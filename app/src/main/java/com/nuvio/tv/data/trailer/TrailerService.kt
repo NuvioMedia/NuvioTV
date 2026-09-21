@@ -110,6 +110,13 @@ class TrailerService(
                 cache[cacheKey] = NEGATIVE_CACHE
             }
             null
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // The detail screen cancels the previous trailer job every time it starts a new
+            // one, so this is routine. Swallowing it returned null, which the caller cannot
+            // tell apart from "this title has no trailer" -- it wrote that null over a URL a
+            // later job had already resolved, and the NEGATIVE_CACHE line above pinned the
+            // miss for the rest of the process, so the trailer button stayed gone.
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching trailer for $title: ${e.message}", e)
             null
@@ -326,6 +333,8 @@ class TrailerService(
             } else {
                 response.body()?.results.orEmpty()
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "TMDB movie videos error ($tmdbId/$language): ${e.message}")
             emptyList()
@@ -345,6 +354,8 @@ class TrailerService(
             } else {
                 response.body()?.results.orEmpty()
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "TMDB tv videos error ($tmdbId/$language): ${e.message}")
             emptyList()

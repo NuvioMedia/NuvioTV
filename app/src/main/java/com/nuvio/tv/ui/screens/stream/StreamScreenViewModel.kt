@@ -45,6 +45,7 @@ import com.nuvio.tv.domain.repository.StreamRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
+import com.nuvio.tv.ui.screens.player.StreamSidecarSubtitles
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -66,6 +67,7 @@ import javax.inject.Inject
 
 private const val TAG = "StreamScreenViewModel"
 private const val DIRECT_AUTOPLAY_HARD_TIMEOUT_MS = 60_000L
+private const val STREAM_FILTER_PAGE_SIZE = 100
 
 @HiltViewModel
 class StreamScreenViewModel @Inject constructor(
@@ -89,6 +91,7 @@ class StreamScreenViewModel @Inject constructor(
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val torrentService: TorrentService,
+    profileManager: com.nuvio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private var autoPlayHandledForSession = false
@@ -101,6 +104,8 @@ class StreamScreenViewModel @Inject constructor(
     private var sourceChipErrorDismissJob: Job? = null
     private var pendingCacheSaveJob: Job? = null
     private var streamBadgePresentationJob: Job? = null
+    private var streamFilterExpandJob: Job? = null
+    private var streamFilterFullList: List<Stream> = emptyList()
     private var streamBadgePresentationRequestId = 0L
     private var badgedAddonNames: Set<String> = emptySet()
     private var playbackMetaVideos: List<Video>? = null
@@ -127,6 +132,8 @@ class StreamScreenViewModel @Inject constructor(
     private val contentId: String? = savedStateHandle.getOptionalString("contentId")
     private val contentName: String? = savedStateHandle.getOptionalString("contentName")
     private val contentLanguage: String? = savedStateHandle.getOptionalString("contentLanguage")
+    private val playbackProfileId: Int = savedStateHandle.get<String>("profileId")?.toIntOrNull()
+        ?: profileManager.activeProfileId.value
     private val manualSelection: Boolean = savedStateHandle.get<String>("manualSelection")
         ?.toBooleanStrictOrNull()
         ?: false
@@ -201,15 +208,19 @@ class StreamScreenViewModel @Inject constructor(
                         }
                         val updatedAllStreams = updatedAddonStreams.flatMap { it.streams }
                         val currentFilter = state.selectedAddonFilter
-                        val filteredStreams = if (currentFilter == null) {
+                        val fullFiltered = if (currentFilter == null) {
                             updatedAllStreams
                         } else {
                             updatedAllStreams.filter { it.addonName == currentFilter }
                         }
+                        streamFilterFullList = fullFiltered
+                        val pageEnd = state.filteredStreams.size.coerceAtMost(fullFiltered.size)
+                            .coerceAtLeast(STREAM_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
                         state.copy(
                             addonStreams = updatedAddonStreams,
                             allStreams = updatedAllStreams,
-                            filteredStreams = filteredStreams
+                            filteredStreams = if (pageEnd >= fullFiltered.size) fullFiltered
+                                else fullFiltered.subList(0, pageEnd)
                         )
                     }
                 }
@@ -428,6 +439,7 @@ class StreamScreenViewModel @Inject constructor(
                                 episode = episode,
                                 episodeTitle = episodeName,
                                 bingeGroup = cached.bingeGroup,
+                                profileId = playbackProfileId,
                                 filename = cached.filename,
                                 videoHash = cached.videoHash,
                                 videoSize = cached.videoSize,
@@ -515,10 +527,16 @@ class StreamScreenViewModel @Inject constructor(
                 }
 
                 val currentFilter = _uiState.value.selectedAddonFilter
-                val filteredStreams = if (currentFilter == null) {
+                val fullFiltered = if (currentFilter == null) {
                     allStreams
                 } else {
                     allStreams.filter { it.addonName == currentFilter }
+                }
+                streamFilterFullList = fullFiltered
+                val paginatedStreams = if (fullFiltered.size > STREAM_FILTER_PAGE_SIZE) {
+                    fullFiltered.subList(0, STREAM_FILTER_PAGE_SIZE)
+                } else {
+                    fullFiltered
                 }
 
                 updateUiStateIfChanged {
@@ -526,7 +544,7 @@ class StreamScreenViewModel @Inject constructor(
                         isLoading = false,
                         addonStreams = mergedAddonStreams,
                         allStreams = allStreams,
-                        filteredStreams = filteredStreams,
+                        filteredStreams = paginatedStreams,
                         availableAddons = availableAddons,
                         sourceChips = mergeSourceChipStatuses(
                             existing = _uiState.value.sourceChips,
@@ -614,15 +632,19 @@ class StreamScreenViewModel @Inject constructor(
                                     addonStreams.streams
                                 }
                                 val currentFilter = state.selectedAddonFilter
-                                val filteredStreams = if (currentFilter == null) {
+                                val fullFiltered = if (currentFilter == null) {
                                     updatedAllStreams
                                 } else {
                                     updatedAllStreams.filter { it.addonName == currentFilter }
                                 }
+                                streamFilterFullList = fullFiltered
+                                val pageEnd = state.filteredStreams.size.coerceAtMost(fullFiltered.size)
+                                    .coerceAtLeast(STREAM_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
                                 state.copy(
                                     addonStreams = updatedGroups,
                                     allStreams = updatedAllStreams,
-                                    filteredStreams = filteredStreams
+                                    filteredStreams = if (pageEnd >= fullFiltered.size) fullFiltered
+                                        else fullFiltered.subList(0, pageEnd)
                                 )
                             }
                         }
@@ -876,6 +898,9 @@ class StreamScreenViewModel @Inject constructor(
     private fun shouldAttemptEmbeddedMetaStreamLookup(): Boolean {
         val metaId = contentId?.takeIf { it.isNotBlank() } ?: return false
         if (contentType.isBlank()) return false
+        if (metaRepository.getCachedMeta(contentType, metaId)?.videos?.any {
+                it.id == videoId && it.streams.isNotEmpty()
+            } == true) return true
         if (contentType.equals("other", ignoreCase = true)) return true
 
         val canonicalVideoMetaId = videoId.substringBefore(":")
@@ -1018,9 +1043,13 @@ class StreamScreenViewModel @Inject constructor(
 
     private suspend fun getEmbeddedStreamsFromMeta(): AddonStreams? {
         val metaId = contentId?.takeIf { it.isNotBlank() } ?: return null
-        val result = metaRepository.getMetaFromAllAddons(type = contentType, id = metaId)
-            .first { it !is NetworkResult.Loading }
-        val meta = (result as? NetworkResult.Success)?.data ?: return null
+        val cached = metaRepository.getCachedMeta(contentType, metaId)
+            ?.takeIf { meta -> meta.videos.any { it.id == videoId && it.streams.isNotEmpty() } }
+        val meta = cached ?: run {
+            val result = metaRepository.getMetaFromAllAddons(type = contentType, id = metaId)
+                .first { it !is NetworkResult.Loading }
+            (result as? NetworkResult.Success)?.data
+        } ?: return null
         val video = meta.videos.firstOrNull { it.id == videoId } ?: return null
         if (video.streams.isEmpty()) return null
 
@@ -1097,20 +1126,36 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     private fun filterByAddon(addonName: String?) {
+        streamFilterExpandJob?.cancel()
         updateUiStateIfChanged { state ->
             if (state.selectedAddonFilter == addonName) {
-                state
-            } else {
-                val filteredStreams = if (addonName == null) {
-                    state.allStreams
-                } else {
-                    state.allStreams.filter { it.addonName == addonName }
-                }
-                state.copy(
-                    selectedAddonFilter = addonName,
-                    filteredStreams = filteredStreams
-                )
+                return@updateUiStateIfChanged state
             }
+            val fullFiltered = if (addonName == null) {
+                state.allStreams
+            } else {
+                state.allStreams.filter { it.addonName == addonName }
+            }
+            streamFilterFullList = fullFiltered
+            val paginatedStreams = if (fullFiltered.size > STREAM_FILTER_PAGE_SIZE) {
+                fullFiltered.subList(0, STREAM_FILTER_PAGE_SIZE)
+            } else {
+                fullFiltered
+            }
+            state.copy(
+                selectedAddonFilter = addonName,
+                filteredStreams = paginatedStreams
+            )
+        }
+    }
+
+    fun expandFilteredStreamsIfNeeded() {
+        val current = _uiState.value.filteredStreams
+        val full = streamFilterFullList
+        if (current.size >= full.size) return
+        val nextEnd = (current.size + STREAM_FILTER_PAGE_SIZE).coerceAtMost(full.size)
+        updateUiStateIfChanged {
+            it.copy(filteredStreams = full.subList(0, nextEnd))
         }
     }
 
@@ -1164,6 +1209,7 @@ class StreamScreenViewModel @Inject constructor(
                     filename = result.filename ?: basePlaybackInfo.filename,
                     videoSize = result.videoSize ?: basePlaybackInfo.videoSize
                 )
+                StreamSidecarSubtitles.set(result.url, stream.subtitles)
                 // Save resolved URL to cache for reuse last link
                 if (!result.url.isNullOrBlank()) {
                     pendingCacheSaveJob = viewModelScope.launch {
@@ -1325,6 +1371,7 @@ class StreamScreenViewModel @Inject constructor(
             episode = episode,
             episodeTitle = episodeName,
             bingeGroup = stream.behaviorHints?.bingeGroup,
+            profileId = playbackProfileId,
             filename = stream.behaviorHints?.filename,
             videoHash = stream.behaviorHints?.videoHash,
             videoSize = stream.behaviorHints?.videoSize,
@@ -1335,6 +1382,7 @@ class StreamScreenViewModel @Inject constructor(
             sources = stream.sources,
             contentLanguage = contentLanguage
         )
+        StreamSidecarSubtitles.set(playbackUrlFor(playbackInfo), stream.subtitles)
 
         val url = playbackInfo.url
         if (!url.isNullOrBlank() && !playbackInfo.isExternal) {
@@ -1385,9 +1433,14 @@ class StreamScreenViewModel @Inject constructor(
     suspend fun getResumePositionMs(playbackInfo: StreamPlaybackInfo): Long {
         val contentId = playbackInfo.contentId ?: return 0L
         val progress = if (playbackInfo.season != null && playbackInfo.episode != null) {
-            watchProgressRepository.getEpisodeProgress(contentId, playbackInfo.season, playbackInfo.episode)
+            watchProgressRepository.getEpisodeProgress(
+                contentId,
+                playbackInfo.season,
+                playbackInfo.episode,
+                playbackInfo.profileId
+            )
         } else {
-            watchProgressRepository.getProgress(contentId)
+            watchProgressRepository.getProgress(contentId, playbackInfo.profileId)
         }
         val wp = progress.first() ?: return 0L
         // Don't resume if completed
@@ -1581,7 +1634,8 @@ class StreamScreenViewModel @Inject constructor(
             season = playbackInfo.season,
             episode = playbackInfo.episode,
             episodeTitle = playbackInfo.episodeTitle,
-            year = playbackInfo.year
+            year = playbackInfo.year,
+            profileId = playbackInfo.profileId
         )
 
         val settings = playerSettingsDataStore.playerSettings.first()
@@ -1673,7 +1727,7 @@ class StreamScreenViewModel @Inject constructor(
         }
 
         return try {
-            val allSubtitles = subtitleRepository.getSubtitles(
+            val addonSubtitles = subtitleRepository.getSubtitles(
                 type = metadata.contentType,
                 id = metadata.contentId,
                 videoId = metadata.videoId,
@@ -1693,6 +1747,9 @@ class StreamScreenViewModel @Inject constructor(
                     }
                 }
             )
+            val allSubtitles = (
+                StreamSidecarSubtitles.forUrl(playbackUrlFor(playbackInfo).orEmpty()) + addonSubtitles
+            ).distinctBy { "${it.id}|${it.url}" }
 
             // Filter to preferred languages only
             val filtered = allSubtitles.filter { subtitle ->
@@ -1758,7 +1815,7 @@ class StreamScreenViewModel @Inject constructor(
             )
             Log.d(TAG, "Saving external player progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +
                 "content=$contentId, video=$videoId")
-            watchProgressRepository.saveProgress(progress)
+            watchProgressRepository.saveProgress(progress, playbackInfo.profileId)
 
             val progressPercent = if (effectiveDuration > 0L) {
                 (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)
@@ -1811,7 +1868,10 @@ private fun Stream.badgeMergeKey(): String {
     val playableUrl = url ?: clientResolve?.let { resolve ->
         resolve.stream?.raw?.filename ?: resolve.infoHash
     }
-    if (playableUrl != null) return "$addonName|$playableUrl"
+    if (playableUrl != null) {
+        val nameSuffix = name?.takeIf { it.isNotBlank() }?.let { "|$it" } ?: ""
+        return "$addonName|$playableUrl$nameSuffix"
+    }
     return "$addonName|${name}:${title}:${description?.hashCode() ?: 0}"
 }
 
@@ -1837,6 +1897,7 @@ data class StreamPlaybackInfo(
     val episode: Int?,
     val episodeTitle: String?,
     val bingeGroup: String?,
+    val profileId: Int,
     val filename: String? = null,
     val videoHash: String? = null,
     val videoSize: Long? = null,
@@ -1847,6 +1908,10 @@ data class StreamPlaybackInfo(
     val sources: List<String>? = null,
     val contentLanguage: String? = null
 )
+
+private fun playbackUrlFor(playbackInfo: StreamPlaybackInfo): String? =
+    playbackInfo.url?.takeIf { it.isNotBlank() }
+        ?: if (playbackInfo.isTorrent) playbackInfo.infoHash?.let { "torrent://$it" } else null
 
 private fun Stream.isReadyForDebridPreparation(): Boolean =
     getStreamUrl() == null &&

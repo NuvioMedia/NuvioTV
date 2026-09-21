@@ -142,7 +142,7 @@
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Pokračovať v sledovaní</string>
     <string name="cw_upcoming">Čoskoro</string>
-    <string name="cw_next_up">Ďalší diel</string>
+    <string name="cw_next_up">Ďalšia epizóda</string>
     <string name="cw_new_episode">Nová epizóda</string>
     <string name="cw_new_season">Nová séria</string>
     <string name="cw_resume">Pokračovať</string>
@@ -154,14 +154,29 @@
     <string name="cw_airs_today">Vysiela sa dnes</string>
     <string name="cw_airs_tomorrow">Vysiela sa zajtra</string>
     <plurals name="cw_airs_in_days">
-        <item quantity="one">Vysiela sa za %d deň</item>
-        <item quantity="other">Vysiela sa za %d dní</item>
+        <item quantity="one">Vysiela sa o %d deň</item>
+        <item quantity="few">Vysiela sa o %d dni</item>
+        <item quantity="many">Vysiela sa o %d dní</item>
+        <item quantity="other">Vysiela sa o %d dní</item>
     </plurals>
     <string name="cw_action_go_to_details">Prejsť na detaily</string>
     <string name="cw_action_start_from_beginning">Začať od začiatku</string>
     <string name="cw_action_remove">Odobrať</string>
     <string name="cw_dialog_subtitle">Vyberte, čo chcete s touto položkou urobiť.</string>
     <string name="home_poster_dialog_subtitle">Možnosti titulu</string>
+
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_next_up_short">Ďalšie</string>
+    <string name="cw_new_episode_short">Nové</string>
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Dnes</string>
+    <string name="cw_airs_tomorrow_short">Zajtra</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">O %d deň</item>
+        <item quantity="few">O %d dni</item>
+        <item quantity="many">O %d dní</item>
+        <item quantity="other">O %d dní</item>
+    </plurals>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">z %1$s</string>
@@ -345,7 +360,7 @@
     <string name="about_check_updates_subtitle">Stiahnuť najnovšiu verziu</string>
     <string name="about_privacy_policy">Zásady ochrany osobných údajov</string>
     <string name="about_privacy_policy_subtitle">Zobraziť zásady ochrany osobných údajov</string>
-    <string name="about_supporters_contributors">Podporovatelia &amp; Prispievatelia</string>
+    <string name="about_supporters_contributors">Podporovatelia a Prispievatelia</string>
     <string name="about_supporters_contributors_subtitle">Verejné uznanie a kredity projektu</string>
     <string name="about_licenses_attributions">Licencie a atribúcie</string>
     <string name="about_licenses_attributions_subtitle">Zdroje dát, poďakovania a Android licencie</string>
@@ -512,7 +527,7 @@
     <string name="action_close">Zavrieť</string>
 
     <!-- SupportersContributorsScreen -->
-    <string name="supporters_contributors_title">Podporovatelia &amp; Prispievatelia</string>
+    <string name="supporters_contributors_title">Podporovatelia a Prispievatelia</string>
     <string name="supporters_contributors_subtitle">Ľudia podporujúci Nuvio a prispievatelia budujúci ho pre TV a mobil.</string>
     <string name="supporters_contributors_supporters_copy">Podporovatelia a darcovia pomáhajú posúvať projekt vpred, financujú infraštruktúru a vytvárajú priestor pre vývoj náročnejších funkcií.</string>
     <string name="supporters_contributors_donate_copy">Nuvio zostane bezplatné a Open Source. Ak chcete podporiť projekt, môžete prispieť.</string>
@@ -566,8 +581,8 @@
     <string name="auto_skip_outro">Outro / Záver</string>
     <string name="auto_skip_outro_sub">Automaticky preskočiť outrá a anime závery</string>
     <string name="playback_auto_frame_rate">Automatická snímková frekvencia a rozlíšenie</string>
-    <string name="playback_section_player">Prehrávač &amp; výber streamu</string>
-    <string name="playback_section_player_desc">Preferencie prehrávača, automatické prehrávanie a filtrovanie zdrojov.</string>
+    <string name="playback_section_player">Prehrávač a výber streamu</string>
+    <string name="playback_section_player_desc">Preferencie prehrávača, automatické prehrávanie a filtrovanie zdrojov</string>
     <string name="playback_player">Prehrávač</string>
     <string name="playback_player_internal">Interný</string>
     <string name="playback_player_external">Externý</string>
@@ -576,11 +591,11 @@
     <string name="playback_engine_exoplayer">ExoPlayer</string>
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automaticky prepnúť engine pri chybe spustenia</string>
-    <string name="playback_auto_switch_internal_player_on_error_sub">Ak spustenie streamu zlyhá, automaticky prepnúť medzi ExoPlayer a libmpv.</string>
-    <string name="playback_section_audio">Audio &amp; video</string>
+    <string name="playback_auto_switch_internal_player_on_error_sub">Ak spustenie streamu zlyhá, automaticky prepnúť medzi ExoPlayer a libmpv</string>
+    <string name="playback_section_audio">Audio a video</string>
     <string name="playback_section_audio_desc">Kompatibilita videa a ovládanie audia</string>
     <string name="playback_section_subtitles">Titulky</string>
-    <string name="playback_section_subtitles_desc">Jazyk, štýl a režim renderovania.</string>
+    <string name="playback_section_subtitles_desc">Jazyk, štýl a režim renderovania</string>
     <string name="playback_afr_open">Otvorené</string>
     <string name="playback_afr_closed">Zatvorené</string>
     <string name="playback_afr_off">Vypnuté</string>
@@ -609,7 +624,7 @@
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Automaticky prehrávať trailery</string>
-    <string name="audio_autoplay_trailers_sub">Automaticky prehrať trailery na detailnej obrazovke po čase nečinnosti.</string>
+    <string name="audio_autoplay_trailers_sub">Automaticky prehrať trailery na detailnej obrazovke po čase nečinnosti</string>
     <string name="audio_trailer_delay">Oneskorenie traileru</string>
     <string name="audio_section">Audio</string>
     <string name="audio_lang_default">Predvolené (mediálny súbor)</string>
@@ -692,7 +707,7 @@
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Použiť posledný odkaz</string>
-    <string name="autoplay_reuse_last_link_sub">Automaticky prehrať váš posledný funkčný stream pre ten istý film/epizódu, ak je cache stále platná.</string>
+    <string name="autoplay_reuse_last_link_sub">Automaticky prehrať váš posledný funkčný stream pre ten istý film/epizódu, ak je cache stále platná</string>
     <string name="autoplay_last_link_cache">Doba platnosti cache posledného odkazu</string>
     <string name="cache_duration_hour_one">%1$d hodina</string>
     <string name="cache_duration_hour_other">%1$d hodín</string>
@@ -737,8 +752,8 @@
     <string name="autoplay_scope_all_desc">Automatické prehrávanie môže používať nainštalované doplnky aj povolené pluginy.</string>
     <string name="autoplay_scope_addons_desc">Automatické prehrávanie zohľadňuje iba streamy z vašich nainštalovaných doplnkov.</string>
     <string name="autoplay_scope_plugins_desc">Automatické prehrávanie zohľadňuje iba streamy z povolených pluginov.</string>
-    <string name="autoplay_threshold_pct_desc">Zobraziť podľa percent prehrávania, keď nie je dostupná časová značka outro.</string>
-    <string name="autoplay_threshold_min_desc">Zobraziť toľko minút pred koncom epizódy, keď nie je dostupná časová značka outro.</string>
+    <string name="autoplay_threshold_pct_desc">Zobraziť podľa percent prehrávania, keď nie je dostupná časová značka outro</string>
+    <string name="autoplay_threshold_min_desc">Zobraziť toľko minút pred koncom epizódy, keď nie je dostupná časová značka outro</string>
     <string name="autoplay_regex_matches">Porovnáva názov/titul/popis/doplnok/url streamu. Príklad: 4K|2160p|Remux</string>
     <string name="autoplay_regex_presets">Predvoľby</string>
     <string name="autoplay_invalid_regex">Neplatný regex vzor</string>
@@ -795,23 +810,23 @@
     <string name="layout_section_continue_watching">Pokračovať v sledovaní</string>
     <string name="layout_section_continue_watching_desc">Nastavenia pre sekciu Pokračovať v sledovaní</string>
     <string name="layout_use_episode_thumbnails_cw">Použiť miniatúry epizód v Pokračovať v sledovaní</string>
-    <string name="layout_use_episode_thumbnails_cw_sub">Použiť miniatúry epizód ako predvolený obrázok. Keď je zakázané, použije sa pozadie.</string>
+    <string name="layout_use_episode_thumbnails_cw_sub">Použiť miniatúry epizód ako predvolený obrázok; keď je zakázané, použije sa pozadie</string>
     <string name="layout_blur_unwatched">Rozmazať nevidené epizódy</string>
-    <string name="layout_blur_unwatched_sub">Rozmazať náhľady epizód, kým nie sú videné, aby sa predišlo spoilerom.</string>
+    <string name="layout_blur_unwatched_sub">Rozmazať náhľady epizód, kým nie sú videné, aby sa predišlo spoilerom</string>
     <string name="layout_blur_cw_next_up">Rozmazať nevidené v Pokračovať v sledovaní</string>
-    <string name="layout_blur_cw_next_up_sub">Rozmazať náhľady ďalších epizód v pokračovať v sledovaní, aby sa predišlo spoilerom.</string>
-    <string name="layout_next_up_furthest_episode">Ďalší diel od najďalej sledovanej epizódy</string>
-    <string name="layout_next_up_furthest_episode_sub">Zobraziť ďalšiu epizódu na základe najďalej sledovanej epizódy. Zakážte pre opätovné sledovanie, aby sa použila naposledy sledovaná epizóda.</string>
-    <string name="layout_show_unaired_next_up">Zobraziť nevysielané epizódy v Ďalší diel</string>
-    <string name="layout_show_unaired_next_up_sub">Zahrnúť nadchádzajúce epizódy do Pokračovať v sledovaní pred ich odvysielaním.</string>
+    <string name="layout_blur_cw_next_up_sub">Rozmazať náhľady ďalších epizód v pokračovať v sledovaní, aby sa predišlo spoilerom</string>
+    <string name="layout_next_up_furthest_episode">Ďalšia epizóda v poradí</string>
+    <string name="layout_next_up_furthest_episode_sub">Zobraziť ďalšiu epizódu na základe najďalej sledovanej epizódy; zakážte pre opätovné sledovanie, aby sa použila naposledy sledovaná epizóda</string>
+    <string name="layout_show_unaired_next_up">Zobraziť nevysielané epizódy</string>
+    <string name="layout_show_unaired_next_up_sub">Zahrnúť nadchádzajúce epizódy do Pokračovať v sledovaní pred ich odvysielaním</string>
     <string name="layout_cw_sort_mode">Poradie zoradenia</string>
-    <string name="layout_cw_sort_mode_sub">Ako sú usporiadané položky Pokračovať v sledovaní.</string>
+    <string name="layout_cw_sort_mode_sub">Ako sú usporiadané položky Pokračovať v sledovaní</string>
     <string name="layout_cw_sort_default">Predvolené</string>
     <string name="layout_cw_sort_default_desc">Zoradiť všetky položky podľa aktuálnosti</string>
     <string name="layout_cw_sort_streaming">Štýl streamovania</string>
     <string name="layout_cw_sort_streaming_desc">Vydané položky ako prvé, nadchádzajúce na konci</string>
     <string name="layout_trailer_button">Zobraziť tlačidlo traileru</string>
-    <string name="layout_trailer_button_sub">Zobraziť tlačidlo traileru na detailnej stránke (iba ak je dostupný).</string>
+    <string name="layout_trailer_button_sub">Zobraziť tlačidlo traileru na detailnej stránke (iba ak je dostupný)</string>
     <string name="layout_prefer_external_meta">Preferovať externé metadáta</string>
     <string name="layout_prefer_external_meta_sub">Použiť metadáta z externého doplnku namiesto katalógového</string>
     <string name="layout_show_full_release_date">Zobraziť úplný dátum vydania</string>
@@ -895,7 +910,7 @@
     <string name="debrid_add_key_first">Najprv pripojte účet.</string>
     <string name="debrid_section_account">Účty</string>
     <string name="debrid_section_instant_playback">Príprava odkazov</string>
-    <string name="debrid_section_filters">Filtre &amp; zoradenie</string>
+    <string name="debrid_section_filters">Filtre a zoradenie</string>
     <string name="debrid_section_formatting">Formátovanie</string>
     <string name="debrid_provider_title">Poskytovateľ</string>
     <string name="debrid_provider_subtitle">Ďalší poskytovatelia budú pridaní neskôr</string>
@@ -1310,7 +1325,7 @@
     <string name="p2p_consent_enable">Povoliť P2P</string>
     <string name="p2p_consent_cancel">Zrušiť</string>
     <string name="settings_p2p_title">P2P streamovanie</string>
-    <string name="settings_p2p_subtitle">Povoliť peer-to-peer (torrent) streamy.</string>
+    <string name="settings_p2p_subtitle">Povoliť peer-to-peer (torrent) streamy</string>
     <string name="settings_p2p_hide_stats_title">Skryť štatistiky torrentu</string>
     <string name="settings_p2p_hide_stats_subtitle">Skryť buffer, seeds, peers a rýchlosť sťahovania počas načítavania a prehrávania</string>
     <string name="p2p_download_title">Sťahuje sa P2P engine</string>
@@ -1338,7 +1353,7 @@
     <string name="player_engine_switching_message">Spustenie zlyhalo. Prepína sa na %1$s…</string>
     <string name="player_engine_switching_manual_message">Prepína sa na %1$s...</string>
     <string name="playback_show_loading_status">Zobraziť stav načítavania</string>
-    <string name="playback_show_loading_status_sub">Zobraziť postup krok za krokom počas inicializácie prehrávača.</string>
+    <string name="playback_show_loading_status_sub">Zobraziť postup krok za krokom počas inicializácie prehrávača</string>
     <string name="player_sync_line">Synchronizačná línia</string>
     <string name="subtitle_timing_press_sync">Stlačte Synchronizovať, keď počujete dialógovú líniu.</string>
     <string name="subtitle_timing_sync_button">Synchronizovať</string>
@@ -1357,9 +1372,9 @@
     <string name="parental_profanity">Vulgarizmy</string>
     <string name="parental_alcohol">Alkohol/Drogy</string>
     <string name="parental_frightening">Strašidelnosť</string>
-    <string name="parental_severity_severe">Intenzívne</string>
-    <string name="parental_severity_moderate">Mierne</string>
-    <string name="parental_severity_mild">Nízke</string>
+    <string name="parental_severity_severe">Silné</string>
+    <string name="parental_severity_moderate">Stredné</string>
+    <string name="parental_severity_mild">Mierne</string>
     <string name="player_ends_at">Končí o %1$s</string>
     <string name="player_via">cez %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
@@ -1435,9 +1450,9 @@
     <string name="audio_center_mix_label">Downmix: Úroveň stredového kanála</string>
     <string name="audio_center_mix_value_db">%1$d dB</string>
     <string name="audio_center_mix_help">Úroveň stredového mixu v dB relatívne k metadátam alebo predvolenej hodnote (-3 dB)</string>
-    <string name="audio_center_mix_unavailable">Stredový mix je dostupný iba pri aktívnom FFmpeg downmixe.</string>
+    <string name="audio_center_mix_unavailable">Stredový mix je dostupný iba pri aktívnom FFmpeg downmixe</string>
     <string name="audio_maintain_original_audio_on_downmix_title">Zachovať pôvodné audio pri downmixe</string>
-    <string name="audio_maintain_original_audio_on_downmix_subtitle">Keď je vypnuté, normalizácia downmixu môže znížiť celkovú hlasitosť.</string>
+    <string name="audio_maintain_original_audio_on_downmix_subtitle">Keď je vypnuté, normalizácia downmixu môže znížiť celkovú hlasitosť</string>
 
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Titulky</string>
@@ -1488,7 +1503,7 @@
     <!-- PostPlayOverlay -->
     <string name="next_episode_label">Ďalšia epizóda</string>
     <string name="next_episode_finding_source">Hľadá sa zdroj…</string>
-    <string name="next_episode_playing_via">Prehrávanie cez %1$s za %2$ds</string>
+    <string name="next_episode_playing_via">Prehrávanie cez %1$s o %2$ds</string>
     <string name="next_episode_play">Prehrať</string>
     <string name="player_next_episode_prompt_title">Pokračovať v sledovaní?</string>
     <string name="player_next_episode_prompt_message">Chcete prehrať ďalšiu epizódu?</string>
@@ -1499,11 +1514,11 @@
     <string name="still_watching_title">Stále sledujete?</string>
     <string name="still_watching_continue">Prehrať</string>
     <string name="still_watching_exit">Ukončiť</string>
-    <string name="still_watching_countdown">Zastavenie za %1$d</string>
+    <string name="still_watching_countdown">Zastavenie o %1$d</string>
     <string name="still_watching_setting_title">Stále sledujete?</string>
-    <string name="still_watching_setting_sub">Zobraziť výzvu po po sebe idúcich automaticky prehratých epizódach.</string>
+    <string name="still_watching_setting_sub">Zobraziť výzvu po po sebe idúcich automaticky prehratých epizódach</string>
     <string name="still_watching_threshold_title">Prah epizód</string>
-    <string name="still_watching_threshold_sub">Počet automaticky prehratých epizód pred zobrazením výzvy.</string>
+    <string name="still_watching_threshold_sub">Počet automaticky prehratých epizód pred zobrazením výzvy</string>
     <string name="skip_intro">Preskočiť intro</string>
     <string name="skip_ending">Preskočiť záver</string>
     <string name="skip_recap">Preskočiť rekapituláciu</string>
@@ -1561,7 +1576,7 @@
     <string name="genre_sci_fi_fantasy">Sci-Fi a Fantasy</string>
     <string name="genre_soap">Soap Opera</string>
     <string name="genre_talk">Talk Show</string>
-    <string name="genre_war_politics">Vojna a politika</string>
+    <string name="genre_war_politics">Vojna a Politika</string>
     <string name="library_sort_trakt_order">Poradie Trakt</string>
     <string name="library_sort_added_desc">Pridané ↓</string>
     <string name="library_sort_added_asc">Pridané ↑</string>
@@ -2263,7 +2278,7 @@
     <string name="collections_editor_tmdb_genre_animation">Animovaný</string>
     <string name="collections_editor_tmdb_genre_comedy">Komédia</string>
     <string name="collections_editor_tmdb_genre_horror">Horor</string>
-    <string name="collections_editor_tmdb_genre_scifi">Sci-fi</string>
+    <string name="collections_editor_tmdb_genre_scifi">Sci-Fi</string>
     <string name="collections_editor_tmdb_genre_drama">Dráma</string>
     <string name="collections_editor_tmdb_genre_crime">Krimi</string>
     <string name="collections_editor_tmdb_genre_reality">Reality</string>
@@ -2487,9 +2502,9 @@
 <string name="settings_content_discovery_plugins_subtitle">Spravovať repozitáre a poskytovateľov streamov</string>
 <string name="external_auto_next_loading">Načítavanie ďalšej epizódy…</string>
 <string name="advanced_sentry_reports">Hlásenia o pádoch (Sentry)</string>
-<string name="advanced_sentry_reports_subtitle">Odosielať hlásenia o pádoch a zamrznutiach (ANR) s bezpečným kontextom. Predvolene zapnuté.</string>
+<string name="advanced_sentry_reports_subtitle">Odosielať hlásenia o pádoch a zamrznutiach (ANR) s bezpečným kontextom; predvolene zapnuté</string>
 <string name="advanced_playback_issue_reports">Hlásenia o problémoch s prehrávaním</string>
-<string name="advanced_playback_issue_reports_subtitle">Zobrazovať tlačidlá hlásení počas prehrávania, dlhého načítavania a chýb prehrávania.</string>
+<string name="advanced_playback_issue_reports_subtitle">Zobrazovať tlačidlá hlásení počas prehrávania, dlhého načítavania a chýb prehrávania</string>
 <string name="sentry_enable_dialog_title">Zapnúť hlásenia o pádoch?</string>
 <string name="sentry_enable_dialog_subtitle">Hlásenia o pádoch pomáhajú identifikovať chyby špecifické pre konkrétne zariadenie bez potreby reprodukovať problém pomocou záznamov ADB.</string>
 <string name="sentry_disable_dialog_title">Vypnúť hlásenia o pádoch?</string>
@@ -2556,12 +2571,12 @@
 <string name="dv7_libdovi_mode_4_title">Režim 4 — 8.4 (statický)</string>
 <string name="dv7_libdovi_mode_4_sub">Konvertovať na statický profil 8.4.</string>
 <string name="layout_section_streams">Streamy</string>
-<string name="layout_section_streams_desc">Nastavenia zobrazenia pre výsledky streamov a panely zdrojov prehrávača.</string>
+<string name="layout_section_streams_desc">Nastavenia zobrazenia pre výsledky streamov a panely zdrojov prehrávača</string>
 <string name="layout_cw_sort_split_upcoming">Oddelený riadok Nespustené</string>
 <string name="layout_cw_sort_split_upcoming_desc">Presunie neodvysielané epizódy do samostatného riadka Nespustené</string>
 <string name="upcoming_section_title">Nespustené</string>
 <string name="settings_card_depth_title">Efekt hĺbky karty</string>
-<string name="settings_card_depth_description">Pridáva osvetlený horný okraj a jemný lesk kartám s obrázkami pre diskrétny pocit hĺbky</string>
+<string name="settings_card_depth_description">Pridáva osvetlený horný okraj a lesk kartám s obrázkami pre jemný pocit hĺbky</string>
 <string name="settings_card_depth_enabled">Povoliť efekt hĺbky</string>
 <string name="settings_card_depth_edge">Žiara okrajov</string>
 <string name="settings_card_depth_edge_subtle">Jemná</string>
@@ -2574,7 +2589,7 @@
 <string name="settings_card_depth_apply_to">Aplikovať na</string>
 <string name="settings_card_depth_fine_tune">Prispôsobiť</string>
 <string name="settings_card_depth_fine_tune_title">Detailné nastavenie hĺbky</string>
-<string name="settings_card_depth_fine_tune_hint_tv">Použite ľavú a pravú šípku na diaľkovom ovládači na úpravu jednotlivých hodnôt.</string>
+<string name="settings_card_depth_fine_tune_hint_tv">Použite ľavú a pravú šípku na diaľkovom ovládači na úpravu jednotlivých hodnôt</string>
 <string name="settings_card_depth_edge_value">Žiara okrajov</string>
 <string name="settings_card_depth_sheen_value">Lesk</string>
 <string name="settings_card_depth_edge_coverage">Pokrytie okrajov</string>
@@ -2597,14 +2612,14 @@
 <string name="debrid_stream_sort_language">Najprv preferovaný jazyk</string>
 <string name="settings_stream_badges_section">Štýl Fusion</string>
 <string name="settings_stream_size_badges_title">Odznaky veľkosti</string>
-<string name="settings_stream_size_badges_description">Zobrazovať odznaky veľkosti súboru vo výsledkoch streamov a paneloch zdrojov prehrávača.</string>
+<string name="settings_stream_size_badges_description">Zobrazovať odznaky veľkosti súboru vo výsledkoch streamov a paneloch zdrojov prehrávača</string>
 <string name="settings_stream_addon_logo_title">Logo doplnku</string>
-<string name="settings_stream_addon_logo_description">Zobrazovať logo a názov doplnku vedľa zdrojov streamov.</string>
+<string name="settings_stream_addon_logo_description">Zobrazovať logo a názov doplnku vedľa zdrojov streamov</string>
 <string name="settings_stream_display_section">Zobrazenie</string>
 <string name="settings_stream_badge_position_title">Pozícia odznakov</string>
 <string name="settings_stream_badge_position_description">Vyberte, či sa odznaky Fusion a veľkosti zobrazia nad alebo pod kartami streamov.</string>
 <string name="settings_stream_badge_position_dialog_title">Pozícia odznaku</string>
-<string name="settings_stream_badge_position_dialog_description">Vyberte umiestnenie odznakov na kartách streamov.</string>
+<string name="settings_stream_badge_position_dialog_description">Vyberte umiestnenie odznakov na kartách streamov</string>
 <string name="settings_stream_badge_position_top">Horná časť</string>
 <string name="settings_stream_badge_position_bottom">Spodná časť</string>
 <string name="settings_stream_badge_urls_title">Adresy URL odznakov Fusion</string>
@@ -2747,7 +2762,7 @@
 <string name="web_stream_badge_error_url_scheme">Adresa URL odznaku musí začínať na http:// alebo https://.</string>
 <string name="web_stream_badge_error_import_limit">Možno importovať maximálne %1$d adries URL pre odznaky.</string>
 <string name="playback_section_buffer_network">Vyrovnávacia pamäť a sieť</string>
-<string name="playback_section_buffer_network_desc">Určuje veľkosť pamäte pre ukladanie obsahu a spôsob načítavania streamov.</string>
+<string name="playback_section_buffer_network_desc">Určuje veľkosť pamäte pre ukladanie obsahu a spôsob načítavania streamov</string>
 <string name="playback_net_device_memory_info">Pamäť zariadenia: %1$s | Odporúčaný bezpečný limit: %2$d MB</string>
 <string name="playback_net_nuvio_performance_mode">Natívna pamäť ExoPlayer</string>
 <string name="playback_net_nuvio_performance_mode_sub">Povoľuje natívny alokátor mimo haldy a optimalizácie čistenia pamäte.</string>
@@ -2946,18 +2961,13 @@
 <string name="cd_simkl_qr">Aktivácia Simkl cez QR kód</string>
 <string name="cd_simkl_logo">Logo Simkl</string>
 
-    <string name="cw_next_up_short">Ďalšie</string>
-    <string name="cw_new_episode_short">Nové</string>
-    <string name="cw_airs_date_short">%1$s</string>
-    <string name="cw_airs_today_short">Dnes</string>
-    <string name="cw_airs_tomorrow_short">Zajtra</string>
     <string name="collections_editor_tmdb_without_watch_providers">Vylúčené ID poskytovateľov obsahu</string>
     <string name="collections_editor_tmdb_without_watch_providers_helper">Vylúčiť tituly dostupné od týchto čísel poskytovateľov TMDB vo vybranom regióne.</string>
     <string name="collections_editor_tmdb_without_watch_providers_placeholder">8|337|350</string>
     <string name="theme_color_gold">Zlatá</string>
     <string name="theme_color_jade">Nefritová</string>
     <string name="theme_color_rose_gold">Ružové zlato</string>
-    <string name="theme_color_arctic_blue">Arktická modrá</string>
+    <string name="theme_color_arctic_blue">Arktická</string>
     <string name="theme_color_graphite">Grafitová</string>
     <string name="about_update_banner_title">Banner automatickej aktualizácie</string>
     <string name="about_update_banner_subtitle">Zobraziť banner, keď je k dispozícii nová verzia</string>
@@ -2974,7 +2984,7 @@
     <string name="supporter_membership_thank_you">Ďakujeme.</string>
     <string name="supporter_membership_supporter_since">Podporovateľom od %1$s.</string>
     <string name="supporter_membership_tier_supporter">Podporovateľ</string>
-    <string name="supporter_membership_tier_supporter_plus">Podporovateľ Plus</string>
+    <string name="supporter_membership_tier_supporter_plus">Podporovateľ+</string>
     <string name="supporter_membership_connected_title">Patreon je pripojený</string>
     <string name="supporter_membership_connected_description">Na tomto účte Patreon sa nenašla žiadna aktívna úroveň Nuvio. Pozrite si dostupné možnosti alebo obnovte stav po zmene členstva na Patreone.</string>
     <string name="supporter_membership_scan_support">Naskenujte pre zobrazenie členstva</string>
@@ -2990,25 +3000,25 @@
     <string name="sub_strip_sdh">Odstrániť SDH titulky</string>
     <string name="sub_strip_sdh_desc">Skryť opisy zvukov a označenia rečníkov z textových titulkov</string>
     <string name="autoplay_next_episode_fallback">Záložná možnosť pri zlyhaní binge skupiny</string>
-    <string name="autoplay_next_episode_fallback_sub">Automaticky vybrať prvý dostupný stream, ak sa nenájde binge skupina. Keď je možnosť vypnutá, zobrazí sa namiesto toho výber streamu.</string>
+    <string name="autoplay_next_episode_fallback_sub">Automaticky vybrať prvý dostupný stream, ak sa nenájde binge skupina; keď je možnosť vypnutá, zobrazí sa namiesto toho výber streamu</string>
     <string name="layout_overall_ratings">Celkové hodnotenia</string>
-    <string name="layout_overall_ratings_sub_on">Zobrazujú sa štandardné hodnotenia a hodnotenia TMDB.</string>
-    <string name="layout_overall_ratings_sub_off">Štandardné hodnotenia a hodnotenia TMDB sú skryté. Na stránkach detailov majú prioritu nastavenia poskytovateľa MDBList.</string>
+    <string name="layout_overall_ratings_sub_on">Zobrazujú sa štandardné hodnotenia a hodnotenia TMDB</string>
+    <string name="layout_overall_ratings_sub_off">Štandardné hodnotenia a hodnotenia TMDB sú skryté. Na stránkach detailov majú prioritu nastavenia poskytovateľa MDBList</string>
     <string name="layout_episode_ratings">Hodnotenia epizód</string>
-    <string name="layout_episode_ratings_sub">Vyberte, ktoré hodnotenia epizód budú viditeľné.</string>
+    <string name="layout_episode_ratings_sub">Vyberte, ktoré hodnotenia epizód budú viditeľné</string>
     <string name="layout_ratings_show">Zobraziť</string>
     <string name="layout_ratings_hide">Skryť</string>
     <string name="layout_ratings_hide_unwatched">Skryť nepozerané</string>
     <string name="layout_cw_enabled">Zobraziť Pokračovať v sledovaní</string>
-    <string name="layout_cw_enabled_sub">Zobraziť riadok Pokračovať v sledovaní na domovskej obrazovke.</string>
+    <string name="layout_cw_enabled_sub">Zobraziť riadok Pokračovať v sledovaní na domovskej obrazovke</string>
     <string name="layout_episode_options_overlay">Prekrytie možností epizódy</string>
-    <string name="layout_episode_options_overlay_sub">Vyberte vzhľad zobrazený pri podržaní epizódy.</string>
+    <string name="layout_episode_options_overlay_sub">Vyberte vzhľad zobrazený pri podržaní epizódy</string>
     <string name="layout_episode_options_overlay_none">Žiadne</string>
-    <string name="layout_episode_options_overlay_none_desc">Použiť celoobrazovkový prechod (gradient) bez obrázka epizódy.</string>
+    <string name="layout_episode_options_overlay_none_desc">Použiť celoobrazovkový prechod (gradient) bez obrázka epizódy</string>
     <string name="layout_episode_options_overlay_artwork">Obrázok</string>
-    <string name="layout_episode_options_overlay_artwork_desc">Použiť celoobrazovkové rozloženie s obrázkom epizódy.</string>
+    <string name="layout_episode_options_overlay_artwork_desc">Použiť celoobrazovkové rozloženie s obrázkom epizódy</string>
     <string name="layout_episode_options_overlay_blur">Rozostrenie</string>
-    <string name="layout_episode_options_overlay_blur_desc">Použiť celoobrazovkové rozloženie s rozostreným obrázkom epizódy.</string>
+    <string name="layout_episode_options_overlay_blur_desc">Použiť celoobrazovkové rozloženie s rozostreným obrázkom epizódy</string>
     <string name="layout_cw_card_style_card">Karta</string>
     <string name="layout_cw_card_style_wide">Široká</string>
     <string name="layout_cw_card_style_poster">Plagát</string>
@@ -3030,7 +3040,7 @@
     <string name="addon_delete_yes">Áno</string>
     <string name="subtitle_delay_reset">Obnoviť</string>
     <string name="library_filter_watched">Pozrené</string>
-    <string name="library_watched_filter_all">Všetky</string>
+    <string name="library_watched_filter_all">Všetko</string>
     <string name="library_watched_filter_watched">Pozrené</string>
     <string name="library_watched_filter_unwatched">Nepozrené</string>
     <string name="genre_anime">Anime</string>
@@ -3108,4 +3118,81 @@
     <string name="collections_editor_tmdb_without_genres_placeholder">16 pre Animované</string>
     <string name="collections_editor_tmdb_without_keywords_placeholder">9715</string>
     <string name="collections_editor_tmdb_without_companies_placeholder">420</string>
+
+    <string name="advanced_player_stats_hud">Prekrytie štatistík prehrávania</string>
+    <string name="advanced_confirm_exit">Úplné ukončenie pri zavretí</string>
+    <string name="advanced_confirm_exit_subtitle">Pri ukončení úplne zatvoriť aplikáciu a uvoľniť pamäť; vyžaduje dvojité stlačenie tlačidla Späť na potvrdenie</string>
+    <string name="confirm_exit_toast">Stlačte Späť ešte raz pre ukončenie</string>
+    <string name="autoplay_post_play_recommendations">Odporúčania po prehratí</string>
+    <string name="autoplay_post_play_recommendations_sub">Zobraziť odporúčania pred koncom filmov a seriálov</string>
+    <string name="autoplay_post_play_movie_threshold">Časovanie odporúčaní pre filmy</string>
+    <string name="autoplay_post_play_movie_threshold_sub">Vyberte, kedy sa zobrazia odporúčania pre filmy; epizódy sa riadia nastavením Prahovej hodnoty pre ďalšiu epizódu</string>
+    <string name="player_live_watched">NAŽIVO %1$s</string>
+    <string name="stream_info_bitrate_file">Dátový tok (súbor)</string>
+    <string name="stream_info_hud">HUD</string>
+    <string name="player_post_play_because">Keďže ste pozerali %1$s</string>
+    <string name="player_post_play_recommended">Odporúčané pre vás</string>
+    <string name="player_post_play_play">Prehrať</string>
+    <string name="player_post_play_previous_recommendation">Predchádzajúce odporúčanie</string>
+    <string name="player_post_play_next_recommendation">Nasledujúce odporúčanie</string>
+    <string name="player_post_play_return_to_player">Späť do prehrávača</string>
+    <string name="player_post_play_trailer_countdown">Upútavka o %1$d</string>
+    <string name="player_post_play_trailer_playing">Prehráva sa upútavka</string>
+    <string name="player_post_play_trailer">Upútavka</string>
+    <string name="auth_qr_manual_instruction">Alebo prejdite na %1$s a zadajte</string>
+
+    <string name="appearance_launcher_artwork">Obrázok spúšťača</string>
+    <string name="appearance_launcher_artwork_subtitle">Vyberte, ako sa Nuvio zobrazí na domovskej obrazovke TV</string>
+    <string name="appearance_app_icon_and_banner">Ikona aplikácie a banner</string>
+    <string name="appearance_app_icon_and_banner_subtitle">Zmeniť ikonu aplikácie a banner</string>
+    <string name="appearance_app_icon_picker_title">Vybrať ikonu aplikácie a banner</string>
+    <string name="appearance_app_icon_picker_subtitle">Každý štýl obsahuje zodpovedajúcu štvorcovú ikonu a TV banner</string>
+    <string name="appearance_app_icon_confirmation_title">Zmeniť ikonu aplikácie?</string>
+    <string name="appearance_app_icon_confirmation_message">Zmena na %1$s zatvorí aplikáciu Nuvio. TV banner sa môže aktualizovať až po reštarte zariadenia. Pokračujte výberom možnosti OK.</string>
+    <string name="appearance_app_icon_change_failed">Ikonu a banner sa nepodarilo zmeniť. Skúste to znova.</string>
+    <string name="appearance_app_icon_original">Pôvodná</string>
+    <string name="appearance_app_icon_arctic_blue">Arktická</string>
+    <string name="appearance_app_icon_emerald">Smaragdová</string>
+    <string name="appearance_app_icon_rose_gold">Ružové zlato</string>
+    <string name="appearance_app_icon_copper">Medená</string>
+    <string name="appearance_app_icon_graphite">Grafitová</string>
+    <string name="about_update_channel_title">Kanál aktualizácií</string>
+    <string name="about_update_channel_subtitle">Vyberte typ aktualizácií aplikácie, ktoré chcete prijímať</string>
+    <string name="update_channel_stable">Stabilný</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_dialog_subtitle">Vyberte typ aktualizácií, ktoré chcete prijímať</string>
+    <string name="update_channel_stable_description">Určené na každodenné používanie</string>
+    <string name="update_channel_beta_description">Skoršie aktualizácie, ktoré môžu obsahovať chyby, nefunkčné funkcie alebo sa správať neočakávane</string>
+    <string name="advanced_player_stats_hud_subtitle">Zobraziť tlačidlo v informáciách o streame na zapnutie/vypnutie živých údajov o CPU, pamäti, vyrovnávacej pamäti, dátovom toku a teplote počas prehrávania</string>
+    <string name="profile_copy_settings_label">Kopírovať nastavenia</string>
+    <string name="profile_copy_settings_setup_title">Nastavenia profilu</string>
+    <string name="profile_copy_settings_setup_subtitle">Začnite odznova alebo jednorazovo skopírujte nastavenia TV z iného profilu.</string>
+    <string name="profile_copy_settings_start_fresh">Začať odznova</string>
+    <string name="profile_copy_settings_primary_source">%1$s (Hlavný)</string>
+    <string name="profile_copy_settings_create_fresh">Nastavenia: Začať odznova</string>
+    <string name="profile_copy_settings_create_source">Nastavenia: %1$s</string>
+    <string name="profile_copy_settings_title">Kopírovať nastavenia do profilu %1$s</string>
+    <string name="profile_copy_settings_subtitle">Vyberte zdrojový profil. Jeho podporované TV nastavenia jednorazovo nahradia nastavenia tohto profilu.</string>
+    <string name="profile_copy_settings_from">Kopírovať z</string>
+    <string name="profile_copy_settings_action">Kopírovať nastavenia</string>
+    <string name="profile_copy_settings_copying">Kopíruje sa\u2026</string>
+    <string name="profile_copy_settings_apply">Použiť</string>
+    <string name="profile_copy_settings_credentials_off">API kľúče: Nekopírovať</string>
+    <string name="profile_copy_settings_credentials_on">API kľúče: Kopírovať chýbajúce kľúče</string>
+    <string name="profile_copy_settings_details">Existujúce API kľúče budú zachované. OAuth, doplnky, pluginy, rozloženie domovskej obrazovky, PIN, história, knižnica, stiahnuté súbory a nastavenia špecifické pre zariadenie zostanú nezmenené.</string>
+    <string name="profile_copy_settings_exclusions">OAuth, doplnky, pluginy, rozloženie domovskej obrazovky, PIN, história, knižnica, stiahnuté súbory a nastavenia špecifické pre zariadenie zostanú nezmenené.</string>
+    <string name="profile_copy_settings_success">Nastavenia boli skopírované z profilu %1$s do %2$s.</string>
+    <string name="profile_copy_settings_error">Nepodarilo sa skopírovať nastavenia. Skontrolujte pripojenie a skúste to znova.</string>
+    <string name="profile_copy_settings_created_success">Profil bol vytvorený s nastaveniami z profilu %1$s.</string>
+    <string name="profile_copy_settings_created_error">Profil bol vytvorený, ale nastavenia sa nepodarilo skopírovať. Môžete to skúsiť znova v Možnostiach profilu.</string>
+    <string name="profile_create_error">Profil sa nepodarilo vytvoriť. Skúste to znova.</string>
+    <string name="update_waiting_for_stable">Ďalšiu stabilnú verziu dostanete hneď, ako bude k dispozícii</string>
+
+    <string name="advanced_rgb565">Dekódovanie obrazu v RGB565</string>
+    <string name="advanced_rgb565_subtitle">Pre vhodné nepriehľadné obrázky použiť 16-bitovú farbu s nižšou pamäťovou náročnosťou.. Zmena tejto možnosti reštartuje aplikáciu.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Softvérová záloha Hi10P G-NEXT (iba pre MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Použiť softvérové dekódovanie G-NEXT, ak podrobnosti streamu identifikujú H.264 Hi10P. Štandardne vypnuté; zapnite iba vtedy, ak sa prehrávanie Hi10P zasekáva alebo zlyháva.</string>
+    <string name="layout_hide_floating_pill">Skryť plávajúci indikátor</string>
+    <string name="layout_hide_floating_pill_sub">Skryť plávajúci navigačný indikátor na domovskej obrazovke</string>
+    <string name="cd_remove_recent_search">Odstrániť %1$s z nedávnych vyhľadávaní</string>
 </resources>

@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -224,8 +225,11 @@ fun LayoutSettingsContent(
                     focusRequester = homeLayoutHeaderFocus,
                     onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
                 ) {
+                    val firstHomeLayoutFocusRequester = remember { FocusRequester() }
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .settingsOptionRow(firstHomeLayoutFocusRequester),
                         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
                     ) {
                         LayoutCard(
@@ -237,7 +241,9 @@ fun LayoutSettingsContent(
                             onFocused = {
                                 focusedSection = LayoutSettingsSection.HOME_LAYOUT
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(firstHomeLayoutFocusRequester)
                         )
                         LayoutCard(
                             layout = HomeLayout.GRID,
@@ -318,21 +324,28 @@ fun LayoutSettingsContent(
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioTheme.colors.TextTertiary
                         )
+                        val firstHeroCatalogFocusRequester = remember { FocusRequester() }
                         LazyRow(
+                            modifier = Modifier.settingsOptionRow(firstHeroCatalogFocusRequester),
                             contentPadding = PaddingValues(end = NuvioTheme.spacing.sm),
                             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
                         ) {
-                            items(
+                            itemsIndexed(
                                 items = uiState.availableCatalogs,
-                                key = { it.key }
-                            ) { catalog ->
+                                key = { _, catalog -> catalog.key }
+                            ) { catalogIndex, catalog ->
                                 CatalogChip(
                                     catalogInfo = catalog,
                                     isSelected = catalog.key in uiState.heroCatalogKeys,
                                     onClick = {
                                         viewModel.onEvent(LayoutSettingsEvent.ToggleHeroCatalog(catalog.key))
                                     },
-                                    onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                                    onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT },
+                                    modifier = if (catalogIndex == 0) {
+                                        Modifier.focusRequester(firstHeroCatalogFocusRequester)
+                                    } else {
+                                        Modifier
+                                    }
                                 )
                             }
                         }
@@ -382,6 +395,19 @@ fun LayoutSettingsContent(
                             onToggle = {
                                 viewModel.onEvent(
                                     LayoutSettingsEvent.SetModernSidebarBlurEnabled(!uiState.modernSidebarBlurEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                    }
+                    if (uiState.modernSidebarEnabled) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_hide_floating_pill),
+                            subtitle = stringResource(R.string.layout_hide_floating_pill_sub),
+                            checked = uiState.sidebarCollapsedByDefault,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetSidebarCollapsed(!uiState.sidebarCollapsedByDefault)
                                 )
                             },
                             onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
@@ -1145,9 +1171,9 @@ private fun EpisodeOptionsOverlayStyleDialog(
 ) {
     val options = listOf(
         SettingsPickerOption(
-            EpisodeOptionsOverlayStyle.NONE,
-            stringResource(R.string.layout_episode_options_overlay_none),
-            stringResource(R.string.layout_episode_options_overlay_none_desc)
+            EpisodeOptionsOverlayStyle.BLUR,
+            stringResource(R.string.layout_episode_options_overlay_blur),
+            stringResource(R.string.layout_episode_options_overlay_blur_desc)
         ),
         SettingsPickerOption(
             EpisodeOptionsOverlayStyle.ARTWORK,
@@ -1155,9 +1181,9 @@ private fun EpisodeOptionsOverlayStyleDialog(
             stringResource(R.string.layout_episode_options_overlay_artwork_desc)
         ),
         SettingsPickerOption(
-            EpisodeOptionsOverlayStyle.BLUR,
-            stringResource(R.string.layout_episode_options_overlay_blur),
-            stringResource(R.string.layout_episode_options_overlay_blur_desc)
+            EpisodeOptionsOverlayStyle.NONE,
+            stringResource(R.string.layout_episode_options_overlay_none),
+            stringResource(R.string.layout_episode_options_overlay_none_desc)
         )
     )
 
@@ -1273,12 +1299,15 @@ private fun ModernTrailerPlaybackTargetRow(
         style = MaterialTheme.typography.bodySmall,
         color = NuvioTheme.colors.TextTertiary
     )
+    val firstTrailerTargetFocusRequester = remember { FocusRequester() }
     LazyRow(
+        modifier = Modifier.settingsOptionRow(firstTrailerTargetFocusRequester),
         contentPadding = PaddingValues(end = NuvioTheme.spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         item(key = "trailer_target_expanded_card") {
             SettingsChoiceChip(
+                modifier = Modifier.focusRequester(firstTrailerTargetFocusRequester),
                 label = stringResource(R.string.layout_trailer_expanded_card),
                 selected = selectedTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD,
                 onClick = {
@@ -1572,9 +1601,11 @@ private fun CatalogChip(
     catalogInfo: CatalogInfo,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onFocused: () -> Unit
+    onFocused: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     SettingsChoiceChip(
+        modifier = modifier,
         label = catalogInfo.name,
         selected = isSelected,
         onClick = onClick,
@@ -1926,19 +1957,26 @@ private fun OptionRow(
         color = NuvioTheme.colors.TextSecondary
     )
 
+    val firstOptionFocusRequester = remember { FocusRequester() }
     LazyRow(
+        modifier = Modifier.settingsOptionRow(firstOptionFocusRequester),
         contentPadding = PaddingValues(end = NuvioTheme.spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
-        items(
+        itemsIndexed(
             items = options,
-            key = { it.value }
-        ) { option ->
+            key = { _, option -> option.value }
+        ) { optionIndex, option ->
             ValueChip(
                 label = option.label,
                 isSelected = option.value == selectedValue,
                 onClick = { onSelected(option.value) },
-                onFocused = onFocused
+                onFocused = onFocused,
+                modifier = if (optionIndex == 0) {
+                    Modifier.focusRequester(firstOptionFocusRequester)
+                } else {
+                    Modifier
+                }
             )
         }
     }
@@ -1949,9 +1987,11 @@ private fun ValueChip(
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onFocused: () -> Unit
+    onFocused: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     SettingsChoiceChip(
+        modifier = modifier,
         label = label,
         selected = isSelected,
         onClick = onClick,

@@ -11,6 +11,7 @@ import androidx.media3.exoplayer.ScrubbingModeParameters
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.ui.screens.settings.MemoryBudget
 
 /**
  * Centralizes all Nuvio ExoPlayer performance enhancements behind a single toggle.
@@ -75,6 +76,9 @@ object NuvioExoPlayerPerformanceHelper {
     var targetBufferSizeMb: Int = 250
 
     @Volatile
+    var calculatedMemoryUsageMb: Int = 0
+
+    @Volatile
     var connectionPoolSize: Int = DEFAULT_NUVIO_CONNECTION_POOL_SIZE
 
     @Volatile
@@ -105,6 +109,27 @@ object NuvioExoPlayerPerformanceHelper {
         } else {
             safeLimitMb
         }
+
+        val effectiveBufferMb = when {
+            settings.nuvioPerformanceModeEnabled -> {
+                if (customBuffers && !settings.bufferBudgetManaged) {
+                    MemoryBudget.effectiveBufferMb(bufferSettings.targetBufferSizeMb)
+                } else {
+                    safeLimitMb
+                }
+            }
+            customBuffers -> {
+                if (settings.bufferBudgetManaged) MemoryBudget.budgetMb
+                else MemoryBudget.effectiveBufferMb(bufferSettings.targetBufferSizeMb)
+            }
+            else -> MemoryBudget.defaultBufferSizeMb
+        }
+        calculatedMemoryUsageMb = MemoryBudget.totalUsageMb(
+            effectiveBufferMb,
+            settings.parallelConnectionCount,
+            Math.ceil(settings.parallelChunkSizeKb / 1024.0).toInt(),
+            settings.useParallelConnections && settings.parallelNetworkEnabled
+        )
 
         val oldPoolSize = connectionPoolSize
         val customNetwork = settings.parallelNetworkEnabled
@@ -254,11 +279,17 @@ object NuvioExoPlayerPerformanceHelper {
      * Builds a [DefaultLoadControl] tuned for Nuvio performance when enabled,
      * or a standard ExoPlayer [DefaultLoadControl] when disabled.
      */
-    fun buildLoadControl(context: Context? = null): DefaultLoadControl {
+    fun buildLoadControl(context: Context? = null, chunkOverheadMb: Int = 0): DefaultLoadControl {
         return if (enabled) {
-            val targetBufferBytes = (targetBufferSizeMb.toLong() * 1024L * 1024L)
+            val effectiveTargetBufferMb = (targetBufferSizeMb - chunkOverheadMb)
+                .coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
+            val targetBufferBytes = (effectiveTargetBufferMb.toLong() * 1024L * 1024L)
                 .coerceAtMost(Int.MAX_VALUE.toLong())
                 .toInt()
+            android.util.Log.i(
+                "ExoPerformance",
+                "buildLoadControl: targetBufferSizeMb=$targetBufferSizeMb, chunkOverheadMb=$chunkOverheadMb, effectiveTargetBufferMb=$effectiveTargetBufferMb, targetBytes=$targetBufferBytes"
+            )
             DefaultLoadControl.Builder()
                 .setAllocator(DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 64, enabled))
                 .setTargetBufferBytes(targetBufferBytes)

@@ -50,6 +50,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     traktMappingJob?.cancel()
     traktMappingJob = null
     delayMpvResumeSeekUntilVideoTrack = false
+    mpvMediaLoadPrepared = false
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
     debridResolveJob?.cancel()
@@ -70,6 +71,9 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
         runCatching { player.release() }
     }
     _exoPlayer = null
+    _loadControl = null
+    currentBitrateAwareLoadControl = null
+    currentParallelChunkOverheadMb = 0
     ffmpegAudioRenderer = null
     updateAudioControlAvailability()
     playbackSpeedAwareAudioSink = null

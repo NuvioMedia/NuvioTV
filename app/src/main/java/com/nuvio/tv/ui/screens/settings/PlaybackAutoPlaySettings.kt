@@ -856,18 +856,30 @@ private fun StreamRegexDialog(
                     color = NuvioTheme.colors.TextSecondary
                 )
 
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                    items(
+                val firstPresetFocusRequester = remember { FocusRequester() }
+                LazyRow(
+                    modifier = Modifier.settingsOptionRow(firstPresetFocusRequester),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                ) {
+                    itemsIndexed(
                         items = presets,
-                        key = { it.first }
-                    ) { (label, pattern) ->
+                        key = { _, preset -> preset.first }
+                    ) { presetIndex, (label, pattern) ->
                         var isFocused by remember { mutableStateOf(false) }
                         Card(
                             onClick = {
                                 regex = pattern
                                 regexError = null
                             },
-                            modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
+                            modifier = Modifier
+                                .onFocusChanged { isFocused = it.isFocused }
+                                .then(
+                                    if (presetIndex == 0) {
+                                        Modifier.focusRequester(firstPresetFocusRequester)
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
                             colors = CardDefaults.colors(
                                 containerColor = NuvioTheme.colors.BackgroundElevated,
                                 focusedContainerColor = NuvioTheme.colors.FocusBackground

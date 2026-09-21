@@ -1,16 +1,16 @@
 package com.nuvio.tv.ui.screens.home
 
 import android.content.Context
-import android.content.res.Configuration
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
+import com.nuvio.tv.core.util.withAppLocale
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import com.nuvio.tv.domain.model.stableItemKey
+import com.nuvio.tv.ui.util.StableList
 import com.nuvio.tv.ui.util.asStable
-import java.util.Locale
 import kotlinx.coroutines.withContext
 
 @Immutable
@@ -33,7 +33,7 @@ internal fun buildModernHomePresentation(
     maxCatalogRows: Int? = null
 ): ModernHomePresentationState {
     val visibleHomeRows = resolveVisibleHomeRows(input)
-    val localizedContext = getLocalizedContext(context)
+    val localizedContext = context.withAppLocale()
     val strContinueWatching = localizedContext.getString(R.string.continue_watching)
     val strAirsDate = localizedContext.getString(R.string.cw_airs_date)
     val strUpcoming = localizedContext.getString(R.string.cw_upcoming)
@@ -183,7 +183,7 @@ internal fun buildModernHomePresentation(
                                     cachedItem.showImdbRatings == input.showImdbRatings
                                 ) {
                                     cachedItem.carouselItem.let { cached ->
-                                        val stableItemKey = "${rowKey}_$itemIndex"
+                                        val stableItemKey = row.stableItemKey(item, occurrence)
                                         if (cached.key == stableItemKey) cached
                                         else cached.copy(key = stableItemKey)
                                     }
@@ -198,7 +198,7 @@ internal fun buildModernHomePresentation(
                                         showFullReleaseDate = input.showFullReleaseDate,
                                         showImdbRatings = input.showImdbRatings,
                                         previousCachedItem = cachedItem?.carouselItem
-                                    ).copy(key = "${rowKey}_$itemIndex")
+                                    ).copy(key = row.stableItemKey(item, occurrence))
                                     rowItemCache[cacheKey] = CachedCarouselItem(
                                         source = item,
                                         useLandscapePosters = input.useLandscapePosters,
@@ -360,15 +360,6 @@ private fun collectionRowKey(collection: Collection): String {
     return "collection_${collection.id}"
 }
 
-private fun getLocalizedContext(context: Context): Context {
-    val tag = LocaleCache.localeTag.takeIf { it != LocaleCache.UNSET && it.isNotEmpty() }
-        ?: return context
-    val locale = Locale.forLanguageTag(tag)
-    val config = Configuration(context.resources.configuration)
-    config.setLocale(locale)
-    return context.createConfigurationContext(config)
-}
-
 private fun Collection.hasVisibleFolders(): Boolean {
     return folders.isNotEmpty()
 }
@@ -381,6 +372,7 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
     val fallbackBackdropByRow = LinkedHashMap<String, String>(carouselRows.size)
     val activeRowKeys = LinkedHashSet<String>(carouselRows.size)
     val activeItemKeysByRow = LinkedHashMap<String, Set<String>>(carouselRows.size)
+    val itemIdentitiesByRow = LinkedHashMap<String, StableList<String>>(carouselRows.size)
     val activeCatalogItemIds = LinkedHashSet<String>()
 
     carouselRows.forEachIndexed { index, row ->
@@ -396,14 +388,24 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
         activeRowKeys += row.key
 
         val itemKeys = LinkedHashSet<String>(row.items.list.size)
+        val itemIdentities = ArrayList<String>(row.items.list.size)
         row.items.list.forEach { item ->
             itemKeys.add(item.key)
-            val payload = item.payload
-            if (payload is ModernPayload.Catalog) {
-                activeCatalogItemIds += payload.itemId
+            when (val payload = item.payload) {
+                is ModernPayload.Catalog -> {
+                    itemIdentities += "${payload.itemType}:${payload.itemId}"
+                    activeCatalogItemIds += payload.itemId
+                }
+                is ModernPayload.CollectionFolder -> {
+                    itemIdentities += "folder:${payload.folderId}"
+                }
+                is ModernPayload.ContinueWatching -> {
+                    itemIdentities += "cw:${payload.item.hashCode()}"
+                }
             }
         }
         activeItemKeysByRow[row.key] = itemKeys
+        itemIdentitiesByRow[row.key] = itemIdentities.asStable()
     }
 
     return CarouselRowLookups(
@@ -414,6 +416,7 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
         fallbackBackdropByRow = fallbackBackdropByRow.asStable(),
         activeRowKeys = activeRowKeys.asStable(),
         activeItemKeysByRow = activeItemKeysByRow.asStable(),
+        itemIdentitiesByRow = itemIdentitiesByRow.asStable(),
         activeCatalogItemIds = activeCatalogItemIds.asStable()
     )
 }

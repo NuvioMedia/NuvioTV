@@ -723,8 +723,7 @@ fun ContinueWatchingCard(
                     .then(
                         if (textBelowArtwork && isFocused) {
                             Modifier.border(
-                                width = NuvioTheme.spacing.xxs,
-                                color = NuvioTheme.colors.FocusRing,
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                 shape = cwClipShape
                             )
                         } else {
@@ -853,7 +852,7 @@ fun ContinueWatchingCard(
                                     .fillMaxWidth(progressFraction)
                                     .clip(RoundedCornerShape(1.5.dp))
                                     .height(3.dp)
-                                    .background(NuvioTheme.colors.Primary)
+                                    .background(NuvioTheme.colors.Secondary)
                             )
                         }
                     }
@@ -1048,7 +1047,7 @@ private fun WideCardContent(
                             .fillMaxWidth(progressFraction)
                             .clip(RoundedCornerShape(1.5.dp))
                             .height(3.dp)
-                            .background(NuvioTheme.colors.Primary)
+                            .background(NuvioTheme.colors.Secondary)
                     )
                 }
                 Text(
@@ -1109,6 +1108,7 @@ fun ContinueWatchingOptionsDialog(
     showPlayManually: Boolean = false,
     onPlayManually: () -> Unit = {}
 ) {
+    val isPlayEnabled = LocalPlaybackAvailability.current.canStream(item)
     val title = when (item) {
         is ContinueWatchingItem.InProgress -> item.progress.name
         is ContinueWatchingItem.NextUp -> item.info.name
@@ -1138,7 +1138,7 @@ fun ContinueWatchingOptionsDialog(
             Text(stringResource(R.string.cw_action_go_to_details))
         }
 
-        if (showPlayManually) {
+        if (showPlayManually && isPlayEnabled) {
             Button(
                 onClick = onPlayManually,
                 colors = ButtonDefaults.colors(
@@ -1151,7 +1151,7 @@ fun ContinueWatchingOptionsDialog(
             }
         }
 
-        if (item is ContinueWatchingItem.InProgress) {
+        if (item is ContinueWatchingItem.InProgress && isPlayEnabled) {
             Button(
                 onClick = onStartFromBeginning,
                 colors = ButtonDefaults.colors(

@@ -90,6 +90,7 @@ fun HeroContentSection(
     nextEpisode: Video?,
     nextToWatch: NextToWatch?,
     onPlayClick: () -> Unit,
+    isPlayEnabled: Boolean = true,
     onPlayLongPress: (() -> Unit)? = null,
     isInLibrary: Boolean,
     onToggleLibrary: () -> Unit,
@@ -238,7 +239,8 @@ fun HeroContentSection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         PlayButton(
-                            text = nextToWatch?.displayText,
+                            text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),
+                            enabled = isPlayEnabled,
                             onClick = onPlayClick,
                             onLongPress = onPlayLongPress,
                             focusRequester = playButtonFocusRequester,
@@ -341,6 +343,7 @@ fun HeroContentSection(
 @Composable
 private fun PlayButton(
     text: String?,
+    enabled: Boolean = true,
     onClick: () -> Unit,
     onLongPress: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
@@ -362,6 +365,7 @@ private fun PlayButton(
     )
 
     Button(
+        enabled = enabled,
         onClick = {
             if (longPressTriggered) {
                 longPressTriggered = false
@@ -378,14 +382,14 @@ private fun PlayButton(
             }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
-                if (onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
+                if (enabled && onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
                     if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
                         longPressTriggered = true
                         onLongPress()
                         return@onPreviewKeyEvent true
                     }
                 }
-                if (onLongPress != null &&
+                if (enabled && onLongPress != null &&
                     longPressKeyTracker.handle(native, ::isSelectKey) {
                         longPressTriggered = true
                         onLongPress()
@@ -862,7 +866,14 @@ private fun formatYearRange(releaseInfo: String?): String? {
     return releaseInfo.trim()
 }
 
-private fun formatRuntime(runtime: String): String {
+/**
+ * Null when the runtime is zero or unparseable-as-positive.
+ *
+ * TMDB answers with runtime 0, not null, for a title whose length it does not know yet, so
+ * every branch below could reach the end with a total of zero and render a literal "0m" in the
+ * metadata row. The caller already drops a null.
+ */
+private fun formatRuntime(runtime: String): String? {
     val trimmed = runtime.trim()
     // Already in "Xh Ym" or "Xh" format
     if (trimmed.contains('h') || trimmed.contains('m')) {
@@ -887,6 +898,7 @@ private fun formatRuntime(runtime: String): String {
     }
     // Plain number (minutes)
     val minutes = trimmed.filter { it.isDigit() }.toIntOrNull() ?: return runtime
+    if (minutes <= 0) return null
     return if (minutes >= 60) {
         val hours = minutes / 60
         val mins = minutes % 60

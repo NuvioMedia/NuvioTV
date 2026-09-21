@@ -12,6 +12,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
@@ -81,6 +82,7 @@ import com.nuvio.tv.ui.components.ContinueWatchingOptionsDialog
 import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.LocalContentFocusRequester
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
+import com.nuvio.tv.ui.util.StableList
 import com.nuvio.tv.ui.util.StableRef
 import com.nuvio.tv.ui.util.asStable
 import com.nuvio.tv.ui.util.formatHeroRuntime
@@ -95,6 +97,20 @@ import kotlin.math.roundToInt
 
 // Height of the wide card as a fraction of its width, matching the 2.5:1 shape of the mobile card.
 private const val WIDE_CARD_HEIGHT_RATIO = 0.4f
+
+private class ItemIdentitySnapshot(
+    var byRow: Map<String, StableList<String>> = emptyMap()
+)
+
+internal fun findRelocatedItemIndex(
+    previousIdentities: List<String>?,
+    currentIdentities: List<String>,
+    storedIndex: Int?
+): Int? {
+    if (storedIndex == null) return null
+    val previousIdentity = previousIdentities?.getOrNull(storedIndex) ?: return null
+    return currentIdentities.indexOf(previousIdentity).takeIf { it >= 0 }
+}
 
 @Composable
 fun ModernHomeContent(
@@ -198,9 +214,7 @@ fun ModernHomeContent(
     val loadMoreRequestedTotals = remember { mutableStateMapOf<String, Int>() }
 
     val focusedItemByRow = remember { mutableStateMapOf<String, Int>() }
-    // Item keys of each row as they were when its focused index was last recorded, so the index
-    // can be relocated when an in-place refresh shifts the row instead of pointing at a new item.
-    val previousItemKeysByRow = remember { mutableMapOf<String, List<String>>() }
+    val itemIdentitySnapshot = remember { ItemIdentitySnapshot() }
     val stableFocusedItemByRow = remember { StableRef<MutableMap<String, Int>>(focusedItemByRow) }
     val stableRowListStates = remember { StableRef<MutableMap<String, LazyListState>>(rowListStates) }
     val stableLoadMoreRequestedTotals = remember { StableRef<MutableMap<String, Int>>(loadMoreRequestedTotals) }
@@ -360,31 +374,20 @@ fun ModernHomeContent(
         lastRequestedTrailerFocusKey = selection.focusKey
     }
 
-    // During composition, not in an effect: an effect only lands after the new list is drawn,
-    // so the row would briefly show focus on whatever sits at the old index. The write is
-    // guarded by an inequality, so it settles after one extra pass.
-    previousItemKeysByRow.keys.retainAll(activeRowKeys)
-    carouselRows.list.forEach { row ->
-        // Use item identity (from payload) for relocation instead of composable key,
-        // because composable keys are index-based for shimmer→real stability.
-        val currentIdentities = row.items.list.map { item ->
-            when (val p = item.payload) {
-                is ModernPayload.Catalog -> "${p.itemType}:${p.itemId}"
-                is ModernPayload.CollectionFolder -> "folder:${p.folderId}"
-                is ModernPayload.ContinueWatching -> "cw:${p.item.hashCode()}"
+    val currentItemIdentitiesByRow = carouselLookups.itemIdentitiesByRow.map
+    if (itemIdentitySnapshot.byRow !== currentItemIdentitiesByRow) {
+        currentItemIdentitiesByRow.forEach { (rowKey, currentIdentities) ->
+            val storedIndex = focusedItemByRow[rowKey]
+            val relocatedIndex = findRelocatedItemIndex(
+                previousIdentities = itemIdentitySnapshot.byRow[rowKey]?.list,
+                currentIdentities = currentIdentities.list,
+                storedIndex = storedIndex
+            )
+            if (relocatedIndex != null && relocatedIndex != storedIndex) {
+                focusedItemByRow[rowKey] = relocatedIndex
             }
         }
-        val storedIdx = focusedItemByRow[row.key]
-        val relocated = if (storedIdx != null) {
-            previousItemKeysByRow[row.key]
-                ?.getOrNull(storedIdx)
-                ?.let { currentIdentities.indexOf(it) }
-                ?.takeIf { it >= 0 }
-        } else null
-        if (relocated != null && relocated != storedIdx) {
-            focusedItemByRow[row.key] = relocated
-        }
-        previousItemKeysByRow[row.key] = currentIdentities
+        itemIdentitySnapshot.byRow = currentItemIdentitiesByRow
     }
 
     LaunchedEffect(carouselRows, focusState.hasSavedFocus) {
@@ -649,7 +652,7 @@ fun ModernHomeContent(
     val screenWidth = localConfiguration.screenWidthDp.dp
     val screenHeight = localConfiguration.screenHeightDp.dp
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(NuvioTheme.colors.Background)) {
             val posterCardCornerRadius = remember(uiState.posterCardCornerRadiusDp) { uiState.posterCardCornerRadiusDp.dp }
             val rowHorizontalPadding = 52.dp
 

@@ -102,6 +102,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val cardDepthCastEnabledKey = booleanPreferencesKey("card_depth_cast_enabled")
     private val cardDepthTrailersEnabledKey = booleanPreferencesKey("card_depth_trailers_enabled")
     private val blurUnwatchedEpisodesKey = booleanPreferencesKey("blur_unwatched_episodes")
+    private val startupSplashEnabledKey = booleanPreferencesKey("startup_splash_enabled")
     private val episodeOptionsOverlayStyleKey = stringPreferencesKey("episode_options_overlay_style")
     private val homeImdbRatingsVisibilityKey = stringPreferencesKey("home_imdb_ratings_visibility")
     private val detailImdbRatingsVisibilityKey = stringPreferencesKey("detail_imdb_ratings_visibility")
@@ -218,13 +219,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val sidebarCollapsedByDefault: Flow<Boolean> = profileFlow { prefs ->
-        val modernSidebarEnabled =
-            prefs[modernSidebarEnabledKey] ?: prefs[legacyModernSidebarEnabledKey] ?: false
-        if (modernSidebarEnabled) {
-            false
-        } else {
-            prefs[sidebarCollapsedKey] ?: false
-        }
+        prefs[sidebarCollapsedKey] ?: false
     }
 
     val modernSidebarEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -338,10 +333,14 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[blurUnwatchedEpisodesKey] ?: false
     }
 
+    val startupSplashEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[startupSplashEnabledKey] ?: true
+    }
+
     val episodeOptionsOverlayStyle: Flow<EpisodeOptionsOverlayStyle> = profileFlow { prefs ->
-        val stored = prefs[episodeOptionsOverlayStyleKey] ?: EpisodeOptionsOverlayStyle.ARTWORK.name
+        val stored = prefs[episodeOptionsOverlayStyleKey] ?: EpisodeOptionsOverlayStyle.BLUR.name
         runCatching { EpisodeOptionsOverlayStyle.valueOf(stored) }
-            .getOrDefault(EpisodeOptionsOverlayStyle.ARTWORK)
+            .getOrDefault(EpisodeOptionsOverlayStyle.BLUR)
     }
 
     val homeImdbRatingsVisibility: Flow<HomeImdbRatingsVisibility> = profileFlow { prefs ->
@@ -502,9 +501,7 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     suspend fun setSidebarCollapsedByDefault(collapsed: Boolean) {
         store().edit { prefs ->
-            val modernSidebarEnabled =
-                prefs[modernSidebarEnabledKey] ?: prefs[legacyModernSidebarEnabledKey] ?: false
-            prefs[sidebarCollapsedKey] = if (modernSidebarEnabled) false else collapsed
+            prefs[sidebarCollapsedKey] = collapsed
         }
     }
 
@@ -512,9 +509,6 @@ class LayoutPreferenceDataStore @Inject constructor(
         store().edit { prefs ->
             prefs[modernSidebarEnabledKey] = enabled
             prefs.remove(legacyModernSidebarEnabledKey)
-            if (enabled) {
-                prefs[sidebarCollapsedKey] = false
-            }
         }
     }
 
@@ -688,6 +682,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setBlurUnwatchedEpisodes(enabled: Boolean) {
         store().edit { prefs ->
             prefs[blurUnwatchedEpisodesKey] = enabled
+        }
+    }
+
+    suspend fun setStartupSplashEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[startupSplashEnabledKey] = enabled
         }
     }
 

@@ -165,6 +165,7 @@ internal fun PlaybackSettingsSections(
     onSetDv5ToDv81Enabled: (Boolean) -> Unit,
     onSetDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onSetStripHdr10PlusSei: (Boolean) -> Unit,
+    onSetMpvHi10pGnextSoftwareFallbackEnabled: (Boolean) -> Unit,
     onSetSubtitleSize: (Int) -> Unit,
     onSetSubtitleVerticalOffset: (Int) -> Unit,
     onSetSubtitleBold: (Boolean) -> Unit,
@@ -454,6 +455,21 @@ internal fun PlaybackSettingsSections(
                         enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
                     )
                 }
+
+                item(key = "general_auto_skip_movie_credits") {
+                    ToggleSettingsItem(
+                        icon = Icons.Default.SkipNext,
+                        title = stringResource(R.string.auto_skip_movie_credits),
+                        subtitle = stringResource(R.string.auto_skip_movie_credits_sub),
+                        isChecked = AutoSkipSegmentType.MOVIE_CREDITS in playerSettings.autoSkipSegmentTypes,
+                        onCheckedChange = {
+                            onSetAutoSkipSegmentTypeEnabled(AutoSkipSegmentType.MOVIE_CREDITS, it)
+                        },
+                        onFocused = { focusedSection = PlaybackSection.GENERAL },
+                        enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
+                    )
+                }
+
             }
 
         }
@@ -586,6 +602,8 @@ internal fun PlaybackSettingsSections(
                 onSetDv5ToDv81Enabled = onSetDv5ToDv81Enabled,
                 onSetDv7ToDv81PreserveMappingEnabled = onSetDv7ToDv81PreserveMappingEnabled,
                 onSetStripHdr10PlusSei = onSetStripHdr10PlusSei,
+                onSetMpvHi10pGnextSoftwareFallbackEnabled =
+                    onSetMpvHi10pGnextSoftwareFallbackEnabled,
                 onItemFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
                 enabled = !generalUi.isExternalPlayer,
                 videoExtraItems = {

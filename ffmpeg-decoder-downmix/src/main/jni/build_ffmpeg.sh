@@ -82,6 +82,8 @@ cd "${FFMPEG_MODULE_PATH}/jni/ffmpeg"
     --arch=arm \
     --cpu=armv7-a \
     --cross-prefix="${TOOLCHAIN_PREFIX}/armv7a-linux-androideabi${ANDROID_ABI}-" \
+    --cc="${TOOLCHAIN_PREFIX}/armv7a-linux-androideabi${ANDROID_ABI}-clang" \
+    --cxx="${TOOLCHAIN_PREFIX}/armv7a-linux-androideabi${ANDROID_ABI}-clang++" \
     --nm="${TOOLCHAIN_PREFIX}/llvm-nm" \
     --ar="${TOOLCHAIN_PREFIX}/llvm-ar" \
     --ranlib="${TOOLCHAIN_PREFIX}/llvm-ranlib" \
@@ -97,6 +99,8 @@ make clean
     --arch=aarch64 \
     --cpu=armv8-a \
     --cross-prefix="${TOOLCHAIN_PREFIX}/aarch64-linux-android${ANDROID_ABI_64BIT}-" \
+    --cc="${TOOLCHAIN_PREFIX}/aarch64-linux-android${ANDROID_ABI_64BIT}-clang" \
+    --cxx="${TOOLCHAIN_PREFIX}/aarch64-linux-android${ANDROID_ABI_64BIT}-clang++" \
     --nm="${TOOLCHAIN_PREFIX}/llvm-nm" \
     --ar="${TOOLCHAIN_PREFIX}/llvm-ar" \
     --ranlib="${TOOLCHAIN_PREFIX}/llvm-ranlib" \
@@ -110,6 +114,8 @@ make clean
     --arch=x86 \
     --cpu=i686 \
     --cross-prefix="${TOOLCHAIN_PREFIX}/i686-linux-android${ANDROID_ABI}-" \
+    --cc="${TOOLCHAIN_PREFIX}/i686-linux-android${ANDROID_ABI}-clang" \
+    --cxx="${TOOLCHAIN_PREFIX}/i686-linux-android${ANDROID_ABI}-clang++" \
     --nm="${TOOLCHAIN_PREFIX}/llvm-nm" \
     --ar="${TOOLCHAIN_PREFIX}/llvm-ar" \
     --ranlib="${TOOLCHAIN_PREFIX}/llvm-ranlib" \
@@ -124,6 +130,8 @@ make clean
     --arch=x86_64 \
     --cpu=x86-64 \
     --cross-prefix="${TOOLCHAIN_PREFIX}/x86_64-linux-android${ANDROID_ABI_64BIT}-" \
+    --cc="${TOOLCHAIN_PREFIX}/x86_64-linux-android${ANDROID_ABI_64BIT}-clang" \
+    --cxx="${TOOLCHAIN_PREFIX}/x86_64-linux-android${ANDROID_ABI_64BIT}-clang++" \
     --nm="${TOOLCHAIN_PREFIX}/llvm-nm" \
     --ar="${TOOLCHAIN_PREFIX}/llvm-ar" \
     --ranlib="${TOOLCHAIN_PREFIX}/llvm-ranlib" \

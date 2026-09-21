@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +85,8 @@ import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.GridContinueWatchingSection
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.components.HeroCarousel
+import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.LocalStartupSplashEnabled
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.collectionFolderCardImageUrl
@@ -118,6 +121,7 @@ fun GridHomeContent(
     )
     val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val lastFocusedGridItemKey = remember { mutableStateOf(gridFocusState.focusedItemKey) }
+    var restoredSavedGridFocus by remember { mutableStateOf(false) }
     // Saveable so the rows come back where they were left after navigating away and
     // returning. The restorer falls back to the first card when the remembered one is
     // off screen, so the scroll has to survive too, not just the index.
@@ -187,11 +191,14 @@ fun GridHomeContent(
     val continueWatchingOffset = if (continueWatchingItems.isNotEmpty()) 1 else 0
 
     LaunchedEffect(gridItems, gridFocusState.hasSavedFocus, gridFocusState.focusedItemKey) {
+        // Restore once per screen entry, not again when background catalog loads finish.
+        if (restoredSavedGridFocus) return@LaunchedEffect
         val targetKey = gridFocusState.focusedItemKey ?: return@LaunchedEffect
         if (!gridFocusState.hasSavedFocus) return@LaunchedEffect
         val requester = focusRequesters[targetKey] ?: return@LaunchedEffect
         repeat(2) { withFrameNanos { } }
-        if (runCatching { requester.requestFocus() }.isSuccess) {
+        if (runCatching { requester.requestFocus() }.getOrDefault(false)) {
+            restoredSavedGridFocus = true
             lastFocusedGridItemKey.value = targetKey
         }
     }
@@ -227,6 +234,9 @@ fun GridHomeContent(
             gridFocusState.verticalScrollOffset == 0
     }
     val heroFocusRequester = remember { FocusRequester() }
+    val savedHeroIndex = rememberSaveable { mutableIntStateOf(0) }
+    val shouldRestoreHeroFocus = gridFocusState.hasSavedFocus &&
+        gridFocusState.focusedItemKey == "hero"
     val firstGridItemFocusRequester = remember { FocusRequester() }
     val hasContinueWatching = continueWatchingItems.isNotEmpty()
     val hasStandaloneFocusableGridItem = remember(gridItems) {
@@ -245,6 +255,16 @@ fun GridHomeContent(
 
     // Keyed on the "is there something focusable" booleans (not gridItems.size, which
     // churns per catalog and stole focus back to the top); retries until the target attaches.
+    val heroExpected = uiState.heroSectionEnabled && uiState.heroCatalogKeys.isNotEmpty()
+    val heroResolved = !heroExpected || hasHero
+    var heroDeferTimedOut by remember { mutableStateOf(false) }
+    LaunchedEffect(shouldRequestInitialFocus, heroExpected) {
+        if (!shouldRequestInitialFocus || !heroExpected) return@LaunchedEffect
+        delay(2000)
+        heroDeferTimedOut = true
+    }
+    val deferGridContent = shouldRequestInitialFocus && !heroResolved && !heroDeferTimedOut
+
     LaunchedEffect(
         shouldRequestInitialFocus,
         hasHero,
@@ -263,6 +283,17 @@ fun GridHomeContent(
             withFrameNanos { }
             if (userScrolledGrid) return@LaunchedEffect
             if (runCatching { targetRequester.requestFocus(); true }.getOrDefault(false)) {
+                return@LaunchedEffect
+            }
+        }
+    }
+
+    LaunchedEffect(shouldRestoreHeroFocus, hasHero) {
+        if (!shouldRestoreHeroFocus || !hasHero) return@LaunchedEffect
+        gridState.scrollToItem(0)
+        repeat(8) {
+            withFrameNanos { }
+            if (runCatching { heroFocusRequester.requestFocus(); true }.getOrDefault(false)) {
                 return@LaunchedEffect
             }
         }
@@ -307,7 +338,19 @@ fun GridHomeContent(
         else emptyList()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    if (deferGridContent) {
+        if (!LocalStartupSplashEnabled.current) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                LoadingIndicator()
+            }
+        }
+        return
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(NuvioTheme.colors.Background)) {
         val contentFocusRequester = LocalContentFocusRequester.current
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val gridWidth = maxWidth
@@ -388,7 +431,8 @@ fun GridHomeContent(
                     }
                     val lastKey = lastFocusedGridItemKey.value
                     val fromGrid = lastKey?.let { key -> focusRequesters[key] }
-                    fromCwRow ?: fromGrid ?: FocusRequester.Default
+                    val fromHero = if (hasHero && lastKey == null) heroFocusRequester else null
+                    fromCwRow ?: fromGrid ?: fromHero ?: FocusRequester.Default
                 }
                 .dpadRepeatThrottle(),
             contentPadding = PaddingValues(
@@ -429,9 +473,17 @@ fun GridHomeContent(
                         is GridItem.Hero -> {
                             HeroCarousel(
                                 items = gridItem.items.asStable(),
-                                focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
+                                focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
                                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
-                                onItemFocus = { activeCwRowKey.value = null },
+                                initialActiveIndex = savedHeroIndex.intValue,
+                                onItemFocus = {
+                                    lastFocusedGridItemKey.value = "hero"
+                                    activeCwRowKey.value = null
+                                },
+                                onActiveItemChanged = { item ->
+                                    val idx = gridItem.items.indexOfFirst { it.id == item.id }
+                                    if (idx >= 0) savedHeroIndex.intValue = idx
+                                },
                                 onItemClick = remember(onNavigateToDetail) {
                                     { item ->
                                         onNavigateToDetail(
@@ -607,9 +659,17 @@ fun GridHomeContent(
                     is GridItem.Hero -> {
                         HeroCarousel(
                             items = gridItem.items.asStable(),
-                            focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
+                            focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
                             showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
-                            onItemFocus = { activeCwRowKey.value = null },
+                            initialActiveIndex = savedHeroIndex.intValue,
+                            onItemFocus = {
+                                lastFocusedGridItemKey.value = "hero"
+                                activeCwRowKey.value = null
+                            },
+                            onActiveItemChanged = { item ->
+                                val idx = gridItem.items.indexOfFirst { it.id == item.id }
+                                if (idx >= 0) savedHeroIndex.intValue = idx
+                            },
                             onItemClick = remember(onNavigateToDetail) {
                                 { item ->
                                     onNavigateToDetail(
@@ -707,7 +767,13 @@ fun GridHomeContent(
                         }
                         SeeAllGridCard(
                             posterCardStyle = posterCardStyle,
-                            focusRequester = focusRequester,
+                            focusRequester = focusRequester ?: focusRequesters.getOrPut(itemKey) { FocusRequester() },
+                            onFocused = remember(itemKey) {
+                                {
+                                    lastFocusedGridItemKey.value = itemKey
+                                    activeCwRowKey.value = null
+                                }
+                            },
                             label = catalogSeeAllLabel,
                             onClick = {
                                 onNavigateToCatalogSeeAll(
@@ -831,6 +897,7 @@ private fun SeeAllGridCard(
     onClick: () -> Unit,
     posterCardStyle: PosterCardStyle,
     focusRequester: FocusRequester? = null,
+    onFocused: () -> Unit = {},
     label: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -844,6 +911,7 @@ private fun SeeAllGridCard(
             modifier = Modifier
                 .width(posterCardStyle.width)
                 .height(posterCardStyle.height)
+                .onFocusChanged { if (it.isFocused) onFocused() }
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             shape = CardDefaults.shape(
                 shape = seeAllCardShape

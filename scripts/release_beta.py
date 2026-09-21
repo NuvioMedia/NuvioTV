@@ -386,6 +386,14 @@ def tag_push(
     subprocess.run(["git", "push", "origin", release_tag], cwd=ROOT, check=True)
 
 
+def is_github_prerelease(release_tag: str) -> bool:
+    match = re.fullmatch(
+        r"v?(\d+)\.\d+\.\d+(-[0-9A-Za-z.-]+)?",
+        release_tag,
+    )
+    return bool(match and int(match.group(1)) >= 1 and match.group(2))
+
+
 def create_github_release(
     release_tag: str,
     release_title: str,
@@ -406,9 +414,12 @@ def create_github_release(
         "--notes-file",
         str(notes_path),
     ]
+    prerelease = is_github_prerelease(release_tag)
+    if prerelease:
+        command.append("--prerelease")
     if draft:
         command.append("--draft")
-    else:
+    elif not prerelease:
         command.append("--latest")
     subprocess.run(command, cwd=ROOT, check=True, text=True)
 

@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.local
 
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -140,9 +141,9 @@ data class SubtitleStyleSettings(
     val preferredLanguage: String = "en",
     val isPreferredLanguageSystemDefault: Boolean = true,
     val secondaryPreferredLanguage: String? = null,
-    val useForcedSubtitles: Boolean = false,
+    val useForcedSubtitles: Boolean = true,
     val showOnlyPreferredLanguages: Boolean = false,
-    val stripSdh: Boolean = false,
+    val stripSdh: Boolean = true,
     val size: Int = 120, // Percentage (50-200)
     val verticalOffset: Int = 5, // Percentage from bottom (-20 to 50)
     val bold: Boolean = false,
@@ -220,7 +221,7 @@ data class PlayerSettings(
     val playerPreference: PlayerPreference = PlayerPreference.INTERNAL,
     val internalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER,
     val autoSwitchInternalPlayerOnError: Boolean = false,
-    val useLibass: Boolean = false,
+    val useLibass: Boolean = true,
     val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
     val bufferSettings: BufferSettings = BufferSettings(),
@@ -257,6 +258,7 @@ data class PlayerSettings(
     // Only honored when dv7HandlingMode is OFF or DV81_LIBDOVI.
     val dv7LibdoviModeOverride: Int = -1,
     val stripHdr10PlusSei: Boolean = false,
+    val mpvHi10pGnextSoftwareFallbackEnabled: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
     // Display settings
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
@@ -272,15 +274,15 @@ data class PlayerSettings(
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
     val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = true,
-    val streamAutoPlayReuseBingeGroup: Boolean = true,
-    val streamAutoPlayTimeoutSeconds: Int = 3,
+    val streamAutoPlayReuseBingeGroup: Boolean = false,
+    val streamAutoPlayTimeoutSeconds: Int = 10,
     val stillWatchingEnabled: Boolean = false,
     val stillWatchingEpisodeThreshold: Int = DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD,
     val nextEpisodeThresholdMode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
     val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
-    val streamReuseLastLinkEnabled: Boolean = false,
-    val streamReuseLastLinkCacheHours: Int = 24,
+    val streamReuseLastLinkEnabled: Boolean = true,
+    val streamReuseLastLinkCacheHours: Int = 1,
     val externalPlayerForwardSubtitles: Boolean = false,
     val externalPlayerSendSkipSegments: Boolean = false,
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
@@ -326,7 +328,7 @@ data class PlayerSettings(
         const val DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD = 3
         const val MIN_STILL_WATCHING_EPISODE_THRESHOLD = 2
         const val MAX_STILL_WATCHING_EPISODE_THRESHOLD = 6
-        const val DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 90
+        const val DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 96
         const val MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 80
         const val MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 100
 
@@ -399,7 +401,8 @@ enum class MpvHardwareDecodeMode {
 enum class AutoSkipSegmentType(val storedValue: String) {
     INTRO("intro"),
     RECAP("recap"),
-    OUTRO("outro");
+    OUTRO("outro"),
+    MOVIE_CREDITS("movie-credits");
 
     companion object {
         fun fromStoredValue(value: String): AutoSkipSegmentType? =
@@ -409,6 +412,7 @@ enum class AutoSkipSegmentType(val storedValue: String) {
             "op", "opening", "mixed-op", "intro" -> INTRO
             "recap" -> RECAP
             "ed", "ending", "mixed-ed", "outro", "credits" -> OUTRO
+            "movie-credits" -> MOVIE_CREDITS
             else -> null
         }
     }
@@ -520,6 +524,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val legacyMapDv7ToHevcKey = booleanPreferencesKey("map_dv7_to_hevc")
     private val dv7LibdoviModeOverrideKey = intPreferencesKey("dv7_libdovi_mode_override")
     private val stripHdr10PlusSeiKey = booleanPreferencesKey("strip_hdr10plus_sei")
+    private val mpvHi10pGnextSoftwareFallbackEnabledKey =
+        booleanPreferencesKey("mpv_hi10p_gnext_software_fallback_enabled")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
     private val frameRateMatchingModeKey = stringPreferencesKey("frame_rate_matching_mode")
@@ -806,6 +812,7 @@ class PlayerSettingsDataStore @Inject constructor(
     val playerSettings: Flow<PlayerSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.onStart { migrateProfile(pid) }
     }.map { prefs ->
+        try {
             PlayerSettings(
                 playerPreference = prefs[playerPreferenceKey]?.let {
                     runCatching { PlayerPreference.valueOf(it) }.getOrDefault(PlayerPreference.INTERNAL)
@@ -871,6 +878,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 },
                 dv7LibdoviModeOverride = (prefs[dv7LibdoviModeOverrideKey] ?: -1).coerceIn(-1, 4),
                 stripHdr10PlusSei = prefs[stripHdr10PlusSeiKey] ?: false,
+                mpvHi10pGnextSoftwareFallbackEnabled =
+                    prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
                 frameRateMatchingMode = prefs[frameRateMatchingModeKey]?.let {
                     runCatching { FrameRateMatchingMode.valueOf(it) }.getOrNull()
@@ -896,7 +905,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 streamAutoPlayPreferBingeGroupForNextEpisode =
                     prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] ?: true,
                 streamAutoPlayReuseBingeGroup =
-                    prefs[streamAutoPlayReuseBingeGroupKey] ?: true,
+                    prefs[streamAutoPlayReuseBingeGroupKey] ?: false,
                 streamAutoPlayTimeoutSeconds = PlayerSettings.applyLegacyTimeoutSentinelMigration(
                     prefs[streamAutoPlayTimeoutSecondsKey]
                 ),
@@ -995,6 +1004,10 @@ class PlayerSettingsDataStore @Inject constructor(
                     retainBackBufferFromKeyframe = prefs[retainBackBufferFromKeyframeKey] ?: false
                 )
             )
+        } catch (e: ClassCastException) {
+            Log.w("PlayerSettingsDataStore", "Corrupt preference value, using defaults", e)
+            PlayerSettings()
+        }
         }
 
     val useLibass: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
@@ -1466,6 +1479,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setMpvHardwareDecodeMode(mode: MpvHardwareDecodeMode) {
         store().edit { prefs ->
             prefs[mpvHardwareDecodeModeKey] = mode.name
+        }
+    }
+
+    suspend fun setMpvHi10pGnextSoftwareFallbackEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] = enabled
         }
     }
 

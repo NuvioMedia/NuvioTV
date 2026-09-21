@@ -126,8 +126,11 @@ jobs:
             > release-notes.md || generation_status=$?
 
           if [[ ! -s release-notes.md ]]; then
-            echo "No release-note commits were found." >&2
-            exit 1
+            if [[ "${generation_status}" -ne 0 || "${RELEASE_MODE}" == "publish" ]]; then
+              echo "No release-note commits were found." >&2
+              exit 1
+            fi
+            printf '%s\n' 'Release notes pending. Replace this text before publishing.' > release-notes.md
           fi
 
           {
@@ -201,9 +204,9 @@ jobs:
             fi
           done
 
-      - name: Build full release APKs
+      - name: Test updater and build full release APKs
         if: inputs.mode != 'dry-run'
-        run: ./gradlew :app:assembleFullRelease --stacktrace
+        run: ./gradlew :app:testFullReleaseUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullRelease --stacktrace
 
       - name: Upload build artifacts
         if: inputs.mode != 'dry-run'
@@ -220,6 +223,7 @@ jobs:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
           RELEASE_TITLE: ${{ steps.release.outputs.title }}
           RELEASE_TARGET: ${{ steps.release.outputs.current_bump }}
+          RELEASE_PRERELEASE: ${{ steps.release.outputs.prerelease }}
         run: |
           mapfile -t release_apks < <(find app/build/outputs/apk/full/release -maxdepth 1 -type f -name '*.apk' -print | sort)
           if (( ${#release_apks[@]} == 0 )); then
@@ -233,6 +237,11 @@ jobs:
             --title "${RELEASE_TITLE}"
             --notes-file release-notes.md
           )
+          if [[ "${RELEASE_PRERELEASE}" == "true" ]]; then
+            release_args+=(--prerelease)
+          elif [[ "${RELEASE_MODE}" == "publish" ]]; then
+            release_args+=(--latest)
+          fi
           if [[ "${RELEASE_MODE}" == "draft" ]]; then
             release_args+=(--draft)
           fi

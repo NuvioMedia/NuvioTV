@@ -156,6 +156,26 @@ internal class ParallelRangeDataSource(
             val ceil = readerIdx + prefetchWindow.toLong()
             return chunkIndex in floor..ceil
         }
+
+        internal fun isChunkEvictionCandidate(
+            chunkIndex: Long,
+            readerIdx: Long,
+            protectIndex: Long,
+            prefetchWindow: Int,
+            totalChunks: Long,
+            lastTouchMs: Long,
+            nowMs: Long,
+            isPinnedSide: Boolean = false,
+            backChunks: Long = PLAYHEAD_BACK_CHUNKS,
+            touchGuardMs: Long = EVICTION_TOUCH_GUARD_MS
+        ): Boolean {
+            if (chunkIndex == protectIndex || chunkIndex == readerIdx) return false
+            if (isPinnedSide) return false
+            if (isTailChunk(chunkIndex, totalChunks)) return false
+            if (isInPlayheadWindow(readerIdx, chunkIndex, prefetchWindow, backChunks)) return false
+            if (readerIdx >= 0L && chunkIndex < readerIdx - backChunks) return true
+            return nowMs - lastTouchMs >= touchGuardMs
+        }
         private const val RATE_LIMIT_MAX_BACKOFF_RETRIES = 3
         private const val RATE_LIMIT_BACKOFF_BASE_MS = 500L
         private const val RATE_LIMIT_BACKOFF_CYCLE_CAP_MS = 3_000L
@@ -375,21 +395,27 @@ internal class ParallelRangeDataSource(
                         0L
                     }
                     val evictable = session.futures.keys
-                        .filter { it != protectIndex }
-                        .filter { it != readerIdx }
-                        .filter { now - (session.lastTouch[it] ?: 0L) >= EVICTION_TOUCH_GUARD_MS }
-                        .filter { !isInPlayheadWindow(readerIdx, it, session.prefetchWindow) }
-                        .filter { !isTailChunk(it, totalChunks) }
-                        .filter { !session.pinnedSideChunks.contains(it) }
                         .filter { index ->
                             val future = session.futures[index]
                             future == null || (future.isDone && !future.isCancelled)
+                        }
+                        .filter { index ->
+                            isChunkEvictionCandidate(
+                                chunkIndex = index,
+                                readerIdx = readerIdx,
+                                protectIndex = protectIndex,
+                                prefetchWindow = session.prefetchWindow,
+                                totalChunks = totalChunks,
+                                lastTouchMs = session.lastTouch[index] ?: 0L,
+                                nowMs = now,
+                                isPinnedSide = session.pinnedSideChunks.contains(index)
+                            )
                         }
                     val victim = evictable
                         .filter { readerIdx >= 0L && it < readerIdx }
                         .minByOrNull { session.lastTouch[it] ?: 0L }
                         ?: evictable.maxOrNull()
-                        ?: if (session.futures.size > session.chunkCap + 8) {
+                        ?: if (session.futures.size > session.chunkCap + 2) {
                             session.futures.keys
                                 .filter { it != protectIndex && it != readerIdx }
                                 .filter { !isInPlayheadWindow(readerIdx, it, session.prefetchWindow) }
@@ -398,7 +424,11 @@ internal class ParallelRangeDataSource(
                                     val future = session.futures[index]
                                     future != null && future.isDone && !future.isCancelled
                                 }
-                                .minByOrNull { session.lastTouch[it] ?: 0L }
+                                .let { candidates ->
+                                    candidates.filter { readerIdx >= 0L && it < readerIdx }
+                                        .minByOrNull { session.lastTouch[it] ?: 0L }
+                                        ?: candidates.maxOrNull()
+                                }
                         } else {
                             null
                         }
@@ -992,7 +1022,7 @@ internal class ParallelRangeDataSource(
     ): Long {
         val jitter = (Math.random() * RATE_LIMIT_BACKOFF_JITTER_MS).toLong()
         val header = rl.headerFields.entries
-            .firstOrNull { it.key?.equals("Retry-After", ignoreCase = true) == true }
+            .firstOrNull { it.key.equals("Retry-After", ignoreCase = true) }
             ?.value?.firstOrNull()?.trim()
         val headerMs = ParallelRangeRetryAfter.parseHeaderMs(header)
         if (headerMs != null) {
@@ -1035,7 +1065,7 @@ internal class ParallelRangeDataSource(
         var totalRead = 0
         var consecutiveZeroReads = 0
         try {
-            val byteBufferReader = if (useNativeMemory && ds is androidx.media3.common.ByteBufferDataReader && ds.supportsByteBufferRead()) {
+            val byteBufferReader = if (isEffectiveNative && ds is androidx.media3.common.ByteBufferDataReader) {
                 ds
             } else {
                 null
@@ -1049,8 +1079,17 @@ internal class ParallelRangeDataSource(
                 if (maxRead <= 0) break
 
                 val read = if (byteBufferReader != null) {
-                    buffer.byteBuffer.position(totalRead)
-                    byteBufferReader.read(buffer.byteBuffer, maxRead)
+                    try {
+                        buffer.byteBuffer.position(totalRead)
+                        byteBufferReader.read(buffer.byteBuffer, maxRead)
+                    } catch (_: Exception) {
+                        val r = ds.read(tempArray, 0, maxRead)
+                        if (r != C.RESULT_END_OF_INPUT) {
+                            buffer.byteBuffer.position(totalRead)
+                            buffer.byteBuffer.put(tempArray, 0, r)
+                        }
+                        r
+                    }
                 } else {
                     val r = ds.read(tempArray, 0, maxRead)
                     if (r != C.RESULT_END_OF_INPUT) {
@@ -1112,14 +1151,24 @@ internal class ParallelRangeDataSource(
         return DownloadedChunk(PooledBuffer(null, wrapped), totalRead)
     }
 
+    private val isEffectiveNative: Boolean
+        get() = useNativeMemory || androidx.media3.common.NuvioEngineConfig.get().isNativeAllocationEnabled()
+
     private fun acquireBuffer(): PooledBuffer {
         val pool = globalBufferPool.computeIfAbsent(chunkSize) { ConcurrentLinkedDeque() }
-        val buf = pool.pollLast()
-        if (buf != null) {
-            buf.byteBuffer.clear()
-            return buf
+        val effective = isEffectiveNative
+        while (true) {
+            val buf = pool.pollLast() ?: break
+            val isDirect = buf.allocation != null || buf.byteBuffer.isDirect
+            if (isDirect == effective) {
+                buf.byteBuffer.clear()
+                return buf
+            }
+            if (buf.allocation != null) {
+                androidx.media3.exoplayer.upstream.DefaultAllocatorNative.freeAllocation(buf.allocation)
+            }
         }
-        return if (useNativeMemory) {
+        return if (effective) {
             val allocation = androidx.media3.exoplayer.upstream.DefaultAllocatorNative.createAllocation(chunkSize.toInt())
             val allocBuffer = allocation?.buffer
             if (allocation != null && allocBuffer != null) {

@@ -40,7 +40,25 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
 
-internal data class DebugStat(val label: String, val value: String, val warn: Boolean = false)
+internal enum class DebugStatSeverity {
+    NORMAL,
+    WARNING,
+    DANGER
+}
+
+internal data class DebugStat(
+    val label: String,
+    val value: String,
+    val severity: DebugStatSeverity = DebugStatSeverity.NORMAL
+) {
+    val warn: Boolean get() = severity != DebugStatSeverity.NORMAL
+
+    constructor(label: String, value: String, warn: Boolean) : this(
+        label = label,
+        value = value,
+        severity = if (warn) DebugStatSeverity.WARNING else DebugStatSeverity.NORMAL
+    )
+}
 
 internal data class PlayerSnapshot(
     val aheadMs: Long,
@@ -48,7 +66,8 @@ internal data class PlayerSnapshot(
     val audioBitrate: Int,
     val durationMs: Long,
     val droppedFrames: Int,
-    val fileSizeBytes: Long?
+    val fileSizeBytes: Long?,
+    val nativeMemoryBytes: Long? = null
 )
 
 @OptIn(UnstableApi::class)
@@ -92,7 +111,8 @@ internal fun PlayerDebugStatsOverlay(
                     audioBitrate = runCatching { it.audioFormat?.bitrate }.getOrNull() ?: -1,
                     durationMs = runCatching { it.duration }.getOrNull() ?: -1L,
                     droppedFrames = runCatching { it.videoDecoderCounters?.droppedBufferCount }.getOrNull() ?: 0,
-                    fileSizeBytes = viewModel.getCurrentFileSizeBytes() ?: probedFileSize
+                    fileSizeBytes = viewModel.getCurrentFileSizeBytes() ?: probedFileSize,
+                    nativeMemoryBytes = viewModel.getPlayerNativeMemoryBytes()
                 )
             }
             stats = withContext(Dispatchers.IO) { sampler.sample(snapshot) }
@@ -105,7 +125,7 @@ internal fun PlayerDebugStatsOverlay(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xCC000000))
+            .background(Color(0x99000000))
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
@@ -113,18 +133,23 @@ internal fun PlayerDebugStatsOverlay(
             Row {
                 Text(
                     text = stat.label,
-                    modifier = Modifier.width(72.dp),
+                    modifier = Modifier.width(64.dp),
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF8A8A8A)
                 )
+                val (color, fontWeight) = when (stat.severity) {
+                    DebugStatSeverity.DANGER -> Color(0xFFF44336) to FontWeight.Bold
+                    DebugStatSeverity.WARNING -> Color(0xFFFFB300) to FontWeight.Bold
+                    DebugStatSeverity.NORMAL -> Color(0xFFF0F0F0) to FontWeight.Normal
+                }
                 Text(
                     text = stat.value,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
-                    fontWeight = if (stat.warn) FontWeight.Bold else FontWeight.Normal,
-                    color = if (stat.warn) Color(0xFFFFB300) else Color(0xFFF0F0F0)
+                    fontWeight = fontWeight,
+                    color = color
                 )
             }
         }
@@ -134,7 +159,8 @@ internal fun PlayerDebugStatsOverlay(
 @OptIn(UnstableApi::class)
 private class DebugStatsSampler(context: Context) {
 
-    private val powerManager = context.applicationContext
+    private val appContext = context.applicationContext
+    private val powerManager = appContext
         .getSystemService(Context.POWER_SERVICE) as? PowerManager
     private val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
     private val clockTicks = runCatching { Os.sysconf(OsConstants._SC_CLK_TCK) }
@@ -147,6 +173,8 @@ private class DebugStatsSampler(context: Context) {
     private var lastRxAtMs = 0L
     private var bufferTotal = 0.0
     private var bufferSamples = 0
+    private var networkTotal = 0.0
+    private var networkSamples = 0
     private var cpuTotal = 0.0
     private var cpuSamples = 0
     private var faultTotal = 0.0
@@ -165,16 +193,16 @@ private class DebugStatsSampler(context: Context) {
             lastProcAtMs = now
         }
 
-        add(memoryStat())
+        add(memoryStat(snapshot))
         add(bufferStat(snapshot))
         add(bitrateStat(snapshot))
         add(networkStat())
         add(droppedStat(snapshot))
         addAll(thermalStats())
-    }
+    }.filterNot { it.value == UNAVAILABLE }
 
     private fun cpuStat(proc: ProcTimes?, elapsedSeconds: Double): DebugStat {
-        if (proc == null) return DebugStat("cpu", "n/a")
+        if (proc == null) return DebugStat("cpu", UNAVAILABLE)
         if (lastCpuTicks < 0L || elapsedSeconds <= 0.0) return DebugStat("cpu", "...")
         val cpuSeconds = (proc.cpuTicks - lastCpuTicks).toDouble() / clockTicks
         val percent = cpuSeconds / elapsedSeconds / cores * 100.0
@@ -189,7 +217,7 @@ private class DebugStatsSampler(context: Context) {
 
     // Faults that had to hit storage, so a high rate means the device is paging rather than playing.
     private fun majorFaultStat(proc: ProcTimes?, elapsedSeconds: Double): DebugStat {
-        if (proc == null) return DebugStat("paging", "n/a")
+        if (proc == null) return DebugStat("paging", UNAVAILABLE)
         if (lastMajorFaults < 0L || elapsedSeconds <= 0.0) return DebugStat("paging", "...")
         val perSecond = (proc.majorFaults - lastMajorFaults).toDouble() / elapsedSeconds
         faultTotal += perSecond
@@ -213,21 +241,42 @@ private class DebugStatsSampler(context: Context) {
     }.getOrNull()
 
     // Performance mode puts the player buffers in native memory, so the java heap alone hides them.
-    private fun memoryStat(): DebugStat {
+    private fun memoryStat(snapshot: PlayerSnapshot?): DebugStat {
         val runtime = Runtime.getRuntime()
         val usedMb = (runtime.totalMemory() - runtime.freeMemory()) / MB
         val maxMb = runtime.maxMemory() / MB
-        val nativeMb = runCatching { Debug.getNativeHeapAllocatedSize() / MB }.getOrDefault(-1L)
-        val nativeText = if (nativeMb < 0L) "" else "   native $nativeMb MB"
+        val playerNativeBytes = snapshot?.nativeMemoryBytes
+        val nativeMb = if (playerNativeBytes != null && playerNativeBytes >= 0L) {
+            playerNativeBytes / MB
+        } else {
+            runCatching { Debug.getNativeHeapAllocatedSize() / MB }.getOrDefault(-1L)
+        }
+        val targetBufferMb = NuvioExoPlayerPerformanceHelper.calculatedMemoryUsageMb
+        val nativeText = when {
+            nativeMb < 0L -> ""
+            targetBufferMb > 0 -> "   native $nativeMb / $targetBufferMb MB"
+            else -> "   native $nativeMb MB"
+        }
+        val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(appContext)
+        val warningLimitMb = NuvioExoPlayerPerformanceHelper.getWarningNativeMemoryLimitMb(appContext)
+
+        val severity = when {
+            nativeMb > 0L && nativeMb > warningLimitMb -> DebugStatSeverity.DANGER
+            nativeMb > 0L && nativeMb > safeLimitMb -> DebugStatSeverity.WARNING
+            maxMb > 0L && usedMb.toDouble() / maxMb >= 0.90 -> DebugStatSeverity.DANGER
+            maxMb > 0L && usedMb.toDouble() / maxMb >= 0.80 -> DebugStatSeverity.WARNING
+            else -> DebugStatSeverity.NORMAL
+        }
+
         return DebugStat(
             label = "memory",
             value = "$usedMb / $maxMb MB$nativeText",
-            warn = maxMb > 0L && usedMb.toDouble() / maxMb >= 0.85
+            severity = severity
         )
     }
 
     private fun bufferStat(snapshot: PlayerSnapshot?): DebugStat {
-        if (snapshot == null) return DebugStat("buffer", "n/a")
+        if (snapshot == null) return DebugStat("buffer", UNAVAILABLE)
         val ahead = snapshot.aheadMs / 1000.0
         bufferTotal += ahead
         bufferSamples++
@@ -254,14 +303,14 @@ private class DebugStatsSampler(context: Context) {
         }
         val video = snapshot?.videoBitrate ?: -1
         val audio = snapshot?.audioBitrate ?: -1
-        if (video <= 0 && audio <= 0) return DebugStat("bitrate", "n/a")
+        if (video <= 0 && audio <= 0) return DebugStat("bitrate", UNAVAILABLE)
         val totalMbps = (video.coerceAtLeast(0) + audio.coerceAtLeast(0)) / 1_000_000.0
         return DebugStat("bitrate", String.format(Locale.US, "%.1f Mbps tracks", totalMbps))
     }
 
     private fun networkStat(): DebugStat {
         val rx = runCatching { TrafficStats.getUidRxBytes(Process.myUid()) }.getOrDefault(-1L)
-        if (rx < 0L) return DebugStat("network", "n/a")
+        if (rx < 0L) return DebugStat("network", UNAVAILABLE)
         val now = System.currentTimeMillis()
         val previousRx = lastRxBytes
         val previousAt = lastRxAtMs
@@ -269,7 +318,17 @@ private class DebugStatsSampler(context: Context) {
         lastRxAtMs = now
         if (previousRx < 0L || now <= previousAt) return DebugStat("network", "...")
         val mbps = (rx - previousRx).toDouble() / ((now - previousAt) / 1000.0) * 8.0 / 1_000_000.0
-        return DebugStat("network", String.format(Locale.US, "%.1f Mbps", mbps))
+        networkTotal += mbps
+        networkSamples++
+        return DebugStat(
+            label = "network",
+            value = String.format(
+                Locale.US,
+                "%.1f Mbps   avg %.1f",
+                mbps,
+                networkTotal / networkSamples
+            )
+        )
     }
 
     private fun droppedStat(snapshot: PlayerSnapshot?): DebugStat {
@@ -279,19 +338,19 @@ private class DebugStatsSampler(context: Context) {
 
     // Headroom is normalised so 1.00 is the throttling point; the status line only matters once it trips.
     private fun thermalStats(): List<DebugStat> {
-        val pm = powerManager ?: return listOf(DebugStat("thermal", "n/a"))
+        val pm = powerManager ?: return listOf(DebugStat("thermal", UNAVAILABLE))
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            return listOf(DebugStat("thermal", "needs api 30"))
+            return listOf(DebugStat("thermal", UNAVAILABLE))
         }
         val headroom = runCatching { pm.getThermalHeadroom(0) }.getOrDefault(Float.NaN)
         val status = runCatching { pm.currentThermalStatus }.getOrDefault(PowerManager.THERMAL_STATUS_NONE)
         val headroomStat = DebugStat(
             label = "thermal",
-            value = if (headroom.isNaN()) "n/a" else String.format(Locale.US, "%.2f / 1.00", headroom),
+            value = if (headroom.isNaN()) UNAVAILABLE else String.format(Locale.US, "%.2f / 1.00", headroom),
             warn = !headroom.isNaN() && headroom >= 0.9f
         )
         val throttleName = throttleName(status) ?: return listOf(headroomStat)
-        return listOf(headroomStat, DebugStat("throttling", throttleName, warn = true))
+        return listOf(headroomStat, DebugStat("throttle", throttleName, warn = true))
     }
 
     private fun throttleName(status: Int): String? = when (status) {
@@ -308,5 +367,9 @@ private class DebugStatsSampler(context: Context) {
 
     private companion object {
         const val MB = 1024L * 1024L
+
+        // A row carrying this is one the device will never fill in, so it is dropped rather than
+        // taking a line; the warmup placeholder is left alone so no row appears a second later.
+        const val UNAVAILABLE = "n/a"
     }
 }

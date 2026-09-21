@@ -815,7 +815,7 @@ class TmdbMetadataService(
             )
 
             // Show in release order
-            val sortedParts = rawParts.sortedBy { it.releaseDate ?: "9999" }
+            val sortedParts = rawParts.sortedBy { it.releaseDate?.takeIf(String::isNotBlank) ?: "9999" }
 
             val includeImageLanguage = buildString {
                 append(normalizedLanguage.substringBefore("-"))

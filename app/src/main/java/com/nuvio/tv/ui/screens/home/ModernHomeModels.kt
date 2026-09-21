@@ -134,6 +134,7 @@ data class CarouselRowLookups(
     val fallbackBackdropByRow: StableMap<String, String>,
     val activeRowKeys: StableSet<String>,
     val activeItemKeysByRow: StableMap<String, Set<String>>,
+    val itemIdentitiesByRow: StableMap<String, StableList<String>>,
     val activeCatalogItemIds: StableSet<String>
 )
 
@@ -148,6 +149,7 @@ data class ModernHomePresentationState(
         fallbackBackdropByRow = StableMap(),
         activeRowKeys = StableSet(),
         activeItemKeysByRow = StableMap(),
+        itemIdentitiesByRow = StableMap(),
         activeCatalogItemIds = StableSet()
     )
 )

@@ -105,6 +105,9 @@ fun CatalogRowSection(
     /** Persisted focus index from parent — used only by focusRestorer to
      *  survive LazyColumn recycling.  Does NOT trigger a focus request. */
     restorerFocusedIndex: Int = -1,
+    /** Clears the remembered focus index when this changes, including when the new content has
+     *  the same items. */
+    focusResetToken: String? = null,
     onItemFocused: (itemIndex: Int) -> Unit = {},
     rowFocusRequester: FocusRequester? = null,
     /** FocusRequester that will be attached to the first-or-last-focused card.
@@ -115,8 +118,33 @@ fun CatalogRowSection(
 ) {
     val catalogRowKey = remember(catalogRow) { catalogRow.stableKey() }
     val rowItemIdentities = remember(catalogRow.items) { catalogRow.stableItemKeys() }
+
+    // Item keys carry item identity, which the placeholder the ring sits on loses when real data
+    // arrives: its key changes and Compose tears the focused node down. Lend that one card a
+    // positional key for as long as the ring can be on it, so the node is reused instead.
+    //
+    // Armed from the item id, not a loading flag: a lazily loaded catalog composes its row
+    // before loading starts and would never see the flag go up.
+    val firstCardKey = remember(catalogRowKey) { catalogRowKey + "__first" }
+    val firstIsPlaceholder = catalogRow.items.firstOrNull()?.id?.startsWith("__placeholder_") == true
+    val pinFirstCard = remember(catalogRowKey) { mutableStateOf(firstIsPlaceholder) }
+    val pinSpent = remember(catalogRowKey) { mutableStateOf(false) }
+    // Lent to the card, not the slot: slot 0 would hand the key to whatever lands there.
+    val pinnedItemKey = remember(catalogRowKey) { mutableStateOf<String?>(null) }
+    if (firstIsPlaceholder && !pinSpent.value) pinFirstCard.value = true
+    if (pinFirstCard.value && !firstIsPlaceholder && pinnedItemKey.value == null) {
+        pinnedItemKey.value = rowItemIdentities.firstOrNull()
+    }
+
     fun rowItemFocusKey(index: Int, item: MetaPreview): String {
-        return "${catalogRowKey}_$index"
+        val identity = rowItemIdentities.getOrElse(index) { catalogRow.stableItemKey(item) }
+        if (!pinFirstCard.value) return identity
+        val pinned = pinnedItemKey.value
+        return when {
+            pinned != null -> if (identity == pinned) firstCardKey else identity
+            index == 0 -> firstCardKey
+            else -> identity
+        }
     }
 
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
@@ -128,6 +156,12 @@ fun CatalogRowSection(
     // Item keys as they were when lastFocusedItemIndex was recorded, so the index can be
     // relocated when the row changes instead of pointing at whatever took that slot.
     val previousRowItemKeys = remember { mutableStateOf<List<String>>(emptyList()) }
+    // Update during composition so focusRestorer sees the reset immediately.
+    val lastFocusResetToken = remember { mutableStateOf(focusResetToken) }
+    if (lastFocusResetToken.value != focusResetToken) {
+        lastFocusResetToken.value = focusResetToken
+        lastFocusedItemIndex.intValue = -1
+    }
     // Runs during composition, not in an effect: focusRestorer below is driven by the user and
     // can fire before an effect would have relocated the index, which would restore focus onto
     // whatever took that slot.
@@ -152,6 +186,13 @@ fun CatalogRowSection(
         blockingFocusExit.value = true
     }
     wasPlaceholderRef.value = firstItemId?.startsWith("__placeholder_") == true
+
+    // Released once the ring has left the row: swapping the node earlier is visible for nothing.
+    if (pinFirstCard.value && !firstIsPlaceholder && !rowHasFocusRef.value) {
+        pinFirstCard.value = false
+        pinnedItemKey.value = null
+        pinSpent.value = true
+    }
 
     LaunchedEffect(blockingFocusExit.value) {
         if (!blockingFocusExit.value) return@LaunchedEffect

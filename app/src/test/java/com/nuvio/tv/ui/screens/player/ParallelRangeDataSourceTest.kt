@@ -262,4 +262,134 @@ class ParallelRangeDataSourceTest {
             )
         )
     }
+
+    @Test
+    fun `isChunkEvictionCandidate never evicts readerIdx or protectIndex`() {
+        // Chunk is readerIdx
+        assertEquals(
+            false,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 5L,
+                readerIdx = 5L,
+                protectIndex = 0L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 0L,
+                nowMs = 100_000L
+            )
+        )
+        // Chunk is protectIndex
+        assertEquals(
+            false,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 5L,
+                readerIdx = 10L,
+                protectIndex = 5L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 0L,
+                nowMs = 100_000L
+            )
+        )
+    }
+
+    @Test
+    fun `isChunkEvictionCandidate protects tail chunks for slow mp4`() {
+        // Total chunks = 100, tail is 96..99
+        assertEquals(
+            false,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 98L,
+                readerIdx = 10L,
+                protectIndex = 10L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 0L,
+                nowMs = 100_000L
+            )
+        )
+    }
+
+    @Test
+    fun `isChunkEvictionCandidate protects playhead window`() {
+        // readerIdx = 10, backChunks = 2, prefetchWindow = 2 -> window is 8..12
+        for (ci in 8L..12L) {
+            assertEquals(
+                false,
+                ParallelRangeDataSource.isChunkEvictionCandidate(
+                    chunkIndex = ci,
+                    readerIdx = 10L,
+                    protectIndex = -1L,
+                    prefetchWindow = 2,
+                    totalChunks = 100L,
+                    lastTouchMs = 0L,
+                    nowMs = 100_000L
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `isChunkEvictionCandidate immediately evicts chunks behind playhead back window`() {
+        // readerIdx = 10, backChunks = 2 -> chunks < 8 are behind playhead
+        // Even if touched just 100ms ago (well within 15s touch guard), chunk 7 is evictable!
+        assertEquals(
+            true,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 7L,
+                readerIdx = 10L,
+                protectIndex = -1L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 99_900L,
+                nowMs = 100_000L
+            )
+        )
+        assertEquals(
+            true,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 0L,
+                readerIdx = 10L,
+                protectIndex = -1L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 99_900L,
+                nowMs = 100_000L
+            )
+        )
+    }
+
+    @Test
+    fun `isChunkEvictionCandidate respects touch guard for ahead chunks`() {
+        // readerIdx = 10, prefetch = 2 -> chunk 15 is far ahead
+        // If touched recently (within 15s touch guard), not evictable yet
+        assertEquals(
+            false,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 15L,
+                readerIdx = 10L,
+                protectIndex = -1L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 95_000L,
+                nowMs = 100_000L, // 5s ago < 15s guard
+                touchGuardMs = 15_000L
+            )
+        )
+        // If touched > 15s ago, evictable
+        assertEquals(
+            true,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 15L,
+                readerIdx = 10L,
+                protectIndex = -1L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 80_000L,
+                nowMs = 100_000L, // 20s ago >= 15s guard
+                touchGuardMs = 15_000L
+            )
+        )
+    }
 }
+

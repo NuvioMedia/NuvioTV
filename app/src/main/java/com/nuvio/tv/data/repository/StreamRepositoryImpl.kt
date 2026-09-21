@@ -23,6 +23,7 @@ import com.nuvio.tv.domain.model.ProxyHeaders
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBehaviorHints
+import com.nuvio.tv.core.streams.supportsStreamResource
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.StreamRepository
@@ -190,7 +191,7 @@ class StreamRepositoryImpl @Inject constructor(
                 streamAddons.forEach { addon ->
                     launch {
                         try {
-                            val streamsResult = getStreamsFromAddon(addon.baseUrl, type, videoId)
+                            val streamsResult = getStreamsFromAddon(addon, type, videoId)
                             when (streamsResult) {
                                 is NetworkResult.Success -> {
                                     if (streamsResult.data.isNotEmpty()) {
@@ -523,17 +524,24 @@ class StreamRepositoryImpl @Inject constructor(
             ytId = null,
             externalUrl = null,
             quality = quality,
-            qualityValue = parseQualityValue(quality)
+            qualityValue = parseQualityValue(quality),
+            subtitles = subtitles
         )
     }
 
-    private fun Stream.dedupKey(): String =
-        infoHash?.lowercase()?.let { hash -> "$hash:${fileIdx ?: ""}" }
+    private fun Stream.dedupKey(): String {
+        val base = infoHash?.lowercase()?.let { hash -> "$hash:${fileIdx ?: ""}" }
             ?: clientResolve?.infoHash?.lowercase()?.let { hash -> "$hash:${clientResolve.fileIdx}" }
             ?: url
             ?: externalUrl
             ?: ytId
             ?: "${addonName}:${name}:${title}"
+        val nameSuffix = if (base == url) {
+            val discriminator = name?.takeIf { it.isNotBlank() }
+            if (discriminator != null) "|$discriminator" else ""
+        } else ""
+        return "$base$nameSuffix"
+    }
 
     /**
      * Build a description string from scraper result
@@ -561,11 +569,11 @@ class StreamRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getStreamsFromAddon(
-        baseUrl: String,
+        addon: Addon,
         type: String,
         videoId: String
     ): NetworkResult<List<Stream>> {
-        val cleanBaseUrl = baseUrl.trimEnd('/')
+        val cleanBaseUrl = addon.baseUrl.trimEnd('/')
         val queryStart = cleanBaseUrl.indexOf('?')
         val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
         val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
@@ -574,16 +582,12 @@ class StreamRepositoryImpl @Inject constructor(
         val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"
         Log.d(TAG, "Fetching streams type=$type videoId=$videoId url=$streamUrl")
 
-        // First, get addon info for name and logo
-        val addonResult = addonRepository.fetchAddon(baseUrl)
-        val addonName = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.displayName
-            else -> context.getString(com.nuvio.tv.R.string.stream_addon_unknown)
-        }
-        val addonLogo = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.logo
-            else -> null
-        }
+        // Display info comes from the installed addon the caller already holds. Calling
+        // addonRepository.fetchAddon() here caused an unconditional manifest GET ahead of every
+        // queried addon's stream request: fetchAddon is the low-level fetch that does not consult
+        // the cache, so this sidestepped the manifest-cache policy in AddonRepositoryImpl.
+        val addonName = addon.displayName
+        val addonLogo = addon.logo
 
         return when (val result = safeApiCall(context) { api.getStreams(streamUrl) }) {
             is NetworkResult.Success -> {
@@ -601,24 +605,6 @@ class StreamRepositoryImpl @Inject constructor(
                 result
             }
             NetworkResult.Loading -> NetworkResult.Loading
-        }
-    }
-
-    /**
-     * Check if addon supports stream resource for the given type and video id.
-     * Respects the resource-level idPrefixes declared in the addon manifest,
-     * falling back to the top-level addon idPrefixes if the resource doesn't
-     * declare its own.
-     */
-    private fun Addon.supportsStreamResource(type: String, videoId: String): Boolean {
-        return resources.any { resource ->
-            resource.name == "stream" &&
-            (resource.types.isEmpty() || resource.types.contains(type)) &&
-            run {
-                val prefixes = resource.idPrefixes?.takeIf { it.isNotEmpty() }
-                    ?: idPrefixes.takeIf { it.isNotEmpty() }
-                prefixes == null || prefixes.any { prefix -> videoId.startsWith(prefix) }
-            }
         }
     }
 

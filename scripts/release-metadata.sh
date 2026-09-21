@@ -78,8 +78,24 @@ if (( 10#$current_version_code <= 10#$previous_version_code )); then
 fi
 
 release_title="$current_version"
-if [[ "$current_version" == *-beta ]]; then
-    release_title="Beta ${current_version%-beta}"
+version_core="${current_version%%-*}"
+version_suffix=""
+if [[ "$current_version" == *-* ]]; then
+    version_suffix="${current_version#*-}"
+fi
+if [[ "$version_suffix" == "beta" ]]; then
+    release_title="Beta ${version_core}"
+elif [[ "$version_suffix" == beta.* ]]; then
+    release_title="Beta ${version_core} (${version_suffix#beta.})"
+elif [[ "$version_suffix" == "rc" ]]; then
+    release_title="Release Candidate ${version_core}"
+elif [[ "$version_suffix" == rc.* ]]; then
+    release_title="Release Candidate ${version_core} (${version_suffix#rc.})"
+fi
+release_prerelease="false"
+version_major="${current_version%%.*}"
+if [[ -n "$version_suffix" ]] && (( 10#$version_major >= 1 )); then
+    release_prerelease="true"
 fi
 current_bump_subject="$(git log -1 --format='%s' "$current_bump")"
 current_bump_subject_lower="$(printf '%s' "$current_bump_subject" | tr '[:upper:]' '[:lower:]')"
@@ -91,6 +107,7 @@ printf 'version=%s\n' "$current_version"
 printf 'version_code=%s\n' "$current_version_code"
 printf 'tag=%s\n' "$current_version"
 printf 'title=%s\n' "$release_title"
+printf 'prerelease=%s\n' "$release_prerelease"
 printf 'release_commit=%s\n' "$(git rev-parse "${target_ref}^{commit}")"
 printf 'current_bump=%s\n' "$current_bump"
 printf 'previous_version=%s\n' "$previous_version"

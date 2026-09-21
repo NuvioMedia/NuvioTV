@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,7 +81,10 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.domain.model.CardDepthSurface
+import com.nuvio.tv.ui.screens.home.ClassicFocusArtwork
+import com.nuvio.tv.ui.screens.home.ClassicFocusGradientBackdrop
 import com.nuvio.tv.ui.screens.home.ClassicHomeContent
+import com.nuvio.tv.ui.screens.home.toClassicFocusArtwork
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 import com.nuvio.tv.ui.screens.home.GridHomeContent
 import com.nuvio.tv.ui.screens.home.HeroBackdropState
@@ -563,7 +567,14 @@ private fun RowsContent(
     onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
     isItemWatched: (MetaPreview) -> Boolean = { false },
     onItemFocus: (MetaPreview) -> Unit = {},
-    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> }
+    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
+    posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
+    focusedPosterBackdropExpandEnabled: Boolean = false,
+    focusedPosterBackdropExpandDelaySeconds: Int = 3,
+    focusedPosterBackdropTrailerEnabled: Boolean = false,
+    focusedPosterBackdropTrailerMuted: Boolean = true,
+    trailerPreviewUrls: Map<String, String> = emptyMap(),
+    trailerPreviewAudioUrls: Map<String, String> = emptyMap()
 ) {
     val sourceTabs = uiState.tabs.filter { tab ->
         if (tab.isAllTab) return@filter false
@@ -606,11 +617,15 @@ private fun RowsContent(
         }
     }
 
+    // Keep a stable ref to the latest sourceTabs so DisposableEffect.onDispose
+    // (which captures its closure only once) can read the most recent data.
+    val currentSourceTabs by rememberUpdatedState(sourceTabs)
+
     DisposableEffect(Unit) {
         onDispose {
             val focusedRowKey = currentFocusedRowKey.value
             val itemKeys = mutableMapOf<String, String>()
-            sourceTabs.forEach { tab ->
+            currentSourceTabs.forEach { tab ->
                 val row = tab.catalogRow
                 if (row != null) {
                     val rowKey = row.key()
@@ -627,7 +642,7 @@ private fun RowsContent(
                 itemKeys,
                 rowStates.mapValues { it.value.firstVisibleItemIndex },
                 -1, // rowIndex
-                0   // itemIndex
+                rowFocusedItemIndex[focusedRowKey] ?: 0 // itemIndex — positional fallback
             )
         }
     }
@@ -758,7 +773,7 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(PosterCardDefaults.Style.height),
+                                    .height(posterCardStyle.height),
                                 contentAlignment = Alignment.Center
                             ) {
                                 LoadingIndicator()
@@ -776,7 +791,7 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(PosterCardDefaults.Style.height),
+                                    .height(posterCardStyle.height),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(text = tab.error, color = NuvioTheme.colors.TextSecondary)
@@ -794,6 +809,13 @@ private fun RowsContent(
                             catalogRow = catalogRow,
                             onItemClick = onNavigateToDetail,
                             onItemLongPress = onItemLongPress,
+                            posterCardStyle = posterCardStyle,
+                            focusedPosterBackdropExpandEnabled = focusedPosterBackdropExpandEnabled,
+                            focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
+                            focusedPosterBackdropTrailerEnabled = focusedPosterBackdropTrailerEnabled,
+                            focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
+                            trailerPreviewUrls = trailerPreviewUrls,
+                            trailerPreviewAudioUrls = trailerPreviewAudioUrls,
                             onSeeAll = {
                                 onLoadMoreCatalog(
                                     catalogRow.catalogId,
@@ -812,15 +834,14 @@ private fun RowsContent(
                             rowFocusRequester = rowFocusRequester,
                             entryFocusRequester = rowEntryFocusRequesters.getOrPut(rowKey) { FocusRequester() },
                             enableRowFocusRestorer = true,
-                            focusedItemIndex = if (
-                                focusState.hasSavedFocus &&
-                                focusState.focusedRowIndex == index
-                            ) {
-                                focusState.focusedItemIndex
-                            } else {
-                                -1
+                            focusedItemIndex = when {
+                                focusState.hasSavedFocus && focusState.focusedRowKey == rowKey ->
+                                    focusState.focusedItemIndex
+                                !focusState.hasSavedFocus && index == 0 -> 0
+                                else -> -1
                             },
-                            restorerFocusedIndex = rowFocusedItemIndex[rowKey] ?: -1,
+                            restorerFocusedIndex = rowFocusedItemIndex[rowKey]
+                                ?: if (focusState.hasSavedFocus && focusState.focusedRowKey == rowKey) focusState.focusedItemIndex else -1,
                             onItemFocused = { itemIndex ->
                                 currentFocusedRowKey.value = rowKey
                                 rowFocusedItemIndex[rowKey] = itemIndex
@@ -879,16 +900,56 @@ private fun FollowLayoutContent(
 
     when (uiState.homeLayout) {
         HomeLayout.CLASSIC -> {
-            RowsContent(
-                uiState = uiState,
-                focusState = focusState,
-                onNavigateToDetail = onNavigateToDetail,
-                onLoadMoreCatalog = onLoadMoreCatalog,
-                onSaveFocusState = onSaveFocusState,
-                isItemWatched = isItemWatched,
-                onItemFocus = onItemFocus,
-                onItemLongPress = onCatalogItemLongPress
-            )
+            val classicPosterCardStyle = remember(posterCardStyle) {
+                val scale = 1.35f // matches CLASSIC_CATALOG_POSTER_SCALE in ClassicHomeContent
+                posterCardStyle.copy(
+                    width = posterCardStyle.width * scale,
+                    height = posterCardStyle.height * scale
+                )
+            }
+            var focusedArtwork by remember { mutableStateOf<ClassicFocusArtwork?>(null) }
+            val classicFocusGradientEnabled = homeState.classicFocusGradientEnabled
+            val focusedPosterBackdropExpandEnabled = homeState.focusedPosterBackdropExpandEnabled
+
+            LaunchedEffect(classicFocusGradientEnabled) {
+                if (!classicFocusGradientEnabled) {
+                    focusedArtwork = null
+                }
+            }
+
+            val handleItemFocus: (MetaPreview) -> Unit = remember(classicFocusGradientEnabled, focusedPosterBackdropExpandEnabled) {
+                { item ->
+                    if (classicFocusGradientEnabled) {
+                        focusedArtwork = item.toClassicFocusArtwork(focusedPosterBackdropExpandEnabled)
+                    }
+                    onItemFocus(item)
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                ClassicFocusGradientBackdrop(
+                    artworkProvider = { focusedArtwork },
+                    enabled = classicFocusGradientEnabled,
+                    modifier = Modifier.fillMaxSize()
+                )
+                RowsContent(
+                    uiState = uiState,
+                    focusState = focusState,
+                    onNavigateToDetail = onNavigateToDetail,
+                    onLoadMoreCatalog = onLoadMoreCatalog,
+                    onSaveFocusState = onSaveFocusState,
+                    isItemWatched = isItemWatched,
+                    onItemFocus = handleItemFocus,
+                    onItemLongPress = onCatalogItemLongPress,
+                    posterCardStyle = classicPosterCardStyle,
+                    focusedPosterBackdropExpandEnabled = focusedPosterBackdropExpandEnabled,
+                    focusedPosterBackdropExpandDelaySeconds = homeState.focusedPosterBackdropExpandDelaySeconds,
+                    focusedPosterBackdropTrailerEnabled = homeState.focusedPosterBackdropTrailerEnabled,
+                    focusedPosterBackdropTrailerMuted = homeState.focusedPosterBackdropTrailerMuted,
+                    trailerPreviewUrls = trailerPreviewUrls,
+                    trailerPreviewAudioUrls = trailerPreviewAudioUrls
+                )
+            }
         }
         HomeLayout.GRID -> {
             Column(modifier = Modifier.fillMaxSize()) {

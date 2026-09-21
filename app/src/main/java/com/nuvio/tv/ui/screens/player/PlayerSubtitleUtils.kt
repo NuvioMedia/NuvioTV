@@ -5,6 +5,7 @@ import android.text.Spanned
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.text.Cue
 import com.nuvio.tv.ui.util.LANGUAGE_OVERRIDES
+import com.nuvio.tv.ui.util.resolveLanguageNameAlias
 
 internal object PlayerSubtitleUtils {
     fun normalizeLanguageCode(lang: String): String {
@@ -40,8 +41,19 @@ internal object PlayerSubtitleUtils {
             return "es"
         }
 
+        if (containsAny("bahasa indonesia", "indonesian", "indonesia")) {
+            return "id"
+        }
+        if (containsAny("bahasa malaysia", "bahasa melayu", "malaysian")) {
+            return "ms"
+        }
+
+        resolveLanguageNameAlias(tokenized)?.let { return it }
+
         // LANGUAGE_OVERRIDES uses pt-BR (mixed case) — normalize to lowercase for consistency
-        return LANGUAGE_OVERRIDES[code]?.lowercase() ?: normalizedCode
+        return LANGUAGE_OVERRIDES[code]?.lowercase()
+            ?: LANGUAGE_OVERRIDES[normalizedCode]?.lowercase()
+            ?: normalizedCode
     }
 
     fun matchesLanguageCode(language: String?, target: String): Boolean {
@@ -116,6 +128,12 @@ internal object PlayerSubtitleUtils {
             return baseLang
         }
 
+        if (baseLang == "ms" || baseLang == "msa" || baseLang == "may") {
+            val hasIndonesian = INDONESIAN_TAGS.any { haystack.contains(it) }
+            if (hasIndonesian) return "id"
+            return baseLang
+        }
+
         return baseLang
     }
 
@@ -131,6 +149,9 @@ internal object PlayerSubtitleUtils {
     )
     internal val CASTILIAN_TAGS = listOf(
         "es-es", "es_es", "castilian", "castellano", "spain", "españa", "espana", "iberian"
+    )
+    internal val INDONESIAN_TAGS = listOf(
+        "indonesia", "indonesian", "bahasa indonesia"
     )
 
     fun mimeTypeFromUrl(url: String): String {

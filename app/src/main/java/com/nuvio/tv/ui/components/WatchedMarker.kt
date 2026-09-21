@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioTheme
-import com.nuvio.tv.ui.theme.ThemeColors
 import com.nuvio.tv.ui.theme.accentBrush
 
 @Composable
@@ -26,7 +25,7 @@ fun WatchedMarker(
     size: Dp = 21.dp,
     iconSize: Dp = 20.dp
 ) {
-    val palette = ThemeColors.getColorPalette(NuvioTheme.currentTheme)
+    val palette = NuvioTheme.palette
 
     Box(
         modifier = modifier

@@ -16,3 +16,15 @@ data class WatchedItem(
     override val trackingContentId: String
         get() = contentId
 }
+
+data class WatchedMutationKey(
+    val contentId: String,
+    val season: Int?,
+    val episode: Int?
+)
+
+fun WatchedItem.mutationKey(): WatchedMutationKey = WatchedMutationKey(
+    contentId = contentId,
+    season = season,
+    episode = episode
+)

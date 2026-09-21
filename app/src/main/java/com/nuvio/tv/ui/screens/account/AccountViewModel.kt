@@ -746,9 +746,7 @@ class AccountViewModel @Inject constructor(
             addonRepository.isSyncingFromRemote = false
 
             val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
-            val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
-            watchProgressSyncService.restoreLastPushTimestamp(profileId)
-            watchedItemsSyncService.restoreLastPushTimestamp(profileId)
+            val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync(profileId)
             Log.d(
                 "AccountViewModel",
                 "pullRemoteData: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"

@@ -1,6 +1,7 @@
 package com.nuvio.tv.domain.repository
 
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import kotlinx.coroutines.flow.Flow
@@ -26,14 +27,18 @@ interface StreamRepository {
     ): Flow<NetworkResult<List<AddonStreams>>>
 
     /**
-     * Fetches streams from a specific addon
-     * @param baseUrl The addon base URL
+     * Fetches streams from a specific addon.
+     *
+     * Takes the installed [Addon] rather than a bare base URL so the display name and logo
+     * stamped onto the returned streams come from the manifest already held in memory.
+     *
+     * @param addon The installed addon to query
      * @param type The content type
      * @param videoId The video ID
      * @return NetworkResult containing list of streams
      */
     suspend fun getStreamsFromAddon(
-        baseUrl: String,
+        addon: Addon,
         type: String,
         videoId: String
     ): NetworkResult<List<Stream>>

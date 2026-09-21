@@ -397,6 +397,8 @@
     <string name="layout_section_content_desc">Kontroluj co pojawia się na stronie głównej i w wyszukiwarce.</string>
     <string name="layout_collapse_sidebar">Zwiń pasek boczny</string>
     <string name="layout_collapse_sidebar_sub">Ukryj pasek boczny domyślnie; pokaż po skupieniu.</string>
+    <string name="layout_hide_floating_pill">Ukryj pływający wskaźnik</string>
+    <string name="layout_hide_floating_pill_sub">Ukryj pływający wskaźnik nawigacji na ekranie głównym.</string>
     <string name="layout_modern_sidebar">Nowoczesny pasek boczny</string>
     <string name="layout_modern_sidebar_sub">Włącz pływającą nawigację boczną.</string>
     <string name="layout_modern_sidebar_blur">Rozmycie nowoczesnego paska bocznego</string>
@@ -751,6 +753,8 @@
     <string name="stream_info_resolution">Rozdzielczość</string>
     <string name="stream_info_frame_rate">Klatki/s</string>
     <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_bitrate_file">Bitrate (plik)</string>
+    <string name="stream_info_hud">HUD</string>
     <string name="stream_info_channels">Kanały</string>
     <string name="stream_info_sample_rate">Próbkowanie</string>
     <string name="stream_info_language">Język</string>
@@ -845,6 +849,8 @@
     <string name="skip_ending">Pomiń zakończenie</string>
     <string name="skip_recap">Pomiń podsumowanie</string>
     <string name="skip_generic">Pomiń</string>
+    <string name="skip_movie_credits">Pomiń napisy końcowe</string>
+    <string name="skip_to_post_credits">Do sceny po napisach</string>
     <string name="display_mode_refresh">Odświeżanie</string>
     <string name="display_mode_resolution">Rozdzielczość</string>
 
@@ -916,6 +922,7 @@
     <string name="auth_qr_code_label">Kod: %1$s</string>
     <string name="auth_qr_expires">Wygasa za %1$s</string>
     <string name="auth_qr_scan_instruction">Zeskanuj QR, zatwierdź w przeglądarce, a następnie wróć tutaj.</string>
+    <string name="auth_qr_manual_instruction">Lub wejdź na %1$s i wpisz</string>
     <string name="auth_qr_code_display">Kod: %1$s</string>
     <string name="auth_qr_refresh">Odśwież QR</string>
     <string name="auth_qr_continue_without_account">Kontynuuj bez konta</string>
@@ -1353,6 +1360,7 @@
     <string name="cd_add">Dodaj</string>
     <string name="cd_refresh">Odśwież</string>
     <string name="cd_remove">Usuń</string>
+    <string name="cd_remove_recent_search">Usuń %1$s z ostatnich wyszukiwań</string>
     <string name="cd_preview">Podgląd</string>
     <string name="cd_test">Test</string>
     <string name="cd_unlink">Odłącz</string>
@@ -1667,6 +1675,23 @@
     <string name="appearance_amoled_mode_subtitle">Użyj czystej czerni jako tła aplikacji</string>
     <string name="appearance_amoled_surfaces_mode">Czysto czarne powierzchnie</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Karty, panele i kontenery również będą czysto czarne</string>
+    <string name="appearance_startup_splash">Ekran startowy</string>
+    <string name="appearance_startup_splash_subtitle">Pokaż logo i wskaźnik ładowania po wyborze profilu</string>
+    <string name="appearance_app_icon_and_banner">Ikona i baner aplikacji</string>
+    <string name="appearance_app_icon_and_banner_subtitle">Zmień ikonę i baner aplikacji</string>
+    <string name="appearance_app_icon_arctic_blue">Arctic Blue</string>
+    <string name="appearance_app_icon_change_failed">Nie udało się zmienić ikony i baneru. Spróbuj ponownie.</string>
+    <string name="appearance_app_icon_confirmation_message">Zmiana na %1$s zamknie Nuvio. Baner TV może wymagać restartu urządzenia. Wybierz OK, aby kontynuować.</string>
+    <string name="appearance_app_icon_confirmation_title">Zmienić ikonę aplikacji?</string>
+    <string name="appearance_app_icon_copper">Copper</string>
+    <string name="appearance_app_icon_emerald">Emerald</string>
+    <string name="appearance_app_icon_graphite">Graphite</string>
+    <string name="appearance_app_icon_original">Oryginał</string>
+    <string name="appearance_app_icon_picker_subtitle">Każdy styl zawiera pasującą ikonę kwadratową i baner TV</string>
+    <string name="appearance_app_icon_picker_title">Wybierz ikonę i baner</string>
+    <string name="appearance_app_icon_rose_gold">Rose Gold</string>
+    <string name="appearance_launcher_artwork">Grafika launchera</string>
+    <string name="appearance_launcher_artwork_subtitle">Wybierz jak Nuvio wygląda na ekranie głównym TV</string>
     <string name="theme_color_crimson">Karmazyn</string>
     <string name="theme_color_ocean">Ocean</string>
     <string name="theme_color_violet">Fiolet</string>
@@ -1768,6 +1793,8 @@
     <string name="auto_skip_outro_sub">Automatycznie pomijaj outra i endingi anime.</string>
     <string name="auto_skip_recap">Podsumowanie</string>
     <string name="auto_skip_recap_sub">Automatycznie pomijaj segmenty podsumowań.</string>
+    <string name="auto_skip_movie_credits">Napisy końcowe</string>
+    <string name="auto_skip_movie_credits_sub">Automatycznie pomijaj napisy końcowe filmów, zachowując sceny po napisach.</string>
     <string name="cast_error_load_details_for">Nie udało się załadować szczegółów dla %1$s</string>
     <string name="collection_editor_choice_both">Oba</string>
     <string name="collection_editor_folder_count_one">%1$d element</string>
@@ -2867,6 +2894,7 @@
     <string name="advanced_nuvio_performance_mode_subtitle">Włącza wysokowydajny natywny alokator, pamięć poza stertą i optymalizacje sieciowe dla płynniejszego odtwarzania</string>
     <string name="advanced_playback_issue_reports">Raporty problemów z odtwarzaniem</string>
     <string name="advanced_playback_issue_reports_subtitle">Pokaż przyciski zgłaszania problemów podczas odtwarzania, długiego ładowania i błędów odtwarzania</string>
+    <string name="advanced_player_stats_hud">Nakładka statystyk odtwarzania</string>
     <string name="advanced_sentry_reports">Raporty awarii Sentry</string>
     <string name="advanced_sentry_reports_subtitle">Wysyłaj raporty awarii i ANR z bezpiecznym kontekstem. Domyślnie włączone.</string>
 
@@ -3079,8 +3107,9 @@
     <string name="theme_color_gold">Złoty</string>
     <string name="theme_color_jade">Jadeit</string>
     <string name="theme_color_rose_gold">Różowe złoto</string>
-    <string name="theme_color_arctic_blue">Arktyczny błękit</string>
+    <string name="theme_color_arctic_blue">Arktyczny</string>
     <string name="theme_color_graphite">Grafit</string>
+    <string name="theme_color_custom">Własny</string>
 
     <string name="addon_delete_confirm_title">Usunąć dodatek?</string>
     <string name="addon_delete_confirm_message">Czy na pewno chcesz go usunąć?</string>
@@ -3139,6 +3168,8 @@
     <!-- Post-play recommendations -->
     <string name="autoplay_post_play_recommendations">Rekomendacje po odtwarzaniu</string>
     <string name="autoplay_post_play_recommendations_sub">Pokaż rekomendowane filmy i seriale po zakończeniu odtwarzania.</string>
+    <string name="autoplay_post_play_movie_threshold">Czas rekomendacji filmowych</string>
+    <string name="autoplay_post_play_movie_threshold_sub">Wybierz kiedy pojawiają się rekomendacje filmowe. Odcinki korzystają z ustawienia progu następnego odcinka.</string>
     <string name="player_post_play_because">Ponieważ obejrzałeś %1$s</string>
     <string name="player_post_play_next_recommendation">Następna rekomendacja</string>
     <string name="player_post_play_play">Odtwórz</string>
@@ -3176,4 +3207,68 @@
 
     <!-- Player -->
     <string name="player_live_watched">NA ŻYWO  %1$s</string>
+
+    <!-- Update channel -->
+    <string name="about_update_channel_title">Kanał aktualizacji</string>
+    <string name="about_update_channel_subtitle">Wybierz rodzaj aktualizacji aplikacji</string>
+    <string name="update_channel_stable">Stabilny</string>
+    <string name="update_channel_stable_description">Przeznaczony do codziennego użytku.</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_beta_description">Wczesne aktualizacje, które mogą zawierać błędy, uszkadzać funkcje lub działać niestabilnie.</string>
+    <string name="update_channel_dialog_subtitle">Wybierz rodzaj aktualizacji, które chcesz otrzymywać</string>
+    <string name="update_waiting_for_stable">Otrzymasz następną stabilną wersję, gdy będzie dostępna</string>
+
+    <!-- Advanced settings -->
+    <string name="advanced_player_stats_hud_subtitle">Pokaż przycisk w informacjach o strumieniu, umożliwiający podgląd na żywo użycia CPU, pamięci, bufora, bitrate i temperatury podczas odtwarzania</string>
+    <string name="advanced_rgb565">Dekodowanie obrazu RGB565</string>
+    <string name="advanced_rgb565_subtitle">Użyj oszczędnego 16-bitowego koloru dla kwalifikujących się nieprzezroczystych obrazów. Zmiana wymaga restartu aplikacji.</string>
+
+    <!-- Audio / MPV -->
+    <string name="audio_mpv_hi10p_gnext_sw_title">Awaryjne dekodowanie Hi10P G-NEXT SW (tylko MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Użyj programowego dekodowania G-NEXT, gdy szczegóły strumienia wskazują H.264 Hi10P. Domyślnie wyłączone; włącz tylko jeśli odtwarzanie Hi10P się zawiesza lub nie działa.</string>
+
+    <!-- Profile copy settings -->
+    <string name="profile_create_error">Nie udało się utworzyć profilu. Spróbuj ponownie.</string>
+    <string name="profile_copy_settings_action">Kopiuj ustawienia</string>
+    <string name="profile_copy_settings_apply">Zastosuj</string>
+    <string name="profile_copy_settings_copying">Kopiowanie\u2026</string>
+    <string name="profile_copy_settings_create_fresh">Ustawienia: Zacznij od nowa</string>
+    <string name="profile_copy_settings_create_source">Ustawienia: %1$s</string>
+    <string name="profile_copy_settings_created_error">Profil utworzony, ale nie udało się skopiować ustawień. Możesz ponowić z opcji profilu.</string>
+    <string name="profile_copy_settings_created_success">Profil utworzony z ustawieniami z %1$s.</string>
+    <string name="profile_copy_settings_credentials_off">Klucze API: Nie kopiuj</string>
+    <string name="profile_copy_settings_credentials_on">Klucze API: Kopiuj brakujące klucze</string>
+    <string name="profile_copy_settings_details">Istniejące klucze API zostają zachowane. OAuth, dodatki, wtyczki, układ ekranu głównego, PIN, historia, biblioteka, pobrane i ustawienia urządzenia pozostają niezmienione.</string>
+    <string name="profile_copy_settings_error">Nie udało się skopiować ustawień. Sprawdź połączenie i spróbuj ponownie.</string>
+    <string name="profile_copy_settings_exclusions">OAuth, dodatki, wtyczki, układ ekranu głównego, PIN, historia, biblioteka, pobrane i ustawienia urządzenia pozostają niezmienione.</string>
+    <string name="profile_copy_settings_from">Kopiuj z</string>
+    <string name="profile_copy_settings_label">Kopiuj ustawienia</string>
+    <string name="profile_copy_settings_primary_source">%1$s (Główny)</string>
+    <string name="profile_copy_settings_setup_subtitle">Zacznij od nowa lub jednorazowo skopiuj ustawienia TV z innego profilu.</string>
+    <string name="profile_copy_settings_setup_title">Ustawienia profilu</string>
+    <string name="profile_copy_settings_start_fresh">Zacznij od nowa</string>
+    <string name="profile_copy_settings_subtitle">Wybierz profil źródłowy. Jego obsługiwane ustawienia TV jednorazowo zastąpią ustawienia tego profilu.</string>
+    <string name="profile_copy_settings_success">Ustawienia skopiowane z %1$s do %2$s.</string>
+    <string name="profile_copy_settings_title">Kopiuj ustawienia do %1$s</string>
+
+    <string name="custom_theme_title">Twój własny gradient</string>
+    <string name="custom_theme_subtitle">Wybierz trzy kolory dla motywu. Kliknij kolor, aby go edytować.</string>
+    <string name="custom_theme_solid_title">Twój własny kolor</string>
+    <string name="custom_theme_solid_subtitle">Wybierz kolor dla motywu.</string>
+    <string name="custom_theme_mode_gradient">Gradient</string>
+    <string name="custom_theme_mode_solid">Jeden kolor</string>
+    <string name="custom_theme_color_number">Kolor %1$d</string>
+    <string name="custom_theme_hue">Odcień</string>
+    <string name="custom_theme_saturation">Nasycenie</string>
+    <string name="custom_theme_brightness">Jasność</string>
+    <string name="custom_theme_enter_hex">Wprowadź kod hex</string>
+    <string name="custom_theme_hex_title">Kolor hex</string>
+    <string name="custom_theme_hex_hint">Wpisz sześć znaków (0–9, A–F). Pierwszy klawisz zastępuje bieżący kod.</string>
+    <string name="custom_theme_hex_clear">Wyczyść</string>
+    <string name="custom_theme_hex_delete">Usuń</string>
+    <string name="custom_theme_use_color">Użyj koloru</string>
+    <string name="custom_theme_save">Zapisz motyw</string>
+    <string name="custom_theme_remote_hint">← → Reguluj   ·   ↑ ↓ Przesuń   ·   Przytrzymaj, aby szybciej</string>
+    <string name="custom_theme_preview">PODGLĄD</string>
+    <string name="custom_theme_preview_ring">Wybrany element</string>
 </resources>
