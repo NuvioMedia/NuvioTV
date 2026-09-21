@@ -849,6 +849,8 @@
     <string name="skip_ending">Pomiń zakończenie</string>
     <string name="skip_recap">Pomiń podsumowanie</string>
     <string name="skip_generic">Pomiń</string>
+    <string name="skip_movie_credits">Pomiń napisy końcowe</string>
+    <string name="skip_to_post_credits">Do sceny po napisach</string>
     <string name="display_mode_refresh">Odświeżanie</string>
     <string name="display_mode_resolution">Rozdzielczość</string>
 
@@ -1673,6 +1675,8 @@
     <string name="appearance_amoled_mode_subtitle">Użyj czystej czerni jako tła aplikacji</string>
     <string name="appearance_amoled_surfaces_mode">Czysto czarne powierzchnie</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Karty, panele i kontenery również będą czysto czarne</string>
+    <string name="appearance_startup_splash">Ekran startowy</string>
+    <string name="appearance_startup_splash_subtitle">Pokaż logo i wskaźnik ładowania po wyborze profilu</string>
     <string name="appearance_app_icon_and_banner">Ikona i baner aplikacji</string>
     <string name="appearance_app_icon_and_banner_subtitle">Zmień ikonę i baner aplikacji</string>
     <string name="appearance_app_icon_arctic_blue">Arctic Blue</string>
@@ -1789,6 +1793,8 @@
     <string name="auto_skip_outro_sub">Automatycznie pomijaj outra i endingi anime.</string>
     <string name="auto_skip_recap">Podsumowanie</string>
     <string name="auto_skip_recap_sub">Automatycznie pomijaj segmenty podsumowań.</string>
+    <string name="auto_skip_movie_credits">Napisy końcowe</string>
+    <string name="auto_skip_movie_credits_sub">Automatycznie pomijaj napisy końcowe filmów, zachowując sceny po napisach.</string>
     <string name="cast_error_load_details_for">Nie udało się załadować szczegółów dla %1$s</string>
     <string name="collection_editor_choice_both">Oba</string>
     <string name="collection_editor_folder_count_one">%1$d element</string>

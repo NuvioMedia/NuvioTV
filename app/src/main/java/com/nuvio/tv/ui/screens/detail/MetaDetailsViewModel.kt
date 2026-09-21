@@ -1235,8 +1235,8 @@ class MetaDetailsViewModel @Inject constructor(
                     val settings = tmdbSettingsDataStore.settings.first()
                     val tmdbContentType = resolveTmdbContentType(meta)
                     val tmdbLookupType = tmdbContentType.toApiString()
-                    val tmdbId = tmdbService.ensureTmdbId(meta.id, tmdbLookupType)
-                        ?: tmdbService.ensureTmdbId(itemId, itemType)
+                    val tmdbId = tmdbService.ensureTmdbId(meta.id, tmdbLookupType, fallbackImdbId = meta.imdbId)
+                        ?: tmdbService.ensureTmdbId(itemId, itemType, fallbackImdbId = meta.imdbId)
                     if (tmdbId.isNullOrBlank()) {
                         _uiState.update { it.copy(moreLikeThis = emptyList(), moreLikeThisSource = null) }
                         return@launch
@@ -1389,10 +1389,10 @@ class MetaDetailsViewModel @Inject constructor(
                 }
 
                 val tmdbLookupType = tmdbContentType.toApiString()
-                val tmdbIdString = tmdbService.ensureTmdbId(meta.id, tmdbLookupType)
-                    ?: tmdbService.ensureTmdbId(itemId, itemType)
+                val tmdbIdString = tmdbService.ensureTmdbId(meta.id, tmdbLookupType, fallbackImdbId = meta.imdbId)
+                    ?: tmdbService.ensureTmdbId(itemId, itemType, fallbackImdbId = meta.imdbId)
                 val tmdbId = tmdbIdString?.toIntOrNull()
-                val imdbId = extractImdbId(meta.id) ?: extractImdbId(itemId)
+                val imdbId = extractImdbId(meta.id) ?: extractImdbId(itemId) ?: meta.imdbId
 
                 if (tmdbId == null && imdbId == null) {
                     _uiState.update { state ->
@@ -1458,8 +1458,8 @@ class MetaDetailsViewModel @Inject constructor(
 
         val tmdbContentType = resolveTmdbContentType(meta)
         val tmdbLookupType = tmdbContentType.toApiString()
-        val tmdbId = tmdbService.ensureTmdbId(meta.id, tmdbLookupType)
-            ?: tmdbService.ensureTmdbId(itemId, itemType)
+        val tmdbId = tmdbService.ensureTmdbId(meta.id, tmdbLookupType, fallbackImdbId = meta.imdbId)
+            ?: tmdbService.ensureTmdbId(itemId, itemType, fallbackImdbId = meta.imdbId)
             ?: return meta
 
         val isSeries = meta.apiType in listOf("series", "tv")
@@ -2738,7 +2738,7 @@ class MetaDetailsViewModel @Inject constructor(
             }
 
             val tmdbId = try {
-                tmdbService.ensureTmdbId(meta.id, meta.apiType)
+                tmdbService.ensureTmdbId(meta.id, meta.apiType, fallbackImdbId = meta.imdbId)
             } catch (_: Exception) {
                 null
             }

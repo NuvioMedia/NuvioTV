@@ -219,6 +219,8 @@
     <string name="detail_marked_episodes_unwatched">Episodios marcados como no vistos: %1$d</string>
     <string name="detail_marked_previous_watched">Episodios anteriores marcados como vistos: %1$d</string>
 
+    <string name="playback_unavailable">Reproducción no disponible</string>
+    <string name="playback_unavailable_message">La reproducción no está disponible para este título con tu configuración actual.</string>
     <string name="detail_btn_play">Reproducir</string>
     <string name="detail_btn_resume">Continuar</string>
     <string name="detail_btn_play_episode">Reproducir T%1$d E%2$d</string>
@@ -336,10 +338,33 @@
     <string name="theme_color_amber">Ámbar</string>
     <string name="theme_color_rose">Rosa</string>
     <string name="theme_color_white">Blanco</string>
+    <string name="theme_color_custom">Personalizado</string>
+    <string name="custom_theme_title">Tu degradado personalizado</string>
+    <string name="custom_theme_subtitle">Elige tres colores para tu tema. Selecciona un color para editarlo.</string>
+    <string name="custom_theme_solid_title">Tu color personalizado</string>
+    <string name="custom_theme_solid_subtitle">Elige un color para tu tema.</string>
+    <string name="custom_theme_mode_gradient">Degradado</string>
+    <string name="custom_theme_mode_solid">Color único</string>
+    <string name="custom_theme_color_number">Color %1$d</string>
+    <string name="custom_theme_hue">Tono</string>
+    <string name="custom_theme_saturation">Saturación</string>
+    <string name="custom_theme_brightness">Brillo</string>
+    <string name="custom_theme_enter_hex">Ingresa el código hexadecimal</string>
+    <string name="custom_theme_hex_title">Color hexadecimal</string>
+    <string name="custom_theme_hex_hint">Elige seis caracteres (0–9, A–F). La primera tecla que presiones reemplaza el código actual.</string>
+    <string name="custom_theme_hex_clear">Limpiar</string>
+    <string name="custom_theme_hex_delete">Eliminar</string>
+    <string name="custom_theme_use_color">Usar color</string>
+    <string name="custom_theme_save">Guardar tema</string>
+    <string name="custom_theme_remote_hint">← → Ajustar   ·   ↑ ↓ Mover   ·   Mantén presionado para ajustar más rápido</string>
+    <string name="custom_theme_preview">VISTA PREVIA</string>
+    <string name="custom_theme_preview_ring">Elemento seleccionado</string>
     <string name="appearance_amoled_mode">Modo AMOLED</string>
     <string name="appearance_amoled_mode_subtitle">Usa negro puro para los fondos de la app</string>
     <string name="appearance_amoled_surfaces_mode">Superficies negro puro</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">También aplica negro puro a tarjetas, paneles y contenedores</string>
+    <string name="appearance_startup_splash">Pantalla de inicio</string>
+    <string name="appearance_startup_splash_subtitle">Muestra el logo y el indicador de carga después de seleccionar un perfil</string>
     <string name="appearance_settings_style">Estilo de configuración</string>
     <string name="appearance_settings_style_subtitle">Elige cómo se muestran las pantallas de configuración</string>
     <string name="appearance_launcher_artwork">Ilustración del launcher</string>
@@ -394,6 +419,9 @@
     <string name="licenses_attributions_section_app">LICENCIA DE LA APP</string>
     <string name="licenses_attributions_section_data">DATOS Y SERVICIOS</string>
     <string name="licenses_attributions_section_playback">LICENCIAS DE REPRODUCCIÓN DE ANDROID</string>
+    <string name="licenses_attributions_section_ui">BIBLIOTECAS DE INTERFAZ</string>
+    <string name="licenses_attributions_haze_title">Haze 1.7.2</string>
+    <string name="licenses_attributions_haze_body">Se usa para efectos de desenfoque de fondo. Creado por Chris Banes. Licenciado bajo la Licencia Apache, Versión 2.0.</string>
     <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
     <string name="licenses_attributions_nuvio_body">El código fuente y los términos de la licencia están disponibles en el repositorio del proyecto. Licenciado bajo la GNU General Public License v3.0.</string>
     <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
@@ -452,6 +480,7 @@
     <string name="tracking_simkl_anime_id_imdb">Preferir IMDB</string>
     <string name="tracking_simkl_anime_id_mal">Preferir MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Preferir Kitsu</string>
+    <string name="tracking_simkl_anime_id_tvdb">Preferir TVDB</string>
     <string name="tracking_status_connected">Conectado</string>
     <string name="tracking_status_disconnected">No conectado</string>
     <string name="tracking_status_waiting">Esperando aprobación</string>
@@ -702,6 +731,10 @@
     <string name="auto_skip_recap_sub">Omitir automáticamente los segmentos de resumen.</string>
     <string name="auto_skip_outro">Outro / Ending</string>
     <string name="auto_skip_outro_sub">Omitir automáticamente outros y endings de anime.</string>
+    <string name="auto_skip_movie_credits">Créditos finales</string>
+    <string name="auto_skip_movie_credits_sub">Omite automáticamente los créditos de la película, conservando las escenas poscréditos.</string>
+    <string name="skip_movie_credits">Omitir créditos</string>
+    <string name="skip_to_post_credits">Saltar a poscréditos</string>
     <string name="playback_auto_frame_rate">Frecuencia de cuadros y resolución automáticas</string>
     <string name="playback_section_player">Reproductor y Selección de Fuente</string>
     <string name="playback_section_player_desc">Preferencia de reproductor, auto-reproducción y filtrado de fuentes.</string>
@@ -809,6 +842,8 @@
     <string name="dv7_libdovi_mode_3_sub" translatable="false">Convierte streams Perfil 5 (DV5) a Perfil 8.1. Es la misma conversión utilizada por la opción Convertir DV5 a DV8.1.</string>
     <string name="dv7_libdovi_mode_4_title" translatable="false">Modo 4 — 8.4 (estático)</string>
     <string name="dv7_libdovi_mode_4_sub" translatable="false">Convierte al perfil estático 8.4.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Alternativa por software G-NEXT para Hi10P (solo MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Usa la decodificación por software G-NEXT cuando los detalles del stream identifiquen H.264 Hi10P. Está desactivado de forma predeterminada; actívalo solo si la reproducción de Hi10P se congela o falla.</string>
     <string name="audio_mpv_hwdec_title">Decodificación por hardware (solo MPV)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Selecciona cómo libmpv debe utilizar los decodificadores por hardware.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (directo -&gt; copia)</string>
@@ -945,6 +980,8 @@
     <string name="layout_section_content_desc">Controla lo que aparece en inicio y búsqueda.</string>
     <string name="layout_collapse_sidebar">Contraer Barra Lateral</string>
     <string name="layout_collapse_sidebar_sub">Ocultar la barra lateral por defecto; mostrarla al interactuar con ella.</string>
+    <string name="layout_hide_floating_pill">Ocultar indicador flotante</string>
+    <string name="layout_hide_floating_pill_sub">Oculta el indicador de navegación flotante en la pantalla de inicio.</string>
     <string name="layout_modern_sidebar">Barra Lateral Moderna</string>
     <string name="layout_modern_sidebar_sub">Habilitar la navegación de la barra lateral flotante.</string>
     <string name="layout_modern_sidebar_blur">Desenfocar Barra Lateral Moderna</string>
@@ -1685,6 +1722,7 @@
     <string name="player_subtitle_delay">Retraso de Subtítulos</string>
     <string name="player_error_title">Error de Reproducción</string>
     <string name="player_go_back">Volver</string>
+    <string name="player_switch_to_mpv">Cambiar al reproductor MPV</string>
     <string name="player_report_issue">Reportar problema</string>
     <string name="player_report_issue_sending">Enviando reporte de reproducción...</string>
     <string name="player_report_issue_sending_button">Enviando...</string>
@@ -1857,6 +1895,7 @@
     <string name="search_start_subtitle_no_discover">Descubrir está desactivado. Ingresa al menos 2 caracteres</string>
     <string name="search_recent_title">Búsquedas recientes</string>
     <string name="search_recent_clear">Borrar historial</string>
+    <string name="cd_remove_recent_search">Eliminar %1$s de las búsquedas recientes</string>
     <string name="search_voice_no_speech">No se detectó voz. Intenta de nuevo.</string>
     <string name="search_voice_mic_permission">Se requiere permiso de micrófono para búsqueda por voz.</string>
     <string name="search_voice_failed">Error en el reconocimiento de voz. Intenta de nuevo.</string>

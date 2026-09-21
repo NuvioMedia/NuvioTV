@@ -9,11 +9,13 @@ import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.MDBListRatingsResult
 import com.nuvio.tv.domain.model.MDBListSettings
 import com.nuvio.tv.domain.model.Meta
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -178,16 +180,30 @@ class MDBListRepository @Inject constructor(
         mediaType: String,
         apiKey: String,
         providers: List<ProviderType>
-    ): MDBListRatingsResult? {
+    ): MDBListRatingsResult? = coroutineScope {
         val semaphore = Semaphore(4)
         val requestBody = MDBListRatingRequestDto(
             ids = listOf(imdbId),
             provider = "imdb"
         )
 
+        val rottenTomatoesRatings = if (providers.any { it == ProviderType.TOMATOES || it == ProviderType.AUDIENCE }) {
+            async {
+                semaphore.withPermit { fetchRottenTomatoesRatings(imdbId, mediaType, apiKey) }
+            }
+        } else {
+            null
+        }
         val results = providers.map { provider ->
-            scope.async {
-                semaphore.withPermit {
+            async {
+                val rating = when (provider) {
+                    ProviderType.TOMATOES -> rottenTomatoesRatings?.await()?.tomatoes
+                    ProviderType.AUDIENCE -> rottenTomatoesRatings?.await()?.audience
+                    else -> null
+                }
+                if (rating != null) {
+                    provider to rating
+                } else semaphore.withPermit {
                     fetchProviderRating(
                         mediaType = mediaType,
                         provider = provider,
@@ -198,6 +214,7 @@ class MDBListRepository @Inject constructor(
             }
         }.awaitAll().toMap()
 
+        val certifications = rottenTomatoesRatings?.await()
         val ratings = MDBListRatings(
             trakt = results[ProviderType.TRAKT],
             imdb = results[ProviderType.IMDB],
@@ -206,15 +223,36 @@ class MDBListRepository @Inject constructor(
             tomatoes = results[ProviderType.TOMATOES],
             audience = results[ProviderType.AUDIENCE],
             metacritic = results[ProviderType.METACRITIC],
-            mal = results[ProviderType.MAL]
+            mal = results[ProviderType.MAL],
+            tomatoesCertified = certifications?.let { it.tomatoes != null && it.tomatoesCertified } == true,
+            audienceCertified = certifications?.let { it.audience != null && it.audienceCertified } == true
         )
 
-        if (ratings.isEmpty()) return null
+        if (ratings.isEmpty()) return@coroutineScope null
 
-        return MDBListRatingsResult(
+        MDBListRatingsResult(
             ratings = ratings,
             hasImdbRating = ratings.imdb != null
         )
+    }
+
+    private suspend fun fetchRottenTomatoesRatings(
+        imdbId: String,
+        mediaType: String,
+        apiKey: String
+    ): MDBListRatings? {
+        return try {
+            val response = api.getMedia(mediaType, imdbId, apiKey)
+            if (!response.isSuccessful) {
+                Log.w(tag, "Failed Rotten Tomatoes metadata (${response.code()})")
+                return null
+            }
+            response.body()?.toRottenTomatoesRatings()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(tag, "Error fetching Rotten Tomatoes metadata", e)
+            null
+        }
     }
 
     private suspend fun fetchProviderRating(
@@ -239,6 +277,7 @@ class MDBListRepository @Inject constructor(
             val rating = response.body()?.ratings?.firstOrNull()?.rating
             provider to rating
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(tag, "Error fetching ${provider.apiValue}", e)
             provider to null
         }
@@ -263,6 +302,7 @@ class MDBListRepository @Inject constructor(
     ): String? {
         extractImdbId(meta.id)?.let { return it }
         extractImdbId(fallbackItemId)?.let { return it }
+        extractImdbId(meta.imdbId)?.let { return it }
 
         val tmdbId = extractTmdbId(meta.id)
             ?: extractTmdbId(fallbackItemId)

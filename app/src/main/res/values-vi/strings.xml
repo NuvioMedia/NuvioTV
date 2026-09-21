@@ -173,7 +173,7 @@
     <string name="action_see_all">Xem tất cả</string>
     <string name="action_load_more">Tải thêm</string>
 
-    <string name="hero_creator">Tác giả: %1$s</string>
+    <string name="hero_creator">Nhà sáng tạo: %1$s</string>
     <string name="hero_director">Đạo diễn: %1$s</string>
     <string name="hero_writer">Biên kịch: %1$s</string>
     <string name="hero_play">Xem</string>
@@ -195,10 +195,10 @@
     <string name="episodes_dialog_subtitle">Thao tác với tập phim</string>
     <string name="episodes_mark_watched">Đánh dấu đã xem</string>
     <string name="episodes_mark_unwatched">Đánh dấu chưa xem</string>
-    <string name="episodes_mark_season_watched">Đánh dấu cả phần đã xem</string>
-    <string name="episodes_mark_season_unwatched">Đánh dấu cả phần chưa xem</string>
-    <string name="episodes_mark_previous_watched">Đánh dấu các tập trước là đã xem</string>
-    <string name="episodes_mark_previous_seasons_watched">Đánh dấu các mùa trước là đã xem</string>
+    <string name="episodes_mark_season_watched">Đánh dấu đã xem mùa này</string>
+    <string name="episodes_mark_season_unwatched">Đánh dấu chưa xem mùa này</string>
+    <string name="episodes_mark_previous_watched">Đánh dấu đã xem các tập trước</string>
+    <string name="episodes_mark_previous_seasons_watched">Đánh dấu đã xem các mùa trước</string>
     <string name="episodes_play">Phát</string>
     <string name="episodes_open_comments">Mở bình luận tập phim</string>
     <string name="play_manually">Chọn nguồn phát</string>
@@ -206,8 +206,8 @@
 
     <string name="detail_added_to_library">Đã thêm vào thư viện</string>
     <string name="detail_removed_from_library">Đã xoá khỏi thư viện</string>
-    <string name="detail_episode_marked_watched">Đã đánh dấu tập đã xem</string>
-    <string name="detail_episode_marked_unwatched">Đã đánh dấu tập chưa xem</string>
+    <string name="detail_episode_marked_watched">Đã đánh dấu đã xem tập này</string>
+    <string name="detail_episode_marked_unwatched">Đã đánh dấu chưa xem tập này</string>
     <string name="detail_lists_updated">Đã cập nhật danh sách</string>
     <string name="detail_movie_marked_watched">Đã đánh dấu đã xem</string>
     <string name="detail_movie_marked_unwatched">Đã đánh dấu chưa xem</string>
@@ -219,13 +219,15 @@
     <string name="detail_marked_episodes_unwatched">Đã đánh dấu %1$d tập chưa xem</string>
     <string name="detail_marked_previous_watched">Đã đánh dấu %1$d tập trước đã xem</string>
 
+    <string name="playback_unavailable">Không thể phát nội dung</string>
+    <string name="playback_unavailable_message">Không thể phát nội dung này với thiết lập hiện tại.</string>
     <string name="detail_btn_play">Phát</string>
     <string name="detail_btn_resume">Xem tiếp</string>
     <string name="detail_btn_play_episode">Phát M%1$dT%2$d</string>
     <string name="detail_btn_resume_episode">Xem tiếp M%1$dT%2$d</string>
     <string name="detail_btn_next_episode">Tập tiếp theo M%1$dT%2$d</string>
     <string name="detail_tab_cast">Nhà sáng tạo &amp; Diễn viên</string>
-    <string name="cast_role_creator">Tác giả</string>
+    <string name="cast_role_creator">Nhà sáng tạo</string>
     <string name="cast_role_director">Đạo diễn</string>
     <string name="cast_role_writer">Biên kịch</string>
     <string name="detail_tab_ratings">Điểm đánh giá</string>
@@ -338,14 +340,18 @@
     <string name="theme_color_white">Trắng</string>
     <string name="theme_color_custom">Tùy chỉnh</string>
     <string name="custom_theme_title">Dải màu chuyển tiếp tùy chỉnh của bạn</string>
-    <string name="custom_theme_subtitle">Chọn ba màu cho chủ đề của bạn. Chọn một màu để chỉnh sửa.</string>
+    <string name="custom_theme_subtitle">Chọn 3 màu cho chủ đề của bạn. Chọn một màu để chỉnh sửa.</string>
+    <string name="custom_theme_solid_title">Màu tùy chỉnh</string>
+    <string name="custom_theme_solid_subtitle">Chọn một màu cho chủ đề của bạn.</string>
+    <string name="custom_theme_mode_gradient">Dải màu chuyển tiếp</string>
+    <string name="custom_theme_mode_solid">Màu trơn</string>
     <string name="custom_theme_color_number">Màu %1$d</string>
     <string name="custom_theme_hue">Sắc độ</string>
     <string name="custom_theme_saturation">Độ bão hòa</string>
     <string name="custom_theme_brightness">Độ sáng</string>
     <string name="custom_theme_enter_hex">Nhập mã Hex</string>
     <string name="custom_theme_hex_title">Màu Hex</string>
-    <string name="custom_theme_hex_hint">Chọn sáu ký tự (0–9, A–F). Ký tự đầu tiên của bạn sẽ thay thế mã hiện tại.</string>
+    <string name="custom_theme_hex_hint">Chọn 6 ký tự (0–9, A–F). Ký tự đầu tiên của bạn sẽ thay thế mã hiện tại.</string>
     <string name="custom_theme_hex_clear">Xoá hết</string>
     <string name="custom_theme_hex_delete">Xoá</string>
     <string name="custom_theme_use_color">Dùng màu này</string>
@@ -357,6 +363,8 @@
     <string name="appearance_amoled_mode_subtitle">Dùng màu đen tuyệt đối cho nền ứng dụng</string>
     <string name="appearance_amoled_surfaces_mode">Tông nền đen tuyệt đối</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Đồng thời dùng màu đen tuyệt đối cho các thẻ, bảng và khung chứa</string>
+    <string name="appearance_startup_splash">Màn hình chờ khởi động</string>
+    <string name="appearance_startup_splash_subtitle">Hiển thị logo và biểu tượng tải dữ liệu sau khi chọn hồ sơ</string>
     <string name="appearance_settings_style">Kiểu màn hình Cài đặt</string>
     <string name="appearance_settings_style_subtitle">Chọn cách hiển thị các màn hình Cài đặt</string>
     <string name="appearance_launcher_artwork">Ảnh hiển thị Trình khởi chạy</string>
@@ -411,6 +419,9 @@
     <string name="licenses_attributions_section_app">GIẤY PHÉP ỨNG DỤNG</string>
     <string name="licenses_attributions_section_data">DỮ LIỆU &amp; DỊCH VỤ</string>
     <string name="licenses_attributions_section_playback">GIẤY PHÉP PHÁT LẠI TRÊN ANDROID</string>
+    <string name="licenses_attributions_section_ui">THƯ VIỆN GIAO DIỆN NGƯỜI DÙNG</string>
+    <string name="licenses_attributions_haze_title">Haze 1.7.2</string>
+    <string name="licenses_attributions_haze_body">Dùng cho hiệu ứng làm mờ nền. Được tạo bởi Chris Banes. Được cấp phép theo Giấy phép Apache, Phiên bản 2.0.</string>
     <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
     <string name="licenses_attributions_nuvio_body">Mã nguồn và các điều khoản cấp phép có sẵn trong kho lưu trữ của dự án. Phần mềm được cấp phép theo Giấy phép Công cộng GNU phiên bản 3.0.</string>
     <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
@@ -469,6 +480,7 @@
     <string name="tracking_simkl_anime_id_imdb">Ưu tiên IMDb</string>
     <string name="tracking_simkl_anime_id_mal">Ưu tiên MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Ưu tiên Kitsu</string>
+    <string name="tracking_simkl_anime_id_tvdb">Ưu tiên TVDB</string>
     <string name="tracking_status_connected">Đã kết nối</string>
     <string name="tracking_status_disconnected">Chưa kết nối</string>
     <string name="tracking_status_waiting">Đang chờ phê duyệt</string>
@@ -577,9 +589,9 @@
     <string name="sentry_disable_dialog_subtitle">Các sự cố trong tương lai và các lỗi ứng dụng không phản hồi hiện tại trên thiết bị này sẽ không được báo cáo. Điều này có thể khiến các lỗi chỉ xảy ra trên thiết bị này khó khắc phục hơn nhiều.</string>
     <string name="sentry_help_title">Cách thức hoạt động</string>
     <string name="sentry_help_body">Báo cáo được nhóm theo phiên bản ứng dụng, dòng máy, phiên bản Android và lỗi hệ thống để chúng tôi có thể sửa chữa các sự cố thường gặp một cách dễ dàng hơn</string>
-    <string name="sentry_sent_title">Đã gửi</string>
+    <string name="sentry_sent_title">Thông tin được gửi</string>
     <string name="sentry_sent_body">Sự cố, các lỗi ứng dụng không phản hồi hiện tại, dấu vết ngăn xếp, phiên bản ứng dụng, loại bản dựng, biến thể, siêu dữ liệu về thiết bị và hệ điều hành, cùng các dấu vết mạng an toàn gồm phương thức, máy chủ, đường dẫn, trạng thái, thời lượng và loại ngoại lệ.</string>
-    <string name="sentry_not_sent_title">Không gửi</string>
+    <string name="sentry_not_sent_title">Thông tin không được gửi</string>
     <string name="sentry_not_sent_body">Mật khẩu, token truy cập, token làm mới, nội dung yêu cầu, nội dung phản hồi, tiêu đề, cookie, ảnh chụp màn hình, cấu trúc phân cấp giao diện, bản phát lại phiên, dữ liệu chẩn đoán thô và các giá trị tham số truy vấn hoặc phân đoạn của URL luồng.</string>
     <string name="sentry_keep_enabled">Tiếp tục bật</string>
     <string name="sentry_turn_off">Tắt</string>
@@ -719,6 +731,10 @@
     <string name="auto_skip_recap_sub">Tự động bỏ qua các phân đoạn tóm tắt.</string>
     <string name="auto_skip_outro">Đoạn kết / Kết thúc</string>
     <string name="auto_skip_outro_sub">Tự động bỏ qua đoạn kết và kết thúc anime.</string>
+    <string name="auto_skip_movie_credits">Danh đề kết thúc</string>
+    <string name="auto_skip_movie_credits_sub">Tự động bỏ qua danh đề phim, giữ lại các cảnh sau danh đề.</string>
+    <string name="skip_movie_credits">Bỏ qua danh đề</string>
+    <string name="skip_to_post_credits">Đến cảnh sau danh đề</string>
     <string name="playback_auto_frame_rate">Tốc độ Khung hình Tự động &amp; Độ phân giải</string>
     <string name="playback_section_player">Trình phát &amp; Lựa chọn luồng</string>
     <string name="playback_section_player_desc">Tùy chọn trình phát, tự động phát và bộ lọc nguồn.</string>
@@ -1115,7 +1131,7 @@
     <string name="mdblist_subtitle">Cấu hình các điểm đánh giá bên ngoài hiển thị trong chi tiết của Khu vực Nổi bật</string>
     <string name="mdblist_enable_title">Bật điểm đánh giá MDBList</string>
     <string name="mdblist_enable_subtitle">Lấy điểm đánh giá từ các nhà cung cấp bên ngoài trên màn hình chi tiết siêu dữ liệu</string>
-    <string name="mdblist_api_key_title">Khóa API</string>
+    <string name="mdblist_api_key_title">Mã khóa API</string>
     <string name="mdblist_api_key_subtitle">Cần thiết để lấy điểm đánh giá từ MDBList</string>
     <string name="mdblist_trakt_title">Trakt</string>
     <string name="mdblist_trakt_subtitle">Hiển thị điểm Trakt</string>
@@ -1185,9 +1201,9 @@
     <string name="debrid_device_auth_failed">Không thể đăng nhập.</string>
     <string name="debrid_device_auth_missing_configuration">Phương thức đăng nhập này chưa được cấu hình trong bản dựng này.</string>
     <string name="debrid_device_auth_expired">Mã này đã hết hạn. Vui lòng thử lại</string>
-    <string name="debrid_key_invalid">Không thể xác minh khóa API này</string>
-    <string name="debrid_invalid_torbox_api_key">Không thể xác minh khóa API này</string>
-    <string name="debrid_invalid_real_debrid_api_key">Không thể xác thực khóa API này</string>
+    <string name="debrid_key_invalid">Không thể xác minh mã khóa API này</string>
+    <string name="debrid_invalid_torbox_api_key">Không thể xác minh mã khóa API này</string>
+    <string name="debrid_invalid_real_debrid_api_key">Không thể xác minh mã khóa API này</string>
     <string name="debrid_prepare_instant_playback">Chuẩn bị liên kết</string>
     <string name="debrid_prepare_instant_playback_description">Phân giải các liên kết phát được trước khi bắt đầu phát.</string>
     <string name="debrid_prepare_stream_count">Liên kết cần chuẩn bị</string>
@@ -1443,7 +1459,7 @@
     <string name="debug_sync_code_title">Tính năng mã đồng bộ</string>
     <string name="debug_sync_code_subtitle">Hiển thị nút Tạo/Nhập mã đồng bộ trong cài đặt Tài khoản</string>
     <string name="debug_member_tier_title">Mô phỏng cấp người tài trợ</string>
-    <string name="debug_member_tier_subtitle">Chọn cấp người tài trợ đã xác minh được trả về trong bản dựng gỡ lỗi này</string>
+    <string name="debug_member_tier_subtitle">Chọn cấp người tài trợ đã xác thực được trả về trong bản dựng gỡ lỗi này</string>
     <string name="debug_member_tier_none">Không có</string>
     <string name="debug_member_tier_one">Người tài trợ</string>
     <string name="debug_member_tier_two">Người tài trợ cao cấp</string>
@@ -1522,9 +1538,9 @@
     <string name="profile_copy_settings_action">Sao chép cài đặt</string>
     <string name="profile_copy_settings_copying">Đang sao chép\u2026</string>
     <string name="profile_copy_settings_apply">Áp dụng</string>
-    <string name="profile_copy_settings_credentials_off">Khóa API: Không sao chép</string>
-    <string name="profile_copy_settings_credentials_on">Khóa API: Sao chép khóa còn thiếu</string>
-    <string name="profile_copy_settings_details">Các khóa API hiện có được giữ lại. Giao thức ủy quyền OAuth, tiện ích, trình mở rộng, bố cục trang chủ, mã PIN, lịch sử, thư viện, tải xuống và cài đặt riêng theo thiết bị sẽ không thay đổi.</string>
+    <string name="profile_copy_settings_credentials_off">Mã khóa API: Không sao chép</string>
+    <string name="profile_copy_settings_credentials_on">Mã khóa API: Sao chép khóa còn thiếu</string>
+    <string name="profile_copy_settings_details">Các mã khóa API hiện có được giữ lại. Giao thức ủy quyền OAuth, tiện ích, trình mở rộng, bố cục trang chủ, mã PIN, lịch sử, thư viện, tải xuống và cài đặt riêng theo thiết bị sẽ không thay đổi.</string>
     <string name="profile_copy_settings_exclusions">Giao thức ủy quyền OAuth, tiện ích, trình mở rộng, bố cục trang chủ, mã PIN, lịch sử, thư viện, tải xuống và cài đặt riêng theo thiết bị sẽ không thay đổi.</string>
     <string name="profile_copy_settings_success">Đã sao chép cài đặt từ %1$s sang %2$s.</string>
     <string name="profile_copy_settings_error">Không thể sao chép cài đặt. Vui lòng kiểm tra kết nối và thử lại.</string>
@@ -1637,7 +1653,7 @@
     <string name="stream_finding_source">Đang tìm nguồn phát</string>
     <string name="debrid_resolving_stream">Đang phân giải luồng debrid</string>
     <string name="debrid_stale_stream">Nguồn phát Debrid này đã hết hạn. Đang làm mới các luồng.</string>
-    <string name="debrid_missing_api_key">Thêm khóa API Debrid trong phần Cài đặt</string>
+    <string name="debrid_missing_api_key">Thêm mã khóa API Debrid trong phần Cài đặt</string>
     <string name="debrid_not_cached">Chưa được lưu sẵn trên dịch vụ này.</string>
     <string name="debrid_resolution_failed">Không thể phân giải luồng Debrid này.</string>
     <string name="stream_type_torrent">Torrent</string>
@@ -1706,6 +1722,7 @@
     <string name="player_subtitle_delay">Độ trễ phụ đề</string>
     <string name="player_error_title">Lỗi phát lại</string>
     <string name="player_go_back">Quay lại</string>
+    <string name="player_switch_to_mpv">Chuyển sang trình phát MPV</string>
     <string name="player_report_issue">Báo cáo lỗi</string>
     <string name="player_report_issue_sending">Đang gửi báo cáo phát lại...</string>
     <string name="player_report_issue_sending_button">Đang gửi...</string>
@@ -2072,10 +2089,10 @@
     <string name="custom_server_key_label">Cấu hình máy khách</string>
     <string name="custom_server_key_discovered">Đã tự động phát hiện khóa có thể công khai</string>
     <string name="custom_server_warning_title">Chỉ kết nối với máy chủ bạn tin cậy</string>
-    <string name="custom_server_warning_public">Máy chủ này sử dụng tên miền công cộng. Ứng dụng không thể xác minh ai sở hữu hoặc vận hành máy chủ này.</string>
+    <string name="custom_server_warning_public">Máy chủ này sử dụng tên miền công cộng. Ứng dụng không thể xác thực ai sở hữu hoặc vận hành máy chủ này.</string>
     <string name="custom_server_warning_http">Máy chủ này thuộc mạng nội bộ, nhưng lưu lượng HTTP không được mã hóa. Các thiết bị khác trong mạng có thể đọc được dữ liệu.</string>
     <string name="custom_server_warning_public_http">Máy chủ này sử dụng tên miền công cộng và HTTP không được mã hóa. Thông tin đăng nhập và dữ liệu đồng bộ có thể bị lộ trong quá trình truyền.</string>
-    <string name="custom_server_warning_private">Đây có vẻ là máy chủ mạng nội bộ, nhưng ứng dụng vẫn không thể xác minh ai đang kiểm soát máy chủ này.</string>
+    <string name="custom_server_warning_private">Đây có vẻ là máy chủ mạng nội bộ, nhưng ứng dụng vẫn không thể xác thực ai đang kiểm soát máy chủ này.</string>
     <string name="custom_server_warning_credentials">Nhà vận hành máy chủ có thể nhận thông tin đăng nhập tài khoản của bạn và truy cập dữ liệu bạn đồng bộ qua máy chủ này.</string>
     <string name="custom_server_trust_action">Tôi tin cậy máy chủ này</string>
     <string name="custom_server_switching">Đang chuyển sang\u2026</string>
@@ -2822,7 +2839,7 @@
     <string name="simkl_disconnect_subtitle">Thao tác này sẽ xóa tài khoản Simkl và dữ liệu Simkl đã lưu trong hồ sơ này.</string>
     <string name="simkl_connected_as">Đã kết nối với %1$s</string>
     <string name="simkl_user_fallback">Người dùng Simkl</string>
-    <string name="simkl_awaiting_instruction">Mở trang xác minh Simkl và nhập mã này.</string>
+    <string name="simkl_awaiting_instruction">Mở trang xác thực Simkl và nhập mã này.</string>
     <string name="simkl_code_expires">Mã sẽ hết hạn sau %1$s</string>
     <string name="simkl_sync_now">Đồng bộ ngay</string>
     <string name="simkl_visit">Truy cập Simkl</string>

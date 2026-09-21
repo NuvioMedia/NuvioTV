@@ -479,6 +479,17 @@ fun AdvancedSettingsContent(
                         ProfileManagerEntryPoint::class.java
                     ).profileManager()
                 }
+                val startupSplashEnabled by profileManager.startupSplashEnabled.collectAsState()
+                SettingsToggleRow(
+                    title = stringResource(R.string.appearance_startup_splash),
+                    subtitle = stringResource(R.string.appearance_startup_splash_subtitle),
+                    checked = startupSplashEnabled,
+                    onToggle = {
+                        scope.launch {
+                            profileManager.setStartupSplashEnabled(!startupSplashEnabled)
+                        }
+                    }
+                )
                 val rememberLastProfileEnabled by profileManager.rememberLastProfileEnabled.collectAsState()
                 SettingsToggleRow(
                     title = stringResource(R.string.advanced_remember_last_profile),

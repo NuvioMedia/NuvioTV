@@ -96,7 +96,14 @@ internal fun normalizeLanguageCode(language: String?): String? {
 /** Best-effort mapping from country name/code to ISO 639-1 primary language. */
 internal fun countryToLanguageCode(country: String?): String? {
     val normalized = country?.trim()?.lowercase()?.takeIf { it.isNotBlank() } ?: return null
-    return COUNTRY_TO_LANGUAGE_MAP[normalized]
+    // Direct lookup first (single country)
+    COUNTRY_TO_LANGUAGE_MAP[normalized]?.let { return it }
+    // Multi-country: split on comma and try the first one
+    if (',' in normalized) {
+        val first = normalized.substringBefore(',').trim()
+        COUNTRY_TO_LANGUAGE_MAP[first]?.let { return it }
+    }
+    return null
 }
 
 private val LANGUAGE_NORMALIZATION_MAP = mapOf(
@@ -152,7 +159,13 @@ private val COUNTRY_TO_LANGUAGE_MAP = mapOf(
     "netherlands" to "nl", "sweden" to "sv", "norway" to "no",
     "denmark" to "da", "finland" to "fi", "thailand" to "th",
     "israel" to "he", "romania" to "ro", "hungary" to "hu",
-    "ukraine" to "uk", "greece" to "el"
+    "ukraine" to "uk", "greece" to "el",
+    "united kingdom" to "en", "united states" to "en",
+    "united states of america" to "en", "australia" to "en",
+    "canada" to "en", "new zealand" to "en", "ireland" to "en",
+    "us" to "en", "gb" to "en", "uk" to "en", "usa" to "en",
+    "gbr" to "en", "aus" to "en", "can" to "en", "nzl" to "en",
+    "irl" to "en"
 )
 
 @Immutable

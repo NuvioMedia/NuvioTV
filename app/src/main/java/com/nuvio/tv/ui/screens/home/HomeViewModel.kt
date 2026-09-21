@@ -252,6 +252,9 @@ class HomeViewModel @Inject constructor(
     internal var externalMetaPrefetchJob: Job? = null
     internal var pendingExternalMetaPrefetchItemId: String? = null
     internal val prefetchedTmdbIds: MutableSet<String> = Collections.newSetFromMap(createLruMap(MAX_PREFETCH_CACHE_SIZE))
+
+    /** Items an enrichment merge was applied for. */
+    internal val enrichmentMergedIds: MutableSet<String> = Collections.newSetFromMap(createLruMap(MAX_PREFETCH_CACHE_SIZE))
     internal val cwMetaCache: MutableMap<String, CwMetaSummary?> = createLruMap(MAX_CW_CACHE_SIZE)
     internal val cwMetaNegativeCacheTimestamps: MutableMap<String, Long> = createLruMap(MAX_CW_CACHE_SIZE)
     /** Ultra-light cache for badge evaluation: contentId → set of aired (season, episode) pairs. */
@@ -581,10 +584,13 @@ class HomeViewModel @Inject constructor(
     private fun observeProgressSourceChanges() {
         viewModelScope.launch {
             var previousSource: com.nuvio.tv.data.local.WatchProgressSource? = null
+            var previousProfileId: Int? = null
             traktSettingsDataStore.watchProgressSource
                 .collect { source ->
-                    if (previousSource != null && previousSource != source) {
-                        // Source changed — clear CW caches to prevent mixing.
+                    val currentProfileId = profileManager.activeProfileId.value
+                    val profileChanged = previousProfileId != null && previousProfileId != currentProfileId
+                    if (previousSource != null && previousSource != source && !profileChanged) {
+                        // Genuine in-profile source change — clear CW caches to prevent mixing.
                         cwMetaCache.clear()
                         cwEnrichedNextUpOverlay.clear()
                         cwEnrichedInProgressOverlay.clear()
@@ -599,6 +605,7 @@ class HomeViewModel @Inject constructor(
                         loadContinueWatching()
                     }
                     previousSource = source
+                    previousProfileId = currentProfileId
                 }
         }
     }

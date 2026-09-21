@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Nuvio</string>
-    <string name="tv_channel_continue_watching">Nastavi sa gledanjem</string>
+    <string name="tv_channel_continue_watching">Nastavi gledanje</string>
     <string name="type_movie">Film</string>
     <string name="type_movies">Filmovi</string>
     <string name="type_series">Serija</string>
@@ -136,7 +136,7 @@
     <string name="error_stream_tried_generic">Pokušani dodaci za strim: %1$s. Strimovi nisu mogli biti učitani za id=%2$s (type=%3$s).</string>
     <string name="error_stream_tried_issues">Pokušani dodaci za strim: %1$s. Strimovi nisu mogli biti učitani za id=%2$s (type=%3$s). Problemi: %4$s.</string>
 
-    <string name="continue_watching">Nastavi sa gledanjem</string>
+    <string name="continue_watching">Nastavi gledanje</string>
     <string name="cw_upcoming">Uskoro</string>
     <string name="cw_next_up">Sledeće na redu</string>
     <string name="cw_next_up_short">Sledeće</string>
@@ -156,7 +156,6 @@
         <item quantity="few">Prikazuje se za %d dana</item>
         <item quantity="other">Prikazuje se za %d dana</item>
     </plurals>
-
     <!-- Short versions for compact card styles (wide/poster) -->
     <string name="cw_airs_date_short">%1$s</string>
     <string name="cw_airs_today_short">Danas</string>
@@ -222,6 +221,8 @@
     <string name="detail_marked_episodes_unwatched">Epizode označene kao neodgledane: %1$d</string>
     <string name="detail_marked_previous_watched">Prethodne epizode označene kao odgledane: %1$d</string>
 
+    <string name="playback_unavailable">Reprodukcija nije dostupna</string>
+    <string name="playback_unavailable_message">Reprodukcija nije dostupna za ovaj naslov sa vašim trenutnim podešavanjima.</string>
     <string name="detail_btn_play">Pusti</string>
     <string name="detail_btn_resume">Nastavi</string>
     <string name="detail_btn_play_episode">Pusti S%1$d E%2$d</string>
@@ -339,10 +340,33 @@
     <string name="theme_color_amber">Ćilibar</string>
     <string name="theme_color_rose">Ružičasta</string>
     <string name="theme_color_white">Bela</string>
+    <string name="theme_color_custom">Prilagođeno</string>
+    <string name="custom_theme_title">Vaš prilagođeni gradient</string>
+    <string name="custom_theme_subtitle">Izaberite tri boje za temu. Izaberite boju da je izmenite.</string>
+    <string name="custom_theme_solid_title">Vaša prilagođena boja</string>
+    <string name="custom_theme_solid_subtitle">Izaberite boju za temu.</string>
+    <string name="custom_theme_mode_gradient">Gradient</string>
+    <string name="custom_theme_mode_solid">Jedna boja</string>
+    <string name="custom_theme_color_number">Boja %1$d</string>
+    <string name="custom_theme_hue">Nijansa</string>
+    <string name="custom_theme_saturation">Zasićenost</string>
+    <string name="custom_theme_brightness">Osvetljenost</string>
+    <string name="custom_theme_enter_hex">Unesite hex kod</string>
+    <string name="custom_theme_hex_title">Hex boja</string>
+    <string name="custom_theme_hex_hint">Izaberite šest znakova (0–9, A–F). Prvi taster zamenjuje trenutni kod.</string>
+    <string name="custom_theme_hex_clear">Obriši</string>
+    <string name="custom_theme_hex_delete">Obriši</string>
+    <string name="custom_theme_use_color">Koristi boju</string>
+    <string name="custom_theme_save">Sačuvaj temu</string>
+    <string name="custom_theme_remote_hint">← → Podesi   ·   ↑ ↓ Pomeri   ·   Držite za brže podešavanje</string>
+    <string name="custom_theme_preview">PREGLED</string>
+    <string name="custom_theme_preview_ring">Fokusirana stavka</string>
     <string name="appearance_amoled_mode">AMOLED režim</string>
     <string name="appearance_amoled_mode_subtitle">Koristi čistu crnu boju za pozadine aplikacije</string>
     <string name="appearance_amoled_surfaces_mode">Potpuno crne površine</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Takođe postavi kartice, panele i kontejnere na čistu crnu boju</string>
+    <string name="appearance_startup_splash">Početni ekran</string>
+    <string name="appearance_startup_splash_subtitle">Prikaži logo i indikator učitavanja nakon izbora profila</string>
     <string name="appearance_settings_style">Stil podešavanja</string>
     <string name="appearance_settings_style_subtitle">Izaberite kako su prikazani ekrani sa podešavanjima</string>
     <string name="appearance_launcher_artwork">Grafika pokretača</string>
@@ -376,8 +400,15 @@
     <string name="about_version">Verzija %1$s</string>
     <string name="about_update_banner_title">Baner za automatsko ažuriranje</string>
     <string name="about_update_banner_subtitle">Prikaži baner kada je dostupna nova verzija</string>
+    <string name="about_update_channel_title">Kanal ažuriranja</string>
+    <string name="about_update_channel_subtitle">Izaberite vrstu ažuriranja aplikacije koje želite da primate</string>
     <string name="about_check_updates">Proveri ažuriranja</string>
     <string name="about_check_updates_subtitle">Preuzmi najnovije izdanje</string>
+    <string name="update_channel_stable">Stabilno</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_dialog_subtitle">Izaberite vrstu ažuriranja koju želite da primate</string>
+    <string name="update_channel_stable_description">Namenjeno za svakodnevnu upotrebu.</string>
+    <string name="update_channel_beta_description">Rana ažuriranja koja mogu da sadrže greške, poremete funkcije ili se ponašaju neočekivano.</string>
     <string name="about_privacy_policy">Politika privatnosti</string>
     <string name="about_privacy_policy_subtitle">Pogledajte našu politiku privatnosti</string>
     <string name="support_nuvio_name">Podržite Nuvio</string>
@@ -549,6 +580,7 @@
     <string name="advanced_playback_issue_reports">Izveštaji o problemima sa reprodukcijom</string>
     <string name="advanced_playback_issue_reports_subtitle">Prikaži dugmad za izveštaj tokom reprodukcije, dugog učitavanja i grešaka u reprodukciji</string>
     <string name="advanced_player_stats_hud">Preklop sa statistikama reprodukcije</string>
+    <string name="advanced_player_stats_hud_subtitle">Prikaži dugme u informacijama o strimu za uključivanje/isključivanje live CPU, memorije, bafera, bitrejta i termalnih očitavanja tokom reprodukcije</string>
     <string name="sentry_enable_dialog_title">Uključiti izveštaje o rušenju?</string>
     <string name="sentry_enable_dialog_subtitle">Izveštaji o rušenju pomažu u identifikaciji otkazivanja specifičnih za uređaj bez traženja od vas da reprodukujete problem sa ADB dnevnicima.</string>
     <string name="sentry_disable_dialog_title">Isključiti izveštaje o rušenju?</string>
@@ -575,6 +607,8 @@
     <string name="buffer_auto_limit_active">Automatski skalirano bezbedno ograničenje: %d MB</string>
     <string name="advanced_nuvio_focus_scroll">Nuvio fokus skrolovanje</string>
     <string name="advanced_nuvio_focus_scroll_subtitle">Koristite Nuvio prilagođenu animaciju i pozicioniranje globalnog skrolovanja fokusa.</string>
+    <string name="advanced_rgb565">RGB565 dekodiranje slika</string>
+    <string name="advanced_rgb565_subtitle">Koristi 16-bitne boje sa manjom potrošnjom memorije za pogodne neprozirne slike. Promena ponovo pokreće aplikaciju.</string>
     <string name="advanced_memory_only_vertical_scroll">Vertikalno skrolovanje samo iz memorije</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Preskoči zahteve za slike sa diska i mreže tokom vertikalnog skrolovanja početnih redova.</string>
     <string name="advanced_compose_highlighter">Compose Highlighter</string>
@@ -802,6 +836,8 @@
     <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
     <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
     <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Hi10P G-NEXT SW rezervna opcija (samo MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Koristi G-NEXT softversko dekodiranje kada detalji strima identifikuju H.264 Hi10P. Isključeno podrazumevano; uključite samo ako Hi10P reprodukcija zastane ili ne uspe.</string>
     <string name="audio_mpv_hwdec_title">Hardversko dekodiranje (samo za MPV)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Izaberite kako libmpv treba da koristi hardverske dekodere.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Zastarelo (direktno -&gt; kopiranje)</string>
@@ -938,6 +974,8 @@
     <string name="layout_section_content_desc">Kontrolišite šta se pojavljuje na početnoj stranici i u pretrazi.</string>
     <string name="layout_collapse_sidebar">Skupi bočnu traku</string>
     <string name="layout_collapse_sidebar_sub">Sakrij bočnu traku po podrazumevanoj vrednosti; prikaži kada je u fokusu.</string>
+    <string name="layout_hide_floating_pill">Sakrij plutajući indikator</string>
+    <string name="layout_hide_floating_pill_sub">Sakrij plutajući indikator navigacije na početnom ekranu.</string>
     <string name="layout_modern_sidebar">Moderna bočna traka</string>
     <string name="layout_modern_sidebar_sub">Omogući plutajuću navigaciju u bočnoj traci.</string>
     <string name="layout_modern_sidebar_blur">Zamućenje moderne bočne trake</string>
@@ -1271,7 +1309,7 @@
     <string name="stream_badge_qr_instruction">Skenirajte ovaj QR kod na telefonu da upravljate URL-ovima Fusion znački.</string>
     <string name="streams_size">VELIČINA %1$s</string>
     <string name="action_import">Uvezi</string>
-    <string name="action_delete">Izbriši</string>
+    <string name="action_delete">Obriši</string>
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Skip</string>
@@ -1458,7 +1496,7 @@
     <string name="profile_creating">Kreiranje\u2026</string>
     <string name="profile_create_btn">Kreiraj</string>
     <string name="profile_confirm">Potvrdi</string>
-    <string name="profile_delete">Izbriši</string>
+    <string name="profile_delete">Obriši</string>
     <string name="profile_addons">dodaci</string>
     <string name="profile_plugins">priključci</string>
     <string name="profile_choose_avatar">Izaberite avatar</string>
@@ -1481,6 +1519,28 @@
     <string name="profile_add_new">Dodaj profil</string>
     <string name="profile_cancel">Otkaži</string>
     <string name="profile_save">Sačuvaj</string>
+    <string name="profile_copy_settings_label">Kopiraj podešavanja</string>
+    <string name="profile_copy_settings_setup_title">Podešavanja profila</string>
+    <string name="profile_copy_settings_setup_subtitle">Počnite ispočetka ili jednom kopirajte TV podešavanja iz drugog profila.</string>
+    <string name="profile_copy_settings_start_fresh">Počni ispočetka</string>
+    <string name="profile_copy_settings_primary_source">%1$s (Primarni)</string>
+    <string name="profile_copy_settings_create_fresh">Podešavanja: Počni ispočetka</string>
+    <string name="profile_copy_settings_create_source">Podešavanja: %1$s</string>
+    <string name="profile_copy_settings_title">Kopiraj podešavanja u %1$s</string>
+    <string name="profile_copy_settings_subtitle">Izaberite izvorni profil. Njegova podržana TV podešavanja će jednom zameniti podešavanja ovog profila.</string>
+    <string name="profile_copy_settings_from">Kopiraj iz</string>
+    <string name="profile_copy_settings_action">Kopiraj podešavanja</string>
+    <string name="profile_copy_settings_copying">Kopiranje…</string>
+    <string name="profile_copy_settings_apply">Primeni</string>
+    <string name="profile_copy_settings_credentials_off">API ključevi: Ne kopiraj</string>
+    <string name="profile_copy_settings_credentials_on">API ključevi: Kopiraj nedostajuće ključeve</string>
+    <string name="profile_copy_settings_details">Postojeći API ključevi se čuvaju. OAuth, dodaci, plugini, raspored početne, PIN, istorija, biblioteka, preuzimanja i podešavanja specifična za uređaj ostaju nepromenjena.</string>
+    <string name="profile_copy_settings_exclusions">OAuth, dodaci, plugini, raspored početne, PIN, istorija, biblioteka, preuzimanja i podešavanja specifična za uređaj ostaju nepromenjena.</string>
+    <string name="profile_copy_settings_success">Podešavanja kopirana iz %1$s u %2$s.</string>
+    <string name="profile_copy_settings_error">Nije moguće kopirati podešavanja. Proverite vezu i pokušajte ponovo.</string>
+    <string name="profile_copy_settings_created_success">Profil je kreiran sa podešavanjima iz %1$s.</string>
+    <string name="profile_copy_settings_created_error">Profil je kreiran, ali podešavanja nisu mogla da se kopiraju. Možete pokušati ponovo iz Opcija profila.</string>
+    <string name="profile_create_error">Nije moguće kreirati profil. Pokušajte ponovo.</string>
     <string name="profile_pin_title">PIN zaključavanje profila</string>
     <string name="profile_pin_enabled_subtitle">Ovaj profil zahteva četvorocifreni PIN pre prebacivanja.</string>
     <string name="profile_pin_disabled_subtitle">Podesite četvorocifreni PIN da biste zaključali ovaj profil.</string>
@@ -1511,7 +1571,7 @@
     <string name="profile_pin_overlay_delete_verify_support">Unesite trenutni 4-cifreni PIN pre brisanja ovog profila.</string>
     <string name="profile_pin_overlay_set_support">Ovaj PIN će biti potreban pre otvaranja ovog profila.</string>
     <string name="profile_pin_overlay_confirm_support">Ponovo unesite iste 4 cifre da završite podešavanje.</string>
-	<string name="profile_pin_overlay_mismatch">PIN kodovi se ne poklapaju. Unesite novi PIN ponovo.</string>
+    <string name="profile_pin_overlay_mismatch">PIN kodovi se ne poklapaju. Unesite novi PIN ponovo.</string>
     <string name="profile_pin_overlay_forgot_hint">Zaboravili ste PIN? Resetujte ga sa svog Nuvio naloga na nuvio veb-sajtu.</string>
     <string name="profile_pin_overlay_back_hint">Pritisnite nazad za otkazivanje</string>
 
@@ -1656,6 +1716,7 @@
     <string name="player_subtitle_delay">Kašnjenje titlova</string>
     <string name="player_error_title">Greška pri reprodukciji</string>
     <string name="player_go_back">Idi nazad</string>
+    <string name="player_switch_to_mpv">Prebaci na MPV plejer</string>
     <string name="player_report_issue">Prijavi problem</string>
     <string name="player_report_issue_sending">Slanje izveštaja o reprodukciji...</string>
     <string name="player_report_issue_sending_button">Slanje...</string>
@@ -1829,6 +1890,7 @@
     <string name="search_start_subtitle_no_discover">Otkrivanje je onemogućeno. Unesite najmanje 2 karaktera</string>
     <string name="search_recent_title">Nedavne pretrage</string>
     <string name="search_recent_clear">Obriši istoriju</string>
+    <string name="cd_remove_recent_search">Ukloni %1$s iz nedavnih pretraga</string>
     <string name="search_voice_no_speech">Govor nije detektovan. Pokušajte ponovo.</string>
     <string name="search_voice_mic_permission">Dozvola za mikrofon je potrebna za glasovnu pretragu.</string>
     <string name="search_voice_failed">Glasovno prepoznavanje nije uspelo. Pokušajte ponovo.</string>
@@ -1979,7 +2041,8 @@
     <string name="account_loading">Učitavanje\u2026</string>
     <string name="account_sync_description">Sinhronizujte svoju biblioteku, napredak gledanja, dodatke i priključke na svim uređajima.</string>
     <string name="account_sync_restart_note">Sinhronizacija se ne odvija u realnom vremenu na aktivnim uređajima. Ponovo pokrenite ovaj uređaj nakon prijavljivanja ili da biste preuzeli izmene napravljene na drugom mestu.</string>
-    <string name="account_signin_qr_title">Prijavite se pomoću QR koda</string><string name="account_signin_qr_subtitle">Skenirajte QR kod i završite prijavu putem e-pošte na telefonu</string>
+    <string name="account_signin_qr_title">Prijavite se pomoću QR koda</string>
+    <string name="account_signin_qr_subtitle">Skenirajte QR kod i završite prijavu putem e-pošte na telefonu</string>
     <string name="account_signin_email_title">Prijavite se</string>
     <string name="account_signin_email_subtitle">Unesite e-poštu i lozinku vašeg samostalno hostovanog (self-hosted) naloga</string>
     <string name="account_signed_in_label">Prijavljeni ste</string>
@@ -2156,8 +2219,9 @@
     <string name="catalog_see_all_empty_subtitle">Pokušajte sa drugim katalogom ili proverite ponovo kasnije</string>
 
     <string name="layout_selection_welcome">Welcome to Nuvio</string>
-    <string name="layout_selection_subtitle">Choose your home screen layout</string>
+    <string name="layout_selection_subtitle">Izaberite raspored početnog ekrana</string>
     <string name="layout_selection_continue">Continue</string>
+
     <string name="update_title">Ažuriranje aplikacije</string>
     <string name="update_available">Dostupno je ažuriranje</string>
     <string name="update_downloading">Preuzimanje ažuriranja</string>
@@ -2205,7 +2269,8 @@
     <!-- ProfileSettingsContent -->
     <string name="profile_edit_title_id">Uređivanje profila %1$d</string>
 
-    <!-- PlaybackAudioSettings --><string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3, itd.) je automatski. Kada je uređaj povezan sa kompatibilnim AV prijemnikom ili zvučnom trakom (soundbar) putem HDMI-ja, zvuk bez gubitaka se šalje u izvornom obliku bez dekodiranja.</string>
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3, itd.) je automatski. Kada je uređaj povezan sa kompatibilnim AV prijemnikom ili zvučnom trakom (soundbar) putem HDMI-ja, zvuk bez gubitaka se šalje u izvornom obliku bez dekodiranja.</string>
     <string name="audio_dv_title">DV7 - HEVC rezervni režim (Fallback)</string>
     <string name="audio_dv_sub">Mape sa Dolby Vision Profile 7 na standardni HEVC za uređaje bez hardverske DV podrške</string>
 
@@ -2223,6 +2288,7 @@
     <string name="cd_expand_sidebar">Proširi bočnu traku</string>
 
     <string name="update_checking">Provera ažuriranja…</string>
+    <string name="update_waiting_for_stable">Primićete sledeće stabilno izdanje kada postane dostupno</string>
     <string name="update_download_complete">Preuzimanje je završeno. Spremno za instalaciju.</string>
     <string name="update_up_to_date">Sistem je ažuriran. Najnovije izmene:</string>
     <string name="update_close">Zatvori</string>
@@ -2282,7 +2348,7 @@
     <string name="trakt_status_syncing">Sinhronizacija...</string>
     <string name="trakt_status_sync_completed">Sinhronizacija je završena</string>
     <string name="trakt_status_disconnected">Prekinuta veza sa Trakt-om</string>
-    <string name="trakt_status_cw_window_updated">Prozor za Nastavi sa gledanjem je ažuriran</string>
+    <string name="trakt_status_cw_window_updated">Prozor za Nastavi gledanje je ažuriran</string>
     <string name="trakt_status_rate_limited_slowing_polling">Brzina je ograničena, usporava se provera...</string>
     <string name="trakt_user_fallback">Trakt korisnik</string>
     <string name="trakt_error_failed_start">Pokretanje Trakt autorizacije nije uspelo</string>
@@ -2549,9 +2615,6 @@
     <string name="collections_editor_error_search_trakt_lists">Nije moguće pretražiti Trakt liste</string>
     <string name="collections_editor_error_trakt_list_not_found">Trakt lista nije pronađena</string>
     <string name="collections_editor_error_trakt_list_missing_numeric_id">Trakt lista ne sadrži numerički ID</string>
-Evo prevoda za navedene stringove na srpski jezik (latinica, Android XML format):
-
-XML
     <string name="collections_editor_tmdb_placeholder_list">https://www.themoviedb.org/list/8504994 ili 8504994</string>
     <string name="collections_editor_tmdb_placeholder_collection">10 za Star Wars kolekciju</string>
     <string name="collections_editor_tmdb_placeholder_company">Marvel Studios, 420 ili URL kompanije</string>
@@ -2632,7 +2695,7 @@ XML
     <string name="tmdb_entity_error_load">Nije bilo moguće učitati TMDB entitet</string>
 
     <!-- Catalog see-all fallback -->
-<string name="catalog_see_all_title_fallback">Katalog</string>
+    <string name="catalog_see_all_title_fallback">Katalog</string>
 
     <!-- Collection editor: emoji categories -->
     <string name="collections_editor_emoji_category_streaming">Striming</string>
@@ -2803,7 +2866,7 @@ XML
     <string name="action_remove_anyway">Ipak ukloni</string>
     <string name="cd_simkl_qr">QR kod za Simkl aktivaciju</string>
     <string name="cd_simkl_logo">Simkl logotip</string>
-<string name="trakt_error_mark_watched_failed">Označavanje kao odgledano na Trakt-u nije uspelo (%1$d)</string>
+    <string name="trakt_error_mark_watched_failed">Označavanje kao odgledano na Trakt-u nije uspelo (%1$d)</string>
 
     <!-- Detail / poster options errors -->
     <string name="detail_error_update_library_failed">Ažuriranje biblioteke nije uspelo</string>
@@ -2952,7 +3015,7 @@ XML
     <string name="debrid_picker_excluded_release_groups_subtitle">Sakrij izabrane grupe izdanja.</string>
 
     <!-- Debrid: selection count + size range labels -->
-<string name="debrid_selection_count_any">Bilo koji</string>
+    <string name="debrid_selection_count_any">Bilo koji</string>
     <plurals name="debrid_selection_count_value">
         <item quantity="one">%d izabran</item>
         <item quantity="few">%d izabrana</item>
@@ -3061,7 +3124,7 @@ XML
     <string name="playback_net_chunk_size_sub">Veličina svakog bloka za preuzimanje po vezi. Veći blokovi smanjuju režijske troškove, ali troše više memorije.</string>
 
     <!-- Playback diagnostics card -->
-<string name="diag_last_playback_title">Dijagnostika poslednje reprodukcije</string>
+    <string name="diag_last_playback_title">Dijagnostika poslednje reprodukcije</string>
     <string name="diag_no_data">Još nema podataka o reprodukciji. Pustite strim i vratite se ovde da biste videli detalje o DV odluci za tu reprodukciju.</string>
     <string name="diag_section_source_hardware">Izvor i hardver</string>
     <string name="diag_section_source_hardware_sub">Fotografišite ovu karticu ako prijavljujete problem.</string>
@@ -3138,4 +3201,5 @@ XML
     <string name="stream_test_error_prefix">Greška: %1$s</string>
     <string name="stream_test_video_bitrate">Prosečni video bitrejt: %1$s</string>
     <string name="stream_test_error_connection">Povezivanje nije uspelo. Veza poslednje puštenog strima je možda istekla ili je nedostupna. Pustite video ponovo i pokušajte opet.</string>
-	</resources>
+
+</resources>

@@ -10,6 +10,7 @@ import com.nuvio.tv.domain.model.CustomThemeColors
 import com.nuvio.tv.domain.model.SettingsUiStyle
 import com.nuvio.tv.domain.model.ThemeSelection
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -116,4 +117,14 @@ class ThemeDataStore @Inject constructor(
             prefs[settingsUiStyleKey] = style.name
         }
     }
+
+    suspend fun getThemeForProfile(profileId: Int): AppTheme? {
+        val prefs = factory.get(profileId, FEATURE).data.first()
+        return prefs[themeKey]?.let { name -> AppTheme.entries.firstOrNull { it.name == name } }
+    }
+
+    fun observeThemeForProfile(profileId: Int): Flow<AppTheme?> =
+        factory.get(profileId, FEATURE).data.map { prefs ->
+            prefs[themeKey]?.let { name -> AppTheme.entries.firstOrNull { it.name == name } }
+        }
 }

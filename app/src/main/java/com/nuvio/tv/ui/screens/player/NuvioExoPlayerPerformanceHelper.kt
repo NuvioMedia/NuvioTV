@@ -279,11 +279,17 @@ object NuvioExoPlayerPerformanceHelper {
      * Builds a [DefaultLoadControl] tuned for Nuvio performance when enabled,
      * or a standard ExoPlayer [DefaultLoadControl] when disabled.
      */
-    fun buildLoadControl(context: Context? = null): DefaultLoadControl {
+    fun buildLoadControl(context: Context? = null, chunkOverheadMb: Int = 0): DefaultLoadControl {
         return if (enabled) {
-            val targetBufferBytes = (targetBufferSizeMb.toLong() * 1024L * 1024L)
+            val effectiveTargetBufferMb = (targetBufferSizeMb - chunkOverheadMb)
+                .coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
+            val targetBufferBytes = (effectiveTargetBufferMb.toLong() * 1024L * 1024L)
                 .coerceAtMost(Int.MAX_VALUE.toLong())
                 .toInt()
+            android.util.Log.i(
+                "ExoPerformance",
+                "buildLoadControl: targetBufferSizeMb=$targetBufferSizeMb, chunkOverheadMb=$chunkOverheadMb, effectiveTargetBufferMb=$effectiveTargetBufferMb, targetBytes=$targetBufferBytes"
+            )
             DefaultLoadControl.Builder()
                 .setAllocator(DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 64, enabled))
                 .setTargetBufferBytes(targetBufferBytes)

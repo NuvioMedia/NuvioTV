@@ -66,6 +66,7 @@ import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.HeroCarouselBackdrop
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.LocalStartupSplashEnabled
 import com.nuvio.tv.ui.components.PosterCardStyle
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
@@ -324,6 +325,22 @@ fun ClassicHomeContent(
         }
     }
 
+    val shouldRestoreHeroFocus = restoringFocus && heroVisible &&
+        focusState.focusedRowKey == "hero_carousel"
+    LaunchedEffect(shouldRestoreHeroFocus) {
+        if (!shouldRestoreHeroFocus) return@LaunchedEffect
+        columnListState.scrollToItem(0)
+        repeat(8) {
+            withFrameNanos { }
+            val focused = runCatching { heroFocusRequester.requestFocus(); true }
+                .getOrDefault(false)
+            if (focused) {
+                restoringFocus = false
+                return@LaunchedEffect
+            }
+        }
+    }
+
     val contentFocusRequester = LocalContentFocusRequester.current
 
     // Surfaced from [Modifier.dpadVerticalFastScroll] so cards inside the
@@ -341,6 +358,7 @@ fun ClassicHomeContent(
     var activeHeroItem by remember(uiState.heroItems.firstOrNull()?.id) {
         mutableStateOf(uiState.heroItems.firstOrNull())
     }
+    val savedHeroIndex = rememberSaveable { mutableIntStateOf(0) }
     val latestOnItemFocus by rememberUpdatedState(onItemFocus)
     val latestOnRequestTrailerPreview by rememberUpdatedState(onRequestTrailerPreview)
 
@@ -370,6 +388,9 @@ fun ClassicHomeContent(
 
     val handleHeroFocus: (MetaPreview) -> Unit = remember(uiState.classicFocusGradientEnabled) {
         { item ->
+            currentFocusSnapshot.rowIndex = -2
+            currentFocusSnapshot.itemIndex = 0
+            currentFocusSnapshot.rowKey = "hero_carousel"
             activeRowKeyState.value = null
             if (uiState.classicFocusGradientEnabled) {
                 focusedArtwork = null
@@ -385,13 +406,15 @@ fun ClassicHomeContent(
     }
 
     if (deferContentFocus) {
-        // Show spinner while waiting for hero data to arrive — prevents
-        // content rows from claiming focus before the hero is ready.
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            LoadingIndicator()
+        // When the startup splash is active it already shows a spinner,
+        // so skip the redundant loading indicator underneath.
+        if (!LocalStartupSplashEnabled.current) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                LoadingIndicator()
+            }
         }
         return
     }
@@ -570,11 +593,16 @@ fun ClassicHomeContent(
             item(key = "hero_carousel", contentType = "hero") {
                 HeroCarousel(
                     items = uiState.heroItems.asStable(),
-                    focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
+                    focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
                     showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
-                    onActiveItemChanged = { activeHeroItem = it },
+                    onActiveItemChanged = { item ->
+                        activeHeroItem = item
+                        val idx = uiState.heroItems.indexOfFirst { it.id == item.id }
+                        if (idx >= 0) savedHeroIndex.intValue = idx
+                    },
                     showBackdrop = false,
                     onItemFocus = handleHeroFocus,
+                    initialActiveIndex = savedHeroIndex.intValue,
                     onItemClick = { item ->
                         onNavigateToDetail(
                             item.id,

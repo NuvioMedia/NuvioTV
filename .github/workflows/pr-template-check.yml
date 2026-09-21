@@ -40,11 +40,11 @@ jobs:
             }
 
             function checkedLines(content) {
-              return (content || "").match(/^\s*-\s+\[[xX]\]\s+.+$/gm) || [];
+              return (content || "").match(/^\s*[-*+]\s+\[[xX]\]\s+.+$/gm) || [];
             }
 
             function uncheckedLines(content) {
-              return (content || "").match(/^\s*-\s+\[\s\]\s+.+$/gm) || [];
+              return (content || "").match(/^\s*[-*+]\s+\[\s\]\s+.+$/gm) || [];
             }
 
             function hasIssueReference(content) {
