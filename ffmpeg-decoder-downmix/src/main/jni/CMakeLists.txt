@@ -46,13 +46,16 @@ endforeach()
 
 find_library(android_log_lib log)
 find_library(android_lib android)
+find_library(egl_lib EGL)
+find_library(gles_lib GLESv2)
 find_library(z_lib z)
 find_library(m_lib m)
 find_library(dl_lib dl)
 
 add_library(ffmpegJNI
             SHARED
-            ffmpeg_jni.cc)
+            ffmpeg_jni.cc
+            ffmpeg_video_gl.cc)
 
 # FFmpeg ships a top-level file named VERSION. On case-insensitive hosts a
 # regular -I for the FFmpeg root can shadow libc++'s <version> header. Search
@@ -63,6 +66,8 @@ target_compile_options(ffmpegJNI PRIVATE
 
 target_link_libraries(ffmpegJNI
                       PRIVATE ${android_lib}
+                      PRIVATE ${egl_lib}
+                      PRIVATE ${gles_lib}
                       PRIVATE swresample
                       PRIVATE avcodec
                       PRIVATE avutil

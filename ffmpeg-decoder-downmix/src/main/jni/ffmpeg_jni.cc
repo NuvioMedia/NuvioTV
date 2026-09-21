@@ -50,6 +50,8 @@ extern "C" {
 #include <libavutil/audio_fifo.h>
 }
 
+#include "ffmpeg_video_gl.h"
+
 #define LOG_TAG "ffmpeg_jni"
 #define LOGE(...) \
   ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
@@ -125,6 +127,12 @@ struct VideoDecoderContext {
   int window_width;
   int window_height;
   int window_hw_ready;
+  int32_t window_dataspace;
+  int presented_with_gl;
+  VideoGlPresenter* gl;
+  uint8_t* nv12_u;
+  uint8_t* nv12_v;
+  int nv12_capacity;
 };
 
 #ifndef NATIVE_WINDOW_API_CPU
@@ -1361,19 +1369,20 @@ static void configureHwPresent(VideoDecoderContext* context, ANativeWindow* wind
     return;
   }
   int sizeChanged = context->window_width != width || context->window_height != height;
-  if (!sizeChanged && context->window_hw_ready) {
-    return;
-  }
-  loadNativeWindowExt();
-  if (!context->window_hw_ready) {
-    if (g_nwSetDataSpace) {
-      g_nwSetDataSpace(window, nativeDataspaceFromFrame(frame));
-    }
-  }
   if (sizeChanged || !context->window_hw_ready) {
+    // Geometry resets the buffer queue, so dataspace must be applied after it.
     ANativeWindow_setBuffersGeometry(window, width, height, kImageFormatYV12);
     context->window_width = width;
     context->window_height = height;
+    context->window_dataspace = 0;
+  }
+  int32_t dataspace = nativeDataspaceFromFrame(frame);
+  if (!context->window_hw_ready || context->window_dataspace != dataspace) {
+    loadNativeWindowExt();
+    if (g_nwSetDataSpace) {
+      g_nwSetDataSpace(window, dataspace);
+    }
+    context->window_dataspace = dataspace;
   }
   context->window_hw_ready = 1;
 }
@@ -1389,14 +1398,45 @@ static ANativeWindow* windowForSurface(VideoDecoderContext* context, JNIEnv* env
     return context->window;
   }
   if (context->window) {
-    disconnectCpuWindow(context->window);
+    video_gl_detach(context->gl);
+    if (!context->presented_with_gl) {
+      disconnectCpuWindow(context->window);
+    }
     ANativeWindow_release(context->window);
   }
   context->window = acquired;
   context->window_width = 0;
   context->window_height = 0;
   context->window_hw_ready = 0;
+  context->window_dataspace = 0;
+  context->presented_with_gl = 0;
   return context->window;
+}
+
+static void topDownPlane(const uint8_t* data, int linesize, int height, const uint8_t** outData,
+                         int* outStride) {
+  if (linesize < 0) {
+    *outStride = -linesize;
+    *outData = data + (height - 1) * linesize;
+  } else {
+    *outStride = linesize;
+    *outData = data;
+  }
+}
+
+static int presentWithGl(VideoDecoderContext* context, ANativeWindow* window,
+                         const VideoGlFrame* frame) {
+  if (!context->gl) {
+    context->gl = video_gl_create();
+  }
+  if (!context->gl) {
+    return -1;
+  }
+  int result = video_gl_draw(context->gl, window, frame);
+  if (result == 0) {
+    context->presented_with_gl = 1;
+  }
+  return result;
 }
 
 static int blitAvFrameToNativeWindow(VideoDecoderContext* context, JNIEnv* env,
@@ -1410,6 +1450,70 @@ static int blitAvFrameToNativeWindow(VideoDecoderContext* context, JNIEnv* env,
   if (!window) {
     return VIDEO_DECODER_ERROR_OTHER;
   }
+  const uint8_t* yPlane = NULL;
+  const uint8_t* uPlane = NULL;
+  const uint8_t* vPlane = NULL;
+  int yStride = 0;
+  int uStride = 0;
+  int vStride = 0;
+  int uvHeight = (height + 1) / 2;
+  int uvWidth = (width + 1) / 2;
+  enum AVPixelFormat pixFmt = (enum AVPixelFormat)frame->format;
+  topDownPlane(frame->data[0], frame->linesize[0], height, &yPlane, &yStride);
+  if (pixFmt == AV_PIX_FMT_NV12) {
+    const uint8_t* uv = NULL;
+    int srcUvStride = 0;
+    topDownPlane(frame->data[1], frame->linesize[1], uvHeight, &uv, &srcUvStride);
+    if (!uv) {
+      return VIDEO_DECODER_ERROR_OTHER;
+    }
+    int planeBytes = uvWidth * uvHeight;
+    if (context->nv12_capacity < planeBytes) {
+      free(context->nv12_u);
+      free(context->nv12_v);
+      context->nv12_u = (uint8_t*)malloc((size_t)planeBytes);
+      context->nv12_v = (uint8_t*)malloc((size_t)planeBytes);
+      if (!context->nv12_u || !context->nv12_v) {
+        return VIDEO_DECODER_ERROR_OTHER;
+      }
+      context->nv12_capacity = planeBytes;
+    }
+    for (int y = 0; y < uvHeight; ++y) {
+      const uint8_t* row = uv + y * srcUvStride;
+      uint8_t* uRow = context->nv12_u + y * uvWidth;
+      uint8_t* vRow = context->nv12_v + y * uvWidth;
+      for (int x = 0; x < uvWidth; ++x) {
+        uRow[x] = row[2 * x];
+        vRow[x] = row[2 * x + 1];
+      }
+    }
+    uPlane = context->nv12_u;
+    vPlane = context->nv12_v;
+    uStride = uvWidth;
+    vStride = uvWidth;
+  } else {
+    if (!frame->data[1] || !frame->data[2]) {
+      return VIDEO_DECODER_ERROR_OTHER;
+    }
+    topDownPlane(frame->data[1], frame->linesize[1], uvHeight, &uPlane, &uStride);
+    topDownPlane(frame->data[2], frame->linesize[2], uvHeight, &vPlane, &vStride);
+  }
+  VideoGlFrame glFrame;
+  glFrame.y = yPlane;
+  glFrame.u = uPlane;
+  glFrame.v = vPlane;
+  glFrame.y_stride = yStride;
+  glFrame.u_stride = uStride;
+  glFrame.v_stride = vStride;
+  glFrame.width = width;
+  glFrame.height = height;
+  glFrame.colorspace = videoColorspace(frame);
+  if (presentWithGl(context, window, &glFrame) == 0) {
+    return 0;
+  }
+  if (context->gl && video_gl_has_surface(context->gl)) {
+    return VIDEO_DECODER_ERROR_OTHER;
+  }
   configureHwPresent(context, window, width, height, frame);
   ANativeWindow_Buffer nativeBuffer;
   int lockResult = ANativeWindow_lock(window, &nativeBuffer, NULL);
@@ -1419,12 +1523,9 @@ static int blitAvFrameToNativeWindow(VideoDecoderContext* context, JNIEnv* env,
   uint8_t* dest = (uint8_t*)nativeBuffer.bits;
   int destYStride = nativeBuffer.stride;
   int destUvStride = (destYStride / 2 + 15) & ~15;
-  int uvHeight = (height + 1) / 2;
-  int uvWidth = (width + 1) / 2;
   uint8_t* destV = dest + destYStride * nativeBuffer.height;
   uint8_t* destU = destV + destUvStride * ((nativeBuffer.height + 1) / 2);
   copyPlane(dest, destYStride, frame->data[0], frame->linesize[0], width, height);
-  enum AVPixelFormat pixFmt = (enum AVPixelFormat)frame->format;
   if (pixFmt == AV_PIX_FMT_NV12) {
     const uint8_t* uv = frame->data[1];
     int srcUvStride = frame->linesize[1];
@@ -1489,8 +1590,18 @@ static void releaseVideoContext(VideoDecoderContext* context) {
   if (!context) {
     return;
   }
+  if (context->gl) {
+    video_gl_destroy(context->gl);
+    context->gl = NULL;
+  }
+  free(context->nv12_u);
+  free(context->nv12_v);
+  context->nv12_u = NULL;
+  context->nv12_v = NULL;
   if (context->window) {
-    disconnectCpuWindow(context->window);
+    if (!context->presented_with_gl) {
+      disconnectCpuWindow(context->window);
+    }
     ANativeWindow_release(context->window);
     context->window = NULL;
     context->window_hw_ready = 0;
@@ -1554,14 +1665,14 @@ VIDEO_DECODER_FUNC(jlong, ffmpegInitialize, jstring codecName, jbyteArray extraD
     if (cpu_count < 2) {
       cpu_count = 2;
     }
-    if (cpu_count > 3) {
-      cpu_count = 3;
+    if (cpu_count > 4) {
+      cpu_count = 4;
     }
     thread_count = cpu_count;
   }
   context->codec_context->thread_count = thread_count;
   context->codec_context->thread_type = FF_THREAD_SLICE | FF_THREAD_FRAME;
-  context->codec_context->skip_loop_filter = AVDISCARD_NONKEY;
+  context->codec_context->skip_loop_filter = AVDISCARD_DEFAULT;
   context->codec_context->get_format = ffmpegVideoGetFormat;
   context->codec_context->err_recognition = AV_EF_IGNORE_ERR;
   context->codec_context->pkt_timebase = AV_TIME_BASE_Q;
@@ -1675,7 +1786,7 @@ VIDEO_DECODER_FUNC(void, ffmpegSetDecodeLoadLevel, jlong jContext, jint level) {
     case DECODE_LOAD_NORMAL:
     default:
       codecContext->skip_frame = AVDISCARD_DEFAULT;
-      codecContext->skip_loop_filter = AVDISCARD_NONKEY;
+      codecContext->skip_loop_filter = AVDISCARD_DEFAULT;
       codecContext->skip_idct = AVDISCARD_DEFAULT;
       break;
   }
@@ -1717,6 +1828,34 @@ VIDEO_DECODER_FUNC(jint, ffmpegRenderFrame, jlong jContext, jobject surface,
   ANativeWindow* window = windowForSurface(context, env, surface);
   if (!window) {
     env->ReleaseIntArrayElements(strides, strideValues, JNI_ABORT);
+    return VIDEO_DECODER_ERROR_OTHER;
+  }
+  VideoGlFrame glFrame;
+  glFrame.y = ySrc;
+  glFrame.u = uSrc;
+  glFrame.v = vSrc;
+  glFrame.y_stride = yStride;
+  glFrame.u_stride = uStride;
+  glFrame.v_stride = vStride;
+  glFrame.width = width;
+  glFrame.height = height;
+  glFrame.colorspace = height >= 720 ? kColorspaceBT709 : kColorspaceBT601;
+  if (presentWithGl(context, window, &glFrame) == 0) {
+    env->ReleaseIntArrayElements(strides, strideValues, JNI_ABORT);
+    env->DeleteLocalRef(yObj);
+    env->DeleteLocalRef(uObj);
+    env->DeleteLocalRef(vObj);
+    env->DeleteLocalRef(planes);
+    env->DeleteLocalRef(strides);
+    return 0;
+  }
+  if (context->gl && video_gl_has_surface(context->gl)) {
+    env->ReleaseIntArrayElements(strides, strideValues, JNI_ABORT);
+    env->DeleteLocalRef(yObj);
+    env->DeleteLocalRef(uObj);
+    env->DeleteLocalRef(vObj);
+    env->DeleteLocalRef(planes);
+    env->DeleteLocalRef(strides);
     return VIDEO_DECODER_ERROR_OTHER;
   }
   configureHwPresent(context, window, width, height, NULL);

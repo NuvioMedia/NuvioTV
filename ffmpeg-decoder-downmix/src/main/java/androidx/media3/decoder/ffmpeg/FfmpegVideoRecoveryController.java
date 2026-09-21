@@ -20,13 +20,13 @@ import androidx.media3.common.C;
 /** Controls decoder load shedding and bounded keyframe resynchronization. */
 final class FfmpegVideoRecoveryController {
 
-  private static final long LOAD_SHEDDING_ENABLE_THRESHOLD_US = -30_000;
-  private static final long LOAD_SHEDDING_ENABLE_DURATION_US = 100_000;
+  private static final long LOAD_SHEDDING_ENABLE_THRESHOLD_US = -200_000;
+  private static final long LOAD_SHEDDING_ENABLE_DURATION_US = 500_000;
   // Recover before reaching exactly zero. Render-loop scheduling normally leaves a small negative
   // earlyUs even after the decoder has caught up, so requiring zero can leave non-reference frame
   // shedding enabled indefinitely.
   private static final long LOAD_SHEDDING_DISABLE_THRESHOLD_US = -10_000;
-  private static final long AGGRESSIVE_LOAD_SHEDDING_ENABLE_THRESHOLD_US = -250_000;
+  private static final long AGGRESSIVE_LOAD_SHEDDING_ENABLE_THRESHOLD_US = -400_000;
   private static final long AGGRESSIVE_LOAD_SHEDDING_DISABLE_THRESHOLD_US = -100_000;
 
   @FfmpegVideoDecoder.DecodeLoadLevel private int decodeLoadLevel;

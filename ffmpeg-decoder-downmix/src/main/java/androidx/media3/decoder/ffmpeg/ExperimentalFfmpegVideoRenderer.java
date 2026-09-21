@@ -66,6 +66,11 @@ public final class ExperimentalFfmpegVideoRenderer extends DecoderVideoRenderer 
   private static final long STARTUP_DROP_THRESHOLD_US = -400_000;
   /** Don't flush to a keyframe during startup unless we are more than 1.2s behind. */
   private static final long STARTUP_KEYFRAME_DROP_THRESHOLD_US = -1_200_000;
+  /**
+   * ExoPlayer drops any frame later than 30ms. VC-1 software plus the GL upload is often a frame
+   * or two behind on this box; showing those frames is smoother than skipping them.
+   */
+  private static final long LATE_FRAME_DROP_THRESHOLD_US = -150_000;
 
   private final int threads;
   private final int numInputBuffers;
@@ -177,7 +182,7 @@ public final class ExperimentalFfmpegVideoRenderer extends DecoderVideoRenderer 
     if (startupGrace) {
       return earlyUs < STARTUP_DROP_THRESHOLD_US;
     }
-    return super.shouldDropOutputBuffer(earlyUs, elapsedRealtimeUs);
+    return earlyUs < LATE_FRAME_DROP_THRESHOLD_US;
   }
 
   @Override
