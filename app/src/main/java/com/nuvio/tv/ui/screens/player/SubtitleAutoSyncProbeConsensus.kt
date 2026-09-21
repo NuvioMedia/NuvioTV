@@ -6,8 +6,9 @@ import kotlin.math.abs
  * Promotes a stable offset repeated across independent probe snapshots.
  *
  * Individual snapshots can narrowly miss the engine's sigma/agreement gates. Repeating the same
- * offset with a distinct peak across three growing audio samples is stronger evidence than any one
- * of those snapshots alone, while unrelated whole-film aliases jump by minutes between probes.
+ * offset with a distinct peak across three disjoint audio samples is stronger evidence than any one
+ * sample alone, while unrelated whole-film aliases jump by minutes between probes. Callers must
+ * never pass cumulative snapshots here.
  */
 internal object SubtitleAutoSyncProbeConsensus {
     private const val MIN_RESULTS = 3

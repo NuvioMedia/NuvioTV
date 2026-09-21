@@ -105,6 +105,8 @@ internal class PlaybackSpeedAwareAudioSink(
         if (format != null && endPosition > startPosition) {
             val bytesPerSample = when (format.pcmEncoding) {
                 C.ENCODING_PCM_16BIT -> 2
+                C.ENCODING_PCM_24BIT -> 3
+                C.ENCODING_PCM_32BIT,
                 C.ENCODING_PCM_FLOAT -> 4
                 else -> 0
             }

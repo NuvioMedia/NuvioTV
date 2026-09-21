@@ -63,8 +63,8 @@ class SubtitleAutoSyncTargetedValidationTest {
     }
 
     @Test
-    fun `final local candidate nomination relies on structural evidence not score thresholds`() {
-        assertTrue(
+    fun `final local candidate nomination rejects a peak with no statistical support`() {
+        assertFalse(
             SubtitleAutoSyncTargetedValidation.shouldStart(
                 candidate = result(
                     offsetMs = 49_600,
@@ -164,7 +164,7 @@ class SubtitleAutoSyncTargetedValidationTest {
         requireNotNull(confirmed)
         assertEquals(49_500, confirmed.offsetMs)
         assertTrue(confirmed.shouldApply)
-        assertEquals(1.0, confirmed.windowAgreement, 0.0)
+        assertEquals(0.25, confirmed.windowAgreement, 0.0)
     }
 
     @Test
@@ -212,6 +212,38 @@ class SubtitleAutoSyncTargetedValidationTest {
     }
 
     @Test
+    fun `confirmations on opposite sides of candidate must agree with each other`() {
+        val candidate = result(offsetMs = 50_000)
+
+        assertNull(
+            SubtitleAutoSyncTargetedValidation.confirmedResult(
+                candidate,
+                listOf(
+                    result(offsetMs = 48_100, confidence = 0.60, margin = 0.04, sigma = 2.0),
+                    result(offsetMs = 51_900, confidence = 0.61, margin = 0.05, sigma = 2.1)
+                )
+            )
+        )
+    }
+
+    @Test
+    fun `confirmation rejects a nearby but weak peak`() {
+        assertFalse(
+            SubtitleAutoSyncTargetedValidation.confirms(
+                candidateOffsetMs = 50_000,
+                result = result(
+                    offsetMs = 50_600,
+                    confidence = 0.40,
+                    margin = 0.001,
+                    sigma = 2.0,
+                    agreement = 0.50,
+                    windows = 2
+                )
+            )
+        )
+    }
+
+    @Test
     fun `validation planner picks two dense windows outside existing evidence`() {
         val cues = buildList {
             listOf(120_000L, 600_000L, 1_200_000L).forEachIndexed { group, base ->
@@ -231,6 +263,31 @@ class SubtitleAutoSyncTargetedValidationTest {
         assertEquals(2, positions.size)
         assertTrue(positions.all { it > 500_000L })
         assertTrue(kotlin.math.abs(positions[0] - positions[1]) >= 90_000L)
+    }
+
+    @Test
+    fun `validation planner does not mistake sound descriptions for dialogue`() {
+        val cues = buildList {
+            repeat(14) { index ->
+                val start = 120_000L + index * 2_000L
+                add(SubtitleSyncCue(start, start + 900L, "[door closes]"))
+            }
+            repeat(10) { index ->
+                val start = 600_000L + index * 2_500L
+                add(SubtitleSyncCue(start, start + 1_200L, "Actual dialogue $index"))
+            }
+        }
+
+        val positions = planSubtitleAutoSyncValidationPositions(
+            cues = cues,
+            candidateOffsetMs = 0,
+            durationMs = 1_000_000L,
+            excludedObservedSpans = emptyList(),
+            maxAttempts = 1
+        )
+
+        assertEquals(1, positions.size)
+        assertTrue(positions.single() >= 600_000L)
     }
 
     private fun result(

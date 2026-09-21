@@ -26,6 +26,7 @@ import com.nuvio.tv.core.player.DolbyVisionConversionConfig
 import com.nuvio.tv.core.player.DolbyVisionExtractorsFactory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -67,25 +68,30 @@ internal data class SubtitleFastAudioProbeResult(
         } else {
             0L
         }
+
+    val observedDurationMs: Long
+        get() = snapshot?.let { mergedObservedDurationMs(it.observedSpans) } ?: 0L
 }
 
 /**
  * On-demand, audio-only ExoPlayer used by Auto Sync.
  *
- * The player is created only for [probe], uses its own MediaSource/LoadControl/track selector,
+ * The player is created on the first [probe], reused for later seeks in the same Auto Sync run,
+ * and released explicitly after discovery/validation. It uses its own MediaSource/LoadControl,
  * never attaches a video surface, and has video/text/image/metadata tracks disabled. Its data
  * source deliberately bypasses [PlayerMediaSourceFactory]'s shared VOD cache/session state while
  * retaining the same Nuvio HTTP stack and request headers.
  *
  * Audio is muted and audio-focus handling is disabled. Playback uses the request's adaptive speed;
  * the collector receives the decoder's original PCM (before speed processing) through
- * [PlaybackSpeedAwareAudioSink], so VAD timestamps remain on the media timeline. Every player and
- * sink resource is released from the application looper on success, timeout, error, or cancellation.
+ * [PlaybackSpeedAwareAudioSink], so VAD timestamps remain on the media timeline. Player and sink
+ * resources are always released from the application looper, including cancellation.
  */
 internal class SubtitleFastAudioProbe(
     context: Context
 ) {
     private val appContext = context.applicationContext
+    private var session: ProbeSession? = null
 
     private companion object {
         const val TAG = "SubtitleFastProbe"
@@ -101,6 +107,18 @@ internal class SubtitleFastAudioProbe(
         const val TARGET_BUFFER_BYTES = 12 * 1024 * 1024
     }
 
+    private data class ProbeSession(
+        val key: String,
+        val player: ExoPlayer,
+        val collector: SubtitleSpeechProfileCollector,
+        var activeRequest: SubtitleFastAudioProbeRequest? = null,
+        var requestedStartMs: Long = 0L,
+        var playerError: PlaybackException? = null,
+        var playbackEnded: Boolean = false,
+        var audioOverrideResolved: Boolean = false,
+        var trackSelectionFailure: String? = null
+    )
+
     suspend fun probe(request: SubtitleFastAudioProbeRequest): SubtitleFastAudioProbeResult =
         withContext(Dispatchers.Main.immediate) {
             if (request.streamUrl.isBlank()) {
@@ -108,140 +126,39 @@ internal class SubtitleFastAudioProbe(
             }
 
             val requestedStartMs = resolveWindowStartMs(request)
-            val collector = SubtitleSpeechProfileCollector(
-                timelineAnchorMs = requestedStartMs
-            ).apply {
-                beginSession("exo-fast:${request.streamUrl.hashCode()}:$requestedStartMs")
-                startCollecting(clearExisting = true)
-            }
-
-            var player: ExoPlayer? = null
-            var playerError: PlaybackException? = null
-            var playbackEnded = false
-            var audioOverrideResolved = request.selectedAudioTrack == null
             val startedAtMs = SystemClock.elapsedRealtime()
             var firstPcmAtMs: Long? = null
+            var activeSession: ProbeSession? = null
 
             try {
-                val normalizedRequest = PlayerMediaSourceFactory.normalizePlaybackRequest(
-                    request.streamUrl,
-                    request.headers
-                )
-                val dataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(
-                    appContext,
-                    normalizedRequest.headers
-                )
-                // Keep the probe's network/session state independent, but use the same extractor
-                // compatibility layer as normal playback. In particular, the vendored Matroska
-                // extractor recognises DTS-HD tracks that stock Media3 may expose as core DTS.
-                val extractorsFactory = DolbyVisionExtractorsFactory(
-                    delegate = DefaultExtractorsFactory(),
-                    config = DolbyVisionConversionConfig(active = false)
-                )
-                val mediaSourceFactory = DefaultMediaSourceFactory(
-                    dataSourceFactory,
-                    extractorsFactory
-                )
-                val trackSelector = DefaultTrackSelector(appContext).apply {
-                    val parametersBuilder = buildUponParameters()
-                        .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
-                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                        .setTrackTypeDisabled(C.TRACK_TYPE_IMAGE, true)
-                        .setTrackTypeDisabled(C.TRACK_TYPE_METADATA, true)
-                    request.selectedAudioTrack?.language
-                        ?.takeIf { it.isNotBlank() && !it.equals("und", ignoreCase = true) }
-                        ?.let(parametersBuilder::setPreferredAudioLanguage)
-                    setParameters(parametersBuilder)
-                }
                 val playbackSpeed = request.playbackSpeed
                     .takeIf { it.isFinite() && it > 0f }
                     ?.coerceIn(1f, 8f)
                     ?: 1f
-                val renderersFactory = SubtitleProbeRenderersFactory(
-                    context = appContext,
-                    collector = collector,
-                    playbackSpeed = playbackSpeed
+                val currentSession = ensureSession(request, playbackSpeed)
+                activeSession = currentSession
+                val collector = currentSession.collector
+                currentSession.activeRequest = request
+                currentSession.requestedStartMs = requestedStartMs
+                currentSession.playerError = null
+                currentSession.playbackEnded = false
+                currentSession.audioOverrideResolved = request.selectedAudioTrack == null
+                currentSession.trackSelectionFailure = null
+                collector.beginSession(
+                    key = "exo-fast:${request.streamUrl.hashCode()}:$requestedStartMs",
+                    timelineAnchorMs = requestedStartMs
                 )
-                    .setExtensionRendererMode(
-                        DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                    )
-                    .setEnableDecoderFallback(true)
-                val loadControl = DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(
-                        MIN_BUFFER_MS,
-                        MAX_BUFFER_MS,
-                        BUFFER_FOR_PLAYBACK_MS,
-                        BUFFER_AFTER_REBUFFER_MS
-                    )
-                    .setTargetBufferBytes(TARGET_BUFFER_BYTES)
-                    .setPrioritizeTimeOverSizeThresholds(true)
-                    .setBackBuffer(0, false)
-                    .build()
+                collector.stopCollecting(clearExisting = true)
 
-                val localPlayer = ExoPlayer.Builder(appContext, renderersFactory)
-                    .setLooper(Looper.getMainLooper())
-                    .setTrackSelector(trackSelector)
-                    .setMediaSourceFactory(mediaSourceFactory)
-                    .setLoadControl(loadControl)
-                    .setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(C.USAGE_MEDIA)
-                            .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
-                            .build(),
-                        /* handleAudioFocus = */ false
-                    )
-                    .setHandleAudioBecomingNoisy(false)
-                    .setReleaseTimeoutMs(RELEASE_TIMEOUT_MS)
-                    .build()
-                player = localPlayer
-
-                val listener = object : Player.Listener {
-                    override fun onTracksChanged(tracks: Tracks) {
-                        val selected = request.selectedAudioTrack
-                        if (selected == null || audioOverrideResolved) return
-                        val target = findBestAudioTrack(tracks, selected) ?: return
-                        audioOverrideResolved = true
-
-                        if (!target.group.isTrackSelected(target.trackIndex)) {
-                            // Preparation may briefly select the default audio track before the
-                            // complete manifest is known. Discard any such PCM and restart this
-                            // probe window using the same audio track as the main player.
-                            collector.resetForAudioTrackChange()
-                            localPlayer.trackSelectionParameters =
-                                localPlayer.trackSelectionParameters
-                                    .buildUpon()
-                                    .setOverrideForType(
-                                        TrackSelectionOverride(
-                                            target.group.mediaTrackGroup,
-                                            target.trackIndex
-                                        )
-                                    )
-                                    .build()
-                            localPlayer.seekTo(requestedStartMs)
-                        }
-                    }
-
-                    override fun onPlaybackStateChanged(playbackState: Int) {
-                        playbackEnded = playbackState == Player.STATE_ENDED
-                    }
-
-                    override fun onPlayerError(error: PlaybackException) {
-                        playerError = error
-                    }
-                }
-                localPlayer.addListener(listener)
-
-                val mediaItemBuilder = MediaItem.Builder().setUri(normalizedRequest.url)
-                PlayerMediaSourceFactory.inferMimeType(
-                    url = normalizedRequest.url,
-                    filename = null
-                )?.let(mediaItemBuilder::setMimeType)
-
-                localPlayer.volume = 0f
+                val localPlayer = currentSession.player
                 localPlayer.playbackParameters = PlaybackParameters(playbackSpeed, 1f)
-                localPlayer.setMediaItem(mediaItemBuilder.build())
                 localPlayer.seekTo(requestedStartMs)
-                localPlayer.prepare()
+                if (request.selectedAudioTrack == null) {
+                    collector.startCollecting(clearExisting = true)
+                } else if (localPlayer.currentTracks.groups.any { it.type == C.TRACK_TYPE_AUDIO }) {
+                    resolveSelectedAudioTrack(currentSession, localPlayer.currentTracks)
+                }
+                if (localPlayer.playbackState == Player.STATE_IDLE) localPlayer.prepare()
                 localPlayer.play()
 
                 val playbackStartedAtMs = SystemClock.elapsedRealtime()
@@ -252,7 +169,19 @@ internal class SubtitleFastAudioProbe(
                 ) {
                     while (true) {
                         coroutineContext.ensureActive()
-                        playerError?.let { throw it }
+                        currentSession.playerError?.let { throw it }
+                        if (
+                            !currentSession.audioOverrideResolved &&
+                            currentSession.player.playbackState == Player.STATE_READY
+                        ) {
+                            resolveSelectedAudioTrack(
+                                currentSession,
+                                currentSession.player.currentTracks
+                            )
+                        }
+                        if (currentSession.trackSelectionFailure != null) {
+                            return@withTimeoutOrNull SubtitleFastAudioProbeTermination.ERROR
+                        }
 
                         val snapshot = collector.snapshot()
                         val nowMs = SystemClock.elapsedRealtime()
@@ -270,7 +199,7 @@ internal class SubtitleFastAudioProbe(
                         if (hasReachedSubtitleFastAudioTarget(snapshot.observedSpans)) {
                             return@withTimeoutOrNull SubtitleFastAudioProbeTermination.TARGET_REACHED
                         }
-                        if (playbackEnded) {
+                        if (currentSession.playbackEnded) {
                             return@withTimeoutOrNull SubtitleFastAudioProbeTermination.EOF
                         }
                         val pcmStartedAtMs = firstPcmAtMs
@@ -289,7 +218,9 @@ internal class SubtitleFastAudioProbe(
 
                 val snapshot = collector.snapshot()
                 val failureReason = when {
-                    playerError != null -> playerError?.message
+                    currentSession.playerError != null -> currentSession.playerError?.message
+                    currentSession.trackSelectionFailure != null ->
+                        currentSession.trackSelectionFailure
                     snapshot.failureReason != null -> snapshot.failureReason
                     termination == SubtitleFastAudioProbeTermination.WALL_TIMEOUT ->
                         if (firstPcmAtMs == null) {
@@ -313,18 +244,170 @@ internal class SubtitleFastAudioProbe(
                 throw error
             } catch (error: Throwable) {
                 Log.w(TAG, "Exo audio probe unavailable: ${error.message}", error)
-                collector.snapshot().toProbeResult(
+                activeSession?.collector?.snapshot().orEmptyProbeSnapshot().toProbeResult(
                     termination = SubtitleFastAudioProbeTermination.ERROR,
                     failureReason = error.message ?: error.javaClass.simpleName
                 )
             } finally {
-                collector.stopCollecting(clearExisting = false)
-                // probe() is confined to Dispatchers.Main.immediate, which is also the player's
-                // application looper. release() therefore cannot race an ExoPlayer callback.
-                runCatching { player?.stop() }
-                runCatching { player?.release() }
+                activeSession?.let { current ->
+                    current.collector.stopCollecting(clearExisting = false)
+                    current.activeRequest = null
+                    runCatching { current.player.pause() }
+                    if (current.playerError != null) releaseSession()
+                }
             }
         }
+
+    /** Releases the one on-demand player after discovery and validation have both completed. */
+    suspend fun release() = withContext(NonCancellable + Dispatchers.Main.immediate) {
+        releaseSession()
+    }
+
+    private fun ensureSession(
+        request: SubtitleFastAudioProbeRequest,
+        playbackSpeed: Float
+    ): ProbeSession {
+        val key = buildString {
+            append(request.streamUrl)
+            append('|').append(request.headers.toSortedMap().hashCode())
+            append('|').append(request.selectedAudioTrack?.trackId)
+            append('|').append(request.selectedAudioTrack?.index)
+        }
+        session?.takeIf { it.key == key }?.let { return it }
+        releaseSession()
+
+        val normalizedRequest = PlayerMediaSourceFactory.normalizePlaybackRequest(
+            request.streamUrl,
+            request.headers
+        )
+        val dataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(
+            appContext,
+            normalizedRequest.headers
+        )
+        val extractorsFactory = DolbyVisionExtractorsFactory(
+            delegate = DefaultExtractorsFactory(),
+            config = DolbyVisionConversionConfig(active = false)
+        )
+        val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
+        val trackSelector = DefaultTrackSelector(appContext).apply {
+            val parametersBuilder = buildUponParameters()
+                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .setTrackTypeDisabled(C.TRACK_TYPE_IMAGE, true)
+                .setTrackTypeDisabled(C.TRACK_TYPE_METADATA, true)
+            request.selectedAudioTrack?.language
+                ?.takeIf { it.isNotBlank() && !it.equals("und", ignoreCase = true) }
+                ?.let(parametersBuilder::setPreferredAudioLanguage)
+            setParameters(parametersBuilder)
+        }
+        val collector = SubtitleSpeechProfileCollector(timelineAnchorMs = null)
+        val renderersFactory = SubtitleProbeRenderersFactory(
+            context = appContext,
+            collector = collector,
+            playbackSpeed = playbackSpeed
+        )
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            .setEnableDecoderFallback(true)
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                MIN_BUFFER_MS,
+                MAX_BUFFER_MS,
+                BUFFER_FOR_PLAYBACK_MS,
+                BUFFER_AFTER_REBUFFER_MS
+            )
+            .setTargetBufferBytes(TARGET_BUFFER_BYTES)
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .setBackBuffer(0, false)
+            .build()
+        val player = ExoPlayer.Builder(appContext, renderersFactory)
+            .setLooper(Looper.getMainLooper())
+            .setTrackSelector(trackSelector)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .setLoadControl(loadControl)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+                    .build(),
+                /* handleAudioFocus = */ false
+            )
+            .setHandleAudioBecomingNoisy(false)
+            .setReleaseTimeoutMs(RELEASE_TIMEOUT_MS)
+            .build()
+        val created = ProbeSession(key = key, player = player, collector = collector)
+        player.addListener(object : Player.Listener {
+            override fun onTracksChanged(tracks: Tracks) {
+                resolveSelectedAudioTrack(created, tracks)
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                created.playbackEnded = playbackState == Player.STATE_ENDED
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                created.playerError = error
+            }
+        })
+        val mediaItemBuilder = MediaItem.Builder().setUri(normalizedRequest.url)
+        PlayerMediaSourceFactory.inferMimeType(
+            url = normalizedRequest.url,
+            filename = null
+        )?.let(mediaItemBuilder::setMimeType)
+        player.volume = 0f
+        player.setMediaItem(mediaItemBuilder.build())
+        session = created
+        return created
+    }
+
+    private fun resolveSelectedAudioTrack(current: ProbeSession, tracks: Tracks) {
+        val request = current.activeRequest ?: return
+        val selected = request.selectedAudioTrack
+        if (selected == null || current.audioOverrideResolved) return
+        val target = findBestAudioTrack(tracks, selected)
+        if (target == null) {
+            if (
+                current.player.playbackState == Player.STATE_READY &&
+                tracks.groups.any { it.type == C.TRACK_TYPE_AUDIO }
+            ) {
+                current.trackSelectionFailure =
+                    "Could not confidently match the selected audio track"
+            }
+            return
+        }
+        current.trackSelectionFailure = null
+        if (!target.group.isTrackSelected(target.trackIndex)) {
+            current.collector.resetForAudioTrackChange()
+            current.player.trackSelectionParameters =
+                current.player.trackSelectionParameters
+                    .buildUpon()
+                    .setOverrideForType(
+                        TrackSelectionOverride(target.group.mediaTrackGroup, target.trackIndex)
+                    )
+                    .build()
+            current.player.seekTo(current.requestedStartMs)
+            return
+        }
+
+        current.audioOverrideResolved = true
+        // Track discovery may already have decoded default-track PCM while collection was paused.
+        // Re-seek before enabling the collector so the requested window is not silently shortened.
+        current.player.seekTo(current.requestedStartMs)
+        current.collector.startCollecting(clearExisting = true)
+        Log.i(
+            TAG,
+            "Matched audio track ordinal=${target.audioOrdinal} id=${target.format.id} " +
+                "language=${target.format.language} channels=${target.format.channelCount} " +
+                "score=${audioTrackMatchScore(target, selected)}"
+        )
+    }
+
+    private fun releaseSession() {
+        val current = session ?: return
+        session = null
+        current.collector.stopCollecting(clearExisting = true)
+        runCatching { current.player.stop() }
+        runCatching { current.player.release() }
+    }
 
     private fun resolveWindowStartMs(request: SubtitleFastAudioProbeRequest): Long {
         val preferred = (request.preferredStartMs - PRE_ROLL_MS).coerceAtLeast(0L)
@@ -341,7 +424,14 @@ internal class SubtitleFastAudioProbe(
     )
 }
 
-/** PCM-only sink factory for the short-lived probe player. */
+private fun SubtitleSpeechSnapshot?.orEmptyProbeSnapshot(): SubtitleSpeechSnapshot = this
+    ?: SubtitleSpeechSnapshot(
+        speechSpans = emptyList(),
+        observedSpans = emptyList(),
+        pcmAvailable = false
+    )
+
+/** PCM-only sink factory for the reusable probe player. */
 private class SubtitleProbeRenderersFactory(
     context: Context,
     private val collector: SubtitleSpeechProfileCollector,
@@ -394,9 +484,15 @@ private fun findBestAudioTrack(tracks: Tracks, selected: TrackInfo): ProbeAudioT
             }
         }
     }
-    return candidates.maxByOrNull { candidate ->
-        audioTrackMatchScore(candidate, selected)
-    }
+    if (candidates.size == 1) return candidates.first()
+    val ranked = candidates
+        .map { candidate -> candidate to audioTrackMatchScore(candidate, selected) }
+        .sortedByDescending { it.second }
+    val best = ranked.firstOrNull() ?: return null
+    val runnerUpScore = ranked.getOrNull(1)?.second ?: Int.MIN_VALUE
+    val hasStrongIdentity = best.second >= 90
+    val hasUsefulIdentity = best.second >= 40 && best.second - runnerUpScore >= 10
+    return best.first.takeIf { hasStrongIdentity || hasUsefulIdentity }
 }
 
 private fun audioTrackMatchScore(candidate: ProbeAudioTrack, selected: TrackInfo): Int {

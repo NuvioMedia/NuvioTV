@@ -9,6 +9,7 @@ import com.konovalov.vad.webrtc.config.Mode
 import com.konovalov.vad.webrtc.config.SampleRate
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 internal data class SubtitlePcmTimelineRange(
@@ -24,9 +25,16 @@ internal data class SubtitlePcmTimelineRange(
  * frame duration. Normal playback leaves [anchorMs] null and retains the renderer timestamps.
  */
 internal class SubtitlePcmTimelineCursor(
-    private val anchorMs: Long?
+    anchorMs: Long?
 ) {
-    private val anchorUs = anchorMs?.coerceAtLeast(0L)?.times(1_000L)
+    private companion object {
+        const val MAX_FORWARD_PTS_GAP_US = 30_000_000L
+        const val MAX_BACKWARD_PTS_JITTER_US = 5_000L
+    }
+
+    private var anchorUs = anchorMs?.coerceAtLeast(0L)?.times(1_000L)
+    private var segmentAnchorUs = anchorUs
+    private var rawBaseUs: Long? = null
     private var nextNormalizedUs: Long? = anchorUs
 
     fun map(
@@ -34,7 +42,25 @@ internal class SubtitlePcmTimelineCursor(
         frameCount: Int,
         sampleRate: Int
     ): SubtitlePcmTimelineRange {
-        val startUs = nextNormalizedUs ?: rawPresentationTimeUs
+        val currentAnchorUs = segmentAnchorUs
+        val expectedStartUs = nextNormalizedUs
+        val startUs = if (currentAnchorUs == null) {
+            rawPresentationTimeUs
+        } else {
+            val baseUs = rawBaseUs
+            if (baseUs == null) {
+                rawBaseUs = rawPresentationTimeUs
+                expectedStartUs ?: currentAnchorUs
+            } else {
+                val mappedRawUs = currentAnchorUs + (rawPresentationTimeUs - baseUs)
+                when {
+                    expectedStartUs == null -> mappedRawUs
+                    mappedRawUs < expectedStartUs - MAX_BACKWARD_PTS_JITTER_US -> expectedStartUs
+                    mappedRawUs > expectedStartUs + MAX_FORWARD_PTS_GAP_US -> expectedStartUs
+                    else -> mappedRawUs
+                }
+            }
+        }
         val durationUs = if (frameCount > 0 && sampleRate > 0) {
             frameCount.toLong() * 1_000_000L / sampleRate.toLong()
         } else {
@@ -48,8 +74,17 @@ internal class SubtitlePcmTimelineCursor(
         )
     }
 
-    fun reset() {
+    fun reset(anchorMs: Long? = anchorUs?.div(1_000L)) {
+        anchorUs = anchorMs?.coerceAtLeast(0L)?.times(1_000L)
+        segmentAnchorUs = anchorUs
+        rawBaseUs = null
         nextNormalizedUs = anchorUs
+    }
+
+    fun onDiscontinuity() {
+        if (anchorUs == null) return
+        segmentAnchorUs = nextNormalizedUs ?: anchorUs
+        rawBaseUs = null
     }
 }
 
@@ -70,6 +105,8 @@ internal class SubtitleSpeechProfileCollector(
     private var pcmEncoding: Int = C.ENCODING_INVALID
     private var bytesPerSample = 0
     private var resamplePhase = 0
+    private var resampleAccumulator = 0.0
+    private var resampleAccumulatorCount = 0
     private var vadFrame = ShortArray(VAD_FRAME_SAMPLES)
     private var vadFrameSize = 0
     private var vadFrameStartMs = 0L
@@ -80,14 +117,15 @@ internal class SubtitleSpeechProfileCollector(
     private val timelineCursor = SubtitlePcmTimelineCursor(timelineAnchorMs)
 
     @Synchronized
-    fun beginSession(key: String) {
-        if (sessionKey == key) return
+    fun beginSession(key: String, timelineAnchorMs: Long? = null) {
         sessionKey = key
         collecting = false
         speechSpans.clear()
         observedSpans.clear()
-        timelineCursor.reset()
-        resetAudioState(clearFormat = true)
+        timelineCursor.reset(timelineAnchorMs)
+        // A reusable probe player does not necessarily call AudioSink.configure() after every
+        // seek. Keep the already negotiated PCM format while clearing all timing/VAD state.
+        resetAudioState(clearFormat = false)
     }
 
     /** Enables the relatively expensive resampling/VAD path only for an explicit Auto Sync run. */
@@ -117,7 +155,9 @@ internal class SubtitleSpeechProfileCollector(
     @Synchronized
     fun configure(format: Format) {
         val supportedEncoding = format.pcmEncoding == C.ENCODING_PCM_16BIT ||
-            format.pcmEncoding == C.ENCODING_PCM_FLOAT
+            format.pcmEncoding == C.ENCODING_PCM_FLOAT ||
+            format.pcmEncoding == C.ENCODING_PCM_24BIT ||
+            format.pcmEncoding == C.ENCODING_PCM_32BIT
         val isSupportedPcm = format.sampleMimeType == MimeTypes.AUDIO_RAW &&
             supportedEncoding &&
             format.sampleRate > 0 &&
@@ -140,7 +180,13 @@ internal class SubtitleSpeechProfileCollector(
             sampleRate = format.sampleRate
             channelCount = format.channelCount
             pcmEncoding = format.pcmEncoding
-            bytesPerSample = if (pcmEncoding == C.ENCODING_PCM_FLOAT) 4 else 2
+            bytesPerSample = when (pcmEncoding) {
+                C.ENCODING_PCM_16BIT -> 2
+                C.ENCODING_PCM_24BIT -> 3
+                C.ENCODING_PCM_32BIT,
+                C.ENCODING_PCM_FLOAT -> 4
+                else -> 0
+            }
             resetFraming()
         }
         if (collecting) ensureVad()
@@ -165,28 +211,20 @@ internal class SubtitleSpeechProfileCollector(
         val endMs = timelineRange.endMs
         appendMerged(observedSpans, SubtitleSyncSpan(startMs, endMs), allowedGapMs = 120L)
 
+        val frameSamples = DoubleArray(channelCount)
         repeat(inputFrameCount) { inputFrameIndex ->
-            var sum = 0.0
-            repeat(channelCount) {
-                val value = if (pcmEncoding == C.ENCODING_PCM_FLOAT) {
-                    input.float.coerceIn(-1f, 1f).toDouble()
-                } else {
-                    input.short.toDouble() / Short.MAX_VALUE.toDouble()
-                }
-                sum += value
+            repeat(channelCount) { channel ->
+                frameSamples[channel] = readPcmSample(input)
             }
-            val mono = (sum / channelCount.toDouble()).coerceIn(-1.0, 1.0)
-            resamplePhase += TARGET_SAMPLE_RATE
-            while (resamplePhase >= sampleRate) {
-                resamplePhase -= sampleRate
-                val sampleTimeMs = startMs + (inputFrameIndex * 1_000L / sampleRate)
-                emitSample((mono * Short.MAX_VALUE).roundToInt().toShort(), sampleTimeMs)
-            }
+            val mono = downmixSubtitlePcmFrame(frameSamples)
+            val sampleTimeMs = startMs + (inputFrameIndex * 1_000L / sampleRate)
+            resampleAndEmit(mono, sampleTimeMs)
         }
     }
 
     @Synchronized
     fun onDiscontinuity() {
+        timelineCursor.onDiscontinuity()
         resetFraming()
     }
 
@@ -228,6 +266,47 @@ internal class SubtitleSpeechProfileCollector(
         vadFrameSize = 0
     }
 
+    private fun resampleAndEmit(mono: Double, sampleTimeMs: Long) {
+        if (sampleRate >= TARGET_SAMPLE_RATE) {
+            // Average every source bucket before decimation. This inexpensive low-pass filter
+            // avoids the strong aliasing produced by selecting one sample out of every 2-3.
+            resampleAccumulator += mono
+            resampleAccumulatorCount++
+            resamplePhase += TARGET_SAMPLE_RATE
+            if (resamplePhase >= sampleRate) {
+                resamplePhase -= sampleRate
+                val filtered = resampleAccumulator / resampleAccumulatorCount.toDouble()
+                resampleAccumulator = 0.0
+                resampleAccumulatorCount = 0
+                emitSample((filtered.coerceIn(-1.0, 1.0) * Short.MAX_VALUE)
+                    .roundToInt().toShort(), sampleTimeMs)
+            }
+            return
+        }
+
+        // Very low-rate PCM is uncommon. Preserve duration by duplicating the current sample;
+        // WebRTC still receives a valid 16 kHz timeline instead of a shortened signal.
+        resamplePhase += TARGET_SAMPLE_RATE
+        while (resamplePhase >= sampleRate) {
+            resamplePhase -= sampleRate
+            emitSample((mono.coerceIn(-1.0, 1.0) * Short.MAX_VALUE)
+                .roundToInt().toShort(), sampleTimeMs)
+        }
+    }
+
+    private fun readPcmSample(input: ByteBuffer): Double = when (pcmEncoding) {
+        C.ENCODING_PCM_FLOAT -> input.float.coerceIn(-1f, 1f).toDouble()
+        C.ENCODING_PCM_16BIT -> input.short.toDouble() / 32_768.0
+        C.ENCODING_PCM_24BIT -> {
+            val raw = (input.get().toInt() and 0xff) or
+                ((input.get().toInt() and 0xff) shl 8) or
+                (input.get().toInt() shl 16)
+            raw.toDouble() / 8_388_608.0
+        }
+        C.ENCODING_PCM_32BIT -> input.int.toDouble() / 2_147_483_648.0
+        else -> 0.0
+    }
+
     private fun ensureVad(): VadWebRTC? {
         vad?.let { return it }
         if (initializationFailure != null) return null
@@ -259,6 +338,8 @@ internal class SubtitleSpeechProfileCollector(
 
     private fun resetFraming() {
         resamplePhase = 0
+        resampleAccumulator = 0.0
+        resampleAccumulatorCount = 0
         vadFrameSize = 0
         closeVad()
         if (collecting && isPcmConfigured()) ensureVad()
@@ -289,4 +370,36 @@ internal class SubtitleSpeechProfileCollector(
             target[target.lastIndex] = last.copy(endMs = span.endMs)
         }
     }
+}
+
+/** Center-aware mono fold-down used only by Auto Sync's speech detector. */
+internal fun downmixSubtitlePcmFrame(samples: DoubleArray): Double {
+    if (samples.isEmpty()) return 0.0
+    if (samples.size == 1) return samples[0].coerceIn(-1.0, 1.0)
+    if (samples.size == 2) {
+        val average = (samples[0] + samples[1]) * 0.5
+        val strongest = if (abs(samples[0]) >= abs(samples[1])) samples[0] else samples[1]
+        return if (abs(average) < abs(strongest) * 0.12) {
+            (strongest * 0.70).coerceIn(-1.0, 1.0)
+        } else {
+            average.coerceIn(-1.0, 1.0)
+        }
+    }
+
+    if (samples.size == 4) {
+        // Quad PCM normally has no centre or LFE channel.
+        return (samples[0] * 0.35 + samples[1] * 0.35 +
+            samples[2] * 0.15 + samples[3] * 0.15).coerceIn(-1.0, 1.0)
+    }
+
+    // Android decoder PCM normally follows FL, FR, FC, [LFE], surrounds. Dialogue is commonly in
+    // FC; LFE is deliberately excluded when present. Extra channels receive a small weight.
+    var weighted = samples[0] * 0.25 + samples[1] * 0.25 + samples[2]
+    var totalWeight = 1.50
+    val firstSurround = if (samples.size >= 6) 4 else 3
+    for (index in firstSurround until samples.size) {
+        weighted += samples[index] * 0.15
+        totalWeight += 0.15
+    }
+    return (weighted / totalWeight).coerceIn(-1.0, 1.0)
 }

@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SubtitlePcmTimelineCursorTest {
@@ -38,6 +39,25 @@ class SubtitlePcmTimelineCursorTest {
     }
 
     @Test
+    fun `anchored cursor preserves a plausible forward pts gap`() {
+        val cursor = SubtitlePcmTimelineCursor(anchorMs = 10_000L)
+        cursor.map(
+            rawPresentationTimeUs = 8_000_000_000L,
+            frameCount = 24_000,
+            sampleRate = 48_000
+        )
+
+        val second = cursor.map(
+            rawPresentationTimeUs = 8_002_500_000L,
+            frameCount = 48_000,
+            sampleRate = 48_000
+        )
+
+        assertEquals(12_500L, second.startMs)
+        assertEquals(13_500L, second.endMs)
+    }
+
+    @Test
     fun `reset returns an anchored cursor to requested probe position`() {
         val cursor = SubtitlePcmTimelineCursor(anchorMs = 25_000L)
         cursor.map(
@@ -69,5 +89,25 @@ class SubtitlePcmTimelineCursorTest {
 
         assertEquals(12_345L, range.startMs)
         assertEquals(13_345L, range.endMs)
+    }
+
+    @Test
+    fun `multichannel downmix favours centre dialogue and excludes lfe`() {
+        val centreOnly = downmixSubtitlePcmFrame(
+            doubleArrayOf(0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
+        )
+        val lfeOnly = downmixSubtitlePcmFrame(
+            doubleArrayOf(0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+        )
+
+        assertTrue(centreOnly > 0.50)
+        assertEquals(0.0, lfeOnly, 0.0)
+    }
+
+    @Test
+    fun `stereo anti phase does not cancel all speech energy`() {
+        val mono = downmixSubtitlePcmFrame(doubleArrayOf(0.8, -0.8))
+
+        assertTrue(kotlin.math.abs(mono) > 0.50)
     }
 }

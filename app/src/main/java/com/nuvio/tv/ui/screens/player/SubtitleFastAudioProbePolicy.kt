@@ -21,7 +21,9 @@ internal object SubtitleFastAudioProbePolicy {
     fun plan(fileSizeBytes: Long?, durationMs: Long): SubtitleFastAudioProbePlan {
         val bitrateBps = PlayerBitrateEstimator.fileBitrateBps(fileSizeBytes, durationMs)
         val speed = when {
-            bitrateBps == null -> 8f
+            // Unknown size/throughput is the least safe case for 8x. Start at 4x and let observed
+            // decode progress decide whether a slower tier is needed.
+            bitrateBps == null -> 4f
             bitrateBps <= EIGHT_X_MAX_BITRATE_BPS -> 8f
             bitrateBps <= FOUR_X_MAX_BITRATE_BPS -> 4f
             bitrateBps <= TWO_X_MAX_BITRATE_BPS -> 2f
@@ -51,7 +53,7 @@ internal object SubtitleFastAudioProbePolicy {
     ): SubtitleFastAudioProbePlan {
         if (
             result.termination != SubtitleFastAudioProbeTermination.WALL_TIMEOUT ||
-            result.decodedDurationMs >= TARGET_AUDIO_MS / 2L ||
+            result.observedDurationMs >= TARGET_AUDIO_MS / 2L ||
             current.playbackSpeed <= 1f
         ) {
             return current

@@ -73,6 +73,25 @@ class SubtitleAutoSyncEngineTest {
     }
 
     @Test
+    fun `audio evidence keeps every independent window instead of resampling eight`() {
+        val spans = (0 until 6).map { index ->
+            val start = index * 120_000L
+            SubtitleSyncSpan(start, start + 60_000L)
+        }
+        val evidence = SubtitleAutoSyncEngine.measureAudioEvidence(
+            SubtitleSpeechSnapshot(
+                speechSpans = emptyList(),
+                observedSpans = spans,
+                pcmAvailable = true
+            )
+        )
+
+        assertEquals(360_000L, evidence.observedMs)
+        assertEquals(18, evidence.windowCount)
+        assertTrue(evidence.ready)
+    }
+
+    @Test
     fun `finds a positive constant offset`() {
         val cues = irregularCues()
         val expectedOffsetMs = 2_400

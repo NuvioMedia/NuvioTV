@@ -16,7 +16,7 @@ class SubtitleAutoSyncProbePlannerTest {
         assertEquals(3, positions.size)
         assertEquals(3_500_000L, positions.first())
         assertTrue(positions.zipWithNext().all { (left, right) ->
-            kotlin.math.abs(left - right) >= 30_000L
+            kotlin.math.abs(left - right) >= 75_000L
         })
     }
 

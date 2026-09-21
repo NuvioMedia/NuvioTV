@@ -5,6 +5,17 @@ import org.junit.Test
 
 class SubtitleFastAudioProbePolicyTest {
     @Test
+    fun `unknown bitrate starts conservatively at four times speed`() {
+        val plan = SubtitleFastAudioProbePolicy.plan(
+            fileSizeBytes = null,
+            durationMs = 0L
+        )
+
+        assertEquals(4f, plan.playbackSpeed)
+        assertEquals(25_000L, plan.activeDecodeTimeoutMs)
+    }
+
+    @Test
     fun `hundred gigabyte long movie starts at two times speed`() {
         val plan = SubtitleFastAudioProbePolicy.plan(
             fileSizeBytes = 102_682_361_361L,
@@ -46,12 +57,36 @@ class SubtitleFastAudioProbePolicyTest {
     fun `useful timed out probe keeps its speed`() {
         val initial = SubtitleFastAudioProbePolicy.planForSpeed(2f)
         val result = SubtitleFastAudioProbeResult(
-            snapshot = null,
+            snapshot = SubtitleSpeechSnapshot(
+                speechSpans = emptyList(),
+                observedSpans = listOf(SubtitleSyncSpan(0L, 47_000L)),
+                pcmAvailable = true
+            ),
             decodedStartMs = 0L,
             decodedEndMs = 47_000L,
             termination = SubtitleFastAudioProbeTermination.WALL_TIMEOUT
         )
 
         assertEquals(initial, SubtitleFastAudioProbePolicy.afterProbe(initial, result))
+    }
+
+    @Test
+    fun `disconnected pcm range uses observed union when deciding backoff`() {
+        val initial = SubtitleFastAudioProbePolicy.planForSpeed(4f)
+        val result = SubtitleFastAudioProbeResult(
+            snapshot = SubtitleSpeechSnapshot(
+                speechSpans = emptyList(),
+                observedSpans = listOf(
+                    SubtitleSyncSpan(0L, 5_000L),
+                    SubtitleSyncSpan(45_000L, 50_000L)
+                ),
+                pcmAvailable = true
+            ),
+            decodedStartMs = 0L,
+            decodedEndMs = 50_000L,
+            termination = SubtitleFastAudioProbeTermination.WALL_TIMEOUT
+        )
+
+        assertEquals(2f, SubtitleFastAudioProbePolicy.afterProbe(initial, result).playbackSpeed)
     }
 }

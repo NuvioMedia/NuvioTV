@@ -9,11 +9,14 @@ import kotlin.math.abs
  * to nominate one candidate and are never counted as separate confirmations.
  */
 internal object SubtitleAutoSyncTargetedValidation {
-    const val SEARCH_RADIUS_MS = 3_000
+    /** Search wider than the acceptance tolerance so a boundary result is not self-confirming. */
+    const val SEARCH_RADIUS_MS = 8_000
     const val MAX_PROBES = 2
 
     private const val MIN_CANDIDATE_ABS_OFFSET_MS = 500
     private const val MIN_FINAL_CANDIDATE_WINDOWS = 4
+    private const val MIN_FINAL_CANDIDATE_CONFIDENCE = 0.35
+    private const val MIN_FINAL_CANDIDATE_SIGMA = 0.75
 
     private const val MIN_INDEPENDENT_CANDIDATE_CONFIDENCE = 0.48
     private const val MIN_INDEPENDENT_CANDIDATE_MARGIN = 0.02
@@ -21,9 +24,13 @@ internal object SubtitleAutoSyncTargetedValidation {
     private const val MIN_INDEPENDENT_CANDIDATE_AGREEMENT = 0.20
     private const val MIN_INDEPENDENT_CANDIDATE_WINDOWS = 2
 
+    private const val MIN_CONFIRMATION_CONFIDENCE = 0.46
+    private const val MIN_CONFIRMATION_MARGIN = 0.005
     private const val MIN_CONFIRMATION_SIGMA = 1.25
+    private const val MIN_CONFIRMATION_AGREEMENT = 0.25
     private const val MIN_CONFIRMATION_WINDOWS = 2
-    private const val CONFIRMATION_OFFSET_TOLERANCE_MS = SEARCH_RADIUS_MS
+    private const val CONFIRMATION_OFFSET_TOLERANCE_MS = 2_000
+    private const val MAX_CONFIRMATION_SPREAD_MS = 1_800
 
     fun shouldStart(
         candidate: SubtitleAutoSyncResult,
@@ -54,14 +61,21 @@ internal object SubtitleAutoSyncTargetedValidation {
         if (independentResults.size < MAX_PROBES) return null
         val confirmations = independentResults.take(MAX_PROBES)
         if (confirmations.any { !confirms(candidate.offsetMs, it) }) return null
+        val confirmationOffsets = confirmations.map { it.offsetMs }
+        if (
+            confirmationOffsets.maxOrNull()!! - confirmationOffsets.minOrNull()!! >
+            MAX_CONFIRMATION_SPREAD_MS
+        ) {
+            return null
+        }
 
-        val offsets = (confirmations.map { it.offsetMs } + candidate.offsetMs).sorted()
+        val offsets = (confirmationOffsets + candidate.offsetMs).sorted()
         return candidate.copy(
             offsetMs = offsets[offsets.size / 2],
             confidence = confirmations.map { it.confidence }.average(),
             scoreMargin = confirmations.minOf { it.scoreMargin },
             sigma = confirmations.map { it.sigma }.average(),
-            windowAgreement = 1.0,
+            windowAgreement = confirmations.map { it.windowAgreement }.average(),
             evidenceWindows = confirmations.sumOf { it.evidenceWindows },
             rejection = SubtitleAutoSyncRejection.NONE
         )
@@ -73,13 +87,18 @@ internal object SubtitleAutoSyncTargetedValidation {
             result.rejection != SubtitleAutoSyncRejection.NOT_ENOUGH_DIALOGUE &&
             abs(result.offsetMs.toLong() - candidateOffsetMs.toLong()) <=
             CONFIRMATION_OFFSET_TOLERANCE_MS &&
+            result.confidence >= MIN_CONFIRMATION_CONFIDENCE &&
+            result.scoreMargin >= MIN_CONFIRMATION_MARGIN &&
             result.sigma >= MIN_CONFIRMATION_SIGMA &&
+            result.windowAgreement >= MIN_CONFIRMATION_AGREEMENT &&
             result.evidenceWindows >= MIN_CONFIRMATION_WINDOWS
 
     private fun isEligibleFinalCandidate(result: SubtitleAutoSyncResult): Boolean =
         result.rejection == SubtitleAutoSyncRejection.LOW_CONFIDENCE &&
             abs(result.offsetMs.toLong()) in
             MIN_CANDIDATE_ABS_OFFSET_MS.toLong()..SubtitleAutoSyncEngine.LOCAL_FINE_SEARCH_RADIUS_MS.toLong() &&
+            result.confidence >= MIN_FINAL_CANDIDATE_CONFIDENCE &&
+            result.sigma >= MIN_FINAL_CANDIDATE_SIGMA &&
             result.evidenceWindows >= MIN_FINAL_CANDIDATE_WINDOWS
 }
 
@@ -96,13 +115,9 @@ internal fun planSubtitleAutoSyncValidationPositions(
 ): List<Long> {
     if (maxAttempts <= 0) return emptyList()
 
-    val predictedCueTimes = cues.asSequence()
-        .filter { cue ->
-            cue.endTimeMs > cue.startTimeMs &&
-                cue.endTimeMs - cue.startTimeMs <= 15_000L &&
-                cue.text.any { it.isLetterOrDigit() }
-        }
-        .map { cue -> (cue.startTimeMs + candidateOffsetMs.toLong()).coerceAtLeast(0L) }
+    val predictedCueTimes = SubtitleAutoSyncCueProfile.features(cues).asSequence()
+        .filter { it.weight >= 0.65 }
+        .map { cue -> (cue.startMs + candidateOffsetMs.toLong()).coerceAtLeast(0L) }
         .filter { durationMs <= 0L || it < durationMs }
         .sorted()
         .toList()
