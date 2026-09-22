@@ -55,7 +55,9 @@ find_library(dl_lib dl)
 add_library(ffmpegJNI
             SHARED
             ffmpeg_jni.cc
-            ffmpeg_video_gl.cc)
+            ffmpeg_video_gl.cc
+            ffmpeg_vc1_pool.cc
+            ffmpeg_vc1_sync.c)
 
 # FFmpeg ships a top-level file named VERSION. On case-insensitive hosts a
 # regular -I for the FFmpeg root can shadow libc++'s <version> header. Search

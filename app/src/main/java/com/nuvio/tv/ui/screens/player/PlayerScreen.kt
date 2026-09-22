@@ -10,8 +10,10 @@ import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.accentBrush
 
+import android.graphics.PixelFormat
 import android.util.Log
 import android.view.KeyEvent
+import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.RawRes
@@ -1746,6 +1748,7 @@ private fun ExoPlayerSurface(
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
             setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
             enableComposeSurfaceSyncWorkaroundIfAvailable()
+            (videoSurfaceView as? SurfaceView)?.holder?.setFormat(PixelFormat.RGBX_8888)
             this.player = player
         }
     }

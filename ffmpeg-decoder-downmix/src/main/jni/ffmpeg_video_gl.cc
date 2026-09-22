@@ -4,6 +4,7 @@
 #include <GLES2/gl2.h>
 #include <android/log.h>
 #include <dlfcn.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -241,14 +242,28 @@ static int ensureContext(VideoGlPresenter* presenter, ANativeWindow* window, int
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
-        EGL_ALPHA_SIZE, 8,
+        EGL_ALPHA_SIZE, 0,
         EGL_NONE};
     EGLint count = 0;
-    if (!eglChooseConfig(presenter->display, configAttribs, &presenter->config, 1, &count) ||
-        count < 1) {
+    eglChooseConfig(presenter->display, configAttribs, NULL, 0, &count);
+    if (count < 1) {
       LOGE("eglChooseConfig failed: 0x%x", eglGetError());
       return 0;
     }
+    EGLConfig* configs = new EGLConfig[count];
+    eglChooseConfig(presenter->display, configAttribs, configs, count, &count);
+    presenter->config = configs[0];
+    for (EGLint i = 0; i < count; ++i) {
+      EGLint alpha = 8;
+      EGLint red = 0;
+      eglGetConfigAttrib(presenter->display, configs[i], EGL_ALPHA_SIZE, &alpha);
+      eglGetConfigAttrib(presenter->display, configs[i], EGL_RED_SIZE, &red);
+      if (alpha == 0 && red >= 8) {
+        presenter->config = configs[i];
+        break;
+      }
+    }
+    delete[] configs;
     const EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
     presenter->context = eglCreateContext(presenter->display, presenter->config, EGL_NO_CONTEXT,
                                           contextAttribs);
@@ -257,9 +272,9 @@ static int ensureContext(VideoGlPresenter* presenter, ANativeWindow* window, int
       return 0;
     }
   }
-  // Render at the video size. The display scaler takes 1080p to 4K, so the shader
-  // does not run once per panel pixel.
-  ANativeWindow_setBuffersGeometry(window, width, height, 0);
+  // Opaque RGBX plus exact sRGB lets the display plane scale 1080p to 4K.
+  // WINDOW_FORMAT_RGBX_8888 = 2. ADATASPACE_SRGB = 142671872.
+  ANativeWindow_setBuffersGeometry(window, width, height, 2);
   typedef int32_t (*ThrottleFn)(ANativeWindow*, bool);
   // A deeper queue absorbs a slow VC-1 frame without blocking the next present.
   typedef int (*SetBufferCountFn)(ANativeWindow*, size_t);
@@ -278,14 +293,33 @@ static int ensureContext(VideoGlPresenter* presenter, ANativeWindow* window, int
     if (setThrottle) {
       setThrottle(window, false);
     }
-    dlclose(nativeWindowLib);
+    typedef int (*SetUsageFn)(ANativeWindow*, uint64_t);
+    typedef int32_t (*SetDataSpaceFn)(ANativeWindow*, int32_t);
+    SetUsageFn setUsage = (SetUsageFn)dlsym(nativeWindowLib, "native_window_set_usage");
+    if (setUsage) {
+      // GPU_COLOR_OUTPUT | COMPOSER_OVERLAY. No sampled-image bit, so this stays a plane.
+      setUsage(window, (1ULL << 1) | (1ULL << 11));
+    }
+    SetDataSpaceFn setDataSpace =
+        (SetDataSpaceFn)dlsym(nativeWindowLib, "ANativeWindow_setBuffersDataSpace");
+    if (setDataSpace) {
+      setDataSpace(window, 142671872);
+    }
   }
   presenter->buffer_width = width;
   presenter->buffer_height = height;
   presenter->surface =
       eglCreateWindowSurface(presenter->display, presenter->config, window, NULL);
   if (presenter->surface == EGL_NO_SURFACE) {
+    ANativeWindow_setBuffersGeometry(window, width, height, 0);
+    presenter->surface =
+        eglCreateWindowSurface(presenter->display, presenter->config, window, NULL);
+  }
+  if (presenter->surface == EGL_NO_SURFACE) {
     LOGE("eglCreateWindowSurface failed: 0x%x", eglGetError());
+    if (nativeWindowLib) {
+      dlclose(nativeWindowLib);
+    }
     return 0;
   }
   if (!eglMakeCurrent(presenter->display, presenter->surface, presenter->surface,
@@ -293,9 +327,21 @@ static int ensureContext(VideoGlPresenter* presenter, ANativeWindow* window, int
     LOGE("eglMakeCurrent(window) failed: 0x%x", eglGetError());
     eglDestroySurface(presenter->display, presenter->surface);
     presenter->surface = EGL_NO_SURFACE;
+    if (nativeWindowLib) {
+      dlclose(nativeWindowLib);
+    }
     return 0;
   }
   eglSwapInterval(presenter->display, 0);
+  if (nativeWindowLib) {
+    typedef int32_t (*SetDataSpaceFn)(ANativeWindow*, int32_t);
+    SetDataSpaceFn setDataSpace =
+        (SetDataSpaceFn)dlsym(nativeWindowLib, "ANativeWindow_setBuffersDataSpace");
+    if (setDataSpace) {
+      setDataSpace(window, 142671872);
+    }
+    dlclose(nativeWindowLib);
+  }
   presenter->window = window;
   if (!presenter->ready) {
     if (!createProgram(presenter)) {
@@ -303,7 +349,7 @@ static int ensureContext(VideoGlPresenter* presenter, ANativeWindow* window, int
       return 0;
     }
     presenter->ready = 1;
-    LOGI("VC-1 video presenting at %dx%d with cosited chroma", width, height);
+    LOGI("VC-1 RGBX sRGB overlay at %dx%d", width, height);
   }
   return 1;
 }
@@ -425,6 +471,7 @@ static void copyPlaneBytes(std::vector<uint8_t>& dst, const uint8_t* src, int st
 }
 
 static void presenterThread(VideoGlPresenter* presenter) {
+  pthread_setname_np(pthread_self(), "VC1GlPresent");
   for (;;) {
     std::vector<uint8_t> y;
     std::vector<uint8_t> u;

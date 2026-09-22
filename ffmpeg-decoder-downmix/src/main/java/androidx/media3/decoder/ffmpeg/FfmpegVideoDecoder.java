@@ -17,6 +17,7 @@ package androidx.media3.decoder.ffmpeg;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import android.os.Process;
 import android.view.Surface;
 import androidx.annotation.IntDef;
 import androidx.annotation.Nullable;
@@ -68,6 +69,7 @@ import java.util.Locale;
   private long nativeContext;
   private volatile @C.VideoOutputMode int outputMode;
   @DecodeLoadLevel private volatile int decodeLoadLevel;
+  private boolean decodeThreadPrioritized;
 
   FfmpegVideoDecoder(
       int numInputBuffers,
@@ -124,6 +126,12 @@ import java.util.Locale;
   @Nullable
   protected FfmpegDecoderException decode(
       DecoderInputBuffer inputBuffer, VideoDecoderOutputBuffer outputBuffer, boolean reset) {
+    if (!decodeThreadPrioritized) {
+      // Media3's SimpleDecoder leaves this thread at normal priority. VC-1 cannot
+      // use a second core, so it has to keep the one it has.
+      Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
+      decodeThreadPrioritized = true;
+    }
     if (reset) {
       nativeContext = ffmpegReset(nativeContext);
       if (nativeContext == 0) {

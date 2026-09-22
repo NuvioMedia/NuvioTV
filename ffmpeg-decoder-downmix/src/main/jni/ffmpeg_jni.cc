@@ -51,10 +51,15 @@ extern "C" {
 }
 
 #include "ffmpeg_video_gl.h"
+#include "ffmpeg_vc1_pool.h"
+
+extern "C" void ff_vc1_pin_decode_thread(void);
 
 #define LOG_TAG "ffmpeg_jni"
 #define LOGE(...) \
   ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
+#define LOGI(...) \
+  ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
 #define LOGD(...) \
   ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
 
@@ -133,6 +138,7 @@ struct VideoDecoderContext {
   uint8_t* nv12_u;
   uint8_t* nv12_v;
   int nv12_capacity;
+  Vc1Pool* vc1_pool;
 };
 
 #ifndef NATIVE_WINDOW_API_CPU
@@ -202,6 +208,7 @@ static jfieldID videoModeField;
 static jfieldID videoWidthField;
 static jfieldID videoHeightField;
 static jfieldID videoDecoderPrivateField;
+static jfieldID videoTimeUsField;
 static bool videoJniReady = false;
 
 // LINT.IfChange(decodeLoadLevel)
@@ -1224,6 +1231,10 @@ static bool ensureVideoJni(JNIEnv* env) {
   if (!videoDecoderPrivateField) {
     env->ExceptionClear();
   }
+  videoTimeUsField = env->GetFieldID(clazz, "timeUs", "J");
+  if (!videoTimeUsField) {
+    env->ExceptionClear();
+  }
   env->DeleteLocalRef(clazz);
   if (!videoInitForYuvFrameMethod || !videoYuvPlanesField || !videoYuvStridesField ||
       !videoModeField || !videoWidthField || !videoHeightField) {
@@ -1369,8 +1380,16 @@ static void configureHwPresent(VideoDecoderContext* context, ANativeWindow* wind
     return;
   }
   int sizeChanged = context->window_width != width || context->window_height != height;
+  loadNativeWindowExt();
   if (sizeChanged || !context->window_hw_ready) {
-    // Geometry resets the buffer queue, so dataspace must be applied after it.
+    // CPU-written YUV with the overlay usage lets the display scaler enlarge
+    // 1080p to 4K instead of the GPU.
+    if (g_nwSetUsage) {
+      g_nwSetUsage(window, kUsageCpuWriteOften | kUsageComposerOverlay);
+    }
+    if (g_nwSetBufferCount) {
+      g_nwSetBufferCount(window, 4);
+    }
     ANativeWindow_setBuffersGeometry(window, width, height, kImageFormatYV12);
     context->window_width = width;
     context->window_height = height;
@@ -1378,11 +1397,11 @@ static void configureHwPresent(VideoDecoderContext* context, ANativeWindow* wind
   }
   int32_t dataspace = nativeDataspaceFromFrame(frame);
   if (!context->window_hw_ready || context->window_dataspace != dataspace) {
-    loadNativeWindowExt();
     if (g_nwSetDataSpace) {
       g_nwSetDataSpace(window, dataspace);
     }
     context->window_dataspace = dataspace;
+    LOGI("VC-1 hardware overlay YV12 %dx%d dataspace=%d", width, height, dataspace);
   }
   context->window_hw_ready = 1;
 }
@@ -1567,9 +1586,11 @@ static void releasePrivateAvFrame(JNIEnv* env, jobject out) {
 }
 
 static int initPrivateFrameOutput(JNIEnv* env, jobject out, AVFrame* frame, int outputMode) {
-  AVFrame* clone = av_frame_clone(frame);
-  if (!clone) {
-    LOGE("av_frame_clone failed.");
+  // Share the decoder buffer. Cloning copied the whole 1080p frame on the decode thread.
+  AVFrame* clone = av_frame_alloc();
+  if (!clone || av_frame_ref(clone, frame) < 0) {
+    av_frame_free(&clone);
+    LOGE("av_frame_ref failed.");
     return VIDEO_DECODER_ERROR_OTHER;
   }
   releasePrivateAvFrame(env, out);
@@ -1611,6 +1632,10 @@ static void releaseVideoContext(VideoDecoderContext* context) {
   }
   if (context->frame) {
     av_frame_free(&context->frame);
+  }
+  if (context->vc1_pool) {
+    vc1_pool_destroy(context->vc1_pool);
+    context->vc1_pool = NULL;
   }
   if (context->codec_context) {
     avcodec_free_context(&context->codec_context);
@@ -1672,7 +1697,8 @@ VIDEO_DECODER_FUNC(jlong, ffmpegInitialize, jstring codecName, jbyteArray extraD
   }
   context->codec_context->thread_count = thread_count;
   context->codec_context->thread_type = FF_THREAD_SLICE | FF_THREAD_FRAME;
-  context->codec_context->skip_loop_filter = AVDISCARD_DEFAULT;
+  // VC-1 has no frame threading, so a full deblock on B-frames misses 24fps on one core.
+  context->codec_context->skip_loop_filter = AVDISCARD_NONREF;
   context->codec_context->get_format = ffmpegVideoGetFormat;
   context->codec_context->err_recognition = AV_EF_IGNORE_ERR;
   context->codec_context->pkt_timebase = AV_TIME_BASE_Q;
@@ -1682,6 +1708,12 @@ VIDEO_DECODER_FUNC(jlong, ffmpegInitialize, jstring codecName, jbyteArray extraD
     releaseVideoContext(context);
     return 0L;
   }
+  if (context->codec_context->codec_id == AV_CODEC_ID_VC1) {
+    context->vc1_pool = vc1_pool_create(codec, context->codec_context->extradata,
+                                        context->codec_context->extradata_size);
+  }
+  LOGI("VC-1 decode threads requested=%d bframe_workers=%s", thread_count,
+       context->vc1_pool ? "on" : "off");
   return (jlong)context;
 }
 
@@ -1697,58 +1729,117 @@ VIDEO_DECODER_FUNC(jint, ffmpegDecode, jlong jContext, jobject encoded, jint len
   }
   av_packet_unref(context->packet);
   av_frame_unref(context->frame);
-  int sendResult;
-  if (length <= 0 || !encoded) {
-    sendResult = avcodec_send_packet(context->codec_context, NULL);
-  } else {
-    uint8_t* input = (uint8_t*)env->GetDirectBufferAddress(encoded);
+  {
+    static int decode_thread_pinned = 0;
+    if (!decode_thread_pinned) {
+      decode_thread_pinned = 1;
+      ff_vc1_pin_decode_thread();
+    }
+  }
+  const uint8_t* input = NULL;
+  if (length > 0 && encoded) {
+    input = (const uint8_t*)env->GetDirectBufferAddress(encoded);
     if (!input) {
       LOGE("Video input buffer address is NULL.");
       return VIDEO_DECODER_ERROR_OTHER;
     }
-    // Frame-thread workers may read the packet after decode() returns the Java
-    // buffer to the pool. Copy so the pointer stays valid.
-    int copyResult = av_new_packet(context->packet, length);
-    if (copyResult < 0) {
-      return VIDEO_DECODER_ERROR_OTHER;
+  }
+  int64_t packetPts = videoTimeUsField ? env->GetLongField(out, videoTimeUsField) : 0;
+  bool submittedToWorker = false;
+  if (context->vc1_pool && input) {
+    submittedToWorker = vc1_pool_submit_b(context->vc1_pool, context->codec_context, input, length,
+                                          packetPts) == 1;
+  }
+  if (!submittedToWorker) {
+    int sendResult;
+    if (!input) {
+      sendResult = avcodec_send_packet(context->codec_context, NULL);
+    } else {
+      // Frame-thread workers may read the packet after decode() returns the Java
+      // buffer to the pool. Copy so the pointer stays valid.
+      int copyResult = av_new_packet(context->packet, length);
+      if (copyResult < 0) {
+        return VIDEO_DECODER_ERROR_OTHER;
+      }
+      memcpy(context->packet->data, input, (size_t)length);
+      sendResult = avcodec_send_packet(context->codec_context, context->packet);
     }
-    memcpy(context->packet->data, input, (size_t)length);
-    sendResult = avcodec_send_packet(context->codec_context, context->packet);
+    if (sendResult < 0 && sendResult != AVERROR(EAGAIN) && sendResult != AVERROR_EOF) {
+      logError("avcodec_send_packet(video)", sendResult);
+      return transformVideoError(sendResult);
+    }
+    int receiveResult = avcodec_receive_frame(context->codec_context, context->frame);
+    if (receiveResult == AVERROR(EAGAIN) || receiveResult == AVERROR_EOF) {
+      receiveResult = 0;
+    } else if (receiveResult < 0) {
+      logError("avcodec_receive_frame(video)", receiveResult);
+      return transformVideoError(receiveResult);
+    } else if (context->vc1_pool) {
+      vc1_pool_push_frame(context->vc1_pool, context->frame, packetPts);
+      av_frame_unref(context->frame);
+      receiveResult = 0;
+    } else {
+      receiveResult = 1;
+    }
+    if (!context->vc1_pool) {
+      if (receiveResult == 0) {
+        return 0;
+      }
+      enum AVPixelFormat pixFmt = (enum AVPixelFormat)context->frame->format;
+      if (pixFmt != AV_PIX_FMT_YUV420P && pixFmt != AV_PIX_FMT_YUVJ420P &&
+          pixFmt != AV_PIX_FMT_NV12) {
+        LOGE("Unsupported video pixel format: %d", (int)pixFmt);
+        return VIDEO_DECODER_ERROR_OTHER;
+      }
+      bool usePrivateFrame = outputMode == VIDEO_OUTPUT_MODE_SURFACE_YUV &&
+                             videoInitForPrivateFrameMethod != NULL &&
+                             videoDecoderPrivateField != NULL;
+      if (usePrivateFrame) {
+        return initPrivateFrameOutput(env, out, context->frame, outputMode);
+      }
+      if (videoDecoderPrivateField) {
+        releasePrivateAvFrame(env, out);
+      }
+      return fillYuvOutput(env, out, context->frame, outputMode);
+    }
   }
-  if (sendResult < 0 && sendResult != AVERROR(EAGAIN) && sendResult != AVERROR_EOF) {
-    logError("avcodec_send_packet(video)", sendResult);
-    return transformVideoError(sendResult);
-  }
-  int receiveResult = avcodec_receive_frame(context->codec_context, context->frame);
-  if (receiveResult == AVERROR(EAGAIN) || receiveResult == AVERROR_EOF) {
+  AVFrame* ready = NULL;
+  int64_t readyPts = 0;
+  if (!context->vc1_pool || !vc1_pool_pop_frame(context->vc1_pool, &ready, &readyPts)) {
     return 0;
   }
-  if (receiveResult < 0) {
-    logError("avcodec_receive_frame(video)", receiveResult);
-    return transformVideoError(receiveResult);
+  if (videoTimeUsField) {
+    env->SetLongField(out, videoTimeUsField, readyPts);
   }
-  enum AVPixelFormat pixFmt = (enum AVPixelFormat)context->frame->format;
-  if (pixFmt != AV_PIX_FMT_YUV420P && pixFmt != AV_PIX_FMT_YUVJ420P &&
-      pixFmt != AV_PIX_FMT_NV12) {
+  enum AVPixelFormat pixFmt = (enum AVPixelFormat)ready->format;
+  int emit;
+  if (pixFmt != AV_PIX_FMT_YUV420P && pixFmt != AV_PIX_FMT_YUVJ420P && pixFmt != AV_PIX_FMT_NV12) {
     LOGE("Unsupported video pixel format: %d", (int)pixFmt);
+    av_frame_free(&ready);
     return VIDEO_DECODER_ERROR_OTHER;
   }
   bool usePrivateFrame = outputMode == VIDEO_OUTPUT_MODE_SURFACE_YUV &&
                          videoInitForPrivateFrameMethod != NULL &&
                          videoDecoderPrivateField != NULL;
   if (usePrivateFrame) {
-    return initPrivateFrameOutput(env, out, context->frame, outputMode);
+    emit = initPrivateFrameOutput(env, out, ready, outputMode);
+  } else {
+    if (videoDecoderPrivateField) {
+      releasePrivateAvFrame(env, out);
+    }
+    emit = fillYuvOutput(env, out, ready, outputMode);
   }
-  if (videoDecoderPrivateField) {
-    releasePrivateAvFrame(env, out);
-  }
-  return fillYuvOutput(env, out, context->frame, outputMode);
+  av_frame_free(&ready);
+  return emit;
 }
 
 VIDEO_DECODER_FUNC(jlong, ffmpegReset, jlong jContext) {
   VideoDecoderContext* context = (VideoDecoderContext*)jContext;
   if (!context || !context->codec_context) {
     return 0L;
+  }
+  if (context->vc1_pool) {
+    vc1_pool_flush(context->vc1_pool);
   }
   avcodec_flush_buffers(context->codec_context);
   return jContext;
@@ -1786,7 +1877,7 @@ VIDEO_DECODER_FUNC(void, ffmpegSetDecodeLoadLevel, jlong jContext, jint level) {
     case DECODE_LOAD_NORMAL:
     default:
       codecContext->skip_frame = AVDISCARD_DEFAULT;
-      codecContext->skip_loop_filter = AVDISCARD_DEFAULT;
+      codecContext->skip_loop_filter = AVDISCARD_NONREF;
       codecContext->skip_idct = AVDISCARD_DEFAULT;
       break;
   }
