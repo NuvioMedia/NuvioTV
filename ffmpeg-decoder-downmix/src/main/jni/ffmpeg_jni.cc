@@ -27,8 +27,11 @@
 #include <dlfcn.h>
 #include <jni.h>
 #include <math.h>
+#include <sched.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 extern "C" {
 #ifdef __cplusplus
@@ -53,8 +56,6 @@ extern "C" {
 #include "ffmpeg_video_gl.h"
 #include "ffmpeg_vc1_pool.h"
 
-extern "C" void ff_vc1_pin_decode_thread(void);
-
 #define LOG_TAG "ffmpeg_jni"
 #define LOGE(...) \
   ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
@@ -62,6 +63,48 @@ extern "C" void ff_vc1_pin_decode_thread(void);
   ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
 #define LOGD(...) \
   ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
+
+// Keep the VC-1 decode thread on the fastest cores. This lives in JNI so a
+// stock FFmpeg rebuild does not have to provide the symbol.
+static void pinDecodeThreadToFastCores() {
+  long cpuCount = sysconf(_SC_NPROCESSORS_ONLN);
+  if (cpuCount < 1) {
+    cpuCount = 1;
+  }
+  if (cpuCount > 8) {
+    cpuCount = 8;
+  }
+  int freq[8];
+  int best = 0;
+  for (int cpu = 0; cpu < cpuCount; ++cpu) {
+    char path[80];
+    freq[cpu] = 0;
+    snprintf(path, sizeof(path),
+             "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq", cpu);
+    FILE* file = fopen(path, "r");
+    if (file) {
+      if (fscanf(file, "%d", &freq[cpu]) != 1) {
+        freq[cpu] = 0;
+      }
+      fclose(file);
+    }
+    if (freq[cpu] > best) {
+      best = freq[cpu];
+    }
+  }
+  cpu_set_t set;
+  CPU_ZERO(&set);
+  int pinned = 0;
+  for (int cpu = 0; cpu < cpuCount; ++cpu) {
+    if (best <= 0 || freq[cpu] == best) {
+      CPU_SET(cpu, &set);
+      pinned++;
+    }
+  }
+  if (pinned > 0) {
+    sched_setaffinity(0, sizeof(set), &set);
+  }
+}
 
 #define LIBRARY_FUNC(RETURN_TYPE, NAME, ...)                               \
   extern "C" {                                                             \
@@ -1733,7 +1776,7 @@ VIDEO_DECODER_FUNC(jint, ffmpegDecode, jlong jContext, jobject encoded, jint len
     static int decode_thread_pinned = 0;
     if (!decode_thread_pinned) {
       decode_thread_pinned = 1;
-      ff_vc1_pin_decode_thread();
+      pinDecodeThreadToFastCores();
     }
   }
   const uint8_t* input = NULL;
