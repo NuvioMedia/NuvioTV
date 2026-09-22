@@ -643,6 +643,8 @@ private fun EpisodesListView(
             isPending = false,
             // The player has no watched state to write to, so only the play action is offered here.
             showWatchedActions = false,
+            isCurrentlyPlaying = episode.season == uiState.currentSeason &&
+                episode.episode == uiState.currentEpisode,
             onDismiss = { detailsEpisode = null },
             onPlay = {
                 detailsEpisode = null

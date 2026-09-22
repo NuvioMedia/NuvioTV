@@ -104,7 +104,8 @@ internal fun EpisodeOptionsOverlay(
     onMarkSeasonWatched: () -> Unit = {},
     onMarkSeasonUnwatched: () -> Unit = {},
     onMarkPreviousEpisodesWatched: () -> Unit = {},
-    showWatchedActions: Boolean = true
+    showWatchedActions: Boolean = true,
+    isCurrentlyPlaying: Boolean = false
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -215,8 +216,14 @@ internal fun EpisodeOptionsOverlay(
         }
         add(
             EpisodeOverlayAction(
-                label = stringResource(if (isPlayEnabled) R.string.episodes_play else R.string.playback_unavailable),
-                enabled = isPlayEnabled,
+                label = stringResource(
+                    when {
+                        isCurrentlyPlaying -> R.string.sources_playing
+                        isPlayEnabled -> R.string.episodes_play
+                        else -> R.string.playback_unavailable
+                    }
+                ),
+                enabled = isPlayEnabled && !isCurrentlyPlaying,
                 onClick = onPlay
             )
         )
@@ -249,7 +256,11 @@ internal fun EpisodeOptionsOverlay(
     var acceptsSelectKey by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        primaryFocusRequester.requestFocus()
+        // A disabled button cannot take focus, so with nothing enabled the description is the only place focus can go.
+        when {
+            actions.any { it.enabled } -> primaryFocusRequester.requestFocus()
+            !isNoneStyle -> detailsFocusRequester.requestFocus()
+        }
     }
 
     Dialog(
