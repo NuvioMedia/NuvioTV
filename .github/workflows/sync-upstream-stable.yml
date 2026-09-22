@@ -142,7 +142,22 @@ jobs:
 
           git checkout -B "$BRANCH" "origin/${BASE_BRANCH}"
 
+          BEFORE_SHA="$(git rev-parse HEAD)"
           if git merge --no-ff "upstream-stable-${TAG}" -m "chore: sync upstream stable ${TAG}"; then
+            AFTER_SHA="$(git rev-parse HEAD)"
+
+            # "Already up to date" exits 0 with --no-ff but creates no commit.
+            # GitHub then rejects PR create: "No commits between base and head".
+            if [[ "$BEFORE_SHA" == "$AFTER_SHA" ]]; then
+              echo "Merge of ${TAG} produced no new commit (already up to date with origin/${BASE_BRANCH}). Skipping PR."
+              exit 0
+            fi
+
+            if git diff --quiet "origin/${BASE_BRANCH}...HEAD"; then
+              echo "No file diff between origin/${BASE_BRANCH} and ${BRANCH} after merge. Skipping PR."
+              exit 0
+            fi
+
             git push -u origin "$BRANCH" --force-with-lease
 
             BODY="$(cat <<EOF
