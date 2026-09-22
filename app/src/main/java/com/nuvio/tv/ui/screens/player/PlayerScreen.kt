@@ -3099,7 +3099,7 @@ private fun dispatchTranslateSubtitleWithAi(
     val optionId = uiState.subtitleTranslateMenuOptionId
     when {
         optionId == SubtitleAiOptionId -> {
-            viewModel.onEvent(PlayerEvent.OnTranslateSubtitleWithAi())
+            viewModel.onEvent(PlayerEvent.OnDismissSubtitleTranslateMenu)
         }
         optionId?.startsWith("internal:") == true -> {
             val trackIndex = optionId.removePrefix("internal:").toIntOrNull()
@@ -3109,7 +3109,7 @@ private fun dispatchTranslateSubtitleWithAi(
             val addonSubtitle = resolveAddonSubtitleByOptionId(optionId, uiState.addonSubtitles)
             viewModel.onEvent(PlayerEvent.OnTranslateSubtitleWithAi(addonSubtitle = addonSubtitle))
         }
-        else -> viewModel.onEvent(PlayerEvent.OnTranslateSubtitleWithAi())
+        else -> viewModel.onEvent(PlayerEvent.OnDismissSubtitleTranslateMenu)
     }
 }
 
