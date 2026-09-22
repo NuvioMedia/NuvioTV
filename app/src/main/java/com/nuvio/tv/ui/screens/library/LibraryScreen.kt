@@ -160,7 +160,6 @@ fun LibraryScreen(
     }
     val layoutDirection = LocalLayoutDirection.current
     val firstVisiblePosterKey = visibleItemKeys.firstOrNull()
-    val firstCardFocusRequester = remember { FocusRequester() }
     val firstVisibleCardKey = visibleItemKeys.let { keys ->
         if (layoutDirection == LayoutDirection.Rtl) {
             keys.lastOrNull()  // Last in logical order = rightmost in RTL
@@ -283,7 +282,12 @@ fun LibraryScreen(
             .fillMaxSize()
             .background(NuvioTheme.colors.Background)
             .focusRestorer {
-                firstCardFocusRequester
+                val lastKey = lastFocusedPosterKey
+                (if (lastKey != null && lastKey in posterFocusRequesters) {
+                    posterFocusRequesters[lastKey]
+                } else {
+                    posterFocusRequesters[firstVisibleCardKey]
+                }) ?: FocusRequester()
             }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
@@ -450,7 +454,6 @@ fun LibraryScreen(
 
             items(uiState.visibleItems, key = { "${it.type}:${it.id}" }) { item ->
                 val focusKey = "${item.type}:${item.id}"
-                val isFirstCard = focusKey == firstVisibleCardKey
                 val isSeries = item.type.equals("series", ignoreCase = true) || item.type.equals("tv", ignoreCase = true)
                 val previewForLongPress = remember(item) {
                     item.toMetaPreview().copy(posterShape = PosterShape.POSTER)
@@ -459,7 +462,7 @@ fun LibraryScreen(
                     item = previewForLongPress,
                     posterCardStyle = posterCardStyle,
                     isWatched = if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds,
-                    focusRequester = if (isFirstCard) firstCardFocusRequester else posterFocusRequesters[focusKey],
+                    focusRequester = posterFocusRequesters[focusKey],
                     showLabel = true,
                     onFocused = {
                         lastFocusedPosterKey = focusKey
