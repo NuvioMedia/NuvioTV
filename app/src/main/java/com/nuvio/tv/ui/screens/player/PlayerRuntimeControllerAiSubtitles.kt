@@ -210,9 +210,10 @@ internal fun PlayerRuntimeController.applyAiAutoSelectLadder() {
         }
     }
 
+    val originalContentLanguage = contentLanguage
     val aiSourceIndex = findAiSourceSubtitleTrackIndex(
         subtitleTracks = state.subtitleTracks,
-        originalLanguage = contentLanguage
+        originalLanguage = originalContentLanguage
     )
     if (aiSourceIndex >= 0) {
         val track = state.subtitleTracks[aiSourceIndex]
@@ -225,8 +226,8 @@ internal fun PlayerRuntimeController.applyAiAutoSelectLadder() {
         publishAiSubtitleDiagnostics(
             AiSubtitleDiagnostics(
                 rung = AiSubtitleLadderRung.AI_EMBEDDED,
-                reason = if (contentLanguage != null &&
-                    PlayerSubtitleUtils.matchesLanguageCode(track.language, contentLanguage)
+                reason = if (originalContentLanguage != null &&
+                    PlayerSubtitleUtils.matchesLanguageCode(track.language, originalContentLanguage)
                 ) {
                     "embedded original-language source"
                 } else {

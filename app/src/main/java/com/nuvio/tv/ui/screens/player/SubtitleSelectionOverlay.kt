@@ -550,6 +550,8 @@ internal fun SubtitleSelectionOverlay(
                     color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.padding(bottom = NuvioTheme.spacing.md)
                 )
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 SubtitleLanguageRail(
                     items = languageItems,
