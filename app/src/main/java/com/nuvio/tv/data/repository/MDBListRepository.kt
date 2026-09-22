@@ -3,17 +3,20 @@ package com.nuvio.tv.data.repository
 import android.util.Log
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.MDBListSettingsDataStore
-import com.nuvio.tv.data.remote.api.MDBListApi
+import com.nuvio.tv.data.mdblist.MdbListRatingsClient
+import com.nuvio.tv.data.mdblist.MdbListRatingsCredential
 import com.nuvio.tv.data.remote.dto.mdblist.MDBListRatingRequestDto
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.MDBListRatingsResult
 import com.nuvio.tv.domain.model.MDBListSettings
 import com.nuvio.tv.domain.model.Meta
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -25,10 +28,17 @@ import javax.inject.Singleton
 
 @Singleton
 class MDBListRepository @Inject constructor(
-    private val api: MDBListApi,
+    private val api: MdbListRatingsClient,
     private val settingsDataStore: MDBListSettingsDataStore,
     private val tmdbService: TmdbService
 ) {
+    private data class CacheKey(
+        val mediaType: String,
+        val imdbId: String,
+        val providers: String,
+        val credential: MdbListRatingsCredential
+    )
+
     private data class CacheEntry(
         val result: MDBListRatingsResult?,
         val expiresAtMs: Long
@@ -47,17 +57,18 @@ class MDBListRepository @Inject constructor(
 
     private val tag = "MDBListRepository"
     private val cacheTtlMs = 30L * 60L * 1000L
-    private val cache = ConcurrentHashMap<String, CacheEntry>()
-    private val inFlight = mutableMapOf<String, kotlinx.coroutines.Deferred<MDBListRatingsResult?>>()
+    private val cache = ConcurrentHashMap<CacheKey, CacheEntry>()
+    private val inFlight = mutableMapOf<CacheKey, kotlinx.coroutines.Deferred<MDBListRatingsResult?>>()
     private val inFlightMutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    fun isAvailable(settings: MDBListSettings): Boolean = settings.enabled && api.credential(settings.apiKey) != null
 
     /** Lightweight helper for home screen enrichment - fetches only the IMDb rating. */
     suspend fun getImdbRatingForItem(itemId: String, itemType: String): Double? {
         val settings = settingsDataStore.settings.first()
         if (!settings.enabled) return null
-        val apiKey = settings.apiKey.trim()
-        if (apiKey.isBlank()) return null
+        val credential = api.credential(settings.apiKey) ?: return null
 
         val mediaType = normalizeMediaType(itemType)
         val imdbId = resolveImdbId(
@@ -90,7 +101,7 @@ class MDBListRepository @Inject constructor(
             mediaType = mediaType
         ) ?: return null
 
-        val cacheKey = "$mediaType:$imdbId:imdb:${apiKey.hashCode()}"
+        val cacheKey = CacheKey(mediaType, imdbId, "imdb", credential)
         val now = System.currentTimeMillis()
         cache[cacheKey]?.let { cached ->
             if (cached.expiresAtMs > now) return cached.result?.ratings?.imdb
@@ -103,7 +114,7 @@ class MDBListRepository @Inject constructor(
                     fetchRatings(
                         imdbId = imdbId,
                         mediaType = mediaType,
-                        apiKey = apiKey,
+                        credential = credential,
                         providers = listOf(ProviderType.IMDB)
                     ).also { result ->
                         cache[cacheKey] = CacheEntry(
@@ -126,8 +137,7 @@ class MDBListRepository @Inject constructor(
         val settings = settingsDataStore.settings.first()
         if (!settings.enabled) return null
 
-        val apiKey = settings.apiKey.trim()
-        if (apiKey.isBlank()) return null
+        val credential = api.credential(settings.apiKey) ?: return null
 
         val enabledProviders = enabledProviders(settings)
         if (enabledProviders.isEmpty()) return null
@@ -136,7 +146,7 @@ class MDBListRepository @Inject constructor(
         val imdbId = resolveImdbId(meta, fallbackItemId, fallbackItemType, mediaType) ?: return null
 
         val providerHash = enabledProviders.map { it.apiValue }.sorted().joinToString(",")
-        val cacheKey = "$mediaType:$imdbId:$providerHash:${apiKey.hashCode()}"
+        val cacheKey = CacheKey(mediaType, imdbId, providerHash, credential)
         val now = System.currentTimeMillis()
 
         cache[cacheKey]?.let { cached ->
@@ -152,7 +162,7 @@ class MDBListRepository @Inject constructor(
                     fetchRatings(
                         imdbId = imdbId,
                         mediaType = mediaType,
-                        apiKey = apiKey,
+                        credential = credential,
                         providers = enabledProviders
                     ).also { result ->
                         cache[cacheKey] = CacheEntry(
@@ -176,28 +186,43 @@ class MDBListRepository @Inject constructor(
     private suspend fun fetchRatings(
         imdbId: String,
         mediaType: String,
-        apiKey: String,
+        credential: MdbListRatingsCredential,
         providers: List<ProviderType>
-    ): MDBListRatingsResult? {
+    ): MDBListRatingsResult? = coroutineScope {
         val semaphore = Semaphore(4)
         val requestBody = MDBListRatingRequestDto(
             ids = listOf(imdbId),
             provider = "imdb"
         )
 
+        val rottenTomatoesRatings = if (providers.any { it == ProviderType.TOMATOES || it == ProviderType.AUDIENCE }) {
+            async {
+                semaphore.withPermit { fetchRottenTomatoesRatings(imdbId, mediaType, credential) }
+            }
+        } else {
+            null
+        }
         val results = providers.map { provider ->
-            scope.async {
-                semaphore.withPermit {
+            async {
+                val rating = when (provider) {
+                    ProviderType.TOMATOES -> rottenTomatoesRatings?.await()?.tomatoes
+                    ProviderType.AUDIENCE -> rottenTomatoesRatings?.await()?.audience
+                    else -> null
+                }
+                if (rating != null) {
+                    provider to rating
+                } else semaphore.withPermit {
                     fetchProviderRating(
                         mediaType = mediaType,
                         provider = provider,
-                        apiKey = apiKey,
+                        credential = credential,
                         requestBody = requestBody
                     )
                 }
             }
         }.awaitAll().toMap()
 
+        val certifications = rottenTomatoesRatings?.await()
         val ratings = MDBListRatings(
             trakt = results[ProviderType.TRAKT],
             imdb = results[ProviderType.IMDB],
@@ -206,39 +231,51 @@ class MDBListRepository @Inject constructor(
             tomatoes = results[ProviderType.TOMATOES],
             audience = results[ProviderType.AUDIENCE],
             metacritic = results[ProviderType.METACRITIC],
-            mal = results[ProviderType.MAL]
+            mal = results[ProviderType.MAL],
+            tomatoesCertified = certifications?.let { it.tomatoes != null && it.tomatoesCertified } == true,
+            audienceCertified = certifications?.let { it.audience != null && it.audienceCertified } == true
         )
 
-        if (ratings.isEmpty()) return null
+        if (ratings.isEmpty()) return@coroutineScope null
 
-        return MDBListRatingsResult(
+        MDBListRatingsResult(
             ratings = ratings,
             hasImdbRating = ratings.imdb != null
         )
     }
 
+    private suspend fun fetchRottenTomatoesRatings(
+        imdbId: String,
+        mediaType: String,
+        credential: MdbListRatingsCredential
+    ): MDBListRatings? {
+        return try {
+            api.getMedia(mediaType, imdbId, credential)?.toRottenTomatoesRatings()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(tag, "Error fetching Rotten Tomatoes metadata", e)
+            null
+        }
+    }
+
     private suspend fun fetchProviderRating(
         mediaType: String,
         provider: ProviderType,
-        apiKey: String,
+        credential: MdbListRatingsCredential,
         requestBody: MDBListRatingRequestDto
     ): Pair<ProviderType, Double?> {
         return try {
             val response = api.getRating(
                 mediaType = mediaType,
                 ratingType = provider.apiValue,
-                apiKey = apiKey,
+                credential = credential,
                 body = requestBody
             )
 
-            if (!response.isSuccessful) {
-                Log.w(tag, "Failed ${provider.apiValue} (${response.code()})")
-                return provider to null
-            }
-
-            val rating = response.body()?.ratings?.firstOrNull()?.rating
+            val rating = response?.ratings?.firstOrNull()?.rating
             provider to rating
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(tag, "Error fetching ${provider.apiValue}", e)
             provider to null
         }
@@ -263,6 +300,7 @@ class MDBListRepository @Inject constructor(
     ): String? {
         extractImdbId(meta.id)?.let { return it }
         extractImdbId(fallbackItemId)?.let { return it }
+        extractImdbId(meta.imdbId)?.let { return it }
 
         val tmdbId = extractTmdbId(meta.id)
             ?: extractTmdbId(fallbackItemId)

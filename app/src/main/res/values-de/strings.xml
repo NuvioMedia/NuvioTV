@@ -832,7 +832,7 @@
     <string name="layout_trailer_muted">Trailer stumm abspielen</string>
     <string name="layout_trailer_muted_sub_preview">Trailer-Audio während der automatischen Wiedergabe der Vorschau stumm schalten.</string>
     <string name="layout_trailer_muted_sub_expanded">Trailer-Audio in erweiterten Karten stummschalten.</string>
-    <string name="layout_section_card_style">Poster-Stil</string>
+    <string name="layout_section_card_style">Posterkarte</string>
     <string name="layout_section_card_style_desc">Kartenbreite und Eckenradius anpassen.</string>
     <string name="layout_open">Öffnen</string>
     <string name="layout_closed">Geschlossen</string>

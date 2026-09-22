@@ -457,7 +457,7 @@
     <string name="layout_trailer_muted">Spela trailer tyst</string>
     <string name="layout_trailer_muted_sub_preview">Tysta trailerljud under automatisk förhandsvisning.</string>
     <string name="layout_trailer_muted_sub_expanded">Tysta trailerljud i expanderade kort.</string>
-    <string name="layout_section_card_style">Affischkortstil</string>
+    <string name="layout_section_card_style">Affischkort</string>
     <string name="layout_section_card_style_desc">Justera kortbredd och hörnradie.</string>
     <string name="layout_open">Öppen</string>
     <string name="layout_closed">Stängd</string>

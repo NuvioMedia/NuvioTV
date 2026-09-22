@@ -909,7 +909,7 @@
     <string name="layout_trailer_muted">静音播放预告片</string>
     <string name="layout_trailer_muted_sub_preview">在自动播放预览中将预告片音频静音。</string>
     <string name="layout_trailer_muted_sub_expanded">在展开的卡片中将预告片音频静音。</string>
-    <string name="layout_section_card_style">海报卡样式</string>
+    <string name="layout_section_card_style">海报卡</string>
     <string name="layout_section_card_style_desc">调整卡片宽度和圆角半径。</string>
     <string name="layout_open">开启</string>
     <string name="layout_closed">关闭</string>

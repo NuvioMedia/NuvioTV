@@ -796,7 +796,7 @@
     <string name="layout_trailer_muted">Predvajaj napovednik brez zvoka</string>
     <string name="layout_trailer_muted_sub_preview">Utišaj zvok napovednika med samodejnim predogledom.</string>
     <string name="layout_trailer_muted_sub_expanded">Utišaj zvok napovednika v razširjenih karticah.</string>
-    <string name="layout_section_card_style">Slog kartice plakata</string>
+    <string name="layout_section_card_style">Kartica plakata</string>
     <string name="layout_section_card_style_desc">Prilagodite širino kartice in radij vogalov.</string>
     <string name="layout_open">Razširjeno</string>
     <string name="layout_closed">Strnjeno</string>

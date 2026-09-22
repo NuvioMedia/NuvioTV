@@ -439,12 +439,23 @@ fun PlaybackSettingsContent(
                 }
                 else -> MemoryBudget.defaultBufferSizeMb
             }
-            val totalUsageMb = MemoryBudget.totalUsageMb(
-                effectiveBufferMb,
-                playerSettings.parallelConnectionCount,
-                Math.ceil(playerSettings.parallelChunkSizeKb / 1024.0).toInt(),
-                playerSettings.useParallelConnections && playerSettings.parallelNetworkEnabled
-            )
+            val parallelActive = playerSettings.parallelNetworkEnabled && playerSettings.useParallelConnections
+            val chunkMb = Math.ceil(playerSettings.parallelChunkSizeKb / 1024.0).toInt().coerceAtMost(MemoryBudget.tierMaxChunkMb)
+            val parallelOverheadMb = if (parallelActive) {
+                MemoryBudget.parallelOverheadMb(playerSettings.parallelConnectionCount, chunkMb)
+            } else {
+                0
+            }
+            val totalUsageMb = if (playerSettings.nuvioPerformanceModeEnabled) {
+                effectiveBufferMb
+            } else {
+                MemoryBudget.totalUsageMb(
+                    effectiveBufferMb,
+                    playerSettings.parallelConnectionCount,
+                    chunkMb,
+                    parallelActive
+                )
+            }
 
             val safeLimitMb = if (playerSettings.nuvioPerformanceModeEnabled) {
                 NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
@@ -474,8 +485,17 @@ fun PlaybackSettingsContent(
                     .border(NuvioTheme.spacing.hairline, usageColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
+                val effectiveExoMb = (effectiveBufferMb - parallelOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
+                val baseText = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, warningLimitMb)
+                val usageText = if (playerSettings.nuvioPerformanceModeEnabled && parallelActive && parallelOverheadMb > 0) {
+                    baseText
+                        .replace("$totalUsageMb / $warningLimitMb", "$totalUsageMb($effectiveExoMb+$parallelOverheadMb)/$warningLimitMb")
+                        .replace("$totalUsageMb /", "$totalUsageMb($effectiveExoMb+$parallelOverheadMb)/")
+                } else {
+                    baseText
+                }
                 Text(
-                    text = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, warningLimitMb),
+                    text = usageText,
                     style = MaterialTheme.typography.bodySmall,
                     color = usageColor
                 )
@@ -600,6 +620,8 @@ fun PlaybackSettingsContent(
     }
 }
 
+private const val SettingsSubtitleFocusedMaxLines = 8
+
 @Composable
 internal fun ToggleSettingsItem(
     icon: ImageVector,
@@ -610,7 +632,8 @@ internal fun ToggleSettingsItem(
     onFocused: () -> Unit = {},
     enabled: Boolean = true,
     titleTrailingIcon: ImageVector? = null,
-    titleTrailingIconTint: Color = NuvioTheme.colors.TextPrimary
+    titleTrailingIconTint: Color = NuvioTheme.colors.TextPrimary,
+    expandSubtitleOnFocus: Boolean = false
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val contentAlpha = if (enabled) 1f else 0.4f
@@ -679,7 +702,7 @@ internal fun ToggleSettingsItem(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioTheme.colors.TextSecondary.copy(alpha = contentAlpha),
-                    maxLines = 3,
+                    maxLines = if (expandSubtitleOnFocus && isFocused) SettingsSubtitleFocusedMaxLines else 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }

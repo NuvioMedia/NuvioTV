@@ -996,7 +996,7 @@
     <string name="layout_trailer_muted">הפעל טריילר בשקט</string>
     <string name="layout_trailer_muted_sub_preview">השתק שמע טריילר בתצוגה מקדימה אוטומטית.</string>
     <string name="layout_trailer_muted_sub_expanded">השתק שמע טריילר בכרטיסים מורחבים.</string>
-    <string name="layout_section_card_style">סגנון כרטיס פוסטר</string>
+    <string name="layout_section_card_style">כרטיס פוסטר</string>
     <string name="layout_section_card_style_desc">כוונן רוחב כרטיס ורדיוס פינה.</string>
     <string name="settings_card_depth_title">אפקט עומק לכרטיס</string>
     <string name="settings_card_depth_description">מוסיף קצה עליון מואר וברק עדין לכרטיסי תמונה, ליצירת תחושת עומק עדינה.</string>

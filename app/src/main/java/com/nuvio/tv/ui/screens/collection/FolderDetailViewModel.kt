@@ -41,6 +41,7 @@ import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import com.nuvio.tv.ui.screens.home.buildModernHomePresentation
 import com.nuvio.tv.ui.screens.home.homeItemStatusKey
 import com.nuvio.tv.domain.repository.CatalogRepository
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -75,6 +76,7 @@ data class FolderDetailUiState(
     val focusedPosterBackdropTrailerMuted: Boolean = true,
     val focusedPosterBackdropTrailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget =
         FocusedPosterTrailerPlaybackTarget.HERO_MEDIA,
+    val classicFocusGradientEnabled: Boolean = false,
     val posterCardWidthDp: Int = 126,
     val posterCardHeightDp: Int = 189,
     val posterCardCornerRadiusDp: Int = 12,
@@ -246,6 +248,7 @@ class FolderDetailViewModel @Inject constructor(
             val focusedPosterBackdropTrailerMuted = layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted.first()
             val focusedPosterBackdropTrailerPlaybackTarget =
                 layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.first()
+            val classicFocusGradientEnabled = layoutPreferenceDataStore.classicFocusGradientEnabled.first()
             val posterCardWidthDp = layoutPreferenceDataStore.posterCardWidthDp.first()
             val posterCardHeightDp = layoutPreferenceDataStore.posterCardHeightDp.first()
             val posterCardCornerRadiusDp = layoutPreferenceDataStore.posterCardCornerRadiusDp.first()
@@ -344,6 +347,7 @@ class FolderDetailViewModel @Inject constructor(
                         AppFeaturePolicy.inAppTrailerPlaybackEnabled,
                     focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
                     focusedPosterBackdropTrailerPlaybackTarget = focusedPosterBackdropTrailerPlaybackTarget,
+                    classicFocusGradientEnabled = classicFocusGradientEnabled && homeLayout == HomeLayout.CLASSIC,
                     posterCardWidthDp = posterCardWidthDp,
                     posterCardHeightDp = posterCardHeightDp,
                     posterCardCornerRadiusDp = posterCardCornerRadiusDp,
@@ -562,7 +566,8 @@ class FolderDetailViewModel @Inject constructor(
                         hideUnreleasedContent = s.hideUnreleasedContent,
                         showFullReleaseDate = s.showFullReleaseDate,
                         movieWatchedStatus = s.movieWatchedStatus,
-                        heroEnrichmentEnabled = computedHeroEnrichmentEnabled
+                        heroEnrichmentEnabled = computedHeroEnrichmentEnabled,
+                        classicFocusGradientEnabled = s.classicFocusGradientEnabled
                     )
                     s.copy(followLayoutHomeState = homeState.copy(modernHomePresentation = modernPresentation))
                 }
@@ -594,7 +599,8 @@ class FolderDetailViewModel @Inject constructor(
                     hideUnreleasedContent = s.hideUnreleasedContent,
                     showFullReleaseDate = s.showFullReleaseDate,
                     movieWatchedStatus = s.movieWatchedStatus,
-                    heroEnrichmentEnabled = false
+                    heroEnrichmentEnabled = false,
+                    classicFocusGradientEnabled = s.classicFocusGradientEnabled
                 )
                 s.copy(followLayoutHomeState = homeState)
             }
@@ -914,6 +920,7 @@ class FolderDetailViewModel @Inject constructor(
             tmdbCollectionSourceResolver.resolve(source, page).collect { result ->
                 when (result) {
                     is NetworkResult.Success -> {
+                        val posterPattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
                         _uiState.update { s ->
                             val tabs = s.tabs.toMutableList()
                             val currentRow = tabs.getOrNull(tabIndex)?.catalogRow
@@ -932,7 +939,7 @@ class FolderDetailViewModel @Inject constructor(
                             } else {
                                 filteredData
                             }
-                            if (tabIndex < tabs.size) tabs[tabIndex] = tabs[tabIndex].copy(catalogRow = row, isLoading = false)
+                            if (tabIndex < tabs.size) tabs[tabIndex] = tabs[tabIndex].copy(catalogRow = row.copy(items = row.items.withCustomPosterUrls(posterPattern)), isLoading = false)
                             s.copy(tabs = tabs)
                         }
                         rebuildAllTab()
@@ -975,6 +982,7 @@ class FolderDetailViewModel @Inject constructor(
             traktPublicListSourceResolver.resolve(source, page).collect { result ->
                 when (result) {
                     is NetworkResult.Success -> {
+                        val posterPattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
                         _uiState.update { s ->
                             val tabs = s.tabs.toMutableList()
                             val currentRow = tabs.getOrNull(tabIndex)?.catalogRow
@@ -993,7 +1001,7 @@ class FolderDetailViewModel @Inject constructor(
                             } else {
                                 filteredData
                             }
-                            if (tabIndex < tabs.size) tabs[tabIndex] = tabs[tabIndex].copy(catalogRow = row, isLoading = false)
+                            if (tabIndex < tabs.size) tabs[tabIndex] = tabs[tabIndex].copy(catalogRow = row.copy(items = row.items.withCustomPosterUrls(posterPattern)), isLoading = false)
                             s.copy(tabs = tabs)
                         }
                         rebuildAllTab()

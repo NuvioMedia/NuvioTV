@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -123,7 +124,8 @@ fun TrailerSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(if (sectionFocusRequester != null) Modifier.focusRequester(sectionFocusRequester) else Modifier)
-                .focusRestorer { firstItemFocusRequester },
+                .focusRestorer { firstItemFocusRequester }
+                .focusGroup(),
             contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {

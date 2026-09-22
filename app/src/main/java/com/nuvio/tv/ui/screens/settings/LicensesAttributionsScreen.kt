@@ -75,6 +75,7 @@ private const val MdbListUrl = "https://mdblist.com"
 private const val IntroDbUrl = "https://introdb.app/"
 private const val ImdbDatasetsUrl = "https://developer.imdb.com/non-commercial-datasets/"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
+private const val HazeLicenseUrl = "https://github.com/chrisbanes/haze/blob/1.7.2/LICENSE"
 private const val LibMpvAndroidUrl = "https://github.com/jarnedemeulemeester/libmpv-android"
 
 private sealed interface LicenseLogo {
@@ -193,6 +194,18 @@ private fun LicensesAttributionsDetailsPanel(
                     playbackLicenseItems().forEach { item ->
                         AttributionDetailRow(item = item)
                     }
+                }
+
+                AttributionSection(
+                    title = stringResource(R.string.licenses_attributions_section_ui)
+                ) {
+                    AttributionDetailRow(
+                        item = LicenseAttributionItem(
+                            title = stringResource(R.string.licenses_attributions_haze_title),
+                            body = stringResource(R.string.licenses_attributions_haze_body),
+                            url = HazeLicenseUrl
+                        )
+                    )
                 }
             }
             SettingsVerticalScrollIndicators(state = scrollState)

@@ -873,7 +873,7 @@
     <string name="layout_trailer_muted">予告編をミュートで再生</string>
     <string name="layout_trailer_muted_sub_preview">自動再生プレビュー中の予告編音声をミュート</string>
     <string name="layout_trailer_muted_sub_expanded">拡大カードの予告編音声をミュート</string>
-    <string name="layout_section_card_style">ポスターカードスタイル</string>
+    <string name="layout_section_card_style">ポスターカード</string>
     <string name="layout_section_card_style_desc">カードの幅と角の丸みを調整</string>
     <string name="layout_open">開く</string>
     <string name="layout_closed">閉じる</string>

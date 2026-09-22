@@ -909,7 +909,7 @@
     <string name="layout_trailer_muted">靜音播放預告片</string>
     <string name="layout_trailer_muted_sub_preview">在自動播放預覽中將預告片音訊靜音。</string>
     <string name="layout_trailer_muted_sub_expanded">在展開的卡片中將預告片音訊靜音。</string>
-    <string name="layout_section_card_style">海報卡樣式</string>
+    <string name="layout_section_card_style">海報卡</string>
     <string name="layout_section_card_style_desc">調整卡片寬度和圓角半徑。</string>
     <string name="layout_open">開啟</string>
     <string name="layout_closed">關閉</string>

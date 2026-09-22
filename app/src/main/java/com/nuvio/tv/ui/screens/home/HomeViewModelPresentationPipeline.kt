@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.core.tmdb.TmdbEnrichment
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
@@ -267,8 +268,12 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                 ModernHomePresentationInput(
                     homeRows = state.homeRows,
                     catalogRows = state.catalogRows,
-                    continueWatchingItems = if (state.continueWatchingEnabled) state.continueWatchingItems else emptyList(),
-                    upcomingItems = if (state.continueWatchingEnabled) state.upcomingItems else emptyList(),
+                    continueWatchingItems = if (state.continueWatchingEnabled)
+                        state.continueWatchingItems.withCustomPosterUrls(state.customPosterUrlPattern)
+                    else emptyList(),
+                    upcomingItems = if (state.continueWatchingEnabled)
+                        state.upcomingItems.withCustomPosterUrls(state.customPosterUrlPattern)
+                    else emptyList(),
                     useLandscapePosters = state.modernLandscapePostersEnabled,
                     showCatalogTypeSuffix = state.catalogTypeSuffixEnabled,
                     showFullReleaseDate = state.showFullReleaseDate,
@@ -614,11 +619,11 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             }
 
             // If neither source produced anything, mark enrichment in previews
-            // so UI doesn't keep showing spinner. Take the indexed item rather than the argument,
-            // and only when nothing is published yet: a retry that fails again must not overwrite
-            // enrichment an earlier pass already resolved.
-            if (tmdbEnrichment == null && externalMeta == null && item.id !in _enrichedPreviews.value) {
-                addEnrichedPreview(item.id, findCatalogItemById(item.id) ?: item)
+            // so UI doesn't keep showing spinner. Skip titles a merge already reached: a row
+            // loaded after that merge carries raw data, and publishing it would downgrade them.
+            if (tmdbEnrichment == null && externalMeta == null && item.id !in enrichmentMergedIds) {
+                val preview = findCatalogItemById(item.id) ?: item
+                if (_enrichedPreviews.value[item.id] != preview) addEnrichedPreview(item.id, preview)
             }
 
             // Always prefetch full meta in background for instant detail screen loading.
@@ -798,6 +803,7 @@ private fun HomeViewModel.applyEnrichmentToDisplayedRows(
 }
 
 private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: TmdbEnrichment) {
+    enrichmentMergedIds.add(itemId)
     val isModernLayout = _uiState.value.homeLayout == HomeLayout.MODERN
     fun mergeItem(currentItem: MetaPreview): MetaPreview {
         var merged = currentItem
@@ -865,6 +871,7 @@ internal fun HomeViewModel.updateCatalogItemImdbRating(itemId: String, rating: F
 }
 
 private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) {
+    enrichmentMergedIds.add(itemId)
     val incomingTrailerYtIds = meta.trailerYtIds
     val seasonCount = meta.videos
         .asSequence()
@@ -951,7 +958,7 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
 ): List<MetaPreview> {
     if (items.isEmpty()) return items
     val mdbSettings = currentMdbListSettings
-    val mdbEnabled = mdbSettings.enabled && mdbSettings.apiKey.isNotBlank()
+    val mdbEnabled = mdbListRepository.isAvailable(mdbSettings)
 
     return coroutineScope {
         val semaphore = Semaphore(TMDB_HERO_ENRICHMENT_CONCURRENCY)

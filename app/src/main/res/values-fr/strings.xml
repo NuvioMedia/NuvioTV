@@ -764,7 +764,7 @@
     <string name="layout_trailer_muted">Lire la bande-annonce en sourdine</string>
     <string name="layout_trailer_muted_sub_preview">Couper le son de la bande-annonce pendant l’aperçu automatique.</string>
     <string name="layout_trailer_muted_sub_expanded">Couper le son de la bande-annonce dans les cartes étendues.</string>
-    <string name="layout_section_card_style">Style des cartes d’affiche</string>
+    <string name="layout_section_card_style">Carte d’affiche</string>
     <string name="layout_section_card_style_desc">Ajuster la largeur et le rayon des coins des cartes.</string>
     <string name="layout_open">Ouvert</string>
     <string name="layout_closed">Fermé</string>

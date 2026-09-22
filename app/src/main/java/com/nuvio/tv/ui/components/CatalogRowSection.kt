@@ -105,6 +105,9 @@ fun CatalogRowSection(
     /** Persisted focus index from parent — used only by focusRestorer to
      *  survive LazyColumn recycling.  Does NOT trigger a focus request. */
     restorerFocusedIndex: Int = -1,
+    /** Clears the remembered focus index when this changes, including when the new content has
+     *  the same items. */
+    focusResetToken: String? = null,
     onItemFocused: (itemIndex: Int) -> Unit = {},
     rowFocusRequester: FocusRequester? = null,
     /** FocusRequester that will be attached to the first-or-last-focused card.
@@ -153,6 +156,12 @@ fun CatalogRowSection(
     // Item keys as they were when lastFocusedItemIndex was recorded, so the index can be
     // relocated when the row changes instead of pointing at whatever took that slot.
     val previousRowItemKeys = remember { mutableStateOf<List<String>>(emptyList()) }
+    // Update during composition so focusRestorer sees the reset immediately.
+    val lastFocusResetToken = remember { mutableStateOf(focusResetToken) }
+    if (lastFocusResetToken.value != focusResetToken) {
+        lastFocusResetToken.value = focusResetToken
+        lastFocusedItemIndex.intValue = -1
+    }
     // Runs during composition, not in an effect: focusRestorer below is driven by the user and
     // can fire before an effect would have relocated the index, which would restore focus onto
     // whatever took that slot.

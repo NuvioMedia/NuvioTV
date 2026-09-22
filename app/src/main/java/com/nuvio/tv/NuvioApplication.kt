@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.StrictMode
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import com.nuvio.tv.core.image.CustomPosterFallbackInterceptor
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.gif.GifDecoder
@@ -117,6 +118,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
         return ImageLoader.Builder(this)
             .components {
+                add(CustomPosterFallbackInterceptor())
                 if (Build.VERSION.SDK_INT >= 28) {
                     add(AnimatedImageDecoder.Factory())
                 } else {

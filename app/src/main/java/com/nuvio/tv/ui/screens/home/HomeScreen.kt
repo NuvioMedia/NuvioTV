@@ -47,11 +47,14 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.LibraryListTab
-import com.nuvio.tv.domain.model.localizedTitle
+import com.nuvio.tv.domain.model.localizedMembershipTitle
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ErrorState
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.LocalStartupLoadingState
+import com.nuvio.tv.ui.components.LocalStartupSplashEnabled
+import com.nuvio.tv.ui.components.shouldShowHomeStartupLoader
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
@@ -239,6 +242,18 @@ fun HomeScreen(
     // Reports the home screen as fully drawn once it leaves the loading state so startup timing is measurable and post-launch work can be deferred.
     ReportDrawnWhen { !showStartupLoader }
 
+    val startupLoadingState = LocalStartupLoadingState.current
+    val showHomeLoader = shouldShowHomeStartupLoader(
+        loading = showStartupLoader,
+        sharedSplashEnabled = LocalStartupSplashEnabled.current,
+        startupComplete = startupLoadingState?.complete != false
+    )
+    LaunchedEffect(showStartupLoader, startupLoadingState) {
+        if (!showStartupLoader) {
+            startupLoadingState?.complete = true
+        }
+    }
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -397,7 +412,7 @@ fun HomeScreen(
             }
         }
 
-        if (showStartupLoader) {
+        if (showHomeLoader) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -819,7 +834,7 @@ private fun HomeLibraryListPickerDialog(
         ) {
             items(tabs, key = { it.key }) { tab ->
                 val selected = membership[tab.key] == true
-                val titleText = if (selected) "\u2713 ${tab.localizedTitle()}" else tab.localizedTitle()
+                val titleText = if (selected) "\u2713 ${tab.localizedMembershipTitle()}" else tab.localizedMembershipTitle()
                 Button(
                     onClick = { onToggle(tab.key) },
                     enabled = !isPending,

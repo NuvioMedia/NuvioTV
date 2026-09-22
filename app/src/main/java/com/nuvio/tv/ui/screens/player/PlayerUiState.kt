@@ -164,6 +164,7 @@ data class PlayerUiState(
     val showAddonLogo: Boolean = true,
     val streamBadgePlacement: StreamBadgePlacement = StreamBadgePlacement.BOTTOM,
     val error: String? = null,
+    val showSwitchToMpvErrorAction: Boolean = false,
     val playbackIssueReportStatus: PlaybackIssueReportStatus = PlaybackIssueReportStatus.Idle,
     val playbackIssueReportId: String? = null,
     val playbackIssueReportError: String? = null,
@@ -174,6 +175,7 @@ data class PlayerUiState(
     val parentalGuideHasShown: Boolean = false,
     // Skip intro
     val activeSkipInterval: SkipInterval? = null,
+    val activeSkipTargetsPostCredits: Boolean = false,
     val skipIntervalDismissed: Boolean = false,
     // Next episode card
     val nextEpisode: NextEpisodeInfo? = null,
@@ -338,6 +340,7 @@ sealed class PlayerEvent {
     data object OnResetSubtitleDefaults : PlayerEvent()
     data object OnToggleAspectRatio : PlayerEvent()
     data object OnSwitchInternalPlayerEngine : PlayerEvent()
+    data object OnSwitchToMpvPlayer : PlayerEvent()
     data object OnShowStreamInfo : PlayerEvent()
     data object OnDismissStreamInfo : PlayerEvent()
     data object OnTogglePlayerStatsHud : PlayerEvent()

@@ -868,7 +868,7 @@
     <string name="layout_trailer_muted">تشغيل الإعلان بدون صوت</string>
     <string name="layout_trailer_muted_sub_preview">كتم صوت الإعلان أثناء المعاينة التلقائية.</string>
     <string name="layout_trailer_muted_sub_expanded">كتم صوت الإعلان في البطاقات الممتدة.</string>
-    <string name="layout_section_card_style">نمط البطاقات</string>
+    <string name="layout_section_card_style">البطاقات</string>
     <string name="layout_section_card_style_desc">ضبط عرض البطاقة وزوايا الانحناء.</string>
     <string name="layout_open">مفتوح</string>
     <string name="layout_closed">مغلق</string>

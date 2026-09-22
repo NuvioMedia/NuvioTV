@@ -219,6 +219,8 @@
     <string name="detail_marked_episodes_unwatched">Episodes marked as unwatched: %1$d</string>
     <string name="detail_marked_previous_watched">Previous episodes marked as watched: %1$d</string>
 
+    <string name="playback_unavailable">Playback unavailable</string>
+    <string name="playback_unavailable_message">Playback isn’t available for this title with your current setup.</string>
     <string name="detail_btn_play">Play</string>
     <string name="detail_btn_resume">Resume</string>
     <string name="detail_btn_play_episode">Play S%1$d E%2$d</string>
@@ -336,10 +338,33 @@
     <string name="theme_color_amber">Amber</string>
     <string name="theme_color_rose">Rose</string>
     <string name="theme_color_white">White</string>
+    <string name="theme_color_custom">Custom</string>
+    <string name="custom_theme_title">Your custom gradient</string>
+    <string name="custom_theme_subtitle">Choose three colors for your theme. Select a color to edit it.</string>
+    <string name="custom_theme_solid_title">Your custom color</string>
+    <string name="custom_theme_solid_subtitle">Choose a color for your theme.</string>
+    <string name="custom_theme_mode_gradient">Gradient</string>
+    <string name="custom_theme_mode_solid">Single color</string>
+    <string name="custom_theme_color_number">Color %1$d</string>
+    <string name="custom_theme_hue">Hue</string>
+    <string name="custom_theme_saturation">Saturation</string>
+    <string name="custom_theme_brightness">Brightness</string>
+    <string name="custom_theme_enter_hex">Enter hex code</string>
+    <string name="custom_theme_hex_title">Hex color</string>
+    <string name="custom_theme_hex_hint">Choose six characters (0–9, A–F). Your first key replaces the current code.</string>
+    <string name="custom_theme_hex_clear">Clear</string>
+    <string name="custom_theme_hex_delete">Delete</string>
+    <string name="custom_theme_use_color">Use color</string>
+    <string name="custom_theme_save">Save theme</string>
+    <string name="custom_theme_remote_hint">← → Adjust   ·   ↑ ↓ Move   ·   Hold to adjust faster</string>
+    <string name="custom_theme_preview">PREVIEW</string>
+    <string name="custom_theme_preview_ring">Focused Item</string>
     <string name="appearance_amoled_mode">AMOLED Mode</string>
     <string name="appearance_amoled_mode_subtitle">Use pure black for app backgrounds</string>
     <string name="appearance_amoled_surfaces_mode">Pure Black Surfaces</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Also make cards, panels, and containers pure black</string>
+    <string name="appearance_startup_splash">Startup Splash</string>
+    <string name="appearance_startup_splash_subtitle">Show logo and loading indicator after selecting a profile</string>
     <string name="appearance_settings_style">Settings Style</string>
     <string name="appearance_settings_style_subtitle">Choose how the settings screens are presented</string>
     <string name="appearance_launcher_artwork">Launcher Artwork</string>
@@ -394,6 +419,9 @@
     <string name="licenses_attributions_section_app">APP LICENSE</string>
     <string name="licenses_attributions_section_data">DATA &amp; SERVICES</string>
     <string name="licenses_attributions_section_playback">ANDROID PLAYBACK LICENSES</string>
+    <string name="licenses_attributions_section_ui">UI LIBRARIES</string>
+    <string name="licenses_attributions_haze_title">Haze 1.7.2</string>
+    <string name="licenses_attributions_haze_body">Used for background blur effects. Created by Chris Banes. Licensed under the Apache License, Version 2.0.</string>
     <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
     <string name="licenses_attributions_nuvio_body">Source code and license terms are available in the project repository. Licensed under the GNU General Public License v3.0.</string>
     <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
@@ -407,7 +435,7 @@
     <string name="licenses_attributions_torbox_title">TorBox</string>
     <string name="licenses_attributions_torbox_body">Nuvio connects to TorBox for account authentication, cloud library access, cache checks, and cloud playback features. Nuvio is not affiliated with or endorsed by TorBox.</string>
     <string name="licenses_attributions_mdblist_title">MDBList</string>
-    <string name="licenses_attributions_mdblist_body">Nuvio uses MDBList for ratings and external score provider data. Nuvio is not affiliated with or endorsed by MDBList.</string>
+    <string name="licenses_attributions_mdblist_body">Nuvio uses MDBList for ratings, watched history and playback tracking. Nuvio is not affiliated with or endorsed by MDBList.</string>
     <string name="licenses_attributions_introdb_title">IntroDB</string>
     <string name="licenses_attributions_introdb_body">Nuvio uses the IntroDB API for community-provided intro, recap, credits, and preview timestamps used by skip controls. Nuvio is not affiliated with or endorsed by IntroDB.</string>
     <string name="licenses_attributions_imdb_title">IMDb Non-Commercial Datasets</string>
@@ -437,7 +465,7 @@
     <string name="settings_playback_subtitle">Player, subtitles, and auto-play</string>
     <string name="settings_trakt_subtitle">Open Trakt connection screen</string>
     <string name="settings_tracking_title">Tracking</string>
-    <string name="settings_tracking_subtitle">Manage Trakt and Simkl connections</string>
+    <string name="settings_tracking_subtitle">Manage your tracking accounts</string>
     <string name="settings_tracking_description">Connect tracking providers and choose which one powers your Library and Continue Watching.</string>
     <string name="tracking_accounts_title">Accounts</string>
     <string name="tracking_accounts_subtitle">Connect and manage tracking services</string>
@@ -452,6 +480,7 @@
     <string name="tracking_simkl_anime_id_imdb">Prefer IMDB</string>
     <string name="tracking_simkl_anime_id_mal">Prefer MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Prefer Kitsu</string>
+    <string name="tracking_simkl_anime_id_tvdb">Prefer TVDB</string>
     <string name="tracking_status_connected">Connected</string>
     <string name="tracking_status_disconnected">Not connected</string>
     <string name="tracking_status_waiting">Waiting for approval</string>
@@ -702,6 +731,10 @@
     <string name="auto_skip_recap_sub">Skip recap segments automatically.</string>
     <string name="auto_skip_outro">Outro / Ending</string>
     <string name="auto_skip_outro_sub">Skip outros and anime endings automatically.</string>
+    <string name="auto_skip_movie_credits">End Credits</string>
+    <string name="auto_skip_movie_credits_sub">Skip movie credits automatically, keeping post-credits scenes.</string>
+    <string name="skip_movie_credits">Skip Credits</string>
+    <string name="skip_to_post_credits">Skip to Post-Credits</string>
     <string name="playback_auto_frame_rate">Auto Frame Rate &amp; Resolution</string>
     <string name="playback_section_player">Player &amp; Stream Selection</string>
     <string name="playback_section_player_desc">Player preference, auto-play, and source filtering.</string>
@@ -1040,7 +1073,7 @@
     <string name="layout_trailer_muted">Play Trailer Muted</string>
     <string name="layout_trailer_muted_sub_preview">Mute trailer audio during autoplay preview.</string>
     <string name="layout_trailer_muted_sub_expanded">Mute trailer audio in expanded cards.</string>
-    <string name="layout_section_card_style">Poster Card Style</string>
+    <string name="layout_section_card_style">Poster Card</string>
     <string name="layout_section_card_style_desc">Tune card width and corner radius.</string>
     <string name="settings_card_depth_title">Card Depth Effect</string>
     <string name="settings_card_depth_description">Adds a lit top edge and a soft sheen to image cards for a subtle sense of depth.</string>
@@ -1093,13 +1126,62 @@
     <string name="layout_reset_default">Reset to Default</string>
     <string name="layout_custom">Custom</string>
 
+    <!-- Custom Poster URL -->
+    <string name="layout_custom_poster_title">Custom Poster Source</string>
+    <string name="layout_custom_poster_description">Provide a poster URL pattern from an external service. If a placeholder has no value for a given title, the original poster is used instead.</string>
+    <string name="layout_custom_poster_clear">Clear</string>
+    <string name="layout_custom_poster_active">✓ Custom poster source active</string>
+    <string name="layout_custom_poster_qr">Configure via Phone</string>
+    <string name="custom_poster_qr_instruction">Scan the QR code with your phone to paste a poster URL pattern</string>
 
+    <!-- Custom Poster Web Page -->
+    <string name="web_custom_poster_title">Custom Poster Source</string>
+    <string name="web_custom_poster_subtitle">Paste a poster URL pattern below and press Save.</string>
+    <string name="web_custom_poster_label">URL Pattern</string>
+    <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
+    <string name="web_custom_poster_save">Save</string>
+    <string name="web_custom_poster_clear">Clear</string>
+    <string name="web_custom_poster_saved">Saved!</string>
+    <string name="web_custom_poster_cleared">Cleared</string>
+    <string name="web_custom_poster_error_empty">Enter a URL pattern</string>
+    <string name="web_custom_poster_error_save">Save failed</string>
+    <string name="web_custom_poster_error_clear">Clear failed</string>
+    <string name="web_custom_poster_error_connection">Connection error</string>
+    <string name="web_custom_poster_current">Current:</string>
+    <string name="web_custom_poster_none">No pattern set</string>
+    <string name="web_custom_poster_loading">Loading…</string>
+    <string name="web_custom_poster_placeholders_info">Placeholders: {id} passes all content IDs. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} target a single ID type - if unavailable, the original poster is kept. {imdb_id|tmdb_id|kitsu_id} declares supported ID types - the matching one is used, or the original poster is kept. Add ? to make a placeholder optional, resolving to empty instead of skipping: {imdb_id?}. Other placeholders: {id_type}, {typed_id}, {type}, {shape}.</string>
+
+
+    <string name="mdblist_name">MDBList</string>
+    <string name="mdblist_tracking_description">Sync watched history and playback progress across devices</string>
+    <string name="mdblist_connected_as">Connected as %1$s</string>
+    <string name="mdblist_account_fallback">MDBList user</string>
+    <string name="mdblist_insufficient_scope">MDBList did not grant permission to update watch history. Reconnect and allow write access.</string>
+    <string name="mdblist_awaiting_instruction">Scan the QR code, or enter this code at the address below.</string>
+    <string name="mdblist_qr_description">QR code to connect your MDBList account</string>
+    <string name="mdblist_status_enter_code">Approve the connection in your MDBList account.</string>
+    <string name="mdblist_status_syncing">Syncing watched history and playback progress…</string>
+    <string name="mdblist_last_synced">Last synced %1$s</string>
+    <string name="mdblist_disconnect_title">Disconnect MDBList?</string>
+    <string name="mdblist_disconnect_subtitle">Stop sending watch updates from this profile. Your MDBList history is kept.</string>
+    <string name="mdblist_missing_client">MDBList connection is unavailable in this build.</string>
+    <string name="mdblist_invalid_response">MDBList returned an incomplete response. Please try again.</string>
+    <string name="mdblist_code_expired">This code has expired. Try again to get a new code.</string>
+    <string name="mdblist_access_denied">Connection was declined. Try again to connect your account.</string>
+    <string name="mdblist_authorization_revoked">Your MDBList connection has expired or been revoked. Connect again to resume syncing.</string>
+    <string name="mdblist_unavailable">Could not sync with MDBList. Please try again.</string>
+    <string name="mdblist_rate_limited">MDBList’s request limit has been reached. Syncing will resume after the limit resets.</string>
+    <string name="mdblist_revoke_failed">Disconnected on this device. Remove this app in your MDBList account settings to revoke its access.</string>
     <string name="mdblist_title">MDBList Ratings</string>
     <string name="mdblist_subtitle">Configure external ratings shown in the detail hero</string>
     <string name="mdblist_enable_title">Enable MDBList Ratings</string>
     <string name="mdblist_enable_subtitle">Fetch ratings from external providers in metadata detail screen</string>
     <string name="mdblist_api_key_title">API Key</string>
     <string name="mdblist_api_key_subtitle">Required to fetch ratings from MDBList</string>
+    <string name="mdblist_ratings_credentials_subtitle">Use your MDBList account connected in Tracking, or enter a separate API key for ratings.</string>
+    <string name="mdblist_ratings_connected_account">Using connected account</string>
+    <string name="mdblist_ratings_key_override_subtitle">An API key overrides your connected account for ratings. Clear it to use the connected account again.</string>
     <string name="mdblist_trakt_title">Trakt</string>
     <string name="mdblist_trakt_subtitle">Show Trakt score</string>
     <string name="mdblist_imdb_title">IMDb</string>
@@ -1689,6 +1771,7 @@
     <string name="player_subtitle_delay">Subtitles Delay</string>
     <string name="player_error_title">Playback Error</string>
     <string name="player_go_back">Go Back</string>
+    <string name="player_switch_to_mpv">Switch to MPV Player</string>
     <string name="player_report_issue">Report Issue</string>
     <string name="player_report_issue_sending">Sending playback report...</string>
     <string name="player_report_issue_sending_button">Sending...</string>
@@ -3085,6 +3168,7 @@
     <string name="playback_cache_info_manual_headroom">Manual mode keeps about %1$dMB headroom.</string>
     <string name="playback_cache_info_free_disk">Free disk available: %1$s.</string>
     <string name="playback_cache_info_restart">New cache cap applies after app restart when changing between modes/sizes.</string>
+    <string name="playback_cache_write_warning">On devices with built-in storage write activity is steady and can add wear over time.</string>
     <string name="playback_reset_to_default">Reset to Default</string>
     <string name="playback_net_custom">Custom Network</string>
     <string name="playback_net_custom_sub">Use multiple parallel connections to fetch progressive streams. When off, a single connection is used.</string>
@@ -3118,8 +3202,15 @@
     <string name="diag_label_source_profile">Source Profile</string>
     <string name="diag_label_conversions">Conversions</string>
     <string name="diag_label_signal_rewrites">Signal Rewrites</string>
+    <string name="diag_label_last_convert">Last convert</string>
     <string name="diag_label_custom_buffers">Custom Buffers</string>
     <string name="diag_label_custom_network_cache">Custom Network/Cache</string>
+    <string name="diag_label_disk_cache">Disk Cache</string>
+    <string name="diag_label_disk_cache_usage">Disk Cache Usage</string>
+    <string name="diag_value_disk_cache_on">On - %1$s</string>
+    <string name="diag_value_disk_cache_unavailable">Unavailable</string>
+    <string name="diag_value_disk_cache_not_used">Off - not used for this stream</string>
+    <string name="diag_value_disk_cache_usage">%1$s read, %2$s evicted</string>
     <string name="diag_section_outcome">Outcome</string>
     <string name="diag_label_hdr_format_intended">HDR Format (intended)</string>
     <string name="diag_label_first_frame">First Frame</string>

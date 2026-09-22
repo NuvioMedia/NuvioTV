@@ -1036,7 +1036,7 @@
 <string name="layout_trailer_muted">Riproduci trailer senza audio</string>
 <string name="layout_trailer_muted_sub_preview">Disattiva l\'audio del trailer durante l\'anteprima automatica.</string>
 <string name="layout_trailer_muted_sub_expanded">Disattiva l\'audio del trailer nelle schede espanse.</string>
-<string name="layout_section_card_style">Stile scheda locandina</string>
+<string name="layout_section_card_style">Scheda locandina</string>
 <string name="layout_section_card_style_desc">Regola la larghezza della scheda e il raggio degli angoli.</string>
 <string name="settings_card_depth_title">Effetto profondità schede</string>
 <string name="settings_card_depth_description">Aggiunge un bordo superiore illuminato e una lucentezza morbida alle schede immagine per un sottile senso di profondità.</string>

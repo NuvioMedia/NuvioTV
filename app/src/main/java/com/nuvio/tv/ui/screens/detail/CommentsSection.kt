@@ -59,10 +59,12 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,6 +82,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -118,6 +121,7 @@ fun CommentsSection(
     modifier: Modifier = Modifier
 ) {
     val cardShape = RoundedCornerShape(NuvioTheme.radii.xl)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val firstItemFocusRequester = remember { FocusRequester() }
     val internalTitleModeFocusRequester = remember { FocusRequester() }
     val internalEpisodeModeFocusRequester = remember { FocusRequester() }
@@ -270,7 +274,8 @@ fun CommentsSection(
                     focusRequester = resolvedTitleModeFocusRequester,
                     upFocusRequester = upFocusRequester,
                     downFocusRequester = commentsTargetFocusRequester,
-                    rightFocusRequester = resolvedEpisodeModeFocusRequester,
+                    leftFocusRequester = if (isRtl) resolvedEpisodeModeFocusRequester else FocusRequester.Cancel,
+                    rightFocusRequester = if (isRtl) FocusRequester.Cancel else resolvedEpisodeModeFocusRequester,
                     onClick = { onCommentsModeSelected(CommentsMode.TITLE) }
                 )
                 CommentModeButton(
@@ -286,8 +291,8 @@ fun CommentsSection(
                     focusRequester = resolvedEpisodeModeFocusRequester,
                     upFocusRequester = upFocusRequester,
                     downFocusRequester = commentsTargetFocusRequester,
-                    leftFocusRequester = resolvedTitleModeFocusRequester,
-                    rightFocusRequester = FocusRequester.Cancel,
+                    leftFocusRequester = if (isRtl) FocusRequester.Cancel else resolvedTitleModeFocusRequester,
+                    rightFocusRequester = if (isRtl) resolvedTitleModeFocusRequester else FocusRequester.Cancel,
                     onClick = {
                         if (commentsMode == CommentsMode.EPISODE && allEpisodes.isNotEmpty()) {
                             showEpisodePicker = true
@@ -341,7 +346,9 @@ fun CommentsSection(
                 ) {
                     Text(
                         text = error,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textDirection = error.contentTextDirection()
+                        ),
                         color = NuvioTheme.colors.TextSecondary
                     )
                     Button(
@@ -531,7 +538,10 @@ private fun CommentCard(
 
             Text(
                 text = bodyText,
-                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    lineHeight = 20.sp,
+                    textDirection = bodyText.contentTextDirection()
+                ),
                 color = if (review.hasSpoilerContent) {
                     NuvioTheme.colors.Warning
                 } else {
@@ -954,7 +964,7 @@ private fun CommentOverlayContent(
             ) {
                 Text(
                     text = commentText,
-                    style = commentStyle,
+                    style = commentStyle.copy(textDirection = commentText.contentTextDirection()),
                     color = Color.White,
                     modifier = Modifier.fillMaxWidth()
                 )

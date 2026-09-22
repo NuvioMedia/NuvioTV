@@ -48,6 +48,9 @@ class ProfileManager @Inject constructor(
     val confirmExitEnabled: StateFlow<Boolean> = profileDataStore.confirmExitEnabled
         .stateIn(scope, SharingStarted.Eagerly, false)
 
+    val startupSplashEnabled: StateFlow<Boolean> = profileDataStore.startupSplashEnabled
+        .stateIn(scope, SharingStarted.Eagerly, true)
+
     val profiles: StateFlow<List<UserProfile>> = profileDataStore.profilesList
         .stateIn(scope, SharingStarted.Eagerly, listOf(
             UserProfile(id = 1, name = context.getString(R.string.profile_default_name, 1), avatarColorHex = "#1E88E5")
@@ -75,6 +78,10 @@ class ProfileManager @Inject constructor(
 
     suspend fun setConfirmExitEnabled(enabled: Boolean) {
         profileDataStore.setConfirmExitEnabled(enabled)
+    }
+
+    suspend fun setStartupSplashEnabled(enabled: Boolean) {
+        profileDataStore.setStartupSplashEnabled(enabled)
     }
 
     suspend fun createProfile(

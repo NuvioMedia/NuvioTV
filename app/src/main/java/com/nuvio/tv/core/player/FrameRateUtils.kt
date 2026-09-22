@@ -259,11 +259,32 @@ object FrameRateUtils {
         return if (width >= height) width to height else height to width
     }
 
-    private fun resolutionDistanceSquared(mode: Display.Mode, targetWidth: Int, targetHeight: Int): Long {
-        val (modeWidth, modeHeight) = normalizedSize(mode.physicalWidth, mode.physicalHeight)
-        val dw = modeWidth - targetWidth
-        val dh = modeHeight - targetHeight
-        return dw.toLong() * dw.toLong() + dh.toLong() * dh.toLong()
+    private fun selectResolutionCandidates(
+        modeSizes: List<Pair<Int, Int>>,
+        videoWidth: Int,
+        videoHeight: Int
+    ): List<Pair<Int, Int>> {
+        if (modeSizes.isEmpty()) return modeSizes
+        val (targetWidth, targetHeight) = normalizedSize(videoWidth, videoHeight)
+
+        fun area(width: Int, height: Int): Long {
+            val (normalizedWidth, normalizedHeight) = normalizedSize(width, height)
+            return normalizedWidth.toLong() * normalizedHeight.toLong()
+        }
+
+        fun fits(width: Int, height: Int): Boolean {
+            val (modeWidth, modeHeight) = normalizedSize(width, height)
+            return modeWidth >= targetWidth && modeHeight >= targetHeight
+        }
+
+        val fitting = modeSizes.filter { fits(it.first, it.second) }
+        if (fitting.isNotEmpty()) {
+            val minArea = fitting.minOf { area(it.first, it.second) }
+            return fitting.filter { area(it.first, it.second) == minArea }
+        }
+
+        val maxArea = modeSizes.maxOf { area(it.first, it.second) }
+        return modeSizes.filter { area(it.first, it.second) == maxArea }
     }
 
     private fun selectModesForVideoResolution(
@@ -272,9 +293,12 @@ object FrameRateUtils {
         videoHeight: Int
     ): List<Display.Mode> {
         if (modes.isEmpty()) return modes
-        val (targetWidth, targetHeight) = normalizedSize(videoWidth, videoHeight)
-        val minDistance = modes.minOfOrNull { resolutionDistanceSquared(it, targetWidth, targetHeight) } ?: return modes
-        return modes.filter { resolutionDistanceSquared(it, targetWidth, targetHeight) == minDistance }
+        val selectedSizes = selectResolutionCandidates(
+            modeSizes = modes.map { it.physicalWidth to it.physicalHeight },
+            videoWidth = videoWidth,
+            videoHeight = videoHeight
+        ).map { normalizedSize(it.first, it.second) }.toSet()
+        return modes.filter { normalizedSize(it.physicalWidth, it.physicalHeight) in selectedSizes }
     }
 
     suspend fun matchFrameRateAndWait(

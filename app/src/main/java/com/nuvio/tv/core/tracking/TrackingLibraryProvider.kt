@@ -10,6 +10,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 
 interface TrackingLibraryProvider {
+    val listManager: TrackingListManager? get() = null
     val providerId: TrackingProviderId
     val isAuthenticated: Flow<Boolean>
     val isRefreshing: Flow<Boolean>

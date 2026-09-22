@@ -612,6 +612,23 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
     // Prefer videoId over contentId — videoId carries the season/episode-specific ID
     val effectiveId = currentVideoId?.takeIf { it.isNotBlank() } ?: id
 
+    if (contentType.equals("movie", ignoreCase = true)) {
+        val key = "movie:$id:$effectiveId"
+        if (skipIntroFetchedKey == key) return
+        skipIntroFetchedKey = key
+        scope.launch {
+            skipIntervals = withTimeoutOrNull(15_000L) {
+                skipIntroRepository.getMovieSkipIntervals(id, effectiveId)
+            } ?: emptyList()
+        }
+        return
+    }
+
+    val metaImdbId = contentType?.let { type ->
+        metaRepository.getCachedMeta(type, id)?.imdbId
+            ?: metaRepository.getCachedMeta(type, effectiveId.substringBefore(':'))?.imdbId
+    }?.takeIf { it.startsWith("tt") }
+
     // MAL ID format: "mal:57658:1" (malId:episode)
     if (effectiveId.startsWith("mal:")) {
         val parts = effectiveId.split(":")
@@ -620,7 +637,7 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
         val key = "mal:$malId:$malEpisode"
         if (skipIntroFetchedKey == key) return
         skipIntroFetchedKey = key
-        val imdbId = id?.takeIf { it.startsWith("tt") }
+        val imdbId = id?.takeIf { it.startsWith("tt") } ?: metaImdbId
         scope.launch {
             skipIntervals = withTimeoutOrNull(15_000L) {
                 skipIntroRepository.getSkipIntervalsForMal(malId, malEpisode, imdbId = imdbId, imdbSeason = season, imdbEpisode = episode)
@@ -637,7 +654,7 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
         val key = "kitsu:$kitsuId:$kitsuEpisode"
         if (skipIntroFetchedKey == key) return
         skipIntroFetchedKey = key
-        val imdbId = id?.takeIf { it.startsWith("tt") }
+        val imdbId = id?.takeIf { it.startsWith("tt") } ?: metaImdbId
         scope.launch {
             skipIntervals = withTimeoutOrNull(15_000L) {
                 skipIntroRepository.getSkipIntervalsForKitsu(kitsuId, kitsuEpisode, imdbId = imdbId, imdbSeason = season, imdbEpisode = episode)
@@ -740,10 +757,6 @@ internal fun PlayerRuntimeController.retryCurrentStreamWithDolbyVisionFallback(f
 
 internal fun PlayerRuntimeController.retryCurrentStreamWithDv7Mode1Fallback(fromPositionMs: Long) {
     scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs, clearResumeProgress = true)
-}
-
-internal fun PlayerRuntimeController.retryCurrentStreamWithVc1SoftwareFallback(fromPositionMs: Long) {
-    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
 }
 
 internal fun PlayerRuntimeController.retryCurrentStreamWithVc1TrackSelectionBypass(fromPositionMs: Long) {
@@ -881,9 +894,6 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
                     isManualDv81Mode2Active = isManualDv81Mode2ActiveForCurrentPlayback,
                     dv7Mode1AlreadyForced = dv7Mode1ForcedStreamUrls.contains(currentStreamUrl),
                     currentVideoTrackIsLikelyVc1 = currentVideoTrackIsLikelyVc1,
-                    isVc1SoftwareFallbackActive = isVc1SoftwareFallbackActiveForCurrentPlayback,
-                    currentVideoTrackSelected = currentVideoTrackSelected,
-                    isVc1TrackSelectionBypassActive = isVc1TrackSelectionBypassActiveForCurrentPlayback,
                 )
             )
         ) {
@@ -891,16 +901,40 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
                 dv7Mode1ForcedStreamUrls.add(currentStreamUrl)
                 retryCurrentStreamWithDv7Mode1Fallback(currentPosition)
             }
-            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.RetryVc1Software -> {
-                vc1SoftwarePreferredStreamUrls.add(currentStreamUrl)
-                retryCurrentStreamWithVc1SoftwareFallback(currentPosition)
-            }
-            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.RetryVc1TrackBypass -> {
-                vc1TrackSelectionBypassStreamUrls.add(currentStreamUrl)
-                retryCurrentStreamWithVc1TrackSelectionBypass(currentPosition)
+            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.FailVc1Unsupported -> {
+                val exoError = livePlayer.playerError ?: return@launch
+                handleVc1PlaybackFailure(errorMessage = exoError.toDisplayMessage(context))
             }
             PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.None -> Unit
         }
+    }
+}
+
+internal fun PlayerRuntimeController.handleVc1PlaybackFailure(errorMessage: String? = null) {
+    val displayMessage = errorMessage?.takeIf { it.isNotBlank() }
+        ?: _exoPlayer?.playerError?.toDisplayMessage(context)
+        ?: return
+    cancelFirstFrameWatchdog()
+    cancelStallWatchdog()
+    cancelStableProgressReset()
+    errorRetryJob?.cancel()
+    errorRetryJob = null
+    releasePlayer(flushPlaybackState = false)
+    cancelNextEpisodeAutoPlayOnFatalError()
+    _uiState.update {
+        it.copy(
+            error = displayMessage,
+            showSwitchToMpvErrorAction = true,
+            isPlaying = false,
+            showControls = false,
+            isBuffering = false,
+            showLoadingOverlay = false,
+            showPauseOverlay = false,
+            loadingIssueReportVisible = false,
+            loadingIssueElapsedMs = 0L,
+            playbackEnded = false,
+            postPlayMode = null
+        )
     }
 }
 

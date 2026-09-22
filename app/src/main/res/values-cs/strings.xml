@@ -913,7 +913,7 @@
     <string name="layout_trailer_muted">Přehrát trailer ztlumený</string>
     <string name="layout_trailer_muted_sub_preview">Ztlumit zvuk traileru během automatického náhledu.</string>
     <string name="layout_trailer_muted_sub_expanded">Ztlumit zvuk traileru v rozšířených kartách.</string>
-    <string name="layout_section_card_style">Styl karty plakátu</string>
+    <string name="layout_section_card_style">Karta plakátu</string>
     <string name="layout_section_card_style_desc">Vyladit šířku karty a poloměr rohů.</string>
     <string name="settings_card_depth_title">Efekt hloubky karty</string>
     <string name="settings_card_depth_description">Přidá osvětlenou horní hranu a jemný lesk obrazovým kartám pro nenápadný pocit hloubky.</string>
