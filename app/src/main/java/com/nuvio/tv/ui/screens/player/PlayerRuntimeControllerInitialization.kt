@@ -2408,8 +2408,7 @@ private class SubtitleOffsetRenderersFactory(
             initialForcePcm = initialForcePcm,
             forcePcmForBluetooth = bluetoothForcePcm,
             passthroughPolicy = passthroughPolicy,
-            onDiagnosticEvent = onAudioDiagnosticEvent,
-            systemPassthroughHbr = useSystemPassthrough
+            onDiagnosticEvent = onAudioDiagnosticEvent
         )
         speedAwareSink = playbackSpeedAwareAudioSink
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())
@@ -2887,9 +2886,10 @@ private fun promotePassthroughAudioWhenRendererAlive(
 
 // Tunnelled video releases frames against the platform's hw_av_sync audio clock, so the
 // selected audio track must be one the HAL will clock. Clear the tunnelling capability of
-// tracks that will not be: HBR formats the IEC sink would carry on its own track (no HAL
-// has been seen to clock an app-packed IEC 61937 stream) and tracks of an audio class
-// already seen with a dead tunnel clock on this chain. Whether a HAL clocks software PCM
+// tracks that will not be: lossless HBR formats whichever path carries them (no HAL has
+// been seen to clock an app-packed IEC 61937 stream, and a RAW TrueHD open under the tunnel
+// has left one box's audio dead until a reboot) and tracks of an audio class already seen
+// with a dead tunnel clock on this chain. Whether a HAL clocks software PCM
 // under tunnelling is a device fact: some never start that clock, while some TVs only
 // render 4K video through the tunnel, so FFmpeg-decoded tracks keep their tunnel until the
 // dead-clock watchdog has seen the PCM class fail on this chain and memoised it. With the
@@ -2923,9 +2923,9 @@ private fun demoteAudioTunnelingWhereItCannotBeClocked(
                         }
                     audioSink == null -> null
                     audioSink.demandsNonTunnelledVideo(format) -> "iec-hbr"
-                    // System Passthrough sends HBR to the platform as a RAW bitstream; keep it
-                    // out of the tunnel the same way (see the sink for the reason).
-                    audioSink.systemPassthroughDemandsNonTunnelledVideo(format) -> "system-passthrough-hbr"
+                    // Whatever path HBR leaves by, it is kept out of the tunnel; this catches the
+                    // starts where the IEC rule cannot fire (see the sink for the reason).
+                    audioSink.hbrDemandsNonTunnelledVideo(format) -> "hbr-format"
                     deadClockAudioClasses.isNotEmpty() &&
                         deadClockAudioClasses.contains(audioSink.tunnelAudioClass(format)) -> "dead-tunnel-clock"
                     else -> null
