@@ -1,0 +1,171 @@
+name: Sync upstream stable
+
+# Watches NuvioMedia/NuvioTV for non-beta stable releases and opens a PR into
+# this fork's default branch (dev). Pre-releases and beta/rc/alpha tags are ignored.
+#
+# Note: scheduled workflows are disabled on forks until you visit the Actions tab
+# once and enable them. workflow_dispatch always works when Actions are on.
+
+on:
+  schedule:
+    - cron: "0 14 * * *" # daily 14:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: sync-upstream-stable
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve latest upstream stable release
+        id: stable
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM: NuvioMedia/NuvioTV
+        run: |
+          set -euo pipefail
+
+          # Prefer GitHub's "latest" (excludes prerelease/draft), then reject
+          # tags that still look like betas (some older betas were mis-flagged).
+          resolve_stable() {
+            gh api "repos/${UPSTREAM}/releases" --paginate --jq '
+              [
+                .[]
+                | select(.draft == false and .prerelease == false)
+                | select(.tag_name | test("(?i)(^|[^a-z])(beta|rc|alpha|preview)([^a-z]|$)") | not)
+              ]
+              | sort_by(.published_at)
+              | reverse
+              | .[0]
+              | {tag: .tag_name, name: .name, url: .html_url, published: .published_at}
+            '
+          }
+
+          RELEASE="$(resolve_stable)"
+          TAG="$(jq -r '.tag // empty' <<<"$RELEASE")"
+          if [[ -z "$TAG" || "$TAG" == "null" ]]; then
+            echo "No stable upstream release found."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          NAME="$(jq -r '.name // .tag' <<<"$RELEASE")"
+          URL="$(jq -r '.url' <<<"$RELEASE")"
+          PUBLISHED="$(jq -r '.published' <<<"$RELEASE")"
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "published=$PUBLISHED" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "Found stable release: $TAG ($NAME)"
+
+      - name: Checkout fork
+        if: steps.stable.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Open sync PR (or issue on conflict)
+        if: steps.stable.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM: NuvioMedia/NuvioTV
+          TAG: ${{ steps.stable.outputs.tag }}
+          RELEASE_NAME: ${{ steps.stable.outputs.name }}
+          RELEASE_URL: ${{ steps.stable.outputs.url }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          MARKER="<!-- upstream-stable-sync:${TAG} -->"
+          BRANCH="sync/upstream-stable-${TAG}"
+
+          # Already have an open PR for this tag?
+          EXISTING_PR="$(gh pr list --state open --search "$MARKER in:body" --json number,url --jq '.[0].url // empty')"
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Open PR already exists for $TAG: $EXISTING_PR"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git remote add upstream "https://github.com/${UPSTREAM}.git"
+          git fetch upstream "refs/tags/${TAG}:refs/tags/upstream-stable-${TAG}"
+          git fetch origin "$BASE_BRANCH"
+
+          # Skip if base already contains the release commit.
+          TAG_SHA="$(git rev-list -n 1 "upstream-stable-${TAG}")"
+          if git merge-base --is-ancestor "$TAG_SHA" "origin/${BASE_BRANCH}"; then
+            echo "origin/${BASE_BRANCH} already contains ${TAG} ($TAG_SHA); nothing to sync."
+            exit 0
+          fi
+
+          git checkout -B "$BRANCH" "origin/${BASE_BRANCH}"
+
+          if git merge --no-ff "upstream-stable-${TAG}" -m "chore: sync upstream stable ${TAG}"; then
+            git push -u origin "$BRANCH" --force-with-lease
+
+            BODY="$(cat <<EOF
+          ${MARKER}
+
+          Automated sync of upstream **stable** release [\`${TAG}\`](${RELEASE_URL}) (${RELEASE_NAME}).
+
+          - Upstream: \`${UPSTREAM}\`
+          - Target branch: \`${BASE_BRANCH}\`
+          - Pre-releases / beta tags are ignored by this workflow.
+
+          Review the diff, resolve any remaining issues, then merge when ready.
+          EOF
+          )"
+
+            # Dedent for nicer PR body
+            BODY="$(sed 's/^          //' <<<"$BODY")"
+
+            gh pr create \
+              --base "$BASE_BRANCH" \
+              --head "$BRANCH" \
+              --title "Sync upstream stable ${TAG}" \
+              --body "$BODY"
+          else
+            git merge --abort || true
+
+            BODY="$(cat <<EOF
+          ${MARKER}
+
+          Upstream published stable release [\`${TAG}\`](${RELEASE_URL}) (${RELEASE_NAME}), but merging it into \`${BASE_BRANCH}\` conflicted automatically.
+
+          Manual sync:
+
+          \`\`\`bash
+          git fetch https://github.com/${UPSTREAM}.git tag ${TAG}
+          git checkout ${BASE_BRANCH}
+          git checkout -b sync/upstream-stable-${TAG}
+          git merge ${TAG}
+          # resolve conflicts, then:
+          git push -u origin sync/upstream-stable-${TAG}
+          gh pr create --base ${BASE_BRANCH} --head sync/upstream-stable-${TAG}
+          \`\`\`
+          EOF
+          )"
+            BODY="$(sed 's/^          //' <<<"$BODY")"
+
+            EXISTING_ISSUE="$(gh issue list --state open --search "$MARKER in:body" --json number,url --jq '.[0].url // empty')"
+            if [[ -n "$EXISTING_ISSUE" ]]; then
+              echo "Open issue already exists for $TAG: $EXISTING_ISSUE"
+              exit 0
+            fi
+
+            gh issue create \
+              --title "Upstream stable ${TAG} needs manual sync" \
+              --body "$BODY"
+          fi
