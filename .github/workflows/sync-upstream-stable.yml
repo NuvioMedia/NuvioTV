@@ -16,6 +16,11 @@ permissions:
   pull-requests: write
   issues: write
 
+# Pushing a merge that touches `.github/workflows/*` requires a PAT with the
+# `workflow` scope. Create one and store it as repo secret SYNC_UPSTREAM_TOKEN
+# (Settings → Secrets and variables → Actions). The default GITHUB_TOKEN cannot
+# create/update workflow files.
+
 concurrency:
   group: sync-upstream-stable
   cancel-in-progress: false
@@ -81,17 +86,28 @@ jobs:
 
           echo "Found stable release: ${TAG} (${NAME})"
 
+      - name: Require SYNC_UPSTREAM_TOKEN
+        if: steps.stable.outputs.skip != 'true'
+        env:
+          SYNC_UPSTREAM_TOKEN: ${{ secrets.SYNC_UPSTREAM_TOKEN }}
+        run: |
+          if [[ -z "${SYNC_UPSTREAM_TOKEN}" ]]; then
+            echo "::error::Missing secret SYNC_UPSTREAM_TOKEN. Create a classic PAT with 'repo' + 'workflow' (or a fine-grained PAT with Contents + Workflows on this repo), then add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
       - name: Checkout fork
         if: steps.stable.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ github.token }}
+          # PAT needed so git push can update branches that include workflow file changes.
+          token: ${{ secrets.SYNC_UPSTREAM_TOKEN }}
 
       - name: Open sync PR (or issue on conflict)
         if: steps.stable.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.SYNC_UPSTREAM_TOKEN }}
           UPSTREAM: NuvioMedia/NuvioTV
           TAG: ${{ steps.stable.outputs.tag }}
           RELEASE_NAME: ${{ steps.stable.outputs.name }}
