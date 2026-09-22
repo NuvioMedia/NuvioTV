@@ -27,7 +27,7 @@ internal class PlaybackSpeedAwareAudioSink(
     sink: AudioSink,
     initialForcePcm: Boolean = false,
     forcePcmForBluetooth: Boolean = false,
-    private val passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL,
+    passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL,
     private val onDiagnosticEvent: ((String) -> Unit)? = null,
     // True while the System Passthrough setting hands TrueHD / DTS-HD / DTS:X to the platform
     // instead of the app's IEC path.
@@ -45,6 +45,12 @@ internal class PlaybackSpeedAwareAudioSink(
 
     @Volatile
     private var bluetoothForcePcm: Boolean = forcePcmForBluetooth
+
+    // The resolved passthrough policy. Replaceable in place: a chain snapshot taken while HDMI
+    // was down after a display mode change denies every format, and the route callback
+    // resolves again once the device is back (applySurroundResolutionInPlace).
+    @Volatile
+    private var passthroughPolicy: AudioPassthroughPolicy = passthroughPolicy
 
     @Volatile
     private var currentInputFormat: Format? = null
@@ -112,6 +118,17 @@ internal class PlaybackSpeedAwareAudioSink(
     }
 
     fun isBluetoothForcePcm(): Boolean = bluetoothForcePcm
+
+    /**
+     * Replace the resolved passthrough policy without rebuilding the player. Call
+     * [notifyAudioProcessingRequirementChanged] afterwards so Media3 reselects the audio track.
+     * @return true when the policy changed.
+     */
+    fun setPassthroughPolicy(policy: AudioPassthroughPolicy): Boolean {
+        if (policy == passthroughPolicy) return false
+        passthroughPolicy = policy
+        return true
+    }
 
     fun isIecHbrActive(): Boolean = iecSink?.isIecActive == true
 

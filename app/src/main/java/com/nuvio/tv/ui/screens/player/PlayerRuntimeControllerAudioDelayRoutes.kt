@@ -149,6 +149,9 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
         AudioRejectionReverifier.ledger.invalidate()
         AudioChainProbe.invalidate()
         PlatformIecAudioTrackFactory.invalidateIec61937ProbeMemo()
+        // The title that is playing was resolved against the snapshot just dropped; give it
+        // the answer the chain gives now, without a rebuild.
+        applySurroundResolutionInPlace(reason)
 
         if (rememberAudioDelayPerDeviceEnabled) {
             applyStoredAudioDelayForCurrentRouteIfEnabled()
