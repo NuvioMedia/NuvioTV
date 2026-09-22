@@ -32,40 +32,54 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Prefer GitHub's "latest" (excludes prerelease/draft), then reject
-          # tags that still look like betas (some older betas were mis-flagged).
-          resolve_stable() {
-            gh api "repos/${UPSTREAM}/releases" --paginate --jq '
+          # Do not use `gh --paginate` with a jq expression that picks .[0]:
+          # jq runs per page and prints one "latest" per page, which corrupts
+          # GITHUB_OUTPUT when concatenated. One page of 100 is enough.
+          RELEASE="$(
+            gh api "repos/${UPSTREAM}/releases?per_page=100" --jq '
               [
                 .[]
                 | select(.draft == false and .prerelease == false)
-                | select(.tag_name | test("(?i)(^|[^a-z])(beta|rc|alpha|preview)([^a-z]|$)") | not)
+                | select(
+                    ((.tag_name // "") + " " + (.name // ""))
+                    | test("(?i)(^|[^a-z])(beta|rc|alpha|preview)([^a-z]|$)")
+                    | not
+                  )
               ]
               | sort_by(.published_at)
               | reverse
               | .[0]
-              | {tag: .tag_name, name: .name, url: .html_url, published: .published_at}
+              | if . == null then empty else
+                  {tag: .tag_name, name: .name, url: .html_url, published: .published_at}
+                end
             '
-          }
+          )"
 
-          RELEASE="$(resolve_stable)"
-          TAG="$(jq -r '.tag // empty' <<<"$RELEASE")"
-          if [[ -z "$TAG" || "$TAG" == "null" ]]; then
+          if [[ -z "${RELEASE}" ]]; then
             echo "No stable upstream release found."
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          TAG="$(jq -r '.tag' <<<"$RELEASE")"
           NAME="$(jq -r '.name // .tag' <<<"$RELEASE")"
           URL="$(jq -r '.url' <<<"$RELEASE")"
           PUBLISHED="$(jq -r '.published' <<<"$RELEASE")"
 
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
-          echo "published=$PUBLISHED" >> "$GITHUB_OUTPUT"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "Found stable release: $TAG ($NAME)"
+          # Heredoc form is safe if name/url ever contain newlines or '='.
+          {
+            echo "tag=${TAG}"
+            echo "name<<EOF"
+            printf '%s\n' "${NAME}"
+            echo "EOF"
+            echo "url<<EOF"
+            printf '%s\n' "${URL}"
+            echo "EOF"
+            echo "published=${PUBLISHED}"
+            echo "skip=false"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Found stable release: ${TAG} (${NAME})"
 
       - name: Checkout fork
         if: steps.stable.outputs.skip != 'true'
