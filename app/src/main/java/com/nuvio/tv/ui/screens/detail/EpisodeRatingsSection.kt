@@ -368,6 +368,7 @@ private data class EpisodeRatingChipUi(
     val chipTextColor: Color
 )
 
+
 // ---------------------------------------------------------------------------------------------
 // Chart-style ratings overlay (grid of all seasons/episodes), opened from a button on the Hero.
 // ---------------------------------------------------------------------------------------------
@@ -1407,7 +1408,6 @@ internal data class EpisodeRatingsChartData(
     }
 }
 
-// Height shared by the close button / episodes-seasons toggle, so the provider combobox lines up.
 private val RatingsHeaderButtonHeight = 34.dp
 private val RatingProviderLogoSize = 20.dp
 
@@ -1436,21 +1436,14 @@ private fun RatingProviderLogosCombobox(
     var isExpanded by remember { mutableStateOf(false) }
     var hasOpenedOnce by remember { mutableStateOf(false) }
     var selectedIndex by remember { mutableIntStateOf(0) }
-    // One requester per row (instead of only the first), so reopening the dropdown can
-    // restore focus to whichever item is currently selected.
     val itemFocusRequesters = remember(ratingProviders) {
         ratingProviders.indices.associateWith { FocusRequester() }
     }
     val listState = rememberLazyListState()
 
-    // Move focus into the list the moment it opens, and back to the trigger once it closes
-    // again (guarded so this doesn't steal focus on the very first composition).
     LaunchedEffect(isExpanded) {
         if (isExpanded) {
             hasOpenedOnce = true
-            // Make sure the selected row is actually composed/laid out before requesting
-            // focus on it -- otherwise its FocusRequester modifier isn't attached yet and
-            // focus silently falls back to the first item.
             listState.scrollToItem(selectedIndex)
             repeat(2) { withFrameNanos { } }
             itemFocusRequesters[selectedIndex]?.requestFocus()
@@ -1460,7 +1453,6 @@ private fun RatingProviderLogosCombobox(
     }
 
     Box(modifier = modifier) {
-        // Combobox trigger: icon-only, sized to match the close/toggle buttons.
         Button(
             onClick = { isExpanded = true },
             modifier = Modifier
@@ -1493,10 +1485,6 @@ private fun RatingProviderLogosCombobox(
             )
         }
 
-        // Dropdown: icon-only rows, each the same height as the header buttons.
-        // Rendered in a Popup (rather than as a normal sibling in this Box) so it overlays
-        // on top of surrounding content instead of expanding this composable's own measured
-        // size -- which would otherwise push down whatever comes after it in the container.
         if (isExpanded) {
             val density = LocalDensity.current
             val dropdownOffsetY = with(density) { (RatingsHeaderButtonHeight + 6.dp).roundToPx() }
@@ -1537,8 +1525,6 @@ private fun RatingProviderLogosCombobox(
                                         itemFocusRequesters[index] ?: FocusRequester()
                                     )
                                     .then(
-                                        // Swallow Down on the last row instead of letting
-                                        // focus escape the dropdown or wrap around.
                                         if (isLastItem) {
                                             Modifier.focusProperties { down = Cancel }
                                         } else {
