@@ -844,7 +844,7 @@
     <string name="layout_trailer_muted">Prehrať trailer bez zvuku</string>
     <string name="layout_trailer_muted_sub_preview">Stlmiť zvuk traileru počas náhľadu.</string>
     <string name="layout_trailer_muted_sub_expanded">Stlmiť zvuk traileru v rozšírených kartách.</string>
-    <string name="layout_section_card_style">Štýl posterov</string>
+    <string name="layout_section_card_style">Poster</string>
     <string name="layout_section_card_style_desc">Upraviť šírku a zaoblenie rohov kariet</string>
     <string name="layout_open">Otvorené</string>
     <string name="layout_closed">Zatvorené</string>

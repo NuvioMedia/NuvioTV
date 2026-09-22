@@ -17,6 +17,7 @@ data class LibraryEntry(
     val genres: List<String>,
     val addonBaseUrl: String?,
     val listKeys: Set<String> = emptySet(),
+    val listRanks: Map<String, Int> = emptyMap(),
     val listedAt: Long = 0L,
     val traktRank: Int? = null,
     val imdbId: String? = null,
@@ -26,6 +27,7 @@ data class LibraryEntry(
     /** Original media category from the tracking provider (e.g. "anime").
      *  Used for UI filtering while [type] stays as "movie"/"series" for meta addon compatibility. */
     val mediaCategory: String? = null,
+    val rawPosterUrl: String? = null,
     override val trackingProviderId: String? = null,
     override val trackingProviderItemId: String? = null,
     override val trackingSourceUrl: String? = null
@@ -46,7 +48,8 @@ data class LibraryEntry(
             description = description,
             releaseInfo = releaseInfo,
             imdbRating = imdbRating,
-            genres = genres
+            genres = genres,
+            rawPosterUrl = rawPosterUrl
         )
     }
 }
@@ -54,17 +57,18 @@ data class LibraryEntry(
 enum class LibrarySourceMode {
     LOCAL,
     TRAKT,
-    SIMKL
+    SIMKL,
+    MDBLIST
 }
 
-enum class TraktListPrivacy(val apiValue: String) {
+enum class LibraryListPrivacy(val apiValue: String) {
     PRIVATE("private"),
     LINK("link"),
     FRIENDS("friends"),
     PUBLIC("public");
 
     companion object {
-        fun fromApi(value: String?): TraktListPrivacy {
+        fun fromApi(value: String?): LibraryListPrivacy {
             return entries.firstOrNull { it.apiValue.equals(value, ignoreCase = true) } ?: PRIVATE
         }
     }
@@ -78,7 +82,7 @@ data class LibraryListTab(
     val traktListId: Long? = null,
     val slug: String? = null,
     val description: String? = null,
-    val privacy: TraktListPrivacy? = null,
+    val privacy: LibraryListPrivacy? = null,
     val sortBy: String? = null,
     val sortHow: String? = null,
     val trackingProviderId: String? = null,

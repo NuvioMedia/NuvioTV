@@ -1218,7 +1218,7 @@ private fun IntegrationSettingsContent(
                             }
                             item(key = "integration_hub_mdblist") {
                                 SettingsActionRow(
-                                    title = "MDBList",
+                                    title = stringResource(R.string.mdblist_title),
                                     subtitle = stringResource(R.string.settings_mdblist_subtitle),
                                     onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
                                 )

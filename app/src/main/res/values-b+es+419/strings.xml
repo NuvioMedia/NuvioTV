@@ -1073,7 +1073,7 @@
     <string name="layout_trailer_muted">Reproducir Tráiler Silenciado</string>
     <string name="layout_trailer_muted_sub_preview">Silenciar el audio del tráiler durante la vista previa de auto-reproducción.</string>
     <string name="layout_trailer_muted_sub_expanded">Silenciar el audio del tráiler en tarjetas expandidas.</string>
-    <string name="layout_section_card_style">Estilo de Tarjeta de Póster</string>
+    <string name="layout_section_card_style">Tarjeta de Póster</string>
     <string name="layout_section_card_style_desc">Ajustar el ancho de la tarjeta y el radio de las esquinas.</string>
     <string name="settings_card_depth_title">Efecto de profundidad de las tarjetas</string>
     <string name="settings_card_depth_description">Agrega un borde superior iluminado y un brillo suave a las tarjetas con imágenes para dar una sutil sensación de profundidad.</string>

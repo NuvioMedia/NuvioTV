@@ -838,7 +838,7 @@
     <string name="layout_trailer_muted">Putar Trailer Dibisukan</string>
     <string name="layout_trailer_muted_sub_preview">Bisukan audio trailer saat pratinjau putar otomatis.</string>
     <string name="layout_trailer_muted_sub_expanded">Bisukan audio trailer di kartu yang diperluas.</string>
-    <string name="layout_section_card_style">Gaya Kartu Poster</string>
+    <string name="layout_section_card_style">Kartu Poster</string>
     <string name="layout_section_card_style_desc">Sesuaikan lebar kartu dan radius sudut.</string>
     <string name="layout_open">Buka</string>
     <string name="layout_closed">Tutup</string>

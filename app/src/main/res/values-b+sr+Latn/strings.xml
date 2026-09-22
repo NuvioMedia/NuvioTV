@@ -1067,7 +1067,7 @@
     <string name="layout_trailer_muted">Pusti trejler bez zvuka</string>
     <string name="layout_trailer_muted_sub_preview">Utišaj zvuk trejlera tokom pregleda automatskog puštanja.</string>
     <string name="layout_trailer_muted_sub_expanded">Utišaj zvuk trejlera u proširenim karticama.</string>
-    <string name="layout_section_card_style">Stil kartice postera</string>
+    <string name="layout_section_card_style">Kartica postera</string>
     <string name="layout_section_card_style_desc">Podesite širinu kartice i poluprečnik uglova.</string>
     <string name="settings_card_depth_title">Efekat dubine kartice</string>
     <string name="settings_card_depth_description">Dodaje osvetljenu gornju ivicu i blagi sjaj karticama sa slikom za suptilan osećaj dubine.</string>

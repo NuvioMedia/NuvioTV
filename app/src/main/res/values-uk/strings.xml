@@ -865,7 +865,7 @@
     <string name="layout_trailer_muted">Відтворювати трейлер без звуку</string>
     <string name="layout_trailer_muted_sub_preview">Вимкнути звук трейлера під час автовідтворення прев\'ю.</string>
     <string name="layout_trailer_muted_sub_expanded">Вимкнути звук трейлера в розгорнутих картках.</string>
-    <string name="layout_section_card_style">Стиль картки постера</string>
+    <string name="layout_section_card_style">Картка постера</string>
     <string name="layout_section_card_style_desc">Налаштування ширини картки та радіуса кутів.</string>
     <string name="layout_open">Відкрити</string>
     <string name="layout_closed">Закрити</string>

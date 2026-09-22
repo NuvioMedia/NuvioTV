@@ -2221,7 +2221,7 @@ private const val CW_NEXT_UP_NEW_SEASON_UNAIRED_WINDOW_DAYS = 7
 internal fun isNextUpEpisodeUnaired(releaseDate: LocalDate?, today: LocalDate): Boolean =
     releaseDate == null || releaseDate.isAfter(today)
 
-private fun resolveNextUpVideoFromMeta(
+internal fun resolveNextUpVideoFromMeta(
     progress: WatchProgress,
     meta: CwMetaSummary,
     showUnairedNextUp: Boolean
@@ -2274,6 +2274,7 @@ private fun resolveNextUpVideoFromMeta(
     val todayLocal = LocalDate.now(ZoneId.systemDefault())
     val watchedEpisodeSeason = episodes[watchedIndex].season
     val nextVideo = episodes.drop(watchedIndex + 1).firstOrNull { video ->
+        if (video.season in progress.excludedNextUpSeasons) return@firstOrNull false
         val releaseDate = parseEpisodeReleaseDate(video.released)
         val isSeasonRollover = video.season != watchedEpisodeSeason
         if (isSeasonRollover) {
@@ -2533,7 +2534,7 @@ private fun buildLightweightEpisodeVideoId(
     episode: Int
 ): String = "$contentId:$season:$episode"
 
-private fun buildNextUpSeedCacheKey(
+internal fun buildNextUpSeedCacheKey(
     progress: WatchProgress,
     showUnairedNextUp: Boolean
 ): String {
@@ -2545,6 +2546,10 @@ private fun buildNextUpSeedCacheKey(
         append(progress.episode ?: -1)
         append("|unaired=")
         append(showUnairedNextUp)
+        if (progress.excludedNextUpSeasons.isNotEmpty()) {
+            append("|excluded=")
+            append(progress.excludedNextUpSeasons.sorted().joinToString(","))
+        }
     }
 }
 
@@ -2905,7 +2910,7 @@ private suspend fun HomeViewModel.resolveContinueWatchingTmdbData(
 
     if (!isSeriesTypeCW(progress.contentType)) {
         val startedAtMs = SystemClock.elapsedRealtime()
-        val mdbEnabled = currentMdbListSettings.enabled && currentMdbListSettings.apiKey.isNotBlank()
+        val mdbEnabled = mdbListRepository.isAvailable(currentMdbListSettings)
         val (movieMeta, mdbImdbRating) = coroutineScope {
             val movieDeferred = async {
                 runCatching {
@@ -2944,7 +2949,7 @@ private suspend fun HomeViewModel.resolveContinueWatchingTmdbData(
     }
 
     val episodeStartedAtMs = SystemClock.elapsedRealtime()
-    val mdbEnabled = currentMdbListSettings.enabled && currentMdbListSettings.apiKey.isNotBlank()
+    val mdbEnabled = mdbListRepository.isAvailable(currentMdbListSettings)
 
     val (episodeMeta, showMeta, mdbImdbRating) = coroutineScope {
         val episodeDeferred = async {

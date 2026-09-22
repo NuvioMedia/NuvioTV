@@ -860,7 +860,7 @@
     <string name="layout_trailer_muted">Пусни трейлъра без звук</string>
     <string name="layout_trailer_muted_sub_preview">Заглуши аудиото на трейлъра по време на автоматичен преглед.</string>
     <string name="layout_trailer_muted_sub_expanded">Заглуши аудиото на трейлъра в разширените карти.</string>
-    <string name="layout_section_card_style">Стил на постер картите</string>
+    <string name="layout_section_card_style">Постер карта</string>
     <string name="layout_section_card_style_desc">Настрой ширина и радиус на ъглите на картите.</string>
     <string name="layout_open">Отворено</string>
     <string name="layout_closed">Затворено</string>

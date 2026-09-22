@@ -353,6 +353,10 @@ internal fun continueWatchingImageModel(
     useEpisodeThumbnails: Boolean,
     preferPosterArtwork: Boolean = false
 ): String? {
+    val customLandscape = when (item) {
+        is ContinueWatchingItem.InProgress -> item.customLandscapePoster
+        is ContinueWatchingItem.NextUp -> item.customLandscapePoster
+    }
     // Poster art is already 2:3 so it wins here, and only an opted-in episode thumbnail outranks it.
     if (preferPosterArtwork) {
         val posterProgress = (item as? ContinueWatchingItem.InProgress)?.progress
@@ -378,20 +382,23 @@ internal fun continueWatchingImageModel(
     return when {
         nextUp != null && !nextUp.hasAired ->
             firstNonBroken(
+                customLandscape,
                 nextUp.backdrop,
                 nextUp.poster,
                 nextUp.thumbnail.takeIf { useEpisodeThumbnails }
             )
         nextUp != null && useEpisodeThumbnails ->
-            firstNonBroken(nextUp.thumbnail, nextUp.backdrop, nextUp.poster)
+            firstNonBroken(nextUp.thumbnail, customLandscape, nextUp.backdrop, nextUp.poster)
         nextUp != null ->
-            firstNonBroken(nextUp.backdrop, nextUp.poster)
+            firstNonBroken(customLandscape, nextUp.backdrop, nextUp.poster)
         useEpisodeThumbnails -> firstNonBroken(
             (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail,
+            customLandscape,
             progress?.backdrop,
             progress?.poster
         )
         else -> firstNonBroken(
+            customLandscape,
             progress?.backdrop,
             progress?.poster
         )
@@ -577,7 +584,7 @@ fun ContinueWatchingCard(
         }
     }
     val imageRequest = remember(effectiveImageModel, requestWidthPx, requestHeightPx, shouldBlur) {
-        ImageRequest.Builder(context)
+        val builder = ImageRequest.Builder(context)
             .data(effectiveImageModel)
             .crossfade(true)
             .memoryCacheKey(
@@ -589,7 +596,16 @@ fun ContinueWatchingCard(
             .apply {
                 if (shouldBlur) transformations(com.nuvio.tv.ui.util.BlurTransformation())
             }
-            .build()
+        val fallbackUrl = when (item) {
+            is ContinueWatchingItem.InProgress -> item.originalPoster
+            is ContinueWatchingItem.NextUp -> item.originalPoster
+        }
+        if (!fallbackUrl.isNullOrBlank() && fallbackUrl != effectiveImageModel) {
+            builder.memoryCacheKeyExtras(
+                mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
+            )
+        }
+        builder.build()
     }
 
     val bgColor = NuvioTheme.colors.Background

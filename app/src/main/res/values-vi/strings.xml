@@ -19,7 +19,7 @@
     <string name="web_no_catalogs">Không có danh mục Trang chủ nào</string>
     <string name="web_btn_save">Lưu thay đổi</string>
     <string name="web_connection_lost">Mất kết nối với TV</string>
-    <string name="web_btn_remove">Xoá</string>
+    <string name="web_btn_remove">Xóa</string>
     <string name="web_badge_new">Mới</string>
     <string name="web_badge_disabled">Đã tắt</string>
     <string name="web_btn_enable">Bật</string>
@@ -130,11 +130,11 @@
     <string name="error_meta_no_addon_for_id">Không có tiện ích đã cài đặt nào có thể cung cấp siêu dữ liệu cho id=%1$s (type=%2$s).</string>
     <string name="error_meta_tried_none">Đã thử tiện ích siêu dữ liệu: %1$s. Không có tiện ích nào cung cấp siêu dữ liệu cho id=%2$s (type=%3$s).</string>
     <string name="error_meta_tried_generic">Đã thử tiện ích siêu dữ liệu: %1$s. Không thể tải siêu dữ liệu cho id=%2$s (type=%3$s).</string>
-    <string name="error_meta_tried_issues">Đã thử tiện ích siêu dữ liệu: %1$s. Không thể tải siêu dữ liệu cho id=%2$s (type=%3$s). Issues: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Không có tiện ích đã cài đặt nào hỗ trợ nguồn phát cho \"%1$s\".</string>
-    <string name="error_stream_tried_none">Đã thử các tiện ích phát: %1$s. Không có tiện ích nào trả về nguồn phát cho id=%2$s (type=%3$s).</string>
-    <string name="error_stream_tried_generic">Đã thử các tiện ích phát: %1$s. Không thể tải nguồn phát cho id=%2$s (type=%3$s).</string>
-    <string name="error_stream_tried_issues">Đã thử các tiện ích phát: %1$s. Không thể tải nguồn xem chor id=%2$s (type=%3$s). Issues: %4$s.</string>
+    <string name="error_meta_tried_issues">Đã thử tiện ích siêu dữ liệu: %1$s. Không thể tải siêu dữ liệu cho id=%2$s (type=%3$s). Lỗi: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Không có tiện ích đã cài đặt nào hỗ trợ luồng phát cho \"%1$s\".</string>
+    <string name="error_stream_tried_none">Đã thử các tiện ích nguồn phát: %1$s. Không có tiện ích nào tìm thấy luồng phát cho id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_generic">Đã thử các tiện ích nguồn phát: %1$s. Không thể tải luồng phát cho id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_issues">Đã thử các tiện ích nguồn phát: %1$s. Không thể tải luồng phát cho id=%2$s (type=%3$s). Lỗi: %4$s.</string>
 
     <string name="continue_watching">Tiếp tục xem</string>
     <string name="cw_upcoming">Sắp chiếu</string>
@@ -165,7 +165,7 @@
     </plurals>
     <string name="cw_action_go_to_details">Xem chi tiết</string>
     <string name="cw_action_start_from_beginning">Xem từ đầu</string>
-    <string name="cw_action_remove">Xoá</string>
+    <string name="cw_action_remove">Xóa</string>
     <string name="cw_dialog_subtitle">Chọn thao tác cho mục này.</string>
     <string name="home_poster_dialog_subtitle">Thao tác trên thanh tiêu đề</string>
 
@@ -179,7 +179,7 @@
     <string name="hero_play">Xem</string>
     <string name="hero_play_episode">Phát M%1$d, T%2$d</string>
     <string name="hero_add_to_library">Thêm vào thư viện</string>
-    <string name="hero_remove_from_library">Xoá khỏi thư viện</string>
+    <string name="hero_remove_from_library">Xóa khỏi thư viện</string>
     <string name="hero_mark_watched">Đánh dấu đã xem</string>
     <string name="hero_mark_unwatched">Đánh dấu chưa xem</string>
     <string name="hero_play_trailer">Xem trailer</string>
@@ -205,7 +205,7 @@
     <string name="episodes_season_actions">Thao tác với mùa phim</string>
 
     <string name="detail_added_to_library">Đã thêm vào thư viện</string>
-    <string name="detail_removed_from_library">Đã xoá khỏi thư viện</string>
+    <string name="detail_removed_from_library">Đã xóa khỏi thư viện</string>
     <string name="detail_episode_marked_watched">Đã đánh dấu đã xem tập này</string>
     <string name="detail_episode_marked_unwatched">Đã đánh dấu chưa xem tập này</string>
     <string name="detail_lists_updated">Đã cập nhật danh sách</string>
@@ -352,8 +352,8 @@
     <string name="custom_theme_enter_hex">Nhập mã Hex</string>
     <string name="custom_theme_hex_title">Màu Hex</string>
     <string name="custom_theme_hex_hint">Chọn 6 ký tự (0–9, A–F). Ký tự đầu tiên của bạn sẽ thay thế mã hiện tại.</string>
-    <string name="custom_theme_hex_clear">Xoá hết</string>
-    <string name="custom_theme_hex_delete">Xoá</string>
+    <string name="custom_theme_hex_clear">Xóa hết</string>
+    <string name="custom_theme_hex_delete">Xóa</string>
     <string name="custom_theme_use_color">Dùng màu này</string>
     <string name="custom_theme_save">Lưu chủ đề</string>
     <string name="custom_theme_remote_hint">← → Điều chỉnh   ·   ↑ ↓ Di chuyển   ·   Giữ để điều chỉnh nhanh hơn</string>
@@ -615,9 +615,9 @@
     <string name="advanced_memory_only_vertical_scroll_subtitle">Bỏ qua các yêu cầu tải ảnh từ ổ đĩa và mạng trong khi cuộn dọc qua các hàng trên trang chủ.</string>
     <string name="advanced_compose_highlighter">Bộ tô sáng Compose</string>
     <string name="advanced_compose_highlighter_subtitle">Nhấp nháy viền quanh các thành phần giao diện đang được tái cấu trúc để gỡ lỗi hiệu năng.</string>
-    <string name="advanced_clear_cw_cache">Xoá bộ nhớ đệm Tiếp tục xem</string>
-    <string name="advanced_clear_cw_cache_subtitle">Xoá ảnh thu nhỏ, tiêu đề và dữ liệu bổ sung đã lưu trong bộ nhớ đệm của mục Tiếp tục xem.</string>
-    <string name="advanced_clear_cw_cache_done">Đã xoá bộ nhớ đệm</string>
+    <string name="advanced_clear_cw_cache">Xóa bộ nhớ đệm Tiếp tục xem</string>
+    <string name="advanced_clear_cw_cache_subtitle">Xóa ảnh thu nhỏ, tiêu đề và dữ liệu bổ sung đã lưu trong bộ nhớ đệm của mục Tiếp tục xem.</string>
+    <string name="advanced_clear_cw_cache_done">Đã xóa bộ nhớ đệm</string>
     <string name="advanced_remember_last_profile">Nhớ hồ sơ gần nhất</string>
     <string name="advanced_remember_last_profile_subtitle">Nhớ hồ sơ được chọn lần cuối khi khởi động</string>
     <string name="advanced_confirm_exit">Thoát hoàn toàn khi đóng</string>
@@ -732,9 +732,9 @@
     <string name="auto_skip_outro">Đoạn kết / Kết thúc</string>
     <string name="auto_skip_outro_sub">Tự động bỏ qua đoạn kết và kết thúc anime.</string>
     <string name="auto_skip_movie_credits">Danh đề kết thúc</string>
-    <string name="auto_skip_movie_credits_sub">Tự động bỏ qua danh đề phim, giữ lại các cảnh sau danh đề.</string>
-    <string name="skip_movie_credits">Bỏ qua danh đề</string>
-    <string name="skip_to_post_credits">Đến cảnh sau danh đề</string>
+    <string name="auto_skip_movie_credits_sub">Tự động bỏ qua danh đề phim, giữ lại các cảnh hậu danh đề.</string>
+    <string name="skip_movie_credits">Bỏ qua Danh đề</string>
+    <string name="skip_to_post_credits">Đến cảnh hậu danh đề</string>
     <string name="playback_auto_frame_rate">Tốc độ Khung hình Tự động &amp; Độ phân giải</string>
     <string name="playback_section_player">Trình phát &amp; Lựa chọn luồng</string>
     <string name="playback_section_player_desc">Tùy chọn trình phát, tự động phát và bộ lọc nguồn.</string>
@@ -1073,7 +1073,7 @@
     <string name="layout_trailer_muted">Phát trailer đã tắt tiếng</string>
     <string name="layout_trailer_muted_sub_preview">Tắt âm thanh trailer khi tự động phát bản xem trước.</string>
     <string name="layout_trailer_muted_sub_expanded">Tắt âm thanh trailer trong thẻ mở rộng.</string>
-    <string name="layout_section_card_style">Kiểu thẻ poster</string>
+    <string name="layout_section_card_style">Thẻ poster</string>
     <string name="layout_section_card_style_desc">Điều chỉnh độ rộng và bo tròn góc của thẻ.</string>
     <string name="settings_card_depth_title">Hiệu ứng chiều sâu thẻ</string>
     <string name="settings_card_depth_description">Thêm viền sáng phía trên và hiệu ứng bóng mờ để tăng độ sâu tinh tế cho thẻ ảnh.</string>
@@ -1124,7 +1124,33 @@
     <string name="layout_card_width">Độ rộng</string>
     <string name="layout_card_radius">Bo tròn góc</string>
     <string name="layout_reset_default">Đặt lại mặc định</string>
-    <string name="layout_custom">Tuỳ chỉnh</string>
+    <string name="layout_custom">Tùy chỉnh</string>
+
+    <!-- Custom Poster URL -->
+    <string name="layout_custom_poster_title">Nguồn poster tùy chỉnh</string>
+    <string name="layout_custom_poster_description">Cung cấp mẫu URL poster từ một dịch vụ bên ngoài. Nếu một biến giữ chỗ không có giá trị cho tiêu đề cụ thể, poster gốc sẽ được sử dụng thay thế.</string>
+    <string name="layout_custom_poster_clear">Xóa</string>
+    <string name="layout_custom_poster_active">✓ Nguồn poster tùy chỉnh đang hoạt động</string>
+    <string name="layout_custom_poster_qr">Thiết lập qua điện thoại</string>
+    <string name="custom_poster_qr_instruction">Quét mã QR bằng điện thoại để dán mẫu URL poster</string>
+
+    <!-- Custom Poster Web Page -->
+    <string name="web_custom_poster_title">Nguồn poster tùy chỉnh</string>
+    <string name="web_custom_poster_subtitle">Dán mẫu URL poster vào bên dưới và nhấn Lưu.</string>
+    <string name="web_custom_poster_label">Mẫu URL</string>
+    <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
+    <string name="web_custom_poster_save">Lưu</string>
+    <string name="web_custom_poster_clear">Xóa</string>
+    <string name="web_custom_poster_saved">Đã lưu!</string>
+    <string name="web_custom_poster_cleared">Đã xóa</string>
+    <string name="web_custom_poster_error_empty">Nhập mẫu URL</string>
+    <string name="web_custom_poster_error_save">Không thể lưu</string>
+    <string name="web_custom_poster_error_clear">Không thể xóa</string>
+    <string name="web_custom_poster_error_connection">Lỗi kết nối</string>
+    <string name="web_custom_poster_current">Hiện tại:</string>
+    <string name="web_custom_poster_none">Chưa thiết lập mẫu</string>
+    <string name="web_custom_poster_loading">Đang tải…</string>
+    <string name="web_custom_poster_placeholders_info">Các biến giữ chỗ: {id} truyền tất cả ID nội dung. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} nhắm đến một loại ID duy nhất — nếu không có, poster gốc sẽ được giữ lại. {imdb_id|tmdb_id|kitsu_id} khai báo các loại ID được hỗ trợ — loại phù hợp sẽ được sử dụng, nếu không có thì poster gốc sẽ được giữ lại. Thêm ? để biến giữ chỗ trở thành tùy chọn, khi đó biến sẽ được thay bằng giá trị trống thay vì bỏ qua: {imdb_id?}. Các biến giữ chỗ khác: {id_type}, {typed_id}, {type}, {shape}.</string>
 
 
     <string name="mdblist_title">Điểm đánh giá MDBList</string>
@@ -1150,10 +1176,10 @@
     <string name="mdblist_mal_title">MyAnimeList</string>
     <string name="mdblist_mal_subtitle">Hiển thị điểm MyAnimeList</string>
     <string name="mdblist_dialog_title">Mã khóa API của MDBList</string>
-    <string name="mdblist_dialog_subtitle">Nhập mã khoá API để lấy điểm đánh giá bên ngoài</string>
-    <string name="mdblist_dialog_placeholder">Nhập mã khoá API của MDBList</string>
+    <string name="mdblist_dialog_subtitle">Nhập mã khóa API để lấy điểm đánh giá bên ngoài</string>
+    <string name="mdblist_dialog_placeholder">Nhập mã khóa API của MDBList</string>
     <string name="mdblist_not_set">Chưa đặt</string>
-    <string name="mdblist_invalid_api_key">Mã khoá API của MDBList không hợp lệ</string>
+    <string name="mdblist_invalid_api_key">Mã khóa API của MDBList không hợp lệ</string>
 
     <string name="debrid_title">Dịch vụ liên kết</string>
     <string name="debrid_subtitle">Kết nối tài khoản để truy cập liên kết và thư viện nội dung</string>
@@ -1268,9 +1294,9 @@
     <string name="debrid_stream_channels_preferred">Kênh ưu tiên</string>
     <string name="debrid_stream_channels_required">Kênh bắt buộc</string>
     <string name="debrid_stream_channels_excluded">Kênh loại trừ</string>
-    <string name="debrid_stream_encodes_preferred">Bản mã hoá ưu tiên</string>
-    <string name="debrid_stream_encodes_required">Bản mã hoá bắt buộc</string>
-    <string name="debrid_stream_encodes_excluded">Bản mã hoá loại trừ</string>
+    <string name="debrid_stream_encodes_preferred">Bản mã hóa ưu tiên</string>
+    <string name="debrid_stream_encodes_required">Bản mã hóa bắt buộc</string>
+    <string name="debrid_stream_encodes_excluded">Bản mã hóa loại trừ</string>
     <string name="debrid_stream_languages_preferred">Ngôn ngữ ưu tiên</string>
     <string name="debrid_stream_languages_required">Ngôn ngữ bắt buộc</string>
     <string name="debrid_stream_languages_excluded">Ngôn ngữ loại trừ</string>
@@ -1297,7 +1323,7 @@
     <string name="settings_stream_badge_position_top">Phía trên</string>
     <string name="settings_stream_badge_position_bottom">Phía dưới</string>
     <string name="settings_stream_badge_urls_title">URL nhãn Fusion</string>
-    <string name="settings_stream_badge_urls_description">Nhập tối đa %1$d URL JSON nhãn luồng kiểu Fusion. Bạn có thể cập nhật hoặc xoá từng URL riêng lẻ.</string>
+    <string name="settings_stream_badge_urls_description">Nhập tối đa %1$d URL JSON nhãn luồng kiểu Fusion. Bạn có thể cập nhật hoặc xóa từng URL riêng lẻ.</string>
     <string name="settings_stream_badge_urls_search_description">Quản lý các URL JSON nhãn luồng kiểu Fusion đã nhập.</string>
     <string name="settings_fusion_badges_summary">%1$d/%2$d URL • %3$d nhãn Fusion đang hoạt động</string>
     <string name="settings_fusion_badges_empty">Không có URL nhãn Fusion đã nhập</string>
@@ -1315,7 +1341,7 @@
     <string name="stream_badge_qr_instruction">Quét mã QR này bằng điện thoại để quản lý các URL nhãn Fusion.</string>
     <string name="streams_size">DUNG LƯỢNG %1$s</string>
     <string name="action_import">Nhập</string>
-    <string name="action_delete">Xoá</string>
+    <string name="action_delete">Xóa</string>
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Skip</string>
@@ -1328,7 +1354,7 @@
     <string name="animeskip_dialog_subtitle">Tạo ID máy khách tại anime-skip.com/account/settings</string>
     <string name="animeskip_dialog_placeholder">Nhập ID máy khách</string>
     <string name="animeskip_invalid_client_id">ID máy khách không hợp lệ</string>
-    <string name="action_clear">Xoá</string>
+    <string name="action_clear">Xóa</string>
 
     <string name="tmdb_title">Bổ sung dữ liệu TMDB</string>
     <string name="tmdb_subtitle">Chọn trường dữ liệu nào sẽ lấy từ TMDB</string>
@@ -1502,7 +1528,7 @@
     <string name="profile_creating">Đang tạo\u2026</string>
     <string name="profile_create_btn">Tạo</string>
     <string name="profile_confirm">Xác nhận</string>
-    <string name="profile_delete">Xoá</string>
+    <string name="profile_delete">Xóa</string>
     <string name="profile_addons">tiện ích</string>
     <string name="profile_plugins">trình mở rộng</string>
     <string name="profile_choose_avatar">Chọn Ảnh đại diện</string>
@@ -1552,7 +1578,7 @@
     <string name="profile_pin_disabled_subtitle">Đặt mã PIN gồm 4 chữ số để khóa hồ sơ này.</string>
     <string name="profile_pin_set">Đặt mã PIN</string>
     <string name="profile_pin_change">Đổi mã PIN</string>
-    <string name="profile_pin_remove">Xoá mã PIN</string>
+    <string name="profile_pin_remove">Xóa mã PIN</string>
     <string name="profile_pin_set_title">Đặt mã PIN cho hồ sơ</string>
     <string name="profile_pin_set_subtitle">Nhập mã PIN gồm 4 chữ số rồi xác nhận.</string>
     <string name="profile_pin_enter">Nhập mã PIN gồm 4 chữ số</string>
@@ -1573,8 +1599,8 @@
     <string name="profile_pin_overlay_remove_verify_kicker">Yêu cầu kiểm tra bảo mật.</string>
     <string name="profile_pin_overlay_remove_verify_heading">Nhập mã PIN hiện tại để bỏ khóa cho %1$s.</string>
     <string name="profile_pin_overlay_remove_verify_support">Nhập 4 chữ số của mã PIN hiện tại để bỏ khóa.</string>
-    <string name="profile_pin_overlay_delete_verify_heading">Nhập mã PIN hiện tại để xoá %1$s.</string>
-    <string name="profile_pin_overlay_delete_verify_support">Nhập 4 chữ số của mã PIN hiện tại trước khi xoá hồ sơ này.</string>
+    <string name="profile_pin_overlay_delete_verify_heading">Nhập mã PIN hiện tại để xóa %1$s.</string>
+    <string name="profile_pin_overlay_delete_verify_support">Nhập 4 chữ số của mã PIN hiện tại trước khi xóa hồ sơ này.</string>
     <string name="profile_pin_overlay_set_support">Mã PIN này sẽ được yêu cầu trước khi mở hồ sơ này.</string>
     <string name="profile_pin_overlay_confirm_support">Nhập lại 4 chữ số để hoàn tất thiết lập.</string>
     <string name="profile_pin_overlay_mismatch">Mã PIN không khớp. Nhập lại mã PIN mới.</string>
@@ -1602,7 +1628,7 @@
     <string name="addon_error_invalid_scheme">URL tiện ích phải bắt đầu bằng http hoặc https</string>
     <string name="addon_installed_section">Đã cài đặt</string>
     <string name="addon_empty">Chưa cài đặt tiện ích nào. Thêm một tiện ích để bắt đầu.</string>
-    <string name="addon_remove">Xoá</string>
+    <string name="addon_remove">Xóa</string>
     <string name="addon_delete_confirm_title">Xóa tiện ích?</string>
     <string name="addon_delete_confirm_message">Bạn có chắc chắn muốn xóa không?</string>
     <string name="addon_delete_no">Không</string>
@@ -1706,7 +1732,7 @@
     <string name="subtitle_timing_capturing">Đang ghi nhận…</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Cảnh khoả thân</string>
+    <string name="parental_nudity">Cảnh khỏa thân</string>
     <string name="parental_violence">Bạo lực</string>
     <string name="parental_profanity">Ngôn từ thô tục</string>
     <string name="parental_alcohol">Rượu bia/Chất kích thích</string>
@@ -1878,7 +1904,7 @@
     <string name="still_watching_countdown">Dừng lại sau %1$d</string>
     <string name="still_watching_setting_title">Bạn vẫn đang xem chứ?</string>
     <string name="still_watching_setting_sub">Nhắc nhở sau khi các tập tự động phát liên tiếp.</string>
-    <string name="still_watching_threshold_title">Giới hạn số tập phim</string>
+    <string name="still_watching_threshold_title">Ngưỡng tập phim</string>
     <string name="still_watching_threshold_sub">Số tập phim tự động phát liên tiếp trước khi nhắc nhở.</string>
     <string name="skip_intro">Bỏ qua giới thiệu</string>
     <string name="skip_ending">Bỏ qua kết thúc</string>
@@ -1894,7 +1920,7 @@
     <string name="search_start_subtitle">Nhập ít nhất 2 ký tự</string>
     <string name="search_start_subtitle_no_discover">Khám phá đã tắt. Nhập ít nhất 2 ký tự</string>
     <string name="search_recent_title">Tìm kiếm gần đây</string>
-    <string name="search_recent_clear">Xoá lịch sử</string>
+    <string name="search_recent_clear">Xóa lịch sử</string>
     <string name="cd_remove_recent_search">Xóa %1$s khỏi tìm kiếm gần đây</string>
     <string name="search_voice_no_speech">Không phát hiện giọng nói. Thử lại.</string>
     <string name="search_voice_mic_permission">Cần quyền micro để tìm kiếm bằng giọng nói.</string>
@@ -1923,13 +1949,13 @@
     <string name="genre_documentary">Phim tài liệu</string>
     <string name="genre_drama">Chính kịch</string>
     <string name="genre_family">Gia đình</string>
-    <string name="genre_fantasy">Giả tưởng</string>
+    <string name="genre_fantasy">Kỳ ảo</string>
     <string name="genre_history">Lịch sử</string>
     <string name="genre_horror">Kinh dị</string>
     <string name="genre_music">Âm nhạc</string>
     <string name="genre_mystery">Trinh thám</string>
     <string name="genre_romance">Lãng mạn</string>
-    <string name="genre_science_fiction">Khoa học viễn tưởng</string>
+    <string name="genre_science_fiction">Viễn tưởng</string>
     <string name="genre_tv_movie">Phim truyền hình</string>
     <string name="genre_thriller">Giật gân</string>
     <string name="genre_war">Chiến tranh</string>
@@ -1938,7 +1964,7 @@
     <string name="genre_kids">Trẻ em</string>
     <string name="genre_news">Tin tức</string>
     <string name="genre_reality">Thực tế</string>
-    <string name="genre_sci_fi_fantasy">Khoa học viễn tưởng &amp; Giả tưởng</string>
+    <string name="genre_sci_fi_fantasy">Viễn tưởng &amp; Kỳ ảo</string>
     <string name="genre_soap">Dài tập</string>
     <string name="genre_talk">Đối thoại</string>
     <string name="genre_war_politics">Chiến tranh &amp; Chính trị</string>
@@ -1970,15 +1996,15 @@
     <string name="library_list_edit">Chỉnh sửa</string>
     <string name="library_list_move_up">Chuyển lên</string>
     <string name="library_list_move_down">Chuyển xuống</string>
-    <string name="library_list_delete">Xoá</string>
+    <string name="library_list_delete">Xóa</string>
     <string name="library_list_close">Đóng</string>
     <string name="library_list_name_label">Tên</string>
     <string name="library_error_list_name_required">Tên danh sách là bắt buộc</string>
     <string name="library_list_description_label">Mô tả</string>
     <string name="library_list_privacy">Quyền riêng tư</string>
-    <string name="library_delete_title">Xoá danh sách này?</string>
-    <string name="library_delete_subtitle">Thao tác này sẽ xoá danh sách và tất cả mục danh sách khỏi Trakt.</string>
-    <string name="library_delete_confirm">Xoá</string>
+    <string name="library_delete_title">Xóa danh sách này?</string>
+    <string name="library_delete_subtitle">Thao tác này sẽ xóa danh sách và tất cả mục danh sách khỏi Trakt.</string>
+    <string name="library_delete_confirm">Xóa</string>
     <string name="library_source_local">CỤC BỘ</string>
     <string name="library_source_nuvio">NUVIO</string>
     <string name="library_source_trakt">TRAKT</string>
@@ -2027,7 +2053,7 @@
     <string name="cloud_library_playable_file_count">%1$d tệp phát được</string>
     <string name="cloud_library_provider_all">Tất cả</string>
     <string name="cloud_library_refresh">Làm mới thư viện đám mây</string>
-    <string name="cloud_library_search_clear">Xoá tìm kiếm</string>
+    <string name="cloud_library_search_clear">Xóa tìm kiếm</string>
     <string name="cloud_library_search_label">Tìm kiếm thư viện đám mây</string>
     <string name="cloud_library_select_provider">Chọn nhà cung cấp</string>
     <string name="cloud_library_select_type">Chọn loại</string>
@@ -2112,7 +2138,7 @@
     <string name="custom_server_error_missing_configuration">Tài liệu khám phá thiếu URL Backend hoặc khóa công khai hợp lệ.</string>
     <string name="custom_server_error_no_auth">Máy chủ không cung cấp phương thức đăng nhập được hỗ trợ.</string>
     <string name="custom_server_save_failed">Không thể lưu cấu hình máy chủ.</string>
-    <string name="custom_server_session_clear_failed">Không thể xoá an toàn phiên hiện tại. Máy chủ chưa được thay đổi.</string>
+    <string name="custom_server_session_clear_failed">Không thể xóa an toàn phiên hiện tại. Máy chủ chưa được thay đổi.</string>
     <string name="custom_server_restart_failed">Đã lưu máy chủ nhưng ứng dụng không thể tự động khởi động lại. Vui lòng khởi động lại ứng dụng thủ công.</string>
 
     <string name="auth_qr_title">Đăng nhập bằng QR</string>
@@ -2167,13 +2193,13 @@
     <string name="plugin_add_repository">Thêm kho lưu trữ</string>
     <string name="plugin_add_btn">Thêm</string>
     <string name="plugin_manage_from_phone_title">Quản lý từ điện thoại</string>
-    <string name="plugin_manage_from_phone_subtitle">Quét mã QR để thêm hoặc xoá kho lưu trữ từ điện thoại</string>
+    <string name="plugin_manage_from_phone_subtitle">Quét mã QR để thêm hoặc xóa kho lưu trữ từ điện thoại</string>
     <string name="plugin_qr_instruction">Quét bằng điện thoại để quản lý kho lưu trữ</string>
     <string name="plugin_qr_close">Đóng</string>
     <string name="plugin_confirm_title">Xác nhận thay đổi kho lưu trữ</string>
     <string name="plugin_confirm_subtitle">Những thay đổi sau đây được thực hiện từ điện thoại của bạn:</string>
     <string name="plugin_confirm_added">Đã thêm:</string>
-    <string name="plugin_confirm_removed">Đã xoá:</string>
+    <string name="plugin_confirm_removed">Đã xóa:</string>
     <string name="plugin_confirm_no_changes">Không phát hiện thay đổi nào</string>
     <string name="plugin_confirm_total">Tổng số kho lưu trữ: %1$d</string>
     <string name="plugin_confirm_reject">Từ chối</string>
@@ -2207,9 +2233,9 @@
     <string name="profile_selection_empty">Không tìm thấy hồ sơ</string>
     <string name="profile_selection_primary_badge">CHÍNH</string>
     <string name="profile_selection_options_title">Tùy chọn hồ sơ</string>
-    <string name="profile_delete_confirm_title">Xoá hồ sơ?</string>
-    <string name="profile_delete_confirm_subtitle">Thao tác này sẽ xoá vĩnh viễn hồ sơ và toàn bộ dữ liệu của hồ sơ, bao gồm thư viện, lịch sử xem và cài đặt tiện ích. Không thể hoàn tác.</string>
-    <string name="profile_delete_btn">Xoá hồ sơ</string>
+    <string name="profile_delete_confirm_title">Xóa hồ sơ?</string>
+    <string name="profile_delete_confirm_subtitle">Thao tác này sẽ xóa vĩnh viễn hồ sơ và toàn bộ dữ liệu của hồ sơ, bao gồm thư viện, lịch sử xem và cài đặt tiện ích. Không thể hoàn tác.</string>
+    <string name="profile_delete_btn">Xóa hồ sơ</string>
     <string name="profile_saving">Đang lưu…</string>
 
     <string name="cast_detail_error">Đã xảy ra lỗi</string>
@@ -2330,7 +2356,7 @@
 
     <!-- Plugin errors -->
     <string name="plugin_repo_added_with_providers">Đã thêm %1$s với %2$d nhà cung cấp</string>
-    <string name="plugin_repo_removed">Kho lưu trữ đã bị xoá</string>
+    <string name="plugin_repo_removed">Kho lưu trữ đã bị xóa</string>
     <string name="plugin_repo_refreshed">Kho lưu trữ đã làm mới</string>
 
     <!-- Trakt errors -->
@@ -2400,11 +2426,11 @@
     <string name="cd_move_up">Chuyển lên</string>
     <string name="cd_move_down">Chuyển xuống</string>
     <string name="cd_edit">Sửa</string>
-    <string name="cd_delete">Xoá</string>
+    <string name="cd_delete">Xóa</string>
     <string name="cd_qr_code">Mã QR</string>
     <string name="cd_add">Thêm</string>
     <string name="cd_refresh">Làm mới</string>
-    <string name="cd_remove">Xoá</string>
+    <string name="cd_remove">Xóa</string>
     <string name="cd_preview">Xem trước</string>
     <string name="cd_test">Kiểm tra</string>
     <string name="cd_unlink">Hủy liên kết</string>
@@ -2413,7 +2439,7 @@
     <string name="cd_trakt_qr">Mã QR kích hoạt Trakt</string>
     <string name="cd_imdb">IMDb</string>
     <string name="cd_open_discover">Mở mục khám phá</string>
-    <string name="cd_clear_search">Xoá tìm kiếm</string>
+    <string name="cd_clear_search">Xóa tìm kiếm</string>
     <string name="cd_voice_search">Tìm kiếm bằng giọng nói</string>
     <string name="cd_donation_qr">Mã QR quyên góp</string>
     <string name="cd_contributor_qr">Mã QR ủng hộ người đóng góp</string>
@@ -2429,8 +2455,8 @@
 
     <!-- Collection Management -->
     <string name="collections_header">Bộ sưu tập</string>
-    <string name="collections_delete_confirm_title">Xoá Bộ sưu tập?</string>
-    <string name="collections_delete_confirm">Xoá</string>
+    <string name="collections_delete_confirm_title">Xóa Bộ sưu tập?</string>
+    <string name="collections_delete_confirm">Xóa</string>
     <string name="collections_delete_confirm_subtitle">Thao tác này sẽ xóa vĩnh viễn \"%1$s\". Thao tác này không thể hoàn tác.</string>
     <string name="collections_empty">Chưa có bộ sưu tập nào. Tạo một bộ sưu tập để sắp xếp các danh mục của bạn.</string>
     <string name="collections_new">Bộ sưu tập mới</string>
@@ -2548,7 +2574,7 @@
     <string name="collections_editor_tmdb_person_credits">Tác phẩm đã tham gia</string>
     <string name="collections_editor_tmdb_director_credits">Tác phẩm đã đạo diễn</string>
     <string name="collections_editor_tmdb_company_fallback">Hãng sản xuất TMDB %1$d</string>
-    <string name="collections_editor_tmdb_help_presets">Chọn nguồn có sẵn. Bạn có thể sửa hoặc xoá sau khi thêm</string>
+    <string name="collections_editor_tmdb_help_presets">Chọn nguồn có sẵn. Bạn có thể sửa hoặc xóa sau khi thêm</string>
     <string name="collections_editor_tmdb_help_list">Dán URL danh sách TMDB công khai hoặc chỉ nhập số trong URL.</string>
     <string name="collections_editor_tmdb_help_production">Tìm theo tên hãng sản xuất hoặc nhập ID/URL từ TMDB để thêm trực tiếp</string>
     <string name="collections_editor_tmdb_help_network">Nhập ID đơn vị phát sóng. Các đơn vị phổ biến có trong phần Mẫu có sẵn và Bộ lọc nhanh</string>
@@ -2676,15 +2702,15 @@
     <string name="collections_card_subtitle">Nhóm các danh mục vào thư mục trên màn hình chính</string>
     <string name="collections_tab_all">Tất cả</string>
     <string name="collections_tab_combined">Kết hợp</string>
-    <string name="collection_editor_remove_cd">Xoá</string>
+    <string name="collection_editor_remove_cd">Xóa</string>
     <string name="collection_editor_choice_both">Tất cả</string>
     <string name="collection_editor_resolved_trakt_list">Danh sách Trakt đã xác thực</string>
     <string name="collection_editor_trakt_search_placeholder">Tìm kiếm tên, URL hoặc ID danh sách Trakt</string>
     <string name="collection_editor_trakt_name_placeholder">Xem cuối tuần, Đoạt giải thưởng</string>
     <string name="collection_editor_folder_count_one">%1$d mục</string>
     <string name="collection_editor_folder_count_other">%1$d mục</string>
-    <string name="collections_editor_delete_folder_title">Xoá thư mục?</string>
-    <string name="collections_editor_delete_folder_subtitle">Thao tác này sẽ xoá vĩnh viễn \"%1$s\" và nội dung của nó.</string>
+    <string name="collections_editor_delete_folder_title">Xóa thư mục?</string>
+    <string name="collections_editor_delete_folder_subtitle">Thao tác này sẽ xóa vĩnh viễn \"%1$s\" và nội dung của nó.</string>
     <string name="collections_editor_tmdb_movie_title_placeholder">Phim Marvel, Netflix Originals, Pixar</string>
     <string name="collections_editor_tmdb_tv_title_placeholder">Phim hành động hay nhất, Phim Hàn Quốc, Hoạt hình 2024</string>
     <string name="collections_editor_tmdb_person_title_placeholder">Phim Tom Hanks, Diễn viên yêu thích</string>
@@ -2724,7 +2750,7 @@
     <string name="collections_editor_tmdb_genre_animation">Hoạt hình</string>
     <string name="collections_editor_tmdb_genre_comedy">Hài</string>
     <string name="collections_editor_tmdb_genre_horror">Kinh dị</string>
-    <string name="collections_editor_tmdb_genre_scifi">Khoa học viễn tưởng</string>
+    <string name="collections_editor_tmdb_genre_scifi">Viễn tưởng</string>
     <string name="collections_editor_tmdb_genre_drama">Chính kịch</string>
     <string name="collections_editor_tmdb_genre_crime">Tội phạm</string>
     <string name="collections_editor_tmdb_genre_reality">Thực tế</string>
@@ -3002,12 +3028,12 @@
     <string name="debrid_picker_required_audio_channels_subtitle">Chỉ hiển thị các kênh âm thanh đã chọn</string>
     <string name="debrid_picker_excluded_audio_channels_title">Kênh âm thanh loại trừ</string>
     <string name="debrid_picker_excluded_audio_channels_subtitle">Ẩn các kênh âm thanh đã chọn</string>
-    <string name="debrid_picker_preferred_encodes_title">Bản mã hoá ưu tiên </string>
-    <string name="debrid_picker_preferred_encodes_subtitle">Ưu tiên sắp xếp các bản mã hoá như AV1, HEVC, AVC và các bản mã hoá tương tự</string>
-    <string name="debrid_picker_required_encodes_title">Bản mã hoá bắt buộc</string>
-    <string name="debrid_picker_required_encodes_subtitle">Chỉ hiển thị kết quả có bản mã hoá như AV1, HEVC và AVC và các bản mã hoá tương tự </string>
-    <string name="debrid_picker_excluded_encodes_title">Bản mã hoá loại trừ</string>
-    <string name="debrid_picker_excluded_encodes_subtitle">Ẩn các bản mã hoá đã chọn</string>
+    <string name="debrid_picker_preferred_encodes_title">Bản mã hóa ưu tiên </string>
+    <string name="debrid_picker_preferred_encodes_subtitle">Ưu tiên sắp xếp các bản mã hóa như AV1, HEVC, AVC và các bản mã hóa tương tự</string>
+    <string name="debrid_picker_required_encodes_title">Bản mã hóa bắt buộc</string>
+    <string name="debrid_picker_required_encodes_subtitle">Chỉ hiển thị kết quả có bản mã hóa như AV1, HEVC và AVC và các bản mã hóa tương tự </string>
+    <string name="debrid_picker_excluded_encodes_title">Bản mã hóa loại trừ</string>
+    <string name="debrid_picker_excluded_encodes_subtitle">Ẩn các bản mã hóa đã chọn</string>
     <string name="debrid_picker_preferred_languages_title">Ngôn ngữ ưu tiên</string>
     <string name="debrid_picker_preferred_languages_subtitle">Ưu tiên sắp xếp các ngôn ngữ âm thanh đã chọn</string>
     <string name="debrid_picker_required_languages_title">Ngôn ngữ bắt buộc</string>

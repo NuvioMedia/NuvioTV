@@ -455,7 +455,7 @@
     <string name="layout_trailer_muted">Odtwarzaj zwiastun bez dźwięku</string>
     <string name="layout_trailer_muted_sub_preview">Wycisz audio zwiastuna podczas podglądu auto-play.</string>
     <string name="layout_trailer_muted_sub_expanded">Wycisz audio zwiastuna w rozszerzonych kartach.</string>
-    <string name="layout_section_card_style">Styl karty plakatu</string>
+    <string name="layout_section_card_style">Karta plakatu</string>
     <string name="layout_section_card_style_desc">Dostosuj szerokość karty i promień narożnika.</string>
     <string name="layout_open">Otwarte</string>
     <string name="layout_closed">Zamknięte</string>
@@ -480,6 +480,32 @@
     <string name="layout_card_radius">Promień narożnika</string>
     <string name="layout_reset_default">Przywróć domyślne</string>
     <string name="layout_custom">Niestandardowy</string>
+
+    <!-- Custom Poster URL -->
+    <string name="layout_custom_poster_title">Niestandardowe źródło plakatów</string>
+    <string name="layout_custom_poster_description">Podaj wzorzec URL z zewnętrznego serwisu. Jeśli symbol zastępczy nie ma wartości dla danego tytułu, zostanie użyty oryginalny plakat.</string>
+    <string name="layout_custom_poster_clear">Wyczyść</string>
+    <string name="layout_custom_poster_active">✓ Niestandardowe źródło plakatów aktywne</string>
+    <string name="layout_custom_poster_qr">Skonfiguruj przez telefon</string>
+    <string name="custom_poster_qr_instruction">Zeskanuj kod QR telefonem, aby wkleić wzorzec URL plakatów</string>
+
+    <!-- Custom Poster Web Page -->
+    <string name="web_custom_poster_title">Niestandardowe źródło plakatów</string>
+    <string name="web_custom_poster_subtitle">Wklej wzorzec URL poniżej i naciśnij Zapisz.</string>
+    <string name="web_custom_poster_label">Wzorzec URL</string>
+    <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
+    <string name="web_custom_poster_save">Zapisz</string>
+    <string name="web_custom_poster_clear">Wyczyść</string>
+    <string name="web_custom_poster_saved">Zapisano!</string>
+    <string name="web_custom_poster_cleared">Wyczyszczono</string>
+    <string name="web_custom_poster_error_empty">Wpisz wzorzec URL</string>
+    <string name="web_custom_poster_error_save">Zapis nie powiódł się</string>
+    <string name="web_custom_poster_error_clear">Czyszczenie nie powiodło się</string>
+    <string name="web_custom_poster_error_connection">Błąd połączenia</string>
+    <string name="web_custom_poster_current">Aktualny:</string>
+    <string name="web_custom_poster_none">Brak wzorca</string>
+    <string name="web_custom_poster_loading">Ładowanie…</string>
+    <string name="web_custom_poster_placeholders_info">Symbole: {id} przekazuje wszystkie ID treści. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} celują w jeden typ ID - jeśli niedostępny, oryginalny plakat zostaje. {imdb_id|tmdb_id|kitsu_id} deklaruje wspierane typy ID - pasujący zostanie użyty, lub oryginalny plakat zostaje. Dodaj ? aby symbol był opcjonalny, rozwiązując do pustego zamiast pomijania: {imdb_id?}. Inne symbole: {id_type}, {typed_id}, {type}, {shape}.</string>
 
 
     <!-- MDBListSettingsScreen -->

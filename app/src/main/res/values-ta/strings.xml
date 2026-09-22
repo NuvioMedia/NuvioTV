@@ -816,7 +816,7 @@
     <string name="layout_trailer_muted">ஒலியின்றி டிரெய்லரை இயக்கு</string>
     <string name="layout_trailer_muted_sub_preview">தானியங்கி முன்னோட்டத்தின் போது டிரெய்லர் ஒலியை அமைதிப்படுத்து.</string>
     <string name="layout_trailer_muted_sub_expanded">விரிவாக்கப்பட்ட அட்டைகளில் டிரெய்லர் ஒலியை அமைதிப்படுத்து.</string>
-    <string name="layout_section_card_style">போஸ்டர் அட்டை நடை</string>
+    <string name="layout_section_card_style">போஸ்டர் அட்டை</string>
     <string name="layout_section_card_style_desc">அட்டையின் அகலம் மற்றும் மூலை வளைவை அமை.</string>
     <string name="layout_open">திறந்த</string>
     <string name="layout_closed">மூடிய</string>

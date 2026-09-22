@@ -511,6 +511,19 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(continueWatchingCardStyle = style) }
                 }
         }
+        viewModelScope.launch {
+            var initialPattern = true
+            layoutPreferenceDataStore.customPosterUrlPattern
+                .distinctUntilChanged()
+                .collect { pattern ->
+                    _uiState.update { it.copy(customPosterUrlPattern = pattern) }
+                    if (initialPattern) {
+                        initialPattern = false
+                    } else {
+                        refreshVisibleCatalogsPipeline(forceReplace = true)
+                    }
+                }
+        }
         // When "next up from furthest episode" changes, clear CW caches and retrigger pipeline
         viewModelScope.launch {
             var initial = true

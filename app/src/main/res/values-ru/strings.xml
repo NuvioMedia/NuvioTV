@@ -691,7 +691,7 @@
     <string name="layout_trailer_muted">Воспроизводить трейлер без звука</string>
     <string name="layout_trailer_muted_sub_preview">Отключить звук трейлера во время автовоспроизведения превью.</string>
     <string name="layout_trailer_muted_sub_expanded">Отключить звук трейлера в развернутых карточках.</string>
-    <string name="layout_section_card_style">Стиль карточки постера</string>
+    <string name="layout_section_card_style">Карточка постера</string>
     <string name="layout_section_card_style_desc">Настройка ширины карточки и радиуса углов.</string>
     <string name="settings_card_depth_title">Эффект объёма карточек</string>
     <string name="settings_card_depth_description">Добавляет подсвеченный верхний край и мягкий блик к карточкам изображений для лёгкого ощущения объёма.</string>

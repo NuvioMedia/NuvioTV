@@ -946,7 +946,7 @@
   <string name="layout_trailer_muted">Αναπαραγωγή τρέιλερ χωρίς ήχο</string>
   <string name="layout_trailer_muted_sub_preview">Σίγαση ήχου τρέιλερ κατά την προεπισκόπηση αυτόματης αναπαραγωγής.</string>
   <string name="layout_trailer_muted_sub_expanded">Σίγαση ήχου τρέιλερ σε επεκταμένες κάρτες.</string>
-  <string name="layout_section_card_style">Στυλ κάρτας αφίσας</string>
+  <string name="layout_section_card_style">Κάρτα αφίσας</string>
   <string name="layout_section_card_style_desc">Ρύθμιση πλάτους κάρτας και ακτίνας γωνιών.</string>
   <string name="layout_open">Ανοιχτό</string>
   <string name="layout_closed">Κλειστό</string>

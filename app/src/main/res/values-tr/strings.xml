@@ -1082,7 +1082,7 @@
     <string name="layout_trailer_muted">Fragmanı Sessiz Oynat</string>
     <string name="layout_trailer_muted_sub_preview">Otomatik oynatma önizlemesi sırasında fragman sesini kapat.</string>
     <string name="layout_trailer_muted_sub_expanded">Genişletilmiş kartlarda fragman sesini kapat.</string>
-    <string name="layout_section_card_style">Kart Stili</string>
+    <string name="layout_section_card_style">Poster Kartı</string>
     <string name="layout_section_card_style_desc">Kart genişliğini ve köşe yarıçapını ayarlayın.</string>
     <string name="settings_card_depth_title">Kart Derinlik Efekti</string>
     <string name="settings_card_depth_description">Görsel kartlara aydınlık bir üst kenar ve yumuşak bir parıltı ekleyerek hafif bir derinlik hissi verir.</string>

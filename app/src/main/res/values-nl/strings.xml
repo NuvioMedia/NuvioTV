@@ -1042,7 +1042,7 @@
     <string name="layout_trailer_muted">Trailer gedempt afspelen</string>
     <string name="layout_trailer_muted_sub_preview">Demp het trailergeluid tijdens de automatische preview.</string>
     <string name="layout_trailer_muted_sub_expanded">Demp het trailergeluid in uitgevouwen kaarten.</string>
-    <string name="layout_section_card_style">Posterkaartstijl</string>
+    <string name="layout_section_card_style">Posterkaart</string>
     <string name="layout_section_card_style_desc">Pas kaartbreedte en hoekradius aan.</string>
     <string name="settings_card_depth_title">Diepte-effect van kaarten</string>
     <string name="settings_card_depth_description">Voegt een verlichte bovenrand en een zachte glans toe aan afbeeldingskaarten voor een subtiel gevoel van diepte.</string>

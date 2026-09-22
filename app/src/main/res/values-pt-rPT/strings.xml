@@ -843,7 +843,7 @@
     <string name="layout_trailer_muted">Reproduzir trailer sem som</string>
     <string name="layout_trailer_muted_sub_preview">Retirar o som do áudio do trailer durante a pré-visualização automática.</string>
     <string name="layout_trailer_muted_sub_expanded">Retirar o som do áudio do trailer nos cartões expandidos.</string>
-    <string name="layout_section_card_style">Estilo dos cartões com cartaz</string>
+    <string name="layout_section_card_style">Cartões com cartaz</string>
     <string name="layout_section_card_style_desc">Ajustar a largura do cartão e o raio dos cantos.</string>
     <string name="layout_open">Aberto</string>
     <string name="layout_closed">Fechado</string>

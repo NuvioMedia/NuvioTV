@@ -576,7 +576,7 @@
     <string name="layout_trailer_muted">Pusti Trailer Bez Zvuka</string>
     <string name="layout_trailer_muted_sub_preview">Utišaj zvuk trailera tokom autoplay previewa.</string>
     <string name="layout_trailer_muted_sub_expanded">Utišaj zvuk trailera u proširenim karticama.</string>
-    <string name="layout_section_card_style">Stil Poster Kartice</string>
+    <string name="layout_section_card_style">Poster Kartica</string>
     <string name="layout_section_card_style_desc">Podesi širinu kartice i radius uglova.</string>
     <string name="layout_open">Otvoreno</string>
     <string name="layout_closed">Zatvoreno</string>

@@ -199,6 +199,55 @@ class PlayerMediaSourceFactoryTest {
         assertEquals(userInfo.basicAuthHeader(), request.headers["Authorization"])
     }
 
+    @Test
+    fun `isLoopbackNonTorrServerUrl returns true for Usenet or local proxy loopback streams`() {
+        assertTrue(
+            PlayerMediaSourceFactory.isLoopbackNonTorrServerUrl("http://127.0.0.1:51234/stream/movie.mkv")
+        )
+        assertTrue(
+            PlayerMediaSourceFactory.isLoopbackNonTorrServerUrl("http://localhost:51234/stream/movie.mkv")
+        )
+        assertTrue(
+            PlayerMediaSourceFactory.isLoopbackNonTorrServerUrl("http://127.0.0.1:8080/stream/video.mkv?token=abc")
+        )
+    }
+
+    @Test
+    fun `isLoopbackNonTorrServerUrl returns false for TorrServer streams`() {
+        assertFalse(
+            PlayerMediaSourceFactory.isLoopbackNonTorrServerUrl(
+                "http://127.0.0.1:8091/stream/title.mkv?link=magnet:?xt=urn:btih:123&index=1&play"
+            )
+        )
+        assertFalse(
+            PlayerMediaSourceFactory.isLoopbackNonTorrServerUrl(
+                "http://127.0.0.1:8090/stream?play=1"
+            )
+        )
+        assertFalse(
+            PlayerMediaSourceFactory.isLoopbackNonTorrServerUrl(
+                "http://127.0.0.1:9090/stream/title.mkv?link=magnet:?xt=urn:btih:123&index=1&play"
+            )
+        )
+    }
+
+    @Test
+    fun `isLoopbackNonTorrServerUrl returns false for external and non-loopback urls`() {
+        assertFalse(
+            PlayerMediaSourceFactory.isLoopbackNonTorrServerUrl(
+                "https://debrid.example.com/stream/movie.mkv"
+            )
+        )
+        assertFalse(
+            PlayerMediaSourceFactory.isLoopbackNonTorrServerUrl(
+                "http://192.168.1.100:8091/stream?link=123"
+            )
+        )
+        assertFalse(
+            PlayerMediaSourceFactory.isLoopbackNonTorrServerUrl("")
+        )
+    }
+
     private fun String.basicAuthHeader(): String =
         "Basic " + Base64.getEncoder().encodeToString(toByteArray(Charsets.UTF_8))
 }

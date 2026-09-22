@@ -954,7 +954,7 @@
     <string name="layout_trailer_muted">Luaj trailerin pa zë</string>
     <string name="layout_trailer_muted_sub_preview">Çaktivizo zërin e trailerit gjatë pamjes paraprake automatike.</string>
     <string name="layout_trailer_muted_sub_expanded">Çaktivizo zërin e trailerit në kartat e zgjeruara.</string>
-    <string name="layout_section_card_style">Stili i kartës së posterit</string>
+    <string name="layout_section_card_style">Karta e posterit</string>
     <string name="layout_section_card_style_desc">Rregullo gjerësinë e kartës dhe rrezen e qosheve.</string>
     <string name="settings_card_depth_title">Efekti i thellësisë së kartës</string>
     <string name="settings_card_depth_description">Shton një skaj të sipërm të ndriçuar dhe një shkëlqim të butë në kartat me imazh për një ndjesi të lehtë thellësie.</string>

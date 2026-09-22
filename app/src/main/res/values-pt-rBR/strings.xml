@@ -1063,7 +1063,7 @@
     <string name="layout_trailer_muted">Trailer mudo</string>
     <string name="layout_trailer_muted_sub_preview">Silencie o áudio na prévia automática.</string>
     <string name="layout_trailer_muted_sub_expanded">Silencie o áudio nos cartões expandidos.</string>
-    <string name="layout_section_card_style">Estilo dos Cartões</string>
+    <string name="layout_section_card_style">Cartão de Pôster</string>
     <string name="layout_section_card_style_desc">Ajuste a largura e o arredondamento dos itens.</string>
     <string name="settings_card_depth_title">Efeito de Profundidade nos Cartões</string>
     <string name="settings_card_depth_description">Adiciona um brilho suave na borda superior e um reflexo discreto às imagens dos cartões, criando sensação de profundidade.</string>

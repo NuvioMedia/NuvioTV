@@ -868,7 +868,7 @@
     <string name="layout_trailer_muted">Afspil trailer uden lyd</string>
     <string name="layout_trailer_muted_sub_preview">Slå trailer-lyd fra under automatisk afspilningsforhåndsvisning.</string>
     <string name="layout_trailer_muted_sub_expanded">Slå trailer-lyd fra i udvidede kort.</string>
-    <string name="layout_section_card_style">Posterkort-stil</string>
+    <string name="layout_section_card_style">Posterkort</string>
     <string name="layout_section_card_style_desc">Justér kortbredde og hjørneradius.</string>
     <string name="layout_open">Åben</string>
     <string name="layout_closed">Lukket</string>

@@ -409,7 +409,7 @@
     <string name="layout_trailer_muted">Reproducir tráiler silenciado</string>
     <string name="layout_trailer_muted_sub_preview">Silencia audio de tráiler durante vista previa de reproducción automática.</string>
     <string name="layout_trailer_muted_sub_expanded">Silencia audio de tráiler en tarjetas expandidas.</string>
-    <string name="layout_section_card_style">Estilo de tarjeta de póster</string>
+    <string name="layout_section_card_style">Tarjeta de póster</string>
     <string name="layout_section_card_style_desc">Ajusta ancho de tarjeta y radio de esquina.</string>
     <string name="layout_open">Abierto</string>
     <string name="layout_closed">Cerrado</string>
