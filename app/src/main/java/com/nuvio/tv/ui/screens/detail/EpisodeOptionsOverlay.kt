@@ -103,7 +103,8 @@ internal fun EpisodeOptionsOverlay(
     onToggleWatched: () -> Unit,
     onMarkSeasonWatched: () -> Unit = {},
     onMarkSeasonUnwatched: () -> Unit = {},
-    onMarkPreviousEpisodesWatched: () -> Unit = {}
+    onMarkPreviousEpisodesWatched: () -> Unit = {},
+    showWatchedActions: Boolean = true
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -181,28 +182,30 @@ internal fun EpisodeOptionsOverlay(
         else -> stringResource(R.string.episodes_dialog_subtitle)
     }
     val actions = buildList {
-        add(
-            EpisodeOverlayAction(
-                label = if (isWatched) {
-                    stringResource(R.string.episodes_mark_unwatched)
-                } else {
-                    stringResource(R.string.episodes_mark_watched)
-                },
-                enabled = !isPending,
-                onClick = onToggleWatched
+        if (showWatchedActions) {
+            add(
+                EpisodeOverlayAction(
+                    label = if (isWatched) {
+                        stringResource(R.string.episodes_mark_unwatched)
+                    } else {
+                        stringResource(R.string.episodes_mark_watched)
+                    },
+                    enabled = !isPending,
+                    onClick = onToggleWatched
+                )
             )
-        )
-        add(
-            EpisodeOverlayAction(
-                label = if (isSeasonFullyWatched) {
-                    stringResource(R.string.episodes_mark_season_unwatched)
-                } else {
-                    stringResource(R.string.episodes_mark_season_watched)
-                },
-                onClick = if (isSeasonFullyWatched) onMarkSeasonUnwatched else onMarkSeasonWatched
+            add(
+                EpisodeOverlayAction(
+                    label = if (isSeasonFullyWatched) {
+                        stringResource(R.string.episodes_mark_season_unwatched)
+                    } else {
+                        stringResource(R.string.episodes_mark_season_watched)
+                    },
+                    onClick = if (isSeasonFullyWatched) onMarkSeasonUnwatched else onMarkSeasonWatched
+                )
             )
-        )
-        if (hasPreviousEpisodes) {
+        }
+        if (showWatchedActions && hasPreviousEpisodes) {
             add(
                 EpisodeOverlayAction(
                     label = stringResource(R.string.episodes_mark_previous_watched),
