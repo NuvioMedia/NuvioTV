@@ -1626,6 +1626,7 @@ fun PlayerScreen(
             aiSubtitleAvailable = uiState.aiSubtitleAvailable,
             aiSubtitleTranslationActive = uiState.aiSubtitleTranslationActive,
             isAiSubtitleTranslating = uiState.isAiSubtitleTranslating,
+            streamReleaseName = uiState.currentStreamName ?: uiState.contentName,
             onInternalTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectSubtitleTrack(it)) },
             onAddonSubtitleSelected = { viewModel.onEvent(PlayerEvent.OnSelectAddonSubtitle(it)) },
             onDisableSubtitles = { viewModel.onEvent(PlayerEvent.OnDisableSubtitles) },
@@ -1670,6 +1671,43 @@ fun PlayerScreen(
                 onCueSelected = { cue ->
                     viewModel.onEvent(PlayerEvent.OnApplySubtitleAutoSyncCue(cue.startTimeMs))
                 }
+            )
+        }
+
+        PlayerOverlayScaffold(
+            visible = uiState.showAiSubtitleDiagnosticsOverlay && uiState.aiSubtitleDiagnostics != null,
+            onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissAiSubtitleDiagnostics) },
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(2.65f),
+            captureKeys = false,
+            contentPadding = PaddingValues(start = 52.dp, end = 52.dp, top = 36.dp, bottom = 76.dp)
+        ) {
+            uiState.aiSubtitleDiagnostics?.let { diagnostics ->
+                AiSubtitleDiagnosticsOverlayContent(
+                    diagnostics = diagnostics,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+        }
+
+        PlayerOverlayScaffold(
+            visible = uiState.showSubtitleTranslateMenuOverlay,
+            onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissSubtitleTranslateMenu) },
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(2.65f),
+            captureKeys = false,
+            contentPadding = PaddingValues(start = 52.dp, end = 52.dp, top = 36.dp, bottom = 76.dp)
+        ) {
+            SubtitleTranslateMenuOverlayContent(
+                aiTranslateAvailable = uiState.aiSubtitleAvailable,
+                onTranslateWithAi = { dispatchTranslateSubtitleWithAi(viewModel, uiState) },
+                onDisableSubtitles = {
+                    viewModel.onEvent(PlayerEvent.OnDisableSubtitles)
+                    viewModel.onEvent(PlayerEvent.OnDismissSubtitleTranslateMenu)
+                },
+                modifier = Modifier.align(Alignment.Center)
             )
         }
 
@@ -3052,6 +3090,161 @@ private fun PlayerClockOverlayHost(viewModel: PlayerViewModel, playbackSpeed: Fl
         playbackSpeed = playbackSpeed,
         isLive = playbackTimeline.isLive
     )
+}
+
+private fun dispatchTranslateSubtitleWithAi(
+    viewModel: PlayerViewModel,
+    uiState: PlayerUiState
+) {
+    val optionId = uiState.subtitleTranslateMenuOptionId
+    when {
+        optionId == SubtitleAiOptionId -> {
+            viewModel.onEvent(PlayerEvent.OnTranslateSubtitleWithAi())
+        }
+        optionId?.startsWith("internal:") == true -> {
+            val trackIndex = optionId.removePrefix("internal:").toIntOrNull()
+            viewModel.onEvent(PlayerEvent.OnTranslateSubtitleWithAi(internalTrackIndex = trackIndex))
+        }
+        optionId != null -> {
+            val addonSubtitle = resolveAddonSubtitleByOptionId(optionId, uiState.addonSubtitles)
+            viewModel.onEvent(PlayerEvent.OnTranslateSubtitleWithAi(addonSubtitle = addonSubtitle))
+        }
+        else -> viewModel.onEvent(PlayerEvent.OnTranslateSubtitleWithAi())
+    }
+}
+
+@Composable
+private fun AiSubtitleDiagnosticsOverlayContent(
+    diagnostics: AiSubtitleDiagnostics,
+    modifier: Modifier = Modifier
+) {
+    val lockedLabel = if (diagnostics.userLocked) {
+        stringResource(R.string.subtitle_style_on)
+    } else {
+        stringResource(R.string.subtitle_style_off)
+    }
+    val sourceValue = listOfNotNull(
+        diagnostics.sourceLabel,
+        diagnostics.sourceLanguage?.let { com.nuvio.tv.domain.model.Subtitle.languageCodeToName(it) }
+    ).joinToString(" · ").ifBlank { "—" }
+
+    Column(
+        modifier = modifier
+            .widthIn(max = 520.dp)
+            .clip(RoundedCornerShape(NuvioTheme.radii.xl))
+            .background(NuvioTheme.colors.BackgroundElevated)
+            .padding(NuvioTheme.spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+    ) {
+        Text(
+            text = stringResource(R.string.sub_ai_diagnostics_title),
+            style = MaterialTheme.typography.headlineSmall,
+            color = NuvioTheme.colors.TextPrimary
+        )
+        AiSubtitleDiagnosticsRow(
+            label = stringResource(R.string.sub_ai_diagnostics_rung),
+            value = aiSubtitleLadderRungLabel(diagnostics.rung)
+        )
+        AiSubtitleDiagnosticsRow(
+            label = stringResource(R.string.sub_ai_diagnostics_reason),
+            value = diagnostics.reason
+        )
+        AiSubtitleDiagnosticsRow(
+            label = stringResource(R.string.sub_ai_diagnostics_source),
+            value = sourceValue
+        )
+        diagnostics.matchScore?.let { score ->
+            AiSubtitleDiagnosticsRow(
+                label = stringResource(R.string.sub_ai_diagnostics_score),
+                value = "$score%"
+            )
+        }
+        diagnostics.targetLanguage?.let { target ->
+            AiSubtitleDiagnosticsRow(
+                label = stringResource(R.string.sub_ai_diagnostics_target),
+                value = com.nuvio.tv.domain.model.Subtitle.languageCodeToName(target)
+            )
+        }
+        diagnostics.model?.let { model ->
+            AiSubtitleDiagnosticsRow(
+                label = stringResource(R.string.sub_ai_diagnostics_model),
+                value = model
+            )
+        }
+        AiSubtitleDiagnosticsRow(
+            label = stringResource(R.string.sub_ai_diagnostics_locked),
+            value = lockedLabel
+        )
+    }
+}
+
+@Composable
+private fun AiSubtitleDiagnosticsRow(
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = NuvioTheme.colors.TextTertiary,
+            modifier = Modifier.weight(0.42f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = NuvioTheme.colors.TextPrimary,
+            modifier = Modifier.weight(0.58f)
+        )
+    }
+}
+
+@Composable
+private fun aiSubtitleLadderRungLabel(rung: AiSubtitleLadderRung): String {
+    return when (rung) {
+        AiSubtitleLadderRung.PREFERRED_EMBEDDED -> stringResource(R.string.sub_ai_rung_preferred_embedded)
+        AiSubtitleLadderRung.AI_EMBEDDED -> stringResource(R.string.sub_ai_rung_ai_embedded)
+        AiSubtitleLadderRung.AI_SCORED_ADDON -> stringResource(R.string.sub_ai_rung_ai_scored_addon)
+        AiSubtitleLadderRung.PREFERRED_SCORED_ADDON -> stringResource(R.string.sub_ai_rung_preferred_scored_addon)
+        AiSubtitleLadderRung.CLASSIC_FALLBACK -> stringResource(R.string.sub_ai_rung_classic_fallback)
+        AiSubtitleLadderRung.MANUAL -> stringResource(R.string.sub_ai_rung_manual)
+        AiSubtitleLadderRung.NONE -> stringResource(R.string.sub_ai_rung_none)
+    }
+}
+
+@Composable
+private fun SubtitleTranslateMenuOverlayContent(
+    aiTranslateAvailable: Boolean,
+    onTranslateWithAi: () -> Unit,
+    onDisableSubtitles: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .widthIn(max = 420.dp)
+            .clip(RoundedCornerShape(NuvioTheme.radii.xl))
+            .background(NuvioTheme.colors.BackgroundElevated)
+            .padding(NuvioTheme.spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+    ) {
+        PlayerOverlayButton(
+            text = stringResource(R.string.sub_ai_translate_this),
+            onClick = onTranslateWithAi,
+            primary = true,
+            enabled = aiTranslateAvailable,
+            modifier = Modifier.fillMaxWidth()
+        )
+        PlayerOverlayButton(
+            text = stringResource(R.string.sub_ai_menu_disable),
+            onClick = onDisableSubtitles,
+            primary = false,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable

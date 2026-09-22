@@ -157,7 +157,7 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                 audioTracks = _uiState.value.audioTracks,
                 subtitleTracks = _uiState.value.subtitleTracks
             )
-            tryAutoSelectPreferredSubtitleFromAvailableTracks()
+            applySubtitleAutoSelectPolicy()
         } catch (e: Exception) {
             _uiState.update {
                 it.copy(
@@ -183,7 +183,7 @@ private fun PlayerRuntimeController.publishStreamSidecarSubtitlesWithoutAddonFet
             addonSubtitlesError = null
         )
     }
-    tryAutoSelectPreferredSubtitleFromAvailableTracks()
+    applySubtitleAutoSelectPolicy()
 }
 
 internal fun PlayerRuntimeController.refreshSubtitlesForCurrentEpisode() {
@@ -451,7 +451,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 lastSubtitlePreferredLanguage = settings.subtitleStyle.preferredLanguage
                 lastSubtitleSecondaryLanguage = settings.subtitleStyle.secondaryPreferredLanguage
                 lastUseForcedSubtitles = settings.subtitleStyle.useForcedSubtitles
-                tryAutoSelectPreferredSubtitleFromAvailableTracks()
+                applySubtitleAutoSelectPolicy()
             }
 
             if (showOnlyPreferredLanguagesChanged) {

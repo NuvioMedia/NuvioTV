@@ -319,7 +319,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     } else {
         cancelFirstFrameWatchdog()
     }
-    tryAutoSelectPreferredSubtitleFromAvailableTracks()
+    applySubtitleAutoSelectPolicy()
     maybeAdjustLibassPipelineForTracks(tracks)
 }
 

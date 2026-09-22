@@ -208,6 +208,8 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
                     }
                 }
             }
+            // Re-run smart subtitle selection now that original language is known.
+            applySubtitleAutoSelectPolicy()
         }
     }
 

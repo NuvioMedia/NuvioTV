@@ -211,6 +211,7 @@ internal fun PlaybackSettingsSections(
     var streamExpanded by rememberSaveable { mutableStateOf(false) }
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
+    var aiSubtitlesExpanded by rememberSaveable { mutableStateOf(false) }
     var p2pExpanded by rememberSaveable { mutableStateOf(false) }
     var bufferAndNetworkExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -220,6 +221,7 @@ internal fun PlaybackSettingsSections(
     val streamHeaderFocus = remember { FocusRequester() }
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
+    val aiSubtitlesHeaderFocus = remember { FocusRequester() }
     val p2pHeaderFocus = remember { FocusRequester() }
     val bufferAndNetworkHeaderFocus = remember { FocusRequester() }
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
@@ -668,6 +670,9 @@ internal fun PlaybackSettingsSections(
             subtitleSettingsItems(
                 playerSettings = playerSettings,
                 subtitleAiApiKey = subtitleAiApiKey,
+                aiSubtitlesExpanded = aiSubtitlesExpanded,
+                onToggleAiSubtitlesExpanded = { aiSubtitlesExpanded = !aiSubtitlesExpanded },
+                aiSubtitlesHeaderFocus = aiSubtitlesHeaderFocus,
                 onShowLanguageDialog = onShowLanguageDialog,
                 onShowSecondaryLanguageDialog = onShowSecondaryLanguageDialog,
                 onShowTextColorDialog = onShowTextColorDialog,
@@ -801,7 +806,7 @@ private fun LazyListScope.playbackCollapsibleSection(
 }
 
 @Composable
-private fun PlaybackSectionHeader(
+internal fun PlaybackSectionHeader(
     title: String,
     description: String,
     expanded: Boolean,

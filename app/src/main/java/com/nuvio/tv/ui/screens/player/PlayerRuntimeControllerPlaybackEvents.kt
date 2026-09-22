@@ -1363,7 +1363,52 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnToggleAiSubtitleTranslation -> {
             val currentlyActive = _uiState.value.aiSubtitleTranslationActive
-            setAiSubtitleTranslationEnabled(!currentlyActive)
+            if (!currentlyActive) {
+                aiSubtitleUserLocked = true
+            }
+            setAiSubtitleTranslationEnabled(!currentlyActive, allowPreferredUpgrade = false)
+        }
+        is PlayerEvent.OnTranslateSubtitleWithAi -> {
+            translateSubtitleWithAi(
+                internalTrackIndex = event.internalTrackIndex,
+                addonSubtitle = event.addonSubtitle
+            )
+            _uiState.update {
+                it.copy(
+                    showSubtitleTranslateMenuOverlay = false,
+                    subtitleTranslateMenuOptionId = null,
+                    showSubtitleOverlay = true,
+                    showControls = true
+                )
+            }
+        }
+        PlayerEvent.OnShowAiSubtitleDiagnostics -> {
+            _uiState.update {
+                it.copy(
+                    showAiSubtitleDiagnosticsOverlay = true,
+                    showSubtitleTranslateMenuOverlay = false
+                )
+            }
+        }
+        PlayerEvent.OnDismissAiSubtitleDiagnostics -> {
+            _uiState.update { it.copy(showAiSubtitleDiagnosticsOverlay = false) }
+        }
+        is PlayerEvent.OnShowSubtitleTranslateMenu -> {
+            _uiState.update {
+                it.copy(
+                    showSubtitleTranslateMenuOverlay = true,
+                    subtitleTranslateMenuOptionId = event.optionId,
+                    showAiSubtitleDiagnosticsOverlay = false
+                )
+            }
+        }
+        PlayerEvent.OnDismissSubtitleTranslateMenu -> {
+            _uiState.update {
+                it.copy(
+                    showSubtitleTranslateMenuOverlay = false,
+                    subtitleTranslateMenuOptionId = null
+                )
+            }
         }
         is PlayerEvent.OnSelectAddonSubtitle -> {
             logSwitchTrace(
@@ -1594,7 +1639,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleTimingDialog = false,
                     showSpeedDialog = false,
                     showSubtitleDelayOverlay = false,
-                    showMoreDialog = false
+                    showMoreDialog = false,
+                    showAiSubtitleDiagnosticsOverlay = false,
+                    showSubtitleTranslateMenuOverlay = false,
+                    subtitleTranslateMenuOptionId = null
                 )
             }
             scheduleHideControls()

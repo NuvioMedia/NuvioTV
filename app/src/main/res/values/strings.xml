@@ -874,8 +874,8 @@
     <string name="sub_strip_sdh_desc">Hide sound descriptions and speaker labels from text subtitles</string>
     <string name="sub_ai_enabled">AI subtitle translation</string>
     <string name="sub_ai_enabled_desc">Translate subtitles with your own Groq or Gemini API key (ExoPlayer only)</string>
-    <string name="sub_ai_auto_select">Auto-select AI translation</string>
-    <string name="sub_ai_auto_select_desc">Turn on AI translation automatically when playback starts on ExoPlayer</string>
+    <string name="sub_ai_auto_select">Smart AI subtitles</string>
+    <string name="sub_ai_auto_select_desc">Prefer preferred embedded, then AI from original/embedded, then best-scoring addon, then preferred addon</string>
     <string name="sub_ai_model">AI translation model</string>
     <string name="sub_ai_model_groq">Groq (gpt-oss-120b)</string>
     <string name="sub_ai_model_gemini">Gemini (3.5 Flash Lite)</string>
@@ -3219,4 +3219,26 @@
     <string name="stream_test_video_bitrate">Average Video Bitrate: %1$s</string>
     <string name="stream_test_error_connection">Connection failed. The last played stream link may have expired or is unreachable. Please play the video again and retry.</string>
 
+    <string name="sub_ai_section">AI subtitles</string>
+    <string name="sub_ai_section_desc">Translation model, API key, and smart subtitle selection</string>
+    <string name="sub_ai_diagnostics_title">AI subtitle source</string>
+    <string name="sub_ai_diagnostics_rung">Selection step</string>
+    <string name="sub_ai_diagnostics_reason">Reason</string>
+    <string name="sub_ai_diagnostics_source">Source</string>
+    <string name="sub_ai_diagnostics_score">Match score</string>
+    <string name="sub_ai_diagnostics_target">Target language</string>
+    <string name="sub_ai_diagnostics_model">Model</string>
+    <string name="sub_ai_diagnostics_locked">Manual selection</string>
+    <string name="sub_ai_translate_this">Translate with AI</string>
+    <string name="sub_ai_menu_disable">Disable subtitles</string>
+    <string name="sub_ai_menu_details">Details</string>
+    <string name="sub_ai_rung_preferred_embedded">Preferred embedded</string>
+    <string name="sub_ai_rung_ai_embedded">AI from embedded</string>
+    <string name="sub_ai_rung_ai_scored_addon">AI from scored addon</string>
+    <string name="sub_ai_rung_preferred_scored_addon">Preferred scored addon</string>
+    <string name="sub_ai_rung_classic_fallback">Classic fallback</string>
+    <string name="sub_ai_rung_manual">Manual</string>
+    <string name="sub_ai_rung_none">None</string>
+    <string name="sub_ai_option_meta">AI translation to preferred language</string>
+    <string name="sub_ai_option_badge">AI</string>
 </resources>

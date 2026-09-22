@@ -121,6 +121,10 @@ data class PlayerUiState(
     val aiSubtitleAvailable: Boolean = false,
     val aiSubtitleTranslationActive: Boolean = false,
     val subtitleAiFeatureEnabled: Boolean = false,
+    val aiSubtitleDiagnostics: AiSubtitleDiagnostics? = null,
+    val showAiSubtitleDiagnosticsOverlay: Boolean = false,
+    val showSubtitleTranslateMenuOverlay: Boolean = false,
+    val subtitleTranslateMenuOptionId: String? = null,
     val isAiSubtitleTranslating: Boolean = false,
     // Addon subtitles
     val addonSubtitles: List<Subtitle> = emptyList(),
@@ -289,6 +293,14 @@ sealed class PlayerEvent {
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
     data object OnDisableSubtitles : PlayerEvent()
     data object OnToggleAiSubtitleTranslation : PlayerEvent()
+    data class OnTranslateSubtitleWithAi(
+        val internalTrackIndex: Int? = null,
+        val addonSubtitle: Subtitle? = null
+    ) : PlayerEvent()
+    data object OnShowAiSubtitleDiagnostics : PlayerEvent()
+    data object OnDismissAiSubtitleDiagnostics : PlayerEvent()
+    data class OnShowSubtitleTranslateMenu(val optionId: String) : PlayerEvent()
+    data object OnDismissSubtitleTranslateMenu : PlayerEvent()
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()
     data class OnSetPlaybackSpeed(val speed: Float) : PlayerEvent()
     data object OnToggleControls : PlayerEvent()
@@ -398,4 +410,31 @@ data class StreamInfoData(
     val subtitleLanguage: String? = null,
     val subtitleSource: String? = null,
     val playerEngine: String? = null
+)
+
+enum class AiSubtitleLadderRung {
+    PREFERRED_EMBEDDED,
+    AI_EMBEDDED,
+    AI_SCORED_ADDON,
+    PREFERRED_SCORED_ADDON,
+    CLASSIC_FALLBACK,
+    MANUAL,
+    NONE
+}
+
+enum class AiSubtitleSourceKind {
+    EMBEDDED,
+    ADDON
+}
+
+data class AiSubtitleDiagnostics(
+    val rung: AiSubtitleLadderRung,
+    val reason: String,
+    val sourceKind: AiSubtitleSourceKind? = null,
+    val sourceLabel: String? = null,
+    val sourceLanguage: String? = null,
+    val matchScore: Int? = null,
+    val targetLanguage: String? = null,
+    val model: String? = null,
+    val userLocked: Boolean = false
 )

@@ -526,6 +526,9 @@ class PlayerRuntimeController(
     @Volatile internal var subtitleAiFeatureEnabled: Boolean = false
     @Volatile internal var subtitleAiAutoSelect: Boolean = false
     @Volatile internal var aiSubtitleAutoSelectAttempted: Boolean = false
+    @Volatile internal var aiSubtitleUserLocked: Boolean = false
+    internal var subtitleScoreCacheStreamName: String? = null
+    internal val subtitleScoreCache: MutableMap<String, Int> = mutableMapOf()
     internal var pendingPreviewSeekPosition: Long?
         get() = _uiState.value.pendingPreviewSeekPosition
         set(value) {
