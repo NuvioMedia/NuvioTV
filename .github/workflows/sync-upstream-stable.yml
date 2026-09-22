@@ -28,12 +28,16 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    env:
+      UPSTREAM: NuvioMedia/NuvioTV
+      # gh defaults to the parent repo inside a fork, which would target upstream.
+      # Every gh pr/issue call below pins --repo to this fork instead.
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Resolve latest upstream stable release
         id: stable
         env:
           GH_TOKEN: ${{ github.token }}
-          UPSTREAM: NuvioMedia/NuvioTV
         run: |
           set -euo pipefail
 
@@ -108,7 +112,6 @@ jobs:
         if: steps.stable.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.SYNC_UPSTREAM_TOKEN }}
-          UPSTREAM: NuvioMedia/NuvioTV
           TAG: ${{ steps.stable.outputs.tag }}
           RELEASE_NAME: ${{ steps.stable.outputs.name }}
           RELEASE_URL: ${{ steps.stable.outputs.url }}
@@ -116,11 +119,21 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Hard stop: this workflow must never target the upstream repository.
+          if [[ "${GH_REPO}" == "${UPSTREAM}" ]]; then
+            echo "::error::Refusing to run against upstream ${UPSTREAM}."
+            exit 1
+          fi
+
           MARKER="<!-- upstream-stable-sync:${TAG} -->"
           BRANCH="sync/upstream-stable-${TAG}"
 
-          # Already have an open PR for this tag?
-          EXISTING_PR="$(gh pr list --state open --search "$MARKER in:body" --json number,url --jq '.[0].url // empty')"
+          # Already have an open PR for this tag? Match on head branch, which is
+          # exact, instead of a body search that depends on search indexing.
+          EXISTING_PR="$(
+            gh pr list --repo "$GH_REPO" --state open --head "$BRANCH" \
+              --json url --jq '.[0].url // empty'
+          )"
           if [[ -n "$EXISTING_PR" ]]; then
             echo "Open PR already exists for $TAG: $EXISTING_PR"
             exit 0
@@ -132,6 +145,8 @@ jobs:
           git remote add upstream "https://github.com/${UPSTREAM}.git"
           git fetch upstream "refs/tags/${TAG}:refs/tags/upstream-stable-${TAG}"
           git fetch origin "$BASE_BRANCH"
+          # Fetch any previous sync branch so --force-with-lease has a real lease.
+          git fetch origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" || true
 
           # Skip if base already contains the release commit.
           TAG_SHA="$(git rev-list -n 1 "upstream-stable-${TAG}")"
@@ -166,6 +181,7 @@ jobs:
           Automated sync of upstream **stable** release [\`${TAG}\`](${RELEASE_URL}) (${RELEASE_NAME}).
 
           - Upstream: \`${UPSTREAM}\`
+          - Target repository: \`${GH_REPO}\`
           - Target branch: \`${BASE_BRANCH}\`
           - Pre-releases / beta tags are ignored by this workflow.
 
@@ -176,11 +192,23 @@ jobs:
             # Dedent for nicer PR body
             BODY="$(sed 's/^          //' <<<"$BODY")"
 
-            gh pr create \
-              --base "$BASE_BRANCH" \
-              --head "$BRANCH" \
-              --title "Sync upstream stable ${TAG}" \
-              --body "$BODY"
+            # The freshly pushed ref can take a moment to become visible to the API.
+            for attempt in 1 2 3 4 5; do
+              if gh pr create \
+                --repo "$GH_REPO" \
+                --base "$BASE_BRANCH" \
+                --head "$BRANCH" \
+                --title "Sync upstream stable ${TAG}" \
+                --body "$BODY"
+              then
+                exit 0
+              fi
+              echo "pr create attempt ${attempt} failed; retrying in 10s"
+              sleep 10
+            done
+
+            echo "::error::Could not create sync PR for ${TAG} in ${GH_REPO}."
+            exit 1
           else
             git merge --abort || true
 
@@ -198,19 +226,24 @@ jobs:
           git merge ${TAG}
           # resolve conflicts, then:
           git push -u origin sync/upstream-stable-${TAG}
-          gh pr create --base ${BASE_BRANCH} --head sync/upstream-stable-${TAG}
+          gh pr create --repo ${GH_REPO} --base ${BASE_BRANCH} --head sync/upstream-stable-${TAG}
           \`\`\`
           EOF
           )"
             BODY="$(sed 's/^          //' <<<"$BODY")"
 
-            EXISTING_ISSUE="$(gh issue list --state open --search "$MARKER in:body" --json number,url --jq '.[0].url // empty')"
+            EXISTING_ISSUE="$(
+              gh issue list --repo "$GH_REPO" --state open \
+                --search "Upstream stable ${TAG} needs manual sync in:title" \
+                --json url --jq '.[0].url // empty'
+            )"
             if [[ -n "$EXISTING_ISSUE" ]]; then
               echo "Open issue already exists for $TAG: $EXISTING_ISSUE"
               exit 0
             fi
 
             gh issue create \
+              --repo "$GH_REPO" \
               --title "Upstream stable ${TAG} needs manual sync" \
               --body "$BODY"
           fi
