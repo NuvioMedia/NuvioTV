@@ -66,6 +66,7 @@ import com.nuvio.tv.ui.components.FocusScrollingText
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.SourceChipStatus
 import com.nuvio.tv.ui.screens.detail.EpisodeOptionsOverlay
+import com.nuvio.tv.ui.screens.detail.adjacentEpisode
 import com.nuvio.tv.ui.screens.detail.formatReleaseDate
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -641,11 +642,13 @@ private fun EpisodesListView(
             blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
             style = uiState.episodeOptionsOverlayStyle,
             isPending = false,
-            // The player has no watched state to write to, so only the play action is offered here.
             showWatchedActions = false,
             isCurrentlyPlaying = episode.season == uiState.currentSeason &&
                 episode.episode == uiState.currentEpisode,
             onDismiss = { detailsEpisode = null },
+            onNavigateEpisode = { step ->
+                adjacentEpisode(uiState.episodes, episode, step)?.let { detailsEpisode = it }
+            },
             onPlay = {
                 detailsEpisode = null
                 onEpisodeSelected(episode)
@@ -677,7 +680,6 @@ private fun EpisodesSeasonTabs(
 
     LaunchedEffect(selectedSeason, seasons) {
         val targetIndex = seasons.indexOf(selectedSeason)
-        // Focusing a tab now selects it, so scrolling a tab that is already on screen would shift the row under the user on every step.
         if (seasonTabsListState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }) return@LaunchedEffect
         if (targetIndex >= 0) {
             runCatching { seasonTabsListState.animateScrollToItem(targetIndex) }
@@ -809,7 +811,6 @@ private fun EpisodeItem(
                                 onSeasonNavigate(previousSeason)
                                 return@onPreviewKeyEvent true
                             }
-                            // With no earlier season to switch to, the key would otherwise reach the player controls behind the panel.
                             if (onPreviousFromFirstSeason()) return@onPreviewKeyEvent true
                         }
                     } else if (isNextKey) {

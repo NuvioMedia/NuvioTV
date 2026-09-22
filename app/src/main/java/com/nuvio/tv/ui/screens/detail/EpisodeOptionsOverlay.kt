@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -105,7 +106,8 @@ internal fun EpisodeOptionsOverlay(
     onMarkSeasonUnwatched: () -> Unit = {},
     onMarkPreviousEpisodesWatched: () -> Unit = {},
     showWatchedActions: Boolean = true,
-    isCurrentlyPlaying: Boolean = false
+    isCurrentlyPlaying: Boolean = false,
+    onNavigateEpisode: ((Int) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -255,10 +257,14 @@ internal fun EpisodeOptionsOverlay(
     val initialActionIndex = actions.indexOfFirst { it.enabled }.coerceAtLeast(0)
     var acceptsSelectKey by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        // A disabled button cannot take focus, so with nothing enabled the description is the only place focus can go.
+    val hasEnabledAction = actions.any { it.enabled }
+    var descriptionFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(episode.id) {
+        detailsScrollState.scrollTo(0)
+        if (descriptionFocused) return@LaunchedEffect
         when {
-            actions.any { it.enabled } -> primaryFocusRequester.requestFocus()
+            hasEnabledAction -> primaryFocusRequester.requestFocus()
             !isNoneStyle -> detailsFocusRequester.requestFocus()
         }
     }
@@ -360,9 +366,15 @@ internal fun EpisodeOptionsOverlay(
                                         }
                                     }
                                     .focusable()
+                                    .onFocusChanged { descriptionFocused = it.isFocused }
                                     .onPreviewKeyEvent { event ->
+                                        val step = episodeStepForKey(event.nativeKeyEvent.keyCode, isRtl)
                                         when {
                                             event.type != KeyEventType.KeyDown -> false
+                                            onNavigateEpisode != null && (step == -1 || (step == 1 && !hasEnabledAction)) -> {
+                                                onNavigateEpisode(step)
+                                                true
+                                            }
                                             event.key == Key.DirectionDown && detailsScrollState.value < detailsScrollState.maxValue -> {
                                                 coroutineScope.launch {
                                                     detailsScrollState.animateScrollTo(
@@ -446,6 +458,18 @@ internal fun EpisodeOptionsOverlay(
                 Column(
                     modifier = Modifier
                         .width(actionsWidth)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown || onNavigateEpisode == null) {
+                                return@onPreviewKeyEvent false
+                            }
+                            val step = episodeStepForKey(event.nativeKeyEvent.keyCode, isRtl)
+                            if (step == 1 || (step == -1 && isNoneStyle)) {
+                                onNavigateEpisode(step)
+                                true
+                            } else {
+                                false
+                            }
+                        }
                         .focusGroup(),
                     verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
                 ) {
@@ -516,6 +540,18 @@ private fun episodeOverlayDescriptionStyle(length: Int): TextStyle {
             lineHeight = 22.sp
         )
     }
+}
+
+internal fun episodeStepForKey(keyCode: Int, isRtl: Boolean): Int = when (keyCode) {
+    AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> if (isRtl) -1 else 1
+    AndroidKeyEvent.KEYCODE_DPAD_LEFT -> if (isRtl) 1 else -1
+    else -> 0
+}
+
+internal fun adjacentEpisode(episodes: List<Video>, current: Video, step: Int): Video? {
+    val index = episodes.indexOfFirst { it.id == current.id }
+    if (index < 0) return null
+    return episodes.getOrNull(index + step)
 }
 
 private fun isSelectKey(keyCode: Int): Boolean {
