@@ -7,6 +7,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 
+#include <chrono>
 #include <condition_variable>
 #include <deque>
 #include <mutex>
@@ -54,6 +55,73 @@ struct Vc1PoolState {
 };
 
 
+int drain_pending_frames(AVCodecContext* ctx) {
+  AVFrame* junk = av_frame_alloc();
+  if (!junk) {
+    return AVERROR(ENOMEM);
+  }
+  int drained = 0;
+  for (;;) {
+    int ret = avcodec_receive_frame(ctx, junk);
+    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+      break;
+    }
+    if (ret < 0) {
+      av_frame_free(&junk);
+      return ret;
+    }
+    av_frame_unref(junk);
+    drained++;
+  }
+  av_frame_free(&junk);
+  return drained;
+}
+
+// Context copy can leave a finished I/P sitting in the worker. FFmpeg then
+// returns EAGAIN on send until that frame is received. That leftover is not
+// this B-frame, so discard it, send the packet, and only then keep output.
+int decode_b_packet(AVCodecContext* ctx, AVPacket* packet, AVFrame* frame) {
+  int drained = drain_pending_frames(ctx);
+  if (drained < 0) {
+    return drained;
+  }
+  if (drained > 0) {
+    static int drain_logs = 0;
+    drain_logs++;
+    if (drain_logs <= 3 || drain_logs % 120 == 0) {
+      LOGI("VC-1 worker dropped %d leftover frames before B", drained);
+    }
+  }
+
+  int send = avcodec_send_packet(ctx, packet);
+  if (send == AVERROR(EAGAIN)) {
+    int rec = avcodec_receive_frame(ctx, frame);
+    if (rec < 0 && rec != AVERROR(EAGAIN) && rec != AVERROR_EOF) {
+      return rec;
+    }
+    if (rec >= 0) {
+      av_frame_unref(frame);
+    }
+    send = avcodec_send_packet(ctx, packet);
+  }
+  if (send < 0) {
+    return send;
+  }
+
+  int rec = avcodec_receive_frame(ctx, frame);
+  if (rec != AVERROR(EAGAIN)) {
+    return rec;
+  }
+
+  send = avcodec_send_packet(ctx, NULL);
+  if (send < 0 && send != AVERROR_EOF) {
+    return rec;
+  }
+  rec = avcodec_receive_frame(ctx, frame);
+  avcodec_flush_buffers(ctx);
+  return rec;
+}
+
 void worker_loop(Vc1PoolState* pool, Worker* worker) {
   pthread_setname_np(pthread_self(), "VC1BFrame");
   setpriority(PRIO_PROCESS, gettid(), -16);
@@ -71,8 +139,8 @@ void worker_loop(Vc1PoolState* pool, Worker* worker) {
       worker->finished = false;
     }
     AVFrame* frame = av_frame_alloc();
-    int send_result = packet ? avcodec_send_packet(worker->ctx, packet) : AVERROR(EINVAL);
-    int receive_result = send_result < 0 ? send_result : avcodec_receive_frame(worker->ctx, frame);
+    int result = (packet && frame) ? decode_b_packet(worker->ctx, packet, frame)
+                                   : AVERROR(EINVAL);
     if (packet) {
       av_packet_unref(packet);
     }
@@ -80,10 +148,10 @@ void worker_loop(Vc1PoolState* pool, Worker* worker) {
       std::lock_guard<std::mutex> lock(worker->mu);
       worker->busy = false;
       worker->finished = true;
-      if (receive_result < 0 || !frame) {
+      if (result < 0 || !frame) {
         av_frame_free(&frame);
         worker->frame = NULL;
-        worker->result = -1;
+        worker->result = result < 0 ? result : -1;
       } else {
         worker->frame = frame;
         worker->result = 0;
@@ -104,19 +172,51 @@ void collect_finished_locked(Vc1PoolState* pool) {
     if (!worker->finished) {
       continue;
     }
+    int result = worker->result;
     job->frame = worker->frame;
-    job->failed = worker->result < 0 || worker->frame == NULL;
+    job->failed = result < 0 || worker->frame == NULL;
     worker->frame = NULL;
     worker->finished = false;
     worker->result = 0;
     job->worker_index = -1;
     if (job->failed) {
-      pool->dead = true;
+      // One bad B-frame used to latch the pool off for the rest of playback,
+      // which left every later frame on a single core.
+      static int failures = 0;
+      failures++;
+      if (failures <= 3 || failures % 120 == 0) {
+        LOGE("VC-1 B-frame worker failed err=%d count=%d", result, failures);
+      }
+      avcodec_flush_buffers(worker->ctx);
     }
   }
 }
 
+void reclaim_orphan_workers_locked(Vc1PoolState* pool) {
+  for (int i = 0; i < pool->worker_count; ++i) {
+    Worker* worker = &pool->workers[i];
+    std::lock_guard<std::mutex> lock(worker->mu);
+    if (!worker->finished) {
+      continue;
+    }
+    bool referenced = false;
+    for (size_t j = 0; j < pool->jobs.size(); ++j) {
+      if (pool->jobs[j].worker_index == i) {
+        referenced = true;
+        break;
+      }
+    }
+    if (referenced) {
+      continue;
+    }
+    av_frame_free(&worker->frame);
+    worker->finished = false;
+    worker->result = 0;
+  }
+}
+
 int find_idle_worker(Vc1PoolState* pool) {
+  reclaim_orphan_workers_locked(pool);
   for (int i = 0; i < pool->worker_count; ++i) {
     Worker* worker = &pool->workers[i];
     std::lock_guard<std::mutex> lock(worker->mu);
@@ -247,16 +347,13 @@ void vc1_pool_flush(Vc1Pool* opaque) {
 int vc1_pool_submit_b(Vc1Pool* opaque, AVCodecContext* main_ctx, const uint8_t* data, int size,
                       int64_t pts) {
   Vc1PoolState* pool = (Vc1PoolState*)opaque;
-  if (!pool || pool->dead || !vc1_frame_is_progressive_b(main_ctx, data, size)) {
+  if (!pool || !vc1_frame_is_progressive_b(main_ctx, data, size)) {
     return 0;
   }
   int worker_index;
   {
     std::lock_guard<std::mutex> lock(pool->mu);
     collect_finished_locked(pool);
-    if (pool->dead) {
-      return 0;
-    }
     worker_index = find_idle_worker(pool);
   }
   if (worker_index < 0) {
@@ -264,7 +361,6 @@ int vc1_pool_submit_b(Vc1Pool* opaque, AVCodecContext* main_ctx, const uint8_t* 
   }
   Worker* worker = &pool->workers[worker_index];
   if (vc1_sync_worker(worker->ctx, main_ctx) < 0) {
-    pool->dead = true;
     LOGE("VC-1 worker sync failed");
     return 0;
   }
@@ -336,9 +432,15 @@ int vc1_pool_pop_frame(Vc1Pool* opaque, AVFrame** out_frame, int64_t* out_pts) {
       pool->jobs.pop_front();
       return 1;
     }
-    if ((int)pool->jobs.size() < pool->worker_count + 1) {
+    // Leave a single running B-frame in the queue so the next packet can
+    // start beside it. With two or more queued, deliver the oldest instead
+    // of telling the renderer to skip.
+    if ((int)pool->jobs.size() < 2) {
       return 0;
     }
-    pool->cv.wait(lock);
+    pool->cv.wait_for(lock, std::chrono::milliseconds(500), [&] {
+      collect_finished_locked(pool);
+      return pool->jobs.empty() || pool->jobs.front().failed || pool->jobs.front().frame != NULL;
+    });
   }
 }
