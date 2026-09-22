@@ -1292,7 +1292,6 @@ private fun MetaDetailsContent(
     var showSynopsisOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showRatingsOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
     var restoreRatingsFocusToken by rememberSaveable { mutableIntStateOf(0) }
-    var initialDetailReturnFocusHandled by rememberSaveable(
     var lastReturnFocusRestoreId by rememberSaveable(
         meta.id,
         detailReturnEpisodeFocusRequest?.season,
