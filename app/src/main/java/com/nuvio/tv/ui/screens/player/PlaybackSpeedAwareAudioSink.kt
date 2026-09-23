@@ -28,10 +28,7 @@ internal class PlaybackSpeedAwareAudioSink(
     initialForcePcm: Boolean = false,
     forcePcmForBluetooth: Boolean = false,
     passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL,
-    private val onDiagnosticEvent: ((String) -> Unit)? = null,
-    // True while the System Passthrough setting hands TrueHD / DTS-HD / DTS:X to the platform
-    // instead of the app's IEC path.
-    private val systemPassthroughHbr: Boolean = false
+    private val onDiagnosticEvent: ((String) -> Unit)? = null
 ) : ForwardingAudioSink(sink) {
 
     // Set when the sink is built with forcePcm (error recovery). Don't clear on speed reset.
@@ -134,15 +131,17 @@ internal class PlaybackSpeedAwareAudioSink(
 
     fun demandsNonTunnelledVideo(format: Format): Boolean = iecSink?.claimsHbr(format) == true
 
-    // With System Passthrough on, the IEC sink is built with hbrIecEnabled=false, claimsHbr() is
-    // false and the rule above never fires, so an HBR track could open as a RAW bitstream with
-    // tunnelling still enabled. On an Amlogic S905X5 box (Android 14) a RAW TrueHD open under
-    // tunnelling left the audio output unusable until a reboot. Deliberately as broad as
-    // claimsHbr(): it does not ask whether the format would be passed through right now. That
-    // answer changes during a title (speed, Bluetooth, policy); a miss costs a reboot, while a
-    // false positive costs one untunnelled title. Does not depend on the wrapped sink's type.
-    fun systemPassthroughDemandsNonTunnelledVideo(format: Format): Boolean =
-        systemPassthroughHbr && IecPassthroughAudioSink.isHbrPassthrough(format)
+    // Lossless HBR (TrueHD, DTS-HD, DTS:X) is never clocked by the tunnel whichever way it
+    // leaves the app: on the IEC path it rides an app-packed track no HAL has been seen to
+    // clock, and as a RAW bitstream under the tunnel an Amlogic S905X5 box (Android 14) left
+    // the audio output unusable until a reboot. The rule above needs a successful IEC probe,
+    // which a lost race at title start (a display mode change hotplugs HDMI) or a live IEC
+    // failure denies, and with System Passthrough on claimsHbr() is false by design; so this
+    // one is keyed on the format alone. It does not ask whether the format would be passed
+    // through right now: that answer changes during a title (speed, Bluetooth, policy); a
+    // miss costs a reboot, while a false positive costs one untunnelled title.
+    fun hbrDemandsNonTunnelledVideo(format: Format): Boolean =
+        IecPassthroughAudioSink.isHbrPassthrough(format)
 
     // Coarse class of what the sink chain will hand the platform for this format under the
     // current policy: the bitstream mime for passthrough, TUNNEL_AUDIO_CLASS_PCM for anything decoded.
