@@ -457,7 +457,7 @@
     <string name="layout_trailer_muted">Spela trailer tyst</string>
     <string name="layout_trailer_muted_sub_preview">Tysta trailerljud under automatisk förhandsvisning.</string>
     <string name="layout_trailer_muted_sub_expanded">Tysta trailerljud i expanderade kort.</string>
-    <string name="layout_section_card_style">Affischkortstil</string>
+    <string name="layout_section_card_style">Affischkort</string>
     <string name="layout_section_card_style_desc">Justera kortbredd och hörnradie.</string>
     <string name="layout_open">Öppen</string>
     <string name="layout_closed">Stängd</string>
@@ -1344,8 +1344,6 @@
     <string name="layout_memory_only_scroll_sub">Hoppa över laddning av nya bilder vid vertikal rullning.</string>
 
     <!-- TmdbSettingsScreen -->
-    <string name="tmdb_release_dates_title">Premiärdatum</string>
-    <string name="tmdb_release_dates_subtitle">Premiärdatum och sändningsdatum från TMDB</string>
     <string name="tmdb_trailers_title">Trailers</string>
     <string name="tmdb_trailers_subtitle">Trailerkandidater från TMDB-videor för trailer-sektionen på detaljsidan</string>
 

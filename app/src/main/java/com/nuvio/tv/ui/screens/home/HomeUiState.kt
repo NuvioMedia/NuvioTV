@@ -67,7 +67,8 @@ data class HomeUiState(
     val continueWatchingCardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
     val heroEnrichmentEnabled: Boolean = false,
     val startupAuthNotice: StartupAuthNotice? = null,
-    val homeRows: List<HomeRow> = emptyList()
+    val homeRows: List<HomeRow> = emptyList(),
+    val customPosterUrlPattern: String = ""
 )
 
 @Immutable
@@ -82,11 +83,18 @@ sealed class ContinueWatchingItem {
         val genres: List<String> = emptyList(),
         val releaseInfo: String? = null,
         val contentLanguage: String? = null,
-        override val shufflePlayback: Boolean = false
+        override val shufflePlayback: Boolean = false,
+        val originalPoster: String? = null,
+        val customLandscapePoster: String? = null
     ) : ContinueWatchingItem()
 
     @Immutable
-    data class NextUp(val info: NextUpInfo, override val shufflePlayback: Boolean = false) : ContinueWatchingItem()
+    data class NextUp(
+        val info: NextUpInfo,
+        override val shufflePlayback: Boolean = false,
+        val originalPoster: String? = null,
+        val customLandscapePoster: String? = null
+    ) : ContinueWatchingItem()
 }
 
 val ContinueWatchingItem.shuffleFocusKey: String?

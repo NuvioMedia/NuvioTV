@@ -1042,7 +1042,7 @@
     <string name="layout_trailer_muted">Trailer gedempt afspelen</string>
     <string name="layout_trailer_muted_sub_preview">Demp het trailergeluid tijdens de automatische preview.</string>
     <string name="layout_trailer_muted_sub_expanded">Demp het trailergeluid in uitgevouwen kaarten.</string>
-    <string name="layout_section_card_style">Posterkaartstijl</string>
+    <string name="layout_section_card_style">Posterkaart</string>
     <string name="layout_section_card_style_desc">Pas kaartbreedte en hoekradius aan.</string>
     <string name="settings_card_depth_title">Diepte-effect van kaarten</string>
     <string name="settings_card_depth_description">Voegt een verlichte bovenrand en een zachte glans toe aan afbeeldingskaarten voor een subtiel gevoel van diepte.</string>
@@ -1315,8 +1315,6 @@
     <string name="tmdb_basic_info_subtitle">Beschrijving, genres en beoordeling van TMDB</string>
     <string name="tmdb_details_title">Details</string>
     <string name="tmdb_details_subtitle">Speelduur, status, land en taal van TMDB</string>
-    <string name="tmdb_release_dates_title">Releasedatums</string>
-    <string name="tmdb_release_dates_subtitle">Release- en uitzenddatums van TMDB</string>
     <string name="tmdb_credits_title">Credits</string>
     <string name="tmdb_credits_subtitle">Cast met foto\'s, regisseur en schrijver van TMDB</string>
     <string name="tmdb_productions_title">Producties</string>

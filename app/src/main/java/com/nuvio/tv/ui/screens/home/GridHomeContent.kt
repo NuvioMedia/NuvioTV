@@ -83,6 +83,7 @@ import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.GridContinueWatchingSection
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.LoadingIndicator
@@ -187,7 +188,9 @@ fun GridHomeContent(
 
     // Offset for section indices: pre-items + continue watching item (if present)
     val gridItems = uiState.gridItems
-    val continueWatchingItems = if (uiState.continueWatchingEnabled) uiState.continueWatchingItems else emptyList()
+    val continueWatchingItems = if (uiState.continueWatchingEnabled)
+        uiState.continueWatchingItems.withCustomPosterUrls(uiState.customPosterUrlPattern)
+    else emptyList()
     val continueWatchingOffset = if (continueWatchingItems.isNotEmpty()) 1 else 0
 
     LaunchedEffect(gridItems, gridFocusState.hasSavedFocus, gridFocusState.focusedItemKey) {
@@ -584,7 +587,7 @@ fun GridHomeContent(
                     GridContinueWatchingSection(
                         modifier = Modifier.fillMaxWidth(),
                         fullWidth = gridWidth,
-                        items = uiState.upcomingItems,
+                        items = uiState.upcomingItems.withCustomPosterUrls(uiState.customPosterUrlPattern),
                         title = stringResource(R.string.upcoming_section_title),
                         lastFocusedIndex = lastFocusedUpcomingIndex,
                         focusRequesters = upcomingFocusRequesters,

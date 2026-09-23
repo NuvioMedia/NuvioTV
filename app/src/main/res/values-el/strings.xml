@@ -216,6 +216,8 @@
   <string name="detail_marked_episodes_watched">Επισημάνθηκαν ως προβληθέντα επεισόδια: %1$d</string>
   <string name="detail_marked_episodes_unwatched">Επισημάνθηκαν ως μη προβληθέντα επεισόδια: %1$d</string>
   <string name="detail_marked_previous_watched">Επισημάνθηκαν ως προβληθέντα προηγούμενα επεισόδια: %1$d</string>
+  <string name="playback_unavailable">Μη διαθέσιμη αναπαραγωγή</string>
+  <string name="playback_unavailable_message">Η αναπαραγωγή δεν είναι διαθέσιμη για αυτόν τον τίτλο με τις τρέχουσες ρυθμίσεις σας.</string>
   <!-- MetaDetailsScreen -->
   <string name="detail_btn_play">Αναπαραγωγή</string>
   <string name="detail_btn_resume">Συνέχεια</string>
@@ -400,6 +402,9 @@
   <string name="licenses_attributions_section_app">ΑΔΕΙΑ ΕΦΑΡΜΟΓΗΣ</string>
   <string name="licenses_attributions_section_data">ΔΕΔΟΜΕΝΑ &amp; ΥΠΗΡΕΣΙΕΣ</string>
   <string name="licenses_attributions_section_playback">ΑΔΕΙΕΣ ΑΝΑΠΑΡΑΓΩΓΗΣ ANDROID</string>
+  <string name="licenses_attributions_section_ui">ΒΙΒΛΙΟΘΗΚΕΣ UI</string>
+  <string name="licenses_attributions_haze_title">Haze 1.7.2</string>
+  <string name="licenses_attributions_haze_body">Χρησιμοποιείται για εφέ θολώματος φόντου. Δημιουργήθηκε από τον Chris Banes. Διατίθεται υπό την άδεια Apache, έκδοση 2.0.</string>
   <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
   <string name="licenses_attributions_nuvio_body">Ο πηγαίος κώδικας και οι όροι άδειας είναι διαθέσιμοι στο αποθετήριο του έργου. Διατίθεται υπό την άδεια GNU General Public License v3.0.</string>
   <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
@@ -641,7 +646,11 @@
   <string name="auto_skip_recap_sub">Αυτόματη παράλειψη τμημάτων ανασκόπησης.</string>
   <string name="auto_skip_outro">Επίλογος / Τέλος</string>
   <string name="auto_skip_outro_sub">Αυτόματη παράλειψη επιλόγων και anime endings.</string>
-  <string name="playback_auto_frame_rate">Αυτόματος ρυθμός καρέ</string>
+  <string name="auto_skip_movie_credits">Τίτλοι τέλους</string>
+  <string name="auto_skip_movie_credits_sub">Αυτόματη παράλειψη των τίτλων τέλους των ταινιών, διατηρώντας τις σκηνές μετά τους τίτλους.</string>
+  <string name="skip_movie_credits">Παράλειψη τίτλων</string>
+  <string name="skip_to_post_credits">Παράλειψη μετά τους τίτλους</string>
+  <string name="playback_auto_frame_rate">Αυτόματος ρυθμός καρέ &amp; ανάλυση</string>
   <string name="playback_section_player">Πρόγραμμα αναπαραγωγής &amp; Επιλογή ροής</string>
   <string name="playback_section_player_desc">Προτίμηση προγράμματος αναπαραγωγής, αυτόματη αναπαραγωγή και φιλτράρισμα πηγών.</string>
   <string name="playback_player">Πρόγραμμα αναπαραγωγής</string>
@@ -937,7 +946,7 @@
   <string name="layout_trailer_muted">Αναπαραγωγή τρέιλερ χωρίς ήχο</string>
   <string name="layout_trailer_muted_sub_preview">Σίγαση ήχου τρέιλερ κατά την προεπισκόπηση αυτόματης αναπαραγωγής.</string>
   <string name="layout_trailer_muted_sub_expanded">Σίγαση ήχου τρέιλερ σε επεκταμένες κάρτες.</string>
-  <string name="layout_section_card_style">Στυλ κάρτας αφίσας</string>
+  <string name="layout_section_card_style">Κάρτα αφίσας</string>
   <string name="layout_section_card_style_desc">Ρύθμιση πλάτους κάρτας και ακτίνας γωνιών.</string>
   <string name="layout_open">Ανοιχτό</string>
   <string name="layout_closed">Κλειστό</string>
@@ -1137,8 +1146,6 @@
   <string name="tmdb_basic_info_subtitle">Περιγραφή, είδη και βαθμολογία από το TMDB</string>
   <string name="tmdb_details_title">Λεπτομέρειες</string>
   <string name="tmdb_details_subtitle">Διάρκεια, ημερομηνία κυκλοφορίας, χώρα και γλώσσα από το TMDB</string>
-  <string name="tmdb_release_dates_title">Ημερομηνίες κυκλοφορίας</string>
-  <string name="tmdb_release_dates_subtitle">Ημερομηνίες κυκλοφορίας και προβολής από το TMDB</string>
   <string name="tmdb_credits_title">Συντελεστές</string>
   <string name="tmdb_credits_subtitle">Ηθοποιοί με φωτογραφίες, σκηνοθέτης και σεναριογράφος από το TMDB</string>
   <string name="tmdb_productions_title">Παραγωγές</string>
@@ -1248,6 +1255,7 @@
   <string name="tracking_simkl_anime_id_imdb">Προτίμηση IMDb</string>
   <string name="tracking_simkl_anime_id_mal">Προτίμηση MyAnimeList</string>
   <string name="tracking_simkl_anime_id_kitsu">Προτίμηση Kitsu</string>
+  <string name="tracking_simkl_anime_id_tvdb">Προτίμηση TVDB</string>
   <string name="tracking_status_connected">Συνδεδεμένο</string>
   <string name="tracking_status_disconnected">Δεν είναι συνδεδεμένο</string>
   <string name="tracking_status_waiting">Αναμονή έγκρισης</string>

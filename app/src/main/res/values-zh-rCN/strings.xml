@@ -909,7 +909,7 @@
     <string name="layout_trailer_muted">静音播放预告片</string>
     <string name="layout_trailer_muted_sub_preview">在自动播放预览中将预告片音频静音。</string>
     <string name="layout_trailer_muted_sub_expanded">在展开的卡片中将预告片音频静音。</string>
-    <string name="layout_section_card_style">海报卡样式</string>
+    <string name="layout_section_card_style">海报卡</string>
     <string name="layout_section_card_style_desc">调整卡片宽度和圆角半径。</string>
     <string name="layout_open">开启</string>
     <string name="layout_closed">关闭</string>
@@ -1153,8 +1153,6 @@
     <string name="tmdb_basic_info_subtitle">来自 TMDB 的描述、类型和评分</string>
     <string name="tmdb_details_title">详细信息</string>
     <string name="tmdb_details_subtitle">来自 TMDB 的片长、状态、国家和语言</string>
-    <string name="tmdb_release_dates_title">上映日期</string>
-    <string name="tmdb_release_dates_subtitle">来自 TMDB 的上映和播出日期</string>
     <string name="tmdb_credits_title">演职人员</string>
     <string name="tmdb_credits_subtitle">来自 TMDB 的演员 (含照片)、导演和编剧</string>
     <string name="tmdb_productions_title">制作公司</string>

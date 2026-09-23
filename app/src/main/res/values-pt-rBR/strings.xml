@@ -1063,7 +1063,7 @@
     <string name="layout_trailer_muted">Trailer mudo</string>
     <string name="layout_trailer_muted_sub_preview">Silencie o áudio na prévia automática.</string>
     <string name="layout_trailer_muted_sub_expanded">Silencie o áudio nos cartões expandidos.</string>
-    <string name="layout_section_card_style">Estilo dos Cartões</string>
+    <string name="layout_section_card_style">Cartão de Pôster</string>
     <string name="layout_section_card_style_desc">Ajuste a largura e o arredondamento dos itens.</string>
     <string name="settings_card_depth_title">Efeito de Profundidade nos Cartões</string>
     <string name="settings_card_depth_description">Adiciona um brilho suave na borda superior e um reflexo discreto às imagens dos cartões, criando sensação de profundidade.</string>
@@ -1336,8 +1336,6 @@
     <string name="tmdb_basic_info_subtitle">Sinopse, gêneros e nota do TMDB</string>
     <string name="tmdb_details_title">Detalhes</string>
     <string name="tmdb_details_subtitle">Duração, status, país e idioma via TMDB</string>
-    <string name="tmdb_release_dates_title">Datas de lançamento</string>
-    <string name="tmdb_release_dates_subtitle">Datas de estreia e exibição do TMDB</string>
     <string name="tmdb_credits_title">Créditos</string>
     <string name="tmdb_credits_subtitle">Elenco com fotos, direção e roteiro do TMDB</string>
     <string name="tmdb_productions_title">Produtoras</string>

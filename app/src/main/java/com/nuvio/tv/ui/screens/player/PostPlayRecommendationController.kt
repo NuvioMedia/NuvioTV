@@ -564,7 +564,7 @@ internal class PostPlayRecommendationController(
 
     private suspend fun loadRatingPreferences(): RatingPreferences {
         val settings = mdbListSettingsDataStore.settings.first()
-        val isMdbListActive = settings.enabled && settings.apiKey.isNotBlank()
+        val isMdbListActive = mdbListRepository.isAvailable(settings)
         val visibility = layoutPreferenceDataStore.homeImdbRatingsVisibility.first()
         return RatingPreferences(
             isMdbListActive = isMdbListActive,
