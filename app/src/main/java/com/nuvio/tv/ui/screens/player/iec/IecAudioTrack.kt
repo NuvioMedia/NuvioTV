@@ -417,6 +417,7 @@ private class PlatformIecAudioTrack(
     override val payload: HbrPayload
 ) : IecAudioTrack {
     private val headTracker = IecPlaybackHeadTracker()
+    private val settleGate = IecFlushSettleGate()
 
     override fun write(data: ByteArray, offset: Int, size: Int): Int {
         return track.write(data, offset, size, AudioTrack.WRITE_NON_BLOCKING)
@@ -424,6 +425,8 @@ private class PlatformIecAudioTrack(
 
     override fun play() {
         if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+            // Too soon after a flush: refuse, the sink asks again on its next drain.
+            if (!settleGate.mayPlay()) return
             headTracker.onPlay(track.playbackHeadPosition)
             track.play()
         }
@@ -439,6 +442,7 @@ private class PlatformIecAudioTrack(
         track.pause()
         track.flush()
         headTracker.onFlush()
+        settleGate.onFlush()
     }
 
     override fun underrunCount(): Int = track.underrunCount
