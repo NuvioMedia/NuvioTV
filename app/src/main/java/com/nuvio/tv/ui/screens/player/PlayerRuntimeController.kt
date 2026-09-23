@@ -575,6 +575,9 @@ class PlayerRuntimeController(
     // The passthrough policy resolved for the current player build, exposed so
     // error recovery can tell a policy-denied decoder-init failure from any other.
     internal var currentAudioPassthroughPolicy: com.nuvio.tv.core.player.AudioPassthroughPolicy? = null
+    // What that resolution was computed from, kept so the audio route callback can resolve
+    // again in place once the HDMI link is back after a display mode change.
+    internal var surroundResolveInputs: SurroundResolveInputs? = null
     internal var isMapDv7ToHevcActiveForCurrentPlayback: Boolean = false
     internal var isManualDv81Mode2ActiveForCurrentPlayback: Boolean = false
     internal var isExperimentalDv7ToDv81ActiveForCurrentPlayback: Boolean = false

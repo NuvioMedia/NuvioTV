@@ -15,7 +15,14 @@ object AudioChainProbe {
     data class ChainSnapshot(
         val direct: DirectSupport?,
         val maxPcmChannels: Int?
-    )
+    ) {
+        // Every encoding false is what the platform answers while the HDMI link is down (a
+        // display mode change at title start hotplugs it), not a chain with no passthrough.
+        fun deniesEveryEncoding(): Boolean {
+            val d = direct ?: return false
+            return !d.ac3 && !d.eac3 && !d.trueHd && !d.dts && !d.dtsHd
+        }
+    }
 
     @Volatile
     private var cached: Pair<String, ChainSnapshot>? = null
@@ -28,7 +35,9 @@ object AudioChainProbe {
             direct = probeDirectSupport(),
             maxPcmChannels = readMaxPcmChannelCount(context)
         )
-        if (routeKey != null) {
+        // Never cache an all-false answer: the next build asks again instead of inheriting a
+        // stale denial for the whole process. A PCM-only chain pays one extra query per build.
+        if (routeKey != null && !fresh.deniesEveryEncoding()) {
             cached = routeKey to fresh
         }
         return fresh

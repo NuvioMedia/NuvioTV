@@ -73,8 +73,6 @@ import com.nuvio.tv.core.player.DolbyVisionExtractorsFactory
 import com.nuvio.tv.core.player.DoviBridge
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
 import com.nuvio.tv.core.player.AudioPassthroughPolicy
-import com.nuvio.tv.core.player.DeniedTranscodePlanner
-import com.nuvio.tv.core.player.SurroundFormatResolver
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
 import com.nuvio.tv.data.local.AudioLanguageOption
@@ -83,9 +81,6 @@ import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerSettings
-import com.nuvio.tv.data.local.DeniedCodecHandling
-import com.nuvio.tv.data.local.SurroundChannelTarget
-import com.nuvio.tv.data.local.SurroundFormatMode
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.kt.buildWithAssSupport
@@ -929,40 +924,17 @@ internal fun PlayerRuntimeController.initializePlayer(
             val currentRouteKey = currentAudioOutputRoute?.key
             val softwareDecodersAvailable =
                 effectiveDecoderPriority != DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-            val surroundResolution = if (isBluetoothAudioOutput) {
-                SurroundFormatResolver.Resolution.INERT
-            } else {
-                val chainSnapshot = AudioChainProbe.snapshot(context, currentRouteKey)
-                val learnedDeniedGroups = AudioRejectionReverifier.ledger.learnedFor(
-                    currentRouteKey,
-                    playerSettings.audioRejectionsConfirmed
-                )
-                SurroundFormatResolver.resolve(
-                    manualMode = playerSettings.surroundFormatMode == SurroundFormatMode.MANUAL,
-                    allowAc3 = playerSettings.allowAc3Passthrough,
-                    allowEac3 = playerSettings.allowEac3Passthrough,
-                    allowTrueHd = playerSettings.allowTruehdPassthrough,
-                    allowDts = playerSettings.allowDtsPassthrough,
-                    allowDtsHd = playerSettings.allowDtshdPassthrough,
-                    manualTranscodePreferred =
-                        playerSettings.deniedCodecHandling == DeniedCodecHandling.TRANSCODE_AC3,
-                    manualChannelTargetChannels = when (playerSettings.surroundChannelTarget) {
-                        SurroundChannelTarget.AUTO -> null
-                        SurroundChannelTarget.CH_2_0 -> 2
-                        SurroundChannelTarget.CH_5_1 -> 6
-                        SurroundChannelTarget.CH_7_1 -> 8
-                    },
-                    direct = chainSnapshot.direct,
-                    rawMaxPcmChannels = chainSnapshot.maxPcmChannels,
-                    routeIsBluetooth = false,
-                    routeIsHdmiArc = currentRouteKey != null &&
-                        (currentRouteKey.startsWith("type:hdmi_arc") ||
-                            currentRouteKey.startsWith("type:hdmi_earc")),
-                    softwareDecodersAvailable = softwareDecodersAvailable,
-                    forceOpticalActive = isForcePassthroughActive,
-                    learnedDeniedGroups = learnedDeniedGroups
-                )
-            }
+            val surroundInputs = SurroundResolveInputs(
+                routeKey = currentRouteKey,
+                isBluetooth = isBluetoothAudioOutput,
+                softwareDecodersAvailable = softwareDecodersAvailable,
+                forceOpticalActive = isForcePassthroughActive,
+                effectiveDownmixEnabled = effectiveDownmixEnabled,
+                effectiveAudioOutputChannels = effectiveAudioOutputChannels
+            )
+            surroundResolveInputs = surroundInputs
+            val surround = resolveSurroundForRoute(context, playerSettings, surroundInputs)
+            val surroundResolution = surround.resolution
             // Tunnel dead-clock memo: re-arm this process from the store, but only for the
             // chain that learned it (firmware, output port and advertised claims must match).
             tunnelDeadClockSignature = if (isBluetoothAudioOutput || currentRouteKey == null) {
@@ -989,18 +961,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                     )
                 }
             }
-            // Denied formats decode on the app path at the resolved channel target. The
-            // user's own downmix target still wins downward: an equal-or-lower layout the
-            // user chose is kept; only a higher layout is capped to the resolved target.
-            val surroundTargetChannels = surroundResolution.inferredChannelTarget
-            val surroundDownmixEnabled = effectiveDownmixEnabled || surroundTargetChannels != null
-            val surroundAudioOutputChannels = when {
-                surroundTargetChannels == null -> effectiveAudioOutputChannels
-                effectiveDownmixEnabled &&
-                    effectiveAudioOutputChannels.channelCount <= surroundTargetChannels ->
-                    effectiveAudioOutputChannels
-                else -> surroundTargetToOutputChannels(surroundTargetChannels, effectiveAudioOutputChannels)
-            }
+            // Denied formats decode on the app path at the resolved channel target (the
+            // downmix rule is in resolveSurroundForRoute).
+            val surroundTargetChannels = surround.targetChannels
+            val surroundDownmixEnabled = surround.downmixEnabled
+            val surroundAudioOutputChannels = surround.audioOutputChannels
             if (!surroundResolution.policy.allowsEverything() || surroundTargetChannels != null) {
                 Log.i(
                     PlayerRuntimeController.TAG,
@@ -1028,11 +993,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             // the user's row; Auto: a 2-channel chain that claims AC-3), so nothing changes
             // on a multichannel-PCM chain, on Bluetooth, or under Force AC-3. The renderer
             // still checks that the sink takes AC-3 before it transcodes.
-            val deniedTranscodeMimes = DeniedTranscodePlanner.effectiveTranscodeMimes(
-                policy = surroundResolution.policy,
-                transcodeDeniedToAc3 = surroundResolution.transcodePreferred,
-                forcePassthroughActive = isForcePassthroughActive
-            )
+            val deniedTranscodeMimes = surround.deniedTranscodeMimes
             if (deniedTranscodeMimes.isNotEmpty()) {
                 Log.i(
                     PlayerRuntimeController.TAG,
@@ -2334,7 +2295,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     }
 }
 
-private fun surroundTargetToOutputChannels(
+internal fun surroundTargetToOutputChannels(
     channels: Int,
     fallback: com.nuvio.tv.data.local.AudioOutputChannels
 ): com.nuvio.tv.data.local.AudioOutputChannels = when (channels) {
@@ -2535,7 +2496,7 @@ private class SubtitleOffsetRenderersFactory(
         onFfmpegAudioRendererChanged(ffmpegRenderers.firstOrNull())
     }
 }
-private fun FfmpegAudioRenderer.applyDownmixSettings(
+internal fun FfmpegAudioRenderer.applyDownmixSettings(
     downmixEnabled: Boolean,
     audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
     downmixNormalizationEnabled: Boolean,
