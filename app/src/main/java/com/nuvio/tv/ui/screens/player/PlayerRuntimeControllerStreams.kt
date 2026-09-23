@@ -618,6 +618,12 @@ private fun PlayerRuntimeController.applySelectedStreamState(
         filename = currentFilename,
         responseHeaders = currentStreamResponseHeaders
     )
+    // A source switch mints a new debrid link for the same file, and without a file index a
+    // multi-file torrent could hand one file's bytes to another, so that case keys on the url.
+    val fileIdx = stream.getEffectiveFileIdx()
+    currentStreamCacheKey = stream.getEffectiveInfoHash()?.lowercase()?.takeIf { fileIdx != null }?.let { hash ->
+        "$hash:$fileIdx"
+    }
     parsingErrorProbeAttempted = false
     applyStreamMetadata(stream)
 }
@@ -896,7 +902,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                         filename = currentFilename,
                         responseHeaders = currentStreamResponseHeaders,
                         mimeTypeOverride = currentStreamMimeType,
-                        audioDelayUsProvider = audioDelayUs::get
+                        audioDelayUsProvider = audioDelayUs::get,
+                        cacheKey = currentStreamCacheKey
                     )
                 )
                 player.playWhenReady = true

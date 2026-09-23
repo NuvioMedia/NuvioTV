@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,8 +30,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +56,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.SourceChipItem
@@ -60,6 +65,7 @@ import com.nuvio.tv.ui.components.SourceStatusFilterChip
 import com.nuvio.tv.ui.components.StreamBadgeChips
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.contentTextDirection
+import com.nuvio.tv.ui.util.toAbsoluteAlignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
@@ -156,30 +162,33 @@ internal fun StreamItem(
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
-                ) {
-                    Text(
-                        text = streamName,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            textDirection = streamName.contentTextDirection()
-                        ),
-                        color = NuvioTheme.colors.TextPrimary
-                    )
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Row(
+                        modifier = Modifier.align(streamName.contentTextDirection().toAbsoluteAlignment()),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                    ) {
+                        Text(
+                            text = streamName,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                textDirection = streamName.contentTextDirection()
+                            ),
+                            color = NuvioTheme.colors.TextPrimary
+                        )
 
-                    if (isCurrentStream) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(NuvioTheme.colors.Primary.copy(alpha = 0.2f))
-                                .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.sources_playing),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NuvioTheme.colors.Primary
-                            )
+                        if (isCurrentStream) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(NuvioTheme.colors.Primary.copy(alpha = 0.2f))
+                                    .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.sources_playing),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NuvioTheme.colors.Primary
+                                )
+                            }
                         }
                     }
                 }
@@ -188,6 +197,7 @@ internal fun StreamItem(
                     if (description != streamName) {
                         Text(
                             text = description,
+                            modifier = Modifier.align(description.contentTextDirection().toAbsoluteAlignment()),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 textDirection = description.contentTextDirection()
                             ),

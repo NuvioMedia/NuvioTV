@@ -455,7 +455,7 @@
     <string name="layout_trailer_muted">म्यूट ट्रेलर चलाएँ</string>
     <string name="layout_trailer_muted_sub_preview">ऑटो-प्ले प्रिव्यू के दौरान ट्रेलर ऑडियो म्यूट करें।</string>
     <string name="layout_trailer_muted_sub_expanded">विस्तारित कार्ड में ट्रेलर ऑडियो म्यूट करें।</string>
-    <string name="layout_section_card_style">पोस्टर कार्ड स्टाइल</string>
+    <string name="layout_section_card_style">पोस्टर कार्ड</string>
     <string name="layout_section_card_style_desc">कार्ड चौड़ाई और कॉर्नर रेडियस समायोजित करें।</string>
     <string name="layout_open">खुला</string>
     <string name="layout_closed">बंद</string>

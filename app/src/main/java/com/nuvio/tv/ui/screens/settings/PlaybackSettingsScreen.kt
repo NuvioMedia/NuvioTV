@@ -663,6 +663,8 @@ fun PlaybackSettingsContent(
     }
 }
 
+private const val SettingsSubtitleFocusedMaxLines = 8
+
 @Composable
 internal fun ToggleSettingsItem(
     icon: ImageVector,
@@ -673,7 +675,8 @@ internal fun ToggleSettingsItem(
     onFocused: () -> Unit = {},
     enabled: Boolean = true,
     titleTrailingIcon: ImageVector? = null,
-    titleTrailingIconTint: Color = NuvioTheme.colors.TextPrimary
+    titleTrailingIconTint: Color = NuvioTheme.colors.TextPrimary,
+    expandSubtitleOnFocus: Boolean = false
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val contentAlpha = if (enabled) 1f else 0.4f
@@ -742,7 +745,7 @@ internal fun ToggleSettingsItem(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioTheme.colors.TextSecondary.copy(alpha = contentAlpha),
-                    maxLines = 3,
+                    maxLines = if (expandSubtitleOnFocus && isFocused) SettingsSubtitleFocusedMaxLines else 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }

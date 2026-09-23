@@ -82,6 +82,7 @@ data class LayoutSettingsUiState(
     val continueWatchingEnabled: Boolean = true,
     val continueWatchingSortMode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT,
     val continueWatchingCardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
+    val customPosterUrlPattern: String = "",
 )
 
 data class CatalogInfo(
@@ -140,6 +141,8 @@ sealed class LayoutSettingsEvent {
     data class SetContinueWatchingCardStyle(val style: ContinueWatchingCardStyle) : LayoutSettingsEvent()
     data object ResetPosterCardStyle : LayoutSettingsEvent()
     data object ResetCardDepthStyle : LayoutSettingsEvent()
+    data class SetCustomPosterUrlPattern(val pattern: String) : LayoutSettingsEvent()
+    data object ClearCustomPosterSettings : LayoutSettingsEvent()
 }
 
 @HiltViewModel
@@ -388,6 +391,13 @@ class LayoutSettingsViewModel @Inject constructor(
                     updateUiStateIfChanged { it.copy(continueWatchingCardStyle = style) }
                 }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.customPosterUrlPattern
+                .distinctUntilChanged()
+                .collect { pattern ->
+                    updateUiStateIfChanged { it.copy(customPosterUrlPattern = pattern) }
+                }
+        }
         loadAvailableCatalogs()
     }
 
@@ -439,6 +449,8 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetContinueWatchingCardStyle -> setContinueWatchingCardStyle(event.style)
             LayoutSettingsEvent.ResetPosterCardStyle -> resetPosterCardStyle()
             LayoutSettingsEvent.ResetCardDepthStyle -> resetCardDepthStyle()
+            is LayoutSettingsEvent.SetCustomPosterUrlPattern -> setCustomPosterUrlPattern(event.pattern)
+            LayoutSettingsEvent.ClearCustomPosterSettings -> clearCustomPosterSettings()
         }
     }
 
@@ -833,6 +845,68 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setCustomPosterUrlPattern(pattern: String) {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setCustomPosterUrlPattern(pattern)
+        }
+    }
+
+    private fun clearCustomPosterSettings() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.clearCustomPosterSettings()
+        }
+    }
+
+    // -- Custom poster QR mode --
+
+    private var customPosterServer: com.nuvio.tv.core.server.CustomPosterConfigServer? = null
+
+    private val _customPosterQrState = MutableStateFlow(CustomPosterQrState())
+    val customPosterQrState: StateFlow<CustomPosterQrState> = _customPosterQrState.asStateFlow()
+
+    fun startCustomPosterQrMode() {
+        val ip = DeviceIpAddress.get(context)
+        if (ip == null) {
+            _customPosterQrState.update { it.copy(serverError = context.getString(com.nuvio.tv.R.string.error_network_required)) }
+            return
+        }
+        stopCustomPosterServer()
+        customPosterServer = com.nuvio.tv.core.server.CustomPosterConfigServer.startOnAvailablePort(
+            currentPatternProvider = { _uiState.value.customPosterUrlPattern },
+            onPatternChanged = { pattern ->
+                _uiState.update { it.copy(customPosterUrlPattern = pattern) }
+                viewModelScope.launch { layoutPreferenceDataStore.setCustomPosterUrlPattern(pattern) }
+            },
+            context = context
+        )
+        val server = customPosterServer
+        if (server == null) {
+            _customPosterQrState.update { it.copy(serverError = context.getString(com.nuvio.tv.R.string.error_server_ports_unavailable)) }
+            return
+        }
+        val url = "http://$ip:${server.listeningPort}"
+        _customPosterQrState.update {
+            it.copy(
+                isActive = true,
+                qrCodeBitmap = com.nuvio.tv.core.qr.QrCodeGenerator.generate(url, 512),
+                serverUrl = url,
+                serverError = null
+            )
+        }
+    }
+
+    fun stopCustomPosterQrMode() {
+        stopCustomPosterServer()
+        _customPosterQrState.update {
+            it.copy(isActive = false, qrCodeBitmap = null, serverUrl = null)
+        }
+    }
+
+    private fun stopCustomPosterServer() {
+        customPosterServer?.stop()
+        customPosterServer = null
+    }
+
     private fun loadAvailableCatalogs() {
         viewModelScope.launch {
             addonRepository.getInstalledAddons().collectLatest { installedAddons ->
@@ -857,6 +931,7 @@ class LayoutSettingsViewModel @Inject constructor(
 
     override fun onCleared() {
         stopStreamBadgeServer()
+        stopCustomPosterServer()
         super.onCleared()
     }
 }
@@ -880,3 +955,10 @@ data class StreamBadgeSettingsUiState(
     val badgePlacement: StreamBadgePlacement
         get() = settings.badgePlacement
 }
+
+data class CustomPosterQrState(
+    val isActive: Boolean = false,
+    val qrCodeBitmap: android.graphics.Bitmap? = null,
+    val serverUrl: String? = null,
+    val serverError: String? = null
+)

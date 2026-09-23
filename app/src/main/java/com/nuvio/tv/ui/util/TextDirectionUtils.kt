@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.util
 
+import androidx.compose.ui.AbsoluteAlignment
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextDirection
 
 /**
@@ -25,3 +27,10 @@ fun String.contentTextDirection(): TextDirection {
 
 /** True if the string's own content direction (see [contentTextDirection]) is RTL. */
 fun String.isContentRtl(): Boolean = contentTextDirection() == TextDirection.Rtl
+
+/**
+ * Converts a TextDirection to an absolute horizontal alignment.
+ * RTL text directions map to Right, LTR to Left.
+ */
+fun TextDirection.toAbsoluteAlignment(): Alignment.Horizontal =
+    if (this == TextDirection.Rtl) AbsoluteAlignment.Right else AbsoluteAlignment.Left

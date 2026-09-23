@@ -219,6 +219,8 @@
     <string name="detail_marked_episodes_unwatched">Episodios marcados como no vistos: %1$d</string>
     <string name="detail_marked_previous_watched">Episodios anteriores marcados como vistos: %1$d</string>
 
+    <string name="playback_unavailable">Reproducción no disponible</string>
+    <string name="playback_unavailable_message">La reproducción no está disponible para este título con tu configuración actual.</string>
     <string name="detail_btn_play">Reproducir</string>
     <string name="detail_btn_resume">Continuar</string>
     <string name="detail_btn_play_episode">Reproducir T%1$d E%2$d</string>
@@ -336,10 +338,33 @@
     <string name="theme_color_amber">Ámbar</string>
     <string name="theme_color_rose">Rosa</string>
     <string name="theme_color_white">Blanco</string>
+    <string name="theme_color_custom">Personalizado</string>
+    <string name="custom_theme_title">Tu degradado personalizado</string>
+    <string name="custom_theme_subtitle">Elige tres colores para tu tema. Selecciona un color para editarlo.</string>
+    <string name="custom_theme_solid_title">Tu color personalizado</string>
+    <string name="custom_theme_solid_subtitle">Elige un color para tu tema.</string>
+    <string name="custom_theme_mode_gradient">Degradado</string>
+    <string name="custom_theme_mode_solid">Color único</string>
+    <string name="custom_theme_color_number">Color %1$d</string>
+    <string name="custom_theme_hue">Tono</string>
+    <string name="custom_theme_saturation">Saturación</string>
+    <string name="custom_theme_brightness">Brillo</string>
+    <string name="custom_theme_enter_hex">Ingresa el código hexadecimal</string>
+    <string name="custom_theme_hex_title">Color hexadecimal</string>
+    <string name="custom_theme_hex_hint">Elige seis caracteres (0–9, A–F). La primera tecla que presiones reemplaza el código actual.</string>
+    <string name="custom_theme_hex_clear">Limpiar</string>
+    <string name="custom_theme_hex_delete">Eliminar</string>
+    <string name="custom_theme_use_color">Usar color</string>
+    <string name="custom_theme_save">Guardar tema</string>
+    <string name="custom_theme_remote_hint">← → Ajustar   ·   ↑ ↓ Mover   ·   Mantén presionado para ajustar más rápido</string>
+    <string name="custom_theme_preview">VISTA PREVIA</string>
+    <string name="custom_theme_preview_ring">Elemento seleccionado</string>
     <string name="appearance_amoled_mode">Modo AMOLED</string>
     <string name="appearance_amoled_mode_subtitle">Usa negro puro para los fondos de la app</string>
     <string name="appearance_amoled_surfaces_mode">Superficies negro puro</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">También aplica negro puro a tarjetas, paneles y contenedores</string>
+    <string name="appearance_startup_splash">Pantalla de inicio</string>
+    <string name="appearance_startup_splash_subtitle">Muestra el logo y el indicador de carga después de seleccionar un perfil</string>
     <string name="appearance_settings_style">Estilo de configuración</string>
     <string name="appearance_settings_style_subtitle">Elige cómo se muestran las pantallas de configuración</string>
     <string name="appearance_launcher_artwork">Ilustración del launcher</string>
@@ -394,6 +419,9 @@
     <string name="licenses_attributions_section_app">LICENCIA DE LA APP</string>
     <string name="licenses_attributions_section_data">DATOS Y SERVICIOS</string>
     <string name="licenses_attributions_section_playback">LICENCIAS DE REPRODUCCIÓN DE ANDROID</string>
+    <string name="licenses_attributions_section_ui">BIBLIOTECAS DE INTERFAZ</string>
+    <string name="licenses_attributions_haze_title">Haze 1.7.2</string>
+    <string name="licenses_attributions_haze_body">Se usa para efectos de desenfoque de fondo. Creado por Chris Banes. Licenciado bajo la Licencia Apache, Versión 2.0.</string>
     <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
     <string name="licenses_attributions_nuvio_body">El código fuente y los términos de la licencia están disponibles en el repositorio del proyecto. Licenciado bajo la GNU General Public License v3.0.</string>
     <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
@@ -452,6 +480,7 @@
     <string name="tracking_simkl_anime_id_imdb">Preferir IMDB</string>
     <string name="tracking_simkl_anime_id_mal">Preferir MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Preferir Kitsu</string>
+    <string name="tracking_simkl_anime_id_tvdb">Preferir TVDB</string>
     <string name="tracking_status_connected">Conectado</string>
     <string name="tracking_status_disconnected">No conectado</string>
     <string name="tracking_status_waiting">Esperando aprobación</string>
@@ -702,6 +731,10 @@
     <string name="auto_skip_recap_sub">Omitir automáticamente los segmentos de resumen.</string>
     <string name="auto_skip_outro">Outro / Ending</string>
     <string name="auto_skip_outro_sub">Omitir automáticamente outros y endings de anime.</string>
+    <string name="auto_skip_movie_credits">Créditos finales</string>
+    <string name="auto_skip_movie_credits_sub">Omite automáticamente los créditos de la película, conservando las escenas poscréditos.</string>
+    <string name="skip_movie_credits">Omitir créditos</string>
+    <string name="skip_to_post_credits">Saltar a poscréditos</string>
     <string name="playback_auto_frame_rate">Frecuencia de cuadros y resolución automáticas</string>
     <string name="playback_section_player">Reproductor y Selección de Fuente</string>
     <string name="playback_section_player_desc">Preferencia de reproductor, auto-reproducción y filtrado de fuentes.</string>
@@ -809,6 +842,8 @@
     <string name="dv7_libdovi_mode_3_sub" translatable="false">Convierte streams Perfil 5 (DV5) a Perfil 8.1. Es la misma conversión utilizada por la opción Convertir DV5 a DV8.1.</string>
     <string name="dv7_libdovi_mode_4_title" translatable="false">Modo 4 — 8.4 (estático)</string>
     <string name="dv7_libdovi_mode_4_sub" translatable="false">Convierte al perfil estático 8.4.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Alternativa por software G-NEXT para Hi10P (solo MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Usa la decodificación por software G-NEXT cuando los detalles del stream identifiquen H.264 Hi10P. Está desactivado de forma predeterminada; actívalo solo si la reproducción de Hi10P se congela o falla.</string>
     <string name="audio_mpv_hwdec_title">Decodificación por hardware (solo MPV)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Selecciona cómo libmpv debe utilizar los decodificadores por hardware.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (directo -&gt; copia)</string>
@@ -945,6 +980,8 @@
     <string name="layout_section_content_desc">Controla lo que aparece en inicio y búsqueda.</string>
     <string name="layout_collapse_sidebar">Contraer Barra Lateral</string>
     <string name="layout_collapse_sidebar_sub">Ocultar la barra lateral por defecto; mostrarla al interactuar con ella.</string>
+    <string name="layout_hide_floating_pill">Ocultar indicador flotante</string>
+    <string name="layout_hide_floating_pill_sub">Oculta el indicador de navegación flotante en la pantalla de inicio.</string>
     <string name="layout_modern_sidebar">Barra Lateral Moderna</string>
     <string name="layout_modern_sidebar_sub">Habilitar la navegación de la barra lateral flotante.</string>
     <string name="layout_modern_sidebar_blur">Desenfocar Barra Lateral Moderna</string>
@@ -1036,7 +1073,7 @@
     <string name="layout_trailer_muted">Reproducir Tráiler Silenciado</string>
     <string name="layout_trailer_muted_sub_preview">Silenciar el audio del tráiler durante la vista previa de auto-reproducción.</string>
     <string name="layout_trailer_muted_sub_expanded">Silenciar el audio del tráiler en tarjetas expandidas.</string>
-    <string name="layout_section_card_style">Estilo de Tarjeta de Póster</string>
+    <string name="layout_section_card_style">Tarjeta de Póster</string>
     <string name="layout_section_card_style_desc">Ajustar el ancho de la tarjeta y el radio de las esquinas.</string>
     <string name="settings_card_depth_title">Efecto de profundidad de las tarjetas</string>
     <string name="settings_card_depth_description">Agrega un borde superior iluminado y un brillo suave a las tarjetas con imágenes para dar una sutil sensación de profundidad.</string>
@@ -1089,13 +1126,62 @@
     <string name="layout_reset_default">Restablecer a Predeterminado</string>
     <string name="layout_custom">Personalizado</string>
 
+<!-- Custom Poster URL -->
+<string name="layout_custom_poster_title">Fuente de póster personalizada</string>
+<string name="layout_custom_poster_description">Proporciona un patrón de URL de póster desde un servicio externo. Si un marcador no tiene un valor para un título determinado, se utilizará el póster original.</string>
+<string name="layout_custom_poster_clear">Borrar</string>
+<string name="layout_custom_poster_active">✓ Fuente de póster personalizada activa</string>
+<string name="layout_custom_poster_qr">Configurar desde el teléfono</string>
+<string name="custom_poster_qr_instruction">Escanea el código QR con tu teléfono para pegar un patrón de URL de póster</string>
 
+<!-- Custom Poster Web Page -->
+    <string name="web_custom_poster_title">Fuente de póster personalizada</string>
+    <string name="web_custom_poster_subtitle">Pega un patrón de URL de póster a continuación y presiona Guardar.</string>
+    <string name="web_custom_poster_label">Patrón de URL</string>
+    <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
+    <string name="web_custom_poster_save">Guardar</string>
+    <string name="web_custom_poster_clear">Borrar</string>
+    <string name="web_custom_poster_saved">¡Guardado!</string>
+    <string name="web_custom_poster_cleared">Borrado</string>
+    <string name="web_custom_poster_error_empty">Ingresa un patrón de URL</string>
+    <string name="web_custom_poster_error_save">No se pudo guardar</string>
+    <string name="web_custom_poster_error_clear">No se pudo borrar</string>
+    <string name="web_custom_poster_error_connection">Error de conexión</string>
+    <string name="web_custom_poster_current">Actual:</string>
+    <string name="web_custom_poster_none">No hay ningún patrón configurado</string>
+    <string name="web_custom_poster_loading">Cargando…</string>
+    <string name="web_custom_poster_placeholders_info">Marcadores: {id} incluye todos los ID de contenido. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} apuntan a un solo tipo de ID; si no está disponible, se conserva el póster original. {imdb_id|tmdb_id|kitsu_id} declara los tipos de ID compatibles; se utilizará el que corresponda o se conservará el póster original. Agrega ? para hacer que un marcador sea opcional, resolviéndolo como vacío en lugar de omitirlo: {imdb_id?}. Otros marcadores: {id_type}, {typed_id}, {type}, {shape}.</string>
+
+
+    <string name="mdblist_name">MDBList</string>
+    <string name="mdblist_tracking_description">Sincroniza el historial de reproducción y el progreso de reproducción entre dispositivos</string>
+    <string name="mdblist_connected_as">Conectado como %1$s</string>
+    <string name="mdblist_account_fallback">Usuario de MDBList</string>
+    <string name="mdblist_insufficient_scope">MDBList no otorgó permisos para actualizar el historial de reproducción. Vuelve a conectar la cuenta y permite el acceso de escritura.</string>
+    <string name="mdblist_awaiting_instruction">Escanea el código QR o ingresa este código en la dirección que aparece a continuación.</string>
+    <string name="mdblist_qr_description">Código QR para conectar tu cuenta de MDBList</string>
+    <string name="mdblist_status_enter_code">Aprueba la conexión en tu cuenta de MDBList.</string>
+    <string name="mdblist_status_syncing">Sincronizando el historial de reproducción y el progreso de reproducción…</string>
+    <string name="mdblist_last_synced">Última sincronización: %1$s</string>
+    <string name="mdblist_disconnect_title">¿Desconectar MDBList?</string>
+    <string name="mdblist_disconnect_subtitle">Dejar de enviar las actualizaciones de reproducción desde este perfil. Tu historial de MDBList se conservará.</string>
+    <string name="mdblist_missing_client">La conexión con MDBList no está disponible en esta versión.</string>
+    <string name="mdblist_invalid_response">MDBList devolvió una respuesta incompleta. Inténtalo de nuevo.</string>
+    <string name="mdblist_code_expired">Este código ha expirado. Inténtalo de nuevo para obtener un código nuevo.</string>
+    <string name="mdblist_access_denied">Se rechazó la conexión. Inténtalo de nuevo para conectar tu cuenta.</string>
+    <string name="mdblist_authorization_revoked">Tu conexión con MDBList ha expirado o fue revocada. Vuelve a conectarla para reanudar la sincronización.</string>
+    <string name="mdblist_unavailable">No se pudo sincronizar con MDBList. Inténtalo de nuevo.</string>
+    <string name="mdblist_rate_limited">Se alcanzó el límite de solicitudes de MDBList. La sincronización se reanudará cuando se restablezca el límite.</string>
+    <string name="mdblist_revoke_failed">Se desconectó en este dispositivo. Elimina esta app desde la configuración de tu cuenta de MDBList para revocar su acceso.</string>
     <string name="mdblist_title">Calificaciones de MDBList</string>
     <string name="mdblist_subtitle">Configurar calificaciones externas mostradas en la sección destacada</string>
     <string name="mdblist_enable_title">Habilitar Calificaciones de MDBList</string>
     <string name="mdblist_enable_subtitle">Obtener calificaciones de proveedores externos en la pantalla de detalles</string>
     <string name="mdblist_api_key_title">Clave de API</string>
     <string name="mdblist_api_key_subtitle">Necesaria para obtener calificaciones desde MDBList</string>
+    <string name="mdblist_ratings_credentials_subtitle">Usa tu cuenta de MDBList conectada en Seguimiento o ingresa una clave de API independiente para las calificaciones.</string>
+    <string name="mdblist_ratings_connected_account">Usando la cuenta conectada</string>
+    <string name="mdblist_ratings_key_override_subtitle">Una clave de API reemplaza tu cuenta conectada para las calificaciones. Bórrala para volver a usar la cuenta conectada.</string>
     <string name="mdblist_trakt_title">Trakt</string>
     <string name="mdblist_trakt_subtitle">Mostrar puntuación de Trakt</string>
     <string name="mdblist_imdb_title">IMDb</string>
@@ -1309,8 +1395,6 @@
     <string name="tmdb_basic_info_subtitle">Descripción, géneros y calificación desde TMDB</string>
     <string name="tmdb_details_title">Detalles</string>
     <string name="tmdb_details_subtitle">Duración, fecha de lanzamiento, país e idioma desde TMDB</string>
-    <string name="tmdb_release_dates_title">Fechas de estreno</string>
-    <string name="tmdb_release_dates_subtitle">Fechas de estreno y emisión desde TMDB</string>
     <string name="tmdb_credits_title">Créditos</string>
     <string name="tmdb_credits_subtitle">Elenco con fotos, director y escritor desde TMDB</string>
     <string name="tmdb_productions_title">Producciones</string>
@@ -1685,6 +1769,7 @@
     <string name="player_subtitle_delay">Retraso de Subtítulos</string>
     <string name="player_error_title">Error de Reproducción</string>
     <string name="player_go_back">Volver</string>
+    <string name="player_switch_to_mpv">Cambiar al reproductor MPV</string>
     <string name="player_report_issue">Reportar problema</string>
     <string name="player_report_issue_sending">Enviando reporte de reproducción...</string>
     <string name="player_report_issue_sending_button">Enviando...</string>
@@ -1857,6 +1942,7 @@
     <string name="search_start_subtitle_no_discover">Descubrir está desactivado. Ingresa al menos 2 caracteres</string>
     <string name="search_recent_title">Búsquedas recientes</string>
     <string name="search_recent_clear">Borrar historial</string>
+    <string name="cd_remove_recent_search">Eliminar %1$s de las búsquedas recientes</string>
     <string name="search_voice_no_speech">No se detectó voz. Intenta de nuevo.</string>
     <string name="search_voice_mic_permission">Se requiere permiso de micrófono para búsqueda por voz.</string>
     <string name="search_voice_failed">Error en el reconocimiento de voz. Intenta de nuevo.</string>
@@ -3076,6 +3162,7 @@
     <string name="playback_cache_info_manual_headroom">El modo manual mantiene aproximadamente %1$d MB libres.</string>
     <string name="playback_cache_info_free_disk">Espacio libre disponible: %1$s.</string>
     <string name="playback_cache_info_restart">El nuevo límite de caché se aplicará tras reiniciar la aplicación al cambiar entre modos o tamaños.</string>
+    <string name="playback_cache_write_warning">En dispositivos con almacenamiento interno, la actividad de escritura es constante y puede aumentar el desgaste con el tiempo.</string>
     <string name="playback_reset_to_default">Restablecer valores predeterminados</string>
     <string name="playback_net_custom">Red personalizada</string>
     <string name="playback_net_custom_sub">Usa múltiples conexiones paralelas para obtener transmisiones progresivas. Cuando está desactivado, se usa una sola conexión.</string>
@@ -3109,8 +3196,15 @@
     <string name="diag_label_source_profile">Perfil de origen</string>
     <string name="diag_label_conversions">Conversiones</string>
     <string name="diag_label_signal_rewrites">Reescrituras de señal</string>
+    <string name="diag_label_last_convert">Última conversión</string>
     <string name="diag_label_custom_buffers">Búferes personalizados</string>
     <string name="diag_label_custom_network_cache">Red/Caché personalizada</string>
+    <string name="diag_label_disk_cache">Caché de disco</string>
+    <string name="diag_label_disk_cache_usage">Uso de la caché de disco</string>
+    <string name="diag_value_disk_cache_on">Activado - %1$s</string>
+    <string name="diag_value_disk_cache_unavailable">No disponible</string>
+    <string name="diag_value_disk_cache_not_used">Desactivado - no se utiliza para esta transmisión</string>
+    <string name="diag_value_disk_cache_usage">%1$s leídos, %2$s eliminados</string>
     <string name="diag_section_outcome">Resultado</string>
     <string name="diag_label_hdr_format_intended">Formato HDR (previsto)</string>
     <string name="diag_label_first_frame">Primer fotograma</string>

@@ -502,7 +502,7 @@
     <string name="layout_trailer_muted">Spill trailer uten lyd</string>
     <string name="layout_trailer_muted_sub_preview">Dempet trailerlyd under autoavspillingsforhåndsvisning.</string>
     <string name="layout_trailer_muted_sub_expanded">Dempet trailerlyd i utvidede kort.</string>
-    <string name="layout_section_card_style">Stil for plakatkort</string>
+    <string name="layout_section_card_style">Plakatkort</string>
     <string name="layout_section_card_style_desc">Juster kortbredde og hjørneradius.</string>
     <string name="layout_open">Åpne</string>
     <string name="layout_closed">Stengt</string>
