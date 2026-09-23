@@ -796,7 +796,7 @@
     <string name="layout_trailer_muted">Predvajaj napovednik brez zvoka</string>
     <string name="layout_trailer_muted_sub_preview">Utišaj zvok napovednika med samodejnim predogledom.</string>
     <string name="layout_trailer_muted_sub_expanded">Utišaj zvok napovednika v razširjenih karticah.</string>
-    <string name="layout_section_card_style">Slog kartice plakata</string>
+    <string name="layout_section_card_style">Kartica plakata</string>
     <string name="layout_section_card_style_desc">Prilagodite širino kartice in radij vogalov.</string>
     <string name="layout_open">Razširjeno</string>
     <string name="layout_closed">Strnjeno</string>
@@ -876,8 +876,6 @@
     <string name="tmdb_basic_info_subtitle">Opis, žanri in ocena iz TMDB</string>
     <string name="tmdb_details_title">Podrobnosti</string>
     <string name="tmdb_details_subtitle">Čas izvajanja, datum izdaje, država in jezik iz TMDB</string>
-	<string name="tmdb_release_dates_title">Datumi izida</string>
-    <string name="tmdb_release_dates_subtitle">Datumi izida in predvajanja s TMDB</string>															  
 	<string name="tmdb_credits_title">Zasedba</string>
     <string name="tmdb_credits_subtitle">Igralska zasedba s fotografijami, režiser in scenarist iz TMDB</string>
     <string name="tmdb_productions_title">Produkcije</string>

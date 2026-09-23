@@ -48,6 +48,7 @@ class SimklIdResolver @Inject constructor(
 
     private val idsCache = ConcurrentHashMap<String, ResolvedIds?>()
     private val episodeCache = ConcurrentHashMap<Long, List<EpisodeMapping>>()
+    private val animeSeasonCache = ConcurrentHashMap<String, List<AnimeSeasonEntry>>()
 
     suspend fun resolveIds(source: String, id: String): ResolvedIds? {
         val cacheKey = "$source:$id"
@@ -107,6 +108,84 @@ class SimklIdResolver @Inject constructor(
         return entry?.let { it.tvdbSeason to it.tvdbEpisode }
     }
 
+    /**
+     * Given an IMDB ID and a TVDB-style season+episode, resolve the anime-specific IDs
+     * (MAL, AniList, Kitsu) for the correct season entry.
+     */
+    suspend fun resolveIdsForImdbEpisode(
+        imdbId: String,
+        season: Int,
+        episode: Int
+    ): ResolvedIds? {
+        val base = resolveIds("imdb", imdbId) ?: return null
+        if (base.type != "anime") return base
+
+        // If the parent entry already owns this season, no sibling lookup needed.
+        val baseSeason = base.tvdbSeason
+        if (baseSeason != null && baseSeason == season) return base
+
+        // Fetch the parent with full_anime_seasons to discover per-season entries.
+        val seasonSimklId = resolveSeasonSimklId(base.simklId, base.type, season)
+        if (seasonSimklId != null && seasonSimklId != base.simklId) {
+            val siblingIds = resolveIdsBySimklId(seasonSimklId, base.type)
+            if (siblingIds != null) return siblingIds
+        }
+
+        return base
+    }
+
+    private suspend fun resolveSeasonSimklId(parentSimklId: Long, type: String, tvdbSeason: Int): Long? {
+        val cacheKey = "anime_seasons:$parentSimklId"
+        animeSeasonCache[cacheKey]?.let { seasons ->
+            return seasons.firstOrNull { it.tvdbSeason == tvdbSeason }?.simklId
+        }
+
+        return try {
+            val body = httpGet(
+                "$baseUrl/$type/$parentSimklId?extended=full_anime_seasons&${commonParams()}"
+            ) ?: return null
+            val details = JSONObject(body)
+            val seasonsArray = details.optJSONArray("mapped_tvdb_seasons") ?: return null
+
+            val seasons = mutableListOf<AnimeSeasonEntry>()
+            for (i in 0 until seasonsArray.length()) {
+                val entry = seasonsArray.getJSONObject(i)
+                val simklId = entry.optLong("simkl_id", -1L).takeIf { it > 0 } ?: continue
+                val mappedTvdbSeason = entry.optInt("tvdb_season", -1).takeIf { it > 0 } ?: continue
+                seasons.add(AnimeSeasonEntry(simklId, mappedTvdbSeason))
+            }
+            animeSeasonCache[cacheKey] = seasons
+            seasons.firstOrNull { it.tvdbSeason == tvdbSeason }?.simklId
+        } catch (e: Exception) {
+            Log.d(TAG, "resolveSeasonSimklId anime:$parentSimklId season:$tvdbSeason failed: ${e.message}")
+            null
+        }
+    }
+
+    private suspend fun resolveIdsBySimklId(simklId: Long, type: String): ResolvedIds? {
+        val cacheKey = "simkl:$simklId"
+        idsCache[cacheKey]?.let { return it }
+
+        return try {
+            val detailsBody = httpGet("$baseUrl/$type/$simklId?extended=full&${commonParams()}") ?: return null
+            val details = JSONObject(detailsBody)
+            val ids = details.optJSONObject("ids")
+
+            ResolvedIds(
+                simklId = simklId,
+                type = type,
+                mal = ids?.optString("mal")?.takeIf { it.isNotBlank() },
+                anilist = ids?.optString("anilist")?.takeIf { it.isNotBlank() },
+                kitsu = ids?.optString("kitsu")?.takeIf { it.isNotBlank() },
+                imdb = ids?.optString("imdb")?.takeIf { it.isNotBlank() },
+                tvdbSeason = details.optInt("season", -1).takeIf { it > 0 }
+            ).also { idsCache[cacheKey] = it }
+        } catch (e: Exception) {
+            Log.d(TAG, "resolveIdsBySimklId $type:$simklId failed: ${e.message}")
+            null
+        }
+    }
+
     private suspend fun resolveViaRedirect(source: String, id: String): RedirectResult? {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val url = "$baseUrl/redirect?to=simkl&$source=$id&${commonParams()}"
@@ -138,3 +217,5 @@ class SimklIdResolver @Inject constructor(
         private const val TAG = "SimklIdResolver"
     }
 }
+
+private data class AnimeSeasonEntry(val simklId: Long, val tvdbSeason: Int)

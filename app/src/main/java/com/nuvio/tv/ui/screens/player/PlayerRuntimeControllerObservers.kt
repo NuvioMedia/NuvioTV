@@ -612,6 +612,23 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
     // Prefer videoId over contentId — videoId carries the season/episode-specific ID
     val effectiveId = currentVideoId?.takeIf { it.isNotBlank() } ?: id
 
+    if (contentType.equals("movie", ignoreCase = true)) {
+        val key = "movie:$id:$effectiveId"
+        if (skipIntroFetchedKey == key) return
+        skipIntroFetchedKey = key
+        scope.launch {
+            skipIntervals = withTimeoutOrNull(15_000L) {
+                skipIntroRepository.getMovieSkipIntervals(id, effectiveId)
+            } ?: emptyList()
+        }
+        return
+    }
+
+    val metaImdbId = contentType?.let { type ->
+        metaRepository.getCachedMeta(type, id)?.imdbId
+            ?: metaRepository.getCachedMeta(type, effectiveId.substringBefore(':'))?.imdbId
+    }?.takeIf { it.startsWith("tt") }
+
     // MAL ID format: "mal:57658:1" (malId:episode)
     if (effectiveId.startsWith("mal:")) {
         val parts = effectiveId.split(":")
@@ -620,7 +637,7 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
         val key = "mal:$malId:$malEpisode"
         if (skipIntroFetchedKey == key) return
         skipIntroFetchedKey = key
-        val imdbId = id?.takeIf { it.startsWith("tt") }
+        val imdbId = id?.takeIf { it.startsWith("tt") } ?: metaImdbId
         scope.launch {
             skipIntervals = withTimeoutOrNull(15_000L) {
                 skipIntroRepository.getSkipIntervalsForMal(malId, malEpisode, imdbId = imdbId, imdbSeason = season, imdbEpisode = episode)
@@ -637,7 +654,7 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
         val key = "kitsu:$kitsuId:$kitsuEpisode"
         if (skipIntroFetchedKey == key) return
         skipIntroFetchedKey = key
-        val imdbId = id?.takeIf { it.startsWith("tt") }
+        val imdbId = id?.takeIf { it.startsWith("tt") } ?: metaImdbId
         scope.launch {
             skipIntervals = withTimeoutOrNull(15_000L) {
                 skipIntroRepository.getSkipIntervalsForKitsu(kitsuId, kitsuEpisode, imdbId = imdbId, imdbSeason = season, imdbEpisode = episode)

@@ -126,8 +126,11 @@ jobs:
             > release-notes.md || generation_status=$?
 
           if [[ ! -s release-notes.md ]]; then
-            echo "No release-note commits were found." >&2
-            exit 1
+            if [[ "${generation_status}" -ne 0 || "${RELEASE_MODE}" == "publish" ]]; then
+              echo "No release-note commits were found." >&2
+              exit 1
+            fi
+            printf '%s\n' 'Release notes pending. Replace this text before publishing.' > release-notes.md
           fi
 
           {

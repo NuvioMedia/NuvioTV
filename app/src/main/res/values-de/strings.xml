@@ -832,7 +832,7 @@
     <string name="layout_trailer_muted">Trailer stumm abspielen</string>
     <string name="layout_trailer_muted_sub_preview">Trailer-Audio während der automatischen Wiedergabe der Vorschau stumm schalten.</string>
     <string name="layout_trailer_muted_sub_expanded">Trailer-Audio in erweiterten Karten stummschalten.</string>
-    <string name="layout_section_card_style">Poster-Stil</string>
+    <string name="layout_section_card_style">Posterkarte</string>
     <string name="layout_section_card_style_desc">Kartenbreite und Eckenradius anpassen.</string>
     <string name="layout_open">Öffnen</string>
     <string name="layout_closed">Geschlossen</string>
@@ -916,8 +916,6 @@
     <string name="tmdb_basic_info_subtitle">Beschreibung, Genres und Bewertung von TMDB</string>
     <string name="tmdb_details_title">Details</string>
     <string name="tmdb_details_subtitle">Laufzeit, Erscheinungsdatum, Land und Sprache von TMDB</string>
-    <string name="tmdb_release_dates_title">Erscheinungsdaten</string>
-    <string name="tmdb_release_dates_subtitle">Erscheinungsdaten von TMDB</string>
     <string name="tmdb_credits_title">Credits</string>
     <string name="tmdb_credits_subtitle">Besetzung mit Fotos, Regisseur und Drehbuchautor von TMDB</string>
     <string name="tmdb_productions_title">Produktionen</string>

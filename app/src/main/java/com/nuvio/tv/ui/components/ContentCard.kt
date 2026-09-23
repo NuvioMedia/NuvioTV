@@ -53,7 +53,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.nuvio.tv.R
@@ -254,6 +256,12 @@ fun ContentCard(
                 .size(width = requestWidthPx, height = requestHeightPx)
             if (revalidationKey > 0) {
                 builder.placeholderMemoryCacheKey("${imageUrl}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
+            }
+            val fallbackUrl = item.rawPosterUrl
+            if (!fallbackUrl.isNullOrBlank() && fallbackUrl != imageUrl) {
+                builder.memoryCacheKeyExtras(
+                    mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
+                )
             }
             builder.build()
         }
@@ -591,7 +599,9 @@ fun ContentCard(
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                         Text(
                             text = description,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = description.contentTextDirection()
+                            ),
                             color = NuvioTheme.colors.TextPrimary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis

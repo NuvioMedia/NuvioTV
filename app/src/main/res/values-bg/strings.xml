@@ -860,7 +860,7 @@
     <string name="layout_trailer_muted">Пусни трейлъра без звук</string>
     <string name="layout_trailer_muted_sub_preview">Заглуши аудиото на трейлъра по време на автоматичен преглед.</string>
     <string name="layout_trailer_muted_sub_expanded">Заглуши аудиото на трейлъра в разширените карти.</string>
-    <string name="layout_section_card_style">Стил на постер картите</string>
+    <string name="layout_section_card_style">Постер карта</string>
     <string name="layout_section_card_style_desc">Настрой ширина и радиус на ъглите на картите.</string>
     <string name="layout_open">Отворено</string>
     <string name="layout_closed">Затворено</string>
@@ -1104,8 +1104,6 @@
     <string name="tmdb_basic_info_subtitle">Описание, жанрове и рейтинг от TMDB</string>
     <string name="tmdb_details_title">Детайли</string>
     <string name="tmdb_details_subtitle">Продължителност, статус, държава и език от TMDB</string>
-    <string name="tmdb_release_dates_title">Дати на издаване</string>
-    <string name="tmdb_release_dates_subtitle">Дати на издаване и излъчване от TMDB</string>
     <string name="tmdb_credits_title">Кредити</string>
     <string name="tmdb_credits_subtitle">Актьорски състав със снимки, режисьор и сценарист от TMDB</string>
     <string name="tmdb_productions_title">Продукции</string>

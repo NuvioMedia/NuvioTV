@@ -352,7 +352,7 @@
     <string name="layout_trailer_muted">Redă trailerul pe mut</string>
     <string name="layout_trailer_muted_sub_preview">Amuțește sunetul trailerului în timpul previzualizării automate.</string>
     <string name="layout_trailer_muted_sub_expanded">Amuțește sunetul trailerului în cardurile extinse.</string>
-    <string name="layout_section_card_style">Stil card poster</string>
+    <string name="layout_section_card_style">Card poster</string>
     <string name="layout_section_card_style_desc">Ajustează lățimea cardului și raza colțurilor.</string>
     <string name="layout_open">Deschis</string>
     <string name="layout_closed">Închis</string>

@@ -843,7 +843,7 @@
     <string name="layout_trailer_muted">Reproduzir trailer sem som</string>
     <string name="layout_trailer_muted_sub_preview">Retirar o som do áudio do trailer durante a pré-visualização automática.</string>
     <string name="layout_trailer_muted_sub_expanded">Retirar o som do áudio do trailer nos cartões expandidos.</string>
-    <string name="layout_section_card_style">Estilo dos cartões com cartaz</string>
+    <string name="layout_section_card_style">Cartões com cartaz</string>
     <string name="layout_section_card_style_desc">Ajustar a largura do cartão e o raio dos cantos.</string>
     <string name="layout_open">Aberto</string>
     <string name="layout_closed">Fechado</string>
@@ -1080,8 +1080,6 @@
     <string name="tmdb_basic_info_subtitle">Descrição, géneros e classificação do TMDB</string>
     <string name="tmdb_details_title">Detalhes</string>
     <string name="tmdb_details_subtitle">Duração, estado, país e idioma do TMDB</string>
-    <string name="tmdb_release_dates_title">Datas de Lançamento</string>
-    <string name="tmdb_release_dates_subtitle">Datas de lançamento e de emissão do TMDB</string>
     <string name="tmdb_credits_title">Créditos</string>
     <string name="tmdb_credits_subtitle">Mostra o elenco com fotografias e a equipa técnica (dados do TMDB).</string>
     <string name="tmdb_productions_title">Produtoras</string>

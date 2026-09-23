@@ -4,13 +4,16 @@ import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.data.mapper.toDomainOrNull
+import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import java.net.URLEncoder
 import javax.inject.Inject
@@ -19,7 +22,8 @@ import javax.inject.Singleton
 @Singleton
 class CatalogRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val api: AddonApi
+    private val api: AddonApi,
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
 ) : CatalogRepository {
     companion object {
         private const val TAG = "CatalogRepository"
@@ -48,9 +52,13 @@ class CatalogRepositoryImpl @Inject constructor(
         when (val result = safeApiCall(context) { api.getCatalog(url) }) {
             is NetworkResult.Success -> {
                 val rawItemCount = result.data.metas.size
+                val posterPattern = layoutPreferenceDataStore.customPosterUrlPattern
+                    .let { flow -> flow.first() }
+
                 val items = result.data.metas
                     .mapNotNull { it?.toDomainOrNull(type, addonBaseUrl) }
                     .distinctBy { it.id }
+                    .withCustomPosterUrls(posterPattern)
                 Log.d(
                     TAG,
                     "Catalog fetch success addonId=$addonId type=$type catalogId=$catalogId items=${items.size}"

@@ -873,7 +873,7 @@
     <string name="layout_trailer_muted">予告編をミュートで再生</string>
     <string name="layout_trailer_muted_sub_preview">自動再生プレビュー中の予告編音声をミュート</string>
     <string name="layout_trailer_muted_sub_expanded">拡大カードの予告編音声をミュート</string>
-    <string name="layout_section_card_style">ポスターカードスタイル</string>
+    <string name="layout_section_card_style">ポスターカード</string>
     <string name="layout_section_card_style_desc">カードの幅と角の丸みを調整</string>
     <string name="layout_open">開く</string>
     <string name="layout_closed">閉じる</string>
@@ -1116,8 +1116,6 @@
     <string name="tmdb_basic_info_subtitle">TMDBの説明、ジャンル、評価</string>
     <string name="tmdb_details_title">詳細</string>
     <string name="tmdb_details_subtitle">TMDBの上映時間、公開日、国、言語</string>
-    <string name="tmdb_release_dates_title">公開日</string>
-    <string name="tmdb_release_dates_subtitle">TMDBの公開日と放送日</string>
     <string name="tmdb_credits_title">クレジット</string>
     <string name="tmdb_credits_subtitle">TMDBの写真付きキャスト、監督、脚本家</string>
     <string name="tmdb_productions_title">制作会社</string>

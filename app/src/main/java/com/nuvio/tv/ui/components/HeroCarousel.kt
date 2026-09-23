@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -66,6 +67,7 @@ import coil3.request.ImageRequest
 import coil3.request.colorSpace
 import coil3.request.crossfade
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.formatHeroRuntime
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
 import com.nuvio.tv.ui.util.localizedContentType
@@ -370,7 +372,9 @@ private fun HeroCarouselSlide(
             item.description?.takeIf { it.isNotBlank() }?.let { description ->
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        textDirection = description.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextPrimary,
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis

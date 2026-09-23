@@ -49,9 +49,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -126,6 +126,7 @@ fun LayoutSettingsContent(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val streamBadgeUiState by viewModel.streamBadgeUiState.collectAsStateWithLifecycle()
+    val customPosterQrState by viewModel.customPosterQrState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var homeLayoutExpanded by rememberSaveable(essentialMode) { mutableStateOf(essentialMode) }
@@ -942,6 +943,15 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.POSTER_CARD_STYLE }
                     )
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+                    CustomPosterUrlControls(
+                        currentPattern = uiState.customPosterUrlPattern,
+                        onClear = {
+                            viewModel.onEvent(LayoutSettingsEvent.ClearCustomPosterSettings)
+                        },
+                        onConfigureViaPhone = viewModel::startCustomPosterQrMode,
+                        onFocused = { focusedSection = LayoutSettingsSection.POSTER_CARD_STYLE }
+                    )
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                     Text(
                         text = stringResource(R.string.settings_card_depth_title),
@@ -1056,6 +1066,16 @@ fun LayoutSettingsContent(
                 serverUrl = streamBadgeUiState.serverUrl,
                 instruction = stringResource(R.string.stream_badge_qr_instruction),
                 onClose = viewModel::stopStreamBadgeQrMode,
+                qrSize = 168.dp
+            )
+        }
+
+        if (customPosterQrState.isActive) {
+            QrCodeOverlay(
+                qrBitmap = customPosterQrState.qrCodeBitmap,
+                serverUrl = customPosterQrState.serverUrl,
+                instruction = stringResource(R.string.custom_poster_qr_instruction),
+                onClose = viewModel::stopCustomPosterQrMode,
                 qrSize = 168.dp
             )
         }
@@ -2003,3 +2023,103 @@ private data class PresetOption(
     val label: String,
     val value: Int
 )
+
+@Composable
+private fun CustomPosterUrlControls(
+    currentPattern: String,
+    onClear: () -> Unit,
+    onConfigureViaPhone: () -> Unit,
+    onFocused: () -> Unit
+) {
+    val isActive = currentPattern.isNotBlank()
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+    ) {
+        Text(
+            text = stringResource(R.string.layout_custom_poster_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = NuvioTheme.colors.TextPrimary
+        )
+        Text(
+            text = stringResource(R.string.layout_custom_poster_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioTheme.colors.TextTertiary
+        )
+
+        if (isActive) {
+            Text(
+                text = currentPattern,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                ),
+                color = NuvioTheme.colors.TextSecondary,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(NuvioTheme.colors.BackgroundElevated, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 14.dp, vertical = NuvioTheme.spacing.md)
+            )
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+        ) {
+            Button(
+                onClick = onConfigureViaPhone,
+                modifier = Modifier.onFocusChanged { if (it.isFocused) onFocused() },
+                shape = ButtonDefaults.shape(shape = RoundedCornerShape(SettingsPillRadius)),
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundElevated,
+                    focusedContainerColor = NuvioTheme.colors.BackgroundElevated
+                ),
+                border = ButtonDefaults.border(
+                    focusedBorder = Border(
+                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                        shape = RoundedCornerShape(SettingsPillRadius)
+                    )
+                )
+            ) {
+                Text(
+                    text = stringResource(R.string.layout_custom_poster_qr),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = NuvioTheme.colors.TextPrimary
+                )
+            }
+
+            if (isActive) {
+                Button(
+                    onClick = onClear,
+                    modifier = Modifier.onFocusChanged { if (it.isFocused) onFocused() },
+                    shape = ButtonDefaults.shape(shape = RoundedCornerShape(SettingsPillRadius)),
+                    colors = ButtonDefaults.colors(
+                        containerColor = NuvioTheme.colors.Background,
+                        focusedContainerColor = NuvioTheme.colors.Background
+                    ),
+                    border = ButtonDefaults.border(
+                        focusedBorder = Border(
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                            shape = RoundedCornerShape(SettingsPillRadius)
+                        )
+                    )
+                ) {
+                    Text(
+                        text = stringResource(R.string.layout_custom_poster_clear),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = NuvioTheme.colors.TextSecondary
+                    )
+                }
+            }
+        }
+
+        if (isActive) {
+            Text(
+                text = stringResource(R.string.layout_custom_poster_active),
+                style = MaterialTheme.typography.labelSmall,
+                color = NuvioTheme.colors.Primary
+            )
+        }
+    }
+}

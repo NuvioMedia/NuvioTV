@@ -62,6 +62,7 @@ import androidx.compose.ui.Alignment
 import com.nuvio.tv.ui.components.CatalogRowSection
 import com.nuvio.tv.ui.components.CollectionRowSection
 import com.nuvio.tv.ui.components.ContinueWatchingSection
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.HeroCarouselBackdrop
@@ -624,7 +625,7 @@ fun ClassicHomeContent(
                     }
                 }
                 ContinueWatchingSection(
-                    items = uiState.continueWatchingItems,
+                    items = uiState.continueWatchingItems.withCustomPosterUrls(uiState.customPosterUrlPattern),
                     onItemClick = { item ->
                         onContinueWatchingClick(item)
                     },
@@ -702,7 +703,7 @@ fun ClassicHomeContent(
                     }
                 }
                 ContinueWatchingSection(
-                    items = uiState.upcomingItems,
+                    items = uiState.upcomingItems.withCustomPosterUrls(uiState.customPosterUrlPattern),
                     title = stringResource(R.string.upcoming_section_title),
                     onItemClick = { item ->
                         onContinueWatchingClick(item)

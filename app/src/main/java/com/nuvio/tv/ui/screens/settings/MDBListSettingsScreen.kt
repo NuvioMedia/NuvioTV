@@ -100,8 +100,11 @@ fun MDBListSettingsContent(
                 item(key = "mdblist_api_key") {
                     SettingsActionRow(
                         title = stringResource(R.string.mdblist_api_key_title),
-                        subtitle = stringResource(R.string.mdblist_api_key_subtitle),
-                        value = maskApiKey(uiState.apiKey, stringResource(R.string.mdblist_not_set)),
+                        subtitle = stringResource(R.string.mdblist_ratings_credentials_subtitle),
+                        value = maskApiKey(uiState.apiKey, stringResource(
+                            if (uiState.isConnected) R.string.mdblist_ratings_connected_account
+                            else R.string.mdblist_not_set
+                        )),
                         onClick = { showApiKeyDialog = true },
                         enabled = uiState.enabled
                     )
@@ -228,7 +231,7 @@ private fun MDBListApiKeyDialog(
     NuvioDialog(
         onDismiss = onDismiss,
         title = stringResource(R.string.mdblist_dialog_title),
-        subtitle = stringResource(R.string.mdblist_dialog_subtitle),
+        subtitle = stringResource(R.string.mdblist_ratings_key_override_subtitle),
         width = 700.dp
     ) {
         Card(

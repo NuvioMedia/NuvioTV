@@ -1,7 +1,5 @@
 package com.nuvio.tv.core.util
 
-import com.nuvio.tv.domain.model.TmdbSettings
-import com.nuvio.tv.ui.screens.settings.TmdbSettingsUiState
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -78,12 +76,6 @@ class EpisodeReleaseDateParserTest {
                 useTmdbReleaseDates = false
             )
         )
-    }
-
-    @Test
-    fun `tmdb release dates default to disabled`() {
-        assertFalse(TmdbSettings().useReleaseDates)
-        assertFalse(TmdbSettingsUiState().useReleaseDates)
     }
 
     @Test

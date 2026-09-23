@@ -4,6 +4,7 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.stableKey
 import kotlinx.coroutines.Job
 
 internal fun HomeViewModel.catalogKey(addonId: String, type: String, catalogId: String): String {
@@ -152,10 +153,12 @@ internal fun HomeViewModel.snapshotCatalogState(): Pair<List<String>, Map<String
     catalogOrder.toList() to catalogsMap.toMap()
 }
 
+// A title can be in several rows with different data: prefer the row the user is on.
 internal fun HomeViewModel.findCatalogItemById(itemId: String): MetaPreview? = synchronized(catalogStateLock) {
-    val rowKeys = catalogItemKeyIndex[itemId]?.toList().orEmpty()
-    rowKeys.firstNotNullOfOrNull { key ->
-        catalogsMap[key]?.items?.firstOrNull { it.id == itemId }
+    val rows = catalogItemKeyIndex[itemId]?.toList().orEmpty().mapNotNull { catalogsMap[it] }
+    val focusedRow = liveFocusedRowKey?.let { key -> rows.firstOrNull { it.stableKey() == key } }
+    (listOfNotNull(focusedRow) + rows).firstNotNullOfOrNull { row ->
+        row.items.firstOrNull { it.id == itemId }
     }
 }
 

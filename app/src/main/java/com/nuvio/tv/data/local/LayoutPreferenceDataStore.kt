@@ -124,6 +124,8 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val followAddonsOrderKey = booleanPreferencesKey("follow_addons_order")
     private val composeHighlighterEnabledKey = booleanPreferencesKey("compose_highlighter_enabled")
 
+    private val customPosterUrlPatternKey = stringPreferencesKey("custom_poster_url_pattern")
+
     private fun <T> profileFlow(extract: (prefs: androidx.datastore.preferences.core.Preferences) -> T): Flow<T> =
         profileManager.activeProfileId.flatMapLatest { pid ->
             factory.get(pid, FEATURE).data.map { prefs -> extract(prefs) }
@@ -414,6 +416,11 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[composeHighlighterEnabledKey] ?: false
     }
 
+    /** Custom poster URL pattern with `{placeholder}` tokens. Empty string means disabled. */
+    val customPosterUrlPattern: Flow<String> = profileFlow { prefs ->
+        prefs[customPosterUrlPatternKey] ?: ""
+    }
+
     suspend fun setMemoryOnlyVerticalScroll(enabled: Boolean) {
         store().edit { prefs ->
             prefs[memoryOnlyVerticalScrollKey] = enabled
@@ -441,6 +448,22 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setComposeHighlighterEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[composeHighlighterEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setCustomPosterUrlPattern(pattern: String) {
+        store().edit { prefs ->
+            if (pattern.isBlank()) {
+                prefs.remove(customPosterUrlPatternKey)
+            } else {
+                prefs[customPosterUrlPatternKey] = pattern.trim()
+            }
+        }
+    }
+
+    suspend fun clearCustomPosterSettings() {
+        store().edit { prefs ->
+            prefs.remove(customPosterUrlPatternKey)
         }
     }
 

@@ -373,7 +373,7 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     if (!_uiState.value.error.isNullOrBlank()) return
 
     val state = _uiState.value
-    if (state.nextEpisode?.hasAired != true || nextEpisodeVideo == null) {
+    if (state.nextEpisode == null || nextEpisodeVideo == null) {
         if (state.postPlayMode != null) {
             _uiState.update { it.copy(postPlayMode = null) }
         }
@@ -449,9 +449,14 @@ internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) 
     val currentActive = _uiState.value.activeSkipInterval
 
     if (active != null) {
-        if (currentActive == null || active.type != currentActive.type || active.startTime != currentActive.startTime) {
+        val targetsPostCredits = active.followingPostCreditsScene(skipIntervals, currentPlaybackDurationMs()) != null
+        if (currentActive != active || targetsPostCredits != _uiState.value.activeSkipTargetsPostCredits) {
             lastActiveSkipType = active.type
-            _uiState.update { it.copy(activeSkipInterval = active, skipIntervalDismissed = false) }
+            _uiState.update { it.copy(
+                activeSkipInterval = active,
+                activeSkipTargetsPostCredits = targetsPostCredits,
+                skipIntervalDismissed = false
+            ) }
         }
         val segmentType = AutoSkipSegmentType.fromSkipIntervalType(active.type)
         val activeKey = active.autoSkipKey()
@@ -483,7 +488,9 @@ internal fun PlayerRuntimeController.fetchParentalGuide(id: String?, type: Strin
     if (!parentalGuideEnabled) return
     if (id.isNullOrBlank()) return
 
-    val imdbId = id.split(":").firstOrNull()?.takeIf { it.startsWith("tt") } ?: return
+    val imdbId = id.split(":").firstOrNull()?.takeIf { it.startsWith("tt") }
+        ?: type?.let { metaRepository.getCachedMeta(it, id)?.imdbId }?.takeIf { it.startsWith("tt") }
+        ?: return
 
     scope.launch {
         val guide = parentalGuideRepository.getParentalGuide(imdbId) ?: return@launch

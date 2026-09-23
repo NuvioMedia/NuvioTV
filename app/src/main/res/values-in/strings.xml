@@ -838,7 +838,7 @@
     <string name="layout_trailer_muted">Putar Trailer Dibisukan</string>
     <string name="layout_trailer_muted_sub_preview">Bisukan audio trailer saat pratinjau putar otomatis.</string>
     <string name="layout_trailer_muted_sub_expanded">Bisukan audio trailer di kartu yang diperluas.</string>
-    <string name="layout_section_card_style">Gaya Kartu Poster</string>
+    <string name="layout_section_card_style">Kartu Poster</string>
     <string name="layout_section_card_style_desc">Sesuaikan lebar kartu dan radius sudut.</string>
     <string name="layout_open">Buka</string>
     <string name="layout_closed">Tutup</string>
@@ -1046,8 +1046,6 @@
     <string name="tmdb_basic_info_subtitle">Deskripsi, genre, dan rating dari TMDB</string>
     <string name="tmdb_details_title">Detail</string>
     <string name="tmdb_details_subtitle">Durasi, status, negara, dan bahasa dari TMDB</string>
-    <string name="tmdb_release_dates_title">Tanggal Rilis</string>
-    <string name="tmdb_release_dates_subtitle">Tanggal rilis dan tayang dari TMDB</string>
     <string name="tmdb_credits_title">Kredit</string>
     <string name="tmdb_credits_subtitle">Pemeran dengan foto, sutradara, dan penulis dari TMDB</string>
     <string name="tmdb_productions_title">Produksi</string>

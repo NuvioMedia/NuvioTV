@@ -1247,8 +1247,6 @@
     <string name="tmdb_basic_info_subtitle">Leírás, műfajok és értékelés a TMDB-ről</string>
     <string name="tmdb_details_title">Részletek</string>
     <string name="tmdb_details_subtitle">Hossz, premier dátuma, ország és nyelv a TMDB-ről</string>
-    <string name="tmdb_release_dates_title">Megjelenési dátumok</string>
-    <string name="tmdb_release_dates_subtitle">Megjelenési és vetítési dátumok a TMDB-ből</string>
     <string name="tmdb_credits_title">Szereplők és stáb</string>
     <string name="tmdb_credits_subtitle">Szereplők (fotókkal), rendező és író a TMDB-ről</string>
     <string name="tmdb_productions_title">Stúdiók</string>

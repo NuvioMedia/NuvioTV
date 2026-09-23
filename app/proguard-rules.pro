@@ -140,5 +140,10 @@
 -keepclassmembers class org.jsoup.** { *; }
 -keep class com.fasterxml.jackson.** { *; }
 -keepclassmembers class com.fasterxml.jackson.** { *; }
+
+# AndroidX components referenced by extensions
+-keep class androidx.fragment.app.** { *; }
+-keep interface androidx.fragment.app.** { *; }
+
 -dontwarn java.beans.ConstructorProperties
 -dontwarn java.beans.Transient
