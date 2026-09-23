@@ -54,13 +54,19 @@ internal fun PlayerRuntimeController.skipActiveInterval(): Boolean {
 }
 
 internal fun PlayerRuntimeController.skipInterval(interval: SkipInterval): Boolean {
+    if (interval.type == "post-credits") return false
     val duration = currentPlaybackDurationMs().takeIf { it > 0 } ?: Long.MAX_VALUE
-    val seekMs = if (interval.endTime == Double.MAX_VALUE) {
+    val postCredits = interval.followingPostCreditsScene(skipIntervals, currentPlaybackDurationMs())
+    val targetTime = postCredits?.startTime ?: interval.endTime
+    val seekMs = if (targetTime == Double.MAX_VALUE) {
         duration
     } else {
-        (interval.endTime * 1000).toLong()
+        (targetTime * 1000).toLong()
     }
-    seekPlaybackTo(seekMs.coerceAtMost(duration), SeekParameters.NEXT_SYNC)
+    val seekParameters = if (postCredits != null || interval.type == "movie-credits") {
+        SeekParameters.EXACT
+    } else SeekParameters.NEXT_SYNC
+    seekPlaybackTo(seekMs.coerceAtMost(duration), seekParameters)
     scheduleProgressSyncAfterSeek()
     _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = true) }
     return true
@@ -204,7 +210,8 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     val cacheBuffering = view.isPausedForCacheNow() || view.isCoreIdleNow()
                     var firstFrameReady = hasRenderedFirstFrame
                         if (!firstFrameReady) {
-                            firstFrameReady = pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L)
+                            firstFrameReady = view.isPositionFromRequestedMedia() &&
+                                (pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L))
                             if (firstFrameReady) {
                                 hasRenderedFirstFrame = true
                                 val clickToFirstFrameMs = launchStartedAtElapsedMs
@@ -748,7 +755,13 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
                 )
             }
             runCatching { tvRecommendationManager.onProgressRemoved(normalizedProgress.contentId) }
-        } else {
+        } else if (!hasMarkedCurrentEpisodeCompleted) {
+            // Only save in-progress when the episode has not already been
+            // marked as completed during this playback session.  After
+            // natural playback completion the player can report stale
+            // position/duration values (e.g. duration=0 → fallbackPercent=5)
+            // which would overwrite the completed entry in the mutation
+            // store and push an incorrect low-progress value to remote.
             watchProgressRepository.saveProgress(
                 normalizedProgress,
                 profileId = profileId,

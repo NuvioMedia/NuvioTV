@@ -252,6 +252,9 @@ class HomeViewModel @Inject constructor(
     internal var externalMetaPrefetchJob: Job? = null
     internal var pendingExternalMetaPrefetchItemId: String? = null
     internal val prefetchedTmdbIds: MutableSet<String> = Collections.newSetFromMap(createLruMap(MAX_PREFETCH_CACHE_SIZE))
+
+    /** Items an enrichment merge was applied for. */
+    internal val enrichmentMergedIds: MutableSet<String> = Collections.newSetFromMap(createLruMap(MAX_PREFETCH_CACHE_SIZE))
     internal val cwMetaCache: MutableMap<String, CwMetaSummary?> = createLruMap(MAX_CW_CACHE_SIZE)
     internal val cwMetaNegativeCacheTimestamps: MutableMap<String, Long> = createLruMap(MAX_CW_CACHE_SIZE)
     /** Ultra-light cache for badge evaluation: contentId → set of aired (season, episode) pairs. */
@@ -506,6 +509,19 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collect { style ->
                     _uiState.update { it.copy(continueWatchingCardStyle = style) }
+                }
+        }
+        viewModelScope.launch {
+            var initialPattern = true
+            layoutPreferenceDataStore.customPosterUrlPattern
+                .distinctUntilChanged()
+                .collect { pattern ->
+                    _uiState.update { it.copy(customPosterUrlPattern = pattern) }
+                    if (initialPattern) {
+                        initialPattern = false
+                    } else {
+                        refreshVisibleCatalogsPipeline(forceReplace = true)
+                    }
                 }
         }
         // When "next up from furthest episode" changes, clear CW caches and retrigger pipeline

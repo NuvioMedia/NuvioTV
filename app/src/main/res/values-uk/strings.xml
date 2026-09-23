@@ -865,7 +865,7 @@
     <string name="layout_trailer_muted">Відтворювати трейлер без звуку</string>
     <string name="layout_trailer_muted_sub_preview">Вимкнути звук трейлера під час автовідтворення прев\'ю.</string>
     <string name="layout_trailer_muted_sub_expanded">Вимкнути звук трейлера в розгорнутих картках.</string>
-    <string name="layout_section_card_style">Стиль картки постера</string>
+    <string name="layout_section_card_style">Картка постера</string>
     <string name="layout_section_card_style_desc">Налаштування ширини картки та радіуса кутів.</string>
     <string name="layout_open">Відкрити</string>
     <string name="layout_closed">Закрити</string>
@@ -1106,8 +1106,6 @@
     <string name="tmdb_basic_info_subtitle">Опис, жанри та рейтинг з TMDB</string>
     <string name="tmdb_details_title">Деталі</string>
     <string name="tmdb_details_subtitle">Тривалість, статус, країна та мова з TMDB</string>
-    <string name="tmdb_release_dates_title">Дати виходу</string>
-    <string name="tmdb_release_dates_subtitle">Дати релізу та виходу в ефір з TMDB</string>
     <string name="tmdb_credits_title">Творці</string>
     <string name="tmdb_credits_subtitle">Актори з фото, режисер та сценарист з TMDB</string>
     <string name="tmdb_productions_title">Виробництво</string>

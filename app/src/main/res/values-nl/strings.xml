@@ -18,14 +18,14 @@
     <string name="web_home_catalogs">Startcatalogi en collecties</string>
     <string name="web_no_catalogs">Geen startcatalogi beschikbaar</string>
     <string name="web_btn_save">Wijzigingen opslaan</string>
-    <string name="web_connection_lost">Verbinding met tv verbroken</string>
+    <string name="web_connection_lost">Verbinding met de tv verbroken</string>
     <string name="web_btn_remove">Verwijderen</string>
     <string name="web_badge_new">Nieuw</string>
     <string name="web_badge_disabled">Uitgeschakeld</string>
     <string name="web_btn_enable">Inschakelen</string>
     <string name="web_btn_disable">Uitschakelen</string>
     <string name="web_error_addon_exists">Deze add-on staat al in de lijst</string>
-    <string name="web_status_waiting_tv">Wachten op tv</string>
+    <string name="web_status_waiting_tv">Wachten op de tv</string>
     <string name="web_status_msg_waiting_tv">Bevestig de wijzigingen op je tv om ze toe te passen.</string>
     <string name="web_status_changes_applied">Wijzigingen toegepast</string>
     <string name="web_status_msg_addon_updated">Je add-onconfiguratie is bijgewerkt op de tv.</string>
@@ -1042,7 +1042,7 @@
     <string name="layout_trailer_muted">Trailer gedempt afspelen</string>
     <string name="layout_trailer_muted_sub_preview">Demp het trailergeluid tijdens de automatische preview.</string>
     <string name="layout_trailer_muted_sub_expanded">Demp het trailergeluid in uitgevouwen kaarten.</string>
-    <string name="layout_section_card_style">Posterkaartstijl</string>
+    <string name="layout_section_card_style">Posterkaart</string>
     <string name="layout_section_card_style_desc">Pas kaartbreedte en hoekradius aan.</string>
     <string name="settings_card_depth_title">Diepte-effect van kaarten</string>
     <string name="settings_card_depth_description">Voegt een verlichte bovenrand en een zachte glans toe aan afbeeldingskaarten voor een subtiel gevoel van diepte.</string>
@@ -1315,8 +1315,6 @@
     <string name="tmdb_basic_info_subtitle">Beschrijving, genres en beoordeling van TMDB</string>
     <string name="tmdb_details_title">Details</string>
     <string name="tmdb_details_subtitle">Speelduur, status, land en taal van TMDB</string>
-    <string name="tmdb_release_dates_title">Releasedatums</string>
-    <string name="tmdb_release_dates_subtitle">Release- en uitzenddatums van TMDB</string>
     <string name="tmdb_credits_title">Credits</string>
     <string name="tmdb_credits_subtitle">Cast met foto\'s, regisseur en schrijver van TMDB</string>
     <string name="tmdb_productions_title">Producties</string>
@@ -2248,7 +2246,7 @@
     <string name="audio_dv_sub">Zet Dolby Vision Profile 7 om naar standaard HEVC voor apparaten zonder hardwarematige DV-ondersteuning</string>
 
     <!-- SidebarNavigation / MainActivity -->
-    <string name="nav_home">Start</string>
+    <string name="nav_home">Home</string>
     <string name="nav_discover">Ontdekken</string>
     <string name="nav_search">Zoeken</string>
     <string name="nav_library">Bibliotheek</string>
