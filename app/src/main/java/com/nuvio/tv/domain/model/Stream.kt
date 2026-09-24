@@ -106,6 +106,15 @@ data class Stream(
     fun isYouTube(): Boolean = ytId != null
 
     /**
+     * Returns the YouTube video id when [ytId] is the only way to play this stream,
+     * so the video has to be resolved on the device before playback.
+     */
+    fun youTubeIdToResolve(): String? =
+        ytId?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.takeIf { getStreamUrl() == null && !isTorrent() && !isDirectDebrid() }
+
+    /**
      * Returns true if this is an external URL (opens in browser)
      */
     fun isExternal(): Boolean = externalUrl != null && url == null && !externalUrl.isMagnetLink()
