@@ -818,7 +818,7 @@
     <string name="audio_dv5_to_dv81_title">המר DV5 ל-DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">מסמן זרמי Profile 5 כ-Profile 8.1 לפלט תואם HDR10. עוזר במכשירים ללא מפענח DV5 מובנה.</string>
     <string name="audio_strip_hdr10plus_title">הסר מטא-דאטה של HDR10+</string>
-    <string name="audio_strip_hdr10plus_sub">הסרת מטא-דאטה דינמי של HDR10+ מהזרמים. כשגם \\"המרה ל-DV8.1\\" פעיל, ההסרה מתבצעת אחרי ההמרה.</string>
+    <string name="audio_strip_hdr10plus_sub">הסרת מטא-דאטה דינמי של HDR10+ מהזרמים. כשגם \"המרה ל-DV8.1\" פעיל, ההסרה מתבצעת אחרי ההמרה.</string>
     <string name="audio_dv7_preserve_mapping_title">Preserve DV mapping (DV7 to DV8.1)</string>
     <string name="audio_dv7_preserve_mapping_sub">שומר על מיפוי הטונים כפי שהתכוון יוצר התוכן, במחיר עיבוד מעט כבד יותר לכל פריים.</string>
     <string name="dv7_libdovi_mode_caption">Conversion mode (auto-selected, do not change unless instructed). Pick one to force it; None uses auto. Active only when DV7 Handling is Convert to DV8.1.</string>
@@ -1258,7 +1258,7 @@
     <string name="debrid_prepare_instant_playback">הכן קישורים</string>
     <string name="debrid_prepare_instant_playback_description">פענוח קישורים ניתנים להפעלה עוד לפני תחילת ההפעלה.</string>
     <string name="debrid_prepare_stream_count">קישורים להכנה</string>
-    <string name="debrid_prepare_stream_count_warning">מומלץ להשתמש במספר נמוך יותר כשניתן. שירותים מחוברים עשויים להגביל את קצב פענוח הקישורים לפרק זמן נתון. פתיחת סרט או פרק יכולה להיספר במגבלה הזו גם ללא לחיצה על \\"הפעלה\\", כי הקישורים מוכנים מראש.</string>
+    <string name="debrid_prepare_stream_count_warning">מומלץ להשתמש במספר נמוך יותר כשניתן. שירותים מחוברים עשויים להגביל את קצב פענוח הקישורים לפרק זמן נתון. פתיחת סרט או פרק יכולה להיספר במגבלה הזו גם ללא לחיצה על \"הפעלה\", כי הקישורים מוכנים מראש.</string>
     <string name="debrid_prepare_count_one">קישור אחד</string>
     <string name="debrid_prepare_count_many">%1$d קישורים</string>
     <string name="debrid_stream_max_results_title">תוצאות מקסימליות</string>
@@ -1992,7 +1992,7 @@
     <string name="genre_anime">אנימה</string>
     <string name="genre_biography">ביוגרפיה</string>
     <string name="genre_children">ילדים</string>
-    <string name="genre_donghua">דונגהואה (אנימציה יפנית)</string>
+    <string name="genre_donghua">דונגהואה</string>
     <string name="genre_game_show">תוכנית משחקים</string>
     <string name="genre_holiday">חג</string>
     <string name="genre_home_and_garden">בית וגינה</string>
@@ -2010,7 +2010,7 @@
     <string name="library_sort_added_asc">התווסף ↑</string>
     <string name="library_sort_title_asc">כותרת א׳-ת׳</string>
     <string name="library_sort_title_desc">כותרת ת׳-א׳</string>
-    <string name="library_error_sort_failed">Couldn\'t load sort order. Showing provider order.</string>
+    <string name="library_error_sort_failed">לא ניתן היה לטעון את סדר המיון. מוצג סדר הספק.</string>
     <string name="library_manage_lists">נהל רשימות</string>
     <string name="library_manage_trakt_lists">נהל רשימות Trakt</string>
     <string name="library_no_lists">אין רשימות אישיות עדיין.</string>
@@ -2494,7 +2494,7 @@
     <string name="collections_import_paste_json_required">יש להדביק JSON של אוספים לייבוא</string>
     <string name="collections_import_no_data">אין נתונים לייבוא</string>
     <string name="collections_import_invalid_or_empty">פורמט לא תקין או אוספים ריקים</string>
-    <string name="collections_import_file_not_found_downloads">הקובץ לא נמצא בתיקיית ההורדות.\\nיש לייצא אוספים תחילה כדי ליצור אותו.</string>
+    <string name="collections_import_file_not_found_downloads">הקובץ לא נמצא בתיקיית ההורדות.\nיש לייצא אוספים תחילה כדי ליצור אותו.</string>
     <string name="collections_import_failed_read_file">קריאת הקובץ נכשלה: %1$s</string>
     <string name="collections_cancel">ביטול</string>
     <string name="collections_mode_paste">הדבק JSON</string>
@@ -2618,7 +2618,7 @@
     <string name="collections_editor_tmdb_quick_companies">אולפנים מהירים</string>
     <string name="collections_editor_tmdb_quick_networks">רשתות מהירות</string>
     <string name="collections_editor_tmdb_genres">מזהי ז׳אנר</string>
-    <string name="collections_editor_tmdb_genres_helper">יש להשתמש במספרי ז\'אנר של TMDB. הפרדה בפסיקים עבור AND, או בקווים אנכיים עבור OR.</string>
+    <string name="collections_editor_tmdb_genres_helper">יש להשתמש במספרי ז׳אנר של TMDB. הפרדה בפסיקים עבור AND, או בקווים אנכיים עבור OR.</string>
     <string name="collections_editor_tmdb_without_genres">מזהי ז׳אנר מוחרגים</string>
     <string name="collections_editor_tmdb_without_genres_helper">Exclude titles matching these TMDB genre numbers.</string>
     <string name="collections_editor_tmdb_date_from">תאריך יציאה או שידור מ-</string>
@@ -2732,7 +2732,7 @@
     <string name="collection_editor_folder_count_one">פריט %1$d</string>
     <string name="collection_editor_folder_count_other">%1$d פריטים</string>
     <string name="collections_editor_delete_folder_title">למחוק תיקייה?</string>
-    <string name="collections_editor_delete_folder_subtitle">פעולה זו תמחק לצמיתות את \\"%1$s\\" ואת תכולתה.</string>
+    <string name="collections_editor_delete_folder_subtitle">פעולה זו תמחק לצמיתות את \"%1$s\" ואת תכולתה.</string>
     <string name="collections_editor_tmdb_movie_title_placeholder">Marvel Movies, Netflix Originals, Pixar</string>
     <string name="collections_editor_tmdb_tv_title_placeholder">Best Action Movies, Korean Dramas, 2024 Animation</string>
     <string name="collections_editor_tmdb_person_title_placeholder">Tom Hanks Movies, Favorite Actors</string>
@@ -2804,12 +2804,12 @@
     <string name="player_track_subtitle_fallback">כתוביות %1$d</string>
 
     <!-- Player runtime: error recovery -->
-    <string name="player_error_stream_blocked">\\n\\nמקור הזרם חסום או מוגבל. כדאי לנסות מקור אחר.</string>
-    <string name="player_error_stream_removed">\\n\\nקישור הזרם פג תוקף או הוסר. כדאי לנסות מקור אחר.</string>
-    <string name="player_error_stream_expired">\\n\\nפג תוקף קישור הזרם. כדאי לנסות מקור אחר.</string>
-    <string name="player_error_stream_rate_limited">\\n\\nיותר מדי בקשות למקור הזרם. כדאי להמתין רגע ולנסות שוב.</string>
-    <string name="player_error_stream_unavailable">\\n\\nשרת הזרם אינו זמין כרגע. כדאי לנסות מקור אחר.</string>
-    <string name="player_error_source_invalid_content">שגיאת מקור: מקור הזרם החזיר תוכן לא תקין או שלא ניתן להפעיל. ייתכן שפג תוקף הקישור, או שהשרת החזיר דף שגיאה במקום וידאו.\\n\\nכדאי לנסות מקור אחר. [%1$s]</string>
+    <string name="player_error_stream_blocked">\n\nמקור הזרם חסום או מוגבל. כדאי לנסות מקור אחר.</string>
+    <string name="player_error_stream_removed">\n\nקישור הזרם פג תוקף או הוסר. כדאי לנסות מקור אחר.</string>
+    <string name="player_error_stream_expired">\n\nפג תוקף קישור הזרם. כדאי לנסות מקור אחר.</string>
+    <string name="player_error_stream_rate_limited">\n\nיותר מדי בקשות למקור הזרם. כדאי להמתין רגע ולנסות שוב.</string>
+    <string name="player_error_stream_unavailable">\n\nשרת הזרם אינו זמין כרגע. כדאי לנסות מקור אחר.</string>
+    <string name="player_error_source_invalid_content">שגיאת מקור: מקור הזרם החזיר תוכן לא תקין או שלא ניתן להפעיל. ייתכן שפג תוקף הקישור, או שהשרת החזיר דף שגיאה במקום וידאו.\n\nכדאי לנסות מקור אחר. [%1$s]</string>
     <string name="player_error_decoder">שגיאת מפענח</string>
     <string name="player_error_unsupported_format">הזרם הזה משתמש בפורמט שהמכשיר עשוי שלא לתמוך בו. כדאי לנסות מקור אחר. [%1$s]</string>
     <string name="player_error_initialize_failed">אתחול הנגן נכשל</string>
@@ -3113,11 +3113,11 @@
     <string name="web_stream_badge_load_error">לא ניתן היה לטעון את הגדרות תגי המקורות</string>
     <string name="web_stream_badge_error_url_required">.הזן כתובת URL של JSON לתג</string>
     <string name="web_stream_badge_error_url_scheme">".כתובת ה-URL של התג חייבת להתחיל ב-http:// או https://</string>
-    <string name="web_stream_badge_error_import_limit">You can import up to %1$d badge URLs.</string>
+    <string name="web_stream_badge_error_import_limit">ניתן לייבא עד %1$d כתובות URL של תגים.</string>
 
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">אגירת נתונים ורשת</string>
-    <string name="playback_section_buffer_network_desc">כמה תוכן לשמור בזיכרון וכיצד למשוך Streams.</string>
+    <string name="playback_section_buffer_network_desc">כמה תוכן לשמור בזיכרון וכיצד למשוך זרמים.</string>
     <string name="playback_net_device_memory_info">זיכרון המכשיר: %1$s | מגבלת בטיחות מומלצת: %2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">זיכרון מקורי של ExoPlayer</string>
     <string name="playback_net_nuvio_performance_mode_sub">הפעלת הקצאת זיכרון מקורית מחוץ לערימה ואופטימיזציות גלילה.</string>
@@ -3137,7 +3137,7 @@
     <string name="playback_buffer_after_rebuffer_sub">כמות התוכן לאיגור אחרי שההפעלה נעצרת עקב איגור. ערכים גבוהים יותר מפחיתים הפרעות איגור חוזרות.</string>
     <string name="playback_buffer_back">זיכרון לחזרה אחורה</string>
     <string name="playback_buffer_back_sub">כמה מהתוכן שכבר נצפה נשמר בזיכרון, כדי שתוכל לחזור אחורה בלי לחכות לטעינה מחדש. הגדר ל-0 כדי להשבית ולחסוך בזיכרון.</string>
-    <string name="playback_buffer_back_reserve">Reserves ~%1$dMB on top of Target Buffer. Raising Max Buffer Duration shrinks this without losing back-buffer time.</string>
+    <string name="playback_buffer_back_reserve">שומר כ-%1$dMB מעל למאגר היעד. הגדלת משך המאגר המקסימלי מקטינה זאת בלי לאבד זמן מאגר אחורי.</string>
     <string name="playback_buffer_managed">ניהול זיכרון אוטומטי</string>
     <string name="playback_buffer_managed_sub">האפליקציה בוחרת בעצמה כמה זיכרון להשתמש כדי לא לפגוע במכשיר. כבה רק אם אתה רוצה לקבוע בעצמך כמות זיכרון (לא מומלץ למשתמשים רגילים).</string>
     <string name="playback_buffer_target">כמות זיכרון לטעינה מראש</string>
