@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.search
 
+import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -915,7 +916,7 @@ class SearchViewModel @Inject constructor(
                         ?.options
                         .orEmpty()
                     DiscoverCatalog(
-                        key = "${addon.id}_${catalog.apiType}_${catalog.id}",
+                        key = catalogRowLegacyKey(addon.id, catalog.apiType, catalog.id),
                         addonId = addon.id,
                         addonName = addon.displayName,
                         addonBaseUrl = addon.baseUrl,

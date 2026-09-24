@@ -16,6 +16,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
 import com.nuvio.tv.data.local.ExperienceModeDataStore
+import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
@@ -159,6 +160,7 @@ internal fun shouldExcludePreferenceFromProfileSettingsSync(feature: String, key
         feature == "layout_settings" && keyName in localOnlyLayoutProfileSettingsKeys -> true
         feature == "layout_settings" && keyName == "search_discover_enabled" -> true
         feature == PLAYER_SETTINGS_FEATURE && keyName in localOnlyPlayerProfileSettingsKeys -> true
+        feature == PluginDataStore.FEATURE && keyName != PluginDataStore.GROUP_STREAMS_BY_REPOSITORY -> true
         keyName in credentialProfileSettingsKeys[feature].orEmpty() -> true
         else -> false
     }
@@ -193,6 +195,7 @@ class ProfileSettingsSyncService @Inject constructor(
         ExperienceModeDataStore.FEATURE,
         PLAYER_SETTINGS_FEATURE,
         StreamBadgeSettingsDataStore.FEATURE,
+        PluginDataStore.FEATURE,
         "trailer_settings",
         "tmdb_settings",
         "mdblist_settings",
@@ -233,19 +236,21 @@ class ProfileSettingsSyncService @Inject constructor(
         syncMutex.withLock {
             try {
                 val profileId = profileManager.activeProfileId.value
+                val inheritedPluginSettingsApplied = pullInheritedPluginSettings(profileId)
                 val blob = pullProfileFromRemote(profileId)
                 lastForegroundPullAtMs = SystemClock.elapsedRealtime()
                 if (blob == null) {
                     Log.d(TAG, "No remote profile settings blob for profile $profileId; keeping local settings")
-                    return@withLock Result.success(false)
+                    return@withLock Result.success(inheritedPluginSettingsApplied)
                 }
 
-                val featuresJson = blob["features"]?.jsonObject ?: return@withLock Result.success(false)
+                val featuresJson = blob["features"]?.jsonObject
+                    ?: return@withLock Result.success(inheritedPluginSettingsApplied)
                 val remoteSignature = buildSettingsSignature(featuresJson)
                 val localSignature = buildSettingsSignature(profileId)
                 if (remoteSignature == localSignature) {
                     Log.d(TAG, "Remote profile settings already match local for profile $profileId")
-                    return@withLock Result.success(false)
+                    return@withLock Result.success(inheritedPluginSettingsApplied)
                 }
 
                 applySettingsBlob(profileId, featuresJson, remoteSignature)
@@ -410,6 +415,29 @@ class ProfileSettingsSyncService @Inject constructor(
         }
     }
 
+    private suspend fun pullInheritedPluginSettings(profileId: Int): Boolean {
+        val profile = profileManager.profiles.value.firstOrNull { it.id == profileId }
+        if (profileId == 1 || profile?.usesPrimaryPlugins != true) return false
+        val features = pullProfileFromRemote(1)?.get("features") as? JsonObject ?: return false
+        val pluginSettings = features[PluginDataStore.FEATURE] as? JsonObject ?: return false
+        return importPluginSettings(1, pluginSettings)
+    }
+
+    private suspend fun importPluginSettings(profileId: Int, featureJson: JsonObject): Boolean {
+        val keyName = PluginDataStore.GROUP_STREAMS_BY_REPOSITORY
+        val encoded = featureJson[keyName] as? JsonObject ?: return false
+        if ((encoded["type"] as? JsonPrimitive)?.contentOrNull != "boolean") return false
+        val enabled = (encoded["value"] as? JsonPrimitive)?.contentOrNull?.toBooleanStrictOrNull()
+            ?: return false
+        var changed = false
+        profileDataStoreFactory.get(profileId, PluginDataStore.FEATURE).edit { prefs ->
+            val key = booleanPreferencesKey(keyName)
+            changed = prefs[key] != enabled
+            prefs[key] = enabled
+        }
+        return changed
+    }
+
     private suspend fun copyProviderCredentialsLocally(sourceProfileId: Int, targetProfileId: Int) {
         credentialProfileSettingsKeys.forEach { (feature, keyNames) ->
             val sourcePreferences = profileDataStoreFactory.get(sourceProfileId, feature).data.first()
@@ -452,6 +480,10 @@ class ProfileSettingsSyncService @Inject constructor(
         try {
             syncedFeatures.forEach { feature ->
                 val featureJson = featuresJson[feature]?.jsonObject ?: return@forEach
+                if (feature == PluginDataStore.FEATURE) {
+                    importPluginSettings(profileId, featureJson)
+                    return@forEach
+                }
                 profileDataStoreFactory.get(profileId, feature).edit { mutablePrefs ->
                     val preservedEntries = captureLocalOnlyPreferenceEntries(feature, mutablePrefs)
                     val priorDiscoverLocation = if (feature == "layout_settings") {
@@ -533,8 +565,8 @@ class ProfileSettingsSyncService @Inject constructor(
                         signatures.joinToString(separator = "||")
                     }
                 }
-                .drop(1)
                 .distinctUntilChanged()
+                .drop(1)
                 .debounce(SETTINGS_PUSH_DEBOUNCE_MS)
                 .collect { signature ->
                     if (!authManager.isAuthenticated) return@collect

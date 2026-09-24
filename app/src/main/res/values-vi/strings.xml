@@ -233,8 +233,9 @@
     <string name="detail_tab_ratings">Điểm đánh giá</string>
     <string name="detail_tab_more_like_this">Nội dung tương tự</string>
     <string name="detail_tab_trailer">Trailer</string>
-    <string name="detail_more_like_this_powered_by_tmdb">Gợi ý từ TMDB</string>
-    <string name="detail_more_like_this_powered_by_trakt">Gợi ý từ Trakt</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Cung cấp bởi TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Cung cấp bởi Trakt</string>
+    <string name="detail_more_like_this_powered_by_simkl">Cung cấp bởi Simkl</string>
     <string name="detail_comments_title">Bình luận</string>
     <string name="detail_comments_subtitle">Đánh giá và bình luận từ Trakt</string>
     <string name="detail_comments_subtitle_episode">Đánh giá từ Trakt cho M%1$dT%2$d</string>
@@ -571,7 +572,7 @@
     <string name="network_latency_label">Độ trễ</string>
     <string name="network_download_label">Tải xuống</string>
     <string name="network_error_prefix">Lỗi: %1$s</string>
-    <string name="network_powered_by_fast">Được cung cấp bởi fast.com</string>
+    <string name="network_powered_by_fast">Cung cấp bởi fast.com</string>
     <string name="network_connection_wifi">Wi-Fi</string>
     <string name="network_connection_ethernet">Mạng có dây</string>
     <string name="network_connection_offline">Ngoại tuyến</string>
@@ -1134,6 +1135,15 @@
     <string name="layout_custom_poster_qr">Thiết lập qua điện thoại</string>
     <string name="custom_poster_qr_instruction">Quét mã QR bằng điện thoại để dán mẫu URL poster</string>
 
+    <!-- Custom Poster URL - Screen Toggles -->
+    <string name="layout_custom_poster_apply_to">Áp dụng poster tùy chỉnh cho:</string>
+    <string name="layout_custom_poster_screen_home">Trang chủ</string>
+    <string name="layout_custom_poster_screen_continue_watching">Tiếp tục xem</string>
+    <string name="layout_custom_poster_screen_collections">Bộ sưu tập</string>
+    <string name="layout_custom_poster_screen_library">Thư viện</string>
+    <string name="layout_custom_poster_screen_search">Tìm kiếm</string>
+    <string name="layout_custom_poster_screen_details">Màn hình chi tiết</string>
+
     <!-- Custom Poster Web Page -->
     <string name="web_custom_poster_title">Nguồn poster tùy chỉnh</string>
     <string name="web_custom_poster_subtitle">Dán mẫu URL poster vào bên dưới và nhấn Lưu.</string>
@@ -1469,6 +1479,7 @@
     <string name="trakt_more_like_this_source_dialog_subtitle">Chọn nguồn đề xuất hiển thị trên các trang chi tiết</string>
     <string name="trakt_more_like_this_source_trakt">Trakt</string>
     <string name="trakt_more_like_this_source_tmdb">TMDB</string>
+    <string name="trakt_more_like_this_source_simkl">Simkl</string>
     <string name="trakt_cached_label">Đã lưu bộ nhớ đệm</string>
     <string name="trakt_stat_movies">Phim</string>
     <string name="trakt_stat_shows">Chương trình</string>

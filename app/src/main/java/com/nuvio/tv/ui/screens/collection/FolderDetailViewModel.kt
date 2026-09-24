@@ -26,6 +26,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.domain.model.enabledAddons
+import com.nuvio.tv.domain.model.findCollectionCatalog
 import com.nuvio.tv.domain.model.mergeCatalogPage
 import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
@@ -262,11 +263,11 @@ class FolderDetailViewModel @Inject constructor(
                 val (name, typeLabel, rawType) = when (source) {
                     is AddonCatalogCollectionSource -> {
                         val addon = addons.find { it.id == source.addonId }
-                        val catalog = addon?.catalogs?.find { it.id == source.catalogId && it.apiType == source.type }
-                            ?: addon?.catalogs?.find { it.id == source.catalogId.substringBefore(",") && it.apiType == source.type }
-                            ?: addons.firstNotNullOfOrNull { a -> a.catalogs.find { it.id == source.catalogId && it.apiType == source.type } }
+                        val catalog = addon?.catalogs?.findCollectionCatalog(source.type, source.catalogId)
+                            ?: addon?.catalogs?.findCollectionCatalog(source.type, source.catalogId.substringBefore(","))
+                            ?: addons.firstNotNullOfOrNull { a -> a.catalogs.findCollectionCatalog(source.type, source.catalogId) }
                         val labels = buildAddonTabLabels(source, catalog?.name)
-                        Triple(labels.first, labels.second, source.type)
+                        Triple(labels.first, labels.second, catalog?.apiType ?: source.type)
                     }
                     is TmdbCollectionSource -> Triple(source.title, buildTmdbTypeLabel(source), source.mediaType.value.toCollectionRawType())
                     is TraktCollectionSource -> Triple(source.title, buildTraktTypeLabel(source), source.mediaType.value.toCollectionRawType())
@@ -649,13 +650,13 @@ class FolderDetailViewModel @Inject constructor(
                 return@launch
             }
 
-            var catalog = addon.catalogs.find { it.id == source.catalogId && it.apiType == source.type }
-                ?: addon.catalogs.find { it.id == source.catalogId.substringBefore(",") && it.apiType == source.type }
+            var catalog = addon.catalogs.findCollectionCatalog(source.type, source.catalogId)
+                ?: addon.catalogs.findCollectionCatalog(source.type, source.catalogId.substringBefore(","))
             // If the catalog wasn't found in the declared addon, search all installed addons.
             var effectiveAddon: com.nuvio.tv.domain.model.Addon = addon
             if (catalog == null) {
                 for (a in addons) {
-                    val match = a.catalogs.find { it.id == source.catalogId && it.apiType == source.type }
+                    val match = a.catalogs.findCollectionCatalog(source.type, source.catalogId)
                     if (match != null) {
                         effectiveAddon = a
                         catalog = match
@@ -678,7 +679,7 @@ class FolderDetailViewModel @Inject constructor(
                 addonName = effectiveAddon.displayName,
                 catalogId = source.catalogId,
                 catalogName = catalogName,
-                type = source.type,
+                type = catalog?.apiType ?: source.type,
                 skip = 0,
                 skipStep = skipStep,
                 extraArgs = extraArgs,

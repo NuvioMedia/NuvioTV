@@ -1,5 +1,7 @@
 package com.nuvio.tv.core.sync
 
+import com.nuvio.tv.domain.model.catalogTypeKey
+import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.Collection
@@ -24,7 +26,7 @@ private data class HomeCatalogSyncEntry(
 )
 
 internal fun homeCatalogKey(addonId: String, type: String, catalogId: String): String {
-    return "${addonId}_${type}_${catalogId}"
+    return catalogRowLegacyKey(addonId, type, catalogId)
 }
 
 internal fun homeCollectionKey(collectionId: String): String {
@@ -37,7 +39,7 @@ internal fun homeLegacyDisabledCatalogKey(
     catalogId: String,
     catalogName: String
 ): String {
-    return "${addonBaseUrl}_${type}_${catalogId}_${catalogName}"
+    return "${addonBaseUrl}_${catalogTypeKey(type)}_${catalogId}_${catalogName}"
 }
 
 internal fun hasLegacyHomeCatalogDisabledKeyFormat(key: String): Boolean {

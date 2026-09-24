@@ -2,7 +2,6 @@ package com.nuvio.tv.ui.screens.search
 
 import android.content.Context
 import com.nuvio.tv.core.network.NetworkResult
-import com.nuvio.tv.core.poster.CustomPosterScreen
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.SearchHistoryDataStore
 import com.nuvio.tv.data.local.WatchedSeriesStateHolder
@@ -586,7 +585,7 @@ class SearchViewModelSuggestionsTest {
             skipStep: Int,
             extraArgs: Map<String, String>,
             supportsSkip: Boolean,
-            posterScreen: CustomPosterScreen
+            posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
         ): Flow<NetworkResult<CatalogRow>> = flow {
             emit(NetworkResult.Loading)
             if (catalogId in slowCatalogs) delay(100)
