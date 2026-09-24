@@ -479,7 +479,7 @@
     <string name="tracking_status_waiting">ממתין לאישור</string>
     <string name="tracking_status_connecting">מתחבר</string>
     <string name="tracking_finish_connection">השלם את אישור החיבור</string>
-    <string name="tracking_connecting_provider">מתחיל חיבור ל-%1$s\…</string>
+    <string name="tracking_connecting_provider">מתחיל חיבור ל-%1$s…</string>
     <string name="tracking_watch_progress_dialog_subtitle">בחר את השירות ש-Nuvio קוראת ממנו להמשך צפייה. הסקרובלינג נשאר פעיל עבור כל שירות מחובר.</string>
     <string name="tracking_library_source_dialog_subtitle">בחר את השירות ש-Nuvio קוראת ממנו את הספרייה שלך. הצפייה מסונכרנת לכל שירות מחובר.</string>
     <string name="tracking_trakt_progress_required">זמין כאשר Trakt הוא מקור התקדמות הצפייה</string>
@@ -2618,7 +2618,7 @@
     <string name="collections_editor_tmdb_quick_companies">אולפנים מהירים</string>
     <string name="collections_editor_tmdb_quick_networks">רשתות מהירות</string>
     <string name="collections_editor_tmdb_genres">מזהי ז׳אנר</string>
-    <string name="collections_editor_tmdb_genres_helper">יש להשתמש במספרי ז'אנר של TMDB. הפרדה בפסיקים עבור AND, או בקווים אנכיים עבור OR.</string>
+    <string name="collections_editor_tmdb_genres_helper">יש להשתמש במספרי ז\'אנר של TMDB. הפרדה בפסיקים עבור AND, או בקווים אנכיים עבור OR.</string>
     <string name="collections_editor_tmdb_without_genres">מזהי ז׳אנר מוחרגים</string>
     <string name="collections_editor_tmdb_without_genres_helper">Exclude titles matching these TMDB genre numbers.</string>
     <string name="collections_editor_tmdb_date_from">תאריך יציאה או שידור מ-</string>
@@ -2901,10 +2901,10 @@
     <string name="error_open_browser_failed">פתיחת הדפדפן נכשלה</string>
     <string name="simkl_missing_credentials">חסר SIMKL_CLIENT_ID</string>
     <string name="simkl_status_enter_code">הזן את הקוד באתר Simkl כדי להשלים את החיבור</string>
-    <string name="simkl_status_waiting">ממתין לאישור Simkl\…</string>
+    <string name="simkl_status_waiting">ממתין לאישור Simkl…</string>
     <string name="simkl_status_connected">מחובר ל-Simkl</string>
     <string name="simkl_status_disconnected">מנותק מ-Simkl</string>
-    <string name="simkl_status_syncing">מסתנכרן עם Simkl\…</string>
+    <string name="simkl_status_syncing">מסתנכרן עם Simkl…</string>
     <string name="simkl_status_synced">סנכרון Simkl הושלם</string>
     <string name="simkl_watch_progress_selected">Simkl נבחר ל\"המשך צפייה\"</string>
     <string name="simkl_library_source_selected">Simkl נבחר ל\"ספרייה\"</string>
