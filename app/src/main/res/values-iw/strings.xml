@@ -1140,7 +1140,7 @@
     <string name="web_custom_poster_title">מקור פוסטרים מותאם אישית</string>
     <string name="web_custom_poster_subtitle">יש להדביק למטה תבנית כתובת URL לפוסטר וללחוץ על שמירה.</string>
     <string name="web_custom_poster_label">תבנית URL</string>
-    <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&id_type={id_type}&type={type}</string>
+    <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
     <string name="web_custom_poster_save">שמירה</string>
     <string name="web_custom_poster_clear">ניקוי</string>
     <string name="web_custom_poster_saved">נשמר!</string>
