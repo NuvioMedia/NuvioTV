@@ -268,33 +268,40 @@ fun AdvancedSettingsContent(
                     return@launch
                 }
 
+                val measureChunkBytes =
+                    com.nuvio.tv.data.local.PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB.toLong() * 1024L
+
                 streamTestState = "Parallel1"
                 streamParallel1Speed = com.nuvio.tv.core.network.StreamSpeedTester.runParallelChunkTest(
                     lastStreamUrl,
                     lastHeadersMap,
-                    1 * 1024 * 1024L
-                )
+                    chunkSizeBytes = measureChunkBytes,
+                    parallelConnections = 1
+                ).mbps
 
                 streamTestState = "Parallel4"
                 streamParallel4Speed = com.nuvio.tv.core.network.StreamSpeedTester.runParallelChunkTest(
                     lastStreamUrl,
                     lastHeadersMap,
-                    4 * 1024 * 1024L
-                )
+                    chunkSizeBytes = measureChunkBytes,
+                    parallelConnections = 4
+                ).mbps
 
                 streamTestState = "Parallel8"
                 streamParallel8Speed = com.nuvio.tv.core.network.StreamSpeedTester.runParallelChunkTest(
                     lastStreamUrl,
                     lastHeadersMap,
-                    8 * 1024 * 1024L
-                )
+                    chunkSizeBytes = measureChunkBytes,
+                    parallelConnections = 8
+                ).mbps
 
                 streamTestState = "Parallel16"
                 streamParallel16Speed = com.nuvio.tv.core.network.StreamSpeedTester.runParallelChunkTest(
                     lastStreamUrl,
                     lastHeadersMap,
-                    16 * 1024 * 1024L
-                )
+                    chunkSizeBytes = measureChunkBytes,
+                    parallelConnections = 16
+                ).mbps
 
                 streamTestState = "Done"
             } catch (e: java.lang.Exception) {

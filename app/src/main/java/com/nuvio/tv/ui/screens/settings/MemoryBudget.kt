@@ -26,8 +26,9 @@ object MemoryBudget {
     private const val LOW_RAM_CONVERSION_RATIO = 0.95f
     private const val HIGH_RAM_CONVERSION_RATIO = 0.75f
 
-    /** ParallelRangeDataSource schedules maxAhead = parallelConnections + 1 chunks concurrently */
     private const val BUFFER_OVERHEAD = 2
+    private const val PREFETCH_DEPTH_LOWER_MULTIPLE = 2
+    private const val PREFETCH_DEPTH_UPPER_MULTIPLE = 4
 
     const val MIN_CONNECTIONS = 2
     const val MAX_CONNECTIONS = 4
@@ -80,18 +81,30 @@ object MemoryBudget {
     fun effectiveBufferMb(stored: Int): Int =
         if (stored > 0) stored else defaultBufferSizeMb
 
-    /**
-     * Number of chunk-sized buffers alive concurrently in ParallelRangeDataSource.
-     * Accounts for active chunks (connectionCount) and idle recycled buffers in the pool (connectionCount).
-     */
     fun bufferCount(connectionCount: Int): Int =
-        connectionCount * 2
+        connectionCount + BUFFER_OVERHEAD
 
     fun parallelOverheadMb(connectionCount: Int, chunkSizeMb: Int): Int =
         bufferCount(connectionCount) * chunkSizeMb
 
     fun totalUsageMb(bufferMb: Int, connectionCount: Int, chunkSizeMb: Int, parallelEnabled: Boolean): Int =
         bufferMb + if (parallelEnabled) parallelOverheadMb(connectionCount, chunkSizeMb) else 0
+
+    fun prefetchDepthChunks(
+        connections: Int,
+        chunkSizeMb: Int,
+        safeNativeLimitMb: Int,
+        reserveBufferMb: Int,
+    ): Int {
+        val chunkMb = chunkSizeMb.coerceAtLeast(1)
+        val chunkBudgetMb = (safeNativeLimitMb - reserveBufferMb.coerceAtLeast(0))
+            .coerceAtLeast(chunkMb * PREFETCH_DEPTH_LOWER_MULTIPLE)
+        val byBudget = chunkBudgetMb / chunkMb
+        return byBudget.coerceIn(
+            connections * PREFETCH_DEPTH_LOWER_MULTIPLE,
+            connections * PREFETCH_DEPTH_UPPER_MULTIPLE
+        )
+    }
 
     /** Hard chunk-size ceiling for this device tier; binds everywhere, including performance mode. */
     val tierMaxChunkMb: Int = if (isLowRamTier) LOW_RAM_MAX_CHUNK_MB else MAX_CHUNK_MB
