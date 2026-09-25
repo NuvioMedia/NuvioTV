@@ -576,7 +576,7 @@ internal fun buildCollectionFolderItem(
 }
 
 internal fun continueWatchingItemKey(item: ContinueWatchingItem): String {
-    return when (item) {
+    return item.shuffleFocusKey ?: when (item) {
         is ContinueWatchingItem.InProgress ->
             "cw_inprogress_${item.progress.contentId}_${item.progress.season ?: -1}_${item.progress.episode ?: -1}"
         is ContinueWatchingItem.NextUp ->

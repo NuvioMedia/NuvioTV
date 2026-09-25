@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.screens.home.shuffleFocusKey
+
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -246,7 +248,7 @@ fun ContinueWatchingSection(
             itemsIndexed(
                 items = items,
                 key = { _, progress ->
-                    when (progress) {
+                    progress.shuffleFocusKey ?: when (progress) {
                         is ContinueWatchingItem.InProgress ->
                             "cw_${progress.progress.contentId}_${progress.progress.videoId}_${progress.progress.season ?: -1}_${progress.progress.episode ?: -1}"
                         is ContinueWatchingItem.NextUp ->
@@ -695,6 +697,7 @@ fun ContinueWatchingCard(
                 badgeText = badgeText,
                 badgeBackground = badgeBackground,
                 showBadge = progress == null,
+                shufflePlayback = item.shufflePlayback,
                 progressFraction = progressFraction,
                 hasProgress = progress != null,
                 onImageError = {
@@ -799,6 +802,8 @@ fun ContinueWatchingCard(
                         }
                     )
                 }
+
+                if (item.shufflePlayback) EpisodeShuffleBadge(Modifier.align(Alignment.TopStart))
 
                 // Content info at bottom
                 if (!textBelowArtwork) {
@@ -938,6 +943,7 @@ private fun WideCardContent(
     badgeText: String,
     badgeBackground: Color,
     showBadge: Boolean,
+    shufflePlayback: Boolean,
     progressFraction: Float,
     hasProgress: Boolean,
     onImageError: () -> Unit
@@ -976,6 +982,7 @@ private fun WideCardContent(
                     onError = { onImageError() }
                 )
             }
+            if (shufflePlayback) EpisodeShuffleBadge(Modifier.align(Alignment.TopStart))
         }
 
         Column(

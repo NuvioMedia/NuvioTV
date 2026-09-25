@@ -6,27 +6,6 @@ Thanks for helping improve NuvioTV.
 
 These rules are enforced strictly. Issues and PRs that do not follow them will be closed without review.
 
-## Current PR policy (2026-05-23)
-
-We are currently focusing on getting NuvioTV ready for a stable release.
-
-Until further notice, please do not open:
-
-- Feature requests
-- Feature additions
-- UI changes
-- Refactors
-- Other non-critical changes
-
-Pull requests are accepted only for:
-
-- Localization/translation updates
-- Critical bug fixes with a linked issue, reproduction steps, and testing notes
-
-Anything outside this scope may be closed or deferred without review.
-
-Currently open PRs are not automatically exempt from this policy. Only selected PRs may be considered internally if they directly support the stable release.
-
 ---
 
 ## What PRs are for
@@ -39,12 +18,13 @@ Pull requests are accepted only when they fit one of these categories:
 - Small maintenance work that does not change UI, UX, behavior, dependencies, architecture, or public contracts
 - Small documentation fixes that improve accuracy
 - Translation/localization updates
+- Larger or directional changes with a linked, approved feature request
 
 Pull requests are not accepted for:
 
-- New major features
-- Product direction changes
-- UX/UI redesigns
+- New features without prior approval
+- Product direction changes without prior approval
+- UX/UI redesigns without prior approval
 - Cosmetic-only UI changes
 - "Minor polish" changes to colors, spacing, typography, icons, copy, layout, animations, or visual style
 - Behavior changes that are not tied to a reproducible bug or approved feature request
@@ -59,7 +39,7 @@ Translation PRs are allowed, as long as they stay focused on translation/localiz
 
 Do not open a pull request for a UI change just because it looks better, cleaner, more modern, or more consistent to you.
 
-UI PRs are accepted only when they fix a specific, documented glitch or bug, such as:
+UI PRs need explicit maintainer approval unless they fix a specific, documented glitch or bug, such as:
 
 - Broken layout
 - Overlapping or clipped text
@@ -69,12 +49,14 @@ UI PRs are accepted only when they fix a specific, documented glitch or bug, suc
 - A visible regression from a previous version
 - A crash, blank screen, or unusable screen caused by UI code
 
-Every UI PR must include:
+Every UI bug-fix PR must include:
 
 - A linked bug issue
 - A short explanation of the exact glitch being fixed
 - Before and after screenshots or a short video
 - The smallest possible change that fixes the glitch
+
+For approved UI changes, link the approved feature request and include before and after screenshots or a short video.
 
 Cosmetic-only UI PRs will be closed, even if the change is small.
 
@@ -158,7 +140,7 @@ Please include:
 - Your proposed solution
 - Alternatives considered (if any)
 
-Opening a feature request does **not** mean a pull request will be accepted for it. If the feature affects product scope, UX direction, or adds a significant new surface area, do not start implementation unless a maintainer explicitly approves it first.
+Opening a feature request does **not** mean a pull request will be accepted for it. Do not start implementation unless a maintainer explicitly approves it first.
 
 **Large changes require an approved feature request before any PR is submitted.** See the [Large PRs and large changes](#large-prs-and-large-changes) section above.
 
@@ -169,11 +151,11 @@ Opening a feature request does **not** mean a pull request will be accepted for 
 Please make sure your PR is all of the following:
 
 - Allowed by this policy
-- Small in scope and focused on one problem
+- Focused on one problem, with approval for any larger scope
 - Clearly aligned with the current direction of the project
 - Not cosmetic-only
 - Not changing behavior unless it fixes a linked bug or has explicit approval
-- Not changing UI unless it fixes a linked glitch/bug and includes visual proof
+- Not changing UI unless it fixes a linked glitch/bug or has explicit approval, with visual proof either way
 - Not bundling refactors, cleanups, or drive-by changes with a bug fix
 - Tested manually and/or automatically in a way that matches the risk
 - Linked to an approved feature request issue if large, directional, or non-trivial
