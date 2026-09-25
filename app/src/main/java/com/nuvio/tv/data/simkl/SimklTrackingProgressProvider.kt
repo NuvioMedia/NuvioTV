@@ -126,5 +126,8 @@ class SimklTrackingProgressProvider @Inject constructor(
 internal fun checkWatchedByVideoId(
     snapshot: SimklSyncSnapshot,
     videoId: String,
-    episode: Int
-): Boolean = SimklSnapshotProjection.create(snapshot).isWatchedByVideoId(videoId, episode)
+    episode: Int,
+    completionThresholdFraction: Float? = null
+): Boolean = SimklSnapshotProjection
+    .create(snapshot, completionThresholdFraction)
+    .isWatchedByVideoId(videoId, episode)

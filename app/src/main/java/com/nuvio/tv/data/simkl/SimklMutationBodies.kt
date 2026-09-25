@@ -41,8 +41,11 @@ fun buildSimklListMutationBody(
 
 fun buildSimklHistoryMutationBody(
     items: Collection<TrackingHistoryItem>,
+    isRewatch: Boolean = false,
     json: Json = SimklMutationJson
-): String = json.encodeToString(buildHistoryRequest(items, includeWatchedAt = true))
+): String = json.encodeToString(
+    buildHistoryRequest(items, includeWatchedAt = true, isRewatch = isRewatch)
+)
 
 fun buildSimklHistoryRemovalBody(
     items: Collection<TrackingMediaReference>,
@@ -50,7 +53,8 @@ fun buildSimklHistoryRemovalBody(
 ): String = json.encodeToString(
     buildHistoryRequest(
         items = items.map { media -> TrackingHistoryItem(media = media) },
-        includeWatchedAt = false
+        includeWatchedAt = false,
+        isRewatch = false
     )
 )
 
@@ -82,25 +86,28 @@ fun buildSimklScrobbleBody(
 
 private fun buildHistoryRequest(
     items: Collection<TrackingHistoryItem>,
-    includeWatchedAt: Boolean
+    includeWatchedAt: Boolean,
+    isRewatch: Boolean
 ): SimklHistoryMutationRequestDto {
     val movies = items.filter { item -> item.media.kind == TrackingMediaKind.MOVIE }
         .map { item ->
             item.media.toHistoryItemDto(
                 watchedAtEpochMs = item.watchedAtEpochMs.takeIf { includeWatchedAt },
-                includeWatchedAt = includeWatchedAt
+                includeWatchedAt = includeWatchedAt,
+                isRewatch = isRewatch
             )
         }
     val shows = items.filter { item -> item.media.kind != TrackingMediaKind.MOVIE }
         .groupBy { item -> item.media.stableKey }
         .values
-        .map { matchingItems -> buildShowHistoryItem(matchingItems, includeWatchedAt) }
+        .map { matchingItems -> buildShowHistoryItem(matchingItems, includeWatchedAt, isRewatch) }
     return SimklHistoryMutationRequestDto(movies = movies, shows = shows)
 }
 
 private fun buildShowHistoryItem(
     items: List<TrackingHistoryItem>,
-    includeWatchedAt: Boolean
+    includeWatchedAt: Boolean,
+    isRewatch: Boolean
 ): SimklHistoryItemDto {
     val first = items.first()
     val parentMutation = items.lastOrNull { item -> item.media.episode == null }
@@ -108,7 +115,8 @@ private fun buildShowHistoryItem(
         return parentMutation.media.toHistoryItemDto(
             watchedAtEpochMs = parentMutation.watchedAtEpochMs.takeIf { includeWatchedAt },
             includeWatchedAt = includeWatchedAt,
-            status = if (includeWatchedAt) TrackingListStatus.COMPLETED.wireValue else null
+            status = if (includeWatchedAt) TrackingListStatus.COMPLETED.wireValue else null,
+            isRewatch = isRewatch
         )
     }
 
@@ -137,7 +145,8 @@ private fun buildShowHistoryItem(
         includeWatchedAt = includeWatchedAt,
         episodes = flatEpisodes,
         seasons = seasons,
-        useTvdbAnimeSeasons = first.media.kind == TrackingMediaKind.ANIME && seasons.isNotEmpty()
+        useTvdbAnimeSeasons = first.media.kind == TrackingMediaKind.ANIME && seasons.isNotEmpty(),
+        isRewatch = isRewatch
     )
 }
 
@@ -147,7 +156,8 @@ private fun TrackingMediaReference.toHistoryItemDto(
     status: String? = null,
     episodes: List<SimklEpisodeMutationDto> = emptyList(),
     seasons: List<SimklSeasonMutationDto> = emptyList(),
-    useTvdbAnimeSeasons: Boolean = false
+    useTvdbAnimeSeasons: Boolean = false,
+    isRewatch: Boolean = false
 ): SimklHistoryItemDto = SimklHistoryItemDto(
     title = title.nonBlankOrNull(),
     year = year,
@@ -156,7 +166,8 @@ private fun TrackingMediaReference.toHistoryItemDto(
     status = status,
     episodes = episodes,
     seasons = seasons,
-    useTvdbAnimeSeasons = useTvdbAnimeSeasons
+    useTvdbAnimeSeasons = useTvdbAnimeSeasons,
+    isRewatch = isRewatch.takeIf { it }
 )
 
 private fun TrackingMediaReference.toScrobbleMediaDto(): SimklScrobbleMediaDto =
@@ -256,7 +267,8 @@ private data class SimklHistoryItemDto(
     val status: String? = null,
     val episodes: List<SimklEpisodeMutationDto> = emptyList(),
     val seasons: List<SimklSeasonMutationDto> = emptyList(),
-    @SerialName("use_tvdb_anime_seasons") val useTvdbAnimeSeasons: Boolean = false
+    @SerialName("use_tvdb_anime_seasons") val useTvdbAnimeSeasons: Boolean = false,
+    @SerialName("is_rewatch") val isRewatch: Boolean? = null
 )
 
 @Serializable

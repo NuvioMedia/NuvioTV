@@ -931,6 +931,54 @@ internal fun formatTrackingDuration(valueMs: Long): String {
     }
 }
 
+/**
+ * Shown when a free Simkl account tries to turn rewatch recording on.
+ *
+ * Simkl stores rewatch sessions for Pro and VIP accounts only, so the picker keeps its previous value
+ * until the plan allows the change. Mobile opens the page with the Pro offer through `LocalUriHandler`,
+ * which TV does not have at this layer, so the link is opened through an `Intent` in `runCatching`,
+ * the same as TV does elsewhere, and a failed open is reported in the dialog, not a silent click.
+ */
+@Composable
+internal fun SimklRewatchUpgradeDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var browserFailed by remember { mutableStateOf(false) }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.settings_tracking_rewatch_pro_title),
+        subtitle = stringResource(R.string.settings_tracking_rewatch_pro_description),
+        width = 560.dp,
+        suppressFirstKeyUp = false
+    ) {
+        if (browserFailed) {
+            Text(
+                text = stringResource(R.string.error_open_browser_failed),
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.Error
+            )
+        }
+        SettingsDialogActionRow {
+            SettingsDialogActionButton(
+                text = stringResource(R.string.settings_tracking_rewatch_pro_not_now),
+                onClick = onDismiss
+            )
+            SettingsDialogActionButton(
+                text = stringResource(R.string.settings_tracking_rewatch_pro_upgrade),
+                onClick = {
+                    browserFailed = false
+                    val opened = runCatching {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SIMKL_VIP_URL)))
+                    }.isSuccess
+                    browserFailed = !opened
+                },
+                primary = true
+            )
+        }
+    }
+}
+
+private const val SIMKL_VIP_URL = "https://simkl.com/vip/"
 private const val TRAKT_ACTIVATION_URL = "https://trakt.tv/activate"
 private const val SIMKL_WEBSITE_URL = "https://simkl.com"
 private const val SIMKL_SYNC_GUIDE_URL = "https://api.simkl.org/guides/sync"

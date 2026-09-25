@@ -1,13 +1,19 @@
 package com.nuvio.tv.data.simkl
 
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 
 class SimklSyncEngine internal constructor(
     private val remote: SimklSyncRemote,
+    private val settingsDataStore: TraktSettingsDataStore,
     private val nowEpochMs: () -> Long
 ) {
     @Inject
-    constructor(remote: SimklSyncRemote) : this(remote, System::currentTimeMillis)
+    constructor(
+        remote: SimklSyncRemote,
+        settingsDataStore: TraktSettingsDataStore
+    ) : this(remote, settingsDataStore, System::currentTimeMillis)
 
     suspend fun synchronize(current: SimklSyncSnapshot): SimklSyncSnapshot {
         if (!current.isInitialized) return initialSync()
@@ -38,11 +44,14 @@ class SimklSyncEngine internal constructor(
             current.playback
         }
         val now = nowEpochMs()
+        val rewatch = readRewatchRuns(current)
         return current.copy(
             watermark = activities.all,
             activities = activities,
             entries = entries,
             playback = playback,
+            rewatchRuns = rewatch.runs,
+            rewatchSessions = rewatch.sessions,
             lastSyncedAtEpochMs = now,
             lastCheckedAtEpochMs = now
         ).reconcileWatchedPlayback()
@@ -57,16 +66,50 @@ class SimklSyncEngine internal constructor(
         val playback = remote.fetchPlayback()
         val activities = remote.fetchActivities()
         val now = nowEpochMs()
+        val rewatch = readRewatchRuns(current = null)
         return SimklSyncSnapshot(
             isInitialized = true,
             watermark = activities.all,
             activities = activities,
             entries = entries.distinctBy(SimklLibraryEntry::stableKey),
             playback = playback,
+            rewatchRuns = rewatch.runs,
+            rewatchSessions = rewatch.sessions,
             lastSyncedAtEpochMs = now,
             lastCheckedAtEpochMs = now
         ).reconcileWatchedPlayback()
     }
+
+    /**
+     * Reads the rewatch sessions of the account, keeps them, and turns them into runs.
+     *
+     * A failed read keeps what the previous sync found: losing the network must not empty the
+     * Continue Watching cards the user is looking at.
+     */
+    private suspend fun readRewatchRuns(current: SimklSyncSnapshot?): SimklRewatchRead =
+        runCatching {
+            val sessions = remote.fetchRewatchSessions()
+            SimklRewatchRead(
+                runs = deriveSimklRewatchRuns(
+                    entries = sessions,
+                    minimumRunEpisodes = minimumRewatchRunEpisodes()
+                ),
+                sessions = sessions
+            )
+        }.getOrElse {
+            SimklRewatchRead(
+                runs = current?.rewatchRuns.orEmpty(),
+                sessions = current?.rewatchSessions.orEmpty()
+            )
+        }
+
+    /*
+     * Difference from mobile: mobile reads `simklRewatchNextUpMode` from `TrackingSettingsRepository`.
+     * TV has no such `object` repository, so the mode is read from `TraktSettingsDataStore`, where the
+     * keys live. The read is therefore `suspend`, and the caller `readRewatchRuns` is `suspend` too.
+     */
+    private suspend fun minimumRewatchRunEpisodes(): Int? =
+        settingsDataStore.simklRewatchNextUpMode.first().minimumRunEpisodes
 }
 
 fun mergeSimklDelta(

@@ -169,6 +169,96 @@ class SimklAuthRepositoryTest {
         assertNull(harness.storage.state.value.error)
     }
 
+    @Test
+    fun `user settings store the plan the rewatch feature needs`() = runTest {
+        val harness = Harness(
+            response(200, """{"user":{"name":"viewer"},"account":{"id":42,"type":"pro"}}""")
+        )
+        harness.storage.completePinAuthorization("secret-token", harness.storage.currentScope())
+
+        assertEquals("viewer", harness.repository.refreshUserSettings())
+
+        assertEquals(42L, harness.storage.state.value.accountId)
+        assertEquals("pro", harness.storage.state.value.accountType)
+    }
+
+    @Test
+    fun `a plan that is missing or blank keeps the one already stored`() = runTest {
+        val harness = Harness(
+            response(200, """{"user":{"name":"viewer"},"account":{"id":42,"type":"vip"}}"""),
+            response(200, """{"user":{"name":"viewer"},"account":{"id":42}}"""),
+            response(200, """{"user":{"name":"viewer"},"account":{"id":42,"type":"   "}}""")
+        )
+        harness.storage.completePinAuthorization("secret-token", harness.storage.currentScope())
+
+        harness.repository.refreshUserSettings()
+        harness.repository.refreshUserSettings()
+        harness.repository.refreshUserSettings()
+
+        assertEquals("vip", harness.storage.state.value.accountType)
+    }
+
+    @Test
+    fun `an eligible plan is reused without reading the account again`() = runTest {
+        val harness = Harness()
+        harness.storage.completePinAuthorization("secret-token", harness.storage.currentScope())
+        harness.storage.saveIdentity("viewer", 42, accountType = "pro")
+
+        assertEquals("pro", harness.repository.ensurePlanLoaded())
+        assertTrue(harness.engine.requests.isEmpty())
+    }
+
+    @Test
+    fun `an unknown plan is read once and then reused`() = runTest {
+        val harness = Harness(
+            response(200, """{"user":{"name":"viewer"},"account":{"id":42,"type":"pro"}}""")
+        )
+        harness.storage.completePinAuthorization("secret-token", harness.storage.currentScope())
+
+        assertEquals("pro", harness.repository.ensurePlanLoaded())
+
+        val request = harness.engine.requests.single()
+        assertEquals("POST", request.method)
+        assertTrue(request.url.contains("/users/settings"))
+        assertEquals("Bearer secret-token", request.headers["Authorization"])
+
+        assertEquals("pro", harness.repository.ensurePlanLoaded())
+        assertEquals(1, harness.engine.requests.size)
+    }
+
+    @Test
+    fun `a plan that does not prove pro is read again so an upgrade is picked up`() = runTest {
+        val harness = Harness(
+            response(200, """{"user":{"name":"viewer"},"account":{"id":42,"type":"free"}}"""),
+            response(200, """{"user":{"name":"viewer"},"account":{"id":42,"type":"vip"}}""")
+        )
+        harness.storage.completePinAuthorization("secret-token", harness.storage.currentScope())
+
+        assertEquals("free", harness.repository.ensurePlanLoaded())
+        assertEquals("vip", harness.repository.ensurePlanLoaded())
+
+        assertEquals(2, harness.engine.requests.size)
+    }
+
+    @Test
+    fun `a failed plan read keeps the stored plan instead of throwing`() = runTest {
+        val harness = Harness(response(400, """{"error":"settings_unavailable"}"""))
+        harness.storage.completePinAuthorization("secret-token", harness.storage.currentScope())
+        harness.storage.saveIdentity("viewer", 42, accountType = "free")
+
+        assertEquals("free", harness.repository.ensurePlanLoaded())
+
+        assertEquals("free", harness.storage.state.value.accountType)
+    }
+
+    @Test
+    fun `a disconnected account reports the stored plan without a request`() = runTest {
+        val harness = Harness()
+
+        assertNull(harness.repository.ensurePlanLoaded())
+        assertTrue(harness.engine.requests.isEmpty())
+    }
+
     private class Harness(
         vararg responses: SimklRawHttpResponse,
         configuration: SimklApiConfiguration = SimklApiConfiguration("client-id", "nuvio", "1.0")
@@ -233,12 +323,14 @@ class SimklAuthRepositoryTest {
         override fun saveIdentity(
             username: String?,
             accountId: Long?,
+            accountType: String?,
             settingsActivityWatermark: String?,
             scope: SimklAuthScope
         ): Boolean = mutate(scope) { profile ->
             profile.state = profile.state.copy(
                 username = username,
                 accountId = accountId,
+                accountType = accountType ?: profile.state.accountType,
                 hasFetchedUserSettings = true,
                 settingsActivityWatermark = settingsActivityWatermark
                     ?: profile.state.settingsActivityWatermark

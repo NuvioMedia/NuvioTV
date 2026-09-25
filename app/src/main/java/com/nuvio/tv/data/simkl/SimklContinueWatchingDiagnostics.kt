@@ -120,6 +120,7 @@ internal fun buildSimklSeedDiagnosticReport(
     seeds: List<WatchProgress>,
     preferFurthestEpisode: Boolean,
     watchedProjection: SimklWatchedProjection = snapshot.toSimklWatchedProjection(),
+    completionThresholdFraction: Float? = null,
     aliasFor: (String) -> String = TrackingDiagnosticIdentity::alias
 ): SimklSeedDiagnosticReport {
     val watchedByContent = watchedProjection.items
@@ -127,7 +128,7 @@ internal fun buildSimklSeedDiagnosticReport(
         .groupBy { item -> item.contentId.diagnosticKey() }
     val seedsByContent = seeds.associateBy { progress -> progress.contentId.diagnosticKey() }
     val playbackByContent = snapshot.playback
-        .mapNotNull { session -> session.toWatchProgress(snapshot.entries) }
+        .mapNotNull { session -> session.toWatchProgress(snapshot.entries, completionThresholdFraction) }
         .groupBy { progress -> progress.contentId.diagnosticKey() }
     val seedOrder = seeds.withIndex().associate { (index, seed) ->
         seed.contentId.diagnosticKey() to index

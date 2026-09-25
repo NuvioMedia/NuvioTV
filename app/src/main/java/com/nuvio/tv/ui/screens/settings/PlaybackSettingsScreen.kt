@@ -898,7 +898,8 @@ internal fun SliderSettingsItem(
     subtitle: String? = null,
     onFocused: () -> Unit = {},
     enabled: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showStepper: Boolean = true
 ) {
     val span = (maxValue - minValue).toFloat()
     val progress = if (span > 0f) (value - minValue).toFloat() / span else 0f
@@ -918,6 +919,7 @@ internal fun SliderSettingsItem(
             val newValue = (value + step).coerceAtMost(maxValue)
             if (newValue != value) onValueChange(newValue)
         },
+        showStepper = showStepper,
         onFocused = onFocused,
         modifier = modifier,
     )
@@ -976,6 +978,7 @@ private fun SliderSettingsItemLayout(
     onIncrease: () -> Unit,
     onFocused: () -> Unit,
     modifier: Modifier,
+    showStepper: Boolean = true,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val contentAlpha = if (enabled) 1f else 0.4f
@@ -1076,41 +1079,21 @@ private fun SliderSettingsItemLayout(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                var decreaseFocused by remember { mutableStateOf(false) }
-                Card(
-                    onClick = { if (enabled) onDecrease() },
-                    modifier = Modifier
-                        .onFocusChanged { state ->
-                            val nowFocused = state.isFocused
-                            if (decreaseFocused != nowFocused) {
-                                decreaseFocused = nowFocused
-                                if (nowFocused) onFocused()
-                            }
-                        },
-                    colors = CardDefaults.colors(
-                        containerColor = NuvioTheme.colors.Background,
-                        focusedContainerColor = NuvioTheme.colors.Background
-                    ),
-                    border = CardDefaults.border(
-                        focusedBorder = Border(
-                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                            shape = CircleShape
-                        )
-                    ),
-                    shape = CardDefaults.shape(shape = CircleShape),
-                    scale = CardDefaults.scale(focusedScale = 1.1f)
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Remove,
-                            contentDescription = stringResource(R.string.cd_decrease),
-                            tint = (if (decreaseFocused) NuvioTheme.colors.OnPrimary else NuvioTheme.colors.TextPrimary).copy(alpha = contentAlpha),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                /*
+                 * Plus and minus are optional: the rewatch threshold asked for a row without them,
+                 * because on a remote the arrow keys move the value. Settings that do have them (the
+                 * stream selection timeout, for example) keep looking the same, because `showStepper`
+                 * defaults to `true`.
+                 */
+                if (showStepper) {
+                    SliderStepperButton(
+                        icon = Icons.Default.Remove,
+                        contentDescription = stringResource(R.string.cd_decrease),
+                        onClick = onDecrease,
+                        enabled = enabled,
+                        contentAlpha = contentAlpha,
+                        onFocused = onFocused
+                    )
                 }
 
                 Box(
@@ -1129,43 +1112,71 @@ private fun SliderSettingsItemLayout(
                     )
                 }
 
-                var increaseFocused by remember { mutableStateOf(false) }
-                Card(
-                    onClick = { if (enabled) onIncrease() },
-                    modifier = Modifier
-                        .onFocusChanged { state ->
-                            val nowFocused = state.isFocused
-                            if (increaseFocused != nowFocused) {
-                                increaseFocused = nowFocused
-                                if (nowFocused) onFocused()
-                            }
-                        },
-                    colors = CardDefaults.colors(
-                        containerColor = NuvioTheme.colors.Background,
-                        focusedContainerColor = NuvioTheme.colors.Background
-                    ),
-                    border = CardDefaults.border(
-                        focusedBorder = Border(
-                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                            shape = CircleShape
-                        )
-                    ),
-                    shape = CardDefaults.shape(shape = CircleShape),
-                    scale = CardDefaults.scale(focusedScale = 1.1f)
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(R.string.cd_increase),
-                            tint = (if (increaseFocused) NuvioTheme.colors.OnPrimary else NuvioTheme.colors.TextPrimary).copy(alpha = contentAlpha),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                if (showStepper) {
+                    SliderStepperButton(
+                        icon = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.cd_increase),
+                        onClick = onIncrease,
+                        enabled = enabled,
+                        contentAlpha = contentAlpha,
+                        onFocused = onFocused
+                    )
                 }
             }
+        }
+    }
+}
+
+/**
+ * The round plus or minus of a slider row, drawn the way this screen has always drawn it.
+ *
+ * Pulled out of `SliderSettingsItemLayout` so the same piece can also be left out: the rewatch
+ * threshold needs a row without plus and minus, because on a remote the arrow keys move the value.
+ */
+@Composable
+private fun SliderStepperButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    contentAlpha: Float,
+    onFocused: () -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    Card(
+        onClick = { if (enabled) onClick() },
+        modifier = Modifier
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
+            },
+        colors = CardDefaults.colors(
+            containerColor = NuvioTheme.colors.Background,
+            focusedContainerColor = NuvioTheme.colors.Background
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = CircleShape
+            )
+        ),
+        shape = CardDefaults.shape(shape = CircleShape),
+        scale = CardDefaults.scale(focusedScale = 1.1f)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(38.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = (if (isFocused) NuvioTheme.colors.OnPrimary else NuvioTheme.colors.TextPrimary).copy(alpha = contentAlpha),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

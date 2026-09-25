@@ -32,7 +32,39 @@ data class WatchProgress(
     override val trackingProviderItemId: String? = null,
     override val trackingSourceUrl: String? = null,
     val completionThresholdOverride: Float? = null,
-    val excludedNextUpSeasons: Set<Int> = emptySet()
+    val excludedNextUpSeasons: Set<Int> = emptySet(),
+    /**
+     * The threshold the row was reported with, as a fraction, for the rows where that number still
+     * decides something.
+     *
+     * A Simkl playback row is read back from the account and carries the completion threshold its
+     * write side reported it under, which is the user's `simklWatchedThresholdPercent` and not Simkl's
+     * own 80 percent. The field is what the row was reported with, not what the row is decided by:
+     * [isCompleted] short circuits on [isProviderPlaybackPosition] before it ever reads this number,
+     * because a row a provider keeps open is a position that does not complete on a percentage. For a
+     * row that is not a provider playback position this number is still the threshold it is read with,
+     * and [progressPercentage] is compared against it. Null keeps the default of the source
+     * ([COMPLETED_THRESHOLD], or [SIMKL_COMPLETED_THRESHOLD] for a Simkl playback row that arrived
+     * without one).
+     *
+     * Held next to [completionThresholdOverride], which a source sets for its own rows; both end up
+     * deciding the same thing, but they are filled in by different producers.
+     */
+    val completionThresholdFraction: Float? = null,
+    /**
+     * True for a row that is a position a provider keeps open, not a watch it recorded.
+     *
+     * Where such a playback ends is the credits marker of the release being played, and a row the
+     * provider publishes does not carry it, so its percentage alone cannot say the watch is over.
+     * Reading it as completed drops the position out of Continue Watching, which is why this row never
+     * completes on a percentage or a position. A watch the provider really recorded arrives as history
+     * instead, and that row supersedes this one.
+     *
+     * A Simkl playback row and a Simkl watch recorded into history share [SOURCE_SIMKL_PLAYBACK], so
+     * the flag is carried by the row the playback projection builds rather than derived from the
+     * source.
+     */
+    val isProviderPlaybackPosition: Boolean = false
 ) : TrackingAttributedItem {
     override val trackingContentId: String
         get() = contentId
@@ -62,18 +94,24 @@ data class WatchProgress(
         }
 
     /**
-     * Returns true if the content has been watched past the threshold (default 90%)
+     * Returns true if the content has been watched past the threshold (default 90%). A row a provider
+     * keeps open never completes on its percentage, whatever threshold it is read with, because where
+     * such a playback ends is the credits marker and the row does not carry one. Only a watch the
+     * provider really recorded, which arrives as history, completes such a row.
      */
-    fun isCompleted(threshold: Float = completionThreshold()): Boolean = progressPercentage >= threshold
+    fun isCompleted(threshold: Float = completionThreshold()): Boolean =
+        !isProviderPlaybackPosition && progressPercentage >= threshold
 
     /**
-     * Returns true if the content has been started but not completed
+     * Returns true if the content has been started but not completed. The complement of [isCompleted],
+     * so a row a provider keeps open stays resumable instead of falling between both answers.
      */
     fun isInProgress(startThreshold: Float = STARTED_THRESHOLD, endThreshold: Float = completionThreshold()): Boolean =
-        progressPercentage >= startThreshold && progressPercentage < endThreshold
+        !isCompleted(endThreshold) && progressPercentage >= startThreshold
 
     private fun completionThreshold(): Float =
         completionThresholdOverride?.takeIf { it.isFinite() && it > 0f && it <= 1f }
+            ?: completionThresholdFraction
             ?: if (source == SOURCE_SIMKL_PLAYBACK) SIMKL_COMPLETED_THRESHOLD else COMPLETED_THRESHOLD
 
     /**

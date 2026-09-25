@@ -197,7 +197,8 @@ class HomeEnrichmentRepositoryBoundaryTest {
             watchedSeriesStateHolder = mockk(relaxed = true),
             cwEnrichmentCache = cwEnrichmentCache,
             profileManager = profileManager,
-            tvRecommendationManager = mockk(relaxed = true)
+            tvRecommendationManager = mockk(relaxed = true),
+            simklSyncRepository = mockk(relaxed = true)
         )
         viewModel.startupGracePeriodActive = false
         viewModel.externalMetaPrefetchEnabled = true

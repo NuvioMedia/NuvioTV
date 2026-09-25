@@ -24,6 +24,13 @@ interface SimklSyncRemote {
     suspend fun fetchActivities(): SimklActivities
     suspend fun fetchAllItems(request: SimklAllItemsRequest): SimklAllItemsResponse
     suspend fun fetchPlayback(): List<SimklPlaybackSession>
+
+    /**
+     * The account's rewatch sessions. This is a separate read on purpose: a session comes back as a
+     * sidecar row with the same show as the canonical row, so feeding it into [fetchAllItems] would
+     * let rewatch progress replace the canonical watch position.
+     */
+    suspend fun fetchRewatchSessions(): List<SimklLibraryEntry>
 }
 
 class SimklApiSyncRemote @Inject constructor(
@@ -63,6 +70,19 @@ class SimklApiSyncRemote @Inject constructor(
     override suspend fun fetchPlayback(): List<SimklPlaybackSession> = client.execute(
         SimklApiRequest(SimklHttpMethod.GET, "/sync/playback")
     ).body.decode()
+
+    override suspend fun fetchRewatchSessions(): List<SimklLibraryEntry> = client.execute(
+        SimklApiRequest(
+            SimklHttpMethod.GET,
+            "/sync/all-items/${SimklMediaType.SHOWS.apiValue}",
+            mapOf(
+                "extended" to "full",
+                "allow_rewatch" to "yes",
+                "episode_watched_at" to "yes",
+                "language" to "en"
+            )
+        )
+    ).body.decodeAllItems().entriesFor(SimklMediaType.SHOWS)
 
     private inline fun <reified T> String.decode(): T = json.decodeFromString(this)
 
