@@ -30,6 +30,7 @@ private const val DEFAULT_USER_AGENT =
     "Mozilla/5.0 (Linux; Android 12; Android TV) AppleWebKit/537.36 " +
         "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
 private const val PREFERRED_SEPARATE_CLIENT = "visionos"
+private const val FALLBACK_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
 
 private val VIDEO_ID_REGEX = Regex("^[a-zA-Z0-9_-]{11}$")
 private val API_KEY_REGEX = Regex("\"INNERTUBE_API_KEY\":\"([^\"]+)\"")
@@ -65,6 +66,12 @@ internal data class StreamCandidate(
     // Always true for video/progressive candidates, so it never affects them.
     val isDefaultAudioTrack: Boolean = true
 )
+
+internal enum class PlaybackSourceKind {
+    ADAPTIVE,
+    HLS_MANIFEST,
+    PROGRESSIVE
+}
 
 private data class ManifestBestVariant(
     val url: String,
@@ -211,11 +218,15 @@ class InAppYouTubeExtractor @Inject constructor() {
                     Log.w(TAG, "Watch page failed (${watchResponse.status}), using stale config")
                     return@withLock stale
                 }
-                throw IllegalStateException("Failed to fetch watch page (${watchResponse.status})")
+                // The watch page can be replaced by a consent or bot-check page while the player
+                // API still answers, so continue with the fallback key. It isn't cached, so the
+                // next extraction tries the watch page again.
+                Log.w(TAG, "Watch page failed (${watchResponse.status}), using the fallback key")
+                return@withLock CachedConfig(apiKey = FALLBACK_API_KEY, visitorData = null)
             }
 
             val parsed = getWatchConfig(watchResponse.body)
-            val apiKey = parsed.apiKey ?: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8" // fallback key
+            val apiKey = parsed.apiKey ?: FALLBACK_API_KEY
             val newConfig = CachedConfig(
                 apiKey = apiKey,
                 visitorData = parsed.visitorData
@@ -236,15 +247,32 @@ class InAppYouTubeExtractor @Inject constructor() {
         Log.d(TAG, "Watch config invalidated")
     }
 
-    suspend fun extractPlaybackSource(youtubeUrl: String): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
+    suspend fun extractPlaybackSource(youtubeUrl: String): TrailerPlaybackSource? =
+        extract(youtubeUrl, singleUrl = false)
+
+    /**
+     * Returns one URL that carries both video and audio, for players that take a single URL
+     * (the main player and external players). Prefers the HLS master playlist, which covers
+     * every quality and lists the audio as its own rendition, then a progressive file.
+     */
+    suspend fun extractSingleUrl(youtubeUrl: String): String? =
+        extract(youtubeUrl, singleUrl = true)?.videoUrl
+
+    private suspend fun extract(
+        youtubeUrl: String,
+        singleUrl: Boolean
+    ): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
         if (youtubeUrl.isBlank()) return@withContext null
 
         Log.d(TAG, "Starting Kotlin extraction for ${summarizeUrl(youtubeUrl)}")
         var source: TrailerPlaybackSource? = null
         try {
             source = withTimeout(EXTRACTOR_TIMEOUT_MS) {
-                extractPlaybackSourceInternal(youtubeUrl, forceRefreshConfig = false)
+                extractPlaybackSourceInternal(youtubeUrl, forceRefreshConfig = false, singleUrl = singleUrl)
             }
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            // A timeout is a failed attempt, not a cancellation of the caller.
+            Log.w(TAG, "Kotlin extractor timed out for $youtubeUrl")
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (error: Exception) {
@@ -256,8 +284,10 @@ class InAppYouTubeExtractor @Inject constructor() {
             Log.d(TAG, "First attempt failed, retrying with fresh watch config...")
             try {
                 source = withTimeout(EXTRACTOR_TIMEOUT_MS) {
-                    extractPlaybackSourceInternal(youtubeUrl, forceRefreshConfig = true)
+                    extractPlaybackSourceInternal(youtubeUrl, forceRefreshConfig = true, singleUrl = singleUrl)
                 }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                Log.w(TAG, "Kotlin extractor retry timed out for $youtubeUrl")
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (error: Exception) {
@@ -280,7 +310,8 @@ class InAppYouTubeExtractor @Inject constructor() {
 
     private suspend fun extractPlaybackSourceInternal(
         youtubeUrl: String,
-        forceRefreshConfig: Boolean
+        forceRefreshConfig: Boolean,
+        singleUrl: Boolean
     ): TrailerPlaybackSource? {
         val videoId = extractVideoId(youtubeUrl) ?: return null
 
@@ -450,24 +481,24 @@ class InAppYouTubeExtractor @Inject constructor() {
         val bestVideo = pickBestForClient(adaptiveVideo, PREFERRED_SEPARATE_CLIENT)
         val bestAudio = pickBestForClient(adaptiveAudio, PREFERRED_SEPARATE_CLIENT)
 
-        // Try adaptive video + audio first (best quality, separate streams)
-        kotlinx.coroutines.yield()
-        val resolvedVideo = bestVideo?.url?.let { resolveReachableUrl(it) }
-        val resolvedAudio = if (resolvedVideo != null) bestAudio?.url?.let { resolveReachableUrl(it) } else null
-
-        if (resolvedVideo != null) {
-            return TrailerPlaybackSource(videoUrl = resolvedVideo, audioUrl = resolvedAudio)
-        }
-
-        // Adaptive failed (403) — fall back to HLS manifest (1080p, always works for COPPA/kids content)
-        if (bestManifest != null) {
-            return TrailerPlaybackSource(videoUrl = bestManifest.manifestUrl, audioUrl = null)
-        }
-
-        // No HLS available — try progressive (combined video+audio, usually low quality)
-        val resolvedProgressive = bestProgressive?.url?.let { resolveReachableUrl(it) }
-        if (resolvedProgressive != null) {
-            return TrailerPlaybackSource(videoUrl = resolvedProgressive, audioUrl = null)
+        for (kind in sourcePreference(singleUrl)) {
+            kotlinx.coroutines.yield()
+            val source = when (kind) {
+                // Adaptive video + audio (best quality, separate streams)
+                PlaybackSourceKind.ADAPTIVE -> {
+                    val resolvedVideo = bestVideo?.url?.let { resolveReachableUrl(it) }
+                    val resolvedAudio = if (resolvedVideo != null) bestAudio?.url?.let { resolveReachableUrl(it) } else null
+                    resolvedVideo?.let { TrailerPlaybackSource(videoUrl = it, audioUrl = resolvedAudio) }
+                }
+                // HLS manifest (1080p, always works for COPPA/kids content)
+                PlaybackSourceKind.HLS_MANIFEST ->
+                    bestManifest?.let { TrailerPlaybackSource(videoUrl = it.manifestUrl, audioUrl = null) }
+                // Progressive (combined video+audio, usually low quality)
+                PlaybackSourceKind.PROGRESSIVE ->
+                    bestProgressive?.url?.let { resolveReachableUrl(it) }
+                        ?.let { TrailerPlaybackSource(videoUrl = it, audioUrl = null) }
+            }
+            if (source != null) return source
         }
 
         return null
@@ -690,6 +721,17 @@ class InAppYouTubeExtractor @Inject constructor() {
     private fun audioScore(bitrate: Double, audioSampleRate: Double): Double {
         return bitrate * 1_000_000.0 + audioSampleRate
     }
+
+    /**
+     * The order in which source kinds are tried. A single-URL source can't use the adaptive
+     * formats, because their video and audio are separate files.
+     */
+    internal fun sourcePreference(singleUrl: Boolean): List<PlaybackSourceKind> =
+        if (singleUrl) {
+            listOf(PlaybackSourceKind.HLS_MANIFEST, PlaybackSourceKind.PROGRESSIVE)
+        } else {
+            listOf(PlaybackSourceKind.ADAPTIVE, PlaybackSourceKind.HLS_MANIFEST, PlaybackSourceKind.PROGRESSIVE)
+        }
 
     internal fun sortCandidates(items: List<StreamCandidate>): List<StreamCandidate> {
         return items.sortedWith(

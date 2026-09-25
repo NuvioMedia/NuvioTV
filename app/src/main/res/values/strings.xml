@@ -1714,6 +1714,8 @@
     <string name="debrid_missing_api_key">Add a Debrid API key in Settings.</string>
     <string name="debrid_not_cached">Not cached on this service.</string>
     <string name="debrid_resolution_failed">Could not resolve this Debrid stream.</string>
+    <string name="youtube_resolving_stream">Loading YouTube video</string>
+    <string name="youtube_resolution_failed">Could not load this YouTube video.</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
     <string name="p2p_consent_title">P2P Streaming</string>
