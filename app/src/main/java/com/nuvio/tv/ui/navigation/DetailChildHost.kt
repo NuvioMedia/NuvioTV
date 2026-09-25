@@ -374,6 +374,7 @@ internal fun NavHostController.navigateToDetailStream(
     year: String?,
     runtime: Int?,
     contentLanguage: String?,
+    logoLanguage: String? = null,
     manualSelection: Boolean = false,
     startFromBeginning: Boolean = false
 ) {
@@ -396,7 +397,8 @@ internal fun NavHostController.navigateToDetailStream(
             manualSelection = manualSelection,
             startFromBeginning = startFromBeginning,
             returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
-            contentLanguage = contentLanguage
+            contentLanguage = contentLanguage,
+            logoLanguage = logoLanguage
         )
     )
 }
