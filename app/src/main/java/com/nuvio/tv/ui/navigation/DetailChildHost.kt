@@ -255,17 +255,19 @@ internal fun DetailChildHost(
                             childNav.navigateNestedDetail(itemId, itemType, addonBaseUrl)
                         },
                         onPlayClick = parentNavController::navigateToDetailStream,
-                        onPlayManuallyClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
+                        onPlayManuallyClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage, logoLanguage ->
                             parentNavController.navigateToDetailStream(
                                 videoId, contentType, contentId, title, poster, backdrop, logo,
                                 season, episode, episodeName, genres, year, runtime, contentLanguage,
+                                logoLanguage = logoLanguage,
                                 manualSelection = true
                             )
                         },
-                        onPlayStartFromBeginningClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
+                        onPlayStartFromBeginningClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage, logoLanguage ->
                             parentNavController.navigateToDetailStream(
                                 videoId, contentType, contentId, title, poster, backdrop, logo,
                                 season, episode, episodeName, genres, year, runtime, contentLanguage,
+                                logoLanguage = logoLanguage,
                                 startFromBeginning = true
                             )
                         }
