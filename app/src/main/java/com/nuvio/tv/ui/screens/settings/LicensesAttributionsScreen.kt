@@ -75,6 +75,9 @@ private const val MdbListUrl = "https://mdblist.com"
 private const val IntroDbUrl = "https://introdb.app/"
 private const val ImdbDatasetsUrl = "https://developer.imdb.com/non-commercial-datasets/"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
+private const val AndroidVadLicenseUrl =
+    "https://github.com/gkonovalov/android-vad/blob/main/LICENSE.md"
+private const val WebRtcLicenseUrl = "https://webrtc.googlesource.com/src/+/main/LICENSE"
 private const val HazeLicenseUrl = "https://github.com/chrisbanes/haze/blob/1.7.2/LICENSE"
 private const val LibMpvAndroidUrl = "https://github.com/jarnedemeulemeester/libmpv-android"
 
@@ -427,6 +430,16 @@ private fun playbackLicenseItems() = listOf(
         title = stringResource(R.string.licenses_attributions_exoplayer_title),
         body = stringResource(R.string.licenses_attributions_exoplayer_body),
         url = ApacheLicenseUrl
+    ),
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_android_vad_title),
+        body = stringResource(R.string.licenses_attributions_android_vad_body),
+        url = AndroidVadLicenseUrl
+    ),
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_webrtc_vad_title),
+        body = stringResource(R.string.licenses_attributions_webrtc_vad_body),
+        url = WebRtcLicenseUrl
     ),
     LicenseAttributionItem(
         title = stringResource(R.string.licenses_attributions_libmpv_title),

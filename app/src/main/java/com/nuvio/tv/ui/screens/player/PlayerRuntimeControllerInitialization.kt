@@ -1121,6 +1121,7 @@ internal fun PlayerRuntimeController.initializePlayer(
 
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (isReleasingPlayer) return
+                        if (subtitleAutoSyncPlaybackSuspended) return
                         logScrobbleDiagnostic(
                             "exo_playback_state",
                             "playbackState=$playbackState playWhenReady=$playWhenReady isPlaying=$isPlaying " +
@@ -1340,6 +1341,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                     }
 
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        if (subtitleAutoSyncPlaybackSuspended) {
+                            _uiState.update { it.copy(isPlaying = false) }
+                            stopProgressUpdates()
+                            stopWatchProgressSaving()
+                            return
+                        }
                         logScrobbleDiagnostic(
                             "exo_is_playing_changed",
                             "isPlaying=$isPlaying playbackState=$playbackState playWhenReady=$playWhenReady " +
@@ -1375,6 +1382,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     }
 
                     override fun onTracksChanged(tracks: Tracks) {
+                        if (subtitleAutoSyncPlaybackSuspended) return
                         updateAvailableTracks(tracks)
                     }
 

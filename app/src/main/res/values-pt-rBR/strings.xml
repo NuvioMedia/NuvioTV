@@ -437,6 +437,10 @@
     <string name="licenses_attributions_imdb_body">O Nuvio utiliza conjuntos de dados não-comerciais do IMDb, incluindo title.ratings.tsv.gz, para avaliações e contagem de votos do IMDb. Informações cortesia do IMDb (https://www.imdb.com). Usado com permissão. Os dados do IMDb são para uso pessoal e não-comercial sob os termos do IMDb.</string>
     <string name="licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
     <string name="licenses_attributions_exoplayer_body">Usado como motor de reprodução Android. Licenciado sob a Apache License, Versão 2.0.</string>
+    <string name="licenses_attributions_android_vad_title">Android Voice Activity Detection 2.0.10-cf.4</string>
+    <string name="licenses_attributions_android_vad_body">Usado pelo Auto Sync de legendas para detectar fala localmente no dispositivo. O android-vad, de Georgiy Konovalov, é licenciado sob a licença MIT. Os avisos completos estão incluídos no app.</string>
+    <string name="licenses_attributions_webrtc_vad_title">WebRTC Voice Activity Detector</string>
+    <string name="licenses_attributions_webrtc_vad_body">Detector de atividade de voz nativo incluído pelo android-vad. Copyright dos autores do projeto WebRTC e licenciado sob a licença BSD de 3 cláusulas. Os avisos completos estão incluídos no app.</string>
     <string name="licenses_attributions_libmpv_title">libmpv / libmpv-android</string>
     <string name="licenses_attributions_libmpv_body">Usado como motor de reprodução Android. O wrapper libmpv-android é licenciado sob a licença MIT; mpv/libmpv e componentes nativos incluídos mantêm seus termos de licença originais.</string>
 
@@ -1682,11 +1686,25 @@
     <string name="playback_show_loading_status">Exibir status de carregamento</string>
     <string name="playback_show_loading_status_sub">Mostrar progresso passo a passo ao iniciar o player</string>
     <string name="player_sync_line">Sincronizar legenda com a fala</string>
+    <string name="player_auto_sync">Sincronismo automático</string>
     <string name="subtitle_timing_press_sync">Pressione Sincronizar ao ouvir a fala.</string>
     <string name="subtitle_timing_sync_button">Sincronizar</string>
     <string name="subtitle_timing_select_addon_first">Selecione uma legenda de Addon primeiro.</string>
     <string name="subtitle_auto_sync_select_addon_track">Selecione uma legenda de Addon para usar o Sincronismo Automático.</string>
     <string name="subtitle_auto_sync_applied">Sincronia aplicada: %1$s</string>
+    <string name="subtitle_auto_sync_checking">Analisando a fala e os tempos da legenda…</string>
+    <string name="subtitle_auto_sync_probing_audio">Abrindo um player de áudio separado para a Sincronização Automática…</string>
+    <string name="subtitle_auto_sync_probe_attempt">Analisando a amostra de áudio %1$d de %2$d no player separado…</string>
+    <string name="subtitle_auto_sync_confirming_timing">Confirmando a sincronização detectada (%1$d de %2$d)…</string>
+    <string name="subtitle_auto_sync_checking_alternatives">Verificando outras legendas em %1$s…</string>
+    <string name="subtitle_auto_sync_alternatives_title">Escolha uma legenda compatível</string>
+    <string name="subtitle_auto_sync_alternatives_found">A faixa atual não teve uma correspondência segura. Estas alternativas tiveram um resultado melhor.</string>
+    <string name="subtitle_auto_sync_alternative_value">%1$s · %2$d%%</string>
+    <string name="subtitle_auto_sync_pcm_unavailable">O player de áudio separado não conseguiu decodificar esta fonte. A legenda não foi alterada; use Sincronizar por Linha abaixo.</string>
+    <string name="subtitle_auto_sync_need_more_audio">O player de áudio separado não conseguiu decodificar dados suficientes desta fonte. A legenda não foi alterada; use Sincronizar por Linha abaixo.</string>
+    <string name="subtitle_auto_sync_not_enough_dialogue">Não foi detectado diálogo suficiente para uma correspondência automática segura. Use a Sincronização manual abaixo.</string>
+    <string name="subtitle_auto_sync_low_confidence">A confiança automática foi de apenas %1$d%%, por isso a legenda não foi alterada. Use a Sincronização manual abaixo.</string>
+    <string name="subtitle_auto_sync_failed">O sincronismo automático falhou. A legenda não foi alterada; use a sincronização por linha.</string>
     <string name="subtitle_timing_loading">Carregando falas da legenda…</string>
     <string name="subtitle_timing_no_lines_found">Nenhuma fala encontrada neste momento.</string>
     <string name="subtitle_timing_press_back_cancel">Pressione Voltar para cancelar</string>

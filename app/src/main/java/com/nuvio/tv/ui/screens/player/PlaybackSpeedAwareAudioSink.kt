@@ -1,11 +1,13 @@
 package com.nuvio.tv.ui.screens.player
 
+import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import java.nio.ByteBuffer
 
 /**
  * Audio sink wrapper that forces a decode-to-PCM path when:
@@ -18,7 +20,8 @@ import androidx.media3.exoplayer.audio.ForwardingAudioSink
 internal class PlaybackSpeedAwareAudioSink(
     sink: AudioSink,
     initialForcePcm: Boolean = false,
-    forcePcmForBluetooth: Boolean = false
+    forcePcmForBluetooth: Boolean = false,
+    private val subtitleSpeechProfileCollector: SubtitleSpeechProfileCollector? = null
 ) : ForwardingAudioSink(sink) {
 
     // Set when the sink is built with forcePcm (error recovery). Don't clear on speed reset.
@@ -38,6 +41,10 @@ internal class PlaybackSpeedAwareAudioSink(
 
     @Volatile
     private var listener: AudioSink.Listener? = null
+
+    private var activeInputBuffer: ByteBuffer? = null
+    private var activeInputBufferStartPosition = 0
+    private var activeInputBufferPresentationTimeUs = C.TIME_UNSET
 
     fun setInitialPlaybackSpeed(speed: Float) {
         playbackSpeed = normalizeSpeed(speed)
@@ -75,6 +82,73 @@ internal class PlaybackSpeedAwareAudioSink(
         currentInputFormat = inputFormat
         markPcmFallbackIfNeeded(inputFormat, playbackSpeed)
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
+        subtitleSpeechProfileCollector?.configure(inputFormat)
+        clearActiveInputBuffer()
+    }
+
+    override fun handleBuffer(
+        buffer: ByteBuffer,
+        presentationTimeUs: Long,
+        encodedAccessUnitCount: Int
+    ): Boolean {
+        val format = currentInputFormat
+        val startPosition = buffer.position()
+        val source = buffer.duplicate()
+        if (activeInputBuffer !== buffer || startPosition < activeInputBufferStartPosition) {
+            activeInputBuffer = buffer
+            activeInputBufferStartPosition = startPosition
+            activeInputBufferPresentationTimeUs = presentationTimeUs
+        }
+
+        val fullyConsumed = super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
+        val endPosition = buffer.position()
+        if (format != null && endPosition > startPosition) {
+            val bytesPerSample = when (format.pcmEncoding) {
+                C.ENCODING_PCM_16BIT -> 2
+                C.ENCODING_PCM_24BIT -> 3
+                C.ENCODING_PCM_32BIT,
+                C.ENCODING_PCM_FLOAT -> 4
+                else -> 0
+            }
+            val bytesPerFrame = bytesPerSample * format.channelCount.coerceAtLeast(0)
+            val frameOffset = if (bytesPerFrame > 0) {
+                (startPosition - activeInputBufferStartPosition) / bytesPerFrame
+            } else {
+                0
+            }
+            val consumedPresentationTimeUs = if (
+                activeInputBufferPresentationTimeUs != C.TIME_UNSET &&
+                format.sampleRate > 0
+            ) {
+                activeInputBufferPresentationTimeUs +
+                    (frameOffset.toLong() * 1_000_000L / format.sampleRate)
+            } else {
+                presentationTimeUs
+            }
+            source.position(startPosition)
+            source.limit(endPosition)
+            subtitleSpeechProfileCollector?.acceptPcm(source.slice(), consumedPresentationTimeUs)
+        }
+        if (fullyConsumed) clearActiveInputBuffer()
+        return fullyConsumed
+    }
+
+    override fun handleDiscontinuity() {
+        clearActiveInputBuffer()
+        subtitleSpeechProfileCollector?.onDiscontinuity()
+        super.handleDiscontinuity()
+    }
+
+    override fun flush() {
+        clearActiveInputBuffer()
+        subtitleSpeechProfileCollector?.onDiscontinuity()
+        super.flush()
+    }
+
+    override fun reset() {
+        clearActiveInputBuffer()
+        subtitleSpeechProfileCollector?.onDiscontinuity()
+        super.reset()
     }
 
     override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
@@ -145,6 +219,12 @@ internal class PlaybackSpeedAwareAudioSink(
 
     private fun normalizeSpeed(speed: Float): Float {
         return speed.takeIf { it > 0f } ?: 1f
+    }
+
+    private fun clearActiveInputBuffer() {
+        activeInputBuffer = null
+        activeInputBufferStartPosition = 0
+        activeInputBufferPresentationTimeUs = C.TIME_UNSET
     }
 
     /**

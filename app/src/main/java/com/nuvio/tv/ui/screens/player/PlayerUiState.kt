@@ -114,6 +114,7 @@ data class PlayerUiState(
     val subtitleAutoSyncError: String? = null,
     val subtitleAutoSyncLoading: Boolean = false,
     val subtitleAutoSyncLoadedTrackKey: String? = null,
+    val subtitleAutoSyncAlternatives: List<SubtitleAutoSyncAlternative> = emptyList(),
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
     // Subtitle style settings
@@ -270,6 +271,13 @@ data class SubtitleSyncCue(
     val text: String
 )
 
+data class SubtitleAutoSyncAlternative(
+    val trackKey: String,
+    val subtitle: Subtitle,
+    val offsetMs: Int,
+    val confidence: Double
+)
+
 sealed class PlayerEvent {
     data object OnPlayPause : PlayerEvent()
     data object OnSeekForward : PlayerEvent()
@@ -293,9 +301,11 @@ sealed class PlayerEvent {
     data object OnOpenSubtitleStylePanel : PlayerEvent()
     data object OnDismissSubtitleStylePanel : PlayerEvent()
     data object OnShowSubtitleTimingDialog : PlayerEvent()
+    data object OnStartSubtitleAutoSync : PlayerEvent()
     data object OnDismissSubtitleTimingDialog : PlayerEvent()
     data object OnCaptureSubtitleAutoSyncTime : PlayerEvent()
     data class OnApplySubtitleAutoSyncCue(val cueStartTimeMs: Long) : PlayerEvent()
+    data class OnApplySubtitleAutoSyncAlternative(val trackKey: String) : PlayerEvent()
     data object OnReloadSubtitleAutoSyncCues : PlayerEvent()
     data object OnShowSubtitleDelayOverlay : PlayerEvent()
     data object OnHideSubtitleDelayOverlay : PlayerEvent()
