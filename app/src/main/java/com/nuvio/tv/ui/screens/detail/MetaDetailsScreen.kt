@@ -1343,6 +1343,7 @@ private fun MetaDetailsContent(
     val ratingsTabFocusRequester = remember { FocusRequester() }
     val ratingsContentFocusRequester = remember { FocusRequester() }
     val ratingsGridFocusRequester = remember { FocusRequester() }
+    val heroRatingsFocusRequester = remember { FocusRequester() }
     val castSectionFocusRequester = remember { FocusRequester() }
     val moreLikeSectionFocusRequester = remember { FocusRequester() }
     val trailerSectionFocusRequester = remember { FocusRequester() }
@@ -1366,6 +1367,8 @@ private fun MetaDetailsContent(
     var initialHeroFocusRequested by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showHeroPlayOptionsDialog by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showSynopsisOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
+    var showRatingsOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
+    var restoreRatingsFocusToken by rememberSaveable { mutableIntStateOf(0) }
     var lastReturnFocusRestoreId by rememberSaveable(
         meta.id,
         detailReturnEpisodeFocusRequest?.season,
@@ -2464,7 +2467,16 @@ private fun MetaDetailsContent(
                             initialHeroFocusRequested = true
                             clearPendingRestore()
                         },
-                        onShowFullDescription = { showSynopsisOverlay = true }
+                        onShowFullDescription = { showSynopsisOverlay = true },
+                        ratingsAvailable = hasRatingsSection,
+                        onRatingsClick = {
+                            showRatingsOverlay = true
+                        },
+                        ratingsButtonFocusRequester = heroRatingsFocusRequester,
+                        restoreRatingsFocusToken = restoreRatingsFocusToken,
+                        onRatingsFocusRestored = {
+                            initialHeroFocusRequested = true
+                        }
                     )
                 }
             }
@@ -3050,6 +3062,21 @@ private fun MetaDetailsContent(
                 title = meta.name,
                 description = synopsis,
                 onDismiss = { showSynopsisOverlay = false }
+            )
+        }
+
+        if (showRatingsOverlay) {
+            EpisodeRatingsOverlayDialog(
+                meta = meta,
+                episodes = meta.videos,
+                ratings = visibleEpisodeImdbRatings,
+                isLoading = isEpisodeRatingsLoading,
+                error = episodeRatingsError,
+                onDismiss = {
+                    restoreRatingsFocusToken += 1
+                    showRatingsOverlay = false
+                },
+                backdropModel = backdropRequest
             )
         }
     }
