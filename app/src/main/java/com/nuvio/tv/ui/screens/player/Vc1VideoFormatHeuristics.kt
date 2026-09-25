@@ -6,7 +6,7 @@ import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import java.util.Locale
 
-/** VC-1 / WMV detection shared by track selection, playback error handling, and first-frame recovery. */
+/** VC-1 / WMV detection shared by software decode, playback error handling, and first-frame recovery. */
 internal object Vc1VideoFormatHeuristics {
 
     fun isLikelyVc1(
@@ -15,8 +15,7 @@ internal object Vc1VideoFormatHeuristics {
         label: String? = null,
         streamName: String? = null,
     ): Boolean {
-        if (sampleMimeType?.equals(MimeTypes.VIDEO_VC1, ignoreCase = true) == true ||
-            sampleMimeType?.equals("video/vc1", ignoreCase = true) == true ||
+        if (isVc1OrWmvMime(sampleMimeType) ||
             sampleMimeType?.contains("wvc1", ignoreCase = true) == true ||
             sampleMimeType?.contains("wmv", ignoreCase = true) == true
         ) {
@@ -32,7 +31,22 @@ internal object Vc1VideoFormatHeuristics {
         return haystack.contains("wvc1") ||
             haystack.contains("vc-1") ||
             haystack.contains("wmv3") ||
+            haystack.contains("wmv1") ||
+            haystack.contains("wmv2") ||
             Regex("(?<![a-z0-9])vc1(?![a-z0-9])").containsMatchIn(haystack)
+    }
+
+    fun isVc1OrWmvMime(sampleMimeType: String?): Boolean {
+        if (sampleMimeType.isNullOrEmpty()) return false
+        val mime = sampleMimeType.lowercase(Locale.ROOT)
+        return mime == MimeTypes.VIDEO_VC1 ||
+            mime == "video/wvc1" ||
+            mime == "video/vc1" ||
+            mime == "video/x-ms-wmv" ||
+            mime == "video/wmv" ||
+            mime == "video/x-ms-wmv3" ||
+            mime == "video/x-ms-wmv1" ||
+            mime == "video/x-ms-wmv2"
     }
 
     fun isLikelyVc1Stream(vararg hints: String?): Boolean {
