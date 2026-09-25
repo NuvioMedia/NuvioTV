@@ -15,7 +15,6 @@ import androidx.media3.extractor.PositionHolder
 import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
-import com.nuvio.tv.core.player.asf.AsfExtractor
 import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor as DvMatroskaExtractor
 import java.io.EOFException
 import java.io.IOException
@@ -52,15 +51,13 @@ internal class DolbyVisionExtractorsFactory(
 ) : ExtractorsFactory {
 
     override fun createExtractors(): Array<Extractor> =
-        (arrayOf<Extractor>(AsfExtractor()) + delegate.createExtractors()).map(::wrap).toTypedArray()
+        delegate.createExtractors().map(::wrap).toTypedArray()
 
     override fun createExtractors(
         uri: Uri,
         responseHeaders: Map<String, List<String>>
     ): Array<Extractor> =
-        (arrayOf<Extractor>(AsfExtractor()) + delegate.createExtractors(uri, responseHeaders))
-            .map(::wrap)
-            .toTypedArray()
+        delegate.createExtractors(uri, responseHeaders).map(::wrap).toTypedArray()
 
     private fun wrap(extractor: Extractor): Extractor {
         // Matroska is swapped unconditionally: the vendored extractor carries the
