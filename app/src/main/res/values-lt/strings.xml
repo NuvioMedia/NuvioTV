@@ -446,7 +446,7 @@
     <string name="layout_trailer_muted">Paleisti anonsą be garso</string>
     <string name="layout_trailer_muted_sub_preview">Nutildyti anonso garsą automatinio paleidimo peržiūros metu.</string>
     <string name="layout_trailer_muted_sub_expanded">Nutildyti anonso garsą išskleistose kortelėse.</string>
-    <string name="layout_section_card_style">Plakato kortelės stilius</string>
+    <string name="layout_section_card_style">Plakato kortelė</string>
     <string name="layout_section_card_style_desc">Reguliuoti kortelės plotį ir kampo spindulį.</string>
     <string name="layout_open">Atidaryta</string>
     <string name="layout_closed">Uždaryta</string>

@@ -17,19 +17,20 @@ import com.nuvio.tv.core.player.ExternalPlaybackTracker
 import com.nuvio.tv.core.debrid.DebridProviderCapability
 import com.nuvio.tv.core.debrid.DebridProviders
 import com.nuvio.tv.core.debrid.supports
+import com.nuvio.tv.core.tracking.TrackingListManagementCapabilities
 import com.nuvio.tv.core.tracking.TrackingLibraryProviderRegistry
 import com.nuvio.tv.core.tracking.providerId
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
-import com.nuvio.tv.data.repository.TraktLibraryService
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
-import com.nuvio.tv.domain.model.TraktListPrivacy
+import com.nuvio.tv.domain.model.LibraryListPrivacy
 import com.nuvio.tv.domain.repository.LibraryRepository
 import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -98,7 +99,7 @@ data class LibraryListEditorState(
     val listId: String? = null,
     val name: String = "",
     val description: String = "",
-    val privacy: TraktListPrivacy = TraktListPrivacy.PRIVATE
+    val privacy: LibraryListPrivacy = LibraryListPrivacy.PRIVATE
 ) {
     enum class Mode {
         CREATE,
@@ -127,6 +128,7 @@ data class LibraryUiState(
     val selectedTypeTab: LibraryTypeTab? = null,
     val selectedSortOption: LibrarySortOption = LibrarySortOption.DEFAULT,
     val sortSelectionVersion: Long = 0L,
+    val providerAddedOrder: LibraryProviderOrder? = null,
     val availableGenres: List<FilterOption> = emptyList(),
     val availableYears: List<FilterOption> = emptyList(),
     val selectedGenre: String? = null,
@@ -142,10 +144,14 @@ data class LibraryUiState(
     val isSyncing: Boolean = false,
     val errorMessage: String? = null,
     val transientMessage: String? = null,
+    val listManagement: TrackingListManagementCapabilities? = null,
     val showManageDialog: Boolean = false,
     val manageSelectedListKey: String? = null,
     val listEditorState: LibraryListEditorState? = null,
-    val pendingOperation: Boolean = false
+    val pendingOperation: Boolean = false,
+    val customPosterUrlPattern: String = "",
+    val customPosterEnabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen> =
+        com.nuvio.tv.core.poster.CustomPosterScreen.ALL
 )
 
 @HiltViewModel
@@ -175,13 +181,23 @@ class LibraryViewModel @Inject constructor(
     val watchedMovieIds: StateFlow<Set<String>> = _watchedMovieIds.asStateFlow()
     val watchedSeriesIds: StateFlow<Set<String>> = watchedSeriesStateHolder.fullyWatchedSeriesIds
 
+    private class ListManagementContext(val profileId: Int, val source: LibrarySourceMode)
+    private var listManagementContext: ListManagementContext? = null
     private var messageClearJob: Job? = null
     private var cloudRefreshJob: Job? = null
+    private var selectedSortOverride: Pair<Int, LibrarySortOption>? = null
 
     init {
         posterOptions.bind(viewModelScope)
         observeLayoutPreferences()
         observeLibraryData()
+        observeProviderSortOrder()
+        viewModelScope.launch {
+            profileManager.activeProfileId.collect { profileId ->
+                if (selectedSortOverride?.first != profileId) selectedSortOverride = null
+                onCloseManageLists()
+            }
+        }
         observeCloudLibrarySettings()
         viewModelScope.launch {
             watchProgressRepository.observeWatchedMovieIds()
@@ -269,6 +285,8 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun onSelectSortOption(option: LibrarySortOption) {
+        val profileId = profileManager.activeProfileId.value
+        selectedSortOverride = profileId to option
         _uiState.update { current ->
             val nextVersion = if (current.selectedSortOption != option) {
                 current.sortSelectionVersion + 1L
@@ -281,7 +299,45 @@ class LibraryViewModel @Inject constructor(
             )
             updated.withVisibleItems()
         }
-        viewModelScope.launch { libraryPreferences.setSortOption(option.key) }
+        viewModelScope.launch {
+            if (profileManager.activeProfileId.value == profileId) libraryPreferences.setSortOption(option.key)
+        }
+    }
+
+    private fun observeProviderSortOrder() {
+        viewModelScope.launch {
+            combine(profileManager.activeProfileId, uiState) { profileId, state ->
+                profileId to Triple(state.sourceMode.takeIf { state.isTrackingAuthenticated },
+                    state.selectedListKey, state.selectedSortOption)
+            }.distinctUntilChanged().collectLatest { (profileId, selection) ->
+                _uiState.update { it.copy(providerAddedOrder = null).withVisibleItems() }
+                val (source, listKey, sortOption) = selection
+                if (source == null || listKey == null ||
+                    sortOption !in listOf(LibrarySortOption.ADDED_ASC, LibrarySortOption.ADDED_DESC)) return@collectLatest
+                val sorter = source.providerId?.let(trackingProviderRegistry::provider)?.listSorter ?: return@collectLatest
+                try {
+                    sorter.observeAddedOrder(listKey, sortOption == LibrarySortOption.ADDED_DESC).collect { keys ->
+                        if (profileManager.activeProfileId.value != profileId) return@collect
+                        _uiState.update { current ->
+                            if (current.sourceMode != source || current.selectedListKey != listKey ||
+                                current.selectedSortOption != sortOption) current else current.copy(
+                                providerAddedOrder = keys?.let { LibraryProviderOrder(source, listKey, sortOption,
+                                    it.withIndex().associate { (index, key) -> key to index }) }
+                            ).withVisibleItems()
+                        }
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    val current = _uiState.value
+                    if (profileManager.activeProfileId.value == profileId && current.sourceMode == source &&
+                        current.selectedListKey == listKey && current.selectedSortOption == sortOption) {
+                        onSelectSortOption(LibrarySortOption.DEFAULT)
+                        setError(context.getString(R.string.library_error_sort_failed))
+                    }
+                }
+            }
+        }
     }
 
     fun ensureCloudLibraryLoaded() {
@@ -434,76 +490,65 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun onOpenManageLists() {
-        _uiState.update { current ->
-            if (current.sourceMode != LibrarySourceMode.TRAKT) {
-                return@update current
-            }
-            current.copy(
+        val current = _uiState.value
+        if (current.listManagement == null || !current.isTrackingAuthenticated) return
+        listManagementContext = ListManagementContext(profileManager.activeProfileId.value, current.sourceMode)
+        _uiState.update {
+            it.copy(
                 showManageDialog = true,
-                manageSelectedListKey = current.manageSelectedListKey
-                    ?: current.listTabs.firstOrNull { it.type == LibraryListTab.Type.PERSONAL }?.key
+                manageSelectedListKey = it.manageSelectedListKey
+                    ?: it.listTabs.firstOrNull { tab -> tab.type == LibraryListTab.Type.PERSONAL }?.key
             )
         }
     }
 
     fun onCloseManageLists() {
-        _uiState.update { current ->
-            current.copy(
-                showManageDialog = false,
-                listEditorState = null,
-                errorMessage = null
-            )
-        }
+        listManagementContext = null
+        _uiState.update { it.copy(showManageDialog = false, listEditorState = null, pendingOperation = false, errorMessage = null) }
     }
 
     fun onSelectManageList(listKey: String) {
+        if (_uiState.value.pendingOperation) return
         _uiState.update { it.copy(manageSelectedListKey = listKey) }
     }
 
     fun onStartCreateList() {
+        if (!isListManagementCurrent()) return
         _uiState.update {
-            it.copy(
-                listEditorState = LibraryListEditorState(mode = LibraryListEditorState.Mode.CREATE),
-                errorMessage = null
-            )
+            it.copy(listEditorState = LibraryListEditorState(mode = LibraryListEditorState.Mode.CREATE), errorMessage = null)
         }
     }
 
     fun onStartEditList() {
+        if (!isListManagementCurrent()) return
         val selected = selectedManagePersonalList() ?: return
         _uiState.update {
             it.copy(
                 listEditorState = LibraryListEditorState(
                     mode = LibraryListEditorState.Mode.EDIT,
-                    listId = selected.traktListId?.toString(),
+                    listId = selected.key,
                     name = selected.title,
                     description = selected.description.orEmpty(),
-                    privacy = selected.privacy ?: TraktListPrivacy.PRIVATE
+                    privacy = selected.privacy ?: LibraryListPrivacy.PRIVATE
                 ),
                 errorMessage = null
             )
         }
     }
 
-    fun onUpdateEditorName(value: String) {
-        _uiState.update { current ->
-            val editor = current.listEditorState ?: return@update current
-            current.copy(listEditorState = editor.copy(name = value))
-        }
-    }
+    fun onUpdateEditorName(value: String) = updateListEditor { copy(name = value) }
 
     fun onUpdateEditorDescription(value: String) {
-        _uiState.update { current ->
-            val editor = current.listEditorState ?: return@update current
-            current.copy(listEditorState = editor.copy(description = value))
-        }
+        if (_uiState.value.listManagement?.supportsDescription == true) updateListEditor { copy(description = value) }
     }
 
-    fun onUpdateEditorPrivacy(value: TraktListPrivacy) {
-        _uiState.update { current ->
-            val editor = current.listEditorState ?: return@update current
-            current.copy(listEditorState = editor.copy(privacy = value))
-        }
+    fun onUpdateEditorPrivacy(value: LibraryListPrivacy) {
+        if (value in _uiState.value.listManagement?.privacyOptions.orEmpty()) updateListEditor { copy(privacy = value) }
+    }
+
+    private fun updateListEditor(update: LibraryListEditorState.() -> LibraryListEditorState) {
+        if (!isListManagementCurrent() || _uiState.value.pendingOperation) return
+        _uiState.update { current -> current.copy(listEditorState = current.listEditorState?.update()) }
     }
 
     fun onCancelEditor() {
@@ -517,70 +562,58 @@ class LibraryViewModel @Inject constructor(
             setError(context.getString(R.string.library_error_list_name_required))
             return
         }
-        if (_uiState.value.pendingOperation) return
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(pendingOperation = true, errorMessage = null) }
-            runCatching {
-                when (editor.mode) {
-                    LibraryListEditorState.Mode.CREATE -> {
-                        libraryRepository.createPersonalList(
-                            name = name,
-                            description = editor.description.trim().ifBlank { null },
-                            privacy = editor.privacy
-                        )
-                        setTransientMessage(context.getString(R.string.library_list_created))
-                    }
-                    LibraryListEditorState.Mode.EDIT -> {
-                        val listId = editor.listId
-                            ?: throw IllegalStateException(context.getString(R.string.library_error_invalid_list))
-                        libraryRepository.updatePersonalList(
-                            listId = listId,
-                            name = name,
-                            description = editor.description.trim().ifBlank { null },
-                            privacy = editor.privacy
-                        )
-                        setTransientMessage(context.getString(R.string.library_list_updated))
-                    }
-                }
-            }.onSuccess {
-                _uiState.update { it.copy(listEditorState = null, pendingOperation = false) }
-            }.onFailure { error ->
-                _uiState.update { it.copy(pendingOperation = false) }
-                setError(error.message ?: context.getString(R.string.library_error_save_list_failed))
+        val message = if (editor.mode == LibraryListEditorState.Mode.CREATE) R.string.library_list_created else R.string.library_list_updated
+        runListOperation(message, R.string.library_error_save_list_failed) { source ->
+            val description = editor.description.trim().takeIf { _uiState.value.listManagement?.supportsDescription == true && it.isNotBlank() }
+            when (editor.mode) {
+                LibraryListEditorState.Mode.CREATE -> libraryRepository.createPersonalList(name, description, editor.privacy, source)
+                LibraryListEditorState.Mode.EDIT -> libraryRepository.updatePersonalList(
+                    requireNotNull(editor.listId), name, description, editor.privacy, source
+                )
             }
         }
     }
 
     fun onDeleteSelectedList() {
-        val selected = selectedManagePersonalList() ?: return
-        val listId = selected.traktListId?.toString() ?: return
-        if (_uiState.value.pendingOperation) return
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(pendingOperation = true, errorMessage = null) }
-            runCatching {
-                libraryRepository.deletePersonalList(listId)
-                setTransientMessage(context.getString(R.string.library_list_deleted))
-            }.onSuccess {
-                _uiState.update { it.copy(pendingOperation = false) }
-            }.onFailure { error ->
-                _uiState.update { it.copy(pendingOperation = false) }
-                setError(error.message ?: context.getString(R.string.library_error_delete_list_failed))
-            }
+        val key = selectedManagePersonalList()?.key ?: return
+        runListOperation(R.string.library_list_deleted, R.string.library_error_delete_list_failed) { source ->
+            libraryRepository.deletePersonalList(key, source)
         }
     }
 
-    fun onMoveSelectedListUp() {
-        reorderSelectedList(moveUp = true)
-    }
+    fun onMoveSelectedListUp() = reorderSelectedList(moveUp = true)
 
-    fun onMoveSelectedListDown() {
-        reorderSelectedList(moveUp = false)
-    }
+    fun onMoveSelectedListDown() = reorderSelectedList(moveUp = false)
 
     fun onClearTransientMessage() {
         _uiState.update { it.copy(transientMessage = null) }
+    }
+
+    private fun isListManagementCurrent(expected: ListManagementContext? = listManagementContext): Boolean =
+        expected != null && expected == listManagementContext && expected.profileId == profileManager.activeProfileId.value &&
+            expected.source == _uiState.value.sourceMode && _uiState.value.showManageDialog &&
+            _uiState.value.isTrackingAuthenticated && _uiState.value.listManagement != null
+
+    private fun runListOperation(successMessage: Int, errorMessage: Int, action: suspend (LibrarySourceMode) -> Unit) {
+        if (!isListManagementCurrent() || _uiState.value.pendingOperation) return
+        val operationContext = requireNotNull(listManagementContext)
+        _uiState.update { it.copy(pendingOperation = true, errorMessage = null) }
+        viewModelScope.launch {
+            try {
+                if (!isListManagementCurrent(operationContext)) return@launch
+                action(operationContext.source)
+                if (isListManagementCurrent(operationContext)) {
+                    _uiState.update { it.copy(listEditorState = null) }
+                    setTransientMessage(context.getString(successMessage))
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (isListManagementCurrent(operationContext)) setError(error.message ?: context.getString(errorMessage))
+            } finally {
+                if (operationContext == listManagementContext) _uiState.update { it.copy(pendingOperation = false) }
+            }
+        }
     }
 
     private fun observeLibraryData() {
@@ -625,6 +658,7 @@ class LibraryViewModel @Inject constructor(
                 )
             }.collectLatest { bundle ->
                 val (sourceMode, isSyncing, items, listTabs, persistedSortKey, authState, isTrackingAuthenticated, persistedListKey, persistedTypeKey) = bundle
+                if (_uiState.value.sourceMode != sourceMode || !isTrackingAuthenticated) onCloseManageLists()
                 _uiState.update { current ->
                     val nextSelectedList = when {
                         sourceMode.providerId != null && isTrackingAuthenticated -> {
@@ -656,7 +690,8 @@ class LibraryViewModel @Inject constructor(
                     val persistedSort = persistedSortKey?.let { key ->
                         LibrarySortOption.entries.find { it.key == key }
                     }
-                    val nextSelectedSort = (persistedSort ?: current.selectedSortOption)
+                    val sessionSort = selectedSortOverride?.takeIf { it.first == profileManager.activeProfileId.value }?.second
+                    val nextSelectedSort = (sessionSort ?: persistedSort ?: current.selectedSortOption)
                         .takeIf { it in sortOptions }
                         ?: modeDefault
 
@@ -664,6 +699,7 @@ class LibraryViewModel @Inject constructor(
 
                     val updated = current.copy(
                         sourceMode = sourceMode,
+                        listManagement = sourceMode.providerId?.let(trackingProviderRegistry::provider)?.listManager?.capabilities,
                         allItems = items,
                         listTabs = listTabs,
                         availableSortOptions = sortOptions,
@@ -703,6 +739,26 @@ class LibraryViewModel @Inject constructor(
                     }
                 }
             }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.customPosterUrlPattern
+                .distinctUntilChanged()
+                .collectLatest { pattern ->
+                    _uiState.update { current ->
+                        if (current.customPosterUrlPattern == pattern) current
+                        else current.copy(customPosterUrlPattern = pattern).withVisibleItems()
+                    }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.customPosterEnabledScreens
+                .distinctUntilChanged()
+                .collectLatest { screens ->
+                    _uiState.update { current ->
+                        if (current.customPosterEnabledScreens == screens) current
+                        else current.copy(customPosterEnabledScreens = screens).withVisibleItems()
+                    }
+                }
         }
     }
 
@@ -785,34 +841,15 @@ class LibraryViewModel @Inject constructor(
 
     private fun reorderSelectedList(moveUp: Boolean) {
         val state = _uiState.value
-        if (state.pendingOperation) return
-
+        if (state.listManagement?.supportsReordering != true) return
         val personalTabs = state.listTabs.filter { it.type == LibraryListTab.Type.PERSONAL }
-        val selectedKey = state.manageSelectedListKey ?: return
-        val selectedIndex = personalTabs.indexOfFirst { it.key == selectedKey }
+        val selectedIndex = personalTabs.indexOfFirst { it.key == state.manageSelectedListKey }
         if (selectedIndex < 0) return
-
         val targetIndex = if (moveUp) selectedIndex - 1 else selectedIndex + 1
         if (targetIndex !in personalTabs.indices) return
-
-        val reordered = personalTabs.toMutableList().apply {
-            add(targetIndex, removeAt(selectedIndex))
-        }
-        val orderedIds = reordered.mapNotNull { tab ->
-            tab.traktListId?.toString() ?: tab.key.removePrefix(TraktLibraryService.PERSONAL_KEY_PREFIX)
-        }
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(pendingOperation = true, errorMessage = null) }
-            runCatching {
-                libraryRepository.reorderPersonalLists(orderedIds)
-                setTransientMessage(context.getString(R.string.library_list_order_updated))
-            }.onSuccess {
-                _uiState.update { it.copy(pendingOperation = false) }
-            }.onFailure { error ->
-                _uiState.update { it.copy(pendingOperation = false) }
-                setError(error.message ?: context.getString(R.string.library_error_reorder_lists_failed))
-            }
+        val reordered = personalTabs.toMutableList().apply { add(targetIndex, removeAt(selectedIndex)) }
+        runListOperation(R.string.library_list_order_updated, R.string.library_error_reorder_lists_failed) { source ->
+            libraryRepository.reorderPersonalLists(reordered.map { it.key }, source)
         }
     }
 
@@ -950,10 +987,13 @@ class LibraryViewModel @Inject constructor(
         }
 
         // Step 6: Sort
+        val addedOrder = providerAddedOrder?.takeIf {
+            it.source == sourceMode && it.listKey == selectedListKey && it.sortOption == selectedSortOption
+        }?.comparator()
         val sorted = when (selectedSortOption) {
             LibrarySortOption.DEFAULT -> if (sourceMode.providerId != null) {
                 watchedFiltered.sortedWith(
-                    compareBy<LibraryEntry> { it.traktRank ?: Int.MAX_VALUE }
+                    compareBy<LibraryEntry> { it.listRanks[selectedListKey] ?: it.traktRank ?: Int.MAX_VALUE }
                         .thenByDescending { it.listedAt }
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                         .thenBy { it.id }
@@ -962,12 +1002,12 @@ class LibraryViewModel @Inject constructor(
                 watchedFiltered
             }
             LibrarySortOption.ADDED_DESC -> watchedFiltered.sortedWith(
-                compareByDescending<LibraryEntry> { it.listedAt }
+                addedOrder ?: compareByDescending<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )
             LibrarySortOption.ADDED_ASC -> watchedFiltered.sortedWith(
-                compareBy<LibraryEntry> { it.listedAt }
+                addedOrder ?: compareBy<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )
@@ -989,7 +1029,9 @@ class LibraryViewModel @Inject constructor(
         val validYear = selectedYear?.takeIf { y -> yearOptions.any { it.key == y } }
 
         return copy(
-            visibleItems = sorted,
+            visibleItems = sorted.withCustomPosterUrls(
+                com.nuvio.tv.core.poster.patternForScreen(customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.LIBRARY, customPosterEnabledScreens)
+            ),
             availableTypeTabs = typeTabsWithCounts,
             availableGenres = genreOptions,
             availableYears = yearOptions,

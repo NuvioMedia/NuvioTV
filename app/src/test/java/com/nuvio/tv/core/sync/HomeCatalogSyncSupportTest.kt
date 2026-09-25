@@ -13,6 +13,38 @@ import org.junit.Test
 class HomeCatalogSyncSupportTest {
 
     @Test
+    fun `manifest case is synced while old order disabled flags and titles survive`() {
+        val addon = testAddon(
+            id = "aio-metadata",
+            baseUrl = "https://example.com/manifest.json",
+            catalogs = listOf(
+                CatalogDescriptor(type = ContentType.MOVIE, id = "movies", name = "Movies"),
+                CatalogDescriptor(type = ContentType.SERIES, rawType = "Series", id = "series-list", name = "Series")
+            )
+        )
+        val oldKey = "aio-metadata_series_series-list"
+        val payload = buildHomeCatalogSyncPayload(
+            addons = listOf(addon),
+            collections = emptyList(),
+            localState = LocalHomeCatalogSettingsState(
+                orderKeys = listOf(oldKey),
+                disabledKeys = setOf(oldKey),
+                customTitles = mapOf(oldKey to "My shows")
+            )
+        )
+
+        assertEquals("series-list", payload.items.first().catalogId)
+        assertEquals("Series", payload.items.first().type)
+        assertEquals("My shows", payload.items.first().customTitle)
+        assertFalse(payload.items.first().enabled)
+        assertEquals(oldKey, homeCatalogKey("aio-metadata", "Series", "series-list"))
+        assertEquals(
+            homeLegacyDisabledCatalogKey(addon.baseUrl, "series", "series-list", "Series"),
+            homeLegacyDisabledCatalogKey(addon.baseUrl, "Series", "series-list", "Series")
+        )
+    }
+
+    @Test
     fun `build payload keeps disabled catalog when only legacy disable key exists`() {
         val addon = testAddon(
             id = "com.test.addon",

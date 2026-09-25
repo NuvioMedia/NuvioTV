@@ -259,6 +259,7 @@ data class NextEpisodeInfo(
     val overview: String?,
     val released: String?,
     val hasAired: Boolean,
+    val available: Boolean? = null,
     val unairedMessage: String?,
     val isOtherType: Boolean = false
 )

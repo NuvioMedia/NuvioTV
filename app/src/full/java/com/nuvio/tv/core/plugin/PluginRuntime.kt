@@ -288,9 +288,13 @@ class PluginRuntime @Inject constructor() {
                         val url = args.getOrNull(0)?.toString() ?: ""
                         val method = args.getOrNull(1)?.toString() ?: "GET"
                         val headersJson = args.getOrNull(2)?.toString() ?: "{}"
-                        val body = args.getOrNull(3)?.toString() ?: ""
+                        val bodyKind = args.getOrNull(3)?.toString() ?: "none"
+                        val body = args.getOrNull(4)?.toString() ?: ""
+                        val followRedirects = args.getOrNull(5)?.toString()?.let {
+                            !it.equals("false", ignoreCase = true)
+                        } ?: true
                         try {
-                            performNativeFetch(url, method, headersJson, body, inFlightCalls)
+                            performNativeFetch(url, method, headersJson, bodyKind, body, followRedirects, inFlightCalls)
                         } catch (t: Throwable) {
                             Log.e(TAG, "Async fetch bridge error for $method $url: ${t.message}")
                             gson.toJson(
@@ -300,6 +304,7 @@ class PluginRuntime @Inject constructor() {
                                     "statusText" to (t.message ?: "Fetch failed"),
                                     "url" to url,
                                     "body" to "",
+                                    "bodyBase64" to "",
                                     "headers" to emptyMap<String, String>()
                                 )
                             )
@@ -508,11 +513,19 @@ class PluginRuntime @Inject constructor() {
         url: String,
         method: String,
         headersJson: String,
+        bodyKind: String,
         body: String,
+        followRedirects: Boolean,
         inFlightCalls: MutableSet<Call>
     ): String {
-        Log.d(TAG, "Fetch: $method $url body=${body.take(200)}")
+        Log.d(TAG, "Fetch: $method $url bodyKind=$bodyKind")
         return try {
+            val requestBytes = when (bodyKind) {
+                "base64" -> base64Decode(body)
+                "text" -> body.toByteArray(Charsets.UTF_8)
+                "none" -> ByteArray(0)
+                else -> error("Unsupported fetch body kind: $bodyKind")
+            }
             val headers = mutableMapOf<String, String>()
             try {
                 val headersMap = gson.fromJson(headersJson, Map::class.java)
@@ -545,18 +558,31 @@ class PluginRuntime @Inject constructor() {
                     // Use ByteArray.toRequestBody to prevent OkHttp from appending '; charset=utf-8'
                     // to Content-Type, which would break HMAC signature verification on servers
                     // that include Content-Type in their canonical string (e.g. MovieBox).
-                    requestBuilder.post(body.toByteArray(Charsets.UTF_8).toRequestBody(contentType.toMediaType()))
+                    requestBuilder.post(requestBytes.toRequestBody(contentType.toMediaType()))
                 }
                 "PUT" -> {
                     val contentType = headers["Content-Type"] ?: "application/json"
-                    requestBuilder.put(body.toByteArray(Charsets.UTF_8).toRequestBody(contentType.toMediaType()))
+                    requestBuilder.put(requestBytes.toRequestBody(contentType.toMediaType()))
                 }
-                "DELETE" -> requestBuilder.delete()
+                "PATCH" -> {
+                    val contentType = headers["Content-Type"] ?: "application/json"
+                    requestBuilder.patch(requestBytes.toRequestBody(contentType.toMediaType()))
+                }
+                "DELETE" -> if (bodyKind == "none") requestBuilder.delete()
+                    else requestBuilder.delete(requestBytes.toRequestBody((headers["Content-Type"] ?: "application/json").toMediaType()))
                 else -> requestBuilder.get()
             }
 
             val request = requestBuilder.build()
-            val call = httpClient.newCall(request)
+            val client = if (followRedirects) {
+                httpClient
+            } else {
+                httpClient.newBuilder()
+                    .followRedirects(false)
+                    .followSslRedirects(false)
+                    .build()
+            }
+            val call = client.newCall(request)
             inFlightCalls.add(call)
 
             try {
@@ -594,6 +620,7 @@ class PluginRuntime @Inject constructor() {
                         "statusText" to httpResponse.message,
                         "url" to httpResponse.request.url.toString(),
                         "body" to responseBody,
+                        "bodyBase64" to base64Encode(decodedRead.bytes),
                         "headers" to responseHeaders,
                         "truncated" to decodedRead.truncated
                     )
@@ -612,6 +639,7 @@ class PluginRuntime @Inject constructor() {
                 "statusText" to (e.message ?: "Fetch failed"),
                 "url" to url,
                 "body" to "",
+                "bodyBase64" to "",
                 "headers" to emptyMap<String, String>()
             ))
         }
@@ -693,12 +721,54 @@ class PluginRuntime @Inject constructor() {
             }
 
             // Fetch implementation (async)
+            function __fetch_bytes_to_base64(bytes) {
+                var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+                var out = '';
+                for (var i = 0; i < bytes.length; i += 3) {
+                    var a = bytes[i];
+                    var hasB = i + 1 < bytes.length;
+                    var hasC = i + 2 < bytes.length;
+                    var b = hasB ? bytes[i + 1] : 0;
+                    var c = hasC ? bytes[i + 2] : 0;
+                    out += chars.charAt(a >> 2);
+                    out += chars.charAt(((a & 3) << 4) | (b >> 4));
+                    out += hasB ? chars.charAt(((b & 15) << 2) | (c >> 6)) : '=';
+                    out += hasC ? chars.charAt(c & 63) : '=';
+                }
+                return out;
+            }
+
+            function __fetch_base64_to_bytes(value) {
+                var binary = atob(value || '');
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                return bytes;
+            }
+
+            function __normalize_fetch_body(body) {
+                if (body === undefined || body === null) return { kind: 'none', value: '' };
+                if (typeof body === 'string') return { kind: 'text', value: body };
+
+                var bytes = null;
+                if (typeof ArrayBuffer !== 'undefined' && body instanceof ArrayBuffer) {
+                    bytes = new Uint8Array(body);
+                } else if (typeof ArrayBuffer !== 'undefined' &&
+                           typeof ArrayBuffer.isView === 'function' && ArrayBuffer.isView(body)) {
+                    bytes = new Uint8Array(body.buffer, body.byteOffset, body.byteLength);
+                }
+                if (bytes !== null) {
+                    return { kind: 'base64', value: __fetch_bytes_to_base64(bytes) };
+                }
+                return { kind: 'text', value: String(body) };
+            }
+
             var fetch = async function(url, options) {
                 options = options || {};
                 var method = (options.method || 'GET').toUpperCase();
                 var headers = options.headers || {};
-                var body = options.body || '';
+                var body = __normalize_fetch_body(options.body);
                 var signal = options.signal || null;
+                var followRedirects = options.redirect !== 'manual';
 
                 if (signal && signal.aborted) {
                     var preErr = new Error('The operation was aborted.');
@@ -711,8 +781,9 @@ class PluginRuntime @Inject constructor() {
                     headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
                 }
 
-                var result = __native_fetch(url, method, JSON.stringify(headers), body);
+                var result = __native_fetch(url, method, JSON.stringify(headers), body.kind, body.value, followRedirects);
                 var parsed = JSON.parse(result);
+                var responseBytes = __fetch_base64_to_bytes(parsed.bodyBase64);
 
                 if (signal && signal.aborted) {
                     var postErr = new Error('The operation was aborted.');
@@ -729,6 +800,11 @@ class PluginRuntime @Inject constructor() {
                         get: function(name) {
                             return parsed.headers[name.toLowerCase()] || null;
                         }
+                    },
+                    arrayBuffer: function() {
+                        var copy = new Uint8Array(responseBytes.length);
+                        copy.set(responseBytes);
+                        return Promise.resolve(copy.buffer);
                     },
                     text: function() {
                         return Promise.resolve(parsed.body);

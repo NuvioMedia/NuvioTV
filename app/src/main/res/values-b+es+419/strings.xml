@@ -1073,7 +1073,7 @@
     <string name="layout_trailer_muted">Reproducir Tráiler Silenciado</string>
     <string name="layout_trailer_muted_sub_preview">Silenciar el audio del tráiler durante la vista previa de auto-reproducción.</string>
     <string name="layout_trailer_muted_sub_expanded">Silenciar el audio del tráiler en tarjetas expandidas.</string>
-    <string name="layout_section_card_style">Estilo de Tarjeta de Póster</string>
+    <string name="layout_section_card_style">Tarjeta de Póster</string>
     <string name="layout_section_card_style_desc">Ajustar el ancho de la tarjeta y el radio de las esquinas.</string>
     <string name="settings_card_depth_title">Efecto de profundidad de las tarjetas</string>
     <string name="settings_card_depth_description">Agrega un borde superior iluminado y un brillo suave a las tarjetas con imágenes para dar una sutil sensación de profundidad.</string>
@@ -1126,13 +1126,62 @@
     <string name="layout_reset_default">Restablecer a Predeterminado</string>
     <string name="layout_custom">Personalizado</string>
 
+<!-- Custom Poster URL -->
+<string name="layout_custom_poster_title">Fuente de póster personalizada</string>
+<string name="layout_custom_poster_description">Proporciona un patrón de URL de póster desde un servicio externo. Si un marcador no tiene un valor para un título determinado, se utilizará el póster original.</string>
+<string name="layout_custom_poster_clear">Borrar</string>
+<string name="layout_custom_poster_active">✓ Fuente de póster personalizada activa</string>
+<string name="layout_custom_poster_qr">Configurar desde el teléfono</string>
+<string name="custom_poster_qr_instruction">Escanea el código QR con tu teléfono para pegar un patrón de URL de póster</string>
 
+<!-- Custom Poster Web Page -->
+    <string name="web_custom_poster_title">Fuente de póster personalizada</string>
+    <string name="web_custom_poster_subtitle">Pega un patrón de URL de póster a continuación y presiona Guardar.</string>
+    <string name="web_custom_poster_label">Patrón de URL</string>
+    <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
+    <string name="web_custom_poster_save">Guardar</string>
+    <string name="web_custom_poster_clear">Borrar</string>
+    <string name="web_custom_poster_saved">¡Guardado!</string>
+    <string name="web_custom_poster_cleared">Borrado</string>
+    <string name="web_custom_poster_error_empty">Ingresa un patrón de URL</string>
+    <string name="web_custom_poster_error_save">No se pudo guardar</string>
+    <string name="web_custom_poster_error_clear">No se pudo borrar</string>
+    <string name="web_custom_poster_error_connection">Error de conexión</string>
+    <string name="web_custom_poster_current">Actual:</string>
+    <string name="web_custom_poster_none">No hay ningún patrón configurado</string>
+    <string name="web_custom_poster_loading">Cargando…</string>
+    <string name="web_custom_poster_placeholders_info">Marcadores: {id} incluye todos los ID de contenido. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} apuntan a un solo tipo de ID; si no está disponible, se conserva el póster original. {imdb_id|tmdb_id|kitsu_id} declara los tipos de ID compatibles; se utilizará el que corresponda o se conservará el póster original. Agrega ? para hacer que un marcador sea opcional, resolviéndolo como vacío en lugar de omitirlo: {imdb_id?}. Otros marcadores: {id_type}, {typed_id}, {type}, {shape}.</string>
+
+
+    <string name="mdblist_name">MDBList</string>
+    <string name="mdblist_tracking_description">Sincroniza el historial de reproducción y el progreso de reproducción entre dispositivos</string>
+    <string name="mdblist_connected_as">Conectado como %1$s</string>
+    <string name="mdblist_account_fallback">Usuario de MDBList</string>
+    <string name="mdblist_insufficient_scope">MDBList no otorgó permisos para actualizar el historial de reproducción. Vuelve a conectar la cuenta y permite el acceso de escritura.</string>
+    <string name="mdblist_awaiting_instruction">Escanea el código QR o ingresa este código en la dirección que aparece a continuación.</string>
+    <string name="mdblist_qr_description">Código QR para conectar tu cuenta de MDBList</string>
+    <string name="mdblist_status_enter_code">Aprueba la conexión en tu cuenta de MDBList.</string>
+    <string name="mdblist_status_syncing">Sincronizando el historial de reproducción y el progreso de reproducción…</string>
+    <string name="mdblist_last_synced">Última sincronización: %1$s</string>
+    <string name="mdblist_disconnect_title">¿Desconectar MDBList?</string>
+    <string name="mdblist_disconnect_subtitle">Dejar de enviar las actualizaciones de reproducción desde este perfil. Tu historial de MDBList se conservará.</string>
+    <string name="mdblist_missing_client">La conexión con MDBList no está disponible en esta versión.</string>
+    <string name="mdblist_invalid_response">MDBList devolvió una respuesta incompleta. Inténtalo de nuevo.</string>
+    <string name="mdblist_code_expired">Este código ha expirado. Inténtalo de nuevo para obtener un código nuevo.</string>
+    <string name="mdblist_access_denied">Se rechazó la conexión. Inténtalo de nuevo para conectar tu cuenta.</string>
+    <string name="mdblist_authorization_revoked">Tu conexión con MDBList ha expirado o fue revocada. Vuelve a conectarla para reanudar la sincronización.</string>
+    <string name="mdblist_unavailable">No se pudo sincronizar con MDBList. Inténtalo de nuevo.</string>
+    <string name="mdblist_rate_limited">Se alcanzó el límite de solicitudes de MDBList. La sincronización se reanudará cuando se restablezca el límite.</string>
+    <string name="mdblist_revoke_failed">Se desconectó en este dispositivo. Elimina esta app desde la configuración de tu cuenta de MDBList para revocar su acceso.</string>
     <string name="mdblist_title">Calificaciones de MDBList</string>
     <string name="mdblist_subtitle">Configurar calificaciones externas mostradas en la sección destacada</string>
     <string name="mdblist_enable_title">Habilitar Calificaciones de MDBList</string>
     <string name="mdblist_enable_subtitle">Obtener calificaciones de proveedores externos en la pantalla de detalles</string>
     <string name="mdblist_api_key_title">Clave de API</string>
     <string name="mdblist_api_key_subtitle">Necesaria para obtener calificaciones desde MDBList</string>
+    <string name="mdblist_ratings_credentials_subtitle">Usa tu cuenta de MDBList conectada en Seguimiento o ingresa una clave de API independiente para las calificaciones.</string>
+    <string name="mdblist_ratings_connected_account">Usando la cuenta conectada</string>
+    <string name="mdblist_ratings_key_override_subtitle">Una clave de API reemplaza tu cuenta conectada para las calificaciones. Bórrala para volver a usar la cuenta conectada.</string>
     <string name="mdblist_trakt_title">Trakt</string>
     <string name="mdblist_trakt_subtitle">Mostrar puntuación de Trakt</string>
     <string name="mdblist_imdb_title">IMDb</string>
@@ -1346,8 +1395,6 @@
     <string name="tmdb_basic_info_subtitle">Descripción, géneros y calificación desde TMDB</string>
     <string name="tmdb_details_title">Detalles</string>
     <string name="tmdb_details_subtitle">Duración, fecha de lanzamiento, país e idioma desde TMDB</string>
-    <string name="tmdb_release_dates_title">Fechas de estreno</string>
-    <string name="tmdb_release_dates_subtitle">Fechas de estreno y emisión desde TMDB</string>
     <string name="tmdb_credits_title">Créditos</string>
     <string name="tmdb_credits_subtitle">Elenco con fotos, director y escritor desde TMDB</string>
     <string name="tmdb_productions_title">Producciones</string>
@@ -3115,6 +3162,7 @@
     <string name="playback_cache_info_manual_headroom">El modo manual mantiene aproximadamente %1$d MB libres.</string>
     <string name="playback_cache_info_free_disk">Espacio libre disponible: %1$s.</string>
     <string name="playback_cache_info_restart">El nuevo límite de caché se aplicará tras reiniciar la aplicación al cambiar entre modos o tamaños.</string>
+    <string name="playback_cache_write_warning">En dispositivos con almacenamiento interno, la actividad de escritura es constante y puede aumentar el desgaste con el tiempo.</string>
     <string name="playback_reset_to_default">Restablecer valores predeterminados</string>
     <string name="playback_net_custom">Red personalizada</string>
     <string name="playback_net_custom_sub">Usa múltiples conexiones paralelas para obtener transmisiones progresivas. Cuando está desactivado, se usa una sola conexión.</string>
@@ -3148,8 +3196,15 @@
     <string name="diag_label_source_profile">Perfil de origen</string>
     <string name="diag_label_conversions">Conversiones</string>
     <string name="diag_label_signal_rewrites">Reescrituras de señal</string>
+    <string name="diag_label_last_convert">Última conversión</string>
     <string name="diag_label_custom_buffers">Búferes personalizados</string>
     <string name="diag_label_custom_network_cache">Red/Caché personalizada</string>
+    <string name="diag_label_disk_cache">Caché de disco</string>
+    <string name="diag_label_disk_cache_usage">Uso de la caché de disco</string>
+    <string name="diag_value_disk_cache_on">Activado - %1$s</string>
+    <string name="diag_value_disk_cache_unavailable">No disponible</string>
+    <string name="diag_value_disk_cache_not_used">Desactivado - no se utiliza para esta transmisión</string>
+    <string name="diag_value_disk_cache_usage">%1$s leídos, %2$s eliminados</string>
     <string name="diag_section_outcome">Resultado</string>
     <string name="diag_label_hdr_format_intended">Formato HDR (previsto)</string>
     <string name="diag_label_first_frame">Primer fotograma</string>

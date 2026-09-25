@@ -745,7 +745,13 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
                 )
             }
             runCatching { tvRecommendationManager.onProgressRemoved(normalizedProgress.contentId) }
-        } else {
+        } else if (!hasMarkedCurrentEpisodeCompleted) {
+            // Only save in-progress when the episode has not already been
+            // marked as completed during this playback session.  After
+            // natural playback completion the player can report stale
+            // position/duration values (e.g. duration=0 → fallbackPercent=5)
+            // which would overwrite the completed entry in the mutation
+            // store and push an incorrect low-progress value to remote.
             watchProgressRepository.saveProgress(
                 normalizedProgress,
                 profileId = profileId,

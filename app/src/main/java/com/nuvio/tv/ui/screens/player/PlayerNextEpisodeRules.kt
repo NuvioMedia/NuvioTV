@@ -51,6 +51,21 @@ object PlayerNextEpisodeRules {
 
         if (outroSegments.isNotEmpty()) {
             if (durationMs <= 0L) return false
+
+            // Use the same post-credits detection as the skip-credits button so
+            // the next-episode card never appears over a post-credits scene.
+            val latestOutro = outroSegments.maxByOrNull { it.endTime }
+            val postCreditsScene = latestOutro?.followingPostCreditsScene(skipIntervals, durationMs)
+
+            if (postCreditsScene != null) {
+                val sceneEndMs = (postCreditsScene.endTime * 1_000.0).toLong()
+                    .coerceAtMost(durationMs)
+                val userTriggerMs = userThresholdPositionMs(
+                    durationMs, thresholdMode, thresholdPercent, thresholdMinutesBeforeEnd
+                )
+                return positionMs >= maxOf(sceneEndMs, userTriggerMs)
+            }
+
             val latestOutroEndMs = (outroSegments.maxOf { it.endTime } * 1_000.0).toLong()
             val postOutroGapMs = durationMs - latestOutroEndMs
 
@@ -135,4 +150,20 @@ object PlayerNextEpisodeRules {
 
     /** How close to the duration MPV treats as the end of the file. */
     const val NEAR_END_MS = 500L
+
+    private fun userThresholdPositionMs(
+        durationMs: Long,
+        thresholdMode: NextEpisodeThresholdMode,
+        thresholdPercent: Float,
+        thresholdMinutesBeforeEnd: Float,
+    ): Long = when (thresholdMode) {
+        NextEpisodeThresholdMode.PERCENTAGE -> {
+            val clampedPercent = thresholdPercent.coerceIn(97f, 100f)
+            kotlin.math.ceil(durationMs * (clampedPercent / 100.0)).toLong()
+        }
+        NextEpisodeThresholdMode.MINUTES_BEFORE_END -> {
+            val clampedMinutes = thresholdMinutesBeforeEnd.coerceIn(0f, 3.5f)
+            durationMs - (clampedMinutes * 60_000f).toLong()
+        }
+    }
 }

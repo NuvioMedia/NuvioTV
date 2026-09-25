@@ -350,6 +350,12 @@ internal fun AddonFilterChips(
 
     val chipListState = androidx.compose.foundation.lazy.rememberLazyListState()
 
+    LaunchedEffect(orderedNames.size, isRtl, chipRowHasFocus) {
+        if (!chipRowHasFocus) {
+            chipListState.scrollToItem(0)
+        }
+    }
+
     // When the selected addon is removed, switch filter to the last available addon
     LaunchedEffect(selectedAddon, orderedNames) {
         if (selectedAddon != null && selectedAddon !in orderedNames) {

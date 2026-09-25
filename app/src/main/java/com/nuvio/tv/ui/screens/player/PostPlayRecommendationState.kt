@@ -121,10 +121,16 @@ internal fun shouldUsePostPlayRecommendation(
     contentType: String?,
     isNextEpisodeMetadataResolved: Boolean,
     nextEpisodeHasAired: Boolean?,
+    nextEpisodeAvailable: Boolean? = null,
+    nextEpisodeReleased: String? = "",
     enabled: Boolean = true
 ): Boolean = enabled && when (resolvePostPlayContentType(contentType)) {
     ContentType.MOVIE -> true
-    ContentType.SERIES -> isNextEpisodeMetadataResolved && nextEpisodeHasAired != true
+    ContentType.SERIES -> {
+        if (!isNextEpisodeMetadataResolved) false
+        else if (nextEpisodeHasAired != true) true
+        else nextEpisodeReleased.isNullOrBlank() && nextEpisodeAvailable == false
+    }
     else -> false
 }
 

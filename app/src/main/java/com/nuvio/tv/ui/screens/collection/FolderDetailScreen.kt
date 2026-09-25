@@ -50,6 +50,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import com.nuvio.tv.ui.util.localizedContentType
@@ -251,7 +252,9 @@ private fun FolderHeader(folder: com.nuvio.tv.domain.model.CollectionFolder) {
         }
         Text(
             text = folder.title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                textDirection = folder.title.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -313,7 +316,9 @@ private fun TabbedGridContent(
         }
         Text(
             text = folder.title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                textDirection = folder.title.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

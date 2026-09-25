@@ -45,7 +45,7 @@ data class CatalogDescriptor(
     val extraRequired: List<String> = emptyList()
 ) {
     val apiType: String
-        get() = type.toApiString(rawType)
+        get() = rawType.trim().ifBlank { type.toApiString() }
 }
 
 @Immutable

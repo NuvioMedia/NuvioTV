@@ -78,6 +78,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -1133,12 +1134,12 @@ private fun ModernCarouselCard(
     val isCollectionFolder = item.payload is ModernPayload.CollectionFolder
     val baseImageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
         if (useLandscapeOverlayTreatment) {
-            effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+            item.metaPreview?.landscapePoster ?: effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
         } else {
             item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
         }
     } else if (useLandscapeOverlayTreatment && !isCollectionFolder) {
-        effectiveBackdropUrl ?: item.heroPreview.poster
+        item.metaPreview?.landscapePoster ?: effectiveBackdropUrl ?: item.heroPreview.poster
     } else if (isCollectionFolder && !payload?.coverEmoji.isNullOrBlank()) {
         // Emoji cover folders: never fall back to backdrop for the card poster
         item.imageUrl
@@ -1176,6 +1177,7 @@ private fun ModernCarouselCard(
     }
 
     val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(imageUrl)
+    var customPosterLoadFailed by remember(imageUrl) { mutableStateOf(false) }
     val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey) {
         imageUrl?.let {
             val builder = ImageRequest.Builder(context)
@@ -1185,6 +1187,18 @@ private fun ModernCarouselCard(
                 .size(width = requestWidthPx, height = requestHeightPx)
             if (revalidationKey > 0) {
                 builder.placeholderMemoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
+            }
+            val isLandscapeCustomPoster = useLandscapeOverlayTreatment && !item.metaPreview?.landscapePoster.isNullOrBlank()
+            val fallbackUrl = if (isLandscapeCustomPoster) {
+                // Landscape custom poster -> fall back to original backdrop
+                item.metaPreview?.background ?: item.heroPreview.backdrop ?: item.metaPreview?.rawPosterUrl
+            } else {
+                item.metaPreview?.rawPosterUrl
+            }
+            if (!fallbackUrl.isNullOrBlank() && fallbackUrl != it) {
+                builder.memoryCacheKeyExtras(
+                    mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
+                )
             }
             builder.build()
         }
@@ -1217,7 +1231,8 @@ private fun ModernCarouselCard(
         (useLandscapeOverlayTreatment || isBackdropExpanded) &&
             !isCollectionFolder &&
             !effectiveLogoUrl.isNullOrBlank() &&
-            !landscapeLogoLoadFailed
+            !landscapeLogoLoadFailed &&
+            (isBackdropExpanded || item.metaPreview?.landscapePoster.isNullOrBlank() || customPosterLoadFailed)
     var longPressTriggered by remember { mutableStateOf(false) }
     val longPressKeyTracker = rememberLongPressKeyTracker()
     val backgroundCardColor = NuvioTheme.colors.BackgroundCard
@@ -1370,7 +1385,12 @@ private fun ModernCarouselCard(
                             placeholder = backgroundPainter,
                             error = backgroundPainter,
                             fallback = backgroundPainter,
-                            contentScale = imageContentScale
+                            contentScale = imageContentScale,
+                            onError = {
+                                if (!item.metaPreview?.landscapePoster.isNullOrBlank() || !item.metaPreview?.rawPosterUrl.isNullOrBlank()) {
+                                    customPosterLoadFailed = true
+                                }
+                            }
                         )
                     } else if (isCollectionFolder && !payload?.coverEmoji.isNullOrBlank()) {
                         Box(
@@ -1441,10 +1461,12 @@ private fun ModernCarouselCard(
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart
                     )
-                } else if (useLandscapeOverlayTreatment || isBackdropExpanded) {
+                } else if ((useLandscapeOverlayTreatment || isBackdropExpanded) && !isCollectionFolder && (item.metaPreview?.landscapePoster.isNullOrBlank() || customPosterLoadFailed)) {
                     Text(
                         text = item.title,
-                        style = titleStyle,
+                        style = titleStyle.copy(
+                            textDirection = item.title.contentTextDirection()
+                        ),
                         color = Color.White,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -1474,7 +1496,9 @@ private fun ModernCarouselCard(
             ) {
                 Text(
                     text = item.title,
-                    style = titleStyle,
+                    style = titleStyle.copy(
+                        textDirection = item.title.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1483,7 +1507,9 @@ private fun ModernCarouselCard(
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            textDirection = subtitle.contentTextDirection()
+                        ),
                         color = NuvioTheme.colors.TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

@@ -257,6 +257,12 @@ fun ContentCard(
             if (revalidationKey > 0) {
                 builder.placeholderMemoryCacheKey("${imageUrl}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
             }
+            val fallbackUrl = item.rawPosterUrl
+            if (!fallbackUrl.isNullOrBlank() && fallbackUrl != imageUrl) {
+                builder.memoryCacheKeyExtras(
+                    mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
+                )
+            }
             builder.build()
         }
         val logoRequestHeightPx = remember(density) {

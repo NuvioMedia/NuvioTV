@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -75,7 +76,16 @@ class CastDetailViewModel @Inject constructor(
                     language = tmdbSettingsDataStore.settings.first().language
                 )
                 if (detail != null) {
-                    _uiState.value = CastDetailUiState.Success(detail)
+                    val pattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
+                    val enabledScreens = layoutPreferenceDataStore.customPosterEnabledScreens.first()
+                    val effectivePattern = com.nuvio.tv.core.poster.patternForScreen(pattern, com.nuvio.tv.core.poster.CustomPosterScreen.DETAILS, enabledScreens)
+                    val overlaidDetail = if (effectivePattern.isNotBlank()) {
+                        detail.copy(
+                            movieCredits = detail.movieCredits.withCustomPosterUrls(effectivePattern),
+                            tvCredits = detail.tvCredits.withCustomPosterUrls(effectivePattern)
+                        )
+                    } else detail
+                    _uiState.value = CastDetailUiState.Success(overlaidDetail)
                 } else {
                     _uiState.value = CastDetailUiState.Error(
                         context.getString(R.string.cast_error_load_details_for, personName)

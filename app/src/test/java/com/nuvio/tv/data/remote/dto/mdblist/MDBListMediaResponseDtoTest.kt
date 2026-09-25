@@ -61,7 +61,7 @@ class MDBListMediaResponseDtoTest {
         )
         assertEquals(72.0, ratings.tomatoes)
         assertEquals(85.0, ratings.audience)
-        assertNull(ratings.imdb)
+        assertEquals(8.1, ratings.imdb)
         assertEquals(RottenTomatoesStatus.CERTIFIED_FRESH, ratings.tomatoesStatus)
         assertEquals(RottenTomatoesStatus.VERIFIED_HOT, ratings.audienceStatus)
     }
@@ -119,6 +119,58 @@ class MDBListMediaResponseDtoTest {
         assertNull(ratings.audienceStatus)
     }
 
+    @Test
+    fun `all supported sources use their native rating scales`() {
+        val ratings = parse("""{"ratings":[
+            {"source":"imdb","value":0,"score":99},
+            {"source":"trakt","value":81},
+            {"source":"tmdb","value":78},
+            {"source":"letterboxd","value":8.4,"score":84},
+            {"source":"myanimelist","value":8.5},
+            {"source":"metacritic","value":75},
+            {"source":"metacriticuser","value":9.0}
+        ]}""")
+
+        assertEquals(MDBListRatings(imdb = 0.0, trakt = 81.0, tmdb = 78.0, letterboxd = 4.2, mal = 8.5, metacritic = 75.0), ratings)
+    }
+
+    @Test
+    fun `invalid values and missing ratings are skipped`() {
+        val ratings = parse("""{"ratings":[
+            {"source":"imdb","value":11},
+            {"source":"trakt","value":-1},
+            {"source":"tmdb","value":101},
+            {"source":"letterboxd","value":-1,"score":80},
+            {"source":"letterboxd","value":5.1},
+            {"source":"myanimelist","value":10.1},
+            {"source":"metacritic","value":null},
+            {"source":"imdb","score":75}
+        ]}""")
+
+        assertTrue(ratings.isEmpty())
+    }
+
+    @Test
+    fun `live single and batch Letterboxd formats keep the same five point rating`() {
+        for (value in listOf(3.9, 7.8)) {
+            assertEquals(3.9, parse("""{"ratings":[{"source":"letterboxd","value":$value,"score":78}]}""").letterboxd)
+        }
+        assertEquals(1.2, parse("""{"ratings":[{"source":"letterboxd","value":2.4,"score":24}]}""").letterboxd)
+        assertEquals(4.2, parse("""{"ratings":[{"source":"letterboxd","value":4.2}]}""").letterboxd)
+    }
+
+    @Test
+    fun `current and legacy imdb ids can identify batch results`() {
+        for (payload in listOf(
+            """{"ids":{"imdb":"tt1","tmdb":1,"mal":null}}""",
+            """{"imdb_id":"tt1"}""",
+            """{"imdbid":"tt1"}"""
+        )) {
+            assertEquals("tt1", requireNotNull(adapter.fromJson(payload)).resolvedImdbId())
+        }
+        assertNull(requireNotNull(adapter.fromJson("""{"id":1}""")).resolvedImdbId())
+    }
+
     private fun parse(payload: String): MDBListRatings =
-        requireNotNull(adapter.fromJson(payload)).toRottenTomatoesRatings()
+        requireNotNull(adapter.fromJson(payload)).toRatings()
 }

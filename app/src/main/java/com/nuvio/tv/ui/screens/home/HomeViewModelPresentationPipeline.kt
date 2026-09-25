@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.core.tmdb.TmdbEnrichment
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
@@ -267,8 +268,16 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                 ModernHomePresentationInput(
                     homeRows = state.homeRows,
                     catalogRows = state.catalogRows,
-                    continueWatchingItems = if (state.continueWatchingEnabled) state.continueWatchingItems else emptyList(),
-                    upcomingItems = if (state.continueWatchingEnabled) state.upcomingItems else emptyList(),
+                    continueWatchingItems = if (state.continueWatchingEnabled)
+                        state.continueWatchingItems.withCustomPosterUrls(
+                            com.nuvio.tv.core.poster.patternForScreen(state.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, state.customPosterEnabledScreens)
+                        )
+                    else emptyList(),
+                    upcomingItems = if (state.continueWatchingEnabled)
+                        state.upcomingItems.withCustomPosterUrls(
+                            com.nuvio.tv.core.poster.patternForScreen(state.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, state.customPosterEnabledScreens)
+                        )
+                    else emptyList(),
                     useLandscapePosters = state.modernLandscapePostersEnabled,
                     showCatalogTypeSuffix = state.catalogTypeSuffixEnabled,
                     showFullReleaseDate = state.showFullReleaseDate,
@@ -638,6 +647,8 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             }
 
         } finally {
+            // Release the claim only if it is still ours: a later focus may have claimed another item.
+            if (pendingTmdbEnrichItemId == item.id) pendingTmdbEnrichItemId = null
             if (_enrichingItemId.value == item.id) {
                 setEnrichingItemId(null)
                 // If enrichment completed but no enriched data exists for this item,
@@ -822,11 +833,6 @@ private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: 
                 status = enrichment.status ?: merged.status
             )
         }
-        if (currentTmdbSettings.useReleaseDates) {
-            merged = merged.copy(
-                releaseInfo = enrichment.releaseInfo ?: merged.releaseInfo
-            )
-        }
         return merged
     }
 
@@ -953,7 +959,7 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
 ): List<MetaPreview> {
     if (items.isEmpty()) return items
     val mdbSettings = currentMdbListSettings
-    val mdbEnabled = mdbSettings.enabled && mdbSettings.apiKey.isNotBlank()
+    val mdbEnabled = mdbListRepository.isAvailable(mdbSettings)
 
     return coroutineScope {
         val semaphore = Semaphore(TMDB_HERO_ENRICHMENT_CONCURRENCY)
@@ -1005,12 +1011,6 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
                                 ageRating = enrichment.ageRating ?: enriched.ageRating,
                                 country = enrichment.countries?.joinToString(", ") ?: enriched.country,
                                 language = enrichment.language ?: enriched.language
-                            )
-                        }
-
-                        if (settings.useReleaseDates) {
-                            enriched = enriched.copy(
-                                releaseInfo = enrichment.releaseInfo ?: enriched.releaseInfo
                             )
                         }
 

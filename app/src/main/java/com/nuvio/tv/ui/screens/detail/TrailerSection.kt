@@ -8,17 +8,26 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewResponder
+import androidx.compose.foundation.relocation.bringIntoViewResponder
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -39,18 +48,23 @@ private data class TrailerListItem(
     val preview: MetaPreview
 )
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun TrailerSection(
     trailers: List<MetaTrailer>,
+    listState: LazyListState,
     posterCardCornerRadius: Dp = NuvioTheme.spacing.md,
     upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
     sectionFocusRequester: FocusRequester? = null,
     restoreTrailerId: String? = null,
     restoreFocusToken: Int = 0,
+    lastFocusedTrailerId: String? = null,
+    onLastFocusedTrailerIdChange: (String) -> Unit = {},
     onRestoreFocusHandled: () -> Unit = {},
     onTrailerFocused: (MetaTrailer) -> Unit = {},
-    onTrailerClick: (MetaTrailer) -> Unit
+    onTrailerClick: (MetaTrailer) -> Unit,
+    windowResetKey: String? = null
 ) {
     if (trailers.isEmpty()) return
 
@@ -90,19 +104,52 @@ fun TrailerSection(
 
     if (trailerItems.isEmpty()) return
 
+    val trailerIds = remember(trailerItems) { trailerItems.map { it.preview.id } }
+    listState.keepDetailRowWindow(
+        itemIds = trailerIds,
+        lazyKeyAt = { index ->
+            trailerItems.getOrNull(index)?.let { previewRowLazyKey(index, it.preview.id, it.preview.name) }
+        },
+        resetKey = windowResetKey
+    )
+
     val firstItemFocusRequester = remember { FocusRequester() }
     val restoreFocusRequester = remember { FocusRequester() }
     val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val lastFocusedRequester = remember(lastFocusedTrailerId, trailerItems, restoreTrailerId) {
+        when {
+            lastFocusedTrailerId == null -> firstItemFocusRequester
+            lastFocusedTrailerId == restoreTrailerId -> restoreFocusRequester
+            lastFocusedTrailerId == trailerItems.firstOrNull()?.preview?.id -> firstItemFocusRequester
+            else -> itemFocusRequesters.getOrPut(lastFocusedTrailerId) { FocusRequester() }
+        }
+    }
 
     LaunchedEffect(trailerItems) {
         val validIds = trailerItems.mapTo(mutableSetOf()) { it.preview.id }
         itemFocusRequesters.keys.retainAll(validIds)
     }
 
+    val suppressRestoreScroll = !restoreTrailerId.isNullOrBlank() && restoreFocusToken > 0
+    var restorePending by remember(restoreTrailerId, restoreFocusToken) {
+        mutableStateOf(suppressRestoreScroll)
+    }
+    var placedFocused by remember(restoreTrailerId, restoreFocusToken) { mutableStateOf(false) }
     LaunchedEffect(restoreFocusToken, restoreTrailerId, trailerItems) {
         if (restoreFocusToken <= 0 || restoreTrailerId.isNullOrBlank()) return@LaunchedEffect
         if (trailerItems.none { it.preview.id == restoreTrailerId }) return@LaunchedEffect
-        restoreFocusRequester.requestFocusAfterFrames()
+        restoreFocusRequester.requestFocusAfterFrames(frames = 0)
+    }
+    val restoreNoScrollResponder = remember {
+        object : BringIntoViewResponder {
+            override fun calculateRectForParent(localRect: Rect): Rect = Rect.Zero
+            override suspend fun bringChildIntoView(localRect: () -> Rect?) {}
+        }
+    }
+    val restoreItemModifier = if (suppressRestoreScroll) {
+        Modifier.bringIntoViewResponder(restoreNoScrollResponder)
+    } else {
+        Modifier
     }
 
     val landscapeStyle = remember(posterCardCornerRadius) {
@@ -121,29 +168,47 @@ fun TrailerSection(
             .padding(top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.sm)
     ) {
         LazyRow(
+            state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .then(if (sectionFocusRequester != null) Modifier.focusRequester(sectionFocusRequester) else Modifier)
-                .focusRestorer { firstItemFocusRequester }
+                .focusRestorer {
+                    when {
+                        restorePending -> restoreFocusRequester
+                        else -> lastFocusedRequester
+                    }
+                }
                 .focusGroup(),
             contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             itemsIndexed(
                 items = trailerItems,
-                key = { index, item -> item.preview.id + "|" + item.preview.name + "|" + index }
+                key = { index, item -> previewRowLazyKey(index, item.preview.id, item.preview.name) }
             ) { index, item ->
                 val isRestoreTarget = item.preview.id == restoreTrailerId
                 val isFirstItem = index == 0
                 val focusRequester = when {
-                    isRestoreTarget -> restoreFocusRequester
+                    isRestoreTarget && restoreFocusToken > 0 -> restoreFocusRequester
                     isFirstItem -> firstItemFocusRequester
                     else -> remember(item.preview.id) {
                         itemFocusRequesters.getOrPut(item.preview.id) { FocusRequester() }
                     }
                 }
 
-                Column {
+                Column(
+                    modifier = restoreItemModifier.then(
+                        if (isRestoreTarget && suppressRestoreScroll) {
+                            Modifier.onPlaced {
+                                if (placedFocused) return@onPlaced
+                                placedFocused = true
+                                runCatching { focusRequester.requestFocus() }
+                            }
+                        } else {
+                            Modifier
+                        }
+                    )
+                ) {
                     GridContentCard(
                         item = item.preview,
                         onClick = { onTrailerClick(item.trailer) },
@@ -152,10 +217,13 @@ fun TrailerSection(
                         imageCrossfade = true,
                         focusRequester = focusRequester,
                         upFocusRequester = upFocusRequester,
+                        downFocusRequester = downFocusRequester,
                         depthSurface = CardDepthSurface.TRAILERS,
                         onFocused = {
+                            onLastFocusedTrailerIdChange(item.preview.id)
                             onTrailerFocused(item.trailer)
                             if (isRestoreTarget && restoreFocusToken > 0) {
+                                restorePending = false
                                 onRestoreFocusHandled()
                             }
                         }

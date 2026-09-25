@@ -511,6 +511,32 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(continueWatchingCardStyle = style) }
                 }
         }
+        viewModelScope.launch {
+            var initialPattern = true
+            layoutPreferenceDataStore.customPosterUrlPattern
+                .distinctUntilChanged()
+                .collect { pattern ->
+                    _uiState.update { it.copy(customPosterUrlPattern = pattern) }
+                    if (initialPattern) {
+                        initialPattern = false
+                    } else {
+                        refreshVisibleCatalogsPipeline(forceReplace = true)
+                    }
+                }
+        }
+        viewModelScope.launch {
+            var initialScreens = true
+            layoutPreferenceDataStore.customPosterEnabledScreens
+                .distinctUntilChanged()
+                .collect { screens ->
+                    _uiState.update { it.copy(customPosterEnabledScreens = screens) }
+                    if (initialScreens) {
+                        initialScreens = false
+                    } else {
+                        refreshVisibleCatalogsPipeline(forceReplace = true)
+                    }
+                }
+        }
         // When "next up from furthest episode" changes, clear CW caches and retrigger pipeline
         viewModelScope.launch {
             var initial = true

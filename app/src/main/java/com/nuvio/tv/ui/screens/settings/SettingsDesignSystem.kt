@@ -87,6 +87,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.SettingsUiStyle
 import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.BrandWordmark
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioComponents
@@ -1225,7 +1226,9 @@ internal fun SettingsChoiceChip(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium.copy(
+                textDirection = label.contentTextDirection()
+            ),
             color = if (selected || isFocused) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextSecondary,
             modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = 10.dp)
         )

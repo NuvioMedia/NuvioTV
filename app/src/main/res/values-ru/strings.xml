@@ -691,7 +691,7 @@
     <string name="layout_trailer_muted">Воспроизводить трейлер без звука</string>
     <string name="layout_trailer_muted_sub_preview">Отключить звук трейлера во время автовоспроизведения превью.</string>
     <string name="layout_trailer_muted_sub_expanded">Отключить звук трейлера в развернутых карточках.</string>
-    <string name="layout_section_card_style">Стиль карточки постера</string>
+    <string name="layout_section_card_style">Карточка постера</string>
     <string name="layout_section_card_style_desc">Настройка ширины карточки и радиуса углов.</string>
     <string name="settings_card_depth_title">Эффект объёма карточек</string>
     <string name="settings_card_depth_description">Добавляет подсвеченный верхний край и мягкий блик к карточкам изображений для лёгкого ощущения объёма.</string>
@@ -801,8 +801,6 @@
     <string name="tmdb_basic_info_subtitle">Описание, жанры и рейтинг из TMDB</string>
     <string name="tmdb_details_title">Детали</string>
     <string name="tmdb_details_subtitle">Длительность, статус, страна и язык из TMDB</string>
-    <string name="tmdb_release_dates_title">Даты выхода</string>
-    <string name="tmdb_release_dates_subtitle">Даты релиза и выхода в эфир из TMDB</string>
     <string name="tmdb_credits_title">Создатели</string>
     <string name="tmdb_credits_subtitle">Актеры с фото, режиссер и сценарист из TMDB</string>
     <string name="tmdb_productions_title">Производство</string>

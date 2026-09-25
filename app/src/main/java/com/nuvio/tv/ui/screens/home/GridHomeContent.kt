@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.ExperimentalComposeUiApi
 import com.nuvio.tv.ui.util.asStable
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -83,6 +84,7 @@ import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.GridContinueWatchingSection
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.LoadingIndicator
@@ -187,7 +189,11 @@ fun GridHomeContent(
 
     // Offset for section indices: pre-items + continue watching item (if present)
     val gridItems = uiState.gridItems
-    val continueWatchingItems = if (uiState.continueWatchingEnabled) uiState.continueWatchingItems else emptyList()
+    val continueWatchingItems = if (uiState.continueWatchingEnabled)
+        uiState.continueWatchingItems.withCustomPosterUrls(
+            com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
+        )
+    else emptyList()
     val continueWatchingOffset = if (continueWatchingItems.isNotEmpty()) 1 else 0
 
     LaunchedEffect(gridItems, gridFocusState.hasSavedFocus, gridFocusState.focusedItemKey) {
@@ -584,7 +590,9 @@ fun GridHomeContent(
                     GridContinueWatchingSection(
                         modifier = Modifier.fillMaxWidth(),
                         fullWidth = gridWidth,
-                        items = uiState.upcomingItems,
+                        items = uiState.upcomingItems.withCustomPosterUrls(
+                            com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
+                        ),
                         title = stringResource(R.string.upcoming_section_title),
                         lastFocusedIndex = lastFocusedUpcomingIndex,
                         focusRequesters = upcomingFocusRequesters,
@@ -855,7 +863,9 @@ private fun SectionDivider(
     ) {
         Text(
             text = catalogName,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                textDirection = catalogName.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextPrimary
         )
     }
@@ -885,7 +895,9 @@ private fun StickyCategoryHeader(
     ) {
         Text(
             text = sectionName,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleLarge.copy(
+                textDirection = sectionName.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextPrimary
         )
     }
@@ -1088,7 +1100,9 @@ private fun GridCollectionFolderCard(
                 ) {
                     Text(
                         text = folder.title,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            textDirection = folder.title.contentTextDirection()
+                        ),
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
