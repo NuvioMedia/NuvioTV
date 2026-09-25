@@ -53,6 +53,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     traktMappingJob = null
     delayMpvResumeSeekUntilVideoTrack = false
     mpvMediaLoadPrepared = false
+    mpvWaitingForSurfaceLoad = false
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
     debridResolveJob?.cancel()

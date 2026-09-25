@@ -160,6 +160,7 @@ internal fun PlayerRuntimeController.initializePlayer(
         return
     }
     mpvMediaLoadPrepared = false
+    mpvWaitingForSurfaceLoad = false
 
     scope.launch {
         try {
@@ -293,8 +294,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                     )
                     initializeMpvPlayer(url = url, headers = headers, allowEngineFailover = allowEngineFailover)
                     fetchAddonSubtitles()
+                    if (mpvWaitingForSurfaceLoad) {
+                        mpvView?.let { attachMpvView(it) }
+                    }
                 } finally {
                     mpvInitializationInProgress = false
+                }
+                if (mpvWaitingForSurfaceLoad) {
+                    mpvView?.let { attachMpvView(it) }
                 }
                 return@launch
             }
