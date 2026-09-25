@@ -1033,6 +1033,7 @@ fun PlayerScreen(
             visible = uiState.showLoadingOverlay && uiState.error == null && !postPlayRecommendationState.isVisible,
             backdropUrl = uiState.backdrop,
             logoUrl = uiState.logo,
+            logoLanguage = uiState.logoLanguage,
             title = uiState.title,
             message = uiState.loadingMessage.takeIf { uiState.showPlayerLoadingStatus || uiState.isTorrentStream },
             progress = uiState.loadingProgress,
