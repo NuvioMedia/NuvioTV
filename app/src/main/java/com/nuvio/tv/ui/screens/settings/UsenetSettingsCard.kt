@@ -1,12 +1,19 @@
 package com.nuvio.tv.ui.screens.settings
 
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.core.usenet.UsenetConfiguration
 
 @Composable
-internal fun UsenetSettingsCard(configuration: UsenetConfiguration, update: (UsenetConfiguration) -> Unit) {
+internal fun UsenetSettingsCard(
+    configuration: UsenetConfiguration,
+    update: (UsenetConfiguration) -> Unit,
+    initialFocusRequester: FocusRequester? = null
+) {
     var picker by remember { mutableStateOf<String?>(null) }
     val automatic = stringResource(R.string.usenet_automatic)
     val profiles = listOf(
@@ -18,7 +25,8 @@ internal fun UsenetSettingsCard(configuration: UsenetConfiguration, update: (Use
         SettingsToggleRow(title = stringResource(R.string.usenet_fallback),
             subtitle = stringResource(R.string.usenet_fallback_description),
             checked = configuration.fallbackEnabled,
-            onToggle = { update(configuration.copy(fallbackEnabled = !configuration.fallbackEnabled)) })
+            onToggle = { update(configuration.copy(fallbackEnabled = !configuration.fallbackEnabled)) },
+            modifier = initialFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
         SettingsToggleRow(title = stringResource(R.string.usenet_prefetch_results),
             subtitle = stringResource(R.string.usenet_prefetch_results_description),
             checked = configuration.prefetchResults,
