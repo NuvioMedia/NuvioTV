@@ -198,7 +198,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         val progressiveUpstreamFactory: DataSource.Factory = if (useChunkSessionSource) {
             val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
-                setUserAgent(DEFAULT_USER_AGENT)
+                if (sanitizedHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
+                    setUserAgent(DEFAULT_USER_AGENT)
+                }
             }
             val sessionConnections = parallelConnectionCount
             // Runtime enforcement of the tier chunk cap: a value
