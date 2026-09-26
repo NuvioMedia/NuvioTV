@@ -132,17 +132,11 @@ class MetaRepositoryImpl @Inject constructor(
         type: String,
         id: String
     ): Flow<NetworkResult<Meta>> = flow {
-        val requestedType = type.trim()
-        val inferredType = inferCanonicalType(requestedType, id)
+        val requestedType = normalizeExternalMetaType(type)
 
-        // supportedCandidateType only ever returns one of these two, so every
-        // metaCache entry written for this addon and title sits under one of two
-        // keys. Check both, in the order it would pick them, before resolving
-        // the addon, so a cache hit skips the cold-start wait below. Only metaCache
-        // needs this: addonMetaCache is already canonical via metaLookupCacheKey.
-        val probeTypes = listOf(requestedType, inferredType)
-            .filter { it.isNotBlank() }
-            .distinct()
+        // Check the exact requested type before resolving the addon so a cache hit
+        // skips the cold-start wait below.
+        val probeTypes = listOf(requestedType).filter { it.isNotBlank() }
         probeTypes.forEach { probeType ->
             val probeKey = addonMetaCacheKey(addonBaseUrl, probeType, id)
             metaCache[probeKey]?.let { cached ->
@@ -154,28 +148,20 @@ class MetaRepositoryImpl @Inject constructor(
             }
         }
 
-        // The caller names the addon but not necessarily a type it serves. Nuvio's
-        // internal "tv" against a series-only addon is the usual case. Resolve it
-        // like the multi-addon path does, so the request and the cached entry line
-        // up with the other paths.
+        // A known addon's declared resource types are authoritative. Keep tv and
+        // series separate at this external boundary.
         val addon = findAddonByBaseUrl(addonBaseUrl)
-        val advertisedType = addon?.supportedCandidateType(requestedType, inferredType)
-        if (advertisedType == null) {
-            // Both fall back to the requested type, for different reasons. Log which,
-            // so a request expected to fail is not confused with an unknown addon.
-            if (addon == null) {
-                Log.w(
-                    TAG,
-                    "Addon unresolved (not installed, disabled, or URL not matched), " +
-                        "requesting as-is url=$addonBaseUrl type=$requestedType id=$id"
-                )
-            } else {
-                Log.w(
-                    TAG,
-                    "Addon advertises neither type, requesting as-is " +
-                        "addonId=${addon.id} requested=$requestedType inferred=$inferredType id=$id"
-                )
-            }
+        val advertisedType = addon?.supportedCandidateType(requestedType)
+        if (addon != null && advertisedType == null) {
+            emit(NetworkResult.Error(context.getString(R.string.error_meta_not_found), NetworkResult.META_NOT_FOUND_CODE))
+            return@flow
+        }
+        if (addon == null) {
+            Log.w(
+                TAG,
+                "Addon unresolved (not installed, disabled, or URL not matched), " +
+                    "requesting as-is url=$addonBaseUrl type=$requestedType id=$id"
+            )
         }
         val effectiveType = advertisedType ?: requestedType
 
@@ -252,114 +238,20 @@ class MetaRepositoryImpl @Inject constructor(
 
         val addons = installedAddonsOrEmpty()
 
-        val requestedType = type.trim()
-        val inferredType = inferCanonicalType(requestedType, id)
-        val attemptedFailures = mutableListOf<MetaAttemptFailure>()
-        val attemptedAddonNames = linkedSetOf<String>()
-        val metaResourceAddons = addons.filter { addon ->
-            addon.resources.any { it.name == "meta" }
-        }
-
-        // Priority order:
-        // 1) addons that explicitly support requested type AND support the ID prefix
-        // 2) addons that support inferred canonical type AND support the ID prefix
-        // 3) addons that support the type but have no idPrefixes (accept all IDs)
-        // 4) top addon in installed order that exposes meta resource
+        val requestedType = normalizeExternalMetaType(type)
+        // Try only addons that declare this exact resource type and support the ID.
         val prioritizedCandidates = linkedSetOf<Pair<Addon, String>>()
-        // First pass: addons that explicitly match type AND id prefix
         addons.forEach { addon ->
             if (addon.supportsMetaType(requestedType) && addon.supportsMetaId(id)) {
                 prioritizedCandidates.add(addon to requestedType)
             }
         }
-        if (!inferredType.equals(requestedType, ignoreCase = true)) {
-            addons.forEach { addon ->
-                if (addon.supportsMetaType(inferredType) && addon.supportsMetaId(id)) {
-                    prioritizedCandidates.add(addon to inferredType)
-                }
-            }
-        }
-        metaResourceAddons.firstOrNull { it.supportsMetaId(id) }?.let { topMetaAddon ->
-            topMetaAddon.supportedCandidateType(requestedType, inferredType)?.let { fallbackType ->
-                prioritizedCandidates.add(topMetaAddon to fallbackType)
-            }
-        }
-        // Fallback: if no ID-matching addons found, include addons without idPrefixes
-        if (prioritizedCandidates.isEmpty()) {
-            addons.forEach { addon ->
-                if (addon.supportsMetaType(requestedType) && addon.idPrefixes.isEmpty()) {
-                    prioritizedCandidates.add(addon to requestedType)
-                }
-            }
-            metaResourceAddons.firstOrNull { it.idPrefixes.isEmpty() }?.let { topMetaAddon ->
-                topMetaAddon.supportedCandidateType(requestedType, inferredType)?.let { fallbackType ->
-                    prioritizedCandidates.add(topMetaAddon to fallbackType)
-                }
-            }
-        }
 
         if (prioritizedCandidates.isEmpty()) {
-            // Last resort: try addons that declare the raw type (legacy behavior).
-            val fallbackAddons = addons.filter { addon ->
-                addon.rawTypes.any { it.equals(requestedType, ignoreCase = true) } &&
-                    addon.resources.any { it.name == "meta" }
-            }
-
-            for (addon in fallbackAddons) {
-                attemptedAddonNames += addon.displayName
-                val url = buildMetaUrl(addon.baseUrl, requestedType, id)
-                try {
-                    val response = api.getMeta(url)
-                    if (response.isSuccessful) {
-                        val metaDto = response.body()?.meta
-                        if (metaDto != null) {
-                            val episodeLabel = context.getString(R.string.episodes_episode)
-                            val meta = metaDto.toDomain(episodeLabel)
-                            val ttlMs = parseMaxAgeMs(response.headers()["Cache-Control"])
-                            val cached = CachedMeta(meta, System.currentTimeMillis() + ttlMs)
-                            addonMetaCache[cacheKey] = cached
-                            metaCache[addonMetaCacheKey(addon.baseUrl, requestedType, id)] = cached
-                            emit(NetworkResult.Success(meta))
-                            return@flow
-                        } else {
-                            attemptedFailures += buildMissingMetaFailure(addon)
-                        }
-                    } else {
-                        attemptedFailures += MetaAttemptFailure(
-                            addonName = addon.displayName,
-                            kind = if (response.code() == 404) MetaFailureKind.MISSING else MetaFailureKind.REQUEST_FAILED,
-                            detail = response.message() ?: "HTTP ${response.code()}"
-                        )
-                    }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    attemptedFailures += MetaAttemptFailure(
-                        addonName = addon.displayName,
-                        kind = MetaFailureKind.REQUEST_FAILED,
-                        detail = e.message ?: context.getString(R.string.network_error_unknown)
-                    )
-                }
-            }
-
-            val fallbackMessage = if (fallbackAddons.isEmpty()) {
-                context.getString(R.string.error_meta_no_supported_addon, requestedType)
-            } else {
-                buildAggregateFailureMessage(
-                    type = requestedType,
-                    id = id,
-                    attemptedAddonNames = attemptedAddonNames.toList(),
-                    failures = attemptedFailures
-                )
-            }
-            // Classified like the main path below. No addon declaring the type is final, and so is
-            // every legacy candidate answering "no such item"; only a request failure is retryable.
-            val fallbackFinal = fallbackAddons.isEmpty() ||
-                attemptedFailures.all { it.kind == MetaFailureKind.MISSING }
             emit(
                 NetworkResult.Error(
-                    fallbackMessage,
-                    code = if (fallbackFinal) NetworkResult.META_NOT_FOUND_CODE else null
+                    context.getString(R.string.error_meta_no_supported_addon, requestedType),
+                    code = NetworkResult.META_NOT_FOUND_CODE
                 )
             )
             return@flow
@@ -492,12 +384,10 @@ class MetaRepositoryImpl @Inject constructor(
         emit(NetworkResult.Loading)
 
         val addons = installedAddonsOrEmpty()
-        val requestedType = type.trim()
-        val inferredType = inferCanonicalType(requestedType, id)
+        val requestedType = normalizeExternalMetaType(type)
         val candidate = selectPrimaryMetaCandidate(
             addons = addons,
-            requestedType = requestedType,
-            inferredType = inferredType
+            requestedType = requestedType
         )
 
         if (candidate == null) {
@@ -566,19 +456,16 @@ class MetaRepositoryImpl @Inject constructor(
 
     private fun addonMetaCacheKey(addonBaseUrl: String, type: String, id: String): String {
         val (basePath, baseQuery) = splitAddonBaseUrl(addonBaseUrl)
-        return "$basePath$baseQuery|$type:$id"
+        return "$basePath$baseQuery|${normalizeExternalMetaType(type)}:$id"
     }
 
     /** Normalized addon base URL, so two spellings of the same one compare equal. */
     private fun normalizedAddonKey(baseUrl: String): String =
         splitAddonBaseUrl(baseUrl).let { (basePath, baseQuery) -> "$basePath$baseQuery" }
 
-    /**
-     * Key for the caches that are not per addon. Canonicalized so one title asked
-     * for as "tv" and as "series" shares an entry instead of taking two.
-     */
+    /** Keep different external content types in different cache entries. */
     private fun metaLookupCacheKey(type: String, id: String): String =
-        "${inferCanonicalType(type.trim(), id).lowercase()}:$id"
+        "${normalizeExternalMetaType(type)}:$id"
 
     /**
      * Installed, enabled addons. Waits up to [INSTALLED_ADDONS_WAIT_MS] for a real
@@ -599,7 +486,7 @@ class MetaRepositoryImpl @Inject constructor(
 
     private fun buildMetaUrl(baseUrl: String, type: String, id: String): String {
         val (basePath, baseQuery) = splitAddonBaseUrl(baseUrl)
-        val encodedType = encodePathSegment(type)
+        val encodedType = encodePathSegment(normalizeExternalMetaType(type))
         val encodedId = encodePathSegment(id)
         return "$basePath/meta/$encodedType/$encodedId.json$baseQuery"
     }
@@ -634,64 +521,29 @@ class MetaRepositoryImpl @Inject constructor(
     }
 
     private fun AddonResource.supportsType(type: String): Boolean {
-        if (types.isEmpty()) return true
-        return types.any { it.equals(type, ignoreCase = true) }
+        return types.any { it.trim().equals(type.trim(), ignoreCase = true) }
     }
 
-    private fun inferCanonicalType(type: String, id: String): String {
-        val normalizedType = type.trim()
-        // "tv" is Nuvio's internal synonym for episodic content. Stremio metadata
-        // addons advertise episodic content as "series", so fold it over here rather
-        // than requesting a type nothing declares. Live TV is a separate type
-        // ("channel") and is left alone.
-        if (normalizedType.equals("tv", ignoreCase = true)) return "series"
-        val known = setOf("movie", "series", "channel", "anime")
-        if (normalizedType.lowercase() in known) return normalizedType
-
-        val normalizedId = id.lowercase()
-        return when {
-            ":movie:" in normalizedId -> "movie"
-            ":series:" in normalizedId -> "series"
-            ":tv:" in normalizedId -> "series"
-            ":anime:" in normalizedId -> "anime"
-            else -> normalizedType
-        }
-    }
+    private fun normalizeExternalMetaType(type: String): String = type.trim().lowercase()
 
     /**
      * Picks a meta type this addon actually advertises, preferring the requested one.
      * Returns null when it supports neither, so a candidate is never built with a type
      * the addon has already rejected.
      */
-    private fun Addon.supportedCandidateType(requestedType: String, inferredType: String): String? = when {
-        supportsMetaType(requestedType) -> requestedType
-        supportsMetaType(inferredType) -> inferredType
-        else -> null
-    }
+    private fun Addon.supportedCandidateType(requestedType: String): String? =
+        requestedType.takeIf(::supportsMetaType)
 
     private fun selectPrimaryMetaCandidate(
         addons: List<Addon>,
-        requestedType: String,
-        inferredType: String
+        requestedType: String
     ): Pair<Addon, String>? {
         addons.forEach { addon ->
             if (addon.supportsMetaType(requestedType)) {
                 return addon to requestedType
             }
         }
-        if (!inferredType.equals(requestedType, ignoreCase = true)) {
-            addons.forEach { addon ->
-                if (addon.supportsMetaType(inferredType)) {
-                    return addon to inferredType
-                }
-            }
-        }
-        val topMetaAddon = addons.firstOrNull { addon ->
-            addon.resources.any { it.name == "meta" }
-        } ?: return null
-        val fallbackType = topMetaAddon.supportedCandidateType(requestedType, inferredType)
-            ?: return null
-        return topMetaAddon to fallbackType
+        return null
     }
 
     private fun encodePathSegment(value: String): String {

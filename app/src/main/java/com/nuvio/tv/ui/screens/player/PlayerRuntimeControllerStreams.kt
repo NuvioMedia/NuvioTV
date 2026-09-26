@@ -594,7 +594,7 @@ private fun PlayerRuntimeController.markRemainingEpisodeSourceChipsAsError() {
 private fun com.nuvio.tv.domain.model.Addon.supportsStreamResourceForChip(type: String, videoId: String): Boolean {
     return resources.any { resource ->
         resource.name == "stream" &&
-            (resource.types.isEmpty() || resource.types.any { it.equals(type, ignoreCase = true) }) &&
+            (resource.types.isEmpty() || resource.types.any { it.trim().equals(type.trim(), ignoreCase = true) }) &&
             run {
                 val prefixes = resource.idPrefixes?.takeIf { it.isNotEmpty() }
                     ?: idPrefixes.takeIf { it.isNotEmpty() }

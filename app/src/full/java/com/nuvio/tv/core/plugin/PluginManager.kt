@@ -791,6 +791,13 @@ class PluginManager @Inject constructor(
         season: Int?,
         episode: Int?
     ): List<LocalScraperResult> {
+        if (
+            scraper.type == RepositoryType.EXTERNAL_DEX &&
+            mediaType.trim().lowercase() in setOf("tv", "channel")
+        ) {
+            // The CloudStream bridge resolves TMDB movies and series; live channel IDs are not TMDB IDs.
+            return emptyList()
+        }
         return when (scraper.type) {
             RepositoryType.EXTERNAL_DEX -> executeExternalDexScraper(scraper, tmdbId, mediaType, season, episode)
             RepositoryType.NUVIO_JS -> executeJsScraper(scraper, tmdbId, mediaType, season, episode)
@@ -902,7 +909,10 @@ class PluginManager @Inject constructor(
 
         // Use a popular movie for testing (The Matrix - 603)
         val testTmdbId = "603"
-        val testMediaType = if (scraper.supportsType("movie")) "movie" else "series"
+        val testMediaType = listOf("movie", "series", "tv", "channel")
+            .firstOrNull(scraper::supportsType)
+            ?: scraper.supportedTypes.firstOrNull()?.trim()?.lowercase()
+            ?: "movie"
         diagnostics.addStep("Test: TMDB $testTmdbId ($testMediaType)")
 
         // Preload extractors from ALL .cs3 files in the same repo(s)
@@ -915,8 +925,8 @@ class PluginManager @Inject constructor(
             }
         }
 
-        val testSeason = if (testMediaType == "movie") null else 1
-        val testEpisode = if (testMediaType == "movie") null else 1
+        val testSeason = if (testMediaType == "series") 1 else null
+        val testEpisode = if (testMediaType == "series") 1 else null
 
         return try {
             val results = when (scraper.type) {
@@ -1090,8 +1100,8 @@ class PluginManager @Inject constructor(
                             ?.mapNotNull { tvTypeFromString(it) }
                             ?.map { it.toNuvioType() }
                             ?.distinct()
-                            ?.ifEmpty { listOf("movie", "tv") }
-                            ?: listOf("movie", "tv")
+                            ?.ifEmpty { listOf("movie", "series") }
+                            ?: listOf("movie", "series")
 
                         val scraper = ScraperInfo(
                             id = scraperId,
