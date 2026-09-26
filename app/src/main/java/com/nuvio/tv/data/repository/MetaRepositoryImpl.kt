@@ -532,7 +532,7 @@ class MetaRepositoryImpl @Inject constructor(
      * the addon has already rejected.
      */
     private fun Addon.supportedCandidateType(requestedType: String): String? =
-        requestedType.takeIf(::supportsMetaType)
+        requestedType.takeIf { supportsMetaType(it) }
 
     private fun selectPrimaryMetaCandidate(
         addons: List<Addon>,
