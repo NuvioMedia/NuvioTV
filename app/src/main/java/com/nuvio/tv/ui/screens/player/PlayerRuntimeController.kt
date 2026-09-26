@@ -703,6 +703,7 @@ class PlayerRuntimeController(
             fetchMetaDetails(contentId, contentType)
         }
         observeBlurUnwatchedEpisodes()
+        observeEpisodeOptionsOverlayStyle()
         observeEpisodeWatchProgress()
         observeTorrentSettings()
         observeStreamBadgeSettings()
