@@ -42,39 +42,12 @@ val buildTasks = abis.map { (abi, target) ->
                 return@doLast
             }
 
-            val rapidyencDir = layout.buildDirectory.dir("rapidyenc-source/rapidyenc-480bd7b5896f8b3edecc721d23f1384d767ffe2f").get().asFile
-            val completeMarker = File(rapidyencDir, ".extracted")
-            if (!completeMarker.exists()) {
-                rapidyencDir.deleteRecursively()
-                val tempDir = layout.buildDirectory.dir("rapidyenc-extract-tmp").get().asFile
-                tempDir.deleteRecursively()
-                tempDir.mkdirs()
-                val archive = File(tempDir, "rapidyenc.tar.gz")
-                val connection = java.net.URI("https://github.com/animetosho/rapidyenc/archive/480bd7b5896f8b3edecc721d23f1384d767ffe2f.tar.gz").toURL().openConnection() as java.net.HttpURLConnection
-                connection.connectTimeout = 15000
-                connection.readTimeout = 30000
-                val bytes = connection.inputStream.use { it.readAllBytes() }
-                val hash = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
-                check(hash == "bd5eff1e978672af4ebaacde837270a679808bbc12dc15bd6acf7c83d94baa16") { "RapidYenc checksum mismatch" }
-                archive.writeBytes(bytes)
-                project.copy { from(project.tarTree(project.resources.gzip(archive))); into(tempDir) }
-                val extracted = File(tempDir, "rapidyenc-480bd7b5896f8b3edecc721d23f1384d767ffe2f")
-                check(File(extracted, "CMakeLists.txt").exists()) { "RapidYenc extraction incomplete" }
-                project.copy { from(extracted); into(rapidyencDir) }
-                tempDir.deleteRecursively()
-                completeMarker.createNewFile()
-            }
-
-            val cmakeCache = File(nativeBuild.get().asFile, "CMakeCache.txt")
-            if (cmakeCache.exists() && !cmakeCache.readText().contains(rapidyencDir.name)) {
-                nativeBuild.get().asFile.deleteRecursively()
-            }
 
             val cmake = File(cmakeBin, "cmake$suffix")
             check(cmake.exists()) { "Install Android SDK CMake 3.22.1 to build Usenet" }
             check(ndk.exists()) { "Install Android NDK $ndkVersion to build Usenet" }
             project.exec {
-                commandLine(cmake, "-S", rapidyencDir, "-B", nativeBuild.get().asFile,
+                commandLine(cmake, "-S", File(nativeRoot, "third_party/rapidyenc-native"), "-B", nativeBuild.get().asFile,
                     "-G", "Ninja", "-DCMAKE_MAKE_PROGRAM=${File(cmakeBin, "ninja$suffix")}",
                     "-DCMAKE_TOOLCHAIN_FILE=${File(ndk, "build/cmake/android.toolchain.cmake")}",
                     "-DANDROID_ABI=$abi", "-DANDROID_PLATFORM=android-24", "-DANDROID_STL=c++_static",
