@@ -7,6 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.debrid.DirectDebridPlayableResult
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
+import com.nuvio.tv.core.streams.externalStreamType
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
@@ -217,7 +218,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
 
         // On resume, skip chip reset — keep existing chip statuses
         if (!isResume) {
-            updateSourceChipsForFetchStart(type, vid, installedAddons)
+            updateSourceChipsForFetchStart(type, vid, seasonArg, episodeArg, installedAddons)
         }
 
         streamRepository.getStreamsFromAllAddons(
@@ -428,21 +429,20 @@ private const val SOURCE_FILTER_PAGE_SIZE = 100
 private suspend fun PlayerRuntimeController.updateSourceChipsForFetchStart(
     type: String,
     videoId: String,
+    season: Int?,
+    episode: Int?,
     installedAddons: List<com.nuvio.tv.domain.model.Addon>
 ) {
+    val externalType = externalStreamType(type, season, episode)
     val addonNames = installedAddons
-        .filter { it.supportsStreamResourceForChip(type, videoId) }
+        .filter { it.supportsStreamResourceForChip(externalType, videoId) }
         .map { it.displayName }
 
     val pluginNames = try {
         if (pluginManager.pluginsEnabled.first()) {
-            val mediaType = when (type.lowercase()) {
-                "series", "tv", "show" -> "tv"
-                else -> type.lowercase()
-            }
             val groupByRepository = pluginManager.groupStreamsByRepository.first()
             val scrapers = pluginManager.enabledScrapers.first()
-                .filter { it.supportsType(mediaType) }
+                .filter { it.supportsType(externalType) }
             if (groupByRepository) {
                 val repositoriesById = pluginManager.repositories.first().associateBy { it.id }
                 scrapers
@@ -522,21 +522,20 @@ private fun PlayerRuntimeController.markRemainingSourceChipsAsError() {
 private suspend fun PlayerRuntimeController.updateEpisodeSourceChipsForFetchStart(
     type: String,
     videoId: String,
+    season: Int?,
+    episode: Int?,
     installedAddons: List<com.nuvio.tv.domain.model.Addon>
 ) {
+    val externalType = externalStreamType(type, season, episode)
     val addonNames = installedAddons
-        .filter { it.supportsStreamResourceForChip(type, videoId) }
+        .filter { it.supportsStreamResourceForChip(externalType, videoId) }
         .map { it.displayName }
 
     val pluginNames = try {
         if (pluginManager.pluginsEnabled.first()) {
-            val mediaType = when (type.lowercase()) {
-                "series", "tv", "show" -> "tv"
-                else -> type.lowercase()
-            }
             val groupByRepository = pluginManager.groupStreamsByRepository.first()
             val scrapers = pluginManager.enabledScrapers.first()
-                .filter { it.supportsType(mediaType) }
+                .filter { it.supportsType(externalType) }
             if (groupByRepository) {
                 val repositoriesById = pluginManager.repositories.first().associateBy { it.id }
                 scrapers
@@ -594,7 +593,7 @@ private fun PlayerRuntimeController.markRemainingEpisodeSourceChipsAsError() {
 private fun com.nuvio.tv.domain.model.Addon.supportsStreamResourceForChip(type: String, videoId: String): Boolean {
     return resources.any { resource ->
         resource.name == "stream" &&
-            (resource.types.isEmpty() || resource.types.any { it.trim().equals(type.trim(), ignoreCase = true) }) &&
+            resource.types.any { it.trim().equals(type.trim(), ignoreCase = true) } &&
             run {
                 val prefixes = resource.idPrefixes?.takeIf { it.isNotEmpty() }
                     ?: idPrefixes.takeIf { it.isNotEmpty() }
@@ -1143,7 +1142,13 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
         var debridPreparationLaunched = false
 
         // Initialize episode source chips with LOADING status
-        updateEpisodeSourceChipsForFetchStart(type, video.id, installedAddons)
+        updateEpisodeSourceChipsForFetchStart(
+            type = type,
+            videoId = video.id,
+            season = video.season,
+            episode = video.episode,
+            installedAddons = installedAddons
+        )
 
         streamRepository.getStreamsFromAllAddons(
             type = type,

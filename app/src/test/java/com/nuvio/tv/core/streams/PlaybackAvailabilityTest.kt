@@ -21,7 +21,7 @@ class PlaybackAvailabilityTest {
         assertEquals("tv", externalStreamType("tv", season = null, episode = null))
         assertEquals("channel", externalStreamType(" Channel ", season = null, episode = null))
         assertEquals("movie", externalStreamType(" MOVIE ", season = null, episode = null))
-        assertEquals("ppv", externalStreamType(" PPV ", season = null, episode = null))
+        assertEquals("PPV", externalStreamType(" PPV ", season = null, episode = null))
     }
 
     @Test

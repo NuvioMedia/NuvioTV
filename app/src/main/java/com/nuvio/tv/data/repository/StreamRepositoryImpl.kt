@@ -10,6 +10,7 @@ import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.plugin.resolvePluginSeasonEpisode
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.streams.canonicalExternalMediaType
 import com.nuvio.tv.core.streams.externalStreamType
 import com.nuvio.tv.core.streams.supportsStreamResource
 import com.nuvio.tv.core.tmdb.TmdbService
@@ -359,7 +360,7 @@ class StreamRepositoryImpl @Inject constructor(
     )
 
     private fun buildPluginRequest(tmdbId: String?, type: String, videoId: String): PluginRequest? {
-        val externalType = type.trim().lowercase()
+        val externalType = canonicalExternalMediaType(type)
         if (tmdbId != null) {
             return PluginRequest(
                 id = tmdbId,
@@ -368,7 +369,7 @@ class StreamRepositoryImpl @Inject constructor(
             )
         }
 
-        if (!videoId.canRunLocalPlugins() && externalType !in LIVE_CONTENT_TYPES) return null
+        if (!videoId.canRunLocalPlugins() && externalType !in NON_TMDB_CONTENT_TYPES) return null
 
         return PluginRequest(
             id = if (videoId.startsWith("kitsu:", ignoreCase = true)) {
@@ -432,7 +433,7 @@ class StreamRepositoryImpl @Inject constructor(
     }
 
     private companion object {
-        val LIVE_CONTENT_TYPES = setOf("tv", "channel")
+        val NON_TMDB_CONTENT_TYPES = setOf("tv", "channel")
     }
 
     private suspend fun streamLocalPlugins(
@@ -577,7 +578,7 @@ class StreamRepositoryImpl @Inject constructor(
         val queryStart = cleanBaseUrl.indexOf('?')
         val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
         val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
-        val externalType = type.trim().lowercase()
+        val externalType = canonicalExternalMediaType(type)
         val encodedType = encodePathSegment(externalType)
         val encodedVideoId = encodePathSegment(videoId)
         val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"

@@ -3,6 +3,7 @@ package com.nuvio.tv.data.repository
 import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.streams.canonicalExternalMediaType
 import com.nuvio.tv.core.network.safeApiCall
 import com.nuvio.tv.data.local.AddonPreferences
 import com.nuvio.tv.data.remote.api.AddonApi
@@ -125,7 +126,7 @@ class SubtitleRepositoryImpl @Inject constructor(
     }
 
     private fun canonicalSubtitleType(type: String): String {
-        return type.trim().lowercase()
+        return canonicalExternalMediaType(type)
     }
     
     private fun supportsType(addon: Addon, resource: com.nuvio.tv.domain.model.AddonResource, type: String, id: String): Boolean {

@@ -3,6 +3,7 @@ package com.nuvio.tv.data.repository
 import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.streams.canonicalExternalMediaType
 import com.nuvio.tv.data.mapper.toDomain
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.Addon
@@ -524,7 +525,7 @@ class MetaRepositoryImpl @Inject constructor(
         return types.any { it.trim().equals(type.trim(), ignoreCase = true) }
     }
 
-    private fun normalizeExternalMetaType(type: String): String = type.trim().lowercase()
+    private fun normalizeExternalMetaType(type: String): String = canonicalExternalMediaType(type)
 
     /**
      * Picks a meta type this addon actually advertises, preferring the requested one.

@@ -2,6 +2,7 @@ package com.nuvio.tv.core.plugin
 
 import android.util.Log
 import com.nuvio.tv.core.plugin.cloudstream.toNuvioType
+import com.nuvio.tv.core.streams.canonicalExternalMediaType
 import com.nuvio.tv.core.plugin.cloudstream.tvTypeFromString
 import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionLoader
 import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionRunner
@@ -795,7 +796,7 @@ class PluginManager @Inject constructor(
             scraper.type == RepositoryType.EXTERNAL_DEX &&
             mediaType.trim().lowercase() in setOf("tv", "channel")
         ) {
-            // The CloudStream bridge resolves TMDB movies and series; live channel IDs are not TMDB IDs.
+            // The CloudStream bridge resolves TMDB movies and series; tv/channel content IDs are not TMDB IDs.
             return emptyList()
         }
         return when (scraper.type) {
@@ -911,7 +912,7 @@ class PluginManager @Inject constructor(
         val testTmdbId = "603"
         val testMediaType = listOf("movie", "series", "tv", "channel")
             .firstOrNull(scraper::supportsType)
-            ?: scraper.supportedTypes.firstOrNull()?.trim()?.lowercase()
+            ?: scraper.supportedTypes.firstOrNull()?.let(::canonicalExternalMediaType)
             ?: "movie"
         diagnostics.addStep("Test: TMDB $testTmdbId ($testMediaType)")
 
