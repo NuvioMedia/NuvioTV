@@ -742,7 +742,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Automatski promeni mehanizam pri grešci pokretanja</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ako pokretanje strima ne uspe, automatski prebaci između ExoPlayer-a i libmpv-a.</string>
     <string name="playback_external_forward_subtitles">Prosledi titlove eksternom plejeru</string>
-    <string name="playback_external_forward_subtitles_sub">Preuzmi titlove na željenom jeziku sa dodataka i prosledi ih eksternom plejeru.</string>
     <string name="playback_external_send_skip_segments">Pošalji vremenske oznake uvoda i odjave</string>
     <string name="playback_external_send_skip_segments_sub">Prosledi razrešene vremenske oznake uvoda/odjave eksternom plejeru za automatsko preskakanje. Radi samo u plejerima koji to podržavaju; ostali plejeri to ignorišu.</string>
     <string name="playback_section_audio">Zvuk i video</string>
