@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Subtitle AutoSync. English only; translations are added by translators. -->
+<resources>
+    <!-- Settings (Playback → Subtitles) -->
+    <string name="autosync_setting_title">Auto Sync Subtitles</string>
+    <string name="autosync_setting_description">Match the selected add-on subtitle to the timing of the subtitles embedded in the video.</string>
+    <string name="autosync_tolerance_title">Auto Sync Tolerance</string>
+    <string name="autosync_tolerance_description">Keep the original timing when the correction needed is this small or smaller.</string>
+    <string name="autosync_tolerance_off">Off</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">Thorough Auto Sync Search</string>
+    <string name="autosync_thorough_description">Keep comparing other subtitles and embedded tracks for a closer match before syncing. When off, the first strong match is used sooner. Only confident matches are ever applied.</string>
+
+    <!-- Player toasts -->
+    <string name="autosync_toast_synced">Auto Sync • Subtitles synced</string>
+    <string name="autosync_toast_synced_replaced">Auto Sync • Switched to a better-matching subtitle</string>
+    <string name="autosync_toast_failed">Auto Sync • Sync failed • subtitle timing not changed</string>
+    <string name="autosync_toast_failed_no_reference">Auto Sync • No embedded subtitles to compare with • subtitle timing not changed</string>
+    <string name="autosync_toast_failed_unsupported">Auto Sync • Subtitle format not supported • subtitle timing not changed</string>
+
+    <!-- Subtitle list -->
+    <string name="autosync_label_synced">Auto synced</string>
+</resources>

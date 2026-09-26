@@ -418,8 +418,11 @@ class PlayerRuntimeController(
     internal var hidePlayerEngineSwitchInfoJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var subtitleAutoSyncLoadJob: Job? = null
+    internal var automaticSubtitleSyncJob: Job? = null // AutoSync hook
     /** ExoPlayer sidecar path: external addon cues without setMediaSource (preserves buffer). */
     internal var sidecarSubtitleJob: Job? = null
+    internal var sidecarGenerationCounter: Long = 0L // AutoSync hook
+    internal var activeSidecarGeneration: Long = 0L // AutoSync hook
     internal var activeSidecarSubtitleKey: String? = null
     internal var sidecarTimedCues: List<androidx.media3.extractor.text.CuesWithTiming> = emptyList()
     internal var lastSidecarCueSignature: Long? = null
