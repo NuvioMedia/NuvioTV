@@ -832,7 +832,12 @@ private fun RightStreamSection(
         val chipRowHeight = NuvioTheme.spacing.huge
 
         // Addon filter chips
-        Box(modifier = Modifier.height(chipRowHeight)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(chipRowHeight),
+            contentAlignment = if (isRtl) Alignment.CenterEnd else Alignment.CenterStart
+        ) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = sourceChips.isNotEmpty() || (!isLoading && availableAddons.isNotEmpty()),
                 enter = fadeIn(animationSpec = tween(300)),
