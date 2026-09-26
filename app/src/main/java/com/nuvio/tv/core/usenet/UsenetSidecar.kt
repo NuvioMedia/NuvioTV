@@ -19,6 +19,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -36,6 +38,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.coroutineContext
 
 /** Executes the APK-installed PIE binary using the same Android-supported
  * nativeLibraryDir mechanism as TorrServer. All media remains in the child.
@@ -152,7 +155,21 @@ class UsenetSidecar private constructor(private val context: Context) {
         }
     }
 
-    suspend fun resolve(stream: Stream, season: Int?, episode: Int?, profileId: Int? = null): Stream = withContext(Dispatchers.IO) {
+    suspend fun resolve(stream: Stream, season: Int?, episode: Int?, profileId: Int? = null): Stream {
+        var resolved: Stream? = null
+        try {
+            return withContext(Dispatchers.IO) {
+                resolveLocked(stream, season, episode, profileId).also { resolved = it }
+            }
+        } catch (cancelled: CancellationException) {
+            // withContext can discard a successful result when its caller is
+            // cancelled during dispatcher handoff. No screen can own it then.
+            release(resolved?.url)
+            throw cancelled
+        }
+    }
+
+    private suspend fun resolveLocked(stream: Stream, season: Int?, episode: Int?, profileId: Int?): Stream {
         val key = preparationKey(stream, season, episode, profileId)
         val selectionTrace = UsenetStartupDiagnostics.Trace(key.configuration.fastMkvStartup, key.configuration.fastNzbFetch)
         val pending = synchronized(preparationGuard) {
@@ -161,7 +178,7 @@ class UsenetSidecar private constructor(private val context: Context) {
         }
         // Joining outside the session mutex lets a click share an in-flight open.
         pending?.join()
-        mutex.withLock {
+        return mutex.withLock {
             synchronized(preparationGuard) {
                 if (preparationJob === pending) {
                     preparationJob = null; preparationOwner = null; preparationKey = null; preparationGeneration = null
@@ -183,6 +200,8 @@ class UsenetSidecar private constructor(private val context: Context) {
         selectionTrace: UsenetStartupDiagnostics.Trace? = null): Stream {
         val configuration = UsenetSettings.read(context)
         val trace = selectionTrace ?: UsenetStartupDiagnostics.Trace(configuration.fastMkvStartup, configuration.fastNzbFetch)
+        val previousId = sessionId
+        var openedId: String? = null
         return try {
             trace.mark("resolve_lock_acquired")
             start()
@@ -211,12 +230,8 @@ class UsenetSidecar private constructor(private val context: Context) {
             val newId = result.getString("id")
             val newPath = result.getString("path")
             require(newId.matches(Regex("[0-9a-f]{48}")) && newPath.startsWith("/stream/$newId/"))
-            val oldId = sessionId
-            sessionId = newId
+            openedId = newId
             val url = "$endpoint/stream/$newId/${Uri.encode(result.getString("filename").substringAfterLast('/'))}"
-            playbackUrl = url
-            UsenetStartupDiagnostics.bind(url, trace, result.optJSONObject("startup"))
-            if (oldId != null) control("/sessions/$oldId", null, delete = true)
             val nativeSubtitles = result.optJSONArray("subtitles")?.let { items ->
                 (0 until items.length()).map { index ->
                     val item = items.getJSONObject(index)
@@ -229,15 +244,32 @@ class UsenetSidecar private constructor(private val context: Context) {
                 }
             }.orEmpty()
             trace.mark("resolved")
-            stream.copy(
+            val resolved = stream.copy(
                 url = url, nzbUrl = null, servers = null, externalUrl = null, infoHash = null,
                 subtitles = stream.subtitles + nativeSubtitles,
                 behaviorHints = (stream.behaviorHints ?: com.nuvio.tv.domain.model.StreamBehaviorHints(null, null, null, null)).copy(
                     proxyHeaders = null, filename = result.getString("filename"), videoSize = result.getLong("size")
                 )
             )
+            // Validate the entire response before replacing a working session.
+            coroutineContext.ensureActive()
+            sessionId = newId
+            playbackUrl = url
+            UsenetStartupDiagnostics.bind(url, trace, result.optJSONObject("startup"))
+            if (previousId != null) withContext(NonCancellable) {
+                // The replacement is committed; cancellation or a failed DELETE
+                // must not turn a successful open into an engine-wide shutdown.
+                runCatching { control("/sessions/$previousId", null, delete = true) }
+            }
+            resolved
         } catch (e: Exception) {
-            stopLocked()
+            if (previousId != null && sessionId == previousId && process?.let(::isRunning) == true) {
+                openedId?.let { id ->
+                    withContext(NonCancellable) { runCatching { control("/sessions/$id", null, delete = true) } }
+                }
+            } else {
+                stopLocked()
+            }
             throw e
         }
     }
@@ -310,7 +342,11 @@ class UsenetSidecar private constructor(private val context: Context) {
     private fun start() {
         idleStop?.cancel(); idleStop = null
         val cfg = UsenetSettings.read(context)
-        if (process?.let(::isRunning) == true && endpoint != null && processProfile == cfg.profile) return
+        // A settings change must not restart the engine underneath the playing
+        // source while its replacement is still being prepared. Apply the new
+        // runtime memory target once no session owns this process.
+        if (process?.let(::isRunning) == true && endpoint != null &&
+            (processProfile == cfg.profile || sessionId != null)) return
         stopLocked()
         val binary = File(context.applicationInfo.nativeLibraryDir, "libnuvio_usenet.so")
         if (!binary.canExecute()) throw IOException("Usenet engine is missing for this device's CPU")
