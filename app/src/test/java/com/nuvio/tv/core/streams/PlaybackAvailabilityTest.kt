@@ -9,11 +9,21 @@ import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaybackAvailabilityTest {
+    @Test
+    fun `episode context converts TMDB tv to external series but keeps live types`() {
+        assertEquals("series", externalStreamType("tv", season = 1, episode = 1))
+        assertEquals("tv", externalStreamType("tv", season = null, episode = null))
+        assertEquals("channel", externalStreamType(" Channel ", season = null, episode = null))
+        assertEquals("movie", externalStreamType(" MOVIE ", season = null, episode = null))
+        assertEquals("PPV", externalStreamType(" PPV ", season = null, episode = null))
+    }
+
     @Test
     fun `no sources or metadata-only addons cannot play`() {
         assertFalse(PlaybackAvailability().canStream("movie", "tt123"))
@@ -36,27 +46,56 @@ class PlaybackAvailabilityTest {
         assertTrue(configured.supportsStreamResource("movie", "tt123"))
         assertFalse(configured.supportsStreamResource("movie", "tmdb:123"))
         for (prefixes in listOf<List<String>?>(null, emptyList())) {
-            val fallback = configured.copy(resources = listOf(AddonResource("stream", emptyList(), prefixes)))
+            val fallback = configured.copy(resources = listOf(AddonResource("stream", listOf("series"), prefixes)))
             assertTrue(fallback.supportsStreamResource("series", "tmdb:123:1:1"))
             assertFalse(fallback.supportsStreamResource("movie", "tt123"))
         }
     }
 
     @Test
-    fun `unrestricted stream resources support custom content types`() {
-        val unrestricted = addon().copy(resources = listOf(AddonResource("stream", emptyList(), null)))
-        assertTrue(PlaybackAvailability(addons = listOf(unrestricted)).canStream("channel", "channel:1"))
+    fun `declared custom stream types match literally`() {
+        val customTypes = addon().copy(resources = listOf(AddonResource("stream", listOf("channel", "ppv"), null)))
+        assertTrue(PlaybackAvailability(addons = listOf(customTypes)).canStream("channel", "channel:1"))
+        assertTrue(PlaybackAvailability(addons = listOf(customTypes)).canStream("ppv", "ppv:1"))
+        assertFalse(PlaybackAvailability(addons = listOf(customTypes)).canStream("tv", "channel:1"))
     }
 
     @Test
-    fun `plugins honor enabled state and existing type aliases for both runtimes`() {
+    fun `empty resource types do not imply support for every type`() {
+        val emptyTypes = addon().copy(resources = listOf(AddonResource("stream", emptyList(), null)))
+        assertFalse(PlaybackAvailability(addons = listOf(emptyTypes)).canStream("series", "tt123:1:1"))
+    }
+
+    @Test
+    fun `addon stream resource matches types literally after trim and case normalization`() {
+        val seriesAddon = addon().copy(resources = listOf(AddonResource("stream", listOf(" SERIES "), listOf("tt"))))
+        val seriesAvailability = PlaybackAvailability(addons = listOf(seriesAddon))
+        assertTrue(seriesAvailability.canStream("series", "tt123:1:1"))
+        assertFalse(seriesAvailability.canStream("tv", "tt123:1:1"))
+
+        val liveAddon = addon().copy(resources = listOf(AddonResource("stream", listOf("tv", "channel"), listOf("channel:"))))
+        val liveAvailability = PlaybackAvailability(addons = listOf(liveAddon))
+        assertTrue(liveAvailability.canStream("tv", "channel:1"))
+        assertTrue(liveAvailability.canStream("channel", "channel:1"))
+        assertFalse(liveAvailability.canStream("series", "channel:1"))
+    }
+
+    @Test
+    fun `plugins match series and live tv types literally for both runtimes`() {
         for (runtime in RepositoryType.entries) {
-            val scraper = scraper().copy(type = runtime, supportedTypes = listOf("tv"))
-            val available = PlaybackAvailability(scrapers = listOf(scraper))
-            assertTrue(available.canStream("series", "tt123:1:1"))
-            assertTrue(available.canStream("other", "channel:1"))
-            assertFalse(available.canStream("movie", "tt123"))
-            assertFalse(available.copy(scrapers = listOf(scraper.copy(enabled = false))).canStream("series", "tt123:1:1"))
+            val seriesScraper = scraper().copy(type = runtime, supportedTypes = listOf("series"))
+            val seriesAvailable = PlaybackAvailability(scrapers = listOf(seriesScraper))
+            assertTrue(seriesAvailable.canStream("series", "tt123:1:1"))
+            assertFalse(seriesAvailable.canStream("tv", "channel:1"))
+            assertFalse(seriesAvailable.canStream("movie", "tt123"))
+            assertFalse(seriesAvailable.copy(scrapers = listOf(seriesScraper.copy(enabled = false))).canStream("series", "tt123:1:1"))
+
+            val liveAvailable = PlaybackAvailability(
+                scrapers = listOf(seriesScraper.copy(supportedTypes = listOf("tv", "channel")))
+            )
+            assertTrue(liveAvailable.canStream("tv", "channel:1"))
+            assertTrue(liveAvailable.canStream("channel", "channel:1"))
+            assertFalse(liveAvailable.canStream("series", "tt123:1:1"))
         }
     }
 

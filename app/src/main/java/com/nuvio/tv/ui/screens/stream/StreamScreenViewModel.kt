@@ -12,6 +12,7 @@ import com.nuvio.tv.core.debrid.DirectDebridResolver
 import com.nuvio.tv.core.debrid.DirectDebridStreamPreparer
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.streams.externalStreamType
 import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.torrent.TorrentState
@@ -137,7 +138,7 @@ class StreamScreenViewModel @Inject constructor(
     private val manualSelection: Boolean = savedStateHandle.get<String>("manualSelection")
         ?.toBooleanStrictOrNull()
         ?: false
-    private val streamCacheKey: String = "${contentType.lowercase()}|$videoId"
+    private val streamCacheKey: String = "${externalStreamType(contentType, season, episode)}|$videoId"
 
     private val _uiState = MutableStateFlow(
         StreamScreenUiState(
@@ -912,15 +913,16 @@ class StreamScreenViewModel @Inject constructor(
         directDebridSourceNames: List<String>,
         alreadySucceededNames: Set<String> = emptySet()
     ) {
+        val externalType = externalStreamType(contentType, season, episode)
         val addonNames = installedAddons
-            .filter { it.supportsStreamResourceForChip(contentType) }
+            .filter { it.supportsStreamResourceForChip(externalType) }
             .map { it.displayName }
 
         val pluginNames = try {
             if (pluginManager.pluginsEnabled.first()) {
                 val groupByRepository = pluginManager.groupStreamsByRepository.first()
                 val scrapers = pluginManager.enabledScrapers.first()
-                    .filter { it.supportsType(contentType) }
+                    .filter { it.supportsType(externalType) }
                 if (groupByRepository) {
                     val repositoriesById = pluginManager.repositories.first().associateBy { it.id }
                     scrapers
@@ -1032,7 +1034,7 @@ class StreamScreenViewModel @Inject constructor(
     private fun com.nuvio.tv.domain.model.Addon.supportsStreamResourceForChip(type: String): Boolean {
         return resources.any { resource ->
             resource.name == "stream" &&
-                (resource.types.isEmpty() || resource.types.any { it.equals(type, ignoreCase = true) }) &&
+                resource.types.any { it.trim().equals(type.trim(), ignoreCase = true) } &&
                 run {
                     val prefixes = resource.idPrefixes?.takeIf { it.isNotEmpty() }
                         ?: idPrefixes.takeIf { it.isNotEmpty() }

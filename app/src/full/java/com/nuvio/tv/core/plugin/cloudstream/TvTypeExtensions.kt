@@ -2,10 +2,11 @@ package com.nuvio.tv.core.plugin.cloudstream
 
 import com.lagradost.cloudstream3.TvType
 
-/** Map CloudStream TvType to NuvioTV content type string ("movie" or "tv"). */
+/** Map CloudStream categories to the external Nuvio/Stremio content types. */
 fun TvType.toNuvioType(): String = when (this) {
     TvType.Movie, TvType.AnimeMovie, TvType.Documentary, TvType.Torrent -> "movie"
-    else -> "tv"
+    TvType.Live -> "tv"
+    else -> "series"
 }
 
 /** Parse TvType from string name, case-insensitive. */

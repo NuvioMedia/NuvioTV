@@ -7,27 +7,42 @@ import org.junit.Test
 class ScraperInfoTest {
 
     @Test
-    fun `series normalizes to tv and matches series tv and show scraper types`() {
+    fun `manifest defaults to movie and series types`() {
+        val manifest = ScraperManifestInfo(
+            id = "test",
+            name = "Test",
+            version = "1.0.0",
+            filename = "test.js"
+        )
+
+        assertTrue(manifest.supportedTypes == listOf("movie", "series"))
+    }
+
+    @Test
+    fun `series matches only series after trimming and case normalization`() {
         assertTrue(scraperInfo(supportedTypes = listOf("series")).supportsType("series"))
-        assertTrue(scraperInfo(supportedTypes = listOf("tv")).supportsType("series"))
-        assertTrue(scraperInfo(supportedTypes = listOf("show")).supportsType("series"))
+        assertTrue(scraperInfo(supportedTypes = listOf(" SERIES ")).supportsType(" series "))
+        assertFalse(scraperInfo(supportedTypes = listOf("tv")).supportsType("series"))
+        assertFalse(scraperInfo(supportedTypes = listOf("show")).supportsType("series"))
         assertFalse(scraperInfo(supportedTypes = listOf("anime")).supportsType("series"))
         assertFalse(scraperInfo(supportedTypes = listOf("movie")).supportsType("series"))
     }
 
     @Test
-    fun `tv matches series tv and show scraper types`() {
+    fun `tv matches only tv scraper types`() {
         assertTrue(scraperInfo(supportedTypes = listOf("tv")).supportsType("tv"))
-        assertTrue(scraperInfo(supportedTypes = listOf("series")).supportsType("tv"))
-        assertTrue(scraperInfo(supportedTypes = listOf("show")).supportsType("tv"))
+        assertTrue(scraperInfo(supportedTypes = listOf(" TV ")).supportsType(" tv "))
+        assertFalse(scraperInfo(supportedTypes = listOf("series")).supportsType("tv"))
+        assertFalse(scraperInfo(supportedTypes = listOf("show")).supportsType("tv"))
         assertFalse(scraperInfo(supportedTypes = listOf("movie")).supportsType("tv"))
     }
 
     @Test
-    fun `other normalizes to tv`() {
-        assertTrue(scraperInfo(supportedTypes = listOf("tv")).supportsType("other"))
-        assertTrue(scraperInfo(supportedTypes = listOf("series")).supportsType("other"))
-        assertFalse(scraperInfo(supportedTypes = listOf("movie")).supportsType("other"))
+    fun `unknown and channel types remain literal`() {
+        assertTrue(scraperInfo(supportedTypes = listOf("ppv")).supportsType("ppv"))
+        assertFalse(scraperInfo(supportedTypes = listOf("series")).supportsType("other"))
+        assertTrue(scraperInfo(supportedTypes = listOf("channel")).supportsType("channel"))
+        assertFalse(scraperInfo(supportedTypes = listOf("tv")).supportsType("channel"))
     }
 
     @Test

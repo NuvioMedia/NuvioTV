@@ -8,7 +8,7 @@ import com.nuvio.tv.domain.model.Video
 internal fun Addon.supportsStreamResource(type: String, videoId: String): Boolean =
     resources.any { resource ->
         resource.name == "stream" &&
-            (resource.types.isEmpty() || resource.types.contains(type)) &&
+            resource.types.any { it.trim().equals(type.trim(), ignoreCase = true) } &&
             run {
                 val prefixes = resource.idPrefixes?.takeIf { it.isNotEmpty() }
                     ?: idPrefixes.takeIf { it.isNotEmpty() }

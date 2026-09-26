@@ -10,6 +10,9 @@ import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.plugin.resolvePluginSeasonEpisode
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.streams.canonicalExternalMediaType
+import com.nuvio.tv.core.streams.externalStreamType
+import com.nuvio.tv.core.streams.supportsStreamResource
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.mapper.toDomain
@@ -23,7 +26,6 @@ import com.nuvio.tv.domain.model.ProxyHeaders
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBehaviorHints
-import com.nuvio.tv.core.streams.supportsStreamResource
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.StreamRepository
@@ -91,10 +93,11 @@ class StreamRepositoryImpl @Inject constructor(
         episode: Int?,
         forceRefresh: Boolean
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
+        val externalType = externalStreamType(type, season, episode)
         val sourceConfiguration = captureSourceConfiguration()
         val requestKey = StreamSearchRequestKey(
             profileId = sourceConfiguration.profileId,
-            type = type.lowercase(),
+            type = externalType,
             videoId = videoId,
             season = season,
             episode = episode,
@@ -116,14 +119,14 @@ class StreamRepositoryImpl @Inject constructor(
                 forceRefresh = forceRefresh
             ) {
                 fetchStreamsFromAllSources(
-                    type = type,
+                    type = externalType,
                     videoId = videoId,
                     season = season,
                     episode = episode,
                     addons = sourceConfiguration.addons,
                     debridSettings = sourceConfiguration.debridSettings,
                     hasCompatiblePlugins = sourceConfiguration.pluginsEnabled &&
-                        sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) }
+                        sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(externalType) }
                 )
             }
         )
@@ -357,15 +360,16 @@ class StreamRepositoryImpl @Inject constructor(
     )
 
     private fun buildPluginRequest(tmdbId: String?, type: String, videoId: String): PluginRequest? {
+        val externalType = canonicalExternalMediaType(type)
         if (tmdbId != null) {
             return PluginRequest(
                 id = tmdbId,
-                mediaType = normalizeTmdbPluginType(type),
+                mediaType = externalType,
                 source = "TMDB"
             )
         }
 
-        if (!videoId.canRunLocalPlugins()) return null
+        if (!videoId.canRunLocalPlugins() && externalType !in NON_TMDB_CONTENT_TYPES) return null
 
         return PluginRequest(
             id = if (videoId.startsWith("kitsu:", ignoreCase = true)) {
@@ -373,16 +377,9 @@ class StreamRepositoryImpl @Inject constructor(
             } else {
                 videoId
             },
-            mediaType = type.lowercase(),
+            mediaType = externalType,
             source = videoId.substringBefore(":").uppercase()
         )
-    }
-
-    private fun normalizeTmdbPluginType(type: String): String {
-        return when (type.lowercase()) {
-            "series", "tv", "show" -> "tv"
-            else -> type.lowercase()
-        }
     }
 
     private fun cleanKitsuPluginId(videoId: String): String {
@@ -433,6 +430,10 @@ class StreamRepositoryImpl @Inject constructor(
         return startsWith("kitsu:", ignoreCase = true) ||
             startsWith("anilist:", ignoreCase = true) ||
             startsWith("mal:", ignoreCase = true)
+    }
+
+    private companion object {
+        val NON_TMDB_CONTENT_TYPES = setOf("tv", "channel")
     }
 
     private suspend fun streamLocalPlugins(
@@ -577,10 +578,11 @@ class StreamRepositoryImpl @Inject constructor(
         val queryStart = cleanBaseUrl.indexOf('?')
         val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
         val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
-        val encodedType = encodePathSegment(type)
+        val externalType = canonicalExternalMediaType(type)
+        val encodedType = encodePathSegment(externalType)
         val encodedVideoId = encodePathSegment(videoId)
         val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"
-        Log.d(TAG, "Fetching streams type=$type videoId=$videoId url=$streamUrl")
+        Log.d(TAG, "Fetching streams type=$externalType videoId=$videoId url=$streamUrl")
 
         // Display info comes from the installed addon the caller already holds. Calling
         // addonRepository.fetchAddon() here caused an unconditional manifest GET ahead of every
