@@ -6,10 +6,15 @@ import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.Dv7HandlingMode
+import com.nuvio.tv.data.local.SurroundFormatMode
+import com.nuvio.tv.data.local.SurroundChannelTarget
+import com.nuvio.tv.data.local.DeniedCodecHandling
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
+import com.nuvio.tv.ui.screens.player.PlayerTunnelAvSyncPolicy
+import com.nuvio.tv.ui.screens.player.iec.PlatformIecAudioTrackFactory
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
@@ -27,6 +32,8 @@ import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -118,12 +125,29 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setMaintainOriginalAudioOnDownmix(enabled)
     }
 
+    private val _iecProbeFeedback = MutableSharedFlow<IecProbeFeedback>(extraBufferCapacity = 4)
+    val iecProbeFeedback: SharedFlow<IecProbeFeedback> = _iecProbeFeedback
+
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setTunnelingEnabled(enabled)
+        PlayerTunnelAvSyncPolicy.resetMemo()
     }
 
     suspend fun setForceOpticalPassthrough(enabled: Boolean) {
         playerSettingsDataStore.setForceOpticalPassthrough(enabled)
+    }
+
+    suspend fun setUseSystemPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setUseSystemPassthrough(enabled)
+    }
+
+    fun resetIecPassthroughProbe() {
+        _iecProbeFeedback.tryEmit(IecProbeFeedback.STARTED)
+        PlatformIecAudioTrackFactory.resetIec61937Probe { usable ->
+            _iecProbeFeedback.tryEmit(
+                if (usable) IecProbeFeedback.AVAILABLE else IecProbeFeedback.UNAVAILABLE
+            )
+        }
     }
 
     suspend fun setSkipSilence(enabled: Boolean) {
@@ -198,6 +222,40 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setDv7ToDv81PreserveMappingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setDv7ToDv81PreserveMappingEnabled(enabled)
+    }
+
+    suspend fun setSurroundFormatMode(mode: SurroundFormatMode) {
+        playerSettingsDataStore.setSurroundFormatMode(mode)
+    }
+
+    suspend fun setAllowAc3Passthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowAc3Passthrough(enabled)
+    }
+
+    suspend fun setAllowEac3Passthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowEac3Passthrough(enabled)
+    }
+
+    suspend fun setAllowTruehdPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowTruehdPassthrough(enabled)
+    }
+
+    suspend fun setAllowDtsPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowDtsPassthrough(enabled)
+    }
+
+    suspend fun setAllowDtshdPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowDtshdPassthrough(enabled)
+    }
+
+    suspend fun setTranscodeDeniedToAc3(enabled: Boolean) {
+        playerSettingsDataStore.setDeniedCodecHandling(
+            if (enabled) DeniedCodecHandling.TRANSCODE_AC3 else DeniedCodecHandling.DECODE_PCM
+        )
+    }
+
+    suspend fun setSurroundChannelTarget(target: SurroundChannelTarget) {
+        playerSettingsDataStore.setSurroundChannelTarget(target)
     }
 
     suspend fun setDv7HandlingMode(mode: Dv7HandlingMode) {
@@ -532,3 +590,5 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setNuvioPerformanceModeEnabled(enabled)
     }
 }
+
+enum class IecProbeFeedback { STARTED, AVAILABLE, UNAVAILABLE }
