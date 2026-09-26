@@ -85,7 +85,9 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.nuvio.tv.ui.util.RtlKeyUtils
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -1380,6 +1382,9 @@ private fun SearchInputField(
                     color = NuvioTheme.colors.TextTertiary
                 )
             },
+            textStyle = TextStyle(
+                textDirection = TextDirection.Content
+            ),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = NuvioTheme.colors.BackgroundCard,
                 unfocusedContainerColor = NuvioTheme.colors.BackgroundCard,
