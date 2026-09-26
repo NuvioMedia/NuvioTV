@@ -187,14 +187,8 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return nil, errors.New("NZB URL must use HTTP or HTTPS")
 	}
-	if fastNZBFetch {
-		q := u.Query()
-		if !q.Has("gzip") && (q.Get("t") == "get" || q.Has("id") || strings.Contains(u.Path, "api")) {
-			q.Set("gzip", "1")
-			u.RawQuery = q.Encode()
-			raw = u.String()
-		}
-	}
+	// Addon URLs may be signed, including their exact query encoding/order.
+	// Negotiate compression through HTTP without modifying the supplied URL.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
 	if err != nil {
 		return nil, errors.New("invalid NZB URL")

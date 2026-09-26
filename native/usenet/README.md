@@ -20,7 +20,7 @@ unguessable session capabilities. No credentials appear in arguments or files.
 Parent pipe EOF terminates the child even if Android kills the parent abruptly.
 
 Deleting a session cancels its requests, closes the NNTP pool and releases its
-buffers. Pre-warm Usenet Engine (on by default) starts the local daemon on app
+buffers. Pre-warm Usenet Engine (off by default) starts the local daemon on app
 foreground and keeps it ready while browsing, without opening provider sockets.
 With **Prefetch First Usenet Result** enabled (default off), the first available
 Usenet result on the **stream results page** is immediately prepared using the
@@ -36,6 +36,10 @@ released when leaving the results page or backgrounding. Preparation is skipped
 while the sidecar has active playback. Completed article bytes remain in the
 existing memory LRU after warmup leases expire; there is no extra video cache.
 Changing settings invalidates unused preparation without stopping adopted playback.
+The results screen owns a selected session until an internal or external player
+launches. Dismissing the player chooser or leaving before launch releases it.
+Fast NZB Fetch negotiates gzip through HTTP headers and preserves addon URLs,
+including signed query strings, exactly as supplied.
 
 **Cache NZB Files** defaults on and is independent of result prefetching. It stores
 validated NZB playback metadata in the app's private cache directory, surviving
@@ -73,7 +77,9 @@ outcomes, cache format and saved document size from the session's in-memory
 article cache hits. `cues_cache_hit` marks reuse of a persisted MKV seek location.
 With prewarming disabled, an idle daemon survives for up to 30 seconds between
 playbacks. An idle daemon exits when the app backgrounds. Active playback retains its session. A profile change
-restarts the child to apply its memory target. Idle session deletion also returns
+restarts the idle child to apply its memory target; an active session keeps its
+engine while a replacement is prepared. Failed or cancelled preparation leaves
+the playing session intact. Idle session deletion also returns
 unused Go heap pages to the OS; steady playback does not force garbage collection.
 
 The engine adapts AltMount's progressive shared-article model, NNTP pool, NZB

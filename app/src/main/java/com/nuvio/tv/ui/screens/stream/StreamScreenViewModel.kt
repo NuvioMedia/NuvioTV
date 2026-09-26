@@ -1171,8 +1171,18 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     private var streamResolutionJob: Job? = null
+    private var usenetPlayerLaunchJob: Job? = null
+    private val pendingUsenetPlayback = com.nuvio.tv.core.usenet.PendingUsenetPlayback { url ->
+        com.nuvio.tv.core.player.StreamFallbackHandoff.take(streamCacheKey, playbackProfileId, url)
+        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).release(url)
+    }
+
+    fun abandonPendingUsenetPlayback() = pendingUsenetPlayback.release()
 
     suspend fun resolveStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        usenetPlayerLaunchJob?.cancel()
+        usenetPlayerLaunchJob = null
+        abandonPendingUsenetPlayback()
         if (!stream.isUsenet()) {
             // Normal HTTP/debrid/torrent selections never enter the Usenet fallback queue.
             streamResolutionJob?.cancel()
@@ -1249,6 +1259,7 @@ class StreamScreenViewModel @Inject constructor(
             }
             return try {
                 val resolved = com.nuvio.tv.core.usenet.UsenetSidecar.get(context).resolve(stream, season, episode, playbackProfileId)
+                pendingUsenetPlayback.replace(requireNotNull(resolved.url))
                 updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null) }
                 getStreamForPlayback(resolved)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
@@ -1350,7 +1361,8 @@ class StreamScreenViewModel @Inject constructor(
         updateUiStateIfChanged { it.copy(playbackErrorMessage = null) }
     }
 
-    fun onInternalPlayerLaunching() {
+    fun onInternalPlayerLaunching(playbackInfo: StreamPlaybackInfo) {
+        pendingUsenetPlayback.handoff(playbackInfo.url)
         usenetSelectionStarted = true
         com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
         streamRepository.setLocalPluginSearchPaused(true)
@@ -1388,6 +1400,9 @@ class StreamScreenViewModel @Inject constructor(
     private val hostInForeground = MutableStateFlow(true)
 
     fun onHostStopped() {
+        usenetPlayerLaunchJob?.cancel()
+        usenetPlayerLaunchJob = null
+        abandonPendingUsenetPlayback()
         if (streamResolutionJob?.isActive == true) {
             streamResolutionJob?.cancel()
             streamResolutionJob = null
@@ -1444,6 +1459,7 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     private fun showDirectDebridPlaybackError(message: String, refreshStreams: Boolean) {
+        abandonPendingUsenetPlayback()
         directAutoPlayFlowEnabledForSession = false
         updateUiStateIfChanged {
             it.copy(
@@ -1528,6 +1544,8 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        usenetPlayerLaunchJob?.cancel()
+        abandonPendingUsenetPlayback()
         streamResolutionJob?.cancel()
         com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
         super.onCleared()
@@ -1578,6 +1596,28 @@ class StreamScreenViewModel @Inject constructor(
         resumePositionMs: Long = 0L,
         startFromBeginning: Boolean = false,
         autoLaunch: Boolean = false,
+        context: android.content.Context
+    ) {
+        val usenet = com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)
+        val launchJob = kotlinx.coroutines.currentCoroutineContext()[Job]
+        if (usenet) usenetPlayerLaunchJob = launchJob
+        try {
+            launchExternalPlayerPrepared(playbackInfo, url, resumePositionMs, startFromBeginning, autoLaunch, context)
+        } finally {
+            if (usenet && usenetPlayerLaunchJob === launchJob) usenetPlayerLaunchJob = null
+            // After a successful launch handoff this is a no-op. Otherwise an
+            // exception/cancellation during subtitle or resume preparation must
+            // release the session that never reached a player.
+            if (usenet) pendingUsenetPlayback.release(url)
+        }
+    }
+
+    private suspend fun launchExternalPlayerPrepared(
+        playbackInfo: StreamPlaybackInfo,
+        url: String,
+        resumePositionMs: Long,
+        startFromBeginning: Boolean,
+        autoLaunch: Boolean,
         context: android.content.Context
     ) {
         streamRepository.setLocalPluginSearchPaused(true)
@@ -1796,6 +1836,7 @@ class StreamScreenViewModel @Inject constructor(
             context = context
         )
         if (!launched) {
+            pendingUsenetPlayback.release(playbackInfo.url)
             streamRepository.setLocalPluginSearchPaused(false)
             externalPlayerLaunched = false
             externalPlayerLaunchTimeMs = 0L
@@ -1807,6 +1848,8 @@ class StreamScreenViewModel @Inject constructor(
                     directAutoPlayProgress = null
                 )
             }
+        } else {
+            pendingUsenetPlayback.handoff(playbackInfo.url)
         }
     }
 

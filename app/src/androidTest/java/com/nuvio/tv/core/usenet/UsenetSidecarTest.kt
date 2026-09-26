@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.CRC32
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
@@ -57,7 +58,7 @@ class UsenetSidecarTest {
 
     @Test fun prewarmHonorsSettingAndVisibility() = runBlocking {
         val prefs = context.getSharedPreferences("usenet_performance", android.content.Context.MODE_PRIVATE)
-        val previous = prefs.getBoolean("prewarmOnLaunch", true)
+        val previous = prefs.getBoolean("prewarmOnLaunch", false)
         val present = prefs.contains("prewarmOnLaunch")
         val sidecar = UsenetSidecar.get(context)
         val field = UsenetSidecar::class.java.getDeclaredField("process").apply { isAccessible = true }
@@ -157,6 +158,72 @@ class UsenetSidecarTest {
             }
             assertTrue("sidecar did not stop when playback released", stopped)
             assertEquals("sizing probes are forbidden", 0, fixture.stats)
+        }
+    }
+
+    @Test fun failedAndCancelledReplacementKeepPlayingSessionAlive() = runBlocking {
+        UsenetSidecar.onAppForegrounded()
+        val sidecar = UsenetSidecar.get(context)
+        Fixture().use { playing ->
+            val first = sidecar.resolve(playing.stream(), null, null)
+            val process = UsenetSidecar::class.java.getDeclaredField("process").apply { isAccessible = true }
+            val child = process.get(sidecar)
+            val previousProfile = prefs.getString("profile", null)
+            try {
+                // Even a changed tuning profile must not kill A while opening B.
+                prefs.edit().putString("profile", "low-memory").commit()
+                val failure = runCatching {
+                    sidecar.resolve(playing.stream().copy(servers = emptyList()), null, null)
+                }
+                assertTrue("invalid replacement unexpectedly opened", failure.isFailure)
+                assertSame("failed replacement restarted the engine", child, process.get(sidecar))
+                val gate = CountDownLatch(1)
+                Fixture(gate).use { replacement ->
+                    val pending = async { sidecar.resolve(replacement.stream(), null, null) }
+                    try {
+                        withTimeout(10_000) { while (replacement.nzbReads.get() == 0) delay(10) }
+                        pending.cancelAndJoin()
+                    } finally {
+                        gate.countDown()
+                    }
+                }
+                assertSame("cancelled replacement restarted the engine", child, process.get(sidecar))
+                OkHttpClient().newCall(Request.Builder().url(first.url!!).build()).execute().use {
+                    assertEquals(200, it.code)
+                    assertArrayEquals(playing.payload, it.body!!.bytes())
+                }
+                // A later valid replacement must still be able to open.
+                val next = sidecar.resolve(playing.stream(), null, null)
+                assertNotEquals(first.url, next.url)
+                sidecar.release(next.url)
+            } finally {
+                prefs.edit().apply {
+                    if (previousProfile == null) remove("profile") else putString("profile", previousProfile)
+                }.commit()
+                sidecar.release(first.url)
+            }
+        }
+    }
+
+    @Test fun abandoningPlayerChoiceDeletesSessionButHandoffKeepsPlayback() = runBlocking {
+        UsenetSidecar.onAppForegrounded()
+        val sidecar = UsenetSidecar.get(context)
+        val pending = PendingUsenetPlayback(sidecar::release)
+        val session = UsenetSidecar::class.java.getDeclaredField("sessionId").apply { isAccessible = true }
+        Fixture().use { fixture ->
+            val abandoned = sidecar.resolve(fixture.stream(), null, null)
+            pending.replace(requireNotNull(abandoned.url))
+            pending.release()
+            withTimeout(10_000) { while (session.get(sidecar) != null) delay(10) }
+            val launched = sidecar.resolve(fixture.stream(), null, null)
+            pending.replace(requireNotNull(launched.url))
+            pending.handoff(launched.url)
+            pending.release() // Results screen stops after player launch.
+            OkHttpClient().newCall(Request.Builder().url(launched.url!!).build()).execute().use {
+                assertEquals(200, it.code)
+                assertArrayEquals(fixture.payload, it.body!!.bytes())
+            }
+            sidecar.release(launched.url)
         }
     }
 
