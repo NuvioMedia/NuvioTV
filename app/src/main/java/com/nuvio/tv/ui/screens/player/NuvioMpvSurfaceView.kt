@@ -7,8 +7,11 @@ import android.view.SurfaceHolder
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import `is`.xyz.mpv.BaseMPVView
+import `is`.xyz.mpv.MPV
+import `is`.xyz.mpv.MPVNode
 import `is`.xyz.mpv.Utils
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.pow
 import kotlin.math.roundToLong
 
@@ -18,6 +21,22 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 ) : BaseMPVView(context, attrs) {
 
     private var initialized = false
+    private val playbackFailure = AtomicReference<String?>(null)
+    private val failureObserver = object : MPV.EventObserver {
+        override fun event(eventId: Int, data: MPVNode) {
+            if (eventId == MPV.mpvEvent.MPV_EVENT_END_FILE) {
+                mpvPlaybackFailure(data)?.let(playbackFailure::set)
+            }
+        }
+        override fun eventProperty(property: String) = Unit
+        override fun eventProperty(property: String, value: Long) = Unit
+        override fun eventProperty(property: String, value: Boolean) = Unit
+        override fun eventProperty(property: String, value: String) = Unit
+        override fun eventProperty(property: String, value: Double) = Unit
+        override fun eventProperty(property: String, value: MPVNode) = Unit
+    }
+
+    fun consumePlaybackFailure(): String? = playbackFailure.getAndSet(null)
     private var hasQueuedInitialMedia = false
     private var lastMediaRequestKey: String? = null
     private var pendingInitialMediaUrl: String? = null
@@ -41,9 +60,11 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             cacheDir = context.cacheDir.path
         )
         initialized = true
+        mpv.addObserver(failureObserver)
     }
 
     fun setMedia(url: String, headers: Map<String, String>, startPositionMs: Long = 0L) {
+        playbackFailure.set(null)
         ensureInitialized()
         val requestKey = buildMediaRequestKey(url = url, headers = headers) +
             "#start=${startPositionMs.coerceAtLeast(0L)}"
@@ -625,6 +646,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
     fun releasePlayer() {
         if (!initialized) return
+        mpv.removeObserver(failureObserver)
+        playbackFailure.set(null)
         removeCallbacks(aspectReapplyRunnable)
         runCatching { destroy() }
             .onFailure { Log.w(TAG, "Failed to destroy libmpv view cleanly: ${it.message}") }
@@ -662,6 +685,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.setOptionString("tls-ca-file", "${context.filesDir.path}/cacert.pem")
         mpv.setOptionString("input-default-bindings", "yes")
         mpv.setOptionString("demuxer-max-bytes", "${64 * 1024 * 1024}")
+        mpv.setOptionString("cache-on-disk", "no")
         mpv.setOptionString("demuxer-max-back-bytes", "${64 * 1024 * 1024}")
         mpv.setOptionString("keep-open", "yes")
         mpv.setOptionString("softvol", "yes")

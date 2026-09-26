@@ -180,6 +180,12 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         val mediaItem = mediaItemBuilder.build()
 
+        val mp4SessionMode = !useParallelConnections && !isHls && !isDash &&
+            resolvedMimeType == MimeTypes.VIDEO_MP4
+        // The native engine owns Usenet concurrency/read-ahead. A second Java
+        // prefetch layer would duplicate memory and keep obsolete ranges alive.
+        val nativeUsenet = com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)
+        val directLoopback = isLoopbackNonTorrServerUrl(url)
         Log.i(
             "PlayerMediaSource",
             "PLAYBACK_CONFIG: native=$nativeEngineEnabled " +
@@ -193,20 +199,33 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 PlayerMemoryReporter.snapshot(context)
         )
         PlayerMemoryReporter.startSampling(context)
-        val useChunkSessionSource = useParallelConnections && !isHls && !isDash
+        val useChunkSessionSource = !nativeUsenet && !directLoopback &&
+            (useParallelConnections || mp4SessionMode) && !isHls && !isDash
         parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
         val progressiveUpstreamFactory: DataSource.Factory = if (useChunkSessionSource) {
+            if (mp4SessionMode) {
+                Log.i(
+                    "PlayerMediaSourceFactory",
+                    "MP4_SESSION engaged: single-connection chunk session " +
+                        "(${MP4_SESSION_CHUNK_BYTES / (1024L * 1024L)} MB chunks) " +
+                        "for progressive MP4 with parallel connections off"
+                )
+            }
             val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
                 setUserAgent(DEFAULT_USER_AGENT)
             }
-            val sessionConnections = parallelConnectionCount
+            val sessionConnections = if (mp4SessionMode) 1 else parallelConnectionCount
             // Runtime enforcement of the tier chunk cap: a value
             // persisted before the cap existed (or on another device)
             // must not bypass it.
-            val sessionChunkBytes = parallelChunkSizeKb
-                .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
-                .toLong() * 1024L
+            val sessionChunkBytes = if (mp4SessionMode) {
+                MP4_SESSION_CHUNK_BYTES
+            } else {
+                parallelChunkSizeKb
+                    .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
+                    .toLong() * 1024L
+            }
             val effectiveNative =
                 nuvioPerformanceModeEnabled || NuvioEngineConfig.get().isNativeAllocationEnabled()
             ParallelRangeDataSource.Factory(
@@ -217,7 +236,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
             )
-        } else if (isLoopbackNonTorrServerUrl(url)) {
+        } else if (directLoopback) {
             // Non-torrent loopback streams (e.g. Usenet, local proxies) must stay on
             // direct OkHttpDataSource with persistent connection pooling. If routed through
             // DefaultDataSource, LocalhostZeroCopyDataSource intercepts 127.0.0.1 and drops
@@ -355,6 +374,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     }
 
     private fun shouldUseVodCache(url: String): Boolean {
+        if (com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)) return false
         val scheme = Uri.parse(url).scheme?.lowercase()
         return scheme == "https" || scheme == "http"
     }
@@ -392,6 +412,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
     companion object {
         private const val MIME_VIDEO_QUICK_TIME = "video/quicktime"
+        internal const val MP4_SESSION_CHUNK_BYTES = 8L * 1024L * 1024L
         private const val ENABLE_VOD_CACHE = true
         private const val VOD_CACHE_FREE_SPACE_RESERVE_BYTES = 1024L * 1024L * 1024L
         private const val VOD_CACHE_DIR_NAME = "nuvio_vod_cache"

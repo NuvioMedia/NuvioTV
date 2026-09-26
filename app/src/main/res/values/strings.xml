@@ -639,6 +639,7 @@
     <string name="settings_mdblist_subtitle">External ratings providers</string>
     <string name="settings_animeskip_subtitle">Anime intro/outro skip timestamps</string>
     <string name="settings_debrid_subtitle">Experimental cloud account sources</string>
+    <string name="settings_usenet_subtitle">Playback controls and startup diagnostics</string>
 
     <string name="playback_title">Playback Settings</string>
     <string name="playback_subtitle">Configure video playback and subtitle options</string>
@@ -3274,4 +3275,9 @@
     <string name="stream_test_video_bitrate">Average Video Bitrate: %1$s</string>
     <string name="stream_test_error_connection">Connection failed. The last played stream link may have expired or is unreachable. Please play the video again and retry.</string>
 
+    <string name="player_finding_next_stream">Finding the next stream…</string>
+    <string name="player_trying_next_stream">Trying next stream (attempt %1$d)…</string>
+    <string name="player_stream_fallback_exhausted">No more working streams. Choose another source or retry.</string>
+    <string name="usenet_fallback">Automatic Usenet fallback</string>
+    <string name="usenet_fallback_description">If a Usenet stream fails, try up to five following Usenet sources. Torrent and other streams never switch automatically.</string>
 </resources>
