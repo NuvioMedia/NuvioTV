@@ -15,15 +15,15 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/javi11/nntppool/v4"
 )
 
 type OpenRequest struct {
-	CacheScope string            `json:"cacheScope,omitempty"`
-	NZBURL     string            `json:"nzbUrl"`
-	Servers    []string          `json:"servers"`
-	Headers    map[string]string `json:"headers,omitempty"`
+	// Present for ownership-aware clients. Empty retains no previous session.
+	KeepSessionID *string           `json:"keepSessionId,omitempty"`
+	CacheScope    string            `json:"cacheScope,omitempty"`
+	NZBURL        string            `json:"nzbUrl"`
+	Servers       []string          `json:"servers"`
+	Headers       map[string]string `json:"headers,omitempty"`
 	Selection
 	Config Config `json:"config"`
 }
@@ -31,7 +31,7 @@ type OpenRequest struct {
 type Session struct {
 	content   *Content
 	store     *Store
-	pool      *nntppool.Client
+	pool      interface{ Close() error }
 	ctx       context.Context
 	cancel    context.CancelFunc
 	ahead     int
@@ -51,6 +51,7 @@ type Server struct {
 	sessions map[string]*Session
 	opening  bool
 	nzbCache *nzbCache
+	pools    providerPools
 }
 
 func NewServer(ctx context.Context, token string, roots *x509.CertPool, client *http.Client) *Server {
@@ -133,7 +134,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	trace := newStartupTrace()
 	s.mu.Lock()
-	if s.opening || len(s.sessions) >= 2 {
+	if s.opening {
 		s.mu.Unlock()
 		http.Error(w, "playback session busy", http.StatusConflict)
 		return
@@ -146,13 +147,36 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid stream request", http.StatusBadRequest)
 		return
 	}
+	// Reconcile even an open whose response/DELETE was lost. The explicitly
+	// retained session continues playing; all other capabilities are abandoned.
+	var abandoned []*Session
+	s.mu.Lock()
+	if req.KeepSessionID != nil {
+		for id, session := range s.sessions {
+			if id != *req.KeepSessionID {
+				delete(s.sessions, id)
+				abandoned = append(abandoned, session)
+			}
+		}
+	}
+	busy := len(s.sessions) >= 2
+	s.mu.Unlock()
+	for _, session := range abandoned {
+		session.Close()
+	}
+	if busy {
+		http.Error(w, "playback session busy", http.StatusConflict)
+		return
+	}
 	t, err := req.Config.Tuning()
 	if err != nil {
+		w.Header().Set("X-Usenet-Failure", "configuration")
 		http.Error(w, err.Error(), 400)
 		return
 	}
 	providers, err := Providers(req.Servers, req.Config, s.roots)
 	if err != nil {
+		w.Header().Set("X-Usenet-Failure", "provider")
 		http.Error(w, err.Error(), 400)
 		return
 	}
@@ -160,7 +184,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	// Cancelling the open HTTP request tears down its work. Once committed,
 	// session lifetime is independent of this one request.
 	stop := context.AfterFunc(r.Context(), cancel)
-	pool, err := nntppool.NewClient(ctx, providers, nntppool.WithStatProbe(false))
+	pool, err := s.pools.acquire(s.ctx, providers)
 	if err != nil {
 		stop()
 		cancel()
@@ -191,7 +215,10 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		// Network errors can contain URLs/message IDs. Only our actionable
 		// archive/selector errors are suitable for display or diagnostics.
 		msg := "Usenet stream could not be opened"
-		if errors.Is(err, ErrCompressedRAR) || errors.Is(err, ErrEncryptedRAR) {
+		if errors.Is(err, errProviderAuthentication) || errors.Is(err, errProviderQuota) {
+			w.Header().Set("X-Usenet-Failure", "provider")
+			msg = err.Error()
+		} else if errors.Is(err, ErrCompressedRAR) || errors.Is(err, ErrEncryptedRAR) {
 			msg = err.Error()
 		} else if !strings.ContainsAny(err.Error(), "<>@") && !strings.Contains(err.Error(), "://") {
 			msg = err.Error()

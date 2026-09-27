@@ -320,7 +320,8 @@ func (s *Store) fetch(a *article, speculative bool) {
 		a.mu.Lock()
 		// The pool already handles provider fallback for missing articles.
 		// Replaying its terminal miss only repeats the same lookup.
-		permanent := a.err != nil || errors.Is(err, nntppool.ErrArticleNotFound)
+		permanent := a.err != nil || errors.Is(err, nntppool.ErrArticleNotFound) ||
+			errors.Is(err, errProviderAuthentication) || errors.Is(err, errProviderQuota)
 		a.mu.Unlock()
 		if err == nil || a.ctx.Err() != nil || permanent {
 			break
