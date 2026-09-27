@@ -77,10 +77,12 @@ class CastDetailViewModel @Inject constructor(
                 )
                 if (detail != null) {
                     val pattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
-                    val overlaidDetail = if (pattern.isNotBlank()) {
+                    val enabledScreens = layoutPreferenceDataStore.customPosterEnabledScreens.first()
+                    val effectivePattern = com.nuvio.tv.core.poster.patternForScreen(pattern, com.nuvio.tv.core.poster.CustomPosterScreen.DETAILS, enabledScreens)
+                    val overlaidDetail = if (effectivePattern.isNotBlank()) {
                         detail.copy(
-                            movieCredits = detail.movieCredits.withCustomPosterUrls(pattern),
-                            tvCredits = detail.tvCredits.withCustomPosterUrls(pattern)
+                            movieCredits = detail.movieCredits.withCustomPosterUrls(effectivePattern),
+                            tvCredits = detail.tvCredits.withCustomPosterUrls(effectivePattern)
                         )
                     } else detail
                     _uiState.value = CastDetailUiState.Success(overlaidDetail)

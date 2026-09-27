@@ -524,6 +524,19 @@ class HomeViewModel @Inject constructor(
                     }
                 }
         }
+        viewModelScope.launch {
+            var initialScreens = true
+            layoutPreferenceDataStore.customPosterEnabledScreens
+                .distinctUntilChanged()
+                .collect { screens ->
+                    _uiState.update { it.copy(customPosterEnabledScreens = screens) }
+                    if (initialScreens) {
+                        initialScreens = false
+                    } else {
+                        refreshVisibleCatalogsPipeline(forceReplace = true)
+                    }
+                }
+        }
         // When "next up from furthest episode" changes, clear CW caches and retrigger pipeline
         viewModelScope.launch {
             var initial = true
@@ -933,6 +946,7 @@ class HomeViewModel @Inject constructor(
         focusedRowKey: String?,
         focusedItemKeyByRow: Map<String, String>,
         catalogRowScrollStates: Map<String, Int>,
+        catalogRowScrollAnchors: Map<String, String>,
         focusedRowIndex: Int = 0,
         focusedItemIndex: Int = 0
     ) {
@@ -946,6 +960,7 @@ class HomeViewModel @Inject constructor(
             focusedRowKey = focusedRowKey,
             focusedItemKeyByRow = focusedItemKeyByRow,
             catalogRowScrollStates = catalogRowScrollStates,
+            catalogRowScrollAnchors = catalogRowScrollAnchors,
             focusedRowIndex = focusedRowIndex,
             focusedItemIndex = focusedItemIndex,
             hasSavedFocus = true

@@ -71,6 +71,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.BlurTransformation
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import com.nuvio.tv.ui.util.toAbsoluteAlignment
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -408,6 +409,7 @@ internal fun EpisodeOptionsOverlay(
 
                     Text(
                         text = title,
+                        modifier = Modifier.align(title.contentTextDirection().toAbsoluteAlignment()),
                         style = if (isNoneStyle) MaterialTheme.typography.displayLarge else titleStyle,
                         color = Color.White,
                         maxLines = if (isNoneStyle) 3 else Int.MAX_VALUE,

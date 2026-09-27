@@ -489,7 +489,18 @@
     <string name="layout_custom_poster_qr">Skonfiguruj przez telefon</string>
     <string name="custom_poster_qr_instruction">Zeskanuj kod QR telefonem, aby wkleić wzorzec URL plakatów</string>
 
+    <!-- Custom Poster URL - Screen Toggles -->
+    <string name="layout_custom_poster_apply_to">Stosuj niestandardowe plakaty w:</string>
+    <string name="layout_custom_poster_screen_home">Strona główna</string>
+    <string name="layout_custom_poster_screen_continue_watching">Kontynuuj oglądanie</string>
+    <string name="layout_custom_poster_screen_collections">Kolekcje</string>
+    <string name="layout_custom_poster_screen_library">Biblioteka</string>
+    <string name="layout_custom_poster_screen_search">Wyszukiwanie</string>
+    <string name="layout_custom_poster_screen_details">Strona szczegółów</string>
+
     <!-- Custom Poster Web Page -->
+    <string name="layout_always_show_landscape_clearlogo">Zawsze tło z logo dla poziomych plakatów</string>
+    <string name="layout_always_show_landscape_clearlogo_sub">Ignoruj poziomy plakat z dodatku i użyj tła z nakładką logo.</string>
     <string name="web_custom_poster_title">Niestandardowe źródło plakatów</string>
     <string name="web_custom_poster_subtitle">Wklej wzorzec URL poniżej i naciśnij Zapisz.</string>
     <string name="web_custom_poster_label">Wzorzec URL</string>
@@ -1243,6 +1254,7 @@
     <string name="trakt_more_like_this_source_dialog_subtitle">Wybierz źródło rekomendacji wyświetlanych na stronach szczegółów.</string>
     <string name="trakt_more_like_this_source_trakt">Trakt</string>
     <string name="trakt_more_like_this_source_tmdb">TMDB</string>
+    <string name="trakt_more_like_this_source_simkl">Simkl</string>
 
     <string name="network_speed_test_run">Uruchom test prędkości</string>
     <string name="network_speed_test_running">Trwa test prędkości</string>
@@ -1317,6 +1329,7 @@
 
     <string name="detail_more_like_this_powered_by_tmdb">Na podstawie danych TMDB</string>
     <string name="detail_more_like_this_powered_by_trakt">Na podstawie danych Trakt</string>
+    <string name="detail_more_like_this_powered_by_simkl">Na podstawie danych Simkl</string>
     <string name="library_filter_genre">Gatunek</string>
     <string name="library_filter_year">Rok</string>
     <string name="library_filter_watched">Obejrzane</string>

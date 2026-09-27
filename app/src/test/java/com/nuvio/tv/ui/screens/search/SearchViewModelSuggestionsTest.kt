@@ -50,6 +50,17 @@ private val UNRELATED = listOf("Alpha", "Beasts of No Nation")
 private const val UNRELATED_CATALOG = "unrelated"
 private const val MATCHING_CATALOG = "matching"
 
+/** Two catalogs answering "slo" the way Cinemeta does, each best match first. */
+private const val MOVIE_CATALOG = "movie"
+private const val SERIES_CATALOG = "series"
+private val SLO_CATALOGS = linkedMapOf(
+    MOVIE_CATALOG to listOf("Slow West", "Slotherhouse", "Miss Sloane", "Slo Light"),
+    SERIES_CATALOG to listOf("Slow Horses", "Slo Pitch", "Slo Pitch")
+)
+
+/** One title from each catalog in turn, the duplicate dropped, the substring match last. */
+private val SLO_STRIP = listOf("Slow West", "Slow Horses", "Slotherhouse", "Slo Pitch", "Slo Light", "Miss Sloane")
+
 /**
  * Suggestions are pushed to the keyboard's own suggestion strip while the user types, so they
  * have to survive live search. Live search runs the same performSearch() that a submit runs,
@@ -316,6 +327,68 @@ class SearchViewModelSuggestionsTest {
         assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
     }
 
+    /**
+     * The keyboard shows only the first few titles, so the addon's order decides whether the one
+     * being typed is visible. Alphabetical order would put "Jurassic Fight Club" first.
+     */
+    @Test
+    fun `titles of the same rank keep the addon's order`() = runTest {
+        val viewModel = newViewModel(
+            catalogTitles = mapOf(
+                "top" to listOf("The Lost World: Jurassic Park", "Jurassic Park", "Jurassic World", "Jurassic Fight Club")
+            )
+        )
+
+        viewModel.onEvent(SearchEvent.QueryChanged("juras"))
+        advanceUntilIdle()
+
+        // Prefix matches still come before the title that only contains the query.
+        assertEquals(
+            listOf("Jurassic Park", "Jurassic World", "Jurassic Fight Club", "The Lost World: Jurassic Park"),
+            viewModel.uiState.value.suggestions
+        )
+    }
+
+    @Test
+    fun `each catalog's best match leads the strip`() = runTest {
+        val viewModel = newViewModel(catalogTitles = SLO_CATALOGS)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("slo"))
+        advanceUntilIdle()
+
+        assertEquals(SLO_STRIP, viewModel.uiState.value.suggestions)
+    }
+
+    /** The series catalog answers first here. The movie catalog still leads once it lands. */
+    @Test
+    fun `the strip order does not depend on which catalog answers first`() = runTest {
+        val viewModel = newViewModel(catalogTitles = SLO_CATALOGS, slowCatalogs = setOf(MOVIE_CATALOG))
+
+        viewModel.onEvent(SearchEvent.QueryChanged("slo"))
+        // Past SUGGESTION_DEBOUNCE_MS, short of the movie catalog's pause.
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(listOf("Slow Horses", "Slo Pitch"), viewModel.uiState.value.suggestions)
+
+        advanceUntilIdle()
+        assertEquals(SLO_STRIP, viewModel.uiState.value.suggestions)
+    }
+
+    /** SUGGESTION_DEBOUNCE_MS has not elapsed, so this is narrowing alone, before any fetch. */
+    @Test
+    fun `narrowing keeps the addon's order`() = runTest {
+        val viewModel = newViewModel(catalogTitles = SLO_CATALOGS)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("slo"))
+        advanceUntilIdle()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("slow"))
+        advanceTimeBy(50)
+        runCurrent()
+
+        assertEquals(listOf("Slow West", "Slow Horses"), viewModel.uiState.value.suggestions)
+    }
+
     /** Live search submits as the user types, so a space trims back to the submitted query. */
     @Test
     fun `typing a space between words leaves the strip standing`() = runTest {
@@ -334,12 +407,16 @@ class SearchViewModelSuggestionsTest {
 
     private fun newViewModel(
         catalogIgnoresQuery: Boolean = false,
-        staged: Boolean = false
+        staged: Boolean = false,
+        /** Catalog id to the titles it answers with, both in the addon's order. */
+        catalogTitles: Map<String, List<String>>? = null,
+        /** Catalogs of [catalogTitles] that answer after a pause. */
+        slowCatalogs: Set<String> = emptySet()
     ): SearchViewModel {
-        val addon = if (staged) {
-            searchableAddon(listOf(UNRELATED_CATALOG, MATCHING_CATALOG))
-        } else {
-            searchableAddon()
+        val addon = when {
+            catalogTitles != null -> searchableAddon(catalogTitles.keys.toList())
+            staged -> searchableAddon(listOf(UNRELATED_CATALOG, MATCHING_CATALOG))
+            else -> searchableAddon()
         }
 
         val layoutPreferences = mockk<LayoutPreferenceDataStore>()
@@ -363,10 +440,10 @@ class SearchViewModelSuggestionsTest {
 
         return SearchViewModel(
             addonRepository = SingleAddonRepository(addon),
-            catalogRepository = if (staged) {
-                StagedCatalogRepository(addon)
-            } else {
-                TitleCatalogRepository(addon, catalogIgnoresQuery)
+            catalogRepository = when {
+                catalogTitles != null -> OrderedCatalogRepository(addon, catalogTitles, slowCatalogs)
+                staged -> StagedCatalogRepository(addon)
+                else -> TitleCatalogRepository(addon, catalogIgnoresQuery)
             },
             metaRepository = mockk(relaxed = true),
             discoverSelectionDataStore = mockk(relaxed = true),
@@ -406,7 +483,8 @@ class SearchViewModelSuggestionsTest {
             skip: Int,
             skipStep: Int,
             extraArgs: Map<String, String>,
-            supportsSkip: Boolean
+            supportsSkip: Boolean,
+            posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
         ): Flow<NetworkResult<CatalogRow>> = flow {
             val query = extraArgs["search"].orEmpty()
             val matches = ignoresQuery || (query.isNotBlank() && TITLE.contains(query, ignoreCase = true))
@@ -452,7 +530,8 @@ class SearchViewModelSuggestionsTest {
             skip: Int,
             skipStep: Int,
             extraArgs: Map<String, String>,
-            supportsSkip: Boolean
+            supportsSkip: Boolean,
+            posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
         ): Flow<NetworkResult<CatalogRow>> = flow {
             emit(NetworkResult.Loading)
             if (catalogId == MATCHING_CATALOG) {
@@ -461,6 +540,56 @@ class SearchViewModelSuggestionsTest {
             } else {
                 emit(NetworkResult.Success(row(catalogId, UNRELATED)))
             }
+        }
+
+        private fun row(catalogId: String, titles: List<String>): CatalogRow = CatalogRow(
+            addonId = addon.id,
+            addonName = addon.displayName,
+            addonBaseUrl = addon.baseUrl,
+            catalogId = catalogId,
+            catalogName = catalogId,
+            type = ContentType.MOVIE,
+            items = titles.map { title ->
+                MetaPreview(
+                    id = "id_${title.hashCode()}",
+                    type = ContentType.MOVIE,
+                    name = title,
+                    poster = null,
+                    posterShape = PosterShape.POSTER,
+                    background = null,
+                    logo = null,
+                    description = null,
+                    releaseInfo = null,
+                    imdbRating = null,
+                    genres = emptyList()
+                )
+            }
+        )
+    }
+
+    /** Each catalog answers with its own titles in a fixed order, whatever the query, the slow
+     *  ones after a pause. */
+    private class OrderedCatalogRepository(
+        private val addon: Addon,
+        private val catalogTitles: Map<String, List<String>>,
+        private val slowCatalogs: Set<String>
+    ) : CatalogRepository {
+        override fun getCatalog(
+            addonBaseUrl: String,
+            addonId: String,
+            addonName: String,
+            catalogId: String,
+            catalogName: String,
+            type: String,
+            skip: Int,
+            skipStep: Int,
+            extraArgs: Map<String, String>,
+            supportsSkip: Boolean,
+            posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
+        ): Flow<NetworkResult<CatalogRow>> = flow {
+            emit(NetworkResult.Loading)
+            if (catalogId in slowCatalogs) delay(100)
+            emit(NetworkResult.Success(row(catalogId, catalogTitles.getValue(catalogId))))
         }
 
         private fun row(catalogId: String, titles: List<String>): CatalogRow = CatalogRow(
