@@ -44,8 +44,8 @@ onto `dev`. They are recorded evidence, not a new device run of the PR branch.
 
 ## Automated validation
 
-The PR workflow runs the updater tests and `TrailerSettingsDataStoreTest`, then
-assembles the full debug APK:
+The existing PR workflow selects the updater tests and assembles the full debug
+APK. To also run `TrailerSettingsDataStoreTest` locally, use:
 
 ```sh
 ./gradlew :app:testFullDebugUnitTest \
