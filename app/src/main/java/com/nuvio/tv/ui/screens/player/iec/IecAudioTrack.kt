@@ -4,7 +4,9 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
+import androidx.media3.common.C
 import com.nuvio.tv.ui.screens.player.DirectOpenProbeLock
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -29,6 +31,16 @@ internal interface IecAudioTrack {
     fun setVolume(volume: Float)
     fun underrunCount(): Int
     fun isPlayHeld(): Boolean = false
+    fun outputLatencyUs(): Long = 0L
+}
+
+internal const val IEC_MAX_OUTPUT_LATENCY_US = 5L * C.MICROS_PER_SECOND
+
+internal fun iecOutputLatencyUs(reportedLatencyMs: Int, bufferSizeUs: Long): Long {
+    if (reportedLatencyMs <= 0) return 0L
+    val latencyUs = reportedLatencyMs * 1_000L - bufferSizeUs.coerceAtLeast(0L)
+    if (latencyUs <= 0L || latencyUs > IEC_MAX_OUTPUT_LATENCY_US) return 0L
+    return latencyUs
 }
 
 internal fun interface IecAudioTrackFactory {
@@ -447,6 +459,13 @@ private class PlatformIecAudioTrack(
 ) : IecAudioTrack {
     private val headTracker = IecPlaybackHeadTracker()
     private val settleGate = IecFlushSettleGate()
+    private var sampledLatencyUs: Long = 0L
+    private var lastLatencySampleMs: Long = Long.MIN_VALUE
+    private val latencyMethod: java.lang.reflect.Method? = try {
+        AudioTrack::class.java.getMethod("getLatency")
+    } catch (_: Exception) {
+        null
+    }
 
     override fun write(data: ByteArray, offset: Int, size: Int): Int {
         return track.write(data, offset, size, AudioTrack.WRITE_NON_BLOCKING)
@@ -488,10 +507,35 @@ private class PlatformIecAudioTrack(
 
     override fun playbackHeadFrames(): Long = headTracker.frames(track.playbackHeadPosition)
 
+    override fun outputLatencyUs(): Long {
+        val method = latencyMethod ?: return 0L
+        val nowMs = SystemClock.elapsedRealtime()
+        if (lastLatencySampleMs != Long.MIN_VALUE &&
+            nowMs - lastLatencySampleMs < MIN_LATENCY_SAMPLE_MS
+        ) {
+            return sampledLatencyUs
+        }
+        lastLatencySampleMs = nowMs
+        val reported = try {
+            method.invoke(track) as Int
+        } catch (_: Exception) {
+            return sampledLatencyUs
+        }
+        val bufferUs = if (frameSizeBytes > 0 && sampleRate > 0) {
+            bufferSizeBytes.toLong() / frameSizeBytes * C.MICROS_PER_SECOND / sampleRate
+        } else {
+            0L
+        }
+        sampledLatencyUs = iecOutputLatencyUs(reported, bufferUs)
+        return sampledLatencyUs
+    }
+
     override fun setVolume(volume: Float) {
         track.setVolume(volume.coerceIn(0f, 1f))
     }
 }
+
+private const val MIN_LATENCY_SAMPLE_MS = 500L
 
 internal enum class IecProbeAttemptAction { OPEN, DEFER, STOP_USABLE }
 

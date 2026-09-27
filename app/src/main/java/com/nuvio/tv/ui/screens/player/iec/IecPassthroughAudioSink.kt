@@ -200,7 +200,13 @@ internal class IecPassthroughAudioSink(
             return AudioSink.CURRENT_POSITION_NOT_SET
         }
         val head = minOf(track.playbackHeadFrames(), writtenFrames) - headAnchorFrames
-        return startPtsUs + head * C.MICROS_PER_SECOND / track.sampleRate
+        val headUs = if (track.sampleRate > 0) {
+            head * C.MICROS_PER_SECOND / track.sampleRate
+        } else {
+            0L
+        }
+        val presentedUs = if (headUs <= 0L) headUs else (headUs - track.outputLatencyUs()).coerceAtLeast(0L)
+        return startPtsUs + presentedUs
     }
 
     override fun play() {

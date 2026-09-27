@@ -54,6 +54,78 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
+    fun trueHd_positionSubtractsOutputLatencyButNotBeforeTheAnchor() {
+        val latencyUs = 10_000L
+        val track = LatencyIecAudioTrack(latencyUs)
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = IecAudioTrackFactory { _, _, _, _ -> track }
+        )
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+        var pts = 0L
+        for (i in 0 until 48) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = i == 0)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
+            pts += 833L
+        }
+        val headUs = (track.written / 16).toLong() * C.MICROS_PER_SECOND / 192_000L
+        assertTrue(headUs > latencyUs)
+        assertEquals(headUs - latencyUs, sink.getCurrentPositionUs(false))
+        assertEquals(headUs - latencyUs, sink.getCurrentPositionUs(true))
+    }
+
+    @Test
+    fun trueHd_positionStaysOnTheAnchorWhenLatencyExceedsTheHead() {
+        val track = LatencyIecAudioTrack(500_000L)
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = IecAudioTrackFactory { _, _, _, _ -> track }
+        )
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+        var pts = 0L
+        for (i in 0 until 48) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = i == 0)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
+            pts += 833L
+        }
+        val headUs = (track.written / 16).toLong() * C.MICROS_PER_SECOND / 192_000L
+        assertTrue(headUs < 500_000L)
+        assertEquals(0L, sink.getCurrentPositionUs(false))
+    }
+
+    @Test
+    fun trueHd_latencyDoesNotPullAShiftedAnchorBackwards() {
+        val latencyUs = 40_000L
+        val track = LatencyIecAudioTrack(latencyUs)
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = IecAudioTrackFactory { _, _, _, _ -> track }
+        )
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+        val bufferPts = 1_000_000L
+        val chunk = ByteBuffer.allocate(40 * 19)
+        for (i in 0 until 19) {
+            chunk.put(TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = i == 3))
+        }
+        chunk.flip()
+        assertTrue(sink.handleBuffer(chunk, bufferPts, 19))
+        var pts = bufferPts + 19 * 833L
+        for (i in 19 until 120) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = false)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
+            pts += 833L
+        }
+        val expectedAnchor = bufferPts + 3L * 40L * C.MICROS_PER_SECOND / 48_000L
+        val headUs = (track.written / 16).toLong() * C.MICROS_PER_SECOND / 192_000L
+        assertTrue(headUs > latencyUs)
+        assertEquals(expectedAnchor + headUs - latencyUs, sink.getCurrentPositionUs(false))
+        assertTrue(sink.getCurrentPositionUs(false) > expectedAnchor)
+    }
+
+    @Test
     fun trueHd_anchorsOnFirstAcceptedAccessUnit_notOnFirstBuffer() {
         val fakeTrack = FakeIecAudioTrack(sampleRate = 192_000, frameSizeBytes = 16)
         val events = mutableListOf<String>()
@@ -1188,7 +1260,13 @@ class IecPassthroughAudioSinkTest {
         override fun iec61937Ready(): Boolean = false
     }
 
-    private class FakeIecAudioTrack(
+    private class LatencyIecAudioTrack(
+        private val latencyUs: Long
+    ) : FakeIecAudioTrack(192_000, 16) {
+        override fun outputLatencyUs(): Long = latencyUs
+    }
+
+    private open class FakeIecAudioTrack(
         override val sampleRate: Int,
         override val frameSizeBytes: Int,
         override val payload: HbrPayload = HbrPayload.IEC_BURST,
