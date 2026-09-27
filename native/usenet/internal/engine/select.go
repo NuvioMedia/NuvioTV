@@ -227,6 +227,25 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 			return c, nil
 		}
 	}
+	// For an explicitly indexed standalone video, inspect that file before
+	// unrelated obfuscated entries. Do not reorder archive volumes: their file
+	// indexes refer to entries inside the archive, not NZB volume indexes.
+	if s.FileIdx != nil {
+		for _, f := range unknown {
+			if f.Index != *s.FileIdx {
+				continue
+			}
+			head, err := sniff(ctx, f)
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			if err == nil && !bytes.HasPrefix(head, []byte("Rar!\x1a\x07")) {
+				if name, video := recoveredVideo(f, head); video {
+					return &Content{Name: name, Size: f.Size(), direct: f}, nil
+				}
+			}
+		}
+	}
 	if (len(groups) == 0 || allowFallback) && len(unknown) > 0 {
 		ordered := true
 		for _, f := range unknown {
@@ -343,4 +362,19 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 		return fallback, nil
 	}
 	return nil, errNoMatchingVideo
+}
+
+func recoveredVideo(f *File, head []byte) (string, bool) {
+	f.mu.RLock()
+	name := f.recoveredName
+	f.mu.RUnlock()
+	video := isVideo(name) || bytes.HasPrefix(head, []byte{0x1a, 0x45, 0xdf, 0xa3}) ||
+		(len(head) >= 8 && string(head[4:8]) == "ftyp") || bytes.HasPrefix(head, []byte("RIFF"))
+	if !isVideo(name) {
+		name = f.Name
+		if !isVideo(name) {
+			name += ".mkv"
+		}
+	}
+	return name, video
 }
