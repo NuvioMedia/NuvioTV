@@ -32,9 +32,7 @@ internal fun PlayerRuntimeController.cancelStreamFallback(showError: Boolean = f
 
 internal suspend fun PlayerRuntimeController.resolveFallbackCandidate(stream: Stream, season: Int?, episode: Int?): Stream {
     require(stream.isUsenet()) { "Fallback only supports Usenet sources" }
-    return withTimeoutOrNull(120_000L) {
-        UsenetSidecar.get(context).resolve(stream, season, episode, profileId)
-    } ?: error("Stream preparation timed out")
+    return UsenetSidecar.get(context).resolve(stream, season, episode, profileId)
 }
 
 internal suspend fun PlayerRuntimeController.resolveSelectedStreamWithFallback(
@@ -42,7 +40,9 @@ internal suspend fun PlayerRuntimeController.resolveSelectedStreamWithFallback(
 ): Stream? {
     require(stream.isUsenet()) { "Fallback only supports Usenet sources" }
     val resolved = try {
-        resolveFallbackCandidate(stream, season, episode)
+        streamFallbackSession?.prepareCandidate(stream) { resolveFallbackCandidate(stream, season, episode) }
+            ?: withTimeoutOrNull(120_000L) { resolveFallbackCandidate(stream, season, episode) }
+            ?: error("Stream preparation timed out")
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (error: Exception) {
@@ -93,7 +93,7 @@ internal fun PlayerRuntimeController.tryNextStream(detailedError: String): Boole
             if (resolved == null || !session.enabled) {
                 _uiState.update {
                     it.copy(
-                        error = context.getString(R.string.player_stream_fallback_exhausted) + "\n" + detailedError,
+                        error = context.getString(R.string.player_stream_fallback_exhausted) + "\n" + (session.failureMessage ?: detailedError),
                         isBuffering = false, showLoadingOverlay = false, showPauseOverlay = false
                     )
                 }

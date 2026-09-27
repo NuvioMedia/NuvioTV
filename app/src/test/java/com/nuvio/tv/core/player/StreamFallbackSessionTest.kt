@@ -1,6 +1,8 @@
 package com.nuvio.tv.core.player
 
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.core.usenet.UsenetPreparationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -9,7 +11,61 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class StreamFallbackSessionTest {
+    @Test fun `preparation has one cumulative budget across initial and fallback attempts`() = runTest {
+        val sources = (0..6).map { stream("budget-$it") }
+        val session = StreamFallbackSession(sources[0], sources,
+            nanoTime = { testScheduler.currentTime * 1_000_000L }, isEnabled = { true })
+        try {
+            session.prepareCandidate(sources[0]) { delay(180_000); sources[0] }
+            fail("Initial preparation must time out")
+        } catch (_: UsenetPreparationException) { }
+        assertEquals(60_000L, testScheduler.currentTime)
+        var attempts = 0
+        assertNull(session.resolveNext { candidate, _ -> attempts++; delay(180_000); candidate })
+        assertEquals(2, attempts)
+        assertEquals(120_000L, testScheduler.currentTime)
+        assertFalse(session.canAdvance)
+        assertTrue(session.failureMessage!!.contains("budget exhausted"))
+    }
+
+    @Test fun `watching time does not consume preparation budget`() = runTest {
+        val first = stream("watch")
+        val session = StreamFallbackSession(first, listOf(first, stream("next")),
+            nanoTime = { testScheduler.currentTime * 1_000_000L }, isEnabled = { true })
+        session.prepareCandidate(first) { delay(1000); first }
+        delay(3_600_000)
+        assertNotNull(session.resolveNext { candidate, _ -> delay(1000); candidate })
+    }
+
+    @Test fun `provider failures skip the same account but allow a different provider`() = runTest {
+        val first = stream("first").copy(servers = listOf("nntps://account-a/8"))
+        val duplicateProvider = stream("second").copy(servers = first.servers)
+        val other = stream("third").copy(servers = listOf("nntps://account-b/8"))
+        val session = session(first, listOf(first, duplicateProvider, other))
+        try {
+            session.prepareCandidate(first) {
+                throw UsenetPreparationException("Authentication failed", UsenetPreparationException.Scope.PROVIDER)
+            }
+        } catch (_: UsenetPreparationException) { }
+        assertEquals(other, session.next())
+        assertEquals(1, session.attempts)
+    }
+
+    @Test fun `engine failure stops futile fallback and preserves the explanation`() = runTest {
+        val first = stream("first")
+        val session = session(first, listOf(first, stream("next")))
+        try {
+            session.prepareCandidate(first) {
+                throw UsenetPreparationException("Engine missing", UsenetPreparationException.Scope.ENGINE)
+            }
+        } catch (_: UsenetPreparationException) { }
+        assertFalse(session.canAdvance)
+        assertNull(session.next())
+        assertEquals("Engine missing", session.failureMessage)
+    }
+
     private fun stream(id: String) = Stream(
         name = id, title = null, description = null, url = null, nzbUrl = "https://example.test/$id.nzb",
         ytId = null, infoHash = null, fileIdx = null, externalUrl = null,

@@ -1214,7 +1214,7 @@ class StreamScreenViewModel @Inject constructor(
                     }
                 }
                 val result = try {
-                    kotlinx.coroutines.withTimeoutOrNull(120_000L) {
+                    session.prepareCandidate(selectedCandidate) {
                         resolveSingleStreamForPlayback(selectedCandidate, session.attempts) { pendingResolutionError = it }
                     }
                 } catch (cancelled: CancellationException) {
@@ -1239,7 +1239,7 @@ class StreamScreenViewModel @Inject constructor(
             if (streamResolutionJob === selectionJob) streamResolutionJob = null
         }
         showDirectDebridPlaybackError(
-            pendingResolutionError ?: context.getString(R.string.player_stream_fallback_exhausted),
+            session.failureMessage ?: pendingResolutionError ?: context.getString(R.string.player_stream_fallback_exhausted),
             refreshStreams = false
         )
         return null
@@ -1266,7 +1266,7 @@ class StreamScreenViewModel @Inject constructor(
             } catch (e: Exception) {
                 usenetSelectionStarted = false
                 onFailure(e.message ?: context.getString(R.string.usenet_failed))
-                null
+                throw e
             }
         }
         if (!directDebridResolver.shouldResolveToPlayableStream(stream)) {
