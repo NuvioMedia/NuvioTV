@@ -163,7 +163,7 @@ internal class PlaybackSpeedAwareAudioSink(
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
         currentInputFormat = inputFormat
-        passthroughPacer.onFormat(inputFormat)
+        passthroughPacer.onFormat(inputFormat, nowMs())
         markPcmFallbackIfNeeded(inputFormat, playbackSpeed)
         currentTunnelAudioClass = tunnelAudioClass(inputFormat)
         super.configure(inputFormat, specifiedBufferSize, outputChannels)

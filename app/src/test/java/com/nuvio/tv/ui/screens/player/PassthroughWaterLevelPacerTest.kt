@@ -261,22 +261,165 @@ class PassthroughWaterLevelPacerTest {
     }
 
     @Test
-    fun onFormat_whilePlaying_keepsWallClock_andRelatchesPts() {
+    fun onFormat_whilePlaying_resetsWallOriginAndRelatchesContinuingPts() {
         val pacer = PassthroughWaterLevelPacer()
+        val playedMs = 60_000L
+        val continuingPtsUs = 60_000_000L
         pacer.onFormat(mime(MimeTypes.AUDIO_DTS_HD))
         pacer.onPlay(0L)
         assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
         pacer.onBufferAccepted(0L)
+        assertTrue(pacer.shouldAcceptBuffer(continuingPtsUs, playedMs, 1f))
+        pacer.onBufferAccepted(continuingPtsUs)
+
+        pacer.onFormat(mime(MimeTypes.AUDIO_AC3), playedMs)
+
+        assertTrue(pacer.shouldAcceptBuffer(continuingPtsUs, playedMs, 1f))
+        pacer.onBufferAccepted(continuingPtsUs)
+        val ceiling = PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US
+        assertTrue(pacer.shouldAcceptBuffer(continuingPtsUs + ceiling, playedMs, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(continuingPtsUs + ceiling + 1L, playedMs, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(continuingPtsUs + playedMs * 1_000L, playedMs, 1f))
+    }
+
+    @Test
+    fun onFormat_whilePlaying_rejectsARestartedPtsSprint() {
+        val pacer = PassthroughWaterLevelPacer()
+        val playedMs = 60_000L
+        pacer.onFormat(mime(MimeTypes.AUDIO_DTS_HD))
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        assertTrue(pacer.shouldAcceptBuffer(playedMs * 1_000L, playedMs, 1f))
+        pacer.onFormat(mime(MimeTypes.AUDIO_AC3), playedMs)
+
+        assertTrue(pacer.shouldAcceptBuffer(0L, playedMs, 1f))
+        val ceiling = PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US
+        assertTrue(pacer.shouldAcceptBuffer(ceiling, playedMs, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(ceiling + 1L, playedMs, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(1_000_000L, playedMs, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(playedMs * 1_000L, playedMs, 1f))
+    }
+
+    @Test
+    fun onFormat_whilePlaying_pauseFreezesOnlyTheNewWindow() {
+        val pacer = PassthroughWaterLevelPacer()
+        val playedMs = 60_000L
         pacer.onFormat(mime(MimeTypes.AUDIO_AC3))
-        assertTrue(pacer.shouldAcceptBuffer(0L, 1_000L, 1f))
-        assertTrue(pacer.shouldAcceptBuffer(1_000_000L, 1_000L, 1f))
-        assertFalse(
-            pacer.shouldAcceptBuffer(
-                1_000_000L + PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US + 1L,
-                1_000L,
-                1f
-            )
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        pacer.onFormat(mime(MimeTypes.AUDIO_AC3), playedMs)
+        assertTrue(pacer.shouldAcceptBuffer(0L, playedMs, 1f))
+        pacer.onPause(playedMs + 100L)
+
+        val pausedLimit = 100_000L + PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US
+        assertTrue(pacer.shouldAcceptBuffer(pausedLimit, playedMs + 30_000L, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(pausedLimit + 1L, playedMs + 30_000L, 1f))
+    }
+
+    @Test
+    fun onFormat_whilePaused_dropsTheFrozenWindow() {
+        val pacer = PassthroughWaterLevelPacer()
+        pacer.onFormat(mime(MimeTypes.AUDIO_AC3))
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        pacer.onPause(5_000L)
+        pacer.onFormat(mime(MimeTypes.AUDIO_E_AC3))
+
+        assertTrue(pacer.shouldAcceptBuffer(0L, 50_000L, 1f))
+        val ceiling = PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US
+        assertTrue(pacer.shouldAcceptBuffer(ceiling, 50_000L, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(ceiling + 1L, 50_000L, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(5_000_000L, 50_000L, 1f))
+
+        pacer.onPlay(50_000L)
+        assertTrue(pacer.shouldAcceptBuffer(200_000L + ceiling, 50_200L, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(200_000L + ceiling + 1L, 50_200L, 1f))
+    }
+
+    @Test
+    fun onFormat_whilePlaying_positionClampStartsFromTheNewOrigin() {
+        val pacer = PassthroughWaterLevelPacer()
+        val playedMs = 60_000L
+        pacer.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        pacer.onBufferAccepted(0L)
+        assertEquals(0L, pacer.clampPositionUs(0L, 0L, 1f))
+        assertTrue(pacer.shouldAcceptBuffer(playedMs * 1_000L, playedMs, 1f))
+        pacer.onBufferAccepted(playedMs * 1_000L)
+
+        pacer.onFormat(mime(MimeTypes.AUDIO_AC3), playedMs)
+
+        assertEquals(0L, pacer.clampPositionUs(0L, playedMs, 1f))
+        assertEquals(
+            PassthroughWaterLevelPacer.POSITION_LEAD_SLACK_US,
+            pacer.clampPositionUs(5_000_000L, playedMs, 1f)
         )
+        assertTrue(pacer.shouldAcceptBuffer(0L, playedMs, 1f))
+        pacer.onBufferAccepted(0L)
+        assertTrue(
+            pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US, playedMs, 1f)
+        )
+        pacer.onBufferAccepted(PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US)
+        assertEquals(
+            PassthroughWaterLevelPacer.POSITION_LEAD_SLACK_US,
+            pacer.clampPositionUs(playedMs * 1_000L, playedMs, 1f)
+        )
+    }
+
+    @Test
+    fun onFormat_whilePlaying_usesTheNewMimeCeilingNotTheOldSession() {
+        val pacer = PassthroughWaterLevelPacer()
+        val playedMs = 60_000L
+        pacer.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
+        pacer.setIecPacked(false)
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        pacer.onFormat(mime(MimeTypes.AUDIO_AC3), playedMs)
+
+        assertTrue(pacer.shouldAcceptBuffer(0L, playedMs, 1f))
+        assertTrue(pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US, playedMs, 1f))
+        assertFalse(
+            pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US + 1L, playedMs, 1f)
+        )
+        assertFalse(
+            pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.TRUEHD_WRITE_AHEAD_US, playedMs, 1f)
+        )
+    }
+
+    @Test
+    fun onFormat_whilePlaying_keepsTheIecCeilingButNotTheSession() {
+        val pacer = PassthroughWaterLevelPacer()
+        val playedMs = 60_000L
+        pacer.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
+        pacer.setIecPacked(true)
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        pacer.onFormat(mime(MimeTypes.AUDIO_DTS_HD), playedMs)
+        assertEquals(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US, pacer.writeAheadCeilingUs())
+
+        assertTrue(pacer.shouldAcceptBuffer(0L, playedMs, 1f))
+        assertTrue(pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US, playedMs, 1f))
+        assertFalse(
+            pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US + 1L, playedMs, 1f)
+        )
+        assertFalse(pacer.shouldAcceptBuffer(playedMs * 1_000L, playedMs, 1f))
+    }
+
+    @Test
+    fun onFormat_whilePlaying_doubleSpeedDoesNotMultiplyTheOldSession() {
+        val pacer = PassthroughWaterLevelPacer()
+        val playedMs = 60_000L
+        pacer.onFormat(mime(MimeTypes.AUDIO_E_AC3))
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        pacer.onFormat(mime(MimeTypes.AUDIO_E_AC3), playedMs)
+
+        assertTrue(pacer.shouldAcceptBuffer(0L, playedMs, 2f))
+        val ceiling = PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US
+        assertTrue(pacer.shouldAcceptBuffer(ceiling, playedMs, 2f))
+        assertFalse(pacer.shouldAcceptBuffer(ceiling + 1L, playedMs, 2f))
+        assertFalse(pacer.shouldAcceptBuffer(playedMs * 2_000L, playedMs, 2f))
     }
 
     @Test

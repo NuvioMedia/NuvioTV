@@ -23,12 +23,16 @@ internal class PassthroughWaterLevelPacer(
         return isPassthroughMime(format?.sampleMimeType)
     }
 
-    fun onFormat(format: Format?) {
+    fun onFormat(format: Format?, nowMs: Long = 0L) {
         sampleMimeType = format?.sampleMimeType
         firstPtsUs = C.TIME_UNSET
         lastAcceptedPtsUs = C.TIME_UNSET
         positionAnchorUs = C.TIME_UNSET
         pacingReported = false
+        frozenPlayingMs = 0L
+        if (playing) {
+            playStartedAtMs = nowMs
+        }
     }
 
     fun setIecPacked(packed: Boolean) {
