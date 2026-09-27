@@ -76,6 +76,7 @@ internal class IecPassthroughAudioSink(
     // reselect DTS onto IEC without looping every configure. The probe thread writes
     // this latch; configure catch-up reads it.
     private val iecReadyDelivered = AtomicBoolean(false)
+    private val timestampClock = IecAudioTimestampClock(nanoTime)
 
     init {
         attachReadyListener()
@@ -204,17 +205,22 @@ internal class IecPassthroughAudioSink(
     override fun getCurrentPositionUs(sourceEnded: Boolean): Long {
         if (!isIecActive) return super.getCurrentPositionUs(sourceEnded)
         val track = iecTrack ?: return AudioSink.CURRENT_POSITION_NOT_SET
-        if (track.isPlayHeld() || writtenFrames == 0L || startPtsUs == C.TIME_UNSET) {
-            return AudioSink.CURRENT_POSITION_NOT_SET
-        }
         val head = minOf(track.playbackHeadFrames(), writtenFrames) - headAnchorFrames
-        val headUs = if (track.sampleRate > 0) {
-            head * C.MICROS_PER_SECOND / track.sampleRate
-        } else {
-            0L
+        val written = (writtenFrames - headAnchorFrames).coerceAtLeast(0L)
+        val sample = track.timestamp()?.let { stamp ->
+            val adjusted = stamp.framePosition - headAnchorFrames
+            if (adjusted < 0L) null else stamp.copy(framePosition = adjusted)
         }
-        val presentedUs = if (headUs <= 0L) headUs else (headUs - track.outputLatencyUs()).coerceAtLeast(0L)
-        return startPtsUs + presentedUs
+        return timestampClock.positionUs(
+            sampleRate = track.sampleRate,
+            headFrames = head.coerceAtLeast(0L),
+            writtenFrames = written,
+            startPtsUs = startPtsUs,
+            latencyUs = track.outputLatencyUs(),
+            playHeld = track.isPlayHeld(),
+            timestamp = sample,
+            playing = playing
+        )
     }
 
     override fun play() {
@@ -229,6 +235,7 @@ internal class IecPassthroughAudioSink(
     override fun pause() {
         playing = false
         writeStallStartedNanos = WRITE_STALL_NOT_STARTED
+        timestampClock.reset()
         if (isIecActive) {
             iecTrack?.pause()
         } else {
@@ -258,6 +265,7 @@ internal class IecPassthroughAudioSink(
             discardedAuSinceReset = 0
             dtsDuration.clearPts()
             writeStallStartedNanos = WRITE_STALL_NOT_STARTED
+            timestampClock.reset()
         } else {
             super.handleDiscontinuity()
         }
@@ -752,6 +760,7 @@ internal class IecPassthroughAudioSink(
         headAnchorFrames = 0L
         handledEndOfStream = false
         writeStallStartedNanos = WRITE_STALL_NOT_STARTED
+        timestampClock.reset()
         if (!keepTrack) {
             iecTrack?.release()
             iecTrack = null

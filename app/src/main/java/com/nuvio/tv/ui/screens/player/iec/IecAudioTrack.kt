@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player.iec
 
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioTimestamp
 import android.media.AudioTrack
 import android.os.Build
 import android.os.SystemClock
@@ -32,6 +33,7 @@ internal interface IecAudioTrack {
     fun underrunCount(): Int
     fun isPlayHeld(): Boolean = false
     fun outputLatencyUs(): Long = 0L
+    fun timestamp(): IecAudioTimestampSample? = null
 }
 
 internal const val IEC_MAX_OUTPUT_LATENCY_US = 5L * C.MICROS_PER_SECOND
@@ -459,6 +461,7 @@ private class PlatformIecAudioTrack(
 ) : IecAudioTrack {
     private val headTracker = IecPlaybackHeadTracker()
     private val settleGate = IecFlushSettleGate()
+    private val audioTimestamp = AudioTimestamp()
     private var sampledLatencyUs: Long = 0L
     private var lastLatencySampleMs: Long = Long.MIN_VALUE
     private val latencyMethod: java.lang.reflect.Method? = try {
@@ -506,6 +509,14 @@ private class PlatformIecAudioTrack(
     }
 
     override fun playbackHeadFrames(): Long = headTracker.frames(track.playbackHeadPosition)
+
+    override fun timestamp(): IecAudioTimestampSample? {
+        return if (track.getTimestamp(audioTimestamp)) {
+            IecAudioTimestampSample(audioTimestamp.framePosition, audioTimestamp.nanoTime)
+        } else {
+            null
+        }
+    }
 
     override fun outputLatencyUs(): Long {
         val method = latencyMethod ?: return 0L
