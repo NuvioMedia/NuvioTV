@@ -72,12 +72,6 @@ internal class TrueHdMatPacker {
 
         state.padding += (spaceSize - state.prevMatFramesize)
 
-        if (state.padding > MAT_BUFFER_SIZE * 5) {
-            reset()
-            state.init = true
-            return false
-        }
-
         if (state.outputTimingValid) {
             var prevOutput = (state.outputTiming - frameSamples) and 0xFFFF
             if (prevOutput < frameTime) prevOutput += 0x10000
