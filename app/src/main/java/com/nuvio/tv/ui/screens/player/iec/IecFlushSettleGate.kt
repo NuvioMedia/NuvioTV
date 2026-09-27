@@ -31,15 +31,21 @@ internal class IecFlushSettleGate(
         flushedAtNanos = nanoTime()
     }
 
+    fun isHolding(): Boolean {
+        if (!armed) return false
+        return nanoTime() - flushedAtNanos < settleNanos
+    }
+
     /** True when `play()` may start the track now; false while the settle time is still running. */
     fun mayPlay(): Boolean {
-        if (!armed) return true
-        if (nanoTime() - flushedAtNanos < settleNanos) return false
-        armed = false
-        return true
+        if (!isHolding()) {
+            armed = false
+            return true
+        }
+        return false
     }
 
     companion object {
-        const val DEFAULT_SETTLE_NANOS = 250_000_000L
+        const val DEFAULT_SETTLE_NANOS = 150_000_000L
     }
 }

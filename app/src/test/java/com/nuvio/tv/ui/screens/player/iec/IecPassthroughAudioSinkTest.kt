@@ -12,10 +12,16 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import java.nio.ByteBuffer
 
 class IecPassthroughAudioSinkTest {
+
+    @Before
+    fun setUp() {
+        LiveDirectAudioPlayback.resetForTest()
+    }
 
     @After
     fun tearDown() {
@@ -574,18 +580,24 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
-    fun dtsHd_stalledWrites_fallBackAfterStallLimit() {
+    fun dtsHd_stalledWrites_fallBackAfterStallBudget() {
+        val clock = longArrayOf(0L)
         val inner = RecordingSink()
         val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = 0))
-        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        val sink = IecPassthroughAudioSink(
+            sink = inner,
+            trackFactory = factory,
+            nanoTime = { clock[0] }
+        )
         sink.configure(dtsHdFormat(), 0, null)
         assertTrue(sink.isIecActive)
         sink.play()
 
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
-        repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS - 2) {
-            assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
-        }
+        clock[0] = IecPassthroughAudioSink.WRITE_STALL_BUDGET_NANOS - 1
+        assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertTrue(sink.isIecActive)
+        clock[0] = IecPassthroughAudioSink.WRITE_STALL_BUDGET_NANOS
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
         assertFalse(sink.isIecActive)
         assertTrue(factory.markedUnusable)
@@ -593,25 +605,30 @@ class IecPassthroughAudioSinkTest {
 
     @Test
     fun dtsHd_stalledWritesWhilePaused_doNotCountTowardFallback() {
+        val clock = longArrayOf(0L)
         val inner = RecordingSink()
         val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = 0))
-        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        val sink = IecPassthroughAudioSink(
+            sink = inner,
+            trackFactory = factory,
+            nanoTime = { clock[0] }
+        )
         sink.configure(dtsHdFormat(), 0, null)
         assertTrue(sink.isIecActive)
 
-        // Paused: the full buffer never drains, and none of these attempts may count.
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
-        repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS * 2) {
-            assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
-        }
+        clock[0] = IecPassthroughAudioSink.WRITE_STALL_BUDGET_NANOS * 4
+        assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
         assertTrue(sink.isIecActive)
         assertFalse(factory.markedUnusable)
 
-        // Playing: the same stalls count, and the limit still trips.
         sink.play()
-        repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS - 1) {
-            assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
-        }
+        clock[0] = 0L
+        assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        clock[0] = IecPassthroughAudioSink.WRITE_STALL_BUDGET_NANOS - 1
+        assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertTrue(sink.isIecActive)
+        clock[0] = IecPassthroughAudioSink.WRITE_STALL_BUDGET_NANOS
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
         assertFalse(sink.isIecActive)
         assertTrue(factory.markedUnusable)
@@ -820,6 +837,40 @@ class IecPassthroughAudioSinkTest {
             "position should stay near the new start PTS, was $afterJump",
             afterJump < 1_050_000L
         )
+    }
+
+    @Test
+    fun discontinuity_dropsPendingBursts() {
+        val track = ThrottledIecAudioTrack(192_000, 16, capacityBytes = 32)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(track))
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        sink.play()
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertTrue(track.isFull())
+        assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 10_000L, 1))
+        assertTrue(sink.hasPendingData())
+
+        sink.handleDiscontinuity()
+        track.drain(track.written)
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 1_000_000L, 1))
+        val afterJump = sink.getCurrentPositionUs(false)
+        assertTrue(
+            "position should stay near the new start PTS, was $afterJump",
+            afterJump < 1_050_000L
+        )
+    }
+
+    @Test
+    fun open_reportsTrackBufferSizeNotRequestedSize() {
+        val track = FakeIecAudioTrack(192_000, 16, bufferSizeBytes = 32_768)
+        val factory = ReadyFactory(track)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        assertTrue(factory.lastBufferSizeBytes > 32_768)
+        val expectedUs = 32_768L / 16 * C.MICROS_PER_SECOND / 192_000L
+        assertEquals(expectedUs, sink.getAudioTrackBufferSizeUs())
     }
 
     @Test
@@ -1102,6 +1153,7 @@ class IecPassthroughAudioSinkTest {
         override val sampleRate: Int,
         override val frameSizeBytes: Int,
         override val payload: HbrPayload = HbrPayload.IEC_BURST,
+        override val bufferSizeBytes: Int = sampleRate * frameSizeBytes,
         private val fixedWriteResult: Int? = null,
         private val maxWriteChunk: Int? = null
     ) : IecAudioTrack {
@@ -1133,6 +1185,7 @@ class IecPassthroughAudioSinkTest {
         var failWrites: Boolean = false
     ) : IecAudioTrack {
         override val payload: HbrPayload = HbrPayload.IEC_BURST
+        override val bufferSizeBytes: Int = capacityBytes
         var written: Int = 0
             private set
         var consumed: Int = 0

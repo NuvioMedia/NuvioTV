@@ -26,7 +26,7 @@ class IecFlushSettleGateTest {
 
     @Test
     fun shortRestarts_areHeldUntilTheSettleTime() {
-        for (gap in longArrayOf(0, 1, 47, 61, 84, 97, 107, 127, 157, 249)) {
+        for (gap in longArrayOf(0, 1, 47, 61, 84, 97, 107, 127, 149)) {
             now = ms(1_000)
             val g = gate()
             g.onFlush()
@@ -40,16 +40,16 @@ class IecFlushSettleGateTest {
         now = ms(1_000)
         val g = gate()
         g.onFlush()
-        now = ms(1_250)
-        assertTrue("released at +250 ms", g.mayPlay())
-        now = ms(1_251)
+        now = ms(1_150)
+        assertTrue("released at +150 ms", g.mayPlay())
+        now = ms(1_151)
         assertTrue("stays released", g.mayPlay())
         now = ms(9_000)
         assertTrue("stays released much later", g.mayPlay())
     }
 
     @Test
-    fun drainRetriesEvery10ms_startAt250ms() {
+    fun drainRetriesEvery10ms_startAt150ms() {
         now = ms(2_000)
         val g = gate()
         g.onFlush()
@@ -63,8 +63,8 @@ class IecFlushSettleGateTest {
             }
             refused++
         }
-        assertEquals(250L, startedAt)
-        assertEquals(25, refused)
+        assertEquals(150L, startedAt)
+        assertEquals(15, refused)
     }
 
     @Test
@@ -81,12 +81,12 @@ class IecFlushSettleGateTest {
         now = ms(4_000)
         val g = gate()
         g.onFlush()
-        now = ms(4_150)
+        now = ms(4_100)
         g.onFlush()
-        now = ms(4_260)
-        assertFalse("held 110 ms after the second flush", g.mayPlay())
-        now = ms(4_400)
-        assertTrue("released 250 ms after the second flush", g.mayPlay())
+        now = ms(4_200)
+        assertFalse("held 100 ms after the second flush", g.mayPlay())
+        now = ms(4_250)
+        assertTrue("released 150 ms after the second flush", g.mayPlay())
     }
 
     @Test
@@ -94,7 +94,7 @@ class IecFlushSettleGateTest {
         now = ms(4_000)
         val g = gate()
         g.onFlush()
-        now = ms(4_400)
+        now = ms(4_200)
         assertTrue(g.mayPlay())
         now = ms(5_000)
         g.onFlush()
@@ -109,7 +109,7 @@ class IecFlushSettleGateTest {
         g.onFlush()
         now = Long.MIN_VALUE + ms(100)
         assertFalse("negative clock: held", g.mayPlay())
-        now = Long.MIN_VALUE + ms(260)
+        now = Long.MIN_VALUE + ms(160)
         assertTrue("negative clock: released", g.mayPlay())
 
         now = Long.MAX_VALUE - ms(100)

@@ -686,6 +686,7 @@ class DtsXIecBurstPeriodTest {
         override val sampleRate: Int = 192_000
         override val frameSizeBytes: Int = 16
         override val payload: HbrPayload = HbrPayload.IEC_BURST
+        override val bufferSizeBytes: Int = sampleRate * frameSizeBytes
         var written: Int = 0
             private set
 

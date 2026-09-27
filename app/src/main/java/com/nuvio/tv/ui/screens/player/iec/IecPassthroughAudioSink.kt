@@ -29,6 +29,7 @@ internal class IecPassthroughAudioSink(
     sink: AudioSink,
     private val trackFactory: IecAudioTrackFactory = PlatformIecAudioTrackFactory(),
     private val hbrIecEnabled: Boolean = true,
+    private val nanoTime: () -> Long = System::nanoTime,
     private val onDiagnosticEvent: ((String) -> Unit)? = null,
     private val onIecBecameReady: (() -> Unit)? = null
 ) : ForwardingAudioSink(sink) {
@@ -60,7 +61,7 @@ internal class IecPassthroughAudioSink(
     private var configuredBufferSize: Int = 0
     private var configuredOutputChannels: IntArray? = null
     private var iecFailedThisSession: Boolean = false
-    private var consecutiveWriteStalls: Int = 0
+    private var writeStallStartedNanos: Long = WRITE_STALL_NOT_STARTED
     private var totalWriteStalls: Long = 0L
     private var lastHealthNanos: Long = 0L
     private var lastHealthUnderruns: Int = -1
@@ -193,7 +194,7 @@ internal class IecPassthroughAudioSink(
     override fun getCurrentPositionUs(sourceEnded: Boolean): Long {
         if (!isIecActive) return super.getCurrentPositionUs(sourceEnded)
         val track = iecTrack ?: return AudioSink.CURRENT_POSITION_NOT_SET
-        if (writtenFrames == 0L || startPtsUs == C.TIME_UNSET) {
+        if (track.isPlayHeld() || writtenFrames == 0L || startPtsUs == C.TIME_UNSET) {
             return AudioSink.CURRENT_POSITION_NOT_SET
         }
         val head = minOf(track.playbackHeadFrames(), writtenFrames) - headAnchorFrames
@@ -211,6 +212,7 @@ internal class IecPassthroughAudioSink(
 
     override fun pause() {
         playing = false
+        writeStallStartedNanos = WRITE_STALL_NOT_STARTED
         if (isIecActive) {
             iecTrack?.pause()
         } else {
@@ -229,13 +231,16 @@ internal class IecPassthroughAudioSink(
 
     override fun handleDiscontinuity() {
         if (isIecActive) {
-            // No flush here: the AudioTrack head keeps counting, so re-anchor it
-            // or the position jumps by everything played before the discontinuity.
             headAnchorFrames = iecTrack?.playbackHeadFrames() ?: 0L
+            matPacker.reset()
+            while (pendingFrames.isNotEmpty()) recycleFrame(pendingFrames.removeFirst())
+            pendingOffset = 0
+            leftover = ByteArray(0)
             startPtsUs = C.TIME_UNSET
             firstBufferPtsUs = C.TIME_UNSET
             discardedAuSinceReset = 0
             dtsDuration.clearPts()
+            writeStallStartedNanos = WRITE_STALL_NOT_STARTED
         } else {
             super.handleDiscontinuity()
         }
@@ -404,7 +409,7 @@ internal class IecPassthroughAudioSink(
         ) ?: return false
         track.setVolume(volume)
         iecTrack = track
-        iecBufferSizeBytes = requestedBytes
+        iecBufferSizeBytes = track.bufferSizeBytes
         iecOutputSampleRate = sampleRate
         return true
     }
@@ -574,17 +579,20 @@ internal class IecPassthroughAudioSink(
                     return fallbackToWrappedSink("write_error code=$written")
                 }
                 if (written == 0) {
-                    // A paused track keeps a full buffer by design; only stalls while the track
-                    // should be draining count towards giving up on IEC.
                     if (playing) {
                         totalWriteStalls++
-                        if (stallIsFatal && ++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
-                            return fallbackToWrappedSink("write_stalls=$consecutiveWriteStalls")
+                        val now = nanoTime()
+                        if (writeStallStartedNanos == WRITE_STALL_NOT_STARTED) {
+                            writeStallStartedNanos = now
+                        }
+                        val stalledFor = now - writeStallStartedNanos
+                        if (stallIsFatal && stalledFor >= WRITE_STALL_BUDGET_NANOS) {
+                            return fallbackToWrappedSink("write_stall_ms=${stalledFor / 1_000_000L}")
                         }
                     }
                     return false
                 }
-                consecutiveWriteStalls = 0
+                writeStallStartedNanos = WRITE_STALL_NOT_STARTED
                 pendingOffset += written
                 writtenBytes += written
             }
@@ -643,7 +651,7 @@ internal class IecPassthroughAudioSink(
         writtenBytes = 0L
         headAnchorFrames = 0L
         handledEndOfStream = false
-        consecutiveWriteStalls = 0
+        writeStallStartedNanos = WRITE_STALL_NOT_STARTED
         if (!keepTrack) {
             iecTrack?.release()
             iecTrack = null
@@ -692,9 +700,8 @@ internal class IecPassthroughAudioSink(
         // HAL minimum if a device rejects the larger allocation, so this never reduces the
         // buffer or fails an open the default would have made.
         internal const val IEC_BUFFER_TARGET_MS = 1_000
-        internal const val MAX_WRITE_STALLS = 1_000
-        // Reported as the WriteException error code when the wrapped sink refuses the format
-        // during a fallback; not an AudioTrack return value.
+        internal const val WRITE_STALL_BUDGET_NANOS = 500_000_000L
+        private const val WRITE_STALL_NOT_STARTED = Long.MIN_VALUE
         internal const val WRITE_ERROR_FALLBACK_REFUSED = -1_000
         private const val HEALTH_INTERVAL_NANOS = 5_000_000_000L
         private const val FRAME_POOL_LIMIT = 8

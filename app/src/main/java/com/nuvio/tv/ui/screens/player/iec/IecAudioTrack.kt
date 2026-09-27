@@ -19,6 +19,7 @@ internal interface IecAudioTrack {
     val sampleRate: Int
     val frameSizeBytes: Int
     val payload: HbrPayload
+    val bufferSizeBytes: Int
     fun write(data: ByteArray, offset: Int, size: Int): Int
     fun play()
     fun pause()
@@ -27,6 +28,7 @@ internal interface IecAudioTrack {
     fun playbackHeadFrames(): Long
     fun setVolume(volume: Float)
     fun underrunCount(): Int
+    fun isPlayHeld(): Boolean = false
 }
 
 internal fun interface IecAudioTrackFactory {
@@ -123,7 +125,13 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                 val track = createTrack(sampleRate, mask, mat, bufferSizeBytes, sessionId)
                 if (track != null) {
                     Log.i(TAG, "opened DOLBY_MAT $sampleRate/$channelCount")
-                    return PlatformIecAudioTrack(track, sampleRate, channelCount * 2, HbrPayload.MAT)
+                    return PlatformIecAudioTrack(
+                        track.first,
+                        sampleRate,
+                        channelCount * 2,
+                        HbrPayload.MAT,
+                        track.second
+                    )
                 }
                 Log.w(TAG, "DOLBY_MAT refused")
             }
@@ -139,7 +147,13 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
             )
             if (track != null) {
                 Log.i(TAG, "opened IEC61937 $sampleRate/$channelCount")
-                return PlatformIecAudioTrack(track, sampleRate, channelCount * 2, HbrPayload.IEC_BURST)
+                return PlatformIecAudioTrack(
+                    track.first,
+                    sampleRate,
+                    channelCount * 2,
+                    HbrPayload.IEC_BURST,
+                    track.second
+                )
             }
             if (sampleRate == 176_400) {
                 iec176400Usable = false
@@ -158,16 +172,15 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         encoding: Int,
         bufferSizeBytes: Int,
         sessionId: Int
-    ): AudioTrack? {
+    ): Pair<AudioTrack, Int>? {
         val min = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding)
         if (min <= 0) return null
         val requested = maxOf(min, bufferSizeBytes)
-        // Try the requested size, then the HAL minimum, so a larger buffer request can
-        // never fail an open the minimum size would have made.
         if (requested > min) {
-            createTrackAtSize(sampleRate, channelMask, encoding, requested, sessionId)?.let { return it }
+            createTrackAtSize(sampleRate, channelMask, encoding, requested, sessionId)
+                ?.let { return it to requested }
         }
-        return createTrackAtSize(sampleRate, channelMask, encoding, min, sessionId)
+        return createTrackAtSize(sampleRate, channelMask, encoding, min, sessionId)?.let { it to min }
     }
 
     private fun createTrackAtSize(
@@ -429,7 +442,8 @@ private class PlatformIecAudioTrack(
     private val track: AudioTrack,
     override val sampleRate: Int,
     override val frameSizeBytes: Int,
-    override val payload: HbrPayload
+    override val payload: HbrPayload,
+    override val bufferSizeBytes: Int
 ) : IecAudioTrack {
     private val headTracker = IecPlaybackHeadTracker()
     private val settleGate = IecFlushSettleGate()
@@ -440,12 +454,13 @@ private class PlatformIecAudioTrack(
 
     override fun play() {
         if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
-            // Too soon after a flush: refuse, the sink asks again on its next drain.
             if (!settleGate.mayPlay()) return
             headTracker.onPlay(track.playbackHeadPosition)
             track.play()
         }
     }
+
+    override fun isPlayHeld(): Boolean = settleGate.isHolding()
 
     override fun pause() {
         if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
