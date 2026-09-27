@@ -651,13 +651,84 @@ class IecPassthroughAudioSinkTest {
         sink.configure(dtsHdFormat(), 0, null)
         assertTrue(sink.isIecActive)
 
-        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        val payload = ByteArray(64) { 0x5A }
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(payload), 1_000L, 1))
         assertFalse(sink.isIecActive)
         assertTrue(factory.markedUnusable)
-        assertEquals(0, inner.buffers)
+        assertEquals(1, inner.payloads.size)
+        assertTrue(inner.payloads[0].contentEquals(payload))
+        assertEquals(1_000L, inner.payloadPts[0])
 
-        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 100L, 1))
-        assertEquals(1, inner.buffers)
+        val next = ByteArray(64) { 0x11 }
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(next), 2_000L, 1))
+        assertEquals(2, inner.payloads.size)
+        assertTrue(inner.payloads[1].contentEquals(next))
+        assertEquals(2_000L, inner.payloadPts[1])
+    }
+
+    @Test
+    fun dtsHd_successfulIecWrite_doesNotAlsoForwardTheAccessUnit() {
+        val inner = RecordingSink()
+        val sink = IecPassthroughAudioSink(
+            sink = inner,
+            trackFactory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        )
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertTrue(sink.isIecActive)
+        assertTrue(inner.payloads.isEmpty())
+    }
+
+    @Test
+    fun dtsHd_queuedAccessUnit_isForwardedWhenALaterWriteFails() {
+        val inner = RecordingSink()
+        val track = ThrottledIecAudioTrack(192_000, 16, capacityBytes = 0)
+        val factory = ReadyFactory(track)
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+
+        val first = ByteArray(64) { 0x21 }
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(first), 4_000L, 1))
+        assertTrue(sink.isIecActive)
+        assertTrue(inner.payloads.isEmpty())
+
+        track.failWrites = true
+        val second = ByteArray(64) { 0x22 }
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(second), 8_000L, 1))
+        assertFalse(sink.isIecActive)
+        assertTrue(factory.markedUnusable)
+        assertEquals(2, inner.payloads.size)
+        assertTrue(inner.payloads[0].contentEquals(first))
+        assertEquals(4_000L, inner.payloadPts[0])
+        assertTrue(inner.payloads[1].contentEquals(second))
+        assertEquals(8_000L, inner.payloadPts[1])
+    }
+
+    @Test
+    fun trueHd_majorSync_isForwardedWhenIecWriteFails() {
+        val inner = RecordingSink()
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = -2))
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+
+        val sent = mutableListOf<ByteArray>()
+        for (i in 0 until 80) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = i == 0)
+            sent.add(au)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), i * 833L, 1))
+            if (!sink.isIecActive) break
+        }
+        assertFalse(sink.isIecActive)
+        assertTrue(factory.markedUnusable)
+        assertEquals(sent.size, inner.payloads.size)
+        for (i in sent.indices) {
+            assertTrue(inner.payloads[i].contentEquals(sent[i]))
+            assertEquals(i * 833L, inner.payloadPts[i])
+        }
+        assertTrue(inner.payloads[0].contentEquals(sent[0]))
     }
 
     @Test
@@ -1338,6 +1409,8 @@ class IecPassthroughAudioSinkTest {
     ) : AudioSink {
         var buffers: Int = 0
             private set
+        val payloads = mutableListOf<ByteArray>()
+        val payloadPts = mutableListOf<Long>()
         var configured: Int = 0
             private set
         var lastConfigured: Format? = null
@@ -1361,8 +1434,11 @@ class IecPassthroughAudioSinkTest {
             presentationTimeUs: Long,
             encodedAccessUnitCount: Int
         ): Boolean {
+            val bytes = ByteArray(buffer.remaining())
+            buffer.get(bytes)
+            payloads.add(bytes)
+            payloadPts.add(presentationTimeUs)
             buffers++
-            buffer.position(buffer.limit())
             return true
         }
         var endOfStreamRequested = false

@@ -41,6 +41,9 @@ internal class IecPassthroughAudioSink(
     private var iecOutputSampleRate: Int = IEC_SAMPLE_RATE
     private var mode: Mode = Mode.FORWARD
     private val pendingFrames = ArrayDeque<ByteArray>()
+    private val uncommitted = ArrayDeque<UncommittedAu>()
+    private val sourcesOnFrame = ArrayDeque<Int>()
+    private var sourcesSinceFrame: Int = 0
     // DTS-HD bursts handed back after they were written; MAT frames go back to matPacker.
     private val dtsBurstPool = ArrayDeque<ByteArray>()
     private var pendingOffset: Int = 0
@@ -184,12 +187,17 @@ internal class IecPassthroughAudioSink(
             startPtsUs = presentationTimeUs
         }
         if (!drainPending()) return false
+        if (mode == Mode.FORWARD) {
+            return super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
+        }
+        rememberSource(buffer, presentationTimeUs, encodedAccessUnitCount)
         val accepted = when (mode) {
             Mode.TRUEHD -> handleTrueHd(buffer, presentationTimeUs)
             Mode.DTS_HD -> handleDtsHd(buffer, presentationTimeUs)
             Mode.FORWARD -> super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
         }
         drainPending()
+        if (mode == Mode.FORWARD) return true
         return accepted
     }
 
@@ -240,6 +248,7 @@ internal class IecPassthroughAudioSink(
     override fun handleDiscontinuity() {
         if (isIecActive) {
             headAnchorFrames = iecTrack?.playbackHeadFrames() ?: 0L
+            clearUncommitted()
             matPacker.reset()
             while (pendingFrames.isNotEmpty()) recycleFrame(pendingFrames.removeFirst())
             pendingOffset = 0
@@ -492,6 +501,7 @@ internal class IecPassthroughAudioSink(
                         if (iecTrack?.payload == HbrPayload.MAT) mat
                         else Iec61937Packer.packTrueHdInPlace(mat)
                     )
+                    noteFrameQueued()
                 }
             }
         }
@@ -545,6 +555,7 @@ internal class IecPassthroughAudioSink(
         val burst = acquireDtsBurst(period shl 2)
         Iec61937Packer.packDtsHdInto(buffer, period, burst)
         pendingFrames.add(burst)
+        noteFrameQueued()
         return true
     }
 
@@ -645,11 +656,13 @@ internal class IecPassthroughAudioSink(
             }
             recycleFrame(pendingFrames.removeFirst())
             pendingOffset = 0
+            noteFrameWritten()
         }
         return true
     }
 
     private fun fallbackToWrappedSink(reason: String): Boolean {
+        val replays = ArrayList(uncommitted)
         val format = configuredFormat
         val endOfStreamRequested = handledEndOfStream
         android.util.Log.w("IecPassthrough", "IEC write failed; falling back to RAW")
@@ -676,14 +689,54 @@ internal class IecPassthroughAudioSink(
                     .apply { initCause(e) }
             }
             if (playing) super.play()
-            // resetIecState clears the flag, hence the capture above.
+            var handedOff = true
+            for (replay in replays) {
+                val bytes = ByteBuffer.wrap(replay.bytes)
+                if (!super.handleBuffer(bytes, replay.ptsUs, replay.count)) {
+                    handedOff = false
+                    break
+                }
+            }
             if (endOfStreamRequested) super.playToEndOfStream()
+            refreshPassthroughLive()
+            return handedOff
         }
         refreshPassthroughLive()
         return true
     }
 
+    private fun rememberSource(buffer: ByteBuffer, ptsUs: Long, count: Int) {
+        val size = buffer.remaining()
+        if (size <= 0) return
+        val bytes = ByteArray(size)
+        val view = buffer.duplicate()
+        view.get(bytes)
+        uncommitted.add(UncommittedAu(bytes, ptsUs, count))
+        sourcesSinceFrame++
+    }
+
+    private fun noteFrameQueued() {
+        sourcesOnFrame.add(sourcesSinceFrame)
+        sourcesSinceFrame = 0
+    }
+
+    private fun noteFrameWritten() {
+        if (sourcesOnFrame.isEmpty()) return
+        var drop = sourcesOnFrame.removeFirst()
+        while (drop > 0 && uncommitted.isNotEmpty()) {
+            uncommitted.removeFirst()
+            drop--
+        }
+    }
+
+    private fun clearUncommitted() {
+        uncommitted.clear()
+        sourcesOnFrame.clear()
+        sourcesSinceFrame = 0
+    }
+
     private fun resetIecState(keepTrack: Boolean) {
+        clearUncommitted()
         matPacker.reset()
         while (pendingFrames.isNotEmpty()) recycleFrame(pendingFrames.removeFirst())
         pendingOffset = 0
@@ -732,6 +785,8 @@ internal class IecPassthroughAudioSink(
         resetIecState(keepTrack = false)
         mode = Mode.FORWARD
     }
+
+    private class UncommittedAu(val bytes: ByteArray, val ptsUs: Long, val count: Int)
 
     private enum class Mode { FORWARD, TRUEHD, DTS_HD }
 
