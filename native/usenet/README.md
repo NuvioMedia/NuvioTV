@@ -19,8 +19,14 @@ port. Control requests require the token; media/subtitle URLs carry independent
 unguessable session capabilities. No credentials appear in arguments or files.
 Parent pipe EOF terminates the child even if Android kills the parent abruptly.
 
-Deleting a session cancels its requests, closes the NNTP pool and releases its
-buffers. Pre-warm Usenet Engine (off by default) starts the local daemon on app
+Deleting a session cancels its requests and releases its buffers. Overlapping
+sessions share a reference-counted NNTP pool per provider endpoint, TLS mode and
+credentials, including partially overlapping provider lists. The last owner
+closes its provider sockets. A replacement therefore does not allocate a second
+connection allowance for an account already in use. Provider connection/pipeline
+tuning remains fixed while that provider has owners; new tuning applies after
+its last session closes. Article buffers and metadata remain session-local.
+Pre-warm Usenet Engine (off by default) starts the local daemon on app
 foreground and keeps it ready while browsing, without opening provider sockets.
 With **Prefetch First Usenet Result** enabled (default off), the first available
 Usenet result on the **stream results page** is immediately prepared using the
@@ -79,7 +85,11 @@ With prewarming disabled, an idle daemon survives for up to 30 seconds between
 playbacks. An idle daemon exits when the app backgrounds. Active playback retains its session. A profile change
 restarts the idle child to apply its memory target; an active session keeps its
 engine while a replacement is prepared. Failed or cancelled preparation leaves
-the playing session intact. Idle session deletion also returns
+the playing session intact. Replacement cleanup retries asynchronously with a
+two-second deadline per DELETE. Each subsequent open explicitly identifies the
+session to retain; the engine removes abandoned sessions before checking its
+capacity. This also recovers lost open responses and lost DELETE requests.
+Idle session deletion also returns
 unused Go heap pages to the OS; steady playback does not force garbage collection.
 
 The engine adapts AltMount's progressive shared-article model, NNTP pool, NZB
@@ -87,6 +97,17 @@ planning, archive strategy and volume naming. See [NOTICE.md](NOTICE.md) for
 versions, licenses and the local pool corrections.
 
 ## Streaming and memory
+
+Automatic next-source fallback is Usenet-only and opt-in. It never wraps the
+displayed source order and attempts at most five distinct alternatives. With
+fallback enabled, initial preparation gets at most 60 seconds, each automatic
+alternative at most 30 seconds, and all preparations share a cumulative
+120-second budget. Time spent watching is excluded; the player's existing
+same-source/decoder recovery is separate. With fallback disabled, the selected
+source retains its 120-second preparation allowance. Engine/configuration
+failures stop the queue; provider authentication/quota failures skip candidates
+with the same provider list. Other provider lists can still be tried. The last
+preparation failure and budget exhaustion are retained for the error message.
 
 * All article, video, RAR and native subtitle payloads are memory-backed. There is
   no video disk cache or extraction directory. Only NZB metadata and the bounded
