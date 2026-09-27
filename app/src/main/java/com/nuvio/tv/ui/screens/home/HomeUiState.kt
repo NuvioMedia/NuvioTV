@@ -26,6 +26,7 @@ data class HomeUiState(
     val installedAddonsCount: Int = 0,
     val homeLayout: HomeLayout = HomeLayout.MODERN,
     val modernLandscapePostersEnabled: Boolean = false,
+    val alwaysShowLandscapeClearlogo: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean = false,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
     val heroItems: List<MetaPreview> = emptyList(),
@@ -68,7 +69,9 @@ data class HomeUiState(
     val heroEnrichmentEnabled: Boolean = false,
     val startupAuthNotice: StartupAuthNotice? = null,
     val homeRows: List<HomeRow> = emptyList(),
-    val customPosterUrlPattern: String = ""
+    val customPosterUrlPattern: String = "",
+    val customPosterEnabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen> =
+        com.nuvio.tv.core.poster.CustomPosterScreen.ALL
 )
 
 @Immutable

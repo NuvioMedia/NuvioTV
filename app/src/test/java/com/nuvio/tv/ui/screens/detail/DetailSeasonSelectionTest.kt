@@ -78,6 +78,20 @@ class DetailSeasonSelectionTest {
                 playedSeason = 3,
                 selectedSeason = 4,
                 nextSeason = 3,
+                availableSeasons = seasons,
+                hasWaitedForSeasonAdvance = true
+            )
+        )
+    }
+
+    @Test
+    fun `return focus prefers played season over a later selected when opening an earlier episode`() {
+        assertEquals(
+            2,
+            resolveReturnFocusSeason(
+                playedSeason = 2,
+                selectedSeason = 4,
+                nextSeason = 1,
                 availableSeasons = seasons
             )
         )
@@ -92,6 +106,67 @@ class DetailSeasonSelectionTest {
                 selectedSeason = 3,
                 nextSeason = 3,
                 availableSeasons = seasons
+            )
+        )
+    }
+
+    @Test
+    fun `return focus keeps played season when unwatched next to watch is still earlier`() {
+        assertEquals(
+            4,
+            resolveReturnFocusSeason(
+                playedSeason = 4,
+                selectedSeason = 1,
+                nextSeason = 1,
+                availableSeasons = seasons
+            )
+        )
+    }
+
+    @Test
+    fun `step selects played season when unwatched next to watch is still earlier`() {
+        assertEquals(
+            ReturnFocusStep.SelectSeason(4),
+            resolveReturnFocusStep(
+                playedSeason = 4,
+                playedEpisode = 10,
+                selectedSeason = 1,
+                nextSeason = 1,
+                availableSeasons = seasons,
+                allVideos = listOf(
+                    episode("s1e1", 1, 1),
+                    episode("s4e10", 4, 10)
+                ),
+                requestedEpisodeId = "s4e10",
+                episodesForSeason = listOf(episode("s1e1", 1, 1)),
+                nextVideoId = "s1e1",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
+            )
+        )
+    }
+
+    @Test
+    fun `step selects played season when returning from an earlier season episode`() {
+        assertEquals(
+            ReturnFocusStep.SelectSeason(2),
+            resolveReturnFocusStep(
+                playedSeason = 2,
+                playedEpisode = 5,
+                selectedSeason = 4,
+                nextSeason = 1,
+                availableSeasons = seasons,
+                allVideos = listOf(
+                    episode("s1e1", 1, 1),
+                    episode("s2e5", 2, 5),
+                    episode("s2e6", 2, 6),
+                    episode("s4e1", 4, 1)
+                ),
+                requestedEpisodeId = "s2e5",
+                episodesForSeason = listOf(episode("s4e1", 4, 1)),
+                nextVideoId = "s1e1",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
             )
         )
     }
@@ -226,6 +301,199 @@ class DetailSeasonSelectionTest {
                 selectedSeason = 3,
                 availableSeasons = listOf(1, 2, 3),
                 episodesForSeason = listOf(episode("s3e12", 3, 12), episode("s3e13", 3, 13))
+            )
+        )
+    }
+
+    @Test
+    fun `step restores the exit episode on the visible season over next to watch`() {
+        assertEquals(
+            ReturnFocusStep.RestoreEpisode(episodeId = "s4e3", consumeRequest = true),
+            resolveReturnFocusStep(
+                playedSeason = 4,
+                playedEpisode = 3,
+                selectedSeason = 4,
+                nextSeason = 1,
+                availableSeasons = seasons,
+                allVideos = listOf(
+                    episode("s1e1", 1, 1),
+                    episode("s4e1", 4, 1),
+                    episode("s4e2", 4, 2),
+                    episode("s4e3", 4, 3)
+                ),
+                requestedEpisodeId = "s4e3",
+                episodesForSeason = listOf(
+                    episode("s4e1", 4, 1),
+                    episode("s4e2", 4, 2),
+                    episode("s4e3", 4, 3)
+                ),
+                nextVideoId = "s1e1",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
+            )
+        )
+    }
+
+    @Test
+    fun `step selects exit season then restores when returning from a half-watched earlier episode`() {
+        val catalog = listOf(
+            episode("s1e1", 1, 1),
+            episode("s1e2", 1, 2),
+            episode("s1e3", 1, 3),
+            episode("s4e1", 4, 1)
+        )
+        assertEquals(
+            ReturnFocusStep.SelectSeason(1),
+            resolveReturnFocusStep(
+                playedSeason = 1,
+                playedEpisode = 2,
+                selectedSeason = 4,
+                nextSeason = 4,
+                availableSeasons = seasons,
+                allVideos = catalog,
+                requestedEpisodeId = "s1e2",
+                episodesForSeason = listOf(episode("s4e1", 4, 1)),
+                nextVideoId = "s4e1",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
+            )
+        )
+        assertEquals(
+            ReturnFocusStep.RestoreEpisode(episodeId = "s1e2", consumeRequest = true),
+            resolveReturnFocusStep(
+                playedSeason = 1,
+                playedEpisode = 2,
+                selectedSeason = 1,
+                nextSeason = 4,
+                availableSeasons = seasons,
+                allVideos = catalog,
+                requestedEpisodeId = "s1e2",
+                episodesForSeason = listOf(
+                    episode("s1e1", 1, 1),
+                    episode("s1e2", 1, 2),
+                    episode("s1e3", 1, 3)
+                ),
+                nextVideoId = "s4e1",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
+            )
+        )
+    }
+
+    @Test
+    fun `step selects binge exit season then restores mid-season episode`() {
+        val catalog = listOf(
+            episode("s1e1", 1, 1),
+            episode("s2e3", 2, 3),
+            episode("s2e4", 2, 4),
+            episode("s2e5", 2, 5),
+            episode("s4e1", 4, 1)
+        )
+        assertEquals(
+            ReturnFocusStep.SelectSeason(2),
+            resolveReturnFocusStep(
+                playedSeason = 2,
+                playedEpisode = 4,
+                selectedSeason = 4,
+                nextSeason = 1,
+                availableSeasons = seasons,
+                allVideos = catalog,
+                requestedEpisodeId = "s2e4",
+                episodesForSeason = listOf(episode("s4e1", 4, 1)),
+                nextVideoId = "s1e1",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
+            )
+        )
+        assertEquals(
+            ReturnFocusStep.RestoreEpisode(episodeId = "s2e4", consumeRequest = true),
+            resolveReturnFocusStep(
+                playedSeason = 2,
+                playedEpisode = 4,
+                selectedSeason = 2,
+                nextSeason = 1,
+                availableSeasons = seasons,
+                allVideos = catalog,
+                requestedEpisodeId = "s2e4",
+                episodesForSeason = listOf(
+                    episode("s2e3", 2, 3),
+                    episode("s2e4", 2, 4),
+                    episode("s2e5", 2, 5)
+                ),
+                nextVideoId = "s1e1",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
+            )
+        )
+    }
+
+    @Test
+    fun `step restores next episode when next to watch advanced past the completed exit`() {
+        val catalog = listOf(
+            episode("s2e3", 2, 3),
+            episode("s2e4", 2, 4),
+            episode("s2e5", 2, 5)
+        )
+        assertEquals(
+            ReturnFocusStep.RestoreEpisode(episodeId = "s2e5", consumeRequest = true),
+            resolveReturnFocusStep(
+                playedSeason = 2,
+                playedEpisode = 4,
+                selectedSeason = 2,
+                nextSeason = 2,
+                availableSeasons = seasons,
+                allVideos = catalog,
+                requestedEpisodeId = "s2e4",
+                episodesForSeason = catalog,
+                nextVideoId = "s2e5",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
+            )
+        )
+    }
+
+    @Test
+    fun `step restores binge finale ahead of progress without waiting for season advance`() {
+        val catalog = listOf(
+            episode("s1e1", 1, 1),
+            episode("s2e4", 2, 4),
+            episode("s2e5", 2, 5),
+            episode("s3e1", 3, 1),
+            episode("s4e1", 4, 1)
+        )
+        assertEquals(
+            ReturnFocusStep.SelectSeason(2),
+            resolveReturnFocusStep(
+                playedSeason = 2,
+                playedEpisode = 5,
+                selectedSeason = 4,
+                nextSeason = 1,
+                availableSeasons = seasons,
+                allVideos = catalog,
+                requestedEpisodeId = "s2e5",
+                episodesForSeason = listOf(episode("s4e1", 4, 1)),
+                nextVideoId = "s1e1",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
+            )
+        )
+        assertEquals(
+            ReturnFocusStep.RestoreEpisode(episodeId = "s2e5", consumeRequest = true),
+            resolveReturnFocusStep(
+                playedSeason = 2,
+                playedEpisode = 5,
+                selectedSeason = 2,
+                nextSeason = 1,
+                availableSeasons = seasons,
+                allVideos = catalog,
+                requestedEpisodeId = "s2e5",
+                episodesForSeason = listOf(
+                    episode("s2e4", 2, 4),
+                    episode("s2e5", 2, 5)
+                ),
+                nextVideoId = "s1e1",
+                alreadyRestoredId = null,
+                hasWaitedForSeasonAdvance = false
             )
         )
     }

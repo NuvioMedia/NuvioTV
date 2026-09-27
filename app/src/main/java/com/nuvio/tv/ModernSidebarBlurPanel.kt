@@ -56,6 +56,7 @@ import com.nuvio.tv.ui.theme.NuvioRadii
 import com.nuvio.tv.ui.theme.NuvioStrokes
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.accentBrush
+import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.draw.drawWithCache
@@ -432,7 +433,8 @@ private fun SidebarProfileItem(
                 .weight(1f)
                 .graphicsLayer { alpha = labelAlpha },
             style = androidx.tv.material3.MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                textDirection = profileName.contentTextDirection()
             )
         )
     }

@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens
 
+import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -96,7 +97,7 @@ fun CatalogSeeAllScreen(
     BackHandler { onBackPress() }
 
     val isSearchMode = searchViewModel != null
-    val catalogKey = "${addonId}_${type}_${catalogId}"
+    val catalogKey = catalogRowLegacyKey(addonId, type, catalogId)
 
     // In search mode, get the catalog row from SearchViewModel's existing results.
     // Otherwise fall back to HomeViewModel's fullCatalogRows (home screen catalogs).

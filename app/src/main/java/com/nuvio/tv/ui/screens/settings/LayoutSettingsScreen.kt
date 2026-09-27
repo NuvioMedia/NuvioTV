@@ -944,12 +944,28 @@ fun LayoutSettingsContent(
                         onFocused = { focusedSection = LayoutSettingsSection.POSTER_CARD_STYLE }
                     )
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_always_show_landscape_clearlogo),
+                        subtitle = stringResource(R.string.layout_always_show_landscape_clearlogo_sub),
+                        checked = uiState.alwaysShowLandscapeClearlogo,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetAlwaysShowLandscapeClearlogo(!uiState.alwaysShowLandscapeClearlogo)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.POSTER_CARD_STYLE }
+                    )
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                     CustomPosterUrlControls(
                         currentPattern = uiState.customPosterUrlPattern,
+                        enabledScreens = uiState.customPosterEnabledScreens,
                         onClear = {
                             viewModel.onEvent(LayoutSettingsEvent.ClearCustomPosterSettings)
                         },
                         onConfigureViaPhone = viewModel::startCustomPosterQrMode,
+                        onScreenToggled = { screen, enabled ->
+                            viewModel.onEvent(LayoutSettingsEvent.SetCustomPosterScreenEnabled(screen, enabled))
+                        },
                         onFocused = { focusedSection = LayoutSettingsSection.POSTER_CARD_STYLE }
                     )
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -2027,8 +2043,10 @@ private data class PresetOption(
 @Composable
 private fun CustomPosterUrlControls(
     currentPattern: String,
+    enabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen>,
     onClear: () -> Unit,
     onConfigureViaPhone: () -> Unit,
+    onScreenToggled: (com.nuvio.tv.core.poster.CustomPosterScreen, Boolean) -> Unit,
     onFocused: () -> Unit
 ) {
     val isActive = currentPattern.isNotBlank()
@@ -2120,6 +2138,31 @@ private fun CustomPosterUrlControls(
                 style = MaterialTheme.typography.labelSmall,
                 color = NuvioTheme.colors.Primary
             )
+
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+            Text(
+                text = stringResource(R.string.layout_custom_poster_apply_to),
+                style = MaterialTheme.typography.titleMedium,
+                color = NuvioTheme.colors.TextPrimary
+            )
+
+            val screenEntries = listOf(
+                com.nuvio.tv.core.poster.CustomPosterScreen.HOME to stringResource(R.string.layout_custom_poster_screen_home),
+                com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING to stringResource(R.string.layout_custom_poster_screen_continue_watching),
+                com.nuvio.tv.core.poster.CustomPosterScreen.COLLECTIONS to stringResource(R.string.layout_custom_poster_screen_collections),
+                com.nuvio.tv.core.poster.CustomPosterScreen.LIBRARY to stringResource(R.string.layout_custom_poster_screen_library),
+                com.nuvio.tv.core.poster.CustomPosterScreen.SEARCH to stringResource(R.string.layout_custom_poster_screen_search),
+                com.nuvio.tv.core.poster.CustomPosterScreen.DETAILS to stringResource(R.string.layout_custom_poster_screen_details),
+            )
+            screenEntries.forEach { (screen, label) ->
+                CompactToggleRow(
+                    title = label,
+                    subtitle = null,
+                    checked = screen in enabledScreens,
+                    onToggle = { onScreenToggled(screen, screen !in enabledScreens) },
+                    onFocused = onFocused
+                )
+            }
         }
     }
 }

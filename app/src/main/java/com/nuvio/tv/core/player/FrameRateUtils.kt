@@ -39,6 +39,7 @@ object FrameRateUtils {
     private const val MKV_EXTENSION = ".mkv"
     private const val SWITCH_POLL_INTERVAL_MS = 60L
     private const val SWITCH_REQUIRED_STABLE_POLLS = 2
+    private const val RESOLUTION_MATCH_MIN_SHORT_SIDE = 720
 
     data class DisplayModeSwitchResult(
         val appliedMode: Display.Mode
@@ -150,12 +151,21 @@ object FrameRateUtils {
         val videoHeight: Int? = null
     )
 
+    internal data class DisplayModeSpec(
+        val modeId: Int,
+        val width: Int,
+        val height: Int,
+        val refreshRate: Float
+    )
+
+    private fun Display.Mode.toSpec() = DisplayModeSpec(modeId, physicalWidth, physicalHeight, refreshRate)
+
     private fun matchesTargetRefresh(refreshRate: Float, target: Float): Boolean {
         val tolerance = max(REFRESH_MATCH_MIN_TOLERANCE_HZ, target * 0.003f)
         return abs(refreshRate - target) <= tolerance
     }
 
-    private fun pickBestForTarget(modes: List<Display.Mode>, target: Float): Display.Mode? {
+    private fun pickBestForTarget(modes: List<DisplayModeSpec>, target: Float): DisplayModeSpec? {
         if (target <= 0f) return null
         val closest = modes.minByOrNull { abs(it.refreshRate - target) } ?: return null
         return if (matchesTargetRefresh(closest.refreshRate, target)) closest else null
@@ -214,7 +224,7 @@ object FrameRateUtils {
             val sameSizeModes = display.supportedModes.filter {
                 it.physicalWidth == activeMode.physicalWidth &&
                     it.physicalHeight == activeMode.physicalHeight
-            }
+            }.map { it.toSpec() }
             if (sameSizeModes.isEmpty()) return detectedFps
 
             val has23976 = pickBestForTarget(sameSizeModes, NTSC_FILM_FPS) != null
@@ -240,10 +250,10 @@ object FrameRateUtils {
     }
 
     private fun chooseBestModeForFrameRate(
-        activeMode: Display.Mode,
-        modes: List<Display.Mode>,
+        activeMode: DisplayModeSpec,
+        modes: List<DisplayModeSpec>,
         frameRate: Float
-    ): Display.Mode {
+    ): DisplayModeSpec {
         val modeExact = pickBestForTarget(modes, frameRate)
         val modeDouble = pickBestForTarget(modes, frameRate * 2f)
         val modePulldown = pickBestForTarget(modes, frameRate * 2.5f)
@@ -259,46 +269,65 @@ object FrameRateUtils {
         return if (width >= height) width to height else height to width
     }
 
-    private fun selectResolutionCandidates(
-        modeSizes: List<Pair<Int, Int>>,
+    private fun resolutionCandidateGroups(
+        modes: List<DisplayModeSpec>,
         videoWidth: Int,
         videoHeight: Int
-    ): List<Pair<Int, Int>> {
-        if (modeSizes.isEmpty()) return modeSizes
+    ): List<List<DisplayModeSpec>> {
+        if (modes.isEmpty()) return emptyList()
         val (targetWidth, targetHeight) = normalizedSize(videoWidth, videoHeight)
 
-        fun area(width: Int, height: Int): Long {
-            val (normalizedWidth, normalizedHeight) = normalizedSize(width, height)
+        fun area(mode: DisplayModeSpec): Long {
+            val (normalizedWidth, normalizedHeight) = normalizedSize(mode.width, mode.height)
             return normalizedWidth.toLong() * normalizedHeight.toLong()
         }
 
-        fun fits(width: Int, height: Int): Boolean {
-            val (modeWidth, modeHeight) = normalizedSize(width, height)
+        fun fits(mode: DisplayModeSpec): Boolean {
+            val (modeWidth, modeHeight) = normalizedSize(mode.width, mode.height)
             return modeWidth >= targetWidth && modeHeight >= targetHeight
         }
 
-        val fitting = modeSizes.filter { fits(it.first, it.second) }
+        // Never below 720p when the display offers 720p or larger.
+        val eligible = modes.filter { min(it.width, it.height) >= RESOLUTION_MATCH_MIN_SHORT_SIDE }
+            .ifEmpty { modes }
+        val fitting = eligible.filter { fits(it) }
         if (fitting.isNotEmpty()) {
-            val minArea = fitting.minOf { area(it.first, it.second) }
-            return fitting.filter { area(it.first, it.second) == minArea }
+            return fitting.groupBy { area(it) }.toSortedMap().values.toList()
         }
 
-        val maxArea = modeSizes.maxOf { area(it.first, it.second) }
-        return modeSizes.filter { area(it.first, it.second) == maxArea }
+        val maxArea = eligible.maxOf { area(it) }
+        return listOf(eligible.filter { area(it) == maxArea })
     }
 
-    private fun selectModesForVideoResolution(
-        modes: List<Display.Mode>,
-        videoWidth: Int,
-        videoHeight: Int
-    ): List<Display.Mode> {
-        if (modes.isEmpty()) return modes
-        val selectedSizes = selectResolutionCandidates(
-            modeSizes = modes.map { it.physicalWidth to it.physicalHeight },
-            videoWidth = videoWidth,
-            videoHeight = videoHeight
-        ).map { normalizedSize(it.first, it.second) }.toSet()
-        return modes.filter { normalizedSize(it.physicalWidth, it.physicalHeight) in selectedSizes }
+    internal fun selectDisplayMode(
+        modes: List<DisplayModeSpec>,
+        activeMode: DisplayModeSpec,
+        frameRate: Float,
+        videoWidth: Int?,
+        videoHeight: Int?,
+        resolutionMatchingEnabled: Boolean
+    ): DisplayModeSpec? {
+        if (resolutionMatchingEnabled && hasValidVideoSize(videoWidth, videoHeight)) {
+            val sizeGroups = resolutionCandidateGroups(
+                modes = modes,
+                videoWidth = videoWidth ?: activeMode.width,
+                videoHeight = videoHeight ?: activeMode.height
+            )
+            if (sizeGroups.isEmpty()) return null
+            // Frame rate first: the smallest size that shows the rate exactly or doubled.
+            for (group in sizeGroups) {
+                (pickBestForTarget(group, frameRate) ?: pickBestForTarget(group, frameRate * 2f))
+                    ?.let { return it }
+            }
+            return chooseBestModeForFrameRate(activeMode, sizeGroups.first(), frameRate)
+        }
+
+        val sameSizeModes = modes.filter {
+            it.width == activeMode.width && it.height == activeMode.height
+        }
+        if (sameSizeModes.isEmpty()) return null
+        if (!resolutionMatchingEnabled && sameSizeModes.size <= 1) return null
+        return chooseBestModeForFrameRate(activeMode, sameSizeModes, frameRate)
     }
 
     suspend fun matchFrameRateAndWait(
@@ -315,38 +344,26 @@ object FrameRateUtils {
             val window = activity.window ?: return@withContext null
             val display = window.decorView.display ?: return@withContext null
             val activeMode = display.mode
+            val supportedModes = display.supportedModes.toList()
 
-            val sameSizeModes = display.supportedModes.filter {
-                it.physicalWidth == activeMode.physicalWidth &&
-                    it.physicalHeight == activeMode.physicalHeight
-            }
-            val candidateModes = if (resolutionMatchingEnabled && hasValidVideoSize(videoWidth, videoHeight)) {
-                selectModesForVideoResolution(
-                    modes = display.supportedModes.toList(),
-                    videoWidth = videoWidth ?: activeMode.physicalWidth,
-                    videoHeight = videoHeight ?: activeMode.physicalHeight
-                )
-            } else {
-                sameSizeModes
-            }
-            if (candidateModes.isEmpty()) {
-                return@withContext Pair<Display.Mode?, DisplayModeSwitchResult?>(
-                    null,
-                    DisplayModeSwitchResult(activeMode)
-                )
-            }
-            if (!resolutionMatchingEnabled && candidateModes.size <= 1) {
-                return@withContext Pair<Display.Mode?, DisplayModeSwitchResult?>(
-                    null,
-                    DisplayModeSwitchResult(activeMode)
-                )
-            }
-
-            val modeBest = chooseBestModeForFrameRate(
-                activeMode = activeMode,
-                modes = candidateModes,
-                frameRate = frameRate
+            val selected = selectDisplayMode(
+                modes = supportedModes.map { it.toSpec() },
+                activeMode = activeMode.toSpec(),
+                frameRate = frameRate,
+                videoWidth = videoWidth,
+                videoHeight = videoHeight,
+                resolutionMatchingEnabled = resolutionMatchingEnabled
             )
+            val modeBest = selected?.let { spec ->
+                supportedModes.firstOrNull { it.modeId == spec.modeId }
+                    ?: activeMode.takeIf { it.modeId == spec.modeId }
+            }
+            if (modeBest == null) {
+                return@withContext Pair<Display.Mode?, DisplayModeSwitchResult?>(
+                    null,
+                    DisplayModeSwitchResult(activeMode)
+                )
+            }
             recordOriginalMode(display)
             if (modeBest.modeId == activeMode.modeId) {
                 Log.d(TAG, "Display already at optimal rate ${activeMode.refreshRate}Hz for ${frameRate}fps")

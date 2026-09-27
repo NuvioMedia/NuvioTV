@@ -37,7 +37,8 @@ enum class WatchProgressSource {
 
 enum class MoreLikeThisSourcePreference {
     TRAKT,
-    TMDB
+    TMDB,
+    SIMKL
 }
 
 @Singleton

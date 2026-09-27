@@ -45,6 +45,8 @@ data class HomeScreenFocusState(
      * Key format: "${addonId}_${type}_${catalogId}"
      */
     val catalogRowScrollStates: Map<String, Int> = emptyMap(),
+    /** Key of the card each row's window started on: an index goes stale once a row gains items in front. */
+    val catalogRowScrollAnchors: Map<String, String> = emptyMap(),
 
     /**
      * Optional stable key for the currently focused card in grid-style layouts.

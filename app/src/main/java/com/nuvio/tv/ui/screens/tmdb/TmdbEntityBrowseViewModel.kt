@@ -105,10 +105,13 @@ class TmdbEntityBrowseViewModel @Inject constructor(
                     .distinctBy { it.id }
 
                 val pattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
+                val enabledScreens = layoutPreferenceDataStore.customPosterEnabledScreens.first()
                 _uiState.value = TmdbEntityBrowseUiState.Success(
                     latestData.withUpdatedRail(mediaType, railType) {
                         it.copy(
-                            items = mergedItems.withCustomPosterUrls(pattern),
+                            items = mergedItems.withCustomPosterUrls(
+                                com.nuvio.tv.core.poster.patternForScreen(pattern, com.nuvio.tv.core.poster.CustomPosterScreen.DETAILS, enabledScreens)
+                            ),
                             currentPage = nextPage,
                             hasMore = pageResult.hasMore,
                             isLoading = false
@@ -139,7 +142,10 @@ class TmdbEntityBrowseViewModel @Inject constructor(
                 )
                 _uiState.value = if (browseData != null) {
                     val pattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
-                    TmdbEntityBrowseUiState.Success(browseData.withCustomPosterUrls(pattern))
+                    val enabledScreens = layoutPreferenceDataStore.customPosterEnabledScreens.first()
+                    TmdbEntityBrowseUiState.Success(browseData.withCustomPosterUrls(
+                        com.nuvio.tv.core.poster.patternForScreen(pattern, com.nuvio.tv.core.poster.CustomPosterScreen.DETAILS, enabledScreens)
+                    ))
                 } else {
                     TmdbEntityBrowseUiState.Error(
                         if (entityName.isNotBlank()) {

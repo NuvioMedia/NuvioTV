@@ -133,6 +133,19 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             .build()
     }
 
+    private fun computePrefetchDepthChunks(
+        connections: Int,
+        chunkBytes: Long
+    ): Int {
+        if (!nuvioPerformanceModeEnabled) return connections + 1
+        val chunkMb = (chunkBytes / (1024L * 1024L)).toInt().coerceAtLeast(1)
+        val safeNativeMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+        val reserveMb = NuvioExoPlayerPerformanceHelper.targetBufferSizeMb.coerceAtLeast(0)
+        return com.nuvio.tv.ui.screens.settings.MemoryBudget.prefetchDepthChunks(
+            connections, chunkMb, safeNativeMb, reserveMb
+        )
+    }
+
     fun configureSubtitleParsing(
         extractorsFactory: ExtractorsFactory?,
         subtitleParserFactory: SubtitleParser.Factory?
@@ -180,8 +193,6 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         val mediaItem = mediaItemBuilder.build()
 
-        val mp4SessionMode = !useParallelConnections && !isHls && !isDash &&
-            resolvedMimeType == MimeTypes.VIDEO_MP4
         // The native engine owns Usenet concurrency/read-ahead. A second Java
         // prefetch layer would duplicate memory and keep obsolete ranges alive.
         val nativeUsenet = com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)
@@ -200,32 +211,19 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         )
         PlayerMemoryReporter.startSampling(context)
         val useChunkSessionSource = !nativeUsenet && !directLoopback &&
-            (useParallelConnections || mp4SessionMode) && !isHls && !isDash
+            useParallelConnections && !isHls && !isDash
         parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
         val progressiveUpstreamFactory: DataSource.Factory = if (useChunkSessionSource) {
-            if (mp4SessionMode) {
-                Log.i(
-                    "PlayerMediaSourceFactory",
-                    "MP4_SESSION engaged: single-connection chunk session " +
-                        "(${MP4_SESSION_CHUNK_BYTES / (1024L * 1024L)} MB chunks) " +
-                        "for progressive MP4 with parallel connections off"
-                )
-            }
             val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
-                setUserAgent(DEFAULT_USER_AGENT)
+                if (sanitizedHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
+                    setUserAgent(DEFAULT_USER_AGENT)
+                }
             }
-            val sessionConnections = if (mp4SessionMode) 1 else parallelConnectionCount
-            // Runtime enforcement of the tier chunk cap: a value
-            // persisted before the cap existed (or on another device)
-            // must not bypass it.
-            val sessionChunkBytes = if (mp4SessionMode) {
-                MP4_SESSION_CHUNK_BYTES
-            } else {
-                parallelChunkSizeKb
-                    .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
-                    .toLong() * 1024L
-            }
+            val sessionConnections = parallelConnectionCount
+            val sessionChunkBytes = parallelChunkSizeKb
+                .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
+                .toLong() * 1024L
             val effectiveNative =
                 nuvioPerformanceModeEnabled || NuvioEngineConfig.get().isNativeAllocationEnabled()
             ParallelRangeDataSource.Factory(
@@ -233,6 +231,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 sessionConnections,
                 sessionChunkBytes,
                 useNativeMemory = effectiveNative,
+                prefetchDepthChunks = computePrefetchDepthChunks(
+                    sessionConnections,
+                    sessionChunkBytes
+                ),
                 shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
             )
@@ -412,7 +414,6 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
     companion object {
         private const val MIME_VIDEO_QUICK_TIME = "video/quicktime"
-        internal const val MP4_SESSION_CHUNK_BYTES = 8L * 1024L * 1024L
         private const val ENABLE_VOD_CACHE = true
         private const val VOD_CACHE_FREE_SPACE_RESERVE_BYTES = 1024L * 1024L * 1024L
         private const val VOD_CACHE_DIR_NAME = "nuvio_vod_cache"

@@ -52,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import com.nuvio.tv.ui.util.toAbsoluteAlignment
 
 @Composable
 fun PauseOverlay(
@@ -186,6 +187,7 @@ private fun PauseMetadataView(
                 } else {
                     Text(
                         text = title,
+                        modifier = Modifier.align(title.contentTextDirection().toAbsoluteAlignment()),
                         style = MaterialTheme.typography.headlineLarge,
                         color = Color.White,
                         maxLines = 2,
@@ -195,6 +197,7 @@ private fun PauseMetadataView(
             } else {
                 Text(
                     text = title,
+                    modifier = Modifier.align(title.contentTextDirection().toAbsoluteAlignment()),
                     style = MaterialTheme.typography.headlineLarge,
                     color = Color.White,
                     maxLines = 2,

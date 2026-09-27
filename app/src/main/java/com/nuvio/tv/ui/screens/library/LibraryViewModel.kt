@@ -149,7 +149,9 @@ data class LibraryUiState(
     val manageSelectedListKey: String? = null,
     val listEditorState: LibraryListEditorState? = null,
     val pendingOperation: Boolean = false,
-    val customPosterUrlPattern: String = ""
+    val customPosterUrlPattern: String = "",
+    val customPosterEnabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen> =
+        com.nuvio.tv.core.poster.CustomPosterScreen.ALL
 )
 
 @HiltViewModel
@@ -748,6 +750,16 @@ class LibraryViewModel @Inject constructor(
                     }
                 }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.customPosterEnabledScreens
+                .distinctUntilChanged()
+                .collectLatest { screens ->
+                    _uiState.update { current ->
+                        if (current.customPosterEnabledScreens == screens) current
+                        else current.copy(customPosterEnabledScreens = screens).withVisibleItems()
+                    }
+                }
+        }
     }
 
     private fun observeCloudLibrarySettings() {
@@ -1017,7 +1029,9 @@ class LibraryViewModel @Inject constructor(
         val validYear = selectedYear?.takeIf { y -> yearOptions.any { it.key == y } }
 
         return copy(
-            visibleItems = sorted.withCustomPosterUrls(customPosterUrlPattern),
+            visibleItems = sorted.withCustomPosterUrls(
+                com.nuvio.tv.core.poster.patternForScreen(customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.LIBRARY, customPosterEnabledScreens)
+            ),
             availableTypeTabs = typeTabsWithCounts,
             availableGenres = genreOptions,
             availableYears = yearOptions,

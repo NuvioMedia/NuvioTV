@@ -44,6 +44,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -79,6 +80,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
+import com.nuvio.tv.ui.util.contentTextDirection
 import java.util.Locale
 
 private const val MAX_VISIBLE_HERO_GENRES = 6
@@ -301,7 +303,9 @@ fun HeroContentSection(
                     if (!creditLine.isNullOrBlank()) {
                         Text(
                             text = creditLine,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                textDirection = creditLine.contentTextDirection()
+                            ),
                             color = NuvioTheme.extendedColors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
