@@ -222,6 +222,64 @@ class SurroundFormatResolverTest {
     }
 
     @Test
+    fun routeKey_isArcOnlyForTheArcType() {
+        assertTrue(SurroundFormatResolver.routeKeyIsHdmiArc("type:hdmi_arc|name:soundbar"))
+        assertTrue(SurroundFormatResolver.routeKeyIsHdmiArc("type:hdmi_arc"))
+        assertFalse(SurroundFormatResolver.routeKeyIsHdmiArc("type:hdmi_earc|name:soundbar"))
+        assertFalse(SurroundFormatResolver.routeKeyIsHdmiArc("type:hdmi_earc"))
+        assertFalse(SurroundFormatResolver.routeKeyIsHdmiArc("type:hdmi|name:tv"))
+        assertFalse(SurroundFormatResolver.routeKeyIsHdmiArc("type:hdmi_arc_extra|name:x"))
+        assertFalse(SurroundFormatResolver.routeKeyIsHdmiArc(null))
+        assertFalse(SurroundFormatResolver.routeKeyIsHdmiArc("hdmi_arc"))
+    }
+
+    @Test
+    fun earcRoute_withUnreadablePcm_doesNotInferStereoOrAc3() {
+        val earc = SurroundFormatResolver.routeKeyIsHdmiArc("type:hdmi_earc|name:living_room")
+        val r = resolve(
+            direct = allClaimed.copy(trueHd = false, dtsHd = false),
+            rawMaxPcmChannels = null,
+            routeIsHdmiArc = earc
+        )
+        assertFalse(r.transcodePreferred)
+        assertNull(r.inferredChannelTarget)
+    }
+
+    @Test
+    fun arcRouteKey_withUnreadablePcm_stillInfersStereoAndAc3() {
+        val arc = SurroundFormatResolver.routeKeyIsHdmiArc("type:hdmi_arc|name:soundbar")
+        val r = resolve(
+            direct = allClaimed.copy(trueHd = false, dtsHd = false),
+            rawMaxPcmChannels = null,
+            routeIsHdmiArc = arc
+        )
+        assertTrue(r.transcodePreferred)
+        assertEquals(2, r.inferredChannelTarget)
+    }
+
+    @Test
+    fun measuredChannels_winOnEarcEvenWhenTheRouteIsNotArc() {
+        val denied = allClaimed.copy(trueHd = false)
+        val stereo = resolve(direct = denied, rawMaxPcmChannels = 2, routeIsHdmiArc = false)
+        assertTrue(stereo.transcodePreferred)
+        assertEquals(2, stereo.inferredChannelTarget)
+        val sevenOne = resolve(direct = denied, rawMaxPcmChannels = 8, routeIsHdmiArc = false)
+        assertFalse(sevenOne.transcodePreferred)
+        assertEquals(8, sevenOne.inferredChannelTarget)
+    }
+
+    @Test
+    fun measuredMultichannel_winsOverAnArcRoute() {
+        val r = resolve(
+            direct = allClaimed.copy(trueHd = false),
+            rawMaxPcmChannels = 8,
+            routeIsHdmiArc = true
+        )
+        assertFalse(r.transcodePreferred)
+        assertEquals(8, r.inferredChannelTarget)
+    }
+
+    @Test
     fun channelTarget_arcRouteWithUnreadablePcm_infersStereo() {
         val r = resolve(direct = allClaimed.copy(trueHd = false), rawMaxPcmChannels = null, routeIsHdmiArc = true)
         assertEquals(2, r.inferredChannelTarget)

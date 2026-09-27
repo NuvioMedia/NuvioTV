@@ -4,6 +4,13 @@ import androidx.media3.common.MimeTypes
 
 object SurroundFormatResolver {
 
+    fun routeKeyIsHdmiArc(routeKey: String?): Boolean {
+        if (routeKey == null) return false
+        val type = routeKey.substringAfter("type:", missingDelimiterValue = "")
+            .substringBefore("|")
+        return type == "hdmi_arc"
+    }
+
     data class DirectSupport(
         val ac3: Boolean,
         val eac3: Boolean,

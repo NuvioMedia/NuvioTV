@@ -67,9 +67,7 @@ internal fun resolveSurroundForRoute(
             direct = chainSnapshot.direct,
             rawMaxPcmChannels = chainSnapshot.maxPcmChannels,
             routeIsBluetooth = false,
-            routeIsHdmiArc = currentRouteKey != null &&
-                (currentRouteKey.startsWith("type:hdmi_arc") ||
-                    currentRouteKey.startsWith("type:hdmi_earc")),
+            routeIsHdmiArc = SurroundFormatResolver.routeKeyIsHdmiArc(currentRouteKey),
             softwareDecodersAvailable = inputs.softwareDecodersAvailable,
             forceOpticalActive = inputs.forceOpticalActive,
             learnedDeniedGroups = learnedDeniedGroups
