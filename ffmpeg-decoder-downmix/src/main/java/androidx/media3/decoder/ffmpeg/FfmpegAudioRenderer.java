@@ -324,6 +324,24 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     return 48000;
   }
 
+  public static int ac3TrailingSilenceSamples(int queuedSamples, int frameSize) {
+    if (frameSize <= 0 || queuedSamples <= 0) {
+      return 0;
+    }
+    int remainder = queuedSamples % frameSize;
+    if (remainder == 0) {
+      return 0;
+    }
+    return frameSize - remainder;
+  }
+
+  public static long ac3FrameDurationUs(int frameSamples, int sampleRate) {
+    if (frameSamples <= 0 || sampleRate <= 0) {
+      return 0L;
+    }
+    return frameSamples * 1_000_000L / sampleRate;
+  }
+
   private static Format ac3OutputFormat(Format inputFormat) {
     return new Format.Builder()
         .setSampleMimeType(MimeTypes.AUDIO_AC3)
