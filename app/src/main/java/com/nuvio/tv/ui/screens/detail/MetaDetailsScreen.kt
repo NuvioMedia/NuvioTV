@@ -140,6 +140,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
+// Match the home preview's overscan to crop letterboxing baked into trailer frames.
+private const val BACKGROUND_TRAILER_OVERSCAN_ZOOM = 1.35f
+
 private enum class RestoreTarget {
     HERO,
     EPISODE,
@@ -524,8 +527,10 @@ fun MetaDetailsScreen(
         } else if (uiState.isSharedTrailerOverlayVisible) {
             restoreSharedTrailerFocusToken += 1
             viewModel.onEvent(MetaDetailsEvent.OnDismissSharedTrailer)
-        } else if (uiState.isTrailerPlaying && !uiState.isBackgroundTrailerPlaying) {
-            restorePlayFocusAfterTrailerBackToken += 1
+        } else if (uiState.isTrailerPlaying) {
+            if (!uiState.isBackgroundTrailerPlaying) {
+                restorePlayFocusAfterTrailerBackToken += 1
+            }
             isTrailerPaused = false
             viewModel.onEvent(MetaDetailsEvent.OnTrailerEnded)
         } else {
@@ -1795,10 +1800,6 @@ private fun MetaDetailsContent(
         }
     }
 
-    LaunchedEffect(isScrolledPastHero, isBackgroundTrailerPlaying) {
-        if (isScrolledPastHero && isBackgroundTrailerPlaying) onTrailerEnded()
-    }
-
     // Pre-compute cast members to avoid recomputation in lazy scope
     val castMembersToShow = remember(meta.castMembers, meta.cast) {
         if (meta.castMembers.isNotEmpty()) {
@@ -2465,6 +2466,7 @@ private fun MetaDetailsContent(
                         onTrailerClick = onTrailerButtonClick,
                         hideLogoDuringTrailer = hideLogoDuringTrailer,
                         isTrailerPlaying = isTrailerPlaying && !isBackgroundTrailerPlaying,
+                        isBackgroundTrailerPlaying = isBackgroundTrailerPlaying,
                         playButtonFocusRequester = heroPlayFocusRequester,
                         onHeroActionFocused = {
                             if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
@@ -3138,10 +3140,20 @@ private fun BackdropLayer(
         label = "backdropFade"
     )
     val gradientAlphaState = animateFloatAsState(
-        targetValue = if ((isTrailerPlaying && !isBackgroundTrailerPlaying) || isScrolledPastHero) 0f else 1f,
+        targetValue = when {
+            (isTrailerPlaying && !isBackgroundTrailerPlaying) || isScrolledPastHero -> 0f
+            isBackgroundTrailerPlaying -> 0.85f
+            else -> 1f
+        },
         animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
         label = "gradientFade"
     )
+    val trailerScrimAlphaState = animateFloatAsState(
+        targetValue = if (isBackgroundTrailerPlaying && isScrolledPastHero) 0.7f else 0f,
+        animationSpec = tween(300),
+        label = "backgroundTrailerScrollScrim"
+    )
+    val backgroundColor = NuvioTheme.colors.Background
     Box(modifier = Modifier.fillMaxSize()) {
         // Show hero backdrop from previous screen as persistent underlay
         // to prevent flash/re-render during navigation transition
@@ -3170,6 +3182,8 @@ private fun BackdropLayer(
             isPlaying = isTrailerPlaying,
             isPaused = isTrailerPaused,
             focusable = !isBackgroundTrailerPlaying,
+            cropToFill = isBackgroundTrailerPlaying,
+            overscanZoom = if (isBackgroundTrailerPlaying) BACKGROUND_TRAILER_OVERSCAN_ZOOM else 1f,
             seekRequestToken = if (showTrailerControls) trailerSeekToken else 0,
             seekDeltaMs = if (showTrailerControls) trailerSeekDeltaMs else 0L,
             onRemoteKey = onTrailerControlKey,
@@ -3182,6 +3196,9 @@ private fun BackdropLayer(
                 .fillMaxSize()
                 .drawWithCache {
                     onDrawBehind {
+                        if (trailerScrimAlphaState.value > 0f) {
+                            drawRect(backgroundColor, alpha = trailerScrimAlphaState.value)
+                        }
                         if (gradientAlphaState.value > 0f) {
                             drawImage(
                                 leftGradient,
