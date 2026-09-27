@@ -3276,4 +3276,6 @@
     <string name="stream_test_video_bitrate">Average Video Bitrate: %1$s</string>
     <string name="stream_test_error_connection">Connection failed. The last played stream link may have expired or is unreachable. Please play the video again and retry.</string>
 
+    <string name="audio_trailer_background">Background trailers</string>
+    <string name="audio_trailer_background_sub">Keep the title, synopsis and buttons visible during automatic trailer playback.</string>
 </resources>

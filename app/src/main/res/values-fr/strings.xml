@@ -2926,4 +2926,6 @@
     <string name="stream_test_error_prefix">Erreur : %1$s</string>
     <string name="stream_test_video_bitrate">Débit vidéo moyen : %1$s</string>
     <string name="stream_test_error_connection">Échec de la connexion. Le lien du dernier flux lu a peut-être expiré ou est injoignable. Veuillez relire la vidéo et réessayer.</string>
+    <string name="audio_trailer_background">Bandes-annonces en arrière-plan</string>
+    <string name="audio_trailer_background_sub">Garder le titre, le synopsis et les boutons visibles pendant la lecture automatique.</string>
 </resources>

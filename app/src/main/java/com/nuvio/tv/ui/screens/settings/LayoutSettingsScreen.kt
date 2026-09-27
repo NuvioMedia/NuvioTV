@@ -561,12 +561,25 @@ fun LayoutSettingsContent(
                         )
 
                         if (uiState.detailPageTrailerAutoplayEnabled) {
+                            CompactToggleRow(
+                                title = stringResource(R.string.audio_trailer_background),
+                                subtitle = stringResource(R.string.audio_trailer_background_sub),
+                                checked = uiState.detailPageTrailerBackgroundEnabled,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetDetailPageTrailerBackgroundEnabled(
+                                            !uiState.detailPageTrailerBackgroundEnabled
+                                        )
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                            )
                             SliderSettingsItem(
                                 icon = Icons.Default.Timer,
                                 title = stringResource(R.string.audio_trailer_delay),
                                 value = uiState.detailPageTrailerAutoplayDelaySeconds,
                                 valueText = "${uiState.detailPageTrailerAutoplayDelaySeconds}s",
-                                minValue = 3,
+                                minValue = 0,
                                 maxValue = 15,
                                 step = 1,
                                 onValueChange = { seconds ->
