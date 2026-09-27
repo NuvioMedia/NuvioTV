@@ -226,6 +226,7 @@
     <string name="detail_btn_play_episode">Play S%1$d E%2$d</string>
     <string name="detail_btn_resume_episode">Resume S%1$d E%2$d</string>
     <string name="detail_btn_next_episode">Next S%1$d E%2$d</string>
+    <string name="detail_btn_rewatch">Rewatch from S1E1</string>
     <string name="detail_tab_cast">Creator and Cast</string>
     <string name="cast_role_creator">Creator</string>
     <string name="cast_role_director">Director</string>
