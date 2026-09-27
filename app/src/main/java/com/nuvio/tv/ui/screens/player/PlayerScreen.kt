@@ -1785,7 +1785,10 @@ private fun ExoPlayerSurface(
             isFocusableInTouchMode = false
             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
             keepScreenOn = false
-            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            // Problem: RESIZE_MODE_FIT shrinks the video surface, causing Android OS to paint elevated gray letterbox bars in Dolby Vision.
+            // Fix: RESIZE_MODE_FILL keeps the surface fullscreen so the decoder draws true black bars internally (OLED pixels off).
+            // (MediaCodec still preserves the video's aspect ratio — the picture is not stretched).
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
             setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
             enableComposeSurfaceSyncWorkaroundIfAvailable()
             this.player = player
