@@ -2979,16 +2979,7 @@ private fun demoteAudioTunnelingWhereItCannotBeClocked(
 }
 
 private fun isPassthroughAudioMime(mime: String): Boolean {
-    return mime == MimeTypes.AUDIO_AC3 ||
-        mime == MimeTypes.AUDIO_E_AC3 ||
-        mime == MimeTypes.AUDIO_E_AC3_JOC ||
-        mime == MimeTypes.AUDIO_AC4 ||
-        mime == MimeTypes.AUDIO_DTS ||
-        mime == MimeTypes.AUDIO_DTS_HD ||
-        mime == MimeTypes.AUDIO_DTS_EXPRESS ||
-        mime == MimeTypes.AUDIO_DTS_X ||
-        mime == MimeTypes.AUDIO_TRUEHD ||
-        mime.startsWith("audio/vnd.dts")
+    return PassthroughWaterLevelPacer.isPassthroughMime(mime)
 }
 
 private val defaultPassthroughBuffers = DefaultAudioTrackBufferSizeProvider.Builder().build()

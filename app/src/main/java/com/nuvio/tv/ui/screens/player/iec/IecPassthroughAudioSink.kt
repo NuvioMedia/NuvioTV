@@ -6,6 +6,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import androidx.media3.extractor.DtsUtil
+import com.nuvio.tv.ui.screens.player.PassthroughWaterLevelPacer
 import java.nio.ByteBuffer
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicBoolean
@@ -44,6 +45,7 @@ internal class IecPassthroughAudioSink(
     private val dtsBurstPool = ArrayDeque<ByteArray>()
     private var pendingOffset: Int = 0
     private var leftover: ByteArray = ByteArray(0)
+    private var trueHdScratch: ByteArray = ByteArray(0)
     private var startPtsUs: Long = C.TIME_UNSET
     // PTS of the first buffer after a reset, kept only to report how far the anchor moved.
     private var firstBufferPtsUs: Long = C.TIME_UNSET
@@ -422,27 +424,44 @@ internal class IecPassthroughAudioSink(
 
     private fun handleTrueHd(buffer: ByteBuffer, presentationTimeUs: Long): Boolean {
         val carried = leftover.size
-        val data = concat(leftover, buffer)
-        var offset = 0
+        if (carried == 0 && buffer.hasArray()) {
+            val array = buffer.array()
+            val start = buffer.arrayOffset() + buffer.position()
+            consumeTrueHd(array, start, start + buffer.remaining(), 0, presentationTimeUs)
+        } else {
+            val end = appendTrueHd(leftover, buffer)
+            consumeTrueHd(trueHdScratch, 0, end, carried, presentationTimeUs)
+        }
+        buffer.position(buffer.limit())
+        return true
+    }
+
+    private fun consumeTrueHd(
+        data: ByteArray,
+        start: Int,
+        end: Int,
+        carried: Int,
+        presentationTimeUs: Long
+    ) {
+        var offset = start
         var discardedInBuffer = 0
-        while (offset + 10 <= data.size) {
+        while (offset + 10 <= end) {
             val auSize = TrueHdMatPacker.trueHdAccessUnitSize(data, offset)
             if (auSize < 10) {
                 // Not an access unit. The extractor hands over access-unit-aligned samples, so
                 // drop the remainder and resync on the next sample rather than carrying the bad
                 // head forward under every later buffer (a frozen clock with no error).
                 onDiagnosticEvent?.invoke(
-                    "iec_truehd_resync auSize=$auSize dropped=${data.size - offset}"
+                    "iec_truehd_resync auSize=$auSize dropped=${end - offset}"
                 )
-                offset = data.size
+                offset = end
                 break
             }
-            if (offset + auSize > data.size) break
-            val auStart = offset
-            val au = data.copyOfRange(offset, offset + auSize)
-            offset += auSize
+            if (offset + auSize > end) break
+            val auStart = offset - start
             val wasSynced = matPacker.isSynced
-            val frameReady = matPacker.packAccessUnit(au)
+            val frameReady = matPacker.packAccessUnit(data, offset, auSize)
+            offset += auSize
             if (startPtsUs == C.TIME_UNSET && presentationTimeUs != C.TIME_UNSET) {
                 if (matPacker.isSynced) {
                     anchorTrueHd(presentationTimeUs, auStart >= carried, discardedInBuffer)
@@ -461,9 +480,22 @@ internal class IecPassthroughAudioSink(
                 }
             }
         }
-        leftover = if (offset >= data.size) ByteArray(0) else data.copyOfRange(offset, data.size)
-        buffer.position(buffer.limit())
-        return true
+        val tail = end - offset
+        leftover = if (tail <= 0) {
+            ByteArray(0)
+        } else {
+            data.copyOfRange(offset, end)
+        }
+    }
+
+    private fun appendTrueHd(prefix: ByteArray, buffer: ByteBuffer): Int {
+        val need = prefix.size + buffer.remaining()
+        if (trueHdScratch.size < need) trueHdScratch = ByteArray(need)
+        System.arraycopy(prefix, 0, trueHdScratch, 0, prefix.size)
+        val pos = buffer.position()
+        buffer.get(trueHdScratch, prefix.size, buffer.remaining())
+        buffer.position(pos)
+        return need
     }
 
     // The buffer's PTS is that of its first access unit; the packer accepted the unit at index
@@ -711,12 +743,7 @@ internal class IecPassthroughAudioSink(
         }
 
         fun isHbrPassthrough(format: Format): Boolean {
-            val mime = format.sampleMimeType ?: return false
-            return isTrueHd(format) ||
-                mime == MimeTypes.AUDIO_DTS_HD ||
-                mime == MimeTypes.AUDIO_DTS_X ||
-                mime.startsWith("audio/vnd.dts.hd") ||
-                mime.startsWith("audio/vnd.dts.uhd")
+            return PassthroughWaterLevelPacer.isHbrMime(format.sampleMimeType)
         }
 
         // ETSI TS 102 114 sync words: 16-bit and 14-bit, big and little endian.
@@ -732,22 +759,5 @@ internal class IecPassthroughAudioSink(
                 (b0 == 0xFF && b1 == 0x1F && b2 == 0x00 && b3 == 0xE8)
         }
 
-        private fun concat(prefix: ByteArray, buffer: ByteBuffer): ByteArray {
-            if (prefix.isEmpty() && buffer.hasArray() && buffer.arrayOffset() == 0 &&
-                buffer.position() == 0 && buffer.remaining() == buffer.array().size
-            ) {
-                val copy = ByteArray(buffer.remaining())
-                val pos = buffer.position()
-                buffer.get(copy)
-                buffer.position(pos)
-                return copy
-            }
-            val combined = ByteArray(prefix.size + buffer.remaining())
-            System.arraycopy(prefix, 0, combined, 0, prefix.size)
-            val pos = buffer.position()
-            buffer.get(combined, prefix.size, buffer.remaining())
-            buffer.position(pos)
-            return combined
-        }
     }
 }

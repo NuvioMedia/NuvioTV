@@ -24,22 +24,21 @@ internal class TrueHdMatPacker {
         state.reset()
     }
 
-    /**
-     * @return true when at least one complete MAT frame is ready in [pollFrame].
-     */
-    fun packAccessUnit(data: ByteArray): Boolean {
-        if (data.size < 10) return false
+    fun packAccessUnit(data: ByteArray): Boolean = packAccessUnit(data, 0, data.size)
 
-        val isMajorSync = isMajorSync(data)
+    fun packAccessUnit(data: ByteArray, offset: Int, length: Int): Boolean {
+        if (length < 10 || offset < 0 || offset + length > data.size) return false
+
+        val isMajorSync = isMajorSync(data, offset)
         var info: MajorSyncInfo? = null
         if (isMajorSync) {
-            info = parseMajorSync(data)
-            state.ratebits = info?.ratebits ?: ((data[8].toInt() and 0xFF) shr 4)
+            info = parseMajorSync(data, offset, length)
+            state.ratebits = info?.ratebits ?: ((data[offset + 8].toInt() and 0xFF) shr 4)
         } else if (!state.prevFrametimeValid) {
             return false
         }
 
-        val frameTime = readU16Be(data, 2)
+        val frameTime = readU16Be(data, offset + 2)
         var spaceSize = 0
         val frameSamples = 40 shl (state.ratebits and 7)
 
@@ -104,12 +103,12 @@ internal class TrueHdMatPacker {
             }
         }
 
-        var remaining = fillDataBuffer(data, 0, data.size, Type.DATA)
+        var remaining = fillDataBuffer(data, offset, length, Type.DATA)
         if (remaining > 0 || bufferCount == MAT_BUFFER_SIZE) {
             flushPacket()
             if (remaining > 0) {
                 writeHeader()
-                remaining = fillDataBuffer(data, data.size - remaining, remaining, Type.DATA)
+                remaining = fillDataBuffer(data, offset + length - remaining, remaining, Type.DATA)
             }
         }
 
@@ -291,15 +290,15 @@ internal class TrueHdMatPacker {
             return (sync and 0xFFFFFFFE.toInt()) == (FORMAT_MAJOR_SYNC and 0xFFFFFFFE.toInt())
         }
 
-        private fun parseMajorSync(data: ByteArray): MajorSyncInfo? {
-            if (data.size < 32) return null
+        private fun parseMajorSync(data: ByteArray, offset: Int, length: Int): MajorSyncInfo? {
+            if (offset < 0 || length < 32 || offset + length > data.size) return null
             var majorSyncSize = 28
-            if ((data[29].toInt() and 1) != 0) {
-                val extensionSize = (data[30].toInt() and 0xFF) shr 4
+            if ((data[offset + 29].toInt() and 1) != 0) {
+                val extensionSize = (data[offset + 30].toInt() and 0xFF) shr 4
                 majorSyncSize += 2 + extensionSize * 2
             }
-            if (majorSyncSize > data.size) return null
-            val bits = BitReader(data, 4)
+            if (majorSyncSize > length) return null
+            val bits = BitReader(data, offset + 4, offset + length)
             bits.skip(32)
             val ratebits = bits.read(4)
             bits.skip(1 + 1 + 2 + 2 + 2 + 5 + 2 + 13 + 16 + 16 + 16 + 1 + 15)
@@ -337,8 +336,13 @@ internal class TrueHdMatPacker {
         }
     }
 
-    private class BitReader(private val data: ByteArray, startByte: Int) {
+    private class BitReader(
+        private val data: ByteArray,
+        startByte: Int,
+        endByte: Int
+    ) {
         private var bitIndex = startByte * 8
+        private val endBit = endByte * 8
 
         fun skip(n: Int) {
             bitIndex += n
@@ -347,7 +351,7 @@ internal class TrueHdMatPacker {
         fun read(n: Int): Int {
             var value = 0
             repeat(n) {
-                if (bitIndex >= data.size * 8) return value
+                if (bitIndex >= endBit) return value
                 val byte = data[bitIndex / 8].toInt() and 0xFF
                 val bit = (byte shr (7 - (bitIndex % 8))) and 1
                 value = (value shl 1) or bit

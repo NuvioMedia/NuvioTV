@@ -332,22 +332,7 @@ internal class PlaybackSpeedAwareAudioSink(
      * Matches Media3 surround encodings that need decode-to-PCM on A2DP/LE Audio.
      */
     private fun isEncodedPassthroughCandidate(format: Format): Boolean {
-        val mimeType = format.sampleMimeType
-        if (mimeType != null && (
-                mimeType == MimeTypes.AUDIO_E_AC3 ||
-                    mimeType == MimeTypes.AUDIO_E_AC3_JOC ||
-                    mimeType == MimeTypes.AUDIO_AC3 ||
-                    mimeType == MimeTypes.AUDIO_AC4 ||
-                    mimeType == MimeTypes.AUDIO_TRUEHD ||
-                    mimeType == MimeTypes.AUDIO_DTS ||
-                    mimeType == MimeTypes.AUDIO_DTS_HD ||
-                    mimeType == MimeTypes.AUDIO_DTS_EXPRESS ||
-                    mimeType == MimeTypes.AUDIO_DTS_X ||
-                    mimeType.startsWith("audio/vnd.dts")
-                )
-        ) {
-            return true
-        }
+        if (PassthroughWaterLevelPacer.isPassthroughMime(format.sampleMimeType)) return true
         val codecs = format.codecs
         if (codecs != null) {
             return codecs.contains("ac-3", ignoreCase = true) ||

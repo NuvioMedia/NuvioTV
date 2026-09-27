@@ -160,6 +160,15 @@ internal class PassthroughWaterLevelPacer(
                 mimeType.startsWith("audio/vnd.dts")
         }
 
+        fun isHbrMime(mimeType: String?): Boolean {
+            if (mimeType == null) return false
+            return mimeType == MimeTypes.AUDIO_TRUEHD ||
+                mimeType == MimeTypes.AUDIO_DTS_HD ||
+                mimeType == MimeTypes.AUDIO_DTS_X ||
+                mimeType.startsWith("audio/vnd.dts.hd") ||
+                mimeType.startsWith("audio/vnd.dts.uhd")
+        }
+
         private fun normalizeSpeed(speed: Float): Float {
             return speed.takeIf { it > 0f } ?: 1f
         }
