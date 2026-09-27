@@ -147,6 +147,17 @@ import androidx.media3.exoplayer.ExoPlayer
 import io.github.peerless2012.ass.media.widget.AssSubtitleView
 import kotlin.math.abs
 
+private fun PlayerUiState.returnFocusSeasonEpisode(completed: Boolean): Pair<Int?, Int?> {
+    val next = nextEpisode?.takeIf {
+        it.hasAired && !(it.released.isNullOrBlank() && it.available == false)
+    }
+    return if (completed && next != null) {
+        next.season to next.episode
+    } else {
+        currentSeason to currentEpisode
+    }
+}
+
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel(),
@@ -193,7 +204,14 @@ fun PlayerScreen(
             (!timeline.isLive &&
                 timeline.duration > 0L &&
                 (timeline.currentPosition.toFloat() / timeline.duration.toFloat()) >= WatchProgress.COMPLETED_THRESHOLD)
-        onBackPress(uiState.currentVideoId, uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL, completed)
+        val (focusSeason, focusEpisode) = uiState.returnFocusSeasonEpisode(completed)
+        onBackPress(
+            uiState.currentVideoId,
+            focusSeason,
+            focusEpisode,
+            uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL,
+            completed
+        )
     }
     val exitPlayerFromError: () -> Unit = exitPlayerFromError@{
         if (exitDispatched) return@exitPlayerFromError
@@ -212,7 +230,9 @@ fun PlayerScreen(
     val currentOnBackPress by rememberUpdatedState(onBackPress)
     val currentOnPlayRecommendation by rememberUpdatedState(onPlayRecommendation)
     val currentOnOpenRecommendationDetails by rememberUpdatedState(onOpenRecommendationDetails)
-    val nextEpisodeForEndPrompt = uiState.nextEpisode?.takeIf { it.hasAired }
+    val nextEpisodeForEndPrompt = uiState.nextEpisode?.takeIf {
+        it.hasAired && !(it.released.isNullOrBlank() && it.available == false)
+    }
     val shouldConfirmNextEpisodeOnEnd =
         uiState.playbackEnded &&
             uiState.error == null &&
@@ -222,10 +242,11 @@ fun PlayerScreen(
             nextEpisodeForEndPrompt != null
     val returnToDetailsFromEndPrompt = {
         viewModel.stopAndRelease()
+        val (focusSeason, focusEpisode) = uiState.returnFocusSeasonEpisode(completed = true)
         currentOnBackPress(
             uiState.currentVideoId,
-            uiState.currentSeason,
-            uiState.currentEpisode,
+            focusSeason,
+            focusEpisode,
             true,
             true
         )
@@ -238,10 +259,11 @@ fun PlayerScreen(
             if (cb != null) {
                 cb(next.videoId, next.season, next.episode, null)
             } else {
+                val (focusSeason, focusEpisode) = uiState.returnFocusSeasonEpisode(completed = true)
                 currentOnBackPress(
                     uiState.currentVideoId,
-                    uiState.currentSeason,
-                    uiState.currentEpisode,
+                    focusSeason,
+                    focusEpisode,
                     false,
                     true
                 )
@@ -345,10 +367,11 @@ fun PlayerScreen(
                 if (cb != null) {
                     cb(null, null, null, PlayerExitReason.StillWatchingPrompt)
                 } else {
+                    val (focusSeason, focusEpisode) = uiState.returnFocusSeasonEpisode(completed = true)
                     currentOnBackPress(
                         uiState.currentVideoId,
-                        uiState.currentSeason,
-                        uiState.currentEpisode,
+                        focusSeason,
+                        focusEpisode,
                         uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL,
                         true
                     )
@@ -357,15 +380,18 @@ fun PlayerScreen(
             }
             shouldDispatchNatural -> {
                 viewModel.stopAndRelease()
-                val next = uiState.nextEpisode?.takeIf { it.hasAired }
+                val next = uiState.nextEpisode?.takeIf {
+                    it.hasAired && !(it.released.isNullOrBlank() && it.available == false)
+                }
                 val cb = currentOnPlaybackEnded
                 if (cb != null) {
                     cb(next?.videoId, next?.season, next?.episode, null)
                 } else {
+                    val (focusSeason, focusEpisode) = uiState.returnFocusSeasonEpisode(completed = true)
                     currentOnBackPress(
                         uiState.currentVideoId,
-                        uiState.currentSeason,
-                        uiState.currentEpisode,
+                        focusSeason,
+                        focusEpisode,
                         uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL,
                         true
                     )
@@ -1323,10 +1349,11 @@ fun PlayerScreen(
                             externalHandoffInProgress = false
                             if (launched && !exitDispatched) {
                                 exitDispatched = true
+                                val (focusSeason, focusEpisode) = uiState.returnFocusSeasonEpisode(completed)
                                 currentOnBackPress(
                                     uiState.currentVideoId,
-                                    uiState.currentSeason,
-                                    uiState.currentEpisode,
+                                    focusSeason,
+                                    focusEpisode,
                                     uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL,
                                     completed
                                 )
@@ -1654,6 +1681,7 @@ fun PlayerScreen(
             SubtitleTimingDialogHost(
                 viewModel = viewModel,
                 modifier = Modifier.align(Alignment.TopCenter),
+                subtitleDelayMs = uiState.subtitleDelayMs,
                 selectedAddonSubtitle = uiState.selectedAddonSubtitle,
                 cues = uiState.subtitleAutoSyncCues,
                 capturedVideoMs = uiState.subtitleAutoSyncCapturedVideoMs,
@@ -2859,6 +2887,7 @@ private fun PlayerClockOverlayHost(viewModel: PlayerViewModel, playbackSpeed: Fl
 private fun SubtitleTimingDialogHost(
     viewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
+    subtitleDelayMs: Int,
     selectedAddonSubtitle: Subtitle?,
     cues: List<SubtitleSyncCue>,
     capturedVideoMs: Long?,
@@ -2873,6 +2902,7 @@ private fun SubtitleTimingDialogHost(
     SubtitleTimingDialog(
         modifier = modifier,
         currentPositionMs = playbackTimeline.currentPosition,
+        subtitleDelayMs = subtitleDelayMs,
         selectedAddonSubtitle = selectedAddonSubtitle,
         cues = cues,
         capturedVideoMs = capturedVideoMs,

@@ -58,6 +58,7 @@ internal class LibraryViewModelTestFixture(sorter: TrackingLibrarySorter? = null
             every { posterCardWidthDp } returns flowOf(126)
             every { posterCardCornerRadiusDp } returns flowOf(12)
             every { customPosterUrlPattern } returns flowOf("")
+            every { customPosterEnabledScreens } returns flowOf(com.nuvio.tv.core.poster.CustomPosterScreen.ALL)
         },
         libraryPreferences = mockk<LibraryPreferences>(relaxed = true) {
             every { sortOption } returns persistedSort

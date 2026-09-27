@@ -133,6 +133,19 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             .build()
     }
 
+    private fun computePrefetchDepthChunks(
+        connections: Int,
+        chunkBytes: Long
+    ): Int {
+        if (!nuvioPerformanceModeEnabled) return connections + 1
+        val chunkMb = (chunkBytes / (1024L * 1024L)).toInt().coerceAtLeast(1)
+        val safeNativeMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+        val reserveMb = NuvioExoPlayerPerformanceHelper.targetBufferSizeMb.coerceAtLeast(0)
+        return com.nuvio.tv.ui.screens.settings.MemoryBudget.prefetchDepthChunks(
+            connections, chunkMb, safeNativeMb, reserveMb
+        )
+    }
+
     fun configureSubtitleParsing(
         extractorsFactory: ExtractorsFactory?,
         subtitleParserFactory: SubtitleParser.Factory?
@@ -198,12 +211,11 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         val progressiveUpstreamFactory: DataSource.Factory = if (useChunkSessionSource) {
             val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
-                setUserAgent(DEFAULT_USER_AGENT)
+                if (sanitizedHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
+                    setUserAgent(DEFAULT_USER_AGENT)
+                }
             }
             val sessionConnections = parallelConnectionCount
-            // Runtime enforcement of the tier chunk cap: a value
-            // persisted before the cap existed (or on another device)
-            // must not bypass it.
             val sessionChunkBytes = parallelChunkSizeKb
                 .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
                 .toLong() * 1024L
@@ -214,6 +226,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 sessionConnections,
                 sessionChunkBytes,
                 useNativeMemory = effectiveNative,
+                prefetchDepthChunks = computePrefetchDepthChunks(
+                    sessionConnections,
+                    sessionChunkBytes
+                ),
                 shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
             )
