@@ -73,6 +73,20 @@ class Iec61937ProbePolicyTest {
         assertFalse(LiveDirectAudioPlayback.isDirectPassthroughFormat(format(MimeTypes.AUDIO_AAC)))
     }
 
+    @Test
+    fun clearingPassthroughLive_notifiesListener() {
+        var cleared = 0
+        LiveDirectAudioPlayback.setOnPassthroughLiveCleared { cleared++ }
+        LiveDirectAudioPlayback.setPassthroughLive(true)
+        assertEquals(0, cleared)
+        LiveDirectAudioPlayback.setPassthroughLive(true)
+        assertEquals(0, cleared)
+        LiveDirectAudioPlayback.setPassthroughLive(false)
+        assertEquals(1, cleared)
+        LiveDirectAudioPlayback.setPassthroughLive(false)
+        assertEquals(1, cleared)
+    }
+
     private fun format(mime: String): Format {
         return Format.Builder().setSampleMimeType(mime).build()
     }

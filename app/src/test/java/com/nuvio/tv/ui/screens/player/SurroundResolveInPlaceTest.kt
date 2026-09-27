@@ -7,7 +7,9 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
 import com.nuvio.tv.core.player.AudioPassthroughPolicy
+import com.nuvio.tv.core.player.SurroundFormatResolver
 import com.nuvio.tv.core.player.SurroundFormatResolver.DirectSupport
+import com.nuvio.tv.data.local.AudioOutputChannels
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -70,6 +72,38 @@ class SurroundResolveInPlaceTest {
         assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(pcm))
         sink.setPassthroughPolicy(AudioPassthroughPolicy.ALLOW_ALL)
         assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(pcm))
+    }
+
+    @Test
+    fun surroundResolveNeedsReselect_whenOnlyTranscodeOrChannelsChange() {
+        val base = SurroundResolveResult(
+            resolution = SurroundFormatResolver.Resolution(
+                policy = AudioPassthroughPolicy.ALLOW_ALL,
+                transcodePreferred = false,
+                inferredChannelTarget = null
+            ),
+            targetChannels = null,
+            downmixEnabled = false,
+            audioOutputChannels = AudioOutputChannels.CHANNELS_5_1,
+            deniedTranscodeMimes = emptySet()
+        )
+        assertFalse(surroundResolveNeedsReselect(base, base))
+        assertTrue(surroundResolveNeedsReselect(null, base))
+        assertTrue(
+            surroundResolveNeedsReselect(
+                base,
+                base.copy(
+                    resolution = base.resolution.copy(transcodePreferred = true),
+                    deniedTranscodeMimes = setOf(MimeTypes.AUDIO_TRUEHD)
+                )
+            )
+        )
+        assertTrue(
+            surroundResolveNeedsReselect(
+                base,
+                base.copy(targetChannels = 6, downmixEnabled = true)
+            )
+        )
     }
 
     private fun format(mime: String): Format = Format.Builder()

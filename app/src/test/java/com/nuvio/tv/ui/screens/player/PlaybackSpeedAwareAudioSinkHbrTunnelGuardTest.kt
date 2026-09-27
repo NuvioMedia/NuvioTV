@@ -67,6 +67,25 @@ class PlaybackSpeedAwareAudioSinkHbrTunnelGuardTest {
         assertFalse(sink.demandsNonTunnelledVideo(format(MimeTypes.AUDIO_AC3)))
     }
 
+    @Test
+    fun tunnelAudioClass_isPcm_whenSpeedForcesDecode() {
+        val sink = PlaybackSpeedAwareAudioSink(sink = PlainSink())
+        sink.setPlaybackParameters(PlaybackParameters(1.25f))
+        sink.configure(format(MimeTypes.AUDIO_TRUEHD), 0, null)
+        assertEquals(PlaybackSpeedAwareAudioSink.TUNNEL_AUDIO_CLASS_PCM, sink.currentTunnelAudioClass)
+        assertEquals(
+            PlaybackSpeedAwareAudioSink.TUNNEL_AUDIO_CLASS_PCM,
+            sink.tunnelAudioClass(format(MimeTypes.AUDIO_TRUEHD))
+        )
+    }
+
+    @Test
+    fun tunnelAudioClass_isBitstream_whenPassthroughIsLive() {
+        val sink = PlaybackSpeedAwareAudioSink(sink = PlainSink())
+        sink.configure(format(MimeTypes.AUDIO_AC3), 0, null)
+        assertEquals(MimeTypes.AUDIO_AC3, sink.currentTunnelAudioClass)
+    }
+
     private fun format(mime: String): Format = Format.Builder()
         .setSampleMimeType(mime)
         .setChannelCount(6)

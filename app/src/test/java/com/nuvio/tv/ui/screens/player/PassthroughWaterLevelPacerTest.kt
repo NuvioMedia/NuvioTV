@@ -166,6 +166,25 @@ class PassthroughWaterLevelPacerTest {
     }
 
     @Test
+    fun onFormat_whilePlaying_keepsWallClock_andRelatchesPts() {
+        val pacer = PassthroughWaterLevelPacer()
+        pacer.onFormat(mime(MimeTypes.AUDIO_DTS_HD))
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        pacer.onBufferAccepted(0L)
+        pacer.onFormat(mime(MimeTypes.AUDIO_AC3))
+        assertTrue(pacer.shouldAcceptBuffer(0L, 1_000L, 1f))
+        assertTrue(pacer.shouldAcceptBuffer(1_000_000L, 1_000L, 1f))
+        assertFalse(
+            pacer.shouldAcceptBuffer(
+                1_000_000L + PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US + 1L,
+                1_000L,
+                1f
+            )
+        )
+    }
+
+    @Test
     fun sink_ac3AndDtsHdArePaced_pcmIsNot() {
         val ac3Sink = PlaybackSpeedAwareAudioSink(RecordingSink())
         ac3Sink.configure(mime(MimeTypes.AUDIO_AC3), 0, null)

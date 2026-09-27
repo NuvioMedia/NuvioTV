@@ -323,10 +323,17 @@ internal class IecPassthroughAudioSink(
 
     private fun refreshPassthroughLive() {
         val format = configuredFormat
+        val hbrWaitingOnIec = format != null &&
+            isHbrPassthrough(format) &&
+            hbrIecEnabled &&
+            !isIecActive &&
+            !iecFailedThisSession &&
+            !trackFactory.iec61937Ready()
         val live = isIecActive || (
             mode == Mode.FORWARD &&
                 format != null &&
-                LiveDirectAudioPlayback.isDirectPassthroughFormat(format)
+                LiveDirectAudioPlayback.isDirectPassthroughFormat(format) &&
+                !hbrWaitingOnIec
         )
         LiveDirectAudioPlayback.setPassthroughLive(live)
     }

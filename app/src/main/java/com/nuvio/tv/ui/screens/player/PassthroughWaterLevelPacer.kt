@@ -25,7 +25,10 @@ internal class PassthroughWaterLevelPacer(
 
     fun onFormat(format: Format?) {
         sampleMimeType = format?.sampleMimeType
-        onReset()
+        firstPtsUs = C.TIME_UNSET
+        lastAcceptedPtsUs = C.TIME_UNSET
+        positionAnchorUs = C.TIME_UNSET
+        pacingReported = false
     }
 
     fun setIecPacked(packed: Boolean) {

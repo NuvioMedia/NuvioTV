@@ -248,13 +248,33 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
-    fun configure_rawFallback_marksWrappedDirectLive() {
+    fun configure_hbrRawWaitingOnIec_doesNotBlockTheProbe() {
         val factory = ReadyFactory(
             track = FakeIecAudioTrack(192_000, 16),
             readyAt = { false }
         )
         val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
         sink.configure(dtsHdFormat(), 0, null)
+        assertFalse(sink.isIecActive)
+        assertFalse(LiveDirectAudioPlayback.isPassthroughLive())
+    }
+
+    @Test
+    fun configure_coreCodecForward_marksWrappedDirectLive() {
+        val factory = ReadyFactory(
+            track = FakeIecAudioTrack(192_000, 16),
+            readyAt = { false }
+        )
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(
+            Format.Builder()
+                .setSampleMimeType(MimeTypes.AUDIO_AC3)
+                .setChannelCount(6)
+                .setSampleRate(48_000)
+                .build(),
+            0,
+            null
+        )
         assertFalse(sink.isIecActive)
         assertTrue(LiveDirectAudioPlayback.isPassthroughLive())
     }

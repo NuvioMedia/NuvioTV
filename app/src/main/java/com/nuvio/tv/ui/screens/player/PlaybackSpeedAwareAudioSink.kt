@@ -163,11 +163,9 @@ internal class PlaybackSpeedAwareAudioSink(
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
         currentInputFormat = inputFormat
-        currentTunnelAudioClass = inputFormat.sampleMimeType
-            ?.takeIf { it != MimeTypes.AUDIO_RAW }
-            ?: TUNNEL_AUDIO_CLASS_PCM
         passthroughPacer.onFormat(inputFormat)
         markPcmFallbackIfNeeded(inputFormat, playbackSpeed)
+        currentTunnelAudioClass = tunnelAudioClass(inputFormat)
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
         passthroughPacer.setIecPacked(iecSink?.isIecActive == true)
         armForwardAnchor(armedBy = "configure")
@@ -257,6 +255,7 @@ internal class PlaybackSpeedAwareAudioSink(
             forcePcmForCurrentSession = false
             shouldNotify = true
         }
+        currentInputFormat?.let { currentTunnelAudioClass = tunnelAudioClass(it) }
         super.setPlaybackParameters(playbackParameters)
         if (shouldNotify) {
             listener?.onAudioCapabilitiesChanged()

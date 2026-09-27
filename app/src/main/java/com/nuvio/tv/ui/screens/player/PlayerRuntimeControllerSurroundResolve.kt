@@ -109,13 +109,14 @@ internal fun PlayerRuntimeController.applySurroundResolutionInPlace(reason: Stri
     val inputs = surroundResolveInputs ?: return
     if (inputs.isBluetooth || currentAudioOutputRoute?.isBluetooth == true) return
     val settings = currentPlayerSettingsForReport
+    val routeKey = currentAudioOutputRoute?.key ?: inputs.routeKey
     val surround = resolveSurroundForRoute(
         context,
         settings,
-        inputs.copy(routeKey = currentAudioOutputRoute?.key ?: inputs.routeKey)
+        inputs.copy(routeKey = routeKey)
     )
     val policy = surround.resolution.policy
-    val changed = playbackSpeedAwareAudioSink?.setPassthroughPolicy(policy) == true
+    val policyChanged = playbackSpeedAwareAudioSink?.setPassthroughPolicy(policy) == true
     currentAudioPassthroughPolicy = policy
     ffmpegAudioRenderer?.applyDownmixSettings(
         downmixEnabled = surround.downmixEnabled,
@@ -124,9 +125,11 @@ internal fun PlayerRuntimeController.applySurroundResolutionInPlace(reason: Stri
         forceOpticalPassthrough = inputs.forceOpticalActive,
         deniedTranscodeMimes = surround.deniedTranscodeMimes
     )
+    val changed = surroundResolveNeedsReselect(lastAppliedSurroundResolve, surround) || policyChanged
+    lastAppliedSurroundResolve = surround
     Log.i(
         PlayerRuntimeController.TAG,
-        "SURROUND_RESOLVE_INPLACE: reason=$reason changed=$changed route=${inputs.routeKey} " +
+        "SURROUND_RESOLVE_INPLACE: reason=$reason changed=$changed route=$routeKey " +
             "policy=[ac3=${policy.allowAc3} eac3=${policy.allowEac3} truehd=${policy.allowTrueHd} " +
             "dts=${policy.allowDts} dtshd=${policy.allowDtsHd} learned=${policy.learnedDeniedGroups}] " +
             "transcodePreferred=${surround.resolution.transcodePreferred} " +
@@ -150,3 +153,8 @@ internal fun PlayerRuntimeController.applySurroundResolutionInPlace(reason: Stri
         }
     }
 }
+
+internal fun surroundResolveNeedsReselect(
+    previous: SurroundResolveResult?,
+    next: SurroundResolveResult
+): Boolean = previous != next

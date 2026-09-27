@@ -215,6 +215,8 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
 
         private val PROBE_DELAYS_MS = longArrayOf(0L, 2_000L, 1_000L)
 
+        private const val PROBE_DEFER_RETRY_MS = 2_000L
+
         @Volatile
         private var iec61937Usable: Boolean = false
 
@@ -256,6 +258,7 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         }
 
         fun startIec61937Probe(ignoreLivePassthrough: Boolean = false) {
+            ensurePassthroughLiveClearedHook()
             if (iec61937Usable || iec61937ProbeExhausted) return
             if (!iec61937ProbeRunning.compareAndSet(false, true)) return
             Thread({
@@ -275,15 +278,6 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                     var firstInThisRun = true
                     var attempt = iec61937ProbeRealFailures
                     while (attempt < PROBE_ATTEMPTS) {
-                        val delayMs = if (firstInThisRun) 0L else PROBE_DELAYS_MS[attempt]
-                        firstInThisRun = false
-                        if (delayMs > 0L) {
-                            try {
-                                Thread.sleep(delayMs)
-                            } catch (_: InterruptedException) {
-                                return@Thread
-                            }
-                        }
                         when (
                             iecProbeAttemptAction(
                                 usable = iec61937Usable,
@@ -296,11 +290,26 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                                 Log.i(
                                     TAG,
                                     "IEC61937 probe: deferred, passthrough track live " +
-                                        "(attempt ${attempt + 1} of $PROBE_ATTEMPTS)"
+                                        "(attempt ${attempt + 1} of $PROBE_ATTEMPTS); " +
+                                        "retry in ${PROBE_DEFER_RETRY_MS}ms"
                                 )
-                                return@Thread
+                                try {
+                                    Thread.sleep(PROBE_DEFER_RETRY_MS)
+                                } catch (_: InterruptedException) {
+                                    return@Thread
+                                }
+                                continue
                             }
                             IecProbeAttemptAction.OPEN -> Unit
+                        }
+                        val delayMs = if (firstInThisRun) 0L else PROBE_DELAYS_MS[attempt]
+                        firstInThisRun = false
+                        if (delayMs > 0L) {
+                            try {
+                                Thread.sleep(delayMs)
+                            } catch (_: InterruptedException) {
+                                return@Thread
+                            }
                         }
                         val opened = synchronized(DirectOpenProbeLock) {
                             val track = try {
@@ -333,6 +342,12 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                     iec61937ProbeRunning.set(false)
                 }
             }, "iec61937-probe").apply { isDaemon = true }.start()
+        }
+
+        private fun ensurePassthroughLiveClearedHook() {
+            LiveDirectAudioPlayback.setOnPassthroughLiveCleared {
+                startIec61937Probe()
+            }
         }
 
         private fun probe176400(mask: Int) {

@@ -983,6 +983,7 @@ internal fun PlayerRuntimeController.initializePlayer(
 
             // Expose the resolved policy to error recovery (tryDeniedAudioFfmpegFallback).
             currentAudioPassthroughPolicy = surroundResolution.policy
+            lastAppliedSurroundResolve = surround
 
             // Denied formats to re-encode to AC-3 instead of decoding to PCM (stage 3 of
             // #3287). Empty unless the resolver prefers transcode for this chain (Manual:

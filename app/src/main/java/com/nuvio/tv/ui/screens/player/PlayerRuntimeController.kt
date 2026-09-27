@@ -642,6 +642,7 @@ class PlayerRuntimeController(
     // What that resolution was computed from, kept so the audio route callback can resolve
     // again in place once the HDMI link is back after a display mode change.
     internal var surroundResolveInputs: SurroundResolveInputs? = null
+    internal var lastAppliedSurroundResolve: SurroundResolveResult? = null
     internal var isMapDv7ToHevcActiveForCurrentPlayback: Boolean = false
     internal var isManualDv81Mode2ActiveForCurrentPlayback: Boolean = false
     internal var isExperimentalDv7ToDv81ActiveForCurrentPlayback: Boolean = false
