@@ -71,10 +71,12 @@ fun SynopsisDescription(
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
     onFocused: () -> Unit = {},
-    onTruncationChanged: (Boolean) -> Unit = {}
+    onTruncationChanged: (Boolean) -> Unit = {},
+    onReadMoreFocusRequesterCreated: (FocusRequester) -> Unit = {}
 ) {
-    var isFocused by remember { mutableStateOf(false) }
     var isTruncated by rememberSaveable(description, maxLines) { mutableStateOf(false) }
+    var readMoreFocused by remember { mutableStateOf(false) }
+    val readMoreFocusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     val highlightInset = 12.dp
 
@@ -82,24 +84,36 @@ fun SynopsisDescription(
         onTruncationChanged(isTruncated)
     }
 
-    Column(
-        modifier = modifier.then(
-            if (isTruncated) {
-                Modifier
+    LaunchedEffect(Unit) {
+        onReadMoreFocusRequesterCreated(readMoreFocusRequester)
+    }
+
+    Column(modifier = modifier) {
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                textDirection = description.contentTextDirection()
+            ),
+            color = NuvioTheme.colors.TextPrimary,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { result ->
+                if (result.hasVisualOverflow != isTruncated) {
+                    isTruncated = result.hasVisualOverflow
+                }
+            }
+        )
+        if (isTruncated) {
+            Box(
+                modifier = Modifier
                     .offset(x = -highlightInset)
-                    .then(
-                        if (focusRequester != null) {
-                            Modifier.focusRequester(focusRequester)
-                        } else {
-                            Modifier
-                        }
-                    )
+                    .focusRequester(readMoreFocusRequester)
                     .onFocusChanged {
-                        isFocused = it.isFocused
+                        readMoreFocused = it.isFocused
                         if (it.isFocused) onFocused()
                     }
                     .background(
-                        color = if (isFocused) {
+                        color = if (readMoreFocused) {
                             Color.White.copy(alpha = 0.10f)
                         } else {
                             Color.Transparent
@@ -122,36 +136,17 @@ fun SynopsisDescription(
                         onClick = onShowFullDescription
                     )
                     .padding(horizontal = highlightInset, vertical = 8.dp)
-            } else {
-                Modifier
+            ) {
+                Text(
+                    text = stringResource(R.string.hero_synopsis_read_more),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (readMoreFocused) {
+                        NuvioTheme.colors.TextPrimary
+                    } else {
+                        NuvioTheme.extendedColors.textSecondary
+                    }
+                )
             }
-        )
-    ) {
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                textDirection = description.contentTextDirection()
-            ),
-            color = NuvioTheme.colors.TextPrimary,
-            maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis,
-            onTextLayout = { result ->
-                if (result.hasVisualOverflow != isTruncated) {
-                    isTruncated = result.hasVisualOverflow
-                }
-            }
-        )
-        if (isTruncated) {
-            Text(
-                text = stringResource(R.string.hero_synopsis_read_more),
-                style = MaterialTheme.typography.labelMedium,
-                color = if (isFocused) {
-                    NuvioTheme.colors.TextPrimary
-                } else {
-                    NuvioTheme.extendedColors.textSecondary
-                },
-                modifier = Modifier.padding(top = 4.dp)
-            )
         }
     }
 }
