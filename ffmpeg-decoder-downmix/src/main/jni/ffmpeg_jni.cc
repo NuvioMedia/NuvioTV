@@ -334,7 +334,19 @@ AUDIO_DECODER_FUNC(jint, ffmpegGetSampleRate, jlong context) {
     LOGE("Context must be non-NULL.");
     return -1;
   }
-  return ((DecoderContext*)context)->codec_context->sample_rate;
+  DecoderContext* decoderContext = (DecoderContext*)context;
+  if (decoderContext->transcode_to_ac3 && decoderContext->encoder_context &&
+      decoderContext->encoder_context->sample_rate > 0) {
+    return decoderContext->encoder_context->sample_rate;
+  }
+  return decoderContext->codec_context->sample_rate;
+}
+
+int ac3EncoderSampleRate(int inputSampleRate) {
+  if (inputSampleRate == 32000 || inputSampleRate == 44100 || inputSampleRate == 48000) {
+    return inputSampleRate;
+  }
+  return 48000;
 }
 
 AUDIO_DECODER_FUNC(jlong, ffmpegReset, jlong jContext, jbyteArray extraData) {
@@ -644,6 +656,9 @@ int configureResampler(DecoderContext* decoderContext, AVFrame* frame,
 
   int inputSampleRate =
       frame->sample_rate > 0 ? frame->sample_rate : codecContext->sample_rate;
+  int outputSampleRate = decoderContext->transcode_to_ac3
+                             ? ac3EncoderSampleRate(inputSampleRate)
+                             : inputSampleRate;
   AVSampleFormat inputSampleFormat = (AVSampleFormat)frame->format;
   bool isDownmixActive = outputLayout.nb_channels < inputLayout.nb_channels;
   bool applyNormalization = isDownmixActive && downmixNormalizationEnabled;
@@ -675,7 +690,7 @@ int configureResampler(DecoderContext* decoderContext, AVFrame* frame,
   SwrContext* resampleContext = NULL;
   int result = swr_alloc_set_opts2(&resampleContext, &outputLayout,
                                    decoderContext->output_sample_format,
-                                   inputSampleRate, &inputLayout,
+                                   outputSampleRate, &inputLayout,
                                    inputSampleFormat, inputSampleRate, 0, NULL);
   if (result < 0) {
     logError("swr_alloc_set_opts2", result);
@@ -739,7 +754,7 @@ int configureResampler(DecoderContext* decoderContext, AVFrame* frame,
       return AUDIO_DECODER_ERROR_OTHER;
     }
     enc_ctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
-    enc_ctx->sample_rate = inputSampleRate;
+    enc_ctx->sample_rate = outputSampleRate;
     av_channel_layout_copy(&enc_ctx->ch_layout, &outputLayout);
     enc_ctx->bit_rate = 640000;
     

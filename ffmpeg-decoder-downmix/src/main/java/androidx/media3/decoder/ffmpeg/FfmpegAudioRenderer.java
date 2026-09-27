@@ -317,12 +317,18 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     return deniedTranscodeMimes.contains(mimeType) && sinkSupportsFormat(ac3OutputFormat(format));
   }
 
+  public static int ac3SampleRate(int inputSampleRate) {
+    if (inputSampleRate == 32000 || inputSampleRate == 44100 || inputSampleRate == 48000) {
+      return inputSampleRate;
+    }
+    return 48000;
+  }
+
   private static Format ac3OutputFormat(Format inputFormat) {
-    int sampleRate = inputFormat.sampleRate > 0 ? inputFormat.sampleRate : 48000;
     return new Format.Builder()
         .setSampleMimeType(MimeTypes.AUDIO_AC3)
         .setChannelCount(6)
-        .setSampleRate(sampleRate)
+        .setSampleRate(ac3SampleRate(inputFormat.sampleRate))
         .build();
   }
 
