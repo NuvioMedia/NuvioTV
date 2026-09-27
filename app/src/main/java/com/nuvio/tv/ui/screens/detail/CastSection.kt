@@ -251,7 +251,15 @@ fun CastSection(
                         else -> lastFocusedRequester
                     }
                 }
-                .focusGroup(),
+                .then(
+                    if (currentUpFocusRequester != null) {
+                        Modifier.focusProperties {
+                            up = currentUpFocusRequester!!
+                        }
+                    } else {
+                        Modifier
+                    }
+                ),
             state = listState,
             contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = 6.dp),
             horizontalArrangement = Arrangement.Start
