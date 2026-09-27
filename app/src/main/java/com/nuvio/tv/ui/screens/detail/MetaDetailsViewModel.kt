@@ -2103,13 +2103,16 @@ class MetaDetailsViewModel @Inject constructor(
             }
             else -> {
                 val firstEpisode = episodes.firstOrNull()
+                val hasWatchedEpisodes = fallbackProgressMap.isNotEmpty() || watchedEpisodes.isNotEmpty()
                 NextToWatch(
                     watchProgress = null,
                     isResume = false,
                     nextVideoId = firstEpisode?.id ?: metaId,
                     nextSeason = firstEpisode?.season,
                     nextEpisode = firstEpisode?.episode,
-                    displayText = if (firstEpisode != null) {
+                    displayText = if (hasWatchedEpisodes) {
+                        localizedContext.getString(R.string.detail_btn_rewatch)
+                    } else if (firstEpisode != null) {
                         localizedContext.getString(R.string.detail_btn_play_episode, firstEpisode.season, firstEpisode.episode)
                     } else {
                         localizedContext.getString(R.string.detail_btn_play)
