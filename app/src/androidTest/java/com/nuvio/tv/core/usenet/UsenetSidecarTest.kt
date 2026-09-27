@@ -26,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -158,6 +159,51 @@ class UsenetSidecarTest {
             }
             assertTrue("sidecar did not stop when playback released", stopped)
             assertEquals("sizing probes are forbidden", 0, fixture.stats)
+        }
+    }
+
+    @Test fun failedRetirementIsRetriedWithoutInterruptingReplacement() = runBlocking {
+        UsenetSidecar.onAppForegrounded()
+        val sidecar = UsenetSidecar.get(context)
+        Fixture().use { fixture ->
+            val first = sidecar.resolve(fixture.stream(), null, null)
+            val id = first.url!!.substringAfter("/stream/").substringBefore('/')
+            val field = UsenetSidecar::class.java.getDeclaredField("http").apply { isAccessible = true }
+            val original = field.get(sidecar) as OkHttpClient
+            val attempts = AtomicInteger()
+            val unreliable = original.newBuilder().addInterceptor { chain ->
+                val request = chain.request()
+                if (request.method == "DELETE" && request.url.encodedPath == "/sessions/$id" &&
+                    attempts.incrementAndGet() <= 2) {
+                    okhttp3.Response.Builder().request(request).protocol(okhttp3.Protocol.HTTP_1_1)
+                        .code(503).message("Injected cleanup failure").body("try again".toResponseBody()).build()
+                } else chain.proceed(request)
+            }.build()
+            field.set(sidecar, unreliable)
+            var replacement: String? = null
+            try {
+                replacement = sidecar.resolve(fixture.stream(), null, null).url!!
+                original.newCall(Request.Builder().url(replacement).build()).execute().use {
+                    assertEquals(200, it.code)
+                    assertArrayEquals(fixture.payload, it.body!!.bytes())
+                }
+                withTimeout(10_000) {
+                    while (true) {
+                        val deleted = original.newCall(Request.Builder().url(first.url!!).head().build())
+                            .execute().use { it.code == 404 }
+                        if (deleted) break
+                        delay(50)
+                    }
+                }
+                assertEquals("failed DELETE must be retried", 3, attempts.get())
+                original.newCall(Request.Builder().url(replacement).build()).execute().use {
+                    assertEquals(200, it.code)
+                    assertArrayEquals(fixture.payload, it.body!!.bytes())
+                }
+            } finally {
+                field.set(sidecar, original)
+                sidecar.release(replacement ?: first.url)
+            }
         }
     }
 

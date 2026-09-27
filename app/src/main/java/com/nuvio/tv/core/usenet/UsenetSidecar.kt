@@ -19,7 +19,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -27,6 +26,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -57,6 +57,8 @@ class UsenetSidecar private constructor(private val context: Context) {
     private var sessionId: String? = null
     @Volatile private var playbackUrl: String? = null
     private var idleStop: Job? = null
+    private val retiredSessions = mutableSetOf<String>() // guarded by mutex
+    private var retirementJob: Job? = null
     private val preparationGuard = Any()
     private var preparationJob: Job? = null
     private var preparationOwner: Any? = null
@@ -200,13 +202,15 @@ class UsenetSidecar private constructor(private val context: Context) {
         selectionTrace: UsenetStartupDiagnostics.Trace? = null): Stream {
         val configuration = UsenetSettings.read(context)
         val trace = selectionTrace ?: UsenetStartupDiagnostics.Trace(configuration.fastMkvStartup, configuration.fastNzbFetch)
-        val previousId = sessionId
+        var previousId = sessionId
         var openedId: String? = null
         return try {
             trace.mark("resolve_lock_acquired")
             start()
+            previousId = sessionId
             trace.mark("engine_ready")
             val request = JSONObject().apply {
+                put("keepSessionId", previousId ?: "")
                 put("cacheScope", profileId?.toString() ?: "unscoped")
                 put("nzbUrl", stream.nzbUrl)
                 put("servers", JSONArray(stream.servers.orEmpty()))
@@ -231,6 +235,8 @@ class UsenetSidecar private constructor(private val context: Context) {
             val newPath = result.getString("path")
             require(newId.matches(Regex("[0-9a-f]{48}")) && newPath.startsWith("/stream/$newId/"))
             openedId = newId
+            // The engine reconciled abandoned sessions before this open.
+            retiredSessions.clear()
             val url = "$endpoint/stream/$newId/${Uri.encode(result.getString("filename").substringAfterLast('/'))}"
             val nativeSubtitles = result.optJSONArray("subtitles")?.let { items ->
                 (0 until items.length()).map { index ->
@@ -256,21 +262,38 @@ class UsenetSidecar private constructor(private val context: Context) {
             sessionId = newId
             playbackUrl = url
             UsenetStartupDiagnostics.bind(url, trace, result.optJSONObject("startup"))
-            if (previousId != null) withContext(NonCancellable) {
-                // The replacement is committed; cancellation or a failed DELETE
-                // must not turn a successful open into an engine-wide shutdown.
-                runCatching { control("/sessions/$previousId", null, delete = true) }
-            }
+            previousId?.let(::retireSessionLocked)
             resolved
         } catch (e: Exception) {
             if (previousId != null && sessionId == previousId && process?.let(::isRunning) == true) {
-                openedId?.let { id ->
-                    withContext(NonCancellable) { runCatching { control("/sessions/$id", null, delete = true) } }
-                }
+                openedId?.let(::retireSessionLocked)
             } else {
                 stopLocked()
             }
             throw e
+        }
+    }
+
+    /** Retry bounded cleanup without delaying playback or swallowing ownership.
+     * A later open also reconciles these IDs, including lost open responses. */
+    private fun retireSessionLocked(id: String) {
+        retiredSessions += id
+        if (retirementJob?.isActive == true) return
+        retirementJob = cleanup.launch {
+            repeat(3) { attempt ->
+                if (attempt > 0) delay(1_000L * attempt)
+                mutex.withLock {
+                    for (retired in retiredSessions.toList()) {
+                        val deleted = runCatching {
+                            withTimeoutOrNull(2_000L) {
+                                control("/sessions/$retired", null, delete = true)
+                                true
+                            } == true
+                        }.getOrDefault(false)
+                        if (deleted) retiredSessions.remove(retired)
+                    }
+                }
+            }
         }
     }
 
@@ -304,7 +327,11 @@ class UsenetSidecar private constructor(private val context: Context) {
         clearPreparedLocked()
         val id = sessionId
         sessionId = null; playbackUrl = null
-        try { if (id != null) control("/sessions/$id", null, delete = true) } catch (_: Exception) { stopLocked(); return }
+        try {
+            if (id != null && withTimeoutOrNull(2_000L) { control("/sessions/$id", null, delete = true); true } != true) {
+                stopLocked(); return
+            }
+        } catch (_: Exception) { stopLocked(); return }
         if (!appForeground) { stopLocked(); return }
         idleStop?.cancel()
         if (UsenetSettings.read(context).prewarmOnLaunch) { idleStop = null; return }
@@ -349,7 +376,7 @@ class UsenetSidecar private constructor(private val context: Context) {
             (processProfile == cfg.profile || sessionId != null)) return
         stopLocked()
         val binary = File(context.applicationInfo.nativeLibraryDir, "libnuvio_usenet.so")
-        if (!binary.canExecute()) throw IOException("Usenet engine is missing for this device's CPU")
+        if (!binary.canExecute()) throw UsenetPreparationException("Usenet engine is missing for this device's CPU", UsenetPreparationException.Scope.ENGINE)
         val secret = ByteArray(32).also { SecureRandom().nextBytes(it) }
             .joinToString("") { "%02x".format(it) }
         val child = ProcessBuilder(binary.absolutePath).start()
@@ -379,7 +406,7 @@ class UsenetSidecar private constructor(private val context: Context) {
             require(record.getInt("protocol") == 1)
             val port = record.getInt("port"); require(port in 1..65535)
             endpoint = "http://127.0.0.1:$port"; token = secret
-        } catch (e: Exception) { ready.cancel(true); stopLocked(); throw IOException("Usenet engine could not start", e) }
+        } catch (e: Exception) { ready.cancel(true); stopLocked(); throw UsenetPreparationException("Usenet engine could not start", UsenetPreparationException.Scope.ENGINE) }
     }
 
     private suspend fun control(path: String, payload: JSONObject?, delete: Boolean = false): String {
@@ -389,13 +416,22 @@ class UsenetSidecar private constructor(private val context: Context) {
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) { if (continuation.isActive) continuation.resumeWithException(IOException("Usenet engine connection failed")) }
+                override fun onFailure(call: Call, e: IOException) { if (continuation.isActive) continuation.resumeWithException(UsenetPreparationException("Usenet engine connection failed", UsenetPreparationException.Scope.ENGINE)) }
                 override fun onResponse(call: Call, response: Response) {
                     try { response.use {
                         val text = it.body?.string().orEmpty()
                         if (!continuation.isActive) return
                         if (it.isSuccessful) continuation.resume(text)
-                        else continuation.resumeWithException(IOException(text.take(240).ifBlank { "Usenet engine returned HTTP ${it.code}" }))
+                        else {
+                            val scope = when (it.header("X-Usenet-Failure")) {
+                                "configuration" -> UsenetPreparationException.Scope.ENGINE
+                                "provider" -> UsenetPreparationException.Scope.PROVIDER
+                                // Busy can be the previous cancelled open still
+                                // unwinding; it is not a permanent engine failure.
+                                else -> UsenetPreparationException.Scope.SOURCE
+                            }
+                            continuation.resumeWithException(UsenetPreparationException(text.take(240).ifBlank { "Usenet engine returned HTTP ${it.code}" }, scope))
+                        }
                     } } catch (e: IOException) {
                         if (continuation.isActive) continuation.resumeWithException(IOException("Usenet engine response was interrupted"))
                     }
@@ -405,6 +441,8 @@ class UsenetSidecar private constructor(private val context: Context) {
     }
 
     private fun stopLocked() {
+        retirementJob?.cancel(); retirementJob = null
+        retiredSessions.clear()
         clearPreparedLocked()
         idleStop?.cancel(); idleStop = null
         val child = process
