@@ -114,6 +114,13 @@ internal fun findRelocatedItemIndex(
     return currentIdentities.indexOf(previousIdentity).takeIf { it >= 0 }
 }
 
+/**
+ * Whether a row's focus index, left unrelocated, is past the end of its new list. Such an index
+ * would point at another title once the row grows back. The active row is clamped separately.
+ */
+internal fun isFocusedIndexPastRow(storedIndex: Int?, rowSize: Int, isActiveRow: Boolean): Boolean =
+    storedIndex != null && storedIndex !in 0 until rowSize && !isActiveRow
+
 @Composable
 fun ModernHomeContent(
     uiState: HomeUiState,
@@ -138,7 +145,7 @@ fun ModernHomeContent(
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
+    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
     onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0,
     onRequestLazyCatalogLoad: (String) -> Unit = {},
@@ -399,6 +406,10 @@ fun ModernHomeContent(
                     val state = rowListStates[rowKey] ?: return@withoutReadObservation
                     pendingRowScrolls += state to relocatedIndex
                 }
+            } else if (
+                isFocusedIndexPastRow(storedIndex, currentIdentities.list.size, rowKey == activeRowKey.value)
+            ) {
+                focusedItemByRow[rowKey] = 0
             }
         }
         SideEffect {
@@ -602,7 +613,6 @@ fun ModernHomeContent(
     val latestCarouselRows by rememberUpdatedState(carouselRows)
     val latestVerticalRowListState by rememberUpdatedState(verticalRowListState)
     val latestRowIndexByKey = rememberUpdatedState(rowIndexByKey)
-    val latestSavedScrollAnchors by rememberUpdatedState(focusState.catalogRowScrollAnchors)
     DisposableEffect(Unit) {
         onDispose {
             val row = latestActiveRow
@@ -631,28 +641,12 @@ fun ModernHomeContent(
                     rowState.key to scrollIndex
                 }
 
-            // A row not composed since the return has no state: keep the anchor it came back with.
-            val liveRowKeys = latestCarouselRows.map { it.key }.toSet()
-            val catalogRowScrollAnchors = latestSavedScrollAnchors.filterKeys { it in liveRowKeys } + latestCarouselRows
-                .mapNotNull { rowState ->
-                    val state = rowListStates[rowState.key] ?: return@mapNotNull null
-                    // The card last measured there: an off-screen row is not re-measured when items land in front.
-                    val anchorKey = (state.layoutInfo.visibleItemsInfo
-                        .firstOrNull { it.index == state.firstVisibleItemIndex }?.key as? String)
-                        ?.takeIf { key -> rowState.items.list.any { it.key == key } }
-                        ?: rowState.items.list.getOrNull(state.firstVisibleItemIndex)?.key
-                        ?: return@mapNotNull null
-                    rowState.key to anchorKey
-                }
-                .toMap()
-
             onSaveFocusState(
                 latestVerticalRowListState.firstVisibleItemIndex,
                 latestVerticalRowListState.firstVisibleItemScrollOffset,
                 focusedRowKey,
                 focusedItemKeyByRow,
                 catalogRowScrollStates,
-                catalogRowScrollAnchors,
                 focusedRowIndex,
                 focusedItemIndex
             )
@@ -1166,7 +1160,6 @@ fun ModernHomeContent(
                 focusedItemByRow = stableFocusedItemByRow,
                 rowListStates = stableRowListStates,
                 loadMoreRequestedTotals = stableLoadMoreRequestedTotals,
-                focusState = focusState,
                 activeRowKey = activeRowKey,
                 activeItemIndex = activeItemIndex,
                 isFastScrolling = isFastScrolling,

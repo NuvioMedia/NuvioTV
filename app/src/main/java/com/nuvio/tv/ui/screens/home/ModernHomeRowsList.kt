@@ -82,7 +82,6 @@ internal fun ModernHomeRowsList(
     focusedItemByRow: StableRef<MutableMap<String, Int>>,
     rowListStates: StableRef<MutableMap<String, LazyListState>>,
     loadMoreRequestedTotals: StableRef<MutableMap<String, Int>>,
-    focusState: HomeScreenFocusState,
     activeRowKey: State<String?>,
     activeItemIndex: State<Int>,
     isFastScrolling: State<Boolean>,
@@ -429,8 +428,6 @@ internal fun ModernHomeRowsList(
                     rowFocusRequester = rowFocusRequesters.getOrPut(row.key) { FocusRequester() },
                     rowTitleBottom = 14.dp, // rowTitleBottom
                     defaultBringIntoViewSpec = defaultBringIntoViewSpec,
-                    focusStateCatalogRowScrollIndex = focusState.catalogRowScrollStates[row.key] ?: 0,
-                    focusStateCatalogRowScrollAnchor = focusState.catalogRowScrollAnchors[row.key],
                     focusedItemByRow = focusedItemByRow,
                     rowListStates = rowListStates,
                     loadMoreRequestedTotals = loadMoreRequestedTotals,

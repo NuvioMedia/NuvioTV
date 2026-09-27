@@ -48,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Brush
@@ -432,8 +433,6 @@ internal fun ModernRowSection(
     isVerticalRowsScrollingState: State<Boolean>,
     rowTitleBottom: Dp,
     defaultBringIntoViewSpec: BringIntoViewSpec,
-    focusStateCatalogRowScrollIndex: Int,
-    focusStateCatalogRowScrollAnchor: String?,
     focusedItemByRow: StableRef<MutableMap<String, Int>>,
     rowListStates: StableRef<MutableMap<String, LazyListState>>,
     loadMoreRequestedTotals: StableRef<MutableMap<String, Int>>,
@@ -545,11 +544,10 @@ internal fun ModernRowSection(
         )
 
         val rowListState = rowListStates.getOrPut(row.key) {
-            // Resolved when the row is built, so a refresh that already moved the card is seen.
-            val restoredIndex = focusStateCatalogRowScrollAnchor
-                ?.let { anchor -> row.items.list.indexOfFirst { it.key == anchor } }
-                ?.takeIf { it >= 0 }
-                ?: focusStateCatalogRowScrollIndex
+            // Start on the focused card, relocated by identity even while the row is not shown.
+            // Read unobserved: only the row's first composition needs it.
+            val restoredIndex = Snapshot.withoutReadObservation { rowFocusedIndex.value }
+                .takeIf { it in row.items.list.indices } ?: 0
             LazyListState(
                 firstVisibleItemIndex = restoredIndex,
                 prefetchStrategy = LazyListPrefetchStrategy(nestedPrefetchItemCount = NESTED_PREFETCH_COUNT)
