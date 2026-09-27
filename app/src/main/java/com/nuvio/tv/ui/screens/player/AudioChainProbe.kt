@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
@@ -32,7 +33,7 @@ object AudioChainProbe {
             cached?.let { (key, snap) -> if (key == routeKey) return snap }
         }
         val fresh = ChainSnapshot(
-            direct = probeDirectSupport(),
+            direct = probeDirectSupport(context),
             maxPcmChannels = readMaxPcmChannelCount(context)
         )
         // Never cache an all-false answer: the next build asks again instead of inheriting a
@@ -47,8 +48,8 @@ object AudioChainProbe {
         cached = null
     }
 
-    fun probeDirectSupport(): DirectSupport? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+    fun probeDirectSupport(context: Context): DirectSupport? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return readHdmiPlugReport(context)
         return runCatching {
             val attributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -62,6 +63,36 @@ object AudioChainProbe {
                 dtsHd = probeDirect(AudioFormat.ENCODING_DTS_HD, attributes)
             )
         }.getOrNull()
+    }
+
+    // Pre-Q has no isDirectPlaybackSupported: read the sticky HDMI plug report, as Media3 does.
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private fun readHdmiPlugReport(context: Context): DirectSupport? {
+        val report = runCatching {
+            context.registerReceiver(null, IntentFilter(AudioManager.ACTION_HDMI_AUDIO_PLUG))
+        }.getOrNull() ?: return null
+        return directSupportFromHdmiPlugReport(
+            plugState = report.getIntExtra(AudioManager.EXTRA_AUDIO_PLUG_STATE, -1),
+            encodings = report.getIntArrayExtra(AudioManager.EXTRA_ENCODINGS)
+        )
+    }
+
+    // Unplugged (a mode switch hotplug) denies all, uncached; plugged without a list is unknown.
+    @SuppressLint("InlinedApi")
+    internal fun directSupportFromHdmiPlugReport(plugState: Int, encodings: IntArray?): DirectSupport? {
+        return when {
+            plugState == 0 ->
+                DirectSupport(ac3 = false, eac3 = false, trueHd = false, dts = false, dtsHd = false)
+            plugState != 1 || encodings == null || encodings.isEmpty() -> null
+            else -> DirectSupport(
+                ac3 = AudioFormat.ENCODING_AC3 in encodings,
+                eac3 = AudioFormat.ENCODING_E_AC3 in encodings ||
+                    AudioFormat.ENCODING_E_AC3_JOC in encodings,
+                trueHd = AudioFormat.ENCODING_DOLBY_TRUEHD in encodings,
+                dts = AudioFormat.ENCODING_DTS in encodings,
+                dtsHd = AudioFormat.ENCODING_DTS_HD in encodings
+            )
+        }
     }
 
     private fun probeDirect(encoding: Int, attributes: AudioAttributes): Boolean {
