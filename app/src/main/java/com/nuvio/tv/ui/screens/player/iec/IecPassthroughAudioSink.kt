@@ -365,8 +365,12 @@ internal class IecPassthroughAudioSink(
         return if (isTrueHd(format)) {
             val channels = hbrIecChannelCount(format)
             val preferred = iecSampleRateFor(format)
-            trackFactory.canOpen(preferred, channels) ||
-                (preferred != IEC_SAMPLE_RATE && trackFactory.canOpen(IEC_SAMPLE_RATE, channels))
+            if (isFortyFourOneTrueHd(format)) {
+                trackFactory.canOpen(preferred, channels)
+            } else {
+                trackFactory.canOpen(preferred, channels) ||
+                    (preferred != IEC_SAMPLE_RATE && trackFactory.canOpen(IEC_SAMPLE_RATE, channels))
+            }
         } else {
             trackFactory.iec61937Ready()
         }
@@ -375,7 +379,12 @@ internal class IecPassthroughAudioSink(
     private fun openIec(format: Format): Boolean {
         val preferredRate = iecSampleRateFor(format)
         if (openIecAt(format, preferredRate)) return true
+        if (isFortyFourOneTrueHd(format)) return false
         return preferredRate != IEC_SAMPLE_RATE && openIecAt(format, IEC_SAMPLE_RATE)
+    }
+
+    private fun isFortyFourOneTrueHd(format: Format): Boolean {
+        return isTrueHd(format) && format.sampleRate == 44_100
     }
 
     private fun iecSampleRateFor(format: Format): Int {

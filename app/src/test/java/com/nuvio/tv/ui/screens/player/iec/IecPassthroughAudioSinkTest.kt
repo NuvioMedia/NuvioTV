@@ -351,14 +351,53 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
-    fun trueHd_44k1_fallsBackTo192000When176400IsRefused() {
-        val track = FakeIecAudioTrack(192_000, 16, payload = HbrPayload.MAT)
-        val factory = ReadyFactory(track, refuseRate = 176_400)
-        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+    fun trueHd_44k1_doesNotOpen192000When176400IsRefused() {
+        val inner = RecordingSink()
+        val factory = ReadyFactory(
+            FakeIecAudioTrack(192_000, 16, payload = HbrPayload.MAT),
+            refuseRate = 176_400
+        )
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        val format = trueHdFormat(sampleRate = 44_100)
+        sink.configure(format, 0, null)
+        assertFalse(sink.isIecActive)
+        assertEquals(listOf(176_400), factory.openedRates)
+        assertEquals(1, inner.configured)
+        assertEquals(format, inner.lastConfigured)
+    }
+
+    @Test
+    fun trueHd_44k1_doesNotClaimHbrWhenOnly192000CanOpen() {
+        val factory = ReadyFactory(
+            FakeIecAudioTrack(192_000, 16, payload = HbrPayload.MAT),
+            canOpenAt = { it == 192_000 },
+            refuseRate = 176_400
+        )
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(innerSupport = AudioSink.SINK_FORMAT_UNSUPPORTED),
+            trackFactory = factory
+        )
+        val format = trueHdFormat(sampleRate = 44_100)
+        assertFalse(sink.claimsHbr(format))
+        assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(format))
+        assertTrue(sink.claimsHbr(trueHdFormat()))
+    }
+
+    @Test
+    fun trueHd_44k1_refused176400_forwardsTheAccessUnitInsteadOfA192000Clock() {
+        val inner = RecordingSink()
+        val factory = ReadyFactory(
+            FakeIecAudioTrack(192_000, 16, payload = HbrPayload.MAT),
+            refuseRate = 176_400
+        )
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
         sink.configure(trueHdFormat(sampleRate = 44_100), 0, null)
-        assertTrue(sink.isIecActive)
-        assertEquals(listOf(176_400, 192_000), factory.openedRates)
-        assertEquals(192_000, factory.lastSampleRate)
+        sink.play()
+        val au = TrueHdMatPackerTest.trueHdAu(frameTime = 0, major = true, ratebits = 8)
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), 0L, 1))
+        assertFalse(sink.isIecActive)
+        assertEquals(1, inner.buffers)
+        assertEquals(listOf(176_400), factory.openedRates)
     }
 
     @Test
@@ -1221,6 +1260,10 @@ class IecPassthroughAudioSinkTest {
     ) : AudioSink {
         var buffers: Int = 0
             private set
+        var configured: Int = 0
+            private set
+        var lastConfigured: Format? = null
+            private set
         override fun setListener(listener: AudioSink.Listener) = Unit
         override fun supportsFormat(format: Format): Boolean = innerSupport != AudioSink.SINK_FORMAT_UNSUPPORTED
         override fun getFormatSupport(format: Format): Int = innerSupport
@@ -1229,6 +1272,8 @@ class IecPassthroughAudioSinkTest {
         override fun getCurrentPositionUs(sourceEnded: Boolean): Long = 0L
         override fun getAudioTrackBufferSizeUs(): Long = C.TIME_UNSET
         override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
+            configured++
+            lastConfigured = inputFormat
             if (configureThrows) throw AudioSink.ConfigurationException("refused", inputFormat)
         }
         override fun play() = Unit
