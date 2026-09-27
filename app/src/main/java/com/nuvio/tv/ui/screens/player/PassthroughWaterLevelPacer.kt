@@ -121,10 +121,7 @@ internal class PassthroughWaterLevelPacer(
     }
 
     fun writeAheadCeilingUs(): Long {
-        // IEC 61937 HBR is CBR at 192 kHz, so the HAL cannot sprint through
-        // silence. Keep the 200 ms water level. RAW TrueHD still needs the
-        // looser ceiling because access-unit size collapses in silence.
-        if (iecPacked) return MAX_WATER_LEVEL_US
+        if (iecPacked) return IEC_WRITE_AHEAD_US
         return if (sampleMimeType == MimeTypes.AUDIO_TRUEHD) {
             TRUEHD_WRITE_AHEAD_US
         } else {
@@ -144,6 +141,7 @@ internal class PassthroughWaterLevelPacer(
     companion object {
         const val MAX_WATER_LEVEL_US = 200_000L
         const val TRUEHD_WRITE_AHEAD_US = 800_000L
+        const val IEC_WRITE_AHEAD_US = 1_000_000L
         const val POSITION_LEAD_SLACK_US = 100_000L
 
         fun isPassthroughMime(mimeType: String?): Boolean {

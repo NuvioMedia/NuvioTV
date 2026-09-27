@@ -6,6 +6,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
+import com.nuvio.tv.ui.screens.player.iec.IecPassthroughAudioSink
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -67,11 +68,105 @@ class PassthroughWaterLevelPacerTest {
     }
 
     @Test
-    fun trueHd_usesTwoHundredMsWhenIecPacked() {
+    fun iecPacked_matchesTheOneSecondTrackBuffer() {
+        assertEquals(
+            IecPassthroughAudioSink.IEC_BUFFER_TARGET_MS * 1_000L,
+            PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US
+        )
+    }
+
+    @Test
+    fun iecPacked_trueHdAndDtsHd_useTheOneSecondCeiling() {
+        val trueHd = PassthroughWaterLevelPacer()
+        trueHd.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
+        trueHd.setIecPacked(true)
+        assertEquals(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US, trueHd.writeAheadCeilingUs())
+
+        val dtsHd = PassthroughWaterLevelPacer()
+        dtsHd.onFormat(mime(MimeTypes.AUDIO_DTS_HD))
+        dtsHd.setIecPacked(true)
+        assertEquals(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US, dtsHd.writeAheadCeilingUs())
+    }
+
+    @Test
+    fun iecPacked_prestart_fillsOneSecondThenRejects() {
         val pacer = PassthroughWaterLevelPacer()
         pacer.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
         pacer.setIecPacked(true)
-        assertEquals(PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US, pacer.writeAheadCeilingUs())
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        assertTrue(pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US, 0L, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US + 1L, 0L, 1f))
+    }
+
+    @Test
+    fun iecPacked_playing_keepsOneSecondAheadOfWallClock() {
+        val pacer = PassthroughWaterLevelPacer()
+        pacer.onFormat(mime(MimeTypes.AUDIO_DTS_HD))
+        pacer.setIecPacked(true)
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        assertTrue(pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US, 0L, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US + 1L, 0L, 1f))
+        assertTrue(
+            pacer.shouldAcceptBuffer(
+                500_000L + PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US,
+                500L,
+                1f
+            )
+        )
+        assertFalse(
+            pacer.shouldAcceptBuffer(
+                500_000L + PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US + 1L,
+                500L,
+                1f
+            )
+        )
+    }
+
+    @Test
+    fun iecPacked_pause_doesNotGrowTheOneSecondWindow() {
+        val pacer = PassthroughWaterLevelPacer()
+        pacer.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
+        pacer.setIecPacked(true)
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        pacer.onPause(400L)
+        val pausedLimit = 400_000L + PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US
+        assertTrue(pacer.shouldAcceptBuffer(pausedLimit, 20_000L, 1f))
+        assertFalse(pacer.shouldAcceptBuffer(pausedLimit + 1L, 20_000L, 1f))
+    }
+
+    @Test
+    fun leavingIec_restoresTheRawCeiling() {
+        val trueHd = PassthroughWaterLevelPacer()
+        trueHd.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
+        trueHd.setIecPacked(true)
+        assertEquals(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US, trueHd.writeAheadCeilingUs())
+        trueHd.setIecPacked(false)
+        assertEquals(PassthroughWaterLevelPacer.TRUEHD_WRITE_AHEAD_US, trueHd.writeAheadCeilingUs())
+
+        val dts = PassthroughWaterLevelPacer()
+        dts.onFormat(mime(MimeTypes.AUDIO_DTS_HD))
+        dts.setIecPacked(true)
+        dts.setIecPacked(false)
+        assertEquals(PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US, dts.writeAheadCeilingUs())
+    }
+
+    @Test
+    fun iecPacked_reportedPositionStillCannotRunAheadOfWrittenPts() {
+        val pacer = PassthroughWaterLevelPacer()
+        pacer.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
+        pacer.setIecPacked(true)
+        pacer.onPlay(0L)
+        assertTrue(pacer.shouldAcceptBuffer(0L, 0L, 1f))
+        pacer.onBufferAccepted(0L)
+        assertTrue(pacer.shouldAcceptBuffer(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US, 0L, 1f))
+        pacer.onBufferAccepted(PassthroughWaterLevelPacer.IEC_WRITE_AHEAD_US)
+        assertEquals(0L, pacer.clampPositionUs(0L, 0L, 1f))
+        assertEquals(
+            PassthroughWaterLevelPacer.POSITION_LEAD_SLACK_US,
+            pacer.clampPositionUs(5_000_000L, 0L, 1f)
+        )
     }
 
     @Test
