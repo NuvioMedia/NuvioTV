@@ -15,7 +15,11 @@ import kotlinx.coroutines.yield
 internal fun PlayerRuntimeController.beginStreamFallbackSession(stream: Stream, streams: List<Stream>) {
     cancelStreamFallback()
     streamFallbackSession = if (stream.isUsenet()) {
-        StreamFallbackSession(stream, streams, isEnabled = { UsenetSettings.read(context).fallbackEnabled })
+        StreamFallbackSession(
+            stream, streams,
+            maxAttempts = UsenetSettings.read(context).fallbackMaxAttempts,
+            isEnabled = { UsenetSettings.read(context).fallbackEnabled }
+        )
     } else null
     streamFallbackResumePosition = null
 }

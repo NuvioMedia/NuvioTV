@@ -1,5 +1,7 @@
 <resources>
     <string name="usenet_title">Usenet streaming</string>
+    <string name="usenet_fallback_max_attempts">Maximum Fallback Attempts</string>
+    <string name="usenet_fallback_max_attempts_description">Try up to this many alternative streams when automatic fallback is enabled (1–50). The two-minute preparation budget still applies. Changes apply to the next stream selection.</string>
     <string name="usenet_prefetch_results">Prefetch First Usenet Result</string>
     <string name="usenet_prefetch_results_description">Prepare the first Usenet result immediately on the stream results page and keep it ready for up to two minutes. Uses provider connections and some bandwidth.</string>
     <string name="usenet_cache_nzb">Cache NZB Files</string>

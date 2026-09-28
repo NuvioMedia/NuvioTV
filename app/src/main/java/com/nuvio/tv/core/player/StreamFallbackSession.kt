@@ -34,7 +34,7 @@ internal class StreamFallbackSession(
     var current: Stream = selected
         private set
     val canAdvance: Boolean
-        get() = enabled && !engineFailed && preparationSpentMs < 120_000L && attempts < maxAttempts.coerceIn(0, 10) &&
+        get() = enabled && !engineFailed && preparationSpentMs < 120_000L && attempts < maxAttempts.coerceIn(0, 50) &&
             remaining.any { eligible(it) }
 
     private fun eligible(stream: Stream) = stream.canAutoFallback() &&
@@ -50,7 +50,7 @@ internal class StreamFallbackSession(
 
     fun next(): Stream? {
         if (!canAdvance) return null
-        while (attempts < maxAttempts.coerceIn(0, 10) && remaining.isNotEmpty()) {
+        while (attempts < maxAttempts.coerceIn(0, 50) && remaining.isNotEmpty()) {
             val candidate = remaining.removeFirst()
             if (!eligible(candidate)) continue
             attempted.add(candidate.fallbackKey())

@@ -16,7 +16,8 @@ data class UsenetConfiguration(
     val fastNzbFetch: Boolean = true,
     val prefetchResults: Boolean = false,
     val cacheNzb: Boolean = true,
-    val fallbackEnabled: Boolean = false
+    val fallbackEnabled: Boolean = false,
+    val fallbackMaxAttempts: Int = 5
 )
 
 /** Device-local tuning; never contains provider credentials or NZB URLs. */
@@ -29,6 +30,7 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
     fun update(value: UsenetConfiguration) {
         require(value.profile in listOf("low-memory", "balanced", "throughput"))
         require(value.readAhead in 0..512 && value.maxConnections in 0..4096)
+        require(value.fallbackMaxAttempts in 1..50)
         preferences.edit().putString("profile", value.profile)
             .putInt("readAhead", value.readAhead).putInt("maxConnections", value.maxConnections)
             .putBoolean("prewarmOnLaunch", value.prewarmOnLaunch)
@@ -36,7 +38,8 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
             .putBoolean("fastNzbFetch", value.fastNzbFetch)
             .putBoolean("prefetchResults", value.prefetchResults)
             .putBoolean("cacheNzb", value.cacheNzb)
-            .putBoolean("fallbackEnabled", value.fallbackEnabled).apply()
+            .putBoolean("fallbackEnabled", value.fallbackEnabled)
+            .putInt("fallbackMaxAttempts", value.fallbackMaxAttempts).apply()
         state.value = value
         UsenetSidecar.get(context).settingsChanged()
     }
@@ -53,7 +56,8 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
                 fastNzbFetch = prefs.getBoolean("fastNzbFetch", true),
                 prefetchResults = prefs.getBoolean("prefetchResults", false),
                 cacheNzb = prefs.getBoolean("cacheNzb", true),
-                fallbackEnabled = prefs.getBoolean("fallbackEnabled", false)
+                fallbackEnabled = prefs.getBoolean("fallbackEnabled", false),
+                fallbackMaxAttempts = prefs.getInt("fallbackMaxAttempts", 5).coerceIn(1, 50)
             )
         }
     }

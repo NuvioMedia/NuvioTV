@@ -8,6 +8,8 @@ import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.Job
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -33,6 +35,22 @@ class UsenetSettingsTest {
             every { UsenetSidecar.get(context) } returns sidecar
             every { sidecar.settingsChanged() } returns Job()
             val settings = UsenetSettings(context)
+            assertEquals(5, UsenetConfiguration().fallbackMaxAttempts)
+            assertEquals(5, settings.settings.value.fallbackMaxAttempts)
+            settings.update(settings.settings.value.copy(fallbackMaxAttempts = 50))
+            assertEquals(50, settings.settings.value.fallbackMaxAttempts)
+            assertEquals(50, UsenetSettings(context).settings.value.fallbackMaxAttempts)
+            settings.update(settings.settings.value.copy(fallbackMaxAttempts = 1))
+            assertEquals(1, UsenetSettings(context).settings.value.fallbackMaxAttempts)
+            for (invalid in listOf(0, 51)) {
+                assertThrows(IllegalArgumentException::class.java) {
+                    settings.update(settings.settings.value.copy(fallbackMaxAttempts = invalid))
+                }
+            }
+            values["fallbackMaxAttempts"] = 100
+            assertEquals(50, UsenetSettings.read(context).fallbackMaxAttempts)
+            values["fallbackMaxAttempts"] = -1
+            assertEquals(1, UsenetSettings.read(context).fallbackMaxAttempts)
             assertFalse(UsenetConfiguration().fallbackEnabled)
             assertFalse(settings.settings.value.fallbackEnabled)
             assertFalse(UsenetConfiguration().prewarmOnLaunch)
