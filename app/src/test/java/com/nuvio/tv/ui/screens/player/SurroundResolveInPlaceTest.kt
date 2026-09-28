@@ -18,7 +18,6 @@ import java.nio.ByteBuffer
 
 class SurroundResolveInPlaceTest {
 
-    // A chain snapshot taken while HDMI is down answers false to every encoding.
     @Test
     fun snapshot_deniesEveryEncoding_onlyWhenAllFiveAreFalse() {
         val allFalse = DirectSupport(ac3 = false, eac3 = false, trueHd = false, dts = false, dtsHd = false)
@@ -30,12 +29,9 @@ class SurroundResolveInPlaceTest {
         val onlyTrueHd = allFalse.copy(trueHd = true)
         assertFalse(AudioChainProbe.ChainSnapshot(direct = onlyTrueHd, maxPcmChannels = 8).deniesEveryEncoding())
 
-        // No direct-support answer at all (pre-Q) is not a denial.
         assertFalse(AudioChainProbe.ChainSnapshot(direct = null, maxPcmChannels = 2).deniesEveryEncoding())
     }
 
-    // The policy handed to the sink at build can be replaced in place, and the sink's answer
-    // for a passthrough format follows it without a rebuild.
     @Test
     fun setPassthroughPolicy_changesFormatSupport_andReportsWhetherItChanged() {
         val denyAll = AudioPassthroughPolicy(
@@ -51,17 +47,14 @@ class SurroundResolveInPlaceTest {
         assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(trueHd))
         assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(eac3))
 
-        // Same policy again: nothing to do, and the caller should not nudge the player.
         assertFalse(sink.setPassthroughPolicy(AudioPassthroughPolicy.ALLOW_ALL))
         assertFalse(sink.setPassthroughPolicy(AudioPassthroughPolicy()))
 
-        // Back to a denial: the sink answers unsupported again.
         assertTrue(sink.setPassthroughPolicy(denyAll.copy(allowEac3 = true)))
         assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(trueHd))
         assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(eac3))
     }
 
-    // PCM is never a passthrough candidate, so the policy does not touch it either way.
     @Test
     fun setPassthroughPolicy_leavesPcmAlone() {
         val sink = PlaybackSpeedAwareAudioSink(

@@ -22,8 +22,6 @@ class AudioPassthroughPolicyTest {
         MimeTypes.AUDIO_AC4
     )
 
-    // ── The load-bearing guarantee: the default must change nothing ──
-
     @Test
     fun allowAll_deniesNothing_forEveryBitstreamFormat() {
         for (mime in allBitstreamMimeTypes) {
@@ -47,8 +45,6 @@ class AudioPassthroughPolicyTest {
         assertEquals(AudioPassthroughPolicy.ALLOW_ALL, AudioPassthroughPolicy())
         assertTrue(AudioPassthroughPolicy().allowsEverything())
     }
-
-    // ── Each switch denies its own group and nothing else ──
 
     @Test
     fun eachSwitchDeniesExactlyItsOwnGroup() {
@@ -94,13 +90,10 @@ class AudioPassthroughPolicyTest {
         assertTrue(policy.deniesPassthrough(MimeTypes.AUDIO_TRUEHD))
         assertTrue(policy.deniesPassthrough(MimeTypes.AUDIO_DTS))
         assertTrue(policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
-        // No fallback decoder exists for these, so they stay on the platform's answer.
         assertFalse(policy.deniesPassthrough(MimeTypes.AUDIO_DTS_EXPRESS))
         assertFalse(policy.deniesPassthrough(MimeTypes.AUDIO_DTS_X))
         assertFalse(policy.deniesPassthrough(MimeTypes.AUDIO_AC4))
     }
-
-    // ── The prefix trap ──
 
     @Test
     fun dtsExpress_isNotMatchedAsDtsHd_despiteSharingItsPrefix() {
@@ -114,8 +107,6 @@ class AudioPassthroughPolicyTest {
                 .deniesPassthrough(MimeTypes.AUDIO_DTS_EXPRESS)
         )
     }
-
-    // ── The Decoder Priority = "Device only" guard ──
 
     @Test
     fun noSoftwareDecoders_deniesNothing_evenWithEverySwitchOff() {
@@ -137,9 +128,6 @@ class AudioPassthroughPolicyTest {
 
     @Test
     fun noSoftwareDecoders_isInert_soAllowsEverythingReportsTrue() {
-        // Nothing is deniable without a fallback decoder, so the policy is inert even with
-        // every switch off or a learned rejection present. The player build gates its
-        // SURROUND_RESOLVE log on this; it must agree with deniesPassthrough, not the raw flags.
         val switchesOff = AudioPassthroughPolicy(
             allowAc3 = false,
             allowEac3 = false,
@@ -171,8 +159,6 @@ class AudioPassthroughPolicyTest {
             assertEquals("$policy", !anythingDenied, policy.allowsEverything())
         }
     }
-
-    // ── Group mapping ──
 
     @Test
     fun everyDeniableMimeHasABundledFfmpegDecoder() {
@@ -207,8 +193,6 @@ class AudioPassthroughPolicyTest {
         assertNull(AudioPassthroughPolicy.groupOf(MimeTypes.AUDIO_RAW))
         assertNull(AudioPassthroughPolicy.groupOf(null))
     }
-
-    // ── Learned rejections deny independently of the user switches ──
 
     @Test
     fun learnedRejection_deniesGroup_evenWhenUserSwitchIsOn() {

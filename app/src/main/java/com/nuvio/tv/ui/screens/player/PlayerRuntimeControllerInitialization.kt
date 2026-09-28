@@ -214,8 +214,6 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (rememberAudioDelayPerDeviceEnabled) {
                 applyStoredAudioDelayForCurrentRouteIfEnabled()
             }
-            // Re-verify learned passthrough denials for this route with a background open,
-            // once per process per route. Nothing runs when nothing is learned.
             currentAudioOutputRoute?.let { route ->
                 if (!route.isBluetooth && _exoPlayer == null) {
                     AudioRejectionReverifier.start(route.key, playerSettings.audioRejectionsConfirmed) { entry ->
@@ -875,8 +873,6 @@ internal fun PlayerRuntimeController.initializePlayer(
             val codecSelector = createDolbyVisionFallbackCodecSelector(
                 convertToDv81Active = convertToDv81Active
             )
-            // #3287: a policy-denied audio format failed decoder init on an earlier
-            // build of this stream; prefer the FFmpeg audio renderer so it decodes.
             val preferFfmpegAudioActive = preferFfmpegAudioStreamUrls.contains(url)
             // Bluetooth media sink (A2DP / LE Audio): Media3 only advertises PCM. Do not attempt
             // optical/HDMI passthrough — decode to PCM and let the BT stack encode SBC/AAC/aptX/LDAC.
@@ -914,11 +910,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                 )
             }
 
-            // ── Surround format resolution (#3287) ──
-            // One resolution per player build: which formats may bitstream, how denied
-            // formats are handled, and the app-side decode channel target. Bluetooth
-            // skips the probe and resolver entirely - the PCM machinery above already
-            // owns that route, and the policy stays ALLOW_ALL there.
             val currentRouteKey = currentAudioOutputRoute?.key
             val softwareDecodersAvailable =
                 effectiveDecoderPriority != DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
@@ -933,8 +924,6 @@ internal fun PlayerRuntimeController.initializePlayer(
             surroundResolveInputs = surroundInputs
             val surround = resolveSurroundForRoute(context, playerSettings, surroundInputs)
             val surroundResolution = surround.resolution
-            // Tunnel dead-clock memo: re-arm this process from the store, but only for the
-            // chain that learned it (firmware, output port and advertised claims must match).
             tunnelDeadClockSignature = if (isBluetoothAudioOutput || currentRouteKey == null) {
                 null
             } else {
@@ -959,8 +948,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                     )
                 }
             }
-            // Denied formats decode on the app path at the resolved channel target (the
-            // downmix rule is in resolveSurroundForRoute).
             val surroundTargetChannels = surround.targetChannels
             val surroundDownmixEnabled = surround.downmixEnabled
             val surroundAudioOutputChannels = surround.audioOutputChannels
@@ -983,15 +970,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                 )
             }
 
-            // Expose the resolved policy to error recovery (tryDeniedAudioFfmpegFallback).
             currentAudioPassthroughPolicy = surroundResolution.policy
             lastAppliedSurroundResolve = surround
 
-            // Denied formats to re-encode to AC-3 instead of decoding to PCM (stage 3 of
-            // #3287). Empty unless the resolver prefers transcode for this chain (Manual:
-            // the user's row; Auto: a 2-channel chain that claims AC-3), so nothing changes
-            // on a multichannel-PCM chain, on Bluetooth, or under Force AC-3. The renderer
-            // still checks that the sink takes AC-3 before it transcodes.
             val deniedTranscodeMimes = surround.deniedTranscodeMimes
             if (deniedTranscodeMimes.isNotEmpty()) {
                 Log.i(
@@ -1535,8 +1516,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
                         refreshStableProgressResetGate()
                         cancelFirstFrameWatchdog()
-                        // The tunnel clock watchdog outlives the first frame: on Amlogic the codec
-                        // reports a rendered frame within 50 ms while the tunnel renderer holds it.
                         _uiState.update {
                             it.copy(
                                 showLoadingOverlay = false,
@@ -1587,13 +1566,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                             return
                         }
 
-                        // Learn AudioTrack-open rejections (#3287): a chain that advertises a
-                        // codec but refuses it at open() is recorded per route and format
-                        // group. The record is held until this title's fallback rebuild has
-                        // opened an audio track (onAudioTrackInitialized below), so a dead
-                        // audio server or a one-off HDMI glitch teaches nothing, and a learned
-                        // denial is re-verified by a background open on later launches.
-                        // Observation only - the recovery ladder below is unchanged.
                         if (error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED) {
                             val failingMime = (error as? androidx.media3.exoplayer.ExoPlaybackException)
                                 ?.rendererFormat?.sampleMimeType
@@ -1607,9 +1579,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                             }
                         }
 
-                        // #3287: decoder init failed on a policy-denied audio format that was
-                        // selected under an allowed MIME (hybrid track upgraded mid-stream).
-                        // Rebuild with FFmpeg audio preferred so the family decodes.
                         if (tryDeniedAudioFfmpegFallback(error)) {
                             return
                         }
@@ -1648,9 +1617,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                         // fallback ladder as a DV decoder failure instead of burning the
                         // audio fallbacks (safe-audio/audio-disabled) on it — they rebuild
                         // the player with the same broken conversion and fail identically.
-                        // The stuck-buffering watchdog also arrives as 8000 (ExoPlayerImplInternal
-                        // maps its IllegalStateException to FAILED_RUNTIME_CHECK) but it is a load
-                        // stall, not a bitstream failure, so it must not drop Dolby Vision.
                         if (error.errorCode == PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK &&
                             !error.isStuckBufferingWatchdog() &&
                             (isExperimentalDv7ToDv81ActiveForCurrentPlayback ||
@@ -1899,8 +1865,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                         eventTime: AnalyticsListener.EventTime,
                         audioTrackConfig: androidx.media3.exoplayer.audio.AudioSink.AudioTrackConfig
                     ) {
-                        // An audio track opened for this title after a passthrough open was
-                        // refused: the audio server is alive, so the refusal was the format.
                         val entry = AudioRejectionReverifier.ledger.takePendingFor(currentStreamUrl) ?: return
                         val routeKey = AudioRejectionLedger.routeOf(entry) ?: return
                         val group = AudioRejectionLedger.groupOf(entry) ?: return
@@ -2421,8 +2385,6 @@ private class SubtitleOffsetRenderersFactory(
         var speedAwareSink: PlaybackSpeedAwareAudioSink? = null
         val iecAudioSink = IecPassthroughAudioSink(
             sink = baseAudioSink,
-            // Bluetooth cannot carry IEC and the outer sink already refuses direct playback
-            // there; disabling IEC here also keeps the probe from opening a direct stream.
             hbrIecEnabled = !useSystemPassthrough && !forceOpticalPassthrough && !bluetoothForcePcm,
             onIecBecameReady = {
                 Handler(Looper.getMainLooper()).post {
@@ -2858,12 +2820,6 @@ private fun DefaultRenderersFactory.applyMapDv7ToHevcIfSupported(enabled: Boolea
     }.getOrElse { this }
 }
 
-/**
- * HDMI encodings often arrive after the first AudioTrack, so the selector starts
- * on PCM/AAC and reselects AC-3 / DTS / TrueHD seconds later. If the audio
- * renderer can handle anything, treat every bitstream passthrough mime as HANDLED
- * so the first selection is the passthrough track.
- */
 private fun promotePassthroughAudioWhenRendererAlive(
     mappedTrackInfo: androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo,
     rendererFormatSupports: Array<out Array<out IntArray>>,
@@ -2912,17 +2868,6 @@ private fun promotePassthroughAudioWhenRendererAlive(
     }
 }
 
-// Tunnelled video releases frames against the platform's hw_av_sync audio clock, so the
-// selected audio track must be one the HAL will clock. Clear the tunnelling capability of
-// tracks that will not be: lossless HBR formats whichever path carries them (no HAL has
-// been seen to clock an app-packed IEC 61937 stream, and a RAW TrueHD open under the tunnel
-// has left one box's audio dead until a reboot) and tracks of an audio class already seen
-// with a dead tunnel clock on this chain. Whether a HAL clocks software PCM
-// under tunnelling is a device fact: some never start that clock, while some TVs only
-// render 4K video through the tunnel, so FFmpeg-decoded tracks keep their tunnel until the
-// dead-clock watchdog has seen the PCM class fail on this chain and memoised it. With the
-// audio side cleared, DefaultTrackSelector leaves both renderers untunnelled and the video
-// plays through the normal pipeline instead of holding every frame.
 private fun demoteAudioTunnelingWhereItCannotBeClocked(
     mappedTrackInfo: androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo,
     rendererFormatSupports: Array<out Array<out IntArray>>,
@@ -2941,8 +2886,6 @@ private fun demoteAudioTunnelingWhereItCannotBeClocked(
             for (trackIndex in 0 until group.length) {
                 val format = group.getFormat(trackIndex)
                 val reason = when {
-                    // The FFmpeg renderer hands the sink PCM whatever the bitstream is, so its
-                    // tracks belong to the PCM class regardless of what the sink could pass through.
                     isFfmpegRenderer ->
                         if (deadClockAudioClasses.contains(PlaybackSpeedAwareAudioSink.TUNNEL_AUDIO_CLASS_PCM)) {
                             "dead-tunnel-clock"
@@ -2951,8 +2894,6 @@ private fun demoteAudioTunnelingWhereItCannotBeClocked(
                         }
                     audioSink == null -> null
                     audioSink.demandsNonTunnelledVideo(format) -> "iec-hbr"
-                    // Whatever path HBR leaves by, it is kept out of the tunnel; this catches the
-                    // starts where the IEC rule cannot fire (see the sink for the reason).
                     audioSink.hbrDemandsNonTunnelledVideo(format) -> "hbr-format"
                     deadClockAudioClasses.isNotEmpty() &&
                         deadClockAudioClasses.contains(audioSink.tunnelAudioClass(format)) -> "dead-tunnel-clock"
@@ -3005,7 +2946,6 @@ private val cappedPassthroughBufferSizeProvider =
         maxOf(minBuffer, minOf(size, capBytes))
     }
 
-/** Per-codec RAW AudioTrack buffer cap in bytes. */
 private fun passthroughBufferCapBytes(encoding: Int): Int {
     return when (encoding) {
         C.ENCODING_DOLBY_TRUEHD -> 2 * 61_440

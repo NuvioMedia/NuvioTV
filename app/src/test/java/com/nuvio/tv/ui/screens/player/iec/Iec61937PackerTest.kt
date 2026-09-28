@@ -9,8 +9,6 @@ import java.nio.ByteOrder
 
 class Iec61937PackerTest {
 
-    // The word wide swap has to be byte identical to a pairwise swap, including the tail a burst
-    // size leaves when it is not a multiple of eight.
     @Test
     fun packTrueHd_payloadMatchesAPairwiseSwap() {
         val random = java.util.Random(20260905L)
@@ -23,8 +21,6 @@ class Iec61937PackerTest {
         )
     }
 
-    // auSize 1 leaves a payload that is not a multiple of eight, so this covers the scalar tail
-    // the word wide loop cannot reach.
     @Test
     fun packDtsHd_payloadUnswapsToTheStartCode() {
         val random = java.util.Random(20260906L)
@@ -120,7 +116,6 @@ class Iec61937PackerTest {
         }
     }
 
-    // The DTS-HD packer as it was before packDtsHdInto existed, kept verbatim as the oracle.
     private fun referencePackDtsHd(accessUnit: ByteArray, iecPeriod: Int): ByteArray {
         val startCode = byteArrayOf(0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFE.toByte(), 0xFE.toByte())
         val wrappedSize = Iec61937Packer.DTSHD_START_CODE_SIZE + accessUnit.size

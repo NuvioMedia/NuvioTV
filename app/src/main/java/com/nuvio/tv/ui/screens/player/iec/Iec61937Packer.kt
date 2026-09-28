@@ -29,8 +29,6 @@ internal object Iec61937Packer {
         return packTrueHdInPlace(matFrame.copyOf())
     }
 
-    // As packTrueHd, but writes the preamble and the byte swap into matFrame itself and
-    // returns it. The caller gives up the frame's original content.
     fun packTrueHdInPlace(matFrame: ByteArray): ByteArray {
         require(matFrame.size == TRUEHD_IEC_SIZE) {
             "MAT frame must be $TRUEHD_IEC_SIZE bytes, was ${matFrame.size}"
@@ -44,21 +42,12 @@ internal object Iec61937Packer {
         return matFrame
     }
 
-    /**
-     * Packs a DTS-HD / DTS:X access unit into an IEC 61937-5 burst.
-     *
-     * [iecPeriod] is 8192 for 8-channel 192 kHz (MA) and 2048 for 2-channel
-     * 192 kHz (HR). Burst size is period * 4.
-     */
     fun packDtsHd(accessUnit: ByteArray, iecPeriod: Int): ByteArray {
         val out = ByteArray(iecPeriod shl 2)
         packDtsHdInto(ByteBuffer.wrap(accessUnit), iecPeriod, out)
         return out
     }
 
-    // Packs the access unit (position to limit) into out, which must be iecPeriod * 4 bytes.
-    // out is zero-filled first so a recycled burst carries nothing from its previous use;
-    // the access unit is consumed. Output is byte-identical to packDtsHd.
     fun packDtsHdInto(accessUnit: ByteBuffer, iecPeriod: Int, out: ByteArray) {
         val burstSize = iecPeriod shl 2
         require(out.size == burstSize) {
@@ -77,8 +66,6 @@ internal object Iec61937Packer {
         header.putShort(6, length.toShort())
         val payloadBytes = wrappedSize + (wrappedSize and 1)
         val copy = payloadBytes.coerceAtMost(burstSize - DATA_OFFSET)
-        // The first min(copy, wrappedSize) bytes of [start code, size hi, size lo, access unit],
-        // written straight into the burst instead of through an intermediate array.
         val wrappedCopy = copy.coerceAtMost(wrappedSize)
         System.arraycopy(
             dtsHdStartCode, 0, out, DATA_OFFSET, wrappedCopy.coerceAtMost(dtsHdStartCode.size)
@@ -100,10 +87,6 @@ internal object Iec61937Packer {
         return if (channelCount > 2) 8 else 2
     }
 
-    // IEC 61937-5 type 0x11 (DTS-HD) Pc subtype is the burst period.
-    // Periods that are legal UHD frame sizes but missing from the table
-    // (480-sample 8ch = 7680) keep the payload length honest and fall back
-    // to subtype 4; inventing a Pc code would mis-frame the receiver.
     fun dtsHdBurstSubtype(iecPeriod: Int): Int = when (iecPeriod) {
         512 -> 0
         1024 -> 1
@@ -119,8 +102,6 @@ internal object Iec61937Packer {
     private fun swapEndian16(data: ByteArray, offset: Int, length: Int) {
         val end = (offset + (length and 0x7FFFFFFE)).coerceAtMost(data.size)
         var i = offset
-        // Four 16 bit swaps per pass against one load and one store, which on a 61440 byte MAT
-        // frame is 7679 iterations rather than 30716.
         val wordEnd = end - ((end - i) % Long.SIZE_BYTES)
         if (wordEnd > i) {
             val words = ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN)

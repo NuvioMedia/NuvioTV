@@ -10,7 +10,6 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.SurroundChannelTarget
 import com.nuvio.tv.data.local.SurroundFormatMode
 
-/** The build-time facts a surround resolution depends on besides the settings and the chain. */
 internal data class SurroundResolveInputs(
     val routeKey: String?,
     val isBluetooth: Boolean,
@@ -20,7 +19,6 @@ internal data class SurroundResolveInputs(
     val effectiveAudioOutputChannels: AudioOutputChannels
 )
 
-/** One surround resolution: what may bitstream, the app-side channel target, and what is transcoded. */
 internal data class SurroundResolveResult(
     val resolution: SurroundFormatResolver.Resolution,
     val targetChannels: Int?,
@@ -29,12 +27,6 @@ internal data class SurroundResolveResult(
     val deniedTranscodeMimes: Set<String>
 )
 
-// One resolution per player build: which formats may bitstream, how denied formats are
-// handled, and the app-side decode channel target. Bluetooth skips the probe and resolver
-// entirely - the PCM machinery already owns that route, and the policy stays ALLOW_ALL there.
-// Also called again from the audio route callback: a snapshot taken while the HDMI link was
-// down (a display mode change at title start hotplugs it) denies everything, and the title
-// that is playing must not be left with that answer.
 internal fun resolveSurroundForRoute(
     context: Context,
     playerSettings: PlayerSettings,
@@ -73,9 +65,6 @@ internal fun resolveSurroundForRoute(
             learnedDeniedGroups = learnedDeniedGroups
         )
     }
-    // Denied formats decode on the app path at the resolved channel target. The
-    // user's own downmix target still wins downward: an equal-or-lower layout the
-    // user chose is kept; only a higher layout is capped to the resolved target.
     val surroundTargetChannels = surroundResolution.inferredChannelTarget
     val surroundDownmixEnabled = inputs.effectiveDownmixEnabled || surroundTargetChannels != null
     val surroundAudioOutputChannels = when {
@@ -99,9 +88,6 @@ internal fun resolveSurroundForRoute(
     )
 }
 
-// Resolve again for the title that is playing, after the audio route callback dropped the
-// chain snapshot. Same shape as applyBluetoothAudioRouteInPlace: update the sink and the FFmpeg
-// renderer in place, then nudge Media3 to reselect the audio track. Never rebuilds the player.
 internal fun PlayerRuntimeController.applySurroundResolutionInPlace(reason: String) {
     if (_exoPlayer == null || isUsingMpvEngine()) return
     val inputs = surroundResolveInputs ?: return

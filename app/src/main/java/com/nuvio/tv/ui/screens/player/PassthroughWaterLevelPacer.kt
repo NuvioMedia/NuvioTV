@@ -102,11 +102,6 @@ internal class PassthroughWaterLevelPacer(
     }
 
     fun clampPositionUs(sinkPositionUs: Long, nowMs: Long, playbackSpeed: Float): Long {
-        // A sink with nothing to report returns CURRENT_POSITION_NOT_SET (Long.MIN_VALUE), a
-        // different sentinel from TIME_UNSET (Long.MIN_VALUE + 1). Anchoring on it would make
-        // every later wall-clock cap hugely negative, and the renderer's max(current, clamped)
-        // would freeze the audio clock until the next flush. The IEC sink reports it whenever
-        // startPtsUs is unset, including after handleDiscontinuity while playing.
         if (sinkPositionUs == C.TIME_UNSET || sinkPositionUs == AudioSink.CURRENT_POSITION_NOT_SET) {
             return sinkPositionUs
         }

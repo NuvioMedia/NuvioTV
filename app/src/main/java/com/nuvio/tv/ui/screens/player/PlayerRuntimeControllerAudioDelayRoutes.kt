@@ -142,15 +142,9 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
         if (newRoute != null) {
             currentAudioOutputRoute = newRoute
         }
-        // A device came or went: learned denials are re-verified on the next player build,
-        // and the cached chain snapshot is dropped. The snapshot is per route key for the
-        // life of the process, so one taken while the link was down (a display mode change
-        // hotplugs HDMI) would otherwise decide passthrough for every later title.
         AudioRejectionReverifier.ledger.invalidate()
         AudioChainProbe.invalidate()
         PlatformIecAudioTrackFactory.invalidateIec61937ProbeMemo()
-        // The title that is playing was resolved against the snapshot just dropped; give it
-        // the answer the chain gives now, without a rebuild.
         applySurroundResolutionInPlace(reason)
 
         if (rememberAudioDelayPerDeviceEnabled) {

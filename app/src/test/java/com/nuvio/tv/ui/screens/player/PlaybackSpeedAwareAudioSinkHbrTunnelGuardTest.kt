@@ -15,7 +15,6 @@ import java.nio.ByteBuffer
 
 class PlaybackSpeedAwareAudioSinkHbrTunnelGuardTest {
 
-    // Keyed on the format alone: no setting, no probe result, no IEC sink underneath.
     @Test
     fun everyHbrFormat_demandsNonTunnelledVideo() {
         val sink = PlaybackSpeedAwareAudioSink(sink = PlainSink())
@@ -33,8 +32,6 @@ class PlaybackSpeedAwareAudioSinkHbrTunnelGuardTest {
         assertFalse(sink.hbrDemandsNonTunnelledVideo(Format.Builder().build()))
     }
 
-    // The guard must hold whatever the sink would do with the format right now: a title decoded to
-    // PCM at 1.25x goes back to passthrough at 1x without the player being rebuilt.
     @Test
     fun stillDemandsIt_whileTheFormatIsBeingDecodedToPcm() {
         val sink = PlaybackSpeedAwareAudioSink(sink = PlainSink())
@@ -43,9 +40,6 @@ class PlaybackSpeedAwareAudioSinkHbrTunnelGuardTest {
         assertTrue(sink.hbrDemandsNonTunnelledVideo(format(MimeTypes.AUDIO_TRUEHD)))
     }
 
-    // The lost race at title start: the resolved policy denies every format (a chain snapshot
-    // taken while HDMI was down), the sink reports the format unsupported, and the guard still
-    // fires, because the policy can be replaced in place later and the title then passes through.
     @Test
     fun stillDemandsIt_whileThePolicyDeniesTheFormat() {
         val denyAll = AudioPassthroughPolicy(
@@ -59,7 +53,6 @@ class PlaybackSpeedAwareAudioSinkHbrTunnelGuardTest {
         assertTrue(sink.hbrDemandsNonTunnelledVideo(trueHd))
     }
 
-    // The IEC rule is untouched: without an IEC sink underneath it stays false.
     @Test
     fun iecRule_isUnchanged() {
         val sink = PlaybackSpeedAwareAudioSink(sink = PlainSink())
@@ -132,7 +125,6 @@ class PlaybackSpeedAwareAudioSinkHbrTunnelGuardTest {
     }
 
     private companion object {
-        // Everything isHbrPassthrough() accepts: the four media3 constants plus the two prefixes it matches.
         val HBR_MIMES = listOf(
             MimeTypes.AUDIO_TRUEHD,
             MimeTypes.AUDIO_DTS_HD,

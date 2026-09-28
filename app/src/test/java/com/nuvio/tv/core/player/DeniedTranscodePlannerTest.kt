@@ -18,8 +18,6 @@ class DeniedTranscodePlannerTest {
         forcePassthroughActive = forcePassthroughActive
     )
 
-    // ── The load-bearing guarantee: the default changes nothing ──
-
     @Test
     fun optOut_yieldsEmptySet_evenWithDeniedFormats() {
         val policy = AudioPassthroughPolicy(allowDts = false, allowDtsHd = false)
@@ -30,8 +28,6 @@ class DeniedTranscodePlannerTest {
     fun allowAllPolicy_yieldsEmptySet_evenWhenOptedIn() {
         assertTrue(plan(AudioPassthroughPolicy.ALLOW_ALL).isEmpty())
     }
-
-    // ── Denied groups map to their MIME types ──
 
     @Test
     fun deniedDts_yieldsExactlyDtsMime() {
@@ -57,8 +53,6 @@ class DeniedTranscodePlannerTest {
         assertEquals(setOf(MimeTypes.AUDIO_DTS_HD), plan(policy))
     }
 
-    // ── Sink-fallback guard: unusable AC-3 empties the set ──
-
     @Test
     fun ac3SwitchedOff_yieldsEmptySet() {
         val policy = AudioPassthroughPolicy(allowAc3 = false, allowDts = false)
@@ -74,8 +68,6 @@ class DeniedTranscodePlannerTest {
         assertTrue(plan(policy).isEmpty())
     }
 
-    // ── Remaining guards ──
-
     @Test
     fun forceModeActive_yieldsEmptySet() {
         val policy = AudioPassthroughPolicy(allowDts = false)
@@ -87,8 +79,6 @@ class DeniedTranscodePlannerTest {
         val policy = AudioPassthroughPolicy(allowDts = false, softwareDecodersAvailable = false)
         assertTrue(plan(policy).isEmpty())
     }
-
-    // ── AC-3 is never in the set ──
 
     @Test
     fun ac3_neverAppearsInTheSet_evenWithEverythingDenied() {

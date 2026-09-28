@@ -16,9 +16,8 @@ import java.nio.ByteBuffer
 
 /**
  * Audio sink wrapper that forces a decode-to-PCM path when:
- * - Playback speed != 1x for bitstream formats that cannot be tempo-adjusted in passthrough,
- * - Bluetooth media output is active (Media3 policy: Bluetooth only supports PCM), or
- * - The per-format passthrough policy denies the format (user switch or learned rejection).
+ * - Playback speed != 1x for bitstream formats that cannot be tempo-adjusted in passthrough, or
+ * - Bluetooth media output is active (Media3 policy: Bluetooth only supports PCM).
  *
  * Bluetooth cannot carry TrueHD / Atmos / DTS-HD passthrough. Forcing PCM lets MediaCodec/FFmpeg
  * decode to the format the BT stack actually accepts; the system then encodes to SBC/AAC/aptX/LDAC.
@@ -43,9 +42,6 @@ internal class PlaybackSpeedAwareAudioSink(
     @Volatile
     private var bluetoothForcePcm: Boolean = forcePcmForBluetooth
 
-    // The resolved passthrough policy. Replaceable in place: a chain snapshot taken while HDMI
-    // was down after a display mode change denies every format, and the route callback
-    // resolves again once the device is back (applySurroundResolutionInPlace).
     @Volatile
     private var passthroughPolicy: AudioPassthroughPolicy = passthroughPolicy
 
@@ -55,8 +51,6 @@ internal class PlaybackSpeedAwareAudioSink(
     val activeInputFormat: Format?
         get() = currentInputFormat
 
-    // Audio class of the last configured format, readable from any thread; the sink itself
-    // may only be called on the playback thread (DefaultAudioSink asserts it).
     @Volatile
     var currentTunnelAudioClass: String? = null
         private set
@@ -67,25 +61,10 @@ internal class PlaybackSpeedAwareAudioSink(
     private val passthroughPacer = PassthroughWaterLevelPacer(onDiagnosticEvent)
     private val iecSink: IecPassthroughAudioSink? = sink as? IecPassthroughAudioSink
 
-    // Stock TrueHD passthrough (media3 1.8.0 DefaultAudioSink.handleBuffer): after a flush the
-    // first buffer sets startMediaTimeUs, and buffers are then dropped, uncounted, until one
-    // carries a major syncframe ("For TrueHD this can occur after some seek operations"). The
-    // clock starts early by the dropped span, up to 128 access units (~107 ms), which is inside
-    // the sink's 200 ms discontinuity tolerance, so it is never corrected: audio leads video for
-    // the rest of the segment. Seeks that reload through the extractor start on a syncframe
-    // (TrueHdSampleRechunker); seeks served from the sample queue do not. Watch the first
-    // buffers after a flush and, when at least one was unsynced, ask the sink to re-anchor on
-    // the first synced one through its own handleDiscontinuity path.
     private var forwardAnchorPending: Boolean = false
     private var forwardUnsyncedChunks: Int = 0
     private var forwardFirstPtsUs: Long = C.TIME_UNSET
     private var forwardLastEvaluatedPtsUs: Long = C.TIME_UNSET
-    // Set when the watcher is armed by an IEC-to-RAW fallback inside handleBuffer. The IEC sink
-    // configures the wrapped DefaultAudioSink itself and may feed it the buffer that triggered
-    // the fallback in the same call, before this wrapper was watching; that buffer can anchor the
-    // sink's media time and then be dropped, uncounted. So the first synced buffer re-anchors
-    // even when no unsynced one was seen here: if nothing was dropped, the sink's own arithmetic
-    // makes the adjustment about zero.
     private var forwardForceResync: Boolean = false
     private var forwardArmedBy: String = "configure"
 
@@ -116,11 +95,6 @@ internal class PlaybackSpeedAwareAudioSink(
 
     fun isBluetoothForcePcm(): Boolean = bluetoothForcePcm
 
-    /**
-     * Replace the resolved passthrough policy without rebuilding the player. Call
-     * [notifyAudioProcessingRequirementChanged] afterwards so Media3 reselects the audio track.
-     * @return true when the policy changed.
-     */
     fun setPassthroughPolicy(policy: AudioPassthroughPolicy): Boolean {
         if (policy == passthroughPolicy) return false
         passthroughPolicy = policy
@@ -131,21 +105,9 @@ internal class PlaybackSpeedAwareAudioSink(
 
     fun demandsNonTunnelledVideo(format: Format): Boolean = iecSink?.claimsHbr(format) == true
 
-    // Lossless HBR (TrueHD, DTS-HD, DTS:X) is never clocked by the tunnel whichever way it
-    // leaves the app: on the IEC path it rides an app-packed track no HAL has been seen to
-    // clock, and as a RAW bitstream under the tunnel an Amlogic S905X5 box (Android 14) left
-    // the audio output unusable until a reboot. The rule above needs a successful IEC probe,
-    // which a lost race at title start (a display mode change hotplugs HDMI) or a live IEC
-    // failure denies, and with System Passthrough on claimsHbr() is false by design; so this
-    // one is keyed on the format alone. It does not ask whether the format would be passed
-    // through right now: that answer changes during a title (speed, Bluetooth, policy); a
-    // miss costs a reboot, while a false positive costs one untunnelled title.
     fun hbrDemandsNonTunnelledVideo(format: Format): Boolean =
         IecPassthroughAudioSink.isHbrPassthrough(format)
 
-    // Coarse class of what the sink chain will hand the platform for this format under the
-    // current policy: the bitstream mime for passthrough, TUNNEL_AUDIO_CLASS_PCM for anything decoded.
-    // Playback thread only: it queries the wrapped sink.
     fun tunnelAudioClass(format: Format): String {
         val mime = format.sampleMimeType ?: return TUNNEL_AUDIO_CLASS_PCM
         if (mime == MimeTypes.AUDIO_RAW) return TUNNEL_AUDIO_CLASS_PCM
@@ -193,7 +155,6 @@ internal class PlaybackSpeedAwareAudioSink(
     }
 
     override fun playToEndOfStream() {
-        // The IEC sink drains here too, so a write failure can fall back from this call as well.
         val iecWasActive = iecSink?.isIecActive == true
         super.playToEndOfStream()
         noteIecFallbackIfFlipped(iecWasActive)
@@ -210,7 +171,6 @@ internal class PlaybackSpeedAwareAudioSink(
         encodedAccessUnitCount: Int
     ): Boolean {
         if (forwardAnchorPending && presentationTimeUs != forwardLastEvaluatedPtsUs) {
-            // Once per buffer: a refused buffer is offered again with the same PTS.
             forwardLastEvaluatedPtsUs = presentationTimeUs
             evaluateForwardAnchor(buffer, presentationTimeUs)
         }
@@ -220,7 +180,6 @@ internal class PlaybackSpeedAwareAudioSink(
         ) {
             return false
         }
-        // Read before the sink consumes the buffer.
         val encodedBytes = if (currentInputFormat?.sampleMimeType != MimeTypes.AUDIO_RAW) {
             buffer.remaining()
         } else {
@@ -299,7 +258,6 @@ internal class PlaybackSpeedAwareAudioSink(
         return isPolicyDeniedPassthrough(format)
     }
 
-    // Keyed on sample MIME only: the codecs-string fallback cannot distinguish DTS from DTS-HD, so null-MIME formats defer to the platform report.
     fun isPolicyDeniedPassthrough(format: Format): Boolean {
         return passthroughPolicy.deniesPassthrough(format.sampleMimeType)
     }
@@ -345,14 +303,6 @@ internal class PlaybackSpeedAwareAudioSink(
         return false
     }
 
-    // Armed after configure and after flush, only when the wrapped chain will hand the platform
-    // TrueHD itself (the IEC sink anchors its own clock; decoded audio arrives here as PCM).
-    // The IEC sink leaves the IEC path from inside handleBuffer or playToEndOfStream (write error
-    // or stall limit) and configures the wrapped DefaultAudioSink itself, so neither configure()
-    // nor flush() runs here. Seen as isIecActive going true-to-false across the call: the stream
-    // is RAW from now on for the pacer, and the TrueHD watcher must be re-armed with a forced
-    // resync, because the buffer that triggered the fallback may already have been fed to the
-    // wrapped sink and dropped uncounted.
     private fun noteIecFallbackIfFlipped(iecWasActive: Boolean) {
         if (iecWasActive && iecSink?.isIecActive == false) {
             passthroughPacer.setIecPacked(false)
@@ -374,7 +324,6 @@ internal class PlaybackSpeedAwareAudioSink(
     private fun evaluateForwardAnchor(buffer: ByteBuffer, presentationTimeUs: Long) {
         if (presentationTimeUs == C.TIME_UNSET) return
         if (forwardFirstPtsUs == C.TIME_UNSET) forwardFirstPtsUs = presentationTimeUs
-        // Same test the sink applies before dropping; reads without moving the position.
         if (Ac3Util.findTrueHdSyncframeOffset(buffer) == C.INDEX_UNSET) {
             forwardUnsyncedChunks++
             return
@@ -382,8 +331,6 @@ internal class PlaybackSpeedAwareAudioSink(
         val deltaUs = presentationTimeUs - forwardFirstPtsUs
         val resynced = forwardUnsyncedChunks > 0 || forwardForceResync
         if (resynced) {
-            // The sink re-reads startMediaTimeUs from this buffer's PTS; nothing was counted
-            // for the dropped ones, so the adjustment is exactly the dropped span.
             handleDiscontinuity()
         }
         val line = "forward_anchor mime=true-hd droppedChunks=$forwardUnsyncedChunks " +

@@ -17,8 +17,6 @@ object AudioChainProbe {
         val direct: DirectSupport?,
         val maxPcmChannels: Int?
     ) {
-        // Every encoding false is what the platform answers while the HDMI link is down (a
-        // display mode change at title start hotplugs it), not a chain with no passthrough.
         fun deniesEveryEncoding(): Boolean {
             val d = direct ?: return false
             return !d.ac3 && !d.eac3 && !d.trueHd && !d.dts && !d.dtsHd
@@ -36,8 +34,6 @@ object AudioChainProbe {
             direct = probeDirectSupport(context),
             maxPcmChannels = readMaxPcmChannelCount(context)
         )
-        // Never cache an all-false answer: the next build asks again instead of inheriting a
-        // stale denial for the whole process. A PCM-only chain pays one extra query per build.
         if (routeKey != null && !fresh.deniesEveryEncoding()) {
             cached = routeKey to fresh
         }
@@ -65,7 +61,6 @@ object AudioChainProbe {
         }.getOrNull()
     }
 
-    // Pre-Q has no isDirectPlaybackSupported: read the sticky HDMI plug report, as Media3 does.
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun readHdmiPlugReport(context: Context): DirectSupport? {
         val report = runCatching {
@@ -77,7 +72,6 @@ object AudioChainProbe {
         )
     }
 
-    // Unplugged (a mode switch hotplug) denies all, uncached; plugged without a list is unknown.
     @SuppressLint("InlinedApi")
     internal fun directSupportFromHdmiPlugReport(plugState: Int, encodings: IntArray?): DirectSupport? {
         return when {
@@ -129,8 +123,6 @@ object AudioChainProbe {
                 .filter { it.type in HDMI_OUTPUT_TYPES }
                 .flatMap { it.audioProfiles }
                 .filter { it.format in pcmEncodings }
-                // Both positional and index masks resolve to a channel count via
-                // popcount; take the largest across every PCM profile's masks.
                 .flatMap { profile ->
                     (profile.channelMasks.asList() + profile.channelIndexMasks.asList())
                         .map { mask -> Integer.bitCount(mask) }

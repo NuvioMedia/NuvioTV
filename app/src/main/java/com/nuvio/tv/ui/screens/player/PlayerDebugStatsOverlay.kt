@@ -350,14 +350,11 @@ private class DebugStatsSampler(context: Context) {
         val channels = snapshot?.audioChannelCount ?: -1
         if (mime == null && channels <= 0) return DebugStat("audio", UNAVAILABLE)
         if (mime == null) return DebugStat("audio", channelLayout(channels))
-        // The raw mime stays because "Dolby Atmos" alone cannot be told apart from the TrueHD kind.
         val name = "${friendlyAudioName(mime)} (${mime.substringAfter('/')})"
         val value = if (isObjectBasedAudio(mime)) name else "$name   ${channelLayout(channels)}"
         return DebugStat("audio", value)
     }
 
-    // channelCount reports only the bed, so showing it would name a layout the renderer is not
-    // bound to.
     private fun isObjectBasedAudio(mime: String): Boolean {
         return mime == MimeTypes.AUDIO_E_AC3_JOC ||
             mime == MimeTypes.AUDIO_AC4 ||
@@ -401,7 +398,6 @@ private class DebugStatsSampler(context: Context) {
     }
 
     private fun audioBitrateStat(snapshot: PlayerSnapshot?): DebugStat {
-        // Format.bitrate is unset on mkv, so the declared rate is only a fallback.
         val measured = PlayerAudioBitrateMeter.bitrateBps()
         val declared = (snapshot?.audioBitrate ?: -1).takeIf { it > 0 }
         val bitrate = measured ?: declared ?: return DebugStat("audio bit", UNAVAILABLE)

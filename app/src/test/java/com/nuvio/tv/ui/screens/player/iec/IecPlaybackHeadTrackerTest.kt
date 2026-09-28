@@ -4,10 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Raw `getPlaybackHeadPosition()` sequences, including the ones logged on a Fire TV Stick 4K Max
- * (mt8696) where a seek left the head 2^32 or 2^33 ahead of the written frames.
- */
 class IecPlaybackHeadTrackerTest {
 
     private fun raw(unsignedValue: Long): Int = unsignedValue.toInt()
@@ -22,7 +18,6 @@ class IecPlaybackHeadTrackerTest {
 
     @Test
     fun staleHeadAfterFlush_thenZero_isNotAWrap() {
-        // Logged: head=6280791 before the seek, 8192 twenty ms after the flush, then 0, then 968834.
         val tracker = IecPlaybackHeadTracker()
         tracker.frames(6_280_791)
         tracker.onFlush()
@@ -36,7 +31,6 @@ class IecPlaybackHeadTrackerTest {
 
     @Test
     fun largeStaleHeadAfterFlush_thenZero_isNotAWrap() {
-        // Logged on TrueHD: 2832427 straight after a flush.
         val tracker = IecPlaybackHeadTracker()
         tracker.frames(2_832_427)
         tracker.onFlush()
@@ -48,7 +42,6 @@ class IecPlaybackHeadTrackerTest {
 
     @Test
     fun staleHeadSeenTwice_neverReachesTwoToTheThirtyTwo() {
-        // The capture showed 2^33 after some seeks: two drops in a row.
         val tracker = IecPlaybackHeadTracker()
         tracker.frames(5_000_000)
         tracker.onFlush()
@@ -90,7 +83,6 @@ class IecPlaybackHeadTrackerTest {
 
     @Test
     fun crossingTwoToTheThirtyOne_isNotAWrap() {
-        // The raw value is an Int: past 2^31 it is negative. 3.1 h at 192 kHz.
         val tracker = IecPlaybackHeadTracker()
         assertEquals(0x7FFF_FF00L, tracker.frames(raw(0x7FFF_FF00L)))
         assertEquals(0x8000_0100L, tracker.frames(raw(0x8000_0100L)))

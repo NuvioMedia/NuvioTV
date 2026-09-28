@@ -967,13 +967,8 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
                     val audioClass = playbackSpeedAwareAudioSink?.currentTunnelAudioClass
                     val audioLabel = audioClass ?: "unknown"
                     if (result.reason == PlayerTunnelAvSyncPolicy.Reason.PositionFrozen) {
-                        // Only a dead audio clock marks the class for the selector. A held picture
-                        // with an advancing position is disarmed for this stream only.
                         if (audioClass != null) {
                             PlayerTunnelAvSyncPolicy.deadAudioClasses.add(audioClass)
-                            // Persist only a clock that never moved since READY, and only once the
-                            // untunnelled rebuild below has played: a stream that stalls both
-                            // ways teaches nothing about the tunnel clock.
                             val signature = tunnelDeadClockSignature
                             if (signature != null && positionMs == firstReadyPositionMs) {
                                 pendingDeadClockMemo = audioClass to signature
@@ -1012,9 +1007,6 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
     }
 }
 
-// Writes the dead-clock memo once the untunnelled rebuild has advanced its position, and
-// drops it if the rebuild is torn down, the stream changes, or nothing plays within the
-// confirmation window.
 private fun PlayerRuntimeController.persistDeadClockMemoWhenRebuildPlays(
     audioClass: String,
     signature: String,

@@ -18,13 +18,6 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.roundToLong
 
-/**
- * DTS:X / DTS-UHD IEC burst sizing: PTS rounding, UHD grid snap, Matroska 1 ms
- * jitter, and IEC 61937-5 type-IV subtypes.
- *
- * Frame durations: ETSI TS 103 491 V1.2.1 Table 6-13, as parsed by media3 1.8.0
- * [DtsUtil.parseDtsUhdHeader].
- */
 class DtsXIecBurstPeriodTest {
 
     @Test
@@ -45,19 +38,14 @@ class DtsXIecBurstPeriodTest {
         assertEquals(1024, snapToUhdGrid(1056.0))
         assertEquals(2048, snapToUhdGrid(2064.0))
         assertEquals(384, snapToUhdGrid(384.0))
-        // 44.1 kHz 512-sample frame as 48 kHz-equivalent (557) must not collapse.
         assertEquals(557, snapToUhdGrid(557.0))
-        // 32 kHz 512-sample frame is exactly 768 at 48 kHz, a legal UHD count.
         assertEquals(768, snapToUhdGrid(768.0))
     }
 
     @Test
     fun estimator_matroska1ms_512SampleStreamLocksTo512() {
         val estimator = DtsHdFrameDurationEstimator()
-        // First unit has no delta.
         assertEquals(512, estimator.resolveFromPts(0L))
-        // 10 ms then 11 ms, the Matroska rounding of 10.667 ms. A single 10 ms
-        // is within 10% of 512, so it must not emit a 480 burst.
         assertEquals(512, estimator.resolveFromPts(10_000L))
         assertEquals(512, estimator.resolveFromPts(21_000L))
         assertEquals(512, estimator.resolveFromPts(31_000L))
@@ -97,7 +85,6 @@ class DtsXIecBurstPeriodTest {
     fun estimator_uhdParseFailure_reusesLastSyncDuration() {
         val estimator = DtsHdFrameDurationEstimator()
         assertEquals(0, estimator.sampleCountFromUhdCache())
-        // 1024 samples at 48 kHz is 21333.33 us.
         estimator.rememberUhdDurationUs(21_333L)
         assertEquals(1024, estimator.sampleCountFromUhdCache())
         assertEquals(1024, estimator.resolvedSampleCount)
@@ -105,7 +92,6 @@ class DtsXIecBurstPeriodTest {
         estimator.clearPts()
         assertEquals(1024, estimator.sampleCountFromUhdCache())
 
-        // A later CRC / non-sync failure must not fall back to a 10 ms PTS guess.
         assertEquals(1024, estimator.resolveFromPts(0L))
         assertEquals(1024, estimator.resolveFromPts(10_000L))
         assertEquals(1024, estimator.sampleCountFromUhdCache())
@@ -126,7 +112,6 @@ class DtsXIecBurstPeriodTest {
 
     @Test
     fun ptsDelta_outOfRange_isNotAFake512Frame() {
-        // 2 ms is 96 samples; 500 ms is 24000. Neither is a DTS-UHD frame.
         assertEquals(0, dtsSampleCountFromPtsDeltaUs(2_000L))
         assertEquals(0, dtsSampleCountFromPtsDeltaUs(500_000L))
         assertEquals(DEFAULT_DTS_SAMPLE_COUNT, dtsSampleCountFromPtsDeltaUs(0L))
@@ -140,7 +125,6 @@ class DtsXIecBurstPeriodTest {
         for (samples in DtsHdFrameDurationEstimator.UHD_FRAME_SAMPLE_COUNTS) {
             assertEquals(samples, snapToUhdGrid(samples.toDouble()))
         }
-        // Core DTS 256 is not on the UHD grid; leave it alone (error vs 384 is 33%).
         assertEquals(256, snapToUhdGrid(256.0))
         assertEquals(DEFAULT_DTS_SAMPLE_COUNT, snapToUhdGrid(0.0))
         assertEquals(DEFAULT_DTS_SAMPLE_COUNT, snapToUhdGrid(-8.0))
@@ -242,7 +226,6 @@ class DtsXIecBurstPeriodTest {
         assertEquals(256, estimator.resolvedSampleCount)
         estimator.clearPts()
         assertEquals(256, estimator.resolveFromPts(0L))
-        // 256 samples at 48 kHz is 5.333 ms; do not snap that header onto 384.
         assertEquals(256, estimator.resolveFromPts(5_333L))
     }
 
@@ -259,7 +242,6 @@ class DtsXIecBurstPeriodTest {
 
     @Test
     fun ptsDelta_justOutsideTheLegalRange_isZero() {
-        // 127 samples at 48 kHz; 8193 samples at 48 kHz.
         assertEquals(0, dtsSampleCountFromPtsDeltaUs(2_645L))
         assertEquals(0, dtsSampleCountFromPtsDeltaUs(170_688L))
     }
@@ -269,7 +251,6 @@ class DtsXIecBurstPeriodTest {
         assertEquals(557, dtsSampleCountFromPtsDeltaUs(11_610L))
         val estimator = DtsHdFrameDurationEstimator()
         assertEquals(512, estimator.resolveFromPts(0L))
-        // 8.8% is inside relock, so the first delta does not steal the default.
         assertEquals(512, estimator.resolveFromPts(11_610L))
         assertEquals(557, estimator.resolveFromPts(23_220L))
         assertEquals(557, estimator.resolveFromPts(34_830L))
@@ -562,7 +543,6 @@ class DtsXIecBurstPeriodTest {
             7,
             Iec61937Packer.dtsHdBurstSubtype(Iec61937Packer.dtsHdIecPeriod(8, 4096))
         )
-        // 384 and 480 × 16 are legal UHD periods but have no type-IV code.
         assertEquals(4, Iec61937Packer.dtsHdBurstSubtype(Iec61937Packer.dtsHdIecPeriod(8, 384)))
         assertEquals(4, Iec61937Packer.dtsHdBurstSubtype(Iec61937Packer.dtsHdIecPeriod(8, 480)))
         assertEquals(null, iec61937TypeIvSubtype(6_144))

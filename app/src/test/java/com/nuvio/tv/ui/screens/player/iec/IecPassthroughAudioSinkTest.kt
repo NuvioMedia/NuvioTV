@@ -138,9 +138,6 @@ class IecPassthroughAudioSinkTest {
         assertTrue(sink.isIecActive)
         sink.play()
 
-        // A mid-stream chunk, as a sample-queue seek delivers it: three units before the major
-        // sync, all in one buffer whose PTS is that of its first unit. The packer discards the
-        // three, so the clock must start at the fourth unit's time, 3 x 40/48000 s later.
         val bufferPts = 1_000_000L
         val chunk = ByteBuffer.allocate(40 * 19)
         for (i in 0 until 19) {
@@ -193,7 +190,6 @@ class IecPassthroughAudioSinkTest {
         sink.flush()
         assertEquals(AudioSink.CURRENT_POSITION_NOT_SET.toLong(), sink.getCurrentPositionUs(false))
 
-        // Seek landed two units before a major sync.
         val seekPts = 5_000_000L
         val chunk = ByteBuffer.allocate(40 * 16)
         for (i in 0 until 16) {
@@ -249,7 +245,6 @@ class IecPassthroughAudioSinkTest {
         sink.configure(trueHdFormat(), 0, null)
         sink.play()
 
-        // A length word of 2 (4 bytes) cannot be an access unit; the rest of the sample is junk.
         val junk = ByteArray(200)
         junk[0] = 0x00
         junk[1] = 0x02
@@ -284,11 +279,9 @@ class IecPassthroughAudioSinkTest {
         assertEquals(1, first.size)
         assertTrue(first[0], first[0].contains("underruns=0"))
 
-        // Nothing changed and the interval has not elapsed: no new line.
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 10_000L, 1))
         assertEquals(1, lines.count { it.startsWith("iec_health ") })
 
-        // An underrun is reported at once.
         fakeTrack.underruns = 1
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 20_000L, 1))
         val after = lines.filter { it.startsWith("iec_health ") }
@@ -607,7 +600,6 @@ class IecPassthroughAudioSinkTest {
         )
         sink.configure(trueHdFormat(), 0, null)
         sink.play()
-        // Length word says 40 bytes; only five arrived.
         val partial = byteArrayOf(0x00, 0x14, 0x00, 0x00, 0x00)
         assertTrue(sink.handleBuffer(ByteBuffer.wrap(partial), 0L, 1))
         assertTrue(sink.hasPendingData())
@@ -632,8 +624,6 @@ class IecPassthroughAudioSinkTest {
             .build()
     }
 
-    // The burst the sink actually packs for one unit of this shape, so capacity math in the
-    // end-of-stream tests does not depend on how the period is derived.
     private fun packedBurstBytes(): Int {
         val track = FakeIecAudioTrack(192_000, 16)
         val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(track))
@@ -756,7 +746,6 @@ class IecPassthroughAudioSinkTest {
         assertTrue(write.cause is AudioSink.ConfigurationException)
         assertFalse(sink.isIecActive)
         assertTrue(factory.markedUnusable)
-        // A recovery must not re-select IEC: the format is now answered by the wrapped sink.
         assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(dtsHdFormat()))
         assertFalse(sink.supportsFormat(dtsHdFormat()))
     }
@@ -837,7 +826,6 @@ class IecPassthroughAudioSinkTest {
             sink = RecordingSink(innerSupport = AudioSink.SINK_FORMAT_UNSUPPORTED),
             trackFactory = ProbePendingFactory(FakeIecAudioTrack(192_000, 16))
         )
-        // MAT answering canOpen says nothing about DTS-HD, which needs IEC bursts.
         assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(dtsHdFormat()))
         assertFalse(sink.supportsFormat(dtsHdFormat()))
         assertFalse(sink.claimsHbr(dtsHdFormat()))
@@ -858,8 +846,6 @@ class IecPassthroughAudioSinkTest {
         assertTrue(sink.isIecActive)
         sink.play()
 
-        // Nothing to parse: the first burst falls back to one default frame, the next follows
-        // the PTS delta of 1024 samples at 48 kHz.
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(256), 0L, 1))
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(256), 21_334L, 1))
 
@@ -918,7 +904,6 @@ class IecPassthroughAudioSinkTest {
         val firstBurst = track.written
         assertTrue(firstBurst > 0)
 
-        // With a core header to parse, a half-second PTS gap must not resize the burst.
         assertTrue(sink.handleBuffer(ByteBuffer.wrap(au.copyOf()), 500_000L, 1))
         assertEquals(2 * firstBurst, track.written)
     }
@@ -934,8 +919,6 @@ class IecPassthroughAudioSinkTest {
         val burstBytes = packedBurstBytes()
         assertEquals(burstBytes, track.written)
 
-        // Seven-byte writes never align to a sixteen-byte frame, so counting frames per write
-        // would drop every remainder and the clock would not move at all.
         val expectedUs = (burstBytes / 16) * 1_000_000L / 192_000L
         assertEquals(expectedUs, sink.getCurrentPositionUs(false))
     }
@@ -1199,16 +1182,13 @@ class IecPassthroughAudioSinkTest {
         assertTrue(sink.isIecActive)
         sink.play()
 
-        // Identical PTS on purpose: sizing bursts from PTS deltas is covered elsewhere.
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
         assertTrue(track.isFull())
-        // Backpressure: the next buffer is refused until the track drains.
         assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
 
         sink.playToEndOfStream()
         assertFalse(sink.isEnded())
-        // A full track during the end-of-stream poll must not give up on IEC.
         repeat(10) { assertFalse(sink.isEnded()) }
         assertFalse(factory.markedUnusable)
 
@@ -1255,7 +1235,6 @@ class IecPassthroughAudioSinkTest {
         assertFalse(sink.isEnded())
         assertTrue(sink.isIecActive)
 
-        // The track dies while the renderer is polling for the end of the stream.
         track.failWrites = true
         assertTrue(sink.isEnded())
         assertFalse(sink.isIecActive)
@@ -1318,7 +1297,6 @@ class IecPassthroughAudioSinkTest {
         }
     }
 
-    // MAT answers canOpen, but the IEC61937 probe has not landed yet.
     private class ProbePendingFactory(private val track: IecAudioTrack?) : IecAudioTrackFactory {
         override fun open(
             sampleRate: Int,
@@ -1365,7 +1343,6 @@ class IecPassthroughAudioSinkTest {
         override fun underrunCount(): Int = underruns
     }
 
-    // A track with a real hardware buffer: writes stop when full, the head advances on drain.
     private class ThrottledIecAudioTrack(
         override val sampleRate: Int,
         override val frameSizeBytes: Int,

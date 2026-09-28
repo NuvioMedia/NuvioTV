@@ -79,8 +79,6 @@ class TrueHdMatPackerTest {
                     val frame = pooled.pollFrame()!!
                     if (handedOut.put(frame, true) != null) reused = true
                     pooledFrames.add(frame.copyOf())
-                    // Dirty the frame before handing it back: a reused frame that is not
-                    // zero-filled would show this in its padding.
                     frame.fill(0x5A)
                     pooled.recycleFrame(frame)
                 }

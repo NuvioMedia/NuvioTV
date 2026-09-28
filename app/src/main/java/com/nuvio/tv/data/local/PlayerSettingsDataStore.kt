@@ -262,11 +262,6 @@ data class PlayerSettings(
     val tunnelingEnabled: Boolean = false,
     val forceOpticalPassthrough: Boolean = false,
     val useSystemPassthrough: Boolean = false,
-    // Surround-format handling: Auto (probe-driven) vs Manual per-format
-    // switches, the output channel target, denied-format handling, and the
-    // learned-denial sets. Rejection entries are "routeKey::FORMAT_GROUP"; an
-    // entry seen in two separate playback sessions is promoted from seen to
-    // confirmed.
     val surroundFormatMode: SurroundFormatMode = SurroundFormatMode.AUTO,
     val surroundChannelTarget: SurroundChannelTarget = SurroundChannelTarget.AUTO,
     val allowAc3Passthrough: Boolean = true,
@@ -1185,7 +1180,6 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         store().edit { prefs ->
             if ((prefs[tunnelingEnabledKey] ?: false) != enabled) {
-                // Toggling tunnelling is the user's "try again" for a learned dead clock.
                 prefs.remove(tunnelDeadAudioClassesKey)
                 prefs.remove(tunnelDeadAudioSignatureKey)
             }
@@ -1193,9 +1187,6 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
-    // Tunnel dead-clock memo (PlayerTunnelAvSyncPolicy): audio classes whose hw_av_sync
-    // clock never started on this chain, stored with the signature of the chain that
-    // learned them. A record under a different signature replaces the set.
     suspend fun recordTunnelDeadAudioClass(audioClass: String, signature: String) {
         store().edit { prefs ->
             val sameChain = prefs[tunnelDeadAudioSignatureKey] == signature
@@ -1216,8 +1207,6 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs[useSystemPassthroughKey] = enabled
         }
     }
-
-    // Surround-format handling setters
 
     suspend fun setSurroundFormatMode(mode: SurroundFormatMode) {
         store().edit { prefs ->
@@ -1267,9 +1256,6 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
-    // A rejection is recorded after one real open failure whose fallback then opened audio,
-    // and stays only until a background open of the same format on the same route succeeds
-    // (AudioRejectionReverifier). The older two-session "seen" stage is retired.
     suspend fun recordAudioRejection(routeKey: String, formatGroup: String) {
         val entry = "$routeKey::$formatGroup"
         store().edit { prefs ->

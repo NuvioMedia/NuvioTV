@@ -814,9 +814,6 @@
     <string name="audio_use_system_passthrough_sub">Sends TrueHD and DTS-HD to your receiver through Android (System path) instead of Nuvio (IEC path). Use this if lossless formats produce noise, drift, or no audio.</string>
     <string name="audio_force_optical_passthrough">Force AC-3 Transcoding (Optical/SPDIF)</string>
     <string name="audio_force_optical_passthrough_sub">Transcodes multichannel formats (TrueHD, DTS, AAC, etc.) to Dolby Digital 5.1 in real-time for Optical/SPDIF connections.</string>
-    <!-- Surround format (#3287). The per-format passthrough model, and some of the
-         per-format label wording added with it, follow Kodi's audiooutput.*passthrough
-         settings (Kodi is GPL-2.0-or-later). No Kodi code is used. -->
     <string name="audio_surround_header">Surround Sound</string>
     <string name="audio_surround_reset_iec_probe">Clear IEC Probe Decision</string>
     <string name="audio_surround_reset_iec_probe_sub">Test IEC 61937 output again. Use this if lossless formats fall back to PCM after changing receiver or input.</string>

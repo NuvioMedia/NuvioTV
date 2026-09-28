@@ -6,15 +6,8 @@ import android.media.AudioTrack
 import android.util.Log
 import com.nuvio.tv.core.player.AudioPassthroughPolicy
 
-// Held while any direct (compressed) AudioTrack is opened for probing. On the HALs measured
-// so far a single open direct stream makes every other direct open fail, so the IEC 61937
-// probe and the re-verification probe must never overlap.
 internal object DirectOpenProbeLock
 
-// Process-scoped view of learned passthrough denials. The persisted set means "denied until
-// re-verified": entries are added only after a real open failed and the same title's
-// fallback then opened audio, and they are removed as soon as a background open succeeds.
-// Pure Kotlin so the bookkeeping is unit-testable; the probe itself is in the object below.
 internal class AudioRejectionLedger {
 
     private val verified = HashSet<String>()
@@ -55,7 +48,6 @@ internal class AudioRejectionLedger {
         pending = streamUrl to entry
     }
 
-    // Returns the pending entry if it belongs to this stream, and clears it either way.
     @Synchronized
     fun takePendingFor(streamUrl: String): String? {
         val current = pending ?: return null
@@ -90,10 +82,6 @@ internal object AudioRejectionReverifier {
 
     val ledger = AudioRejectionLedger()
 
-    // Opens and releases a real direct track for every learned denial on this route that has
-    // not been probed in this process. Runs once per route per process (until invalidate),
-    // off the calling thread, and reports each entry that opened through onVerified, which
-    // is invoked on the probe thread.
     fun start(routeKey: String, persisted: Set<String>, onVerified: (String) -> Unit) {
         val entries = ledger.entriesToProbe(routeKey, persisted)
         if (entries.isEmpty()) return

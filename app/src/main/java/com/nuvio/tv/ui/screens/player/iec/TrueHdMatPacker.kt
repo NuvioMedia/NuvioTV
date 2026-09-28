@@ -2,15 +2,9 @@ package com.nuvio.tv.ui.screens.player.iec
 
 import java.util.ArrayDeque
 
-/**
- * Packs TrueHD access units into 61440-byte MAT frames with start/middle/end
- * codes and dynamic padding. IEC burst preamble is left as 8 leading zeros;
- * [Iec61937Packer.packTrueHd] fills it and byte-swaps the payload.
- */
 internal class TrueHdMatPacker {
 
     private val outputQueue = ArrayDeque<ByteArray>()
-    // Frames handed back by recycleFrame; writeHeader takes from here before allocating.
     private val framePool = ArrayDeque<ByteArray>()
     private var buffer = EMPTY_FRAME
     private var bufferCount = 0
@@ -111,27 +105,15 @@ internal class TrueHdMatPacker {
         return outputQueue.isNotEmpty()
     }
 
-    /**
-     * True once an access unit has been accepted since the last [reset]. Until the first
-     * major-sync unit arrives, [packAccessUnit] discards input, so callers anchoring a clock on
-     * the stream must wait for this rather than for the first buffer.
-     */
     val isSynced: Boolean
         get() = state.prevFrametimeValid
 
-    /**
-     * Base sample rate family of the stream (48 000 or 44 100). One access unit is always
-     * 40 samples at this rate, whatever the shift, so its duration is 40 / baseSampleRate.
-     * Meaningful once [isSynced].
-     */
     fun baseSampleRate(): Int = if ((state.ratebits and 8) != 0) 44_100 else 48_000
 
     fun pollFrame(): ByteArray? = outputQueue.poll()
 
     fun hasFrame(): Boolean = outputQueue.isNotEmpty()
 
-    // Returns a frame obtained from pollFrame once the caller is finished with it. The
-    // pool is bounded; anything beyond the limit is left to the garbage collector.
     fun recycleFrame(frame: ByteArray) {
         if (frame.size == MAT_BUFFER_SIZE && framePool.size < FRAME_POOL_LIMIT) {
             framePool.add(frame)
@@ -139,7 +121,6 @@ internal class TrueHdMatPacker {
     }
 
     private fun writeHeader() {
-        // Padding bytes are never written, so a reused frame must start all-zero.
         buffer = framePool.poll()?.also { it.fill(0) } ?: ByteArray(MAT_BUFFER_SIZE)
         val size = BURST_HEADER_SIZE + MAT_START_CODE.size
         System.arraycopy(MAT_START_CODE, 0, buffer, BURST_HEADER_SIZE, MAT_START_CODE.size)

@@ -12,9 +12,7 @@ import com.nuvio.tv.ui.screens.player.DirectOpenProbeLock
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal enum class HbrPayload {
-    /** IEC 61937 burst (Pa/Pb + payload). HDMI InfoFrame = bitstream. */
     IEC_BURST,
-    /** Raw Dolby MAT frame. HDMI InfoFrame = Dolby MAT / TrueHD. */
     MAT
 }
 
@@ -56,14 +54,11 @@ internal fun interface IecAudioTrackFactory {
 
     fun iec61937Ready(): Boolean = false
 
-    /** True when a background probe has opened IEC 61937 at [sampleRate]. */
     fun iec61937ReadyAt(sampleRate: Int): Boolean =
         sampleRate == 192_000 && iec61937Ready()
 
-    /** Invoked (on the probe thread) when the background IEC61937 probe proves the encoding usable. */
     fun setReadyListener(listener: (() -> Unit)?) = Unit
 
-    /** A live IEC track failed after opening; stop attempting IEC for this process. */
     fun markIecUnusable() = Unit
 
     fun startProbe() = Unit
@@ -77,14 +72,6 @@ internal fun interface IecAudioTrackFactory {
     ): IecAudioTrack? = open(sampleRate, channelCount, bufferSizeBytes, sessionId)
 }
 
-/**
- * Compressed HBR track, never PCM.
- *
- * [AudioFormat.ENCODING_IEC61937] create can block the caller for seconds on HALs
- * that advertise the encoding then reject the track. Never open it on the
- * playback thread. A background probe records whether it actually initializes;
- * only then is IEC used. TrueHD also tries DOLBY_MAT (cheap, badge-preserving).
- */
 internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
 
     override fun startProbe() {

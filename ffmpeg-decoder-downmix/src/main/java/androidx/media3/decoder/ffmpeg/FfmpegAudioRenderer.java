@@ -256,10 +256,6 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     this.forceOpticalPassthrough = enabled;
   }
 
-  /**
-   * Sets the MIME types to transcode to AC-3 when the sink accepts AC-3 output. Empty or null
-   * restores the original behaviour; {@code audio/ac3} itself is never transcoded.
-   */
   public void setDeniedTranscodeMimes(@Nullable Set<String> mimeTypes) {
     deniedTranscodeMimes =
         mimeTypes == null || mimeTypes.isEmpty()
@@ -277,7 +273,6 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     return rendererEnabled && activeDecoder != null;
   }
 
-  /** Returns whether this renderer is currently transcoding audio to AC-3. */
   public boolean isTranscodingToAc3() {
     return rendererEnabled && activeDecoder != null && activeDecoder.getEncoding() == C.ENCODING_AC3;
   }
@@ -294,12 +289,6 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     return sinkSupportsFormat(Util.getPcmFormat(pcmEncoding, channelCount, inputFormat.sampleRate));
   }
 
-  /**
-   * Returns whether {@code format} is decoded and re-encoded to AC-3 rather than decoded to PCM.
-   * Force AC-3 transcoding takes every eligible format, as before. A MIME type in the
-   * denied-transcode set is taken only when the sink accepts the AC-3 output, so a chain without
-   * AC-3 falls back to PCM decoding instead of leaving the track without a renderer.
-   */
   private boolean shouldTranscodeToAc3(Format format, String mimeType) {
     if (MimeTypes.AUDIO_AC3.equals(mimeType)) {
       return false;

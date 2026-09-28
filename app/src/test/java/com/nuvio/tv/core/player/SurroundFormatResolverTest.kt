@@ -49,8 +49,6 @@ class SurroundFormatResolverTest {
         learnedDeniedGroups = learnedDeniedGroups
     )
 
-    // ── Stand-downs ──
-
     @Test
     fun bluetoothRoute_isFullyInert_inBothModes() {
         assertEquals(Resolution.INERT, resolve(routeIsBluetooth = true, direct = nothingClaimed))
@@ -71,8 +69,6 @@ class SurroundFormatResolverTest {
         assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS))
         assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_TRUEHD))
     }
-
-    // ── Auto: probe-driven policy ──
 
     @Test
     fun auto_probeNull_deniesNothing() {
@@ -115,8 +111,6 @@ class SurroundFormatResolverTest {
         assertNull(r.inferredChannelTarget)
     }
 
-    // ── The DTS-core corner ──
-
     @Test
     fun dtsCoreKeep_dtsHdUnclaimedWithDtsClaimed_staysAllowed_onTwoChannelChain() {
         val direct = allClaimed.copy(dtsHd = false)
@@ -144,8 +138,6 @@ class SurroundFormatResolverTest {
         val r = resolve(direct = direct, rawMaxPcmChannels = 2)
         assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
     }
-
-    // ── Denied handling (Auto, chain-shape) ──
 
     @Test
     fun deniedHandling_multichannelPcmChain_prefersLosslessDecode() {
@@ -201,8 +193,6 @@ class SurroundFormatResolverTest {
         val r = resolve(manualMode = true, manualTranscodePreferred = true)
         assertFalse(r.transcodePreferred)
     }
-
-    // ── Channel target ──
 
     @Test
     fun channelTarget_snapsToProvenTiersOnly() {

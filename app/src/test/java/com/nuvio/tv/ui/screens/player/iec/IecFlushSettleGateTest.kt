@@ -5,10 +5,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The settle gate against a fake clock, including the restart gaps logged on a Fire TV Stick 4K Max
- * (mt8696), where a `play()` 47 to 84 ms after `flush()` lost the flush.
- */
 class IecFlushSettleGateTest {
 
     private var now = 0L

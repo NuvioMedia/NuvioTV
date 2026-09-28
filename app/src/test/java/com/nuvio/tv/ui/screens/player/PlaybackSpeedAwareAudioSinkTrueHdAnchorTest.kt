@@ -27,7 +27,6 @@ class PlaybackSpeedAwareAudioSinkTrueHdAnchorTest {
         sink.play()
         sink.flush()
 
-        // A sample-queue seek: two chunks without a major syncframe, then one with it.
         sink.handleBuffer(chunk(major = false), 1_000_000L, 16)
         sink.handleBuffer(chunk(major = false), 1_013_333L, 16)
         assertEquals(0, inner.discontinuities)
@@ -39,7 +38,6 @@ class PlaybackSpeedAwareAudioSinkTrueHdAnchorTest {
         assertTrue(anchor, anchor.contains("deltaUs=26666"))
         assertTrue(anchor, anchor.contains("resynced=true"))
 
-        // Later buffers are not evaluated again.
         sink.handleBuffer(chunk(major = false), 1_040_000L, 16)
         assertEquals(1, inner.discontinuities)
         assertEquals(1, events.count { it.startsWith("forward_anchor ") })
@@ -84,8 +82,6 @@ class PlaybackSpeedAwareAudioSinkTrueHdAnchorTest {
     fun iecFallbackMidTitle_rearmsWatcherAndForcesResyncOnFirstSyncedBuffer() {
         val inner = CountingSink()
         val events = mutableListOf<String>()
-        // The IEC track refuses every write, so the first MAT frame the packer emits makes the
-        // IEC sink fall back to the wrapped sink from inside handleBuffer.
         val iecSink = IecPassthroughAudioSink(
             sink = inner,
             trackFactory = IecAudioTrackFactory { _, _, _, _ -> ScriptedIecTrack() },
@@ -95,12 +91,8 @@ class PlaybackSpeedAwareAudioSinkTrueHdAnchorTest {
         sink.configure(trueHdFormat(), 0, null)
         assertTrue(iecSink.isIecActive)
         sink.play()
-        // While IEC is active the watcher is idle: no forward_anchor for the start of play.
         assertTrue(events.none { it.startsWith("forward_anchor ") })
 
-        // The packer emits its first MAT frame once the padding for the next unit overflows the
-        // frame, about 25 units in (his packer test allows up to 48). The refused write of that
-        // frame triggers the fallback; stop feeding as soon as it has.
         var pts = 0L
         for (i in 0 until 48) {
             if (events.any { it.startsWith("iec_fallback_to_raw ") }) break
@@ -112,16 +104,12 @@ class PlaybackSpeedAwareAudioSinkTrueHdAnchorTest {
         assertTrue(!iecSink.isIecActive)
         assertEquals(0, inner.discontinuities)
 
-        // The first buffer the wrapped sink sees after the fallback is synced: no unsynced chunk
-        // was observed here, yet the wrapper must still resync because the fallback happened
-        // out of its sight.
         sink.handleBuffer(chunk(major = true), 5_000_000L, 16)
         assertEquals(1, inner.discontinuities)
         val anchor = events.single { it.startsWith("forward_anchor ") }
         assertTrue(anchor, anchor.contains("armedBy=fallback"))
         assertTrue(anchor, anchor.contains("resynced=true"))
 
-        // One-shot: later buffers are not evaluated, and a later flush arms normally again.
         sink.handleBuffer(chunk(major = false), 5_013_333L, 16)
         assertEquals(1, inner.discontinuities)
         sink.flush()
@@ -145,10 +133,6 @@ class PlaybackSpeedAwareAudioSinkTrueHdAnchorTest {
         val sink = PlaybackSpeedAwareAudioSink(sink = iecSink, onDiagnosticEvent = { events.add(it) })
         sink.configure(trueHdFormat(), 0, null)
         sink.play()
-        // The first MAT frame emits about 25 units in. The track stalls (write returns 0) from
-        // unit 16, so the frame stays pending instead of being written from handleBuffer, and
-        // later units are refused at the leading drain; a few dozen stalls are far below the
-        // fallback limit (1000).
         var pts = 0L
         for (i in 0 until 48) {
             if (i == 16) track.writeResult = 0
@@ -157,12 +141,10 @@ class PlaybackSpeedAwareAudioSinkTrueHdAnchorTest {
         }
         assertTrue(iecSink.isIecActive)
         assertTrue(events.none { it.startsWith("iec_fallback_to_raw ") })
-        // End of stream drains the pending frame; the write now errors and the fallback fires here.
         track.writeResult = -1
         sink.playToEndOfStream()
         assertTrue(!iecSink.isIecActive)
         assertTrue(events.any { it.startsWith("iec_fallback_to_raw ") })
-        // A seek after that: the flush arms the watcher the ordinary way.
         sink.flush()
         sink.handleBuffer(chunk(major = false), 9_000_000L, 16)
         sink.handleBuffer(chunk(major = true), 9_013_333L, 16)
@@ -196,7 +178,6 @@ class PlaybackSpeedAwareAudioSinkTrueHdAnchorTest {
         .setSampleRate(48_000)
         .build()
 
-    // Sixteen access units, the rechunker's chunk; the major sync, when present, is unit 5.
     private fun chunk(major: Boolean): ByteBuffer {
         val buf = ByteBuffer.allocate(40 * 16)
         for (i in 0 until 16) {
@@ -206,7 +187,6 @@ class PlaybackSpeedAwareAudioSinkTrueHdAnchorTest {
         return buf
     }
 
-    /** writeResult null = accept the write; 0 = stall; negative = error. */
     private class ScriptedIecTrack(var writeResult: Int? = -1) : IecAudioTrack {
         override val sampleRate: Int = 192_000
         override val frameSizeBytes: Int = 16

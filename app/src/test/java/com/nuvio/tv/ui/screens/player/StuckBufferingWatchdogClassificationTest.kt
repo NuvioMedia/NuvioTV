@@ -5,9 +5,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-// Coverage for isStuckBufferingWatchdog: media3's "Playback stuck buffering and not loading"
-// IllegalStateException reaches the app as ERROR_CODE_FAILED_RUNTIME_CHECK and must not be
-// mistaken for a Dolby Vision conversion failure.
 class StuckBufferingWatchdogClassificationTest {
 
     @Test

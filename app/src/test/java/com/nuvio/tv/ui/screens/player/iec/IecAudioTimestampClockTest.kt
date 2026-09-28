@@ -71,8 +71,6 @@ class IecAudioTimestampClockTest {
 
     @Test
     fun latencyIsNotSubtractedFromAnAdvancingTimestamp() {
-        // The timestamp's frame position is the presented count; the output latency is
-        // already inside it.
         val clock = ClockRig()
         clock.latencyUs = 100_000L
         clock.lockAdvancing(head = 192_000L)
@@ -249,8 +247,6 @@ class IecAudioTimestampClockTest {
 
     @Test
     fun staleTimestampAfterReset_doesNotCountAWrap() {
-        // Post-flush the HAL can report the pre-flush position once (seen on mt8696 for the
-        // playback head); the counter then dropping back near zero is not a 32-bit wrap.
         val clock = ClockRig()
         clock.timestamp = clock.stamp(2_832_427L)
         val rejected = clock.pos(head = 8_192L, written = 200_000L)
@@ -505,8 +501,6 @@ class IecAudioTimestampClockTest {
 
     @Test
     fun sink_advancingTimestampSurvivesADiscontinuityAnchor() {
-        // A discontinuity anchors the head and the timestamp frames by the same amount;
-        // the raw HAL counter keeps counting, so the clock must still lock afterwards.
         val track = ScriptedIecAudioTrack()
         val now = longArrayOf(1_000_000_000L)
         val sink = IecPassthroughAudioSink(

@@ -278,8 +278,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             )
         }
 
-        // ── Surround Sound (#3287): mode row + the force-optical row, which moves here
-        // because both decide what leaves the box as a bitstream. Gating unchanged.
         item(key = "audio_surround_header") {
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
             Text(
@@ -305,10 +303,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             )
         }
 
-        // Manual: one switch per deniable format. On = passthrough allowed (delegates to the
-        // platform report); off = decode to PCM in the app. Inert under Device-only decoding
-        // (no FFmpeg renderer, so nothing is denied) - shown allowed and disabled, mirroring
-        // the Force AC-3 row's gating.
         if (playerSettings.surroundFormatMode == SurroundFormatMode.MANUAL) {
             val switchesEnabled = enabled && playerSettings.decoderPriority != 0
             val deviceOnly = playerSettings.decoderPriority == 0
@@ -367,9 +361,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                     enabled = switchesEnabled
                 )
             }
-            // How a denied format leaves the box: PCM at the resolved channel target (default,
-            // lossless) or re-encoded to AC-3 5.1 where the receiver accepts AC-3 (keeps surround
-            // on a 2-channel-PCM chain). Manual only; Auto decides this from the chain's shape.
             item(key = "audio_surround_transcode_denied") {
                 ToggleSettingsItem(
                     icon = Icons.Default.VolumeUp,
@@ -384,10 +375,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             }
         }
 
-        // Channel target for app-decoded audio. Visible in both modes because the resolver
-        // honours an explicit target in both (it is the user's answer to what the popcount
-        // probe cannot prove - a subwoofer, or a chain whose PCM profile is unreadable).
-        // Auto follows the sink's reported width, so for most chains this row does nothing.
         item(key = "audio_surround_channel_target") {
             val targetName = when (playerSettings.surroundChannelTarget) {
                 SurroundChannelTarget.AUTO -> stringResource(R.string.audio_surround_channel_auto)
@@ -405,8 +392,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             )
         }
 
-        // The escape hatch for chains where Nuvio's own IEC 61937 output misbehaves: hand HBR
-        // back to the platform, which is how it left the box before the app packed it itself.
         if (isExoEngine) {
             item(key = "audio_use_system_passthrough") {
                 ToggleSettingsItem(
@@ -421,8 +406,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             }
         }
 
-        // The probe is gated on the same flag as the IEC path, so the row does nothing while
-        // the platform owns HBR.
         if (isExoEngine) {
             item(key = "audio_surround_reset_iec_probe") {
                 NavigationSettingsItem(

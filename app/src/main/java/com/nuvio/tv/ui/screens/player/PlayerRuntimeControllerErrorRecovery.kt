@@ -142,10 +142,6 @@ internal fun isAudioTrackFailure(errorCode: Int, combinedMessage: String): Boole
         combinedMessage.contains("audiotrack write failed", ignoreCase = true)
 }
 
-// media3 raises this from ExoPlayerImplInternal when the player sits in STATE_BUFFERING
-// without loading for its watchdog interval. It reaches the app as
-// ERROR_CODE_FAILED_RUNTIME_CHECK with no renderer format and says nothing about the
-// bitstream, so the DV conversion guard must not read it as a converted-stream failure.
 internal fun isStuckBufferingWatchdog(errorCode: Int, combinedMessage: String): Boolean {
     if (errorCode != PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK) return false
     return combinedMessage.contains("stuck buffering and not loading", ignoreCase = true)
@@ -324,12 +320,6 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
  * Resets the retry counter. Call this whenever playback enters a healthy state
  * (first frame rendered, or user-initiated retry).
  */
-// Marks that the PCM-forcing audio fallback has been tried for the current playback, and keeps
-// that record across the rebuild it triggers. hasTriedAudioPcmFallback is cleared on every
-// player build unless pendingAudioPcmFallbackRebuild is set (see initializePlayer), so both are
-// set together: the first stops the recovery ladder re-selecting the PCM rung on the rebuild,
-// the second makes that rebuild actually force PCM. Setting only the first leaves the ladder
-// unable to advance past the PCM rung, looping instead of reaching the audio-disabled fallback.
 internal fun PlayerRuntimeController.markAudioPcmFallbackTried() {
     hasTriedAudioPcmFallback = true
     pendingAudioPcmFallbackRebuild = true
@@ -416,14 +406,13 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     return true
 }
 
-// One-shot FFmpeg-preferred rebuild for a policy-denied audio decoder-init failure (#3287). While active for the stream, FFmpeg wins ties for every audio format it supports.
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.tryDeniedAudioFfmpegFallback(
     error: PlaybackException
 ): Boolean {
     if (error.errorCode != PlaybackException.ERROR_CODE_DECODER_INIT_FAILED) return false
     if (currentStreamUrl in preferFfmpegAudioStreamUrls) return false
-    if (cachedDecoderPriority == 0) return false // No FFmpeg renderer under Device only.
+    if (cachedDecoderPriority == 0) return false
     val failingMime = (error as? androidx.media3.exoplayer.ExoPlaybackException)
         ?.rendererFormat?.sampleMimeType
     if (failingMime == null || !androidx.media3.common.MimeTypes.isAudio(failingMime)) return false

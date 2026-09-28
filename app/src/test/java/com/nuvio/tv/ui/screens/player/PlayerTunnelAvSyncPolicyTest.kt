@@ -24,7 +24,6 @@ class PlayerTunnelAvSyncPolicyTest {
         tunnelingAlreadyDisarmed = false,
     )
 
-    // Position advancing every sample, so only the frame leg can decide.
     private fun advancingInput() = baseInput().copy(positionMs = 1_000L, lastPositionMs = 0L)
 
     @Test

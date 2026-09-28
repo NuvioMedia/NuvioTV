@@ -2885,11 +2885,6 @@ public class MatroskaExtractor implements Extractor {
     if (track == null || !track.waitingForDtsAnalysis) {
       return;
     }
-    // Skip the track number, the 2-byte timecode and the flags byte, then scan a bounded
-    // window for the first DTS sync word instead of parsing the lacing-dependent frame
-    // table. The previous parse mis-set the offset for EBML/Xiph-laced blocks (it skipped
-    // only the first lace size), so the peeked word was not a sync and every such track was
-    // left as core DTS. getDtsAudioMimeType still refines core vs. DTS-HD from the frame.
     int searchStart = dataStart + trackNumberLength + 3;
     int searchEnd =
         (int) Math.min((long) dataEnd, (long) searchStart + MAX_EARLY_DTS_BLOCK_HEADER_BYTES);

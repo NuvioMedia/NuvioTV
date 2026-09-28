@@ -40,9 +40,6 @@ class TunnelDeadClockMemoTest {
 
     @Test
     fun signature_distinguishesUnreadableFromReadAsEmpty() {
-        // A snapshot taken while the sink was gone (null) must not match one taken against a
-        // sink that answered but claimed nothing (all-false direct, or a channel count of 0),
-        // otherwise a memo learned during an HDMI drop matches a real chain.
         val allFalse = SurroundFormatResolver.DirectSupport(
             ac3 = false, eac3 = false, trueHd = false, dts = false, dtsHd = false
         )
