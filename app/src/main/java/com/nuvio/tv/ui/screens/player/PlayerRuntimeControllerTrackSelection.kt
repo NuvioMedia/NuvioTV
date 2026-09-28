@@ -181,6 +181,12 @@ internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
+            _uiState.update {
+                it.copy(
+                    selectedSubtitleTrackIndex = trackIndex,
+                    selectedAddonSubtitle = null
+                )
+            }
             updateMpvAvailableTracks()
             keepMpvPlayingIfNeeded(shouldKeepPlaying)
         }
@@ -274,7 +280,8 @@ internal fun PlayerRuntimeController.disableSubtitles() {
             _uiState.update {
                 it.copy(
                     selectedAddonSubtitle = null,
-                    selectedSubtitleTrackIndex = -1
+                    selectedSubtitleTrackIndex = -1,
+                    isRewindSubtitleActive = false
                 )
             }
             updateMpvAvailableTracks()
@@ -291,7 +298,8 @@ internal fun PlayerRuntimeController.disableSubtitles() {
     _uiState.update {
         it.copy(
             selectedAddonSubtitle = null,
-            selectedSubtitleTrackIndex = -1
+            selectedSubtitleTrackIndex = -1,
+            isRewindSubtitleActive = false
         )
     }
 }
