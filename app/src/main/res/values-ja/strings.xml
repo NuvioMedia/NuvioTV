@@ -2474,10 +2474,6 @@
     <string name="network_fast_error_token_missing">fast.com: トークンがバンドルに見つかりません</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">トレントの追加に失敗しました</string>
-    <string name="torrent_error_binary_missing">TorrServerバイナリが %1$s に見つかりません</string>
-    <string name="torrent_error_process_died">TorrServerプロセスが起動時に終了しました（終了コード %1$d）</string>
-    <string name="torrent_error_start_timeout">TorrServerが%1$ds以内に起動しませんでした</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">P2Pエンジンを起動中…</string>

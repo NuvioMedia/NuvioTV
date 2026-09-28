@@ -1512,20 +1512,20 @@ class StreamScreenViewModel @Inject constructor(
                             } else {
                                 val speed = formatSpeed(context, torrentState.downloadSpeed)
                                 val peerInfo = context.getString(R.string.player_torrent_peer_info, torrentState.seeds, torrentState.peers)
-                                val mbLoaded = formatMB(context, torrentState.preloadedBytes)
-                                context.getString(R.string.player_torrent_buffered_status, mbLoaded, peerInfo, speed)
+                                val mbLoaded = formatMB(context, torrentState.loadedBytes)
+                                context.getString(R.string.player_torrent_loading_status, mbLoaded, peerInfo, speed)
                             }
-                            
-                            val progress = (torrentState.preloadedBytes.toFloat() / preloadTarget).coerceIn(0f, 1f)
-                            
+
+                            val progress = (torrentState.deliveredBytes.toFloat() / preloadTarget).coerceIn(0f, 1f)
+
                             updateUiStateIfChanged {
                                 it.copy(
                                     directAutoPlayMessage = message,
                                     directAutoPlayProgress = progress
                                 )
                             }
-                            
-                            if (torrentState.preloadedBytes >= preloadTarget) {
+
+                            if (torrentState.deliveredBytes >= preloadTarget) {
                                 preloadCompleted.complete(Unit)
                             }
                         }
@@ -1579,8 +1579,7 @@ class StreamScreenViewModel @Inject constructor(
                         Log.d(TAG, "Preload background HTTP request cancelled or failed: ${e.message}")
                     }
                 }
-                
-                // Wait for TorrServer to preload (or timeout after 60 seconds)
+
                 val preloaded = kotlinx.coroutines.withTimeoutOrNull(60_000L) {
                     preloadCompleted.await()
                     true

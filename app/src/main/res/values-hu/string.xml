@@ -2776,10 +2776,6 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="network_fast_error_token_missing">fast.com: token nem található a csomagban</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Nem sikerült hozzáadni a torrentet</string>
-    <string name="torrent_error_binary_missing">A TorrServer bináris nem található itt: %1$s</string>
-    <string name="torrent_error_process_died">A TorrServer folyamat leállt indításkor (kilépési kód: %1$d)</string>
-    <string name="torrent_error_start_timeout">A TorrServer nem indult el %1$d másodpercen belül</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">A P2P motor indítása…</string>

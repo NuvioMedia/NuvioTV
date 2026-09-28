@@ -2361,10 +2361,6 @@
     <string name="network_fast_error_script_path_missing">fast.com: caminho do script não encontrado</string>
     <string name="network_fast_error_token_missing">fast.com: token não encontrado no pacote (bundle)</string>
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Falha ao adicionar o torrent</string>
-    <string name="torrent_error_binary_missing">Binário do TorrServer não encontrado em %1$s</string>
-    <string name="torrent_error_process_died">O processo do TorrServer terminou abruptamente ao iniciar (código de saída %1$d)</string>
-    <string name="torrent_error_start_timeout">O TorrServer falhou ao iniciar no período de %1$ds</string>
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">A iniciar o motor P2P…</string>
     <string name="player_torrent_rebuffer_status">%1$s em buffer</string>

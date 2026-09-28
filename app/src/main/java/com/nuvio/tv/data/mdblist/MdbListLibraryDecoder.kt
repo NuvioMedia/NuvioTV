@@ -67,7 +67,7 @@ private fun decodeLibraryItem(row: JsonObject, bucket: MdbListItemType? = null):
         genres = row.arrayValue("genres").mapNotNull {
             (it as? JsonPrimitive)?.contentOrNull ?: (it as? JsonObject)?.text("name", "slug")
         }.distinct(),
-        listedAt = row.timestamp("listed_at", "added_at")?.let(::mdbListTimestamp) ?: 0,
+        listedAt = row.timestamp("listed_at", "added_at", "watchlist_at")?.let(::mdbListTimestamp) ?: 0,
         rank = row.integer("rank")?.takeIf { it >= 0 }
     )
 }

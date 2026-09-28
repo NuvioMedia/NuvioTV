@@ -2315,10 +2315,6 @@
     <string name="network_fast_error_token_missing">fast.com&#160;: jeton introuvable dans le bundle</string>
 
     <!-- Service torrent / erreurs binaire TorrServer -->
-    <string name="torrent_error_add_failed">Échec de l’ajout du torrent</string>
-    <string name="torrent_error_binary_missing">Binaire TorrServer introuvable à %1$s</string>
-    <string name="torrent_error_process_died">Le processus TorrServer s’est arrêté au démarrage (code de sortie %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer n’a pas démarré dans les %1$ds</string>
 
     <!-- Lecteur&#160;: erreurs flux / lien externe -->
     <string name="player_torrent_starting_engine">Démarrage du moteur P2P…</string>

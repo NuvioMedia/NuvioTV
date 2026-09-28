@@ -1145,6 +1145,8 @@
     <string name="layout_custom_poster_screen_details">Màn hình chi tiết</string>
 
     <!-- Custom Poster Web Page -->
+    <string name="layout_always_show_landscape_clearlogo">Luôn dùng phông nền kèm logo cho poster ngang</string>
+    <string name="layout_always_show_landscape_clearlogo_sub">Bỏ qua poster ngang từ tiện ích và thay thế bằng phông nền có chèn lớp phủ logo trong suốt.</string>
     <string name="web_custom_poster_title">Nguồn poster tùy chỉnh</string>
     <string name="web_custom_poster_subtitle">Dán mẫu URL poster vào bên dưới và nhấn Lưu.</string>
     <string name="web_custom_poster_label">Mẫu URL</string>
@@ -2530,10 +2532,10 @@
     <string name="collections_editor_backdrop">Ảnh phông nền</string>
     <string name="collections_editor_pin_above">Ghim phía trên các danh mục</string>
     <string name="collections_editor_pin_above_desc">Hiển thị bộ sưu tập này phía trên tất cả danh mục trang chủ thông thường. Các bộ sưu tập được ghim sẽ theo thứ tự tạo bộ sưu tập.</string>
-    <string name="collections_editor_focus_glow">Viền sáng khi chọn</string>
-    <string name="collections_editor_focus_glow_desc">Sử dụng hiệu ứng phát sáng gốc của TV gốc cho các thẻ danh mục tùy chỉnh trên màn hình chính của bộ sưu tập này</string>
+    <string name="collections_editor_focus_glow">Phát sáng khi chọn</string>
+    <string name="collections_editor_focus_glow_desc">Sử dụng hiệu ứng phát sáng gốc của TV trên các thẻ danh mục tùy chỉnh thuộc màn hình chính của bộ sưu tập này</string>
     <string name="collections_editor_view_mode">Chế độ hiển thị</string>
-    <string name="collections_editor_show_all_tab">Hiển thị thẻ &quot;Tất cả&quot;</string>
+    <string name="collections_editor_show_all_tab">Hiển thị thẻ \"Tất cả\"</string>
     <string name="collections_editor_show_all_tab_desc">Gộp tất cả danh mục vào một thẻ</string>
     <string name="collections_editor_folders">Thư mục</string>
     <string name="collections_editor_add_folder">Thêm thư mục</string>
@@ -2568,6 +2570,7 @@
     <string name="collections_editor_shape_wide">Rộng</string>
     <string name="collections_editor_shape_square">Vuông</string>
     <string name="collections_editor_addon_missing">Tiện ích chưa cài đặt: %1$s</string>
+    <string name="collections_editor_catalog_missing">Danh mục không có sẵn</string>
     <string name="collections_editor_add_tmdb_source">Thêm nguồn TMDB</string>
     <string name="collections_editor_add_trakt_source">Thêm danh sách Trakt</string>
     <string name="collections_editor_edit_tmdb_source">Chỉnh sửa nguồn TMDB</string>
@@ -2981,10 +2984,6 @@
     <string name="network_fast_error_token_missing">fast.com: Không tìm thấy token trong gói</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Không thể thêm torrent</string>
-    <string name="torrent_error_binary_missing">Không tìm thấy tệp thực thi TorrServer tại %1$s</string>
-    <string name="torrent_error_process_died">Tiến trình TorrServer đã dừng khi khởi động (mã thoát %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer đã không thể khởi động trong vòng %1$d giây</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Đang khởi động lõi P2P…</string>

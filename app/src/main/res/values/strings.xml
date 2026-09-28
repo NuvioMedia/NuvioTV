@@ -782,6 +782,8 @@
     <string name="playback_engine_mvplayer_desc">Uses libmpv with Nuvio OSD controls. Experimental.</string>
 
     <string name="video_section">Video</string>
+    <string name="playback_true_black_letterbox">True black bars</string>
+    <string name="playback_true_black_letterbox_sub">Leave the bars around the picture unpainted so HDR stays true black. Keep this off if a bright line appears on the bars.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Auto-play Trailers</string>
     <string name="audio_autoplay_trailers_sub">Automatically play trailers on detail and post-play screens</string>
@@ -1765,6 +1767,26 @@
     <string name="settings_p2p_subtitle">Allow peer-to-peer (torrent) streams</string>
     <string name="settings_p2p_hide_stats_title">Hide torrent stats</string>
     <string name="settings_p2p_hide_stats_subtitle">Hide buffer, seeds, peers and download speed during loading and playback</string>
+    <string name="settings_p2p_profile_title">Torrent profile</string>
+    <string name="settings_p2p_profile_soft">Soft</string>
+    <string name="settings_p2p_profile_balanced">Balanced</string>
+    <string name="settings_p2p_profile_fast">Fast</string>
+    <string name="settings_p2p_profile_soft_description">Uses fewer peer connections to reduce battery and network load</string>
+    <string name="settings_p2p_profile_balanced_description">Recommended balance of startup speed and connection stability</string>
+    <string name="settings_p2p_profile_fast_description">Uses more peer connections for difficult or high-bitrate torrents</string>
+    <string name="settings_p2p_cache_size_title">Torrent cache size</string>
+    <string name="settings_p2p_cache_size_description">Downloaded torrent data kept on this device for faster replays</string>
+    <string name="settings_p2p_cache_none">No persistent cache</string>
+    <string name="settings_p2p_cache_2_gb">2 GB</string>
+    <string name="settings_p2p_cache_5_gb">5 GB</string>
+    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_clear_cache_title">Clear torrent cache</string>
+    <string name="settings_p2p_clear_cache_usage">%1$s currently used</string>
+    <string name="settings_p2p_clear_cache_usage_pending">Usage is measured after P2P starts; select to clear cached torrent data</string>
+    <string name="settings_p2p_clear_cache_clearing">Clearing inactive torrent data…</string>
+    <string name="settings_p2p_clear_cache_playback_active">Stop P2P playback before clearing the cache</string>
+    <string name="settings_p2p_clear_cache_done">Cleared %1$s of inactive torrent data</string>
+    <string name="settings_p2p_clear_cache_failed">Could not clear the torrent cache</string>
     <string name="p2p_download_title">Downloading P2P Engine</string>
     <string name="p2p_download_subtitle">This is a one-time download required for P2P streaming.</string>
     <string name="stream_type_external">External</string>
@@ -2853,6 +2875,10 @@
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
     <string name="player_torrent_connecting_peers">Connecting to peers…</string>
+    <string name="player_torrent_fetching_metadata">Fetching torrent metadata…</string>
+    <string name="player_torrent_preparing_stream">Preparing torrent stream…</string>
+    <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
+    <string name="player_torrent_loading_status">%1$s downloaded · %2$s · %3$s</string>
     <string name="player_track_audio_fallback">Audio %1$d</string>
     <string name="player_track_subtitle_fallback">Subtitle %1$d</string>
 
@@ -3022,11 +3048,8 @@
     <string name="network_fast_error_script_path_missing">fast.com: script path not found</string>
     <string name="network_fast_error_token_missing">fast.com: token not found in bundle</string>
 
-    <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Failed to add torrent</string>
-    <string name="torrent_error_binary_missing">TorrServer binary not found at %1$s</string>
-    <string name="torrent_error_process_died">TorrServer process died on startup (exit code %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer failed to start within %1$ds</string>
+    <!-- Torrent service errors -->
+    <string name="torrent_error_start_timeout">Torrent stream did not start within %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Starting P2P engine…</string>
