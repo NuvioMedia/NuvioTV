@@ -42,6 +42,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import com.nuvio.tv.core.network.IPv4FirstDns
+import com.nuvio.tv.core.network.UserAgentProvider
 import com.nuvio.tv.core.diagnostics.SentryNetworkBreadcrumbInterceptor
 import java.io.File
 import java.security.SecureRandom
@@ -161,6 +162,23 @@ object NetworkModule {
             .hostnameVerifier { _, _ -> true }
             .build()
     }
+
+    @Provides
+    @Singleton
+    @Named("addon")
+    fun provideAddonOkHttpClient(
+        okHttpClient: OkHttpClient,
+        userAgentProvider: UserAgentProvider
+    ): OkHttpClient = okHttpClient.newBuilder()
+        .addInterceptor { chain ->
+            val version = BuildConfig.VERSION_NAME.ifBlank { "dev" }
+            val defaultUa = "Nuvio/$version"
+            val request = chain.request().newBuilder()
+                .header("User-Agent", userAgentProvider.currentOrDefault(defaultUa))
+                .build()
+            chain.proceed(request)
+        }
+        .build()
 
     @Provides
     @Singleton
@@ -309,6 +327,19 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @Named("addon")
+    fun provideAddonRetrofit(
+        @Named("addon") okHttpClient: OkHttpClient,
+        moshi: Moshi
+    ): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://placeholder.nuvio.tv/")
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+
+    @Provides
+    @Singleton
     @Named("tmdb")
     fun provideTmdbRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit =
         Retrofit.Builder()
@@ -332,7 +363,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAddonApi(retrofit: Retrofit): AddonApi =
+    fun provideAddonApi(@Named("addon") retrofit: Retrofit): AddonApi =
         retrofit.create(AddonApi::class.java)
 
     @Provides
