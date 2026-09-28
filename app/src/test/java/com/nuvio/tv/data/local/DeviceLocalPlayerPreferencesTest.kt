@@ -39,6 +39,16 @@ class DeviceLocalPlayerPreferencesTest {
     fun defaultValuesAreFalse() = runTest {
         assertFalse(preferences.playerStatsHudButtonEnabled.first())
         assertFalse(preferences.playerStatsHudActive.first())
+        assertFalse(preferences.transparentLetterbox.first())
+    }
+
+    @Test
+    fun transparentLetterboxPersistsOnDevice() = runTest {
+        preferences.setTransparentLetterbox(true)
+        assertTrue(preferences.transparentLetterbox.first())
+
+        preferences.setTransparentLetterbox(false)
+        assertFalse(preferences.transparentLetterbox.first())
     }
 
     @Test

@@ -89,6 +89,7 @@ data class PlayerUiState(
     val loadingIssueElapsedMs: Long = 0L,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
+    val transparentLetterbox: Boolean = false,
     val playerStatsHudEnabled: Boolean = false,
     val playerStatsHudButtonAvailable: Boolean = false,
     val showPauseOverlay: Boolean = false,
@@ -204,6 +205,7 @@ data class PlayerUiState(
     // Aspect ratio / resize mode
     val resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
     val aspectMode: AspectMode = AspectMode.ORIGINAL,
+    val tunneledSurfaceFill: Boolean = false,
     val tunnelingEnabled: Boolean = false,
     val showAspectRatioIndicator: Boolean = false,
     val aspectRatioIndicatorText: String = "",

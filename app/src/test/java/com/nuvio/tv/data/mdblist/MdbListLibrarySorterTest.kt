@@ -54,7 +54,7 @@ class MdbListLibrarySorterTest {
             assertEquals(expected, sorter.observeAddedOrder(MDBLIST_TEST_LIST_KEY, false).first())
             assertEquals(expected.reversed(), sorter.observeAddedOrder(MDBLIST_TEST_LIST_KEY, true).first())
         }
-        assertEquals(listOf("asc", "desc"), h.http.engine.requests.map { it.query["order"] })
+        assertEquals(listOf("desc", "asc"), h.http.engine.requests.map { it.query["order"] })
         assertTrue(h.http.engine.requests.all { it.query["sort"] == "added" && it.query["unified"] == "true" })
         val restored = MdbListSyncTestHarness(backgroundScope)
         restored.seed(Json.decodeFromString<MdbListSyncSnapshot>(h.storage.profiles.getValue(1)))
@@ -75,7 +75,7 @@ class MdbListLibrarySorterTest {
         val keys = h.libraryService(backgroundScope).listSorter.observeAddedOrder(MDBLIST_TEST_LIST_KEY, true).first()
         assertEquals(listOf("series:tmdb:1", "movie:tmdb:1"), keys)
         assertEquals("next", h.http.engine.requests.last().query["cursor"])
-        assertTrue(h.http.engine.requests.all { it.query["sort"] == "added" && it.query["order"] == "desc" })
+        assertTrue(h.http.engine.requests.all { it.query["sort"] == "added" && it.query["order"] == "asc" })
     }
 
     @Test
@@ -102,7 +102,7 @@ class MdbListLibrarySorterTest {
     @Test
     fun `failed later page never caches a partial order`() = runTest {
         val h = MdbListSyncTestHarness(backgroundScope)
-        val snapshot = mdbListLibrarySnapshot(h.http.now).copy(addedOrders = mapOf(MDBLIST_TEST_LIST_KEY to mapOf("asc" to order)))
+        val snapshot = mdbListLibrarySnapshot(h.http.now).copy(addedOrders = mapOf(MDBLIST_TEST_LIST_KEY to mapOf("desc" to order)))
         h.seedLibrary(snapshot)
         h.repository.ensureLoaded()
         h.http.reply(body = page, headers = mapOf("X-Next-Cursor" to "next"))
@@ -169,7 +169,7 @@ class MdbListLibrarySorterTest {
         val h = MdbListSyncTestHarness(backgroundScope)
         h.seedLibrary(mdbListLibrarySnapshot(h.http.now).copy(
             itemsByList = mapOf(MDBLIST_TEST_LIST_KEY to items),
-            addedOrders = mapOf(MDBLIST_TEST_LIST_KEY to mapOf("desc" to order))
+            addedOrders = mapOf(MDBLIST_TEST_LIST_KEY to mapOf("asc" to order))
         ))
         h.repository.ensureLoaded()
         val service = h.libraryService(backgroundScope)

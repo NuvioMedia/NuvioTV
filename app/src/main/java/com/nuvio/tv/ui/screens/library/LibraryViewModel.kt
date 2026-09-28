@@ -991,15 +991,20 @@ class LibraryViewModel @Inject constructor(
             it.source == sourceMode && it.listKey == selectedListKey && it.sortOption == selectedSortOption
         }?.comparator()
         val sorted = when (selectedSortOption) {
-            LibrarySortOption.DEFAULT -> if (sourceMode.providerId != null) {
-                watchedFiltered.sortedWith(
+            LibrarySortOption.DEFAULT -> when {
+                sourceMode == LibrarySourceMode.MDBLIST -> watchedFiltered.sortedWith(
+                    compareByDescending<LibraryEntry> { it.listedAt }
+                        .thenByDescending { it.listRanks[selectedListKey] ?: Int.MIN_VALUE }
+                        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
+                        .thenBy { it.id }
+                )
+                sourceMode.providerId != null -> watchedFiltered.sortedWith(
                     compareBy<LibraryEntry> { it.listRanks[selectedListKey] ?: it.traktRank ?: Int.MAX_VALUE }
                         .thenByDescending { it.listedAt }
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                         .thenBy { it.id }
                 )
-            } else {
-                watchedFiltered
+                else -> watchedFiltered
             }
             LibrarySortOption.ADDED_DESC -> watchedFiltered.sortedWith(
                 addedOrder ?: compareByDescending<LibraryEntry> { it.listedAt }

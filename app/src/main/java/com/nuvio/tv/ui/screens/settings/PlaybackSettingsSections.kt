@@ -27,7 +27,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
@@ -59,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.DisplayCapabilities
+import com.nuvio.tv.core.torrent.TorrentCacheSize
+import com.nuvio.tv.core.torrent.TorrentProfile
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -147,6 +149,8 @@ internal fun PlaybackSettingsSections(
     onSetLoadingOverlayEnabled: (Boolean) -> Unit,
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
     onSetOsdClockEnabled: (Boolean) -> Unit,
+    onSetTransparentLetterbox: (Boolean) -> Unit,
+    transparentLetterbox: Boolean,
     onSetSkipIntroEnabled: (Boolean) -> Unit,
     onSetParentalGuideEnabled: (Boolean) -> Unit,
     onSetAutoSkipSegmentTypeEnabled: (AutoSkipSegmentType, Boolean) -> Unit,
@@ -175,10 +179,12 @@ internal fun PlaybackSettingsSections(
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
     onSetLibassRenderType: (LibassRenderType) -> Unit,
-    p2pEnabled: Boolean = false,
+    p2pUi: P2pSettingsUi = P2pSettingsUi(),
     onSetP2pEnabled: (Boolean) -> Unit = {},
-    hideTorrentStats: Boolean = false,
     onSetHideTorrentStats: (Boolean) -> Unit = {},
+    onSetTorrentProfile: (TorrentProfile) -> Unit = {},
+    onSetTorrentCacheSize: (TorrentCacheSize) -> Unit = {},
+    onClearTorrentCache: () -> Unit = {},
     onSetNuvioPerformanceModeEnabled: (Boolean) -> Unit,
     onSetBufferEngineEnabled: (Boolean) -> Unit,
     onSetParallelNetworkEnabled: (Boolean) -> Unit,
@@ -264,8 +270,6 @@ internal fun PlaybackSettingsSections(
     val strSectionBufferNetworkDesc = stringResource(R.string.playback_section_buffer_network_desc)
     val strSectionP2p = stringResource(R.string.settings_p2p_title)
     val strSectionP2pDesc = stringResource(R.string.settings_p2p_subtitle)
-    val strHideTorrentStats = stringResource(R.string.settings_p2p_hide_stats_title)
-    val strHideTorrentStatsDesc = stringResource(R.string.settings_p2p_hide_stats_subtitle)
     val generalUi = PlaybackGeneralUi(
         isExternalPlayer = playerSettings.playerPreference == PlayerPreference.EXTERNAL,
         frameRateMatchingLabel = frameRateMatchingModeLabel(
@@ -607,6 +611,19 @@ internal fun PlaybackSettingsSections(
                 onItemFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
                 enabled = !generalUi.isExternalPlayer,
                 videoExtraItems = {
+                    item(key = "video_true_black_letterbox") {
+                        ToggleSettingsItem(
+                            icon = Icons.Default.AspectRatio,
+                            title = stringResource(R.string.playback_true_black_letterbox),
+                            subtitle = stringResource(R.string.playback_true_black_letterbox_sub),
+                            isChecked = transparentLetterbox,
+                            onCheckedChange = onSetTransparentLetterbox,
+                            onFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
+                            enabled = !generalUi.isExternalPlayer &&
+                                playerSettings.internalPlayerEngine != InternalPlayerEngine.MVP_PLAYER
+                        )
+                    }
+
                     item(key = "general_afr_header") {
                         PlaybackSectionHeader(
                             title = stringResource(R.string.playback_auto_frame_rate),
@@ -691,26 +708,15 @@ internal fun PlaybackSettingsSections(
             focusRequester = p2pHeaderFocus,
             onHeaderFocused = { focusedSection = PlaybackSection.P2P }
         ) {
-            item(key = "p2p_enabled") {
-                ToggleSettingsItem(
-                    icon = Icons.Default.Info,
-                    title = strSectionP2p,
-                    subtitle = strSectionP2pDesc,
-                    isChecked = p2pEnabled,
-                    onCheckedChange = onSetP2pEnabled,
-                    onFocused = { focusedSection = PlaybackSection.P2P }
-                )
-            }
-            item(key = "p2p_hide_stats") {
-                ToggleSettingsItem(
-                    icon = Icons.Default.Info,
-                    title = strHideTorrentStats,
-                    subtitle = strHideTorrentStatsDesc,
-                    isChecked = hideTorrentStats,
-                    onCheckedChange = onSetHideTorrentStats,
-                    onFocused = { focusedSection = PlaybackSection.P2P }
-                )
-            }
+            p2pSettingsItems(
+                ui = p2pUi,
+                onSetP2pEnabled = onSetP2pEnabled,
+                onSetHideTorrentStats = onSetHideTorrentStats,
+                onSetTorrentProfile = onSetTorrentProfile,
+                onSetTorrentCacheSize = onSetTorrentCacheSize,
+                onClearTorrentCache = onClearTorrentCache,
+                onFocused = { focusedSection = PlaybackSection.P2P }
+            )
         }
 
         if (playerSettings.internalPlayerEngine == InternalPlayerEngine.EXOPLAYER ||

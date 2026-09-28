@@ -2885,10 +2885,6 @@
     <string name="network_error_unknown">Неизвестная ошибка сети</string>
     <string name="network_fast_error_script_path_missing">Отсутствует путь скрипта fast.com</string>
     <string name="network_fast_error_token_missing">Отсутствует токен fast.com</string>
-    <string name="torrent_error_add_failed">Не удалось добавить торрент</string>
-    <string name="torrent_error_binary_missing">Бинарный файл торрента отсутствует</string>
-    <string name="torrent_error_process_died">Процесс торрента завершился</string>
-    <string name="torrent_error_start_timeout">Время ожидания запуска торрента истекло</string>
     <string name="player_torrent_starting_engine">Запуск движка P2P…</string>
     <string name="player_torrent_rebuffer_status">Перебуферизация %1$s…</string>
     <string name="player_stream_error_invalid_external_url">Неверный внешний URL потока</string>

@@ -2340,10 +2340,6 @@
     <string name="network_fast_error_script_path_missing">fast.com: nie znaleziono ścieżki skryptu</string>
     <string name="network_fast_error_token_missing">fast.com: nie znaleziono tokenu w pakiecie</string>
 
-    <string name="torrent_error_add_failed">Nie udało się dodać torrenta</string>
-    <string name="torrent_error_binary_missing">Nie znaleziono pliku TorrServer w %1$s</string>
-    <string name="torrent_error_process_died">Proces TorrServer zakończył się przy starcie (kod wyjścia %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer nie uruchomił się w ciągu %1$ds</string>
 
     <string name="player_torrent_starting_engine">Uruchamianie silnika P2P…</string>
     <string name="player_torrent_rebuffer_status">%1$s zbuforowane</string>

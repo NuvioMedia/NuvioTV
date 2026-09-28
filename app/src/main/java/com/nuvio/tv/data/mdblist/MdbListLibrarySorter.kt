@@ -21,7 +21,8 @@ internal class MdbListLibrarySorter(
     override fun observeAddedOrder(listKey: String, descending: Boolean) = snapshots.map { scoped ->
         val (scope, library) = scoped ?: return@map null
         if (listKey !in library.itemsByList) return@map null
-        val direction = if (descending) "desc" else "asc"
+        // MDBList returns the newest additions for order=asc and the oldest for order=desc.
+        val direction = if (descending) "asc" else "desc"
         val cached = library.addedOrders[listKey]?.get(direction)
         if (cached != null && !library.invalidated) return@map library.orderKeys(cached)
         if (library.invalidated) return@map null

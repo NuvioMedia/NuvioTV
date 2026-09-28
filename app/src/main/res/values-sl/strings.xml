@@ -2155,11 +2155,7 @@
     <string name="network_fast_error_token_missing">fast.com: žeton ni najden v paketu</string>
 
     <!-- Torrent service / TorrServer binary errors -->    
-    <string name="torrent_error_add_failed">Torrenta ni bilo mogoče dodati</string>
-    <string name="torrent_error_binary_missing">Binarne datoteke TorrServer ni mogoče najti na %1$s</string>
-    <string name="torrent_error_process_died">Proces TorrServer se je zaustavil ob zagonu (koda izhoda %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer se ni zagnal v %1$ds</string>
-
+         
     <!-- Player runtime: stream / external link errors -->    
     <string name="player_torrent_starting_engine">Zagon mehanizma P2P…</string>
     <string name="player_torrent_rebuffer_status">%1$s predpomnjeno</string>

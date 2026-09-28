@@ -2881,10 +2881,6 @@
 <string name="network_fast_error_token_missing">fast.com: token non trovato nel bundle</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-<string name="torrent_error_add_failed">Aggiunta torrent fallita</string>
-<string name="torrent_error_binary_missing">Binario TorrServer non trovato in %1$s</string>
-<string name="torrent_error_process_died">Il processo TorrServer si è interrotto all\'avvio (codice %1$d)</string>
-<string name="torrent_error_start_timeout">TorrServer non è riuscito ad avviarsi entro %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
 <string name="player_torrent_starting_engine">Avvio motore P2P in corso…</string>

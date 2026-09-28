@@ -2969,10 +2969,6 @@
     <string name="network_fast_error_token_missing">fast.com：在 bundle 中找不到權杖</string>
 
     <!-- Torrent 服務 / TorrServer 二進位錯誤 -->
-    <string name="torrent_error_add_failed">新增 torrent 失敗</string>
-    <string name="torrent_error_binary_missing">在 %1$s 找不到 TorrServer 二進位</string>
-    <string name="torrent_error_process_died">TorrServer 程序在啟動時終止 (退出代碼 %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer 在 %1$ds 內無法啟動</string>
 
     <!-- 播放器執行時期：串流 / 外部連結錯誤 -->
     <string name="player_torrent_starting_engine">正在啟動 P2P 引擎…</string>

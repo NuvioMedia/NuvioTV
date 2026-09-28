@@ -60,6 +60,12 @@ class MdbListLibraryDecoderTest {
     }
 
     @Test
+    fun `watchlist timestamps use the provider local datetime`() {
+        val page = decodeMdbListLibraryPage("""[{"id":1,"mediatype":"movie","watchlist_at":"2025-02-02 17:28:22.000000"}]""")
+        assertEquals(mdbListTimestamp("2025-02-02 17:28:22.000000"), page.items.single().listedAt)
+    }
+
+    @Test
     fun `unified items retain their media namespaces and ignore episodes`() {
         for (body in listOf("""[{"id":1,"mediatype":"movie"},{"id":1,"mediatype":"show"},{"mediatype":"episode"}]""",
             """{"items":[{"id":1,"mediatype":"movie"},{"id":1,"mediatype":"show"}]}""")) {

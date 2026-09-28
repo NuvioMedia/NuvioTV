@@ -2240,10 +2240,6 @@
     <string name="network_fast_error_token_missing">பாஸ்ட்.காம்: தொகுப்பில் டோக்கன் கிடைக்கவில்லை</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">டோரண்டைச் சேர்க்க முடியவில்லை</string>
-    <string name="torrent_error_binary_missing">டோர் சர்வர் பைனரி %1$s இல் கிடைக்கவில்லை</string>
-    <string name="torrent_error_process_died">டோர் சர்வர் செயல்முறை தொடக்கத்தில் முடங்கியது (வெளியேறும் குறியீடு %1$d)</string>
-    <string name="torrent_error_start_timeout">டோர் சர்வர் %1$ds குள் தொடங்க முடியவில்லை</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">பி2பி இயந்திரம் தொடங்குகிறது…</string>

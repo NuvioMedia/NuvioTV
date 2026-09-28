@@ -2578,10 +2578,6 @@
     <string name="network_fast_error_token_missing">fast.com: token nenalezen v balíčku</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Přidání torrentu selhalo</string>
-    <string name="torrent_error_binary_missing">Binární soubor TorrServer nebyl nalezen na %1$s</string>
-    <string name="torrent_error_process_died">Proces TorrServer při spuštění spadl (kód ukončení %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer se nepodařilo spustit do %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Spouštění P2P jádra…</string>

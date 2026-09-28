@@ -2482,10 +2482,6 @@
     <string name="network_fast_error_token_missing">fast.com: رمز التحقق (Token) مفقود في الحزمة</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">فشل إضافة ملف التورنت</string>
-    <string name="torrent_error_binary_missing">ملف TorrServer التنفيذي غير موجود في %1$s</string>
-    <string name="torrent_error_process_died">توقفت عملية TorrServer عند بدء التشغيل (رمز الخروج %1$d)</string>
-    <string name="torrent_error_start_timeout">فشل بدء تشغيل TorrServer خلال %1$d ثانية</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">جاري تشغيل محرك P2P…</string>

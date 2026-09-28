@@ -23,7 +23,7 @@ class LibrarySortingTest {
     val mainDispatcher = MainDispatcherRule()
 
     @Test
-    fun `MDBList provider order keeps the zero ranked title first`() = runTest {
+    fun `MDBList provider order puts the highest rank first when added dates are absent`() = runTest {
         val f = LibraryViewModelTestFixture()
         val items = decodeMdbListLibraryPage("""[
             {"id":1,"mediatype":"movie","title":"Zulu","rank":0},
@@ -31,7 +31,7 @@ class LibrarySortingTest {
         ]""").items
         f.items.value = MdbListLibraryProjection(MdbListLibrarySnapshot(itemsByList = mapOf(f.tab.key to items))).entries
         runCurrent()
-        assertEquals(listOf("Zulu", "Alpha"), f.viewModel.uiState.value.visibleItems.map { it.name })
+        assertEquals(listOf("Alpha", "Zulu"), f.viewModel.uiState.value.visibleItems.map { it.name })
     }
 
     @Test
@@ -114,7 +114,7 @@ class LibrarySortingTest {
         f.viewModel.onSelectSortOption(LibrarySortOption.ADDED_DESC)
         runCurrent()
         assertEquals(LibrarySortOption.DEFAULT, f.viewModel.uiState.value.selectedSortOption)
-        assertEquals(listOf("Zulu", "Alpha", "Bravo"), f.viewModel.uiState.value.visibleItems.map { it.name })
+        assertEquals(listOf("Bravo", "Alpha", "Zulu"), f.viewModel.uiState.value.visibleItems.map { it.name })
         f.viewModel.onSelectSortOption(LibrarySortOption.ADDED_DESC)
         runCurrent()
         assertEquals(listOf("Bravo", "Alpha", "Zulu"), f.viewModel.uiState.value.visibleItems.map { it.name })
@@ -162,7 +162,7 @@ class LibrarySortingTest {
         )).entries
         runCurrent()
         val expected = mapOf(
-            LibrarySortOption.DEFAULT to listOf("Bravo", "Zulu", "The Alpha"),
+            LibrarySortOption.DEFAULT to listOf("The Alpha", "Bravo", "Zulu"),
             LibrarySortOption.ADDED_DESC to listOf("The Alpha", "Bravo", "Zulu"),
             LibrarySortOption.ADDED_ASC to listOf("Zulu", "Bravo", "The Alpha"),
             LibrarySortOption.TITLE_ASC to listOf("The Alpha", "Bravo", "Zulu"),
@@ -192,7 +192,7 @@ class LibrarySortingTest {
         val providerOrder = listOf("The Shawshank Redemption", "Breaking Bad")
         val alphabetical = providerOrder.reversed()
         for ((option, names) in mapOf(
-            LibrarySortOption.DEFAULT to providerOrder,
+            LibrarySortOption.DEFAULT to alphabetical,
             LibrarySortOption.ADDED_DESC to alphabetical,
             LibrarySortOption.ADDED_ASC to alphabetical,
             LibrarySortOption.TITLE_ASC to alphabetical,
@@ -205,7 +205,7 @@ class LibrarySortingTest {
     }
 
     @Test
-    fun `MDBList provider order preserves response order when rank and added date are absent`() = runTest {
+    fun `MDBList provider order reverses response order when rank and added date are absent`() = runTest {
         val f = LibraryViewModelTestFixture()
         val items = decodeMdbListLibraryPage("""{"items":[
             {"id":1,"mediatype":"movie","title":"Zulu"},
@@ -217,7 +217,7 @@ class LibrarySortingTest {
         )).entries
         runCurrent()
         assertEquals(LibrarySortOption.DEFAULT, f.viewModel.uiState.value.selectedSortOption)
-        assertEquals(listOf("Zulu", "Alpha", "Bravo"), f.viewModel.uiState.value.visibleItems.map { it.name })
+        assertEquals(listOf("Bravo", "Alpha", "Zulu"), f.viewModel.uiState.value.visibleItems.map { it.name })
     }
 
 }
