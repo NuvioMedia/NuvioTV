@@ -115,8 +115,29 @@ fun PlaybackSettingsContent(
     initialFocusRequester: FocusRequester? = null
 ) {
     val playerSettings by viewModel.playerSettings.collectAsStateWithLifecycle(initialValue = PlayerSettings())
+    val transparentLetterbox by viewModel.transparentLetterbox.collectAsStateWithLifecycle(initialValue = false)
     val torrentSettings by viewModel.torrentSettingsFlow.collectAsStateWithLifecycle(
         initialValue = com.nuvio.tv.core.torrent.TorrentSettingsData()
+    )
+    val torrentCacheState by viewModel.torrentCacheState.collectAsStateWithLifecycle()
+    val torrentState by viewModel.torrentState.collectAsStateWithLifecycle()
+    var torrentCacheClearResult by remember { mutableStateOf<com.nuvio.tv.core.torrent.TorrentCacheClearResult?>(null) }
+    var torrentCacheClearFailed by remember { mutableStateOf(false) }
+    val torrentCacheClearAvailable = torrentState !is com.nuvio.tv.core.torrent.TorrentState.Connecting &&
+        torrentState !is com.nuvio.tv.core.torrent.TorrentState.Streaming &&
+        !torrentCacheState.isClearing
+    val p2pUi = P2pSettingsUi(
+        enabled = torrentSettings.p2pEnabled,
+        hideStats = torrentSettings.hideTorrentStats,
+        profile = torrentSettings.torrentProfile,
+        cacheSize = torrentSettings.cacheSize,
+        cacheSummary = torrentCacheSummary(
+            cacheState = torrentCacheState,
+            clearAvailable = torrentCacheClearAvailable,
+            clearResult = torrentCacheClearResult,
+            clearFailed = torrentCacheClearFailed
+        ),
+        cacheClearEnabled = torrentCacheClearAvailable
     )
     val installedAddonNames by viewModel.installedAddonNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val enabledPluginNames by viewModel.enabledPluginNames.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -270,6 +291,10 @@ fun PlaybackSettingsContent(
                 onSetLoadingOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setLoadingOverlayEnabled(enabled) } },
                 onSetPauseOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setPauseOverlayEnabled(enabled) } },
                 onSetOsdClockEnabled = { enabled -> coroutineScope.launch { viewModel.setOsdClockEnabled(enabled) } },
+                onSetTransparentLetterbox = { enabled ->
+                    coroutineScope.launch { viewModel.setTransparentLetterbox(enabled) }
+                },
+                transparentLetterbox = transparentLetterbox,
                 onSetSkipIntroEnabled = { enabled -> coroutineScope.launch { viewModel.setSkipIntroEnabled(enabled) } },
                 onSetParentalGuideEnabled = { enabled -> coroutineScope.launch { viewModel.setParentalGuideEnabled(enabled) } },
                 onSetAutoSkipSegmentTypeEnabled = { segmentType, enabled ->
@@ -341,7 +366,7 @@ fun PlaybackSettingsContent(
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },
                 onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } },
-                p2pEnabled = torrentSettings.p2pEnabled,
+                p2pUi = p2pUi,
                 onSetP2pEnabled = { enabled ->
                     if (enabled && !torrentSettings.p2pEnabled) {
                         openDialog { showP2pConsentDialog = true }
@@ -349,8 +374,18 @@ fun PlaybackSettingsContent(
                         viewModel.setP2pEnabled(enabled)
                     }
                 },
-                hideTorrentStats = torrentSettings.hideTorrentStats,
                 onSetHideTorrentStats = { enabled -> viewModel.setHideTorrentStats(enabled) },
+                onSetTorrentProfile = viewModel::setTorrentProfile,
+                onSetTorrentCacheSize = viewModel::setTorrentCacheSize,
+                onClearTorrentCache = {
+                    torrentCacheClearResult = null
+                    torrentCacheClearFailed = false
+                    coroutineScope.launch {
+                        runCatching { viewModel.clearTorrentCache() }
+                            .onSuccess { torrentCacheClearResult = it }
+                            .onFailure { torrentCacheClearFailed = true }
+                    }
+                },
                 onSetUseParallelConnections = { enabled ->
                     coroutineScope.launch { viewModel.setUseParallelConnections(enabled) }
                     memoryUsageTrigger++

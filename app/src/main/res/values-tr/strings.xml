@@ -785,6 +785,8 @@
     <string name="playback_engine_mvplayer_desc">Nuvio ekran kontrolleriyle libmpv kullanır. Deneysel.</string>
 
     <string name="video_section">Video</string>
+    <string name="playback_true_black_letterbox">Gerçek siyah bantlar</string>
+    <string name="playback_true_black_letterbox_sub">Açıkken görüntünün etrafındaki bantlar boyanmaz ve HDR ekranda gerçek siyah kalır. Bantlarda parlak bir çizgi görürsen kapalı bırak.</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Fragman</string>
@@ -3017,10 +3019,6 @@
     <string name="player_torrent_connecting_peers">Eşlere bağlanılıyor…</string>
     <string name="player_torrent_starting_engine">P2P motoru başlatılıyor…</string>
     <string name="player_torrent_rebuffer_status">%1$s yüklendi</string>
-    <string name="torrent_error_add_failed">Torrent eklenemedi</string>
-    <string name="torrent_error_binary_missing">TorrServer çalıştırılabilir dosyası bulunamadı: %1$s</string>
-    <string name="torrent_error_process_died">TorrServer başlatılırken kapandı (çıkış kodu: %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer %1$d saniye içinde başlatılamadı</string>
     <string name="player_track_audio_fallback">Ses %1$d</string>
     <string name="player_track_subtitle_fallback">Altyazı %1$d</string>
 

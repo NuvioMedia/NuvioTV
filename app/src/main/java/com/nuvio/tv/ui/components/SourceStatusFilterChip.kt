@@ -7,9 +7,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
@@ -39,9 +35,6 @@ data class SourceChipItem(
     val name: String,
     val status: SourceChipStatus
 )
-
-private val SourceChipLoadingIndicatorSize = 12.dp
-private const val SourceChipLoadingIndicatorScale = 1.75f
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -142,28 +135,13 @@ fun SourceStatusFilterChip(
         ),
         shape = FilterChipDefaults.shape(shape = RoundedCornerShape(20.dp))
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
-        ) {
-            if (isLoading) {
-                LoadingIndicator(
-                    modifier = Modifier
-                        .size(SourceChipLoadingIndicatorSize)
-                        .graphicsLayer {
-                            scaleX = SourceChipLoadingIndicatorScale
-                            scaleY = SourceChipLoadingIndicatorScale
-                        },
-                    color = if (isFocused || isSelected) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary
-                )
-            }
-            Text(
-                text = name,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    textDirection = name.contentTextDirection()
-                ),
-                color = textColor
-            )
-        }
+        Text(
+            text = name,
+            modifier = Modifier.shimmer(isLoading),
+            style = MaterialTheme.typography.labelLarge.copy(
+                textDirection = name.contentTextDirection()
+            ),
+            color = textColor
+        )
     }
 }

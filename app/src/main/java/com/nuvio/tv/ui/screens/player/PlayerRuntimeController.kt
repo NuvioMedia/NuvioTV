@@ -712,6 +712,8 @@ class PlayerRuntimeController(
         observeTorrentSettings()
         observeStreamBadgeSettings()
         observeDeviceLocalAspectMode()
+        observeDeviceLocalTransparentLetterbox()
+        observeDeviceLocalTunneledSurfaceFill()
         observePlayerStatsHud()
     }
 
@@ -742,6 +744,7 @@ class PlayerRuntimeController(
         com.nuvio.tv.core.usenet.UsenetSidecar.get(context).release(currentStreamUrl)
         releasePlayer()
         stopTorrentStream()
+        torrentService.shutdown()
         startupLoadingReportJob?.cancel()
         vodTelemetryJob?.cancel()
         mediaSourceFactory.shutdown()

@@ -2969,10 +2969,6 @@
     <string name="network_fast_error_token_missing">fast.com：在 bundle 中找不到令牌</string>
 
     <!-- Torrent 服务 / TorrServer 二进制错误 -->
-    <string name="torrent_error_add_failed">添加 torrent 失败</string>
-    <string name="torrent_error_binary_missing">在 %1$s 找不到 TorrServer 二进制</string>
-    <string name="torrent_error_process_died">TorrServer 进程在启动时终止 (退出代码 %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer 在 %1$ds 内无法启动</string>
 
     <!-- 播放器运行时：流 / 外部链接错误 -->
     <string name="player_torrent_starting_engine">正在启动 P2P 引擎…</string>
