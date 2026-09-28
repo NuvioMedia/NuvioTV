@@ -21,4 +21,32 @@ class ProfileSettingsCredentialPolicyTest {
         assertFalse(shouldExcludePreferenceFromProfileSettingsSync("mdblist_settings", "mdblist_enabled"))
         assertFalse(shouldExcludePreferenceFromProfileSettingsSync("animeskip_settings", "animeskip_enabled"))
     }
+
+    @Test
+    fun `surround format settings stay device local under player settings`() {
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "surround_format_mode"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "surround_channel_target"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "allow_ac3_passthrough"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "allow_eac3_passthrough"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "allow_truehd_passthrough"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "allow_dts_passthrough"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "allow_dtshd_passthrough"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "denied_codec_handling"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "audio_rejections_seen"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "audio_rejections_confirmed"))
+    }
+
+    @Test
+    fun `system passthrough stays device local like the other audio chain switches`() {
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "use_system_passthrough"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "tunneling_enabled"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "force_optical_passthrough"))
+        assertFalse(shouldExcludePreferenceFromProfileSettingsSync("debrid_settings", "use_system_passthrough"))
+    }
+
+    @Test
+    fun `surround format keys are not excluded under an unrelated feature`() {
+        assertFalse(shouldExcludePreferenceFromProfileSettingsSync("debrid_settings", "surround_format_mode"))
+        assertFalse(shouldExcludePreferenceFromProfileSettingsSync("layout_settings", "audio_rejections_confirmed"))
+    }
 }

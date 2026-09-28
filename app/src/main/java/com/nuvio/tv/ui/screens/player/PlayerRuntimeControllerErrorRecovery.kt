@@ -142,6 +142,11 @@ internal fun isAudioTrackFailure(errorCode: Int, combinedMessage: String): Boole
         combinedMessage.contains("audiotrack write failed", ignoreCase = true)
 }
 
+internal fun isStuckBufferingWatchdog(errorCode: Int, combinedMessage: String): Boolean {
+    if (errorCode != PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK) return false
+    return combinedMessage.contains("stuck buffering and not loading", ignoreCase = true)
+}
+
 internal fun PlaybackException.findInvalidResponseCodeException(): HttpDataSource.InvalidResponseCodeException? {
     var current: Throwable? = cause
     while (current != null) {
@@ -315,6 +320,11 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
  * Resets the retry counter. Call this whenever playback enters a healthy state
  * (first frame rendered, or user-initiated retry).
  */
+internal fun PlayerRuntimeController.markAudioPcmFallbackTried() {
+    hasTriedAudioPcmFallback = true
+    pendingAudioPcmFallbackRebuild = true
+}
+
 internal fun PlayerRuntimeController.resetErrorRetryState() {
     startupRetryCount = 0
     errorRetryCount = 0
@@ -375,8 +385,7 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     if (cachedDecoderPriority != 1) return false // Only for EXTENSION_RENDERER_MODE_ON
     if (_uiState.value.tunnelingEnabled) return false
 
-    hasTriedAudioPcmFallback = true
-    pendingAudioPcmFallbackRebuild = true
+    markAudioPcmFallbackTried()
 
     val player = _exoPlayer ?: return false
     val savedPosition = player.currentPosition.takeIf { it > 0L } ?: 0L
@@ -386,6 +395,42 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     showRecoveryOverlay()
 
     errorRetryJob?.cancel()
+    errorRetryJob = scope.launch {
+        releasePlayer(flushPlaybackState = false)
+        if (savedPosition > 0L) {
+            _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+        }
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+    }
+
+    return true
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.tryDeniedAudioFfmpegFallback(
+    error: PlaybackException
+): Boolean {
+    if (error.errorCode != PlaybackException.ERROR_CODE_DECODER_INIT_FAILED) return false
+    if (currentStreamUrl in preferFfmpegAudioStreamUrls) return false
+    if (cachedDecoderPriority == 0) return false
+    val failingMime = (error as? androidx.media3.exoplayer.ExoPlaybackException)
+        ?.rendererFormat?.sampleMimeType
+    if (failingMime == null || !androidx.media3.common.MimeTypes.isAudio(failingMime)) return false
+    val policy = currentAudioPassthroughPolicy ?: return false
+    if (!policy.deniesPassthrough(failingMime)) return false
+
+    preferFfmpegAudioStreamUrls.add(currentStreamUrl)
+
+    val savedPosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
+    val paused = userPausedManually
+
+    Log.d(
+        PlayerRuntimeController.TAG,
+        "Decoder init failed (4001) on policy-denied audio $failingMime - retrying with FFmpeg audio preferred, position=${savedPosition}ms"
+    )
+    showRecoveryOverlay()
+
+    resetErrorRetryState()
     errorRetryJob = scope.launch {
         releasePlayer(flushPlaybackState = false)
         if (savedPosition > 0L) {
