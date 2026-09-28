@@ -27,6 +27,9 @@ internal fun UsenetSettingsCard(
             checked = configuration.fallbackEnabled,
             onToggle = { update(configuration.copy(fallbackEnabled = !configuration.fallbackEnabled)) },
             modifier = initialFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+        SettingsActionRow(title = stringResource(R.string.usenet_fallback_max_attempts),
+            subtitle = stringResource(R.string.usenet_fallback_max_attempts_description),
+            value = configuration.fallbackMaxAttempts.toString(), onClick = { picker = "fallbackAttempts" })
         SettingsToggleRow(title = stringResource(R.string.usenet_prefetch_results),
             subtitle = stringResource(R.string.usenet_prefetch_results_description),
             checked = configuration.prefetchResults,
@@ -58,6 +61,9 @@ internal fun UsenetSettingsCard(
             value = configuration.maxConnections.takeIf { it > 0 }?.toString() ?: automatic, onClick = { picker = "connections" })
     }
     when (picker) {
+        "fallbackAttempts" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_fallback_max_attempts),
+            options = (1..50).map { SettingsPickerOption(it, it.toString()) },
+            selectedValue = configuration.fallbackMaxAttempts, onOptionSelected = { update(configuration.copy(fallbackMaxAttempts = it)); picker = null }, onDismiss = { picker = null })
         "profile" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_profile), options = profiles,
             selectedValue = configuration.profile, onOptionSelected = { update(configuration.copy(profile = it)); picker = null }, onDismiss = { picker = null })
         "ahead" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_read_ahead),

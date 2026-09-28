@@ -1196,6 +1196,7 @@ class StreamScreenViewModel @Inject constructor(
         streamResolutionJob = selectionJob
         val session = com.nuvio.tv.core.player.StreamFallbackSession(
             stream, _uiState.value.filteredStreams.ifEmpty { _uiState.value.allStreams },
+            maxAttempts = com.nuvio.tv.core.usenet.UsenetSettings.read(context).fallbackMaxAttempts,
             isEnabled = { com.nuvio.tv.core.usenet.UsenetSettings.read(context).fallbackEnabled }
         )
         var candidate: Stream? = stream

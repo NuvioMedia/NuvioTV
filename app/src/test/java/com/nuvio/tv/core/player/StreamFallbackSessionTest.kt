@@ -199,6 +199,25 @@ class StreamFallbackSessionTest {
         assertNull(session.next())
     }
 
+    @Test fun `configured limit allows fifty fallback resolutions and stops at the limit`() = runTest {
+        val sources = (0..60).map { stream("$it") }
+        val session = session(sources.first(), sources, maxAttempts = 50)
+        assertEquals(sources[50], session.resolveNext { candidate, attempt ->
+            if (attempt < 50) error("unavailable")
+            candidate
+        })
+        assertEquals(50, session.attempts)
+        assertFalse(session.canAdvance)
+        assertNull(session.next())
+    }
+
+    @Test fun `attempt limits above fifty are capped`() {
+        val sources = (0..60).map { stream("$it") }
+        val session = session(sources.first(), sources, maxAttempts = 100)
+        repeat(50) { assertNotNull(session.next()) }
+        assertNull(session.next())
+    }
+
     @Test fun `external youtube and unusable entries are skipped`() {
         val first = stream("first")
         val valid = stream("valid")
