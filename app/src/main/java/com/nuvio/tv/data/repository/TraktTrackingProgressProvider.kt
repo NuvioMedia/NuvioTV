@@ -23,6 +23,7 @@ class TraktTrackingProgressProvider @Inject constructor(
     override val providerId = TrackingProviderId.TRAKT
     override val isAuthenticated = authDataStore.isEffectivelyAuthenticated
     override val ownsCompletedHistoryProjection = true
+    override val clearsLocalProgressOnSelection = true
     override val allProgress = service.observeAllProgress()
     override val remoteProgressLoaded = service.observeRemoteProgressLoaded()
     override val watchedMovieIds = service.observeAllWatchedMovieIds()

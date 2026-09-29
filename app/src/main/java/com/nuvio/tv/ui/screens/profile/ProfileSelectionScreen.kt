@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.profile
 
+import androidx.tv.material3.MaterialTheme
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.theme.NuvioMotion
 
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -1220,6 +1222,9 @@ private fun ProfileCard(
 
         Text(
             text = profile.name,
+            style = MaterialTheme.typography.labelLarge.copy(
+                textDirection = profile.name.contentTextDirection()
+            ),
             color = nameColor,
             fontSize = if (compact) 15.sp else 17.sp,
             fontWeight = nameWeight,
@@ -1520,6 +1525,9 @@ private fun CreateProfileOverlay(
 
                     Text(
                         text = profileName.ifBlank { stringResource(R.string.profile_name_placeholder) },
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            textDirection = profileName.contentTextDirection()
+                        ),
                         color = if (profileName.isBlank()) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextPrimary,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
@@ -1814,6 +1822,9 @@ private fun EditProfileOverlay(
                     )
                     Text(
                         text = profile.name,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            textDirection = profile.name.contentTextDirection()
+                        ),
                         color = Color.White,
                         fontSize = 30.sp,
                         fontWeight = FontWeight.Black
@@ -1863,6 +1874,9 @@ private fun EditProfileOverlay(
 
                     Text(
                         text = profileName.ifBlank { stringResource(R.string.profile_name_placeholder) },
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            textDirection = profileName.contentTextDirection()
+                        ),
                         color = if (profileName.isBlank()) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextPrimary,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,

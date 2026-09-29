@@ -216,6 +216,8 @@
   <string name="detail_marked_episodes_watched">Επισημάνθηκαν ως προβληθέντα επεισόδια: %1$d</string>
   <string name="detail_marked_episodes_unwatched">Επισημάνθηκαν ως μη προβληθέντα επεισόδια: %1$d</string>
   <string name="detail_marked_previous_watched">Επισημάνθηκαν ως προβληθέντα προηγούμενα επεισόδια: %1$d</string>
+  <string name="playback_unavailable">Μη διαθέσιμη αναπαραγωγή</string>
+  <string name="playback_unavailable_message">Η αναπαραγωγή δεν είναι διαθέσιμη για αυτόν τον τίτλο με τις τρέχουσες ρυθμίσεις σας.</string>
   <!-- MetaDetailsScreen -->
   <string name="detail_btn_play">Αναπαραγωγή</string>
   <string name="detail_btn_resume">Συνέχεια</string>
@@ -400,6 +402,9 @@
   <string name="licenses_attributions_section_app">ΑΔΕΙΑ ΕΦΑΡΜΟΓΗΣ</string>
   <string name="licenses_attributions_section_data">ΔΕΔΟΜΕΝΑ &amp; ΥΠΗΡΕΣΙΕΣ</string>
   <string name="licenses_attributions_section_playback">ΑΔΕΙΕΣ ΑΝΑΠΑΡΑΓΩΓΗΣ ANDROID</string>
+  <string name="licenses_attributions_section_ui">ΒΙΒΛΙΟΘΗΚΕΣ UI</string>
+  <string name="licenses_attributions_haze_title">Haze 1.7.2</string>
+  <string name="licenses_attributions_haze_body">Χρησιμοποιείται για εφέ θολώματος φόντου. Δημιουργήθηκε από τον Chris Banes. Διατίθεται υπό την άδεια Apache, έκδοση 2.0.</string>
   <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
   <string name="licenses_attributions_nuvio_body">Ο πηγαίος κώδικας και οι όροι άδειας είναι διαθέσιμοι στο αποθετήριο του έργου. Διατίθεται υπό την άδεια GNU General Public License v3.0.</string>
   <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
@@ -420,20 +425,14 @@
   <string name="licenses_attributions_libmpv_body">Χρησιμοποιείται ως μηχανή αναπαραγωγής Android. Το wrapper libmpv-android διατίθεται υπό την άδεια MIT· το mpv/libmpv και τα ενσωματωμένα native στοιχεία διατηρούν τους αρχικούς όρους άδειας.</string>
   <!-- SettingsScreen categories -->
   <string name="settings_experience">Εμπειρία</string>
-  <string name="settings_experience_subtitle">Βασική ή Προχωρημένη</string>
   <string name="settings_account">Λογαριασμός</string>
-  <string name="settings_account_subtitle">Κατάσταση λογαριασμού και συγχρονισμού</string>
   <string name="settings_profiles">Προφίλ</string>
-  <string name="settings_profiles_subtitle">Διαχείριση προφίλ χρηστών</string>
   <string name="settings_layout">Διάταξη</string>
-  <string name="settings_layout_subtitle">Δομή αρχικής οθόνης και στυλ αφισών</string>
   <string name="settings_plugins">Πρόσθετα</string>
   <string name="settings_plugins_subtitle">Αποθετήρια και πάροχοι</string>
   <string name="settings_integration">Ενσωματώσεις</string>
   <string name="settings_playback">Αναπαραγωγή</string>
-  <string name="settings_playback_subtitle">Πρόγραμμα αναπαραγωγής, υπότιτλοι και αυτόματη αναπαραγωγή</string>
   <string name="settings_trakt_subtitle">Άνοιγμα οθόνης σύνδεσης Trakt</string>
-  <string name="settings_about_subtitle">Έκδοση και πολιτικές</string>
   <string name="settings_network">Ταχύτητα δικτύου</string>
   <string name="settings_network_subtitle">Διαγνωστικά καθυστέρησης και λήψης</string>
   <string name="settings_advanced">Για προχωρημένους</string>
@@ -537,7 +536,6 @@
   <string name="advanced_confirm_exit_subtitle">Πλήρης τερματισμός της εφαρμογής και απελευθέρωση μνήμης κατά την έξοδο. Απαιτείται διπλό πάτημα του πλήκτρου πίσω για επιβεβαίωση.</string>
   <string name="confirm_exit_toast">Πατήστε ξανά πίσω για έξοδο</string>
   <string name="settings_debug">Αποσφαλμάτωση</string>
-  <string name="settings_debug_subtitle">Εργαλεία προγραμματιστή και σημαίες χαρακτηριστικών</string>
   <string name="settings_plugins_section_subtitle">Διαχείριση αποθετηρίων, παρόχων και καταστάσεων πρόσθετων</string>
   <string name="settings_account_section_subtitle">Κατάσταση λογαριασμού και συγχρονισμού</string>
   <string name="account_stat_addons">πρόσθετα</string>
@@ -621,8 +619,6 @@
   <string name="supporters_since">Υποστηρίζει το Nuvio από %1$s</string>
   <string name="supporters_since_unknown">Υποστηρίζει με υπερηφάνεια το Nuvio</string>
   <!-- PlaybackSettingsSections -->
-  <string name="playback_section_general">Γενικά</string>
-  <string name="playback_section_general_desc">Βασική συμπεριφορά αναπαραγωγής.</string>
   <string name="playback_loading_overlay">Οθόνη φόρτωσης</string>
   <string name="playback_loading_overlay_sub">Εμφάνιση οθόνης φόρτωσης μέχρι να εμφανιστεί το πρώτο καρέ βίντεο.</string>
   <string name="playback_pause_overlay">Οθόνη παύσης</string>
@@ -641,10 +637,11 @@
   <string name="auto_skip_recap_sub">Αυτόματη παράλειψη τμημάτων ανασκόπησης.</string>
   <string name="auto_skip_outro">Επίλογος / Τέλος</string>
   <string name="auto_skip_outro_sub">Αυτόματη παράλειψη επιλόγων και anime endings.</string>
-  <string name="playback_auto_frame_rate">Αυτόματος ρυθμός καρέ</string>
-  <string name="playback_section_player">Πρόγραμμα αναπαραγωγής &amp; Επιλογή ροής</string>
-  <string name="playback_section_player_desc">Προτίμηση προγράμματος αναπαραγωγής, αυτόματη αναπαραγωγή και φιλτράρισμα πηγών.</string>
-  <string name="playback_player">Πρόγραμμα αναπαραγωγής</string>
+  <string name="auto_skip_movie_credits">Τίτλοι τέλους</string>
+  <string name="auto_skip_movie_credits_sub">Αυτόματη παράλειψη των τίτλων τέλους των ταινιών, διατηρώντας τις σκηνές μετά τους τίτλους.</string>
+  <string name="skip_movie_credits">Παράλειψη τίτλων</string>
+  <string name="skip_to_post_credits">Παράλειψη μετά τους τίτλους</string>
+  <string name="playback_auto_frame_rate">Αυτόματος ρυθμός καρέ &amp; ανάλυση</string>
   <string name="playback_player_internal">Εσωτερικό</string>
   <string name="playback_player_external">Εξωτερικό</string>
   <string name="playback_player_ask">Ερώτηση κάθε φορά</string>
@@ -653,12 +650,8 @@
   <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
   <string name="playback_auto_switch_internal_player_on_error">Αυτόματη εναλλαγή μηχανής σε σφάλμα εκκίνησης</string>
   <string name="playback_auto_switch_internal_player_on_error_sub">Αν αποτύχει η εκκίνηση ροής, γίνεται αυτόματη εναλλαγή μεταξύ ExoPlayer και libmpv.</string>
-  <string name="playback_section_audio">Ήχος &amp; Βίντεο</string>
-  <string name="playback_section_audio_desc">Χειριστήρια ήχου και συμβατότητα βίντεο.</string>
   <string name="playback_section_subtitles">Υπότιτλοι</string>
   <string name="playback_section_subtitles_desc">Γλώσσα, στυλ και τρόπος απόδοσης.</string>
-  <string name="playback_afr_open">Ανοιχτό</string>
-  <string name="playback_afr_closed">Κλειστό</string>
   <string name="playback_afr_off">Απενεργοποιημένο</string>
   <string name="playback_afr_off_sub">Να μην αλλάζει ο ρυθμός ανανέωσης οθόνης.</string>
   <string name="playback_afr_on_start">Κατά την έναρξη</string>
@@ -937,7 +930,7 @@
   <string name="layout_trailer_muted">Αναπαραγωγή τρέιλερ χωρίς ήχο</string>
   <string name="layout_trailer_muted_sub_preview">Σίγαση ήχου τρέιλερ κατά την προεπισκόπηση αυτόματης αναπαραγωγής.</string>
   <string name="layout_trailer_muted_sub_expanded">Σίγαση ήχου τρέιλερ σε επεκταμένες κάρτες.</string>
-  <string name="layout_section_card_style">Στυλ κάρτας αφίσας</string>
+  <string name="layout_section_card_style">Κάρτα αφίσας</string>
   <string name="layout_section_card_style_desc">Ρύθμιση πλάτους κάρτας και ακτίνας γωνιών.</string>
   <string name="layout_open">Ανοιχτό</string>
   <string name="layout_closed">Κλειστό</string>
@@ -1137,8 +1130,6 @@
   <string name="tmdb_basic_info_subtitle">Περιγραφή, είδη και βαθμολογία από το TMDB</string>
   <string name="tmdb_details_title">Λεπτομέρειες</string>
   <string name="tmdb_details_subtitle">Διάρκεια, ημερομηνία κυκλοφορίας, χώρα και γλώσσα από το TMDB</string>
-  <string name="tmdb_release_dates_title">Ημερομηνίες κυκλοφορίας</string>
-  <string name="tmdb_release_dates_subtitle">Ημερομηνίες κυκλοφορίας και προβολής από το TMDB</string>
   <string name="tmdb_credits_title">Συντελεστές</string>
   <string name="tmdb_credits_subtitle">Ηθοποιοί με φωτογραφίες, σκηνοθέτης και σεναριογράφος από το TMDB</string>
   <string name="tmdb_productions_title">Παραγωγές</string>
@@ -1233,7 +1224,6 @@
   <string name="trakt_days_format">%1$d ημέρες</string>
   <!-- Tracking (Trakt / Simkl) -->
   <string name="settings_tracking_title">Παρακολούθηση</string>
-  <string name="settings_tracking_subtitle">Διαχείριση συνδέσεων Trakt και Simkl</string>
   <string name="settings_tracking_description">Συνδέστε υπηρεσίες παρακολούθησης και επιλέξτε ποια θα τροφοδοτεί τη Βιβλιοθήκη και τη Συνέχεια παρακολούθησης.</string>
   <string name="tracking_accounts_title">Λογαριασμοί</string>
   <string name="tracking_accounts_subtitle">Σύνδεση και διαχείριση υπηρεσιών παρακολούθησης</string>
@@ -1248,6 +1238,7 @@
   <string name="tracking_simkl_anime_id_imdb">Προτίμηση IMDb</string>
   <string name="tracking_simkl_anime_id_mal">Προτίμηση MyAnimeList</string>
   <string name="tracking_simkl_anime_id_kitsu">Προτίμηση Kitsu</string>
+  <string name="tracking_simkl_anime_id_tvdb">Προτίμηση TVDB</string>
   <string name="tracking_status_connected">Συνδεδεμένο</string>
   <string name="tracking_status_disconnected">Δεν είναι συνδεδεμένο</string>
   <string name="tracking_status_waiting">Αναμονή έγκρισης</string>
@@ -2664,10 +2655,6 @@
   <string name="network_fast_error_script_path_missing">fast.com: δεν βρέθηκε διαδρομή script</string>
   <string name="network_fast_error_token_missing">fast.com: δεν βρέθηκε διακριτικό στο bundle</string>
   <!-- Torrent service / TorrServer binary errors -->
-  <string name="torrent_error_add_failed">Αποτυχία προσθήκης torrent</string>
-  <string name="torrent_error_binary_missing">Το δυαδικό TorrServer δεν βρέθηκε στο %1$s</string>
-  <string name="torrent_error_process_died">Η διεργασία TorrServer τερμάτισε κατά την εκκίνηση (κωδικός εξόδου %1$d)</string>
-  <string name="torrent_error_start_timeout">Το TorrServer δεν εκκίνησε εντός %1$ds</string>
   <!-- Player runtime: stream / external link errors -->
   <string name="player_torrent_starting_engine">Εκκίνηση μηχανής P2P…</string>
   <string name="player_torrent_rebuffer_status">%1$s στην προσωρινή μνήμη</string>

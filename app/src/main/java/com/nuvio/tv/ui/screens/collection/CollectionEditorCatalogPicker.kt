@@ -71,6 +71,7 @@ import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
+import com.nuvio.tv.domain.model.catalogTypesMatch
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.CollectionSource
 import com.nuvio.tv.domain.model.FolderViewMode
@@ -122,7 +123,7 @@ fun CatalogPickerContent(
                 key = { index, c -> "${c.addonId}_${c.type}_${c.catalogId}_$index" }
             ) { _, catalog ->
                 val isAdded = alreadyAdded.any {
-                    it is AddonCatalogCollectionSource && it.addonId == catalog.addonId && it.type == catalog.type && it.catalogId == catalog.catalogId
+                    it is AddonCatalogCollectionSource && it.addonId == catalog.addonId && catalogTypesMatch(it.type, catalog.type) && it.catalogId == catalog.catalogId
                 }
                 Card(
                     onClick = { onToggle(catalog) },

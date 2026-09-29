@@ -21,8 +21,14 @@ object MemoryBudget {
     // and give the rest to the buffer (a flat % of max heap overcommits and starves them).
     private const val LOW_HEAP_RESERVE_MB = 210L
 
-    /** ParallelRangeDataSource schedules maxAhead = parallelConnections + 1 chunks concurrently */
+    // Conversion overhead tracks the video rather than the device, so these only hold back a margin;
+    // high-RAM keeps a larger one because it still retains a back buffer during conversion.
+    private const val LOW_RAM_CONVERSION_RATIO = 0.95f
+    private const val HIGH_RAM_CONVERSION_RATIO = 0.75f
+
     private const val BUFFER_OVERHEAD = 2
+    private const val PREFETCH_DEPTH_LOWER_MULTIPLE = 2
+    private const val PREFETCH_DEPTH_UPPER_MULTIPLE = 4
 
     const val MIN_CONNECTIONS = 2
     const val MAX_CONNECTIONS = 4
@@ -37,6 +43,9 @@ object MemoryBudget {
     private const val LOW_RAM_MAX_CHUNK_MB = 16
     const val BUFFER_STEP_MB = 25
     const val MIN_BUFFER_MB = 25
+    // Half the device default floors the slider above what a low-RAM stick can sustain.
+    const val MIN_TARGET_BUFFER_MB = 50
+    private const val MIN_PLAYBACK_BUDGET_MB = 100
     const val MAX_BUFFER_MB = 1024 * 4
     private const val DEFAULT_EFFECTIVE_BUFFER_MB = 50
 
@@ -51,35 +60,51 @@ object MemoryBudget {
     /** True when the app heap is below the high-RAM threshold (Fire TV / TV-stick class). */
     val isLowRamTier: Boolean = maxHeapMb < HIGH_HEAP_THRESHOLD_MB
 
-    // Pre-cap ratio budget; conversionBudgetMb derives from this so DV7 headroom isn't cut by the cap.
+    // Pre-cap ratio budget, before the low-RAM reserve trims it below.
     private val rawBudgetMb: Int =
         (maxHeapMb * (if (isLowRamTier) LOW_HEAP_RATIO else HIGH_HEAP_RATIO)).toInt()
 
+    // The flat reserve above collapses the budget on small heaps, so hold a floor that still leaves
+    // the smallest devices half their heap.
+    private val minPlaybackBudgetMb: Int =
+        MIN_PLAYBACK_BUDGET_MB.coerceAtMost((maxHeapMb / 2).toInt()).coerceAtLeast(MIN_BUFFER_MB)
+
     val budgetMb: Int =
         if (isLowRamTier)
-            rawBudgetMb.coerceAtMost((maxHeapMb - LOW_HEAP_RESERVE_MB).toInt()).coerceAtLeast(MIN_BUFFER_MB)
+            rawBudgetMb.coerceAtMost((maxHeapMb - LOW_HEAP_RESERVE_MB).toInt()).coerceAtLeast(minPlaybackBudgetMb)
         else rawBudgetMb
 
-    // DV7 conversion headroom: a third of the raw budget on low-RAM, half on high-RAM; never above budget.
     val conversionBudgetMb: Int =
-        (if (isLowRamTier) rawBudgetMb / 3 else rawBudgetMb / 2)
+        (budgetMb * (if (isLowRamTier) LOW_RAM_CONVERSION_RATIO else HIGH_RAM_CONVERSION_RATIO)).toInt()
             .coerceAtMost(budgetMb).coerceAtLeast(MIN_BUFFER_MB)
 
     fun effectiveBufferMb(stored: Int): Int =
         if (stored > 0) stored else defaultBufferSizeMb
 
-    /**
-     * Number of chunk-sized buffers alive concurrently in ParallelRangeDataSource.
-     * Accounts for active chunks (connectionCount) and idle recycled buffers in the pool (connectionCount).
-     */
     fun bufferCount(connectionCount: Int): Int =
-        connectionCount * 2
+        connectionCount + BUFFER_OVERHEAD
 
     fun parallelOverheadMb(connectionCount: Int, chunkSizeMb: Int): Int =
         bufferCount(connectionCount) * chunkSizeMb
 
     fun totalUsageMb(bufferMb: Int, connectionCount: Int, chunkSizeMb: Int, parallelEnabled: Boolean): Int =
         bufferMb + if (parallelEnabled) parallelOverheadMb(connectionCount, chunkSizeMb) else 0
+
+    fun prefetchDepthChunks(
+        connections: Int,
+        chunkSizeMb: Int,
+        safeNativeLimitMb: Int,
+        reserveBufferMb: Int,
+    ): Int {
+        val chunkMb = chunkSizeMb.coerceAtLeast(1)
+        val chunkBudgetMb = (safeNativeLimitMb - reserveBufferMb.coerceAtLeast(0))
+            .coerceAtLeast(chunkMb * PREFETCH_DEPTH_LOWER_MULTIPLE)
+        val byBudget = chunkBudgetMb / chunkMb
+        return byBudget.coerceIn(
+            connections * PREFETCH_DEPTH_LOWER_MULTIPLE,
+            connections * PREFETCH_DEPTH_UPPER_MULTIPLE
+        )
+    }
 
     /** Hard chunk-size ceiling for this device tier; binds everywhere, including performance mode. */
     val tierMaxChunkMb: Int = if (isLowRamTier) LOW_RAM_MAX_CHUNK_MB else MAX_CHUNK_MB

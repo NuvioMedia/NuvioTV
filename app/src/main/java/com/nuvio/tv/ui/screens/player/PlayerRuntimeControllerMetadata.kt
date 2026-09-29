@@ -256,10 +256,12 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
         return
     }
 
-    val resolvedNext = PlayerNextEpisodeRules.resolveNextEpisode(
-        videos = metaVideos,
-        currentSeason = season,
-        currentEpisode = episode
+    val shuffleState = playbackShuffleState ?: run {
+        clearNextEpisodeAndCancelPostPlay()
+        return
+    }
+    val resolvedNext = episodeShufflePlayback.nextEpisode(
+        profileId, contentId.orEmpty(), metaVideos, season, episode, shuffleState
     )
 
     nextEpisodeVideo = resolvedNext
@@ -278,6 +280,7 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
         overview = resolvedNext.overview,
         released = resolvedNext.released,
         hasAired = hasAired,
+        available = resolvedNext.available,
         unairedMessage = if (hasAired) {
             null
         } else {
@@ -406,10 +409,15 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     if (shouldEnterStillWatching) {
         enterStillWatchingPromptMode()
     } else {
+        val ne = state.nextEpisode
+        val isUnplayable = !ne.hasAired ||
+            (ne.released.isNullOrBlank() && ne.available == false)
+        if (isUnplayable) return
+
         _uiState.update {
             it.copy(postPlayMode = PostPlayMode.AutoPlay(nextEpisode = state.nextEpisode))
         }
-        if (state.nextEpisode.hasAired && streamAutoPlayNextEpisodeEnabledSetting) {
+        if (streamAutoPlayNextEpisodeEnabledSetting) {
             playNextEpisode()
         }
     }

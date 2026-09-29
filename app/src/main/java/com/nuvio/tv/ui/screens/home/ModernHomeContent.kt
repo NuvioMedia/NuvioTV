@@ -136,7 +136,7 @@ fun ModernHomeContent(
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
+    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
     onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0,
     onRequestLazyCatalogLoad: (String) -> Unit = {},
@@ -149,6 +149,7 @@ fun ModernHomeContent(
     val isSidebarExpanded = remember(sidebarExpanded) { derivedStateOf { sidebarExpanded } }
     val lifecycleOwner = LocalLifecycleOwner.current
     val useLandscapePosters = uiState.modernLandscapePostersEnabled
+    val alwaysShowLandscapeClearlogo = uiState.alwaysShowLandscapeClearlogo
     val fullScreenBackdrop = uiState.modernHeroFullScreenBackdropEnabled
     val trailerPlaybackTarget = uiState.focusedPosterBackdropTrailerPlaybackTarget
     val effectiveAutoplayEnabled =
@@ -219,18 +220,13 @@ fun ModernHomeContent(
     val stableRowListStates = remember { StableRef<MutableMap<String, LazyListState>>(rowListStates) }
     val stableLoadMoreRequestedTotals = remember { StableRef<MutableMap<String, Int>>(loadMoreRequestedTotals) }
     if (focusedItemByRow.isEmpty() && focusState.hasSavedFocus) {
-        val savedRowKey = focusState.focusedRowKey
-        if (savedRowKey != null) {
-            val savedItemKey = focusState.focusedItemKeyByRow[savedRowKey]
-            if (savedItemKey != null) {
-                val row = carouselRows.list.firstOrNull { it.key == savedRowKey }
-                if (row != null) {
-                    val itemIndex = row.items.list.indexOfFirst { it.key == savedItemKey }
-                    if (itemIndex >= 0) {
-                        focusedItemByRow[savedRowKey] = itemIndex
-                    }
-                }
-            }
+        // Every row is saved, so restore every row, not only the one that held focus.
+        val rowsByKey = carouselRows.list.associateBy { it.key }
+        focusState.focusedItemKeyByRow.forEach { (rowKey, savedItemKey) ->
+            if (savedItemKey.isBlank()) return@forEach
+            val row = rowsByKey[rowKey] ?: return@forEach
+            val itemIndex = row.items.list.indexOfFirst { it.key == savedItemKey }
+            if (itemIndex >= 0) focusedItemByRow[rowKey] = itemIndex
         }
     }
 
@@ -385,6 +381,12 @@ fun ModernHomeContent(
             )
             if (relocatedIndex != null && relocatedIndex != storedIndex) {
                 focusedItemByRow[rowKey] = relocatedIndex
+                // The hero reads its own index, synced by an effect keyed on the row size, so it
+                // would land a frame late and show whatever took the old index meanwhile.
+                if (rowKey == activeRowKey.value) {
+                    focusHolder.activeItemIndex = relocatedIndex
+                    activeItemIndex.intValue = relocatedIndex
+                }
             }
         }
         itemIdentitySnapshot.byRow = currentItemIdentitiesByRow
@@ -585,6 +587,7 @@ fun ModernHomeContent(
     val latestCarouselRows by rememberUpdatedState(carouselRows)
     val latestVerticalRowListState by rememberUpdatedState(verticalRowListState)
     val latestRowIndexByKey = rememberUpdatedState(rowIndexByKey)
+    val latestSavedScrollAnchors by rememberUpdatedState(focusState.catalogRowScrollAnchors)
     DisposableEffect(Unit) {
         onDispose {
             val row = latestActiveRow
@@ -613,12 +616,28 @@ fun ModernHomeContent(
                     rowState.key to scrollIndex
                 }
 
+            // A row not composed since the return has no state: keep the anchor it came back with.
+            val liveRowKeys = latestCarouselRows.map { it.key }.toSet()
+            val catalogRowScrollAnchors = latestSavedScrollAnchors.filterKeys { it in liveRowKeys } + latestCarouselRows
+                .mapNotNull { rowState ->
+                    val state = rowListStates[rowState.key] ?: return@mapNotNull null
+                    // The card last measured there: an off-screen row is not re-measured when items land in front.
+                    val anchorKey = (state.layoutInfo.visibleItemsInfo
+                        .firstOrNull { it.index == state.firstVisibleItemIndex }?.key as? String)
+                        ?.takeIf { key -> rowState.items.list.any { it.key == key } }
+                        ?: rowState.items.list.getOrNull(state.firstVisibleItemIndex)?.key
+                        ?: return@mapNotNull null
+                    rowState.key to anchorKey
+                }
+                .toMap()
+
             onSaveFocusState(
                 latestVerticalRowListState.firstVisibleItemIndex,
                 latestVerticalRowListState.firstVisibleItemScrollOffset,
                 focusedRowKey,
                 focusedItemKeyByRow,
                 catalogRowScrollStates,
+                catalogRowScrollAnchors,
                 focusedRowIndex,
                 focusedItemIndex
             )
@@ -698,6 +717,8 @@ fun ModernHomeContent(
                             poster = enrichedItem.poster,
                             backdrop = enrichedItem.backdropUrl,
                             imageUrl = activeCarouselItem?.heroPreview?.imageUrl,
+                            mdbListRatings = enrichedItem.mdbListRatings,
+                            mdbListRatingOrder = enrichedItem.mdbListRatingOrder,
                             frozenBackdropUrl = activeCarouselItem?.heroPreview?.frozenBackdropUrl,
                             frozenLogoUrl = activeCarouselItem?.heroPreview?.frozenLogoUrl
                         )
@@ -1066,6 +1087,8 @@ fun ModernHomeContent(
                 },
                 portraitMode = !useLandscapePosters,
                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                mdbListShowOnHero = uiState.mdbListShowOnHero,
+                mdbListRatingOrder = uiState.mdbListRatingOrder,
                 trailerPlaying = {
                     if (isRapidHorizontalNav.value) false
                     else {
@@ -1155,6 +1178,7 @@ fun ModernHomeContent(
                 trailerPreviewUrls = stableTrailerPreviewUrls,
                 trailerPreviewAudioUrls = stableTrailerPreviewAudioUrls,
                 useLandscapePosters = useLandscapePosters,
+                alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
                 showLabels = uiState.posterLabelsEnabled,
                 posterCardCornerRadius = posterCardCornerRadius,
                 focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,

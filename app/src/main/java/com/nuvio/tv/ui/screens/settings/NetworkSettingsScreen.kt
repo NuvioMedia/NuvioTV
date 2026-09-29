@@ -268,33 +268,40 @@ fun AdvancedSettingsContent(
                     return@launch
                 }
 
+                val measureChunkBytes =
+                    com.nuvio.tv.data.local.PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB.toLong() * 1024L
+
                 streamTestState = "Parallel1"
                 streamParallel1Speed = com.nuvio.tv.core.network.StreamSpeedTester.runParallelChunkTest(
                     lastStreamUrl,
                     lastHeadersMap,
-                    1 * 1024 * 1024L
-                )
+                    chunkSizeBytes = measureChunkBytes,
+                    parallelConnections = 1
+                ).mbps
 
                 streamTestState = "Parallel4"
                 streamParallel4Speed = com.nuvio.tv.core.network.StreamSpeedTester.runParallelChunkTest(
                     lastStreamUrl,
                     lastHeadersMap,
-                    4 * 1024 * 1024L
-                )
+                    chunkSizeBytes = measureChunkBytes,
+                    parallelConnections = 4
+                ).mbps
 
                 streamTestState = "Parallel8"
                 streamParallel8Speed = com.nuvio.tv.core.network.StreamSpeedTester.runParallelChunkTest(
                     lastStreamUrl,
                     lastHeadersMap,
-                    8 * 1024 * 1024L
-                )
+                    chunkSizeBytes = measureChunkBytes,
+                    parallelConnections = 8
+                ).mbps
 
                 streamTestState = "Parallel16"
                 streamParallel16Speed = com.nuvio.tv.core.network.StreamSpeedTester.runParallelChunkTest(
                     lastStreamUrl,
                     lastHeadersMap,
-                    16 * 1024 * 1024L
-                )
+                    chunkSizeBytes = measureChunkBytes,
+                    parallelConnections = 16
+                ).mbps
 
                 streamTestState = "Done"
             } catch (e: java.lang.Exception) {
@@ -426,17 +433,11 @@ fun AdvancedSettingsContent(
             }
         }
 
-        item(key = "performance_header") {
-            Text(
-                text = stringResource(R.string.advanced_section_performance),
-                style = MaterialTheme.typography.titleSmall,
-                color = NuvioTheme.colors.TextTertiary,
-                modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
-            )
-        }
-
         item(key = "performance_settings") {
-            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+            SettingsGroupCard(
+                modifier = Modifier.fillMaxWidth(),
+                title = stringResource(R.string.advanced_section_performance)
+            ) {
                 SettingsToggleRow(
                     title = stringResource(R.string.advanced_fast_horizontal_navigation),
                     subtitle = stringResource(R.string.advanced_fast_horizontal_navigation_subtitle),
@@ -473,6 +474,14 @@ fun AdvancedSettingsContent(
                         )
                     }
                 )
+            }
+        }
+
+        item(key = "startup_settings") {
+            SettingsGroupCard(
+                modifier = Modifier.fillMaxWidth(),
+                title = stringResource(R.string.advanced_section_startup)
+            ) {
                 val profileManager = remember {
                     dagger.hilt.android.EntryPointAccessors.fromApplication(
                         context.applicationContext,
@@ -516,17 +525,11 @@ fun AdvancedSettingsContent(
             }
         }
 
-        item(key = "diagnostics_header") {
-            Text(
-                text = stringResource(R.string.advanced_section_diagnostics),
-                style = MaterialTheme.typography.titleSmall,
-                color = NuvioTheme.colors.TextTertiary,
-                modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
-            )
-        }
-
         item(key = "playback_issue_reports") {
-            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+            SettingsGroupCard(
+                modifier = Modifier.fillMaxWidth(),
+                title = stringResource(R.string.advanced_section_diagnostics)
+            ) {
                 SettingsToggleRow(
                     title = stringResource(R.string.advanced_sentry_reports),
                     subtitle = stringResource(R.string.advanced_sentry_reports_subtitle),
@@ -560,8 +563,11 @@ fun AdvancedSettingsContent(
             }
         }
 
-        item(key = "speed_test") {
-            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+        item(key = "network_tests") {
+            SettingsGroupCard(
+                modifier = Modifier.fillMaxWidth(),
+                title = stringResource(R.string.advanced_section_network_tests)
+            ) {
                 val isRunning = testState == NetworkTestState.TestingLatency ||
                         testState == NetworkTestState.TestingDownload
                 SettingsActionRow(
@@ -577,6 +583,31 @@ fun AdvancedSettingsContent(
                         }
                     ) else null,
                     onClick = { if (!isRunning) runSpeedTest() }
+                )
+                val isStreamRunning = streamTestState != "Idle" && streamTestState != "Done" && streamTestState != "Error"
+                val hasStream = !lastStreamUrl.isNullOrBlank()
+                SettingsActionRow(
+                    title = stringResource(
+                        if (isStreamRunning) R.string.stream_test_btn_running
+                        else R.string.stream_test_card_title
+                    ),
+                    subtitle = if (hasStream) {
+                        stringResource(R.string.stream_test_server_label, lastStreamUrl.let { android.net.Uri.parse(it).host } ?: stringResource(R.string.stream_quality_unknown))
+                    } else {
+                        stringResource(R.string.stream_test_no_stream)
+                    },
+                    value = if (isStreamRunning) {
+                        when (streamTestState) {
+                            "Baseline" -> stringResource(R.string.stream_test_btn_measuring_baseline)
+                            "Parallel1" -> stringResource(R.string.stream_test_btn_measuring_parallel1)
+                            "Parallel4" -> stringResource(R.string.stream_test_btn_measuring_parallel4)
+                            "Parallel8" -> stringResource(R.string.stream_test_btn_measuring_parallel8)
+                            "Parallel16" -> stringResource(R.string.stream_test_btn_measuring_parallel16)
+                            else -> stringResource(R.string.stream_test_btn_running)
+                        }
+                    } else null,
+                    enabled = hasStream && !isStreamRunning,
+                    onClick = { if (hasStream && !isStreamRunning) runStreamDiagnostics() }
                 )
             }
         }
@@ -629,36 +660,6 @@ fun AdvancedSettingsContent(
                         )
                     }
                 }
-            }
-        }
-
-        item(key = "stream_speed_test") {
-            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
-                val isStreamRunning = streamTestState != "Idle" && streamTestState != "Done" && streamTestState != "Error"
-                val hasStream = !lastStreamUrl.isNullOrBlank()
-                SettingsActionRow(
-                    title = stringResource(
-                        if (isStreamRunning) R.string.stream_test_btn_running
-                        else R.string.stream_test_card_title
-                    ),
-                    subtitle = if (hasStream) {
-                        stringResource(R.string.stream_test_server_label, lastStreamUrl.let { android.net.Uri.parse(it).host } ?: stringResource(R.string.stream_quality_unknown))
-                    } else {
-                        stringResource(R.string.stream_test_no_stream)
-                    },
-                    value = if (isStreamRunning) {
-                        when (streamTestState) {
-                            "Baseline" -> stringResource(R.string.stream_test_btn_measuring_baseline)
-                            "Parallel1" -> stringResource(R.string.stream_test_btn_measuring_parallel1)
-                            "Parallel4" -> stringResource(R.string.stream_test_btn_measuring_parallel4)
-                            "Parallel8" -> stringResource(R.string.stream_test_btn_measuring_parallel8)
-                            "Parallel16" -> stringResource(R.string.stream_test_btn_measuring_parallel16)
-                            else -> stringResource(R.string.stream_test_btn_running)
-                        }
-                    } else null,
-                    enabled = hasStream && !isStreamRunning,
-                    onClick = { if (hasStream && !isStreamRunning) runStreamDiagnostics() }
-                )
             }
         }
 
@@ -732,17 +733,11 @@ fun AdvancedSettingsContent(
             }
         }
 
-        item(key = "cache_header") {
-            Text(
-                text = stringResource(R.string.advanced_section_cache),
-                style = MaterialTheme.typography.titleSmall,
-                color = NuvioTheme.colors.TextTertiary,
-                modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
-            )
-        }
-
         item(key = "clear_cw_cache") {
-            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+            SettingsGroupCard(
+                modifier = Modifier.fillMaxWidth(),
+                title = stringResource(R.string.advanced_section_cache)
+            ) {
                 var cleared by remember { mutableStateOf(false) }
                 SettingsActionRow(
                     title = stringResource(R.string.advanced_clear_cw_cache),
@@ -770,15 +765,6 @@ fun AdvancedSettingsContent(
 
         if (dvPlayerSettings.internalPlayerEngine == InternalPlayerEngine.EXOPLAYER ||
             dvPlayerSettings.internalPlayerEngine == InternalPlayerEngine.AUTO) {
-            item(key = "dv_diagnostics_header") {
-                Text(
-                    text = stringResource(R.string.advanced_section_dv_diagnostics),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = NuvioTheme.colors.TextTertiary,
-                    modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
-                )
-            }
-
             item(key = "dv_conversion_mode") {
                 val overrideEnabled = dvPlayerSettings.dv7HandlingMode == Dv7HandlingMode.DV81_LIBDOVI
                 var showModeDialog by remember { mutableStateOf(false) }
@@ -794,12 +780,13 @@ fun AdvancedSettingsContent(
                     SettingsPickerOption(3, stringResource(R.string.dv7_libdovi_mode_3_title), stringResource(R.string.dv7_libdovi_mode_3_sub)),
                     SettingsPickerOption(4, stringResource(R.string.dv7_libdovi_mode_4_title), stringResource(R.string.dv7_libdovi_mode_4_sub))
                 )
-                // Show None whenever the row is disabled so a stale stored override
-                // never displays as a selected mode.
                 val effectiveOverride = if (overrideEnabled) dvPlayerSettings.dv7LibdoviModeOverride else -1
                 val currentLabel = modeOptions.firstOrNull { it.value == effectiveOverride }?.title
                     ?: modeOptions.first().title
-                SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                SettingsGroupCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(R.string.advanced_section_dv_diagnostics)
+                ) {
                     SettingsActionRow(
                         title = stringResource(R.string.dv7_libdovi_mode_row_title),
                         subtitle = stringResource(R.string.dv7_libdovi_mode_caption),
