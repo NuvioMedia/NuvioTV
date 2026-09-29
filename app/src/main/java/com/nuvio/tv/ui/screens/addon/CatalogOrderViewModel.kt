@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.addon
 
+import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
@@ -13,14 +15,39 @@ import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+private const val TAG = "CatalogOrder"
+
+internal fun catalogOrderKeySample(keys: List<String>, limit: Int = 8): String {
+    if (keys.isEmpty()) return "[] n=0"
+    val shown = keys.take(limit).joinToString(",")
+    val more = if (keys.size > limit) " …+${keys.size - limit}" else ""
+    return "[$shown$more] n=${keys.size}"
+}
+
+internal fun catalogOrderKeysDiff(pending: List<String>?, disk: List<String>): String {
+    if (pending == null) return "pending=null disk=${catalogOrderKeySample(disk)}"
+    if (pending == disk) return "equal n=${pending.size}"
+    if (pending.size != disk.size) {
+        return "size pending=${pending.size} disk=${disk.size} " +
+            "pending=${catalogOrderKeySample(pending)} disk=${catalogOrderKeySample(disk)}"
+    }
+    val index = pending.indices.first { pending[it] != disk[it] }
+    return "mismatch@$index pending=${pending[index]} disk=${disk[index]}"
+}
 
 @HiltViewModel
 class CatalogOrderViewModel @Inject constructor(
@@ -35,61 +62,192 @@ class CatalogOrderViewModel @Inject constructor(
     private var disabledKeysCache: Set<String> = emptySet()
     private var persistedItemsCache: List<CatalogOrderItem> = emptyList()
     private var draftOrderKeys: List<String>? = null
+    private var moveBaselineItems: List<CatalogOrderItem>? = null
+    private var pendingSavedOrderKeys: List<String>? = null
+    private var persistGeneration: Int = 0
+    private val persistMutex = Mutex()
 
     init {
+        Log.d(TAG, "ViewModel init")
         observeCatalogs()
     }
 
     fun enterMoveMode(key: String) {
-        val item = _uiState.value.items.firstOrNull { it.key == key } ?: return
-        if (!item.canMove) return
-        draftOrderKeys = _uiState.value.items.map { it.key }
+        val items = _uiState.value.items
+        val item = items.firstOrNull { it.key == key } ?: return
+        if (!item.canMove) {
+            Log.w(TAG, "enterMoveMode ignored key=$key canMove=false")
+            return
+        }
+        moveBaselineItems = items
+        draftOrderKeys = items.map { it.key }
+        Log.d(
+            TAG,
+            "enterMoveMode key=$key index=${items.indexOf(item)} " +
+                "baseline=${catalogOrderKeySample(draftOrderKeys.orEmpty())} follow=${_uiState.value.followAddonsOrder}",
+        )
         _uiState.update { it.copy(movingKey = key) }
     }
 
     fun moveDuringDrag(key: String, direction: Int): Boolean {
-        val draft = draftOrderKeys ?: return false
-        val reordered = if (_uiState.value.followAddonsOrder) {
-            reorderCollectionInDraft(draft, key, direction) ?: return false
-        } else {
-            reorderInDraft(draft, key, direction) ?: return false
+        val draft = draftOrderKeys ?: run {
+            Log.w(TAG, "moveDuringDrag no draft key=$key dir=$direction")
+            return false
         }
+        val fromIndex = draft.indexOf(key)
+        val reordered = if (_uiState.value.followAddonsOrder) {
+            reorderCollectionInDraft(draft, key, direction) ?: run {
+                Log.d(TAG, "moveDuringDrag blocked followAddons key=$key dir=$direction from=$fromIndex")
+                return false
+            }
+        } else {
+            reorderInDraft(draft, key, direction) ?: run {
+                Log.d(TAG, "moveDuringDrag blocked edge key=$key dir=$direction from=$fromIndex")
+                return false
+            }
+        }
+        val toIndex = reordered.indexOf(key)
         draftOrderKeys = reordered
         applyDraftOrder(reordered)
+        Log.d(TAG, "moveDuringDrag key=$key dir=$direction $fromIndex->$toIndex")
         return true
     }
 
     fun confirmMove() {
-        val draft = draftOrderKeys ?: run {
-            clearMoveMode()
+        val draft = draftOrderKeys
+        val baselineKeys = moveBaselineItems?.map { it.key }
+        if (draft == null || draft == baselineKeys) {
+            Log.d(
+                TAG,
+                "confirmMove skip unchanged draftNull=${draft == null} " +
+                    "baseline=${catalogOrderKeySample(baselineKeys.orEmpty())}",
+            )
+            exitMoveMode()
             return
         }
-        viewModelScope.launch {
-            layoutPreferenceDataStore.setHomeCatalogOrderKeys(draft)
-            homeCatalogSettingsSyncService.triggerPush()
-        }
-        clearMoveMode()
-    }
+        val confirmedItems = itemsInOrder(
+            orderKeys = draft,
+            source = _uiState.value.items.ifEmpty { persistedItemsCache },
+        )
+        persistedItemsCache = confirmedItems
+        val generation = ++persistGeneration
+        pendingSavedOrderKeys = draft
+        draftOrderKeys = null
+        moveBaselineItems = null
+        Log.d(
+            TAG,
+            "confirmMove start gen=$generation draft=${catalogOrderKeySample(draft)} " +
+                "uiItems=${confirmedItems.size} names=${confirmedItems.take(6).joinToString { it.catalogName }}",
+        )
+        _uiState.update { it.copy(movingKey = null, items = confirmedItems) }
 
-    fun cancelMove() {
-        clearMoveMode()
-        persistedItemsCache.takeIf { it.isNotEmpty() }?.let { items ->
-            _uiState.update { state ->
-                state.copy(items = items)
+        viewModelScope.launch {
+            var wrote = false
+            val writeStarted = SystemClock.elapsedRealtime()
+            try {
+                withContext(NonCancellable) {
+                    persistMutex.withLock {
+                        if (generation != persistGeneration) {
+                            Log.w(
+                                TAG,
+                                "confirmMove skip stale write gen=$generation current=$persistGeneration",
+                            )
+                            return@withLock
+                        }
+                        layoutPreferenceDataStore.setHomeCatalogOrderKeys(draft)
+                        wrote = true
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "confirmMove write failed gen=$generation", t)
+            }
+            val writeMs = SystemClock.elapsedRealtime() - writeStarted
+            Log.d(
+                TAG,
+                "confirmMove writeDone gen=$generation wrote=$wrote writeMs=$writeMs " +
+                    "stillCurrent=${generation == persistGeneration} pending=${pendingSavedOrderKeys != null}",
+            )
+            if (wrote && generation == persistGeneration) {
+                Log.d(TAG, "confirmMove triggerPush gen=$generation")
+                homeCatalogSettingsSyncService.triggerPush()
             }
         }
     }
 
-    private fun clearMoveMode() {
+    fun cancelMove() {
+        val baseline = moveBaselineItems
+        Log.d(
+            TAG,
+            "cancelMove restoring=${baseline?.size ?: 0} " +
+                "keys=${catalogOrderKeySample(baseline?.map { it.key }.orEmpty())}",
+        )
+        exitMoveMode()
+        if (baseline != null) {
+            _uiState.update { it.copy(items = baseline) }
+        }
+    }
+
+    private fun exitMoveMode() {
         draftOrderKeys = null
+        moveBaselineItems = null
         _uiState.update { it.copy(movingKey = null) }
     }
 
     private fun applyDraftOrder(orderKeys: List<String>) {
-        val itemMap = persistedItemsCache.associateBy { it.key }
-        val reordered = orderKeys.mapNotNull { itemMap[it] }
+        val reordered = itemsInOrder(
+            orderKeys = orderKeys,
+            source = _uiState.value.items.ifEmpty { persistedItemsCache },
+        )
         if (reordered.isEmpty()) return
         _uiState.update { it.copy(items = reordered) }
+    }
+
+    private fun itemsInOrder(
+        orderKeys: List<String>,
+        source: List<CatalogOrderItem>,
+        followAddonsOrder: Boolean = _uiState.value.followAddonsOrder,
+    ): List<CatalogOrderItem> {
+        if (source.isEmpty()) return emptyList()
+        val map = source.associateBy { it.key }
+        val seen = LinkedHashSet<String>()
+        val ordered = ArrayList<CatalogOrderItem>(source.size)
+        for (key in orderKeys) {
+            val item = map[key] ?: continue
+            if (seen.add(key)) ordered.add(item)
+        }
+        for (item in source) {
+            if (seen.add(item.key)) ordered.add(item)
+        }
+        return ordered.mapIndexed { index, item ->
+            item.withMoveFlags(index, ordered.size, followAddonsOrder)
+        }
+    }
+
+    private fun CatalogOrderItem.withMoveFlags(
+        index: Int,
+        size: Int,
+        followAddonsOrder: Boolean,
+    ): CatalogOrderItem {
+        val isCollection = key.startsWith("collection_")
+        val canMoveUp: Boolean
+        val canMoveDown: Boolean
+        if (followAddonsOrder) {
+            if (isCollection) {
+                canMoveUp = index > 0
+                canMoveDown = index < size - 1
+            } else {
+                canMoveUp = false
+                canMoveDown = false
+            }
+        } else {
+            canMoveUp = index > 0
+            canMoveDown = index < size - 1
+        }
+        return copy(
+            canMoveUp = canMoveUp,
+            canMoveDown = canMoveDown,
+            canMove = canMoveUp || canMoveDown,
+        )
     }
 
     private fun reorderInDraft(
@@ -155,7 +313,9 @@ class CatalogOrderViewModel @Inject constructor(
 
     fun toggleFollowAddonsOrder(enabled: Boolean) {
         viewModelScope.launch {
-            layoutPreferenceDataStore.setFollowAddonsOrder(enabled)
+            withContext(NonCancellable) {
+                layoutPreferenceDataStore.setFollowAddonsOrder(enabled)
+            }
         }
     }
 
@@ -164,20 +324,56 @@ class CatalogOrderViewModel @Inject constructor(
             if (disableKey in this) remove(disableKey) else add(disableKey)
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.setDisabledHomeCatalogKeys(updatedDisabled.toList())
+            withContext(NonCancellable) {
+                layoutPreferenceDataStore.setDisabledHomeCatalogKeys(updatedDisabled.toList())
+            }
             homeCatalogSettingsSyncService.triggerPush()
         }
     }
 
     private fun observeCatalogs() {
         viewModelScope.launch {
+            val openedAt = SystemClock.elapsedRealtime()
+            Log.d(TAG, "observeCatalogs subscribe waiting for 6 sources")
             combine(
-                addonRepository.getInstalledAddons(),
-                collectionsDataStore.collections,
-                layoutPreferenceDataStore.homeCatalogOrderKeys,
-                layoutPreferenceDataStore.disabledHomeCatalogKeys,
-                layoutPreferenceDataStore.customCatalogTitles,
-                layoutPreferenceDataStore.followAddonsOrder
+                addonRepository.getInstalledAddons().onEach { addons ->
+                    Log.d(
+                        TAG,
+                        "source[addons] +${SystemClock.elapsedRealtime() - openedAt}ms " +
+                            "n=${addons.size} enabled=${addons.count { it.enabled }}",
+                    )
+                },
+                collectionsDataStore.collections.onEach { collections ->
+                    Log.d(
+                        TAG,
+                        "source[collections] +${SystemClock.elapsedRealtime() - openedAt}ms n=${collections.size}",
+                    )
+                },
+                layoutPreferenceDataStore.homeCatalogOrderKeys.onEach { keys ->
+                    Log.d(
+                        TAG,
+                        "source[diskOrder] +${SystemClock.elapsedRealtime() - openedAt}ms " +
+                            catalogOrderKeySample(keys),
+                    )
+                },
+                layoutPreferenceDataStore.disabledHomeCatalogKeys.onEach { keys ->
+                    Log.d(
+                        TAG,
+                        "source[disabled] +${SystemClock.elapsedRealtime() - openedAt}ms n=${keys.size}",
+                    )
+                },
+                layoutPreferenceDataStore.customCatalogTitles.onEach { titles ->
+                    Log.d(
+                        TAG,
+                        "source[titles] +${SystemClock.elapsedRealtime() - openedAt}ms n=${titles.size}",
+                    )
+                },
+                layoutPreferenceDataStore.followAddonsOrder.onEach { follow ->
+                    Log.d(
+                        TAG,
+                        "source[followAddons] +${SystemClock.elapsedRealtime() - openedAt}ms follow=$follow",
+                    )
+                },
             ) { values ->
                 @Suppress("UNCHECKED_CAST")
                 val addons = values[0] as List<Addon>
@@ -191,6 +387,7 @@ class CatalogOrderViewModel @Inject constructor(
                 val customTitles = values[4] as Map<String, String>
                 val followAddons = values[5] as Boolean
 
+                val buildStarted = SystemClock.elapsedRealtime()
                 val items = buildOrderedCatalogItems(
                     addons = addons.enabledAddons(),
                     collections = collections,
@@ -199,19 +396,59 @@ class CatalogOrderViewModel @Inject constructor(
                     customTitles = customTitles,
                     followAddonsOrder = followAddons
                 )
-                Pair(items, followAddons)
-            }.collectLatest { (orderedItems, followAddons) ->
+                Log.d(
+                    TAG,
+                    "combine buildMs=${SystemClock.elapsedRealtime() - buildStarted} " +
+                        "openMs=${SystemClock.elapsedRealtime() - openedAt} " +
+                        "items=${items.size} addons=${addons.size} cols=${collections.size} " +
+                        "disk=${catalogOrderKeySample(savedOrderKeys)} follow=$followAddons " +
+                        "disabled=${disabledKeys.size} titles=${customTitles.size}",
+                )
+                Triple(items, followAddons, savedOrderKeys)
+            }.collectLatest { (orderedItems, followAddons, diskOrderKeys) ->
                 disabledKeysCache = orderedItems.filter { it.isDisabled }.map { it.disableKey }.toSet()
-                persistedItemsCache = orderedItems
-                if (_uiState.value.movingKey == null) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            items = orderedItems,
-                            followAddonsOrder = followAddons
+                val pendingKeys = pendingSavedOrderKeys
+                val diskMatchesPending = pendingKeys != null && diskOrderKeys == pendingKeys
+                Log.d(
+                    TAG,
+                    "collect movingKey=${_uiState.value.movingKey} isLoading=${_uiState.value.isLoading} " +
+                        "disk=${catalogOrderKeySample(diskOrderKeys)} ${catalogOrderKeysDiff(pendingKeys, diskOrderKeys)} " +
+                        "built=${orderedItems.size} names=${orderedItems.take(6).joinToString { it.catalogName }}",
+                )
+                if (diskMatchesPending) {
+                    pendingSavedOrderKeys = null
+                    Log.d(TAG, "pending cleared disk caught up")
+                }
+                val itemsToApply = if (pendingKeys != null && !diskMatchesPending) {
+                    Log.w(TAG, "keeping pending UI order until disk matches")
+                    itemsInOrder(pendingKeys, orderedItems, followAddons)
+                } else {
+                    orderedItems
+                }
+                persistedItemsCache = itemsToApply
+                val current = _uiState.value
+                if (current.movingKey == null) {
+                    val itemsUnchanged = current.items == itemsToApply
+                    val followUnchanged = current.followAddonsOrder == followAddons
+                    if (itemsUnchanged && followUnchanged && !current.isLoading) {
+                        Log.d(TAG, "ui skip identical items follow=$followAddons")
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                items = itemsToApply,
+                                followAddonsOrder = followAddons
+                            )
+                        }
+                        Log.d(
+                            TAG,
+                            "ui applied items=${itemsToApply.size} follow=$followAddons " +
+                                "openMs=${SystemClock.elapsedRealtime() - openedAt} " +
+                                "itemsUnchanged=$itemsUnchanged",
                         )
                     }
                 } else {
+                    Log.d(TAG, "ui skip item replace while moving, follow=$followAddons")
                     _uiState.update {
                         it.copy(
                             isLoading = false,

@@ -1634,7 +1634,6 @@
     <string name="catalog_order_disable">Devre Dışı</string>
     <string name="catalog_order_move">Taşı</string>
     <string name="catalog_order_done">Tamam</string>
-    <string name="catalog_order_move_hint">Yukarı/Aşağı ile sürükleyin. Kaydetmek için OK veya Tamam, iptal için Geri.</string>
 
 
     <!-- StreamScreen -->

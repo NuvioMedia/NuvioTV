@@ -1718,7 +1718,6 @@
     <string name="catalog_order_disable">Disable</string>
     <string name="catalog_order_move">Move</string>
     <string name="catalog_order_done">Done</string>
-    <string name="catalog_order_move_hint">Use Up/Down to drag this row. Press OK or Done to save, Back to cancel.</string>
 
 
     <string name="stream_retry">Retry</string>

@@ -1,36 +1,40 @@
-@file:OptIn(ExperimentalTvMaterial3Api::class)
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalTvMaterial3Api::class)
 
 package com.nuvio.tv.ui.components
 
+import android.os.SystemClock
+import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key as keyedItem
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -43,10 +47,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val MOVE_REPEAT_INITIAL_DELAY_MS = 280L
 private const val MOVE_REPEAT_INTERVAL_MS = 140L
+private const val LIST_TAG = "CatalogOrder"
 
 private val ReorderTravelSpec = tween<Float>(
     durationMillis = NuvioMotion.tokens.durations.medium,
@@ -72,6 +78,7 @@ fun <T> TvReorderList(
     onConfirmMove: (String) -> Unit,
     onCancelMove: () -> Unit,
     modifier: Modifier = Modifier,
+    header: @Composable (() -> Unit)? = null,
     itemContent: @Composable (
         item: T,
         isMoving: Boolean,
@@ -86,8 +93,9 @@ fun <T> TvReorderList(
 
     var viewportHeightPx by remember { mutableFloatStateOf(0f) }
     var rowHeightPx by remember { mutableFloatStateOf(0f) }
+    var headerHeightPx by remember { mutableFloatStateOf(0f) }
     val slotStridePx = if (rowHeightPx > 0f) rowHeightPx + rowSpacingPx else 0f
-    val totalHeightPx = if (slotStridePx > 0f && items.isNotEmpty()) {
+    val itemsHeightPx = if (slotStridePx > 0f && items.isNotEmpty()) {
         rowHeightPx + (items.size - 1) * slotStridePx
     } else {
         0f
@@ -100,10 +108,79 @@ fun <T> TvReorderList(
     var animatedIndices by remember { mutableStateOf(indicesFrom(items)) }
     val dragOffsets = remember { mutableStateMapOf<String, Float>() }
     val offsetJobs = remember { mutableMapOf<String, Job>() }
-    val moveFocusRequester = remember { FocusRequester() }
+    val inheritedBringIntoViewSpec = LocalBringIntoViewSpec.current
+    val freezeScrollBringIntoView = remember {
+        object : BringIntoViewSpec {
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float = 0f
+        }
+    }
 
     var repeatJob by remember { mutableStateOf<Job?>(null) }
     var neighborScrollJob by remember { mutableStateOf<Job?>(null) }
+    val previousItemKeys = remember { mutableStateOf(items.map(key)) }
+    val previousMovingKey = remember { mutableStateOf(movingKey) }
+    var hadMoveSession by remember { mutableStateOf(false) }
+    var latestMovingKey by remember { mutableStateOf(movingKey) }
+    var suppressStartMove by remember { mutableStateOf(false) }
+    var pinnedScrollPx by remember { mutableIntStateOf(-1) }
+    latestMovingKey = movingKey
+    val bringIntoViewSpec = if (movingKey != null || pinnedScrollPx >= 0) {
+        freezeScrollBringIntoView
+    } else {
+        inheritedBringIntoViewSpec
+    }
+
+    fun pinScroll(reason: String) {
+        pinnedScrollPx = scrollState.value
+        Log.d(LIST_TAG, "list pinScroll reason=$reason value=$pinnedScrollPx")
+    }
+
+    suspend fun restorePinnedScroll(reason: String) {
+        val pin = pinnedScrollPx
+        if (pin < 0 || scrollState.value == pin) return
+        Log.d(LIST_TAG, "list JUMP? restoreScroll $reason ${scrollState.value}→$pin")
+        scrollState.scrollTo(pin)
+    }
+
+    fun slotOrderSample(): String {
+        return animatedIndices.entries
+            .sortedBy { it.value }
+            .take(8)
+            .joinToString { "${it.value}:${it.key}" }
+    }
+
+    fun visualSnapshot(reason: String): String {
+        val itemKeys = items.map(key)
+        val animatedOrder = animatedIndices.entries.sortedBy { it.value }.map { it.key }
+        val offsetSample = dragOffsets.entries
+            .filter { kotlin.math.abs(it.value) > 0.5f }
+            .take(6)
+            .joinToString { "${it.key}=${it.value.toInt()}" }
+        return "reason=$reason t=${SystemClock.elapsedRealtime()} movingKey=$movingKey " +
+            "scroll=${scrollState.value}/${scrollState.maxValue} rowH=$rowHeightPx stride=$slotStridePx " +
+            "viewport=$viewportHeightPx items=${itemKeys.take(6)} slots=${slotOrderSample()} " +
+            "indicesMatchItems=${itemKeys == animatedOrder} liveOffsets=[$offsetSample]"
+    }
+
+    SideEffect {
+        val itemKeys = items.map(key)
+        val movingChanged = previousMovingKey.value != movingKey
+        val itemsChanged = previousItemKeys.value != itemKeys
+        if (movingChanged || itemsChanged) {
+            Log.d(
+                LIST_TAG,
+                "list JUMP? composition ${visualSnapshot(
+                    "moving ${previousMovingKey.value}→$movingKey itemsChanged=$itemsChanged",
+                )}",
+            )
+            previousMovingKey.value = movingKey
+            previousItemKeys.value = itemKeys
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -119,16 +196,13 @@ fun <T> TvReorderList(
     }
 
     fun clearOffsets() {
+        val hadOffsets = dragOffsets.values.any { kotlin.math.abs(it) > 0.5f }
+        if (hadOffsets) {
+            Log.d(LIST_TAG, "list JUMP? snapOffsets ${visualSnapshot("clearOffsets")}")
+        }
         offsetJobs.values.forEach { it.cancel() }
         offsetJobs.clear()
         dragOffsets.clear()
-    }
-
-    LaunchedEffect(movingKey, items) {
-        if (movingKey == null) {
-            clearOffsets()
-            animatedIndices = indicesFrom(items)
-        }
     }
 
     fun animateOffsetToZero(itemKey: String) {
@@ -177,9 +251,9 @@ fun <T> TvReorderList(
 
     fun keepNeighborVisible(newIndex: Int, direction: Int) {
         if (slotStridePx <= 0f || viewportHeightPx <= 0f) return
-        val movingTop = newIndex * slotStridePx
+        val movingTop = headerHeightPx + newIndex * slotStridePx
         val movingBottom = movingTop + rowHeightPx
-        val peek = slotStridePx
+        val peek = rowHeightPx
         val desiredTop = if (direction < 0) (movingTop - peek).coerceAtLeast(0f) else movingTop
         val desiredBottom = if (direction > 0) movingBottom + peek else movingBottom
         val current = scrollState.value.toFloat()
@@ -189,6 +263,11 @@ fun <T> TvReorderList(
             else -> return
         }.coerceIn(0f, scrollState.maxValue.toFloat())
         neighborScrollJob?.cancel()
+        Log.d(
+            LIST_TAG,
+            "list scrollTo keepNeighbor dir=$direction newIndex=$newIndex " +
+                "from=${current.toInt()} to=${target.toInt()} ${visualSnapshot("keepNeighbor")}",
+        )
         neighborScrollJob = scope.launch {
             scrollState.animateScrollTo(
                 value = target.roundToInt(),
@@ -203,11 +282,24 @@ fun <T> TvReorderList(
             ?: items.indexOfFirst { key(it) == activeKey }.takeIf { it >= 0 }
             ?: return false
         val moved = onMoveBy(activeKey, direction)
+        Log.d(
+            LIST_TAG,
+            "list performMove key=$activeKey dir=$direction oldIndex=$oldIndex moved=$moved " +
+                visualSnapshot("performMove"),
+        )
         if (moved) {
             animateSwap(activeKey, direction)
             keepNeighborVisible(oldIndex + direction, direction)
         }
         return moved
+    }
+
+    fun confirmFromUi(source: String) {
+        val activeKey = movingKey ?: return
+        pinScroll(source)
+        suppressStartMove = true
+        Log.d(LIST_TAG, "list confirm source=$source suppressStartMove ${visualSnapshot(source)}")
+        onConfirmMove(activeKey)
     }
 
     fun handleMoveKey(nativeKeyCode: Int, action: Int, repeatCount: Int): Boolean {
@@ -238,34 +330,91 @@ fun <T> TvReorderList(
         return true
     }
 
+    LaunchedEffect(suppressStartMove) {
+        if (!suppressStartMove) return@LaunchedEffect
+        delay(400)
+        if (suppressStartMove) {
+            Log.d(LIST_TAG, "list clear stale suppressStartMove")
+            suppressStartMove = false
+        }
+    }
+
     LaunchedEffect(movingKey) {
         if (movingKey != null) {
-            delay(50)
-            runCatching { moveFocusRequester.requestFocus() }
-        } else {
+            hadMoveSession = true
+            return@LaunchedEffect
+        }
+        if (!hadMoveSession) {
             stopRepeat()
+            return@LaunchedEffect
+        }
+        delay(1)
+        if (latestMovingKey != null) {
+            Log.d(
+                LIST_TAG,
+                "list skip stale exitMove latest=$latestMovingKey ${visualSnapshot("stale-exit")}",
+            )
+            return@LaunchedEffect
+        }
+        neighborScrollJob?.cancel()
+        stopRepeat()
+        restorePinnedScroll("exitMove")
+        val itemKeys = items.map(key)
+        val animatedOrder = animatedIndices.entries.sortedBy { it.value }.map { it.key }
+        if (itemKeys != animatedOrder || dragOffsets.values.any { kotlin.math.abs(it) > 0.5f }) {
+            Log.d(LIST_TAG, "list JUMP? exitMove beforeReset ${visualSnapshot("exitMove-before")}")
+            clearOffsets()
+            animatedIndices = indicesFrom(items)
+            Log.d(LIST_TAG, "list JUMP? exitMove afterReset ${visualSnapshot("exitMove-after")}")
+        } else {
+            offsetJobs.values.forEach { it.cancel() }
+            offsetJobs.clear()
+            Log.d(LIST_TAG, "list exitMove keepSlots ${visualSnapshot("exitMove-keep")}")
+        }
+        restorePinnedScroll("exitMove-afterLayout")
+        delay(32)
+        restorePinnedScroll("exitMove-late")
+        if (latestMovingKey == null) {
+            pinnedScrollPx = -1
         }
     }
 
     BackHandler(enabled = movingKey != null) {
+        pinScroll("cancel")
         onCancelMove()
     }
 
+    CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoViewSpec) {
     Box(
         modifier = modifier
             .onSizeChanged { viewportHeightPx = it.height.toFloat() }
             .verticalScroll(scrollState)
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
+                val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                    native.keyCode == KeyEvent.KEYCODE_ENTER ||
+                    native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
                 when {
-                    movingKey != null && native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER &&
+                    isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
+                        if (suppressStartMove) {
+                            Log.d(LIST_TAG, "list swallow OK up after confirm")
+                            suppressStartMove = false
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    movingKey != null && isConfirmKey &&
                         native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0 -> {
-                        onConfirmMove(movingKey)
+                        confirmFromUi("ok-confirm")
                         true
                     }
 
                     movingKey != null && native.keyCode == KeyEvent.KEYCODE_BACK &&
                         native.action == KeyEvent.ACTION_DOWN -> {
+                        pinScroll("back-cancel")
+                        Log.d(LIST_TAG, "list BACK cancel ${visualSnapshot("back-cancel")}")
                         onCancelMove()
                         true
                     }
@@ -275,17 +424,31 @@ fun <T> TvReorderList(
             }
             .focusGroup(),
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(
-                    if (totalHeightPx > 0f) {
-                        Modifier.height(with(density) { totalHeightPx.toDp() })
-                    } else {
-                        Modifier
-                    },
-                ),
+                .padding(bottom = NuvioTheme.spacing.xl),
         ) {
+            if (header != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onSizeChanged { headerHeightPx = it.height.toFloat() },
+                ) {
+                    header()
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (itemsHeightPx > 0f) {
+                            Modifier.height(with(density) { itemsHeightPx.toDp() })
+                        } else {
+                            Modifier
+                        },
+                    ),
+            ) {
             items.forEachIndexed { index, item ->
                 val itemKey = key(item)
                 keyedItem(itemKey) {
@@ -293,59 +456,45 @@ fun <T> TvReorderList(
                     val slotIndex = animatedIndices[itemKey] ?: index
                     val dragOffsetPx = dragOffsets[itemKey] ?: 0f
                     val yOffsetPx = slotIndex * slotStridePx + dragOffsetPx
-                    val scale by animateFloatAsState(
-                        targetValue = if (isMoving) NuvioMotion.tokens.focusScale else 1f,
-                        animationSpec = NuvioMotion.focusSpring(),
-                        label = "tvReorderRowScale",
-                    )
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .then(
-                                if (rowHeightPx == 0f) {
-                                    Modifier.onSizeChanged { size ->
-                                        if (rowHeightPx == 0f && size.height > 0) {
-                                            rowHeightPx = size.height.toFloat()
-                                        }
+                            .onSizeChanged { size ->
+                                if (!isMoving && size.height > 0) {
+                                    val measured = size.height.toFloat()
+                                    rowHeightPx = if (rowHeightPx == 0f) {
+                                        measured
+                                    } else {
+                                        min(rowHeightPx, measured)
                                     }
-                                } else {
-                                    Modifier.height(with(density) { rowHeightPx.toDp() })
-                                },
-                            )
+                                }
+                            }
                             .offset {
                                 IntOffset(
                                     x = 0,
                                     y = if (slotStridePx > 0f) yOffsetPx.roundToInt() else 0,
                                 )
                             }
-                            .zIndex(if (isMoving) 1f else 0f)
-                            .graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                            }
-                            .then(
-                                if (isMoving) {
-                                    Modifier
-                                        .focusRequester(moveFocusRequester)
-                                        .focusable()
-                                        .focusProperties { canFocus = true }
-                                } else {
-                                    Modifier
-                                },
-                            ),
+                            .zIndex(if (isMoving) 1f else 0f),
                     ) {
                         itemContent(
                             item,
                             isMoving,
                             {
-                                if (canMove(item)) onStartMove(itemKey)
+                                if (suppressStartMove) {
+                                    Log.d(LIST_TAG, "list ignore startMove suppressed key=$itemKey")
+                                } else if (canMove(item)) {
+                                    onStartMove(itemKey)
+                                }
                             },
-                            { onConfirmMove(itemKey) },
+                            { confirmFromUi("done-button") },
                         )
                     }
                 }
             }
         }
+        }
+    }
     }
 }
