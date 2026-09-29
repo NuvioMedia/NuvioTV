@@ -82,10 +82,24 @@ fun SynopsisDescription(
         onTruncationChanged(isTruncated)
     }
 
-    Column(
-        modifier = modifier.then(
-            if (isTruncated) {
-                Modifier
+    Column(modifier = modifier) {
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                textDirection = description.contentTextDirection()
+            ),
+            color = NuvioTheme.colors.TextPrimary,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { result ->
+                if (result.hasVisualOverflow != isTruncated) {
+                    isTruncated = result.hasVisualOverflow
+                }
+            }
+        )
+        if (isTruncated) {
+            Box(
+                modifier = Modifier
                     .offset(x = -highlightInset)
                     .then(
                         if (focusRequester != null) {
@@ -122,36 +136,17 @@ fun SynopsisDescription(
                         onClick = onShowFullDescription
                     )
                     .padding(horizontal = highlightInset, vertical = 8.dp)
-            } else {
-                Modifier
+            ) {
+                Text(
+                    text = stringResource(R.string.hero_synopsis_read_more),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isFocused) {
+                        NuvioTheme.colors.TextPrimary
+                    } else {
+                        NuvioTheme.extendedColors.textSecondary
+                    }
+                )
             }
-        )
-    ) {
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                textDirection = description.contentTextDirection()
-            ),
-            color = NuvioTheme.colors.TextPrimary,
-            maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis,
-            onTextLayout = { result ->
-                if (result.hasVisualOverflow != isTruncated) {
-                    isTruncated = result.hasVisualOverflow
-                }
-            }
-        )
-        if (isTruncated) {
-            Text(
-                text = stringResource(R.string.hero_synopsis_read_more),
-                style = MaterialTheme.typography.labelMedium,
-                color = if (isFocused) {
-                    NuvioTheme.colors.TextPrimary
-                } else {
-                    NuvioTheme.extendedColors.textSecondary
-                },
-                modifier = Modifier.padding(top = 4.dp)
-            )
         }
     }
 }
