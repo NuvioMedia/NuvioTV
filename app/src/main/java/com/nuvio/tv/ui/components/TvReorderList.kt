@@ -118,6 +118,26 @@ fun <T> TvReorderList(
             ): Float = 0f
         }
     }
+    val headerAwareBringIntoView = remember(inheritedBringIntoViewSpec, scrollState) {
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        object : BringIntoViewSpec {
+            override val scrollAnimationSpec = inheritedBringIntoViewSpec.scrollAnimationSpec
+
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float {
+                if (containerSize <= 0f || size <= 0f) return 0f
+                val itemTopInContent = scrollState.value + offset
+                val firstRowBottom = headerHeightPx + if (rowHeightPx > 0f) rowHeightPx else 1f
+                if (headerHeightPx > 0f && itemTopInContent < firstRowBottom) {
+                    return -scrollState.value.toFloat()
+                }
+                return inheritedBringIntoViewSpec.calculateScrollDistance(offset, size, containerSize)
+            }
+        }
+    }
 
     var repeatJob by remember { mutableStateOf<Job?>(null) }
     var neighborScrollJob by remember { mutableStateOf<Job?>(null) }
@@ -131,11 +151,12 @@ fun <T> TvReorderList(
     val bringIntoViewSpec = if (movingKey != null || pinnedScrollPx >= 0) {
         freezeScrollBringIntoView
     } else {
-        inheritedBringIntoViewSpec
+        headerAwareBringIntoView
     }
 
     fun pinScroll(reason: String) {
-        pinnedScrollPx = scrollState.value
+        val movingIndex = movingKey?.let { animatedIndices[it] }
+        pinnedScrollPx = if (movingIndex == 0) 0 else scrollState.value
         Log.d(LIST_TAG, "list pinScroll reason=$reason value=$pinnedScrollPx")
     }
 
@@ -261,6 +282,18 @@ fun <T> TvReorderList(
 
     fun keepNeighborVisible(newIndex: Int, direction: Int) {
         if (slotStridePx <= 0f || viewportHeightPx <= 0f) return
+        if (newIndex <= 0) {
+            neighborScrollJob?.cancel()
+            Log.d(
+                LIST_TAG,
+                "list scrollTo keepNeighbor header dir=$direction newIndex=$newIndex " +
+                    "from=${scrollState.value} to=0 ${visualSnapshot("keepNeighbor")}",
+            )
+            neighborScrollJob = scope.launch {
+                scrollState.animateScrollTo(0, ReorderTravelSpec)
+            }
+            return
+        }
         val movingTop = headerHeightPx + newIndex * slotStridePx
         val movingBottom = movingTop + rowHeightPx
         val peek = rowHeightPx
@@ -352,6 +385,11 @@ fun <T> TvReorderList(
     LaunchedEffect(movingKey) {
         if (movingKey != null) {
             hadMoveSession = true
+            val movingIndex = animatedIndices[movingKey]
+            if (movingIndex == 0 && scrollState.value != 0) {
+                neighborScrollJob?.cancel()
+                scrollState.animateScrollTo(0, ReorderTravelSpec)
+            }
             return@LaunchedEffect
         }
         if (!hadMoveSession) {
