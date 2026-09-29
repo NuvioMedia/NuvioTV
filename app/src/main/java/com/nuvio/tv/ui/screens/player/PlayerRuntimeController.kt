@@ -741,7 +741,7 @@ class PlayerRuntimeController(
 
     fun onCleared() {
         cancelStreamFallback()
-        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).release(currentStreamUrl)
+        com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.release(currentStreamUrl)
         releasePlayer()
         stopTorrentStream()
         torrentService.shutdown()

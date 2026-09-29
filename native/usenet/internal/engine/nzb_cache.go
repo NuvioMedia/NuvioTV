@@ -243,6 +243,7 @@ func (c *nzbCache) pruneSpace(reserve int64, newEntry bool) bool {
 }
 
 type nzbCacheFill struct {
+	ioTime   time.Duration
 	ctx      context.Context
 	cache    *nzbCache
 	file     *os.File
@@ -276,6 +277,8 @@ func (c *nzbCache) begin(key string) (*nzbCacheFill, string) {
 }
 
 func (f *nzbCacheFill) Write(p []byte) (int, error) {
+	start := time.Now()
+	defer func() { f.ioTime += time.Since(start) }()
 	if f.failure == "" {
 		if int64(len(p)) > nzbCacheEntryBytes-f.written {
 			f.failure = "oversized"
@@ -306,6 +309,8 @@ func (f *nzbCacheFill) Write(p []byte) (int, error) {
 }
 
 func (f *nzbCacheFill) finish(valid bool) string {
+	start := time.Now()
+	defer func() { f.ioTime += time.Since(start) }()
 	err := f.file.Close()
 	f.cache.mu.Lock()
 	defer f.cache.mu.Unlock()

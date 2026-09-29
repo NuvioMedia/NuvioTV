@@ -14,7 +14,7 @@ internal fun PlayerRuntimeController.resolveUsenetForSwitch(
     autoPlay: Boolean = false
 ): Boolean {
     if (!stream.isUsenet()) {
-        if (stream.isTorrent()) UsenetSidecar.get(context).releaseIfDifferent(null)
+        if (stream.isTorrent()) UsenetSidecar.peek()?.releaseIfDifferent(null)
         return false
     }
     debridResolveJob?.cancel()

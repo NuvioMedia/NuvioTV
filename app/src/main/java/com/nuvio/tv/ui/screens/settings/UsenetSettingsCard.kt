@@ -22,6 +22,10 @@ internal fun UsenetSettingsCard(
         SettingsPickerOption("throughput", stringResource(R.string.usenet_throughput))
     )
     SettingsGroupCard(title = stringResource(R.string.usenet_title)) {
+        SettingsToggleRow(title = stringResource(R.string.usenet_self_hosted),
+            subtitle = stringResource(R.string.usenet_self_hosted_description),
+            checked = configuration.allowPrivateNetwork,
+            onToggle = { update(configuration.copy(allowPrivateNetwork = !configuration.allowPrivateNetwork)) })
         SettingsToggleRow(title = stringResource(R.string.usenet_fallback),
             subtitle = stringResource(R.string.usenet_fallback_description),
             checked = configuration.fallbackEnabled,

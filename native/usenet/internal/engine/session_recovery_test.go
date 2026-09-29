@@ -33,7 +33,7 @@ func TestReplacementSharesConnectionAndReconcilesLostDelete(t *testing.T) {
 	open := func(keep string, scope string) (string, string) {
 		t.Helper()
 		b, _ := json.Marshal(OpenRequest{KeepSessionID: &keep, CacheScope: scope, NZBURL: nzb.URL,
-			Servers: []string{"nntp://" + provider.Addr() + "/1"}})
+			Servers: []string{"nntp://" + provider.Addr() + "/1"}, Config: Config{AllowPrivateNetwork: true}})
 		r, _ := http.NewRequest(http.MethodPost, srv.URL+"/sessions", bytes.NewReader(b))
 		r.Header.Set("Authorization", "Bearer secret")
 		resp, err := srv.Client().Do(r)
@@ -157,7 +157,7 @@ func TestExplicitUnknownVideoDoesNotProbeUnrelatedMissingArticle(t *testing.T) {
 	}
 	defer provider.Close()
 	var pools providerPools
-	ps, err := Providers([]string{"nntp://" + provider.Addr() + "/1"}, Config{}, nil)
+	ps, err := Providers([]string{"nntp://" + provider.Addr() + "/1"}, Config{AllowPrivateNetwork: true}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

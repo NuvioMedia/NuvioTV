@@ -157,6 +157,24 @@ class UsenetSidecar private constructor(private val context: Context) {
         }
     }
 
+    /** Results have made Usenet relevant. Warm only Go/trust roots, bounded to
+     * two idle minutes; full NZB/provider preparation remains opt-in. */
+    fun prewarmForSources(): Job = cleanup.launch {
+        mutex.withLock {
+            if (!appForeground || sessionId != null) return@withLock
+            try {
+                start()
+                if (!appForeground) { stopLocked(); return@withLock }
+                if (!UsenetSettings.read(context).prewarmOnLaunch) {
+                    idleStop = cleanup.launch {
+                        delay(120_000)
+                        mutex.withLock { if (sessionId == null) stopLocked() }
+                    }
+                }
+            } catch (_: Exception) { stopLocked() }
+        }
+    }
+
     suspend fun resolve(stream: Stream, season: Int?, episode: Int?, profileId: Int? = null): Stream {
         var resolved: Stream? = null
         try {
@@ -206,7 +224,7 @@ class UsenetSidecar private constructor(private val context: Context) {
         var openedId: String? = null
         return try {
             trace.mark("resolve_lock_acquired")
-            start()
+            start(trace)
             previousId = sessionId
             trace.mark("engine_ready")
             val request = JSONObject().apply {
@@ -226,6 +244,7 @@ class UsenetSidecar private constructor(private val context: Context) {
                     put("fastMkvStartup", configuration.fastMkvStartup)
                     put("fastNzbFetch", configuration.fastNzbFetch)
                     put("cacheNzb", configuration.cacheNzb)
+                    put("allowPrivateNetwork", configuration.allowPrivateNetwork)
                 })
             }
             trace.mark("session_request")
@@ -366,20 +385,25 @@ class UsenetSidecar private constructor(private val context: Context) {
         }
     }
 
-    private fun start() {
+    private fun start(trace: UsenetStartupDiagnostics.Trace? = null) {
         idleStop?.cancel(); idleStop = null
         val cfg = UsenetSettings.read(context)
         // A settings change must not restart the engine underneath the playing
         // source while its replacement is still being prepared. Apply the new
         // runtime memory target once no session owns this process.
         if (process?.let(::isRunning) == true && endpoint != null &&
-            (processProfile == cfg.profile || sessionId != null)) return
+            (processProfile == cfg.profile || sessionId != null)) {
+            trace?.mark("sidecar_reused")
+            return
+        }
+        trace?.mark("sidecar_starting")
         stopLocked()
         val binary = File(context.applicationInfo.nativeLibraryDir, "libnuvio_usenet.so")
         if (!binary.canExecute()) throw UsenetPreparationException("Usenet engine is missing for this device's CPU", UsenetPreparationException.Scope.ENGINE)
         val secret = ByteArray(32).also { SecureRandom().nextBytes(it) }
             .joinToString("") { "%02x".format(it) }
         val child = ProcessBuilder(binary.absolutePath).start()
+        trace?.mark("sidecar_spawned")
         process = child
         processProfile = cfg.profile
         startupReader.execute { child.errorStream.use { input -> val bytes = ByteArray(4096); while (input.read(bytes) >= 0) { /* no credentials in Android logs */ } } }
@@ -400,12 +424,14 @@ class UsenetSidecar private constructor(private val context: Context) {
         // causes the Go process to terminate even if onCleared never ran.
         child.outputStream.write((bootstrap.toString() + "\n").toByteArray())
         child.outputStream.flush()
+        trace?.mark("sidecar_bootstrap_sent")
         val ready = startupReader.submit<String> { child.inputStream.bufferedReader().readLine() ?: throw IOException("Usenet engine exited before startup") }
         try {
             val record = JSONObject(ready.get(15, TimeUnit.SECONDS))
             require(record.getInt("protocol") == 1)
             val port = record.getInt("port"); require(port in 1..65535)
             endpoint = "http://127.0.0.1:$port"; token = secret
+            trace?.mark("sidecar_ready")
         } catch (e: Exception) { ready.cancel(true); stopLocked(); throw UsenetPreparationException("Usenet engine could not start", UsenetPreparationException.Scope.ENGINE) }
     }
 
@@ -467,6 +493,7 @@ class UsenetSidecar private constructor(private val context: Context) {
         fun get(context: Context): UsenetSidecar = instance ?: synchronized(this) {
             instance ?: UsenetSidecar(context.applicationContext).also { instance = it }
         }
+        fun peek(): UsenetSidecar? = instance
         fun onAppForegrounded() { appForeground = true }
         fun stopIdleOnBackground() { appForeground = false; instance?.onAppBackgrounded() }
         fun isSessionUrl(url: String): Boolean = url.startsWith("http://127.0.0.1:") && "/stream/" in url

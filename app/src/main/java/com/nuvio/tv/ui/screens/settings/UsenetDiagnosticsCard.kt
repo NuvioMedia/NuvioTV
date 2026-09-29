@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -25,11 +27,14 @@ import kotlin.math.roundToLong
 internal fun LazyListScope.usenetDiagnosticsCardItems() {
     item(key = "usenet_startup_summary") { UsenetDiagnosticsCard(0) }
     item(key = "usenet_startup_engine") { UsenetDiagnosticsCard(1) }
+    item(key = "usenet_startup_nzb_stages") { UsenetDiagnosticsCard(3) }
     item(key = "usenet_startup_cache") { UsenetDiagnosticsCard(2) }
 }
 
 @Composable
 internal fun UsenetDiagnosticsCard(section: Int, reportOverride: String? = null) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { UsenetStartupDiagnostics.initialize(context) }
     val latest by UsenetStartupDiagnostics.latest.collectAsStateWithLifecycle()
     val source = reportOverride ?: latest
     val report = remember(source) { runCatching { JSONObject(source) }.getOrNull() }
@@ -44,6 +49,7 @@ internal fun UsenetDiagnosticsCard(section: Int, reportOverride: String? = null)
     val marks = report.optJSONObject("marksMs") ?: JSONObject()
     val engine = report.optJSONObject("engine") ?: JSONObject()
     val engineMarks = engine.optJSONObject("marksMs") ?: JSONObject()
+    val engineDurations = engine.optJSONObject("durationsMs") ?: JSONObject()
     fun ms(value: Double?): String = value?.takeIf { it.isFinite() && it >= 0 }?.let { "${it.roundToLong()} ms" } ?: "—"
     fun value(objectValue: JSONObject, key: String): Double? =
         if (objectValue.has(key)) objectValue.optDouble(key).takeIf { it.isFinite() } else null
@@ -65,6 +71,8 @@ internal fun UsenetDiagnosticsCard(section: Int, reportOverride: String? = null)
                     if (report.optBoolean("fastNzbFetch", true)) R.string.diag_value_on else R.string.diag_value_off))
                 DiagnosticRow(stringResource(R.string.usenet_diag_total), duration(marks, "first_frame"), NuvioTheme.colors.Primary)
                 DiagnosticRow(stringResource(R.string.usenet_diag_boot), duration(marks, "engine_ready", "resolve_lock_acquired"))
+                DiagnosticRow(stringResource(R.string.usenet_diag_reused), stringResource(
+                    if (marks.has("sidecar_reused") || marks.has("prepared_session_reused")) R.string.diag_value_on else R.string.diag_value_off))
                 DiagnosticRow(stringResource(R.string.usenet_diag_session), duration(marks, "session_response", "session_request"))
                 DiagnosticRow(stringResource(R.string.usenet_diag_handoff), duration(marks, "prepare", "resolved"))
                 DiagnosticRow(stringResource(R.string.usenet_diag_player), duration(marks, "first_frame", "prepare"))
@@ -91,7 +99,22 @@ internal fun UsenetDiagnosticsCard(section: Int, reportOverride: String? = null)
                 DiagnosticRow(stringResource(R.string.usenet_diag_range_wait), ms(waits.maxOrNull()))
                 DiagnosticRow(stringResource(R.string.usenet_diag_head_ready), duration(engineMarks, "head_article_ready", "warmup_started"))
                 DiagnosticRow(stringResource(R.string.usenet_diag_tail_ready), duration(engineMarks, "tail_article_ready", "warmup_started"))
+                DiagnosticRow(stringResource(R.string.usenet_diag_first_bytes), duration(engineMarks, "first_media_bytes"))
                 Text(stringResource(R.string.usenet_diag_overlap), style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextTertiary)
+            }
+            3 -> {
+                UsenetDiagnosticHeader(stringResource(R.string.usenet_diag_nzb_stages))
+                DiagnosticRow(stringResource(R.string.usenet_diag_provider_setup), duration(engineMarks, "pool_created", "provider_setup_started"))
+                DiagnosticRow(stringResource(R.string.usenet_diag_provider_first), duration(engineMarks, "first_nntp_metadata", "first_nntp_request"))
+                DiagnosticRow(stringResource(R.string.usenet_diag_lookup_time), duration(engineMarks, "nzb_cache_lookup_finished", "nzb_cache_lookup_started"))
+                DiagnosticRow(stringResource(R.string.usenet_diag_headers_time), duration(engineMarks, "nzb_response_headers", "nzb_fetch_started"))
+                DiagnosticRow(stringResource(R.string.usenet_diag_body_time), ms(value(engineDurations, "nzb_body_read")))
+                DiagnosticRow(stringResource(R.string.usenet_diag_parse_time), ms(value(engineDurations, "nzb_parse_work")))
+                DiagnosticRow(stringResource(R.string.usenet_diag_index_time), duration(engineMarks, "nzb_index_finished", "nzb_index_started"))
+                DiagnosticRow(stringResource(R.string.usenet_diag_io_time), ms(value(engineDurations, "nzb_cache_io")))
+                DiagnosticRow(stringResource(R.string.usenet_diag_bind_time), duration(engineMarks, "nzb_cache_bound", "nzb_index_finished"))
+                Text(stringResource(R.string.usenet_diag_nzb_notes), style = MaterialTheme.typography.bodySmall,
                     color = NuvioTheme.colors.TextTertiary)
             }
             2 -> {

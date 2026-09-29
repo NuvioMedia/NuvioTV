@@ -44,7 +44,7 @@ class UsenetStartupBenchmarkTest {
         var surface: Surface? = null
         try {
             prefs.edit().putString("profile", "balanced").putInt("readAhead", 0)
-                .putInt("maxConnections", 0).putBoolean("prewarmOnLaunch", true).commit()
+                .putInt("maxConnections", 0).putBoolean("prewarmOnLaunch", true).putBoolean("allowPrivateNetwork", true).commit()
             UsenetSidecar.onAppForegrounded()
             for (trial in 1..6) {
                 prefs.edit().putBoolean("prewarmOnLaunch", false).commit()

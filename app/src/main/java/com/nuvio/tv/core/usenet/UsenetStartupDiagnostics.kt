@@ -61,6 +61,8 @@ object UsenetStartupDiagnostics {
             // Android's log-entry limit. The in-memory report remains complete.
             Log.i("UsenetStartup", JSONObject().put("fastMkvStartup", trace.fast)
                 .put("marksMs", trace.marks).put("engineMarksMs", trace.engine.optJSONObject("marksMs")).toString())
+            Log.i("UsenetStartupStages", JSONObject().put("durationsMs", trace.engine.optJSONObject("durationsMs"))
+                .put("nzbCache", trace.engine.optJSONObject("nzbCache")).toString())
             trace.engine.optJSONArray("ranges")?.let { ranges ->
                 for (i in 0 until ranges.length()) Log.i("UsenetStartupRange", ranges.getJSONObject(i).toString())
             }
@@ -109,7 +111,6 @@ object UsenetStartupDiagnostics {
     }
 
     fun attach(player: ExoPlayer, context: android.content.Context) {
-        val sidecar = UsenetSidecar.get(context)
-        attach(player, sidecar::captureStartup)
+        attach(player) { url -> UsenetSidecar.peek()?.captureStartup(url) }
     }
 }

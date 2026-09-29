@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 const (
@@ -307,8 +308,10 @@ func (f *nzbCacheFill) indexed(files []*File) string {
 	hash := sha256.Sum256(b)
 	copy(header[24:], hash[:])
 	f.Write(b)
+	start := time.Now()
 	if _, err := f.file.WriteAt(header[:], 0); err != nil {
 		f.failure = "disk_error"
 	}
+	f.ioTime += time.Since(start)
 	return f.finish(len(files) > 0)
 }

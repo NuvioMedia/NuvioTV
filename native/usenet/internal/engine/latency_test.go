@@ -35,7 +35,7 @@ func TestProviderSeekDrainPolicy(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Cleanup(func() { server.Close() })
-			providers, err := Providers([]string{"nntp://user:pass@" + server.Addr() + "/1"}, Config{}, nil)
+			providers, err := Providers([]string{"nntp://user:pass@" + server.Addr() + "/1"}, Config{AllowPrivateNetwork: true}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

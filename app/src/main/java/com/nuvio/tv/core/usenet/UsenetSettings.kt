@@ -16,6 +16,7 @@ data class UsenetConfiguration(
     val fastNzbFetch: Boolean = true,
     val prefetchResults: Boolean = false,
     val cacheNzb: Boolean = true,
+    val allowPrivateNetwork: Boolean = false,
     val fallbackEnabled: Boolean = false,
     val fallbackMaxAttempts: Int = 5
 )
@@ -38,6 +39,7 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
             .putBoolean("fastNzbFetch", value.fastNzbFetch)
             .putBoolean("prefetchResults", value.prefetchResults)
             .putBoolean("cacheNzb", value.cacheNzb)
+            .putBoolean("allowPrivateNetwork", value.allowPrivateNetwork)
             .putBoolean("fallbackEnabled", value.fallbackEnabled)
             .putInt("fallbackMaxAttempts", value.fallbackMaxAttempts).apply()
         state.value = value
@@ -56,6 +58,7 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
                 fastNzbFetch = prefs.getBoolean("fastNzbFetch", true),
                 prefetchResults = prefs.getBoolean("prefetchResults", false),
                 cacheNzb = prefs.getBoolean("cacheNzb", true),
+                allowPrivateNetwork = prefs.getBoolean("allowPrivateNetwork", false),
                 fallbackEnabled = prefs.getBoolean("fallbackEnabled", false),
                 fallbackMaxAttempts = prefs.getInt("fallbackMaxAttempts", 5).coerceIn(1, 50)
             )
