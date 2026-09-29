@@ -80,6 +80,7 @@ fun <T> TvReorderList(
     val scope = rememberCoroutineScope()
     val rowSpacingPx = with(density) { NuvioTheme.spacing.lg.toPx() }
 
+    var viewportHeightPx by remember { mutableFloatStateOf(0f) }
     var rowHeightPx by remember { mutableFloatStateOf(0f) }
     val slotStridePx = if (rowHeightPx > 0f) rowHeightPx + rowSpacingPx else 0f
     val totalHeightPx = if (slotStridePx > 0f && items.isNotEmpty()) {
@@ -112,9 +113,13 @@ fun <T> TvReorderList(
     val moveFocusRequester = remember { FocusRequester() }
 
     var repeatJob by remember { mutableStateOf<Job?>(null) }
+    var neighborScrollJob by remember { mutableStateOf<Job?>(null) }
 
     DisposableEffect(Unit) {
-        onDispose { repeatJob?.cancel() }
+        onDispose {
+            repeatJob?.cancel()
+            neighborScrollJob?.cancel()
+        }
     }
 
     fun stopRepeat() {
@@ -153,15 +158,34 @@ fun <T> TvReorderList(
         }
     }
 
+    fun keepNeighborVisible(newIndex: Int, direction: Int) {
+        if (slotStridePx <= 0f || viewportHeightPx <= 0f) return
+        val movingTop = newIndex * slotStridePx
+        val movingBottom = movingTop + rowHeightPx
+        val peek = slotStridePx
+        val desiredTop = if (direction < 0) (movingTop - peek).coerceAtLeast(0f) else movingTop
+        val desiredBottom = if (direction > 0) movingBottom + peek else movingBottom
+        val current = scrollState.value.toFloat()
+        val target = when {
+            desiredTop < current -> desiredTop
+            desiredBottom > current + viewportHeightPx -> desiredBottom - viewportHeightPx
+            else -> return
+        }.coerceIn(0f, scrollState.maxValue.toFloat())
+        neighborScrollJob?.cancel()
+        neighborScrollJob = scope.launch {
+            scrollState.animateScrollTo(target.roundToInt())
+        }
+    }
+
     fun performMove(direction: Int): Boolean {
         val activeKey = movingKey ?: return false
+        val oldIndex = items.indexOfFirst { key(it) == activeKey }
         val moved = onMoveBy(activeKey, direction)
         if (moved) {
             animatedIndices = items.mapIndexed { index, item -> key(item) to index }.toMap()
             animateSwap(activeKey, direction)
-            scope.launch {
-                bringIntoViewRequesters[activeKey]?.bringIntoView()
-            }
+            val newIndex = if (oldIndex >= 0) oldIndex + direction else 0
+            keepNeighborVisible(newIndex, direction)
         }
         return moved
     }
@@ -210,6 +234,7 @@ fun <T> TvReorderList(
 
     Box(
         modifier = modifier
+            .onSizeChanged { viewportHeightPx = it.height.toFloat() }
             .verticalScroll(scrollState)
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
