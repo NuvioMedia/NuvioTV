@@ -3331,4 +3331,36 @@
     <string name="shuffle_save_failed">Could not update shuffle. Try again.</string>
     <string name="shuffle_change_selection">Choose episodes</string>
     <string name="shuffle_badge">Episode shuffle enabled</string>
+
+    <!-- Live TV -->
+    <string name="nav_live_tv">Live TV</string>
+    <string name="live_tv_title">Live TV</string>
+    <string name="live_all">All</string>
+    <string name="live_playlist_settings">Manage lists</string>
+    <string name="live_now">Now</string>
+    <string name="live_next_prefix">Next: %1$s</string>
+    <string name="live_switch_to">Switch to</string>
+    <string name="live_next_channel">Next channel</string>
+    <string name="live_source">Source: %1$s</string>
+    <string name="live_no_epg">No guide information</string>
+    <string name="live_empty_title">No channels yet</string>
+    <string name="live_empty_body">Add an M3U playlist URL to load your channels.</string>
+    <string name="live_add_playlist">Add playlist</string>
+    <string name="live_loading">Loading…</string>
+    <string name="live_load_error">Could not load the playlist</string>
+    <string name="live_dialog_title">Live TV playlist</string>
+    <string name="live_m3u_hint">M3U playlist URL</string>
+    <string name="live_epg_hint">XMLTV guide URL (optional)</string>
+    <string name="live_save">Save</string>
+    <string name="live_cancel">Cancel</string>
+    <string name="live_not_m3u">This address did not return an M3U playlist. Check the link.</string>
+    <string name="live_clear">Clear</string>
+    <string name="live_name_hint">Name (for example: Server 1)</string>
+    <string name="live_manage_title">Channel lists</string>
+    <string name="live_channel_count">%1$d channels</string>
+    <string name="live_edit">Edit</string>
+    <string name="live_delete">Delete</string>
+    <string name="live_delete_confirm">Press again to delete</string>
+    <string name="live_close">Close</string>
+    <string name="live_all_categories">All categories</string>
 </resources>

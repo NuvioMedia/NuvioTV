@@ -32,6 +32,8 @@ import com.nuvio.tv.ui.screens.home.HomeScreen
 import com.nuvio.tv.ui.screens.addon.AddonManagerScreen
 import com.nuvio.tv.ui.screens.addon.CatalogOrderScreen
 import com.nuvio.tv.ui.screens.library.LibraryScreen
+import com.nuvio.tv.ui.screens.live.LiveTvPlayerScreen
+import com.nuvio.tv.ui.screens.live.LiveTvScreen
 import com.nuvio.tv.ui.screens.player.PlayerExitReason
 import com.nuvio.tv.ui.screens.player.PlayerScreen
 import com.nuvio.tv.ui.screens.player.PostPlayRecommendation
@@ -1160,6 +1162,22 @@ private fun PlaybackNavHost(
                         )
                     )
                 }
+            )
+        }
+
+        composable(Screen.LiveTv.route) {
+            LiveTvScreen(
+                onPlayChannel = { index -> navController.navigate(Screen.LiveTvPlayer.createRoute(index)) }
+            )
+        }
+
+        composable(
+            route = Screen.LiveTvPlayer.route,
+            arguments = listOf(navArgument("channelIndex") { type = NavType.IntType })
+        ) { backStackEntry ->
+            LiveTvPlayerScreen(
+                startIndex = backStackEntry.arguments?.getInt("channelIndex") ?: 0,
+                onBack = { navController.popBackStack() }
             )
         }
 

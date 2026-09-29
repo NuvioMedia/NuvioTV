@@ -138,6 +138,10 @@ sealed class Screen(val route: String) {
     data object Search : Screen("search")
     data object Discover : Screen("discover")
     data object Library : Screen("library")
+    data object LiveTv : Screen("live_tv")
+    data object LiveTvPlayer : Screen("live_tv_player/{channelIndex}") {
+        fun createRoute(channelIndex: Int): String = "live_tv_player/$channelIndex"
+    }
     data object Settings : Screen("settings")
     data object Tracking : Screen("trakt")
     data object TmdbSettings : Screen("tmdb_settings")

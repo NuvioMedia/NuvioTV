@@ -3236,4 +3236,35 @@
     <string name="stream_test_video_bitrate">קצב סיביות וידאו ממוצע: %1$s</string>
     <string name="stream_test_error_connection">החיבור נכשל. ייתכן שקישור הסטרים האחרון שהופעל פג תוקף או שאינו נגיש. אנא נגן את הווידאו שוב ונסה שוב.</string>
 
+    <!-- Live TV -->
+    <string name="nav_live_tv">טלוויזיה חיה</string>
+    <string name="live_tv_title">טלוויזיה חיה</string>
+    <string name="live_all">הכל</string>
+    <string name="live_playlist_settings">ניהול רשימות</string>
+    <string name="live_now">עכשיו</string>
+    <string name="live_next_prefix">הבא: %1$s</string>
+    <string name="live_switch_to">למעבר</string>
+    <string name="live_next_channel">הערוץ הבא</string>
+    <string name="live_source">Source: %1$s</string>
+    <string name="live_no_epg">אין מידע על התוכנית</string>
+    <string name="live_empty_title">אין עדיין ערוצים</string>
+    <string name="live_empty_body">הוסף כתובת של רשימת M3U כדי לטעון ערוצים.</string>
+    <string name="live_add_playlist">הוסף רשימה</string>
+    <string name="live_loading">טוען…</string>
+    <string name="live_load_error">טעינת הרשימה נכשלה</string>
+    <string name="live_dialog_title">רשימת ערוצים</string>
+    <string name="live_m3u_hint">כתובת רשימת M3U</string>
+    <string name="live_epg_hint">כתובת מדריך שידורים XMLTV (לא חובה)</string>
+    <string name="live_save">שמור</string>
+    <string name="live_cancel">ביטול</string>
+    <string name="live_not_m3u">הכתובת לא החזירה רשימת M3U. בדוק את הקישור.</string>
+    <string name="live_clear">נקה</string>
+    <string name="live_name_hint">שם (לדוגמה: שרת 1)</string>
+    <string name="live_manage_title">רשימות ערוצים</string>
+    <string name="live_channel_count">%1$d ערוצים</string>
+    <string name="live_edit">עריכה</string>
+    <string name="live_delete">מחיקה</string>
+    <string name="live_delete_confirm">לחץ שוב למחיקה</string>
+    <string name="live_close">סגור</string>
+    <string name="live_all_categories">כל הקטגוריות</string>
 </resources>
