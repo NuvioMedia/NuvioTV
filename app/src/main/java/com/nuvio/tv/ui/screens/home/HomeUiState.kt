@@ -26,6 +26,7 @@ data class HomeUiState(
     val installedAddonsCount: Int = 0,
     val homeLayout: HomeLayout = HomeLayout.MODERN,
     val modernLandscapePostersEnabled: Boolean = false,
+    val alwaysShowLandscapeClearlogo: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean = false,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
     val heroItems: List<MetaPreview> = emptyList(),
@@ -67,11 +68,17 @@ data class HomeUiState(
     val continueWatchingCardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
     val heroEnrichmentEnabled: Boolean = false,
     val startupAuthNotice: StartupAuthNotice? = null,
-    val homeRows: List<HomeRow> = emptyList()
+    val homeRows: List<HomeRow> = emptyList(),
+    val customPosterUrlPattern: String = "",
+    val customPosterEnabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen> =
+        com.nuvio.tv.core.poster.CustomPosterScreen.ALL,
+    val mdbListShowOnHero: Boolean = false,
+    val mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER
 )
 
 @Immutable
 sealed class ContinueWatchingItem {
+    abstract val shufflePlayback: Boolean
     @Immutable
     data class InProgress(
         val progress: WatchProgress,
@@ -80,12 +87,27 @@ sealed class ContinueWatchingItem {
         val episodeImdbRating: Float? = null,
         val genres: List<String> = emptyList(),
         val releaseInfo: String? = null,
-        val contentLanguage: String? = null
+        val contentLanguage: String? = null,
+        override val shufflePlayback: Boolean = false,
+        val originalPoster: String? = null,
+        val customLandscapePoster: String? = null,
+        val mdbListRatings: com.nuvio.tv.domain.model.MDBListRatings? = null
     ) : ContinueWatchingItem()
 
     @Immutable
-    data class NextUp(val info: NextUpInfo) : ContinueWatchingItem()
+    data class NextUp(
+        val info: NextUpInfo,
+        override val shufflePlayback: Boolean = false,
+        val originalPoster: String? = null,
+        val customLandscapePoster: String? = null
+    ) : ContinueWatchingItem()
 }
+
+val ContinueWatchingItem.shuffleFocusKey: String?
+    get() = if (!shufflePlayback) null else when (this) {
+        is ContinueWatchingItem.InProgress -> "cw_shuffle_${progress.contentId}"
+        is ContinueWatchingItem.NextUp -> "cw_shuffle_${info.contentId}"
+    }
 
 @Immutable
 data class NextUpInfo(
@@ -120,7 +142,8 @@ data class NextUpInfo(
     val isMidSeasonPremiere: Boolean = false,
     val isMidSeasonFinale: Boolean = false,
     val isSeasonFinale: Boolean = false,
-    val isSeriesFinale: Boolean = false
+    val isSeriesFinale: Boolean = false,
+    val mdbListRatings: com.nuvio.tv.domain.model.MDBListRatings? = null
 )
 
 @Immutable

@@ -195,7 +195,7 @@ fun DebridSettingsContent(
                     }
 
                     item(key = "debrid_account_section") {
-                        DebridSectionLabel(text = stringResource(R.string.debrid_section_account))
+                        SettingsSectionLabel(text = stringResource(R.string.debrid_section_account))
                     }
 
                     DebridProviders.visible().forEachIndexed { providerIndex, provider ->
@@ -235,7 +235,7 @@ fun DebridSettingsContent(
 
                     if (uiState.canResolvePlayableLinks) {
                         item(key = "debrid_instant_section") {
-                            DebridSectionLabel(text = stringResource(R.string.debrid_section_instant_playback))
+                            SettingsSectionLabel(text = stringResource(R.string.debrid_section_instant_playback))
                         }
 
                         item(key = "debrid_prepare_links") {
@@ -263,7 +263,7 @@ fun DebridSettingsContent(
                     }
 
                     item(key = "debrid_formatting_section") {
-                        DebridSectionLabel(text = stringResource(R.string.debrid_section_formatting))
+                        SettingsSectionLabel(text = stringResource(R.string.debrid_section_formatting))
                     }
 
                     item(key = "debrid_formatter") {
@@ -288,7 +288,7 @@ fun DebridSettingsContent(
 
                     if (uiState.canResolvePlayableLinks) {
                         item(key = "debrid_filters_section") {
-                            DebridSectionLabel(text = stringResource(R.string.debrid_section_filters))
+                            SettingsSectionLabel(text = stringResource(R.string.debrid_section_filters))
                         }
 
                         item(key = "debrid_max_results") {
@@ -726,16 +726,6 @@ private fun DebridInfoText(text: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.sm)
-    )
-}
-
-@Composable
-private fun DebridSectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = NuvioTheme.colors.TextPrimary,
-        modifier = Modifier.padding(start = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.sm)
     )
 }
 

@@ -5,6 +5,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.sync.LibrarySyncService
+import com.nuvio.tv.core.tracking.TrackingListManager
 import com.nuvio.tv.core.tracking.TrackingLibraryProviderRegistry
 import com.nuvio.tv.core.tracking.TrackingMembershipApplyResult
 import com.nuvio.tv.core.tracking.TrackingProviderId
@@ -15,7 +16,6 @@ import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tracking.effectiveLibrarySourceMode
 import com.nuvio.tv.core.tracking.providerId
 import com.nuvio.tv.data.local.LibraryPreferences
-import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.model.LibraryEntry
@@ -25,7 +25,7 @@ import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.domain.model.ListMembershipSnapshot
 import com.nuvio.tv.domain.model.SavedLibraryItem
-import com.nuvio.tv.domain.model.TraktListPrivacy
+import com.nuvio.tv.domain.model.LibraryListPrivacy
 import com.nuvio.tv.domain.repository.LibraryRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,9 +53,7 @@ import javax.inject.Singleton
 class LibraryRepositoryImpl @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val libraryPreferences: LibraryPreferences,
-    private val traktAuthDataStore: TraktAuthDataStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
-    private val traktLibraryService: TraktLibraryService,
     private val librarySyncService: LibrarySyncService,
     private val authManager: AuthManager,
     private val metaRepository: MetaRepository,
@@ -303,34 +301,40 @@ class LibraryRepositoryImpl @Inject constructor(
         return TrackingMembershipApplyResult()
     }
 
-    override suspend fun createPersonalList(name: String, description: String?, privacy: TraktListPrivacy) {
-        requireTraktAuth()
-        traktLibraryService.createPersonalList(name = name, description = description, privacy = privacy)
+    override suspend fun createPersonalList(name: String, description: String?, privacy: LibraryListPrivacy, source: LibrarySourceMode) {
+        selectedListManager(source).createList(name, description, privacy)
     }
 
     override suspend fun updatePersonalList(
         listId: String,
         name: String,
         description: String?,
-        privacy: TraktListPrivacy
+        privacy: LibraryListPrivacy,
+        source: LibrarySourceMode
     ) {
-        requireTraktAuth()
-        traktLibraryService.updatePersonalList(
-            listId = listId,
-            name = name,
-            description = description,
-            privacy = privacy
-        )
+        selectedListManager(source, listOf(listId)).updateList(listId, name, description, privacy)
     }
 
-    override suspend fun deletePersonalList(listId: String) {
-        requireTraktAuth()
-        traktLibraryService.deletePersonalList(listId)
+    override suspend fun deletePersonalList(listId: String, source: LibrarySourceMode) {
+        selectedListManager(source, listOf(listId)).deleteList(listId)
     }
 
-    override suspend fun reorderPersonalLists(orderedListIds: List<String>) {
-        requireTraktAuth()
-        traktLibraryService.reorderPersonalLists(orderedListIds)
+    override suspend fun reorderPersonalLists(orderedListIds: List<String>, source: LibrarySourceMode) {
+        selectedListManager(source, orderedListIds).reorderLists(orderedListIds)
+    }
+
+    private suspend fun selectedListManager(
+        source: LibrarySourceMode,
+        keys: List<String> = emptyList()
+    ): TrackingListManager {
+        val profileId = profileManager.activeProfileId.value
+        check(sourceMode.first() == source) { "Library source changed" }
+        val provider = source.providerId?.let(trackingProviders::provider)
+            ?: throw IllegalStateException("This library does not support list management")
+        check(provider.isAuthenticated.first()) { "Connect the library account first" }
+        require(keys.all(provider::recognizesListKey)) { "Invalid list for the library provider" }
+        check(profileManager.activeProfileId.value == profileId) { "Profile changed" }
+        return provider.listManager ?: throw IllegalStateException("This provider does not support list management")
     }
 
     override suspend fun refreshNow() {
@@ -339,11 +343,6 @@ class LibraryRepositoryImpl @Inject constructor(
             ?.refresh(TrackingRefreshIntent.USER_INITIATED)
     }
 
-    private suspend fun requireTraktAuth() {
-        if (!traktAuthDataStore.isEffectivelyAuthenticated.first()) {
-            throw IllegalStateException(appContext.getString(com.nuvio.tv.R.string.trakt_error_auth_required))
-        }
-    }
 
     private fun LibraryEntryInput.toSavedLibraryItem(): SavedLibraryItem {
         return SavedLibraryItem(

@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -75,7 +76,8 @@ internal fun MemberTier.badgeStyle(): MemberBadgeStyle = when (this) {
 fun MemberBrandWordmark(
     height: Dp,
     modifier: Modifier = Modifier,
-    contentDescription: String? = null
+    contentDescription: String? = null,
+    drawableOverride: Int? = null
 ) {
     val access = Membership.access
 
@@ -83,11 +85,18 @@ fun MemberBrandWordmark(
         modifier = modifier.height(height),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BrandWordmark(
-            modifier = Modifier.height(height),
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Fit
-        )
+        Crossfade(
+            targetState = drawableOverride,
+            animationSpec = tween(durationMillis = 180),
+            label = "brandWordmarkCrossfade"
+        ) { currentDrawable ->
+            BrandWordmark(
+                modifier = Modifier.height(height),
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Fit,
+                drawableOverride = currentDrawable
+            )
+        }
 
         access.tier?.let { tier ->
             LocalMemberSuffix(

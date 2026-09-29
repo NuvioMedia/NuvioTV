@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.data.local.NextEpisodeThresholdMode
+import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.domain.model.Video
 import java.time.Clock
 import java.time.Instant
@@ -81,5 +83,139 @@ class PlayerNextEpisodeRulesTest {
 
         assertFalse(PlayerNextEpisodeRules.hasEpisodeAired("2026-07-15T15:00:00Z", before))
         assertTrue(PlayerNextEpisodeRules.hasEpisodeAired("2026-07-15T15:00:00Z", exact))
+    }
+
+    private fun shouldShow(
+        positionMs: Long,
+        durationMs: Long,
+        skipIntervals: List<SkipInterval> = emptyList(),
+        mode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
+        percent: Float = 97f,
+        minutesBeforeEnd: Float = 2f
+    ) = PlayerNextEpisodeRules.shouldShowNextEpisodeCard(
+        positionMs = positionMs,
+        durationMs = durationMs,
+        skipIntervals = skipIntervals,
+        thresholdMode = mode,
+        thresholdPercent = percent,
+        thresholdMinutesBeforeEnd = minutesBeforeEnd
+    )
+
+    private fun outro(startSec: Double, endSec: Double) =
+        SkipInterval(startTime = startSec, endTime = endSec, type = "outro", provider = "introdb")
+
+    @Test
+    fun `percentage mode fires past the threshold`() {
+        assertTrue(shouldShow(positionMs = 44 * 60_000L, durationMs = 45 * 60_000L))
+    }
+
+    @Test
+    fun `a duration below the position does not fire in percentage mode`() {
+        // 25 minutes into a 45 minute episode, player transiently reports 20 minutes.
+        assertFalse(shouldShow(positionMs = 25 * 60_000L, durationMs = 20 * 60_000L))
+    }
+
+    @Test
+    fun `a duration below the position does not fire in minutes mode`() {
+        assertFalse(
+            shouldShow(
+                positionMs = 25 * 60_000L,
+                durationMs = 20 * 60_000L,
+                mode = NextEpisodeThresholdMode.MINUTES_BEFORE_END
+            )
+        )
+    }
+
+    @Test
+    fun `a duration below the position does not fire with outro segments`() {
+        assertFalse(
+            shouldShow(
+                positionMs = 25 * 60_000L,
+                durationMs = 20 * 60_000L,
+                skipIntervals = listOf(outro(startSec = 1_180.0, endSec = 1_200.0))
+            )
+        )
+    }
+
+    @Test
+    fun `the end of the episode still fires within the epsilon`() {
+        val durationMs = 45 * 60_000L
+        assertTrue(shouldShow(positionMs = durationMs, durationMs = durationMs))
+        assertTrue(shouldShow(positionMs = durationMs + 500L, durationMs = durationMs))
+    }
+
+    @Test
+    fun `position beyond the epsilon does not fire`() {
+        val durationMs = 45 * 60_000L
+        assertFalse(shouldShow(positionMs = durationMs + 1_001L, durationMs = durationMs))
+    }
+
+    @Test
+    fun `minutes mode fires inside the window`() {
+        assertTrue(
+            shouldShow(
+                positionMs = 44 * 60_000L,
+                durationMs = 45 * 60_000L,
+                mode = NextEpisodeThresholdMode.MINUTES_BEFORE_END
+            )
+        )
+    }
+
+    @Test
+    fun `an unknown duration never fires`() {
+        assertFalse(shouldShow(positionMs = 25 * 60_000L, durationMs = 0L))
+    }
+
+    private fun awayFromEnd(positionMs: Long, durationMs: Long) =
+        PlayerNextEpisodeRules.isAwayFromEnd(
+            positionMs = positionMs,
+            durationMs = durationMs,
+            skipIntervals = emptyList(),
+            thresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
+            thresholdPercent = 97f,
+            thresholdMinutesBeforeEnd = 2f
+        )
+
+    @Test
+    fun `the start of a stream is away from the end`() {
+        assertTrue(awayFromEnd(positionMs = 0L, durationMs = 22 * 60_000L))
+    }
+
+    @Test
+    fun `mid-episode is away from the end`() {
+        assertTrue(awayFromEnd(positionMs = 11 * 60_000L, durationMs = 22 * 60_000L))
+    }
+
+    @Test
+    fun `the previous file's end position is not away from the end`() {
+        // Stale reading after a switch: previous episode's end against a similar duration.
+        assertFalse(awayFromEnd(positionMs = 22 * 60_000L, durationMs = 22 * 60_000L))
+    }
+
+    @Test
+    fun `a stale position inside the card threshold is not away from the end`() {
+        // Previous episode ended at 22:00; the new one reports 22:20. Before the file end, but
+        // past 97%, so it must not arm.
+        assertFalse(awayFromEnd(positionMs = 22 * 60_000L, durationMs = 22 * 60_000L + 20_000L))
+    }
+
+    @Test
+    fun `a resume inside the card window but below completion is not away from the end`() {
+        // 17:30 of a 20 minute episode is 87.5%, so it resumes, but it is inside a 3 minute window.
+        assertFalse(
+            PlayerNextEpisodeRules.isAwayFromEnd(
+                positionMs = 17 * 60_000L + 30_000L,
+                durationMs = 20 * 60_000L,
+                skipIntervals = emptyList(),
+                thresholdMode = NextEpisodeThresholdMode.MINUTES_BEFORE_END,
+                thresholdPercent = 97f,
+                thresholdMinutesBeforeEnd = 3f
+            )
+        )
+    }
+
+    @Test
+    fun `an unknown duration is not away from the end`() {
+        assertFalse(awayFromEnd(positionMs = 0L, durationMs = 0L))
     }
 }

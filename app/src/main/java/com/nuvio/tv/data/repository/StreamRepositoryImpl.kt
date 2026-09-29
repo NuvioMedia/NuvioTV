@@ -23,6 +23,7 @@ import com.nuvio.tv.domain.model.ProxyHeaders
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBehaviorHints
+import com.nuvio.tv.core.streams.supportsStreamResource
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.StreamRepository
@@ -528,13 +529,19 @@ class StreamRepositoryImpl @Inject constructor(
         )
     }
 
-    private fun Stream.dedupKey(): String =
-        infoHash?.lowercase()?.let { hash -> "$hash:${fileIdx ?: ""}" }
+    private fun Stream.dedupKey(): String {
+        val base = infoHash?.lowercase()?.let { hash -> "$hash:${fileIdx ?: ""}" }
             ?: clientResolve?.infoHash?.lowercase()?.let { hash -> "$hash:${clientResolve.fileIdx}" }
             ?: url
             ?: externalUrl
             ?: ytId
             ?: "${addonName}:${name}:${title}"
+        val nameSuffix = if (base == url) {
+            val discriminator = name?.takeIf { it.isNotBlank() }
+            if (discriminator != null) "|$discriminator" else ""
+        } else ""
+        return "$base$nameSuffix"
+    }
 
     /**
      * Build a description string from scraper result
@@ -598,24 +605,6 @@ class StreamRepositoryImpl @Inject constructor(
                 result
             }
             NetworkResult.Loading -> NetworkResult.Loading
-        }
-    }
-
-    /**
-     * Check if addon supports stream resource for the given type and video id.
-     * Respects the resource-level idPrefixes declared in the addon manifest,
-     * falling back to the top-level addon idPrefixes if the resource doesn't
-     * declare its own.
-     */
-    private fun Addon.supportsStreamResource(type: String, videoId: String): Boolean {
-        return resources.any { resource ->
-            resource.name == "stream" &&
-            (resource.types.isEmpty() || resource.types.contains(type)) &&
-            run {
-                val prefixes = resource.idPrefixes?.takeIf { it.isNotEmpty() }
-                    ?: idPrefixes.takeIf { it.isNotEmpty() }
-                prefixes == null || prefixes.any { prefix -> videoId.startsWith(prefix) }
-            }
         }
     }
 

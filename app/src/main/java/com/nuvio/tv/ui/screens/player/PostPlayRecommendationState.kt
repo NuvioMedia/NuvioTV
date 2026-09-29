@@ -48,7 +48,8 @@ data class PostPlayRecommendationUiState(
     val hasReturnedToPlayer: Boolean = false,
     val countdownSeconds: Int? = null,
     val isTrailerPlaying: Boolean = false,
-    val hasAutoPlayedTrailer: Boolean = false
+    val hasAutoPlayedTrailer: Boolean = false,
+    val mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER
 ) {
     val canNavigatePrevious: Boolean
         get() = !isChangingRecommendation && recommendationIndex > 0
@@ -121,10 +122,16 @@ internal fun shouldUsePostPlayRecommendation(
     contentType: String?,
     isNextEpisodeMetadataResolved: Boolean,
     nextEpisodeHasAired: Boolean?,
+    nextEpisodeAvailable: Boolean? = null,
+    nextEpisodeReleased: String? = "",
     enabled: Boolean = true
 ): Boolean = enabled && when (resolvePostPlayContentType(contentType)) {
     ContentType.MOVIE -> true
-    ContentType.SERIES -> isNextEpisodeMetadataResolved && nextEpisodeHasAired != true
+    ContentType.SERIES -> {
+        if (!isNextEpisodeMetadataResolved) false
+        else if (nextEpisodeHasAired != true) true
+        else nextEpisodeReleased.isNullOrBlank() && nextEpisodeAvailable == false
+    }
     else -> false
 }
 

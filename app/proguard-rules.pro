@@ -55,8 +55,10 @@
 # Keep server classes and their inner data classes (serialized with Gson)
 -keep class com.nuvio.tv.core.server.** { *; }
 
-# ── Torrent streaming (TorrServer) ─────────────────────────────────────────────
+# ── Torrent streaming (Nuvio Engine) ───────────────────────────────────────────
 -keep class com.nuvio.tv.core.torrent.** { *; }
+-keep class com.nuvio.engine.** { *; }
+-keep interface com.nuvio.engine.** { *; }
 
 #── QuickJS ────────────────────────────────────────────────────────────────────
 # Keep quickjs-kt library classes for proper type conversion
@@ -140,5 +142,10 @@
 -keepclassmembers class org.jsoup.** { *; }
 -keep class com.fasterxml.jackson.** { *; }
 -keepclassmembers class com.fasterxml.jackson.** { *; }
+
+# AndroidX components referenced by extensions
+-keep class androidx.fragment.app.** { *; }
+-keep interface androidx.fragment.app.** { *; }
+
 -dontwarn java.beans.ConstructorProperties
 -dontwarn java.beans.Transient

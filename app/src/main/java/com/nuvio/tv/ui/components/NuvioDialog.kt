@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.components
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.contentTextDirection
 
 import android.os.SystemClock
 import android.view.KeyEvent as AndroidKeyEvent
@@ -103,7 +104,9 @@ fun NuvioDialog(
                 if (title.isNotBlank()) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            textDirection = title.contentTextDirection()
+                        ),
                         color = NuvioTheme.colors.TextPrimary,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = titleTextAlign,

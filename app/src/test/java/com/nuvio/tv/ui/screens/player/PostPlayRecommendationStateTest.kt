@@ -163,8 +163,7 @@ class PostPlayRecommendationStateTest {
                 enabled = true,
                 useArtwork = true,
                 useBasicInfo = true,
-                useDetails = true,
-                useReleaseDates = true
+                useDetails = true
             ),
             tmdbId = "42"
         )
