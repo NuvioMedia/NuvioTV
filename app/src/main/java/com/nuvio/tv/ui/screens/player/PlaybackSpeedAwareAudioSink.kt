@@ -45,15 +45,23 @@ internal class PlaybackSpeedAwareAudioSink(
     }
 
     /**
-     * Update Bluetooth policy without rebuilding the player when possible.
-     * Call [notifyAudioProcessingRequirementChanged] after flipping from false → true mid-session
-     * if the sink is already configured for passthrough.
+     * Update Bluetooth policy without rebuilding the player.
+     * Call [notifyAudioProcessingRequirementChanged] after a change so Media3 reselects
+     * decode-to-PCM vs passthrough on the live renderer.
+     *
+     * @return true when the effective PCM/passthrough policy changed.
      */
-    fun setBluetoothForcePcm(enabled: Boolean) {
+    fun setBluetoothForcePcm(enabled: Boolean): Boolean {
+        val wasBluetoothForce = bluetoothForcePcm
+        val wasSessionForce = forcePcmForCurrentSession
         bluetoothForcePcm = enabled
         if (enabled) {
             forcePcmForCurrentSession = true
+        } else if (!startedWithForcedPcm && playbackSpeed == 1f) {
+            // Session was not built as PCM-only; leaving Bluetooth can restore passthrough.
+            forcePcmForCurrentSession = false
         }
+        return wasBluetoothForce != bluetoothForcePcm || wasSessionForce != forcePcmForCurrentSession
     }
 
     fun isBluetoothForcePcm(): Boolean = bluetoothForcePcm

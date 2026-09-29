@@ -16,19 +16,23 @@ interface IntroDbApi {
     @GET("segments")
     suspend fun getSegments(
         @Query("imdb_id") imdbId: String,
-        @Query("season") season: Int,
-        @Query("episode") episode: Int
+        @Query("season") season: Int? = null,
+        @Query("episode") episode: Int? = null,
+        @Query("is_movie") isMovie: Boolean? = null
     ): Response<IntroDbSegmentsResponse>
 }
 
 @JsonClass(generateAdapter = true)
 data class IntroDbSegmentsResponse(
     @Json(name = "imdb_id") val imdbId: String? = null,
+    @Json(name = "media_type") val mediaType: String? = null,
+    @Json(name = "is_movie") val isMovie: Boolean? = null,
     @Json(name = "season") val season: Int? = null,
     @Json(name = "episode") val episode: Int? = null,
     @Json(name = "intro") val intro: IntroDbSegment? = null,
     @Json(name = "recap") val recap: IntroDbSegment? = null,
-    @Json(name = "outro") val outro: IntroDbSegment? = null
+    @Json(name = "outro") val outro: IntroDbSegment? = null,
+    @Json(name = "post_credits") val postCredits: IntroDbSegment? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -71,65 +75,6 @@ data class AniSkipResult(
 data class AniSkipInterval(
     @Json(name = "startTime") val startTime: Double,
     @Json(name = "endTime") val endTime: Double
-)
-
-// --- ARM API (IMDB -> MAL ID resolution) ---
-
-interface ArmApi {
-    // /imdb?id=...&include=myanimelist,anilist,kitsu  → List<ArmEntry> (one per season)
-    @GET("imdb")
-    suspend fun resolveImdbToAll(
-        @Query("id") imdbId: String,
-        @Query("include") include: String = "myanimelist,anilist,kitsu"
-    ): Response<List<ArmEntry>>
-
-    // /ids?source=myanimelist&id=...&include=anilist  → single ArmEntry
-    @GET("ids")
-    suspend fun resolveMalToAnilist(
-        @Query("source") source: String = "myanimelist",
-        @Query("id") malId: String,
-        @Query("include") include: String = "anilist"
-    ): Response<ArmEntry>
-
-    // /ids?source=myanimelist&id=...&include=imdb  → single ArmEntry
-    @GET("ids")
-    suspend fun resolveMalToImdb(
-        @Query("source") source: String = "myanimelist",
-        @Query("id") malId: String,
-        @Query("include") include: String = "imdb"
-    ): Response<ArmEntry>
-
-    // /ids?source=kitsu&id=...&include=myanimelist  → single ArmEntry
-    @GET("ids")
-    suspend fun resolveKitsuToMal(
-        @Query("source") source: String = "kitsu",
-        @Query("id") kitsuId: String,
-        @Query("include") include: String = "myanimelist"
-    ): Response<ArmEntry>
-
-    // /ids?source=kitsu&id=...&include=anilist  → single ArmEntry
-    @GET("ids")
-    suspend fun resolveKitsuToAnilist(
-        @Query("source") source: String = "kitsu",
-        @Query("id") kitsuId: String,
-        @Query("include") include: String = "anilist"
-    ): Response<ArmEntry>
-
-    // /ids?source=kitsu&id=...&include=imdb  → single ArmEntry
-    @GET("ids")
-    suspend fun resolveKitsuToImdb(
-        @Query("source") source: String = "kitsu",
-        @Query("id") kitsuId: String,
-        @Query("include") include: String = "imdb"
-    ): Response<ArmEntry>
-}
-
-@JsonClass(generateAdapter = true)
-data class ArmEntry(
-    @Json(name = "myanimelist") val myanimelist: Int? = null,
-    @Json(name = "anilist") val anilist: Int? = null,
-    @Json(name = "kitsu") val kitsu: Int? = null,
-    @Json(name = "imdb") val imdb: String? = null
 )
 
 // --- Anime-Skip API (GraphQL) ---

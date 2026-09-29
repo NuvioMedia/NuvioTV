@@ -5,14 +5,14 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class CatalogResponseDto(
-    @Json(name = "metas") val metas: List<MetaPreviewDto> = emptyList()
+    @Json(name = "metas") val metas: List<MetaPreviewDto?> = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
 data class MetaPreviewDto(
-    @Json(name = "id") val id: String,
+    @Json(name = "id") val id: String? = null,
     @Json(name = "type") val type: String? = null,
-    @Json(name = "name") val name: String,
+    @Json(name = "name") val name: String? = null,
     @Json(name = "poster") val poster: String? = null,
     @Json(name = "posterShape") val posterShape: String? = null,
     @Json(name = "background") val background: String? = null,

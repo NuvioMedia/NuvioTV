@@ -19,6 +19,7 @@ import com.nuvio.tv.domain.model.TmdbSettings
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -32,7 +33,7 @@ import retrofit2.http.Query
 class TmdbCollectionSourceResolverTest {
     private val context = mockk<Context>(relaxed = true)
     private val settings = mockk<TmdbSettingsDataStore> {
-        every { this@mockk.settings } returns flowOf(TmdbSettings(language = "en"))
+        every { this@mockk.settings } returns MutableStateFlow(TmdbSettings(language = "en"))
     }
 
     @Test

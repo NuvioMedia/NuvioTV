@@ -741,7 +741,11 @@ fun TmdbActionButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, if (primary) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusRing),
+                border = if (primary) {
+                    BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.SecondaryVariant)
+                } else {
+                    NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)
+                },
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
@@ -952,7 +956,7 @@ fun TmdbPickerCard(title: String, subtitle: String, onClick: () -> Unit) {
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),

@@ -1,16 +1,16 @@
 package com.nuvio.tv.ui.screens.home
 
 import android.content.Context
-import android.content.res.Configuration
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
+import com.nuvio.tv.core.util.withAppLocale
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import com.nuvio.tv.domain.model.stableItemKey
+import com.nuvio.tv.ui.util.StableList
 import com.nuvio.tv.ui.util.asStable
-import java.util.Locale
 import kotlinx.coroutines.withContext
 
 @Immutable
@@ -22,6 +22,7 @@ internal data class ModernHomePresentationInput(
     val useLandscapePosters: Boolean,
     val showCatalogTypeSuffix: Boolean,
     val showFullReleaseDate: Boolean,
+    val showImdbRatings: Boolean,
     val localeTag: String
 )
 
@@ -32,7 +33,7 @@ internal fun buildModernHomePresentation(
     maxCatalogRows: Int? = null
 ): ModernHomePresentationState {
     val visibleHomeRows = resolveVisibleHomeRows(input)
-    val localizedContext = getLocalizedContext(context)
+    val localizedContext = context.withAppLocale()
     val strContinueWatching = localizedContext.getString(R.string.continue_watching)
     val strAirsDate = localizedContext.getString(R.string.cw_airs_date)
     val strUpcoming = localizedContext.getString(R.string.cw_upcoming)
@@ -52,7 +53,8 @@ internal fun buildModernHomePresentation(
                     cache.continueWatchingTitle == strContinueWatching &&
                     cache.continueWatchingAirsDateTemplate == strAirsDate &&
                     cache.continueWatchingUpcomingLabel == strUpcoming &&
-                    cache.continueWatchingUseLandscapePosters == input.useLandscapePosters
+                    cache.continueWatchingUseLandscapePosters == input.useLandscapePosters &&
+                    cache.continueWatchingShowImdbRatings == input.showImdbRatings
             val continueWatchingRow = if (reuseContinueWatchingRow) {
                 checkNotNull(cache.continueWatchingRow)
             } else {
@@ -64,6 +66,7 @@ internal fun buildModernHomePresentation(
                         buildContinueWatchingItem(
                             item = item,
                             useLandscapePosters = input.useLandscapePosters,
+                            showImdbRatings = input.showImdbRatings,
                             airsDateTemplate = strAirsDate,
                             upcomingLabel = strUpcoming,
                             context = localizedContext
@@ -76,6 +79,7 @@ internal fun buildModernHomePresentation(
             cache.continueWatchingAirsDateTemplate = strAirsDate
             cache.continueWatchingUpcomingLabel = strUpcoming
             cache.continueWatchingUseLandscapePosters = input.useLandscapePosters
+            cache.continueWatchingShowImdbRatings = input.showImdbRatings
             cache.continueWatchingRow = continueWatchingRow
             add(continueWatchingRow)
         } else {
@@ -90,7 +94,8 @@ internal fun buildModernHomePresentation(
                 cache.upcomingRow != null &&
                     cache.upcomingItems == input.upcomingItems &&
                     cache.upcomingTitle == strUpcomingSectionTitle &&
-                    cache.upcomingUseLandscapePosters == input.useLandscapePosters
+                    cache.upcomingUseLandscapePosters == input.useLandscapePosters &&
+                    cache.upcomingShowImdbRatings == input.showImdbRatings
             val upcomingRow = if (reuseUpcomingRow) {
                 checkNotNull(cache.upcomingRow)
             } else {
@@ -102,6 +107,7 @@ internal fun buildModernHomePresentation(
                         buildContinueWatchingItem(
                             item = item,
                             useLandscapePosters = input.useLandscapePosters,
+                            showImdbRatings = input.showImdbRatings,
                             airsDateTemplate = strAirsDate,
                             upcomingLabel = strUpcoming,
                             context = localizedContext
@@ -112,6 +118,7 @@ internal fun buildModernHomePresentation(
             cache.upcomingItems = input.upcomingItems
             cache.upcomingTitle = strUpcomingSectionTitle
             cache.upcomingUseLandscapePosters = input.useLandscapePosters
+            cache.upcomingShowImdbRatings = input.showImdbRatings
             cache.upcomingRow = upcomingRow
             add(upcomingRow)
         } else {
@@ -136,6 +143,7 @@ internal fun buildModernHomePresentation(
                             cached.source == row &&
                             cached.useLandscapePosters == input.useLandscapePosters &&
                             cached.showCatalogTypeSuffix == input.showCatalogTypeSuffix &&
+                            cached.showImdbRatings == input.showImdbRatings &&
                             cached.localeTag == currentLocaleTag
 
                     val mappedRow = if (canReuseMappedRow) {
@@ -171,10 +179,11 @@ internal fun buildModernHomePresentation(
                                 if (cachedItem != null &&
                                     cachedItem.source == item &&
                                     cachedItem.useLandscapePosters == input.useLandscapePosters &&
-                                    cachedItem.showFullReleaseDate == input.showFullReleaseDate
+                                    cachedItem.showFullReleaseDate == input.showFullReleaseDate &&
+                                    cachedItem.showImdbRatings == input.showImdbRatings
                                 ) {
                                     cachedItem.carouselItem.let { cached ->
-                                        val stableItemKey = row.stableItemKey(itemIndex)
+                                        val stableItemKey = row.stableItemKey(item, occurrence)
                                         if (cached.key == stableItemKey) cached
                                         else cached.copy(key = stableItemKey)
                                     }
@@ -187,12 +196,14 @@ internal fun buildModernHomePresentation(
                                         strTypeMovie = strTypeMovie,
                                         strTypeSeries = strTypeSeries,
                                         showFullReleaseDate = input.showFullReleaseDate,
+                                        showImdbRatings = input.showImdbRatings,
                                         previousCachedItem = cachedItem?.carouselItem
-                                    ).copy(key = row.stableItemKey(itemIndex))
+                                    ).copy(key = row.stableItemKey(item, occurrence))
                                     rowItemCache[cacheKey] = CachedCarouselItem(
                                         source = item,
                                         useLandscapePosters = input.useLandscapePosters,
                                         showFullReleaseDate = input.showFullReleaseDate,
+                                        showImdbRatings = input.showImdbRatings,
                                         carouselItem = built
                                     )
                                     built
@@ -205,6 +216,7 @@ internal fun buildModernHomePresentation(
                         source = row,
                         useLandscapePosters = input.useLandscapePosters,
                         showCatalogTypeSuffix = input.showCatalogTypeSuffix,
+                        showImdbRatings = input.showImdbRatings,
                         localeTag = currentLocaleTag,
                         mappedRow = mappedRow
                     )
@@ -348,15 +360,6 @@ private fun collectionRowKey(collection: Collection): String {
     return "collection_${collection.id}"
 }
 
-private fun getLocalizedContext(context: Context): Context {
-    val tag = LocaleCache.localeTag.takeIf { it != LocaleCache.UNSET && it.isNotEmpty() }
-        ?: return context
-    val locale = Locale.forLanguageTag(tag)
-    val config = Configuration(context.resources.configuration)
-    config.setLocale(locale)
-    return context.createConfigurationContext(config)
-}
-
 private fun Collection.hasVisibleFolders(): Boolean {
     return folders.isNotEmpty()
 }
@@ -369,6 +372,7 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
     val fallbackBackdropByRow = LinkedHashMap<String, String>(carouselRows.size)
     val activeRowKeys = LinkedHashSet<String>(carouselRows.size)
     val activeItemKeysByRow = LinkedHashMap<String, Set<String>>(carouselRows.size)
+    val itemIdentitiesByRow = LinkedHashMap<String, StableList<String>>(carouselRows.size)
     val activeCatalogItemIds = LinkedHashSet<String>()
 
     carouselRows.forEachIndexed { index, row ->
@@ -384,14 +388,24 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
         activeRowKeys += row.key
 
         val itemKeys = LinkedHashSet<String>(row.items.list.size)
+        val itemIdentities = ArrayList<String>(row.items.list.size)
         row.items.list.forEach { item ->
             itemKeys.add(item.key)
-            val payload = item.payload
-            if (payload is ModernPayload.Catalog) {
-                activeCatalogItemIds += payload.itemId
+            when (val payload = item.payload) {
+                is ModernPayload.Catalog -> {
+                    itemIdentities += "${payload.itemType}:${payload.itemId}"
+                    activeCatalogItemIds += payload.itemId
+                }
+                is ModernPayload.CollectionFolder -> {
+                    itemIdentities += "folder:${payload.folderId}"
+                }
+                is ModernPayload.ContinueWatching -> {
+                    itemIdentities += "cw:${payload.item.hashCode()}"
+                }
             }
         }
         activeItemKeysByRow[row.key] = itemKeys
+        itemIdentitiesByRow[row.key] = itemIdentities.asStable()
     }
 
     return CarouselRowLookups(
@@ -402,6 +416,7 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
         fallbackBackdropByRow = fallbackBackdropByRow.asStable(),
         activeRowKeys = activeRowKeys.asStable(),
         activeItemKeysByRow = activeItemKeysByRow.asStable(),
+        itemIdentitiesByRow = itemIdentitiesByRow.asStable(),
         activeCatalogItemIds = activeCatalogItemIds.asStable()
     )
 }

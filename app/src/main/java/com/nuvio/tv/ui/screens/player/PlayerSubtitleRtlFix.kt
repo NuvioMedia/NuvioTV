@@ -174,7 +174,7 @@ internal object PlayerSubtitleRtlFix {
     ) {
         if (from >= toExclusive) return
 
-        fun isNumberSeparator(c: Char) = c == ',' || c == ':' || c == '.' || c == '-'
+        fun isNumberSeparator(c: Char) = c == ',' || c == ':' || c == '.' || c == '-' || c == '/'
 
         // 1. Split [from, toExclusive) into chunks: number-runs (digits + embedded , : .) stay together
         val chunks = ArrayList<IntRange>()

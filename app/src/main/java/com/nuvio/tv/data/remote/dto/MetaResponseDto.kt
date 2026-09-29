@@ -62,6 +62,7 @@ data class AppExtrasDto(
     @Json(name = "directors") val directors: List<AppExtrasCastMemberDto>? = null,
     @Json(name = "writers") val writers: List<AppExtrasCastMemberDto>? = null,
     @Json(name = "releaseDates") val releaseDates: MetaReleaseDatesEnvelopeDto? = null,
+    @Json(name = "certificationLocal") val certificationLocal: String? = null,
     @Json(name = "certification") val certification: String? = null
 )
 
@@ -87,6 +88,7 @@ data class VideoDto(
     @Json(name = "overview") val overview: String? = null,
     @Json(name = "description") val description: String? = null,
     @Json(name = "runtime") val runtime: String? = null,
+    @Json(name = "rating") val rating: String? = null,
     @Json(name = "available") val available: Boolean? = null
 )
 

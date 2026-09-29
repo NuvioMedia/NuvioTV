@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.screens.home.shuffleFocusKey
+
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -44,6 +46,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.CardDepthSurface
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -139,6 +142,8 @@ fun ContinueWatchingSection(
     downFocusRequester: FocusRequester? = null,
     entryFocusRequester: FocusRequester? = null,
     focusRequesters: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
+    rowFocusRequester: FocusRequester = remember { FocusRequester() },
+    listState: LazyListState = rememberLazyListState(),
     lastFocusedIndexState: MutableIntState = remember { mutableIntStateOf(-1) },
     cardWidth: Dp = 288.dp,
     imageHeight: Dp = 162.dp,
@@ -152,8 +157,6 @@ fun ContinueWatchingSection(
     var lastRequestedFocusIndex by remember { mutableIntStateOf(-1) }
     var pendingFocusIndex by remember { mutableStateOf<Int?>(null) }
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
-    
-    val listState = rememberLazyListState()
 
     // Restore focus to specific item if requested
     LaunchedEffect(focusedItemIndex) {
@@ -227,10 +230,14 @@ fun ContinueWatchingSection(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
+                .focusRequester(rowFocusRequester)
                 .focusRestorer {
-                    val idx = if (lastFocusedIndex >= 0) lastFocusedIndex else 0
-                    focusRequesters[idx]
-                        ?: focusRequesters.values.firstOrNull()
+                    val visibleIndices = listState.layoutInfo.visibleItemsInfo
+                        .map { it.index }
+                        .filter { it in items.indices }
+                    val idx = lastFocusedIndex.takeIf { it in visibleIndices }
+                        ?: visibleIndices.firstOrNull()
+                    idx?.let { focusRequesters[it] }
                         ?: FocusRequester.Default
                 }
                 .focusGroup(),
@@ -241,7 +248,7 @@ fun ContinueWatchingSection(
             itemsIndexed(
                 items = items,
                 key = { _, progress ->
-                    when (progress) {
+                    progress.shuffleFocusKey ?: when (progress) {
                         is ContinueWatchingItem.InProgress ->
                             "cw_${progress.progress.contentId}_${progress.progress.videoId}_${progress.progress.season ?: -1}_${progress.progress.episode ?: -1}"
                         is ContinueWatchingItem.NextUp ->
@@ -270,8 +277,10 @@ fun ContinueWatchingSection(
                     modifier = Modifier
                         .onFocusChanged { focusState ->
                             isCardFocused = focusState.isFocused
-                            if (focusState.isFocused && lastFocusedIndex != index) {
-                                lastFocusedIndex = index
+                            if (focusState.isFocused) {
+                                if (lastFocusedIndex != index) {
+                                    lastFocusedIndex = index
+                                }
                                 onItemFocused(index)
                             }
                         }
@@ -346,6 +355,10 @@ internal fun continueWatchingImageModel(
     useEpisodeThumbnails: Boolean,
     preferPosterArtwork: Boolean = false
 ): String? {
+    val customLandscape = when (item) {
+        is ContinueWatchingItem.InProgress -> item.customLandscapePoster
+        is ContinueWatchingItem.NextUp -> item.customLandscapePoster
+    }
     // Poster art is already 2:3 so it wins here, and only an opted-in episode thumbnail outranks it.
     if (preferPosterArtwork) {
         val posterProgress = (item as? ContinueWatchingItem.InProgress)?.progress
@@ -357,10 +370,11 @@ internal fun continueWatchingImageModel(
         fun firstUsable(vararg candidates: String?): String? =
             candidates.firstOrNull { !it.isNullOrBlank() && it !in brokenImageUrls }?.trim()
         // Movies carry no episode thumbnail, so they keep their poster without needing a content type check.
+        // A thumbnail that is switched off leaves the chain entirely, because Trakt rows hydrate their artwork late and a demoted thumbnail would show until it lands.
         return if (useEpisodeThumbnails) {
             firstUsable(thumbnail, poster, backdrop)
         } else {
-            firstUsable(poster, backdrop, thumbnail)
+            firstUsable(poster, backdrop)
         }
     }
     val progress = (item as? ContinueWatchingItem.InProgress)?.progress
@@ -369,20 +383,26 @@ internal fun continueWatchingImageModel(
         candidates.firstOrNull { !it.isNullOrBlank() && it !in brokenImageUrls }?.trim()
     return when {
         nextUp != null && !nextUp.hasAired ->
-            firstNonBroken(nextUp.backdrop, nextUp.poster, nextUp.thumbnail)
+            firstNonBroken(
+                customLandscape,
+                nextUp.backdrop,
+                nextUp.poster,
+                nextUp.thumbnail.takeIf { useEpisodeThumbnails }
+            )
         nextUp != null && useEpisodeThumbnails ->
-            firstNonBroken(nextUp.thumbnail, nextUp.backdrop, nextUp.poster)
+            firstNonBroken(nextUp.thumbnail, customLandscape, nextUp.backdrop, nextUp.poster)
         nextUp != null ->
-            firstNonBroken(nextUp.backdrop, nextUp.poster, nextUp.thumbnail)
+            firstNonBroken(customLandscape, nextUp.backdrop, nextUp.poster)
         useEpisodeThumbnails -> firstNonBroken(
             (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail,
+            customLandscape,
             progress?.backdrop,
             progress?.poster
         )
         else -> firstNonBroken(
+            customLandscape,
             progress?.backdrop,
-            progress?.poster,
-            (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail
+            progress?.poster
         )
     }
 }
@@ -394,13 +414,14 @@ internal fun continueWatchingShouldBlur(
     useEpisodeThumbnails: Boolean,
     preferPosterArtwork: Boolean = false
 ): Boolean {
-    val nextUp = (item as? ContinueWatchingItem.NextUp)?.info ?: return false
     if (!blurUnwatchedEpisodes || !useEpisodeThumbnails) return false
-    if (!preferPosterArtwork) return true
-    // Poster art carries no spoiler, so these cards only blur when they fell back to the episode thumbnail.
+    if (item is ContinueWatchingItem.InProgress && item.progress.isCompleted()) return false
+    val thumbnail = when (item) {
+        is ContinueWatchingItem.InProgress -> item.episodeThumbnail
+        is ContinueWatchingItem.NextUp -> item.info.thumbnail
+    }?.trim()?.takeIf { it.isNotBlank() } ?: return false
     val resolved = continueWatchingImageModel(item, useEpisodeThumbnails, preferPosterArtwork)
-    val thumbnail = nextUp.thumbnail?.trim()?.takeIf { it.isNotBlank() }
-    return resolved != null && resolved == thumbnail
+    return resolved?.trim() == thumbnail
 }
 
 // Builds the Coil memory-cache key that the card and prefetch must share, including the blur suffix, so the prefetch is not wasted.
@@ -565,7 +586,7 @@ fun ContinueWatchingCard(
         }
     }
     val imageRequest = remember(effectiveImageModel, requestWidthPx, requestHeightPx, shouldBlur) {
-        ImageRequest.Builder(context)
+        val builder = ImageRequest.Builder(context)
             .data(effectiveImageModel)
             .crossfade(true)
             .memoryCacheKey(
@@ -577,7 +598,16 @@ fun ContinueWatchingCard(
             .apply {
                 if (shouldBlur) transformations(com.nuvio.tv.ui.util.BlurTransformation())
             }
-            .build()
+        val fallbackUrl = when (item) {
+            is ContinueWatchingItem.InProgress -> item.originalPoster
+            is ContinueWatchingItem.NextUp -> item.originalPoster
+        }
+        if (!fallbackUrl.isNullOrBlank() && fallbackUrl != effectiveImageModel) {
+            builder.memoryCacheKeyExtras(
+                mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
+            )
+        }
+        builder.build()
     }
 
     val bgColor = NuvioTheme.colors.Background
@@ -642,7 +672,7 @@ fun ContinueWatchingCard(
         } else {
             CardDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                     shape = cwCardShape
                 )
             )
@@ -667,6 +697,7 @@ fun ContinueWatchingCard(
                 badgeText = badgeText,
                 badgeBackground = badgeBackground,
                 showBadge = progress == null,
+                shufflePlayback = item.shufflePlayback,
                 progressFraction = progressFraction,
                 hasProgress = progress != null,
                 onImageError = {
@@ -711,8 +742,7 @@ fun ContinueWatchingCard(
                     .then(
                         if (textBelowArtwork && isFocused) {
                             Modifier.border(
-                                width = NuvioTheme.spacing.xxs,
-                                color = NuvioTheme.colors.FocusRing,
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                 shape = cwClipShape
                             )
                         } else {
@@ -772,6 +802,8 @@ fun ContinueWatchingCard(
                         }
                     )
                 }
+
+                if (item.shufflePlayback) EpisodeShuffleBadge(Modifier.align(Alignment.TopStart))
 
                 // Content info at bottom
                 if (!textBelowArtwork) {
@@ -841,7 +873,7 @@ fun ContinueWatchingCard(
                                     .fillMaxWidth(progressFraction)
                                     .clip(RoundedCornerShape(1.5.dp))
                                     .height(3.dp)
-                                    .background(NuvioTheme.colors.Primary)
+                                    .background(NuvioTheme.colors.Secondary)
                             )
                         }
                     }
@@ -911,6 +943,7 @@ private fun WideCardContent(
     badgeText: String,
     badgeBackground: Color,
     showBadge: Boolean,
+    shufflePlayback: Boolean,
     progressFraction: Float,
     hasProgress: Boolean,
     onImageError: () -> Unit
@@ -949,6 +982,7 @@ private fun WideCardContent(
                     onError = { onImageError() }
                 )
             }
+            if (shufflePlayback) EpisodeShuffleBadge(Modifier.align(Alignment.TopStart))
         }
 
         Column(
@@ -1036,7 +1070,7 @@ private fun WideCardContent(
                             .fillMaxWidth(progressFraction)
                             .clip(RoundedCornerShape(1.5.dp))
                             .height(3.dp)
-                            .background(NuvioTheme.colors.Primary)
+                            .background(NuvioTheme.colors.Secondary)
                     )
                 }
                 Text(
@@ -1097,6 +1131,7 @@ fun ContinueWatchingOptionsDialog(
     showPlayManually: Boolean = false,
     onPlayManually: () -> Unit = {}
 ) {
+    val isPlayEnabled = LocalPlaybackAvailability.current.canStream(item)
     val title = when (item) {
         is ContinueWatchingItem.InProgress -> item.progress.name
         is ContinueWatchingItem.NextUp -> item.info.name
@@ -1126,7 +1161,7 @@ fun ContinueWatchingOptionsDialog(
             Text(stringResource(R.string.cw_action_go_to_details))
         }
 
-        if (showPlayManually) {
+        if (showPlayManually && isPlayEnabled) {
             Button(
                 onClick = onPlayManually,
                 colors = ButtonDefaults.colors(
@@ -1139,7 +1174,7 @@ fun ContinueWatchingOptionsDialog(
             }
         }
 
-        if (item is ContinueWatchingItem.InProgress) {
+        if (item is ContinueWatchingItem.InProgress && isPlayEnabled) {
             Button(
                 onClick = onStartFromBeginning,
                 colors = ButtonDefaults.colors(

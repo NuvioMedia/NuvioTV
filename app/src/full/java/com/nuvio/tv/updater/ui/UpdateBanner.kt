@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
@@ -45,6 +46,8 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AppTheme
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.ThemeColors
+import com.nuvio.tv.ui.theme.accentBrush
 import com.nuvio.tv.updater.UpdateUiState
 import com.nuvio.tv.updater.model.AppUpdate
 
@@ -67,11 +70,8 @@ internal fun UpdateBanner(
     )
     val containerColor = NuvioTheme.colors.BackgroundElevated
     val isWhiteTheme = NuvioTheme.currentTheme == AppTheme.WHITE
-    val progressColor = if (isWhiteTheme) {
-        NuvioTheme.colors.Secondary.copy(alpha = 0.18f)
-    } else {
-        NuvioTheme.colors.Secondary
-    }
+    val progressBrush = ThemeColors.getColorPalette(NuvioTheme.currentTheme).accentBrush()
+    val progressAlpha = if (isWhiteTheme) 0.18f else 1f
     val dividerColor = NuvioTheme.colors.Border
     val subtitle = when {
         state.errorMessage != null -> state.errorMessage
@@ -95,7 +95,8 @@ internal fun UpdateBanner(
                 drawRect(containerColor)
                 if (progress > 0f) {
                     drawRect(
-                        color = progressColor,
+                        brush = progressBrush,
+                        alpha = progressAlpha,
                         size = Size(width = size.width * progress, height = size.height)
                     )
                 }
@@ -127,7 +128,9 @@ internal fun UpdateBanner(
             ) {
                 Text(
                     text = updateLabel,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        textDirection = TextDirection.Ltr
+                    ),
                     color = NuvioTheme.colors.TextPrimary,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,

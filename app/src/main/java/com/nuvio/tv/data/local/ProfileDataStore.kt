@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.UserProfile
@@ -18,7 +20,13 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.profileDataStore: DataStore<Preferences> by preferencesDataStore(name = "profile_settings")
+private val Context.profileDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "profile_settings",
+    corruptionHandler = ReplaceFileCorruptionHandler { ex ->
+        android.util.Log.e("ProfileDataStore", "DataStore corrupted: ${ex.message} — resetting to empty")
+        emptyPreferences()
+    }
+)
 
 @Singleton
 class ProfileDataStore @Inject constructor(
@@ -31,6 +39,8 @@ class ProfileDataStore @Inject constructor(
     private val activeProfileIdKey = intPreferencesKey("active_profile_id")
     private val hasEverSelectedProfileKey = booleanPreferencesKey("profile_has_ever_selected")
     private val rememberLastProfileEnabledKey = booleanPreferencesKey("remember_last_profile_enabled")
+    private val confirmExitEnabledKey = booleanPreferencesKey("confirm_exit_enabled")
+    private val startupSplashEnabledKey = booleanPreferencesKey("startup_splash_enabled")
 
     private val profileListType = Types.newParameterizedType(List::class.java, ProfileJson::class.java)
 
@@ -55,6 +65,14 @@ class ProfileDataStore @Inject constructor(
         prefs[rememberLastProfileEnabledKey] ?: false
     }
 
+    val confirmExitEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[confirmExitEnabledKey] ?: false
+    }
+
+    val startupSplashEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[startupSplashEnabledKey] ?: true
+    }
+
     suspend fun setActiveProfile(id: Int) {
         dataStore.edit { prefs ->
             prefs[activeProfileIdKey] = id
@@ -65,6 +83,18 @@ class ProfileDataStore @Inject constructor(
     suspend fun setRememberLastProfileEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[rememberLastProfileEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setConfirmExitEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[confirmExitEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setStartupSplashEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[startupSplashEnabledKey] = enabled
         }
     }
 
@@ -147,7 +177,9 @@ internal data class ProfileJson(
     val usesPrimaryAddons: Boolean = false,
     val usesPrimaryPlugins: Boolean = false,
     val avatarId: String? = null,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val profileBackgroundId: String? = null,
+    val profileBackgroundUrl: String? = null
 ) {
     fun toDomain() = UserProfile(
         id = id,
@@ -156,7 +188,9 @@ internal data class ProfileJson(
         usesPrimaryAddons = usesPrimaryAddons,
         usesPrimaryPlugins = usesPrimaryPlugins,
         avatarId = avatarId,
-        avatarUrl = avatarUrl
+        avatarUrl = avatarUrl,
+        profileBackgroundId = profileBackgroundId,
+        profileBackgroundUrl = profileBackgroundUrl
     )
 
     companion object {
@@ -167,7 +201,9 @@ internal data class ProfileJson(
             usesPrimaryAddons = profile.usesPrimaryAddons,
             usesPrimaryPlugins = profile.usesPrimaryPlugins,
             avatarId = profile.avatarId,
-            avatarUrl = profile.avatarUrl
+            avatarUrl = profile.avatarUrl,
+            profileBackgroundId = profile.profileBackgroundId,
+            profileBackgroundUrl = profile.profileBackgroundUrl
         )
     }
 }

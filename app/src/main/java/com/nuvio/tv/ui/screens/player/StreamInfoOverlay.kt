@@ -2,7 +2,11 @@ package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import android.view.KeyEvent
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
@@ -11,18 +15,34 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onPlaced
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
@@ -36,15 +56,51 @@ fun StreamInfoOverlay(
     visible: Boolean,
     onClose: () -> Unit,
     data: StreamInfoData?,
+    hudEnabled: Boolean,
+    hudButtonShown: Boolean,
+    onToggleHud: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val hudFocusRequester = remember { FocusRequester() }
+    var hudFocused by remember(visible) { mutableStateOf(false) }
+    var hudPlaced by remember(visible) { mutableStateOf(false) }
+
+    LaunchedEffect(visible, hudButtonShown, hudPlaced) {
+        if (!visible || !hudButtonShown || !hudPlaced) return@LaunchedEffect
+        hudFocusRequester.requestFocusAfterFrames(frames = 0)
+    }
     PlayerOverlayScaffold(
         visible = visible,
         onDismiss = onClose,
-        modifier = modifier,
-        dismissOnCenter = true,
+        // The scaffold holds focus so the overlay still closes on centre, which leaves nothing
+        // pointing at the button; a direction press is the request to reach it, and it also
+        // recovers focus if anything else took it while the overlay stayed open.
+        modifier = modifier.onPreviewKeyEvent { event ->
+            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+            val isDirection = when (event.nativeKeyEvent.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_DPAD_RIGHT -> true
+                else -> false
+            }
+            if (!isDirection || hudFocused || !hudButtonShown) return@onPreviewKeyEvent false
+            runCatching { hudFocusRequester.requestFocus() }.isSuccess
+        },
+        dismissOnCenter = !hudButtonShown,
         contentPadding = PaddingValues(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, top = 36.dp, bottom = 36.dp)
     ) {
+        // Someone who never turned the overlay on has no use for a control they cannot interpret.
+        if (hudButtonShown) {
+            StreamInfoHudButton(
+                enabled = hudEnabled,
+                onClick = onToggleHud,
+                focusRequester = hudFocusRequester,
+                onFocusChanged = { hudFocused = it },
+                onLaidOut = { hudPlaced = true },
+                modifier = Modifier.align(Alignment.BottomEnd)
+            )
+        }
         if (data != null) {
             Column(
                 modifier = Modifier.align(Alignment.BottomStart),
@@ -130,7 +186,8 @@ private fun StreamInfoContent(data: StreamInfoData) {
     }
 
     // VIDEO section
-    val hasVideoInfo = data.videoCodec != null || data.videoWidth != null || data.videoFrameRate != null || data.videoBitrate != null
+    val hasVideoInfo = data.videoCodec != null || data.videoWidth != null ||
+        data.videoFrameRate != null || data.videoBitrate != null || data.fileBitrate != null
     if (hasVideoInfo) {
         SectionLabel(stringResource(R.string.stream_info_section_video))
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
@@ -146,10 +203,19 @@ private fun StreamInfoContent(data: StreamInfoData) {
                 label = stringResource(R.string.stream_info_frame_rate),
                 value = data.videoFrameRate?.let { "%.3f fps".format(it) }
             )
-            InfoItem(
-                label = stringResource(R.string.stream_info_bitrate),
-                value = data.videoBitrate?.let { formatBitrate(it) }
-            )
+            // A container that declares no track bitrate leaves only the whole file rate, which
+            // includes audio and overhead, so it is labelled apart rather than shown as the video rate.
+            if (data.videoBitrate != null) {
+                InfoItem(
+                    label = stringResource(R.string.stream_info_bitrate),
+                    value = formatBitrate(data.videoBitrate)
+                )
+            } else {
+                InfoItem(
+                    label = stringResource(R.string.stream_info_bitrate_file),
+                    value = data.fileBitrate?.let { formatBitrate(it) }
+                )
+            }
         }
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     }
@@ -249,4 +315,83 @@ internal fun formatResolution(width: Int, height: Int): String {
         else -> "${minOf(width, height)}p"
     }
     return "$width × $height ($label)"
+}
+
+@Composable
+private fun StreamInfoHudButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester,
+    onFocusChanged: (Boolean) -> Unit,
+    onLaidOut: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    Button(
+        onClick = onClick,
+        // Every direction leads back to this button, so a stray press cannot drop focus onto the
+        // transport controls still drawn behind the overlay.
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .onPlaced { onLaidOut() }
+            .onFocusChanged {
+                isFocused = it.isFocused
+                onFocusChanged(it.isFocused)
+            }
+            .focusProperties {
+                up = FocusRequester.Cancel
+                down = FocusRequester.Cancel
+                left = FocusRequester.Cancel
+                right = FocusRequester.Cancel
+            },
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+        colors = ButtonDefaults.colors(
+            containerColor = if (enabled) NuvioTheme.colors.Secondary.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.08f),
+            contentColor = if (enabled) Color.White else Color.White.copy(alpha = 0.7f),
+            focusedContainerColor = if (enabled) NuvioTheme.colors.Secondary else Color.White,
+            focusedContentColor = if (enabled) NuvioTheme.colors.OnSecondary else Color.Black
+        ),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.sm)),
+        scale = ButtonDefaults.scale(focusedScale = 1.05f),
+        border = ButtonDefaults.border(
+            border = Border(
+                border = BorderStroke(
+                    1.dp,
+                    if (enabled) NuvioTheme.colors.Secondary.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.12f)
+                ),
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
+            ),
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
+            )
+        )
+    ) {
+        val statusText = if (enabled) {
+            stringResource(R.string.diag_value_on)
+        } else {
+            stringResource(R.string.diag_value_off)
+        }
+        val hudLabel = stringResource(R.string.stream_info_hud)
+
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(
+                    if (enabled) {
+                        if (isFocused) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.FocusRing
+                    } else {
+                        if (isFocused) Color.Black.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.4f)
+                    }
+                )
+        )
+        Spacer(modifier = Modifier.width(NuvioTheme.spacing.xs))
+        Text(
+            text = "$hudLabel: $statusText",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (isFocused || enabled) FontWeight.SemiBold else FontWeight.Medium
+        )
+    }
 }

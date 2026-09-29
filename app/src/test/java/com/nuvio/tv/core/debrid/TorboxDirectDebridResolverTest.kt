@@ -88,6 +88,32 @@ class TorboxDirectDebridResolverTest {
     }
 
     @Test
+    fun `PMR episode two requests its provider file id in either file order`() = runTest {
+        for (files in listOf(pmrFiles, pmrFiles.reversed())) {
+            val api = cachedApi(files)
+
+            val result = resolver(api).resolve(pmrStream(), season = 1, episode = 2)
+
+            assertTrue(result is DirectDebridResolveResult.Success)
+            result as DirectDebridResolveResult.Success
+            assertEquals(pmrFilename, result.filename)
+            assertEquals(4_817_912_734L, result.videoSize)
+            assertEquals(4, api.lastFileId)
+            assertEquals(1, api.requestCalls)
+        }
+    }
+
+    @Test
+    fun `missing PMR episode does not request another episode link`() = runTest {
+        val api = cachedApi(pmrFiles.take(1))
+
+        val result = resolver(api).resolve(pmrStream(), season = 1, episode = 2)
+
+        assertTrue(result is DirectDebridResolveResult.Stale)
+        assertEquals(0, api.requestCalls)
+    }
+
+    @Test
     fun `torbox api exposes checkcached endpoint for local torrent availability`() {
         val hasCheckCached = TorboxApi::class.java.methods.any {
             it.name.contains("checkcached", ignoreCase = true) ||
@@ -96,6 +122,43 @@ class TorboxDirectDebridResolverTest {
 
         assertTrue(hasCheckCached)
     }
+
+    private val pmrFilename = "Sentenced to Be a Hero - S01E02 (BD 1080p x265 Opus) [Dual Audio] [PMR].mkv"
+    private val pmrFiles = listOf(
+        TorboxTorrentFileDto(
+            id = 3,
+            name = "Sentenced to Be a Hero - S01E01 (BD 1080p x265 Opus) [Dual Audio] [PMR].mkv",
+            size = 12_359_794_201L,
+        ),
+        TorboxTorrentFileDto(id = 4, name = pmrFilename, size = 4_817_912_734L),
+    )
+
+    private fun pmrStream(): Stream {
+        val stream = stream(fileIdx = 1)
+        return stream.copy(
+            clientResolve = stream.clientResolve?.copy(
+                infoHash = "439733a4816b34543c33f010c98b098aa916dca2",
+                magnetUri = "magnet:?xt=urn:btih:439733a4816b34543c33f010c98b098aa916dca2",
+                torrentName = "[PMR] Sentenced to Be a Hero Season 1\n$pmrFilename\nDubbed / Dual Audio",
+                filename = pmrFilename,
+                mediaType = "series",
+                season = 1,
+                episode = 2,
+            )
+        )
+    }
+
+    private fun cachedApi(files: List<TorboxTorrentFileDto>) = FakeTorboxApi(
+        createResponse = Response.success(
+            TorboxEnvelopeDto(success = true, data = TorboxCreateTorrentDataDto(torrentId = 44))
+        ),
+        torrentResponse = Response.success(
+            TorboxEnvelopeDto(success = true, data = TorboxTorrentDataDto(id = 44, files = files))
+        ),
+        linkResponse = Response.success(
+            TorboxEnvelopeDto(success = true, data = "https://cdn.example/episode-two.mkv")
+        ),
+    )
 
     private fun resolver(api: TorboxApi): TorboxDirectDebridResolver {
         val dataStore = mockk<DebridSettingsDataStore>()

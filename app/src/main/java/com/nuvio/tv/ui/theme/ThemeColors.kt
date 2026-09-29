@@ -2,13 +2,16 @@ package com.nuvio.tv.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.domain.model.CustomThemeColors
 
 data class ThemeColorPalette(
     val secondary: Color,
     val secondaryVariant: Color,
     val onSecondary: Color = NuvioPrimitives.white,
     val onSecondaryVariant: Color = NuvioPrimitives.white,
+    val accentGradient: List<Color> = listOf(secondary),
     val focusRing: Color,
+    val focusRingGradient: List<Color> = listOf(focusRing),
     val focusBackground: Color,
     val background: Color = NuvioPrimitives.neutral950,
     val backgroundElevated: Color = NuvioPrimitives.neutral900,
@@ -88,8 +91,17 @@ object ThemeColors {
         backgroundCard = NuvioPrimitives.neutral850
     )
 
-    fun getColorPalette(theme: AppTheme): ThemeColorPalette {
+    fun getColorPalette(
+        theme: AppTheme,
+        customColors: CustomThemeColors = CustomThemeColors.Default
+    ): ThemeColorPalette {
         return when (theme) {
+            AppTheme.CUSTOM -> customColors.toColorPalette()
+            AppTheme.GOLD -> SupporterThemeColors.Gold
+            AppTheme.JADE -> SupporterThemeColors.Jade
+            AppTheme.ROSE_GOLD -> SupporterThemeColors.RoseGold
+            AppTheme.ARCTIC_BLUE -> SupporterThemeColors.ArcticBlue
+            AppTheme.GRAPHITE -> SupporterThemeColors.Graphite
             AppTheme.CRIMSON -> Crimson
             AppTheme.OCEAN -> Ocean
             AppTheme.VIOLET -> Violet

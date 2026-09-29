@@ -77,6 +77,26 @@ class TraktProgressPolicyTest {
     }
 
     @Test
+    fun `episode lookup uses aggregate progress while the episode snapshot loads`() {
+        val aggregateProgress = progress(
+            source = WatchProgress.SOURCE_TRAKT_PLAYBACK,
+            percent = 48f,
+            lastWatched = 100L
+        )
+
+        assertEquals(
+            aggregateProgress,
+            resolveProviderEpisodeProgress(
+                contentId = "tt123",
+                season = 1,
+                episode = 1,
+                episodeProgress = emptyMap(),
+                allProgress = listOf(aggregateProgress)
+            )
+        )
+    }
+
+    @Test
     fun `Trakt retains progress whose ids cannot be represented remotely`() {
         assertTrue(shouldRetainTraktLocalProgress("kitsu:44"))
         assertTrue(shouldRetainTraktLocalProgress("mal:21"))

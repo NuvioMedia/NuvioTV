@@ -8,6 +8,8 @@ import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.resolveContentLanguage
+import com.nuvio.tv.domain.model.normalizeLanguageCode
+import com.nuvio.tv.data.local.AudioLanguageOption
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -36,6 +38,25 @@ internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?
     }
 }
 
+internal fun PlayerRuntimeController.initializeCloudPlaybackSequence() {
+    val playbackContext = cloudPlaybackContext ?: return
+    metaVideos = playbackContext.asVideos()
+    val currentFile = playbackContext.currentFile ?: return
+    currentVideoId = playbackContext.videoId(currentFile)
+    currentSeason = 1
+    currentEpisode = playbackContext.currentIndex + 1
+    currentEpisodeTitle = currentFile.name
+    _uiState.update {
+        it.copy(
+            currentVideoId = currentVideoId,
+            currentSeason = currentSeason,
+            currentEpisode = currentEpisode,
+            currentEpisodeTitle = currentEpisodeTitle
+        )
+    }
+    recomputeNextEpisode(resetVisibility = false)
+}
+
 internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
     metaVideos = meta.videos
     metaGenres = meta.genres
@@ -46,13 +67,14 @@ internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
     }
     val description = resolveDescription(meta)
 
+    recomputeNextEpisode(resetVisibility = false)
     _uiState.update { state ->
         state.copy(
             description = description ?: state.description,
-            castMembers = if (meta.castMembers.isNotEmpty()) meta.castMembers else state.castMembers
+            castMembers = if (meta.castMembers.isNotEmpty()) meta.castMembers else state.castMembers,
+            isNextEpisodeMetadataResolved = true
         )
     }
-    recomputeNextEpisode(resetVisibility = false)
 }
 
 internal fun PlayerRuntimeController.resolveDescription(meta: Meta): String? {
@@ -72,16 +94,17 @@ internal fun PlayerRuntimeController.updateEpisodeDescription() {
         video.season == currentSeason && video.episode == currentEpisode
     }?.overview
 
-    if (!overview.isNullOrBlank()) {
-        _uiState.update { it.copy(description = overview) }
-    }
+    // Always update description when switching episodes - clear stale description
+    _uiState.update { it.copy(description = overview) }
 
     // Push episode metadata to the MediaSession so Google Home shows the new episode.
     updateMediaSessionMetadata()
 
-    // Re-enrich from TMDB for the new episode.
-    scope.launch {
-        enrichDescriptionFromTmdb(contentId, contentType)
+    // Cloud library IDs belong to the provider, not TMDB.
+    if (!contentType.equals("cloud", ignoreCase = true)) {
+        scope.launch {
+            enrichDescriptionFromTmdb(contentId, contentType)
+        }
     }
 }
 
@@ -155,19 +178,52 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
         }
     }
 
+    // Fill in content language from TMDB if still unknown, so "original
+    // audio" can resolve correctly even when the addon meta lacks it.
+    if (contentLanguage == null) {
+        val tmdbLang = normalizeLanguageCode(enrichment.language)
+        if (tmdbLang != null) {
+            contentLanguage = tmdbLang
+            val hasUserAudioSelection = persistedTrackPreference?.audio != null
+            if (!hasUserAudioSelection) {
+                val playerSettings = playerSettingsDataStore.playerSettings.first()
+                if (playerSettings.preferredAudioLanguage == AudioLanguageOption.ORIGINAL) {
+                    val resolved = resolvePreferredAudioLanguages(
+                        preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+                        secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
+                        deviceLanguages = resolveDeviceAudioLanguages(),
+                        contentOriginalLanguage = tmdbLang
+                    )
+                    if (resolved.isNotEmpty()) {
+                        _exoPlayer?.let { player ->
+                            player.trackSelectionParameters = player.trackSelectionParameters
+                                .buildUpon()
+                                .setPreferredAudioLanguages(*resolved.toTypedArray())
+                                .build()
+                        }
+                        if (isUsingMpvEngine()) {
+                            mpvPreferredAudioLanguages = resolved
+                            mpvView?.applyAudioLanguagePreferences(resolved)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Refresh MediaSession metadata with TMDB-enriched title / artwork.
     updateMediaSessionMetadata()
 }
 
 internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boolean) {
     val normalizedType = contentType?.lowercase()
-    if (normalizedType !in listOf("series", "tv", "other")) {
+    if (normalizedType !in listOf("series", "tv", "other", "cloud")) {
         nextEpisodeVideo = null
         clearNextEpisodeAndCancelPostPlay()
         return
     }
 
-    if (normalizedType == "other") {
+    if (normalizedType == "other" || normalizedType == "cloud") {
         val currentId = currentVideoId
         val idx = if (currentId != null) metaVideos.indexOfFirst { it.id == currentId } else -1
         val resolvedNext = if (idx >= 0 && idx < metaVideos.size - 1) metaVideos[idx + 1] else null
@@ -186,7 +242,7 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
             released = resolvedNext.released,
             hasAired = true,
             unairedMessage = null,
-            isOtherType = true
+            isOtherType = normalizedType == "other" || normalizedType == "cloud"
         )
         applyRecomputedNextEpisode(nextInfo, resetVisibility)
         return
@@ -200,10 +256,12 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
         return
     }
 
-    val resolvedNext = PlayerNextEpisodeRules.resolveNextEpisode(
-        videos = metaVideos,
-        currentSeason = season,
-        currentEpisode = episode
+    val shuffleState = playbackShuffleState ?: run {
+        clearNextEpisodeAndCancelPostPlay()
+        return
+    }
+    val resolvedNext = episodeShufflePlayback.nextEpisode(
+        profileId, contentId.orEmpty(), metaVideos, season, episode, shuffleState
     )
 
     nextEpisodeVideo = resolvedNext
@@ -222,6 +280,7 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
         overview = resolvedNext.overview,
         released = resolvedNext.released,
         hasAired = hasAired,
+        available = resolvedNext.available,
         unairedMessage = if (hasAired) {
             null
         } else {
@@ -295,10 +354,25 @@ internal fun PlayerRuntimeController.resetPostPlayOverlayState(clearEpisode: Boo
 }
 
 internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionMs: Long, durationMs: Long) {
+    if (_playbackTimeline.value.isLive) return
     if (!hasRenderedFirstFrame) return
     // Short debrid/error clips must never arm next-episode auto-play (see #2819).
-    val effectiveDurationEarly = durationMs.takeIf { it > 0L } ?: lastKnownDuration
+    // Prefer the largest known duration; the per-poll value can drop transiently.
+    val effectiveDurationEarly = maxOf(durationMs, lastKnownDuration)
     if (isShortPlaceholderDuration(effectiveDurationEarly)) return
+    // Act only after this stream has reported a position away from its end.
+    if (!endDetectionArmed) {
+        if (!PlayerNextEpisodeRules.isAwayFromEnd(
+                positionMs = positionMs,
+                durationMs = effectiveDurationEarly,
+                skipIntervals = skipIntervals,
+                thresholdMode = nextEpisodeThresholdModeSetting,
+                thresholdPercent = nextEpisodeThresholdPercentSetting,
+                thresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEndSetting
+            )
+        ) return
+        endDetectionArmed = true
+    }
     if (!_uiState.value.error.isNullOrBlank()) return
 
     val state = _uiState.value
@@ -335,10 +409,15 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     if (shouldEnterStillWatching) {
         enterStillWatchingPromptMode()
     } else {
+        val ne = state.nextEpisode
+        val isUnplayable = !ne.hasAired ||
+            (ne.released.isNullOrBlank() && ne.available == false)
+        if (isUnplayable) return
+
         _uiState.update {
             it.copy(postPlayMode = PostPlayMode.AutoPlay(nextEpisode = state.nextEpisode))
         }
-        if (state.nextEpisode.hasAired && streamAutoPlayNextEpisodeEnabledSetting) {
+        if (streamAutoPlayNextEpisodeEnabledSetting) {
             playNextEpisode()
         }
     }
@@ -378,9 +457,14 @@ internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) 
     val currentActive = _uiState.value.activeSkipInterval
 
     if (active != null) {
-        if (currentActive == null || active.type != currentActive.type || active.startTime != currentActive.startTime) {
+        val targetsPostCredits = active.followingPostCreditsScene(skipIntervals, currentPlaybackDurationMs()) != null
+        if (currentActive != active || targetsPostCredits != _uiState.value.activeSkipTargetsPostCredits) {
             lastActiveSkipType = active.type
-            _uiState.update { it.copy(activeSkipInterval = active, skipIntervalDismissed = false) }
+            _uiState.update { it.copy(
+                activeSkipInterval = active,
+                activeSkipTargetsPostCredits = targetsPostCredits,
+                skipIntervalDismissed = false
+            ) }
         }
         val segmentType = AutoSkipSegmentType.fromSkipIntervalType(active.type)
         val activeKey = active.autoSkipKey()
@@ -412,7 +496,9 @@ internal fun PlayerRuntimeController.fetchParentalGuide(id: String?, type: Strin
     if (!parentalGuideEnabled) return
     if (id.isNullOrBlank()) return
 
-    val imdbId = id.split(":").firstOrNull()?.takeIf { it.startsWith("tt") } ?: return
+    val imdbId = id.split(":").firstOrNull()?.takeIf { it.startsWith("tt") }
+        ?: type?.let { metaRepository.getCachedMeta(it, id)?.imdbId }?.takeIf { it.startsWith("tt") }
+        ?: return
 
     scope.launch {
         val guide = parentalGuideRepository.getParentalGuide(imdbId) ?: return@launch

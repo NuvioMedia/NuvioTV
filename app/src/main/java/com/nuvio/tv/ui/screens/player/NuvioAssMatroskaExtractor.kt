@@ -12,6 +12,7 @@ import androidx.media3.extractor.ExtractorOutput
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mkv.EbmlProcessor
 import androidx.media3.extractor.text.SubtitleParser
+import com.nuvio.tv.core.player.SubtitleCharsetDetector
 import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor
 import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor.DolbyVisionSampleTransformer
 import io.github.peerless2012.ass.media.AssHandler
@@ -244,12 +245,13 @@ private class NuvioAssTrackOutput(
 
     private fun ByteArray.dialoguePayload(offset: Int, limit: Int): ByteArray {
         if (offset >= limit) return EMPTY_BYTE_ARRAY
-        if (looksLikeZlib(offset, limit)) {
-            val inflated = maybeInflate(offset, size - offset)
-            if (inflated != null) return inflated
+        val raw = if (looksLikeZlib(offset, limit)) {
+            maybeInflate(offset, size - offset) ?: copyOfRange(offset, limit.coerceIn(offset, size))
+        } else {
+            val boundedLimit = limit.coerceIn(offset, size)
+            copyOfRange(offset, boundedLimit)
         }
-        val boundedLimit = limit.coerceIn(offset, size)
-        return copyOfRange(offset, boundedLimit)
+        return SubtitleCharsetDetector.normalizeToUtf8(raw)
     }
 
     private fun ByteArray.looksLikeZlib(offset: Int, limit: Int): Boolean {

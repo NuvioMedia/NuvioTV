@@ -151,7 +151,7 @@ class NuvioColorScheme(
     val Premium = NuvioPrimitives.premium
 
     val Border = NuvioPrimitives.neutral750
-    val BorderFocused = palette.focusRing
+    val BorderFocused = FocusRing
     val BorderMuted = NuvioPrimitives.neutral750.copy(alpha = 0.58f)
 
     val Scrim = NuvioPrimitives.black.copy(alpha = 0.62f)

@@ -4,8 +4,6 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.tween
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -17,9 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,10 +23,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -48,10 +46,10 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.CardDepthSurface
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.ui.util.recompositionHighlighter
@@ -59,7 +57,6 @@ import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.nuvio.tv.ui.theme.ThemeColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -82,8 +79,17 @@ fun GridContentCard(
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
     val cardDepthStyle = LocalCardDepthStyle.current
     val density = LocalDensity.current
+
+    // Derive card height from item's posterShape aspect ratio while keeping width from posterCardStyle.
+    // This ensures grids and rows display landscape/square shapes correctly.
+    val cardHeight = when (item.posterShape) {
+        PosterShape.POSTER -> posterCardStyle.height
+        PosterShape.LANDSCAPE -> posterCardStyle.width / PosterShape.LANDSCAPE.aspectRatio()
+        PosterShape.SQUARE -> posterCardStyle.width
+    }
+
     val requestWidthPx = remember(density, posterCardStyle.width) { with(density) { posterCardStyle.width.roundToPx() }.coerceAtLeast(1) }
-    val requestHeightPx = remember(density, posterCardStyle.height) { with(density) { posterCardStyle.height.roundToPx() }.coerceAtLeast(1) }
+    val requestHeightPx = remember(density, cardHeight) { with(density) { cardHeight.roundToPx() }.coerceAtLeast(1) }
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
     val longPressKeyTracker = rememberLongPressKeyTracker()
@@ -104,7 +110,7 @@ fun GridContentCard(
             },
             modifier = Modifier
                 .width(posterCardStyle.width)
-                .height(posterCardStyle.height)
+                .height(cardHeight)
                 .then(
                     if (focusRequester != null) Modifier.focusRequester(focusRequester)
                     else Modifier
@@ -163,7 +169,7 @@ fun GridContentCard(
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioTheme.colors.FocusRing),
+                    border = NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth),
                     shape = cardShape
                 )
             ),
@@ -182,13 +188,23 @@ fun GridContentCard(
                 val context = LocalContext.current
                 val bgCardColor = NuvioTheme.colors.BackgroundCard
                 val bgPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
-                val imageModel = remember(item.poster, requestWidthPx, requestHeightPx) {
-                    ImageRequest.Builder(context)
+                val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(item.poster)
+                val imageModel = remember(item.poster, requestWidthPx, requestHeightPx, revalidationKey) {
+                    val builder = ImageRequest.Builder(context)
                         .data(item.poster)
                         .crossfade(imageCrossfade)
                         .size(width = requestWidthPx, height = requestHeightPx)
-                        .memoryCacheKey("${item.poster}_${requestWidthPx}x${requestHeightPx}")
-                        .build()
+                        .memoryCacheKey("${item.poster}_${requestWidthPx}x${requestHeightPx}_v$revalidationKey")
+                    if (revalidationKey > 0) {
+                        builder.placeholderMemoryCacheKey("${item.poster}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
+                    }
+                    val fallbackUrl = item.rawPosterUrl
+                    if (!fallbackUrl.isNullOrBlank() && fallbackUrl != item.poster) {
+                        builder.memoryCacheKeyExtras(
+                            mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
+                        )
+                    }
+                    builder.build()
                 }
                 if (item.poster.isNullOrBlank()) {
                     MonochromePosterPlaceholder()
@@ -209,12 +225,16 @@ fun GridContentCard(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .height(posterCardStyle.height * 0.45f)
-                            .background(
-                                Brush.verticalGradient(
+                            .height(cardHeight * 0.45f)
+                            .graphicsLayer {
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }
+                            .drawWithCache {
+                                val gradient = Brush.verticalGradient(
                                     listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
                                 )
-                            )
+                                onDrawBehind { drawRect(gradient) }
+                            }
                     )
                     val logoRequest = remember(item.logo) {
                         ImageRequest.Builder(context)
@@ -229,28 +249,18 @@ fun GridContentCard(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .heightIn(max = posterCardStyle.height * 0.35f)
+                            .heightIn(max = cardHeight * 0.35f)
                             .padding(horizontal = NuvioTheme.spacing.lg, vertical = 14.dp)
                     )
                 }
 
                 if (isWatched) {
-                    Box(
+                    WatchedMarker(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.sm)
                             .zIndex(2f)
-                            .size(21.dp)
-                            .shadow(10.dp, shape = CircleShape, spotColor = Color.Transparent)
-                            .background(NuvioTheme.colors.Secondary, CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            tint = if (NuvioTheme.colors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White,
-                            contentDescription = stringResource(R.string.episodes_cd_watched),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    )
                 }
             }
         }

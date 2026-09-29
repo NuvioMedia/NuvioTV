@@ -357,6 +357,7 @@ data class TmdbDetailsResponse(
 data class TmdbCreatedBy(
     @Json(name = "id") val id: Int? = null,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "profile_path") val profilePath: String? = null
 )
 
@@ -396,6 +397,7 @@ data class TmdbAggregateCreditsResponse(
 data class TmdbAggregateCastMember(
     @Json(name = "id") val id: Int? = null,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "roles") val roles: List<TmdbAggregateRole>? = null,
     @Json(name = "profile_path") val profilePath: String? = null,
     @Json(name = "total_episode_count") val totalEpisodeCount: Int? = null
@@ -411,6 +413,7 @@ data class TmdbAggregateRole(
 data class TmdbAggregateCrewMember(
     @Json(name = "id") val id: Int? = null,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "jobs") val jobs: List<TmdbAggregateJob>? = null,
     @Json(name = "profile_path") val profilePath: String? = null,
     @Json(name = "department") val department: String? = null,
@@ -427,6 +430,7 @@ data class TmdbAggregateJob(
 data class TmdbCastMember(
     @Json(name = "id") val id: Int? = null,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "character") val character: String? = null,
     @Json(name = "profile_path") val profilePath: String? = null
 )
@@ -435,6 +439,7 @@ data class TmdbCastMember(
 data class TmdbCrewMember(
     @Json(name = "id") val id: Int? = null,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "job") val job: String? = null,
     @Json(name = "department") val department: String? = null,
     @Json(name = "profile_path") val profilePath: String? = null
@@ -634,6 +639,7 @@ data class TmdbRecommendationResult(
 data class TmdbPersonResponse(
     @Json(name = "id") val id: Int,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "biography") val biography: String? = null,
     @Json(name = "birthday") val birthday: String? = null,
     @Json(name = "deathday") val deathday: String? = null,
@@ -655,6 +661,8 @@ data class TmdbPersonCreditCast(
     @Json(name = "id") val id: Int,
     @Json(name = "title") val title: String? = null,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_title") val originalTitle: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "media_type") val mediaType: String? = null,
     @Json(name = "poster_path") val posterPath: String? = null,
     @Json(name = "backdrop_path") val backdropPath: String? = null,
@@ -672,6 +680,8 @@ data class TmdbPersonCreditCrew(
     @Json(name = "id") val id: Int,
     @Json(name = "title") val title: String? = null,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_title") val originalTitle: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "media_type") val mediaType: String? = null,
     @Json(name = "poster_path") val posterPath: String? = null,
     @Json(name = "backdrop_path") val backdropPath: String? = null,
@@ -698,6 +708,7 @@ data class TmdbCollectionResponse(
 data class TmdbCollectionPart(
     @Json(name = "id") val id: Int,
     @Json(name = "title") val title: String? = null,
+    @Json(name = "original_title") val originalTitle: String? = null,
     @Json(name = "overview") val overview: String? = null,
     @Json(name = "release_date") val releaseDate: String? = null,
     @Json(name = "poster_path") val posterPath: String? = null,

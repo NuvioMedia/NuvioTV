@@ -58,7 +58,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -79,17 +78,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.tv.material3.Border
-import androidx.tv.material3.Icon
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -119,12 +114,12 @@ import com.nuvio.tv.ui.components.continueWatchingUsesEpisodeThumbnails
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.MonochromePosterPlaceholder
 import com.nuvio.tv.ui.components.TrailerPlayer
+import com.nuvio.tv.ui.components.WatchedMarker
 import com.nuvio.tv.ui.components.placeholderCardShimmer
 import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
 import com.nuvio.tv.ui.components.rememberPlaceholderShimmerOffsetState
 import com.nuvio.tv.LocalSidebarExpanded
-import com.nuvio.tv.ui.theme.ThemeColors
 import kotlin.math.abs
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -133,12 +128,13 @@ import com.nuvio.tv.ui.util.recompositionHighlighter
 import com.nuvio.tv.ui.util.StableMap
 import com.nuvio.tv.ui.util.StableRef
 import com.nuvio.tv.ui.util.asStable
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.debounce
 
 private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
-private const val POSTER_PREFETCH_DISTANCE = 2
+private const val POSTER_PREFETCH_DISTANCE = 1
 private const val NESTED_PREFETCH_COUNT = 2
 
 internal val LocalVerticalRowsScrolling = compositionLocalOf<State<Boolean>> { mutableStateOf(false) }
@@ -226,6 +222,7 @@ private fun ModernCatalogRowItem(
     requester: FocusRequester,
     isTargetItem: Boolean = false,
     useLandscapePosters: Boolean,
+    alwaysShowLandscapeClearlogo: Boolean = false,
     showLabels: Boolean,
     placeholderShimmerOffsetState: State<Float>?,
     posterCardCornerRadius: Dp,
@@ -375,6 +372,7 @@ private fun ModernCatalogRowItem(
     ModernCarouselCard(
         item = item,
         useLandscapeOverlayTreatment = useLandscapePosters,
+        alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
         showLabels = showLabels,
         placeholderShimmerOffsetState = placeholderShimmerOffsetState,
         cardCornerRadius = posterCardCornerRadius,
@@ -410,10 +408,12 @@ private fun ModernCatalogRowItem(
                         )
                     }
                 }
-                is ModernPayload.CollectionFolder -> onNavigateToFolderDetail(
-                    payload.collectionId,
-                    payload.folderId
-                )
+                is ModernPayload.CollectionFolder -> {
+                    onNavigateToFolderDetail(
+                        payload.collectionId,
+                        payload.folderId
+                    )
+                }
                 is ModernPayload.ContinueWatching -> Unit
             }
         },
@@ -433,6 +433,7 @@ internal fun ModernRowSection(
     rowTitleBottom: Dp,
     defaultBringIntoViewSpec: BringIntoViewSpec,
     focusStateCatalogRowScrollIndex: Int,
+    focusStateCatalogRowScrollAnchor: String?,
     focusedItemByRow: StableRef<MutableMap<String, Int>>,
     rowListStates: StableRef<MutableMap<String, LazyListState>>,
     loadMoreRequestedTotals: StableRef<MutableMap<String, Int>>,
@@ -442,6 +443,7 @@ internal fun ModernRowSection(
     onPendingRowFocusCleared: () -> Unit,
     onRowItemFocused: (String, Int, Boolean) -> Unit,
     useLandscapePosters: Boolean,
+    alwaysShowLandscapeClearlogo: Boolean = false,
     showLabels: Boolean,
     posterCardCornerRadius: Dp,
     focusedPosterBackdropTrailerMuted: Boolean,
@@ -474,7 +476,7 @@ internal fun ModernRowSection(
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit,
-    sharedPlaceholderShimmerOffsetState: State<Float>,
+    sharedPlaceholderShimmerOffsetState: State<Float>?,
     itemFocusRequesters: StableRef<MutableMap<Int, FocusRequester>> = StableRef(mutableMapOf())
 ) {
     // Unwrap StableRef wrappers
@@ -492,6 +494,30 @@ internal fun ModernRowSection(
 
     // Blocks vertical focus exit during placeholder→data transition.
     val blockingFocusExit = remember { mutableStateOf(false) }
+
+    // Item keys carry item identity, which the placeholder the ring sits on loses when real data
+    // arrives: its key changes and Compose tears the focused node down. Lend that one card a
+    // positional key for as long as the ring can be on it, so the node is reused instead.
+    //
+    // Armed from the item id, not a loading flag: a lazily loaded catalog composes its row
+    // before loading starts and would never see the flag go up.
+    val firstCardKey = remember(rowKey) { "${rowKey}__first" }
+    val firstIsPlaceholder = (row.items.list.firstOrNull()?.payload as? ModernPayload.Catalog)
+        ?.itemId?.startsWith("__placeholder_") == true
+    val pinFirstCard = remember(rowKey) { mutableStateOf(firstIsPlaceholder) }
+    val pinSpent = remember(rowKey) { mutableStateOf(false) }
+    // Lent to the card, not the slot: slot 0 would hand the key to whatever lands there.
+    val pinnedItemKey = remember(rowKey) { mutableStateOf<String?>(null) }
+    if (firstIsPlaceholder && !pinSpent.value) pinFirstCard.value = true
+    if (pinFirstCard.value && !firstIsPlaceholder && pinnedItemKey.value == null) {
+        pinnedItemKey.value = row.items.list.firstOrNull()?.key
+    }
+    // Released once the ring has left the row: swapping the node earlier is visible for nothing.
+    if (pinFirstCard.value && !firstIsPlaceholder && !isActiveRow()) {
+        pinFirstCard.value = false
+        pinnedItemKey.value = null
+        pinSpent.value = true
+    }
     Column(
         modifier = Modifier.then(
             if (blockingFocusExit.value) {
@@ -513,14 +539,19 @@ internal fun ModernRowSection(
         }
         Text(
             text = rowTitle,
-            style = rowTitleStyle,
+            style = rowTitleStyle.copy(textDirection = rowTitle.contentTextDirection()),
             color = textColor,
             modifier = textModifier
         )
 
         val rowListState = rowListStates.getOrPut(row.key) {
+            // Resolved when the row is built, so a refresh that already moved the card is seen.
+            val restoredIndex = focusStateCatalogRowScrollAnchor
+                ?.let { anchor -> row.items.list.indexOfFirst { it.key == anchor } }
+                ?.takeIf { it >= 0 }
+                ?: focusStateCatalogRowScrollIndex
             LazyListState(
-                firstVisibleItemIndex = focusStateCatalogRowScrollIndex,
+                firstVisibleItemIndex = restoredIndex,
                 prefetchStrategy = LazyListPrefetchStrategy(nestedPrefetchItemCount = NESTED_PREFETCH_COUNT)
             )
         }
@@ -857,8 +888,7 @@ internal fun ModernRowSection(
         }
 
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
-            val usesPlaceholderShimmer = row.isLoading &&
-                row.items.list.firstOrNull()?.imageUrl.isPlaceholder()
+            val usesPlaceholderShimmer = row.showsPlaceholderShimmer()
             val placeholderShimmerOffsetState = if (usesPlaceholderShimmer) {
                 sharedPlaceholderShimmerOffsetState
             } else {
@@ -882,7 +912,15 @@ internal fun ModernRowSection(
             ) {
                 itemsIndexed(
                     items = row.items.list,
-                    key = { _, item -> item.key },
+                    key = { index, item ->
+                        val pinned = pinnedItemKey.value
+                        when {
+                            !pinFirstCard.value -> item.key
+                            pinned != null -> if (item.key == pinned) firstCardKey else item.key
+                            index == 0 -> firstCardKey
+                            else -> item.key
+                        }
+                    },
                     contentType = { _, item ->
                         when (val payload = item.payload) {
                             is ModernPayload.ContinueWatching -> "modern_cw_card"
@@ -974,6 +1012,7 @@ internal fun ModernRowSection(
                                 requester = requester,
                                 isTargetItem = isTargetItem,
                                 useLandscapePosters = useLandscapePosters,
+                                alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
                                 showLabels = showLabels,
                                 placeholderShimmerOffsetState = placeholderShimmerOffsetState,
                                 posterCardCornerRadius = posterCardCornerRadius,
@@ -1020,6 +1059,7 @@ internal fun ModernRowSection(
 private fun ModernCarouselCard(
     item: ModernCarouselItem,
     useLandscapeOverlayTreatment: Boolean,
+    alwaysShowLandscapeClearlogo: Boolean = false,
     showLabels: Boolean,
     placeholderShimmerOffsetState: State<Float>? = null,
     cardCornerRadius: Dp,
@@ -1103,14 +1143,24 @@ private fun ModernCarouselCard(
     var isFocused by remember { mutableStateOf(false) }
     val payload = item.payload as? ModernPayload.CollectionFolder
     val isCollectionFolder = item.payload is ModernPayload.CollectionFolder
+    val hasCustomPosterOverlay = item.metaPreview?.rawPosterUrl != null
+    val effectiveIgnoreLandscapePoster = alwaysShowLandscapeClearlogo && !hasCustomPosterOverlay
     val baseImageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
         if (useLandscapeOverlayTreatment) {
-            effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+            if (effectiveIgnoreLandscapePoster) {
+                effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+            } else {
+                item.metaPreview?.landscapePoster ?: effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+            }
         } else {
             item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
         }
     } else if (useLandscapeOverlayTreatment && !isCollectionFolder) {
-        effectiveBackdropUrl ?: item.heroPreview.poster
+        if (effectiveIgnoreLandscapePoster) {
+            effectiveBackdropUrl ?: item.heroPreview.poster
+        } else {
+            item.metaPreview?.landscapePoster ?: effectiveBackdropUrl ?: item.heroPreview.poster
+        }
     } else if (isCollectionFolder && !payload?.coverEmoji.isNullOrBlank()) {
         // Emoji cover folders: never fall back to backdrop for the card poster
         item.imageUrl
@@ -1147,14 +1197,31 @@ private fun ModernCarouselCard(
         with(density) { cardHeight.roundToPx() }.coerceAtLeast(1)
     }
 
-    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx) {
+    val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(imageUrl)
+    var customPosterLoadFailed by remember(imageUrl) { mutableStateOf(false) }
+    val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey) {
         imageUrl?.let {
-            ImageRequest.Builder(context)
+            val builder = ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(true)
-                .memoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}")
+                .memoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v$revalidationKey")
                 .size(width = requestWidthPx, height = requestHeightPx)
-                .build()
+            if (revalidationKey > 0) {
+                builder.placeholderMemoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
+            }
+            val isLandscapeCustomPoster = useLandscapeOverlayTreatment && !effectiveIgnoreLandscapePoster && !item.metaPreview?.landscapePoster.isNullOrBlank()
+            val fallbackUrl = if (isLandscapeCustomPoster) {
+                // Landscape custom poster -> fall back to original backdrop
+                item.metaPreview?.background ?: item.heroPreview.backdrop ?: item.metaPreview?.rawPosterUrl
+            } else {
+                item.metaPreview?.rawPosterUrl
+            }
+            if (!fallbackUrl.isNullOrBlank() && fallbackUrl != it) {
+                builder.memoryCacheKeyExtras(
+                    mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
+                )
+            }
+            builder.build()
         }
     }
     val logoHeight = cardHeight * 0.34f
@@ -1185,16 +1252,17 @@ private fun ModernCarouselCard(
         (useLandscapeOverlayTreatment || isBackdropExpanded) &&
             !isCollectionFolder &&
             !effectiveLogoUrl.isNullOrBlank() &&
-            !landscapeLogoLoadFailed
+            !landscapeLogoLoadFailed &&
+            (effectiveIgnoreLandscapePoster || isBackdropExpanded || item.metaPreview?.landscapePoster.isNullOrBlank() || customPosterLoadFailed)
     var longPressTriggered by remember { mutableStateOf(false) }
     val longPressKeyTracker = rememberLongPressKeyTracker()
     val backgroundCardColor = NuvioTheme.colors.BackgroundCard
-    val focusRingColor = NuvioTheme.colors.FocusRing
+    val focusRingBorder = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)
     val titleMedium = MaterialTheme.typography.titleMedium
     val backgroundPainter = remember(backgroundCardColor) { ColorPainter(backgroundCardColor) }
-    val focusedBorder = remember(cardShape, focusRingColor) {
+    val focusedBorder = remember(cardShape, focusRingBorder) {
         Border(
-            border = BorderStroke(NuvioTheme.spacing.xxs, focusRingColor),
+            border = focusRingBorder,
             shape = cardShape
         )
     }
@@ -1295,9 +1363,6 @@ private fun ModernCarouselCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        compositingStrategy = CompositingStrategy.Offscreen
-                    }
                     .clip(cardShape)
                     .nuvioCardDepth(
                         shape = cardShape,
@@ -1341,7 +1406,12 @@ private fun ModernCarouselCard(
                             placeholder = backgroundPainter,
                             error = backgroundPainter,
                             fallback = backgroundPainter,
-                            contentScale = imageContentScale
+                            contentScale = imageContentScale,
+                            onError = {
+                                if (!item.metaPreview?.landscapePoster.isNullOrBlank() || !item.metaPreview?.rawPosterUrl.isNullOrBlank()) {
+                                    customPosterLoadFailed = true
+                                }
+                            }
                         )
                     } else if (isCollectionFolder && !payload?.coverEmoji.isNullOrBlank()) {
                         Box(
@@ -1412,10 +1482,12 @@ private fun ModernCarouselCard(
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart
                     )
-                } else if (useLandscapeOverlayTreatment || isBackdropExpanded) {
+                } else if ((useLandscapeOverlayTreatment || isBackdropExpanded) && !isCollectionFolder && (effectiveIgnoreLandscapePoster || item.metaPreview?.landscapePoster.isNullOrBlank() || customPosterLoadFailed)) {
                     Text(
                         text = item.title,
-                        style = titleStyle,
+                        style = titleStyle.copy(
+                            textDirection = item.title.contentTextDirection()
+                        ),
                         color = Color.White,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -1427,22 +1499,12 @@ private fun ModernCarouselCard(
                 }
 
                 if (isWatched) {
-                    Box(
+                    WatchedMarker(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.sm)
                             .zIndex(2f)
-                            .size(21.dp)
-                            .shadow(10.dp, shape = CircleShape, spotColor = Color.Transparent)
-                            .background(NuvioTheme.colors.Secondary, CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            tint = if (NuvioTheme.colors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White,
-                            contentDescription = stringResource(R.string.episodes_cd_watched),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    )
                 }
             }
         }
@@ -1455,7 +1517,9 @@ private fun ModernCarouselCard(
             ) {
                 Text(
                     text = item.title,
-                    style = titleStyle,
+                    style = titleStyle.copy(
+                        textDirection = item.title.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1464,7 +1528,9 @@ private fun ModernCarouselCard(
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            textDirection = subtitle.contentTextDirection()
+                        ),
                         color = NuvioTheme.colors.TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1489,8 +1555,7 @@ private fun shouldResetBackdropTimer(key: Key): Boolean {
         Key.DirectionUp,
         Key.DirectionDown,
         Key.DirectionLeft,
-        Key.DirectionRight,
-        Key.Back -> true
+        Key.DirectionRight -> true
         else -> false
     }
 }

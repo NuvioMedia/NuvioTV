@@ -17,6 +17,7 @@ import com.nuvio.tv.domain.repository.CatalogRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 import io.mockk.every
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -89,9 +90,29 @@ class SearchViewModelConcurrencyTest {
         assertEquals(listOf("Deep Cover"), catalogRepository.queries.distinct())
     }
 
+    @Test
+    fun `moving from text input to live-search results remembers the query`() = runTest {
+        val addon = searchableAddon()
+        val history = mockk<SearchHistoryDataStore>(relaxed = true)
+        every { history.recentSearches } returns flowOf(emptyList())
+        val viewModel = newViewModel(
+            addonRepository = GatedAddonRepository(addon, CompletableDeferred(Unit)),
+            catalogRepository = ImmediateCatalogRepository(addon),
+            history = history
+        )
+
+        viewModel.onEvent(SearchEvent.QueryChanged("Deep Cover"))
+        advanceUntilIdle()
+        viewModel.onEvent(SearchEvent.RememberSearchFromTextInput)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { history.saveRecentSearch("Deep Cover", 8) }
+    }
+
     private fun newViewModel(
         addonRepository: AddonRepository,
-        catalogRepository: CatalogRepository
+        catalogRepository: CatalogRepository,
+        history: SearchHistoryDataStore = mockk(relaxed = true)
     ): SearchViewModel {
         val layoutPreferences = mockk<LayoutPreferenceDataStore>()
         every { layoutPreferences.discoverLocation } returns flowOf(com.nuvio.tv.domain.model.DiscoverLocation.OFF)
@@ -103,7 +124,6 @@ class SearchViewModelConcurrencyTest {
         every { layoutPreferences.catalogTypeSuffixEnabled } returns flowOf(true)
         every { layoutPreferences.hideUnreleasedContent } returns flowOf(false)
 
-        val history = mockk<SearchHistoryDataStore>(relaxed = true)
         every { history.recentSearches } returns flowOf(emptyList())
 
         val watchProgress = mockk<WatchProgressRepository>()
@@ -115,6 +135,8 @@ class SearchViewModelConcurrencyTest {
         return SearchViewModel(
             addonRepository = addonRepository,
             catalogRepository = catalogRepository,
+            metaRepository = mockk(relaxed = true),
+            discoverSelectionDataStore = mockk(relaxed = true),
             layoutPreferenceDataStore = layoutPreferences,
             searchHistoryDataStore = history,
             watchProgressRepository = watchProgress,
@@ -159,7 +181,8 @@ class SearchViewModelConcurrencyTest {
             skip: Int,
             skipStep: Int,
             extraArgs: Map<String, String>,
-            supportsSkip: Boolean
+            supportsSkip: Boolean,
+            posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
         ): Flow<NetworkResult<CatalogRow>> = flow {
             val query = extraArgs.getValue("search")
             queries += query

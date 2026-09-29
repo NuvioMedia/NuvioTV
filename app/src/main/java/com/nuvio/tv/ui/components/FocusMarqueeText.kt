@@ -14,17 +14,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Text
 
-// Compose's default marquee velocity (MarqueeDefaults.Velocity) is 30.dp/s, which at our title font
-// is only ~3.5 characters/second. Screen-reading research on horizontally scrolling text shows
-// comprehension stays high (~95%) up to ~8.5 chars/second (~85 wpm), so 45.dp/s (~5.3 cps) reads
-// noticeably faster while keeping a comfortable margin below that rate.
 private val MarqueeVelocity = 45.dp
+internal const val MarqueeIterations = 3
 
-/**
- * Returns true if the first strongly-directional character in this string is RTL (Hebrew, Arabic,
- * etc.), false if it's LTR. Digits, punctuation, and spaces are skipped since they have no
- * inherent direction. Same "first-strong" heuristic already used by [P2pConsentDialog].
- */
 private fun String.isRtl(): Boolean {
     for (char in this) {
         val directionality = Character.getDirectionality(char)
@@ -41,11 +33,8 @@ private fun String.isRtl(): Boolean {
 
 /**
  * Single-line text that scrolls (marquees) horizontally while [focused] if the content overflows,
- * and otherwise ellipsizes. Lets long titles/labels become fully readable when their card or row is
- * focused, while staying visually identical to a normal ellipsized [Text] when unfocused.
+ * and otherwise ellipsizes.
  *
- * Scrolling only happens while [focused] and when the text actually overflows (Compose's
- * [basicMarquee] is a no-op when it already fits).
  */
 @Composable
 fun FocusMarqueeText(
@@ -56,35 +45,37 @@ fun FocusMarqueeText(
     color: Color = Color.Unspecified,
     textAlign: TextAlign? = null,
 ) {
-    val marqueeText: @Composable () -> Unit = {
+    val currentDirection = LocalLayoutDirection.current
+    val textDirection = remember(text) {
+        if (text.isRtl()) LayoutDirection.Rtl else LayoutDirection.Ltr
+    }
+    val needsDirectionOverride = textDirection != currentDirection
+
+    val textModifier = if (focused) {
+        modifier.basicMarquee(iterations = MarqueeIterations, velocity = MarqueeVelocity)
+    } else {
+        modifier
+    }
+    val textOverflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis
+
+    val content = @Composable {
         Text(
             text = text,
-            modifier = if (focused) {
-                modifier.basicMarquee(iterations = Int.MAX_VALUE, velocity = MarqueeVelocity)
-            } else {
-                modifier
-            },
+            modifier = textModifier,
             style = style,
             color = color,
             maxLines = 1,
             softWrap = false,
-            overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis,
+            overflow = textOverflow,
             textAlign = textAlign,
         )
     }
 
-    if (focused) {
-        // basicMarquee scrolls according to LocalLayoutDirection, which reflects the app/UI
-        // locale (e.g. Hebrew -> Rtl) rather than this particular string's script. Override it
-        // per-text so an English title inside a Hebrew/Arabic UI still scrolls left (its own
-        // reading direction) instead of right, and vice versa for an RTL title in an LTR UI.
-        val marqueeDirection = remember(text) {
-            if (text.isRtl()) LayoutDirection.Rtl else LayoutDirection.Ltr
-        }
-        CompositionLocalProvider(LocalLayoutDirection provides marqueeDirection) {
-            marqueeText()
+    if (needsDirectionOverride) {
+        CompositionLocalProvider(LocalLayoutDirection provides textDirection) {
+            content()
         }
     } else {
-        marqueeText()
+        content()
     }
 }

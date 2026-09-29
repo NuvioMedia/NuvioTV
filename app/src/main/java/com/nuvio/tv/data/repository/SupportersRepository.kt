@@ -1,78 +1,51 @@
 package com.nuvio.tv.data.repository
 
-import com.nuvio.tv.data.remote.api.DonationsApi
-import java.time.Instant
+import com.nuvio.tv.data.remote.api.SupportersApi
+import com.nuvio.tv.domain.model.MemberTier
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class SupporterDonation(
+data class SupporterMember(
     val key: String,
     val name: String,
-    val date: String,
-    val message: String?,
-    val sortTimestamp: Long
-)
-
-data class DonationProgress(
-    val progressPercent: Int
-)
-
-data class SupportersResult(
-    val supporters: List<SupporterDonation>,
-    val progress: DonationProgress?
+    val avatarUrl: String?,
+    val membershipLevel: MemberTier,
+    val supporterSince: String?
 )
 
 @Singleton
 class SupportersRepository @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
-    private val donationsApi: DonationsApi
+    private val supportersApi: SupportersApi
 ) {
 
-    suspend fun getSupporters(): Result<SupportersResult> = runCatching {
-        val response = donationsApi.getDonations()
+    suspend fun getSupporters(): Result<List<SupporterMember>> = runCatching {
+        val response = supportersApi.getSupportersWall()
         if (!response.isSuccessful) {
             error(appContext.getString(com.nuvio.tv.R.string.supporters_error_api_http, response.code()))
         }
 
-        val donationsResponse = response.body()
-        val supporters = donationsResponse
-            ?.donations
+        response.body()
+            ?.top
+            ?.members
             .orEmpty()
-            .mapNotNull { donation ->
-                val name = donation.name?.trim().orEmpty()
-                val date = donation.date?.trim()
-                    ?: donation.createdAt?.trim()
-                    ?: ""
-                if (name.isBlank() || date.isBlank()) return@mapNotNull null
+            .mapNotNull { member ->
+                val name = member.displayName?.trim().orEmpty()
+                val membershipLevel = MemberTier.entries.firstOrNull {
+                    it.name == member.membershipLevel?.trim()
+                }
+                if (name.isBlank() || membershipLevel == null) return@mapNotNull null
 
-                SupporterDonation(
-                    key = donation.id?.trim()?.takeIf { it.isNotBlank() } ?: "$name|$date",
+                SupporterMember(
+                    key = "$name|${member.supporterSince.orEmpty()}",
                     name = name,
-                    date = date,
-                    message = donation.message?.trim()?.takeIf { it.isNotBlank() },
-                    sortTimestamp = parseTimestamp(date)
+                    avatarUrl = member.avatarUrl?.trim()?.takeIf { it.isNotBlank() },
+                    membershipLevel = membershipLevel,
+                    supporterSince = member.supporterSince?.trim()?.takeIf { it.isNotBlank() }
                 )
             }
-            .sortedByDescending { it.sortTimestamp }
-            .mapIndexed { index, donation ->
-                donation.copy(key = "${donation.key}#$index")
+            .mapIndexed { index, supporter ->
+                supporter.copy(key = "${supporter.key}#$index")
             }
-
-        val progress = donationsResponse
-            ?.monthlyGoal
-            ?.progressPercent
-            ?.toInt()
-            ?.coerceIn(0, 100)
-            ?.let { percent -> DonationProgress(progressPercent = percent) }
-
-        SupportersResult(
-            supporters = supporters,
-            progress = progress
-        )
-    }
-
-    private fun parseTimestamp(rawDate: String): Long {
-        return runCatching { Instant.parse(rawDate).toEpochMilli() }
-            .getOrDefault(Long.MIN_VALUE)
     }
 }

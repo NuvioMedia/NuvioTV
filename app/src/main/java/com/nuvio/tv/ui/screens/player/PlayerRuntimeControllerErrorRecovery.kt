@@ -5,6 +5,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import com.nuvio.tv.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
@@ -31,11 +32,14 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
     error: PlaybackException,
     detailedError: String
 ): Boolean {
+    if (currentVideoTrackIsLikelyVc1 ||
+        Vc1VideoFormatHeuristics.isLikelyVc1(streamName = _uiState.value.currentStreamName ?: streamName)
+    ) {
+        return false
+    }
     if (hasRenderedFirstFrame) return false
     if (!isRetryablePlaybackError(error)) return false
     if (startupRetryCount >= MAX_STARTUP_AUTO_RETRIES) return false
-
-    handleParsingErrorFallback(error)
 
     val paused = userPausedManually
     val attempt = startupRetryCount
@@ -147,6 +151,7 @@ internal fun PlaybackException.findInvalidResponseCodeException(): HttpDataSourc
     return null
 }
 
+@androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlaybackException.toDisplayMessage(context: android.content.Context): String {
     val responseException = findInvalidResponseCodeException()
     if (responseException != null) {
@@ -176,17 +181,18 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
         return context.getString(com.nuvio.tv.R.string.player_error_source_invalid_content, errorCodeName)
     }
 
-    // Check for codec/renderer errors
-    val isRendererError = errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
-        errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
-    if (isRendererError) {
-        val meaningfulMessage = findMostRelevantCauseMessage()
-        val decoderHeader = meaningfulMessage ?: context.getString(com.nuvio.tv.R.string.player_error_decoder)
-        val unsupported = context.getString(com.nuvio.tv.R.string.player_error_unsupported_format, errorCodeName)
-        return "$decoderHeader\n\n$unsupported"
+    val decoderInit = findCauseOfType<MediaCodecRenderer.DecoderInitializationException>()
+    if (decoderInit != null) {
+        val decoderMessage = decoderInit.message?.trim()?.takeIf { it.isNotBlank() }
+            ?: decoderInit.diagnosticInfo?.trim()?.takeIf { it.isNotBlank() }
+        return if (decoderMessage != null) {
+            "$decoderMessage [$errorCodeName]"
+        } else {
+            errorCodeName
+        }
     }
 
-    val meaningfulMessage = findMostRelevantCauseMessage()
+    val meaningfulMessage = findMostRelevantCauseMessage() ?: cause?.message ?: message
     return if (meaningfulMessage != null) {
         "$meaningfulMessage [$errorCodeName]"
     } else {
@@ -243,10 +249,13 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
     error: PlaybackException,
     detailedError: String
 ): Boolean {
+    if (currentVideoTrackIsLikelyVc1 ||
+        Vc1VideoFormatHeuristics.isLikelyVc1(streamName = _uiState.value.currentStreamName ?: streamName)
+    ) {
+        return false
+    }
     if (!isRetryablePlaybackError(error)) return false
     if (errorRetryCount >= MAX_AUTO_RETRIES) return false
-
-    handleParsingErrorFallback(error)
 
     val paused = userPausedManually
     val attempt = errorRetryCount
@@ -309,6 +318,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
 internal fun PlayerRuntimeController.resetErrorRetryState() {
     startupRetryCount = 0
     errorRetryCount = 0
+    parsingErrorProbeAttempted = false
     pendingAudioPcmFallbackRebuild = false
     errorRetryJob?.cancel()
     errorRetryJob = null
@@ -435,18 +445,83 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
     return true
 }
 
-internal fun PlayerRuntimeController.handleParsingErrorFallback(error: PlaybackException) {
-    if (error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
+internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
+    error: PlaybackException,
+    detailedError: String,
+    allowEngineFailover: Boolean,
+    savedPosition: Long = 0L,
+    paused: Boolean = userPausedManually
+): Boolean {
+    if (currentVideoTrackIsLikelyVc1 ||
+        Vc1VideoFormatHeuristics.isLikelyVc1(streamName = _uiState.value.currentStreamName ?: streamName)
+    ) {
+        return false
+    }
+    val isSourceOrParsingError = error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED ||
-        error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED
-    ) {
-        Log.w(
-            PlayerRuntimeController.TAG,
-            "Parsing error [${error.errorCode}] detected with previous mimeType=$currentStreamMimeType. " +
-                    "Setting mimeType to HLS (APPLICATION_M3U8) for retry fallback."
+        error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
+        error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ||
+        error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
+        error.findCauseOfType<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null ||
+        error.cause?.toString()?.contains("UnrecognizedInputFormatException") == true
+
+    if (!isSourceOrParsingError) return false
+    if (parsingErrorProbeAttempted) return false
+    parsingErrorProbeAttempted = true
+
+    val previousMimeType = currentStreamMimeType
+    Log.w(
+        PlayerRuntimeController.TAG,
+        "Source/parsing error [${error.errorCode}] detected (previous mimeType=$previousMimeType). " +
+            "Probing stream format..."
+    )
+
+    errorRetryJob?.cancel()
+    errorRetryJob = scope.launch {
+        showRecoveryOverlay()
+        val probedMime = PlayerMediaSourceFactory.probeNetworkMimeType(
+            url = currentStreamUrl,
+            headers = currentHeaders
         )
-        currentStreamMimeType = androidx.media3.common.MimeTypes.APPLICATION_M3U8
-        currentStreamResponseHeaders = emptyMap()
+
+        if (probedMime != null && probedMime != previousMimeType) {
+            Log.i(
+                PlayerRuntimeController.TAG,
+                "Stream probe resolved mimeType=$probedMime (was $previousMimeType). Retrying playback..."
+            )
+            currentStreamMimeType = probedMime
+            currentStreamResponseHeaders = emptyMap()
+            releasePlayer(flushPlaybackState = false)
+            if (savedPosition > 0L) {
+                _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+            }
+            initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+        } else if (previousMimeType == androidx.media3.common.MimeTypes.APPLICATION_M3U8) {
+            currentStreamMimeType = null
+            currentStreamResponseHeaders = emptyMap()
+            releasePlayer(flushPlaybackState = false)
+            if (savedPosition > 0L) {
+                _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+            }
+            initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+        } else {
+            if (maybeAutoSwitchInternalPlayerOnStartupError(detailedError = detailedError, allowEngineFailover = allowEngineFailover)) {
+                return@launch
+            }
+            if (attemptAutoRetry(error, detailedError)) {
+                return@launch
+            }
+            val userFacingError = error.toDisplayMessage(context)
+            _uiState.update {
+                it.copy(
+                    error = userFacingError,
+                    isBuffering = false,
+                    showLoadingOverlay = false,
+                    showPauseOverlay = false
+                )
+            }
+        }
     }
+    return true
 }

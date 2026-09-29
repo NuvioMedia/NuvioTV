@@ -24,7 +24,8 @@ data class Stream(
     val qualityValue: Int = -1,
     val clientResolve: StreamClientResolve? = null,
     val debridCacheStatus: StreamDebridCacheStatus? = null,
-    val badges: List<StreamBadge> = emptyList()
+    val badges: List<StreamBadge> = emptyList(),
+    val subtitles: List<Subtitle> = emptyList()
 ) {
     /**
      * Returns the primary stream source URL
@@ -103,6 +104,15 @@ data class Stream(
      * Returns true if this is a YouTube stream
      */
     fun isYouTube(): Boolean = ytId != null
+
+    /**
+     * Returns the YouTube video id when [ytId] is the only way to play this stream,
+     * so the video has to be resolved on the device before playback.
+     */
+    fun youTubeIdToResolve(): String? =
+        ytId?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.takeIf { getStreamUrl() == null && !isTorrent() && !isDirectDebrid() }
 
     /**
      * Returns true if this is an external URL (opens in browser)

@@ -66,15 +66,23 @@ internal fun PlayerRuntimeController.updateMediaSessionMetadata() {
     try {
         // Media3 MediaSession reads metadata from the player's current MediaItem.
         // Setting mediaMetadata on the player propagates to the session automatically.
-        _exoPlayer?.let { player ->
-            val current = player.currentMediaItem ?: return@let
-            val updated = current.buildUpon()
-                .apply {
-                    mediaId?.let(::setMediaId)
-                }
-                .setMediaMetadata(metadata)
-                .build()
-            player.replaceMediaItem(player.currentMediaItemIndex, updated)
+        val player = _exoPlayer
+        if (player != null) {
+            val current = player.currentMediaItem
+            if (current != null) {
+                val updated = current.buildUpon()
+                    .apply {
+                        mediaId?.let(::setMediaId)
+                    }
+                    .setMediaMetadata(metadata)
+                    .build()
+                player.replaceMediaItem(player.currentMediaItemIndex, updated)
+            }
+            // No current MediaItem yet (e.g. player just built, source not set) means there is
+            // nothing to attach metadata to. Setting a placeholder item was tried here and can
+            // never work: a MediaItem carrying only metadata has no localConfiguration, and
+            // DefaultMediaSourceFactory.createMediaSource requires one, so setMediaItem threw
+            // every time. The metadata is applied on the next call, once the real item exists.
         }
         Log.d(
             PlayerRuntimeController.TAG,

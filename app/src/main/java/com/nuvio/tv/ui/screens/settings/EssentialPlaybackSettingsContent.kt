@@ -8,10 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VideoSettings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,12 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.tv.R
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.StreamAutoPlayMode
+import com.nuvio.tv.data.local.SubtitleLanguageOption
 import com.nuvio.tv.ui.components.P2pConsentDialog
 import kotlinx.coroutines.launch
 
@@ -70,7 +66,6 @@ fun EssentialPlaybackSettingsContent(
                             StreamAutoPlayMode.REGEX_MATCH -> stringResource(R.string.stream_auto_play_smart_match)
                             null -> ""
                         },
-                        trailingIcon = Icons.Default.PlayArrow,
                         onClick = {
                             val current = settings?.streamAutoPlayMode ?: StreamAutoPlayMode.MANUAL
                             val next = if (current == StreamAutoPlayMode.MANUAL) {
@@ -100,6 +95,18 @@ fun EssentialPlaybackSettingsContent(
                         enabled = settings != null
                     )
                     SettingsToggleRow(
+                        title = stringResource(R.string.autoplay_post_play_recommendations),
+                        subtitle = stringResource(R.string.autoplay_post_play_recommendations_sub),
+                        checked = settings?.postPlayRecommendationsEnabled == true,
+                        onToggle = {
+                            val current = settings ?: return@SettingsToggleRow
+                            coroutineScope.launch {
+                                viewModel.setPostPlayRecommendationsEnabled(!current.postPlayRecommendationsEnabled)
+                            }
+                        },
+                        enabled = settings != null
+                    )
+                    SettingsToggleRow(
                         title = stringResource(R.string.essential_p2p_streams),
                         subtitle = stringResource(R.string.essential_p2p_streams_subtitle),
                         checked = torrentSettings?.p2pEnabled == true,
@@ -120,12 +127,7 @@ fun EssentialPlaybackSettingsContent(
                     SettingsActionRow(
                         title = stringResource(R.string.essential_subtitle_language),
                         subtitle = stringResource(R.string.essential_subtitle_language_subtitle),
-                        value = if (settings?.subtitleStyle?.preferredLanguage == "none") {
-                            stringResource(R.string.action_none)
-                        } else {
-                            settings?.subtitleStyle?.preferredLanguage.orEmpty()
-                        },
-                        trailingIcon = Icons.Default.VideoSettings,
+                        value = settings?.let { subtitleLanguageLabel(it.subtitleStyle) },
                         onClick = { showSubtitleLanguageDialog = true },
                         enabled = settings != null
                     )
@@ -142,21 +144,14 @@ fun EssentialPlaybackSettingsContent(
                     SettingsActionRow(
                         title = stringResource(R.string.essential_audio_language),
                         subtitle = stringResource(R.string.essential_audio_language_subtitle),
-                        value = settings?.preferredAudioLanguage.orEmpty(),
-                        trailingIcon = Icons.Default.VideoSettings,
+                        value = settings?.let { audioLanguageLabel(it.preferredAudioLanguage) },
                         onClick = { showAudioLanguageDialog = true },
                         enabled = settings != null
                     )
                     SettingsActionRow(
                         title = stringResource(R.string.audio_decoder_priority),
                         subtitle = stringResource(R.string.audio_decoder_controls),
-                        value = when (settings?.decoderPriority) {
-                            0 -> stringResource(R.string.audio_decoder_device_only)
-                            1 -> stringResource(R.string.audio_decoder_prefer_device)
-                            2 -> stringResource(R.string.audio_decoder_prefer_app)
-                            else -> ""
-                        },
-                        trailingIcon = Icons.Default.Tune,
+                        value = settings?.let { decoderPriorityLabel(it.decoderPriority) },
                         onClick = { showDecoderPriorityDialog = true },
                         enabled = settings != null
                     )
@@ -169,8 +164,13 @@ fun EssentialPlaybackSettingsContent(
     if (showSubtitleLanguageDialog && settings != null) {
         LanguageSelectionDialog(
             title = stringResource(R.string.essential_subtitle_language),
-            selectedLanguage = if (settings.subtitleStyle.preferredLanguage == "none") null else settings.subtitleStyle.preferredLanguage,
+            selectedLanguage = when {
+                settings.subtitleStyle.preferredLanguage == "none" -> null
+                settings.subtitleStyle.isPreferredLanguageSystemDefault -> SubtitleLanguageOption.DEVICE
+                else -> settings.subtitleStyle.preferredLanguage
+            },
             showNoneOption = true,
+            extraOptions = listOf(SubtitleLanguageOption.DEVICE to stringResource(R.string.appearance_language_system)),
             onLanguageSelected = { language ->
                 coroutineScope.launch { viewModel.setSubtitlePreferredLanguage(language ?: "none") }
                 showSubtitleLanguageDialog = false

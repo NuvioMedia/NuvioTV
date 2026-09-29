@@ -161,7 +161,7 @@ private fun AnimeSkipClientIdDialog(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                 ),
                 focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                 )
             ),

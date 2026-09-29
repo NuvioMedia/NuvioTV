@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.cloud
 
 import com.nuvio.tv.core.debrid.DebridProvider
+import com.nuvio.tv.domain.model.Video
 
 enum class CloudLibraryItemType {
     Torrent,
@@ -82,8 +83,62 @@ data class CloudLibraryPlaybackInfo(
     val file: CloudLibraryFile,
     val url: String,
     val filename: String? = null,
-    val videoSizeBytes: Long? = null
+    val videoSizeBytes: Long? = null,
+    val sessionToken: String,
+    val sequenceIndex: Int
 )
+
+data class CloudLibraryPlaybackContext(
+    val item: CloudLibraryItem,
+    val currentFileKey: String
+) {
+    val currentIndex: Int
+        get() = item.playableFiles.indexOfFirst { it.stableKey == currentFileKey }
+
+    val currentFile: CloudLibraryFile?
+        get() = item.playableFiles.getOrNull(currentIndex)
+
+    val nextFile: CloudLibraryFile?
+        get() = item.playableFiles.getOrNull(currentIndex + 1)
+
+    fun advanceTo(file: CloudLibraryFile): CloudLibraryPlaybackContext =
+        copy(currentFileKey = file.stableKey)
+
+    fun videoId(file: CloudLibraryFile): String = "${item.stableKey}:${file.stableKey}"
+
+    fun fileForVideoId(videoId: String?): CloudLibraryFile? =
+        videoId?.let { requestedId ->
+            item.playableFiles.firstOrNull { file -> videoId(file) == requestedId }
+        } ?: currentFile
+
+    fun episodeNumber(file: CloudLibraryFile): Int? =
+        item.playableFiles.indexOfFirst { it.stableKey == file.stableKey }
+            .takeIf { it >= 0 }
+            ?.plus(1)
+
+    fun asVideos(): List<Video> = item.playableFiles.mapIndexed { index, file ->
+        Video(
+            id = videoId(file),
+            title = file.name,
+            released = null,
+            thumbnail = null,
+            season = 1,
+            episode = index + 1,
+            overview = null,
+            available = true
+        )
+    }
+
+    companion object {
+        fun create(item: CloudLibraryItem, file: CloudLibraryFile): CloudLibraryPlaybackContext? {
+            val context = CloudLibraryPlaybackContext(
+                item = item,
+                currentFileKey = file.stableKey
+            )
+            return context.takeIf { it.currentIndex >= 0 }
+        }
+    }
+}
 
 const val TorboxCloudLibraryPosterUrl = "https://torbox.app/assets/logo-bb7a9579.svg"
 const val PremiumizeCloudLibraryPosterUrl = "https://www.premiumize.me/icon_normal.svg"

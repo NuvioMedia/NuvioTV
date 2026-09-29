@@ -11,7 +11,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertNull
@@ -92,7 +92,7 @@ class TrailerServiceUseTrailersGateTest {
         val tmdbApi = mockk<TmdbApi>(relaxed = true)
         val extractor = mockk<InAppYouTubeExtractor>(relaxed = true)
         val tmdbSettingsDataStore = mockk<TmdbSettingsDataStore> {
-            every { settings } returns flowOf(TmdbSettings(language = "en", useTrailers = enabled))
+            every { settings } returns MutableStateFlow(TmdbSettings(language = "en", useTrailers = enabled))
         }
         val tmdbService = mockk<TmdbService> {
             every { apiKey() } returns "tmdb-key"

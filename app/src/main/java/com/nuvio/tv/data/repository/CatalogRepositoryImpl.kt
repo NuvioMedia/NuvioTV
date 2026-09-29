@@ -4,13 +4,16 @@ import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
-import com.nuvio.tv.data.mapper.toDomain
+import com.nuvio.tv.core.poster.withCustomPosterUrls
+import com.nuvio.tv.data.mapper.toDomainOrNull
+import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import java.net.URLEncoder
 import javax.inject.Inject
@@ -19,7 +22,8 @@ import javax.inject.Singleton
 @Singleton
 class CatalogRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val api: AddonApi
+    private val api: AddonApi,
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
 ) : CatalogRepository {
     companion object {
         private const val TAG = "CatalogRepository"
@@ -35,7 +39,8 @@ class CatalogRepositoryImpl @Inject constructor(
         skip: Int,
         skipStep: Int,
         extraArgs: Map<String, String>,
-        supportsSkip: Boolean
+        supportsSkip: Boolean,
+        posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
     ): Flow<NetworkResult<CatalogRow>> = flow {
         emit(NetworkResult.Loading)
 
@@ -47,7 +52,17 @@ class CatalogRepositoryImpl @Inject constructor(
 
         when (val result = safeApiCall(context) { api.getCatalog(url) }) {
             is NetworkResult.Success -> {
-                val items = result.data.metas.map { it.toDomain(type, addonBaseUrl) }.distinctBy { it.id }
+                val rawItemCount = result.data.metas.size
+                val posterPattern = layoutPreferenceDataStore.customPosterUrlPattern
+                    .let { flow -> flow.first() }
+                val enabledScreens = layoutPreferenceDataStore.customPosterEnabledScreens.first()
+
+                val items = result.data.metas
+                    .mapNotNull { it?.toDomainOrNull(type, addonBaseUrl) }
+                    .distinctBy { it.id }
+                    .withCustomPosterUrls(
+                        com.nuvio.tv.core.poster.patternForScreen(posterPattern, posterScreen, enabledScreens)
+                    )
                 Log.d(
                     TAG,
                     "Catalog fetch success addonId=$addonId type=$type catalogId=$catalogId items=${items.size}"
@@ -63,11 +78,11 @@ class CatalogRepositoryImpl @Inject constructor(
                     rawType = type,
                     items = items,
                     isLoading = false,
-                    hasMore = supportsSkip && items.isNotEmpty(),
+                    hasMore = supportsSkip && rawItemCount > 0,
                     currentPage = if (skipStep > 0) skip / skipStep else 0,
                     supportsSkip = supportsSkip,
                     skipStep = skipStep,
-                    nextSkip = if (supportsSkip && items.isNotEmpty()) skip + items.size else skip,
+                    nextSkip = if (supportsSkip && rawItemCount > 0) skip + rawItemCount else skip,
                     extraArgs = extraArgs
                 )
                 emit(NetworkResult.Success(catalogRow))

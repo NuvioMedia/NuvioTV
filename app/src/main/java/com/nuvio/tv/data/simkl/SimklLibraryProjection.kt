@@ -115,7 +115,7 @@ private fun SimklLibraryEntry.toLibraryEntry(
     }
     return LibraryEntry(
         id = contentId,
-        type = entryType,
+        type = if (entryType == "tv") "series" else entryType,
         name = media.title?.takeIf(String::isNotBlank) ?: contentId,
         poster = resolvedPosterUrl(),
         posterShape = PosterShape.POSTER,
@@ -134,6 +134,7 @@ private fun SimklLibraryEntry.toLibraryEntry(
         imdbId = media.ids.idValue("imdb"),
         tmdbId = media.ids.idValue("tmdb")?.toIntOrNull(),
         simklId = simklId,
+        mediaCategory = if (mediaType == SimklMediaType.ANIME) "anime" else null,
         trackingProviderId = TrackingProviderId.SIMKL.storageId,
         trackingProviderItemId = simklId?.let { "simkl:$it" },
         trackingSourceUrl = buildSimklSourceUrl(mediaType, media)

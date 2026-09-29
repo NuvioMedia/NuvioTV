@@ -23,6 +23,7 @@ data class ExternalPlayerInput(
     val title: String? = null,
     val headers: Map<String, String>? = null,
     val resumePositionMs: Long = 0L,
+    val startFromBeginning: Boolean = false,
     val subtitles: List<SubtitleInput>? = null,
     // Pre-resolved intro/outro skip segments as a JSON array string
     // (`[{"type","start","end"}]`, times in seconds). Read by mpvNova.
@@ -72,7 +73,13 @@ class ExternalPlayerResultContract : ActivityResultContract<ExternalPlayerInput,
             }
 
             // Resume position — supported by MX Player, VLC, Just Player, mpv-android, Vimu
-            if (input.resumePositionMs > 0L) {
+            if (input.startFromBeginning) {
+                putExtra("position", 0)
+                putExtra("extra_position", 0L)
+                putExtra("startfrom", 0)
+                putExtra("forceresume", false)
+                putExtra("from_start", true)
+            } else if (input.resumePositionMs > 0L) {
                 putExtra("position", input.resumePositionMs.toInt())  // MX Player / Just Player / mpv (Int ms)
                 putExtra("extra_position", input.resumePositionMs)    // VLC (Long ms)
                 putExtra("startfrom", input.resumePositionMs.toInt()) // Vimu Player (Int ms)

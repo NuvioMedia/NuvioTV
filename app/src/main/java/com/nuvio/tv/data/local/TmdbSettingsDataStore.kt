@@ -5,13 +5,20 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.domain.model.TmdbSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class TmdbSettingsDataStore @Inject constructor(
     private val factory: ProfileDataStoreFactory,
     private val profileManager: ProfileManager
@@ -19,6 +26,8 @@ class TmdbSettingsDataStore @Inject constructor(
     companion object {
         private const val FEATURE = "tmdb_settings"
     }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
         factory.get(profileId, FEATURE)
@@ -30,7 +39,6 @@ class TmdbSettingsDataStore @Inject constructor(
     private val useArtworkKey = booleanPreferencesKey("tmdb_use_artwork")
     private val useBasicInfoKey = booleanPreferencesKey("tmdb_use_basic_info")
     private val useDetailsKey = booleanPreferencesKey("tmdb_use_details")
-    private val useReleaseDatesKey = booleanPreferencesKey("tmdb_use_release_dates")
     private val useCreditsKey = booleanPreferencesKey("tmdb_use_credits")
     private val useProductionsKey = booleanPreferencesKey("tmdb_use_productions")
     private val useNetworksKey = booleanPreferencesKey("tmdb_use_networks")
@@ -39,7 +47,7 @@ class TmdbSettingsDataStore @Inject constructor(
     private val useMoreLikeThisKey = booleanPreferencesKey("tmdb_use_more_like_this")
     private val useCollectionsKey = booleanPreferencesKey("tmdb_use_collections")
 
-    val settings: Flow<TmdbSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
+    val settings: StateFlow<TmdbSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             TmdbSettings(
                 enabled = prefs[enabledKey] ?: false,
@@ -49,7 +57,6 @@ class TmdbSettingsDataStore @Inject constructor(
                 useArtwork = prefs[useArtworkKey] ?: true,
                 useBasicInfo = prefs[useBasicInfoKey] ?: true,
                 useDetails = prefs[useDetailsKey] ?: true,
-                useReleaseDates = prefs[useReleaseDatesKey] ?: false,
                 useCredits = prefs[useCreditsKey] ?: true,
                 useProductions = prefs[useProductionsKey] ?: true,
                 useNetworks = prefs[useNetworksKey] ?: true,
@@ -59,7 +66,7 @@ class TmdbSettingsDataStore @Inject constructor(
                 useCollections = prefs[useCollectionsKey] ?: true
             )
         }
-    }
+    }.stateIn(scope, SharingStarted.Eagerly, TmdbSettings())
 
     suspend fun setEnabled(enabled: Boolean) {
         store().edit { it[enabledKey] = enabled }
@@ -87,10 +94,6 @@ class TmdbSettingsDataStore @Inject constructor(
 
     suspend fun setUseDetails(enabled: Boolean) {
         store().edit { it[useDetailsKey] = enabled }
-    }
-
-    suspend fun setUseReleaseDates(enabled: Boolean) {
-        store().edit { it[useReleaseDatesKey] = enabled }
     }
 
     suspend fun setUseCredits(enabled: Boolean) {

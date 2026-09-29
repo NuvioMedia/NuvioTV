@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +22,9 @@ class CastDetailViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val tmdbMetadataService: TmdbMetadataService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
+    private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    private val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -34,9 +38,28 @@ class CastDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<CastDetailUiState>(CastDetailUiState.Loading)
     val uiState: StateFlow<CastDetailUiState> = _uiState.asStateFlow()
 
+    private val _watchedMovieIds = MutableStateFlow<Set<String>>(emptySet())
+    val watchedMovieIds: StateFlow<Set<String>> = _watchedMovieIds.asStateFlow()
+    val watchedSeriesIds: StateFlow<Set<String>> = watchedSeriesStateHolder.fullyWatchedSeriesIds
+
+    private val _posterCardCornerRadiusDp = MutableStateFlow(12)
+    val posterCardCornerRadiusDp: StateFlow<Int> = _posterCardCornerRadiusDp.asStateFlow()
+
     init {
         posterOptions.bind(viewModelScope)
         loadPersonDetail()
+        observeWatchedStatus()
+        viewModelScope.launch {
+            layoutPreferenceDataStore.posterCardCornerRadiusDp
+                .collect { _posterCardCornerRadiusDp.value = it }
+        }
+    }
+
+    private fun observeWatchedStatus() {
+        viewModelScope.launch {
+            watchProgressRepository.observeWatchedMovieIds()
+                .collect { ids -> _watchedMovieIds.value = ids }
+        }
     }
 
     fun retry() {
@@ -53,7 +76,16 @@ class CastDetailViewModel @Inject constructor(
                     language = tmdbSettingsDataStore.settings.first().language
                 )
                 if (detail != null) {
-                    _uiState.value = CastDetailUiState.Success(detail)
+                    val pattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
+                    val enabledScreens = layoutPreferenceDataStore.customPosterEnabledScreens.first()
+                    val effectivePattern = com.nuvio.tv.core.poster.patternForScreen(pattern, com.nuvio.tv.core.poster.CustomPosterScreen.DETAILS, enabledScreens)
+                    val overlaidDetail = if (effectivePattern.isNotBlank()) {
+                        detail.copy(
+                            movieCredits = detail.movieCredits.withCustomPosterUrls(effectivePattern),
+                            tvCredits = detail.tvCredits.withCustomPosterUrls(effectivePattern)
+                        )
+                    } else detail
+                    _uiState.value = CastDetailUiState.Success(overlaidDetail)
                 } else {
                     _uiState.value = CastDetailUiState.Error(
                         context.getString(R.string.cast_error_load_details_for, personName)

@@ -1,10 +1,12 @@
 package com.nuvio.tv.data.remote.supabase
 
 import io.github.jan.supabase.auth.user.UserInfo
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 
@@ -62,6 +64,17 @@ data class TvLoginStartResult(
     @SerialName("web_url") val webUrl: String,
     @SerialName("expires_at") val expiresAt: String,
     @SerialName("poll_interval_seconds") val pollIntervalSeconds: Int = 3
+)
+
+@Serializable
+data class DeviceLoginStartResult(
+    @SerialName("device_code") val deviceCode: String,
+    @SerialName("user_code") val userCode: String,
+    @SerialName("verification_uri") val verificationUri: String,
+    @SerialName("verification_uri_complete") val verificationUriComplete: String,
+    @SerialName("expires_at") val expiresAt: String,
+    @SerialName("poll_interval_seconds") val pollIntervalSeconds: Int = 3,
+    val legacy: Boolean = false
 )
 
 @Serializable
@@ -147,8 +160,19 @@ data class SupabaseProfile(
     @SerialName("uses_primary_plugins") val usesPrimaryPlugins: Boolean = false,
     @SerialName("avatar_id") val avatarId: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("profile_background_id") val profileBackgroundId: String? = null,
+    @SerialName("profile_background_url") val profileBackgroundUrl: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
+)
+
+@Serializable
+data class SupabaseProfileBackgroundCatalogItem(
+    val id: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("storage_path") val storagePath: String,
+    @SerialName("portrait_storage_path") val portraitStoragePath: String? = null,
+    @SerialName("asset_version") val assetVersion: Int
 )
 
 @Serializable
@@ -175,10 +199,31 @@ data class SupabaseAvatarCatalogItem(
 )
 
 @Serializable
+data class SupabaseMemberAvatarCatalogItem(
+    val id: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("storage_path") val storagePath: String,
+    val category: String,
+    @SerialName("sort_order") val sortOrder: Int = 0,
+    @SerialName("bg_color") val bgColor: String? = null,
+    @SerialName("asset_version") val assetVersion: Int
+)
+
+@Serializable
 data class SupabaseProfileSettingsBlob(
     @SerialName("profile_id") val profileId: Int = 1,
     @SerialName("settings_json") val settingsJson: JsonObject = buildJsonObject { },
     @SerialName("updated_at") val updatedAt: String? = null
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@JsonIgnoreUnknownKeys
+@Serializable
+data class SupabaseProfileSetupCopyResult(
+    @SerialName("source_profile_id") val sourceProfileId: Int,
+    @SerialName("target_profile_id") val targetProfileId: Int,
+    @SerialName("tv_status") val tvStatus: String,
+    @SerialName("provider_credentials_status") val providerCredentialsStatus: String
 )
 
 @Serializable

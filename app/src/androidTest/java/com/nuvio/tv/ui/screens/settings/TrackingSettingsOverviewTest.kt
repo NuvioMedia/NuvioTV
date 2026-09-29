@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.settings
 
 import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -12,6 +13,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.nuvio.tv.R
@@ -39,9 +42,10 @@ class TrackingSettingsOverviewTest {
 
         composeRule.onNodeWithTag(TrackingSettingsTestTags.TRAKT_PROVIDER).assertIsDisplayed()
         composeRule.onNodeWithTag(TrackingSettingsTestTags.SIMKL_PROVIDER).assertIsDisplayed()
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.MDBLIST_PROVIDER).assertIsDisplayed()
         composeRule.onAllNodesWithText(
             context.getString(R.string.tracking_status_disconnected)
-        ).assertCountEquals(2)
+        ).assertCountEquals(3)
 
         val traktTop = composeRule
             .onNodeWithTag(TrackingSettingsTestTags.TRAKT_PROVIDER)
@@ -54,7 +58,10 @@ class TrackingSettingsOverviewTest {
             .boundsInRoot
             .top
 
+        val mdblistTop = composeRule.onNodeWithTag(TrackingSettingsTestTags.MDBLIST_PROVIDER)
+            .fetchSemanticsNode().boundsInRoot.top
         assertTrue(traktTop < simklTop)
+        assertTrue(simklTop < mdblistTop)
     }
 
     @Test
@@ -89,16 +96,29 @@ class TrackingSettingsOverviewTest {
     }
 
     @Test
-    fun disconnectedTraktDisablesEveryTraktFeature() {
-        setOverview()
-        scrollToTraktFeatures()
+    fun connectedMdbListDisplaysUsernameAndSelectedWatchSource() {
+        setOverview(
+            mdbListState = MdbListTrackerUiState(isConnected = true, username = "mdb-viewer"),
+            trackingState = TrackingSettingsUiState(
+                watchProgressSource = WatchProgressSource.MDBLIST,
+                connectedProviderIds = setOf(TrackingProviderId.MDBLIST), isReady = true
+            )
+        )
+        composeRule.onNodeWithText(context.getString(R.string.mdblist_connected_as, "mdb-viewer")).assertIsDisplayed()
+        composeRule.onAllNodesWithText(context.getString(R.string.tracking_status_connected)).assertCountEquals(1)
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.OVERVIEW_LIST).performScrollToIndex(1)
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.WATCH_PROGRESS_SOURCE).assertIsEnabled()
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.LIBRARY_SOURCE).assertIsEnabled()
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.CONTINUE_WATCHING).assertDoesNotExist()
+    }
 
-        composeRule.onNodeWithTag(TrackingSettingsTestTags.CONTINUE_WATCHING)
-            .assertIsNotEnabled()
-        composeRule.onNodeWithTag(TrackingSettingsTestTags.COMMENTS)
-            .assertIsNotEnabled()
-        composeRule.onNodeWithTag(TrackingSettingsTestTags.MORE_LIKE_THIS)
-            .assertIsNotEnabled()
+    @Test
+    fun disconnectedTraktHidesItsProviderFeatures() {
+        setOverview()
+
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.CONTINUE_WATCHING).assertDoesNotExist()
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.COMMENTS).assertDoesNotExist()
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.MORE_LIKE_THIS).assertDoesNotExist()
     }
 
     @Test
@@ -143,7 +163,7 @@ class TrackingSettingsOverviewTest {
     }
 
     @Test
-    fun initialFocusStartsOnTrakt() {
+    fun remoteFocusMovesFromTraktThroughSimklToMdbList() {
         lateinit var traktFocusRequester: FocusRequester
         composeRule.setContent {
             NuvioTheme {
@@ -151,20 +171,24 @@ class TrackingSettingsOverviewTest {
                 TrackingSettingsOverview(
                     traktState = TraktUiState(),
                     simklState = SimklSettingsUiState(),
+                    mdbListState = MdbListTrackerUiState(),
                     trackingState = TrackingSettingsUiState(isReady = true),
                     traktFocusRequester = traktFocusRequester,
                     simklFocusRequester = remember { FocusRequester() },
+                    mdbListFocusRequester = remember { FocusRequester() },
                     libraryFocusRequester = remember { FocusRequester() },
                     watchProgressFocusRequester = remember { FocusRequester() },
                     continueWatchingFocusRequester = remember { FocusRequester() },
                     moreLikeThisFocusRequester = remember { FocusRequester() },
                     onTraktClick = {},
                     onSimklClick = {},
+                    onMdbListClick = {},
                     onLibrarySourceClick = {},
                     onWatchProgressClick = {},
                     onContinueWatchingWindowClick = {},
                     onCommentsChanged = {},
-                    onMoreLikeThisClick = {}
+                    onMoreLikeThisClick = {},
+                    onAnimeIdClick = {}
                 )
             }
         }
@@ -173,7 +197,10 @@ class TrackingSettingsOverviewTest {
         }
 
         composeRule.onNodeWithTag(TrackingSettingsTestTags.TRAKT_PROVIDER)
-            .assertIsFocused()
+            .assertIsFocused().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.SIMKL_PROVIDER)
+            .assertIsFocused().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.MDBLIST_PROVIDER).assertIsFocused()
     }
 
     @Test
@@ -184,7 +211,6 @@ class TrackingSettingsOverviewTest {
                     state = TraktUiState(),
                     onStartConnection = {},
                     onRetryPolling = {},
-                    onSync = {},
                     onDisconnect = {},
                     onDismiss = {}
                 )
@@ -207,7 +233,6 @@ class TrackingSettingsOverviewTest {
                     ),
                     onStartConnection = {},
                     onRetryPolling = {},
-                    onSync = {},
                     onDisconnect = {},
                     onDismiss = {}
                 )
@@ -221,6 +246,7 @@ class TrackingSettingsOverviewTest {
     private fun setOverview(
         traktState: TraktUiState = TraktUiState(),
         simklState: SimklSettingsUiState = SimklSettingsUiState(),
+        mdbListState: MdbListTrackerUiState = MdbListTrackerUiState(),
         trackingState: TrackingSettingsUiState = TrackingSettingsUiState(isReady = true)
     ) {
         composeRule.setContent {
@@ -228,20 +254,24 @@ class TrackingSettingsOverviewTest {
                 TrackingSettingsOverview(
                     traktState = traktState,
                     simklState = simklState,
+                    mdbListState = mdbListState,
                     trackingState = trackingState,
                     traktFocusRequester = remember { FocusRequester() },
                     simklFocusRequester = remember { FocusRequester() },
+                    mdbListFocusRequester = remember { FocusRequester() },
                     libraryFocusRequester = remember { FocusRequester() },
                     watchProgressFocusRequester = remember { FocusRequester() },
                     continueWatchingFocusRequester = remember { FocusRequester() },
                     moreLikeThisFocusRequester = remember { FocusRequester() },
                     onTraktClick = {},
                     onSimklClick = {},
+                    onMdbListClick = {},
                     onLibrarySourceClick = {},
                     onWatchProgressClick = {},
                     onContinueWatchingWindowClick = {},
                     onCommentsChanged = {},
-                    onMoreLikeThisClick = {}
+                    onMoreLikeThisClick = {},
+                    onAnimeIdClick = {}
                 )
             }
         }

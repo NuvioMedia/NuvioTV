@@ -43,6 +43,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +55,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.request.transitionFactory
 import com.nuvio.tv.R
@@ -95,9 +97,14 @@ internal fun ModernHeroScene(
         requestWidthPx = requestWidthPx,
         requestHeightPx = requestHeightPx
     )
+    val isTrailerPlayingFullScreen = {
+        val s = state()
+        s.fullScreenBackdrop && s.shouldPlayTrailer && s.trailerFirstFrameRendered
+    }
     ModernHeroGradientLayer(
         bgColor = bgColor,
         isFullScreen = isFullScreen,
+        isTrailerPlayingFullScreen = isTrailerPlayingFullScreen,
         modifier = modifier
     )
 }
@@ -202,6 +209,7 @@ internal fun ModernHeroMediaLayer(
 internal fun ModernHeroGradientLayer(
     bgColor: Color,
     isFullScreen: () -> Boolean,
+    isTrailerPlayingFullScreen: () -> Boolean = { false },
     modifier: Modifier
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -209,6 +217,7 @@ internal fun ModernHeroGradientLayer(
         modifier = modifier
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
+                alpha = if (isTrailerPlayingFullScreen()) 0f else 1f
             }
             .drawWithCache {
                 val fullScreen = isFullScreen()
@@ -290,6 +299,7 @@ internal fun HeroTitleBlock(
     previewProvider: () -> HeroPreview?,
     enrichmentActive: () -> Boolean = { false },
     portraitMode: Boolean,
+    showImdbRatings: Boolean,
     trailerPlaying: () -> Boolean = { false },
     modifier: Modifier = Modifier
 ) {
@@ -318,6 +328,7 @@ internal fun HeroTitleBlock(
         HeroTitleContent(
             previewProvider = { displayPreview },
             portraitMode = portraitMode,
+            showImdbRatings = showImdbRatings,
             trailerPlaying = trailerPlaying
         )
     }
@@ -327,6 +338,7 @@ internal fun HeroTitleBlock(
 private fun HeroTitleContent(
     previewProvider: () -> HeroPreview?,
     portraitMode: Boolean,
+    showImdbRatings: Boolean,
     trailerPlaying: () -> Boolean = { false }
 ) {
     val preview = previewProvider() ?: return
@@ -443,13 +455,18 @@ private fun HeroTitleContent(
         val statusBadge = secondaryMeta.status
         val secondaryDetails = secondaryMeta.details
         val hasSecondaryBadge = ageRatingBadge != null || statusBadge != null
-        val showImdbInPrimary = !preview.isSeries && !hasSecondaryBadge && !preview.imdbText.isNullOrBlank()
-        val showImdbInPrimaryWithHighlight = showImdbInPrimary && secondaryHighlightText == null
-        val showImdbInSecondary = !preview.imdbText.isNullOrBlank() &&
+        val hasImdbRatingForLayout = !preview.imdbText.isNullOrBlank()
+        val reserveImdbInPrimary = !preview.isSeries && !hasSecondaryBadge && hasImdbRatingForLayout
+        val reserveImdbInPrimaryWithHighlight = reserveImdbInPrimary && secondaryHighlightText == null
+        val reserveImdbInSecondary = hasImdbRatingForLayout &&
             (preview.isSeries || hasSecondaryBadge || secondaryHighlightText != null)
+        val showImdbInPrimaryWithHighlight = showImdbRatings && reserveImdbInPrimaryWithHighlight
+        val showImdbInSecondary = showImdbRatings && reserveImdbInSecondary
 
         Row(
-            modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = metaAlpha },
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = metaAlpha },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(metaSpacing)
         ) {
@@ -465,10 +482,9 @@ private fun HeroTitleContent(
 
             val runtimeText = preview.runtimeText
             val yearText = preview.yearText
-            val imdbText = preview.imdbText
             val hasTrailingMeta = !runtimeText.isNullOrBlank() ||
                 !yearText.isNullOrBlank() ||
-                showImdbInPrimaryWithHighlight
+                reserveImdbInPrimaryWithHighlight
 
             if (hasLeadingMeta) {
                 Text(
@@ -512,22 +528,25 @@ private fun HeroTitleContent(
                             maxLines = 1
                         )
                     }
-                    if (showImdbInPrimaryWithHighlight && !imdbText.isNullOrBlank()) {
+                    if (reserveImdbInPrimaryWithHighlight) {
                         HeroImdbMeta(
-                            imdbText = imdbText,
+                            imdbText = preview.imdbText.orEmpty(),
                             textStyle = labelMedium,
                             textColor = NuvioTheme.colors.TextSecondary,
                             logoSize = 30.dp * metaScale,
-                            spacing = imdbMetaSpacing
+                            spacing = imdbMetaSpacing,
+                            visible = showImdbInPrimaryWithHighlight
                         )
                     }
                 }
             }
         }
 
-        if (secondaryHighlightText != null || ageRatingBadge != null || showImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty()) {
+        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty()) {
             Row(
-                modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = metaAlpha },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = metaAlpha },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(metaSpacing)
             ) {
@@ -541,8 +560,11 @@ private fun HeroTitleContent(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (secondaryHighlightText != null && (hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty())) {
-                    HeroMetaDivider(metaScale)
+                if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                    HeroMetaDivider(
+                        scale = metaScale,
+                        visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty()
+                    )
                 }
                 if (ageRatingBadge != null && statusBadge != null) {
                     HeroCombinedMetaBadge(
@@ -567,20 +589,27 @@ private fun HeroTitleContent(
                         )
                     }
                 }
-                if ((ageRatingBadge != null || statusBadge != null) && (showImdbInSecondary || secondaryDetails.isNotEmpty())) {
-                    HeroMetaDivider(metaScale)
+                if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                    HeroMetaDivider(
+                        scale = metaScale,
+                        visible = showImdbInSecondary || secondaryDetails.isNotEmpty()
+                    )
                 }
-                if (showImdbInSecondary) {
+                if (reserveImdbInSecondary) {
                     HeroImdbMeta(
                         imdbText = preview.imdbText.orEmpty(),
                         textStyle = labelMedium,
                         textColor = NuvioTheme.colors.TextSecondary,
                         logoSize = 30.dp * metaScale,
-                        spacing = imdbMetaSpacing
+                        spacing = imdbMetaSpacing,
+                        visible = showImdbInSecondary
                     )
                 }
-                if (showImdbInSecondary && secondaryDetails.isNotEmpty()) {
-                    HeroMetaDivider(metaScale)
+                if (reserveImdbInSecondary && secondaryDetails.isNotEmpty()) {
+                    HeroMetaDivider(
+                        scale = metaScale,
+                        visible = showImdbInSecondary
+                    )
                 }
                 secondaryDetails.forEachIndexed { index, value ->
                     Text(
@@ -600,7 +629,7 @@ private fun HeroTitleContent(
         preview.description?.takeIf { it.isNotBlank() }?.let { description ->
             Text(
                 text = description,
-                style = scaledDescriptionStyle,
+                style = scaledDescriptionStyle.copy(textDirection = description.contentTextDirection()),
                 color = NuvioTheme.colors.TextPrimary,
                 maxLines = descriptionMaxLines,
                 overflow = TextOverflow.Ellipsis,
@@ -616,9 +645,13 @@ private fun HeroImdbMeta(
     textStyle: androidx.compose.ui.text.TextStyle,
     textColor: Color,
     logoSize: androidx.compose.ui.unit.Dp,
-    spacing: androidx.compose.ui.unit.Dp
+    spacing: androidx.compose.ui.unit.Dp,
+    visible: Boolean = true
 ) {
     Row(
+        modifier = Modifier
+            .graphicsLayer { alpha = if (visible) 1f else 0f }
+            .then(if (visible) Modifier else Modifier.clearAndSetSemantics {}),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(spacing)
     ) {
@@ -707,11 +740,15 @@ private fun HeroMetaBadge(
 }
 
 @Composable
-private fun HeroMetaDivider(scale: Float) {
+private fun HeroMetaDivider(
+    scale: Float,
+    visible: Boolean = true
+) {
     Box(
         modifier = Modifier
             .size((NuvioTheme.spacing.xs * scale).coerceAtLeast(NuvioTheme.spacing.xxs))
             .clip(RoundedCornerShape(percent = 50))
+            .graphicsLayer { alpha = if (visible) 1f else 0f }
             .background(NuvioTheme.colors.TextTertiary.copy(alpha = 0.78f))
     )
 }

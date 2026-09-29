@@ -93,6 +93,11 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
                     "subtitle=${persistedTrackPreference?.subtitle?.javaClass?.simpleName ?: "none"}"
             )
         }
+        contentId?.takeIf { it.isNotBlank() }?.let { id ->
+            trackPreferenceDataStore.loadPlaybackSpeed(id)?.let { speed ->
+                _uiState.update { it.copy(playbackSpeed = speed) }
+            }
+        }
         // Load saved watch progress BEFORE player init.
         // This eliminates the race condition where ExoPlayer's STATE_READY
         // callback fired before the DB read completed, causing the resume

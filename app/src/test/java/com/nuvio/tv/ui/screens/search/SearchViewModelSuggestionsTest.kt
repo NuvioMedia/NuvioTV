@@ -1,0 +1,641 @@
+package com.nuvio.tv.ui.screens.search
+
+import android.content.Context
+import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.SearchHistoryDataStore
+import com.nuvio.tv.data.local.WatchedSeriesStateHolder
+import com.nuvio.tv.domain.model.Addon
+import com.nuvio.tv.domain.model.CatalogDescriptor
+import com.nuvio.tv.domain.model.CatalogExtra
+import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.ContentType
+import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.PosterShape
+import com.nuvio.tv.domain.repository.AddonRepository
+import com.nuvio.tv.domain.repository.CatalogRepository
+import com.nuvio.tv.domain.repository.WatchProgressRepository
+import com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+private const val TITLE = "The Wolf of Wall Street"
+private const val SHORT_TITLE = "Wolf"
+
+/** Alphabetically ahead of the wolf titles, so an unfiltered strip shows these first. */
+private const val HYPHENATED_TITLE = "Spider-Man"
+private val CATALOG = listOf("Alpha", "Beasts of No Nation", HYPHENATED_TITLE, SHORT_TITLE, TITLE)
+
+/** Answered by the catalog that holds nothing useful, and matching nothing typed here. */
+private val UNRELATED = listOf("Alpha", "Beasts of No Nation")
+private const val UNRELATED_CATALOG = "unrelated"
+private const val MATCHING_CATALOG = "matching"
+
+/** Two catalogs answering "slo" the way Cinemeta does, each best match first. */
+private const val MOVIE_CATALOG = "movie"
+private const val SERIES_CATALOG = "series"
+private val SLO_CATALOGS = linkedMapOf(
+    MOVIE_CATALOG to listOf("Slow West", "Slotherhouse", "Miss Sloane", "Slo Light"),
+    SERIES_CATALOG to listOf("Slow Horses", "Slo Pitch", "Slo Pitch")
+)
+
+/** One title from each catalog in turn, the duplicate dropped, the substring match last. */
+private val SLO_STRIP = listOf("Slow West", "Slow Horses", "Slotherhouse", "Slo Pitch", "Slo Light", "Miss Sloane")
+
+/**
+ * Suggestions are pushed to the keyboard's own suggestion strip while the user types, so they
+ * have to survive live search. Live search runs the same performSearch() that a submit runs,
+ * and that used to retire the strip roughly 200ms after each fetch filled it.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class SearchViewModelSuggestionsTest {
+
+    private val mainDispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(mainDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `live search leaves the suggestions it just fetched in place`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+
+        // Live search has run by now: it owns the results, not the suggestion strip.
+        assertEquals("wolf", viewModel.uiState.value.submittedQuery)
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    /**
+     * Walks the two debounces one at a time rather than asserting the settled state, so it fails
+     * on the original mechanism: the strip filling at 150ms and the live search emptying it at
+     * 350ms. An end-state assertion alone would pass even if the ordering were wrong.
+     */
+    @Test
+    fun `the strip fills before live search runs and survives it`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+
+        // Past SUGGESTION_DEBOUNCE_MS, short of LIVE_SEARCH_DEBOUNCE_MS. An empty submittedQuery
+        // is what pins the ordering: the strip is full while live search is still pending.
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+        assertEquals("", viewModel.uiState.value.submittedQuery)
+
+        // Past LIVE_SEARCH_DEBOUNCE_MS. This is the run that used to empty the strip.
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals("wolf", viewModel.uiState.value.submittedQuery)
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `suggestions survive every keystroke of a word`() = runTest {
+        val viewModel = newViewModel()
+
+        listOf("wo", "wol", "wolf").forEach { typed ->
+            viewModel.onEvent(SearchEvent.QueryChanged(typed))
+            advanceUntilIdle()
+            assertEquals("cleared while typing \"$typed\"", listOf(TITLE), viewModel.uiState.value.suggestions)
+        }
+    }
+
+    @Test
+    fun `submitting retires the suggestions`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.suggestions.isNotEmpty())
+
+        viewModel.onEvent(SearchEvent.SubmitSearch)
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `dropping below the minimum query length retires the suggestions`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.suggestions.isNotEmpty())
+
+        viewModel.onEvent(SearchEvent.QueryChanged("w"))
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `clearing the field retires the suggestions and the submitted query`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.suggestions.isNotEmpty())
+
+        viewModel.onEvent(SearchEvent.QueryChanged(""))
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), viewModel.uiState.value.suggestions)
+        assertEquals("", viewModel.uiState.value.submittedQuery)
+    }
+
+    @Test
+    fun `a query that matches nothing retires the previous strip`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+
+        // Long enough to keep searching, but nothing answers it. The strip must not go on
+        // captioning the earlier query's results.
+        viewModel.onEvent(SearchEvent.QueryChanged("wolfx"))
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), viewModel.uiState.value.suggestions)
+    }
+
+    // The catalog here ignores the search argument, so every title comes back for every query.
+    @Test
+    fun `titles that do not match the query never reach the strip`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf o"))
+        advanceUntilIdle()
+
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `a query nothing matches leaves the strip empty rather than alphabetical`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("zzz"))
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `prefix matches are offered before substring matches`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        // "wolf" is a prefix of one title and appears mid-string in the other.
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+
+        assertEquals(listOf(SHORT_TITLE, TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `words of the query can match separate words of the title`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        // Not a substring of the title, so this only matches word by word.
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf wall"))
+        advanceUntilIdle()
+
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `two query words cannot both match the same title word`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("a al"))
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `punctuation in a title does not hide it from a spaced query`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("spider man"))
+        advanceUntilIdle()
+
+        assertEquals(listOf(HYPHENATED_TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    /** Narrowing only removes, so a broader query has to wait for the fetch to fill it back in. */
+    @Test
+    fun `a fetch puts back a title that narrowing had removed`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf o"))
+        advanceUntilIdle()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceTimeBy(50)
+        runCurrent()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+
+        advanceUntilIdle()
+        assertEquals(listOf(SHORT_TITLE, TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    /** SUGGESTION_DEBOUNCE_MS has not elapsed, so nothing has been fetched for the new query. */
+    @Test
+    fun `a keystroke that rules a title out drops it before the fetch runs`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+        assertEquals(listOf(SHORT_TITLE, TITLE), viewModel.uiState.value.suggestions)
+
+        // "Wolf" no longer matches the two word query.
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf o"))
+        advanceTimeBy(50)
+        runCurrent()
+
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `a keystroke that rules every title out leaves the strip standing`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolfx"))
+        advanceTimeBy(50)
+        runCurrent()
+
+        assertEquals(listOf(SHORT_TITLE, TITLE), viewModel.uiState.value.suggestions)
+
+        // The fetch is what may empty it, once it has answered.
+        advanceUntilIdle()
+        assertEquals(emptyList<String>(), viewModel.uiState.value.suggestions)
+    }
+
+    /**
+     * One catalog answers with titles that all fail the filter while the catalog holding the
+     * match is still fetching, which used to push an empty strip for as long as that took.
+     */
+    @Test
+    fun `an intermediate batch that ranks to nothing leaves the strip standing`() = runTest {
+        val viewModel = newViewModel(staged = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wol"))
+        advanceUntilIdle()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+
+        // Past SUGGESTION_DEBOUNCE_MS, so the unrelated batch has landed and the matching one
+        // has not. The strip should still be showing what it had.
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+
+        advanceUntilIdle()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    /**
+     * The keyboard shows only the first few titles, so the addon's order decides whether the one
+     * being typed is visible. Alphabetical order would put "Jurassic Fight Club" first.
+     */
+    @Test
+    fun `titles of the same rank keep the addon's order`() = runTest {
+        val viewModel = newViewModel(
+            catalogTitles = mapOf(
+                "top" to listOf("The Lost World: Jurassic Park", "Jurassic Park", "Jurassic World", "Jurassic Fight Club")
+            )
+        )
+
+        viewModel.onEvent(SearchEvent.QueryChanged("juras"))
+        advanceUntilIdle()
+
+        // Prefix matches still come before the title that only contains the query.
+        assertEquals(
+            listOf("Jurassic Park", "Jurassic World", "Jurassic Fight Club", "The Lost World: Jurassic Park"),
+            viewModel.uiState.value.suggestions
+        )
+    }
+
+    @Test
+    fun `each catalog's best match leads the strip`() = runTest {
+        val viewModel = newViewModel(catalogTitles = SLO_CATALOGS)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("slo"))
+        advanceUntilIdle()
+
+        assertEquals(SLO_STRIP, viewModel.uiState.value.suggestions)
+    }
+
+    /** The series catalog answers first here. The movie catalog still leads once it lands. */
+    @Test
+    fun `the strip order does not depend on which catalog answers first`() = runTest {
+        val viewModel = newViewModel(catalogTitles = SLO_CATALOGS, slowCatalogs = setOf(MOVIE_CATALOG))
+
+        viewModel.onEvent(SearchEvent.QueryChanged("slo"))
+        // Past SUGGESTION_DEBOUNCE_MS, short of the movie catalog's pause.
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(listOf("Slow Horses", "Slo Pitch"), viewModel.uiState.value.suggestions)
+
+        advanceUntilIdle()
+        assertEquals(SLO_STRIP, viewModel.uiState.value.suggestions)
+    }
+
+    /** SUGGESTION_DEBOUNCE_MS has not elapsed, so this is narrowing alone, before any fetch. */
+    @Test
+    fun `narrowing keeps the addon's order`() = runTest {
+        val viewModel = newViewModel(catalogTitles = SLO_CATALOGS)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("slo"))
+        advanceUntilIdle()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("slow"))
+        advanceTimeBy(50)
+        runCurrent()
+
+        assertEquals(listOf("Slow West", "Slow Horses"), viewModel.uiState.value.suggestions)
+    }
+
+    /** Live search submits as the user types, so a space trims back to the submitted query. */
+    @Test
+    fun `typing a space between words leaves the strip standing`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+        assertEquals("wolf", viewModel.uiState.value.submittedQuery)
+        assertTrue(viewModel.uiState.value.catalogRows.isNotEmpty())
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf "))
+        advanceUntilIdle()
+
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    private fun newViewModel(
+        catalogIgnoresQuery: Boolean = false,
+        staged: Boolean = false,
+        /** Catalog id to the titles it answers with, both in the addon's order. */
+        catalogTitles: Map<String, List<String>>? = null,
+        /** Catalogs of [catalogTitles] that answer after a pause. */
+        slowCatalogs: Set<String> = emptySet()
+    ): SearchViewModel {
+        val addon = when {
+            catalogTitles != null -> searchableAddon(catalogTitles.keys.toList())
+            staged -> searchableAddon(listOf(UNRELATED_CATALOG, MATCHING_CATALOG))
+            else -> searchableAddon()
+        }
+
+        val layoutPreferences = mockk<LayoutPreferenceDataStore>()
+        every { layoutPreferences.discoverLocation } returns flowOf(com.nuvio.tv.domain.model.DiscoverLocation.OFF)
+        every { layoutPreferences.posterCardWidthDp } returns flowOf(126)
+        every { layoutPreferences.posterLabelsEnabled } returns flowOf(true)
+        every { layoutPreferences.catalogAddonNameEnabled } returns flowOf(true)
+        every { layoutPreferences.posterCardHeightDp } returns flowOf(189)
+        every { layoutPreferences.posterCardCornerRadiusDp } returns flowOf(12)
+        every { layoutPreferences.catalogTypeSuffixEnabled } returns flowOf(true)
+        every { layoutPreferences.hideUnreleasedContent } returns flowOf(false)
+
+        val history = mockk<SearchHistoryDataStore>(relaxed = true)
+        every { history.recentSearches } returns flowOf(emptyList())
+
+        val watchProgress = mockk<WatchProgressRepository>()
+        every { watchProgress.observeWatchedMovieIds() } returns flowOf(emptySet())
+
+        val watchedSeries = mockk<WatchedSeriesStateHolder>()
+        every { watchedSeries.fullyWatchedSeriesIds } returns MutableStateFlow(emptySet())
+
+        return SearchViewModel(
+            addonRepository = SingleAddonRepository(addon),
+            catalogRepository = when {
+                catalogTitles != null -> OrderedCatalogRepository(addon, catalogTitles, slowCatalogs)
+                staged -> StagedCatalogRepository(addon)
+                else -> TitleCatalogRepository(addon, catalogIgnoresQuery)
+            },
+            metaRepository = mockk(relaxed = true),
+            discoverSelectionDataStore = mockk(relaxed = true),
+            layoutPreferenceDataStore = layoutPreferences,
+            searchHistoryDataStore = history,
+            watchProgressRepository = watchProgress,
+            watchedSeriesStateHolder = watchedSeries,
+            posterOptions = mockk<PosterOptionsController>(relaxed = true),
+            context = mockk<Context>(relaxed = true)
+        )
+    }
+
+    private class SingleAddonRepository(private val addon: Addon) : AddonRepository {
+        override fun getInstalledAddons(): Flow<List<Addon>> = flowOf(listOf(addon))
+        override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> = error("unused")
+        override suspend fun addAddon(url: String) = error("unused")
+        override suspend fun removeAddon(url: String) = error("unused")
+        override suspend fun setAddonOrder(urls: List<String>) = error("unused")
+        override suspend fun setAddonEnabled(url: String, enabled: Boolean) = error("unused")
+    }
+
+    /** Answers with one title, and only for queries that title contains, so both the filled
+     *  and the empty strip are reachable from a test. */
+    private class TitleCatalogRepository(
+        private val addon: Addon,
+        /** Answers with everything whatever the query is, the way an addon that ignores the
+         *  search argument does. */
+        private val ignoresQuery: Boolean = false
+    ) : CatalogRepository {
+        override fun getCatalog(
+            addonBaseUrl: String,
+            addonId: String,
+            addonName: String,
+            catalogId: String,
+            catalogName: String,
+            type: String,
+            skip: Int,
+            skipStep: Int,
+            extraArgs: Map<String, String>,
+            supportsSkip: Boolean,
+            posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
+        ): Flow<NetworkResult<CatalogRow>> = flow {
+            val query = extraArgs["search"].orEmpty()
+            val matches = ignoresQuery || (query.isNotBlank() && TITLE.contains(query, ignoreCase = true))
+            emit(NetworkResult.Loading)
+            emit(NetworkResult.Success(row(matches)))
+        }
+
+        private fun row(matches: Boolean): CatalogRow = CatalogRow(
+            addonId = addon.id,
+            addonName = addon.displayName,
+            addonBaseUrl = addon.baseUrl,
+            catalogId = addon.catalogs.single().id,
+            catalogName = addon.catalogs.single().name,
+            type = ContentType.MOVIE,
+            items = if (!matches) emptyList() else (if (ignoresQuery) CATALOG else listOf(TITLE)).map { title ->
+                MetaPreview(
+                    id = "id_${title.hashCode()}",
+                    type = ContentType.MOVIE,
+                    name = title,
+                    poster = null,
+                    posterShape = PosterShape.POSTER,
+                    background = null,
+                    logo = null,
+                    description = null,
+                    releaseInfo = null,
+                    imdbRating = null,
+                    genres = emptyList()
+                )
+            }
+        )
+    }
+
+    /** Two catalogs of one addon answering out of order: the one with no usable titles first,
+     *  the one holding the match after a pause. */
+    private class StagedCatalogRepository(private val addon: Addon) : CatalogRepository {
+        override fun getCatalog(
+            addonBaseUrl: String,
+            addonId: String,
+            addonName: String,
+            catalogId: String,
+            catalogName: String,
+            type: String,
+            skip: Int,
+            skipStep: Int,
+            extraArgs: Map<String, String>,
+            supportsSkip: Boolean,
+            posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
+        ): Flow<NetworkResult<CatalogRow>> = flow {
+            emit(NetworkResult.Loading)
+            if (catalogId == MATCHING_CATALOG) {
+                delay(100)
+                emit(NetworkResult.Success(row(catalogId, listOf(TITLE))))
+            } else {
+                emit(NetworkResult.Success(row(catalogId, UNRELATED)))
+            }
+        }
+
+        private fun row(catalogId: String, titles: List<String>): CatalogRow = CatalogRow(
+            addonId = addon.id,
+            addonName = addon.displayName,
+            addonBaseUrl = addon.baseUrl,
+            catalogId = catalogId,
+            catalogName = catalogId,
+            type = ContentType.MOVIE,
+            items = titles.map { title ->
+                MetaPreview(
+                    id = "id_${title.hashCode()}",
+                    type = ContentType.MOVIE,
+                    name = title,
+                    poster = null,
+                    posterShape = PosterShape.POSTER,
+                    background = null,
+                    logo = null,
+                    description = null,
+                    releaseInfo = null,
+                    imdbRating = null,
+                    genres = emptyList()
+                )
+            }
+        )
+    }
+
+    /** Each catalog answers with its own titles in a fixed order, whatever the query, the slow
+     *  ones after a pause. */
+    private class OrderedCatalogRepository(
+        private val addon: Addon,
+        private val catalogTitles: Map<String, List<String>>,
+        private val slowCatalogs: Set<String>
+    ) : CatalogRepository {
+        override fun getCatalog(
+            addonBaseUrl: String,
+            addonId: String,
+            addonName: String,
+            catalogId: String,
+            catalogName: String,
+            type: String,
+            skip: Int,
+            skipStep: Int,
+            extraArgs: Map<String, String>,
+            supportsSkip: Boolean,
+            posterScreen: com.nuvio.tv.core.poster.CustomPosterScreen
+        ): Flow<NetworkResult<CatalogRow>> = flow {
+            emit(NetworkResult.Loading)
+            if (catalogId in slowCatalogs) delay(100)
+            emit(NetworkResult.Success(row(catalogId, catalogTitles.getValue(catalogId))))
+        }
+
+        private fun row(catalogId: String, titles: List<String>): CatalogRow = CatalogRow(
+            addonId = addon.id,
+            addonName = addon.displayName,
+            addonBaseUrl = addon.baseUrl,
+            catalogId = catalogId,
+            catalogName = catalogId,
+            type = ContentType.MOVIE,
+            items = titles.map { title ->
+                MetaPreview(
+                    id = "id_${title.hashCode()}",
+                    type = ContentType.MOVIE,
+                    name = title,
+                    poster = null,
+                    posterShape = PosterShape.POSTER,
+                    background = null,
+                    logo = null,
+                    description = null,
+                    releaseInfo = null,
+                    imdbRating = null,
+                    genres = emptyList()
+                )
+            }
+        )
+    }
+
+    private fun searchableAddon(catalogIds: List<String> = listOf("top")): Addon {
+        val catalogs = catalogIds.map { id ->
+            CatalogDescriptor(
+                type = ContentType.MOVIE,
+                id = id,
+                name = id,
+                extra = listOf(CatalogExtra(name = "search"))
+            )
+        }
+        return Addon(
+            id = "addon",
+            name = "Addon",
+            version = "1",
+            description = null,
+            logo = null,
+            baseUrl = "https://example.test",
+            catalogs = catalogs,
+            types = listOf(ContentType.MOVIE),
+            resources = emptyList()
+        )
+    }
+}

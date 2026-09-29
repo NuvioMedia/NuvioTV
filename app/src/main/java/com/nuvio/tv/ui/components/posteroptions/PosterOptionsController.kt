@@ -155,6 +155,7 @@ class PosterOptionsController @Inject constructor(
             _state.update { current ->
                 current.copy(
                     target = canonical,
+                    originalItemId = item.id,
                     addonBaseUrl = addonBaseUrl.orEmpty(),
                     isInLibrary = initialIsInLibrary,
                     isWatched = initialIsWatched,
@@ -405,10 +406,20 @@ class PosterOptionsController @Inject constructor(
         if (state.isWatchedPending) return
         val scope = this.scope ?: return
 
+        val currentlyWatched = state.isWatched
+        // Collect all known ID variants: original UI id (e.g. "tmdb:123"),
+        // canonical id (e.g. "tt1979376"), and imdbId field if available.
+        val optimisticIds = buildSet {
+            add(item.id)
+            state.originalItemId?.takeIf { it != item.id }?.let(::add)
+            item.imdbId?.takeIf(String::isNotBlank)?.let(::add)
+        }
+
+        watchProgressRepository.applyOptimisticWatchedMovie(optimisticIds, add = !currentlyWatched)
+
         _state.update { it.copy(isWatchedPending = true) }
         scope.launch {
             val canonical = ensureCanonical() ?: return@launch
-            val currentlyWatched = _state.value.isWatched
             runCatching {
                 if (currentlyWatched) {
                     watchProgressRepository.removeFromHistory(canonical.id, videoId = canonical.imdbId)
@@ -417,6 +428,8 @@ class PosterOptionsController @Inject constructor(
                 }
             }.onFailure { error ->
                 Log.w(TAG, "Failed to toggle watched for ${canonical.id}: ${error.message}")
+                // Revert optimistic update on failure
+                watchProgressRepository.revertOptimisticWatchedMovie(optimisticIds, add = !currentlyWatched)
             }
             _state.update { it.copy(isWatchedPending = false) }
         }

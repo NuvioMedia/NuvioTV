@@ -11,40 +11,14 @@ class RealDebridFileSelector @Inject constructor() {
         files: List<RealDebridTorrentFileDto>,
         resolve: StreamClientResolve,
         season: Int?,
-        episode: Int?
-    ): RealDebridTorrentFileDto? {
-        val playable = files.filter { it.isPlayableVideo() }
-        if (playable.isEmpty()) return null
-
-        val episodePatterns = buildDebridEpisodePatterns(
-            season = season ?: resolve.season,
-            episode = episode ?: resolve.episode
-        )
-        val names = resolve.specificDebridFileNames(episodePatterns)
-        if (names.isNotEmpty()) {
-            playable.firstDebridNameMatch(names) { it.displayName() }?.let { return it }
-        }
-
-        if (episodePatterns.isNotEmpty()) {
-            playable.firstOrNull { file ->
-                val fileName = file.displayName().lowercase()
-                episodePatterns.any { pattern -> fileName.contains(pattern) }
-            }?.let { return it }
-        }
-
-        resolve.fileIdx?.let { fileIdx ->
-            files.getOrNull(fileIdx)?.takeIf { it.isPlayableVideo() }?.let { return it }
-            if (fileIdx > 0) {
-                files.getOrNull(fileIdx - 1)?.takeIf { it.isPlayableVideo() }?.let { return it }
-            }
-            playable.firstOrNull { it.id == fileIdx }?.let { return it }
-        }
-
-        return playable.maxByOrNull { it.bytes ?: 0L }
-    }
-
-    private fun RealDebridTorrentFileDto.isPlayableVideo(): Boolean {
-        val name = displayName().lowercase()
-        return name.hasDebridVideoExtension()
-    }
+        episode: Int?,
+    ): RealDebridTorrentFileDto? = selectDebridFile(
+        files = files,
+        resolve = resolve,
+        season = season,
+        episode = episode,
+        path = { it.path.orEmpty() },
+        isPlayable = { it.displayName().hasDebridVideoExtension() },
+        size = { it.bytes ?: 0L },
+    )
 }

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,7 +38,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -302,7 +305,7 @@ private fun AudioTrackCard(
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             ),
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
@@ -410,6 +413,14 @@ private fun AudioControlsContent(
         canDecreaseCenterMix -> centerMinusFocusRequester
         canIncreaseCenterMix -> centerPlusFocusRequester
         else -> persistFocusRequester
+    }
+    val persistUpFocusRequester = when {
+        canDecreaseCenterMix -> centerMinusFocusRequester
+        canIncreaseCenterMix -> centerPlusFocusRequester
+        canDecreaseAmp -> ampMinusFocusRequester
+        canIncreaseAmp -> ampPlusFocusRequester
+        canDecreaseDelay -> delayMinusFocusRequester
+        else -> delayPlusFocusRequester
     }
     val delayPlusLeftFocusRequester = if (canDecreaseDelay) {
         delayMinusFocusRequester
@@ -568,7 +579,7 @@ private fun AudioControlsContent(
                     .focusRequester(persistFocusRequester)
                     .focusProperties {
                         left = persistLeftFocusRequester
-                        up = firstCenterFocusRequester
+                        up = persistUpFocusRequester
                     },
                 colors = CardDefaults.colors(
                     containerColor = if (persistAmplification) NuvioTheme.colors.Secondary else Color.Transparent,
@@ -581,7 +592,7 @@ private fun AudioControlsContent(
                         shape = RoundedCornerShape(NuvioTheme.radii.md)
                     ),
                     focusedBorder = Border(
-                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                         shape = RoundedCornerShape(NuvioTheme.radii.md)
                     )
                 ),
@@ -628,11 +639,13 @@ private fun AdjustmentSection(
             color = Color.White.copy(alpha = 0.92f)
         )
 
-        Text(
-            text = valueText,
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White
-        )
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Text(
+                text = valueText,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
+            )
+        }
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -704,7 +717,10 @@ private fun StepCard(
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             ),
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, if (enabled) NuvioTheme.colors.FocusRing else Color.Transparent),
+                border = NuvioTheme.focusRing.border(
+                    width = NuvioTheme.spacing.xxs,
+                    alpha = if (enabled) 1f else 0f
+                ),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),

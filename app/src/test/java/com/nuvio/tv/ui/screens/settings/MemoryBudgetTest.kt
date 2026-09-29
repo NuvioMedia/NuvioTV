@@ -16,10 +16,21 @@ class MemoryBudgetTest {
         assertEquals(50, MemoryBudget.totalUsageMb(50, 4, 32, false))
         
         // case 2: parallel enabled
-        // bufferCount(4) = 4 + 1 = 5
-        // overhead = 5 * 32 = 160
-        // total = 50 + 160 = 210
-        assertEquals(210, MemoryBudget.totalUsageMb(50, 4, 32, true))
+        // bufferCount(4) = 4 + 2 = 6
+        // overhead = 6 * 32 = 192
+        // total = 50 + 192 = 242
+        assertEquals(242, MemoryBudget.totalUsageMb(50, 4, 32, true))
+    }
+
+    @Test
+    fun testParallelOverheadMb() {
+        // 3 parallel connections with 8 MB chunk size:
+        // bufferCount(3) = 3 + 2 = 5 chunks * 8 MB = 40 MB
+        assertEquals(40, MemoryBudget.parallelOverheadMb(connectionCount = 3, chunkSizeMb = 8))
+
+        // 4 parallel connections with 8 MB chunks:
+        // bufferCount(4) = 4 + 2 = 6 chunks * 8 MB = 48 MB
+        assertEquals(48, MemoryBudget.parallelOverheadMb(connectionCount = 4, chunkSizeMb = 8))
     }
 
     @Test

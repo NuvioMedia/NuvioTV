@@ -66,4 +66,41 @@ class PlayerSubtitleUtilsMimeTest {
         assertTrue(candidates.contains(MimeTypes.APPLICATION_SUBRIP))
         assertEquals(candidates.size, candidates.distinct().size)
     }
+
+    @Test
+    fun mergeOverlappingCues_mergesMultipleUnpositionedCues() {
+        val cue1 = androidx.media3.common.text.Cue.Builder().setText(">> (sputtering)").build()
+        val cue2 = androidx.media3.common.text.Cue.Builder().setText(">> HEY!").build()
+        val merged = PlayerSubtitleUtils.mergeOverlappingCues(listOf(cue1, cue2))
+        assertEquals(1, merged.size)
+        assertEquals(">> (sputtering)\n>> HEY!", merged[0].text.toString())
+    }
+
+    @Test
+    fun mergeOverlappingCues_preservesPositionedCues() {
+        val cue1 = androidx.media3.common.text.Cue.Builder().setText("TOP").setLine(0.1f, androidx.media3.common.text.Cue.LINE_TYPE_FRACTION).build()
+        val cue2 = androidx.media3.common.text.Cue.Builder().setText("BOTTOM").setLine(0.9f, androidx.media3.common.text.Cue.LINE_TYPE_FRACTION).build()
+        val result = PlayerSubtitleUtils.mergeOverlappingCues(listOf(cue1, cue2))
+        assertEquals(2, result.size)
+        assertEquals("TOP", result[0].text.toString())
+        assertEquals("BOTTOM", result[1].text.toString())
+    }
+
+    @Test
+    fun mergeOverlappingCues_singleCue_returnsSame() {
+        val list = listOf(androidx.media3.common.text.Cue.Builder().setText("Single").build())
+        org.junit.Assert.assertSame(list, PlayerSubtitleUtils.mergeOverlappingCues(list))
+    }
+
+    @Test
+    fun normalizeLanguageCode_mapsEnglishLanguageNames() {
+        assertEquals("tr", PlayerSubtitleUtils.normalizeLanguageCode("TURKISH"))
+        assertEquals("no", PlayerSubtitleUtils.normalizeLanguageCode("Norwegian"))
+        assertEquals("pl", PlayerSubtitleUtils.normalizeLanguageCode("POLISH"))
+        assertEquals("ro", PlayerSubtitleUtils.normalizeLanguageCode("ROMANIAN"))
+        assertEquals("th", PlayerSubtitleUtils.normalizeLanguageCode("THAI"))
+        assertEquals("vi", PlayerSubtitleUtils.normalizeLanguageCode("VIETNAMESE"))
+        assertEquals("sv", PlayerSubtitleUtils.normalizeLanguageCode("swedish"))
+        assertEquals("tr", PlayerSubtitleUtils.normalizeLanguageCode("Turkish (Forced)"))
+    }
 }

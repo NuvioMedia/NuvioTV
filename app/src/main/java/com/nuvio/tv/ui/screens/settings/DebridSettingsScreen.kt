@@ -90,6 +90,20 @@ fun DebridSettingsContent(
     initialFocusRequester: FocusRequester? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // The first two rows are gated on a connected provider and cannot take focus without one,
+    // so the entry requester goes to the first row that can accept it. Left on a gated row the
+    // request is declined, focus stays on the category rail, and the next press walks the rail
+    // instead of entering these options.
+    //
+    // The last of the three is the first account row, which is ungated and so always takes the
+    // request. That rests on DebridProviders.visible() having something in it: it filters a fixed
+    // list on a compile time flag, so it is empty only if every provider is hidden at once, and
+    // this screen has nothing to show at all in that case.
+    val entryOnCloudLibrary = uiState.hasCloudLibraryProvider
+    val entryOnDebridToggle = !entryOnCloudLibrary && uiState.hasResolverProvider
+    // The first visible account row, which is always enabled whatever is connected, so it is the
+    // one row that can always take the entry requester.
+    val entryOnFirstAccount = !entryOnCloudLibrary && !entryOnDebridToggle
     var activeApiKeyDialog by remember { mutableStateOf<String?>(null) }
     var activeDeviceAuthDialog by remember { mutableStateOf<String?>(null) }
     var activeStreamPicker by remember { mutableStateOf<DebridStreamPicker?>(null) }
@@ -137,7 +151,7 @@ fun DebridSettingsContent(
                             modifier = Modifier
                                 .padding(top = NuvioTheme.spacing.xxs)
                                 .then(
-                                    if (initialFocusRequester != null) {
+                                    if (initialFocusRequester != null && entryOnCloudLibrary) {
                                         Modifier.focusRequester(initialFocusRequester)
                                     } else {
                                         Modifier
@@ -153,6 +167,11 @@ fun DebridSettingsContent(
                             subtitle = stringResource(R.string.debrid_enable_subtitle),
                             checked = uiState.canResolvePlayableLinks,
                             onToggle = { viewModel.onEvent(DebridSettingsEvent.ToggleEnabled(!uiState.enabled)) },
+                            modifier = if (initialFocusRequester != null && entryOnDebridToggle) {
+                                Modifier.focusRequester(initialFocusRequester)
+                            } else {
+                                Modifier
+                            },
                             enabled = uiState.hasResolverProvider
                         )
                     }
@@ -176,10 +195,10 @@ fun DebridSettingsContent(
                     }
 
                     item(key = "debrid_account_section") {
-                        DebridSectionLabel(text = stringResource(R.string.debrid_section_account))
+                        SettingsSectionLabel(text = stringResource(R.string.debrid_section_account))
                     }
 
-                    DebridProviders.visible().forEach { provider ->
+                    DebridProviders.visible().forEachIndexed { providerIndex, provider ->
                         item(key = "debrid_${provider.id}_api_key") {
                             SettingsActionRow(
                                 title = provider.displayName,
@@ -200,6 +219,15 @@ fun DebridSettingsContent(
                                         DebridProviderAuthMethod.ApiKey -> activeApiKeyDialog = provider.id
                                     }
                                 },
+                                modifier = if (
+                                    initialFocusRequester != null &&
+                                    entryOnFirstAccount &&
+                                    providerIndex == 0
+                                ) {
+                                    Modifier.focusRequester(initialFocusRequester)
+                                } else {
+                                    Modifier
+                                },
                                 enabled = true
                             )
                         }
@@ -207,7 +235,7 @@ fun DebridSettingsContent(
 
                     if (uiState.canResolvePlayableLinks) {
                         item(key = "debrid_instant_section") {
-                            DebridSectionLabel(text = stringResource(R.string.debrid_section_instant_playback))
+                            SettingsSectionLabel(text = stringResource(R.string.debrid_section_instant_playback))
                         }
 
                         item(key = "debrid_prepare_links") {
@@ -235,7 +263,7 @@ fun DebridSettingsContent(
                     }
 
                     item(key = "debrid_formatting_section") {
-                        DebridSectionLabel(text = stringResource(R.string.debrid_section_formatting))
+                        SettingsSectionLabel(text = stringResource(R.string.debrid_section_formatting))
                     }
 
                     item(key = "debrid_formatter") {
@@ -260,7 +288,7 @@ fun DebridSettingsContent(
 
                     if (uiState.canResolvePlayableLinks) {
                         item(key = "debrid_filters_section") {
-                            DebridSectionLabel(text = stringResource(R.string.debrid_section_filters))
+                            SettingsSectionLabel(text = stringResource(R.string.debrid_section_filters))
                         }
 
                         item(key = "debrid_max_results") {
@@ -698,16 +726,6 @@ private fun DebridInfoText(text: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.sm)
-    )
-}
-
-@Composable
-private fun DebridSectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = NuvioTheme.colors.TextPrimary,
-        modifier = Modifier.padding(start = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.sm)
     )
 }
 
@@ -1494,7 +1512,7 @@ private fun DebridApiKeyDialog(
                     shape = RoundedCornerShape(10.dp)
                 ),
                 focusedBorder = Border(
-                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                     shape = RoundedCornerShape(10.dp)
                 )
             ),

@@ -172,6 +172,8 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
         initializationStartedAtWallTimeMs = 0L
         startPositionMs = null
         lastHealthSnapshotAtElapsedMs = 0L
+        PlaybackConnectionEvents.clear()
+        LoggingDataSource.clear()
     }
 
     fun recordRawEventLine(line: String) {
@@ -199,7 +201,10 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
         positionMs = position
         bufferedPositionMs = player.bufferedPosition.coerceAtLeast(position)
         durationMs = player.duration.takeIf { it > 0L }
-        bufferedPercentage = player.bufferedPercentage.takeIf { it >= 0 }
+        bufferedPercentage = safeBufferedPercentage(
+            bufferedPositionMs = player.bufferedPosition,
+            durationMs = player.duration
+        )
         recordHealthSnapshotIfNeeded(
             now = now,
             rebufferCount = rebufferCount,
@@ -676,6 +681,14 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
             force = true
         )
         val firstFrameElapsed = firstFrameElapsedMs
+        val combinedRawEventLines = buildList {
+            addAll(rawEventLines)
+            PlaybackConnectionEvents.resolvedHost()?.let {
+                add("resolved_serving_host host=$it")
+            }
+            addAll(PlaybackConnectionEvents.recentEvents())
+            addAll(LoggingDataSource.recentEvents())
+        }
         return PlaybackIssuePlaybackAnalyticsInput(
             schemaVersion = 1,
             sessionStartedAtMs = sessionStartedAtWallTimeMs,
@@ -738,9 +751,9 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
             totalBytesLoaded = totalBytesLoaded.coerceAtLeast(0L),
             lastLoad = lastLoad,
             lastLoadError = lastLoadError,
-            rawEventLines = rawEventLines.toList(),
+            rawEventLines = combinedRawEventLines,
             events = events.toList(),
-            rawEvents = rawEventLines.toList(),
+            rawEvents = combinedRawEventLines,
             deepExoEvents = events.toList(),
             stutterSignals = events.filter { it.name.isPlaybackWarningEvent() },
             healthSnapshots = healthSnapshots.toList(),
@@ -976,6 +989,15 @@ private fun Throwable.findHttpStatus(): Int? {
 
 private fun Long?.safeTimeMs(): Long? =
     this?.takeIf { it != C.TIME_UNSET && it >= 0L }
+
+internal fun safeBufferedPercentage(bufferedPositionMs: Long, durationMs: Long): Int? {
+    if (durationMs == 0L) return 100
+    if (durationMs < 0L || bufferedPositionMs < 0L) return null
+    if (bufferedPositionMs >= durationMs) return 100
+    return ((bufferedPositionMs.toDouble() / durationMs.toDouble()) * 100.0)
+        .toInt()
+        .coerceIn(0, 100)
+}
 
 private fun AnalyticsListener.EventTime.bufferedPositionMs(): Long? {
     val position = currentPlaybackPositionMs.safeTimeMs() ?: return null

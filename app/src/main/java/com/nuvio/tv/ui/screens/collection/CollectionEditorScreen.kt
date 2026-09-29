@@ -86,6 +86,7 @@ import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 
@@ -208,7 +209,7 @@ fun CollectionEditorScreen(
                 ),
                 border = CardDefaults.border(
                     focusedBorder = Border(
-                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                         shape = RoundedCornerShape(NuvioTheme.radii.md)
                     )
                 ),
@@ -261,7 +262,7 @@ fun CollectionEditorScreen(
                 ),
                 border = CardDefaults.border(
                     focusedBorder = Border(
-                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                         shape = RoundedCornerShape(NuvioTheme.radii.md)
                     )
                 ),
@@ -336,7 +337,7 @@ fun CollectionEditorScreen(
                                 shape = RoundedCornerShape(NuvioTheme.radii.md)
                             ) else Border.None,
                             focusedBorder = Border(
-                                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                 shape = RoundedCornerShape(NuvioTheme.radii.md)
                             )
                         ),
@@ -360,7 +361,7 @@ fun CollectionEditorScreen(
                     ),
                     border = CardDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
@@ -525,7 +526,9 @@ private fun FolderListItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = folder.title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        textDirection = folder.title.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

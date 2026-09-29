@@ -18,7 +18,8 @@ data class UpdateUiState(
     val showUnknownSourcesDialog: Boolean = false,
     val errorMessage: String? = null,
     val feedbackMessage: String? = null,
-    val updateBannerEnabled: Boolean = false
+    val updateBannerEnabled: Boolean = false,
+    val updateChannel: UpdateChannel = UpdateChannel.STABLE
 )
 
 @HiltViewModel
@@ -35,6 +36,8 @@ class UpdateViewModel @Inject constructor() : ViewModel() {
     fun consumeFeedbackMessage() = Unit
 
     fun setUpdateBannerEnabled(enabled: Boolean) = Unit
+
+    fun setUpdateChannel(channel: UpdateChannel) = Unit
 
     fun downloadUpdate() = Unit
 

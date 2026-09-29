@@ -14,6 +14,9 @@ import com.nuvio.tv.data.remote.api.TmdbCollectionSearchResult
 import com.nuvio.tv.data.remote.api.TmdbCompanySearchResult
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
+import com.nuvio.tv.domain.model.catalogTypesMatch
+import com.nuvio.tv.domain.model.collectionCatalogKey
+import com.nuvio.tv.domain.model.withResolvedCatalogTypes
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.CollectionSource
@@ -48,6 +51,7 @@ data class CollectionEditorUiState(
     val folders: List<CollectionFolder> = emptyList(),
     val isLoading: Boolean = true,
     val availableCatalogs: List<AvailableCatalog> = emptyList(),
+    val installedAddonIds: Set<String> = emptySet(),
     /** Friendly catalog/addon names for every installed addon catalog, keyed by
      *  `"addonId|type|catalogId"`. Unlike [availableCatalogs], this map is not
      *  filtered to picker-compatible catalogs. */
@@ -159,7 +163,7 @@ class CollectionEditorViewModel @Inject constructor(
             }
             val addonCatalogInfoByKey = addons.flatMap { addon ->
                 addon.catalogs.map { catalog ->
-                    "${addon.id}|${catalog.apiType}|${catalog.id}" to
+                    collectionCatalogKey(addon.id, catalog.apiType, catalog.id) to
                         AddonCatalogInfo(catalogName = catalog.name, addonName = addon.displayName)
                 }
             }.toMap()
@@ -180,6 +184,7 @@ class CollectionEditorViewModel @Inject constructor(
                             showAllTab = existing.showAllTab,
                             folders = existing.folders,
                             availableCatalogs = availableCatalogs,
+                            installedAddonIds = addons.map { addon -> addon.id }.toSet(),
                             addonCatalogInfoByKey = addonCatalogInfoByKey,
                             isLoading = false
                         )
@@ -193,6 +198,7 @@ class CollectionEditorViewModel @Inject constructor(
                     isNew = true,
                     collectionId = collectionsDataStore.generateId(),
                     availableCatalogs = availableCatalogs,
+                    installedAddonIds = addons.map { addon -> addon.id }.toSet(),
                     addonCatalogInfoByKey = addonCatalogInfoByKey,
                     isLoading = false
                 )
@@ -370,7 +376,7 @@ class CollectionEditorViewModel @Inject constructor(
                 catalogId = catalog.catalogId,
                 genre = defaultGenre
             )
-            if (folder.sources.any { it is AddonCatalogCollectionSource && it.addonId == source.addonId && it.type == source.type && it.catalogId == source.catalogId }) {
+            if (folder.sources.any { it is AddonCatalogCollectionSource && it.addonId == source.addonId && catalogTypesMatch(it.type, source.type) && it.catalogId == source.catalogId }) {
                 return@update state
             }
             state.copy(
@@ -419,7 +425,7 @@ class CollectionEditorViewModel @Inject constructor(
         _uiState.update { state ->
             val folder = state.editingFolder ?: return@update state
             val existing = folder.sources.indexOfFirst {
-                it is AddonCatalogCollectionSource && it.addonId == catalog.addonId && it.type == catalog.type && it.catalogId == catalog.catalogId
+                it is AddonCatalogCollectionSource && it.addonId == catalog.addonId && catalogTypesMatch(it.type, catalog.type) && it.catalogId == catalog.catalogId
             }
             val newSources = if (existing >= 0) {
                 folder.sources.toMutableList().also { it.removeAt(existing) }
@@ -1067,7 +1073,7 @@ class CollectionEditorViewModel @Inject constructor(
             val folder = state.editingFolder ?: return@update state
             val source = folder.sources.getOrNull(index) as? AddonCatalogCollectionSource ?: return@update state
             val catalog = state.availableCatalogs.find {
-                it.addonId == source.addonId && it.type == source.type && it.catalogId == source.catalogId
+                it.addonId == source.addonId && catalogTypesMatch(it.type, source.type) && it.catalogId == source.catalogId
             } ?: return@update state
             val normalizedGenre = resolveGenreSelection(catalog, genre)
             val updatedSources = folder.sources.toMutableList()
@@ -1134,7 +1140,7 @@ class CollectionEditorViewModel @Inject constructor(
                 viewMode = state.viewMode,
                 showAllTab = state.showAllTab,
                 folders = state.folders
-            )
+            ).withResolvedCatalogTypes(addonRepository.getInstalledAddons().first())
 
             if (state.isNew) {
                 collectionsDataStore.addCollection(collection)

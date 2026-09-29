@@ -17,6 +17,7 @@ import com.nuvio.tv.data.remote.dto.AuthDiagnosticRequestDto
 import com.nuvio.tv.data.remote.dto.AuthDiagnosticResponseDto
 import com.nuvio.tv.data.remote.dto.AuthDiagnosticTerminalDto
 import com.nuvio.tv.data.repository.AuthDiagnosticReportRepository
+import com.nuvio.tv.domain.model.ServerConfiguration
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -51,6 +52,7 @@ class AuthDiagnosticsSession(
     private val repository: AuthDiagnosticReportRepository,
     private val flowType: String,
     private val qrTraceId: Long? = null,
+    private val serverConfiguration: ServerConfiguration,
     private val attemptId: String = UUID.randomUUID().toString()
 ) {
     private val startedAtMs = System.currentTimeMillis()
@@ -205,11 +207,11 @@ class AuthDiagnosticsSession(
                     supportedAbis = Build.SUPPORTED_ABIS.orEmpty().toList()
                 ),
                 environment = AuthDiagnosticEnvironmentDto(
-                    supabaseUrl = BuildConfig.SUPABASE_URL,
-                    supabaseHost = BuildConfig.SUPABASE_URL.hostOrNull(),
-                    tvLoginWebBaseUrl = BuildConfig.TV_LOGIN_WEB_BASE_URL,
-                    tvLoginHost = BuildConfig.TV_LOGIN_WEB_BASE_URL.hostOrNull(),
-                    tvLoginWebHost = BuildConfig.TV_LOGIN_WEB_BASE_URL.hostOrNull(),
+                    supabaseUrl = serverConfiguration.backendUrl,
+                    supabaseHost = serverConfiguration.backendUrl.hostOrNull(),
+                    tvLoginWebBaseUrl = serverConfiguration.tvLoginWebBaseUrl.orEmpty(),
+                    tvLoginHost = serverConfiguration.tvLoginWebBaseUrl.orEmpty().hostOrNull(),
+                    tvLoginWebHost = serverConfiguration.tvLoginWebBaseUrl.orEmpty().hostOrNull(),
                     reportsBaseUrlConfigured = BuildConfig.PLAYBACK_REPORTS_BASE_URL.isNotBlank()
                 ),
                 flow = AuthDiagnosticFlowDto(
@@ -224,6 +226,10 @@ class AuthDiagnosticsSession(
             )
         }
         if (payload == null) return Result.failure(IllegalStateException("Auth diagnostics session already finished"))
+        if (serverConfiguration.isCustom) {
+            Log.d(TAG, "attempt=$attemptId flow=$flowType upload=disabled")
+            return Result.success("disabled")
+        }
         val result = repository.submit(payload)
         result.fold(
             onSuccess = { reportId -> Log.d(TAG, "attempt=$attemptId flow=$flowType upload=success reportId=$reportId") },

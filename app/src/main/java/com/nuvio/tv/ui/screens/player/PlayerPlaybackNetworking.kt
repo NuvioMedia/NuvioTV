@@ -19,6 +19,8 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 internal object PlayerPlaybackNetworking {
+    private const val LOOPBACK_READ_TIMEOUT_SECONDS = 65L
+
     private val trustAllManager = object : X509TrustManager {
         override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
 
@@ -47,6 +49,7 @@ internal object PlayerPlaybackNetworking {
         OkHttpClient.Builder()
             .dispatcher(dispatcher)
             .dns(IPv4FirstDns())
+            .eventListenerFactory(PlaybackConnectionEvents)
             .sslSocketFactory(sslContext.socketFactory, trustAllManager)
             .hostnameVerifier(playbackHostnameVerifier)
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -71,6 +74,7 @@ internal object PlayerPlaybackNetworking {
         OkHttpClient.Builder()
             .dispatcher(dispatcher)
             .dns(IPv4FirstDns())
+            .eventListenerFactory(PlaybackConnectionEvents)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
@@ -89,8 +93,14 @@ internal object PlayerPlaybackNetworking {
             .build()
     }
 
-    fun createHttpClient(defaultHeaders: Map<String, String> = emptyMap()): OkHttpClient {
+    fun createHttpClient(
+        defaultHeaders: Map<String, String> = emptyMap(),
+        useLongReadTimeout: Boolean = false
+    ): OkHttpClient {
         val builder = playbackHttpClient.newBuilder()
+        if (useLongReadTimeout) {
+            builder.readTimeout(LOOPBACK_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        }
         if (defaultHeaders.any { it.key.equals("Authorization", ignoreCase = true) }) {
             // OkHttp strips the Authorization header on cross-host redirects.
             // WebDAV servers behind reverse proxies commonly redirect to a
@@ -119,14 +129,18 @@ internal object PlayerPlaybackNetworking {
     }
 
     @UnstableApi
-    fun createHttpDataSourceFactory(defaultHeaders: Map<String, String> = emptyMap()): DataSource.Factory {
-        val client = createHttpClient(defaultHeaders)
-        return OkHttpDataSource.Factory(client).apply {
+    fun createHttpDataSourceFactory(
+        defaultHeaders: Map<String, String> = emptyMap(),
+        useLongReadTimeout: Boolean = false
+    ): DataSource.Factory {
+        val client = createHttpClient(defaultHeaders, useLongReadTimeout)
+        val httpFactory = OkHttpDataSource.Factory(client).apply {
             setDefaultRequestProperties(defaultHeaders)
             if (defaultHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
                 setUserAgent(PlayerMediaSourceFactory.DEFAULT_USER_AGENT)
             }
         }
+        return LoggingDataSourceFactory(httpFactory, "HTTP")
     }
 
     @UnstableApi

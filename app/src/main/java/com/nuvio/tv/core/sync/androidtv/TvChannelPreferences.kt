@@ -10,7 +10,10 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.tvChannelDataStore by preferencesDataStore(name = "tv_channel_prefs")
+private val Context.tvChannelDataStore by preferencesDataStore(
+    name = "tv_channel_prefs",
+    corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { androidx.datastore.preferences.core.emptyPreferences() }
+)
 
 @Singleton
 class TvChannelPreferences @Inject constructor(

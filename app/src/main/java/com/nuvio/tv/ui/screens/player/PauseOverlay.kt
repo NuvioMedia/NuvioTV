@@ -50,6 +50,9 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.util.contentTextDirection
+import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import com.nuvio.tv.ui.util.toAbsoluteAlignment
 
 @Composable
 fun PauseOverlay(
@@ -64,7 +67,8 @@ fun PauseOverlay(
     type: String?,
     description: String?,
     cast: List<MetaCastMember>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showClock: Boolean = true
 ) {
     var selectedCastMember by remember { mutableStateOf<MetaCastMember?>(null) }
 
@@ -81,7 +85,9 @@ fun PauseOverlay(
             bottom = 120.dp
         ),
         topEndContent = {
-            PauseOverlayClock()
+            if (showClock) {
+                PauseOverlayClock()
+            }
         }
     ) {
         Column(
@@ -181,6 +187,7 @@ private fun PauseMetadataView(
                 } else {
                     Text(
                         text = title,
+                        modifier = Modifier.align(title.contentTextDirection().toAbsoluteAlignment()),
                         style = MaterialTheme.typography.headlineLarge,
                         color = Color.White,
                         maxLines = 2,
@@ -190,6 +197,7 @@ private fun PauseMetadataView(
             } else {
                 Text(
                     text = title,
+                    modifier = Modifier.align(title.contentTextDirection().toAbsoluteAlignment()),
                     style = MaterialTheme.typography.headlineLarge,
                     color = Color.White,
                     maxLines = 2,
@@ -213,8 +221,9 @@ private fun PauseMetadataView(
             }
 
             if (!episodeTitle.isNullOrBlank()) {
+                val context = LocalContext.current
                 Text(
-                    text = episodeTitle,
+                    text = episodeTitle.localizeEpisodeTitle(context),
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White,
                     maxLines = 2,
@@ -226,7 +235,9 @@ private fun PauseMetadataView(
             if (!description.isNullOrBlank()) {
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        textDirection = description.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextSecondary,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,

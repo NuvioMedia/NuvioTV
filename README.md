@@ -1,105 +1,32 @@
 <div align="center">
 
-  <img src="assets/brand/app_logo_wordmark.png" alt="NuvioTV" width="300" />
-  <br />
-  <br />
-
-  [![Contributors][contributors-shield]][contributors-url]
-  [![Forks][forks-shield]][forks-url]
-  [![Stargazers][stars-shield]][stars-url]
-  [![Issues][issues-shield]][issues-url]
-  [![License][license-shield]][license-url]
+  <img src="assets/brand/app_logo_wordmark.png" alt="Nuvio" width="300" />
 
   <p>
-    A modern Android TV media player powered by the Stremio addon ecosystem.
+    A free, open-source media app for your phone, your desktop, and the TV you already own.
     <br />
-    Stremio Addon ecosystem • Android TV optimized • Playback-focused experience
+    Bring your own sources. Nuvio turns them into a library with artwork, ratings, subtitles, and your place saved on every screen.
   </p>
+
+  [Website](https://nuvio.tv) · [GitHub releases](https://github.com/NuvioMedia/NuvioTV/releases/latest) · [Support Nuvio](https://nuvio.tv/support)
 
 </div>
 
-## About
+## Get Nuvio TV
 
-NuvioTV is a modern media player designed specifically for Android TV.
+- [Android TV on Google Play](https://play.google.com/store/apps/details?id=com.nuvio.app)
+- [Android TV APK](https://github.com/NuvioMedia/NuvioTV/releases/latest)
 
-It acts as a client-side playback interface that can integrate with the Stremio addon ecosystem for content discovery and source resolution through user-installed extensions.
-
-Built with Kotlin and optimized for a TV-first viewing experience.
-
-## Installation
-
-### Android TV
-
-Download the latest APK from [GitHub Releases](https://github.com/tapframe/NuvioTV/releases/latest) and install on your Android TV device.
-
-## Development
-
-### Prerequisites
-
-- Android Studio (latest version)
-- JDK 11+
-- Android SDK (API 29+)
-- Gradle 8.0+
-
-### Setup
+## Build from source
 
 ```bash
-git clone https://github.com/tapframe/NuvioTV.git
+git clone https://github.com/NuvioMedia/NuvioTV.git
 cd NuvioTV
-```
-
-### Full Debug Build
-
-```bash
-./gradlew :app:compileFullDebugKotlin
 ./gradlew :app:assembleFullDebug
 ```
 
-### Running on Emulator or Device
+Nuvio TV is built with Kotlin, Jetpack Compose, TV Material 3, and Media3. Development requires Android Studio, a JDK, and the Android SDK.
 
-```bash
-# Full debug build
-./gradlew :app:assembleFullDebug
+## License
 
-# Run on connected device
-adb shell am start -n com.nuviodebug.com/com.nuvio.tv.MainActivity
-```
-
-## Legal & DMCA
-
-NuvioTV functions solely as a client-side interface for browsing metadata and playing media provided by user-installed extensions and/or user-provided sources. It is intended for content the user owns or is otherwise authorized to access.
-
-NuvioTV is not affiliated with any third-party extensions or content providers. It does not host, store, or distribute any media content.
-
-For comprehensive legal information, including our full disclaimer, third-party extension policy, and DMCA/Copyright information, please visit our **[Legal & Disclaimer Page](https://nuvioapp.space/legal)**.
-
-## Built With
-
-* Kotlin
-* Jetpack Compose & TV Material3
-* ExoPlayer / Media3
-* Hilt (Dependency Injection)
-* Retrofit (Networking)
-* Gradle
-
-## Star History
-
-<a href="https://www.star-history.com/?type=date&legend=top-left&repos=NuvioMedia%2FNuvioTV">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=NuvioMedia/NuvioTV&type=date&theme=dark&legend=top-left&sealed_token=9Iz85dRlk6w_jvNTbcCVCqzgR7zrdJE1MkzShRgKXmLaMU-dc74KykTAact0cZd9AsGDxHFt1k2au-WsfIpNgyQj3n9xbv29-qLnV3G7d5w2e0ADJFR-7g" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=NuvioMedia/NuvioTV&type=date&legend=top-left&sealed_token=9Iz85dRlk6w_jvNTbcCVCqzgR7zrdJE1MkzShRgKXmLaMU-dc74KykTAact0cZd9AsGDxHFt1k2au-WsfIpNgyQj3n9xbv29-qLnV3G7d5w2e0ADJFR-7g" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=NuvioMedia/NuvioTV&type=date&legend=top-left&sealed_token=9Iz85dRlk6w_jvNTbcCVCqzgR7zrdJE1MkzShRgKXmLaMU-dc74KykTAact0cZd9AsGDxHFt1k2au-WsfIpNgyQj3n9xbv29-qLnV3G7d5w2e0ADJFR-7g" />
- </picture>
-</a>
-
-<!-- MARKDOWN LINKS & IMAGES -->
-[contributors-shield]: https://img.shields.io/github/contributors/tapframe/NuvioTV.svg?style=for-the-badge
-[contributors-url]: https://github.com/tapframe/NuvioTV/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/tapframe/NuvioTV.svg?style=for-the-badge
-[forks-url]: https://github.com/tapframe/NuvioTV/network/members
-[stars-shield]: https://img.shields.io/github/stars/tapframe/NuvioTV.svg?style=for-the-badge
-[stars-url]: https://github.com/tapframe/NuvioTV/stargazers
-[issues-shield]: https://img.shields.io/github/issues/tapframe/NuvioTV.svg?style=for-the-badge
-[issues-url]: https://github.com/tapframe/NuvioTV/issues
-[license-shield]: https://img.shields.io/github/license/tapframe/NuvioTV.svg?style=for-the-badge
-[license-url]: http://www.gnu.org/licenses/gpl-3.0.en.html
+[GNU General Public License v3.0](./LICENSE)

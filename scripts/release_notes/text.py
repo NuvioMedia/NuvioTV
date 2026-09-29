@@ -85,7 +85,7 @@ def plain_markdown(value: str) -> str:
 
 def strip_conventional_prefix(value: str) -> str:
     return re.sub(
-        r"^(?:feat|fix|perf|ref|refactor|chore|build|ci|docs|style|test)"
+        r"^(?:feat|fix|perf|ref|refactor|chore|build|ci|docs|style|test|i18n)"
         r"(?:\([^)]+\))?!?:\s*",
         "",
         value,

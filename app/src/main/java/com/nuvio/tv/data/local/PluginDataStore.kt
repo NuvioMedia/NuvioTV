@@ -30,7 +30,8 @@ class PluginDataStore @Inject constructor(
     private val profileManager: ProfileManager
 ) {
     companion object {
-        private const val FEATURE = "plugin_settings"
+        internal const val FEATURE = "plugin_settings"
+        internal const val GROUP_STREAMS_BY_REPOSITORY = "group_streams_by_repository"
     }
 
     private fun effectiveProfileId(): Int {
@@ -52,7 +53,7 @@ class PluginDataStore @Inject constructor(
     private val repositoriesKey = stringPreferencesKey("repositories")
     private val scrapersKey = stringPreferencesKey("scrapers")
     private val pluginsEnabledKey = booleanPreferencesKey("plugins_enabled")
-    private val groupStreamsByRepositoryKey = booleanPreferencesKey("group_streams_by_repository")
+    private val groupStreamsByRepositoryKey = booleanPreferencesKey(GROUP_STREAMS_BY_REPOSITORY)
     private val scraperSettingsKey = stringPreferencesKey("scraper_settings")
 
     private val repoListType = Types.newParameterizedType(List::class.java, PluginRepository::class.java)

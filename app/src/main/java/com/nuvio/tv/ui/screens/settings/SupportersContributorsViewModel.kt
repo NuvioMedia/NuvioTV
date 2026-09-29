@@ -4,11 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.repository.GitHubContributor
 import com.nuvio.tv.data.repository.GitHubContributorsRepository
+import com.nuvio.tv.data.repository.MembershipOverviewRepository
 import com.nuvio.tv.data.repository.DevelopmentSponsor
-import com.nuvio.tv.data.repository.DonationProgress
 import com.nuvio.tv.data.repository.SponsorsRepository
-import com.nuvio.tv.data.repository.SupporterDonation
+import com.nuvio.tv.data.repository.SupporterMember
 import com.nuvio.tv.data.repository.SupportersRepository
+import com.nuvio.tv.domain.model.MembershipOverviewState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,13 +25,13 @@ enum class SupportersContributorsTab {
 }
 
 data class SupportersContributorsUiState(
+    val membership: MembershipOverviewState = MembershipOverviewState(),
     val selectedTab: SupportersContributorsTab = SupportersContributorsTab.Contributors,
     val isSupportersLoading: Boolean = false,
     val hasLoadedSupporters: Boolean = false,
-    val supporters: List<SupporterDonation> = emptyList(),
-    val donationProgress: DonationProgress? = null,
+    val supporters: List<SupporterMember> = emptyList(),
     val supportersErrorMessage: String? = null,
-    val selectedSupporter: SupporterDonation? = null,
+    val selectedSupporter: SupporterMember? = null,
     val isSponsorsLoading: Boolean = false,
     val hasLoadedSponsors: Boolean = false,
     val sponsors: List<DevelopmentSponsor> = emptyList(),
@@ -48,15 +49,25 @@ class SupportersContributorsViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val supportersRepository: SupportersRepository,
     private val sponsorsRepository: SponsorsRepository,
-    private val contributorsRepository: GitHubContributorsRepository
+    private val contributorsRepository: GitHubContributorsRepository,
+    private val membershipOverviewRepository: MembershipOverviewRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SupportersContributorsUiState())
     val uiState: StateFlow<SupportersContributorsUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            membershipOverviewRepository.state.collect { membership ->
+                _uiState.update { it.copy(membership = membership) }
+            }
+        }
         loadContributorsIfNeeded()
         loadSupportersIfNeeded()
+    }
+
+    fun refreshMembership() {
+        membershipOverviewRepository.refresh()
     }
 
     fun onSelectTab(tab: SupportersContributorsTab) {
@@ -80,7 +91,7 @@ class SupportersContributorsViewModel @Inject constructor(
         loadSponsors(force = true)
     }
 
-    fun onSupporterSelected(supporter: SupporterDonation) {
+    fun onSupporterSelected(supporter: SupporterMember) {
         _uiState.update { it.copy(selectedSupporter = supporter) }
     }
 
@@ -136,13 +147,12 @@ class SupportersContributorsViewModel @Inject constructor(
             }
 
             supportersRepository.getSupporters()
-                .onSuccess { result ->
+                .onSuccess { supporters ->
                     _uiState.update {
                         it.copy(
                             isSupportersLoading = false,
                             hasLoadedSupporters = true,
-                            supporters = result.supporters,
-                            donationProgress = result.progress,
+                            supporters = supporters,
                             supportersErrorMessage = null
                         )
                     }
@@ -153,7 +163,6 @@ class SupportersContributorsViewModel @Inject constructor(
                             isSupportersLoading = false,
                             hasLoadedSupporters = false,
                             supporters = emptyList(),
-                            donationProgress = null,
                             supportersErrorMessage = error.message ?: appContext.getString(com.nuvio.tv.R.string.supporters_error_load)
                         )
                     }

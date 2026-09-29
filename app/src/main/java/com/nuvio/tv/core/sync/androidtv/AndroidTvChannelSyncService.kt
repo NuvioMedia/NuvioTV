@@ -73,9 +73,6 @@ class AndroidTvChannelSyncService @Inject constructor(
         }
         TvChannelRefreshJobService.schedulePeriodic(context)
 
-        // Populate the channel once on startup from the current cache.
-        scope.launch { reconcileFromCache() }
-
         scope.launch {
             // Observe cache snapshot updates and settings changes to trigger reconciliation.
             // snapshotVersion bumps every time the CW pipeline writes new data to disk cache.
@@ -128,20 +125,8 @@ class AndroidTvChannelSyncService @Inject constructor(
         )
         manager.reconcile(channelItems)
 
-        val cutoffMs = if (resolvedSettings.daysCap == TraktSettingsDataStore.CONTINUE_WATCHING_DAYS_CAP_ALL) {
-            null
-        } else {
-            val windowMs = resolvedSettings.daysCap.toLong() * 24L * 60L * 60L * 1000L
-            System.currentTimeMillis() - windowMs
-        }
-        val watchNextInProgress = inProgressItems
-            .filter { cutoffMs == null || it.lastWatched >= cutoffMs }
-
         runCatching {
-            val cwItems = watchNextInProgress.map {
-                ContinueWatchingItem.InProgress(it.toWatchProgress(resolvedSettings.useEpisodeThumbnails))
-            }
-            tvRecommendationManager.updateWatchNextFromCwItems(cwItems)
+            tvRecommendationManager.updateWatchNext(channelItems)
         }
     }
 

@@ -334,7 +334,7 @@ private fun PluginStreamGroupingCard(
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
@@ -395,7 +395,7 @@ private fun PluginsEnabledCard(
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
@@ -488,7 +488,7 @@ private fun AddRepositoryInline(
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
                         ),
                         focusedBorder = Border(
-                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
@@ -556,7 +556,7 @@ private fun AddRepositoryInline(
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(50)
                         )
                     )
@@ -593,7 +593,7 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(18.dp)
             )
         ),
@@ -704,7 +704,7 @@ private fun QrCodeOverlay(
                 ),
                 border = ClickableSurfaceDefaults.border(
                     focusedBorder = Border(
-                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                         shape = RoundedCornerShape(50)
                     )
                 ),
@@ -875,7 +875,7 @@ private fun ConfirmRepoChangesDialog(
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                     shape = RoundedCornerShape(50)
                                 )
                             ),
@@ -908,7 +908,7 @@ private fun ConfirmRepoChangesDialog(
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                     shape = RoundedCornerShape(50)
                                 )
                             ),
@@ -985,7 +985,7 @@ private fun ConfirmScraperEnableDialog(
                         ),
                         border = ClickableSurfaceDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                 shape = RoundedCornerShape(50)
                             )
                         ),
@@ -1018,7 +1018,7 @@ private fun ConfirmScraperEnableDialog(
                         ),
                         border = ClickableSurfaceDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                 shape = RoundedCornerShape(50)
                             )
                         ),
@@ -1130,7 +1130,7 @@ private fun RepositoryCard(
                         ),
                         border = ClickableSurfaceDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                 shape = RoundedCornerShape(NuvioTheme.radii.md)
                             )
                         ),
@@ -1321,7 +1321,7 @@ private fun ScraperCard(
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                     shape = RoundedCornerShape(NuvioTheme.radii.md)
                                 )
                             ),

@@ -3,6 +3,7 @@
 package com.nuvio.tv.ui.screens.account
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.contentTextDirection
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -54,7 +55,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.AuthState
 import androidx.compose.ui.res.stringResource
-import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
 
 @Composable
@@ -104,10 +104,10 @@ fun AccountSettingsContent(
                     SettingsActionButton(
                         icon = Icons.Default.VpnKey,
                         title = stringResource(
-                            if (BuildConfig.SELF_HOSTED) R.string.account_signin_email_title else R.string.account_signin_qr_title
+                            if (viewModel.usesEmailPasswordLogin) R.string.account_signin_email_title else R.string.account_signin_qr_title
                         ),
                         subtitle = stringResource(
-                            if (BuildConfig.SELF_HOSTED) R.string.account_signin_email_subtitle else R.string.account_signin_qr_subtitle
+                            if (viewModel.usesEmailPasswordLogin) R.string.account_signin_email_subtitle else R.string.account_signin_qr_subtitle
                         ),
                         onClick = onNavigateToAuthQrSignIn,
                         modifier = if (initialFocusRequester != null) {
@@ -307,7 +307,9 @@ private fun ProfileSyncRow(profile: ProfileSyncStats) {
 
         Text(
             text = profile.profileName,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodySmall.copy(
+                textDirection = profile.profileName.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextPrimary,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -386,7 +388,7 @@ private fun SettingsActionButton(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(NuvioTheme.radii.sm)
             )
         ),

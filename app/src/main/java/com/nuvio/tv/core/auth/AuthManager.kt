@@ -11,11 +11,13 @@ import com.nuvio.tv.core.logging.diagnosticSummary
 import com.nuvio.tv.core.logging.rawForLog
 import com.nuvio.tv.core.logging.urlForLog
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
+import com.nuvio.tv.data.remote.supabase.DeviceLoginStartResult
 import com.nuvio.tv.data.remote.supabase.TvLoginExchangeResult
 import com.nuvio.tv.data.remote.supabase.TvLoginPollResult
 import com.nuvio.tv.data.remote.supabase.TvLoginStartResult
 import com.nuvio.tv.data.repository.AuthDiagnosticReportRepository
 import com.nuvio.tv.domain.model.AuthState
+import com.nuvio.tv.domain.model.ServerConfiguration
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.Postgrest
@@ -48,6 +50,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 import javax.net.ssl.SSLException
 
@@ -55,6 +58,7 @@ private const val TAG = "AuthManager"
 private const val AUTH_ENDPOINT_SIGNUP = "/auth/v1/signup"
 private const val AUTH_ENDPOINT_PASSWORD = "/auth/v1/token?grant_type=password"
 private const val AUTH_ENDPOINT_REFRESH = "/auth/v1/token?grant_type=refresh_token"
+private const val AUTH_ENDPOINT_START_DEVICE_LOGIN = "/rest/v1/rpc/start_device_login_session"
 private const val AUTH_ENDPOINT_START_TV_LOGIN = "/rest/v1/rpc/start_tv_login_session"
 private const val AUTH_ENDPOINT_POLL_TV_LOGIN = "/rest/v1/rpc/poll_tv_login_session"
 private const val AUTH_ENDPOINT_EXCHANGE_TV_LOGIN = "/functions/v1/tv-logins-exchange"
@@ -77,15 +81,18 @@ class AuthManager @Inject constructor(
     private val auth: Auth,
     private val postgrest: Postgrest,
     private val httpClient: OkHttpClient,
+    @param:Named("customServerAuth") private val customServerHttpClient: OkHttpClient,
     private val authSessionNoticeDataStore: AuthSessionNoticeDataStore,
     private val accountLocalDataResetService: AccountLocalDataResetService,
-    private val authDiagnosticReportRepository: AuthDiagnosticReportRepository
+    private val authDiagnosticReportRepository: AuthDiagnosticReportRepository,
+    private val serverConfiguration: ServerConfiguration
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json { ignoreUnknownKeys = true }
     private val refreshMutex = Mutex()
     private val sessionValidator = AuthSessionValidator(auth)
     private val startupAuthLock = Any()
+    private val authHttpClient = if (serverConfiguration.isCustom) customServerHttpClient else httpClient
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
@@ -206,7 +213,11 @@ class AuthManager @Inject constructor(
             if (startupAuthCompleted) {
                 null
             } else {
-                startupAuthDiagnostics ?: AuthDiagnosticsSession(authDiagnosticReportRepository, "startup_auth").also {
+                startupAuthDiagnostics ?: AuthDiagnosticsSession(
+                    authDiagnosticReportRepository,
+                    "startup_auth",
+                    serverConfiguration = serverConfiguration
+                ).also {
                     startupAuthDiagnostics = it
                     created = true
                 }
@@ -216,9 +227,9 @@ class AuthManager @Inject constructor(
             diagnostics?.recordState(
                 "startup_auth_begin",
                 mapOf(
-                    "supabaseUrl" to BuildConfig.SUPABASE_URL,
-                    "authFallbackSupabaseUrl" to BuildConfig.SUPABASE_FALLBACK_URL,
-                    "tvLoginWebBaseUrl" to BuildConfig.TV_LOGIN_WEB_BASE_URL,
+                    "supabaseUrl" to serverConfiguration.backendUrl,
+                    "authFallbackSupabaseUrl" to serverConfiguration.fallbackBackendUrl,
+                    "tvLoginWebBaseUrl" to serverConfiguration.tvLoginWebBaseUrl,
                     "reportsBaseUrlConfigured" to BuildConfig.PLAYBACK_REPORTS_BASE_URL.isNotBlank().toString(),
                     "authState" to _authState.value.nameForLog()
                 )
@@ -303,7 +314,11 @@ class AuthManager @Inject constructor(
     }
 
     suspend fun signUpWithEmail(email: String, password: String): Result<Unit> {
-        val diagnostics = AuthDiagnosticsSession(authDiagnosticReportRepository, "signup")
+        val diagnostics = AuthDiagnosticsSession(
+            authDiagnosticReportRepository,
+            "signup",
+            serverConfiguration = serverConfiguration
+        )
         return try {
             val payload = buildJsonObject {
                 put("email", email)
@@ -330,7 +345,11 @@ class AuthManager @Inject constructor(
     }
 
     suspend fun signInWithEmail(email: String, password: String): Result<Unit> {
-        val diagnostics = AuthDiagnosticsSession(authDiagnosticReportRepository, "password_login")
+        val diagnostics = AuthDiagnosticsSession(
+            authDiagnosticReportRepository,
+            "password_login",
+            serverConfiguration = serverConfiguration
+        )
         return try {
             val payload = buildJsonObject {
                 put("email", email)
@@ -371,6 +390,19 @@ class AuthManager @Inject constructor(
         cachedEffectiveUserSourceUserId = null
         _authState.value = AuthState.SignedOut
         accountLocalDataResetService.clearAfterSignOut()
+    }
+
+    suspend fun prepareForServerSwitch(): Result<Unit> {
+        val hadSession = auth.currentSessionOrNull() != null || _authState.value is AuthState.FullAccount
+        sessionValidator.reset()
+        val sessionClearResult = runCatching { auth.clearSession() }
+        if (sessionClearResult.isFailure) return sessionClearResult
+        cachedEffectiveUserId = null
+        cachedEffectiveUserSourceUserId = null
+        _authState.value = AuthState.SignedOut
+        authSessionNoticeDataStore.markNuvioExplicitLogout()
+        if (hadSession) accountLocalDataResetService.clearAfterSignOut()
+        return Result.success(Unit)
     }
 
     fun clearEffectiveUserIdCache() {
@@ -466,7 +498,11 @@ class AuthManager @Inject constructor(
             Log.d(TAG, "$reason; session was already refreshed by another request")
             return@withLock SessionRefreshOutcome(SessionRefreshResult.REFRESHED)
         }
-        val refreshDiagnostics = diagnostics ?: AuthDiagnosticsSession(authDiagnosticReportRepository, "refresh_token")
+        val refreshDiagnostics = diagnostics ?: AuthDiagnosticsSession(
+            authDiagnosticReportRepository,
+            "refresh_token",
+            serverConfiguration = serverConfiguration
+        )
         val ownsDiagnostics = diagnostics == null
         return@withLock try {
             Log.w(TAG, "$reason; refreshing Supabase session")
@@ -508,6 +544,67 @@ class AuthManager @Inject constructor(
                 Log.w(TAG, "Supabase session refresh failed transiently", refreshError)
             }
             SessionRefreshOutcome(result, refreshError)
+        }
+    }
+
+    suspend fun startDeviceLoginSession(
+        deviceNonce: String,
+        deviceName: String?,
+        deviceType: String,
+        redirectBaseUrl: String,
+        legacyRedirectBaseUrl: String,
+        traceId: Long? = null,
+        diagnostics: AuthDiagnosticsSession? = null
+    ): Result<DeviceLoginStartResult> {
+        val startedAtMs = SystemClock.elapsedRealtime()
+        val trace = qrTrace(traceId)
+        return try {
+            val params = buildJsonObject {
+                put("p_device_nonce", deviceNonce)
+                put("p_redirect_base_url", redirectBaseUrl)
+                put("p_device_type", deviceType)
+                if (!deviceName.isNullOrBlank()) put("p_device_name", deviceName)
+            }
+            Log.d(TAG, "$trace startDeviceLoginSession begin nonce=${deviceNonce.rawForLog()} deviceType=$deviceType redirect=${redirectBaseUrl.urlForLog()}")
+            val body = executeSupabaseJsonRequest(
+                diagnostics = diagnostics,
+                endpoint = AUTH_ENDPOINT_START_DEVICE_LOGIN,
+                url = supabaseUrl(AUTH_ENDPOINT_START_DEVICE_LOGIN),
+                headers = supabaseHeaders(),
+                body = params.toString()
+            ).body
+            val results = json.decodeFromString<List<DeviceLoginStartResult>>(body)
+            val result = results.firstOrNull()
+                ?: throw Exception("Empty response from start_device_login_session")
+            Log.d(TAG, "$trace startDeviceLoginSession ok elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} deviceCode=${result.deviceCode.rawForLog()} userCode=${result.userCode.rawForLog()} url=${result.verificationUriComplete.urlForLog()}")
+            Result.success(result)
+        } catch (error: Exception) {
+            val message = error.message.orEmpty().lowercase()
+            val missingV2 = message.contains("could not find the function") &&
+                message.contains("start_device_login_session")
+            if (!missingV2) {
+                Log.e(TAG, "$trace startDeviceLoginSession failed elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${error.diagnosticSummary()}", error)
+                return Result.failure(error)
+            }
+
+            Log.w(TAG, "$trace startDeviceLoginSession unavailable; falling back to legacy TV login")
+            startTvLoginSession(
+                deviceNonce = deviceNonce,
+                deviceName = deviceName,
+                redirectBaseUrl = legacyRedirectBaseUrl,
+                traceId = traceId,
+                diagnostics = diagnostics
+            ).map { legacy ->
+                DeviceLoginStartResult(
+                    deviceCode = legacy.code,
+                    userCode = legacy.code,
+                    verificationUri = legacyRedirectBaseUrl,
+                    verificationUriComplete = legacy.webUrl,
+                    expiresAt = legacy.expiresAt,
+                    pollIntervalSeconds = legacy.pollIntervalSeconds,
+                    legacy = true
+                )
+            }
         }
     }
 
@@ -729,10 +826,10 @@ class AuthManager @Inject constructor(
         }
         val request = requestBuilder.build()
         val client = diagnostics?.let {
-            httpClient.newBuilder()
+            authHttpClient.newBuilder()
                 .eventListenerFactory(AuthDiagnosticEventListenerFactory(it, endpoint))
                 .build()
-        } ?: httpClient
+        } ?: authHttpClient
         return try {
             withContext(Dispatchers.IO) {
                 client.newCall(request).execute().use { response ->
@@ -764,11 +861,11 @@ class AuthManager @Inject constructor(
     }
 
     private fun supabaseUrl(endpoint: String): String =
-        "${BuildConfig.SUPABASE_URL.trimEnd('/')}$endpoint"
+        "${serverConfiguration.backendUrl.trimEnd('/')}$endpoint"
 
     private fun supabaseFallbackUrl(endpoint: String): String? {
-        val primary = BuildConfig.SUPABASE_URL.trimEnd('/')
-        val fallback = BuildConfig.SUPABASE_FALLBACK_URL.trim().trimEnd('/')
+        val primary = serverConfiguration.backendUrl.trimEnd('/')
+        val fallback = serverConfiguration.fallbackBackendUrl.orEmpty().trim().trimEnd('/')
         if (fallback.isBlank()) return null
         if (primary.equals(fallback, ignoreCase = true)) return null
         return "$fallback$endpoint"
@@ -776,7 +873,7 @@ class AuthManager @Inject constructor(
 
     private fun supabaseHeaders(accessToken: String? = null): Map<String, String> =
         buildMap {
-            put("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            put("apikey", serverConfiguration.publishableKey)
             put("Content-Type", "application/json")
             put("Accept", "application/json")
             if (!accessToken.isNullOrBlank()) put("Authorization", "Bearer $accessToken")

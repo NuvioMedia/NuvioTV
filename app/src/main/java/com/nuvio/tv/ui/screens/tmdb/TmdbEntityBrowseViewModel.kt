@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.core.tmdb.TmdbEntityBrowseData
 import com.nuvio.tv.core.tmdb.TmdbEntityKind
 import com.nuvio.tv.core.tmdb.TmdbEntityRailType
@@ -28,6 +29,7 @@ class TmdbEntityBrowseViewModel @Inject constructor(
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    private val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -50,12 +52,19 @@ class TmdbEntityBrowseViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<TmdbEntityBrowseUiState>(TmdbEntityBrowseUiState.Loading)
     val uiState: StateFlow<TmdbEntityBrowseUiState> = _uiState.asStateFlow()
 
+    private val _posterCardCornerRadiusDp = MutableStateFlow(12)
+    val posterCardCornerRadiusDp: StateFlow<Int> = _posterCardCornerRadiusDp.asStateFlow()
+
     init {
         posterOptions.bind(viewModelScope)
         load()
         viewModelScope.launch {
             watchProgressRepository.observeWatchedMovieIds()
                 .collect { ids -> _watchedMovieIds.value = ids }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.posterCardCornerRadiusDp
+                .collect { _posterCardCornerRadiusDp.value = it }
         }
     }
 
@@ -95,10 +104,14 @@ class TmdbEntityBrowseViewModel @Inject constructor(
                 val mergedItems = (latestRail.items + pageResult.items)
                     .distinctBy { it.id }
 
+                val pattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
+                val enabledScreens = layoutPreferenceDataStore.customPosterEnabledScreens.first()
                 _uiState.value = TmdbEntityBrowseUiState.Success(
                     latestData.withUpdatedRail(mediaType, railType) {
                         it.copy(
-                            items = mergedItems,
+                            items = mergedItems.withCustomPosterUrls(
+                                com.nuvio.tv.core.poster.patternForScreen(pattern, com.nuvio.tv.core.poster.CustomPosterScreen.DETAILS, enabledScreens)
+                            ),
                             currentPage = nextPage,
                             hasMore = pageResult.hasMore,
                             isLoading = false
@@ -128,7 +141,11 @@ class TmdbEntityBrowseViewModel @Inject constructor(
                     language = language
                 )
                 _uiState.value = if (browseData != null) {
-                    TmdbEntityBrowseUiState.Success(browseData)
+                    val pattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
+                    val enabledScreens = layoutPreferenceDataStore.customPosterEnabledScreens.first()
+                    TmdbEntityBrowseUiState.Success(browseData.withCustomPosterUrls(
+                        com.nuvio.tv.core.poster.patternForScreen(pattern, com.nuvio.tv.core.poster.CustomPosterScreen.DETAILS, enabledScreens)
+                    ))
                 } else {
                     TmdbEntityBrowseUiState.Error(
                         if (entityName.isNotBlank()) {

@@ -5,13 +5,15 @@ import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 
-fun MetaPreviewDto.toDomain(catalogType: String, sourceAddonBaseUrl: String? = null): MetaPreview {
+fun MetaPreviewDto.toDomainOrNull(catalogType: String, sourceAddonBaseUrl: String? = null): MetaPreview? {
+    val resolvedId = id?.takeIf { it.isNotBlank() } ?: return null
+    val resolvedName = name?.takeIf { it.isNotBlank() } ?: return null
     val resolvedType = type?.takeIf { it.isNotBlank() } ?: catalogType
     return MetaPreview(
-        id = id,
+        id = resolvedId,
         type = ContentType.fromString(resolvedType),
         rawType = resolvedType,
-        name = name,
+        name = resolvedName,
         poster = poster,
         posterShape = PosterShape.fromString(posterShape),
         background = background,

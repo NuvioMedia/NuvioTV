@@ -124,7 +124,8 @@ fun LoadingOverlay(
                     model = backdropRequest,
                     contentDescription = stringResource(R.string.cd_loading_backdrop),
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopEnd
                 )
             }
 

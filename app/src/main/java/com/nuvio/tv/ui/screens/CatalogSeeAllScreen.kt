@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens
 
+import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -62,7 +63,8 @@ import com.nuvio.tv.ui.screens.search.SearchEvent
 import com.nuvio.tv.ui.screens.search.SearchViewModel
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.legacyKey
-import com.nuvio.tv.domain.model.stableItemKey
+import com.nuvio.tv.domain.model.stableItemKeys
+import com.nuvio.tv.domain.model.stableKey
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
 
@@ -95,7 +97,7 @@ fun CatalogSeeAllScreen(
     BackHandler { onBackPress() }
 
     val isSearchMode = searchViewModel != null
-    val catalogKey = "${addonId}_${type}_${catalogId}"
+    val catalogKey = catalogRowLegacyKey(addonId, type, catalogId)
 
     // In search mode, get the catalog row from SearchViewModel's existing results.
     // Otherwise fall back to HomeViewModel's fullCatalogRows (home screen catalogs).
@@ -221,6 +223,9 @@ fun CatalogSeeAllScreen(
         val isCatalogLoading = catalogRow == null || catalogRow.isLoading
 
         if (hasItems) {
+            val seeAllItemKeys = remember(catalogRow?.items) {
+                catalogRow?.stableItemKeys().orEmpty()
+            }
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     state = gridState,
@@ -237,7 +242,7 @@ fun CatalogSeeAllScreen(
                 ) {
                     itemsIndexed(
                         items = catalogRow.items,
-                        key = { index, item -> catalogRow.stableItemKey(index) }
+                        key = { index, _ -> seeAllItemKeys.getOrElse(index) { "${catalogRow.stableKey()}_$index" } }
                     ) { index, item ->
                         val isWatched = if (isSearchMode) {
                             val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)

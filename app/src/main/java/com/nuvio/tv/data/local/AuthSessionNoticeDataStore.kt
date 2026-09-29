@@ -13,7 +13,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.authSessionNoticeDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "auth_session_notice_store"
+    name = "auth_session_notice_store",
+    corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { androidx.datastore.preferences.core.emptyPreferences() }
 )
 
 enum class StartupAuthNotice {

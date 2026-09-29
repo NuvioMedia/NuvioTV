@@ -18,10 +18,12 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
     if (view == null) return
     if (!isUsingMpvEngine()) return
     if (currentStreamUrl.isBlank()) return
+    if (!mpvMediaLoadPrepared) return
     if (mpvInitializationInProgress) return
 
     runCatching {
         performPendingMpvHardRestartIfNeeded(view)
+        view.applyHi10pGnextSoftwareFallback(shouldUseMpvHi10pGnextSoftwareFallback())
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         view.setMedia(currentStreamUrl, currentHeaders)
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
@@ -33,10 +35,14 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         )
         view.applySubtitleStyle(_uiState.value.subtitleStyle)
         view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
+        view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
+        view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
         view.setPaused(false)
         applyPendingMpvSeekIfNeeded(view)
         hasRenderedFirstFrame = false
+        endDetectionArmed = false
+        mpvEofSeenClear = false
         _uiState.update {
             it.copy(
                 isBuffering = true,
@@ -78,6 +84,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
     headers: Map<String, String>,
     allowEngineFailover: Boolean = true
 ) {
+    mpvMediaLoadPrepared = true
     _exoPlayer?.release()
     _exoPlayer = null
     trackSelector = null
@@ -113,8 +120,11 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             showOverlay = true
         )
         performPendingMpvHardRestartIfNeeded(view)
+        view.applyHi10pGnextSoftwareFallback(shouldUseMpvHi10pGnextSoftwareFallback())
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         val initialResumePosition = resolvePendingInitialResumePosition()
+            .takeIf { it > 0L }
+            ?: (_uiState.value.pendingSeekPosition?.coerceAtLeast(0L) ?: 0L)
         playbackAnalyticsDiagnostics.setStartupStartPosition(initialResumePosition)
         view.setMedia(url, headers, initialResumePosition)
         playbackAnalyticsDiagnostics.recordRawEventLine(
@@ -123,6 +133,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         )
         if (initialResumePosition > 0L) {
             clearPendingInitialResumePosition()
+            _uiState.update { it.copy(pendingSeekPosition = null) }
             updatePlaybackTimeline(currentPosition = initialResumePosition)
         }
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
@@ -134,11 +145,15 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         )
         view.applySubtitleStyle(_uiState.value.subtitleStyle)
         view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
+        view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
+        view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
         view.setPaused(false)
         applyPendingMpvSeekIfNeeded(view)
 
         hasRenderedFirstFrame = false
+        endDetectionArmed = false
+        mpvEofSeenClear = false
         _uiState.update {
             it.copy(
                 isBuffering = true,
@@ -253,7 +268,7 @@ internal fun PlayerRuntimeController.resumeForLifecycle() {
         // Re-create the MediaSession so media controls work in the foreground.
         if (currentMediaSession == null) {
             try {
-                currentMediaSession = androidx.media3.session.MediaSession.Builder(context, player).build()
+                currentMediaSession = androidx.media3.session.MediaSession.Builder(context, SafeMediaSessionPlayer(player)).build()
                 updateMediaSessionMetadata()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -464,6 +479,8 @@ internal fun PlayerRuntimeController.applyPendingMpvSeekIfNeeded(
     if (!canSeekNow) return
 
     view.seekToMs(target)
+    view.setSubtitleDelayMs(state.subtitleDelayMs)
+    view.setAudioDelayMs(state.audioDelayMs)
     if (state.pendingSeekPosition != target) {
         _uiState.update { it.copy(pendingSeekPosition = target) }
     }
@@ -497,6 +514,18 @@ internal fun PlayerRuntimeController.isPlaybackCurrentlyPlaying(): Boolean {
     }
 }
 
+/**
+ * Play intent survives transient states: ExoPlayer reports isPlaying=false while buffering,
+ * but pausing on a route change then would strand playback stopped once buffering ends.
+ */
+internal fun PlayerRuntimeController.hasActivePlayIntent(): Boolean {
+    return if (isUsingMpvEngine()) {
+        mpvView?.isPlayingNow() == true
+    } else {
+        _exoPlayer?.playWhenReady == true
+    }
+}
+
 internal fun PlayerRuntimeController.seekPlaybackTo(
     positionMs: Long,
     seekParameters: SeekParameters = SeekParameters.CLOSEST_SYNC
@@ -504,8 +533,9 @@ internal fun PlayerRuntimeController.seekPlaybackTo(
     if (isUsingMpvEngine()) {
         mpvView?.let { view ->
             view.seekToMs(positionMs)
-            // Keep subtitle delay sticky during FF/RW seeks.
+            // Keep subtitle/audio delay sticky during FF/RW seeks.
             view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
+            view.setAudioDelayMs(_uiState.value.audioDelayMs)
         }
     } else {
         _exoPlayer?.let { player ->

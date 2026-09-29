@@ -12,7 +12,10 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.profileLockStateDataStore: DataStore<Preferences> by preferencesDataStore(name = "profile_lock_state")
+private val Context.profileLockStateDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "profile_lock_state",
+    corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { androidx.datastore.preferences.core.emptyPreferences() }
+)
 
 @Singleton
 class ProfileLockStateDataStore @Inject constructor(

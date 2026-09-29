@@ -3,6 +3,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.accentBrush
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -54,6 +55,7 @@ fun ParentalGuideOverlay(
 
     val count = warnings.size
     val totalLineHeight = (ROW_HEIGHT.value * count) + (ROW_GAP.value * (count - 1))
+    val accentBrush = NuvioTheme.palette.accentBrush()
 
     val containerAlpha = remember { Animatable(0f) }
     val lineHeightFraction = remember { Animatable(0f) }
@@ -122,7 +124,7 @@ fun ParentalGuideOverlay(
                 .width(3.dp)
                 .height((totalLineHeight * lineHeightFraction.value).dp)
                 .clip(RoundedCornerShape(NuvioTheme.spacing.hairline))
-                .background(NuvioTheme.colors.Secondary)
+                .background(accentBrush)
         )
 
         // Warning items

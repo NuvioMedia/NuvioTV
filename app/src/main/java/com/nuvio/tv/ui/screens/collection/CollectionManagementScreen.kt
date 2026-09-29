@@ -66,6 +66,7 @@ import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
@@ -90,7 +91,7 @@ private fun NuvioButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
@@ -390,7 +391,7 @@ private fun ImportContent(
                                 ),
                                 border = ButtonDefaults.border(
                                     focusedBorder = Border(
-                                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                         shape = RoundedCornerShape(NuvioTheme.radii.md)
                                     )
                                 ),
@@ -602,7 +603,9 @@ private fun CollectionListItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = collection.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        textDirection = collection.title.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextPrimary
                 )
                 Text(
@@ -624,7 +627,7 @@ private fun CollectionListItem(
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
@@ -644,7 +647,7 @@ private fun CollectionListItem(
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
@@ -664,7 +667,7 @@ private fun CollectionListItem(
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
@@ -683,7 +686,7 @@ private fun CollectionListItem(
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),

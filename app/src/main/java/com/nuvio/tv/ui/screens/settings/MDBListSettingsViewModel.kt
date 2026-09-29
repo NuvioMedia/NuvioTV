@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.MDBListSettingsDataStore
+import com.nuvio.tv.data.mdblist.MdbListAuthStore
 import com.nuvio.tv.data.remote.api.MDBListApi
 import com.nuvio.tv.domain.model.MDBListSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,14 +14,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class MDBListSettingsViewModel @Inject constructor(
     private val dataStore: MDBListSettingsDataStore,
-    private val mdbListApi: MDBListApi
+    private val mdbListApi: MDBListApi,
+    authStore: MdbListAuthStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MDBListSettingsUiState())
@@ -34,8 +36,10 @@ class MDBListSettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            dataStore.settings.collectLatest { settings ->
-                _uiState.update { it.fromSettings(settings) }
+            combine(dataStore.settings, authStore.state) { settings, auth ->
+                MDBListSettingsUiState(isConnected = auth.isAuthenticated).fromSettings(settings)
+            }.collectLatest { state ->
+                _uiState.value = state
             }
         }
     }
@@ -84,6 +88,7 @@ class MDBListSettingsViewModel @Inject constructor(
 data class MDBListSettingsUiState(
     val enabled: Boolean = false,
     val apiKey: String = "",
+    val isConnected: Boolean = false,
     val showTrakt: Boolean = true,
     val showImdb: Boolean = true,
     val showTmdb: Boolean = true,
