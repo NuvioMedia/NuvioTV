@@ -2,9 +2,11 @@
 
 package com.nuvio.tv.ui.screens.addon
 
+import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -162,10 +164,15 @@ private fun CatalogOrderCard(
     onToggleEnabled: () -> Unit,
     actionsEnabled: Boolean,
 ) {
-    val cardColor = when {
-        isMoving -> NuvioTheme.colors.FocusBackground
-        else -> NuvioTheme.colors.BackgroundCard
-    }
+    val cardColor by animateColorAsState(
+        targetValue = if (isMoving) {
+            NuvioTheme.colors.FocusBackground
+        } else {
+            NuvioTheme.colors.BackgroundCard
+        },
+        animationSpec = NuvioMotion.focusTween(),
+        label = "catalogOrderCardColor",
+    )
     val cardBorder = if (isMoving) {
         BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.Primary)
     } else {

@@ -4,14 +4,11 @@ package com.nuvio.tv.ui.components
 
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,7 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key as keyedItem
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,6 +37,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,7 +46,12 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private const val MOVE_REPEAT_INITIAL_DELAY_MS = 280L
-private const val MOVE_REPEAT_INTERVAL_MS = 120L
+private const val MOVE_REPEAT_INTERVAL_MS = 140L
+
+private val ReorderTravelSpec = tween<Float>(
+    durationMillis = NuvioMotion.tokens.durations.medium,
+    easing = NuvioMotion.tokens.easings.emphasized,
+)
 
 /**
  * TV-first vertical reorder list.
@@ -54,9 +59,8 @@ private const val MOVE_REPEAT_INTERVAL_MS = 120L
  * Uses absolute slot positioning inside a scrollable [Box] instead of
  * [LazyColumn], so slot swaps only recompose the affected rows. Move mode is
  * entered via a per-row action; while active, DPAD up/down (including key
- * repeat) continuously shifts the row with spring animation.
+ * repeat) continuously shifts the row with a shared travel animation.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun <T> TvReorderList(
     items: List<T>,
@@ -89,27 +93,13 @@ fun <T> TvReorderList(
         0f
     }
 
-    val visualIndices = remember(items, key) {
-        items.mapIndexed { index, item -> key(item) to index }.toMap()
-    }
-    var animatedIndices by remember(items, key) {
-        mutableStateOf(visualIndices)
-    }
-    LaunchedEffect(items, key) {
-        animatedIndices = items.mapIndexed { index, item -> key(item) to index }.toMap()
+    fun indicesFrom(source: List<T>): Map<String, Int> {
+        return source.mapIndexed { index, item -> key(item) to index }.toMap()
     }
 
-    val dragOffsets = remember { mutableMapOf<String, Animatable<Float, *>>() }
-    items.forEach { item ->
-        val itemKey = key(item)
-        if (dragOffsets[itemKey] == null) {
-            dragOffsets[itemKey] = Animatable(0f)
-        }
-    }
-
-    val bringIntoViewRequesters = remember(items, key) {
-        items.associate { key(it) to BringIntoViewRequester() }
-    }
+    var animatedIndices by remember { mutableStateOf(indicesFrom(items)) }
+    val dragOffsets = remember { mutableStateMapOf<String, Float>() }
+    val offsetJobs = remember { mutableMapOf<String, Job>() }
     val moveFocusRequester = remember { FocusRequester() }
 
     var repeatJob by remember { mutableStateOf<Job?>(null) }
@@ -119,6 +109,7 @@ fun <T> TvReorderList(
         onDispose {
             repeatJob?.cancel()
             neighborScrollJob?.cancel()
+            offsetJobs.values.forEach { it.cancel() }
         }
     }
 
@@ -127,34 +118,60 @@ fun <T> TvReorderList(
         repeatJob = null
     }
 
+    fun clearOffsets() {
+        offsetJobs.values.forEach { it.cancel() }
+        offsetJobs.clear()
+        dragOffsets.clear()
+    }
+
+    LaunchedEffect(movingKey, items) {
+        if (movingKey == null) {
+            clearOffsets()
+            animatedIndices = indicesFrom(items)
+        }
+    }
+
+    fun animateOffsetToZero(itemKey: String) {
+        offsetJobs[itemKey]?.cancel()
+        val start = dragOffsets[itemKey] ?: 0f
+        if (start == 0f) return
+        offsetJobs[itemKey] = scope.launch {
+            animate(
+                initialValue = start,
+                targetValue = 0f,
+                animationSpec = ReorderTravelSpec,
+            ) { value, _ ->
+                if (isActive) {
+                    dragOffsets[itemKey] = value
+                }
+            }
+        }
+    }
+
     fun animateSwap(movedKey: String, direction: Int) {
         if (slotStridePx <= 0f) return
-        val animatable = dragOffsets[movedKey] ?: return
-        scope.launch {
-            animatable.snapTo(-direction * slotStridePx)
-            animatable.animateTo(
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow,
-                ),
-            )
-        }
-        val currentIndex = animatedIndices[movedKey] ?: return
-        val neighborIndex = currentIndex + direction
-        val neighborKey = animatedIndices.entries.firstOrNull { it.value == neighborIndex }?.key
+        val oldIndex = animatedIndices[movedKey] ?: return
+        val newIndex = oldIndex + direction
+        val neighborKey = animatedIndices.entries.firstOrNull { it.value == newIndex }?.key
+
+        offsetJobs[movedKey]?.cancel()
         if (neighborKey != null) {
-            val neighborAnimatable = dragOffsets[neighborKey] ?: return
-            scope.launch {
-                neighborAnimatable.snapTo(direction * slotStridePx)
-                neighborAnimatable.animateTo(
-                    targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMediumLow,
-                    ),
-                )
-            }
+            offsetJobs[neighborKey]?.cancel()
+        }
+
+        // Keep the drawn position stable in this frame: update the logical slot
+        // and compensate with an opposite offset, then ease the offset to 0.
+        dragOffsets[movedKey] = (dragOffsets[movedKey] ?: 0f) - direction * slotStridePx
+        if (neighborKey != null) {
+            dragOffsets[neighborKey] = (dragOffsets[neighborKey] ?: 0f) + direction * slotStridePx
+        }
+        animatedIndices = animatedIndices.toMutableMap().apply {
+            this[movedKey] = newIndex
+            if (neighborKey != null) this[neighborKey] = oldIndex
+        }
+        animateOffsetToZero(movedKey)
+        if (neighborKey != null) {
+            animateOffsetToZero(neighborKey)
         }
     }
 
@@ -173,19 +190,22 @@ fun <T> TvReorderList(
         }.coerceIn(0f, scrollState.maxValue.toFloat())
         neighborScrollJob?.cancel()
         neighborScrollJob = scope.launch {
-            scrollState.animateScrollTo(target.roundToInt())
+            scrollState.animateScrollTo(
+                value = target.roundToInt(),
+                animationSpec = ReorderTravelSpec,
+            )
         }
     }
 
     fun performMove(direction: Int): Boolean {
         val activeKey = movingKey ?: return false
-        val oldIndex = items.indexOfFirst { key(it) == activeKey }
+        val oldIndex = animatedIndices[activeKey]
+            ?: items.indexOfFirst { key(it) == activeKey }.takeIf { it >= 0 }
+            ?: return false
         val moved = onMoveBy(activeKey, direction)
         if (moved) {
-            animatedIndices = items.mapIndexed { index, item -> key(item) to index }.toMap()
             animateSwap(activeKey, direction)
-            val newIndex = if (oldIndex >= 0) oldIndex + direction else 0
-            keepNeighborVisible(newIndex, direction)
+            keepNeighborVisible(oldIndex + direction, direction)
         }
         return moved
     }
@@ -222,7 +242,6 @@ fun <T> TvReorderList(
         if (movingKey != null) {
             delay(50)
             runCatching { moveFocusRequester.requestFocus() }
-            bringIntoViewRequesters[movingKey]?.bringIntoView()
         } else {
             stopRepeat()
         }
@@ -269,59 +288,62 @@ fun <T> TvReorderList(
         ) {
             items.forEachIndexed { index, item ->
                 val itemKey = key(item)
-                val isMoving = movingKey == itemKey
-                val slotIndex = animatedIndices[itemKey] ?: index
-                val dragOffsetPx = dragOffsets[itemKey]?.value ?: 0f
-                val yOffsetPx = slotIndex * slotStridePx + dragOffsetPx
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (rowHeightPx == 0f) {
-                                Modifier.onSizeChanged { size ->
-                                    if (rowHeightPx == 0f && size.height > 0) {
-                                        rowHeightPx = size.height.toFloat()
-                                    }
-                                }
-                            } else {
-                                Modifier.height(with(density) { rowHeightPx.toDp() })
-                            },
-                        )
-                        .offset {
-                            IntOffset(
-                                x = 0,
-                                y = if (slotStridePx > 0f) yOffsetPx.roundToInt() else 0,
-                            )
-                        }
-                        .zIndex(if (isMoving) 1f else 0f)
-                        .graphicsLayer {
-                            val scale = if (isMoving) 1.02f else 1f
-                            scaleX = scale
-                            scaleY = scale
-                        }
-                        .bringIntoViewRequester(
-                            bringIntoViewRequesters[itemKey] ?: BringIntoViewRequester(),
-                        )
-                        .then(
-                            if (isMoving) {
-                                Modifier
-                                    .focusRequester(moveFocusRequester)
-                                    .focusable()
-                                    .focusProperties { canFocus = true }
-                            } else {
-                                Modifier
-                            },
-                        ),
-                ) {
-                    itemContent(
-                        item,
-                        isMoving,
-                        {
-                            if (canMove(item)) onStartMove(itemKey)
-                        },
-                        { onConfirmMove(itemKey) },
+                keyedItem(itemKey) {
+                    val isMoving = movingKey == itemKey
+                    val slotIndex = animatedIndices[itemKey] ?: index
+                    val dragOffsetPx = dragOffsets[itemKey] ?: 0f
+                    val yOffsetPx = slotIndex * slotStridePx + dragOffsetPx
+                    val scale by animateFloatAsState(
+                        targetValue = if (isMoving) NuvioMotion.tokens.focusScale else 1f,
+                        animationSpec = NuvioMotion.focusSpring(),
+                        label = "tvReorderRowScale",
                     )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (rowHeightPx == 0f) {
+                                    Modifier.onSizeChanged { size ->
+                                        if (rowHeightPx == 0f && size.height > 0) {
+                                            rowHeightPx = size.height.toFloat()
+                                        }
+                                    }
+                                } else {
+                                    Modifier.height(with(density) { rowHeightPx.toDp() })
+                                },
+                            )
+                            .offset {
+                                IntOffset(
+                                    x = 0,
+                                    y = if (slotStridePx > 0f) yOffsetPx.roundToInt() else 0,
+                                )
+                            }
+                            .zIndex(if (isMoving) 1f else 0f)
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                            .then(
+                                if (isMoving) {
+                                    Modifier
+                                        .focusRequester(moveFocusRequester)
+                                        .focusable()
+                                        .focusProperties { canFocus = true }
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    ) {
+                        itemContent(
+                            item,
+                            isMoving,
+                            {
+                                if (canMove(item)) onStartMove(itemKey)
+                            },
+                            { onConfirmMove(itemKey) },
+                        )
+                    }
                 }
             }
         }
