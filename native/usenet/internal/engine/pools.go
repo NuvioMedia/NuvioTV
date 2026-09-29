@@ -16,6 +16,7 @@ import (
 type providerKey struct {
 	host, username, password string
 	tls                      bool
+	allowPrivate             bool
 }
 
 var errProviderAuthentication = errors.New("Usenet provider authentication failed; check the addon credentials")
@@ -24,67 +25,112 @@ var errProviderQuota = errors.New("Usenet provider download quota exceeded")
 type sharedProvider struct {
 	client *nntppool.Client
 	refs   int
+	ready  chan struct{} // Non-nil while creating or closing this account.
 }
 type providerPools struct {
 	mu      sync.Mutex
 	entries map[providerKey]*sharedProvider
 }
 type poolLease struct {
-	owner   *providerPools
-	keys    []providerKey
-	clients []*nntppool.Client
-	next    atomic.Uint64
-	once    sync.Once
+	trace        *startupTrace
+	requestOnce  sync.Once
+	metadataOnce sync.Once
+	owner        *providerPools
+	keys         []providerKey
+	clients      []*nntppool.Client
+	next         atomic.Uint64
+	once         sync.Once
 }
 
-func (p *providerPools) acquire(ctx context.Context, providers []nntppool.Provider) (*poolLease, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if p.entries == nil {
-		p.entries = make(map[providerKey]*sharedProvider)
-	}
+func (p *providerPools) acquire(ctx context.Context, providers []nntppool.Provider, allowPrivate ...bool) (*poolLease, error) {
+	return p.acquireForRequest(ctx, ctx, providers, len(allowPrivate) > 0 && allowPrivate[0])
+}
+
+func (p *providerPools) acquireForRequest(lifetime, wait context.Context, providers []nntppool.Provider, allowPrivate bool) (*poolLease, error) {
 	l := &poolLease{owner: p}
 	seen := make(map[providerKey]bool)
 	for _, provider := range providers {
-		key := providerKey{provider.Host, provider.Auth.Username, provider.Auth.Password, provider.TLSConfig != nil}
+		key := providerKey{provider.Host, provider.Auth.Username, provider.Auth.Password, provider.TLSConfig != nil, allowPrivate}
 		if seen[key] {
 			continue
 		}
 		seen[key] = true
-		entry := p.entries[key]
-		if entry == nil {
-			client, err := nntppool.NewClient(ctx, []nntppool.Provider{provider}, nntppool.WithStatProbe(false))
-			if err != nil {
-				p.releaseLocked(l.keys)
-				return nil, err
-			}
-			entry = &sharedProvider{client: client}
-			p.entries[key] = entry
+		entry, err := p.acquireProvider(lifetime, wait, key, provider)
+		if err != nil {
+			l.Close()
+			return nil, err
 		}
-		entry.refs++
 		l.keys = append(l.keys, key)
 		l.clients = append(l.clients, entry.client)
 	}
 	return l, nil
 }
 
-func (p *providerPools) releaseLocked(keys []providerKey) {
+func (p *providerPools) acquireProvider(lifetime, wait context.Context, key providerKey, provider nntppool.Provider) (*sharedProvider, error) {
+	for {
+		if err := wait.Err(); err != nil {
+			return nil, err
+		}
+		p.mu.Lock()
+		if p.entries == nil {
+			p.entries = make(map[providerKey]*sharedProvider)
+		}
+		entry := p.entries[key]
+		if entry != nil && entry.ready != nil {
+			ready := entry.ready
+			p.mu.Unlock()
+			select {
+			case <-ready:
+				continue
+			case <-wait.Done():
+				return nil, wait.Err()
+			}
+		}
+		if entry != nil {
+			entry.refs++
+			p.mu.Unlock()
+			return entry, nil
+		}
+		entry = &sharedProvider{ready: make(chan struct{}), refs: 1}
+		p.entries[key] = entry
+		p.mu.Unlock()
+		client, err := nntppool.NewClient(lifetime, []nntppool.Provider{provider}, nntppool.WithStatProbe(false))
+		p.mu.Lock()
+		entry.client = client
+		close(entry.ready)
+		entry.ready = nil
+		if err != nil {
+			delete(p.entries, key)
+		}
+		p.mu.Unlock()
+		return entry, err
+	}
+}
+
+func (p *providerPools) release(keys []providerKey) {
+	closing := make(map[providerKey]*sharedProvider)
+	p.mu.Lock()
 	for _, key := range keys {
 		entry := p.entries[key]
 		entry.refs--
 		if entry.refs == 0 {
-			// Finish closing before a new lease can dial the same account.
-			entry.client.Close()
-			delete(p.entries, key)
+			// A per-account barrier prevents duplicate sockets while letting
+			// unrelated accounts acquire/release during slow network shutdown.
+			entry.ready = make(chan struct{})
+			closing[key] = entry
 		}
+	}
+	p.mu.Unlock()
+	for key, entry := range closing {
+		entry.client.Close()
+		p.mu.Lock()
+		delete(p.entries, key)
+		close(entry.ready)
+		p.mu.Unlock()
 	}
 }
 func (l *poolLease) Close() error {
-	l.once.Do(func() {
-		l.owner.mu.Lock()
-		defer l.owner.mu.Unlock()
-		l.owner.releaseLocked(l.keys)
-	})
+	l.once.Do(func() { l.owner.release(l.keys) })
 	return nil
 }
 
@@ -123,12 +169,20 @@ func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority
 	var failures []error
 	allMissing := true
 	allAuth, allQuota := true, true
+	allPrivate := true
 	for i := range l.clients {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 		client := l.clients[(start+i)%len(l.clients)]
-		writer := &providerWriter{w: out, meta: meta}
+		l.requestOnce.Do(func() { l.trace.mark("first_nntp_request") })
+		observedMeta := func(m nntppool.YEncMeta) {
+			l.metadataOnce.Do(func() { l.trace.mark("first_nntp_metadata") })
+			for _, callback := range meta {
+				callback(m)
+			}
+		}
+		writer := &providerWriter{w: out, meta: []func(nntppool.YEncMeta){observedMeta}}
 		var body *nntppool.ArticleBody
 		var err error
 		if priority {
@@ -146,10 +200,14 @@ func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority
 		allMissing = allMissing && errors.Is(err, nntppool.ErrArticleNotFound)
 		allAuth = allAuth && (errors.Is(err, nntppool.ErrAuthRejected) || errors.Is(err, nntppool.ErrAuthRequired))
 		allQuota = allQuota && errors.Is(err, nntppool.ErrQuotaExceeded)
+		allPrivate = allPrivate && errors.Is(err, errPrivateNetwork)
 		failures = append(failures, err)
 	}
 	if allMissing {
 		return nil, nntppool.ErrArticleNotFound
+	}
+	if allPrivate {
+		return nil, errPrivateNetwork
 	}
 	if allAuth {
 		return nil, errProviderAuthentication

@@ -16,12 +16,13 @@ import (
 // Zero overrides follow the profile/provider configuration. Memory is a hard
 // article-buffer budget; Go's runtime memory limit is set separately by main.
 type Config struct {
-	Profile        string `json:"profile"`
-	ReadAhead      int    `json:"readAhead"`
-	MaxConnections int    `json:"maxConnections"`
-	FastMKVStartup bool   `json:"fastMkvStartup"`
-	FastNZBFetch   bool   `json:"fastNzbFetch"`
-	CacheNZB       bool   `json:"cacheNzb"`
+	Profile             string `json:"profile"`
+	ReadAhead           int    `json:"readAhead"`
+	MaxConnections      int    `json:"maxConnections"`
+	FastMKVStartup      bool   `json:"fastMkvStartup"`
+	FastNZBFetch        bool   `json:"fastNzbFetch"`
+	CacheNZB            bool   `json:"cacheNzb"`
+	AllowPrivateNetwork bool   `json:"allowPrivateNetwork"`
 }
 
 type Tuning struct {
@@ -115,6 +116,7 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 		if u.Scheme == "nntps" {
 			p.TLSConfig = &tls.Config{ServerName: u.Hostname(), RootCAs: roots, MinVersion: tls.VersionTLS12, ClientSessionCache: tls.NewLRUClientSessionCache(connections)}
 		}
+		p.Factory = providerDial(p.Host, p.TLSConfig, cfg.AllowPrivateNetwork)
 		ps = append(ps, p)
 		total += connections
 		if total > 4096 {

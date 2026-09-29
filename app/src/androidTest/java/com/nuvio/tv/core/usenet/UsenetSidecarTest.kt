@@ -41,8 +41,28 @@ class UsenetSidecarTest {
     private var savedToggles = emptyMap<String, Boolean?>()
 
     @Before fun enablePreparationForTests() {
-        savedToggles = listOf("prefetchResults", "cacheNzb", "fastMkvStartup").associateWith { prefs.all[it] as? Boolean }
-        prefs.edit().putBoolean("prefetchResults", true).putBoolean("cacheNzb", false).putBoolean("fastMkvStartup", false).commit()
+        savedToggles = listOf("prewarmOnLaunch", "prefetchResults", "cacheNzb", "fastMkvStartup", "allowPrivateNetwork").associateWith { prefs.all[it] as? Boolean }
+        prefs.edit().putBoolean("prefetchResults", true).putBoolean("cacheNzb", false).putBoolean("fastMkvStartup", false).putBoolean("allowPrivateNetwork", true).commit()
+    }
+
+    @Test fun sourceWarmupIsBoundedAndReusesRuntimeWithoutFullPrefetch() = runBlocking {
+        val sidecar = UsenetSidecar.get(context)
+        val field = UsenetSidecar::class.java.getDeclaredField("process").apply { isAccessible = true }
+        val expiry = UsenetSidecar::class.java.getDeclaredField("idleStop").apply { isAccessible = true }
+        prefs.edit().putBoolean("prewarmOnLaunch", false).putBoolean("prefetchResults", false).commit()
+        UsenetSidecar.onAppForegrounded()
+        sidecar.prewarm().join()
+        assertNull(field.get(sidecar))
+        sidecar.prewarmForSources().join()
+        val child = field.get(sidecar)
+        assertNotNull(child)
+        assertTrue("source warmup needs an idle deadline", (expiry.get(sidecar) as kotlinx.coroutines.Job).isActive)
+        sidecar.prewarmForSources().join()
+        assertSame(child, field.get(sidecar))
+        UsenetSidecar.stopIdleOnBackground()
+        sidecar.prewarmForSources().join()
+        sidecar.prewarm().join()
+        assertNull("background retained an unused engine", field.get(sidecar))
     }
 
     @After fun restoreToggles() = runBlocking {

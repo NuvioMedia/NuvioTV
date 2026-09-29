@@ -25,6 +25,16 @@ import org.junit.runner.RunWith
 class UsenetDiagnosticsCardTest {
     @get:Rule val composeRule = createComposeRule()
 
+    @Test fun nzbStagesExposeParseAndIndexSeparately() {
+        val report = """{"engine":{"marksMs":{"provider_setup_started":0,"pool_created":2,
+            "nzb_index_started":400,"nzb_index_finished":454,"nzb_cache_bound":456},
+            "durationsMs":{"nzb_body_read":80,"nzb_parse_work":321,"nzb_cache_io":6}}}"""
+        composeRule.setContent { NuvioTheme { UsenetDiagnosticsCard(3, report) } }
+        composeRule.onNodeWithText("321 ms", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("54 ms", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("6 ms", useUnmergedTree = true).assertIsDisplayed()
+    }
+
     @Test fun nzbHitIsVisibleWhenArticleHitsAreZero() {
         val report = """{"engine":{"nzbCache":{"lookup":"hit","bytes":41943040},"store":{"cacheHits":0}}}"""
         composeRule.setContent {

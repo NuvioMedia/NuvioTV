@@ -184,7 +184,7 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 	diagnostic := nzbCacheDiagnostic{Lookup: "disabled"}
 	defer func() { trace.recordNZBCache(diagnostic) }()
 	u, err := url.Parse(raw)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
 		return nil, errors.New("NZB URL must use HTTP or HTTPS")
 	}
 	// Addon URLs may be signed, including their exact query encoding/order.
@@ -197,10 +197,16 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 		req.Header.Set("Accept-Encoding", "gzip")
 	}
 	for k, v := range headers {
-		if !strings.EqualFold(k, "Range") && !strings.EqualFold(k, "Host") {
-			req.Header.Set(k, v)
+		switch strings.ToLower(k) {
+		case "range", "host", "connection", "proxy-authorization", "proxy-connection", "transfer-encoding", "content-length", "te", "trailer", "upgrade":
+			continue
 		}
+		req.Header.Set(k, v)
 	}
+	// Preserve the caller's transport but enforce header policy for every fetch,
+	// including standalone tests and cache recovery.
+	safeClient := *client
+	safeClient.CheckRedirect = nzbRedirect
 	key := ""
 	if cache != nil && store != nil {
 		defer func() {
@@ -214,7 +220,9 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 	}
 	if cache != nil {
 		key = nzbCacheKey(req, scope)
+		trace.mark("nzb_cache_lookup_started")
 		files, reason, size := cache.read(key, store)
+		trace.mark("nzb_cache_lookup_finished")
 		if reason == "hit" {
 			diagnostic.Format = "legacy"
 			if len(files) > 0 && files[0].cached != nil {
@@ -227,23 +235,34 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 		diagnostic.Lookup = "miss"
 		diagnostic.Reason = reason
 	}
-	resp, err := client.Do(req)
+	trace.mark("nzb_fetch_started")
+	resp, err := safeClient.Do(req)
+	trace.mark("nzb_response_headers")
 	if err != nil {
+		if errors.Is(err, errPrivateNetwork) {
+			return nil, errPrivateNetwork
+		}
 		return nil, errors.New("could not download NZB")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("NZB download returned HTTP %d", resp.StatusCode)
 	}
+	trace.mark("nzb_cache_create_started")
 	fill, outcome := cache.begin(key)
+	trace.mark("nzb_cache_create_finished")
 	if fill != nil {
 		fill.ctx = ctx
-		files, err := ParseNZB(resp.Body, store)
+		files, err := parseNZBTraced(resp.Body, store, trace)
 		if err == nil && ctx.Err() == nil {
+			trace.mark("nzb_index_started")
 			diagnostic.Write = fill.indexed(files)
+			trace.mark("nzb_index_finished")
+			trace.duration("nzb_cache_io", fill.ioTime)
 			if diagnostic.Write == "saved" {
 				diagnostic.Format = "indexed"
 				files = cache.bindSaved(key, files, store)
+				trace.mark("nzb_cache_bound")
 			}
 		} else {
 			diagnostic.Write = fill.finish(false)
@@ -259,7 +278,7 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 	if cache != nil {
 		diagnostic.Write = outcome
 	}
-	return ParseNZB(resp.Body, store)
+	return parseNZBTraced(resp.Body, store, trace)
 }
 
 func (f *File) Size() int64 { f.mu.RLock(); defer f.mu.RUnlock(); return f.size }

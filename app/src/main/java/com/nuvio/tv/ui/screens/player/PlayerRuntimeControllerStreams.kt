@@ -826,7 +826,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
         return
     }
 
-    com.nuvio.tv.core.usenet.UsenetSidecar.get(context).releaseIfDifferent(url)
+    com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.releaseIfDifferent(url)
     // Stop any active torrent before switching to HTTP stream
     stopTorrentStream()
 
@@ -1377,7 +1377,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
         isAutoPlay = isAutoPlay,
     )
 
-    com.nuvio.tv.core.usenet.UsenetSidecar.get(context).releaseIfDifferent(url)
+    com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.releaseIfDifferent(url)
     // Stop any active torrent before switching to HTTP stream
     stopTorrentStream()
 

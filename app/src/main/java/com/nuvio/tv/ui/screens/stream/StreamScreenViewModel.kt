@@ -328,7 +328,7 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     fun cancelStreamsLoad() {
-        if (!usenetSelectionStarted) com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
+        if (!usenetSelectionStarted) com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
         streamLoadScope?.cancel()
         streamLoadScope = null
         streamLoadJob = null
@@ -346,7 +346,7 @@ class StreamScreenViewModel @Inject constructor(
 
     private fun loadStreams(forceRefresh: Boolean = false) {
         usenetSelectionStarted = false
-        if (forceRefresh) com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
+        if (forceRefresh) com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
         streamRepository.setLocalPluginSearchPaused(false)
         streamLoadScope?.cancel()
         streamLoadScope = null
@@ -1174,7 +1174,7 @@ class StreamScreenViewModel @Inject constructor(
     private var usenetPlayerLaunchJob: Job? = null
     private val pendingUsenetPlayback = com.nuvio.tv.core.usenet.PendingUsenetPlayback { url ->
         com.nuvio.tv.core.player.StreamFallbackHandoff.take(streamCacheKey, playbackProfileId, url)
-        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).release(url)
+        com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.release(url)
     }
 
     fun abandonPendingUsenetPlayback() = pendingUsenetPlayback.release()
@@ -1248,7 +1248,7 @@ class StreamScreenViewModel @Inject constructor(
 
     private suspend fun resolveSingleStreamForPlayback(stream: Stream, fallbackAttempt: Int, onFailure: (String) -> Unit): StreamPlaybackInfo? {
         usenetSelectionStarted = true
-        if (!stream.isUsenet()) com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
+        if (!stream.isUsenet()) com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
         if (stream.isUsenet()) {
             updateUiStateIfChanged {
                 it.copy(
@@ -1365,7 +1365,7 @@ class StreamScreenViewModel @Inject constructor(
     fun onInternalPlayerLaunching(playbackInfo: StreamPlaybackInfo) {
         pendingUsenetPlayback.handoff(playbackInfo.url)
         usenetSelectionStarted = true
-        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
+        com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
         streamRepository.setLocalPluginSearchPaused(true)
         updateUiStateIfChanged {
             it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null)
@@ -1410,14 +1410,15 @@ class StreamScreenViewModel @Inject constructor(
             updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null) }
         }
         hostInForeground.value = false
-        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
+        com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
     }
 
     private fun prefetchTopUsenet(streams: List<Stream> = _uiState.value.allStreams) {
         if (usenetSelectionStarted || !hostInForeground.value) return
         streams.firstOrNull { it.isUsenet() }?.let {
-            com.nuvio.tv.core.usenet.UsenetSidecar.get(context)
-                .prefetch(usenetPrefetchOwner, it, season, episode, playbackProfileId)
+            val sidecar = com.nuvio.tv.core.usenet.UsenetSidecar.get(context)
+            sidecar.prewarmForSources()
+            sidecar.prefetch(usenetPrefetchOwner, it, season, episode, playbackProfileId)
         }
     }
     private var externalOverlayHideJob: kotlinx.coroutines.Job? = null
@@ -1548,7 +1549,7 @@ class StreamScreenViewModel @Inject constructor(
         usenetPlayerLaunchJob?.cancel()
         abandonPendingUsenetPlayback()
         streamResolutionJob?.cancel()
-        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
+        com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
         super.onCleared()
         if (isTorrentStreamStarted) {
             torrentService.stopStream()

@@ -93,7 +93,7 @@ func TestMKVStartupMatrix(t *testing.T) {
 					fast := (trial+order)%2 == 1
 					s := NewServer(context.Background(), "benchmark-token", nil, http.DefaultClient)
 					httpServer := httptest.NewServer(s)
-					body, _ := json.Marshal(OpenRequest{NZBURL: nzb.URL, Servers: []string{"nntp://user:pass@" + nntp.Addr() + "/16"}, Config: Config{FastMKVStartup: fast}})
+					body, _ := json.Marshal(OpenRequest{NZBURL: nzb.URL, Servers: []string{"nntp://user:pass@" + nntp.Addr() + "/16"}, Config: Config{FastMKVStartup: fast, AllowPrivateNetwork: true}})
 					req, _ := http.NewRequest("POST", httpServer.URL+"/sessions", bytes.NewReader(body))
 					req.Header.Set("Authorization", "Bearer benchmark-token")
 					before := nntp.Counters()

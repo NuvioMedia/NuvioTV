@@ -62,7 +62,7 @@ func TestPerformanceMatrix(t *testing.T) {
 				}
 				// Use production cancellation/drain policy unless the experiment
 				// explicitly overrides it below.
-				providers, err := Providers([]string{fmt.Sprintf("nntp://%s/%d", s.Addr(), cfg.conn)}, Config{ReadAhead: cfg.ahead}, nil)
+				providers, err := Providers([]string{fmt.Sprintf("nntp://%s/%d", s.Addr(), cfg.conn)}, Config{ReadAhead: cfg.ahead, AllowPrivateNetwork: true}, nil)
 				if err != nil {
 					t.Fatal(err)
 				}

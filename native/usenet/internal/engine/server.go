@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"path"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -43,19 +42,20 @@ type Session struct {
 func (s *Session) Close() { s.cancel(); s.warmup.Close(); s.store.Close(); s.pool.Close() }
 
 type Server struct {
-	ctx      context.Context
-	token    string
-	roots    *x509.CertPool
-	client   *http.Client
-	mu       sync.Mutex
-	sessions map[string]*Session
-	opening  bool
-	nzbCache *nzbCache
-	pools    providerPools
+	ctx           context.Context
+	token         string
+	roots         *x509.CertPool
+	client        *http.Client
+	privateClient *http.Client
+	mu            sync.Mutex
+	sessions      map[string]*Session
+	opening       bool
+	nzbCache      *nzbCache
+	pools         providerPools
 }
 
 func NewServer(ctx context.Context, token string, roots *x509.CertPool, client *http.Client) *Server {
-	return &Server{ctx: ctx, token: token, roots: roots, client: client, sessions: make(map[string]*Session)}
+	return &Server{ctx: ctx, token: token, roots: roots, client: nzbHTTPClient(client, false), privateClient: nzbHTTPClient(client, true), sessions: make(map[string]*Session)}
 }
 
 // Configure once before serving. The directory comes from the Android bootstrap,
@@ -69,6 +69,8 @@ func RandomToken() string {
 	return hex.EncodeToString(b[:])
 }
 func (s *Server) Close() {
+	defer s.client.CloseIdleConnections()
+	defer s.privateClient.CloseIdleConnections()
 	s.mu.Lock()
 	sessions := s.sessions
 	s.sessions = make(map[string]*Session)
@@ -117,13 +119,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		v := s.sessions[id]
 		delete(s.sessions, id)
-		idle := len(s.sessions) == 0 && !s.opening
 		s.mu.Unlock()
 		if v != nil {
 			v.Close()
-			if idle {
-				debug.FreeOSMemory()
-			}
 		}
 		w.WriteHeader(http.StatusNoContent)
 	default:
@@ -174,6 +172,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+	trace.mark("provider_setup_started")
 	providers, err := Providers(req.Servers, req.Config, s.roots)
 	if err != nil {
 		w.Header().Set("X-Usenet-Failure", "provider")
@@ -184,7 +183,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	// Cancelling the open HTTP request tears down its work. Once committed,
 	// session lifetime is independent of this one request.
 	stop := context.AfterFunc(r.Context(), cancel)
-	pool, err := s.pools.acquire(s.ctx, providers)
+	pool, err := s.pools.acquireForRequest(s.ctx, ctx, providers, req.Config.AllowPrivateNetwork)
 	if err != nil {
 		stop()
 		cancel()
@@ -192,6 +191,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	store := NewStore(ctx, pool, t.CacheBytes)
+	pool.trace = trace
 	v := &Session{store: store, pool: pool, ctx: ctx, cancel: cancel, ahead: t.ReadAhead, trace: trace}
 	trace.mark("pool_created")
 	success := false
@@ -205,9 +205,14 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	if req.Config.CacheNZB {
 		cache = s.nzbCache
 	}
-	files, err := fetchNZB(ctx, s.client, req.NZBURL, req.Headers, store, req.Config.FastNZBFetch, cache, req.CacheScope, trace)
+	client := s.client
+	if req.Config.AllowPrivateNetwork {
+		client = s.privateClient
+	}
+	files, err := fetchNZB(ctx, client, req.NZBURL, req.Headers, store, req.Config.FastNZBFetch, cache, req.CacheScope, trace)
 	trace.mark("nzb_loaded")
 	if err == nil {
+		trace.mark("selection_started")
 		v.content, err = Select(ctx, files, req.Selection)
 	}
 	trace.mark("content_selected")

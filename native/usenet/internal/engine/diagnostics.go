@@ -10,11 +10,12 @@ import (
 // filenames or payloads. These clocks measure overlapping work, not an additive
 // CPU breakdown. HTTP read time includes both layout discovery and NNTP waits.
 type startupTrace struct {
-	mu       sync.Mutex
-	start    time.Time
-	marks    map[string]float64
-	ranges   []*rangeTiming
-	nzbCache *nzbCacheDiagnostic
+	mu        sync.Mutex
+	start     time.Time
+	marks     map[string]float64
+	durations map[string]float64
+	ranges    []*rangeTiming
+	nzbCache  *nzbCacheDiagnostic
 }
 
 // Only fixed outcomes and a byte count; never include cache keys or URLs.
@@ -63,7 +64,44 @@ type rangeTiming struct {
 }
 
 func newStartupTrace() *startupTrace {
-	return &startupTrace{start: time.Now(), marks: make(map[string]float64)}
+	return &startupTrace{start: time.Now(), marks: make(map[string]float64), durations: make(map[string]float64)}
+}
+
+func (t *startupTrace) duration(name string, elapsed time.Duration) {
+	if t == nil {
+		return
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.durations[name] = float64(elapsed.Microseconds()) / 1000
+}
+
+// Measure blocking reads without buffering the document again. Parsing and
+// download overlap: parse work is wall time outside Body.Read, not CPU time.
+type nzbTimingReader struct {
+	r       io.Reader
+	elapsed time.Duration
+}
+
+func (r *nzbTimingReader) Read(p []byte) (int, error) {
+	start := time.Now()
+	n, err := r.r.Read(p)
+	r.elapsed += time.Since(start)
+	return n, err
+}
+
+func parseNZBTraced(r io.Reader, store *Store, trace *startupTrace) ([]*File, error) {
+	if trace == nil {
+		return ParseNZB(r, store)
+	}
+	trace.mark("nzb_parse_started")
+	start := time.Now()
+	body := &nzbTimingReader{r: r}
+	files, err := ParseNZB(body, store)
+	trace.duration("nzb_body_read", body.elapsed)
+	trace.duration("nzb_parse_work", time.Since(start)-body.elapsed)
+	trace.mark("nzb_parse_finished")
+	return files, err
 }
 
 func (t *startupTrace) mark(name string) {
@@ -91,7 +129,11 @@ func (t *startupTrace) snapshot() map[string]any {
 	for i, v := range t.ranges {
 		ranges[i] = *v
 	}
-	v := map[string]any{"marksMs": marks, "ranges": ranges}
+	durations := make(map[string]float64, len(t.durations))
+	for k, d := range t.durations {
+		durations[k] = d
+	}
+	v := map[string]any{"marksMs": marks, "durationsMs": durations, "ranges": ranges}
 	if t.nzbCache != nil {
 		v["nzbCache"] = *t.nzbCache
 	}
@@ -126,6 +168,9 @@ func (r *timingReader) Read(p []byte) (int, error) {
 	if n > 0 && r.timing.FirstByteMS < 0 {
 		r.timing.Offset = off
 		r.timing.FirstByteMS = float64(time.Since(r.trace.start).Microseconds()) / 1000
+		if _, exists := r.trace.marks["first_media_bytes"]; !exists {
+			r.trace.marks["first_media_bytes"] = r.timing.FirstByteMS
+		}
 	}
 	r.timing.ReadMS += float64(time.Since(start).Microseconds()) / 1000
 	r.timing.Bytes += int64(n)

@@ -1,12 +1,15 @@
 # Fast MKV Startup
 
 The toggle is under Settings → Advanced → Usenet streaming. It defaults to ON
-and applies to the next session. Three cards immediately below the settings show
-the last ExoPlayer startup, engine work, and cache activity. They reuse the DV
+and applies to the next session. Four cards immediately below the settings show
+the last ExoPlayer startup, engine work, NZB stages, and cache activity. They reuse the DV
 diagnostics card and row components and remain readable with the TV remote.
 The latest report is stored in private app preferences; no clipboard action is
 needed. Before a completed ExoPlayer startup, the card explains how to collect
 one. Unobserved measurements are shown as an em dash.
+
+The [2026-09-29 startup audit](STARTUP-AUDIT-2026-09-29.md) describes the stage
+breakdown, source-flow runtime warmup, network policy and device test procedure.
 
 ## What changes
 
