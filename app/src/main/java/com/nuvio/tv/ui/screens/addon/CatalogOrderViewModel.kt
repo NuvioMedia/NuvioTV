@@ -90,28 +90,28 @@ class CatalogOrderViewModel @Inject constructor(
         _uiState.update { it.copy(movingKey = key) }
     }
 
-    fun moveDuringDrag(key: String, direction: Int): Boolean {
+    fun moveDuringDrag(key: String, direction: Int): Int? {
         val draft = draftOrderKeys ?: run {
             Log.w(TAG, "moveDuringDrag no draft key=$key dir=$direction")
-            return false
+            return null
         }
         val fromIndex = draft.indexOf(key)
         val reordered = if (_uiState.value.followAddonsOrder) {
             reorderCollectionInDraft(draft, key, direction) ?: run {
                 Log.d(TAG, "moveDuringDrag blocked followAddons key=$key dir=$direction from=$fromIndex")
-                return false
+                return null
             }
         } else {
             reorderInDraft(draft, key, direction) ?: run {
                 Log.d(TAG, "moveDuringDrag blocked edge key=$key dir=$direction from=$fromIndex")
-                return false
+                return null
             }
         }
         val toIndex = reordered.indexOf(key)
         draftOrderKeys = reordered
         applyDraftOrder(reordered)
         Log.d(TAG, "moveDuringDrag key=$key dir=$direction $fromIndex->$toIndex")
-        return true
+        return toIndex.takeIf { it >= 0 }
     }
 
     fun confirmMove() {

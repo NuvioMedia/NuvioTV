@@ -74,7 +74,7 @@ fun <T> TvReorderList(
     canMove: (T) -> Boolean,
     movingKey: String?,
     onStartMove: (String) -> Unit,
-    onMoveBy: (String, direction: Int) -> Boolean,
+    onMoveBy: (String, direction: Int) -> Int?,
     onConfirmMove: (String) -> Unit,
     onCancelMove: () -> Unit,
     modifier: Modifier = Modifier,
@@ -253,31 +253,42 @@ fun <T> TvReorderList(
         }
     }
 
-    fun animateSwap(movedKey: String, direction: Int) {
-        if (slotStridePx <= 0f) return
-        val oldIndex = animatedIndices[movedKey] ?: return
-        val newIndex = oldIndex + direction
-        val neighborKey = animatedIndices.entries.firstOrNull { it.value == newIndex }?.key
+    fun animateMove(movedKey: String, oldIndex: Int, newIndex: Int) {
+        if (slotStridePx <= 0f || oldIndex == newIndex) return
+        val shiftRange: IntRange
+        val slotShift: Int
+        if (newIndex > oldIndex) {
+            shiftRange = (oldIndex + 1)..newIndex
+            slotShift = -1
+        } else {
+            shiftRange = newIndex until oldIndex
+            slotShift = 1
+        }
+        val shifting = animatedIndices.mapNotNull { (itemKey, slot) ->
+            if (itemKey != movedKey && slot in shiftRange) itemKey to slot else null
+        }
+        val movedDeltaSlots = newIndex - oldIndex
+        Log.d(
+            LIST_TAG,
+            "list animateMove key=$movedKey $oldIndex->$newIndex delta=$movedDeltaSlots " +
+                "shifting=${shifting.size}",
+        )
 
         offsetJobs[movedKey]?.cancel()
-        if (neighborKey != null) {
-            offsetJobs[neighborKey]?.cancel()
-        }
+        shifting.forEach { (itemKey, _) -> offsetJobs[itemKey]?.cancel() }
 
-        // Keep the drawn position stable in this frame: update the logical slot
-        // and compensate with an opposite offset, then ease the offset to 0.
-        dragOffsets[movedKey] = (dragOffsets[movedKey] ?: 0f) - direction * slotStridePx
-        if (neighborKey != null) {
-            dragOffsets[neighborKey] = (dragOffsets[neighborKey] ?: 0f) + direction * slotStridePx
+        dragOffsets[movedKey] = (dragOffsets[movedKey] ?: 0f) - movedDeltaSlots * slotStridePx
+        shifting.forEach { (itemKey, _) ->
+            dragOffsets[itemKey] = (dragOffsets[itemKey] ?: 0f) - slotShift * slotStridePx
         }
         animatedIndices = animatedIndices.toMutableMap().apply {
             this[movedKey] = newIndex
-            if (neighborKey != null) this[neighborKey] = oldIndex
+            shifting.forEach { (itemKey, slot) ->
+                this[itemKey] = slot + slotShift
+            }
         }
         animateOffsetToZero(movedKey)
-        if (neighborKey != null) {
-            animateOffsetToZero(neighborKey)
-        }
+        shifting.forEach { (itemKey, _) -> animateOffsetToZero(itemKey) }
     }
 
     fun keepNeighborVisible(newIndex: Int, direction: Int) {
@@ -324,17 +335,16 @@ fun <T> TvReorderList(
         val oldIndex = animatedIndices[activeKey]
             ?: items.indexOfFirst { key(it) == activeKey }.takeIf { it >= 0 }
             ?: return false
-        val moved = onMoveBy(activeKey, direction)
+        val newIndex = onMoveBy(activeKey, direction)
         Log.d(
             LIST_TAG,
-            "list performMove key=$activeKey dir=$direction oldIndex=$oldIndex moved=$moved " +
-                visualSnapshot("performMove"),
+            "list performMove key=$activeKey dir=$direction oldIndex=$oldIndex " +
+                "newIndex=$newIndex ${visualSnapshot("performMove")}",
         )
-        if (moved) {
-            animateSwap(activeKey, direction)
-            keepNeighborVisible(oldIndex + direction, direction)
-        }
-        return moved
+        if (newIndex == null || newIndex == oldIndex) return false
+        animateMove(activeKey, oldIndex, newIndex)
+        keepNeighborVisible(newIndex, direction)
+        return true
     }
 
     fun confirmFromUi(source: String) {
