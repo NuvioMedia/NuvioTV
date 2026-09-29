@@ -132,9 +132,9 @@
     <string name="error_meta_tried_generic">Đã thử tiện ích siêu dữ liệu: %1$s. Không thể tải siêu dữ liệu cho id=%2$s (type=%3$s).</string>
     <string name="error_meta_tried_issues">Đã thử tiện ích siêu dữ liệu: %1$s. Không thể tải siêu dữ liệu cho id=%2$s (type=%3$s). Lỗi: %4$s.</string>
     <string name="error_stream_no_supported_addon">Không có tiện ích đã cài đặt nào hỗ trợ luồng phát cho \"%1$s\".</string>
-    <string name="error_stream_tried_none">Đã thử các tiện ích nguồn phát: %1$s. Không có tiện ích nào tìm thấy luồng phát cho id=%2$s (type=%3$s).</string>
-    <string name="error_stream_tried_generic">Đã thử các tiện ích nguồn phát: %1$s. Không thể tải luồng phát cho id=%2$s (type=%3$s).</string>
-    <string name="error_stream_tried_issues">Đã thử các tiện ích nguồn phát: %1$s. Không thể tải luồng phát cho id=%2$s (type=%3$s). Lỗi: %4$s.</string>
+    <string name="error_stream_tried_none">Đã thử các tiện ích phát trực tuyến: %1$s. Không có tiện ích nào tìm thấy luồng phát cho id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_generic">Đã thử các tiện ích phát trực tuyến: %1$s. Không thể tải luồng phát cho id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_issues">Đã thử các tiện ích phát trực tuyến: %1$s. Không thể tải luồng phát cho id=%2$s (type=%3$s). Lỗi: %4$s.</string>
 
     <string name="continue_watching">Tiếp tục xem</string>
     <string name="cw_upcoming">Sắp chiếu</string>
@@ -233,8 +233,9 @@
     <string name="detail_tab_ratings">Điểm đánh giá</string>
     <string name="detail_tab_more_like_this">Nội dung tương tự</string>
     <string name="detail_tab_trailer">Trailer</string>
-    <string name="detail_more_like_this_powered_by_tmdb">Gợi ý từ TMDB</string>
-    <string name="detail_more_like_this_powered_by_trakt">Gợi ý từ Trakt</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Cung cấp bởi TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Cung cấp bởi Trakt</string>
+    <string name="detail_more_like_this_powered_by_simkl">Cung cấp bởi Simkl</string>
     <string name="detail_comments_title">Bình luận</string>
     <string name="detail_comments_subtitle">Đánh giá và bình luận từ Trakt</string>
     <string name="detail_comments_subtitle_episode">Đánh giá từ Trakt cho M%1$dT%2$d</string>
@@ -447,13 +448,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Trải nghiệm</string>
-    <string name="settings_experience_subtitle">Cơ bản hoặc Nâng cao</string>
     <string name="settings_account">Tài khoản</string>
-    <string name="settings_account_subtitle">Tài khoản và trạng thái đồng bộ</string>
     <string name="settings_profiles">Hồ sơ</string>
-    <string name="settings_profiles_subtitle">Quản lý hồ sơ người dùng</string>
     <string name="settings_layout">Bố cục</string>
-    <string name="settings_layout_subtitle">Bố cục Trang chủ và kiểu poster</string>
     <string name="settings_content_discovery">Nội dung &amp; Khám phá</string>
     <string name="settings_content_discovery_subtitle">Tiện ích, trình mở rộng, danh mục và nguồn khám phá</string>
     <string name="settings_content_discovery_addons_subtitle">Quản lý tiện ích, thứ tự danh mục và bộ sưu tập</string>
@@ -462,10 +459,8 @@
     <string name="settings_plugins_subtitle">Kho lưu trữ và nhà cung cấp</string>
     <string name="settings_integration">Tích hợp</string>
     <string name="settings_playback">Phát lại</string>
-    <string name="settings_playback_subtitle">Trình phát, phụ đề và tự động phát</string>
     <string name="settings_trakt_subtitle">Mở màn hình kết nối Trakt</string>
     <string name="settings_tracking_title">Theo dõi</string>
-    <string name="settings_tracking_subtitle">Quản lý kết nối Trakt và Simkl</string>
     <string name="settings_tracking_description">Kết nối các dịch vụ theo dõi và chọn dịch vụ cung cấp dữ liệu cho Thư viện và Tiếp tục xem.</string>
     <string name="tracking_accounts_title">Tài khoản</string>
     <string name="tracking_accounts_subtitle">Kết nối và quản lý các dịch vụ theo dõi</string>
@@ -492,7 +487,6 @@
     <string name="tracking_trakt_progress_required">Khả dụng khi Trakt là nguồn Tiến độ xem</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Phiên bản và điều khoản</string>
     <string name="settings_network">Tốc độ mạng</string>
     <string name="settings_network_subtitle">Chẩn đoán độ trễ và tốc độ tải xuống</string>
     <string name="settings_advanced">Nâng cao</string>
@@ -571,7 +565,7 @@
     <string name="network_latency_label">Độ trễ</string>
     <string name="network_download_label">Tải xuống</string>
     <string name="network_error_prefix">Lỗi: %1$s</string>
-    <string name="network_powered_by_fast">Được cung cấp bởi fast.com</string>
+    <string name="network_powered_by_fast">Cung cấp bởi fast.com</string>
     <string name="network_connection_wifi">Wi-Fi</string>
     <string name="network_connection_ethernet">Mạng có dây</string>
     <string name="network_connection_offline">Ngoại tuyến</string>
@@ -612,7 +606,7 @@
     <string name="advanced_rgb565">Giải mã hình ảnh RGB565</string>
     <string name="advanced_rgb565_subtitle">Dùng màu 16 bit để tiết kiệm bộ nhớ cho các hình ảnh không trong suốt. Thay đổi tùy chọn này sẽ khởi động lại ứng dụng.</string>
     <string name="advanced_memory_only_vertical_scroll">Cuộn dọc chỉ trong bộ nhớ:</string>
-    <string name="advanced_memory_only_vertical_scroll_subtitle">Bỏ qua các yêu cầu tải ảnh từ ổ đĩa và mạng trong khi cuộn dọc qua các hàng trên trang chủ.</string>
+    <string name="advanced_memory_only_vertical_scroll_subtitle">Bỏ qua các yêu cầu tải ảnh từ đĩa và mạng trong khi cuộn dọc qua các hàng trên trang chủ.</string>
     <string name="advanced_compose_highlighter">Bộ tô sáng Compose</string>
     <string name="advanced_compose_highlighter_subtitle">Nhấp nháy viền quanh các thành phần giao diện đang được tái cấu trúc để gỡ lỗi hiệu năng.</string>
     <string name="advanced_clear_cw_cache">Xóa bộ nhớ đệm Tiếp tục xem</string>
@@ -624,7 +618,6 @@
     <string name="advanced_confirm_exit_subtitle">Đóng ứng dụng hoàn toàn và giải phóng bộ nhớ khi thoát. Cần nhấn quay lại hai lần để xác nhận.</string>
     <string name="confirm_exit_toast">Nhấn quay lại lần nữa để thoát</string>
     <string name="settings_debug">Gỡ lỗi</string>
-    <string name="settings_debug_subtitle">Công cụ nhà phát triển và cờ tính năng</string>
     <string name="settings_plugins_section_subtitle">Quản lý kho lưu trữ, nhà cung cấp và trạng thái trình mở rộng</string>
     <string name="settings_account_section_subtitle">Tài khoản và trạng thái đồng bộ</string>
     <string name="account_stat_addons">tiện ích</string>
@@ -711,8 +704,6 @@
     <string name="contributors_hide_kofi_qr">Ẩn mã QR Ko-fi</string>
     <string name="contributors_profile_unavailable">Liên kết hồ sơ GitHub không có sẵn.</string>
 
-    <string name="playback_section_general">Chung</string>
-    <string name="playback_section_general_desc">Cơ chế phát lại cơ bản.</string>
     <string name="playback_loading_overlay">Lớp phủ Đang tải</string>
     <string name="playback_loading_overlay_sub">Hiển thị màn hình tải đến khi khung hình video đầu tiên xuất hiện.</string>
     <string name="playback_pause_overlay">Lớp phủ Tạm dừng</string>
@@ -736,9 +727,6 @@
     <string name="skip_movie_credits">Bỏ qua Danh đề</string>
     <string name="skip_to_post_credits">Đến cảnh hậu danh đề</string>
     <string name="playback_auto_frame_rate">Tốc độ Khung hình Tự động &amp; Độ phân giải</string>
-    <string name="playback_section_player">Trình phát &amp; Lựa chọn luồng</string>
-    <string name="playback_section_player_desc">Tùy chọn trình phát, tự động phát và bộ lọc nguồn.</string>
-    <string name="playback_player">Trình phát</string>
     <string name="playback_player_internal">Bên trong</string>
     <string name="playback_player_external">Bên ngoài</string>
     <string name="playback_player_ask">Luôn hỏi</string>
@@ -751,12 +739,8 @@
     <string name="playback_external_forward_subtitles_sub">Tải phụ đề bằng ngôn ngữ ưu tiên từ các tiện ích rồi chuyển sang trình phát bên ngoài.</string>
     <string name="playback_external_send_skip_segments">Gửi mốc thời gian phần giới thiệu và đoạn kết</string>
     <string name="playback_external_send_skip_segments_sub">Gửi mốc thời gian phần giới thiệu và đoạn kết sang trình phát bên ngoài để tự động bỏ qua. Chỉ hỗ trợ trên các trình phát tương thích; trình phát khác sẽ không sử dụng thông tin này.</string>
-    <string name="playback_section_audio">Âm thanh &amp; Video</string>
-    <string name="playback_section_audio_desc">Điều khiển âm thanh và tương thích video.</string>
     <string name="playback_section_subtitles">Phụ đề</string>
     <string name="playback_section_subtitles_desc">Ngôn ngữ, kiểu và chế độ kết xuất.</string>
-    <string name="playback_afr_open">Mở</string>
-    <string name="playback_afr_closed">Đã đóng</string>
     <string name="playback_afr_off">Tắt</string>
     <string name="playback_afr_off_sub">Không thay đổi tần số quét màn hình.</string>
     <string name="playback_afr_on_start">Khi bắt đầu</string>
@@ -781,6 +765,8 @@
     <string name="playback_engine_mvplayer_desc">Sử dụng libmpv với các điều khiển hiển thị trên màn hình của Nuvio. Tính năng thử nghiệm.</string>
 
     <string name="video_section">Video</string>
+    <string name="playback_true_black_letterbox">Viền đen tuyệt đối</string>
+    <string name="playback_true_black_letterbox_sub">Không phủ màu các viền đen xung quanh hình ảnh để hiển thị HDR đen tuyệt đối. Vui lòng tắt tính năng này nếu xuất hiện vệt sáng trên các viền đen.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Tự động phát trailer</string>
     <string name="audio_autoplay_trailers_sub">Tự động phát trailer trên màn hình chi tiết sau một khoảng thời gian không hoạt động</string>
@@ -1134,7 +1120,17 @@
     <string name="layout_custom_poster_qr">Thiết lập qua điện thoại</string>
     <string name="custom_poster_qr_instruction">Quét mã QR bằng điện thoại để dán mẫu URL poster</string>
 
+    <!-- Custom Poster URL - Screen Toggles -->
+    <string name="layout_custom_poster_screen_home">Trang chủ</string>
+    <string name="layout_custom_poster_screen_continue_watching">Tiếp tục xem</string>
+    <string name="layout_custom_poster_screen_collections">Bộ sưu tập</string>
+    <string name="layout_custom_poster_screen_library">Thư viện</string>
+    <string name="layout_custom_poster_screen_search">Tìm kiếm</string>
+    <string name="layout_custom_poster_screen_details">Màn hình chi tiết</string>
+
     <!-- Custom Poster Web Page -->
+    <string name="layout_always_show_landscape_clearlogo">Luôn dùng phông nền kèm logo cho poster ngang</string>
+    <string name="layout_always_show_landscape_clearlogo_sub">Bỏ qua poster ngang từ tiện ích và thay thế bằng phông nền có chèn lớp phủ logo trong suốt.</string>
     <string name="web_custom_poster_title">Nguồn poster tùy chỉnh</string>
     <string name="web_custom_poster_subtitle">Dán mẫu URL poster vào bên dưới và nhấn Lưu.</string>
     <string name="web_custom_poster_label">Mẫu URL</string>
@@ -1153,12 +1149,35 @@
     <string name="web_custom_poster_placeholders_info">Các biến giữ chỗ: {id} truyền tất cả ID nội dung. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} nhắm đến một loại ID duy nhất — nếu không có, poster gốc sẽ được giữ lại. {imdb_id|tmdb_id|kitsu_id} khai báo các loại ID được hỗ trợ — loại phù hợp sẽ được sử dụng, nếu không có thì poster gốc sẽ được giữ lại. Thêm ? để biến giữ chỗ trở thành tùy chọn, khi đó biến sẽ được thay bằng giá trị trống thay vì bỏ qua: {imdb_id?}. Các biến giữ chỗ khác: {id_type}, {typed_id}, {type}, {shape}.</string>
 
 
+    <string name="mdblist_name">MDBList</string>
+    <string name="mdblist_tracking_description">Đồng bộ lịch sử đã xem và tiến trình phát lại trên các thiết bị</string>
+    <string name="mdblist_connected_as">Đã kết nối với %1$s</string>
+    <string name="mdblist_account_fallback">Người dùng MDBList</string>
+    <string name="mdblist_insufficient_scope">MDBList chưa cấp quyền cập nhật lịch sử xem. Hãy kết nối lại và cho phép quyền ghi.</string>
+    <string name="mdblist_awaiting_instruction">Quét mã QR hoặc nhập mã này tại địa chỉ bên dưới.</string>
+    <string name="mdblist_qr_description">Mã QR để kết nối tài khoản MDBList của bạn</string>
+    <string name="mdblist_status_enter_code">Phê duyệt kết nối trong tài khoản MDBList của bạn.</string>
+    <string name="mdblist_status_syncing">Đang đồng bộ lịch sử đã xem và tiến trình phát lại…</string>
+    <string name="mdblist_last_synced">Đồng bộ lần cuối %1$s</string>
+    <string name="mdblist_disconnect_title">Ngắt kết nối MDBList?</string>
+    <string name="mdblist_disconnect_subtitle">Dừng gửi cập nhật xem từ hồ sơ này. Lịch sử MDBList của bạn vẫn được giữ lại.</string>
+    <string name="mdblist_missing_client">Kết nối MDBList không có sẵn trong bản dựng này.</string>
+    <string name="mdblist_invalid_response">MDBList trả về phản hồi chưa đầy đủ. Vui lòng thử lại.</string>
+    <string name="mdblist_code_expired">Mã này đã hết hạn. Vui lòng thử lại để nhận mã mới.</string>
+    <string name="mdblist_access_denied">Kết nối bị từ chối. Vui lòng thử lại để kết nối tài khoản của bạn.</string>
+    <string name="mdblist_authorization_revoked">Kết nối MDBList của bạn đã hết hạn hoặc bị thu hồi. Vui lòng kết nối lại để tiếp tục đồng bộ.</string>
+    <string name="mdblist_unavailable">Không thể đồng bộ với MDBList. Vui lòng thử lại.</string>
+    <string name="mdblist_rate_limited">Đã đạt giới hạn yêu cầu của MDBList. Quá trình đồng bộ sẽ tiếp tục sau khi giới hạn được đặt lại.</string>
+    <string name="mdblist_revoke_failed">Đã ngắt kết nối trên thiết bị này. Vui lòng xóa ứng dụng trong phần cài đặt tài khoản MDBList để thu hồi quyền truy cập.</string>
     <string name="mdblist_title">Điểm đánh giá MDBList</string>
     <string name="mdblist_subtitle">Cấu hình các điểm đánh giá bên ngoài hiển thị trong chi tiết của Khu vực Nổi bật</string>
     <string name="mdblist_enable_title">Bật điểm đánh giá MDBList</string>
     <string name="mdblist_enable_subtitle">Lấy điểm đánh giá từ các nhà cung cấp bên ngoài trên màn hình chi tiết siêu dữ liệu</string>
     <string name="mdblist_api_key_title">Mã khóa API</string>
     <string name="mdblist_api_key_subtitle">Cần thiết để lấy điểm đánh giá từ MDBList</string>
+    <string name="mdblist_ratings_credentials_subtitle">Sử dụng tài khoản MDBList đã kết nối trong mục Theo dõi hoặc nhập mã khóa API riêng để đánh giá.</string>
+    <string name="mdblist_ratings_connected_account">Đang sử dụng tài khoản đã kết nối</string>
+    <string name="mdblist_ratings_key_override_subtitle">Mã khóa API sẽ thay thế tài khoản đã kết nối khi đánh giá. Xóa mã này để sử dụng lại tài khoản đã kết nối.</string>
     <string name="mdblist_trakt_title">Trakt</string>
     <string name="mdblist_trakt_subtitle">Hiển thị điểm Trakt</string>
     <string name="mdblist_imdb_title">IMDb</string>
@@ -1372,8 +1391,6 @@
     <string name="tmdb_basic_info_subtitle">Mô tả, thể loại và điểm đánh giá từ TMDB</string>
     <string name="tmdb_details_title">Chi tiết</string>
     <string name="tmdb_details_subtitle">Thời lượng, trạng thái, quốc gia và ngôn ngữ từ TMDB</string>
-    <string name="tmdb_release_dates_title">Ngày phát hành</string>
-    <string name="tmdb_release_dates_subtitle">Ngày phát hành và lên sóng từ TMDB</string>
     <string name="tmdb_credits_title">Danh đề</string>
     <string name="tmdb_credits_subtitle">Diễn viên kèm ảnh, đạo diễn và biên kịch từ TMDB</string>
     <string name="tmdb_productions_title">Hãng sản xuất</string>
@@ -1448,6 +1465,7 @@
     <string name="trakt_more_like_this_source_dialog_subtitle">Chọn nguồn đề xuất hiển thị trên các trang chi tiết</string>
     <string name="trakt_more_like_this_source_trakt">Trakt</string>
     <string name="trakt_more_like_this_source_tmdb">TMDB</string>
+    <string name="trakt_more_like_this_source_simkl">Simkl</string>
     <string name="trakt_cached_label">Đã lưu bộ nhớ đệm</string>
     <string name="trakt_stat_movies">Phim</string>
     <string name="trakt_stat_shows">Chương trình</string>
@@ -1692,6 +1710,26 @@
     <string name="settings_p2p_subtitle">Cho phép phát trực tuyến ngang hàng (torrent)</string>
     <string name="settings_p2p_hide_stats_title">Ẩn thống kê torrent</string>
     <string name="settings_p2p_hide_stats_subtitle">Ẩn bộ đệm, số lượng seed, peer và tốc độ tải xuống trong khi tải và phát lại</string>
+    <string name="settings_p2p_profile_title">Cấu hình Torrent</string>
+    <string name="settings_p2p_profile_soft">Nhẹ</string>
+    <string name="settings_p2p_profile_balanced">Cân bằng</string>
+    <string name="settings_p2p_profile_fast">Nhanh</string>
+    <string name="settings_p2p_profile_soft_description">Sử dụng ít kết nối người dùng ngang hàng hơn để giảm tải cho pin và mạng</string>
+    <string name="settings_p2p_profile_balanced_description">Cân bằng được khuyến nghị giữa tốc độ khởi động và độ ổn định kết nối</string>
+    <string name="settings_p2p_profile_fast_description">Sử dụng nhiều kết nối người dùng ngang hàng hơn cho torrent khó tải hoặc có bitrate cao</string>
+    <string name="settings_p2p_cache_size_title">Dung lượng bộ nhớ đệm torrent</string>
+    <string name="settings_p2p_cache_size_description">Dữ liệu torrent đã tải xuống được lưu trên thiết bị này để xem lại nhanh hơn.</string>
+    <string name="settings_p2p_cache_none">Không có bộ nhớ đệm vĩnh viễn</string>
+    <string name="settings_p2p_cache_2_gb">2 GB</string>
+    <string name="settings_p2p_cache_5_gb">5 GB</string>
+    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_clear_cache_title">Xóa bộ nhớ đệm torrent</string>
+    <string name="settings_p2p_clear_cache_usage">%1$s đang được dùng</string>
+    <string name="settings_p2p_clear_cache_usage_pending">Mức sử dụng sẽ được đo sau khi P2P khởi động; chạm để xóa dữ liệu torrent đã lưu trong bộ nhớ đệm</string>
+    <string name="settings_p2p_clear_cache_clearing">Đang xóa dữ liệu torrent không còn hoạt động…</string>
+    <string name="settings_p2p_clear_cache_playback_active">Dừng phát P2P trước khi xóa bộ nhớ đệm</string>
+    <string name="settings_p2p_clear_cache_done">Đã xóa %1$s dữ liệu torrent không hoạt động</string>
+    <string name="settings_p2p_clear_cache_failed">Không thể xóa bộ nhớ đệm torrent</string>
     <string name="p2p_download_title">Đang tải xuống lõi P2P</string>
     <string name="p2p_download_subtitle">Đây là tải xuống một lần, cần thiết để phát luồng P2P.</string>
     <string name="stream_type_external">Bên ngoài</string>
@@ -1989,6 +2027,7 @@
     <string name="library_sort_added_asc">Đã thêm ↑</string>
     <string name="library_sort_title_asc">Tên A-Z</string>
     <string name="library_sort_title_desc">Tên Z-A</string>
+    <string name="library_error_sort_failed">Không thể tải thứ tự sắp xếp. Đang hiển thị theo thứ tự của nhà cung cấp.</string>
     <string name="library_manage_lists">Quản lý danh sách</string>
     <string name="library_manage_trakt_lists">Quản lý danh sách Trakt</string>
     <string name="library_no_lists">Chưa có danh sách cá nhân.</string>
@@ -2497,8 +2536,8 @@
     <string name="collections_editor_backdrop">Ảnh phông nền</string>
     <string name="collections_editor_pin_above">Ghim phía trên các danh mục</string>
     <string name="collections_editor_pin_above_desc">Hiển thị bộ sưu tập này phía trên tất cả danh mục trang chủ thông thường. Các bộ sưu tập được ghim sẽ theo thứ tự tạo bộ sưu tập.</string>
-    <string name="collections_editor_focus_glow">Viền sáng khi chọn</string>
-    <string name="collections_editor_focus_glow_desc">Sử dụng hiệu ứng phát sáng gốc của TV gốc cho các thẻ danh mục tùy chỉnh trên màn hình chính của bộ sưu tập này</string>
+    <string name="collections_editor_focus_glow">Phát sáng khi chọn</string>
+    <string name="collections_editor_focus_glow_desc">Sử dụng hiệu ứng phát sáng gốc của TV trên các thẻ danh mục tùy chỉnh thuộc màn hình chính của bộ sưu tập này</string>
     <string name="collections_editor_view_mode">Chế độ hiển thị</string>
     <string name="collections_editor_show_all_tab">Hiển thị thẻ \"Tất cả\"</string>
     <string name="collections_editor_show_all_tab_desc">Gộp tất cả danh mục vào một thẻ</string>
@@ -2535,6 +2574,7 @@
     <string name="collections_editor_shape_wide">Rộng</string>
     <string name="collections_editor_shape_square">Vuông</string>
     <string name="collections_editor_addon_missing">Tiện ích chưa cài đặt: %1$s</string>
+    <string name="collections_editor_catalog_missing">Danh mục không có sẵn</string>
     <string name="collections_editor_add_tmdb_source">Thêm nguồn TMDB</string>
     <string name="collections_editor_add_trakt_source">Thêm danh sách Trakt</string>
     <string name="collections_editor_edit_tmdb_source">Chỉnh sửa nguồn TMDB</string>
@@ -2778,6 +2818,10 @@
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%%</string>
     <string name="player_torrent_connecting_peers">Đang kết nối tới các người dùng ngang hàng…</string>
+    <string name="player_torrent_fetching_metadata">Đang lấy siêu dữ liệu torrent…</string>
+    <string name="player_torrent_preparing_stream">Đang chuẩn bị luồng torrent…</string>
+    <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
+    <string name="player_torrent_loading_status">%1$s đã tải xuống · %2$s · %3$s</string>
     <string name="player_track_audio_fallback">Âm thanh %1$d</string>
     <string name="player_track_subtitle_fallback">Phụ đề %1$d</string>
 
@@ -2948,10 +2992,7 @@
     <string name="network_fast_error_token_missing">fast.com: Không tìm thấy token trong gói</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Không thể thêm torrent</string>
-    <string name="torrent_error_binary_missing">Không tìm thấy tệp thực thi TorrServer tại %1$s</string>
-    <string name="torrent_error_process_died">Tiến trình TorrServer đã dừng khi khởi động (mã thoát %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer đã không thể khởi động trong vòng %1$d giây</string>
+    <string name="torrent_error_start_timeout">Luồng torrent đã không khởi chạy trong vòng %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Đang khởi động lõi P2P…</string>
@@ -3129,18 +3170,19 @@
     <string name="playback_buffer_target_danger_warning">Nguy hiểm: vượt quá giới hạn cảnh báo (%1$d MB). Nguy cơ lỗi rất cao.</string>
     <string name="playback_buffer_allow_large">Cho phép bộ đệm mục tiêu lớn hơn</string>
     <string name="playback_buffer_allow_large_sub">Gỡ bỏ giới hạn bộ nhớ thiết bị trên thanh trượt dung lượng bộ đệm mục tiêu, cho phép các giá trị lên đến 2 GB. Có thể gây lỗi trên thiết bị có dưới 2 GB RAM.</string>
-    <string name="playback_cache_header">Bộ nhớ đệm ổ đĩa</string>
-    <string name="playback_cache_vod">Bộ nhớ đệm VOD ổ đĩa</string>
-    <string name="playback_cache_vod_sub">Lưu các bytes đã tải xuống vào ổ đĩa cho luồng phát hiện tại. Tính năng này giúp mở rộng khả năng tua ngược tức thì vượt ra ngoài giới hạn của bộ nhớ đệm ngược trên RAM và giúp duy trì phát video khi mạng bị ngắt kết nối trong thời gian ngắn. Chỉ áp dụng cho các luồng phát lũy tiến (không áp dụng cho HLS/DASH).</string>
+    <string name="playback_cache_header">Bộ nhớ đệm đĩa</string>
+    <string name="playback_cache_vod">Bộ nhớ đệm VOD trên đĩa</string>
+    <string name="playback_cache_vod_sub">Lưu các bytes đã tải xuống vào đĩa cho luồng phát hiện tại. Tính năng này giúp mở rộng khả năng tua ngược tức thì vượt ra ngoài giới hạn của bộ nhớ đệm ngược trên RAM và giúp duy trì phát video khi mạng bị ngắt kết nối trong thời gian ngắn. Chỉ áp dụng cho các luồng phát lũy tiến (không áp dụng cho HLS/DASH).</string>
     <string name="playback_cache_auto_size">Dung lượng tự động</string>
-    <string name="playback_cache_auto_size_sub">Khi bật, dung lượng bộ nhớ đệm được tính dựa trên dung lượng ổ đĩa trống. Tắt tùy chọn này để tự chọn dung lượng.</string>
+    <string name="playback_cache_auto_size_sub">Khi bật, dung lượng bộ nhớ đệm được tính dựa trên dung lượng đĩa trống. Tắt tùy chọn này để tự chọn dung lượng.</string>
     <string name="playback_cache_vod_size">Dung lượng bộ nhớ đệm VOD</string>
-    <string name="playback_cache_vod_size_sub">Dung lượng ổ đĩa tối đa dành cho bộ nhớ đệm VOD lũy tiến (các mục ít được sử dụng gần đây sẽ bị xóa trước).</string>
+    <string name="playback_cache_vod_size_sub">Dung lượng đĩa tối đa dành cho bộ nhớ đệm VOD lũy tiến (các mục ít được sử dụng gần đây sẽ bị xóa trước).</string>
     <string name="playback_cache_info_range">Phạm vi: %1$d-%2$d MB.</string>
     <string name="playback_cache_info_auto">Chế độ tự động sử dụng khoảng 10% dung lượng trống.</string>
     <string name="playback_cache_info_manual_headroom">Chế độ thủ công giữ lại khoảng %1$d MB dung lượng dự phòng.</string>
-    <string name="playback_cache_info_free_disk">Dung lượng ổ đĩa trống: %1$s.</string>
+    <string name="playback_cache_info_free_disk">Dung lượng đĩa trống: %1$s.</string>
     <string name="playback_cache_info_restart">Giới hạn bộ nhớ đệm mới sẽ có hiệu lực sau khi khởi động lại ứng dụng khi chuyển đổi giữa các chế độ hoặc dung lượng</string>
+    <string name="playback_cache_write_warning">Trên các thiết bị có bộ nhớ tích hợp sẵn, hoạt động ghi diễn ra liên tục và có thể làm hao mòn bộ nhớ theo thời gian.</string>
     <string name="playback_reset_to_default">Đặt lại</string>
     <string name="playback_net_custom">Mạng tùy chỉnh</string>
     <string name="playback_net_custom_sub">Sử dụng nhiều kết nối đồng thời để tải các luồng tiến dần. Khi tắt, chỉ sử dụng một kết nối.</string>
@@ -3174,8 +3216,15 @@
     <string name="diag_label_source_profile">Cấu hình nguồn</string>
     <string name="diag_label_conversions">Chuyển đổi</string>
     <string name="diag_label_signal_rewrites">Ghi đè tín hiệu</string>
+    <string name="diag_label_last_convert">Chuyển đổi lần cuối</string>
     <string name="diag_label_custom_buffers">Bộ đệm tùy chỉnh</string>
-    <string name="diag_label_custom_network_cache">Bộ nhớ đệm Mạng/Tùy chỉnh</string>
+    <string name="diag_label_custom_network_cache">Mạng/Bộ nhớ đệm tùy chỉnh</string>
+    <string name="diag_label_disk_cache">Bộ nhớ đệm đĩa</string>
+    <string name="diag_label_disk_cache_usage">Mức sử dụng bộ nhớ đệm đĩa</string>
+    <string name="diag_value_disk_cache_on">Bật - %1$s</string>
+    <string name="diag_value_disk_cache_unavailable">Không khả dụng</string>
+    <string name="diag_value_disk_cache_not_used">Tắt - không được dùng cho luồng này</string>
+    <string name="diag_value_disk_cache_usage">%1$s đã đọc, %2$s đã bị xóa</string>
     <string name="diag_section_outcome">Trạng thái đầu ra</string>
     <string name="diag_label_hdr_format_intended">Định dạng HDR (dự kiến)</string>
     <string name="diag_label_first_frame">Khung hình đầu tiên</string>

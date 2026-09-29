@@ -181,20 +181,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Paskyra</string>
-    <string name="settings_account_subtitle">Paskyros ir sinchronizavimo būsena</string>
     <string name="settings_profiles">Profiliai</string>
-    <string name="settings_profiles_subtitle">Valdyti naudotojų profilius</string>
     <string name="settings_layout">Išdėstymas</string>
-    <string name="settings_layout_subtitle">Pradinio ekrano struktūra ir plakatų stiliai</string>
     <string name="settings_plugins">Įskiepiai</string>
     <string name="settings_plugins_subtitle">Repozitorijos ir teikėjai</string>
     <string name="settings_integration">Integracijos</string>
     <string name="settings_playback">Atkūrimas</string>
-    <string name="settings_playback_subtitle">Grotuvas, subtitrai ir automatinis paleidimas</string>
     <string name="settings_trakt_subtitle">Atidaryti „Trakt“ ryšio ekraną</string>
-    <string name="settings_about_subtitle">Versija ir politika</string>
     <string name="settings_debug">Derinimas (Debug)</string>
-    <string name="settings_debug_subtitle">Kūrėjo įrankiai ir funkcijų vėliavėlės</string>
     <string name="settings_plugins_section_subtitle">Valdyti repozitorijas, teikėjus ir įskiepių būsenas</string>
     <string name="settings_account_section_subtitle">Paskyros ir sinchronizavimo būsena</string>
     <string name="account_stat_addons">priedai</string>
@@ -244,8 +238,6 @@
     <string name="contributors_profile_unavailable">„GitHub“ profilio nuoroda nepasiekiama.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Bendra</string>
-    <string name="playback_section_general_desc">Pagrindinė atkūrimo elgsena.</string>
     <string name="playback_loading_overlay">Įkėlimo perdanga</string>
     <string name="playback_loading_overlay_sub">Rodyti įkėlimo ekraną, kol pasirodys pirmas vaizdo kadras.</string>
     <string name="playback_pause_overlay">Pristabdymo perdanga</string>
@@ -255,18 +247,11 @@
     <string name="playback_skip_intro">Praleisti Intro</string>
     <string name="playback_skip_intro_sub">Naudoti „introdb.app“ įžangų ir santraukų aptikimui.</string>
     <string name="playback_auto_frame_rate">Automatinis kadrų dažnis</string>
-    <string name="playback_section_player">Grotuvas ir srauto pasirinkimas</string>
-    <string name="playback_section_player_desc">Grotuvo nustatymai, automatinis paleidimas ir šaltinių filtravimas.</string>
-    <string name="playback_player">Grotuvas</string>
     <string name="playback_player_internal">Vidinis</string>
     <string name="playback_player_external">Išorinis</string>
     <string name="playback_player_ask">Klausti kiekvieną kartą</string>
-    <string name="playback_section_audio">Garsas ir vaizdo įrašas</string>
-    <string name="playback_section_audio_desc">Garso valdikliai ir vaizdo suderinamumas.</string>
     <string name="playback_section_subtitles">Subtitrai</string>
     <string name="playback_section_subtitles_desc">Kalba, stilius ir atvaizdavimo režimas.</string>
-    <string name="playback_afr_open">Atidaryti</string>
-    <string name="playback_afr_closed">Uždaryti</string>
     <string name="playback_afr_off">Išjungta</string>
     <string name="playback_afr_off_sub">Nekeisti ekrano atnaujinimo dažnio.</string>
     <string name="playback_afr_on_start">Pradžioje</string>
@@ -869,7 +854,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="auth_qr_title">Prisijungti per telefoną</string>
     <string name="auth_qr_finishing">Užbaigiama…</string>
     <string name="auth_qr_code_label">Skenuokite QR kodą</string>
-    <string name="auth_qr_expires">Kodas baigsis po %1$d s</string>
+    <string name="auth_qr_expires">Kodas baigsis po %1$s</string>
     <string name="auth_qr_scan_instruction">Nukreipkite kamerą į kodą</string>
     <string name="auth_qr_code_display">QR kodo rodymas</string>
     <string name="auth_qr_refresh">Atnaujinti kodą</string>

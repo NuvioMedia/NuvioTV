@@ -1,7 +1,7 @@
 package com.nuvio.tv.data.mdblist
 
 import com.nuvio.tv.data.remote.api.MDBListApi
-import com.nuvio.tv.data.remote.dto.mdblist.MDBListRatingRequestDto
+import com.nuvio.tv.data.remote.dto.mdblist.MDBListMediaRequestDto
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.mockk.coEvery
@@ -21,22 +21,23 @@ class MdbListRatingsClientTest {
     private val client = MdbListRatingsClient(
         keyApi, harness.api, harness.store, Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
     )
-    private val body = MDBListRatingRequestDto(listOf("tt1234567"), "imdb")
+    private val ids = listOf("tt1234567", "tt7654321")
+    private val body = MDBListMediaRequestDto(ids)
 
     @Test
     fun `account metadata includes certification keywords without an api key`() = runTest {
         harness.connected()
         harness.reply(body = """{"ratings":[{"source":"tomatoes","value":92}],"keywords":[{"name":"certified-fresh"}]}""")
 
-        val media = client.getMedia("movie", "tt1234567", requireNotNull(client.credential("")))
+        val media = client.getMedia("imdb", "movie", "tt1234567", requireNotNull(client.credential("")))
 
-        assertEquals(92.0, media?.toRottenTomatoesRatings()?.tomatoes)
-        assertTrue(media!!.toRottenTomatoesRatings().tomatoesCertified)
+        assertEquals(92.0, media?.toRatings()?.tomatoes)
+        assertTrue(media!!.toRatings().tomatoesCertified)
         val request = harness.engine.requests.single()
         assertEquals("/imdb/movie/tt1234567/", request.path)
         assertEquals(mapOf("append_to_response" to "keyword"), request.query)
         assertEquals("access-one", request.accessToken)
-        coVerify(exactly = 0) { keyApi.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { keyApi.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -44,25 +45,25 @@ class MdbListRatingsClientTest {
         harness.connected()
         harness.reply(401)
         harness.reply(body = MdbListTestHarness.TOKEN_RESPONSE)
-        harness.reply(body = """{"ratings":[{"rating":8.1}]}""")
+        harness.reply(body = """[{"ids":{"imdb":"tt1234567"},"ratings":[{"source":"imdb","value":8.1}]}]""")
 
-        val result = client.getRating("movie", "imdb", requireNotNull(client.credential("")), body)
+        val result = client.getMediaBatch("imdb", "movie", ids, requireNotNull(client.credential("")))
 
-        assertEquals(8.1, result?.ratings?.single()?.rating)
-        assertEquals(listOf("/rating/movie/imdb", "/oauth/token/", "/rating/movie/imdb"), harness.engine.requests.map { it.path })
+        assertEquals(8.1, result?.single()?.toRatings()?.imdb)
+        assertEquals(listOf("/imdb/movie/", "/oauth/token/", "/imdb/movie/"), harness.engine.requests.map { it.path })
         assertEquals("access-two", harness.engine.requests.last().accessToken)
-        assertEquals("""{"ids":["tt1234567"],"provider":"imdb"}""", harness.engine.requests.last().body)
+        assertEquals("""{"ids":["tt1234567","tt7654321"],"append_to_response":["keyword"]}""", harness.engine.requests.last().body)
         assertTrue(harness.engine.requests.last().query.isEmpty())
     }
 
     @Test
     fun `rejected override does not fall back to or disconnect the connected account`() = runTest {
         harness.connected()
-        coEvery { keyApi.getRating("movie", "imdb", "override", body) } returns
+        coEvery { keyApi.getMediaBatch("imdb", "movie", "override", body) } returns
             Response.error(401, "{}".toResponseBody())
 
         val error = expectMdbListFailure<MdbListApiException> {
-            client.getRating("movie", "imdb", requireNotNull(client.credential(" override ")), body)
+            client.getMediaBatch("imdb", "movie", ids, requireNotNull(client.credential(" override ")))
         }
 
         assertEquals(401, error.status)
@@ -73,11 +74,11 @@ class MdbListRatingsClientTest {
     @Test
     fun `account change during a ratings request discards the stale response`() = runTest {
         harness.connected()
-        harness.reply(body = """{"ratings":[{"rating":8.1}]}""")
+        harness.reply(body = """[{"ids":{"imdb":"tt1234567"},"ratings":[{"source":"imdb","value":8.1}]}]""")
         harness.engine.intercept = { harness.store.selectProfile(2) }
 
         expectMdbListFailure<CancellationException> {
-            client.getRating("movie", "imdb", requireNotNull(client.credential("")), body)
+            client.getMediaBatch("imdb", "movie", ids, requireNotNull(client.credential("")))
         }
     }
 }

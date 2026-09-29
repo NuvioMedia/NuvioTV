@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -26,17 +25,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Recommend
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,321 +63,234 @@ import com.nuvio.tv.ui.components.NuvioDialog
 import kotlin.math.roundToInt
 import java.util.Locale
 
-internal fun LazyListScope.autoPlaySettingsItems(
-    playerSettings: PlayerSettings,
-    onShowModeDialog: () -> Unit,
-    onShowSourceDialog: () -> Unit,
-    onShowAddonSelectionDialog: () -> Unit,
-    onShowPluginSelectionDialog: () -> Unit,
-    onShowRegexDialog: () -> Unit,
-    onShowNextEpisodeThresholdModeDialog: () -> Unit,
-    onShowReuseLastLinkCacheDialog: () -> Unit,
-    onSetPostPlayRecommendationsEnabled: (Boolean) -> Unit,
-    onSetPostPlayMovieThresholdPercent: (Int) -> Unit,
-    onSetStreamAutoPlayNextEpisodeEnabled: (Boolean) -> Unit,
-    onSetStreamAutoPlayNextEpisodeFallbackEnabled: (Boolean) -> Unit,
-    onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
-    onSetStreamAutoPlayReuseBingeGroup: (Boolean) -> Unit,
-    onSetNextEpisodeThresholdPercent: (Float) -> Unit,
-    onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
-    onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
-    onSetReuseLastLinkEnabled: (Boolean) -> Unit,
-    onSetStillWatchingEnabled: (Boolean) -> Unit,
-    onSetStillWatchingEpisodeThreshold: (Int) -> Unit,
-    onItemFocused: () -> Unit = {}
+@Composable
+internal fun PlaybackStreamSelectionSection(
+    settings: PlayerSettings,
+    onUpdate: PlaybackSettingsUpdate,
+    onOpenDialog: (PlaybackDialog) -> Unit
 ) {
     val effectiveAutoPlaySource = if (
         !AppFeaturePolicy.pluginsEnabled &&
-        playerSettings.streamAutoPlaySource == StreamAutoPlaySource.ENABLED_PLUGINS_ONLY
+        settings.streamAutoPlaySource == StreamAutoPlaySource.ENABLED_PLUGINS_ONLY
     ) {
         StreamAutoPlaySource.INSTALLED_ADDONS_ONLY
     } else {
-        playerSettings.streamAutoPlaySource
+        settings.streamAutoPlaySource
     }
 
-    item(key = "autoplay_reuse_last_link") {
-        ToggleSettingsItem(
-            icon = Icons.Default.History,
-            title = stringResource(R.string.autoplay_reuse_last_link),
-            subtitle = stringResource(R.string.autoplay_reuse_last_link_sub),
-            isChecked = playerSettings.streamReuseLastLinkEnabled,
-            onCheckedChange = onSetReuseLastLinkEnabled,
-            onFocused = onItemFocused
-        )
-    }
-
-    if (playerSettings.streamReuseLastLinkEnabled) {
-        item(key = "autoplay_reuse_cache_duration") {
-            NavigationSettingsItem(
-                icon = Icons.Default.Tune,
-                title = stringResource(R.string.autoplay_last_link_cache),
-                subtitle = formatReuseCacheDuration(playerSettings.streamReuseLastLinkCacheHours),
-                onClick = onShowReuseLastLinkCacheDialog,
-                onFocused = onItemFocused
-            )
-        }
-    }
-
-    item(key = "autoplay_mode") {
-        val modeLabel = when (playerSettings.streamAutoPlayMode) {
+    SettingsActionRow(
+        title = stringResource(R.string.autoplay_stream_selection),
+        subtitle = null,
+        value = when (settings.streamAutoPlayMode) {
             StreamAutoPlayMode.MANUAL -> stringResource(R.string.autoplay_mode_manual)
             StreamAutoPlayMode.FIRST_STREAM -> stringResource(R.string.autoplay_mode_first)
             StreamAutoPlayMode.REGEX_MATCH -> stringResource(R.string.autoplay_mode_regex)
-        }
-        NavigationSettingsItem(
-            icon = Icons.Default.PlayArrow,
-            title = stringResource(R.string.autoplay_stream_selection),
-            subtitle = modeLabel,
-            onClick = onShowModeDialog,
-            onFocused = onItemFocused
+        },
+        onClick = { onOpenDialog(PlaybackDialog.STREAM_AUTO_PLAY_MODE) }
+    )
+
+    if (settings.streamAutoPlayMode == StreamAutoPlayMode.REGEX_MATCH) {
+        SettingsActionRow(
+            title = stringResource(R.string.autoplay_regex_title),
+            subtitle = settings.streamAutoPlayRegex.ifBlank { stringResource(R.string.autoplay_regex_placeholder) },
+            onClick = { onOpenDialog(PlaybackDialog.STREAM_REGEX) }
         )
     }
 
-    item(key = "autoplay_stream_timeout") {
-        val timeoutSec = playerSettings.streamAutoPlayTimeoutSeconds
-        val valueText = when (timeoutSec) {
-            0 -> stringResource(R.string.autoplay_timeout_instant)
-            PlayerSettings.STREAM_AUTOPLAY_TIMEOUT_UNLIMITED ->
-                stringResource(R.string.autoplay_timeout_unlimited)
-            else -> "${timeoutSec}s"
-        }
-        SliderSettingsItem(
-            icon = Icons.Default.Timer,
-            title = stringResource(R.string.autoplay_timeout_title),
-            subtitle = stringResource(R.string.autoplay_timeout_sub),
-            values = PlayerSettings.STREAM_AUTOPLAY_TIMEOUT_VALUES,
-            selected = timeoutSec,
-            valueText = valueText,
-            onValueChange = { onSetStreamAutoPlayTimeoutSeconds(it) },
-            onFocused = onItemFocused
-        )
-    }
-
-    item(key = "post_play_recommendations") {
-        ToggleSettingsItem(
-            icon = Icons.Default.Recommend,
-            title = stringResource(R.string.autoplay_post_play_recommendations),
-            subtitle = stringResource(R.string.autoplay_post_play_recommendations_sub),
-            isChecked = playerSettings.postPlayRecommendationsEnabled,
-            onCheckedChange = onSetPostPlayRecommendationsEnabled,
-            onFocused = onItemFocused
-        )
-    }
-
-    if (playerSettings.postPlayRecommendationsEnabled) {
-        item(key = "post_play_movie_threshold") {
-            SliderSettingsItem(
-                icon = Icons.Default.Recommend,
-                title = stringResource(R.string.autoplay_post_play_movie_threshold),
-                subtitle = stringResource(R.string.autoplay_post_play_movie_threshold_sub),
-                value = playerSettings.postPlayMovieThresholdPercent,
-                valueText = "${playerSettings.postPlayMovieThresholdPercent}%",
-                minValue = PlayerSettings.MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
-                maxValue = PlayerSettings.MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
-                step = 1,
-                onValueChange = onSetPostPlayMovieThresholdPercent,
-                onFocused = onItemFocused
-            )
-        }
-    }
-
-    item(key = "autoplay_next_episode") {
-        ToggleSettingsItem(
-            icon = Icons.Default.SkipNext,
-            title = stringResource(R.string.autoplay_next_episode),
-            subtitle = stringResource(R.string.autoplay_next_episode_sub),
-            isChecked = playerSettings.streamAutoPlayNextEpisodeEnabled,
-            onCheckedChange = onSetStreamAutoPlayNextEpisodeEnabled,
-            onFocused = onItemFocused
-        )
-    }
-
-    if (playerSettings.streamAutoPlayNextEpisodeEnabled) {
-        if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL) {
-            item(key = "autoplay_next_episode_fallback") {
-                ToggleSettingsItem(
-                    icon = Icons.Default.SwapHoriz,
-                    title = stringResource(R.string.autoplay_next_episode_fallback),
-                    subtitle = stringResource(R.string.autoplay_next_episode_fallback_sub),
-                    isChecked = playerSettings.streamAutoPlayNextEpisodeFallbackEnabled,
-                    onCheckedChange = onSetStreamAutoPlayNextEpisodeFallbackEnabled,
-                    onFocused = onItemFocused
-                )
-            }
-        }
-
-        item(key = "still_watching_enabled") {
-            ToggleSettingsItem(
-                icon = Icons.Default.Visibility,
-                title = stringResource(R.string.still_watching_setting_title),
-                subtitle = stringResource(R.string.still_watching_setting_sub),
-                isChecked = playerSettings.stillWatchingEnabled,
-                onCheckedChange = onSetStillWatchingEnabled,
-                onFocused = onItemFocused
-            )
-        }
-
-        if (playerSettings.stillWatchingEnabled) {
-            item(key = "still_watching_threshold") {
-                val threshold = playerSettings.stillWatchingEpisodeThreshold
-                SliderSettingsItem(
-                    icon = Icons.Default.Repeat,
-                    title = stringResource(R.string.still_watching_threshold_title),
-                    subtitle = stringResource(R.string.still_watching_threshold_sub),
-                    value = threshold,
-                    valueText = "$threshold",
-                    minValue = 2,
-                    maxValue = 6,
-                    step = 1,
-                    onValueChange = { onSetStillWatchingEpisodeThreshold(it) },
-                    onFocused = onItemFocused
-                )
-            }
-        }
-    }
-
-    item(key = "autoplay_next_episode_prefer_binge_group") {
-        ToggleSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.autoplay_prefer_binge_group),
-            subtitle = stringResource(R.string.autoplay_prefer_binge_group_sub),
-            isChecked = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode,
-            onCheckedChange = onSetStreamAutoPlayPreferBingeGroupForNextEpisode,
-            onFocused = onItemFocused
-        )
-    }
-
-    if (playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode) {
-        item(key = "autoplay_reuse_binge_group") {
-            ToggleSettingsItem(
-                icon = Icons.Default.Tune,
-                title = stringResource(R.string.autoplay_reuse_binge_group),
-                subtitle = stringResource(R.string.autoplay_reuse_binge_group_sub),
-                isChecked = playerSettings.streamAutoPlayReuseBingeGroup,
-                onCheckedChange = onSetStreamAutoPlayReuseBingeGroup,
-                onFocused = onItemFocused
-            )
-        }
-    }
-
-    item(key = "autoplay_threshold_mode") {
-        val thresholdModeSubtitle = when (playerSettings.nextEpisodeThresholdMode) {
-            NextEpisodeThresholdMode.PERCENTAGE -> stringResource(R.string.autoplay_threshold_pct)
-            NextEpisodeThresholdMode.MINUTES_BEFORE_END -> stringResource(R.string.autoplay_threshold_min)
-        }
-        NavigationSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.autoplay_threshold_mode),
-            subtitle = thresholdModeSubtitle,
-            onClick = onShowNextEpisodeThresholdModeDialog,
-            onFocused = onItemFocused
-        )
-    }
-
-    item(key = "autoplay_threshold_value") {
-        when (playerSettings.nextEpisodeThresholdMode) {
-            NextEpisodeThresholdMode.PERCENTAGE -> {
-                SliderSettingsItem(
-                    icon = Icons.Default.Tune,
-                    title = stringResource(R.string.autoplay_threshold_pct_title),
-                    subtitle = stringResource(R.string.autoplay_threshold_pct_sub),
-                    value = (playerSettings.nextEpisodeThresholdPercent * 2f).roundToInt(),
-                    valueText = "${formatHalfStepValue(playerSettings.nextEpisodeThresholdPercent)}%",
-                    minValue = 194,
-                    maxValue = 200,
-                    step = 1,
-                    onValueChange = { onSetNextEpisodeThresholdPercent(it / 2f) },
-                    onFocused = onItemFocused
-                )
-            }
-            NextEpisodeThresholdMode.MINUTES_BEFORE_END -> {
-                SliderSettingsItem(
-                    icon = Icons.Default.Tune,
-                    title = stringResource(R.string.autoplay_threshold_min_title),
-                    subtitle = stringResource(R.string.autoplay_threshold_pct_sub),
-                    value = (playerSettings.nextEpisodeThresholdMinutesBeforeEnd * 2f).roundToInt(),
-                    valueText = "${formatHalfStepValue(playerSettings.nextEpisodeThresholdMinutesBeforeEnd)} min",
-                    minValue = 0,
-                    maxValue = 7,
-                    step = 1,
-                    onValueChange = { onSetNextEpisodeThresholdMinutesBeforeEnd(it / 2f) },
-                    onFocused = onItemFocused
-                )
-            }
-        }
-    }
-
-    if (playerSettings.streamAutoPlayMode != StreamAutoPlayMode.MANUAL) {
-
-        item(key = "autoplay_source_scope") {
-            val sourceLabel = when (effectiveAutoPlaySource) {
+    if (settings.streamAutoPlayMode != StreamAutoPlayMode.MANUAL) {
+        SettingsActionRow(
+            title = stringResource(R.string.autoplay_scope),
+            subtitle = null,
+            value = when (effectiveAutoPlaySource) {
                 StreamAutoPlaySource.ALL_SOURCES -> stringResource(R.string.autoplay_scope_all)
                 StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> stringResource(R.string.autoplay_scope_addons)
                 StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> stringResource(R.string.autoplay_scope_plugins)
-            }
-            NavigationSettingsItem(
-                icon = Icons.Default.Tune,
-                title = stringResource(R.string.autoplay_scope),
-                subtitle = sourceLabel,
-                onClick = onShowSourceDialog,
-                onFocused = onItemFocused
-            )
-        }
+            },
+            onClick = { onOpenDialog(PlaybackDialog.STREAM_AUTO_PLAY_SOURCE) }
+        )
 
         if (effectiveAutoPlaySource != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
-            item(key = "autoplay_allowed_addons") {
-                val addonSubtitle = if (playerSettings.streamAutoPlaySelectedAddons.isEmpty()) {
-                    stringResource(R.string.autoplay_all_addons)
-                } else {
-                    "${playerSettings.streamAutoPlaySelectedAddons.size} selected"
-                }
-                NavigationSettingsItem(
-                    icon = Icons.Default.Language,
-                    title = stringResource(R.string.autoplay_allowed_addons),
-                    subtitle = addonSubtitle,
-                    onClick = onShowAddonSelectionDialog,
-                    onFocused = onItemFocused
-                )
-            }
+            SettingsActionRow(
+                title = stringResource(R.string.autoplay_allowed_addons),
+                subtitle = null,
+                value = selectionSummary(
+                    selectedCount = settings.streamAutoPlaySelectedAddons.size,
+                    allLabel = stringResource(R.string.autoplay_all_addons)
+                ),
+                onClick = { onOpenDialog(PlaybackDialog.STREAM_AUTO_PLAY_ADDONS) }
+            )
         }
 
         if (
             AppFeaturePolicy.pluginsEnabled &&
             effectiveAutoPlaySource != StreamAutoPlaySource.INSTALLED_ADDONS_ONLY
         ) {
-            item(key = "autoplay_allowed_plugins") {
-                val pluginSubtitle = if (playerSettings.streamAutoPlaySelectedPlugins.isEmpty()) {
-                    stringResource(R.string.autoplay_all_plugins)
-                } else {
-                    "${playerSettings.streamAutoPlaySelectedPlugins.size} selected"
-                }
-                NavigationSettingsItem(
-                    icon = Icons.Default.Extension,
-                    title = stringResource(R.string.autoplay_allowed_plugins),
-                    subtitle = pluginSubtitle,
-                    onClick = onShowPluginSelectionDialog,
-                    onFocused = onItemFocused
-                )
-            }
-        }
-    }
-
-    if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.REGEX_MATCH) {
-        item(key = "autoplay_regex_pattern") {
-            val strRegexPlaceholder = stringResource(R.string.autoplay_regex_placeholder)
-            val regexSubtitle = playerSettings.streamAutoPlayRegex.ifBlank {
-                strRegexPlaceholder
-            }
-            NavigationSettingsItem(
-                icon = Icons.Default.Tune,
-                title = stringResource(R.string.autoplay_regex_title),
-                subtitle = regexSubtitle,
-                onClick = onShowRegexDialog,
-                onFocused = onItemFocused
+            SettingsActionRow(
+                title = stringResource(R.string.autoplay_allowed_plugins),
+                subtitle = null,
+                value = selectionSummary(
+                    selectedCount = settings.streamAutoPlaySelectedPlugins.size,
+                    allLabel = stringResource(R.string.autoplay_all_plugins)
+                ),
+                onClick = { onOpenDialog(PlaybackDialog.STREAM_AUTO_PLAY_PLUGINS) }
             )
         }
     }
+
+    val timeoutSeconds = settings.streamAutoPlayTimeoutSeconds
+    SliderSettingsItem(
+        title = stringResource(R.string.autoplay_timeout_title),
+        subtitle = stringResource(R.string.autoplay_timeout_sub),
+        values = PlayerSettings.STREAM_AUTOPLAY_TIMEOUT_VALUES,
+        selected = timeoutSeconds,
+        valueText = when (timeoutSeconds) {
+            0 -> stringResource(R.string.autoplay_timeout_instant)
+            PlayerSettings.STREAM_AUTOPLAY_TIMEOUT_UNLIMITED -> stringResource(R.string.autoplay_timeout_unlimited)
+            else -> "${timeoutSeconds}s"
+        },
+        onValueChange = { seconds -> onUpdate { setStreamAutoPlayTimeoutSeconds(seconds) } }
+    )
+
+    SettingsToggleRow(
+        title = stringResource(R.string.autoplay_reuse_last_link),
+        subtitle = stringResource(R.string.autoplay_reuse_last_link_sub),
+        checked = settings.streamReuseLastLinkEnabled,
+        onToggle = { onUpdate { setStreamReuseLastLinkEnabled(!settings.streamReuseLastLinkEnabled) } }
+    )
+
+    if (settings.streamReuseLastLinkEnabled) {
+        SettingsActionRow(
+            title = stringResource(R.string.autoplay_last_link_cache),
+            subtitle = null,
+            value = formatReuseCacheDuration(settings.streamReuseLastLinkCacheHours),
+            onClick = { onOpenDialog(PlaybackDialog.REUSE_LAST_LINK_CACHE) }
+        )
+    }
 }
+
+@Composable
+internal fun PlaybackUpNextSection(
+    settings: PlayerSettings,
+    onUpdate: PlaybackSettingsUpdate,
+    onOpenDialog: (PlaybackDialog) -> Unit
+) {
+    SettingsToggleRow(
+        title = stringResource(R.string.autoplay_next_episode),
+        subtitle = stringResource(R.string.autoplay_next_episode_sub),
+        checked = settings.streamAutoPlayNextEpisodeEnabled,
+        onToggle = { onUpdate { setStreamAutoPlayNextEpisodeEnabled(!settings.streamAutoPlayNextEpisodeEnabled) } }
+    )
+
+    if (settings.streamAutoPlayNextEpisodeEnabled && settings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL) {
+        SettingsToggleRow(
+            title = stringResource(R.string.autoplay_next_episode_fallback),
+            subtitle = stringResource(R.string.autoplay_next_episode_fallback_sub),
+            checked = settings.streamAutoPlayNextEpisodeFallbackEnabled,
+            onToggle = {
+                onUpdate { setStreamAutoPlayNextEpisodeFallbackEnabled(!settings.streamAutoPlayNextEpisodeFallbackEnabled) }
+            }
+        )
+    }
+
+    SettingsActionRow(
+        title = stringResource(R.string.autoplay_threshold_mode),
+        subtitle = null,
+        value = when (settings.nextEpisodeThresholdMode) {
+            NextEpisodeThresholdMode.PERCENTAGE -> stringResource(R.string.autoplay_threshold_pct)
+            NextEpisodeThresholdMode.MINUTES_BEFORE_END -> stringResource(R.string.autoplay_threshold_min)
+        },
+        onClick = { onOpenDialog(PlaybackDialog.NEXT_EPISODE_THRESHOLD_MODE) }
+    )
+
+    when (settings.nextEpisodeThresholdMode) {
+        NextEpisodeThresholdMode.PERCENTAGE -> SliderSettingsItem(
+            title = stringResource(R.string.autoplay_threshold_pct_title),
+            subtitle = stringResource(R.string.autoplay_threshold_pct_sub),
+            value = (settings.nextEpisodeThresholdPercent * 2f).roundToInt(),
+            valueText = "${formatHalfStepValue(settings.nextEpisodeThresholdPercent)}%",
+            minValue = 194,
+            maxValue = 200,
+            step = 1,
+            onValueChange = { value -> onUpdate { setNextEpisodeThresholdPercent(value / 2f) } }
+        )
+        NextEpisodeThresholdMode.MINUTES_BEFORE_END -> SliderSettingsItem(
+            title = stringResource(R.string.autoplay_threshold_min_title),
+            subtitle = stringResource(R.string.autoplay_threshold_pct_sub),
+            value = (settings.nextEpisodeThresholdMinutesBeforeEnd * 2f).roundToInt(),
+            valueText = "${formatHalfStepValue(settings.nextEpisodeThresholdMinutesBeforeEnd)} min",
+            minValue = 0,
+            maxValue = 7,
+            step = 1,
+            onValueChange = { value -> onUpdate { setNextEpisodeThresholdMinutesBeforeEnd(value / 2f) } }
+        )
+    }
+
+    if (settings.streamAutoPlayNextEpisodeEnabled) {
+        SettingsToggleRow(
+            title = stringResource(R.string.still_watching_setting_title),
+            subtitle = stringResource(R.string.still_watching_setting_sub),
+            checked = settings.stillWatchingEnabled,
+            onToggle = { onUpdate { setStillWatchingEnabled(!settings.stillWatchingEnabled) } }
+        )
+
+        if (settings.stillWatchingEnabled) {
+            SliderSettingsItem(
+                title = stringResource(R.string.still_watching_threshold_title),
+                subtitle = stringResource(R.string.still_watching_threshold_sub),
+                value = settings.stillWatchingEpisodeThreshold,
+                valueText = "${settings.stillWatchingEpisodeThreshold}",
+                minValue = 2,
+                maxValue = 6,
+                step = 1,
+                onValueChange = { threshold -> onUpdate { setStillWatchingEpisodeThreshold(threshold) } }
+            )
+        }
+    }
+
+    SettingsToggleRow(
+        title = stringResource(R.string.autoplay_prefer_binge_group),
+        subtitle = stringResource(R.string.autoplay_prefer_binge_group_sub),
+        checked = settings.streamAutoPlayPreferBingeGroupForNextEpisode,
+        onToggle = {
+            onUpdate {
+                setStreamAutoPlayPreferBingeGroupForNextEpisode(!settings.streamAutoPlayPreferBingeGroupForNextEpisode)
+            }
+        }
+    )
+
+    if (settings.streamAutoPlayPreferBingeGroupForNextEpisode) {
+        SettingsToggleRow(
+            title = stringResource(R.string.autoplay_reuse_binge_group),
+            subtitle = stringResource(R.string.autoplay_reuse_binge_group_sub),
+            checked = settings.streamAutoPlayReuseBingeGroup,
+            onToggle = { onUpdate { setStreamAutoPlayReuseBingeGroup(!settings.streamAutoPlayReuseBingeGroup) } }
+        )
+    }
+
+    SettingsToggleRow(
+        title = stringResource(R.string.autoplay_post_play_recommendations),
+        subtitle = stringResource(R.string.autoplay_post_play_recommendations_sub),
+        checked = settings.postPlayRecommendationsEnabled,
+        onToggle = { onUpdate { setPostPlayRecommendationsEnabled(!settings.postPlayRecommendationsEnabled) } }
+    )
+
+    if (settings.postPlayRecommendationsEnabled) {
+        SliderSettingsItem(
+            title = stringResource(R.string.autoplay_post_play_movie_threshold),
+            subtitle = stringResource(R.string.autoplay_post_play_movie_threshold_sub),
+            value = settings.postPlayMovieThresholdPercent,
+            valueText = "${settings.postPlayMovieThresholdPercent}%",
+            minValue = PlayerSettings.MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
+            maxValue = PlayerSettings.MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
+            step = 1,
+            onValueChange = { percent -> onUpdate { setPostPlayMovieThresholdPercent(percent) } }
+        )
+    }
+}
+
+@Composable
+private fun selectionSummary(selectedCount: Int, allLabel: String): String =
+    if (selectedCount == 0) allLabel else stringResource(R.string.autoplay_selected_count, selectedCount)
 
 private fun formatHalfStepValue(value: Float): String {
     return if (value % 1f == 0f) {
@@ -401,106 +302,71 @@ private fun formatHalfStepValue(value: Float): String {
 
 @Composable
 internal fun AutoPlaySettingsDialogs(
-    showModeDialog: Boolean,
-    showSourceDialog: Boolean,
-    showRegexDialog: Boolean,
-    showAddonSelectionDialog: Boolean,
-    showPluginSelectionDialog: Boolean,
-    showNextEpisodeThresholdModeDialog: Boolean,
-    showReuseLastLinkCacheDialog: Boolean,
-    playerSettings: PlayerSettings,
+    dialog: PlaybackDialog?,
+    settings: PlayerSettings,
     installedAddonNames: List<String>,
     enabledPluginNames: List<String>,
-    onSetMode: (StreamAutoPlayMode) -> Unit,
-    onSetSource: (StreamAutoPlaySource) -> Unit,
-    onSetNextEpisodeThresholdMode: (NextEpisodeThresholdMode) -> Unit,
-    onSetRegex: (String) -> Unit,
-    onSetSelectedAddons: (Set<String>) -> Unit,
-    onSetSelectedPlugins: (Set<String>) -> Unit,
-    onSetReuseLastLinkCacheHours: (Int) -> Unit,
-    onDismissModeDialog: () -> Unit,
-    onDismissSourceDialog: () -> Unit,
-    onDismissRegexDialog: () -> Unit,
-    onDismissAddonSelectionDialog: () -> Unit,
-    onDismissPluginSelectionDialog: () -> Unit,
-    onDismissNextEpisodeThresholdModeDialog: () -> Unit,
-    onDismissReuseLastLinkCacheDialog: () -> Unit
+    onUpdate: PlaybackSettingsUpdate,
+    onDismiss: () -> Unit
 ) {
-    if (showModeDialog) {
-        StreamAutoPlayModeDialog(
-            selectedMode = playerSettings.streamAutoPlayMode,
-            onModeSelected = {
-                onSetMode(it)
-                onDismissModeDialog()
+    when (dialog) {
+        PlaybackDialog.STREAM_AUTO_PLAY_MODE -> StreamAutoPlayModeDialog(
+            selectedMode = settings.streamAutoPlayMode,
+            onModeSelected = { mode ->
+                onUpdate { setStreamAutoPlayMode(mode) }
+                onDismiss()
             },
-            onDismiss = onDismissModeDialog
+            onDismiss = onDismiss
         )
-    }
-
-    if (showSourceDialog) {
-        StreamAutoPlaySourceDialog(
-            selectedSource = playerSettings.streamAutoPlaySource,
-            onSourceSelected = {
-                onSetSource(it)
-                onDismissSourceDialog()
+        PlaybackDialog.STREAM_AUTO_PLAY_SOURCE -> StreamAutoPlaySourceDialog(
+            selectedSource = settings.streamAutoPlaySource,
+            onSourceSelected = { source ->
+                onUpdate { setStreamAutoPlaySource(source) }
+                onDismiss()
             },
-            onDismiss = onDismissSourceDialog
+            onDismiss = onDismiss
         )
-    }
-
-    if (showRegexDialog) {
-        StreamRegexDialog(
-            initialRegex = playerSettings.streamAutoPlayRegex,
-            onSave = {
-                onSetRegex(it)
-                onDismissRegexDialog()
+        PlaybackDialog.STREAM_REGEX -> StreamRegexDialog(
+            initialRegex = settings.streamAutoPlayRegex,
+            onSave = { regex ->
+                onUpdate { setStreamAutoPlayRegex(regex) }
+                onDismiss()
             },
-            onDismiss = onDismissRegexDialog
+            onDismiss = onDismiss
         )
-    }
-
-    if (showNextEpisodeThresholdModeDialog) {
-        NextEpisodeThresholdModeDialog(
-            selectedMode = playerSettings.nextEpisodeThresholdMode,
-            onModeSelected = {
-                onSetNextEpisodeThresholdMode(it)
-                onDismissNextEpisodeThresholdModeDialog()
+        PlaybackDialog.NEXT_EPISODE_THRESHOLD_MODE -> NextEpisodeThresholdModeDialog(
+            selectedMode = settings.nextEpisodeThresholdMode,
+            onModeSelected = { mode ->
+                onUpdate { setNextEpisodeThresholdMode(mode) }
+                onDismiss()
             },
-            onDismiss = onDismissNextEpisodeThresholdModeDialog
+            onDismiss = onDismiss
         )
-    }
-
-    if (showAddonSelectionDialog) {
-        StreamAutoPlayProviderSelectionDialog(
+        PlaybackDialog.STREAM_AUTO_PLAY_ADDONS -> StreamAutoPlayProviderSelectionDialog(
             title = stringResource(R.string.autoplay_allowed_addons),
             allLabel = stringResource(R.string.autoplay_all_addons),
             items = installedAddonNames,
-            selectedItems = playerSettings.streamAutoPlaySelectedAddons,
-            onSelectionSaved = onSetSelectedAddons,
-            onDismiss = onDismissAddonSelectionDialog
+            selectedItems = settings.streamAutoPlaySelectedAddons,
+            onSelectionSaved = { selected -> onUpdate { setStreamAutoPlaySelectedAddons(selected) } },
+            onDismiss = onDismiss
         )
-    }
-
-    if (showPluginSelectionDialog) {
-        StreamAutoPlayProviderSelectionDialog(
+        PlaybackDialog.STREAM_AUTO_PLAY_PLUGINS -> StreamAutoPlayProviderSelectionDialog(
             title = stringResource(R.string.autoplay_allowed_plugins),
             allLabel = stringResource(R.string.autoplay_all_plugins),
             items = enabledPluginNames,
-            selectedItems = playerSettings.streamAutoPlaySelectedPlugins,
-            onSelectionSaved = onSetSelectedPlugins,
-            onDismiss = onDismissPluginSelectionDialog
+            selectedItems = settings.streamAutoPlaySelectedPlugins,
+            onSelectionSaved = { selected -> onUpdate { setStreamAutoPlaySelectedPlugins(selected) } },
+            onDismiss = onDismiss
         )
-    }
-
-    if (showReuseLastLinkCacheDialog) {
-        StreamReuseLastLinkCacheDurationDialog(
-            selectedHours = playerSettings.streamReuseLastLinkCacheHours,
-            onDurationSelected = {
-                onSetReuseLastLinkCacheHours(it)
-                onDismissReuseLastLinkCacheDialog()
+        PlaybackDialog.REUSE_LAST_LINK_CACHE -> StreamReuseLastLinkCacheDurationDialog(
+            selectedHours = settings.streamReuseLastLinkCacheHours,
+            onDurationSelected = { hours ->
+                onUpdate { setStreamReuseLastLinkCacheHours(hours) }
+                onDismiss()
             },
-            onDismiss = onDismissReuseLastLinkCacheDialog
+            onDismiss = onDismiss
         )
+        else -> Unit
     }
 }
 

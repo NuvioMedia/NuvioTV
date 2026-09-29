@@ -15,6 +15,7 @@ class MdbListTrackingLibraryProvider @Inject constructor(
 ) : TrackingLibraryProvider {
     override val providerId = TrackingProviderId.MDBLIST
     override val listManager = service.listManager
+    override val listSorter = service.listSorter
     override val isAuthenticated = tracking.isAuthenticated
     override val isRefreshing = service.isRefreshing
     override val items = service.items

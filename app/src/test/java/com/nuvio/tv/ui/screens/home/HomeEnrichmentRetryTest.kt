@@ -441,6 +441,8 @@ class HomeEnrichmentRetryTest {
                 every { getAllEpisodeProgress(any()) } returns flowOf(emptyMap())
             }
         val viewModel = HomeViewModel(
+            episodeShuffleStore = mockk(relaxed = true),
+            episodeShuffle = com.nuvio.tv.domain.model.EpisodeShuffle(),
             appContext = mockk(relaxed = true),
             addonRepository = mockk(relaxed = true),
             startupSyncService = mockk(relaxed = true),
@@ -458,6 +460,7 @@ class HomeEnrichmentRetryTest {
             tmdbService = tmdbService,
             tmdbMetadataService = tmdbMetadataService,
             mdbListRepository = mockk(relaxed = true),
+            imdbEpisodeRatingsRepository = mockk(relaxed = true),
             trailerService = mockk(relaxed = true),
             watchedSeriesStateHolder = mockk(relaxed = true),
             cwEnrichmentCache = cwEnrichmentCache,

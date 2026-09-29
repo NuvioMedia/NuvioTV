@@ -67,6 +67,8 @@ class HomeViewModel @Inject constructor(
     internal val watchProgressRepository: WatchProgressRepository,
     internal val libraryRepository: LibraryRepository,
     internal val metaRepository: MetaRepository,
+    internal val episodeShuffleStore: com.nuvio.tv.data.local.EpisodeShuffleStore,
+    internal val episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffle,
     internal val collectionsDataStore: CollectionsDataStore,
     internal val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
@@ -77,6 +79,7 @@ class HomeViewModel @Inject constructor(
     internal val tmdbService: TmdbService,
     internal val tmdbMetadataService: TmdbMetadataService,
     internal val mdbListRepository: MDBListRepository,
+    internal val imdbEpisodeRatingsRepository: com.nuvio.tv.data.repository.ImdbEpisodeRatingsRepository,
     internal val trailerService: TrailerService,
     internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
@@ -111,7 +114,12 @@ class HomeViewModel @Inject constructor(
     }
 
     internal val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    internal val shuffleHomeRefresh = MutableStateFlow(HomeShuffleRefresh())
+    val uiState: StateFlow<HomeUiState> by lazy { createShuffleHomeState() }
+
+    fun beginShuffleHomeVisit() {
+        shuffleHomeRefresh.update { it.copy(visit = it.visit + 1) }
+    }
 
     internal val _modernHomePresentation = MutableStateFlow(ModernHomePresentationState())
     val modernHomePresentation: StateFlow<ModernHomePresentationState> = _modernHomePresentation.asStateFlow()
@@ -255,6 +263,10 @@ class HomeViewModel @Inject constructor(
 
     /** Items an enrichment merge was applied for. */
     internal val enrichmentMergedIds: MutableSet<String> = Collections.newSetFromMap(createLruMap(MAX_PREFETCH_CACHE_SIZE))
+
+    internal val mdbBatchNegativeIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    internal var mdbBatchRowFocusJob: Job? = null
+    @Volatile internal var mdbBatchHasFired: Boolean = false
     internal val cwMetaCache: MutableMap<String, CwMetaSummary?> = createLruMap(MAX_CW_CACHE_SIZE)
     internal val cwMetaNegativeCacheTimestamps: MutableMap<String, Long> = createLruMap(MAX_CW_CACHE_SIZE)
     /** Ultra-light cache for badge evaluation: contentId → set of aired (season, episode) pairs. */
@@ -524,6 +536,19 @@ class HomeViewModel @Inject constructor(
                     }
                 }
         }
+        viewModelScope.launch {
+            var initialScreens = true
+            layoutPreferenceDataStore.customPosterEnabledScreens
+                .distinctUntilChanged()
+                .collect { screens ->
+                    _uiState.update { it.copy(customPosterEnabledScreens = screens) }
+                    if (initialScreens) {
+                        initialScreens = false
+                    } else {
+                        refreshVisibleCatalogsPipeline(forceReplace = true)
+                    }
+                }
+        }
         // When "next up from furthest episode" changes, clear CW caches and retrigger pipeline
         viewModelScope.launch {
             var initial = true
@@ -585,6 +610,12 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collectLatest { settings ->
                     currentMdbListSettings = settings
+                    _uiState.update {
+                        it.copy(
+                            mdbListShowOnHero = settings.showOnHero,
+                            mdbListRatingOrder = settings.enabledRatingOrder()
+                        )
+                    }
                 }
         }
     }
@@ -787,6 +818,7 @@ class HomeViewModel @Inject constructor(
     /** Called by the Home content when the focused row changes. */
     fun setLiveFocusedRowKey(rowKey: String?) {
         liveFocusedRowKey = rowKey
+        onFocusedRowChangedForMdbBatch(rowKey)
     }
 
     /**
@@ -933,6 +965,7 @@ class HomeViewModel @Inject constructor(
         focusedRowKey: String?,
         focusedItemKeyByRow: Map<String, String>,
         catalogRowScrollStates: Map<String, Int>,
+        catalogRowScrollAnchors: Map<String, String>,
         focusedRowIndex: Int = 0,
         focusedItemIndex: Int = 0
     ) {
@@ -946,6 +979,7 @@ class HomeViewModel @Inject constructor(
             focusedRowKey = focusedRowKey,
             focusedItemKeyByRow = focusedItemKeyByRow,
             catalogRowScrollStates = catalogRowScrollStates,
+            catalogRowScrollAnchors = catalogRowScrollAnchors,
             focusedRowIndex = focusedRowIndex,
             focusedItemIndex = focusedItemIndex,
             hasSavedFocus = true

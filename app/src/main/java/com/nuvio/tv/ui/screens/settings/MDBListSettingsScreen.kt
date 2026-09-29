@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -110,83 +111,45 @@ fun MDBListSettingsContent(
                     )
                 }
 
-                item(key = "mdblist_trakt") {
+                item(key = "mdblist_show_on_hero") {
                     SettingsToggleRow(
-                        title = stringResource(R.string.mdblist_trakt_title),
-                        subtitle = stringResource(R.string.mdblist_trakt_subtitle),
-                        checked = uiState.showTrakt,
+                        title = stringResource(R.string.mdblist_show_on_hero_title),
+                        subtitle = stringResource(R.string.mdblist_show_on_hero_subtitle),
+                        checked = uiState.showOnHero,
                         enabled = uiState.enabled,
-                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleTrakt(!uiState.showTrakt)) }
+                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleShowOnHero(!uiState.showOnHero)) }
                     )
                 }
 
-                item(key = "mdblist_imdb") {
-                    SettingsToggleRow(
-                        title = stringResource(R.string.mdblist_imdb_title),
-                        subtitle = stringResource(R.string.mdblist_imdb_subtitle),
-                        checked = uiState.showImdb,
-                        enabled = uiState.enabled,
-                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleImdb(!uiState.showImdb)) }
+                item(key = "mdblist_rating_order_header") {
+                    Text(
+                        text = stringResource(R.string.mdblist_rating_order_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioTheme.colors.TextSecondary,
+                        modifier = Modifier.padding(top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.xxs)
                     )
                 }
 
-                item(key = "mdblist_tmdb") {
-                    SettingsToggleRow(
-                        title = stringResource(R.string.mdblist_tmdb_title),
-                        subtitle = stringResource(R.string.mdblist_tmdb_subtitle),
-                        checked = uiState.showTmdb,
+                items(
+                    count = uiState.ratingOrder.size,
+                    key = { index -> "mdblist_rating_${uiState.ratingOrder[index]}" }
+                ) { index ->
+                    val provider = uiState.ratingOrder[index]
+                    val isFirst = index == 0
+                    val isLast = index == uiState.ratingOrder.lastIndex
+                    val isProviderEnabled = isRatingProviderEnabled(uiState, provider)
+                    val toggleEvent = toggleEventForProvider(provider, !isProviderEnabled)
+                    RatingOrderToggleRow(
+                        title = ratingProviderLabel(provider),
+                        checked = isProviderEnabled,
                         enabled = uiState.enabled,
-                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleTmdb(!uiState.showTmdb)) }
-                    )
-                }
-
-                item(key = "mdblist_letterboxd") {
-                    SettingsToggleRow(
-                        title = stringResource(R.string.mdblist_letterboxd_title),
-                        subtitle = stringResource(R.string.mdblist_letterboxd_subtitle),
-                        checked = uiState.showLetterboxd,
-                        enabled = uiState.enabled,
-                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleLetterboxd(!uiState.showLetterboxd)) }
-                    )
-                }
-
-                item(key = "mdblist_tomatoes") {
-                    SettingsToggleRow(
-                        title = stringResource(R.string.mdblist_tomatoes_title),
-                        subtitle = stringResource(R.string.mdblist_tomatoes_subtitle),
-                        checked = uiState.showTomatoes,
-                        enabled = uiState.enabled,
-                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleTomatoes(!uiState.showTomatoes)) }
-                    )
-                }
-
-                item(key = "mdblist_audience") {
-                    SettingsToggleRow(
-                        title = stringResource(R.string.mdblist_audience_title),
-                        subtitle = stringResource(R.string.mdblist_audience_subtitle),
-                        checked = uiState.showAudience,
-                        enabled = uiState.enabled,
-                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleAudience(!uiState.showAudience)) }
-                    )
-                }
-
-                item(key = "mdblist_metacritic") {
-                    SettingsToggleRow(
-                        title = stringResource(R.string.mdblist_metacritic_title),
-                        subtitle = stringResource(R.string.mdblist_metacritic_subtitle),
-                        checked = uiState.showMetacritic,
-                        enabled = uiState.enabled,
-                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleMetacritic(!uiState.showMetacritic)) }
-                    )
-                }
-
-                item(key = "mdblist_mal") {
-                    SettingsToggleRow(
-                        title = stringResource(R.string.mdblist_mal_title),
-                        subtitle = stringResource(R.string.mdblist_mal_subtitle),
-                        checked = uiState.showMal,
-                        enabled = uiState.enabled,
-                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleMal(!uiState.showMal)) }
+                        onToggle = { toggleEvent?.let { viewModel.onEvent(it) } },
+                        onMoveUp = if (!isFirst && uiState.enabled) {
+                            { viewModel.onEvent(MDBListSettingsEvent.MoveRatingUp(provider)) }
+                        } else null,
+                        onMoveDown = if (!isLast && uiState.enabled) {
+                            { viewModel.onEvent(MDBListSettingsEvent.MoveRatingDown(provider)) }
+                        } else null
                     )
                 }
             }
@@ -332,4 +295,97 @@ private fun maskApiKey(key: String, notSetLabel: String): String {
     val trimmed = key.trim()
     if (trimmed.isBlank()) return notSetLabel
     return if (trimmed.length <= 4) "••••" else "••••••${trimmed.takeLast(4)}"
+}
+
+@Composable
+private fun RatingOrderToggleRow(
+    title: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onToggle: () -> Unit,
+    onMoveUp: (() -> Unit)?,
+    onMoveDown: (() -> Unit)?
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
+    ) {
+        SettingsToggleRow(
+            title = title,
+            subtitle = null,
+            checked = checked,
+            enabled = enabled,
+            onToggle = onToggle,
+            modifier = Modifier.weight(1f)
+        )
+        Button(
+            onClick = { onMoveUp?.invoke() },
+            enabled = onMoveUp != null,
+            modifier = Modifier.width(40.dp),
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioTheme.colors.BackgroundElevated,
+                contentColor = NuvioTheme.colors.TextPrimary,
+                disabledContainerColor = NuvioTheme.colors.BackgroundElevated,
+                disabledContentColor = NuvioTheme.colors.TextTertiary
+            ),
+            scale = ButtonDefaults.scale(focusedScale = 1.05f),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text("▲", style = MaterialTheme.typography.bodySmall)
+        }
+        Button(
+            onClick = { onMoveDown?.invoke() },
+            enabled = onMoveDown != null,
+            modifier = Modifier.width(40.dp),
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioTheme.colors.BackgroundElevated,
+                contentColor = NuvioTheme.colors.TextPrimary,
+                disabledContainerColor = NuvioTheme.colors.BackgroundElevated,
+                disabledContentColor = NuvioTheme.colors.TextTertiary
+            ),
+            scale = ButtonDefaults.scale(focusedScale = 1.05f),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text("▼", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+private fun ratingProviderLabel(provider: String): String = when (provider) {
+    "trakt" -> "Trakt"
+    "imdb" -> "IMDb"
+    "tmdb" -> "TMDB"
+    "tomatoes" -> "Rotten Tomatoes"
+    "audience" -> "Audience Score"
+    "letterboxd" -> "Letterboxd"
+    "metacritic" -> "Metacritic"
+    "mal" -> "MyAnimeList"
+    else -> provider.replaceFirstChar { it.uppercase() }
+}
+
+private fun isRatingProviderEnabled(state: MDBListSettingsUiState, provider: String): Boolean = when (provider) {
+    "trakt" -> state.showTrakt
+    "imdb" -> state.showImdb
+    "tmdb" -> state.showTmdb
+    "tomatoes" -> state.showTomatoes
+    "audience" -> state.showAudience
+    "letterboxd" -> state.showLetterboxd
+    "metacritic" -> state.showMetacritic
+    "mal" -> state.showMal
+    else -> false
+}
+
+private fun toggleEventForProvider(provider: String, enabled: Boolean): MDBListSettingsEvent? = when (provider) {
+    "trakt" -> MDBListSettingsEvent.ToggleTrakt(enabled)
+    "imdb" -> MDBListSettingsEvent.ToggleImdb(enabled)
+    "tmdb" -> MDBListSettingsEvent.ToggleTmdb(enabled)
+    "tomatoes" -> MDBListSettingsEvent.ToggleTomatoes(enabled)
+    "audience" -> MDBListSettingsEvent.ToggleAudience(enabled)
+    "letterboxd" -> MDBListSettingsEvent.ToggleLetterboxd(enabled)
+    "metacritic" -> MDBListSettingsEvent.ToggleMetacritic(enabled)
+    "mal" -> MDBListSettingsEvent.ToggleMal(enabled)
+    else -> null
 }

@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.home
 
+import com.nuvio.tv.domain.model.catalogTypeKey
+import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
@@ -8,7 +10,7 @@ import com.nuvio.tv.domain.model.stableKey
 import kotlinx.coroutines.Job
 
 internal fun HomeViewModel.catalogKey(addonId: String, type: String, catalogId: String): String {
-    return "${addonId}_${type}_${catalogId}"
+    return catalogRowLegacyKey(addonId, type, catalogId)
 }
 
 internal fun HomeViewModel.buildHomeCatalogLoadSignature(addons: List<Addon>): String {
@@ -114,8 +116,23 @@ internal fun HomeViewModel.readCatalogRow(key: String): CatalogRow? = synchroniz
 
 internal fun HomeViewModel.replaceCatalogRow(key: String, row: CatalogRow) {
     synchronized(catalogStateLock) {
-        val previousRow = catalogsMap.put(key, row)
-        reindexCatalogRow(key, previousRow, row)
+        val previousRow = catalogsMap[key]
+        val previousById = previousRow?.items?.associateBy { it.id }
+        val mergedItems = if (previousById != null) {
+            row.items.map { newItem ->
+                val prev = previousById[newItem.id]
+                if (prev?.mdbListRatings != null && newItem.mdbListRatings == null) {
+                    newItem.copy(
+                        mdbListRatings = prev.mdbListRatings,
+                        mdbListRatingOrder = prev.mdbListRatingOrder,
+                        imdbRating = prev.mdbListRatings.imdb?.toFloat() ?: newItem.imdbRating
+                    )
+                } else newItem
+            }
+        } else row.items
+        val mergedRow = if (mergedItems !== row.items) row.copy(items = mergedItems) else row
+        catalogsMap.put(key, mergedRow)
+        reindexCatalogRow(key, previousRow, mergedRow)
     }
 }
 
@@ -338,7 +355,7 @@ internal fun HomeViewModel.disableCatalogKey(
     catalogId: String,
     catalogName: String
 ): String {
-    return "${addonBaseUrl}_${type}_${catalogId}_${catalogName}"
+    return "${addonBaseUrl}_${catalogTypeKey(type)}_${catalogId}_${catalogName}"
 }
 
 internal fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
@@ -363,7 +380,7 @@ private fun buildAddonKeyOwnerMap(addons: List<Addon>): Map<String, String> {
     val map = mutableMapOf<String, String>()
     addons.forEach { addon ->
         addon.catalogs.forEach { catalog ->
-            val key = "${addon.id}_${catalog.apiType}_${catalog.id}"
+            val key = catalogRowLegacyKey(addon.id, catalog.apiType, catalog.id)
             map[key] = addon.id
         }
     }

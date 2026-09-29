@@ -128,6 +128,7 @@ data class LibraryUiState(
     val selectedTypeTab: LibraryTypeTab? = null,
     val selectedSortOption: LibrarySortOption = LibrarySortOption.DEFAULT,
     val sortSelectionVersion: Long = 0L,
+    val providerAddedOrder: LibraryProviderOrder? = null,
     val availableGenres: List<FilterOption> = emptyList(),
     val availableYears: List<FilterOption> = emptyList(),
     val selectedGenre: String? = null,
@@ -148,7 +149,9 @@ data class LibraryUiState(
     val manageSelectedListKey: String? = null,
     val listEditorState: LibraryListEditorState? = null,
     val pendingOperation: Boolean = false,
-    val customPosterUrlPattern: String = ""
+    val customPosterUrlPattern: String = "",
+    val customPosterEnabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen> =
+        com.nuvio.tv.core.poster.CustomPosterScreen.ALL
 )
 
 @HiltViewModel
@@ -182,13 +185,18 @@ class LibraryViewModel @Inject constructor(
     private var listManagementContext: ListManagementContext? = null
     private var messageClearJob: Job? = null
     private var cloudRefreshJob: Job? = null
+    private var selectedSortOverride: Pair<Int, LibrarySortOption>? = null
 
     init {
         posterOptions.bind(viewModelScope)
         observeLayoutPreferences()
         observeLibraryData()
+        observeProviderSortOrder()
         viewModelScope.launch {
-            profileManager.activeProfileId.collect { onCloseManageLists() }
+            profileManager.activeProfileId.collect { profileId ->
+                if (selectedSortOverride?.first != profileId) selectedSortOverride = null
+                onCloseManageLists()
+            }
         }
         observeCloudLibrarySettings()
         viewModelScope.launch {
@@ -277,6 +285,8 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun onSelectSortOption(option: LibrarySortOption) {
+        val profileId = profileManager.activeProfileId.value
+        selectedSortOverride = profileId to option
         _uiState.update { current ->
             val nextVersion = if (current.selectedSortOption != option) {
                 current.sortSelectionVersion + 1L
@@ -289,7 +299,45 @@ class LibraryViewModel @Inject constructor(
             )
             updated.withVisibleItems()
         }
-        viewModelScope.launch { libraryPreferences.setSortOption(option.key) }
+        viewModelScope.launch {
+            if (profileManager.activeProfileId.value == profileId) libraryPreferences.setSortOption(option.key)
+        }
+    }
+
+    private fun observeProviderSortOrder() {
+        viewModelScope.launch {
+            combine(profileManager.activeProfileId, uiState) { profileId, state ->
+                profileId to Triple(state.sourceMode.takeIf { state.isTrackingAuthenticated },
+                    state.selectedListKey, state.selectedSortOption)
+            }.distinctUntilChanged().collectLatest { (profileId, selection) ->
+                _uiState.update { it.copy(providerAddedOrder = null).withVisibleItems() }
+                val (source, listKey, sortOption) = selection
+                if (source == null || listKey == null ||
+                    sortOption !in listOf(LibrarySortOption.ADDED_ASC, LibrarySortOption.ADDED_DESC)) return@collectLatest
+                val sorter = source.providerId?.let(trackingProviderRegistry::provider)?.listSorter ?: return@collectLatest
+                try {
+                    sorter.observeAddedOrder(listKey, sortOption == LibrarySortOption.ADDED_DESC).collect { keys ->
+                        if (profileManager.activeProfileId.value != profileId) return@collect
+                        _uiState.update { current ->
+                            if (current.sourceMode != source || current.selectedListKey != listKey ||
+                                current.selectedSortOption != sortOption) current else current.copy(
+                                providerAddedOrder = keys?.let { LibraryProviderOrder(source, listKey, sortOption,
+                                    it.withIndex().associate { (index, key) -> key to index }) }
+                            ).withVisibleItems()
+                        }
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    val current = _uiState.value
+                    if (profileManager.activeProfileId.value == profileId && current.sourceMode == source &&
+                        current.selectedListKey == listKey && current.selectedSortOption == sortOption) {
+                        onSelectSortOption(LibrarySortOption.DEFAULT)
+                        setError(context.getString(R.string.library_error_sort_failed))
+                    }
+                }
+            }
+        }
     }
 
     fun ensureCloudLibraryLoaded() {
@@ -642,7 +690,8 @@ class LibraryViewModel @Inject constructor(
                     val persistedSort = persistedSortKey?.let { key ->
                         LibrarySortOption.entries.find { it.key == key }
                     }
-                    val nextSelectedSort = (persistedSort ?: current.selectedSortOption)
+                    val sessionSort = selectedSortOverride?.takeIf { it.first == profileManager.activeProfileId.value }?.second
+                    val nextSelectedSort = (sessionSort ?: persistedSort ?: current.selectedSortOption)
                         .takeIf { it in sortOptions }
                         ?: modeDefault
 
@@ -698,6 +747,16 @@ class LibraryViewModel @Inject constructor(
                     _uiState.update { current ->
                         if (current.customPosterUrlPattern == pattern) current
                         else current.copy(customPosterUrlPattern = pattern).withVisibleItems()
+                    }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.customPosterEnabledScreens
+                .distinctUntilChanged()
+                .collectLatest { screens ->
+                    _uiState.update { current ->
+                        if (current.customPosterEnabledScreens == screens) current
+                        else current.copy(customPosterEnabledScreens = screens).withVisibleItems()
                     }
                 }
         }
@@ -928,24 +987,32 @@ class LibraryViewModel @Inject constructor(
         }
 
         // Step 6: Sort
+        val addedOrder = providerAddedOrder?.takeIf {
+            it.source == sourceMode && it.listKey == selectedListKey && it.sortOption == selectedSortOption
+        }?.comparator()
         val sorted = when (selectedSortOption) {
-            LibrarySortOption.DEFAULT -> if (sourceMode.providerId != null) {
-                watchedFiltered.sortedWith(
+            LibrarySortOption.DEFAULT -> when {
+                sourceMode == LibrarySourceMode.MDBLIST -> watchedFiltered.sortedWith(
+                    compareByDescending<LibraryEntry> { it.listedAt }
+                        .thenByDescending { it.listRanks[selectedListKey] ?: Int.MIN_VALUE }
+                        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
+                        .thenBy { it.id }
+                )
+                sourceMode.providerId != null -> watchedFiltered.sortedWith(
                     compareBy<LibraryEntry> { it.listRanks[selectedListKey] ?: it.traktRank ?: Int.MAX_VALUE }
                         .thenByDescending { it.listedAt }
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                         .thenBy { it.id }
                 )
-            } else {
-                watchedFiltered
+                else -> watchedFiltered
             }
             LibrarySortOption.ADDED_DESC -> watchedFiltered.sortedWith(
-                compareByDescending<LibraryEntry> { it.listedAt }
+                addedOrder ?: compareByDescending<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )
             LibrarySortOption.ADDED_ASC -> watchedFiltered.sortedWith(
-                compareBy<LibraryEntry> { it.listedAt }
+                addedOrder ?: compareBy<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )
@@ -967,7 +1034,9 @@ class LibraryViewModel @Inject constructor(
         val validYear = selectedYear?.takeIf { y -> yearOptions.any { it.key == y } }
 
         return copy(
-            visibleItems = sorted.withCustomPosterUrls(customPosterUrlPattern),
+            visibleItems = sorted.withCustomPosterUrls(
+                com.nuvio.tv.core.poster.patternForScreen(customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.LIBRARY, customPosterEnabledScreens)
+            ),
             availableTypeTabs = typeTabsWithCounts,
             availableGenres = genreOptions,
             availableYears = yearOptions,

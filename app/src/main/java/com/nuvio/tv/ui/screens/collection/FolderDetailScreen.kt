@@ -50,6 +50,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import com.nuvio.tv.ui.util.localizedContentType
@@ -145,8 +146,8 @@ fun FolderDetailScreen(
             onLoadMoreCatalog = viewModel::loadMoreForCatalog,
             onSelectTab = viewModel::selectTab,
             onLoadMoreForSelectedTab = { viewModel.loadMoreItems(viewModel.uiState.value.selectedTabIndex) },
-            onSaveFocusState = { vi, vo, rk, ikm, m, ri, ii ->
-                viewModel.saveFollowLayoutFocusState(vi, vo, rk, ikm, m, ri, ii)
+            onSaveFocusState = { vi, vo, rk, ikm, m, ma, ri, ii ->
+                viewModel.saveFollowLayoutFocusState(vi, vo, rk, ikm, m, ma, ri, ii)
             },
             onItemFocus = viewModel::onItemFocused,
             onPreloadAdjacentItem = viewModel::preloadAdjacentItem,
@@ -156,6 +157,7 @@ fun FolderDetailScreen(
             trailerPreviewUrls = trailerPreviewUrls,
             trailerPreviewAudioUrls = trailerPreviewAudioUrls,
             onRequestTrailerPreview = viewModel::requestTrailerPreview,
+            onFocusedRowKeyChanged = viewModel::onFocusedRowChanged,
             scrollToTopTrigger = scrollToTopTrigger
         )
     } else {
@@ -193,8 +195,8 @@ fun FolderDetailScreen(
                         onNavigateToDetail = onNavigateToDetail,
                         isItemWatched = isItemWatched,
                         onLoadMoreCatalog = viewModel::loadMoreForCatalog,
-                        onSaveFocusState = { vi, vo, rk, ikm, m, ri, ii ->
-                            viewModel.saveRowsFocusState(vi, vo, rk, ikm, m, ri, ii)
+                        onSaveFocusState = { vi, vo, rk, ikm, m, ma, ri, ii ->
+                            viewModel.saveRowsFocusState(vi, vo, rk, ikm, m, ma, ri, ii)
                         },
                         onItemFocus = viewModel::onItemFocused,
                         onItemLongPress = { item, addonBaseUrl ->
@@ -251,7 +253,9 @@ private fun FolderHeader(folder: com.nuvio.tv.domain.model.CollectionFolder) {
         }
         Text(
             text = folder.title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                textDirection = folder.title.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -313,7 +317,9 @@ private fun TabbedGridContent(
         }
         Text(
             text = folder.title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                textDirection = folder.title.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -564,7 +570,7 @@ private fun RowsContent(
     focusState: HomeScreenFocusState,
     onNavigateToDetail: (String, String, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit = { _, _, _ -> },
-    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
+    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
     isItemWatched: (MetaPreview) -> Boolean = { false },
     onItemFocus: (MetaPreview) -> Unit = {},
     onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
@@ -641,6 +647,7 @@ private fun RowsContent(
                 focusedRowKey,
                 itemKeys,
                 rowStates.mapValues { it.value.firstVisibleItemIndex },
+                emptyMap(), // rows here are restored by index
                 -1, // rowIndex
                 rowFocusedItemIndex[focusedRowKey] ?: 0 // itemIndex — positional fallback
             )
@@ -865,13 +872,14 @@ private fun FollowLayoutContent(
     onLoadMoreCatalog: (String, String, String) -> Unit = { _, _, _ -> },
     onSelectTab: (Int) -> Unit = {},
     onLoadMoreForSelectedTab: () -> Unit = {},
-    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
+    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     trailerPreviewUrls: Map<String, String> = emptyMap(),
     trailerPreviewAudioUrls: Map<String, String> = emptyMap(),
     onRequestTrailerPreview: (String, String, String?, String) -> Unit = { _, _, _, _ -> },
+    onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0
 ) {
     val homeState = uiState.followLayoutHomeState
@@ -986,6 +994,7 @@ private fun FollowLayoutContent(
             onItemFocus = onItemFocus,
             onPreloadAdjacentItem = onPreloadAdjacentItem,
             onSaveFocusState = onSaveFocusState,
+            onFocusedRowKeyChanged = onFocusedRowKeyChanged,
             scrollToTopTrigger = scrollToTopTrigger,
             blockLeftOnFirstExpandedItem = true
         )
