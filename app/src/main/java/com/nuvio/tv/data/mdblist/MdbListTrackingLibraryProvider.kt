@@ -22,7 +22,8 @@ class MdbListTrackingLibraryProvider @Inject constructor(
     override val tabs = service.tabs
 
     override fun recognizesListKey(key: String): Boolean =
-        key == MDBLIST_WATCHLIST_KEY || key.startsWith(MDBLIST_LIST_KEY_PREFIX)
+        key == MDBLIST_WATCHLIST_KEY || key.startsWith(MDBLIST_LIST_KEY_PREFIX) ||
+            key.startsWith(MDBLIST_EXTERNAL_LIST_KEY_PREFIX)
 
     override fun observeMembership(itemId: String, itemType: String) = service.observeMembership(itemId, itemType)
 
