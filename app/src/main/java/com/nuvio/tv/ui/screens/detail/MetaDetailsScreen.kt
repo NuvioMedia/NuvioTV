@@ -2500,9 +2500,8 @@ private fun MetaDetailsContent(
                         restoreRatingsFocusToken = restoreRatingsFocusToken,
                         onRatingsFocusRestored = {
                             initialHeroFocusRequested = true
-                        }
+                        },
                         onTruncationChanged = { synopsisTruncated = it }
-                        
                     )
                 }
             }
