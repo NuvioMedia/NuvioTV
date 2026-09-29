@@ -64,6 +64,7 @@ class CatalogOrderViewModel @Inject constructor(
     private var draftOrderKeys: List<String>? = null
     private var moveBaselineItems: List<CatalogOrderItem>? = null
     private var pendingSavedOrderKeys: List<String>? = null
+    private var lastManifestAddonKeys: List<String> = emptyList()
     private var persistGeneration: Int = 0
     private val persistMutex = Mutex()
 
@@ -312,11 +313,44 @@ class CatalogOrderViewModel @Inject constructor(
     }
 
     fun toggleFollowAddonsOrder(enabled: Boolean) {
+        Log.d(TAG, "toggleFollowAddonsOrder enabled=$enabled")
+        pendingSavedOrderKeys = null
+        val current = _uiState.value.items
+        val reordered = if (enabled) {
+            orderItemsByAddonManifest(current, lastManifestAddonKeys)
+        } else {
+            current
+        }
+        val flagged = reordered.mapIndexed { index, item ->
+            item.withMoveFlags(index, reordered.size, enabled)
+        }
+        Log.d(
+            TAG,
+            "toggleFollowAddonsOrder apply n=${flagged.size} " +
+                "names=${flagged.take(6).joinToString { it.catalogName }}",
+        )
+        _uiState.update {
+            it.copy(followAddonsOrder = enabled, items = flagged)
+        }
         viewModelScope.launch {
             withContext(NonCancellable) {
                 layoutPreferenceDataStore.setFollowAddonsOrder(enabled)
             }
+            homeCatalogSettingsSyncService.triggerPush()
         }
+    }
+
+    private fun orderItemsByAddonManifest(
+        current: List<CatalogOrderItem>,
+        manifestKeys: List<String>,
+    ): List<CatalogOrderItem> {
+        if (current.isEmpty() || manifestKeys.isEmpty()) return current
+        val byKey = current.associateBy { it.key }
+        val addons = manifestKeys.mapNotNull { key -> byKey[key] }
+        if (addons.isEmpty()) return current
+        val placed = addons.mapTo(HashSet()) { it.key }
+        val rest = current.filter { it.key !in placed }
+        return addons + rest
     }
 
     fun toggleCatalogEnabled(disableKey: String) {
@@ -481,6 +515,7 @@ class CatalogOrderViewModel @Inject constructor(
         val allEntries = defaultEntries + collectionEntries
         val availableMap = allEntries.associateBy { it.key }
         val defaultOrderKeys = allEntries.map { it.key }
+        lastManifestAddonKeys = defaultEntries.map { it.key }
 
         val effectiveOrder: List<String>
         if (followAddonsOrder) {

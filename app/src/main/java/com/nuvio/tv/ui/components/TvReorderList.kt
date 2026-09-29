@@ -170,6 +170,16 @@ fun <T> TvReorderList(
         val itemKeys = items.map(key)
         val movingChanged = previousMovingKey.value != movingKey
         val itemsChanged = previousItemKeys.value != itemKeys
+        if (itemsChanged && movingKey == null) {
+            val nextIndices = indicesFrom(items)
+            if (nextIndices != animatedIndices) {
+                Log.d(LIST_TAG, "list syncSlots ${visualSnapshot("itemsReorder")}")
+                animatedIndices = nextIndices
+                offsetJobs.values.forEach { it.cancel() }
+                offsetJobs.clear()
+                dragOffsets.clear()
+            }
+        }
         if (movingChanged || itemsChanged) {
             Log.d(
                 LIST_TAG,
@@ -389,39 +399,45 @@ fun <T> TvReorderList(
         modifier = modifier
             .onSizeChanged { viewportHeightPx = it.height.toFloat() }
             .verticalScroll(scrollState)
-            .onPreviewKeyEvent { event ->
-                val native = event.nativeKeyEvent
-                val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                    native.keyCode == KeyEvent.KEYCODE_ENTER ||
-                    native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
-                when {
-                    isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
-                        if (suppressStartMove) {
-                            Log.d(LIST_TAG, "list swallow OK up after confirm")
-                            suppressStartMove = false
-                            true
-                        } else {
-                            false
+            .then(
+                if (movingKey != null || suppressStartMove) {
+                    Modifier.onPreviewKeyEvent { event ->
+                        val native = event.nativeKeyEvent
+                        val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                            native.keyCode == KeyEvent.KEYCODE_ENTER ||
+                            native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
+                        when {
+                            isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
+                                if (suppressStartMove) {
+                                    Log.d(LIST_TAG, "list swallow OK up after confirm")
+                                    suppressStartMove = false
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+
+                            movingKey != null && isConfirmKey &&
+                                native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0 -> {
+                                confirmFromUi("ok-confirm")
+                                true
+                            }
+
+                            movingKey != null && native.keyCode == KeyEvent.KEYCODE_BACK &&
+                                native.action == KeyEvent.ACTION_DOWN -> {
+                                pinScroll("back-cancel")
+                                Log.d(LIST_TAG, "list BACK cancel ${visualSnapshot("back-cancel")}")
+                                onCancelMove()
+                                true
+                            }
+
+                            else -> handleMoveKey(native.keyCode, native.action, native.repeatCount)
                         }
                     }
-
-                    movingKey != null && isConfirmKey &&
-                        native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0 -> {
-                        confirmFromUi("ok-confirm")
-                        true
-                    }
-
-                    movingKey != null && native.keyCode == KeyEvent.KEYCODE_BACK &&
-                        native.action == KeyEvent.ACTION_DOWN -> {
-                        pinScroll("back-cancel")
-                        Log.d(LIST_TAG, "list BACK cancel ${visualSnapshot("back-cancel")}")
-                        onCancelMove()
-                        true
-                    }
-
-                    else -> handleMoveKey(native.keyCode, native.action, native.repeatCount)
-                }
-            }
+                } else {
+                    Modifier
+                },
+            )
             .focusGroup(),
     ) {
         Column(
