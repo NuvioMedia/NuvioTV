@@ -35,6 +35,30 @@ class UsenetSettingsTest {
             every { UsenetSidecar.get(context) } returns sidecar
             every { sidecar.settingsChanged() } returns Job()
             val settings = UsenetSettings(context)
+            assertFalse(UsenetConfiguration().holeFilling)
+            assertFalse(settings.settings.value.holeFilling)
+            assertEquals(5, settings.settings.value.maxMissingArticles)
+            assertEquals(2, settings.settings.value.maxConsecutiveMissing)
+            settings.update(settings.settings.value.copy(holeFilling = true, maxMissingArticles = 50, maxConsecutiveMissing = 10))
+            val restoredHoles = UsenetSettings(context).settings.value
+            assertTrue(restoredHoles.holeFilling)
+            assertEquals(50, restoredHoles.maxMissingArticles)
+            assertEquals(10, restoredHoles.maxConsecutiveMissing)
+            for (invalid in listOf(
+                restoredHoles.copy(maxMissingArticles = 0),
+                restoredHoles.copy(maxMissingArticles = 51),
+                restoredHoles.copy(maxConsecutiveMissing = 0),
+                restoredHoles.copy(maxConsecutiveMissing = 11),
+                restoredHoles.copy(maxMissingArticles = 1, maxConsecutiveMissing = 2)
+            )) {
+                assertThrows(IllegalArgumentException::class.java) { settings.update(invalid) }
+            }
+            settings.update(restoredHoles.copy(holeFilling = false))
+            assertFalse(UsenetSettings(context).settings.value.holeFilling)
+            values["maxMissingArticles"] = -1
+            values["maxConsecutiveMissing"] = 100
+            assertEquals(1, UsenetSettings.read(context).maxMissingArticles)
+            assertEquals(1, UsenetSettings.read(context).maxConsecutiveMissing)
             assertEquals(5, UsenetConfiguration().fallbackMaxAttempts)
             assertEquals(5, settings.settings.value.fallbackMaxAttempts)
             settings.update(settings.settings.value.copy(fallbackMaxAttempts = 50))

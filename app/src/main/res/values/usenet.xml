@@ -1,5 +1,11 @@
 <resources>
     <string name="usenet_title">Usenet streaming</string>
+    <string name="usenet_hole_filling">Fill Missing Articles</string>
+    <string name="usenet_hole_filling_description">Try to continue through small gaps in a damaged video. Missing content may cause picture or audio glitches, and some videos may still fail. Off by default. Applies to the next stream.</string>
+    <string name="usenet_max_missing_articles">Maximum Missing Articles</string>
+    <string name="usenet_max_missing_articles_description">Total missing articles allowed across one playback (1–50). Lower values reject damaged sources sooner.</string>
+    <string name="usenet_max_consecutive_missing">Maximum Consecutive Missing Articles</string>
+    <string name="usenet_max_consecutive_missing_description">Largest gap allowed in a row (1–10). Lower values allow only smaller interruptions. Essential header articles are never filled.</string>
     <string name="usenet_self_hosted">Allow self-hosted servers</string>
     <string name="usenet_self_hosted_description">Allow addon-supplied NZB and provider addresses on your local network or this device. Enable only for trusted addons and self-hosted services. Link-local addresses remain blocked. Applies to the next stream.</string>
     <string name="usenet_diag_provider_setup">Provider pool setup</string>

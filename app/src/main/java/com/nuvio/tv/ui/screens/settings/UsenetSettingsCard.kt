@@ -34,6 +34,18 @@ internal fun UsenetSettingsCard(
         SettingsActionRow(title = stringResource(R.string.usenet_fallback_max_attempts),
             subtitle = stringResource(R.string.usenet_fallback_max_attempts_description),
             value = configuration.fallbackMaxAttempts.toString(), onClick = { picker = "fallbackAttempts" })
+        SettingsToggleRow(title = stringResource(R.string.usenet_hole_filling),
+            subtitle = stringResource(R.string.usenet_hole_filling_description),
+            checked = configuration.holeFilling,
+            onToggle = { update(configuration.copy(holeFilling = !configuration.holeFilling)) })
+        if (configuration.holeFilling) {
+            SettingsActionRow(title = stringResource(R.string.usenet_max_missing_articles),
+                subtitle = stringResource(R.string.usenet_max_missing_articles_description),
+                value = configuration.maxMissingArticles.toString(), onClick = { picker = "missingArticles" })
+            SettingsActionRow(title = stringResource(R.string.usenet_max_consecutive_missing),
+                subtitle = stringResource(R.string.usenet_max_consecutive_missing_description),
+                value = configuration.maxConsecutiveMissing.toString(), onClick = { picker = "consecutiveMissing" })
+        }
         SettingsToggleRow(title = stringResource(R.string.usenet_prefetch_results),
             subtitle = stringResource(R.string.usenet_prefetch_results_description),
             checked = configuration.prefetchResults,
@@ -65,6 +77,17 @@ internal fun UsenetSettingsCard(
             value = configuration.maxConnections.takeIf { it > 0 }?.toString() ?: automatic, onClick = { picker = "connections" })
     }
     when (picker) {
+        "missingArticles" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_max_missing_articles),
+            options = (1..50).map { SettingsPickerOption(it, it.toString()) },
+            selectedValue = configuration.maxMissingArticles, onOptionSelected = {
+                update(configuration.copy(maxMissingArticles = it, maxConsecutiveMissing = minOf(configuration.maxConsecutiveMissing, it)))
+                picker = null
+            }, onDismiss = { picker = null })
+        "consecutiveMissing" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_max_consecutive_missing),
+            options = (1..minOf(10, configuration.maxMissingArticles)).map { SettingsPickerOption(it, it.toString()) },
+            selectedValue = configuration.maxConsecutiveMissing, onOptionSelected = {
+                update(configuration.copy(maxConsecutiveMissing = it)); picker = null
+            }, onDismiss = { picker = null })
         "fallbackAttempts" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_fallback_max_attempts),
             options = (1..50).map { SettingsPickerOption(it, it.toString()) },
             selectedValue = configuration.fallbackMaxAttempts, onOptionSelected = { update(configuration.copy(fallbackMaxAttempts = it)); picker = null }, onDismiss = { picker = null })

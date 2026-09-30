@@ -17,6 +17,9 @@ data class UsenetConfiguration(
     val prefetchResults: Boolean = false,
     val cacheNzb: Boolean = true,
     val allowPrivateNetwork: Boolean = false,
+    val holeFilling: Boolean = false,
+    val maxMissingArticles: Int = 5,
+    val maxConsecutiveMissing: Int = 2,
     val fallbackEnabled: Boolean = false,
     val fallbackMaxAttempts: Int = 5
 )
@@ -32,6 +35,8 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
         require(value.profile in listOf("low-memory", "balanced", "throughput"))
         require(value.readAhead in 0..512 && value.maxConnections in 0..4096)
         require(value.fallbackMaxAttempts in 1..50)
+        require(value.maxMissingArticles in 1..50)
+        require(value.maxConsecutiveMissing in 1..10 && value.maxConsecutiveMissing <= value.maxMissingArticles)
         preferences.edit().putString("profile", value.profile)
             .putInt("readAhead", value.readAhead).putInt("maxConnections", value.maxConnections)
             .putBoolean("prewarmOnLaunch", value.prewarmOnLaunch)
@@ -40,6 +45,9 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
             .putBoolean("prefetchResults", value.prefetchResults)
             .putBoolean("cacheNzb", value.cacheNzb)
             .putBoolean("allowPrivateNetwork", value.allowPrivateNetwork)
+            .putBoolean("holeFilling", value.holeFilling)
+            .putInt("maxMissingArticles", value.maxMissingArticles)
+            .putInt("maxConsecutiveMissing", value.maxConsecutiveMissing)
             .putBoolean("fallbackEnabled", value.fallbackEnabled)
             .putInt("fallbackMaxAttempts", value.fallbackMaxAttempts).apply()
         state.value = value
@@ -49,6 +57,7 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
     companion object {
         fun read(context: Context): UsenetConfiguration {
             val prefs = context.getSharedPreferences("usenet_performance", Context.MODE_PRIVATE)
+            val maxMissingArticles = prefs.getInt("maxMissingArticles", 5).coerceIn(1, 50)
             return UsenetConfiguration(
                 profile = prefs.getString("profile", "balanced")?.takeIf { it in listOf("low-memory", "balanced", "throughput") } ?: "balanced",
                 readAhead = prefs.getInt("readAhead", 0).coerceIn(0, 512),
@@ -59,6 +68,9 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
                 prefetchResults = prefs.getBoolean("prefetchResults", false),
                 cacheNzb = prefs.getBoolean("cacheNzb", true),
                 allowPrivateNetwork = prefs.getBoolean("allowPrivateNetwork", false),
+                holeFilling = prefs.getBoolean("holeFilling", false),
+                maxMissingArticles = maxMissingArticles,
+                maxConsecutiveMissing = prefs.getInt("maxConsecutiveMissing", 2).coerceIn(1, minOf(10, maxMissingArticles)),
                 fallbackEnabled = prefs.getBoolean("fallbackEnabled", false),
                 fallbackMaxAttempts = prefs.getInt("fallbackMaxAttempts", 5).coerceIn(1, 50)
             )
