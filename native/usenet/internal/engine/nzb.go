@@ -395,6 +395,7 @@ type FileReader struct {
 	leases map[int]*article
 	pos    int64
 	header bool
+	fill   bool // Only selected media payload readers may substitute missing bytes.
 }
 
 func (f *File) Reader(ctx context.Context, ahead int) *FileReader {
@@ -479,6 +480,9 @@ func (r *FileReader) ReadAt(p []byte, off int64) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
+	if err := r.ctx.Err(); err != nil {
+		return 0, err
+	}
 	if off < 0 {
 		return 0, errors.New("negative file offset")
 	}
@@ -488,11 +492,16 @@ func (r *FileReader) ReadAt(p []byte, off int64) (int, error) {
 	if off >= r.f.Size() {
 		return 0, io.EOF
 	}
+	if r.fill {
+		if span, ok := r.f.store.holes.lookup(r.f, off); ok {
+			return fillHole(p, off, span)
+		}
+	}
 	lo, hi := 0, len(r.f.segments)-1
 	for lo <= hi {
 		i := r.f.locate(off, lo, hi)
 		if i < 0 {
-			return 0, errors.New("uncovered file offset")
+			return 0, fmt.Errorf("%w: uncovered file offset", errInvalidArticle)
 		}
 		r.trim(i)
 		a := r.get(i, false)
@@ -501,10 +510,28 @@ func (r *FileReader) ReadAt(p []byte, off int64) (int, error) {
 		}
 		m, err := a.metadata(r.ctx)
 		if err != nil {
+			if r.fill && r.f.store.holes != nil && errors.Is(err, nntppool.ErrArticleNotFound) {
+				span, holeErr := r.holeAt(i)
+				if holeErr != nil {
+					return 0, holeErr
+				}
+				if off < span.begin {
+					hi = span.first - 1
+					continue
+				}
+				if off >= span.end {
+					lo = span.last + 1
+					continue
+				}
+				if err := r.f.store.holes.accept(r.f, span); err != nil {
+					return 0, err
+				}
+				return fillHole(p, off, span)
+			}
 			return 0, err
 		}
 		if err = r.f.learn(i, m); err != nil {
-			return 0, err
+			return 0, fmt.Errorf("%w: %v", errInvalidArticle, err)
 		}
 		r.f.mu.RLock()
 		seg := r.f.segments[i]
@@ -525,7 +552,7 @@ func (r *FileReader) ReadAt(p []byte, off int64) (int, error) {
 		}
 		return a.readAt(r.ctx, p[:min(int64(len(p)), seg.end-off)], off-seg.begin)
 	}
-	return 0, errors.New("NZB layout does not cover requested offset")
+	return 0, fmt.Errorf("%w: NZB layout does not cover requested offset", errInvalidArticle)
 }
 
 func (r *FileReader) Read(p []byte) (int, error) {

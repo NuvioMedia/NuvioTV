@@ -16,13 +16,16 @@ import (
 // Zero overrides follow the profile/provider configuration. Memory is a hard
 // article-buffer budget; Go's runtime memory limit is set separately by main.
 type Config struct {
-	Profile             string `json:"profile"`
-	ReadAhead           int    `json:"readAhead"`
-	MaxConnections      int    `json:"maxConnections"`
-	FastMKVStartup      bool   `json:"fastMkvStartup"`
-	FastNZBFetch        bool   `json:"fastNzbFetch"`
-	CacheNZB            bool   `json:"cacheNzb"`
-	AllowPrivateNetwork bool   `json:"allowPrivateNetwork"`
+	Profile               string `json:"profile"`
+	ReadAhead             int    `json:"readAhead"`
+	MaxConnections        int    `json:"maxConnections"`
+	FastMKVStartup        bool   `json:"fastMkvStartup"`
+	FastNZBFetch          bool   `json:"fastNzbFetch"`
+	CacheNZB              bool   `json:"cacheNzb"`
+	AllowPrivateNetwork   bool   `json:"allowPrivateNetwork"`
+	HoleFilling           bool   `json:"holeFilling"`
+	MaxMissingArticles    int    `json:"maxMissingArticles"`
+	MaxConsecutiveMissing int    `json:"maxConsecutiveMissing"`
 }
 
 type Tuning struct {
@@ -43,6 +46,12 @@ func (c Config) Tuning() (Tuning, error) {
 	}
 	if c.ReadAhead < 0 || c.ReadAhead > 512 || c.MaxConnections < 0 || c.MaxConnections > 4096 {
 		return t, fmt.Errorf("invalid Usenet settings")
+	}
+	if c.MaxMissingArticles < 0 || c.MaxMissingArticles > 50 || c.MaxConsecutiveMissing < 0 || c.MaxConsecutiveMissing > 10 {
+		return t, fmt.Errorf("invalid hole filling limits")
+	}
+	if c.HoleFilling && c.MaxMissingArticles > 0 && c.MaxConsecutiveMissing > c.MaxMissingArticles {
+		return t, fmt.Errorf("consecutive missing articles must not exceed the total limit")
 	}
 	if c.ReadAhead > 0 {
 		t.ReadAhead = c.ReadAhead

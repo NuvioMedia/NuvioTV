@@ -37,6 +37,7 @@ type Session struct {
 	subtitles []*File
 	warmup    *startupWarmup
 	trace     *startupTrace
+	failure   streamFailure
 }
 
 func (s *Session) Close() { s.cancel(); s.warmup.Close(); s.store.Close(); s.pool.Close() }
@@ -191,6 +192,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	store := NewStore(ctx, pool, t.CacheBytes)
+	store.holes = newHolePolicy(req.Config)
 	pool.trace = trace
 	v := &Session{store: store, pool: pool, ctx: ctx, cancel: cancel, ahead: t.ReadAhead, trace: trace}
 	trace.mark("pool_created")
@@ -270,6 +272,10 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if kind := session.failure.get(); kind != "" {
+		streamHTTPError(w, kind, http.StatusGone)
+		return
+	}
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 	stop := context.AfterFunc(session.ctx, cancel)
@@ -281,5 +287,16 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 	// ranges, HEAD, exact Content-Length and Content-Range semantics. Every
 	// request has its own cursor; no player can mutate another reader's seek.
 	w.Header().Set("Content-Type", "application/octet-stream")
-	http.ServeContent(w, r, session.content.Name, time.Time{}, session.trace.reader(reader))
+	response := &deferredStreamResponse{ResponseWriter: w}
+	tracked := &failureReader{ReadSeeker: session.trace.reader(reader), session: session, response: response}
+	http.ServeContent(response, r, session.content.Name, time.Time{}, tracked)
+	if !response.committed && tracked.lastError() != nil {
+		if kind := session.failure.get(); kind != "" {
+			streamHTTPError(w, kind, http.StatusGone)
+		} else {
+			streamHTTPError(w, "temporary-read-error", http.StatusBadGateway)
+		}
+		return
+	}
+	response.commit()
 }

@@ -45,6 +45,12 @@ func (s *Session) diagnostics() map[string]any {
 	v["store"] = s.store.stats
 	v["articleSlabsBytes"] = s.store.allocated
 	s.store.mu.Unlock()
+	v["streamFailure"] = s.failure.get()
+	if holes := s.store.holes; holes != nil {
+		holes.mu.Lock()
+		v["filledArticles"] = holes.count
+		holes.mu.Unlock()
+	}
 	if s.content != nil {
 		v["archiveDiscoveryMs"] = float64(s.content.layoutNS.Load()) / 1e6
 		v["archiveWaitMs"] = float64(s.content.layoutWaitNS.Load()) / 1e6
@@ -61,6 +67,7 @@ type rangeTiming struct {
 	FirstByteMS float64 `json:"firstByteMs"`
 	ReadMS      float64 `json:"readMs"`
 	Bytes       int64   `json:"bytes"`
+	Failure     string  `json:"failure,omitempty"`
 }
 
 func newStartupTrace() *startupTrace {
@@ -165,6 +172,9 @@ func (r *timingReader) Read(p []byte) (int, error) {
 	start := time.Now()
 	n, err := r.ContentReader.Read(p)
 	r.trace.mu.Lock()
+	if r.timing.FirstByteMS < 0 {
+		r.timing.Offset = off
+	}
 	if n > 0 && r.timing.FirstByteMS < 0 {
 		r.timing.Offset = off
 		r.timing.FirstByteMS = float64(time.Since(r.trace.start).Microseconds()) / 1000
@@ -174,6 +184,12 @@ func (r *timingReader) Read(p []byte) (int, error) {
 	}
 	r.timing.ReadMS += float64(time.Since(start).Microseconds()) / 1000
 	r.timing.Bytes += int64(n)
+	if err != nil && err != io.EOF {
+		r.timing.Failure = permanentStreamFailure(err)
+		if r.timing.Failure == "" {
+			r.timing.Failure = "temporary-read-error"
+		}
+	}
 	r.trace.mu.Unlock()
 	return n, err
 }
