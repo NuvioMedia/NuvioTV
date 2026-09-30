@@ -1429,7 +1429,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
                         cancelFirstFrameWatchdog()
                         val detailedError = error.toDisplayMessage(context)
+                        val usenetResponse = error.findInvalidResponseCodeException()
+                        val permanentUsenetFailure = com.nuvio.tv.core.player.isPermanentUsenetHttpFailure(
+                            com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(currentStreamUrl),
+                            usenetResponse?.responseCode,
+                            usenetResponse?.headerFields.orEmpty()
+                        )
                         cancelStableProgressReset()
+                        if (permanentUsenetFailure && tryNextStream(detailedError)) return
 
                         if (Vc1VideoFormatHeuristics.isVc1PlaybackFailure(
                                 error = error,
@@ -1631,7 +1638,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
 
                         // ── Main Engine Failover ──
-                        if (maybeAutoSwitchInternalPlayerOnStartupError(detailedError = detailedError, allowEngineFailover = allowEngineFailover)) {
+                        if (!permanentUsenetFailure && maybeAutoSwitchInternalPlayerOnStartupError(detailedError = detailedError, allowEngineFailover = allowEngineFailover)) {
                             return
                         }
                         if (attemptAutoRetry(error, detailedError)) {

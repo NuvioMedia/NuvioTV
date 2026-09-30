@@ -9,6 +9,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UsenetStreamProtocolTest {
+    @Test fun `permanent native Usenet verdict bypasses same-source recovery only`() {
+        val headers = mapOf("x-usenet-failure" to listOf("missing-article"))
+        assertTrue(isPermanentUsenetHttpFailure(true, 410, headers))
+        assertTrue(isPermanentUsenetHttpFailure(true, 410, mapOf("X-Usenet-Failure" to listOf("hole-limit"))))
+        assertFalse(isPermanentUsenetHttpFailure(false, 410, headers))
+        assertFalse(isPermanentUsenetHttpFailure(true, 502, headers))
+        assertFalse(isPermanentUsenetHttpFailure(true, 410, emptyMap()))
+        assertFalse(isPermanentUsenetHttpFailure(true, 410, mapOf("X-Usenet-Failure" to listOf("temporary-read-error"))))
+    }
     @Test fun `Stremio Usenet fields survive Moshi and qualify for autoplay`() {
         val dto = requireNotNull(Moshi.Builder().build().adapter(StreamDto::class.java).fromJson("""
             {"name":"AIOStreams","nzbUrl":"https://indexer.example/release.nzb",
