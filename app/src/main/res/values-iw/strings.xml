@@ -440,13 +440,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">חווית שימוש</string>
-    <string name="settings_experience_subtitle">בסיסי או מתקדם</string>
     <string name="settings_account">חשבון</string>
-    <string name="settings_account_subtitle">חשבון וסטטוס סנכרון</string>
     <string name="settings_profiles">פרופילים</string>
-    <string name="settings_profiles_subtitle">ניהול פרופילי החשבון</string>
     <string name="settings_layout">תצוגה</string>
-    <string name="settings_layout_subtitle">מבנה דף הבית וסגנונות פוסטרים</string>
     <string name="settings_content_discovery">תוכן וגילוי</string>
     <string name="settings_content_discovery_subtitle">תוספים, פלאגינים, קטלוגים ומקורות גילוי</string>
     <string name="settings_content_discovery_addons_subtitle">נהל תוספים, סדר קטלוג ואוספים</string>
@@ -455,10 +451,8 @@
     <string name="settings_plugins_subtitle">מאגרים וספקים</string>
     <string name="settings_integration">אינטגרציות</string>
     <string name="settings_playback">הפעלה</string>
-    <string name="settings_playback_subtitle">נגן, כתוביות והפעלה אוטומטית</string>
     <string name="settings_trakt_subtitle">פתח את מסך החיבור ל-Trakt</string>
     <string name="settings_tracking_title">מעקב</string>
-    <string name="settings_tracking_subtitle">נהל את החיבורים ל-Trakt ול-Simkl</string>
     <string name="settings_tracking_description">חבר ספקי מעקב ובחר איזה מהם מפעיל את הספרייה והמשך הצפייה שלך.</string>
     <string name="tracking_accounts_title">חשבונות</string>
     <string name="tracking_accounts_subtitle">חבר ונהל שירותי מעקב</string>
@@ -485,7 +479,6 @@
     <string name="tracking_trakt_progress_required">זמין כאשר Trakt הוא מקור התקדמות הצפייה</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">גרסה ומדיניות</string>
     <string name="settings_network">מהירות רשת</string>
     <string name="settings_network_subtitle">אבחון זמן תגובה ומהירות הורדה</string>
     <string name="settings_advanced">מתקדם</string>
@@ -617,7 +610,6 @@
     <string name="advanced_confirm_exit_subtitle">סיים את האפליקציה לחלוטין ושחרר זיכרון ביציאה. דורש לחיצה כפולה על חזרה כדי לאשר.</string>
     <string name="confirm_exit_toast">לחץ שוב על חזרה כדי לצאת</string>
     <string name="settings_debug">ניפוי שגיאות</string>
-    <string name="settings_debug_subtitle">כלי מפתחים ודגלי פיצ׳רים</string>
     <string name="settings_plugins_section_subtitle">ניהול מאגרים, ספקים ומצבי פלאגינים</string>
     <string name="settings_account_section_subtitle">חשבון וסטטוס סנכרון</string>
     <string name="account_stat_addons">תוספים</string>
@@ -704,8 +696,6 @@
     <string name="contributors_hide_kofi_qr">הסתר QR Ko-fi</string>
     <string name="contributors_profile_unavailable">קישור לפרופיל GitHub אינו זמין.</string>
 
-    <string name="playback_section_general">כללי</string>
-    <string name="playback_section_general_desc">התנהגות הפעלה בסיסית.</string>
     <string name="playback_loading_overlay">שכבת טעינה</string>
     <string name="playback_loading_overlay_sub">הצג מסך טעינה עד להופעת הפריים הראשון.</string>
     <string name="playback_pause_overlay">שכבת השהייה</string>
@@ -729,9 +719,6 @@
     <string name="skip_movie_credits">דילוג על הקרדיטים</string>
     <string name="skip_to_post_credits">דילוג לסצנה שאחרי הקרדיטים</string>
     <string name="playback_auto_frame_rate">קצב פריימים ורזולוציה אוטומטיים</string>
-    <string name="playback_section_player">נגן ובחירת מקור</string>
-    <string name="playback_section_player_desc">העדפת נגן, הפעלה אוטומטית וסינון מקורות.</string>
-    <string name="playback_player">נגן</string>
     <string name="playback_player_internal">פנימי</string>
     <string name="playback_player_external">חיצוני</string>
     <string name="playback_player_ask">שאל בכל פעם</string>
@@ -744,12 +731,8 @@
     <string name="playback_external_forward_subtitles_sub">משוך כתוביות בשפה המועדפת שלך מתוספים והעבר אותן לנגן החיצוני.</string>
     <string name="playback_external_send_skip_segments">שלח חותמות זמן של פתיח וסיום</string>
     <string name="playback_external_send_skip_segments_sub">העברת חותמות זמן של דילוגים של פתיחה/סיום לנגן החיצוני לצורך דילוג אוטומטי. זה עובד רק בנגנים שתומכים בכך; נגנים אחרים מתעלמים ממנו.</string>
-    <string name="playback_section_audio">שמע ווידאו</string>
-    <string name="playback_section_audio_desc">פקדי שמע ותאימות וידאו.</string>
     <string name="playback_section_subtitles">כתוביות</string>
     <string name="playback_section_subtitles_desc">שפה, סגנון ומצב רינדור.</string>
-    <string name="playback_afr_open">פתוח</string>
-    <string name="playback_afr_closed">סגור</string>
     <string name="playback_afr_off">כבוי</string>
     <string name="playback_afr_off_sub">אל תשנה קצב רענון תצוגה.</string>
     <string name="playback_afr_on_start">בהתחלה</string>
@@ -1128,7 +1111,6 @@
     <string name="custom_poster_qr_instruction">סריקת קוד ה-QR עם הטלפון מאפשרת להדביק תבנית כתובת URL לפוסטר</string>
 
     <!-- Custom Poster URL - Screen Toggles -->
-    <string name="layout_custom_poster_apply_to">החלת פוסטרים מותאמים אישית על:</string>
     <string name="layout_custom_poster_screen_home">מסך הבית</string>
     <string name="layout_custom_poster_screen_continue_watching">שורת המשך הצפייה</string>
     <string name="layout_custom_poster_screen_collections">אוספים</string>

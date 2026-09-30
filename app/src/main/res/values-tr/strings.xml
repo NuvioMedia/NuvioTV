@@ -450,13 +450,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Deneyim</string>
-    <string name="settings_experience_subtitle">Basit veya Gelişmiş</string>
     <string name="settings_account">Hesap</string>
-    <string name="settings_account_subtitle">Hesap ve senkronizasyon durumu</string>
     <string name="settings_profiles">Profiller</string>
-    <string name="settings_profiles_subtitle">Kullanıcı profillerini yönetin</string>
     <string name="settings_layout">Düzen</string>
-    <string name="settings_layout_subtitle">Ana sayfa düzeni ve poster stilleri</string>
     <string name="settings_content_discovery">İçerik ve Keşif</string>
     <string name="settings_content_discovery_subtitle">Eklentiler, eklenti paketleri, kataloglar ve içerik bulma kaynakları</string>
     <string name="settings_content_discovery_addons_subtitle">Eklentileri, katalog sırasını ve koleksiyonları yönetin</string>
@@ -465,10 +461,8 @@
     <string name="settings_plugins_subtitle">Depolar ve sağlayıcılar</string>
     <string name="settings_integration">Entegrasyonlar</string>
     <string name="settings_playback">Oynatma</string>
-    <string name="settings_playback_subtitle">Oynatıcı, altyazılar ve otomatik oynatma</string>
     <string name="settings_trakt_subtitle">Trakt bağlantı ekranını aç</string>
     <string name="settings_tracking_title">Takip</string>
-    <string name="settings_tracking_subtitle">Trakt ve Simkl bağlantılarını yönet</string>
     <string name="settings_tracking_description">Takip servislerini bağla ve Kütüphane ile İzlemeye Devam Et için hangisinin kullanılacağını seç.</string>
     <string name="tracking_accounts_title">Hesaplar</string>
     <string name="tracking_accounts_subtitle">Takip servislerini bağla ve yönet</string>
@@ -495,7 +489,6 @@
     <string name="tracking_trakt_progress_required">İzleme İlerlemesi kaynağı Trakt olduğunda kullanılabilir</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Sürüm ve politikalar</string>
     <string name="settings_network">Ağ Hızı</string>
     <string name="settings_network_subtitle">Gecikme ve indirme hızı testleri</string>
     <string name="settings_advanced">Gelişmiş</string>
@@ -629,7 +622,6 @@
     <string name="advanced_confirm_exit_subtitle">Çıkışta uygulamayı tamamen sonlandırır ve belleği boşaltır. Onaylamak için geri tuşuna iki kez basmanız gerekir.</string>
     <string name="confirm_exit_toast">Çıkmak için tekrar geri tuşuna basın</string>
     <string name="settings_debug">Hata Ayıklama</string>
-    <string name="settings_debug_subtitle">Geliştirici araçları ve özellik bayrakları</string>
     <string name="settings_plugins_section_subtitle">Depoları, sağlayıcıları ve eklenti durumlarını yönetin</string>
     <string name="settings_account_section_subtitle">Hesap ve senkronizasyon durumu</string>
     <string name="account_stat_addons">eklentiler</string>
@@ -719,8 +711,6 @@
     <string name="contributors_profile_unavailable">Bu kişinin GitHub profiline ulaşılamıyor.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Genel</string>
-    <string name="playback_section_general_desc">Temel oynatma davranışı.</string>
     <string name="playback_loading_overlay">Yükleme Ekranı</string>
     <string name="playback_loading_overlay_sub">İlk video karesi görünene kadar yükleme ekranını göster.</string>
     <string name="playback_pause_overlay">Duraklatma Ekranı</string>
@@ -740,9 +730,6 @@
     <string name="auto_skip_outro">Jenerik / Kapanış</string>
     <string name="auto_skip_outro_sub">Jenerik ve anime kapanışlarını otomatik atla.</string>
     <string name="playback_auto_frame_rate">Otomatik Kare Hızı</string>
-    <string name="playback_section_player">Player &amp; Kaynak Seçimi</string>
-    <string name="playback_section_player_desc">Player tercihi, otomatik oynatma ve kaynak filtreleme.</string>
-    <string name="playback_player">Player</string>
     <string name="playback_player_internal">Dahili</string>
     <string name="playback_player_external">Harici</string>
     <string name="playback_player_ask">Her seferinde sor</string>
@@ -755,12 +742,8 @@
     <string name="playback_external_forward_subtitles_sub">Altyazıları tercih ettiğiniz dilde eklentilerden çekip harici oynatıcıya gönderir.</string>
     <string name="playback_external_send_skip_segments">Açılış ve kapanış zaman damgalarını gönder</string>
     <string name="playback_external_send_skip_segments_sub">Bulunan açılış/kapanış atlama zamanlarını otomatik atlama için harici oynatıcıya iletir. Bunu destekleyen oynatıcılarda çalışır; diğerleri yok sayar.</string>
-    <string name="playback_section_audio">Ses &amp; Video</string>
-    <string name="playback_section_audio_desc">Ses kontrolleri ve video uyumluluğu.</string>
     <string name="playback_section_subtitles">Altyazılar</string>
     <string name="playback_section_subtitles_desc">Dil, stil ve oluşturma modu.</string>
-    <string name="playback_afr_open">Açık</string>
-    <string name="playback_afr_closed">Kapalı</string>
     <string name="playback_afr_off">Kapalı</string>
     <string name="playback_afr_off_sub">Ekran yenileme hızını değiştirme.</string>
     <string name="playback_afr_on_start">Başlarken</string>

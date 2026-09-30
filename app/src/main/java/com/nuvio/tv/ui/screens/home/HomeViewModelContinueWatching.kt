@@ -158,7 +158,8 @@ internal data class CwVideoSummary(
     val season: Int?,
     val episode: Int?,
     val overview: String?,
-    val available: Boolean? = null
+    val available: Boolean? = null,
+    val rating: Double? = null
 )
 
 private fun Meta.toCwSummary(): CwMetaSummary = CwMetaSummary(
@@ -182,7 +183,8 @@ private fun Meta.toCwSummary(): CwMetaSummary = CwMetaSummary(
             season = v.season,
             episode = v.episode,
             overview = v.overview,
-            available = v.available
+            available = v.available,
+            rating = v.rating
         )
     }
 )
@@ -1211,7 +1213,7 @@ private fun shouldTreatAsInProgressForContinueWatching(progress: WatchProgress):
         progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
 }
 
-private fun HomeViewModel.shouldUseAsCompletedSeed(progress: WatchProgress): Boolean {
+internal fun HomeViewModel.shouldUseAsCompletedSeed(progress: WatchProgress): Boolean {
     if (isMalformedNextUpSeedContentId(progress.contentId)) return false
     return watchProgressRepository.shouldUseAsNextUpSeed(progress, System.currentTimeMillis())
 }
@@ -1578,8 +1580,6 @@ private suspend fun HomeViewModel.enrichVisibleContinueWatchingItems(
                                 overlay.episode == item.info.episode
                             ) {
                                 // Recalculate hasAired/isReleaseAlert from current time
-                                // so overlays cached while an episode was unaired don't
-                                // keep it stuck in "upcoming" after the air date passes.
                                 val freshHasAired = hasEpisodeAired(overlay.released, fallback = overlay.hasAired)
                                 if (freshHasAired != overlay.hasAired) {
                                     val releaseTimestamp = parseEpisodeReleaseInstant(overlay.released)?.toEpochMilli()
@@ -1941,6 +1941,25 @@ private suspend fun HomeViewModel.enrichInProgressItem(
         )
     } else null
     val imdbRating = tmdbData?.rating?.toFloat() ?: meta.imdbRating
+
+    // Fetch episode rating: external wins over addon (same as detail screen).
+    val episodeRating = if (isSeriesTypeCW(item.progress.contentType) &&
+        item.progress.season != null && item.progress.episode != null
+    ) {
+        val addonRating = resolveVideoForProgress(item.progress, meta)?.rating?.toFloat()
+        val externalRating = run {
+            val imdbId = extractImdbIdFromContentId(item.progress.contentId)
+            val tmdbIdStr = runCatching { tmdbService.ensureTmdbId(item.progress.contentId, item.progress.contentType) }.getOrNull()
+            val tmdbIdInt = tmdbIdStr?.toIntOrNull()
+            if (imdbId != null || tmdbIdInt != null) {
+                runCatching {
+                    imdbEpisodeRatingsRepository.getEpisodeRatings(imdbId, tmdbIdInt)
+                }.getOrNull()?.get(item.progress.season!! to item.progress.episode!!)?.toFloat()
+            } else null
+        }
+        externalRating ?: addonRating
+    } else null
+
     val settings = currentTmdbSettings
     item.copy(
         progress = item.progress.copy(
@@ -1966,7 +1985,7 @@ private suspend fun HomeViewModel.enrichInProgressItem(
             ?: meta.description?.takeIf { it.isNotBlank() }
             ?: item.episodeDescription,
         episodeThumbnail = if (settings.useEpisodes) tmdbData?.thumbnail ?: video?.thumbnail.normalizeImageUrl() ?: item.episodeThumbnail else video?.thumbnail.normalizeImageUrl() ?: item.episodeThumbnail,
-        episodeImdbRating = if (settings.useBasicInfo) imdbRating else meta.imdbRating,
+        episodeImdbRating = if (isSeriesTypeCW(item.progress.contentType)) episodeRating else if (settings.useBasicInfo) imdbRating else meta.imdbRating,
         genres = genres,
         releaseInfo = releaseInfo,
         contentLanguage = tmdbData?.contentLanguage
@@ -2027,6 +2046,24 @@ private suspend fun HomeViewModel.enrichNextUpItem(
         hasAired = hasAired
     )
 
+    // Fetch episode rating: external wins over addon (same as detail screen).
+    val episodeRating = run {
+        val s = video?.season ?: item.info.season
+        val e = video?.episode ?: item.info.episode
+        val addonRating = video?.rating?.toFloat()
+        val externalRating = run {
+            val imdbId = extractImdbIdFromContentId(item.info.contentId)
+            val tmdbIdStr = runCatching { tmdbService.ensureTmdbId(item.info.contentId, item.info.contentType) }.getOrNull()
+            val tmdbIdInt = tmdbIdStr?.toIntOrNull()
+            if (imdbId != null || tmdbIdInt != null) {
+                runCatching {
+                    imdbEpisodeRatingsRepository.getEpisodeRatings(imdbId, tmdbIdInt)
+                }.getOrNull()?.get(s to e)?.toFloat()
+            } else null
+        }
+        externalRating ?: addonRating
+    }
+
     val settings = currentTmdbSettings
     val enrichedInfo = item.info.copy(
         name = if (settings.useBasicInfo) tmdbData?.name ?: meta.name else meta.name,
@@ -2048,7 +2085,6 @@ private suspend fun HomeViewModel.enrichNextUpItem(
         released = released,
         hasAired = hasAired,
         airDateLabel = if (hasAired || releaseDate == null) null else formatEpisodeAirDateLabel(releaseDate),
-        imdbRating = if (settings.useBasicInfo) tmdbData?.rating?.toFloat() ?: meta.imdbRating ?: item.info.imdbRating else meta.imdbRating ?: item.info.imdbRating,
         genres = meta.genres.take(3).ifEmpty { item.info.genres },
         releaseInfo = meta.releaseInfo?.takeIf { it.isNotBlank() } ?: item.info.releaseInfo,
         sortTimestamp = releaseState.sortTimestamp,
@@ -2058,7 +2094,8 @@ private suspend fun HomeViewModel.enrichNextUpItem(
         contentLanguage = tmdbData?.contentLanguage
             ?: normalizeLanguageCode(meta.language)
             ?: countryToLanguageCode(meta.country)
-            ?: item.info.contentLanguage
+            ?: item.info.contentLanguage,
+        imdbRating = episodeRating
     )
     if (shouldTraceNextUpSeries(progressSeed)) {
         logNextUpDecision(
@@ -2319,6 +2356,9 @@ internal fun resolveNextUpVideoFromMeta(
 
 private const val CW_META_NEGATIVE_CACHE_TTL_MS = 5 * 60_000L
 
+internal suspend fun HomeViewModel.resolveCwMeta(progress: WatchProgress) =
+    resolveMetaForProgress(progress, cwMetaCache)
+
 private suspend fun HomeViewModel.resolveMetaForProgress(
     progress: WatchProgress,
     metaCache: MutableMap<String, CwMetaSummary?>,
@@ -2445,6 +2485,7 @@ private suspend fun HomeViewModel.resolveMetaForProgress(
             cwMetaNegativeCacheTimestamps.remove(cacheKey)
         }
     }
+    shuffleHomeRefresh.update { it.copy(metadata = it.metadata + 1) }
     return resolved
 }
 
@@ -2683,6 +2724,11 @@ private fun isSeriesTypeCW(type: String?): Boolean {
     return type.equals("series", ignoreCase = true) || type.equals("tv", ignoreCase = true)
 }
 
+private fun extractImdbIdFromContentId(contentId: String): String? {
+    val regex = Regex("tt\\d+")
+    return regex.find(contentId)?.value
+}
+
 /** Applies enriched overlay from the previous enrichment cycle to avoid
  *  flickering between addon meta and TMDB-enriched values during fresh builds. */
 private suspend fun HomeViewModel.applyContinueWatchingEnrichmentOverlay(
@@ -2744,7 +2790,8 @@ private suspend fun HomeViewModel.applyContinueWatchingEnrichmentOverlay(
                         hasAired = effectiveOverlay.hasAired,
                         airDateLabel = effectiveOverlay.airDateLabel ?: item.info.airDateLabel,
                         releaseTimestamp = effectiveOverlay.releaseTimestamp ?: item.info.releaseTimestamp,
-                        contentLanguage = effectiveOverlay.contentLanguage ?: item.info.contentLanguage
+                        contentLanguage = effectiveOverlay.contentLanguage ?: item.info.contentLanguage,
+                        mdbListRatings = effectiveOverlay.mdbListRatings ?: item.info.mdbListRatings
                     ))
                 }
                 is ContinueWatchingItem.InProgress -> {
@@ -2763,7 +2810,8 @@ private suspend fun HomeViewModel.applyContinueWatchingEnrichmentOverlay(
                         episodeImdbRating = overlay.episodeImdbRating ?: item.episodeImdbRating,
                         genres = overlay.genres.ifEmpty { item.genres },
                         releaseInfo = overlay.releaseInfo ?: item.releaseInfo,
-                        contentLanguage = overlay.contentLanguage ?: item.contentLanguage
+                        contentLanguage = overlay.contentLanguage ?: item.contentLanguage,
+                        mdbListRatings = overlay.mdbListRatings ?: item.mdbListRatings
                     )
                 }
             }
@@ -2949,9 +2997,8 @@ private suspend fun HomeViewModel.resolveContinueWatchingTmdbData(
     }
 
     val episodeStartedAtMs = SystemClock.elapsedRealtime()
-    val mdbEnabled = mdbListRepository.isAvailable(currentMdbListSettings)
 
-    val (episodeMeta, showMeta, mdbImdbRating) = coroutineScope {
+    val (episodeMeta, showMeta) = coroutineScope {
         val episodeDeferred = async {
             runCatching {
                 tmdbMetadataService.fetchEpisodeEnrichment(
@@ -2970,10 +3017,7 @@ private suspend fun HomeViewModel.resolveContinueWatchingTmdbData(
                 )
             }.getOrNull()
         }
-        val mdbDeferred = if (mdbEnabled) async {
-            runCatching { mdbListRepository.getImdbRatingForItem(progress.contentId, progress.contentType) }.getOrNull()
-        } else null
-        Triple(episodeDeferred.await(), showDeferred.await(), mdbDeferred?.await())
+        episodeDeferred.await() to showDeferred.await()
     }
 
     debug?.recordTmdbCall(
@@ -2996,7 +3040,7 @@ private suspend fun HomeViewModel.resolveContinueWatchingTmdbData(
         airDate = episodeMeta?.airDate?.trim()?.takeIf { it.isNotEmpty() },
         overview = episodeMeta?.overview?.trim()?.takeIf { it.isNotEmpty() },
         showDescription = showMeta?.description?.trim()?.takeIf { it.isNotEmpty() },
-        rating = mdbImdbRating ?: showMeta?.rating,
+        rating = showMeta?.rating,
         contentLanguage = showMeta?.language
     )
 

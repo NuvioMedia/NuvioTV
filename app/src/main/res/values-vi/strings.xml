@@ -448,13 +448,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Trải nghiệm</string>
-    <string name="settings_experience_subtitle">Cơ bản hoặc Nâng cao</string>
     <string name="settings_account">Tài khoản</string>
-    <string name="settings_account_subtitle">Tài khoản và trạng thái đồng bộ</string>
     <string name="settings_profiles">Hồ sơ</string>
-    <string name="settings_profiles_subtitle">Quản lý hồ sơ người dùng</string>
     <string name="settings_layout">Bố cục</string>
-    <string name="settings_layout_subtitle">Bố cục Trang chủ và kiểu poster</string>
     <string name="settings_content_discovery">Nội dung &amp; Khám phá</string>
     <string name="settings_content_discovery_subtitle">Tiện ích, trình mở rộng, danh mục và nguồn khám phá</string>
     <string name="settings_content_discovery_addons_subtitle">Quản lý tiện ích, thứ tự danh mục và bộ sưu tập</string>
@@ -463,10 +459,8 @@
     <string name="settings_plugins_subtitle">Kho lưu trữ và nhà cung cấp</string>
     <string name="settings_integration">Tích hợp</string>
     <string name="settings_playback">Phát lại</string>
-    <string name="settings_playback_subtitle">Trình phát, phụ đề và tự động phát</string>
     <string name="settings_trakt_subtitle">Mở màn hình kết nối Trakt</string>
     <string name="settings_tracking_title">Theo dõi</string>
-    <string name="settings_tracking_subtitle">Quản lý kết nối Trakt và Simkl</string>
     <string name="settings_tracking_description">Kết nối các dịch vụ theo dõi và chọn dịch vụ cung cấp dữ liệu cho Thư viện và Tiếp tục xem.</string>
     <string name="tracking_accounts_title">Tài khoản</string>
     <string name="tracking_accounts_subtitle">Kết nối và quản lý các dịch vụ theo dõi</string>
@@ -493,7 +487,6 @@
     <string name="tracking_trakt_progress_required">Khả dụng khi Trakt là nguồn Tiến độ xem</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Phiên bản và điều khoản</string>
     <string name="settings_network">Tốc độ mạng</string>
     <string name="settings_network_subtitle">Chẩn đoán độ trễ và tốc độ tải xuống</string>
     <string name="settings_advanced">Nâng cao</string>
@@ -625,7 +618,6 @@
     <string name="advanced_confirm_exit_subtitle">Đóng ứng dụng hoàn toàn và giải phóng bộ nhớ khi thoát. Cần nhấn quay lại hai lần để xác nhận.</string>
     <string name="confirm_exit_toast">Nhấn quay lại lần nữa để thoát</string>
     <string name="settings_debug">Gỡ lỗi</string>
-    <string name="settings_debug_subtitle">Công cụ nhà phát triển và cờ tính năng</string>
     <string name="settings_plugins_section_subtitle">Quản lý kho lưu trữ, nhà cung cấp và trạng thái trình mở rộng</string>
     <string name="settings_account_section_subtitle">Tài khoản và trạng thái đồng bộ</string>
     <string name="account_stat_addons">tiện ích</string>
@@ -712,8 +704,6 @@
     <string name="contributors_hide_kofi_qr">Ẩn mã QR Ko-fi</string>
     <string name="contributors_profile_unavailable">Liên kết hồ sơ GitHub không có sẵn.</string>
 
-    <string name="playback_section_general">Chung</string>
-    <string name="playback_section_general_desc">Cơ chế phát lại cơ bản.</string>
     <string name="playback_loading_overlay">Lớp phủ Đang tải</string>
     <string name="playback_loading_overlay_sub">Hiển thị màn hình tải đến khi khung hình video đầu tiên xuất hiện.</string>
     <string name="playback_pause_overlay">Lớp phủ Tạm dừng</string>
@@ -737,9 +727,6 @@
     <string name="skip_movie_credits">Bỏ qua Danh đề</string>
     <string name="skip_to_post_credits">Đến cảnh hậu danh đề</string>
     <string name="playback_auto_frame_rate">Tốc độ Khung hình Tự động &amp; Độ phân giải</string>
-    <string name="playback_section_player">Trình phát &amp; Lựa chọn luồng</string>
-    <string name="playback_section_player_desc">Tùy chọn trình phát, tự động phát và bộ lọc nguồn.</string>
-    <string name="playback_player">Trình phát</string>
     <string name="playback_player_internal">Bên trong</string>
     <string name="playback_player_external">Bên ngoài</string>
     <string name="playback_player_ask">Luôn hỏi</string>
@@ -752,12 +739,8 @@
     <string name="playback_external_forward_subtitles_sub">Tải phụ đề bằng ngôn ngữ ưu tiên từ các tiện ích rồi chuyển sang trình phát bên ngoài.</string>
     <string name="playback_external_send_skip_segments">Gửi mốc thời gian phần giới thiệu và đoạn kết</string>
     <string name="playback_external_send_skip_segments_sub">Gửi mốc thời gian phần giới thiệu và đoạn kết sang trình phát bên ngoài để tự động bỏ qua. Chỉ hỗ trợ trên các trình phát tương thích; trình phát khác sẽ không sử dụng thông tin này.</string>
-    <string name="playback_section_audio">Âm thanh &amp; Video</string>
-    <string name="playback_section_audio_desc">Điều khiển âm thanh và tương thích video.</string>
     <string name="playback_section_subtitles">Phụ đề</string>
     <string name="playback_section_subtitles_desc">Ngôn ngữ, kiểu và chế độ kết xuất.</string>
-    <string name="playback_afr_open">Mở</string>
-    <string name="playback_afr_closed">Đã đóng</string>
     <string name="playback_afr_off">Tắt</string>
     <string name="playback_afr_off_sub">Không thay đổi tần số quét màn hình.</string>
     <string name="playback_afr_on_start">Khi bắt đầu</string>
@@ -782,6 +765,8 @@
     <string name="playback_engine_mvplayer_desc">Sử dụng libmpv với các điều khiển hiển thị trên màn hình của Nuvio. Tính năng thử nghiệm.</string>
 
     <string name="video_section">Video</string>
+    <string name="playback_true_black_letterbox">Viền đen tuyệt đối</string>
+    <string name="playback_true_black_letterbox_sub">Không phủ màu các viền đen xung quanh hình ảnh để hiển thị HDR đen tuyệt đối. Vui lòng tắt tính năng này nếu xuất hiện vệt sáng trên các viền đen.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Tự động phát trailer</string>
     <string name="audio_autoplay_trailers_sub">Tự động phát trailer trên màn hình chi tiết sau một khoảng thời gian không hoạt động</string>
@@ -1136,7 +1121,6 @@
     <string name="custom_poster_qr_instruction">Quét mã QR bằng điện thoại để dán mẫu URL poster</string>
 
     <!-- Custom Poster URL - Screen Toggles -->
-    <string name="layout_custom_poster_apply_to">Áp dụng poster tùy chỉnh cho:</string>
     <string name="layout_custom_poster_screen_home">Trang chủ</string>
     <string name="layout_custom_poster_screen_continue_watching">Tiếp tục xem</string>
     <string name="layout_custom_poster_screen_collections">Bộ sưu tập</string>
@@ -1726,6 +1710,26 @@
     <string name="settings_p2p_subtitle">Cho phép phát trực tuyến ngang hàng (torrent)</string>
     <string name="settings_p2p_hide_stats_title">Ẩn thống kê torrent</string>
     <string name="settings_p2p_hide_stats_subtitle">Ẩn bộ đệm, số lượng seed, peer và tốc độ tải xuống trong khi tải và phát lại</string>
+    <string name="settings_p2p_profile_title">Cấu hình Torrent</string>
+    <string name="settings_p2p_profile_soft">Nhẹ</string>
+    <string name="settings_p2p_profile_balanced">Cân bằng</string>
+    <string name="settings_p2p_profile_fast">Nhanh</string>
+    <string name="settings_p2p_profile_soft_description">Sử dụng ít kết nối người dùng ngang hàng hơn để giảm tải cho pin và mạng</string>
+    <string name="settings_p2p_profile_balanced_description">Cân bằng được khuyến nghị giữa tốc độ khởi động và độ ổn định kết nối</string>
+    <string name="settings_p2p_profile_fast_description">Sử dụng nhiều kết nối người dùng ngang hàng hơn cho torrent khó tải hoặc có bitrate cao</string>
+    <string name="settings_p2p_cache_size_title">Dung lượng bộ nhớ đệm torrent</string>
+    <string name="settings_p2p_cache_size_description">Dữ liệu torrent đã tải xuống được lưu trên thiết bị này để xem lại nhanh hơn.</string>
+    <string name="settings_p2p_cache_none">Không có bộ nhớ đệm vĩnh viễn</string>
+    <string name="settings_p2p_cache_2_gb">2 GB</string>
+    <string name="settings_p2p_cache_5_gb">5 GB</string>
+    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_clear_cache_title">Xóa bộ nhớ đệm torrent</string>
+    <string name="settings_p2p_clear_cache_usage">%1$s đang được dùng</string>
+    <string name="settings_p2p_clear_cache_usage_pending">Mức sử dụng sẽ được đo sau khi P2P khởi động; chạm để xóa dữ liệu torrent đã lưu trong bộ nhớ đệm</string>
+    <string name="settings_p2p_clear_cache_clearing">Đang xóa dữ liệu torrent không còn hoạt động…</string>
+    <string name="settings_p2p_clear_cache_playback_active">Dừng phát P2P trước khi xóa bộ nhớ đệm</string>
+    <string name="settings_p2p_clear_cache_done">Đã xóa %1$s dữ liệu torrent không hoạt động</string>
+    <string name="settings_p2p_clear_cache_failed">Không thể xóa bộ nhớ đệm torrent</string>
     <string name="p2p_download_title">Đang tải xuống lõi P2P</string>
     <string name="p2p_download_subtitle">Đây là tải xuống một lần, cần thiết để phát luồng P2P.</string>
     <string name="stream_type_external">Bên ngoài</string>
@@ -2814,6 +2818,10 @@
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%%</string>
     <string name="player_torrent_connecting_peers">Đang kết nối tới các người dùng ngang hàng…</string>
+    <string name="player_torrent_fetching_metadata">Đang lấy siêu dữ liệu torrent…</string>
+    <string name="player_torrent_preparing_stream">Đang chuẩn bị luồng torrent…</string>
+    <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
+    <string name="player_torrent_loading_status">%1$s đã tải xuống · %2$s · %3$s</string>
     <string name="player_track_audio_fallback">Âm thanh %1$d</string>
     <string name="player_track_subtitle_fallback">Phụ đề %1$d</string>
 
@@ -2984,6 +2992,7 @@
     <string name="network_fast_error_token_missing">fast.com: Không tìm thấy token trong gói</string>
 
     <!-- Torrent service / TorrServer binary errors -->
+    <string name="torrent_error_start_timeout">Luồng torrent đã không khởi chạy trong vòng %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Đang khởi động lõi P2P…</string>

@@ -360,11 +360,8 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Compte</string>
-    <string name="settings_account_subtitle">Compte et état de la synchronisation</string>
     <string name="settings_profiles">Profils</string>
-    <string name="settings_profiles_subtitle">Gérer les profils utilisateurs</string>
     <string name="settings_layout">Disposition</string>
-    <string name="settings_layout_subtitle">Structure de l’accueil et styles d’affiches</string>
     <string name="settings_content_discovery">Contenu et découverte</string>
     <string name="settings_content_discovery_subtitle">Addons, plugins, catalogues et sources de découverte</string>
     <string name="settings_content_discovery_addons_subtitle">Gérer les addons, l’ordre des catalogues et les collections</string>
@@ -373,9 +370,7 @@
     <string name="settings_plugins_subtitle">Dépôts et fournisseurs</string>
     <string name="settings_integration">Intégrations</string>
     <string name="settings_playback">Lecture</string>
-    <string name="settings_playback_subtitle">Lecteur, sous-titres et lecture automatique</string>
     <string name="settings_trakt_subtitle">Ouvrir l’écran de connexion Trakt</string>
-    <string name="settings_about_subtitle">Version et politiques</string>
     <string name="settings_network">Débit réseau</string>
     <string name="settings_network_subtitle">Diagnostics de la latence et du débit descendant</string>
     <string name="settings_advanced">Avancé</string>
@@ -435,7 +430,6 @@
     <string name="advanced_remember_last_profile">Se souvenir du dernier profil</string>
     <string name="advanced_remember_last_profile_subtitle">Se souvenir du dernier profil sélectionné au démarrage</string>
     <string name="settings_debug">Débogage</string>
-    <string name="settings_debug_subtitle">Outils développeur et options expérimentales</string>
     <string name="settings_plugins_section_subtitle">Gérer les dépôts, fournisseurs et états des plugins</string>
     <string name="settings_account_section_subtitle">Compte et état de la synchronisation</string>
     <string name="account_stat_addons">addons</string>
@@ -499,8 +493,6 @@
     <string name="contributors_profile_unavailable">Lien du profil GitHub indisponible.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Général</string>
-    <string name="playback_section_general_desc">Comportement de lecture principal.</string>
     <string name="playback_loading_overlay">Écran de chargement</string>
     <string name="playback_loading_overlay_sub">Afficher l’écran de chargement jusqu’à l’apparition de la première image vidéo.</string>
     <string name="playback_pause_overlay">Superposition en pause</string>
@@ -510,9 +502,6 @@
     <string name="playback_skip_intro">Passer l’intro</string>
     <string name="playback_skip_intro_sub">Utiliser introdb.app pour détecter les intros et les récapitulatifs.</string>
     <string name="playback_auto_frame_rate">Fréquence d’images automatique</string>
-    <string name="playback_section_player">Lecteur et sélection de flux</string>
-    <string name="playback_section_player_desc">Préférence de lecteur, lecture automatique et filtrage des sources.</string>
-    <string name="playback_player">Lecteur</string>
     <string name="playback_player_internal">Interne</string>
     <string name="playback_player_external">Externe</string>
     <string name="playback_player_ask">Demander à chaque fois</string>
@@ -525,12 +514,8 @@
     <string name="playback_external_forward_subtitles_sub">Récupère les sous-titres dans votre langue préférée depuis les addons et les transmet au lecteur externe.</string>
     <string name="playback_external_send_skip_segments">Envoyer les horodatages d’intro et d’outro</string>
     <string name="playback_external_send_skip_segments_sub">Transmet les horodatages de saut d’intro/outro résolus au lecteur externe pour le saut automatique. Ne fonctionne que dans les lecteurs compatibles ; les autres l’ignorent.</string>
-    <string name="playback_section_audio">Audio et vidéo</string>
-    <string name="playback_section_audio_desc">Contrôles audio et compatibilité vidéo.</string>
     <string name="playback_section_subtitles">Sous-titres</string>
     <string name="playback_section_subtitles_desc">Langue, style et mode de rendu.</string>
-    <string name="playback_afr_open">Ouvert</string>
-    <string name="playback_afr_closed">Fermé</string>
     <string name="playback_afr_off">Désactivé</string>
     <string name="playback_afr_off_sub">Ne pas modifier le taux de rafraîchissement de l’écran.</string>
     <string name="playback_afr_on_start">Au démarrage</string>
@@ -2128,7 +2113,6 @@
     <string name="experience_mode_switch_to_essential">Passer en mode essentiel</string>
     <string name="experience_mode_switch_to_essential_subtitle">Masquer les écrans de configuration avancée sans modifier les valeurs enregistrées.</string>
     <string name="settings_experience">Expérience</string>
-    <string name="settings_experience_subtitle">Essentiel ou avancé</string>
     <string name="profile_custom_avatar_web_panel_note">Les URL d’avatar personnalisé peuvent être configurées depuis le panneau web Nuvio.</string>
     <string name="tv_channel_continue_watching">Continuer à regarder</string>
 

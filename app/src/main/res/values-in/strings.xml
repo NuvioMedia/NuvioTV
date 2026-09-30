@@ -383,20 +383,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Pengalaman</string>
-    <string name="settings_experience_subtitle">Esensial atau Lanjutan</string>
     <string name="settings_account">Akun</string>
-    <string name="settings_account_subtitle">Status akun dan sinkronisasi</string>
     <string name="settings_profiles">Profil</string>
-    <string name="settings_profiles_subtitle">Kelola profil pengguna</string>
     <string name="settings_layout">Tata Letak</string>
-    <string name="settings_layout_subtitle">Struktur beranda dan gaya poster</string>
     <string name="settings_plugins">Plugin</string>
     <string name="settings_plugins_subtitle">Repositori dan penyedia</string>
     <string name="settings_integration">Integrasi</string>
     <string name="settings_playback">Pemutaran</string>
-    <string name="settings_playback_subtitle">Pemutar, subtitle, dan putar otomatis</string>
     <string name="settings_trakt_subtitle">Buka layar koneksi Trakt</string>
-    <string name="settings_about_subtitle">Versi dan kebijakan</string>
     <string name="settings_network">Kecepatan jaringan</string>
     <string name="settings_network_subtitle">Diagnostik latensi dan unduhan</string>
     <string name="settings_advanced">Lanjutan</string>
@@ -495,7 +489,6 @@
     <string name="advanced_remember_last_profile">Ingat Profil Terakhir</string>
     <string name="advanced_remember_last_profile_subtitle">Ingat profil terakhir yang dipilih saat startup</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Alat pengembang dan tanda fitur</string>
     <string name="settings_plugins_section_subtitle">Kelola repositori, penyedia, dan status plugin</string>
     <string name="settings_account_section_subtitle">Status akun dan sinkronisasi</string>
     <string name="account_stat_addons">addon</string>
@@ -555,8 +548,6 @@
     <string name="contributors_profile_unavailable">Tautan profil GitHub tidak tersedia.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Umum</string>
-    <string name="playback_section_general_desc">Perilaku pemutaran inti.</string>
     <string name="playback_loading_overlay">Overlay Pemuatan</string>
     <string name="playback_loading_overlay_sub">Tampilkan layar pemuatan hingga frame video pertama muncul.</string>
     <string name="playback_pause_overlay">Overlay Jeda</string>
@@ -576,9 +567,6 @@
     <string name="auto_skip_outro">Outro / Penutup</string>
     <string name="auto_skip_outro_sub">Lewati outro dan penutup anime secara otomatis.</string>
     <string name="playback_auto_frame_rate">Frame Rate &amp; Resolusi Otomatis</string>
-    <string name="playback_section_player">Pemutar &amp; Pemilihan Stream</string>
-    <string name="playback_section_player_desc">Preferensi pemutar, putar otomatis, dan penyaringan sumber.</string>
-    <string name="playback_player">Pemutar</string>
     <string name="playback_player_internal">Internal</string>
     <string name="playback_player_external">Eksternal</string>
     <string name="playback_player_ask">Tanya setiap kali</string>
@@ -587,12 +575,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Ganti mesin otomatis saat error startup</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Jika stream gagal dimulai, ganti antara ExoPlayer dan libmpv secara otomatis.</string>
-    <string name="playback_section_audio">Audio &amp; Video</string>
-    <string name="playback_section_audio_desc">Kontrol audio dan kompatibilitas video.</string>
     <string name="playback_section_subtitles">Subtitle</string>
     <string name="playback_section_subtitles_desc">Bahasa, gaya, dan mode render.</string>
-    <string name="playback_afr_open">Buka</string>
-    <string name="playback_afr_closed">Tutup</string>
     <string name="playback_afr_off">Mati</string>
     <string name="playback_afr_off_sub">Jangan ubah refresh rate layar.</string>
     <string name="playback_afr_on_start">Saat mulai</string>

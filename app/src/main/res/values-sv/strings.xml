@@ -192,20 +192,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Konto och synkroniseringsstatus</string>
     <string name="settings_profiles">Profiler</string>
-    <string name="settings_profiles_subtitle">Hantera användarprofiler</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Hemstruktur och affischstilar</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Arkiv och leverantörer</string>
     <string name="settings_integration">Integrationer</string>
     <string name="settings_playback">Uppspelning</string>
-    <string name="settings_playback_subtitle">Spelare, undertexter, och automatisk uppspelning</string>
     <string name="settings_trakt_subtitle">Öppna Trakt anslutningsskärm</string>
-    <string name="settings_about_subtitle">Version och policyer</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Utvecklarverktyg och funktionsflaggor</string>
     <string name="settings_plugins_section_subtitle">Hantera arkiv, leverantörer, och plugin-status</string>
     <string name="settings_account_section_subtitle">Konto och synkroniseringsstatus</string>
     <string name="account_stat_addons">tillägg</string>
@@ -255,8 +249,6 @@
     <string name="contributors_profile_unavailable">GitHub-profillänk ej tillgänglig.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Allmänt</string>
-    <string name="playback_section_general_desc">Grundläggande uppspelningsbeteende.</string>
     <string name="playback_loading_overlay">Laddningsöverlägg</string>
     <string name="playback_loading_overlay_sub">Visa laddningsskärm tills första videobildrutan visas.</string>
     <string name="playback_pause_overlay">Pausöverlägg</string>
@@ -266,18 +258,11 @@
     <string name="playback_skip_intro">Hoppa över intro</string>
     <string name="playback_skip_intro_sub">Använd introdb.app för att upptäcka intron och sammanfattningar.</string>
     <string name="playback_auto_frame_rate">Automatisk bildfrekvens</string>
-    <string name="playback_section_player">Spelare &amp; strömval</string>
-    <string name="playback_section_player_desc">Spelarpreferens, automatisk uppspelning och källfiltrering.</string>
-    <string name="playback_player">Spelare</string>
     <string name="playback_player_internal">Intern</string>
     <string name="playback_player_external">Extern</string>
     <string name="playback_player_ask">Fråga varje gång</string>
-    <string name="playback_section_audio">Ljud &amp; video</string>
-    <string name="playback_section_audio_desc">Ljudkontroller och videokompatibilitet.</string>
     <string name="playback_section_subtitles">Undertexter</string>
     <string name="playback_section_subtitles_desc">Språk, stil och renderingsläge.</string>
-    <string name="playback_afr_open">Öppen</string>
-    <string name="playback_afr_closed">Stängd</string>
     <string name="playback_afr_off">Av</string>
     <string name="playback_afr_off_sub">Ändra inte skärmens uppdateringsfrekvens.</string>
     <string name="playback_afr_on_start">Vid start</string>

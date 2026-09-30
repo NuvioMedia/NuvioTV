@@ -436,13 +436,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Ervaring</string>
-    <string name="settings_experience_subtitle">Essentieel of geavanceerd</string>
     <string name="settings_account">Account</string>
-    <string name="settings_account_subtitle">Account- en synchronisatiestatus</string>
     <string name="settings_profiles">Profielen</string>
-    <string name="settings_profiles_subtitle">Beheer gebruikersprofielen</string>
     <string name="settings_layout">Indeling</string>
-    <string name="settings_layout_subtitle">Indeling van het startscherm en posterstijlen</string>
     <string name="settings_content_discovery">Inhoud &amp; ontdekken</string>
     <string name="settings_content_discovery_subtitle">Add-ons, plug-ins, catalogi en ontdekkingsbronnen</string>
     <string name="settings_content_discovery_addons_subtitle">Beheer add-ons, catalogusvolgorde en collecties</string>
@@ -451,10 +447,8 @@
     <string name="settings_plugins_subtitle">Repositories en providers</string>
     <string name="settings_integration">Integraties</string>
     <string name="settings_playback">Afspelen</string>
-    <string name="settings_playback_subtitle">Speler, ondertiteling en automatisch afspelen</string>
     <string name="settings_trakt_subtitle">Open het Trakt-verbindingsscherm</string>
     <string name="settings_tracking_title">Tracking</string>
-    <string name="settings_tracking_subtitle">Beheer Trakt- en Simkl-verbindingen</string>
     <string name="settings_tracking_description">Verbind trackingproviders en kies welke je bibliotheek en Verder kijken aanstuurt.</string>
     <string name="tracking_accounts_title">Accounts</string>
     <string name="tracking_accounts_subtitle">Trackingservices verbinden en beheren</string>
@@ -480,7 +474,6 @@
     <string name="tracking_trakt_progress_required">Beschikbaar wanneer Trakt de bron voor kijkvoortgang is</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Versie en beleid</string>
     <string name="settings_network">Netwerksnelheid</string>
     <string name="settings_network_subtitle">Diagnostiek voor latentie en downloads</string>
     <string name="settings_advanced">Geavanceerd</string>
@@ -611,7 +604,6 @@
     <string name="advanced_confirm_exit_subtitle">Sluit de app volledig af en maak geheugen vrij bij het afsluiten. Vereist tweemaal op terug drukken ter bevestiging.</string>
     <string name="confirm_exit_toast">Druk nogmaals op terug om af te sluiten</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Ontwikkelaarstools en feature flags</string>
     <string name="settings_plugins_section_subtitle">Beheer repositories, providers en pluginstatussen</string>
     <string name="settings_account_section_subtitle">Account- en synchronisatiestatus</string>
     <string name="account_stat_addons">add-ons</string>
@@ -698,8 +690,6 @@
     <string name="contributors_hide_kofi_qr">Ko-fi-QR verbergen</string>
     <string name="contributors_profile_unavailable">Link naar GitHub-profiel niet beschikbaar.</string>
 
-    <string name="playback_section_general">Algemeen</string>
-    <string name="playback_section_general_desc">Basisgedrag van het afspelen.</string>
     <string name="playback_loading_overlay">Laadoverlay</string>
     <string name="playback_loading_overlay_sub">Toon het laadscherm tot het eerste videoframe verschijnt.</string>
     <string name="playback_pause_overlay">Pauze-overlay</string>
@@ -719,9 +709,6 @@
     <string name="auto_skip_outro">Outro / einde</string>
     <string name="auto_skip_outro_sub">Sla outro\'s en anime-endings automatisch over.</string>
     <string name="playback_auto_frame_rate">Automatische framerate en resolutie</string>
-    <string name="playback_section_player">Speler &amp; streamselectie</string>
-    <string name="playback_section_player_desc">Spelervoorkeur, automatisch afspelen en bronfiltering.</string>
-    <string name="playback_player">Speler</string>
     <string name="playback_player_internal">Intern</string>
     <string name="playback_player_external">Extern</string>
     <string name="playback_player_ask">Elke keer vragen</string>
@@ -734,12 +721,8 @@
     <string name="playback_external_forward_subtitles_sub">Haal ondertiteling in je voorkeurstaal op bij add-ons en geef die door aan de externe speler.</string>
     <string name="playback_external_send_skip_segments">Tijdstempels van intro en outro versturen</string>
     <string name="playback_external_send_skip_segments_sub">Geef de gevonden tijdstempels voor intro/outro door aan de externe speler voor automatisch overslaan. Werkt alleen in spelers die dit ondersteunen; andere spelers negeren het.</string>
-    <string name="playback_section_audio">Audio &amp; video</string>
-    <string name="playback_section_audio_desc">Audiobediening en videocompatibiliteit.</string>
     <string name="playback_section_subtitles">Ondertiteling</string>
     <string name="playback_section_subtitles_desc">Taal, stijl en weergavemodus.</string>
-    <string name="playback_afr_open">Open</string>
-    <string name="playback_afr_closed">Gesloten</string>
     <string name="playback_afr_off">Uit</string>
     <string name="playback_afr_off_sub">Wijzig de schermverversingssnelheid niet.</string>
     <string name="playback_afr_on_start">Bij starten</string>

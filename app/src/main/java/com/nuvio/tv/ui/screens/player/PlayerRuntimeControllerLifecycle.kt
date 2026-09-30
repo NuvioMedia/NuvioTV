@@ -45,6 +45,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     hidePlayerEngineSwitchInfoJob?.cancel()
     hideSubtitleDelayOverlayJob?.cancel()
     subtitleAutoSyncLoadJob?.cancel()
+    cancelAutomaticSubtitleSync() // AutoSync hook
     stopSidecarAddonSubtitle(clearView = true)
     subtitleTimingRefreshJob?.cancel()
     subtitleTimingRefreshJob = null

@@ -448,13 +448,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Experience</string>
-    <string name="settings_experience_subtitle">Essential or Advanced</string>
     <string name="settings_account">Account</string>
-    <string name="settings_account_subtitle">Account and sync status</string>
     <string name="settings_profiles">Profiles</string>
-    <string name="settings_profiles_subtitle">Manage user profiles</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Home structure and poster styles</string>
     <string name="settings_content_discovery">Content &amp; Discovery</string>
     <string name="settings_content_discovery_subtitle">Add-ons, plugins, catalogs, and discovery sources</string>
     <string name="settings_content_discovery_addons_subtitle">Manage add-ons, catalog order, and collections</string>
@@ -463,10 +459,8 @@
     <string name="settings_plugins_subtitle">Repositories and providers</string>
     <string name="settings_integration">Integrations</string>
     <string name="settings_playback">Playback</string>
-    <string name="settings_playback_subtitle">Player, subtitles, and auto-play</string>
     <string name="settings_trakt_subtitle">Open Trakt connection screen</string>
     <string name="settings_tracking_title">Tracking</string>
-    <string name="settings_tracking_subtitle">Manage your tracking accounts</string>
     <string name="settings_tracking_description">Connect tracking providers and choose which one powers your Library and Continue Watching.</string>
     <string name="tracking_accounts_title">Accounts</string>
     <string name="tracking_accounts_subtitle">Connect and manage tracking services</string>
@@ -493,7 +487,6 @@
     <string name="tracking_trakt_progress_required">Available when Trakt is the Watch Progress source</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Version and policies</string>
     <string name="settings_network">Network speed</string>
     <string name="settings_network_subtitle">Latency and download diagnostics</string>
     <string name="settings_advanced">Advanced</string>
@@ -598,6 +591,8 @@
     <string name="sentry_turn_off">Turn off</string>
     <string name="sentry_turn_on">Turn on</string>
     <string name="advanced_section_cache">Cache</string>
+    <string name="advanced_section_startup">Startup &amp; exit</string>
+    <string name="advanced_section_network_tests">Network tests</string>
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Fast Horizontal Navigation</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Increase D-pad repeat speed in rows while keeping repeat throttling enabled.</string>
@@ -625,7 +620,6 @@
     <string name="advanced_confirm_exit_subtitle">Fully terminate the app and free memory when exiting. Requires pressing back twice to confirm.</string>
     <string name="confirm_exit_toast">Press back again to exit</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Developer tools and feature flags</string>
     <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states</string>
     <string name="settings_account_section_subtitle">Account and sync status</string>
     <string name="account_stat_addons">addons</string>
@@ -713,8 +707,27 @@
     <string name="contributors_hide_kofi_qr">Hide Ko-fi QR</string>
     <string name="contributors_profile_unavailable">GitHub profile link unavailable.</string>
 
-    <string name="playback_section_general">General</string>
-    <string name="playback_section_general_desc">Core playback behavior.</string>
+    <string name="playback_section_player_title">Player</string>
+    <string name="playback_section_player_title_desc">Default player, internal engine and error fallback.</string>
+    <string name="playback_section_stream_selection">Stream Selection</string>
+    <string name="playback_section_stream_selection_desc">How a stream is picked when you press play.</string>
+    <string name="playback_section_up_next">Up Next</string>
+    <string name="playback_section_up_next_desc">Next episode autoplay and post-play suggestions.</string>
+    <string name="playback_section_skip">Skip Segments</string>
+    <string name="playback_section_skip_desc">Skip intros, recaps and credits.</string>
+    <string name="playback_section_interface">Player Interface</string>
+    <string name="playback_section_interface_desc">Overlays, clock and details shown during playback.</string>
+    <string name="playback_section_audio_only_desc">Languages, decoding and audio output.</string>
+    <string name="playback_section_video_desc">Frame rate matching, Dolby Vision and HDR.</string>
+    <string name="playback_default_player">Default Player</string>
+    <string name="playback_external_player_label">External Player</string>
+    <string name="playback_afr_mode">Frame Rate Matching</string>
+    <string name="playback_dv_hdr_label">Dolby Vision &amp; HDR</string>
+    <string name="playback_mpv_decoding_label">MPV Decoding</string>
+    <string name="playback_network_label">Network</string>
+    <string name="sub_languages_label">Languages</string>
+    <string name="sub_style_label">Style</string>
+    <string name="autoplay_selected_count">%1$d selected</string>
     <string name="playback_loading_overlay">Loading Overlay</string>
     <string name="playback_loading_overlay_sub">Show loading screen until first video frame appears.</string>
     <string name="playback_pause_overlay">Pause Overlay</string>
@@ -738,9 +751,6 @@
     <string name="skip_movie_credits">Skip Credits</string>
     <string name="skip_to_post_credits">Skip to Post-Credits</string>
     <string name="playback_auto_frame_rate">Auto Frame Rate &amp; Resolution</string>
-    <string name="playback_section_player">Player &amp; Stream Selection</string>
-    <string name="playback_section_player_desc">Player preference, auto-play, and source filtering.</string>
-    <string name="playback_player">Player</string>
     <string name="playback_player_internal">Internal</string>
     <string name="playback_player_external">External</string>
     <string name="playback_player_ask">Ask every time</string>
@@ -753,12 +763,8 @@
     <string name="playback_external_forward_subtitles_sub">Fetch subtitles in your preferred language from addons and pass them to the external player.</string>
     <string name="playback_external_send_skip_segments">Send intro and outro timestamps</string>
     <string name="playback_external_send_skip_segments_sub">Pass resolved intro/outro skip timestamps to the external player for auto-skipping. Only works in players that support it; other players ignore it.</string>
-    <string name="playback_section_audio">Audio &amp; Video</string>
-    <string name="playback_section_audio_desc">Audio controls and video compatibility.</string>
     <string name="playback_section_subtitles">Subtitles</string>
     <string name="playback_section_subtitles_desc">Language, style, and render mode.</string>
-    <string name="playback_afr_open">Open</string>
-    <string name="playback_afr_closed">Closed</string>
     <string name="playback_afr_off">Off</string>
     <string name="playback_afr_off_sub">Don\'t change display refresh rate.</string>
     <string name="playback_afr_on_start">On start</string>
@@ -982,6 +988,10 @@
     <string name="layout_hero_catalogs_sub">Select one or more catalogs for hero content.</string>
     <string name="layout_section_content">Home Content</string>
     <string name="layout_section_content_desc">Control what appears on home and search.</string>
+    <string name="layout_section_sidebar">Sidebar &amp; Navigation</string>
+    <string name="layout_section_sidebar_desc">Sidebar style and where Discover appears.</string>
+    <string name="layout_section_card_depth_desc">Edge light and sheen on image cards.</string>
+    <string name="layout_section_custom_poster_desc">Use artwork from an external poster service.</string>
     <string name="layout_collapse_sidebar">Collapse Sidebar</string>
     <string name="layout_collapse_sidebar_sub">Hide sidebar by default; show when focused.</string>
     <string name="layout_hide_floating_pill">Hide Floating Pill</string>
@@ -1139,7 +1149,6 @@
     <string name="custom_poster_qr_instruction">Scan the QR code with your phone to paste a poster URL pattern</string>
 
     <!-- Custom Poster URL - Screen Toggles -->
-    <string name="layout_custom_poster_apply_to">Apply custom posters to:</string>
     <string name="layout_custom_poster_screen_home">Home</string>
     <string name="layout_custom_poster_screen_continue_watching">Continue Watching</string>
     <string name="layout_custom_poster_screen_collections">Collections</string>
@@ -1213,6 +1222,10 @@
     <string name="mdblist_metacritic_subtitle">Show Metacritic score</string>
     <string name="mdblist_mal_title">MyAnimeList</string>
     <string name="mdblist_mal_subtitle">Show MyAnimeList rating</string>
+    <string name="mdblist_show_on_hero_title">Use Ratings on Hero</string>
+    <string name="mdblist_show_on_hero_subtitle">Show MDBList ratings on hero carousel (modern and classic/grid)</string>
+    <string name="mdblist_rating_order_title">Rating Order</string>
+    <string name="mdblist_rating_order_subtitle">First 3 enabled and available ratings are shown on the modern hero. Use arrows to reorder.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
@@ -1719,6 +1732,8 @@
     <string name="debrid_missing_api_key">Add a Debrid API key in Settings.</string>
     <string name="debrid_not_cached">Not cached on this service.</string>
     <string name="debrid_resolution_failed">Could not resolve this Debrid stream.</string>
+    <string name="youtube_resolving_stream">Loading YouTube video</string>
+    <string name="youtube_resolution_failed">Could not load this YouTube video.</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
     <string name="p2p_consent_title">P2P Streaming</string>
@@ -3305,4 +3320,26 @@
     <string name="player_stream_fallback_exhausted">No more working streams. Choose another source or retry.</string>
     <string name="usenet_fallback">Automatic Usenet fallback</string>
     <string name="usenet_fallback_description">If a Usenet stream fails, try following Usenet sources up to your configured attempt limit. Torrent and other streams never switch automatically.</string>
+
+    <string name="random_episode_title">Shuffle</string>
+    <string name="layout_random_episode_sub">Shuffle episodes from any series. Turning this off pauses shuffle.</string>
+    <string name="random_episode_unwatched">Unwatched episodes</string>
+    <string name="random_episode_include_watched">All episodes</string>
+    <string name="random_episode_empty_subtitle">No episodes are available to shuffle.</string>
+    <string name="random_episode_caught_up">You have watched every episode. Choose All episodes to watch again.</string>
+    <string name="random_episode_loading">Loading episodes…</string>
+    <string name="shuffle_starting">Starting shuffle…</string>
+    <string name="shuffle_choose_episodes">Choose which episodes to shuffle.</string>
+    <string name="shuffle_preview_title">Your episode</string>
+    <string name="shuffle_play_episode">Play episode</string>
+    <string name="shuffle_again">Shuffle again</string>
+    <string name="shuffle_only_episode">This is the only episode in your selection.</string>
+    <string name="shuffle_artwork_hidden">Artwork hidden to avoid spoilers</string>
+    <string name="shuffle_stop">Stop shuffle</string>
+    <string name="shuffle_enabled_all">Shuffle on · All episodes</string>
+    <string name="shuffle_enabled_unwatched">Shuffle on · Unwatched episodes</string>
+    <string name="shuffle_disabled">Shuffle off</string>
+    <string name="shuffle_save_failed">Could not update shuffle. Try again.</string>
+    <string name="shuffle_change_selection">Choose episodes</string>
+    <string name="shuffle_badge">Episode shuffle enabled</string>
 </resources>

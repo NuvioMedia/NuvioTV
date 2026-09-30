@@ -481,6 +481,8 @@ fun GridHomeContent(
                                 items = gridItem.items.asStable(),
                                 focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
                                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                                mdbListShowOnHero = uiState.mdbListShowOnHero,
+                                mdbListRatingOrder = uiState.mdbListRatingOrder,
                                 initialActiveIndex = savedHeroIndex.intValue,
                                 onItemFocus = {
                                     lastFocusedGridItemKey.value = "hero"
@@ -664,33 +666,35 @@ fun GridHomeContent(
                     }
                 ) { (gridItem, itemKey) ->
                 when (gridItem) {
-                    is GridItem.Hero -> {
-                        HeroCarousel(
-                            items = gridItem.items.asStable(),
-                            focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
-                            showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
-                            initialActiveIndex = savedHeroIndex.intValue,
-                            onItemFocus = {
-                                lastFocusedGridItemKey.value = "hero"
-                                activeCwRowKey.value = null
-                            },
-                            onActiveItemChanged = { item ->
-                                val idx = gridItem.items.indexOfFirst { it.id == item.id }
-                                if (idx >= 0) savedHeroIndex.intValue = idx
-                            },
-                            onItemClick = remember(onNavigateToDetail) {
-                                { item ->
-                                    onNavigateToDetail(
-                                        item.id,
-                                        item.apiType,
-                                        ""
-                                    )
-                                }
-                            },
-                            fullWidth = gridWidth,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                        is GridItem.Hero -> {
+                            HeroCarousel(
+                                items = gridItem.items.asStable(),
+                                focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
+                                showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                                mdbListShowOnHero = uiState.mdbListShowOnHero,
+                                mdbListRatingOrder = uiState.mdbListRatingOrder,
+                                initialActiveIndex = savedHeroIndex.intValue,
+                                onItemFocus = {
+                                    lastFocusedGridItemKey.value = "hero"
+                                    activeCwRowKey.value = null
+                                },
+                                onActiveItemChanged = { item ->
+                                    val idx = gridItem.items.indexOfFirst { it.id == item.id }
+                                    if (idx >= 0) savedHeroIndex.intValue = idx
+                                },
+                                onItemClick = remember(onNavigateToDetail) {
+                                    { item ->
+                                        onNavigateToDetail(
+                                            item.id,
+                                            item.apiType,
+                                            ""
+                                        )
+                                    }
+                                },
+                                fullWidth = gridWidth,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
 
                     is GridItem.SectionDivider -> {
                         val strTypeMovie = stringResource(R.string.type_movie)

@@ -71,6 +71,7 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
+import com.nuvio.tv.ui.screens.player.autosync.AutoSyncedChip
 
 private const val SubtitleOffLanguageKey = "__off__"
 private const val SubtitleUnknownLanguageKey = "__unknown__"
@@ -1229,7 +1230,13 @@ private fun SubtitleOptionCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                SourceChip(label = item.sourceLabel, selected = item.isSelected)
+                Row( // AutoSync hook: room for the "Auto synced" chip beside the source
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SourceChip(label = item.sourceLabel, selected = item.isSelected)
+                    item.addonSubtitle?.let { AutoSyncedChip(it.url, item.isSelected) } // AutoSync hook
+                }
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.bodyLarge,

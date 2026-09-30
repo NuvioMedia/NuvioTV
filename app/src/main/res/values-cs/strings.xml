@@ -388,13 +388,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Zkušenost</string>
-    <string name="settings_experience_subtitle">Základní nebo Pokročilá</string>
     <string name="settings_account">Účet</string>
-    <string name="settings_account_subtitle">Stav účtu a synchronizace</string>
     <string name="settings_profiles">Profily</string>
-    <string name="settings_profiles_subtitle">Spravovat uživatelské profily</string>
     <string name="settings_layout">Rozvržení</string>
-    <string name="settings_layout_subtitle">Struktura domů a styly plakátů</string>
     <string name="settings_content_discovery">Obsah a objevování</string>
     <string name="settings_content_discovery_subtitle">Doplňky, pluginy, katalogy a zdroje objevování</string>
     <string name="settings_content_discovery_addons_subtitle">Spravovat doplňky, pořadí katalogů a kolekce</string>
@@ -403,9 +399,7 @@
     <string name="settings_plugins_subtitle">Repozitáře a poskytovatelé</string>
     <string name="settings_integration">Integrace</string>
     <string name="settings_playback">Přehrávání</string>
-    <string name="settings_playback_subtitle">Přehrávač, titulky a automatické přehrávání</string>
     <string name="settings_trakt_subtitle">Otevřít obrazovku připojení Trakt</string>
-    <string name="settings_about_subtitle">Verze a zásady</string>
     <string name="settings_network">Rychlost sítě</string>
     <string name="settings_network_subtitle">Diagnostika latence a stahování</string>
     <string name="settings_advanced">Pokročilé</string>
@@ -530,7 +524,6 @@
     <string name="advanced_remember_last_profile">Pamatovat si poslední profil</string>
     <string name="advanced_remember_last_profile_subtitle">Pamatovat si poslední vybraný profil při spuštění</string>
     <string name="settings_debug">Ladění</string>
-    <string name="settings_debug_subtitle">Vývojářské nástroje a příznaky funkcí</string>
     <string name="settings_plugins_section_subtitle">Spravovat repozitáře, poskytovatele a stavy pluginů</string>
     <string name="settings_account_section_subtitle">Stav účtu a synchronizace</string>
     <string name="account_stat_addons">doplňky</string>
@@ -592,8 +585,6 @@
     <string name="contributors_hide_kofi_qr">Skrýt Ko-fi QR</string>
     <string name="contributors_profile_unavailable">Odkaz na GitHub profil nedostupný.</string>
 
-    <string name="playback_section_general">Obecné</string>
-    <string name="playback_section_general_desc">Základní chování přehrávání.</string>
     <string name="playback_loading_overlay">Překryv načítání</string>
     <string name="playback_loading_overlay_sub">Zobrazit obrazovku načítání, dokud se neobjeví první snímek videa.</string>
     <string name="playback_pause_overlay">Překryv pauzy</string>
@@ -613,9 +604,6 @@
     <string name="auto_skip_outro">Outro / Ukončení</string>
     <string name="auto_skip_outro_sub">Přeskakovat outra a anime ukončení automaticky.</string>
     <string name="playback_auto_frame_rate">Automatická snímková frekvence a rozlišení</string>
-    <string name="playback_section_player">Přehrávač a výběr streamu</string>
-    <string name="playback_section_player_desc">Preference přehrávače, automatické přehrávání a filtrování zdrojů.</string>
-    <string name="playback_player">Přehrávač</string>
     <string name="playback_player_internal">Interní</string>
     <string name="playback_player_external">Externí</string>
     <string name="playback_player_ask">Pokaždé se zeptat</string>
@@ -628,12 +616,8 @@
     <string name="playback_external_forward_subtitles_sub">Načíst titulky v preferovaném jazyce z doplňků a předat je externímu přehrávači.</string>
     <string name="playback_external_send_skip_segments">Odesílat časové značky úvodu a závěru</string>
     <string name="playback_external_send_skip_segments_sub">Předat vypočtené časové značky pro přeskočení úvodu/závěru externímu přehrávači pro automatické přeskakování. Funguje jen v přehrávačích, které to podporují; ostatní ho ignorují.</string>
-    <string name="playback_section_audio">Audio a video</string>
-    <string name="playback_section_audio_desc">Ovládání zvuku a kompatibilita videa.</string>
     <string name="playback_section_subtitles">Titulky</string>
     <string name="playback_section_subtitles_desc">Jazyk, styl a režim vykreslování.</string>
-    <string name="playback_afr_open">Otevřeno</string>
-    <string name="playback_afr_closed">Zavřeno</string>
     <string name="playback_afr_off">Vypnuto</string>
     <string name="playback_afr_off_sub">Neměnit obnovovací frekvenci displeje.</string>
     <string name="playback_afr_on_start">Při spuštění</string>
