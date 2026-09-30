@@ -13,9 +13,10 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -25,8 +26,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key as keyedItem
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -36,8 +37,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -59,14 +63,6 @@ private val ReorderTravelSpec = tween<Float>(
     easing = NuvioMotion.tokens.easings.emphasized,
 )
 
-/**
- * TV-first vertical reorder list.
- *
- * Uses absolute slot positioning inside a scrollable [Box] instead of
- * [LazyColumn], so slot swaps only recompose the affected rows. Move mode is
- * entered via a per-row action; while active, DPAD up/down (including key
- * repeat) continuously shifts the row with a shared travel animation.
- */
 @Composable
 fun <T> TvReorderList(
     items: List<T>,
@@ -95,19 +91,19 @@ fun <T> TvReorderList(
     var rowHeightPx by remember { mutableFloatStateOf(0f) }
     var headerHeightPx by remember { mutableFloatStateOf(0f) }
     val slotStridePx = if (rowHeightPx > 0f) rowHeightPx + rowSpacingPx else 0f
-    val itemsHeightPx = if (slotStridePx > 0f && items.isNotEmpty()) {
-        rowHeightPx + (items.size - 1) * slotStridePx
-    } else {
-        0f
-    }
 
     fun indicesFrom(source: List<T>): Map<String, Int> {
         return source.mapIndexed { index, item -> key(item) to index }.toMap()
     }
 
-    var animatedIndices by remember { mutableStateOf(indicesFrom(items)) }
+    val animatedIndices = remember {
+        mutableStateMapOf<String, Int>().apply { putAll(indicesFrom(items)) }
+    }
     val dragOffsets = remember { mutableStateMapOf<String, Float>() }
     val offsetJobs = remember { mutableMapOf<String, Job>() }
+    val rowContentCache = remember(movingKey) {
+        mutableMapOf<String, CachedRowContent<T>>()
+    }
     val inheritedBringIntoViewSpec = LocalBringIntoViewSpec.current
     val freezeScrollBringIntoView = remember {
         object : BringIntoViewSpec {
@@ -195,7 +191,8 @@ fun <T> TvReorderList(
             val nextIndices = indicesFrom(items)
             if (nextIndices != animatedIndices) {
                 Log.d(LIST_TAG, "list syncSlots ${visualSnapshot("itemsReorder")}")
-                animatedIndices = nextIndices
+                animatedIndices.clear()
+                animatedIndices.putAll(nextIndices)
                 offsetJobs.values.forEach { it.cancel() }
                 offsetJobs.clear()
                 dragOffsets.clear()
@@ -281,11 +278,9 @@ fun <T> TvReorderList(
         shifting.forEach { (itemKey, _) ->
             dragOffsets[itemKey] = (dragOffsets[itemKey] ?: 0f) - slotShift * slotStridePx
         }
-        animatedIndices = animatedIndices.toMutableMap().apply {
-            this[movedKey] = newIndex
-            shifting.forEach { (itemKey, slot) ->
-                this[itemKey] = slot + slotShift
-            }
+        animatedIndices[movedKey] = newIndex
+        shifting.forEach { (itemKey, slot) ->
+            animatedIndices[itemKey] = slot + slotShift
         }
         animateOffsetToZero(movedKey)
         shifting.forEach { (itemKey, _) -> animateOffsetToZero(itemKey) }
@@ -422,7 +417,8 @@ fun <T> TvReorderList(
         if (itemKeys != animatedOrder || dragOffsets.values.any { kotlin.math.abs(it) > 0.5f }) {
             Log.d(LIST_TAG, "list JUMP? exitMove beforeReset ${visualSnapshot("exitMove-before")}")
             clearOffsets()
-            animatedIndices = indicesFrom(items)
+            animatedIndices.clear()
+            animatedIndices.putAll(indicesFrom(items))
             Log.d(LIST_TAG, "list JUMP? exitMove afterReset ${visualSnapshot("exitMove-after")}")
         } else {
             offsetJobs.values.forEach { it.cancel() }
@@ -443,122 +439,247 @@ fun <T> TvReorderList(
     }
 
     CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoViewSpec) {
-    Box(
-        modifier = modifier
-            .onSizeChanged { viewportHeightPx = it.height.toFloat() }
-            .verticalScroll(scrollState)
-            .then(
-                if (movingKey != null || suppressStartMove) {
-                    Modifier.onPreviewKeyEvent { event ->
-                        val native = event.nativeKeyEvent
-                        val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                            native.keyCode == KeyEvent.KEYCODE_ENTER ||
-                            native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
-                        when {
-                            isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
-                                if (suppressStartMove) {
-                                    Log.d(LIST_TAG, "list swallow OK up after confirm")
-                                    suppressStartMove = false
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-
-                            movingKey != null && isConfirmKey &&
-                                native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0 -> {
-                                confirmFromUi("ok-confirm")
-                                true
-                            }
-
-                            movingKey != null && native.keyCode == KeyEvent.KEYCODE_BACK &&
-                                native.action == KeyEvent.ACTION_DOWN -> {
-                                pinScroll("back-cancel")
-                                Log.d(LIST_TAG, "list BACK cancel ${visualSnapshot("back-cancel")}")
-                                onCancelMove()
-                                true
-                            }
-
-                            else -> handleMoveKey(native.keyCode, native.action, native.repeatCount)
+        BoxWithConstraints(modifier = modifier) {
+            val viewportPx = if (constraints.hasBoundedHeight) {
+                constraints.maxHeight.toFloat()
+            } else {
+                0f
+            }
+            SideEffect {
+                viewportHeightPx = viewportPx
+            }
+            val slotCount = items.size
+            val visibleSlotRange by remember(slotCount, rowSpacingPx, movingKey, viewportPx) {
+                derivedStateOf {
+                    val lastSlot = slotCount - 1
+                    if (lastSlot < 0) {
+                        IntRange.EMPTY
+                    } else {
+                        val movingSlot = movingKey
+                            ?.let { animatedIndices[it] }
+                            ?.coerceIn(0, lastSlot)
+                        if (viewportPx <= 0f) {
+                            0..lastSlot
+                        } else {
+                            visibleReorderSlotRange(
+                                slotCount = slotCount,
+                                rowHeightPx = rowHeightPx,
+                                rowSpacingPx = rowSpacingPx,
+                                viewportHeightPx = viewportPx,
+                                headerHeightPx = headerHeightPx,
+                                scrollPx = scrollState.value,
+                                movingSlot = movingSlot,
+                            )
                         }
                     }
-                } else {
-                    Modifier
-                },
-            )
-            .focusGroup(),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = NuvioTheme.spacing.xl),
-        ) {
-            if (header != null) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onSizeChanged { headerHeightPx = it.height.toFloat() },
-                ) {
-                    header()
                 }
             }
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
                     .then(
-                        if (itemsHeightPx > 0f) {
-                            Modifier.height(with(density) { itemsHeightPx.toDp() })
+                        if (movingKey != null || suppressStartMove) {
+                            Modifier.onPreviewKeyEvent { event ->
+                                val native = event.nativeKeyEvent
+                                val isConfirmKey = native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                    native.keyCode == KeyEvent.KEYCODE_ENTER ||
+                                    native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
+                                when {
+                                    isConfirmKey && native.action == KeyEvent.ACTION_UP -> {
+                                        if (suppressStartMove) {
+                                            Log.d(LIST_TAG, "list swallow OK up after confirm")
+                                            suppressStartMove = false
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }
+
+                                    movingKey != null && isConfirmKey &&
+                                        native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0 -> {
+                                        confirmFromUi("ok-confirm")
+                                        true
+                                    }
+
+                                    movingKey != null && native.keyCode == KeyEvent.KEYCODE_BACK &&
+                                        native.action == KeyEvent.ACTION_DOWN -> {
+                                        pinScroll("back-cancel")
+                                        Log.d(LIST_TAG, "list BACK cancel ${visualSnapshot("back-cancel")}")
+                                        onCancelMove()
+                                        true
+                                    }
+
+                                    else -> handleMoveKey(native.keyCode, native.action, native.repeatCount)
+                                }
+                            }
                         } else {
                             Modifier
                         },
-                    ),
+                    )
+                    .focusGroup(),
             ) {
-            items.forEachIndexed { index, item ->
-                val itemKey = key(item)
-                keyedItem(itemKey) {
-                    val isMoving = movingKey == itemKey
-                    val slotIndex = animatedIndices[itemKey] ?: index
-                    val dragOffsetPx = dragOffsets[itemKey] ?: 0f
-                    val yOffsetPx = slotIndex * slotStridePx + dragOffsetPx
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onSizeChanged { size ->
-                                if (!isMoving && size.height > 0) {
-                                    val measured = size.height.toFloat()
-                                    rowHeightPx = if (rowHeightPx == 0f) {
-                                        measured
-                                    } else {
-                                        min(rowHeightPx, measured)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = NuvioTheme.spacing.xl),
+                ) {
+                    if (header != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onSizeChanged { headerHeightPx = it.height.toFloat() },
+                        ) {
+                            header()
+                        }
+                    }
+                    SubcomposeLayout(modifier = Modifier.fillMaxWidth()) { layoutConstraints ->
+                        if (items.isEmpty()) {
+                            val emptyWidth = if (layoutConstraints.hasBoundedWidth) {
+                                layoutConstraints.maxWidth
+                            } else {
+                                0
+                            }
+                            return@SubcomposeLayout layout(emptyWidth, 0) {}
+                        }
+                        val itemConstraints = layoutConstraints.copy(
+                            minHeight = 0,
+                            maxHeight = Constraints.Infinity,
+                        )
+                        val placeables = mutableMapOf<Int, Placeable>()
+                        fun measureSlot(index: Int): Placeable {
+                            placeables[index]?.let { return it }
+                            val item = items[index]
+                            val itemKey = key(item)
+                            val isMoving = movingKey == itemKey
+                            val cached = rowContentCache[itemKey]
+                            val content: @Composable () -> Unit
+                            if (cached != null && cached.item == item && cached.isMoving == isMoving) {
+                                content = cached.content
+                            } else {
+                                content = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .onSizeChanged { size ->
+                                                if (!isMoving && size.height > 0) {
+                                                    val measured = size.height.toFloat()
+                                                    rowHeightPx = if (rowHeightPx == 0f) {
+                                                        measured
+                                                    } else {
+                                                        min(rowHeightPx, measured)
+                                                    }
+                                                }
+                                            }
+                                            .offset {
+                                                val dragOffsetPx = dragOffsets[itemKey] ?: 0f
+                                                IntOffset(x = 0, y = dragOffsetPx.roundToInt())
+                                            }
+                                            .zIndex(if (isMoving) 1f else 0f),
+                                    ) {
+                                        itemContent(
+                                            item,
+                                            isMoving,
+                                            {
+                                                if (suppressStartMove) {
+                                                    Log.d(LIST_TAG, "list ignore startMove suppressed key=$itemKey")
+                                                } else if (canMove(item)) {
+                                                    onStartMove(itemKey)
+                                                }
+                                            },
+                                            { confirmFromUi("done-button") },
+                                        )
                                     }
                                 }
+                                rowContentCache[itemKey] = CachedRowContent(item, isMoving, content)
                             }
-                            .offset {
-                                IntOffset(
+                            val placeable = subcompose(itemKey, content).first().measure(itemConstraints)
+                            placeables[index] = placeable
+                            return placeable
+                        }
+
+                        val sampledRowHeight = if (rowHeightPx > 0f) {
+                            rowHeightPx
+                        } else {
+                            measureSlot(0).height.toFloat()
+                        }
+                        val visibleRange = if (rowHeightPx > 0f) {
+                            visibleSlotRange
+                        } else if (viewportPx <= 0f) {
+                            0..items.lastIndex
+                        } else {
+                            visibleReorderSlotRange(
+                                slotCount = items.size,
+                                rowHeightPx = sampledRowHeight,
+                                rowSpacingPx = rowSpacingPx,
+                                viewportHeightPx = viewportPx,
+                                headerHeightPx = headerHeightPx,
+                                scrollPx = scrollState.value,
+                                movingSlot = movingKey
+                                    ?.let { animatedIndices[it] }
+                                    ?.coerceIn(0, items.lastIndex),
+                            )
+                        }
+                        for (index in visibleRange) {
+                            measureSlot(index)
+                        }
+                        val stride = sampledRowHeight + rowSpacingPx
+                        val totalHeight = (
+                            sampledRowHeight + (items.size - 1) * stride
+                            ).roundToInt()
+                        val layoutWidth = if (layoutConstraints.hasBoundedWidth) {
+                            layoutConstraints.maxWidth
+                        } else {
+                            placeables.values.maxOfOrNull { it.width } ?: 0
+                        }
+                        layout(layoutWidth, totalHeight) {
+                            for (index in visibleRange) {
+                                val placeable = placeables[index] ?: continue
+                                val itemKey = key(items[index])
+                                val slotIndex = animatedIndices[itemKey] ?: index
+                                placeable.place(
                                     x = 0,
-                                    y = if (slotStridePx > 0f) yOffsetPx.roundToInt() else 0,
+                                    y = (slotIndex * stride).roundToInt(),
+                                    zIndex = if (itemKey == movingKey) 1f else 0f,
                                 )
                             }
-                            .zIndex(if (isMoving) 1f else 0f),
-                    ) {
-                        itemContent(
-                            item,
-                            isMoving,
-                            {
-                                if (suppressStartMove) {
-                                    Log.d(LIST_TAG, "list ignore startMove suppressed key=$itemKey")
-                                } else if (canMove(item)) {
-                                    onStartMove(itemKey)
-                                }
-                            },
-                            { confirmFromUi("done-button") },
-                        )
+                        }
                     }
                 }
             }
         }
-        }
     }
+}
+
+private class CachedRowContent<T>(
+    val item: T,
+    val isMoving: Boolean,
+    val content: @Composable () -> Unit,
+)
+
+private fun visibleReorderSlotRange(
+    slotCount: Int,
+    rowHeightPx: Float,
+    rowSpacingPx: Float,
+    viewportHeightPx: Float,
+    headerHeightPx: Float,
+    scrollPx: Int,
+    movingSlot: Int?,
+): IntRange {
+    val lastSlot = slotCount - 1
+    if (lastSlot < 0) return IntRange.EMPTY
+    val stride = if (rowHeightPx > 0f) rowHeightPx + rowSpacingPx else 0f
+    if (stride <= 0f || viewportHeightPx <= 0f) {
+        return 0..(movingSlot ?: 0).coerceIn(0, lastSlot)
     }
+    val overscanPx = viewportHeightPx
+    val topEdge = scrollPx - headerHeightPx - overscanPx
+    val bottomEdge = scrollPx + viewportHeightPx - headerHeightPx + overscanPx
+    val first = ((topEdge - rowHeightPx) / stride).toInt()
+        .coerceIn(0, lastSlot)
+        .coerceAtMost(movingSlot ?: lastSlot)
+    val last = (bottomEdge / stride).toInt()
+        .coerceIn(0, lastSlot)
+        .coerceAtLeast(movingSlot ?: 0)
+    return first..last
 }
