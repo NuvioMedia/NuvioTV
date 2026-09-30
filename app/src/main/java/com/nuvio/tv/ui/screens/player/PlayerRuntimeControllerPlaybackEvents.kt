@@ -1232,6 +1232,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 val backBufferMs = maxOf(effectiveBackBufferDurationMs, configuredBackBufferMs).toLong()
                 val displayedDelayMs = liveBufferFilter.displayedDelayMs
                 val rawDelayMs = liveRawDelayMs(current, buffered)
+                val maxBuf = _playbackTimeline.value.maxBufferMs
                 val seek = LivePlaybackUiPolicy.resolveLivePreviewSeek(
                     playerPosition = current,
                     pendingPreviewPosition = commandedPlaybackPositionMs,
@@ -1240,7 +1241,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     isBackBufferEnabled = isBackBufferEnabled,
                     backBufferDurationMs = backBufferMs,
                     displayedDelayMs = displayedDelayMs,
-                    rawDelayMs = rawDelayMs
+                    rawDelayMs = rawDelayMs,
+                    maxBufferMs = maxBuf
                 ) ?: return
 
                 pendingPreviewSeekPosition = null
@@ -1250,7 +1252,6 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     SeekParameters.NEXT_SYNC
                 }
                 val player = _exoPlayer
-                val maxBuf = _playbackTimeline.value.maxBufferMs
                 val (seekDelay, seekProg) = if (seek.snapToLive && player != null) {
                     armCommandedPlaybackPosition(seek.targetPosition)
                     liveBufferFilter.snapToLive()
@@ -1322,7 +1323,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     isBackBufferEnabled = isBackBufferEnabled,
                     backBufferDurationMs = backBufferMs,
                     displayedDelayMs = displayedDelayMs,
-                    rawDelayMs = rawDelayMs
+                    rawDelayMs = rawDelayMs,
+                    maxBufferMs = _playbackTimeline.value.maxBufferMs
                 ) ?: return
 
                 commandedPlaybackPositionMs = null
@@ -1421,6 +1423,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 val backBufferMs = maxOf(effectiveBackBufferDurationMs, configuredBackBufferMs).toLong()
                 val displayedDelayMs = liveBufferFilter.displayedDelayMs
                 val rawDelayMs = liveRawDelayMs(current, buffered)
+                val maxBuf = _playbackTimeline.value.maxBufferMs
                 val seek = LivePlaybackUiPolicy.resolveLivePreviewSeek(
                     playerPosition = current,
                     pendingPreviewPosition = null,
@@ -1429,12 +1432,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     isBackBufferEnabled = isBackBufferEnabled,
                     backBufferDurationMs = backBufferMs,
                     displayedDelayMs = displayedDelayMs,
-                    rawDelayMs = rawDelayMs
+                    rawDelayMs = rawDelayMs,
+                    maxBufferMs = maxBuf
                 ) ?: return
 
                 pendingPreviewSeekPosition = null
                 val player = _exoPlayer
-                val maxBuf = _playbackTimeline.value.maxBufferMs
                 val (seekToDelay, seekToProg) = if (seek.snapToLive && player != null) {
                     armCommandedPlaybackPosition(seek.targetPosition)
                     liveBufferFilter.snapToLive()

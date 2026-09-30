@@ -407,6 +407,13 @@ class PlayerRuntimeController(
                 liveOffsetMs = if (exo != null && !isUsingMpvEngine()) exo.currentLiveOffset else -1L,
                 totalBufferedMs = if (exo != null && !isUsingMpvEngine()) exo.totalBufferedDuration else -1L
             )
+            maybeRejoinLiveEdge(
+                rawDelayMs = rawDelayMs,
+                maxBufferMs = maxBuf,
+                bufferedAheadMs = (bufferedPosition - currentPosition).coerceAtLeast(0L),
+                isPlaying = liveUiPlaying,
+                isSeeking = isSeeking
+            )
             liveBufferFilter.update(
                 currentPosition = currentPosition,
                 bufferedPosition = bufferedPosition,
@@ -675,6 +682,8 @@ class PlayerRuntimeController(
     internal var forceDv7ToHevc: Boolean = false
     internal var startupRetryCount: Int = 0
     internal var parsingErrorProbeAttempted: Boolean = false
+    internal var behindLiveWindowRecoveryCount: Int = 0
+    internal var liveEdgeRejoinAtElapsedMs: Long = 0L
     internal var hasRetriedCurrentStreamAfterUnexpectedNpe: Boolean = false
     internal var hasRetriedCurrentStreamAfterMediaPeriodHolderCrash: Boolean = false
     internal var timeoutRecoveryAttempts: Int = 0

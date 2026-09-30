@@ -838,4 +838,104 @@ class LivePlaybackUiPolicyTest {
         assertEquals(-15_000L, resolved.uiDeltaMs)
         assertFalse(resolved.snapToLive)
     }
+
+    @Test
+    fun `long pause caps the clock at the retainable buffer`() {
+        val filter = LivePlaybackBufferFilter()
+        filter.update(
+            currentPosition = 10_000L,
+            bufferedPosition = 13_000L,
+            isPlaying = false,
+            maxBufferMs = 45_000L,
+            nowElapsedMs = 0L
+        )
+
+        val (delay, prog) = filter.update(
+            currentPosition = 10_000L,
+            bufferedPosition = 58_000L,
+            isPlaying = false,
+            maxBufferMs = 45_000L,
+            nowElapsedMs = 90_000L,
+            rawDelayMs = 90_000L
+        )
+        assertEquals(45_000L, delay)
+        assertEquals(0f, prog, 0.001f)
+        assertFalse(filter.lockedToLive)
+    }
+
+    @Test
+    fun `pause inside the buffer still tracks wall clock`() {
+        val filter = LivePlaybackBufferFilter()
+        filter.update(
+            currentPosition = 10_000L,
+            bufferedPosition = 13_000L,
+            isPlaying = false,
+            maxBufferMs = 45_000L,
+            nowElapsedMs = 0L
+        )
+        val (delay, _) = filter.update(
+            currentPosition = 10_000L,
+            bufferedPosition = 40_000L,
+            isPlaying = false,
+            maxBufferMs = 45_000L,
+            nowElapsedMs = 20_000L,
+            rawDelayMs = 20_000L
+        )
+        assertEquals(20_000L, delay)
+    }
+
+    @Test
+    fun `playback rejoins live only after the retained buffer is gone`() {
+        assertFalse(
+            LivePlaybackUiPolicy.shouldRejoinLiveEdge(
+                rawDelayMs = 20_000L,
+                maxBufferMs = 45_000L,
+                bufferedAheadMs = 0L
+            )
+        )
+        assertFalse(
+            LivePlaybackUiPolicy.shouldRejoinLiveEdge(
+                rawDelayMs = 90_000L,
+                maxBufferMs = 45_000L,
+                bufferedAheadMs = 40_000L
+            )
+        )
+        assertTrue(
+            LivePlaybackUiPolicy.shouldRejoinLiveEdge(
+                rawDelayMs = 90_000L,
+                maxBufferMs = 45_000L,
+                bufferedAheadMs = 1_000L
+            )
+        )
+    }
+
+    @Test
+    fun `forward seek past the retainable window snaps to live`() {
+        val resolved = LivePlaybackUiPolicy.resolveLivePreviewSeek(
+            playerPosition = 10_000L,
+            pendingPreviewPosition = null,
+            bufferedPosition = 55_000L,
+            deltaMs = 10_000L,
+            isBackBufferEnabled = true,
+            backBufferDurationMs = 15_000L,
+            displayedDelayMs = 45_000L,
+            rawDelayMs = 90_000L,
+            maxBufferMs = 45_000L
+        )
+        assertTrue(resolved!!.snapToLive)
+
+        val backward = LivePlaybackUiPolicy.resolveLivePreviewSeek(
+            playerPosition = 50_000L,
+            pendingPreviewPosition = null,
+            bufferedPosition = 55_000L,
+            deltaMs = -10_000L,
+            isBackBufferEnabled = true,
+            backBufferDurationMs = 15_000L,
+            displayedDelayMs = 45_000L,
+            rawDelayMs = 90_000L,
+            maxBufferMs = 45_000L
+        )
+        assertEquals(40_000L, backward!!.targetPosition)
+        assertFalse(backward.snapToLive)
+    }
 }

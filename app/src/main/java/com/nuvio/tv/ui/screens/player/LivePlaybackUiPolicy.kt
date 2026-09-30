@@ -150,7 +150,8 @@ object LivePlaybackUiPolicy {
         isBackBufferEnabled: Boolean,
         backBufferDurationMs: Long,
         displayedDelayMs: Long,
-        rawDelayMs: Long
+        rawDelayMs: Long,
+        maxBufferMs: Long = Long.MAX_VALUE
     ): LivePreviewSeek? {
         if (deltaMs == 0L) return null
         if (deltaMs > 0L &&
@@ -158,6 +159,18 @@ object LivePlaybackUiPolicy {
             rawDelayMs <= LIVE_FORWARD_BUFFER_MIN_ESCAPE_MS
         ) {
             return null
+        }
+        if (deltaMs > 0L && isBeyondPlayableLiveWindow(rawDelayMs, maxBufferMs)) {
+            return LivePreviewSeek(
+                targetPosition = liveEdgePositionMs(
+                    currentPosition = playerPosition,
+                    bufferedPosition = bufferedPosition,
+                    displayedDelayMs = displayedDelayMs,
+                    rawDelayMs = rawDelayMs
+                ),
+                uiDeltaMs = deltaMs,
+                snapToLive = true
+            )
         }
 
         val base = pendingPreviewPosition ?: playerPosition
@@ -216,6 +229,19 @@ object LivePlaybackUiPolicy {
             0L
         }
         return maxOf(fromBuffered, fromOffset)
+    }
+
+    fun isBeyondPlayableLiveWindow(rawDelayMs: Long, maxBufferMs: Long): Boolean {
+        return maxBufferMs > 0L && rawDelayMs > maxBufferMs
+    }
+
+    fun shouldRejoinLiveEdge(
+        rawDelayMs: Long,
+        maxBufferMs: Long,
+        bufferedAheadMs: Long
+    ): Boolean {
+        if (!isBeyondPlayableLiveWindow(rawDelayMs, maxBufferMs)) return false
+        return bufferedAheadMs <= LIVE_EDGE_BUFFER_MS
     }
 }
 
@@ -349,7 +375,10 @@ class LivePlaybackBufferFilter(
 
         if (!isPlaying) {
             val maxAllowedStepMs = (elapsedSinceLastUpdateMs * maxSlewRateMsPerSecond) / 1_000L
-            val estimatedRawMs = estimatedPausedRawDelayMs(rawAccumulatedMs, now)
+            val pauseCapMs = maxOf(maxBufferMs.coerceAtLeast(0L), filteredDelayMs)
+            val estimatedRawMs = estimatedPausedRawDelayMs(rawAccumulatedMs, now).let { estimated ->
+                if (pauseCapMs > 0L) estimated.coerceAtMost(pauseCapMs) else estimated
+            }
             if (filteredDelayMs < estimatedRawMs) {
                 filteredDelayMs = (filteredDelayMs + maxAllowedStepMs).coerceAtMost(estimatedRawMs)
             }

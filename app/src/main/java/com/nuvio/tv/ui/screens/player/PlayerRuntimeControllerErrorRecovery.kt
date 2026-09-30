@@ -15,6 +15,8 @@ private const val MAX_STARTUP_AUTO_RETRIES = 2
 private const val MAX_AUTO_RETRIES = 2
 private const val RETRY_DELAY_MS = 1_500L
 private const val STABLE_PROGRESS_RESET_DELAY_MS = 5_000L
+private const val MAX_BEHIND_LIVE_WINDOW_RECOVERIES = 3
+private const val LIVE_EDGE_REJOIN_COOLDOWN_MS = 3_000L
 
 internal fun PlayerRuntimeController.showRecoveryOverlay() {
     _uiState.update { state ->
@@ -319,9 +321,58 @@ internal fun PlayerRuntimeController.resetErrorRetryState() {
     startupRetryCount = 0
     errorRetryCount = 0
     parsingErrorProbeAttempted = false
+    behindLiveWindowRecoveryCount = 0
     pendingAudioPcmFallbackRebuild = false
     errorRetryJob?.cancel()
     errorRetryJob = null
+}
+
+internal fun PlayerRuntimeController.maybeRejoinLiveEdge(
+    rawDelayMs: Long,
+    maxBufferMs: Long,
+    bufferedAheadMs: Long,
+    isPlaying: Boolean,
+    isSeeking: Boolean
+) {
+    if (isSeeking || !isPlaying || isUsingMpvEngine() || !hasRenderedFirstFrame) return
+    if (!LivePlaybackUiPolicy.shouldRejoinLiveEdge(rawDelayMs, maxBufferMs, bufferedAheadMs)) return
+    val player = _exoPlayer ?: return
+    returnToLiveEdge(player)
+}
+
+internal fun PlayerRuntimeController.returnToLiveEdge(player: Player, fromError: Boolean = false): Boolean {
+    val now = android.os.SystemClock.elapsedRealtime()
+    if (!fromError && now - liveEdgeRejoinAtElapsedMs < LIVE_EDGE_REJOIN_COOLDOWN_MS) {
+        return false
+    }
+    if (fromError) {
+        if (behindLiveWindowRecoveryCount >= MAX_BEHIND_LIVE_WINDOW_RECOVERIES) {
+            return false
+        }
+        behindLiveWindowRecoveryCount++
+    }
+    liveEdgeRejoinAtElapsedMs = now
+    Log.i(
+        PlayerRuntimeController.TAG,
+        "LIVE_EDGE: rejoining live window fromError=$fromError offsetRecoveries=$behindLiveWindowRecoveryCount"
+    )
+    liveBufferFilter.snapToLive()
+    pendingPreviewSeekPosition = null
+    commandedPlaybackPositionMs = null
+    commandedPlaybackAtElapsedMs = 0L
+    player.seekToDefaultPosition()
+    if (fromError || player.playbackState == Player.STATE_IDLE) {
+        player.prepare()
+    }
+    if (!userPausedManually) {
+        player.playWhenReady = true
+    }
+    updatePlaybackTimeline(
+        currentPosition = player.currentPosition.coerceAtLeast(0L),
+        liveDelayMs = 0L,
+        liveProgress = 1f
+    )
+    return true
 }
 
 internal fun PlayerRuntimeController.scheduleStableProgressReset() {
@@ -461,7 +512,6 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED ||
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
-        error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ||
         error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
         error.findCauseOfType<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null ||
         error.cause?.toString()?.contains("UnrecognizedInputFormatException") == true

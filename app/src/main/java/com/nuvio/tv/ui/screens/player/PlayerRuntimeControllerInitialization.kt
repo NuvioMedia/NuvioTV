@@ -568,8 +568,6 @@ internal fun PlayerRuntimeController.initializePlayer(
             } else {
                 // Stock LoadControl: DefaultLoadControl configured with 1.5s back buffer so 1s rewind doesn't clear buffer.
                 effectiveBackBufferDurationMs = 1_500
-                configuredBackBufferMs = 0
-                configuredMaxBufferMs = com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS
                 currentBitrateAwareLoadControl = null
                 Log.i(
                     PlayerRuntimeController.TAG,
@@ -1460,6 +1458,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                             errorRetryJob = scope.launch {
                                 releasePlayer(flushPlaybackState = false)
                             }
+                            return
+                        }
+
+                        if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW &&
+                            returnToLiveEdge(this@apply, fromError = true)
+                        ) {
                             return
                         }
 
