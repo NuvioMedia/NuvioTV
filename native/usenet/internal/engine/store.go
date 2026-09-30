@@ -52,6 +52,8 @@ type Store struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
 	entries                map[string]*article
+	missing                map[string]bool
+	holes                  *holePolicy
 	lru                    list.List
 	free                   map[int][][]byte
 	allocated, used, limit int64
@@ -99,7 +101,7 @@ func (w *attemptWriter) seal() { w.mu.Lock(); w.active = false; w.mu.Unlock() }
 
 func NewStore(ctx context.Context, client bodyClient, limit int64) *Store {
 	ctx, cancel := context.WithCancel(ctx)
-	s := &Store{client: client, ctx: ctx, cancel: cancel, limit: limit, entries: make(map[string]*article), free: make(map[int][][]byte)}
+	s := &Store{client: client, ctx: ctx, cancel: cancel, limit: limit, entries: make(map[string]*article), missing: make(map[string]bool), free: make(map[int][][]byte)}
 	s.cond = sync.NewCond(&s.mu)
 	return s
 }
@@ -113,6 +115,12 @@ func (s *Store) acquire(id string, speculative bool) *article {
 		return nil
 	}
 	s.stats.Requests++
+	if s.missing[id] {
+		ctx, cancel := context.WithCancel(s.ctx)
+		a := &article{ctx: ctx, cancel: cancel, store: s, id: id, refs: 1, done: true, err: nntppool.ErrArticleNotFound}
+		a.cond = sync.NewCond(&a.mu)
+		return a
+	}
 	if a := s.entries[id]; a != nil {
 		a.mu.Lock()
 		failed := a.err != nil
@@ -225,7 +233,7 @@ func (s *Store) recycleLocked(a *article) {
 
 func (s *Store) allocate(a *article, size int64) error {
 	if size <= 0 || size > maxArticleBytes {
-		return fmt.Errorf("unsupported article size (maximum 16 MiB)")
+		return fmt.Errorf("%w: unsupported article size (maximum 16 MiB)", errInvalidArticle)
 	}
 	n := 64 << 10
 	for int64(n) < size {
@@ -239,7 +247,7 @@ func (s *Store) allocate(a *article, size int64) error {
 		if int64(n) <= a.reserved {
 			return nil
 		}
-		return errors.New("changed yEnc article size during retry")
+		return fmt.Errorf("%w: changed yEnc article size during retry", errInvalidArticle)
 	}
 	for {
 		if err := a.ctx.Err(); err != nil {
@@ -292,7 +300,7 @@ func (s *Store) fetch(a *article, speculative bool) {
 		err := s.allocate(a, size)
 		a.mu.Lock()
 		if a.meta.FileSize != 0 && (a.meta.FileSize != m.FileSize || a.meta.PartBegin != m.PartBegin || a.meta.PartSize != m.PartSize) {
-			err = errors.New("article metadata changed during retry")
+			err = fmt.Errorf("%w: article metadata changed during retry", errInvalidArticle)
 		}
 		a.meta = m
 		if a.err == nil {
@@ -332,10 +340,10 @@ func (s *Store) fetch(a *article, speculative bool) {
 		a.err = err
 	}
 	if a.err == nil && (b == nil || b.Encoding != nntppool.EncodingYEnc) {
-		a.err = errors.New("article is not yEnc encoded")
+		a.err = fmt.Errorf("%w: article is not yEnc encoded", errInvalidArticle)
 	}
 	if a.err == nil && b.ExpectedCRC != 0 && !b.CRCValid {
-		a.err = errors.New("article CRC mismatch")
+		a.err = fmt.Errorf("%w: article CRC mismatch", errInvalidArticle)
 	}
 	if a.err == nil {
 		expected := a.meta.PartSize
@@ -343,13 +351,16 @@ func (s *Store) fetch(a *article, speculative bool) {
 			expected = a.meta.FileSize
 		}
 		if int64(a.ready) != expected || int64(a.written) != expected {
-			a.err = fmt.Errorf("short yEnc payload (%d/%d, attempt %d): %w", a.ready, expected, a.written, io.ErrUnexpectedEOF)
+			a.err = fmt.Errorf("%w: short yEnc payload (%d/%d, attempt %d): %w", errInvalidArticle, a.ready, expected, a.written, io.ErrUnexpectedEOF)
 		}
 	}
 	a.done = true
 	a.cond.Broadcast()
 	a.mu.Unlock()
 	s.mu.Lock()
+	if errors.Is(a.err, nntppool.ErrArticleNotFound) && a.ctx.Err() == nil {
+		s.missing[a.id] = true
+	}
 	s.active--
 	if a.refs == 0 {
 		if a.err != nil || s.closed {
@@ -380,12 +391,12 @@ func (a *article) Write(p []byte) (int, error) {
 		expected = a.meta.FileSize
 	}
 	if int64(len(p)) > expected-int64(a.written) {
-		a.err = errors.New("yEnc payload exceeds announced part size")
+		a.err = fmt.Errorf("%w: yEnc payload exceeds announced part size", errInvalidArticle)
 		a.cond.Broadcast()
 		return len(p), nil
 	}
 	if overlap := min(len(p), a.ready-a.written); overlap > 0 && !bytes.Equal(p[:overlap], a.data[a.written:a.written+overlap]) {
-		a.err = errors.New("article payload changed during retry")
+		a.err = fmt.Errorf("%w: article payload changed during retry", errInvalidArticle)
 		a.cond.Broadcast()
 		return len(p), nil
 	}
@@ -413,7 +424,7 @@ func (a *article) metadata(ctx context.Context) (nntppool.YEncMeta, error) {
 		return a.meta, a.err
 	}
 	if a.meta.FileSize <= 0 {
-		return a.meta, errors.New("missing yEnc layout")
+		return a.meta, fmt.Errorf("%w: missing yEnc layout", errInvalidArticle)
 	}
 	return a.meta, nil
 }

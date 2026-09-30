@@ -714,6 +714,9 @@ func (r *ContentReader) Read(p []byte) (int, error) {
 		var err error
 		e, err = c.part(r.ctx, r.pos)
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				err = fmt.Errorf("%w: incomplete RAR continuation: %v", errInvalidArticle, err)
+			}
 			return 0, err
 		}
 	}
@@ -735,7 +738,11 @@ func (r *ContentReader) Read(p []byte) (int, error) {
 			r.current = e.file.Reader(r.ctx, r.ahead)
 		}
 	}
+	r.current.fill = isVideo(c.Name)
 	n, err := r.current.ReadAt(p[:min(int64(len(p)), e.start+e.length-r.pos)], e.offset+r.pos-e.start)
+	if len(p) > 0 && n == 0 && (err == io.EOF || err == nil) {
+		err = errInvalidArticle
+	}
 	r.pos += int64(n)
 	if err == nil {
 		r.primeBoundary(e)
