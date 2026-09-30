@@ -277,16 +277,12 @@ internal fun PlayerRuntimeController.observeBlurUnwatchedEpisodes() {
 internal fun PlayerRuntimeController.observeEpisodeWatchProgress() {
     val id = contentId ?: return
     val type = contentType ?: return
-    if (type.lowercase() != "series") return
-    val baseId = id.split(":").firstOrNull() ?: id
+    if (!type.equals("series", true) && !type.equals("tv", true)) return
     scope.launch {
-        watchProgressRepository.getAllEpisodeProgress(baseId, profileId).collectLatest { progressMap ->
-            _uiState.update { it.copy(episodeWatchProgressMap = progressMap) }
-        }
-    }
-    scope.launch {
-        watchedItemsPreferences.getWatchedEpisodesForContent(baseId, profileId).collectLatest { watchedSet ->
-            _uiState.update { it.copy(watchedEpisodeKeys = watchedSet) }
+        episodeShufflePlayback.observe(profileId, id, type).collectLatest { state ->
+            playbackShuffleState = state
+            _uiState.update { it.copy(episodeWatchProgressMap = state.progress, watchedEpisodeKeys = state.watched) }
+            recomputeNextEpisode(resetVisibility = false)
         }
     }
 }

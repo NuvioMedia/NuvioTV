@@ -70,6 +70,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -523,7 +524,8 @@ private fun AddRepositoryInline(
                                 }
                             ),
                             textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                color = NuvioTheme.colors.TextPrimary
+                                color = NuvioTheme.colors.TextPrimary,
+                                textDirection = TextDirection.Content
                             ),
                             cursorBrush = SolidColor(if (isEditing) NuvioTheme.colors.Primary else Color.Transparent),
                             decorationBox = { innerTextField ->

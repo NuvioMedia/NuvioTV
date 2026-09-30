@@ -374,20 +374,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Изживяване</string>
-    <string name="settings_experience_subtitle">Основно или Разширено</string>
     <string name="settings_account">Акаунт</string>
-    <string name="settings_account_subtitle">Състояние на акаунта и синхронизация</string>
     <string name="settings_profiles">Профили</string>
-    <string name="settings_profiles_subtitle">Управление на потребителски профили</string>
     <string name="settings_layout">Оформление</string>
-    <string name="settings_layout_subtitle">Структура на началния екран и стилове на постери</string>
     <string name="settings_plugins">Плъгини</string>
     <string name="settings_plugins_subtitle">Хранилища и доставчици</string>
     <string name="settings_integration">Интеграции</string>
     <string name="settings_playback">Възпроизвеждане</string>
-    <string name="settings_playback_subtitle">Плейър, субтитри и автоматично възпроизвеждане</string>
     <string name="settings_trakt_subtitle">Отвори екрана за връзка с Trakt</string>
-    <string name="settings_about_subtitle">Версия и политики</string>
     <string name="settings_network">Скорост на мрежата</string>
     <string name="settings_network_subtitle">Диагностика на латентност и изтегляне</string>
     <string name="settings_advanced">Разширени</string>
@@ -488,7 +482,6 @@
     <string name="advanced_remember_last_profile">Запомни последния профил</string>
     <string name="advanced_remember_last_profile_subtitle">Запомни последно избрания профил при стартиране</string>
     <string name="settings_debug">Дебъг</string>
-    <string name="settings_debug_subtitle">Инструменти за разработчици и флагове на функции</string>
     <string name="settings_plugins_section_subtitle">Управление на хранилища, доставчици и състояния на плъгини</string>
     <string name="settings_account_section_subtitle">Състояние на акаунта и синхронизация</string>
     <string name="account_stat_addons">добавки</string>
@@ -545,8 +538,6 @@
     <string name="contributors_hide_kofi_qr">Скрий Ko-fi QR</string>
     <string name="contributors_profile_unavailable">Връзката към GitHub профила е недостъпна.</string>
 
-    <string name="playback_section_general">Общи</string>
-    <string name="playback_section_general_desc">Основно поведение при възпроизвеждане.</string>
     <string name="playback_loading_overlay">Екран за зареждане</string>
     <string name="playback_loading_overlay_sub">Показвай екран за зареждане докато се появи първият видео кадър.</string>
     <string name="playback_pause_overlay">Пауза оверлей</string>
@@ -566,9 +557,6 @@
     <string name="auto_skip_outro">Аутро / Край</string>
     <string name="auto_skip_outro_sub">Автоматично пропускане на аутро и аниме завършвания.</string>
     <string name="playback_auto_frame_rate">Автоматична честота на кадрите и резолюция</string>
-    <string name="playback_section_player">Плейър и избор на поток</string>
-    <string name="playback_section_player_desc">Предпочитание за плейър, автоматично възпроизвеждане и филтриране на източници.</string>
-    <string name="playback_player">Плейър</string>
     <string name="playback_player_internal">Вграден</string>
     <string name="playback_player_external">Външен</string>
     <string name="playback_player_ask">Питай всеки път</string>
@@ -579,12 +567,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">Ако стартирането на потока се провали, превключи автоматично между ExoPlayer и libmpv.</string>
     <string name="playback_external_forward_subtitles">Препрати субтитри към външен плейър</string>
     <string name="playback_external_forward_subtitles_sub">Извлечи субтитри на предпочитания език от добавките и ги предай на външния плейър.</string>
-    <string name="playback_section_audio">Аудио и видео</string>
-    <string name="playback_section_audio_desc">Контроли за аудио и съвместимост на видео.</string>
     <string name="playback_section_subtitles">Субтитри</string>
     <string name="playback_section_subtitles_desc">Език, стил и режим на рендиране.</string>
-    <string name="playback_afr_open">Отворено</string>
-    <string name="playback_afr_closed">Затворено</string>
     <string name="playback_afr_off">Изключено</string>
     <string name="playback_afr_off_sub">Не променяй честотата на опресняване на дисплея.</string>
     <string name="playback_afr_on_start">При стартиране</string>

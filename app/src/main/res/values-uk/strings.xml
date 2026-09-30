@@ -379,20 +379,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Режим роботи</string>
-    <string name="settings_experience_subtitle">Базовий або розширений</string>
     <string name="settings_account">Акаунт</string>
-    <string name="settings_account_subtitle">Статус акаунта та синхронізації</string>
     <string name="settings_profiles">Профілі</string>
-    <string name="settings_profiles_subtitle">Керування профілями користувачів</string>
     <string name="settings_layout">Інтерфейс</string>
-    <string name="settings_layout_subtitle">Структура головного екрана та стиль постерів</string>
     <string name="settings_plugins">Плагіни</string>
     <string name="settings_plugins_subtitle">Репозиторії та провайдери</string>
     <string name="settings_integration">Інтеграції</string>
     <string name="settings_playback">Відтворення</string>
-    <string name="settings_playback_subtitle">Плеєр, субтитри та автовідтворення</string>
     <string name="settings_trakt_subtitle">Налаштування підключення до Trakt</string>
-    <string name="settings_about_subtitle">Версія та політики</string>
     <string name="settings_network">Швидкість мережі</string>
     <string name="settings_network_subtitle">Діагностика затримки та швидкості завантаження</string>
     <string name="settings_advanced">Додатково</string>
@@ -493,7 +487,6 @@
     <string name="advanced_remember_last_profile">Запам\'ятати останній профіль</string>
     <string name="advanced_remember_last_profile_subtitle">Запам\'ятовувати останній обраний профіль при запуску</string>
     <string name="settings_debug">Налагодження</string>
-    <string name="settings_debug_subtitle">Інструменти розробника та приховані функції</string>
     <string name="settings_plugins_section_subtitle">Керування репозиторіями, провайдерами та станом плагінів</string>
     <string name="settings_account_section_subtitle">Акаунт та статус синхронізації</string>
     <string name="account_stat_addons">адони</string>
@@ -550,8 +543,6 @@
     <string name="contributors_hide_kofi_qr">Приховати Ko-fi QR</string>
     <string name="contributors_profile_unavailable">Посилання на профіль GitHub недоступне.</string>
 
-    <string name="playback_section_general">Загальні</string>
-    <string name="playback_section_general_desc">Основна поведінка відтворення.</string>
     <string name="playback_loading_overlay">Екран завантаження</string>
     <string name="playback_loading_overlay_sub">Показувати екран завантаження до появи першого кадру відео.</string>
     <string name="playback_pause_overlay">Екран паузи</string>
@@ -571,9 +562,6 @@
     <string name="auto_skip_outro">Аутро / Ендінг</string>
     <string name="auto_skip_outro_sub">Автоматично пропускати аутро та ендінги аніме.</string>
     <string name="playback_auto_frame_rate">Автоматична частота кадрів</string>
-    <string name="playback_section_player">Плеєр та вибір потоку</string>
-    <string name="playback_section_player_desc">Налаштування плеєра, автозапуск та фільтрація джерел.</string>
-    <string name="playback_player">Плеєр</string>
     <string name="playback_player_internal">Вбудований</string>
     <string name="playback_player_external">Зовнішній</string>
     <string name="playback_player_ask">Запитувати щоразу</string>
@@ -584,12 +572,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">Якщо запуск потоку не вдався, автоматично перемикатися між ExoPlayer та libmpv.</string>
     <string name="playback_external_forward_subtitles">Передавати субтитри у зовнішній плеєр</string>
     <string name="playback_external_forward_subtitles_sub">Отримувати субтитри бажаною мовою з адонів та передавати у зовнішній плеєр.</string>
-    <string name="playback_section_audio">Аудіо та відео</string>
-    <string name="playback_section_audio_desc">Налаштування аудіо та сумісність відео.</string>
     <string name="playback_section_subtitles">Субтитри</string>
     <string name="playback_section_subtitles_desc">Мова, стиль та режим рендерингу.</string>
-    <string name="playback_afr_open">Відкрити</string>
-    <string name="playback_afr_closed">Закрити</string>
     <string name="playback_afr_off">Вимк</string>
     <string name="playback_afr_off_sub">Не змінювати частоту оновлення екрана.</string>
     <string name="playback_afr_on_start">При старті</string>

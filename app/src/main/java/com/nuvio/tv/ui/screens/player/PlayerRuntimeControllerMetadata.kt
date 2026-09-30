@@ -256,10 +256,12 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
         return
     }
 
-    val resolvedNext = PlayerNextEpisodeRules.resolveNextEpisode(
-        videos = metaVideos,
-        currentSeason = season,
-        currentEpisode = episode
+    val shuffleState = playbackShuffleState ?: run {
+        clearNextEpisodeAndCancelPostPlay()
+        return
+    }
+    val resolvedNext = episodeShufflePlayback.nextEpisode(
+        profileId, contentId.orEmpty(), metaVideos, season, episode, shuffleState
     )
 
     nextEpisodeVideo = resolvedNext

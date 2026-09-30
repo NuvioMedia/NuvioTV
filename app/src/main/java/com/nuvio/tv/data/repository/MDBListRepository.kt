@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private data class MediaRef(val provider: String, val id: String, val mediaType: String)
+
 @Singleton
 class MDBListRepository internal constructor(
     private val api: MdbListRatingsClient,
@@ -33,7 +35,7 @@ class MDBListRepository internal constructor(
         val credential = api.credential(settings.apiKey) ?: return null
 
         val mediaType = normalizeMediaType(itemType)
-        val imdbId = resolveImdbId(
+        val ref = resolveMediaRef(
             meta = Meta(
                 id = itemId,
                 type = when (normalizeMediaType(itemType)) {
@@ -63,7 +65,7 @@ class MDBListRepository internal constructor(
             mediaType = mediaType
         ) ?: return null
 
-        return ratingsLoader.getRatings(mediaType, imdbId, credential)?.imdb
+        return ratingsLoader.getRatings(ref.provider, ref.mediaType, ref.id, credential)?.imdb
     }
 
     suspend fun getRatingsForMeta(
@@ -79,9 +81,9 @@ class MDBListRepository internal constructor(
         if (!settings.hasEnabledProviders()) return null
 
         val mediaType = normalizeMediaType(meta.apiType.ifBlank { fallbackItemType })
-        val imdbId = resolveImdbId(meta, fallbackItemId, fallbackItemType, mediaType) ?: return null
+        val ref = resolveMediaRef(meta, fallbackItemId, fallbackItemType, mediaType) ?: return null
 
-        val ratings = ratingsLoader.getRatings(mediaType, imdbId, credential)?.let { allRatings ->
+        val ratings = ratingsLoader.getRatings(ref.provider, ref.mediaType, ref.id, credential)?.let { allRatings ->
             MDBListRatings(
                 trakt = allRatings.trakt.takeIf { settings.showTrakt },
                 imdb = allRatings.imdb.takeIf { settings.showImdb },
@@ -102,31 +104,40 @@ class MDBListRepository internal constructor(
     private fun MDBListSettings.hasEnabledProviders(): Boolean =
         showTrakt || showImdb || showTmdb || showLetterboxd || showTomatoes || showAudience || showMetacritic || showMal
 
-    private suspend fun resolveImdbId(
+    private suspend fun resolveMediaRef(
         meta: Meta,
         fallbackItemId: String,
         fallbackItemType: String,
         mediaType: String
-    ): String? {
-        extractImdbId(meta.id)?.let { return it }
-        extractImdbId(fallbackItemId)?.let { return it }
-        extractImdbId(meta.imdbId)?.let { return it }
+    ): MediaRef? {
+        // 1. Try IMDB ID first (most reliable).
+        extractImdbId(meta.id)?.let { return MediaRef("imdb", it, mediaType) }
+        extractImdbId(fallbackItemId)?.let { return MediaRef("imdb", it, mediaType) }
+        extractImdbId(meta.imdbId)?.let { return MediaRef("imdb", it, mediaType) }
 
-        val tmdbId = extractTmdbId(meta.id)
-            ?: extractTmdbId(fallbackItemId)
-            ?: meta.id.trim().takeIf { it.all(Char::isDigit) }?.toIntOrNull()
-            ?: fallbackItemId.trim().takeIf { it.all(Char::isDigit) }?.toIntOrNull()
+        // 2. Try TMDB ID directly — no need to convert to IMDB.
+        val tmdbId = extractPrefixedId(meta.id, "tmdb")
+            ?: extractPrefixedId(fallbackItemId, "tmdb")
 
         if (tmdbId != null) {
-            val mapped = tmdbService.tmdbToImdb(tmdbId, fallbackItemType)
-            if (!mapped.isNullOrBlank()) return mapped
+            // First try to get IMDB ID (preferred for cache dedup across providers).
+            val imdb = runCatching { tmdbService.tmdbToImdb(tmdbId.toInt(), fallbackItemType) }.getOrNull()
+            if (!imdb.isNullOrBlank() && imdb.startsWith("tt")) return MediaRef("imdb", imdb, mediaType)
+            return MediaRef("tmdb", tmdbId, mediaType)
         }
 
-        val lookupType = if (fallbackItemType.isNotBlank()) fallbackItemType else mediaType
-        val converted = tmdbService.ensureTmdbId(meta.id, lookupType)?.toIntOrNull()?.let { tmdbNumericId ->
-            tmdbService.tmdbToImdb(tmdbNumericId, lookupType)
-        }
-        return converted?.takeIf { it.startsWith("tt") }
+        // 3. Try MAL ID — use media_type "any" since MDBList doesn't distinguish
+        //    movie/show for MAL anime entries.
+        val malId = extractPrefixedId(meta.id, "mal")
+            ?: extractPrefixedId(fallbackItemId, "mal")
+        if (malId != null) return MediaRef("mal", malId, "any")
+
+        // 4. Try TVDB ID.
+        val tvdbId = extractPrefixedId(meta.id, "tvdb")
+            ?: extractPrefixedId(fallbackItemId, "tvdb")
+        if (tvdbId != null) return MediaRef("tvdb", tvdbId, mediaType)
+
+        return null
     }
 
     private fun extractImdbId(rawId: String?): String? {
@@ -135,11 +146,11 @@ class MDBListRepository internal constructor(
         return regex.find(rawId)?.value
     }
 
-    private fun extractTmdbId(rawId: String?): Int? {
+    private fun extractPrefixedId(rawId: String?, prefix: String): String? {
         if (rawId.isNullOrBlank()) return null
         val trimmed = rawId.trim()
-        if (trimmed.startsWith("tmdb:", ignoreCase = true)) {
-            return trimmed.substringAfter(':').substringBefore(':').toIntOrNull()
+        if (trimmed.startsWith("$prefix:", ignoreCase = true)) {
+            return trimmed.substringAfter(':').substringBefore(':').takeIf { it.isNotBlank() }
         }
         return null
     }

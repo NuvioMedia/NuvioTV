@@ -374,13 +374,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Oplevelse</string>
-    <string name="settings_experience_subtitle">Grundlæggende eller avanceret</string>
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Konto- og synkroniseringsstatus</string>
     <string name="settings_profiles">Profiler</string>
-    <string name="settings_profiles_subtitle">Administrer brugerprofiler</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Hjemstruktur og plakatstile</string>
     <string name="settings_content_discovery">Indhold &amp; Opdagelse</string>
     <string name="settings_content_discovery_subtitle">Add-ons, plugins, kataloger og opdagelseskilder</string>
     <string name="settings_content_discovery_addons_subtitle">Administrer add-ons, katalogrækkefølge og samlinger</string>
@@ -389,9 +385,7 @@
     <string name="settings_plugins_subtitle">Repositories og udbydere</string>
     <string name="settings_integration">Integrationer</string>
     <string name="settings_playback">Afspilning</string>
-    <string name="settings_playback_subtitle">Afspiller, undertekster og autoafspilning</string>
     <string name="settings_trakt_subtitle">Åbn Trakt-forbindelsesskærm</string>
-    <string name="settings_about_subtitle">Version og politikker</string>
     <string name="settings_network">Netværkshastighed</string>
     <string name="settings_network_subtitle">Latens- og downloaddiagnostik</string>
     <string name="settings_advanced">Avanceret</string>
@@ -492,7 +486,6 @@
     <string name="advanced_remember_last_profile">Husk seneste profil</string>
     <string name="advanced_remember_last_profile_subtitle">Husk senest valgte profil ved opstart</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Udviklerværktøjer og funktionsflag</string>
     <string name="settings_plugins_section_subtitle">Administrer repositories, udbydere og plugintilstande</string>
     <string name="settings_account_section_subtitle">Konto- og synkroniseringsstatus</string>
     <string name="account_stat_addons">addons</string>
@@ -549,8 +542,6 @@
     <string name="contributors_hide_kofi_qr">Skjul Ko-fi QR</string>
     <string name="contributors_profile_unavailable">GitHub-profillink utilgængeligt.</string>
 
-    <string name="playback_section_general">Generelt</string>
-    <string name="playback_section_general_desc">Grundlæggende afspilningsadfærd.</string>
     <string name="playback_loading_overlay">Indlæsningsoverlay</string>
     <string name="playback_loading_overlay_sub">Vis indlæsningsskærm indtil første videobillede vises.</string>
     <string name="playback_pause_overlay">Pauseoverlay</string>
@@ -570,9 +561,6 @@
     <string name="auto_skip_outro">Outro / Afslutning</string>
     <string name="auto_skip_outro_sub">Spring outros og anime-afslutninger over automatisk.</string>
     <string name="playback_auto_frame_rate">Auto billedhastighed &amp; opløsning</string>
-    <string name="playback_section_player">Afspiller &amp; streamvalg</string>
-    <string name="playback_section_player_desc">Afspillerpræference, autoafspilning og kildefiltrering.</string>
-    <string name="playback_player">Afspiller</string>
     <string name="playback_player_internal">Intern</string>
     <string name="playback_player_external">Ekstern</string>
     <string name="playback_player_ask">Spørg hver gang</string>
@@ -583,12 +571,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">Hvis stream-opstart fejler, skift automatisk mellem ExoPlayer og libmpv.</string>
     <string name="playback_external_forward_subtitles">Videresend undertekster til ekstern afspiller</string>
     <string name="playback_external_forward_subtitles_sub">Hent undertekster på dit foretrukne sprog fra addons og send dem til den eksterne afspiller.</string>
-    <string name="playback_section_audio">Lyd &amp; video</string>
-    <string name="playback_section_audio_desc">Lydkontrol og videokompatibilitet.</string>
     <string name="playback_section_subtitles">Undertekster</string>
     <string name="playback_section_subtitles_desc">Sprog, stil og renderingstilstand.</string>
-    <string name="playback_afr_open">Åben</string>
-    <string name="playback_afr_closed">Lukket</string>
     <string name="playback_afr_off">Fra</string>
     <string name="playback_afr_off_sub">Skift ikke skærmens opdateringshastighed.</string>
     <string name="playback_afr_on_start">Ved start</string>

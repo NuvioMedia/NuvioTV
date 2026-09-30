@@ -383,13 +383,9 @@
     <string name="licenses_attributions_libmpv_body">Përdoret si motor riprodhimi në Android. Mbështjellësi libmpv-android licencohet sipas licencës MIT; mpv/libmpv dhe komponentët native të përfshirë ruajnë kushtet e licencave të tyre burimore.</string>
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Përvoja</string>
-    <string name="settings_experience_subtitle">Bazë ose e avancuar</string>
     <string name="settings_account">Llogaria</string>
-    <string name="settings_account_subtitle">Llogaria dhe statusi i sinkronizimit</string>
     <string name="settings_profiles">Profilet</string>
-    <string name="settings_profiles_subtitle">Menaxho profilet e përdoruesve</string>
     <string name="settings_layout">Paraqitja</string>
-    <string name="settings_layout_subtitle">Struktura e faqes kryesore dhe stilet e posterëve</string>
     <string name="settings_content_discovery">Përmbajtja dhe zbulimi</string>
     <string name="settings_content_discovery_subtitle">Shtesa, shtojca, katalogë dhe burime zbulimi</string>
     <string name="settings_content_discovery_addons_subtitle">Menaxho shtesat, renditjen e katalogëve dhe koleksionet</string>
@@ -398,10 +394,8 @@
     <string name="settings_plugins_subtitle">Depot dhe ofruesit</string>
     <string name="settings_integration">Integrimet</string>
     <string name="settings_playback">Riprodhimi</string>
-    <string name="settings_playback_subtitle">Luajtësi, titrat dhe luajtja automatike</string>
     <string name="settings_trakt_subtitle">Hap ekranin e lidhjes me Trakt</string>
     <string name="settings_tracking_title">Gjurmimi</string>
-    <string name="settings_tracking_subtitle">Menaxho lidhjet me Trakt dhe Simkl</string>
     <string name="settings_tracking_description">Lidh ofruesit e gjurmimit dhe zgjidh cili prej tyre furnizon Bibliotekën dhe Vazhdo shikimin.</string>
     <string name="tracking_accounts_title">Llogaritë</string>
     <string name="tracking_accounts_subtitle">Lidh dhe menaxho shërbimet e gjurmimit</string>
@@ -427,7 +421,6 @@
     <string name="tracking_trakt_progress_required">E disponueshme kur Trakt është burimi i progresit të shikimit</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Versioni dhe politikat</string>
     <string name="settings_network">Shpejtësia e rrjetit</string>
     <string name="settings_network_subtitle">Diagnostikimi i vonesës dhe shkarkimit</string>
     <string name="settings_advanced">Të avancuara</string>
@@ -552,7 +545,6 @@
     <string name="advanced_remember_last_profile">Mbaj mend profilin e fundit</string>
     <string name="advanced_remember_last_profile_subtitle">Mbaj mend profilin e fundit të zgjedhur gjatë nisjes</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Mjete zhvilluesi dhe flamuj veçorish</string>
     <string name="settings_plugins_section_subtitle">Menaxho depot, ofruesit dhe gjendjet e shtojcave</string>
     <string name="settings_account_section_subtitle">Llogaria dhe statusi i sinkronizimit</string>
     <string name="account_stat_addons">shtesa</string>
@@ -616,8 +608,6 @@
     <string name="contributors_show_kofi_qr">Shfaq QR-në e Ko-fi</string>
     <string name="contributors_hide_kofi_qr">Fshih QR-në e Ko-fi</string>
     <string name="contributors_profile_unavailable">Lidhja e profilit GitHub nuk është e disponueshme.</string>
-    <string name="playback_section_general">Të përgjithshme</string>
-    <string name="playback_section_general_desc">Sjellja bazë e riprodhimit.</string>
     <string name="playback_loading_overlay">Mbivendosja e ngarkimit</string>
     <string name="playback_loading_overlay_sub">Shfaq ekranin e ngarkimit derisa të shfaqet kuadri i parë i videos.</string>
     <string name="playback_pause_overlay">Mbivendosja e pauzës</string>
@@ -637,9 +627,6 @@
     <string name="auto_skip_outro">Dalja / Ending</string>
     <string name="auto_skip_outro_sub">Kapërce automatikisht daljet dhe ending-et e animeve.</string>
     <string name="playback_auto_frame_rate">Shpejtësia automatike e kuadrove dhe rezolucioni</string>
-    <string name="playback_section_player">Luajtësi dhe zgjedhja e transmetimit</string>
-    <string name="playback_section_player_desc">Preferenca e luajtësit, luajtja automatike dhe filtrimi i burimeve.</string>
-    <string name="playback_player">Luajtësi</string>
     <string name="playback_player_internal">I brendshëm</string>
     <string name="playback_player_external">I jashtëm</string>
     <string name="playback_player_ask">Pyet çdo herë</string>
@@ -652,12 +639,8 @@
     <string name="playback_external_forward_subtitles_sub">Merr titrat në gjuhën e preferuar nga shtesat dhe dërgoji te luajtësi i jashtëm.</string>
     <string name="playback_external_send_skip_segments">Dërgo kohëshënuesit e hyrjes dhe daljes</string>
     <string name="playback_external_send_skip_segments_sub">Dërgo kohëshënuesit e përcaktuar për kapërcimin e hyrjes/daljes te luajtësi i jashtëm për kapërcim automatik. Funksionon vetëm në luajtësit që e mbështesin; luajtësit e tjerë e shpërfillin.</string>
-    <string name="playback_section_audio">Audio dhe video</string>
-    <string name="playback_section_audio_desc">Kontrollet e audios dhe përputhshmëria e videos.</string>
     <string name="playback_section_subtitles">Titrat</string>
     <string name="playback_section_subtitles_desc">Gjuha, stili dhe mënyra e renderimit.</string>
-    <string name="playback_afr_open">Hapur</string>
-    <string name="playback_afr_closed">Mbyllur</string>
     <string name="playback_afr_off">Joaktiv</string>
     <string name="playback_afr_off_sub">Mos e ndrysho shpejtësinë e rifreskimit të ekranit.</string>
     <string name="playback_afr_on_start">Në nisje</string>

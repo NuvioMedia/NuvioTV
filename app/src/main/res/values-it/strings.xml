@@ -419,13 +419,9 @@
 
     <!-- SettingsScreen categories -->
 <string name="settings_experience">Esperienza</string>
-<string name="settings_experience_subtitle">Essenziale o Avanzata</string>
 <string name="settings_account">Account</string>
-<string name="settings_account_subtitle">Stato dell\'account e della sincronizzazione</string>
 <string name="settings_profiles">Profili</string>
-<string name="settings_profiles_subtitle">Gestisci i profili utente</string>
 <string name="settings_layout">Layout</string>
-<string name="settings_layout_subtitle">Struttura della home e stili delle locandine</string>
 <string name="settings_content_discovery">Contenuti e scoperta</string>
 <string name="settings_content_discovery_subtitle">Add-on, plugin, cataloghi e sorgenti di scoperta</string>
 <string name="settings_content_discovery_addons_subtitle">Gestisci add-on, ordine dei cataloghi e collezioni</string>
@@ -434,10 +430,8 @@
 <string name="settings_plugins_subtitle">Repository e provider</string>
 <string name="settings_integration">Integrazioni</string>
 <string name="settings_playback">Riproduzione</string>
-<string name="settings_playback_subtitle">Player, sottotitoli e riproduzione automatica</string>
 <string name="settings_trakt_subtitle">Apri la schermata di login su Trakt</string>
 <string name="settings_tracking_title">Tracciamento</string>
-<string name="settings_tracking_subtitle">Gestisci le connessioni Trakt e Simkl</string>
 <string name="settings_tracking_description">Collega i provider di tracciamento e scegli quale gestisce la tua Libreria e Continua a guardare.</string>
 <string name="tracking_accounts_title">Account</string>
 <string name="tracking_accounts_subtitle">Collega e gestisci i servizi di tracciamento</string>
@@ -463,7 +457,6 @@
 <string name="tracking_trakt_progress_required">Disponibile quando Trakt è la fonte dei progressi di visione</string>
 <string name="trakt_name">Trakt</string>
 <string name="simkl_name">Simkl</string>
-<string name="settings_about_subtitle">Versione e informative</string>
 <string name="settings_network">Velocità di rete</string>
 <string name="settings_network_subtitle">Diagnostica di latenza e download</string>
 <string name="settings_advanced">Avanzate</string>
@@ -595,7 +588,6 @@
 <string name="advanced_confirm_exit_subtitle">Termina completamente l\'app e libera la memoria all\'uscita. Richiede di premere indietro due volte per confermare.</string>
 <string name="confirm_exit_toast">Premi di nuovo indietro per uscire</string>
 <string name="settings_debug">Debug</string>
-<string name="settings_debug_subtitle">Strumenti per sviluppatori e feature flags</string>
 <string name="settings_plugins_section_subtitle">Gestisci repository, provider e stato dei plugin</string>
 <string name="settings_account_section_subtitle">Stato dell\'account e della sincronizzazione</string>
 <string name="account_stat_addons">addon</string>
@@ -682,8 +674,6 @@
 <string name="contributors_hide_kofi_qr">Nascondi QR Code di Ko-fi</string>
 <string name="contributors_profile_unavailable">Link profilo GitHub non disponibile.</string>
 
-<string name="playback_section_general">Generale</string>
-<string name="playback_section_general_desc">Comportamento principale della riproduzione.</string>
 <string name="playback_loading_overlay">Overlay di caricamento</string>
 <string name="playback_loading_overlay_sub">Mostra la schermata di caricamento fino alla comparsa del primo fotogramma video.</string>
 <string name="playback_pause_overlay">Overlay in pausa</string>
@@ -703,9 +693,6 @@
 <string name="auto_skip_outro">Outro / Sigla finale</string>
 <string name="auto_skip_outro_sub">Salta automaticamente le outro e le sigle finali degli anime.</string>
 <string name="playback_auto_frame_rate">Frequenza fotogrammi automatica</string>
-<string name="playback_section_player">Player &amp; Selezione streaming</string>
-<string name="playback_section_player_desc">Preferenze del player, riproduzione automatica e filtraggio delle sorgenti.</string>
-<string name="playback_player">Player</string>
 <string name="playback_player_internal">Interno</string>
 <string name="playback_player_external">Esterno</string>
 <string name="playback_player_ask">Chiedi ogni volta</string>
@@ -718,12 +705,8 @@
 <string name="playback_external_forward_subtitles_sub">Recupera dagli add-on i sottotitoli nella tua lingua preferita e passali al player esterno.</string>
 <string name="playback_external_send_skip_segments">Invia i timestamp di intro e outro</string>
 <string name="playback_external_send_skip_segments_sub">Passa al player esterno i timestamp risolti per saltare intro/outro e attivare l\'auto-skip. Funziona solo nei player che lo supportano; gli altri lo ignorano.</string>
-<string name="playback_section_audio">Audio &amp; Video</string>
-<string name="playback_section_audio_desc">Controlli audio e compatibilità video.</string>
 <string name="playback_section_subtitles">Sottotitoli</string>
 <string name="playback_section_subtitles_desc">Lingua, stile e modalità di rendering.</string>
-<string name="playback_afr_open">Aperto</string>
-<string name="playback_afr_closed">Chiuso</string>
 <string name="playback_afr_off">Disattivato</string>
 <string name="playback_afr_off_sub">Non modificare la frequenza di aggiornamento del display.</string>
 <string name="playback_afr_on_start">All\'inizio</string>

@@ -106,6 +106,8 @@ import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 import com.nuvio.tv.R
 
 private const val KEY_REPEAT_THROTTLE_MS = 80L
@@ -865,7 +867,8 @@ private fun CloudLibrarySearchRow(
                     }
                 ),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = NuvioTheme.colors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary,
+                                            textDirection = TextDirection.Content
                 ),
                 cursorBrush = SolidColor(
                     if (editing) NuvioTheme.colors.FocusRing else Color.Transparent

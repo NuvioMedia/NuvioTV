@@ -5,27 +5,34 @@
 ## PR type
 
 <!-- Check exactly one. PRs outside these types are not accepted. -->
-- [ ] Translation/localization only
-- [ ] Critical bug fix
 
-<!-- For translation/localization PRs: check the first box. In the "Reproduction steps" section write: "No reproduction steps - localization-only update." -->
+- [ ] Reproducible bug fix
+- [ ] UI glitch/bug fix
+- [ ] Behavior bug/regression fix
+- [ ] Small maintenance only, with no UI or behavior change
+- [ ] Docs accuracy fix
+- [ ] Translation/localization only
+- [ ] Approved larger or directional change
+
+<!-- For PRs that do not fix a bug, explain why reproduction steps do not apply. -->
 
 ## Why
 
-<!-- Why this change is needed. Explain the critical bug or localization update. -->
+<!-- Why this change is needed. Describe the problem or approved request. -->
 
 ## Issue or approval
 
-<!-- Required for critical bug fixes. Link the bug issue. For localization-only PRs with no issue, explain why no issue is needed. -->
+<!-- Required for bug fixes and approved changes. Link the bug issue or approved feature request. For maintenance, docs, or localization PRs with no issue, explain why no issue is needed. -->
 <!-- Examples: Fixes #123 / No linked issue: localization-only update. -->
 
 ## Reproduction steps
 
-<!-- Required for critical bug fixes. For localization-only PRs, write: No reproduction steps - localization-only update. -->
+<!-- Required for bug fixes. For other PRs, explain why reproduction steps do not apply, for example: No reproduction steps - documentation-only update. -->
 
 ## UI / behavior impact
 
 <!-- Check every box that applies. At least one must be checked. -->
+
 - [ ] No UI change
 - [ ] No behavior change
 - [ ] UI changed only to fix a documented glitch/bug
@@ -36,15 +43,16 @@
 ## Policy check
 
 <!-- ALL boxes must be checked or the PR will be closed without review. -->
+
 - [ ] I have read and understood `CONTRIBUTING.md`.
-- [ ] This PR fits the current PR policy: localization/translation only or a critical bug fix.
-- [ ] This PR does not add features, UI changes, refactors, or other non-critical changes.
-- [ ] This PR is small, focused, and limited to one issue.
+- [ ] This PR fits an accepted contribution category.
+- [ ] Any feature, larger change, dependency addition, or architecture change has explicit maintainer approval.
+- [ ] This PR is focused on one problem or approved request.
 - [ ] This PR does not bundle unrelated refactors, cleanups, formatting, or drive-by changes.
-- [ ] This PR includes a linked issue, reproduction steps, and testing notes if it is a critical bug fix.
+- [ ] This PR includes a linked issue, reproduction steps, and testing notes if it is a bug fix.
 - [ ] I listed the testing performed below.
 
-> Feature additions, feature requests, UI changes, refactors, and other non-critical changes may be closed or deferred without review while NuvioTV is being prepared for a stable release.
+> Feature work and larger changes require a linked, approved feature request. Cosmetic-only UI changes and unrelated work will be closed without review.
 
 ## Scope boundaries
 
@@ -52,7 +60,7 @@
 
 ## Testing
 
-<!-- What you tested and how. Include devices/emulators, commands, and manual flows. Do not write only "not tested" unless this is localization-only. -->
+<!-- What you tested and how. Include relevant devices/emulators, commands, and manual flows. For docs or localization-only changes, describe the content checks performed. -->
 
 ## Screenshots / Video
 
@@ -64,4 +72,4 @@
 
 ## Linked issues
 
-<!-- Required for critical bug fixes. For localization-only PRs with no issue, write: No linked issue - localization-only update. -->
+<!-- Required for bug fixes and approved changes. For maintenance, docs, or localization PRs with no issue, explain why no issue is needed. -->

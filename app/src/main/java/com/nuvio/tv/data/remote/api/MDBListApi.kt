@@ -10,10 +10,11 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface MDBListApi {
-    @GET("imdb/{mediaType}/{imdbId}")
+    @GET("{provider}/{mediaType}/{mediaId}")
     suspend fun getMedia(
+        @Path("provider") provider: String,
         @Path("mediaType") mediaType: String,
-        @Path("imdbId") imdbId: String,
+        @Path("mediaId") mediaId: String,
         @Query("apikey") apiKey: String,
         @Query("append_to_response") appendToResponse: String = "keyword"
     ): Response<MDBListMediaResponseDto>
@@ -23,8 +24,9 @@ interface MDBListApi {
         @Query("apikey") apiKey: String
     ): Response<Unit>
 
-    @POST("imdb/{mediaType}/")
+    @POST("{provider}/{mediaType}/")
     suspend fun getMediaBatch(
+        @Path("provider") provider: String,
         @Path("mediaType") mediaType: String,
         @Query("apikey") apiKey: String,
         @Body body: MDBListMediaRequestDto

@@ -597,6 +597,8 @@ fun ClassicHomeContent(
                     items = uiState.heroItems.asStable(),
                     focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
                     showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                    mdbListShowOnHero = uiState.mdbListShowOnHero,
+                    mdbListRatingOrder = uiState.mdbListRatingOrder,
                     onActiveItemChanged = { item ->
                         activeHeroItem = item
                         val idx = uiState.heroItems.indexOfFirst { it.id == item.id }

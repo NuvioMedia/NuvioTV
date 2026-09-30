@@ -383,20 +383,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">مستوى الاعدادات</string>
-    <string name="settings_experience_subtitle">أساسية او متقدمة</string>
     <string name="settings_account">الحساب</string>
-    <string name="settings_account_subtitle">الحساب وحالة المزامنة</string>
     <string name="settings_profiles">المستخدمين</string>
-    <string name="settings_profiles_subtitle">إدارة ملفات المستخدمين</string>
     <string name="settings_layout">واجهة العرض</string>
-    <string name="settings_layout_subtitle">تنظيم الواجهة الرئيسية وشكل البطاقات</string>
     <string name="settings_plugins">الملحقات</string>
     <string name="settings_plugins_subtitle">المستودعات والمصادر</string>
     <string name="settings_integration">الخدمات المرتبطة</string>
     <string name="settings_playback">وسائط التشغيل</string>
-    <string name="settings_playback_subtitle">المشغل، الترجمة، والتشغيل التلقائي</string>
     <string name="settings_trakt_subtitle">الانتقال إلى صفحة ربط Trakt</string>
-    <string name="settings_about_subtitle">الإصدار والبنود القانونية</string>
     <string name="settings_network">سرعة الشبكة</string>
     <string name="settings_network_subtitle">تشخيصات زمن الوصول وسرعة التنزيل</string>
     <string name="settings_advanced">متقدم</string>
@@ -496,7 +490,6 @@
     <string name="advanced_remember_last_profile">تذكر آخر مستخدم</string>
     <string name="advanced_remember_last_profile_subtitle">تذكر آخر ملف مستخدم تم اختياره عند بدء التشغيل</string>
     <string name="settings_debug">معالجة الأخطاء</string>
-    <string name="settings_debug_subtitle">أدوات المطورين والمزايا التجريبية</string>
     <string name="settings_plugins_section_subtitle">إدارة المستودعات، المصادر، وحالة الملحقات</string>
     <string name="settings_account_section_subtitle">الحساب وحالة المزامنة</string>
     <string name="account_stat_addons">إضافات</string>
@@ -553,8 +546,6 @@
     <string name="contributors_hide_kofi_qr">إخفاء رمز QR لـ Ko-fi</string>
     <string name="contributors_profile_unavailable">رابط ملف GitHub غير متاح.</string>
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">عام</string>
-    <string name="playback_section_general_desc">الخصائص الأساسية للتشغيل.</string>
     <string name="playback_loading_overlay">واجهة التحميل</string>
     <string name="playback_loading_overlay_sub">إظهار شاشة التحميل حتى يظهر أول إطار للفيديو.</string>
     <string name="playback_pause_overlay">واجهة ايقاف العرض</string>
@@ -574,9 +565,6 @@
     <string name="auto_skip_outro">الخاتمة</string>
     <string name="auto_skip_outro_sub">تخطي شارات النهاية تلقائياً.</string>
     <string name="playback_auto_frame_rate">معدل الفريمات التلقائي (AFR)</string>
-    <string name="playback_section_player">المشغل &amp; اختيار المصدر</string>
-    <string name="playback_section_player_desc">تفضيلات المشغل، التشغيل التلقائي، وتصفية المصادر.</string>
-    <string name="playback_player">نوع المشغل</string>
     <string name="playback_player_internal">داخلي</string>
     <string name="playback_player_external">خارجي</string>
     <string name="playback_player_ask">السؤال في كل مرة</string>
@@ -587,12 +575,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">إذا فشل بدء التشغيل، سيتم التبديل بين ExoPlayer و libmpv تلقائياً.</string>
     <string name="playback_engine_exoplayer_desc">أفضل توافق مع ميزات Nuvio الحالية.</string>
     <string name="playback_engine_mvplayer_desc">يستخدم libmpv مع عناصر تحكم Nuvio (OSD). تجريبي.</string>
-    <string name="playback_section_audio">الصوت والفيديو</string>
-    <string name="playback_section_audio_desc">ضبط الصوت وتوافق الفيديو.</string>
     <string name="playback_section_subtitles">الترجمة</string>
     <string name="playback_section_subtitles_desc">تحديد اللغة والمظهر وطريقة المعالجة.</string>
-    <string name="playback_afr_open">مفتوح</string>
-    <string name="playback_afr_closed">مغلق</string>
     <string name="playback_afr_off">معطل</string>
     <string name="playback_afr_off_sub">عدم تغيير معدل تحديث الشاشة.</string>
     <string name="playback_afr_on_start">عند البدء</string>
@@ -2917,7 +2901,6 @@
     <string name="settings_style_zen">مبسط</string>
     <string name="settings_style_zen_desc">تخطيط بسيط ومسطح</string>
     <string name="settings_tracking_description">اربط مزودي التتبع واختر الذي يشغّل مكتبتك ومتابعة المشاهدة.</string>
-    <string name="settings_tracking_subtitle">إدارة اتصالات Trakt وSimkl</string>
     <string name="settings_tracking_title">التتبع</string>
     <string name="simkl_account_title">حساب Simkl</string>
     <string name="simkl_awaiting_instruction">افتح صفحة التحقق من Simkl وأدخل هذا الرمز.</string>

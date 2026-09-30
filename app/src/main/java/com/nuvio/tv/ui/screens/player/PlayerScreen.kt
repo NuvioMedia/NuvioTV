@@ -1024,6 +1024,7 @@ fun PlayerScreen(
                 onTrailerEnded = viewModel::onPostPlayTrailerEnded,
                 onPreviousRecommendation = viewModel::showPreviousPostPlayRecommendation,
                 onNextRecommendation = viewModel::showNextPostPlayRecommendation,
+                mdbListRatingOrder = postPlayRecommendationState.mdbListRatingOrder,
                 modifier = Modifier
                     .fillMaxSize()
                     .zIndex(1f)

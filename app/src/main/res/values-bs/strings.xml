@@ -267,18 +267,13 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Račun</string>
-    <string name="settings_account_subtitle">Račun i status sinhronizacije</string>
     <string name="settings_profiles">Profili</string>
-    <string name="settings_profiles_subtitle">Upravljaj korisničkim profilima</string>
     <string name="settings_layout">Raspored</string>
-    <string name="settings_layout_subtitle">Struktura početne stranice i stilovi postera.</string>
     <string name="settings_plugins">Plugini</string>
     <string name="settings_plugins_subtitle">Repozitoriji i provajderi.</string>
     <string name="settings_integration">Integracije</string>
     <string name="settings_playback">Playback</string>
-    <string name="settings_playback_subtitle">Player, titlovi i automatsko pokretanje.</string>
     <string name="settings_trakt_subtitle">Otvori ekran za povezivanje sa Traktom.</string>
-    <string name="settings_about_subtitle">Verzija i politike.</string>
     <string name="settings_network">Brzina mreže</string>
     <string name="settings_network_subtitle">Latencija i dijagnostika preuzimanja</string>
     <string name="settings_advanced">Napredno</string>
@@ -297,7 +292,6 @@
     <string name="network_connection_ethernet">LAN kabel (Ethernet)</string>
     <string name="network_connection_offline">Van mreže</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Alati za programere i opcije.</string>
     <string name="settings_plugins_section_subtitle">Upravljanje repozitorijima, provajderima i statusom plugina</string>
     <string name="settings_account_section_subtitle">Račun i status sinhronizacije</string>
     <string name="account_stat_addons">addoni</string>
@@ -347,8 +341,6 @@
     <string name="contributors_profile_unavailable">GitHub profil link je nedostupan.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Općenito</string>
-    <string name="playback_section_general_desc">Osnovno ponašanje reprodukcije.</string>
     <string name="playback_loading_overlay">Ekran Učitavanja</string>
     <string name="playback_loading_overlay_sub">Prikaži ekran za učitavanje dok se ne pojavi prva slika videa.</string>
     <string name="playback_pause_overlay">Ekran pri Pauzi</string>
@@ -358,9 +350,6 @@
     <string name="playback_skip_intro">Preskoči Uvod</string>
     <string name="playback_skip_intro_sub">Koristi introdb.app za prepoznavanje uvoda i sažetaka.</string>
     <string name="playback_auto_frame_rate">Automatski Frame Rate</string>
-    <string name="playback_section_player">Player i Odabir Streama</string>
-    <string name="playback_section_player_desc">Prioritet playera, auto-play i filtriranje izvora.</string>
-    <string name="playback_player">Player</string>
     <string name="playback_player_internal">Interni</string>
     <string name="playback_player_external">Eksterni</string>
     <string name="playback_player_ask">Pitaj svaki put</string>
@@ -369,12 +358,8 @@
     <string name="playback_engine_mvplayer">libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automatski promijeni engine u slučaju greške</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ako pokretanje streama ne uspije, automatski se prebaci između ExoPlayer i libmpv.</string>
-    <string name="playback_section_audio">Zvuk i video</string>
-    <string name="playback_section_audio_desc">Kontrole zvuka i kompatibilnost videa.</string>
     <string name="playback_section_subtitles">Titlovi</string>
     <string name="playback_section_subtitles_desc">Jezik, stil i način iscrtavanja.</string>
-    <string name="playback_afr_open">Otvori</string>
-    <string name="playback_afr_closed">Zatvori</string>
     <string name="playback_afr_off">Isključeno</string>
     <string name="playback_afr_off_sub">Ne mijenjaj frekvenciju osvežavanja ekrana.</string>
     <string name="playback_afr_on_start">Pri pokretanju</string>

@@ -190,20 +190,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">अकाउंट</string>
-    <string name="settings_account_subtitle">अकाउंट और सिंक स्थिति।</string>
     <string name="settings_profiles">प्रोफाइल</string>
-    <string name="settings_profiles_subtitle">यूज़र प्रोफाइल मैनेज करें।</string>
     <string name="settings_layout">लेआउट</string>
-    <string name="settings_layout_subtitle">होम स्ट्रक्चर और पोस्टर स्टाइल।</string>
     <string name="settings_plugins">प्लगइन्स</string>
     <string name="settings_plugins_subtitle">रिपॉजिटरी और प्रोवाइडर्स।</string>
     <string name="settings_integration">इंटीग्रेशन</string>
     <string name="settings_playback">प्लेबैक</string>
-    <string name="settings_playback_subtitle">प्लेयर, सबटाइटल और ऑटो-प्ले।</string>
     <string name="settings_trakt_subtitle">Trakt कनेक्शन स्क्रीन खोलें।</string>
-    <string name="settings_about_subtitle">वर्ज़न और नीतियाँ।</string>
     <string name="settings_debug">डीबग</string>
-    <string name="settings_debug_subtitle">डेवलपर टूल्स और फीचर फ्लैग्स।</string>
     <string name="settings_plugins_section_subtitle">रिपॉजिटरी, प्रोवाइडर्स और प्लगइन स्टेट मैनेज करें।</string>
     <string name="settings_account_section_subtitle">अकाउंट और सिंक स्थिति।</string>
     <string name="account_stat_addons">ऐडऑन</string>
@@ -253,8 +247,6 @@
     <string name="contributors_profile_unavailable">GitHub प्रोफाइल लिंक उपलब्ध नहीं है।</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">सामान्य</string>
-    <string name="playback_section_general_desc">मुख्य प्लेबैक व्यवहार।</string>
     <string name="playback_loading_overlay">लोडिंग ओवरले</string>
     <string name="playback_loading_overlay_sub">पहला वीडियो फ्रेम आने तक लोडिंग स्क्रीन दिखाएँ।</string>
     <string name="playback_pause_overlay">पॉज़ ओवरले</string>
@@ -264,18 +256,11 @@
     <string name="playback_skip_intro">इंट्रो स्किप करें</string>
     <string name="playback_skip_intro_sub">इंट्रो और रिकैप पहचानने के लिए introdb.app का उपयोग करें।</string>
     <string name="playback_auto_frame_rate">ऑटो फ्रेम रेट</string>
-    <string name="playback_section_player">प्लेयर और स्ट्रीम चयन</string>
-    <string name="playback_section_player_desc">प्लेयर पसंद, ऑटो-प्ले और सोर्स फ़िल्टरिंग।</string>
-    <string name="playback_player">प्लेयर</string>
     <string name="playback_player_internal">इंटरनल</string>
     <string name="playback_player_external">एक्सटर्नल</string>
     <string name="playback_player_ask">हर बार पूछें</string>
-    <string name="playback_section_audio">ऑडियो और वीडियो</string>
-    <string name="playback_section_audio_desc">ऑडियो नियंत्रण और वीडियो संगतता।</string>
     <string name="playback_section_subtitles">सबटाइटल</string>
     <string name="playback_section_subtitles_desc">भाषा, स्टाइल और रेंडर मोड।</string>
-    <string name="playback_afr_open">खुला</string>
-    <string name="playback_afr_closed">बंद</string>
     <string name="playback_afr_off">ऑफ</string>
     <string name="playback_afr_off_sub">डिस्प्ले रिफ्रेश रेट न बदलें।</string>
     <string name="playback_afr_on_start">शुरू होने पर</string>

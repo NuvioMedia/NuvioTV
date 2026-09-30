@@ -233,6 +233,7 @@
   <string name="detail_tab_trailer">Τρέιλερ</string>
   <string name="detail_more_like_this_powered_by_tmdb">Με την υποστήριξη του TMDB</string>
   <string name="detail_more_like_this_powered_by_trakt">Με την υποστήριξη του Trakt</string>
+  <string name="detail_more_like_this_powered_by_simkl">Με την υποστήριξη του Simkl</string>
   <string name="detail_comments_title">Σχόλια</string>
   <string name="detail_comments_subtitle">Κριτικές από το Trakt</string>
   <string name="detail_comments_subtitle_episode">Κριτικές από το Trakt για S%1$dE%2$d</string>
@@ -343,9 +344,9 @@
   <string name="theme_color_gold">Χρυσό</string>
   <string name="theme_color_jade">Νεφρίτης</string>
   <string name="theme_color_rose_gold">Ροζ χρυσό</string>
-  <string name="theme_color_arctic_blue">Αρκτικό μπλε</string>
+  <string name="theme_color_arctic_blue">Αρκτικό</string>
   <string name="theme_color_graphite">Γραφίτης</string>
-  <string name="theme_color_custom">Προσαρμοσμένο</string>
+  <string name="theme_color_custom">Προσαρμ.</string>
   <string name="custom_theme_title">Η προσαρμοσμένη διαβάθμισή σας</string>
   <string name="custom_theme_subtitle">Επιλέξτε τρία χρώματα για το θέμα σας. Επιλέξτε ένα χρώμα για να το επεξεργαστείτε.</string>
   <string name="custom_theme_solid_title">Το προσαρμοσμένο χρώμα σας</string>
@@ -425,20 +426,14 @@
   <string name="licenses_attributions_libmpv_body">Χρησιμοποιείται ως μηχανή αναπαραγωγής Android. Το wrapper libmpv-android διατίθεται υπό την άδεια MIT· το mpv/libmpv και τα ενσωματωμένα native στοιχεία διατηρούν τους αρχικούς όρους άδειας.</string>
   <!-- SettingsScreen categories -->
   <string name="settings_experience">Εμπειρία</string>
-  <string name="settings_experience_subtitle">Βασική ή Προχωρημένη</string>
   <string name="settings_account">Λογαριασμός</string>
-  <string name="settings_account_subtitle">Κατάσταση λογαριασμού και συγχρονισμού</string>
   <string name="settings_profiles">Προφίλ</string>
-  <string name="settings_profiles_subtitle">Διαχείριση προφίλ χρηστών</string>
   <string name="settings_layout">Διάταξη</string>
-  <string name="settings_layout_subtitle">Δομή αρχικής οθόνης και στυλ αφισών</string>
   <string name="settings_plugins">Πρόσθετα</string>
   <string name="settings_plugins_subtitle">Αποθετήρια και πάροχοι</string>
   <string name="settings_integration">Ενσωματώσεις</string>
   <string name="settings_playback">Αναπαραγωγή</string>
-  <string name="settings_playback_subtitle">Πρόγραμμα αναπαραγωγής, υπότιτλοι και αυτόματη αναπαραγωγή</string>
   <string name="settings_trakt_subtitle">Άνοιγμα οθόνης σύνδεσης Trakt</string>
-  <string name="settings_about_subtitle">Έκδοση και πολιτικές</string>
   <string name="settings_network">Ταχύτητα δικτύου</string>
   <string name="settings_network_subtitle">Διαγνωστικά καθυστέρησης και λήψης</string>
   <string name="settings_advanced">Για προχωρημένους</string>
@@ -542,7 +537,6 @@
   <string name="advanced_confirm_exit_subtitle">Πλήρης τερματισμός της εφαρμογής και απελευθέρωση μνήμης κατά την έξοδο. Απαιτείται διπλό πάτημα του πλήκτρου πίσω για επιβεβαίωση.</string>
   <string name="confirm_exit_toast">Πατήστε ξανά πίσω για έξοδο</string>
   <string name="settings_debug">Αποσφαλμάτωση</string>
-  <string name="settings_debug_subtitle">Εργαλεία προγραμματιστή και σημαίες χαρακτηριστικών</string>
   <string name="settings_plugins_section_subtitle">Διαχείριση αποθετηρίων, παρόχων και καταστάσεων πρόσθετων</string>
   <string name="settings_account_section_subtitle">Κατάσταση λογαριασμού και συγχρονισμού</string>
   <string name="account_stat_addons">πρόσθετα</string>
@@ -626,8 +620,27 @@
   <string name="supporters_since">Υποστηρίζει το Nuvio από %1$s</string>
   <string name="supporters_since_unknown">Υποστηρίζει με υπερηφάνεια το Nuvio</string>
   <!-- PlaybackSettingsSections -->
-  <string name="playback_section_general">Γενικά</string>
-  <string name="playback_section_general_desc">Βασική συμπεριφορά αναπαραγωγής.</string>
+  <string name="playback_section_player_title">Player</string>
+  <string name="playback_section_player_title_desc">Προεπιλεγμένος player, εσωτερική μηχανή και εφεδρική εναλλαγή σε περίπτωση σφάλματος.</string>
+  <string name="playback_section_stream_selection">Επιλογή ροής</string>
+  <string name="playback_section_stream_selection_desc">Πώς επιλέγεται μια ροή όταν πατάτε αναπαραγωγή.</string>
+  <string name="playback_section_up_next">Επόμενο</string>
+  <string name="playback_section_up_next_desc">Αυτόματη αναπαραγωγή επόμενου επεισοδίου και προτάσεις μετά την αναπαραγωγή.</string>
+  <string name="playback_section_skip">Παράλειψη τμημάτων</string>
+  <string name="playback_section_skip_desc">Παράλειψη εισαγωγών, ανασκοπήσεων και τίτλων.</string>
+  <string name="playback_section_interface">Διεπαφή player</string>
+  <string name="playback_section_interface_desc">Επικαλύψεις, ρολόι και λεπτομέρειες που εμφανίζονται κατά την αναπαραγωγή.</string>
+  <string name="playback_section_audio_only_desc">Γλώσσες, αποκωδικοποίηση και έξοδος ήχου.</string>
+  <string name="playback_section_video_desc">Ταίριασμα ρυθμού καρέ, Dolby Vision και HDR.</string>
+  <string name="playback_default_player">Προεπιλεγμένος player</string>
+  <string name="playback_external_player_label">Εξωτερικός player</string>
+  <string name="playback_afr_mode">Ταίριασμα ρυθμού καρέ</string>
+  <string name="playback_dv_hdr_label">Dolby Vision &amp; HDR</string>
+  <string name="playback_mpv_decoding_label">Αποκωδικοποίηση MPV</string>
+  <string name="playback_network_label">Δίκτυο</string>
+  <string name="sub_languages_label">Γλώσσες</string>
+  <string name="sub_style_label">Στυλ</string>
+  <string name="autoplay_selected_count">%1$d επιλεγμένα</string>
   <string name="playback_loading_overlay">Οθόνη φόρτωσης</string>
   <string name="playback_loading_overlay_sub">Εμφάνιση οθόνης φόρτωσης μέχρι να εμφανιστεί το πρώτο καρέ βίντεο.</string>
   <string name="playback_pause_overlay">Οθόνη παύσης</string>
@@ -651,9 +664,6 @@
   <string name="skip_movie_credits">Παράλειψη τίτλων</string>
   <string name="skip_to_post_credits">Παράλειψη μετά τους τίτλους</string>
   <string name="playback_auto_frame_rate">Αυτόματος ρυθμός καρέ &amp; ανάλυση</string>
-  <string name="playback_section_player">Πρόγραμμα αναπαραγωγής &amp; Επιλογή ροής</string>
-  <string name="playback_section_player_desc">Προτίμηση προγράμματος αναπαραγωγής, αυτόματη αναπαραγωγή και φιλτράρισμα πηγών.</string>
-  <string name="playback_player">Πρόγραμμα αναπαραγωγής</string>
   <string name="playback_player_internal">Εσωτερικό</string>
   <string name="playback_player_external">Εξωτερικό</string>
   <string name="playback_player_ask">Ερώτηση κάθε φορά</string>
@@ -662,12 +672,8 @@
   <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
   <string name="playback_auto_switch_internal_player_on_error">Αυτόματη εναλλαγή μηχανής σε σφάλμα εκκίνησης</string>
   <string name="playback_auto_switch_internal_player_on_error_sub">Αν αποτύχει η εκκίνηση ροής, γίνεται αυτόματη εναλλαγή μεταξύ ExoPlayer και libmpv.</string>
-  <string name="playback_section_audio">Ήχος &amp; Βίντεο</string>
-  <string name="playback_section_audio_desc">Χειριστήρια ήχου και συμβατότητα βίντεο.</string>
   <string name="playback_section_subtitles">Υπότιτλοι</string>
   <string name="playback_section_subtitles_desc">Γλώσσα, στυλ και τρόπος απόδοσης.</string>
-  <string name="playback_afr_open">Ανοιχτό</string>
-  <string name="playback_afr_closed">Κλειστό</string>
   <string name="playback_afr_off">Απενεργοποιημένο</string>
   <string name="playback_afr_off_sub">Να μην αλλάζει ο ρυθμός ανανέωσης οθόνης.</string>
   <string name="playback_afr_on_start">Κατά την έναρξη</string>
@@ -691,6 +697,8 @@
   <string name="playback_engine_exoplayer_desc">Καλύτερη συμβατότητα με τις τρέχουσες δυνατότητες του Nuvio.</string>
   <string name="playback_engine_mvplayer_desc">Χρησιμοποιεί libmpv με χειριστήρια OSD του Nuvio. Πειραματικό.</string>
   <!-- PlaybackAudioSettings -->
+  <string name="playback_true_black_letterbox">Πραγματικά μαύρες μπάρες</string>
+  <string name="playback_true_black_letterbox_sub">Αφήστε τις μπάρες γύρω από την εικόνα άβαφες ώστε το HDR να παραμένει πραγματικά μαύρο. Κρατήστε το ανενεργό αν εμφανίζεται φωτεινή γραμμή στις μπάρες.</string>
   <string name="audio_trailer_section">Τρέιλερ</string>
   <string name="audio_autoplay_trailers">Αυτόματη αναπαραγωγή τρέιλερ</string>
   <string name="audio_autoplay_trailers_sub">Αυτόματη αναπαραγωγή τρέιλερ στην οθόνη λεπτομερειών μετά από περίοδο αδράνειας</string>
@@ -853,6 +861,10 @@
   <string name="layout_hero_catalogs_sub">Επιλογή ενός ή περισσότερων καταλόγων για περιεχόμενο ηρωικής ενότητας.</string>
   <string name="layout_section_content">Περιεχόμενο αρχικής οθόνης</string>
   <string name="layout_section_content_desc">Έλεγχος τι εμφανίζεται στην αρχική οθόνη και στην αναζήτηση.</string>
+  <string name="layout_section_sidebar">Πλευρική μπάρα &amp; πλοήγηση</string>
+  <string name="layout_section_sidebar_desc">Στυλ πλευρικής μπάρας και πού εμφανίζεται η Ανακάλυψη.</string>
+  <string name="layout_section_card_depth_desc">Φωτισμός άκρων και λάμψη στις κάρτες εικόνων.</string>
+  <string name="layout_section_custom_poster_desc">Χρήση εικόνων από εξωτερική υπηρεσία αφισών.</string>
   <string name="layout_collapse_sidebar">Σύμπτυξη πλευρικής μπάρας</string>
   <string name="layout_collapse_sidebar_sub">Απόκρυψη πλευρικής μπάρας από προεπιλογή, εμφάνιση όταν εστιάζεται.</string>
   <string name="layout_hide_floating_pill">Απόκρυψη αιωρούμενης ένδειξης</string>
@@ -1000,12 +1012,65 @@
   <string name="settings_card_depth_surface_cast">Ηθοποιοί</string>
   <string name="settings_card_depth_surface_trailers">Τρέιλερ</string>
   <!-- MDBListSettingsScreen -->
+  <string name="layout_custom_poster_title">Προσαρμοσμένη πηγή αφίσας</string>
+  <string name="layout_custom_poster_description">Δώστε ένα μοτίβο URL αφίσας από εξωτερική υπηρεσία. Αν ένα σύμβολο θέσης δεν έχει τιμή για κάποιον τίτλο, χρησιμοποιείται η αρχική αφίσα.</string>
+  <string name="layout_custom_poster_clear">Καθαρισμός</string>
+  <string name="layout_custom_poster_active">✓ Η προσαρμοσμένη πηγή αφίσας είναι ενεργή</string>
+  <string name="layout_custom_poster_qr">Διαμόρφωση μέσω κινητού</string>
+  <string name="custom_poster_qr_instruction">Σαρώστε τον κωδικό QR με το κινητό σας για να επικολλήσετε ένα μοτίβο URL αφίσας</string>
+  <string name="layout_custom_poster_screen_home">Αρχική</string>
+  <string name="layout_custom_poster_screen_continue_watching">Συνέχεια παρακολούθησης</string>
+  <string name="layout_custom_poster_screen_collections">Συλλογές</string>
+  <string name="layout_custom_poster_screen_library">Βιβλιοθήκη</string>
+  <string name="layout_custom_poster_screen_search">Αναζήτηση</string>
+  <string name="layout_custom_poster_screen_details">Οθόνη λεπτομερειών</string>
+  <string name="layout_always_show_landscape_clearlogo">Πάντα φόντο με λογότυπο για οριζόντιες αφίσες</string>
+  <string name="layout_always_show_landscape_clearlogo_sub">Αγνόηση της οριζόντιας αφίσας από το πρόσθετο και χρήση φόντου με επικάλυψη clearlogo.</string>
+  <string name="web_custom_poster_title">Προσαρμοσμένη πηγή αφίσας</string>
+  <string name="web_custom_poster_subtitle">Επικολλήστε παρακάτω ένα μοτίβο URL αφίσας και πατήστε Αποθήκευση.</string>
+  <string name="web_custom_poster_label">Μοτίβο URL</string>
+  <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
+  <string name="web_custom_poster_save">Αποθήκευση</string>
+  <string name="web_custom_poster_clear">Καθαρισμός</string>
+  <string name="web_custom_poster_saved">Αποθηκεύτηκε!</string>
+  <string name="web_custom_poster_cleared">Καθαρίστηκε</string>
+  <string name="web_custom_poster_error_empty">Εισαγάγετε ένα μοτίβο URL</string>
+  <string name="web_custom_poster_error_save">Η αποθήκευση απέτυχε</string>
+  <string name="web_custom_poster_error_clear">Ο καθαρισμός απέτυχε</string>
+  <string name="web_custom_poster_error_connection">Σφάλμα σύνδεσης</string>
+  <string name="web_custom_poster_current">Τρέχον:</string>
+  <string name="web_custom_poster_none">Δεν έχει οριστεί μοτίβο</string>
+  <string name="web_custom_poster_loading">Φόρτωση…</string>
+  <string name="web_custom_poster_placeholders_info">Σύμβολα θέσης: το {id} περνά όλα τα ID περιεχομένου. Τα {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} στοχεύουν έναν μόνο τύπο ID - αν δεν είναι διαθέσιμος, διατηρείται η αρχική αφίσα. Το {imdb_id|tmdb_id|kitsu_id} δηλώνει τους υποστηριζόμενους τύπους ID - χρησιμοποιείται ο αντίστοιχος ή, αν δεν υπάρχει, διατηρείται η αρχική αφίσα. Προσθέστε ? για να γίνει ένα σύμβολο θέσης προαιρετικό, ώστε να επιλύεται σε κενό αντί να παραλείπεται: {imdb_id?}. Άλλα σύμβολα θέσης: {id_type}, {typed_id}, {type}, {shape}.</string>
+  <string name="mdblist_name">MDBList</string>
+  <string name="mdblist_tracking_description">Συγχρονισμός ιστορικού παρακολούθησης και προόδου αναπαραγωγής σε όλες τις συσκευές</string>
+  <string name="mdblist_connected_as">Συνδεδεμένος ως %1$s</string>
+  <string name="mdblist_account_fallback">Χρήστης MDBList</string>
+  <string name="mdblist_insufficient_scope">Το MDBList δεν παραχώρησε άδεια ενημέρωσης του ιστορικού παρακολούθησης. Συνδεθείτε ξανά και επιτρέψτε την πρόσβαση εγγραφής.</string>
+  <string name="mdblist_awaiting_instruction">Σαρώστε τον κωδικό QR ή εισαγάγετε αυτόν τον κωδικό στη διεύθυνση παρακάτω.</string>
+  <string name="mdblist_qr_description">Κωδικός QR για σύνδεση του λογαριασμού σας MDBList</string>
+  <string name="mdblist_status_enter_code">Εγκρίνετε τη σύνδεση στον λογαριασμό σας MDBList.</string>
+  <string name="mdblist_status_syncing">Συγχρονισμός ιστορικού παρακολούθησης και προόδου αναπαραγωγής…</string>
+  <string name="mdblist_last_synced">Τελευταίος συγχρονισμός: %1$s</string>
+  <string name="mdblist_disconnect_title">Αποσύνδεση από το MDBList;</string>
+  <string name="mdblist_disconnect_subtitle">Διακοπή αποστολής ενημερώσεων προβολών από αυτό το προφίλ. Το ιστορικό σας στο MDBList διατηρείται.</string>
+  <string name="mdblist_missing_client">Η σύνδεση με το MDBList δεν είναι διαθέσιμη σε αυτή την έκδοση.</string>
+  <string name="mdblist_invalid_response">Το MDBList επέστρεψε ελλιπή απάντηση. Δοκιμάστε ξανά.</string>
+  <string name="mdblist_code_expired">Ο κωδικός έληξε. Δοκιμάστε ξανά για να λάβετε νέο κωδικό.</string>
+  <string name="mdblist_access_denied">Η σύνδεση απορρίφθηκε. Δοκιμάστε ξανά για να συνδέσετε τον λογαριασμό σας.</string>
+  <string name="mdblist_authorization_revoked">Η σύνδεσή σας με το MDBList έληξε ή ανακλήθηκε. Συνδεθείτε ξανά για να συνεχιστεί ο συγχρονισμός.</string>
+  <string name="mdblist_unavailable">Δεν ήταν δυνατός ο συγχρονισμός με το MDBList. Δοκιμάστε ξανά.</string>
+  <string name="mdblist_rate_limited">Το όριο αιτημάτων του MDBList έχει συμπληρωθεί. Ο συγχρονισμός θα συνεχιστεί μόλις επαναφερθεί το όριο.</string>
+  <string name="mdblist_revoke_failed">Η αποσύνδεση έγινε σε αυτή τη συσκευή. Αφαιρέστε αυτή την εφαρμογή από τις ρυθμίσεις του λογαριασμού σας MDBList για να ανακληθεί η πρόσβαση.</string>
   <string name="mdblist_title">Βαθμολογίες MDBList</string>
   <string name="mdblist_subtitle">Διαμόρφωση εξωτερικών βαθμολογιών που εμφανίζονται στην ηρωική ενότητα λεπτομερειών</string>
   <string name="mdblist_enable_title">Ενεργοποίηση βαθμολογιών MDBList</string>
   <string name="mdblist_enable_subtitle">Λήψη βαθμολογιών από εξωτερικούς παρόχους στην οθόνη λεπτομερειών μεταδεδομένων</string>
   <string name="mdblist_api_key_title">Κλειδί API</string>
   <string name="mdblist_api_key_subtitle">Απαιτείται για λήψη βαθμολογιών από το MDBList</string>
+  <string name="mdblist_ratings_credentials_subtitle">Χρησιμοποιήστε τον λογαριασμό MDBList που έχετε συνδέσει στην Παρακολούθηση ή εισαγάγετε ξεχωριστό κλειδί API για τις βαθμολογίες.</string>
+  <string name="mdblist_ratings_connected_account">Χρήση συνδεδεμένου λογαριασμού</string>
+  <string name="mdblist_ratings_key_override_subtitle">Ένα κλειδί API υπερισχύει του συνδεδεμένου λογαριασμού για τις βαθμολογίες. Καθαρίστε το για να χρησιμοποιηθεί ξανά ο συνδεδεμένος λογαριασμός.</string>
   <string name="mdblist_trakt_title">Trakt</string>
   <string name="mdblist_trakt_subtitle">Εμφάνιση βαθμολογίας Trakt</string>
   <string name="mdblist_imdb_title">IMDb</string>
@@ -1022,6 +1087,10 @@
   <string name="mdblist_audience_subtitle">Εμφάνιση βαθμολογίας κοινού</string>
   <string name="mdblist_metacritic_title">Metacritic</string>
   <string name="mdblist_metacritic_subtitle">Εμφάνιση βαθμολογίας Metacritic</string>
+  <string name="mdblist_show_on_hero_title">Χρήση βαθμολογιών στην ηρωική ενότητα</string>
+  <string name="mdblist_show_on_hero_subtitle">Εμφάνιση βαθμολογιών MDBList στο καρουζέλ της ηρωικής ενότητας (μοντέρνα και κλασική προβολή/πλέγμα)</string>
+  <string name="mdblist_rating_order_title">Σειρά βαθμολογιών</string>
+  <string name="mdblist_rating_order_subtitle">Οι πρώτες 3 ενεργοποιημένες και διαθέσιμες βαθμολογίες εμφανίζονται στη μοντέρνα ηρωική ενότητα. Χρησιμοποιήστε τα βέλη για αναδιάταξη.</string>
   <string name="mdblist_dialog_title">Κλειδί API MDBList</string>
   <string name="mdblist_dialog_subtitle">Εισάγετε το κλειδί API σας για λήψη εξωτερικών βαθμολογιών</string>
   <string name="mdblist_dialog_placeholder">Εισάγετε κλειδί API MDBList</string>
@@ -1219,6 +1288,7 @@
   <string name="trakt_more_like_this_source_dialog_subtitle">Επιλέξτε την πηγή προτάσεων στις σελίδες λεπτομερειών.</string>
   <string name="trakt_more_like_this_source_trakt">Trakt</string>
   <string name="trakt_more_like_this_source_tmdb">TMDB</string>
+  <string name="trakt_more_like_this_source_simkl">Simkl</string>
   <string name="trakt_cached_label">Αποθηκευμένο</string>
   <string name="trakt_stat_movies">Ταινίες</string>
   <string name="trakt_stat_shows">Σειρές</string>
@@ -1240,7 +1310,6 @@
   <string name="trakt_days_format">%1$d ημέρες</string>
   <!-- Tracking (Trakt / Simkl) -->
   <string name="settings_tracking_title">Παρακολούθηση</string>
-  <string name="settings_tracking_subtitle">Διαχείριση συνδέσεων Trakt και Simkl</string>
   <string name="settings_tracking_description">Συνδέστε υπηρεσίες παρακολούθησης και επιλέξτε ποια θα τροφοδοτεί τη Βιβλιοθήκη και τη Συνέχεια παρακολούθησης.</string>
   <string name="tracking_accounts_title">Λογαριασμοί</string>
   <string name="tracking_accounts_subtitle">Σύνδεση και διαχείριση υπηρεσιών παρακολούθησης</string>
@@ -1514,24 +1583,38 @@
   <string name="debrid_missing_api_key">Προσθέστε κλειδί API Debrid στις Ρυθμίσεις.</string>
   <string name="debrid_not_cached">Δεν είναι αποθηκευμένο στην προσωρινή μνήμη σε αυτή την υπηρεσία.</string>
   <string name="debrid_resolution_failed">Δεν ήταν δυνατή η επίλυση αυτής της ροής Debrid.</string>
+  <string name="youtube_resolving_stream">Φόρτωση βίντεο YouTube</string>
+  <string name="youtube_resolution_failed">Δεν ήταν δυνατή η φόρτωση αυτού του βίντεο YouTube.</string>
   <string name="stream_type_torrent">Torrent</string>
   <string name="stream_type_youtube">YouTube</string>
   <string name="p2p_consent_title">Ροή P2P</string>
-  <string name="p2p_consent_body">Αυτή η ροή χρησιμοποιεί τεχνολογία peer-to-peer (P2P). Ενεργοποιώντας το P2P, αναγνωρίζετε και αποδέχεστε ότι:
-
-• Η διεύθυνση IP σας θα είναι ορατή σε άλλους ομότιμους κόμβους (peers) στο δίκτυο
-• Είστε αποκλειστικά υπεύθυνοι για το περιεχόμενο που προσπελάζετε
-• Επιβεβαιώνετε ότι έχετε το νομικό δικαίωμα να κάνετε streaming αυτού του περιεχομένου στη δικαιοδοσία σας
-• Το Nuvio δεν φιλοξενεί, δεν διανέμει και δεν ελέγχει κανένα περιεχόμενο P2P
-• Το Nuvio δεν φέρει καμία ευθύνη για νομικές συνέπειες που προκύπτουν από τη χρήση του P2P streaming
-
-Χρησιμοποιείτε αυτή τη λειτουργία αποκλειστικά με δική σας ευθύνη. Το P2P μπορεί να απενεργοποιηθεί οποιαδήποτε στιγμή στις Ρυθμίσεις.</string>
+  <string name="p2p_consent_body">Αυτή η ροή χρησιμοποιεί τεχνολογία peer-to-peer (P2P). Ενεργοποιώντας το P2P, αναγνωρίζετε και αποδέχεστε ότι:\n\n• Η διεύθυνση IP σας θα είναι ορατή σε άλλους ομότιμους κόμβους (peers) στο δίκτυο\n• Είστε αποκλειστικά υπεύθυνοι για το περιεχόμενο που προσπελάζετε\n• Επιβεβαιώνετε ότι έχετε το νομικό δικαίωμα να κάνετε streaming αυτού του περιεχομένου στη δικαιοδοσία σας\n• Το Nuvio δεν φιλοξενεί, δεν διανέμει και δεν ελέγχει κανένα περιεχόμενο P2P\n• Το Nuvio δεν φέρει καμία ευθύνη για νομικές συνέπειες που προκύπτουν από τη χρήση του P2P streaming\n\nΧρησιμοποιείτε αυτή τη λειτουργία αποκλειστικά με δική σας ευθύνη. Το P2P μπορεί να απενεργοποιηθεί οποιαδήποτε στιγμή στις Ρυθμίσεις.</string>
   <string name="p2p_consent_enable">Ενεργοποίηση P2P</string>
   <string name="p2p_consent_cancel">Ακύρωση</string>
   <string name="settings_p2p_title">Ροή P2P</string>
   <string name="settings_p2p_subtitle">Να επιτρέπονται ροές peer-to-peer (torrent)</string>
   <string name="settings_p2p_hide_stats_title">Απόκρυψη στατιστικών torrent</string>
   <string name="settings_p2p_hide_stats_subtitle">Απόκρυψη buffer, seeds, peers και ταχύτητας λήψης κατά τη φόρτωση και την αναπαραγωγή</string>
+  <string name="settings_p2p_profile_title">Προφίλ torrent</string>
+  <string name="settings_p2p_profile_soft">Ήπιο</string>
+  <string name="settings_p2p_profile_balanced">Ισορροπημένο</string>
+  <string name="settings_p2p_profile_fast">Γρήγορο</string>
+  <string name="settings_p2p_profile_soft_description">Χρησιμοποιεί λιγότερες συνδέσεις με λήπτες για μειωμένη κατανάλωση μπαταρίας και δικτύου</string>
+  <string name="settings_p2p_profile_balanced_description">Συνιστώμενη ισορροπία μεταξύ ταχύτητας εκκίνησης και σταθερότητας σύνδεσης</string>
+  <string name="settings_p2p_profile_fast_description">Χρησιμοποιεί περισσότερες συνδέσεις με λήπτες για δύσκολα torrent ή torrent υψηλού ρυθμού μετάδοσης</string>
+  <string name="settings_p2p_cache_size_title">Μέγεθος προσωρινής μνήμης torrent</string>
+  <string name="settings_p2p_cache_size_description">Ληφθέντα δεδομένα torrent που διατηρούνται σε αυτή τη συσκευή για ταχύτερη επανάληψη</string>
+  <string name="settings_p2p_cache_none">Χωρίς μόνιμη προσωρινή μνήμη</string>
+  <string name="settings_p2p_cache_2_gb">2 GB</string>
+  <string name="settings_p2p_cache_5_gb">5 GB</string>
+  <string name="settings_p2p_cache_10_gb">10 GB</string>
+  <string name="settings_p2p_clear_cache_title">Καθαρισμός προσωρινής μνήμης torrent</string>
+  <string name="settings_p2p_clear_cache_usage">Σε χρήση αυτή τη στιγμή: %1$s</string>
+  <string name="settings_p2p_clear_cache_usage_pending">Η χρήση μετριέται αφού ξεκινήσει το P2P· επιλέξτε για να καθαρίσετε τα αποθηκευμένα δεδομένα torrent</string>
+  <string name="settings_p2p_clear_cache_clearing">Καθαρισμός ανενεργών δεδομένων torrent…</string>
+  <string name="settings_p2p_clear_cache_playback_active">Σταματήστε την αναπαραγωγή P2P πριν από τον καθαρισμό της προσωρινής μνήμης</string>
+  <string name="settings_p2p_clear_cache_done">Καθαρίστηκαν %1$s ανενεργών δεδομένων torrent</string>
+  <string name="settings_p2p_clear_cache_failed">Δεν ήταν δυνατός ο καθαρισμός της προσωρινής μνήμης torrent</string>
   <string name="p2p_download_title">Λήψη μηχανής P2P</string>
   <string name="p2p_download_subtitle">Αυτή είναι μια εφάπαξ λήψη που απαιτείται για ροή P2P.</string>
   <string name="stream_type_external">Εξωτερικό</string>
@@ -1810,6 +1893,7 @@
   <string name="library_sort_added_asc">Προστέθηκε ↑</string>
   <string name="library_sort_title_asc">Τίτλος Α-Ω</string>
   <string name="library_sort_title_desc">Τίτλος Ω-Α</string>
+  <string name="library_error_sort_failed">Δεν ήταν δυνατή η φόρτωση της σειράς ταξινόμησης. Εμφάνιση σειράς παρόχου.</string>
   <string name="library_manage_lists">Διαχείριση λιστών</string>
   <string name="library_manage_trakt_lists">Διαχείριση λιστών Trakt</string>
   <string name="library_no_lists">Δεν υπάρχουν ακόμα προσωπικές λίστες.</string>
@@ -2325,6 +2409,7 @@
   <string name="collections_editor_shape_wide">Φαρδύ</string>
   <string name="collections_editor_shape_square">Τετράγωνο</string>
   <string name="collections_editor_addon_missing">Το πρόσθετο δεν είναι εγκατεστημένο: %1$s</string>
+  <string name="collections_editor_catalog_missing">Ο κατάλογος δεν είναι διαθέσιμος</string>
   <string name="collections_editor_add_tmdb_source">Προσθήκη πηγής TMDB</string>
   <string name="collections_editor_add_trakt_source">Προσθήκη λίστας Trakt</string>
   <string name="collections_editor_edit_tmdb_source">Επεξεργασία πηγής TMDB</string>
@@ -2555,6 +2640,10 @@
   <string name="player_torrent_status">%1$s · %2$s</string>
   <string name="player_torrent_stats">%1$d λήπτες · %2$d διανομείς · %3$d%%</string>
   <string name="player_torrent_connecting_peers">Σύνδεση με peers…</string>
+  <string name="player_torrent_fetching_metadata">Λήψη μεταδεδομένων torrent…</string>
+  <string name="player_torrent_preparing_stream">Προετοιμασία ροής torrent…</string>
+  <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
+  <string name="player_torrent_loading_status">%1$s ληφθέντα · %2$s · %3$s</string>
   <string name="player_track_audio_fallback">Ήχος %1$d</string>
   <string name="player_track_subtitle_fallback">Υπότιτλος %1$d</string>
   <!-- Player runtime: error recovery -->
@@ -2673,6 +2762,7 @@
   <string name="network_fast_error_token_missing">fast.com: δεν βρέθηκε διακριτικό στο bundle</string>
   <!-- Torrent service / TorrServer binary errors -->
   <!-- Player runtime: stream / external link errors -->
+  <string name="torrent_error_start_timeout">Η ροή torrent δεν ξεκίνησε εντός %1$d δευτ.</string>
   <string name="player_torrent_starting_engine">Εκκίνηση μηχανής P2P…</string>
   <string name="player_torrent_rebuffer_status">%1$s στην προσωρινή μνήμη</string>
   <string name="player_stream_error_invalid_external_url">Μη έγκυρη εξωτερική URL</string>
@@ -2891,6 +2981,7 @@
   <string name="playback_cache_info_manual_headroom">Η χειροκίνητη λειτουργία κρατά περίπου %1$dMB ελεύθερο περιθώριο.</string>
   <string name="playback_cache_info_free_disk">Διαθέσιμος ελεύθερος δίσκος: %1$s.</string>
   <string name="playback_cache_info_restart">Το νέο όριο cache εφαρμόζεται μετά από επανεκκίνηση της εφαρμογής όταν αλλάζετε λειτουργία ή μέγεθος.</string>
+  <string name="playback_cache_write_warning">Σε συσκευές με ενσωματωμένο αποθηκευτικό χώρο, η δραστηριότητα εγγραφής είναι συνεχής και μπορεί να προκαλέσει φθορά με τον χρόνο.</string>
   <string name="playback_reset_to_default">Επαναφορά στις προεπιλογές</string>
   <string name="playback_net_custom">Προσαρμοσμένο δίκτυο</string>
   <string name="playback_net_custom_sub">Χρήση πολλαπλών παράλληλων συνδέσεων για ανάκτηση progressive streams. Όταν είναι απενεργοποιημένο, χρησιμοποιείται μία σύνδεση.</string>
@@ -2971,6 +3062,12 @@
   <string name="stream_test_no_stream">Δεν έχει καταγραφεί αναπαραγωγή. Αναπαράγετε ένα βίντεο για να εκτελέσετε διαγνωστικές δοκιμές στον διακομιστή του.</string>
   <string name="stream_test_btn_measuring_baseline">Μέτρηση βάσης αναφοράς...</string>
   <string name="web_status_saved_streams">Αποθηκεύτηκε. Οι νέες ροές θα χρησιμοποιούν αυτές τις ρυθμίσεις.</string>
+  <string name="diag_label_disk_cache">Προσωρινή μνήμη δίσκου</string>
+  <string name="diag_label_disk_cache_usage">Χρήση προσωρινής μνήμης δίσκου</string>
+  <string name="diag_value_disk_cache_on">Ενεργό - %1$s</string>
+  <string name="diag_value_disk_cache_unavailable">Μη διαθέσιμο</string>
+  <string name="diag_value_disk_cache_not_used">Ανενεργό - δεν χρησιμοποιείται σε αυτή τη ροή</string>
+  <string name="diag_value_disk_cache_usage">%1$s αναγνώστηκαν, %2$s απομακρύνθηκαν</string>
   <string name="diag_section_outcome">Έκβαση</string>
   <string name="web_debrid_intro_title">Προσαρμογή ροών Debrid</string>
   <string name="action_switch">Εναλλαγή</string>
@@ -3019,6 +3116,7 @@
   <string name="playback_net_http2_sub">Ενεργοποίηση του πρωτοκόλλου HTTP/2 για τις συνδέσεις δικτύου, επιτρέποντας πολύπλεξη αιτημάτων και ταχύτερους χρόνους χειραψίας.</string>
   <string name="web_stream_badge_importing">Εισαγωγή…</string>
   <string name="settings_content_discovery_subtitle">Πρόσθετα, plugins, κατάλογοι και πηγές ανακάλυψης</string>
+  <string name="diag_label_last_convert">Τελευταία μετατροπή</string>
   <string name="diag_label_custom_buffers">Προσαρμοσμένα buffer</string>
   <string name="diag_label_rebuffers">Επαναφορτίσεις buffer</string>
   <string name="player_report_issue">Αναφορά προβλήματος</string>
@@ -3050,6 +3148,8 @@
   <string name="settings_stream_badge_position_dialog_description">Επιλέξτε πού εμφανίζονται τα διακριτικά ροών στις κάρτες ροών.</string>
   <string name="buffer_safe_status">Ασφαλές: Εντός του προτεινόμενου ορίου για τη συσκευή σας.</string>
   <string name="diag_label_custom_network_cache">Προσαρμοσμένο δίκτυο/προσωρινή μνήμη</string>
+  <string name="advanced_section_startup">Εκκίνηση &amp; έξοδος</string>
+  <string name="advanced_section_network_tests">Δοκιμές δικτύου</string>
   <string name="advanced_section_dv_diagnostics">Διαγνωστικά DV</string>
   <string name="web_debrid_intro_copy">Προσαρμόστε τις ετικέτες ροών, τα φίλτρα και την ταξινόμηση που χρησιμοποιούνται για τα αποτελέσματα άμεσου Debrid.</string>
   <string name="auth_qr_terms_link">Όρους χρήσης</string>
@@ -3124,4 +3224,25 @@
   <string name="debug_progress_indicator_small">Μικρό</string>
   <string name="debug_progress_indicator_default">Προεπιλογή</string>
   <string name="debug_progress_indicator_large">Μεγάλο</string>
+  <string name="random_episode_title">Ανακάτεμα</string>
+  <string name="layout_random_episode_sub">Ανακατέψτε επεισόδια από οποιαδήποτε σειρά. Η απενεργοποίηση θέτει σε παύση το ανακάτεμα.</string>
+  <string name="random_episode_unwatched">Μη προβληθέντα επεισόδια</string>
+  <string name="random_episode_include_watched">Όλα τα επεισόδια</string>
+  <string name="random_episode_empty_subtitle">Δεν υπάρχουν διαθέσιμα επεισόδια για ανακάτεμα.</string>
+  <string name="random_episode_caught_up">Έχετε παρακολουθήσει όλα τα επεισόδια. Επιλέξτε «Όλα τα επεισόδια» για να τα δείτε ξανά.</string>
+  <string name="random_episode_loading">Φόρτωση επεισοδίων…</string>
+  <string name="shuffle_starting">Έναρξη ανακατέματος…</string>
+  <string name="shuffle_choose_episodes">Επιλέξτε ποια επεισόδια θα ανακατευτούν.</string>
+  <string name="shuffle_preview_title">Το επεισόδιό σας</string>
+  <string name="shuffle_play_episode">Αναπαραγωγή επεισοδίου</string>
+  <string name="shuffle_again">Ανακατέψτε ξανά</string>
+  <string name="shuffle_only_episode">Αυτό είναι το μόνο επεισόδιο στην επιλογή σας.</string>
+  <string name="shuffle_artwork_hidden">Η εικόνα αποκρύπτεται για αποφυγή spoilers</string>
+  <string name="shuffle_stop">Διακοπή ανακατέματος</string>
+  <string name="shuffle_enabled_all">Ανακάτεμα ενεργό · Όλα τα επεισόδια</string>
+  <string name="shuffle_enabled_unwatched">Ανακάτεμα ενεργό · Μη προβληθέντα επεισόδια</string>
+  <string name="shuffle_disabled">Ανακάτεμα ανενεργό</string>
+  <string name="shuffle_save_failed">Δεν ήταν δυνατή η ενημέρωση του ανακατέματος. Δοκιμάστε ξανά.</string>
+  <string name="shuffle_change_selection">Επιλογή επεισοδίων</string>
+  <string name="shuffle_badge">Ενεργό ανακάτεμα επεισοδίων</string>
 </resources>

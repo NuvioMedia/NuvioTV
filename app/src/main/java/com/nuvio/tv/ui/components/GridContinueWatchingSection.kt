@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.screens.home.shuffleFocusKey
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.layout.Arrangement
@@ -134,7 +136,7 @@ fun GridContinueWatchingSection(
             itemsIndexed(
                 items = items,
                 key = { _, item ->
-                    when (item) {
+                    item.shuffleFocusKey ?: when (item) {
                         is ContinueWatchingItem.InProgress ->
                             "cw_${item.progress.contentId}_${item.progress.videoId}_${item.progress.season ?: -1}_${item.progress.episode ?: -1}"
                         is ContinueWatchingItem.NextUp ->

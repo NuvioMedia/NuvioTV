@@ -55,6 +55,9 @@ class MDBListSettingsViewModel @Inject constructor(
             is MDBListSettingsEvent.ToggleAudience -> update { dataStore.setShowAudience(event.enabled) }
             is MDBListSettingsEvent.ToggleMetacritic -> update { dataStore.setShowMetacritic(event.enabled) }
             is MDBListSettingsEvent.ToggleMal -> update { dataStore.setShowMal(event.enabled) }
+            is MDBListSettingsEvent.ToggleShowOnHero -> update { dataStore.setShowOnHero(event.enabled) }
+            is MDBListSettingsEvent.MoveRatingUp -> moveRating(event.provider, -1)
+            is MDBListSettingsEvent.MoveRatingDown -> moveRating(event.provider, 1)
         }
     }
 
@@ -83,6 +86,17 @@ class MDBListSettingsViewModel @Inject constructor(
     private fun update(action: suspend () -> Unit) {
         viewModelScope.launch { action() }
     }
+
+    private fun moveRating(provider: String, direction: Int) {
+        val currentOrder = _uiState.value.ratingOrder.toMutableList()
+        val index = currentOrder.indexOf(provider)
+        if (index < 0) return
+        val targetIndex = (index + direction).coerceIn(0, currentOrder.lastIndex)
+        if (targetIndex == index) return
+        currentOrder.removeAt(index)
+        currentOrder.add(targetIndex, provider)
+        update { dataStore.setRatingOrder(currentOrder) }
+    }
 }
 
 data class MDBListSettingsUiState(
@@ -96,7 +110,9 @@ data class MDBListSettingsUiState(
     val showTomatoes: Boolean = true,
     val showAudience: Boolean = true,
     val showMetacritic: Boolean = true,
-    val showMal: Boolean = true
+    val showMal: Boolean = true,
+    val showOnHero: Boolean = false,
+    val ratingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER
 ) {
     fun fromSettings(settings: MDBListSettings): MDBListSettingsUiState = copy(
         enabled = settings.enabled,
@@ -108,7 +124,9 @@ data class MDBListSettingsUiState(
         showTomatoes = settings.showTomatoes,
         showAudience = settings.showAudience,
         showMetacritic = settings.showMetacritic,
-        showMal = settings.showMal
+        showMal = settings.showMal,
+        showOnHero = settings.showOnHero,
+        ratingOrder = settings.ratingOrder
     )
 }
 
@@ -122,4 +140,7 @@ sealed class MDBListSettingsEvent {
     data class ToggleAudience(val enabled: Boolean) : MDBListSettingsEvent()
     data class ToggleMetacritic(val enabled: Boolean) : MDBListSettingsEvent()
     data class ToggleMal(val enabled: Boolean) : MDBListSettingsEvent()
+    data class ToggleShowOnHero(val enabled: Boolean) : MDBListSettingsEvent()
+    data class MoveRatingUp(val provider: String) : MDBListSettingsEvent()
+    data class MoveRatingDown(val provider: String) : MDBListSettingsEvent()
 }

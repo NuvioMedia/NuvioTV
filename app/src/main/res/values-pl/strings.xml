@@ -147,20 +147,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Status konta i synchronizacji</string>
     <string name="settings_profiles">Profile</string>
-    <string name="settings_profiles_subtitle">Zarządzaj profilami użytkowników</string>
     <string name="settings_layout">Układ</string>
-    <string name="settings_layout_subtitle">Struktura strony głównej i style kart</string>
     <string name="settings_plugins">Wtyczki</string>
     <string name="settings_plugins_subtitle">Repozytoria i dostawcy</string>
     <string name="settings_integration">Integracje</string>
     <string name="settings_playback">Odtwarzanie</string>
-    <string name="settings_playback_subtitle">Odtwarzacz, napisy i automatyczne odtwarzanie</string>
     <string name="settings_trakt_subtitle">Otwórz ekran połączenia z Trakt</string>
-    <string name="settings_about_subtitle">Wersja i polityki</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Narzędzia deweloperskie i flagi funkcji</string>
     <string name="settings_plugins_section_subtitle">Zarządzaj repozytoriami, dostawcami i stanami wtyczek</string>
     <string name="settings_account_section_subtitle">Status konta i synchronizacji</string>
     <string name="account_stat_addons">dodatki</string>
@@ -184,8 +178,6 @@
     <string name="action_none">Brak</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Ogólne</string>
-    <string name="playback_section_general_desc">Podstawowe zachowanie odtwarzacza.</string>
     <string name="playback_loading_overlay">Ekan ładowania</string>
     <string name="playback_loading_overlay_sub">Pokaż ekran ładowania do pojawienia się pierwszej klatki.</string>
     <string name="playback_show_loading_status">Pokaż status ładowania</string>
@@ -199,18 +191,29 @@
     <string name="playback_parental_guide">Ostrzeżenie o charakterze treści</string>
     <string name="playback_parental_guide_sub">Pokaż ostrzeżenie o nagości, przemocy i wulgarności na początku odtwarzania.</string>
     <string name="playback_auto_frame_rate">Auto częstotliwość odświeżania</string>
-    <string name="playback_section_player">Odtwarzacz i wybór źródła</string>
-    <string name="playback_section_player_desc">Preferencje odtwarzacza, auto-play i filtrowanie źródeł.</string>
-    <string name="playback_player">Odtwarzacz</string>
     <string name="playback_player_internal">Wbudowany</string>
     <string name="playback_player_external">Zewnętrzny</string>
     <string name="playback_player_ask">Pytaj za każdym razem</string>
-    <string name="playback_section_audio">Audio i wideo</string>
-    <string name="playback_section_audio_desc">Kontrolki audio i kompatybilność wideo.</string>
     <string name="playback_section_subtitles">Napisy</string>
     <string name="playback_section_subtitles_desc">Język, styl i tryb renderowania.</string>
-    <string name="playback_afr_open">Otwarte</string>
-    <string name="playback_afr_closed">Zamknięte</string>
+    <string name="playback_section_player_title">Odtwarzacz</string>
+    <string name="playback_section_player_title_desc">Domyślny odtwarzacz, silnik wbudowany i awaryjne przełączanie.</string>
+    <string name="playback_section_stream_selection">Wybór strumienia</string>
+    <string name="playback_section_stream_selection_desc">Sposób wyboru strumienia po naciśnięciu odtwarzania.</string>
+    <string name="playback_section_up_next">Następny</string>
+    <string name="playback_section_up_next_desc">Auto-odtwarzanie następnego odcinka i sugestie po zakończeniu.</string>
+    <string name="playback_section_skip">Pomijanie segmentów</string>
+    <string name="playback_section_skip_desc">Pomijanie intro, podsumowań i napisów końcowych.</string>
+    <string name="playback_section_interface">Interfejs odtwarzacza</string>
+    <string name="playback_section_interface_desc">Nakładki, zegar i szczegóły wyświetlane podczas odtwarzania.</string>
+    <string name="playback_section_audio_only_desc">Języki, dekodowanie i wyjście audio.</string>
+    <string name="playback_section_video_desc">Dopasowanie częstotliwości klatek, Dolby Vision i HDR.</string>
+    <string name="playback_default_player">Domyślny odtwarzacz</string>
+    <string name="playback_external_player_label">Zewnętrzny odtwarzacz</string>
+    <string name="playback_afr_mode">Dopasowanie częstotliwości klatek</string>
+    <string name="playback_dv_hdr_label">Dolby Vision &amp; HDR</string>
+    <string name="playback_mpv_decoding_label">Dekodowanie MPV</string>
+    <string name="playback_network_label">Sieć</string>
     <string name="playback_afr_off">Wyłączone</string>
     <string name="playback_afr_off_sub">Nie zmieniaj częstotliwości odświeżania ekranu.</string>
     <string name="playback_afr_on_start">Przy starcie</string>
@@ -229,6 +232,11 @@
     <string name="playback_afr_capability_disable_both_button">Wyłącz oba</string>
     <string name="playback_player_external_desc">Zawsze otwieraj strumienie w zewnętrznej aplikacji</string>
     <string name="playback_player_ask_desc">Wybieraj odtwarzacz za każdym razem</string>
+    <string name="playback_true_black_letterbox">Czysto czarne paski</string>
+    <string name="playback_true_black_letterbox_sub">Zostaw paski wokół obrazu niemalowane, aby HDR zachował czystą czerń. Wyłącz jeśli na paskach pojawia się jasna linia.</string>
+    <string name="playback_unavailable">Odtwarzanie niedostępne</string>
+    <string name="playback_unavailable_message">Odtwarzanie nie jest dostępne dla tego tytułu przy obecnej konfiguracji.</string>
+    <string name="playback_cache_write_warning">Na urządzeniach z pamięcią wbudowaną ciągły zapis może z czasem powodować zużycie nośnika.</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Zwiastun</string>
@@ -320,6 +328,8 @@
     <string name="sub_org_none_desc">Pokaż napisy w domyślnej kolejności wyników dodatku.</string>
     <string name="sub_org_by_lang_desc">Grupuj napisy według języka.</string>
     <string name="sub_org_by_addon_desc">Grupuj napisy według źródła dodatku.</string>
+    <string name="sub_languages_label">Języki</string>
+    <string name="sub_style_label">Styl</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Ponownie użyj ostatniego linku</string>
@@ -375,6 +385,7 @@
     <string name="autoplay_regex_matches">Dopasowuje do nazwy/tytułu/opisu/dodatku/url strumienia. Przykład: 4K|2160p|Remux</string>
     <string name="autoplay_regex_presets">Presety</string>
     <string name="autoplay_invalid_regex">Nieprawidłowy wzorzec regex</string>
+    <string name="autoplay_selected_count">%1$d wybranych</string>
 
     <!-- LayoutSettingsScreen -->
     <string name="layout_title">Ustawienia układu</string>
@@ -455,6 +466,10 @@
     <string name="layout_trailer_muted">Odtwarzaj zwiastun bez dźwięku</string>
     <string name="layout_trailer_muted_sub_preview">Wycisz audio zwiastuna podczas podglądu auto-play.</string>
     <string name="layout_trailer_muted_sub_expanded">Wycisz audio zwiastuna w rozszerzonych kartach.</string>
+    <string name="layout_section_sidebar">Pasek boczny i nawigacja</string>
+    <string name="layout_section_sidebar_desc">Styl paska bocznego i lokalizacja sekcji Odkrywaj.</string>
+    <string name="layout_section_card_depth_desc">Efekt krawędzi światła i połysku na kartach obrazów.</string>
+    <string name="layout_section_custom_poster_desc">Używaj grafik z zewnętrznej usługi plakatów.</string>
     <string name="layout_section_card_style">Karta plakatu</string>
     <string name="layout_section_card_style_desc">Dostosuj szerokość karty i promień narożnika.</string>
     <string name="layout_open">Otwarte</string>
@@ -490,7 +505,6 @@
     <string name="custom_poster_qr_instruction">Zeskanuj kod QR telefonem, aby wkleić wzorzec URL plakatów</string>
 
     <!-- Custom Poster URL - Screen Toggles -->
-    <string name="layout_custom_poster_apply_to">Stosuj niestandardowe plakaty w:</string>
     <string name="layout_custom_poster_screen_home">Strona główna</string>
     <string name="layout_custom_poster_screen_continue_watching">Kontynuuj oglądanie</string>
     <string name="layout_custom_poster_screen_collections">Kolekcje</string>
@@ -545,6 +559,33 @@
     <string name="mdblist_dialog_placeholder">Wprowadź klucz API MDBList</string>
     <string name="mdblist_not_set">Nie ustawiono</string>
     <string name="mdblist_invalid_api_key">Nieprawidłowy klucz API MDBList</string>
+    <string name="mdblist_show_on_hero_title">Oceny na stronie głównej</string>
+    <string name="mdblist_show_on_hero_subtitle">Pokaż oceny MDBList na karuzeli głównej (modern i classic/grid)</string>
+    <string name="mdblist_rating_order_title">Kolejność ocen</string>
+    <string name="mdblist_rating_order_subtitle">Pierwsze 3 włączone i dostępne oceny są widoczne na modern hero. Użyj strzałek, aby zmienić kolejność.</string>
+    <string name="mdblist_ratings_credentials_subtitle">Użyj konta MDBList połączonego w Śledzeniu lub wprowadź oddzielny klucz API dla ocen.</string>
+    <string name="mdblist_ratings_connected_account">Używa połączonego konta</string>
+    <string name="mdblist_ratings_key_override_subtitle">Klucz API zastępuje połączone konto dla ocen. Wyczyść go, aby ponownie użyć połączonego konta.</string>
+    <string name="mdblist_name">MDBList</string>
+    <string name="mdblist_tracking_description">Synchronizuj historię oglądania i postęp odtwarzania między urządzeniami</string>
+    <string name="mdblist_connected_as">Połączono jako %1$s</string>
+    <string name="mdblist_account_fallback">Użytkownik MDBList</string>
+    <string name="mdblist_insufficient_scope">MDBList nie przyznał uprawnień do aktualizacji historii oglądania. Połącz ponownie i zezwól na dostęp do zapisu.</string>
+    <string name="mdblist_awaiting_instruction">Zeskanuj kod QR lub wprowadź ten kod pod poniższym adresem.</string>
+    <string name="mdblist_qr_description">Kod QR do połączenia konta MDBList</string>
+    <string name="mdblist_status_enter_code">Zatwierdź połączenie na swoim koncie MDBList.</string>
+    <string name="mdblist_status_syncing">Synchronizacja historii oglądania i postępu odtwarzania…</string>
+    <string name="mdblist_last_synced">Ostatnia synchronizacja %1$s</string>
+    <string name="mdblist_disconnect_title">Odłączyć MDBList?</string>
+    <string name="mdblist_disconnect_subtitle">Przestań wysyłać aktualizacje z tego profilu. Twoja historia w MDBList zostanie zachowana.</string>
+    <string name="mdblist_missing_client">Połączenie z MDBList jest niedostępne w tej wersji.</string>
+    <string name="mdblist_invalid_response">MDBList zwrócił niekompletną odpowiedź. Spróbuj ponownie.</string>
+    <string name="mdblist_code_expired">Ten kod wygasł. Spróbuj ponownie, aby uzyskać nowy kod.</string>
+    <string name="mdblist_access_denied">Połączenie zostało odrzucone. Spróbuj ponownie połączyć konto.</string>
+    <string name="mdblist_authorization_revoked">Twoje połączenie z MDBList wygasło lub zostało cofnięte. Połącz ponownie, aby wznowić synchronizację.</string>
+    <string name="mdblist_unavailable">Nie udało się zsynchronizować z MDBList. Spróbuj ponownie.</string>
+    <string name="mdblist_rate_limited">Osiągnięto limit żądań MDBList. Synchronizacja zostanie wznowiona po zresetowaniu limitu.</string>
+    <string name="mdblist_revoke_failed">Rozłączono na tym urządzeniu. Usuń tę aplikację w ustawieniach konta MDBList, aby cofnąć dostęp.</string>
     <string name="action_clear">Wyczyść</string>
 
     <!-- Anime-Skip -->
@@ -1622,6 +1663,7 @@
     <string name="collections_editor_shape_wide">Szeroki</string>
     <string name="collections_editor_shape_square">Kwadrat</string>
     <string name="collections_editor_addon_missing">Dodatek niezainstalowany: %1$s</string>
+    <string name="collections_editor_catalog_missing">Katalog niedostępny</string>
     <string name="collections_editor_placeholder_name">Nazwa kolekcji</string>
     <string name="collections_editor_placeholder_backdrop">URL obrazu tła (opcjonalnie)</string>
     <string name="collections_editor_placeholder_folder">Nazwa folderu</string>
@@ -1655,6 +1697,26 @@
     <string name="settings_p2p_subtitle">Zezwól na streamy peer-to-peer (torrent)</string>
     <string name="settings_p2p_hide_stats_title">Ukryj statystyki torrentów</string>
     <string name="settings_p2p_hide_stats_subtitle">Ukryj bufor, seedy, peery i prędkość pobierania podczas ładowania i odtwarzania</string>
+    <string name="settings_p2p_profile_title">Profil torrenta</string>
+    <string name="settings_p2p_profile_soft">Soft</string>
+    <string name="settings_p2p_profile_balanced">Balanced</string>
+    <string name="settings_p2p_profile_fast">Fast</string>
+    <string name="settings_p2p_profile_soft_description">Mniej połączeń z peerami, aby zmniejszyć zużycie baterii i obciążenie sieci</string>
+    <string name="settings_p2p_profile_balanced_description">Zalecana równowaga między szybkością startu a stabilnością połączenia</string>
+    <string name="settings_p2p_profile_fast_description">Więcej połączeń z peerami dla trudnych lub wysokobitratowych torrentów</string>
+    <string name="settings_p2p_cache_size_title">Rozmiar cache torrentów</string>
+    <string name="settings_p2p_cache_size_description">Pobrane dane torrentów przechowywane na urządzeniu w celu szybszego ponownego odtwarzania</string>
+    <string name="settings_p2p_cache_none">Brak trwałego cache</string>
+    <string name="settings_p2p_cache_2_gb">2 GB</string>
+    <string name="settings_p2p_cache_5_gb">5 GB</string>
+    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_clear_cache_title">Wyczyść cache torrentów</string>
+    <string name="settings_p2p_clear_cache_usage">Obecnie używane: %1$s</string>
+    <string name="settings_p2p_clear_cache_usage_pending">Zużycie jest mierzone po uruchomieniu P2P; wybierz, aby wyczyścić zapisane dane torrentów</string>
+    <string name="settings_p2p_clear_cache_clearing">Czyszczenie nieaktywnych danych torrentów…</string>
+    <string name="settings_p2p_clear_cache_playback_active">Zatrzymaj odtwarzanie P2P przed wyczyszczeniem cache</string>
+    <string name="settings_p2p_clear_cache_done">Wyczyszczono %1$s nieaktywnych danych torrentów</string>
+    <string name="settings_p2p_clear_cache_failed">Nie udało się wyczyścić cache torrentów</string>
 
     <!-- Player fallback messages -->
     <string name="player_loading_fallback_hevc_decoder">Inicjalizacja dekodera nie powiodła się — przełączanie na dekoder HEVC…</string>
@@ -1675,6 +1737,8 @@
     <string name="advanced_section_performance">Wydajność i nawigacja</string>
     <string name="advanced_section_diagnostics">Diagnostyka</string>
     <string name="advanced_section_cache">Pamięć podręczna</string>
+    <string name="advanced_section_startup">Uruchamianie i zamykanie</string>
+    <string name="advanced_section_network_tests">Testy sieci</string>
     <string name="advanced_fast_horizontal_navigation">Szybka nawigacja pozioma</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Zwiększ prędkość powtarzania D-pad w wierszach przy zachowaniu ograniczania powtórzeń.</string>
     <string name="advanced_nuvio_focus_scroll">Przewijanie fokusa Nuvio</string>
@@ -1977,6 +2041,8 @@
     <string name="playback_auto_skip_segments">Automatyczne pomijanie</string>
     <string name="playback_auto_skip_segments_sub">Wybierz, które segmenty mają być pomijane automatycznie.</string>
     <string name="player_error_failed_start_torrent">Nie udało się uruchomić torrenta: %1$s</string>
+    <string name="player_switch_to_mpv">Przełącz na odtwarzacz MPV</string>
+    <string name="torrent_error_start_timeout">Strumień torrent nie uruchomił się w ciągu %1$ds</string>
     <string name="player_sync_line">Linia synchronizacji</string>
     <string name="plugin_diagnostics_collapse">Diagnostyka (dotknij, aby zwinąć)</string>
     <string name="plugin_diagnostics_expand">Diagnostyka (dotknij, aby rozwinąć)</string>
@@ -1987,7 +2053,6 @@
     <string name="qr_login_device_auth_failed">Nie udało się uwierzytelnić urządzenia</string>
     <string name="qr_login_preparing">Przygotowywanie logowania QR...</string>
     <string name="settings_experience">Doświadczenie</string>
-    <string name="settings_experience_subtitle">Podstawowy lub Zaawansowany</string>
     <string name="sponsors_channel_unavailable">Kanał sponsora niedostępny.</string>
     <string name="sponsors_detail_copy">Sponsorzy pomagają rozwijać Nuvio wspierając różne obszary rozwoju.</string>
     <string name="sponsors_empty">Nie znaleziono jeszcze sponsorów.</string>
@@ -2229,6 +2294,7 @@
     <string name="library_error_refresh_failed">Nie udało się odświeżyć biblioteki</string>
     <string name="library_error_reorder_lists_failed">Nie udało się zmienić kolejności list</string>
     <string name="library_error_save_list_failed">Nie udało się zapisać listy</string>
+    <string name="library_error_sort_failed">Nie udało się załadować kolejności sortowania. Wyświetlanie w kolejności dostawcy.</string>
     <string name="library_list_created">Lista utworzona</string>
     <string name="library_list_deleted">Lista usunięta</string>
     <string name="library_list_fallback_title">Lista</string>
@@ -2254,6 +2320,9 @@
     <string name="licenses_attributions_section_app">LICENCJA APLIKACJI</string>
     <string name="licenses_attributions_section_data">DANE I USŁUGI</string>
     <string name="licenses_attributions_section_playback">LICENCJE ODTWARZANIA ANDROID</string>
+    <string name="licenses_attributions_section_ui">BIBLIOTEKI UI</string>
+    <string name="licenses_attributions_haze_title">Haze 1.7.2</string>
+    <string name="licenses_attributions_haze_body">Używany do efektów rozmycia tła. Stworzony przez Chrisa Banesa. Licencjonowany na licencji Apache, wersja 2.0.</string>
     <string name="licenses_attributions_subtitle">Dostawcy danych, podziękowania i licencje odtwarzania Android używane przez Nuvio TV.</string>
     <string name="licenses_attributions_title">Licencje i atrybucje</string>
     <string name="licenses_attributions_tmdb_body">Nuvio korzysta z API TMDB do metadanych filmów i seriali, grafik, zwiastunów, obsady, szczegółów produkcji, kolekcji i rekomendacji. Ten produkt korzysta z API TMDB, ale nie jest zatwierdzony ani certyfikowany przez TMDB.</string>
@@ -2279,6 +2348,10 @@
     <string name="player_torrent_peer_info">%1$d seedów · %2$d peerów</string>
     <string name="player_torrent_stats">%1$d peerów · %2$d seedów · %3$d%%</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
+    <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
+    <string name="player_torrent_fetching_metadata">Pobieranie metadanych torrenta…</string>
+    <string name="player_torrent_preparing_stream">Przygotowywanie strumienia torrenta…</string>
+    <string name="player_torrent_loading_status">%1$s pobrano · %2$s · %3$s</string>
     <string name="player_track_audio_fallback">Audio %1$d</string>
     <string name="player_track_subtitle_fallback">Napisy %1$d</string>
     <string name="poster_options_error_load_lists_failed">Nie udało się załadować list</string>
@@ -2800,6 +2873,13 @@
     <string name="diag_value_off">Wyłączony</string>
     <string name="diag_value_conversions_fmt">%1$d z %2$d zakończonych sukcesem</string>
     <string name="diag_value_never_rendered">Nigdy nie wyrenderowano</string>
+    <string name="diag_label_last_convert">Ostatnia konwersja</string>
+    <string name="diag_label_disk_cache">Pamięć podręczna dysku</string>
+    <string name="diag_label_disk_cache_usage">Użycie pamięci podręcznej dysku</string>
+    <string name="diag_value_disk_cache_on">Włączony - %1$s</string>
+    <string name="diag_value_disk_cache_unavailable">Niedostępny</string>
+    <string name="diag_value_disk_cache_not_used">Wyłączony - nieużywany dla tego strumienia</string>
+    <string name="diag_value_disk_cache_usage">%1$s odczytane, %2$s usunięte</string>
     <string name="player_error_play_stream_failed">Nie udało się odtworzyć wybranego strumienia</string>
     <string name="unit_size_b">%1$d B</string>
     <string name="unit_size_kb">%1$s KB</string>
@@ -3068,7 +3148,6 @@
     <string name="mdblist_mal_title">MyAnimeList</string>
     <string name="mdblist_mal_subtitle">Pokaż ocenę MyAnimeList</string>
     <string name="settings_tracking_title">Śledzenie</string>
-    <string name="settings_tracking_subtitle">Zarządzaj połączeniami Trakt i Simkl</string>
     <string name="settings_tracking_description">Połącz dostawców śledzenia i wybierz, który zasila Twoją Bibliotekę i Kontynuuj oglądanie.</string>
     <string name="simkl_account_title">Konto Simkl</string>
     <string name="simkl_awaiting_instruction">Otwórz stronę weryfikacji Simkl i wpisz ten kod.</string>
@@ -3112,6 +3191,7 @@
     <string name="tracking_removal_impact_rating">ocena</string>
     <string name="tracking_removal_message">Uswając \"%1$s\" z %2$s, \"%3$s\" także zostanie wyczyszczona. Tego nie można cofnąć.</string>
     <string name="tracking_removal_title">Usunąć z %1$s?</string>
+    <string name="tracking_simkl_anime_id_tvdb">Preferuj TVDB</string>
     <string name="tracking_simkl_anime_id_imdb">Preferuj IMDB</string>
     <string name="tracking_simkl_anime_id_kitsu">Preferuj Kitsu</string>
     <string name="tracking_simkl_anime_id_mal">Preferuj MyAnimeList</string>

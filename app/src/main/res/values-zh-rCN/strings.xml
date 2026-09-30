@@ -447,13 +447,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">使用体验</string>
-    <string name="settings_experience_subtitle">基础或高级</string>
     <string name="settings_account">账户</string>
-    <string name="settings_account_subtitle">账户与同步状态</string>
     <string name="settings_profiles">个人资料</string>
-    <string name="settings_profiles_subtitle">管理用户个人资料</string>
     <string name="settings_layout">布局</string>
-    <string name="settings_layout_subtitle">首页结构与海报样式</string>
     <string name="settings_content_discovery">内容与发现</string>
     <string name="settings_content_discovery_subtitle">扩展、插件、目录与发现来源</string>
     <string name="settings_content_discovery_addons_subtitle">管理扩展、目录顺序和收藏</string>
@@ -462,10 +458,8 @@
     <string name="settings_plugins_subtitle">仓库与提供者</string>
     <string name="settings_integration">集成</string>
     <string name="settings_playback">播放</string>
-    <string name="settings_playback_subtitle">播放器、字幕与自动播放</string>
     <string name="settings_trakt_subtitle">打开 Trakt 连接画面</string>
     <string name="settings_tracking_title">追踪</string>
-    <string name="settings_tracking_subtitle">管理您的追踪账户</string>
     <string name="settings_tracking_description">连接追踪提供者，并选择由哪一个为您提供媒体库和继续观看数据。</string>
     <string name="tracking_accounts_title">账户</string>
     <string name="tracking_accounts_subtitle">连接并管理追踪服务</string>
@@ -492,7 +486,6 @@
     <string name="tracking_trakt_progress_required">当 Trakt 为观看进度来源时可用</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">版本与政策</string>
     <string name="settings_network">网络速度</string>
     <string name="settings_network_subtitle">延迟与下载诊断</string>
     <string name="settings_advanced">高级</string>
@@ -624,7 +617,6 @@
     <string name="advanced_confirm_exit_subtitle">退出时完全终止应用并释放内存。需要按两次返回键以确认。</string>
     <string name="confirm_exit_toast">再按一次返回键退出</string>
     <string name="settings_debug">调试</string>
-    <string name="settings_debug_subtitle">开发者工具与功能开关</string>
     <string name="settings_plugins_section_subtitle">管理仓库、提供者和插件状态</string>
     <string name="settings_account_section_subtitle">账户与同步状态</string>
     <string name="account_stat_addons">扩展</string>
@@ -711,8 +703,6 @@
     <string name="contributors_hide_kofi_qr">隐藏 Ko-fi QR 码</string>
     <string name="contributors_profile_unavailable">GitHub 个人资料链接不可用。</string>
 
-    <string name="playback_section_general">常规</string>
-    <string name="playback_section_general_desc">核心播放行为。</string>
     <string name="playback_loading_overlay">加载覆盖层</string>
     <string name="playback_loading_overlay_sub">在出现第一个视频画面之前显示加载画面。</string>
     <string name="playback_pause_overlay">暂停覆盖层</string>
@@ -736,9 +726,6 @@
     <string name="skip_movie_credits">跳过片尾字幕</string>
     <string name="skip_to_post_credits">跳到片尾彩蛋</string>
     <string name="playback_auto_frame_rate">自动帧率与分辨率</string>
-    <string name="playback_section_player">播放器与流选择</string>
-    <string name="playback_section_player_desc">播放器偏好、自动播放和来源过滤。</string>
-    <string name="playback_player">播放器</string>
     <string name="playback_player_internal">内置</string>
     <string name="playback_player_external">外部</string>
     <string name="playback_player_ask">每次都询问</string>
@@ -751,12 +738,8 @@
     <string name="playback_external_forward_subtitles_sub">从扩展获取您偏好语言的字幕，并传递给外部播放器。</string>
     <string name="playback_external_send_skip_segments">发送片头和片尾时间戳</string>
     <string name="playback_external_send_skip_segments_sub">将解析出的片头/片尾跳过时间戳传递给外部播放器以实现自动跳过。仅适用于支持该功能的播放器；其他播放器会忽略。</string>
-    <string name="playback_section_audio">音频与视频</string>
-    <string name="playback_section_audio_desc">音频控制和视频兼容性。</string>
     <string name="playback_section_subtitles">字幕</string>
     <string name="playback_section_subtitles_desc">语言、样式和渲染模式。</string>
-    <string name="playback_afr_open">开启</string>
-    <string name="playback_afr_closed">关闭</string>
     <string name="playback_afr_off">关闭</string>
     <string name="playback_afr_off_sub">不更改显示器刷新率。</string>
     <string name="playback_afr_on_start">开始时切换</string>

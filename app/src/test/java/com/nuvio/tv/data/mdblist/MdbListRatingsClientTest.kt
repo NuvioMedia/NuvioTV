@@ -29,7 +29,7 @@ class MdbListRatingsClientTest {
         harness.connected()
         harness.reply(body = """{"ratings":[{"source":"tomatoes","value":92}],"keywords":[{"name":"certified-fresh"}]}""")
 
-        val media = client.getMedia("movie", "tt1234567", requireNotNull(client.credential("")))
+        val media = client.getMedia("imdb", "movie", "tt1234567", requireNotNull(client.credential("")))
 
         assertEquals(92.0, media?.toRatings()?.tomatoes)
         assertTrue(media!!.toRatings().tomatoesCertified)
@@ -37,7 +37,7 @@ class MdbListRatingsClientTest {
         assertEquals("/imdb/movie/tt1234567/", request.path)
         assertEquals(mapOf("append_to_response" to "keyword"), request.query)
         assertEquals("access-one", request.accessToken)
-        coVerify(exactly = 0) { keyApi.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { keyApi.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -47,7 +47,7 @@ class MdbListRatingsClientTest {
         harness.reply(body = MdbListTestHarness.TOKEN_RESPONSE)
         harness.reply(body = """[{"ids":{"imdb":"tt1234567"},"ratings":[{"source":"imdb","value":8.1}]}]""")
 
-        val result = client.getMediaBatch("movie", ids, requireNotNull(client.credential("")))
+        val result = client.getMediaBatch("imdb", "movie", ids, requireNotNull(client.credential("")))
 
         assertEquals(8.1, result?.single()?.toRatings()?.imdb)
         assertEquals(listOf("/imdb/movie/", "/oauth/token/", "/imdb/movie/"), harness.engine.requests.map { it.path })
@@ -59,11 +59,11 @@ class MdbListRatingsClientTest {
     @Test
     fun `rejected override does not fall back to or disconnect the connected account`() = runTest {
         harness.connected()
-        coEvery { keyApi.getMediaBatch("movie", "override", body) } returns
+        coEvery { keyApi.getMediaBatch("imdb", "movie", "override", body) } returns
             Response.error(401, "{}".toResponseBody())
 
         val error = expectMdbListFailure<MdbListApiException> {
-            client.getMediaBatch("movie", ids, requireNotNull(client.credential(" override ")))
+            client.getMediaBatch("imdb", "movie", ids, requireNotNull(client.credential(" override ")))
         }
 
         assertEquals(401, error.status)
@@ -78,7 +78,7 @@ class MdbListRatingsClientTest {
         harness.engine.intercept = { harness.store.selectProfile(2) }
 
         expectMdbListFailure<CancellationException> {
-            client.getMediaBatch("movie", ids, requireNotNull(client.credential("")))
+            client.getMediaBatch("imdb", "movie", ids, requireNotNull(client.credential("")))
         }
     }
 }

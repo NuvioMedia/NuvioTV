@@ -157,6 +157,7 @@ fun FolderDetailScreen(
             trailerPreviewUrls = trailerPreviewUrls,
             trailerPreviewAudioUrls = trailerPreviewAudioUrls,
             onRequestTrailerPreview = viewModel::requestTrailerPreview,
+            onFocusedRowKeyChanged = viewModel::onFocusedRowChanged,
             scrollToTopTrigger = scrollToTopTrigger
         )
     } else {
@@ -878,6 +879,7 @@ private fun FollowLayoutContent(
     trailerPreviewUrls: Map<String, String> = emptyMap(),
     trailerPreviewAudioUrls: Map<String, String> = emptyMap(),
     onRequestTrailerPreview: (String, String, String?, String) -> Unit = { _, _, _, _ -> },
+    onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0
 ) {
     val homeState = uiState.followLayoutHomeState
@@ -992,6 +994,7 @@ private fun FollowLayoutContent(
             onItemFocus = onItemFocus,
             onPreloadAdjacentItem = onPreloadAdjacentItem,
             onSaveFocusState = onSaveFocusState,
+            onFocusedRowKeyChanged = onFocusedRowKeyChanged,
             scrollToTopTrigger = scrollToTopTrigger,
             blockLeftOnFirstExpandedItem = true
         )

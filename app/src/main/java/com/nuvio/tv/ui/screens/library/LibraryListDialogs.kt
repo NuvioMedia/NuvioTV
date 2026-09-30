@@ -45,6 +45,7 @@ import com.nuvio.tv.domain.model.localizedTitle
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
 import com.nuvio.tv.R
 import com.nuvio.tv.core.tracking.TrackingListManagementCapabilities
 
@@ -265,6 +266,9 @@ internal fun ListEditorDialog(
                 }
             ),
             label = { androidx.compose.material3.Text(stringResource(R.string.library_list_name_label)) },
+            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                textDirection = TextDirection.Content
+            ),
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                 focusedTextColor = NuvioTheme.colors.TextPrimary,
                 unfocusedTextColor = NuvioTheme.colors.TextPrimary,
@@ -274,7 +278,7 @@ internal fun ListEditorDialog(
                 unfocusedBorderColor = NuvioTheme.colors.Border,
                 focusedLabelColor = NuvioTheme.colors.TextSecondary,
                 unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
-                cursorColor = NuvioTheme.colors.FocusRing
+                cursorColor = NuvioTheme.colors.FocusRing,
             )
         )
 
@@ -304,6 +308,9 @@ internal fun ListEditorDialog(
                 minLines = 3,
                 maxLines = 5,
                 label = { androidx.compose.material3.Text(stringResource(R.string.library_list_description_label)) },
+                textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                    textDirection = TextDirection.Content
+                ),
                 colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                     focusedTextColor = NuvioTheme.colors.TextPrimary,
                     unfocusedTextColor = NuvioTheme.colors.TextPrimary,
@@ -313,7 +320,7 @@ internal fun ListEditorDialog(
                     unfocusedBorderColor = NuvioTheme.colors.Border,
                     focusedLabelColor = NuvioTheme.colors.TextSecondary,
                     unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
-                    cursorColor = NuvioTheme.colors.FocusRing
+                    cursorColor = NuvioTheme.colors.FocusRing,
                 )
             )
         }
