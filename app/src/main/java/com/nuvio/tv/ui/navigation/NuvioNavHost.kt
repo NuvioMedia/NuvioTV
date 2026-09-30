@@ -609,7 +609,8 @@ private fun PlaybackNavHost(
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
                                 contentLanguage = playbackInfo.contentLanguage,
-                                profileId = playbackInfo.profileId
+                                profileId = playbackInfo.profileId,
+                                audioDelayMs = playbackInfo.audioDelayMs
                             )
                         )
                     }
@@ -650,7 +651,8 @@ private fun PlaybackNavHost(
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
                                 contentLanguage = playbackInfo.contentLanguage,
-                                profileId = playbackInfo.profileId
+                                profileId = playbackInfo.profileId,
+                                audioDelayMs = playbackInfo.audioDelayMs
                             )
                         ) {
                             popUpTo(Screen.Stream.route) { inclusive = true }
@@ -801,6 +803,11 @@ private fun PlaybackNavHost(
                     defaultValue = null
                 },
                 navArgument("profileId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("audioDelayMs") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null

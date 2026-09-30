@@ -548,6 +548,9 @@ class PlayerRuntimeController(
     internal var mpvHardwareDecodeModeSetting: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
     internal var mpvPreferredAudioLanguages: List<String> = emptyList()
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
+    // behaviorHints.audioDelayMs of the current stream, and how much of it uiState.audioDelayMs already contains.
+    internal var streamAudioDelayMs: Int = navigationArgs.audioDelayMs ?: 0
+    internal var appliedStreamAudioDelayMs: Int = 0
     internal var hasAppliedRememberedAudioSelection: Boolean = false
     internal var hasInitializedAudioAmplificationForSession: Boolean = false
     internal var hasInitializedCenterMixForSession: Boolean = false
