@@ -13,12 +13,14 @@ import androidx.media3.extractor.text.CuesWithTiming
 
 internal object PlayerSubtitleRtlFix {
 
-    // FILE 2 (looks great) - GREAT AND KEEP IT AS IS
+    // Direction-hint wrap for genuinely mixed-script lines.
     private val bidiFormatter = BidiFormatter.getInstance(/* rtlContext = */ false)
-
-    // DEBUG TOGGLE: true = every line that goes through the FILE 1 path gets "3" in its middle
-    private const val DEBUG_MARK_FILE1_PASSTHROUGH = false
-    private const val DEBUG_MARK = "3"
+ 
+    // Debug: marks each line with the branch that processed it.
+    // "1" = boundary swap changed the line, "2" = swap ran but left it unchanged.
+    private const val DEBUG_MODE  = true
+    private const val DEBUG_MARK_SWAPPED  = "1"
+    private const val DEBUG_MARK_CORRECT = "2"
 
     fun fixCueText(
         cue: Cue,
@@ -33,7 +35,6 @@ internal object PlayerSubtitleRtlFix {
         cues: List<CuesWithTiming>
     ): List<CuesWithTiming> {
         if (cues.isEmpty()) return cues
-        // FILE 1 (the buggy one) - DO TO IN THE FUTURE
         val boundarySwapped = trackHasSwappedBoundaryPunctuation()
 
         var anyChanged = false
@@ -76,9 +77,9 @@ internal object PlayerSubtitleRtlFix {
         return CuesWithTiming(cues, entry.startTimeUs, durationUs)
     }
 
-    // FILE 1 (the buggy one) - DO TO IN THE FUTURE
+    // TODO: replace with a real per-track corruption check.
     private fun trackHasSwappedBoundaryPunctuation(): Boolean {
-        return DEBUG_MARK_FILE1_PASSTHROUGH
+        return DEBUG_MODE 
     }
 
     private fun fixText(text: CharSequence, boundarySwapped: Boolean): CharSequence? {
@@ -92,14 +93,15 @@ internal object PlayerSubtitleRtlFix {
             var line = lines[i]
             if (line.isEmpty()) continue
 
-            // FILE 1 (the buggy one) - DO TO IN THE FUTURE
             if (boundarySwapped) {
                 val unswapped = unswapBoundaryPunctuation(line)
                 if (unswapped !== line) changed = true
                 line = unswapped
+            } else if (DEBUG_MODE) {
+                line = insertDebugMark(line, DEBUG_MARK_CORRECT)
+                changed = true
             }
 
-            // FILE 2 (looks great) - GREAT AND KEEP IT AS IS
             if (hasAnyStrongRtlCharacter(line)) {
                 val wrapped = bidiFormatter.unicodeWrap(line, TextDirectionHeuristics.ANYRTL_LTR, true) ?: line
                 if (wrapped !== line) changed = true
@@ -112,18 +114,17 @@ internal object PlayerSubtitleRtlFix {
         return finishBuilder(out)
     }
 
-    // FILE 1 (the buggy one) - DO TO IN THE FUTURE
     private fun unswapBoundaryPunctuation(line: CharSequence): CharSequence {
-        if (DEBUG_MARK_FILE1_PASSTHROUGH) return insertDebugMark(line)
+        if (DEBUG_MODE) return insertDebugMark(line, DEBUG_MARK_SWAPPED) // 1
         return line
     }
 
-    private fun insertDebugMark(line: CharSequence): CharSequence {
+    private fun insertDebugMark(line: CharSequence, mark: String): CharSequence {
         val mid = line.length / 2
         val result: Appendable =
             if (line is Spanned) SpannableStringBuilder() else StringBuilder(line.length + 1)
         result.append(line.subSequence(0, mid))
-        result.append(DEBUG_MARK)
+        result.append(mark)
         result.append(line.subSequence(mid, line.length))
         return finishBuilder(result)
     }
@@ -149,7 +150,7 @@ internal object PlayerSubtitleRtlFix {
         return result
     }
 
-    // FILE 2 (looks great) - GREAT AND KEEP IT AS IS
+    // True if any character strongly suggests RTL script (Hebrew/Arabic and related blocks).
     private fun hasAnyStrongRtlCharacter(text: CharSequence): Boolean {
         var i = 0
         val len = text.length
