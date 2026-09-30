@@ -334,10 +334,51 @@ internal fun PlayerRuntimeController.maybeRejoinLiveEdge(
     isPlaying: Boolean,
     isSeeking: Boolean
 ) {
-    if (isSeeking || !isPlaying || isUsingMpvEngine() || !hasRenderedFirstFrame) return
+    if (isSeeking || !isPlaying || !hasRenderedFirstFrame) return
     if (!LivePlaybackUiPolicy.shouldRejoinLiveEdge(rawDelayMs, maxBufferMs, bufferedAheadMs)) return
+    if (isUsingMpvEngine()) {
+        returnMpvToLiveEdge()
+        return
+    }
     val player = _exoPlayer ?: return
     returnToLiveEdge(player)
+}
+
+internal fun PlayerRuntimeController.snapLiveToEdge(bufferedPosition: Long) {
+    liveBufferFilter.snapToLive()
+    if (!isUsingMpvEngine()) {
+        _exoPlayer?.seekToDefaultPosition()
+        return
+    }
+    val current = currentPlaybackPositionMs() ?: 0L
+    val rawDelayMs = liveRawDelayMs(current, bufferedPosition)
+    val maxBuf = _playbackTimeline.value.maxBufferMs
+    if (LivePlaybackUiPolicy.isBeyondPlayableLiveWindow(rawDelayMs, maxBuf)) {
+        returnMpvToLiveEdge()
+        return
+    }
+    mpvView?.seekToMs(bufferedPosition.coerceAtLeast(current))
+}
+
+internal fun PlayerRuntimeController.returnMpvToLiveEdge(): Boolean {
+    val view = mpvView ?: return false
+    if (currentStreamUrl.isBlank()) return false
+    val now = android.os.SystemClock.elapsedRealtime()
+    if (now - liveEdgeRejoinAtElapsedMs < LIVE_EDGE_REJOIN_COOLDOWN_MS) return false
+    liveEdgeRejoinAtElapsedMs = now
+    Log.i(PlayerRuntimeController.TAG, "LIVE_EDGE: rejoining live window engine=mpv")
+    liveBufferFilter.snapToLive()
+    pendingPreviewSeekPosition = null
+    commandedPlaybackPositionMs = null
+    commandedPlaybackAtElapsedMs = 0L
+    view.setMediaUsingLoadfile(currentStreamUrl, currentHeaders)
+    view.setPaused(userPausedManually)
+    updatePlaybackTimeline(
+        currentPosition = 0L,
+        liveDelayMs = 0L,
+        liveProgress = 1f
+    )
+    return true
 }
 
 internal fun PlayerRuntimeController.returnToLiveEdge(player: Player, fromError: Boolean = false): Boolean {

@@ -399,6 +399,15 @@ internal fun PlayerRuntimeController.stopWatchProgressSaving() {
     watchProgressSaveJob = null
 }
 
+internal fun PlayerRuntimeController.liveBufferedPositionMs(currentPosition: Long): Long {
+    if (isUsingMpvEngine()) {
+        val cacheMs = ((mpvView?.demuxerCacheDurationSec() ?: 0.0) * 1000.0).toLong()
+        return (currentPosition + cacheMs).coerceAtLeast(currentPosition)
+    }
+    return _exoPlayer?.bufferedPosition?.coerceAtLeast(currentPosition)
+        ?: _playbackTimeline.value.bufferedPosition.coerceAtLeast(currentPosition)
+}
+
 internal fun PlayerRuntimeController.liveRawDelayMs(currentPosition: Long, bufferedPosition: Long): Long {
     val exo = _exoPlayer
     return LivePlaybackUiPolicy.rawAccumulatedDelayMs(
@@ -1216,19 +1225,15 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             showControlsTemporarily()
         }
         PlayerEvent.OnSeekForward -> {
-            if (_playbackTimeline.value.isLive && isUsingMpvEngine()) return
             onEvent(PlayerEvent.OnSeekBy(deltaMs = PlayerScrubRates.STEP_SHORT_MS))
         }
         PlayerEvent.OnSeekBackward -> {
-            if (_playbackTimeline.value.isLive && isUsingMpvEngine()) return
             onEvent(PlayerEvent.OnSeekBy(deltaMs = -PlayerScrubRates.STEP_SHORT_MS))
         }
         is PlayerEvent.OnSeekBy -> {
             if (_playbackTimeline.value.isLive) {
-                if (isUsingMpvEngine()) return
                 val current = currentPlaybackPositionMs() ?: 0L
-                val buffered = _exoPlayer?.bufferedPosition?.coerceAtLeast(current)
-                    ?: _playbackTimeline.value.bufferedPosition.coerceAtLeast(current)
+                val buffered = liveBufferedPositionMs(current)
                 val backBufferMs = maxOf(effectiveBackBufferDurationMs, configuredBackBufferMs).toLong()
                 val displayedDelayMs = liveBufferFilter.displayedDelayMs
                 val rawDelayMs = liveRawDelayMs(current, buffered)
@@ -1252,10 +1257,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     SeekParameters.NEXT_SYNC
                 }
                 val player = _exoPlayer
-                val (seekDelay, seekProg) = if (seek.snapToLive && player != null) {
+                val (seekDelay, seekProg) = if (seek.snapToLive && (player != null || isUsingMpvEngine())) {
                     armCommandedPlaybackPosition(seek.targetPosition)
-                    liveBufferFilter.snapToLive()
-                    player.seekToDefaultPosition()
+                    snapLiveToEdge(buffered)
                     liveBufferFilter.update(
                         currentPosition = seek.targetPosition,
                         bufferedPosition = buffered,
@@ -1308,10 +1312,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnPreviewSeekBy -> {
             if (_playbackTimeline.value.isLive) {
-                if (isUsingMpvEngine()) return
                 val current = currentPlaybackPositionMs() ?: 0L
-                val buffered = _exoPlayer?.bufferedPosition?.coerceAtLeast(current)
-                    ?: _playbackTimeline.value.bufferedPosition.coerceAtLeast(current)
+                val buffered = liveBufferedPositionMs(current)
                 val backBufferMs = maxOf(effectiveBackBufferDurationMs, configuredBackBufferMs).toLong()
                 val displayedDelayMs = liveBufferFilter.displayedDelayMs
                 val rawDelayMs = liveRawDelayMs(current, buffered)
@@ -1367,14 +1369,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnCommitPreviewSeek -> {
             if (_playbackTimeline.value.isLive) {
-                if (isUsingMpvEngine()) return
                 val target = pendingPreviewSeekPosition
                 if (target != null) {
                     val player = _exoPlayer
-                    val bufferedPos = player?.bufferedPosition ?: _playbackTimeline.value.bufferedPosition
-                    if (liveBufferFilter.lockedToLive && player != null) {
-                        liveBufferFilter.snapToLive()
-                        player.seekToDefaultPosition()
+                    val bufferedPos = liveBufferedPositionMs(currentPlaybackPositionMs() ?: target)
+                    if (liveBufferFilter.lockedToLive && (player != null || isUsingMpvEngine())) {
+                        snapLiveToEdge(bufferedPos)
                     } else {
                         seekPlaybackTo(target, SeekParameters.CLOSEST_SYNC)
                     }
@@ -1416,10 +1416,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnSeekTo -> {
             if (_playbackTimeline.value.isLive) {
-                if (isUsingMpvEngine()) return
                 val current = currentPlaybackPositionMs() ?: 0L
-                val buffered = _exoPlayer?.bufferedPosition?.coerceAtLeast(current)
-                    ?: _playbackTimeline.value.bufferedPosition.coerceAtLeast(current)
+                val buffered = liveBufferedPositionMs(current)
                 val backBufferMs = maxOf(effectiveBackBufferDurationMs, configuredBackBufferMs).toLong()
                 val displayedDelayMs = liveBufferFilter.displayedDelayMs
                 val rawDelayMs = liveRawDelayMs(current, buffered)
@@ -1438,10 +1436,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
 
                 pendingPreviewSeekPosition = null
                 val player = _exoPlayer
-                val (seekToDelay, seekToProg) = if (seek.snapToLive && player != null) {
+                val (seekToDelay, seekToProg) = if (seek.snapToLive && (player != null || isUsingMpvEngine())) {
                     armCommandedPlaybackPosition(seek.targetPosition)
-                    liveBufferFilter.snapToLive()
-                    player.seekToDefaultPosition()
+                    snapLiveToEdge(buffered)
                     liveBufferFilter.update(
                         currentPosition = seek.targetPosition,
                         bufferedPosition = buffered,

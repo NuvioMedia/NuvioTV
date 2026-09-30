@@ -794,9 +794,8 @@ fun PlayerScreen(
                                 keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
                             val timeline = viewModel.playbackTimeline.value
                             val isLive = timeline.isLive
-                            val isMpv = uiState.internalPlayerEngine != InternalPlayerEngine.EXOPLAYER
                             val allowLiveSeek = if (isLive) {
-                                !isMpv && (!isLeft || timeline.isBackBufferEnabled)
+                                !isLeft || timeline.isBackBufferEnabled
                             } else {
                                 true
                             }
@@ -818,14 +817,7 @@ fun PlayerScreen(
                                     viewModel.onEvent(PlayerEvent.OnToggleControls)
                                 } else {
                                     try {
-                                        val timeline = viewModel.playbackTimeline.value
-                                        val isMpv = uiState.internalPlayerEngine != InternalPlayerEngine.EXOPLAYER
-                                        val hasProgressBar = !timeline.isLive || !isMpv
-                                        if (hasProgressBar) {
-                                            progressBarFocusRequester.requestFocus()
-                                        } else {
-                                            throw IllegalStateException("No progress bar for live MPV")
-                                        }
+                                        progressBarFocusRequester.requestFocus()
                                     } catch (_: Exception) {
                                         val skipVisible = skipButtonActuallyVisible
                                         if (skipVisible) {
@@ -2176,14 +2168,7 @@ private fun PlayerControlsOverlay(
     val customSourcePainter = rememberRawSvgPainter(R.raw.ic_player_source)
     val customAspectPainter = rememberRawSvgPainter(R.raw.ic_player_aspect_ratio)
     val customEpisodesPainter = rememberRawSvgPainter(R.raw.ic_player_episodes)
-    val playbackTimeline by viewModel.playbackTimeline.collectAsState()
-    val isLivePlayback = playbackTimeline.isLive
-    val showProgressBar = !isLivePlayback || (uiState.internalPlayerEngine == InternalPlayerEngine.EXOPLAYER)
-    val progressUpTarget = if (showProgressBar) {
-        progressBarFocusRequester
-    } else {
-        progressBarUpFocusRequester ?: playPauseFocusRequester
-    }
+    val progressUpTarget = progressBarFocusRequester
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Top gradient
@@ -2304,23 +2289,18 @@ private fun PlayerControlsOverlay(
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
-            if (showProgressBar) {
-                // Progress bar — always LTR regardless of locale
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    PlayerControlsProgressBarHost(
-                        viewModel = viewModel,
-                        focusRequester = progressBarFocusRequester,
-                        upFocusRequester = progressBarUpFocusRequester,
-                        downFocusRequester = playPauseFocusRequester,
-                        onUpKey = onHideControls,
-                        onFocused = onResetHideTimer
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
-            } else {
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                PlayerControlsProgressBarHost(
+                    viewModel = viewModel,
+                    focusRequester = progressBarFocusRequester,
+                    upFocusRequester = progressBarUpFocusRequester,
+                    downFocusRequester = playPauseFocusRequester,
+                    onUpKey = onHideControls,
+                    onFocused = onResetHideTimer
+                )
             }
+
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
             // Control buttons row — always LTR regardless of locale
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {

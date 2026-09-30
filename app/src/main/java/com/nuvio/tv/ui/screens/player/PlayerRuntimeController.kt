@@ -393,7 +393,7 @@ class PlayerRuntimeController(
             nowElapsedMs = nowElapsed
         )
         val backBufferEnabled = isBackBufferEnabled
-        val maxBuf = if (!isUsingMpvEngine()) configuredMaxBufferMs.toLong() else com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS.toLong()
+        val maxBuf = configuredMaxBufferMs.toLong()
         releaseCommandedPlaybackPositionIfLanded(currentPosition)
         val isSeeking = pendingPreviewSeekPosition != null || commandedPlaybackPositionMs != null
         val liveUiPlaying = !userPausedManually && (
@@ -558,7 +558,11 @@ class PlayerRuntimeController(
     internal var configuredBackBufferMs: Int = 0
     internal var configuredMaxBufferMs: Int = com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS
     val isBackBufferEnabled: Boolean
-        get() = !isUsingMpvEngine() && (effectiveBackBufferDurationMs > 0 || (!hasRenderedFirstFrame && configuredBackBufferMs > 0))
+        get() = if (isUsingMpvEngine()) {
+            configuredBackBufferMs > 0
+        } else {
+            effectiveBackBufferDurationMs > 0 || (!hasRenderedFirstFrame && configuredBackBufferMs > 0)
+        }
     internal var metaVideos: List<Video> = emptyList()
     internal var playbackShuffleState: com.nuvio.tv.core.player.PlaybackShuffleState? = null
     internal var cloudPlaybackContext: CloudLibraryPlaybackContext? =
