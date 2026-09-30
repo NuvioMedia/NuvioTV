@@ -445,6 +445,8 @@ internal fun HomeViewModel.loadCatalogPipeline(
                         if (!isRefresh || !mergeRefreshedCatalogRow(key, result.data, requestedByUser, forceReplace)) {
                             replaceCatalogRow(key, result.data)
                         }
+                        // Trigger MDBList batch for newly loaded catalog data.
+                        onCatalogRowItemsChanged(key)
                         // Remove placeholder descriptor now that real data is available
                         synchronized(catalogStateLock) {
                             placeholderDescriptors.removeAll { it.catalogKey == key }
@@ -554,6 +556,7 @@ internal fun HomeViewModel.loadMoreCatalogItemsPipeline(catalogId: String, addon
                     }
                     _loadingCatalogs.update { it - key }
                     scheduleUpdateCatalogRows()
+                    onCatalogRowItemsChanged(key)
                 }
                 is NetworkResult.Error -> {
                     updateCatalogRow(key) { it.copy(isLoading = false) }
@@ -1159,6 +1162,7 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
             HomeViewModel.TAG,
             "Home catalog refresh: +${added.size} item(s) catalogId=${fresh.catalogId}"
         )
+        onCatalogRowItemsChanged(key)
         return true
     }
 

@@ -374,13 +374,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">エクスペリエンス</string>
-    <string name="settings_experience_subtitle">基本または詳細</string>
     <string name="settings_account">アカウント</string>
-    <string name="settings_account_subtitle">アカウントと同期の状態</string>
     <string name="settings_profiles">プロフィール</string>
-    <string name="settings_profiles_subtitle">ユーザープロフィールを管理</string>
     <string name="settings_layout">レイアウト</string>
-    <string name="settings_layout_subtitle">ホーム構造とポスタースタイル</string>
     <string name="settings_content_discovery">コンテンツ &amp; ディスカバー</string>
     <string name="settings_content_discovery_subtitle">アドオン、プラグイン、カタログ、発見ソース</string>
     <string name="settings_content_discovery_addons_subtitle">アドオン、カタログ順序、コレクションを管理</string>
@@ -389,9 +385,7 @@
     <string name="settings_plugins_subtitle">リポジトリとプロバイダー</string>
     <string name="settings_integration">連携</string>
     <string name="settings_playback">再生</string>
-    <string name="settings_playback_subtitle">プレーヤー、字幕、自動再生</string>
     <string name="settings_trakt_subtitle">Trakt接続画面を開く</string>
-    <string name="settings_about_subtitle">バージョンとポリシー</string>
     <string name="settings_network">通信速度</string>
     <string name="settings_network_subtitle">レイテンシとダウンロードの診断</string>
     <string name="settings_advanced">詳細設定</string>
@@ -492,7 +486,6 @@
     <string name="advanced_remember_last_profile">最後のプロフィールを記憶</string>
     <string name="advanced_remember_last_profile_subtitle">起動時に最後に選択したプロフィールを記憶</string>
     <string name="settings_debug">デバッグ</string>
-    <string name="settings_debug_subtitle">開発者ツールと機能フラグ</string>
     <string name="settings_plugins_section_subtitle">リポジトリ、プロバイダー、プラグインの状態を管理</string>
     <string name="settings_account_section_subtitle">アカウントと同期の状態</string>
     <string name="account_stat_addons">アドオン</string>
@@ -553,8 +546,6 @@
     <string name="contributors_hide_kofi_qr">Ko-fi QRを非表示</string>
     <string name="contributors_profile_unavailable">GitHubプロフィールリンクは利用できません</string>
 
-    <string name="playback_section_general">一般</string>
-    <string name="playback_section_general_desc">基本的な再生動作</string>
     <string name="playback_loading_overlay">ローディングオーバーレイ</string>
     <string name="playback_loading_overlay_sub">最初のフレームが表示されるまでローディング画面を表示</string>
     <string name="playback_pause_overlay">一時停止オーバーレイ</string>
@@ -574,9 +565,6 @@
     <string name="auto_skip_outro">アウトロ / エンディング</string>
     <string name="auto_skip_outro_sub">アウトロとアニメのエンディングを自動スキップ</string>
     <string name="playback_auto_frame_rate">自動フレームレート &amp; 解像度</string>
-    <string name="playback_section_player">プレーヤーとストリーム選択</string>
-    <string name="playback_section_player_desc">プレーヤー設定、自動再生、ソースフィルター</string>
-    <string name="playback_player">プレーヤー</string>
     <string name="playback_player_internal">内部</string>
     <string name="playback_player_external">外部</string>
     <string name="playback_player_ask">毎回確認</string>
@@ -587,12 +575,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">ストリーム起動に失敗した場合、ExoPlayerとlibmpvを自動で切り替えます。</string>
     <string name="playback_external_forward_subtitles">外部プレーヤーに字幕を転送</string>
     <string name="playback_external_forward_subtitles_sub">アドオンから優先言語の字幕を取得し、外部プレーヤーに渡します。</string>
-    <string name="playback_section_audio">音声と映像</string>
-    <string name="playback_section_audio_desc">音声設定と映像互換性</string>
     <string name="playback_section_subtitles">字幕</string>
     <string name="playback_section_subtitles_desc">言語、スタイル、レンダリングモード</string>
-    <string name="playback_afr_open">開く</string>
-    <string name="playback_afr_closed">閉じる</string>
     <string name="playback_afr_off">オフ</string>
     <string name="playback_afr_off_sub">ディスプレイのリフレッシュレートを変更しない</string>
     <string name="playback_afr_on_start">開始時</string>
@@ -2474,10 +2458,6 @@
     <string name="network_fast_error_token_missing">fast.com: トークンがバンドルに見つかりません</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">トレントの追加に失敗しました</string>
-    <string name="torrent_error_binary_missing">TorrServerバイナリが %1$s に見つかりません</string>
-    <string name="torrent_error_process_died">TorrServerプロセスが起動時に終了しました（終了コード %1$d）</string>
-    <string name="torrent_error_start_timeout">TorrServerが%1$ds以内に起動しませんでした</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">P2Pエンジンを起動中…</string>

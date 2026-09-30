@@ -388,20 +388,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Skúsenosť</string>
-    <string name="settings_experience_subtitle">Základná alebo Pokročilá</string>
     <string name="settings_account">Účet</string>
-    <string name="settings_account_subtitle">Účet a stav synchronizácie</string>
     <string name="settings_profiles">Profily</string>
-    <string name="settings_profiles_subtitle">Spravovať používateľské profily</string>
     <string name="settings_layout">Rozloženie</string>
-    <string name="settings_layout_subtitle">Domáca obrazovka a štýly posterov</string>
     <string name="settings_plugins">Pluginy</string>
     <string name="settings_plugins_subtitle">Repozitáre a poskytovatelia</string>
     <string name="settings_integration">Integrácie</string>
     <string name="settings_playback">Prehrávanie</string>
-    <string name="settings_playback_subtitle">Prehrávač, titulky a automatické prehrávanie</string>
     <string name="settings_trakt_subtitle">Otvoriť obrazovku pripojenia Trakt</string>
-    <string name="settings_about_subtitle">Verzia a zásady</string>
     <string name="settings_network">Rýchlosť siete</string>
     <string name="settings_network_subtitle">Diagnostika latencie a sťahovania</string>
     <string name="settings_advanced">Pokročilé</string>
@@ -500,7 +494,6 @@
     <string name="advanced_remember_last_profile">Zapamätať posledný profil</string>
     <string name="advanced_remember_last_profile_subtitle">Zapamätať posledný vybraný profil pri spustení</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Nástroje pre vývojárov a funkčné prepínače</string>
     <string name="settings_plugins_section_subtitle">Spravovať repozitáre, poskytovateľov a stavy pluginov</string>
     <string name="settings_account_section_subtitle">Účet a stav synchronizácie</string>
     <string name="account_stat_addons">doplnky</string>
@@ -560,8 +553,6 @@
     <string name="contributors_profile_unavailable">Odkaz na GitHub profil nie je dostupný.</string>
    
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Všeobecné</string>
-    <string name="playback_section_general_desc">Základné správanie prehrávania</string>
     <string name="playback_loading_overlay">Načítavacia obrazovka</string>
     <string name="playback_loading_overlay_sub">Zobraziť načítavaciu obrazovku až do prvého video rámca</string>
     <string name="playback_pause_overlay">Pauzovacia obrazovka</string>
@@ -581,9 +572,6 @@
     <string name="auto_skip_outro">Outro / Záver</string>
     <string name="auto_skip_outro_sub">Automaticky preskočiť outrá a anime závery</string>
     <string name="playback_auto_frame_rate">Automatická snímková frekvencia a rozlíšenie</string>
-    <string name="playback_section_player">Prehrávač a výber streamu</string>
-    <string name="playback_section_player_desc">Preferencie prehrávača, automatické prehrávanie a filtrovanie zdrojov</string>
-    <string name="playback_player">Prehrávač</string>
     <string name="playback_player_internal">Interný</string>
     <string name="playback_player_external">Externý</string>
     <string name="playback_player_ask">Opýtať sa pri každom prehratí</string>
@@ -592,12 +580,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automaticky prepnúť engine pri chybe spustenia</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ak spustenie streamu zlyhá, automaticky prepnúť medzi ExoPlayer a libmpv</string>
-    <string name="playback_section_audio">Audio a video</string>
-    <string name="playback_section_audio_desc">Kompatibilita videa a ovládanie audia</string>
     <string name="playback_section_subtitles">Titulky</string>
     <string name="playback_section_subtitles_desc">Jazyk, štýl a režim renderovania</string>
-    <string name="playback_afr_open">Otvorené</string>
-    <string name="playback_afr_closed">Zatvorené</string>
     <string name="playback_afr_off">Vypnuté</string>
     <string name="playback_afr_off_sub">Nemeniť obnovovaciu frekvenciu displeja.</string>
     <string name="playback_afr_on_start">Pri spustení</string>
@@ -2434,10 +2418,6 @@
     <string name="network_fast_error_token_missing">fast.com: token sa nenašiel v balíku</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Nepodarilo sa pridať torrent</string>
-    <string name="torrent_error_binary_missing">Binárny súbor TorrServer sa nenašiel na %1$s</string>
-    <string name="torrent_error_process_died">Proces TorrServer sa ukončil pri spustení (kód ukončenia %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer sa nepodarilo spustiť do %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Spúšťa sa P2P engine…</string>
@@ -2886,7 +2866,6 @@
 <string name="licenses_attributions_simkl_title">Simkl</string>
 <string name="licenses_attributions_simkl_body">Aplikácia Nuvio sa pripája k službe Simkl na účely overenia účtu, zoznamov sledovania, histórie sledovania, priebehu prehrávania a scrobblovania. Údaje o sledovaní filmov, seriálov a anime poskytuje služba Simkl. Aplikácia Nuvio nie je spojená so službou Simkl ani ňou nie je podporovaná.</string>
 <string name="settings_tracking_title">Sledovanie obsahu</string>
-<string name="settings_tracking_subtitle">Spravovať pripojenia Trakt a Simkl</string>
 <string name="settings_tracking_description">Pripojte poskytovateľov sledovania obsahu a vyberte, ktorý z nich bude napájať vašu Knižnicu a Pokračovať v sledovaní.</string>
 <string name="tracking_accounts_title">Účty</string>
 <string name="tracking_accounts_subtitle">Pripojiť a spravovať služby sledovania</string>
@@ -3234,7 +3213,6 @@
     <string name="layout_custom_poster_active">✓ Vlastný zdroj plagátov je aktívny</string>
     <string name="layout_custom_poster_qr">Konfigurovať cez telefón</string>
     <string name="custom_poster_qr_instruction">Naskenujte QR kód telefónom pre vloženie vzoru URL adresy plagátu</string>
-    <string name="layout_custom_poster_apply_to">Použiť vlastné plagáty pre:</string>
     <string name="layout_custom_poster_screen_home">Domov</string>
     <string name="layout_custom_poster_screen_continue_watching">Pokračovať v sledovaní</string>
     <string name="layout_custom_poster_screen_collections">Kolekcie</string>

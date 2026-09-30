@@ -360,13 +360,9 @@
     <string name="licenses_attributions_libmpv_body">Utilizado como motor de reprodução Android. O wrapper libmpv-android está licenciado sob a licença MIT; o mpv/libmpv e os componentes nativos incluídos mantêm os termos de licença originais.</string>
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Experiência</string>
-    <string name="settings_experience_subtitle">Essencial ou avançado</string>
     <string name="settings_account">Conta</string>
-    <string name="settings_account_subtitle">Estado da conta e sincronização</string>
     <string name="settings_profiles">Perfis</string>
-    <string name="settings_profiles_subtitle">Gerir perfis de utilizador</string>
     <string name="settings_layout">Esquema</string>
-    <string name="settings_layout_subtitle">Estrutura da página inicial e estilos dos cartazes</string>
     <string name="settings_content_discovery">Conteúdo e descoberta</string>
     <string name="settings_content_discovery_subtitle">Addons, plugins, catálogos e fontes de descoberta</string>
     <string name="settings_content_discovery_addons_subtitle">Gerir addons, ordem dos catálogos e coleções</string>
@@ -375,9 +371,7 @@
     <string name="settings_plugins_subtitle">Repositórios e fornecedores</string>
     <string name="settings_integration">Integrações</string>
     <string name="settings_playback">Reprodução</string>
-    <string name="settings_playback_subtitle">Leitor, legendas e reprodução automática</string>
     <string name="settings_trakt_subtitle">Abrir página de ligação ao Trakt</string>
-    <string name="settings_about_subtitle">Versão e políticas</string>
     <string name="settings_network">Velocidade da rede</string>
     <string name="settings_network_subtitle">Diagnóstico de latência e transferências</string>
     <string name="settings_advanced">Avançadas</string>
@@ -478,7 +472,6 @@
     <string name="advanced_remember_last_profile">Lembrar o último perfil</string>
     <string name="advanced_remember_last_profile_subtitle">Lembra o último perfil selecionado ao iniciar</string>
     <string name="settings_debug">Depurar</string>
-    <string name="settings_debug_subtitle">Ferramentas de programador e flags de funcionalidades</string>
     <string name="settings_plugins_section_subtitle">Gerir repositórios, fornecedores e estados dos plugins</string>
     <string name="settings_account_section_subtitle">Estado da conta e sincronização</string>
     <string name="account_stat_addons">addons</string>
@@ -532,8 +525,6 @@
     <string name="contributors_show_kofi_qr">Mostrar QR do Ko-fi</string>
     <string name="contributors_hide_kofi_qr">Ocultar QR do Ko-fi</string>
     <string name="contributors_profile_unavailable">Ligação do perfil do GitHub indisponível.</string>
-    <string name="playback_section_general">Geral</string>
-    <string name="playback_section_general_desc">Comportamento principal da reprodução.</string>
     <string name="playback_loading_overlay">Sobreposição de carregamento</string>
     <string name="playback_loading_overlay_sub">Mostrar ecrã de carregamento até aparecer o primeiro fotograma do vídeo.</string>
     <string name="playback_pause_overlay">Sobreposição ao pausar</string>
@@ -553,9 +544,6 @@
     <string name="auto_skip_outro">Encerramento / Créditos finais</string>
     <string name="auto_skip_outro_sub">Saltar encerramentos e créditos de anime automaticamente.</string>
     <string name="playback_auto_frame_rate">Taxa de atualização e resolução auto</string>
-    <string name="playback_section_player">Leitor e seleção de stream</string>
-    <string name="playback_section_player_desc">Preferência do leitor, reprodução automática e filtragem de fontes.</string>
-    <string name="playback_player">Leitor</string>
     <string name="playback_player_internal">Interno</string>
     <string name="playback_player_external">Externo</string>
     <string name="playback_player_ask">Perguntar sempre</string>
@@ -566,12 +554,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">Se o início do stream falhar, alterna entre o ExoPlayer e a libmpv automaticamente.</string>
     <string name="playback_external_forward_subtitles">Enviar legendas para o leitor externo</string>
     <string name="playback_external_forward_subtitles_sub">Obtém legendas no teu idioma preferido a partir dos addons e envia-as para o leitor externo.</string>
-    <string name="playback_section_audio">Áudio e vídeo</string>
-    <string name="playback_section_audio_desc">Controlos de áudio e compatibilidade de vídeo.</string>
     <string name="playback_section_subtitles">Legendas</string>
     <string name="playback_section_subtitles_desc">Idioma, estilo e modo de renderização.</string>
-    <string name="playback_afr_open">Abrir</string>
-    <string name="playback_afr_closed">Fechar</string>
     <string name="playback_afr_off">Desativado</string>
     <string name="playback_afr_off_sub">Não alterar a taxa de atualização do ecrã.</string>
     <string name="playback_afr_on_start">No início</string>
@@ -2361,10 +2345,6 @@
     <string name="network_fast_error_script_path_missing">fast.com: caminho do script não encontrado</string>
     <string name="network_fast_error_token_missing">fast.com: token não encontrado no pacote (bundle)</string>
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Falha ao adicionar o torrent</string>
-    <string name="torrent_error_binary_missing">Binário do TorrServer não encontrado em %1$s</string>
-    <string name="torrent_error_process_died">O processo do TorrServer terminou abruptamente ao iniciar (código de saída %1$d)</string>
-    <string name="torrent_error_start_timeout">O TorrServer falhou ao iniciar no período de %1$ds</string>
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">A iniciar o motor P2P…</string>
     <string name="player_torrent_rebuffer_status">%1$s em buffer</string>

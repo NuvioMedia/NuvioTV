@@ -447,13 +447,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Experiencia</string>
-    <string name="settings_experience_subtitle">Esencial o Avanzado</string>
     <string name="settings_account">Cuenta</string>
-    <string name="settings_account_subtitle">Estado de la cuenta y sincronización</string>
     <string name="settings_profiles">Perfiles</string>
-    <string name="settings_profiles_subtitle">Administrar perfiles de usuario</string>
     <string name="settings_layout">Diseño</string>
-    <string name="settings_layout_subtitle">Estructura de inicio y estilos de pósteres</string>
     <string name="settings_content_discovery">Contenido y descubrimiento</string>
     <string name="settings_content_discovery_subtitle">Add-ons, plugins, catálogos y fuentes de descubrimiento</string>
     <string name="settings_content_discovery_addons_subtitle">Administrar add-ons, el orden de los catálogos y las colecciones</string>
@@ -462,10 +458,8 @@
     <string name="settings_plugins_subtitle">Repositorios y proveedores</string>
     <string name="settings_integration">Integraciones</string>
     <string name="settings_playback">Reproducción</string>
-    <string name="settings_playback_subtitle">Reproductor, subtítulos y auto-reproducción</string>
     <string name="settings_trakt_subtitle">Abrir pantalla de conexión con Trakt</string>
     <string name="settings_tracking_title">Seguimiento</string>
-    <string name="settings_tracking_subtitle">Administra las conexiones de Trakt y Simkl</string>
     <string name="settings_tracking_description">Conecta servicios de seguimiento y elige cuál usará Nuvio para tu Biblioteca y Continuar viendo.</string>
     <string name="tracking_accounts_title">Cuentas</string>
     <string name="tracking_accounts_subtitle">Conecta y administra los servicios de seguimiento</string>
@@ -492,7 +486,6 @@
     <string name="tracking_trakt_progress_required">Disponible cuando Trakt es la fuente del progreso de visualización</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Versión y políticas</string>
     <string name="settings_network">Velocidad de red</string>
     <string name="settings_network_subtitle">Diagnóstico de latencia y descarga</string>
     <string name="settings_advanced">Avanzado</string>
@@ -624,7 +617,6 @@
     <string name="advanced_confirm_exit_subtitle">Cierra completamente la aplicación y libera memoria al salir. Requiere presionar Atrás dos veces para confirmar.</string>
     <string name="confirm_exit_toast">Presiona Atrás nuevamente para salir</string>
     <string name="settings_debug">Depuración</string>
-    <string name="settings_debug_subtitle">Herramientas de desarrollador y flags de funciones</string>
     <string name="settings_plugins_section_subtitle">Administrar repositorios, proveedores y estados de plugins</string>
     <string name="settings_account_section_subtitle">Estado de cuenta y sincronización</string>
     <string name="account_stat_addons">addons</string>
@@ -711,8 +703,6 @@
     <string name="contributors_hide_kofi_qr">Ocultar QR de Ko-fi</string>
     <string name="contributors_profile_unavailable">Enlace al perfil de GitHub no disponible.</string>
 
-    <string name="playback_section_general">General</string>
-    <string name="playback_section_general_desc">Comportamiento principal de reproducción.</string>
     <string name="playback_loading_overlay">Pantalla de Carga</string>
     <string name="playback_loading_overlay_sub">Mostrar pantalla de carga hasta que aparezca el primer cuadro de video.</string>
     <string name="playback_pause_overlay">Pantalla de Pausa</string>
@@ -736,9 +726,6 @@
     <string name="skip_movie_credits">Omitir créditos</string>
     <string name="skip_to_post_credits">Saltar a poscréditos</string>
     <string name="playback_auto_frame_rate">Frecuencia de cuadros y resolución automáticas</string>
-    <string name="playback_section_player">Reproductor y Selección de Fuente</string>
-    <string name="playback_section_player_desc">Preferencia de reproductor, auto-reproducción y filtrado de fuentes.</string>
-    <string name="playback_player">Reproductor</string>
     <string name="playback_player_internal">Interno</string>
     <string name="playback_player_external">Externo</string>
     <string name="playback_player_ask">Preguntar siempre</string>
@@ -751,12 +738,8 @@
     <string name="playback_external_forward_subtitles_sub">Obtén subtítulos en tu idioma preferido desde los addons y envíalos al reproductor externo.</string>
     <string name="playback_external_send_skip_segments">Enviar marcas de tiempo de introducción y créditos finales</string>
     <string name="playback_external_send_skip_segments_sub">Envía las marcas de tiempo de omisión de introducción y créditos finales al reproductor externo para omitirlas automáticamente. Solo funciona en reproductores compatibles; los demás las ignorarán.</string>
-    <string name="playback_section_audio">Audio y video</string>
-    <string name="playback_section_audio_desc">Controles de audio y compatibilidad de video.</string>
     <string name="playback_section_subtitles">Subtítulos</string>
     <string name="playback_section_subtitles_desc">Idioma, estilo y modo de renderizado.</string>
-    <string name="playback_afr_open">Abrir</string>
-    <string name="playback_afr_closed">Cerrar</string>
     <string name="playback_afr_off">Apagado</string>
     <string name="playback_afr_off_sub">No cambiar la tasa de refresco de la pantalla.</string>
     <string name="playback_afr_on_start">Al iniciar</string>
@@ -2969,10 +2952,6 @@
     <string name="network_fast_error_token_missing">fast.com: token no encontrado en el paquete</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">No se pudo agregar el torrent</string>
-    <string name="torrent_error_binary_missing">Binario de TorrServer no encontrado en %1$s</string>
-    <string name="torrent_error_process_died">El proceso de TorrServer murió al iniciar (código de salida %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer no inició dentro de %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Iniciando motor P2P…</string>

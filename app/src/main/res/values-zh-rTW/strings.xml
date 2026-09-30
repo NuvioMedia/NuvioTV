@@ -447,13 +447,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">使用體驗</string>
-    <string name="settings_experience_subtitle">基礎或進階</string>
     <string name="settings_account">帳戶</string>
-    <string name="settings_account_subtitle">帳戶與同步狀態</string>
     <string name="settings_profiles">個人資料</string>
-    <string name="settings_profiles_subtitle">管理使用者個人資料</string>
     <string name="settings_layout">佈局</string>
-    <string name="settings_layout_subtitle">首頁結構與海報樣式</string>
     <string name="settings_content_discovery">內容與探索</string>
     <string name="settings_content_discovery_subtitle">擴充套件、外掛、目錄與探索來源</string>
     <string name="settings_content_discovery_addons_subtitle">管理擴充套件、目錄順序和收藏</string>
@@ -462,10 +458,8 @@
     <string name="settings_plugins_subtitle">倉庫與提供者</string>
     <string name="settings_integration">整合</string>
     <string name="settings_playback">播放</string>
-    <string name="settings_playback_subtitle">播放器、字幕與自動播放</string>
     <string name="settings_trakt_subtitle">開啟 Trakt 連線畫面</string>
     <string name="settings_tracking_title">追蹤</string>
-    <string name="settings_tracking_subtitle">管理您的追蹤帳戶</string>
     <string name="settings_tracking_description">連接追蹤提供者，並選擇由哪一個為您提供媒體庫和繼續觀看資料。</string>
     <string name="tracking_accounts_title">帳戶</string>
     <string name="tracking_accounts_subtitle">連接並管理追蹤服務</string>
@@ -492,7 +486,6 @@
     <string name="tracking_trakt_progress_required">當 Trakt 為觀看進度來源時可用</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">版本與政策</string>
     <string name="settings_network">網路速度</string>
     <string name="settings_network_subtitle">延遲與下載診斷</string>
     <string name="settings_advanced">進階</string>
@@ -624,7 +617,6 @@
     <string name="advanced_confirm_exit_subtitle">退出時完全終止應用程式並釋放記憶體。需要按兩次返回鍵以確認。</string>
     <string name="confirm_exit_toast">再按一次返回鍵退出</string>
     <string name="settings_debug">除錯</string>
-    <string name="settings_debug_subtitle">開發者工具與功能開關</string>
     <string name="settings_plugins_section_subtitle">管理倉庫、提供者和外掛狀態</string>
     <string name="settings_account_section_subtitle">帳戶與同步狀態</string>
     <string name="account_stat_addons">擴充套件</string>
@@ -711,8 +703,6 @@
     <string name="contributors_hide_kofi_qr">隱藏 Ko-fi QR 碼</string>
     <string name="contributors_profile_unavailable">GitHub 個人檔案連結無法使用。</string>
 
-    <string name="playback_section_general">一般</string>
-    <string name="playback_section_general_desc">核心播放行為。</string>
     <string name="playback_loading_overlay">載入覆蓋層</string>
     <string name="playback_loading_overlay_sub">在出現第一個影片畫面之前顯示載入畫面。</string>
     <string name="playback_pause_overlay">暫停覆蓋層</string>
@@ -736,9 +726,6 @@
     <string name="skip_movie_credits">跳過片尾字幕</string>
     <string name="skip_to_post_credits">跳到片尾彩蛋</string>
     <string name="playback_auto_frame_rate">自動幀率與解析度</string>
-    <string name="playback_section_player">播放器與串流選擇</string>
-    <string name="playback_section_player_desc">播放器偏好、自動播放和來源過濾。</string>
-    <string name="playback_player">播放器</string>
     <string name="playback_player_internal">內建</string>
     <string name="playback_player_external">外部</string>
     <string name="playback_player_ask">每次都詢問</string>
@@ -751,12 +738,8 @@
     <string name="playback_external_forward_subtitles_sub">從擴充套件獲取您偏好語言的字幕，並傳遞給外部播放器。</string>
     <string name="playback_external_send_skip_segments">傳送片頭和片尾時間戳</string>
     <string name="playback_external_send_skip_segments_sub">將解析出的片頭/片尾跳過時間戳傳遞給外部播放器以實現自動跳過。僅適用於支援該功能的播放器；其他播放器會忽略。</string>
-    <string name="playback_section_audio">音訊與影片</string>
-    <string name="playback_section_audio_desc">音訊控制和影片相容性。</string>
     <string name="playback_section_subtitles">字幕</string>
     <string name="playback_section_subtitles_desc">語言、樣式和渲染模式。</string>
-    <string name="playback_afr_open">開啟</string>
-    <string name="playback_afr_closed">關閉</string>
     <string name="playback_afr_off">關閉</string>
     <string name="playback_afr_off_sub">不變更顯示器更新率。</string>
     <string name="playback_afr_on_start">開始時切換</string>
@@ -2969,10 +2952,6 @@
     <string name="network_fast_error_token_missing">fast.com：在 bundle 中找不到權杖</string>
 
     <!-- Torrent 服務 / TorrServer 二進位錯誤 -->
-    <string name="torrent_error_add_failed">新增 torrent 失敗</string>
-    <string name="torrent_error_binary_missing">在 %1$s 找不到 TorrServer 二進位</string>
-    <string name="torrent_error_process_died">TorrServer 程序在啟動時終止 (退出代碼 %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer 在 %1$ds 內無法啟動</string>
 
     <!-- 播放器執行時期：串流 / 外部連結錯誤 -->
     <string name="player_torrent_starting_engine">正在啟動 P2P 引擎…</string>

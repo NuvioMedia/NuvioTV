@@ -396,13 +396,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Felhasználói élmény</string>
-    <string name="settings_experience_subtitle">Alapvető vagy haladó mód</string>
     <string name="settings_account">Fiók</string>
-    <string name="settings_account_subtitle">Fiókadatok és szinkronizálási állapot.</string>
     <string name="settings_profiles">Profilok</string>
-    <string name="settings_profiles_subtitle">Felhasználói profilok kezelése.</string>
     <string name="settings_layout">Elrendezés</string>
-    <string name="settings_layout_subtitle">Kezdőlap szerkezete és poszter stílusok.</string>
     <string name="settings_content_discovery">Tartalom és felfedezés</string>
     <string name="settings_content_discovery_subtitle">Bővítmények, beépülő modulok, katalógusok és felfedezési források</string>
     <string name="settings_content_discovery_addons_subtitle">Bővítmények, katalógussorrend és gyűjtemények kezelése</string>
@@ -411,10 +407,8 @@
     <string name="settings_plugins_subtitle">Tárhelyek és szolgáltatók.</string>
     <string name="settings_integration">Integrációk</string>
     <string name="settings_playback">Lejátszás</string>
-    <string name="settings_playback_subtitle">Lejátszó, feliratok és automatikus lejátszás.</string>
     <string name="settings_trakt_subtitle">Trakt kapcsolat beállítása.</string>
     <string name="settings_tracking_title">Tracking</string>
-    <string name="settings_tracking_subtitle">A Trakt és Simkl kapcsolatok kezelése</string>
     <string name="settings_tracking_description">Csatlakoztass tracking szolgáltatókat, és válaszd ki, melyik szolgáltatja a Könyvtárat és a Megtekintés folytatását.</string>
     <string name="tracking_accounts_title">Fiókok</string>
     <string name="tracking_accounts_subtitle">Tracking szolgáltatások csatlakoztatása és kezelése</string>
@@ -440,7 +434,6 @@
     <string name="tracking_trakt_progress_required">Akkor elérhető, ha a Trakt a Megtekintési folyamat forrása</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Verzióinformációk és irányelvek.</string>
     <string name="settings_network">Hálózati sebesség</string>
     <string name="settings_network_subtitle">Késleltetés és letöltés diagnosztikája</string>
     <string name="settings_advanced">Haladó</string>
@@ -565,7 +558,6 @@
     <string name="advanced_remember_last_profile">Utolsó profil megjegyzése</string>
     <string name="advanced_remember_last_profile_subtitle">Indításkor az utoljára használt profil automatikus kiválasztása</string>
     <string name="settings_debug">Hibakeresés</string>
-    <string name="settings_debug_subtitle">Fejlesztői eszközök és tesztfunkciók.</string>
     <string name="settings_plugins_section_subtitle">Tárhelyek, szolgáltatók és beépülő modulok kezelése.</string>
     <string name="settings_account_section_subtitle">Fiók és szinkronizálási állapot.</string>
     <string name="account_stat_addons">bővítmény</string>
@@ -632,8 +624,6 @@
     <string name="contributors_hide_kofi_qr">Ko-fi QR-kód elrejtése</string>
     <string name="contributors_profile_unavailable">A GitHub profil linkje nem érhető el.</string>
 
-    <string name="playback_section_general">Általános</string>
-    <string name="playback_section_general_desc">Alapvető lejátszási beállítások.</string>
     <string name="playback_loading_overlay">Betöltési réteg</string>
     <string name="playback_loading_overlay_sub">Betöltőképernyő megjelenítése az első képkocka megjelenéséig.</string>
     <string name="playback_pause_overlay">Szüneteltetési réteg</string>
@@ -653,9 +643,6 @@
     <string name="auto_skip_outro">Outro / Stáblista</string>
     <string name="auto_skip_outro_sub">Stáblisták és anime végkifejletek automatikus átugrása.</string>
     <string name="playback_auto_frame_rate">Automatikus képfrissítés és felbontás</string>
-    <string name="playback_section_player">Lejátszó és forrásválasztás</string>
-    <string name="playback_section_player_desc">Lejátszó, automatikus indítás és forrásszűrés.</string>
-    <string name="playback_player">Lejátszó</string>
     <string name="playback_player_internal">Belső</string>
     <string name="playback_player_external">Külső</string>
     <string name="playback_player_ask">Kérdezzen rá minden alkalommal</string>
@@ -668,12 +655,8 @@
     <string name="playback_external_forward_subtitles_sub">Töltsd le a feliratokat az előnyben részesített nyelven a bővítményekből, és add át a külső lejátszónak.</string>
     <string name="playback_external_send_skip_segments">Bevezető és záró időbélyegek küldése</string>
     <string name="playback_external_send_skip_segments_sub">Átadja a feloldott bevezető/záró átugrási időbélyegeket a külső lejátszónak az automatikus átugráshoz. Csak az ezt támogató lejátszókban működik, a többi figyelmen kívül hagyja.</string>
-    <string name="playback_section_audio">Hang és előzetes</string>
-    <string name="playback_section_audio_desc">Előzetesek és hangvezérlők beállításai.</string>
     <string name="playback_section_subtitles">Feliratok</string>
     <string name="playback_section_subtitles_desc">Nyelv, stílus és megjelenítési mód.</string>
-    <string name="playback_afr_open">Nyitott</string>
-    <string name="playback_afr_closed">Zárt</string>
     <string name="playback_afr_off">Kikapcsolva</string>
     <string name="playback_afr_off_sub">Ne változtassa meg a kijelző képfrissítési gyakoriságát.</string>
     <string name="playback_afr_on_start">Indításkor</string>
@@ -2776,10 +2759,6 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="network_fast_error_token_missing">fast.com: token nem található a csomagban</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Nem sikerült hozzáadni a torrentet</string>
-    <string name="torrent_error_binary_missing">A TorrServer bináris nem található itt: %1$s</string>
-    <string name="torrent_error_process_died">A TorrServer folyamat leállt indításkor (kilépési kód: %1$d)</string>
-    <string name="torrent_error_start_timeout">A TorrServer nem indult el %1$d másodpercen belül</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">A P2P motor indítása…</string>

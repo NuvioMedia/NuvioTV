@@ -216,18 +216,13 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Kontostatus og synkroniseringsstatus</string>
     <string name="settings_profiles">Profiler</string>
-    <string name="settings_profiles_subtitle">Administrer brukerprofiler</string>
     <string name="settings_layout">Oppsett</string>
-    <string name="settings_layout_subtitle">Hjemmestruktur og plakatstiler</string>
     <string name="settings_plugins">Programtillegg</string>
     <string name="settings_plugins_subtitle">Arkiver og leverandører</string>
     <string name="settings_integration">Integrasjoner</string>
     <string name="settings_playback">Avspilling</string>
-    <string name="settings_playback_subtitle">Spiller, undertekster og autoavspilling</string>
     <string name="settings_trakt_subtitle">Åpne tilkoblingsside for Trakt</string>
-    <string name="settings_about_subtitle">Versjon og retningslinjer</string>
     <string name="settings_network">Nettverkshastighet</string>
     <string name="settings_network_subtitle">Ventetid og nedlastingsdiagnostikk</string>
     <string name="settings_advanced">Avansert</string>
@@ -246,7 +241,6 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Frakoblet</string>
     <string name="settings_debug">Feilsøking</string>
-    <string name="settings_debug_subtitle">Utviklerverktøy og funksjonsflagg</string>
     <string name="settings_plugins_section_subtitle">Administrer lagrer, leverandører og programtilleggstilstander</string>
     <string name="settings_account_section_subtitle">Kontostatus og synkroniseringsstatus</string>
     <string name="account_stat_addons">tillegg</string>
@@ -296,8 +290,6 @@
     <string name="contributors_profile_unavailable">GitHub-profillenke utilgjengelig.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Generelt</string>
-    <string name="playback_section_general_desc">Kjerneavspillingsatferd.</string>
     <string name="playback_loading_overlay">Lastingoverlegg</string>
     <string name="playback_loading_overlay_sub">Vis lasteskjerm til første videobilde vises.</string>
     <string name="playback_pause_overlay">Pauseoverlegg</string>
@@ -307,18 +299,11 @@
     <string name="playback_skip_intro">Hopp over intro</string>
     <string name="playback_skip_intro_sub">Bruk introdb.app for å finne introer og oppsummeringer.</string>
     <string name="playback_auto_frame_rate">Automatisk bildefrekvens</string>
-    <string name="playback_section_player">Spiller &amp; strømmevalg</string>
-    <string name="playback_section_player_desc">Spillerpreferanse, autoavspilling og kildefiltrering.</string>
-    <string name="playback_player">Spiller</string>
     <string name="playback_player_internal">Intern</string>
     <string name="playback_player_external">Ekstern</string>
     <string name="playback_player_ask">Spør hver gang</string>
-    <string name="playback_section_audio">Lyd &amp; video</string>
-    <string name="playback_section_audio_desc">Lydkontroller og videokompatibilitet.</string>
     <string name="playback_section_subtitles">Undertekster</string>
     <string name="playback_section_subtitles_desc">Språk, stil og gjengivelsesmodus.</string>
-    <string name="playback_afr_open">Åpne</string>
-    <string name="playback_afr_closed">Stengt</string>
     <string name="playback_afr_off">Av</string>
     <string name="playback_afr_off_sub">Ikke endre skjermoppdateringsfrekvens.</string>
     <string name="playback_afr_on_start">Ved start</string>

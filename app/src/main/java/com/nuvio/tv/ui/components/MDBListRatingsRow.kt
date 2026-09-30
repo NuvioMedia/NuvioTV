@@ -17,30 +17,23 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.MDBListRatings
+import com.nuvio.tv.domain.model.MDBListSettings
 import com.nuvio.tv.domain.model.RottenTomatoesStatus
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 
 @Composable
 fun MDBListRatingsRow(
     ratings: MDBListRatings,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    maxItems: Int = Int.MAX_VALUE,
+    order: List<String> = MDBListSettings.DEFAULT_RATING_ORDER,
+    iconSize: Dp = NuvioTheme.spacing.xl
 ) {
-    val context = LocalContext.current
-    val items = remember(ratings) {
-        val tomatoesLogo = when (ratings.tomatoesStatus) {
-            RottenTomatoesStatus.CERTIFIED_FRESH -> R.raw.mdblist_tomatoes_certified
-            RottenTomatoesStatus.ROTTEN -> R.raw.mdblist_tomatoes_rotten
-            else -> R.raw.mdblist_tomatoes
-        }
-        listOf(
-            Triple("trakt", R.raw.mdblist_trakt, ratings.trakt),
-            Triple("imdb", R.raw.imdb_logo_2016, ratings.imdb),
-            Triple("tmdb", R.raw.mdblist_tmdb, ratings.tmdb),
-            Triple("letterboxd", R.raw.mdblist_letterboxd, ratings.letterboxd),
-            Triple("mal", R.raw.mdblist_mal, ratings.mal),
-            Triple("tomatoes", tomatoesLogo, ratings.tomatoes)
-        ).filter { it.third != null }
+    val orderedProviders = remember(ratings, maxItems, order) {
+        order.filter { provider -> getRatingValue(ratings, provider) != null }
+            .take(maxItems)
     }
 
     Row(
@@ -48,36 +41,29 @@ fun MDBListRatingsRow(
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        items.forEach { (provider, logoRes, rating) ->
-            val resolvedRating = rating ?: return@forEach
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val model = remember(context, logoRes) {
-                    ImageRequest.Builder(context)
-                        .data(logoRes)
-                        .build()
-                }
-                AsyncImage(
-                    model = model,
-                    contentDescription = null,
-                    modifier = Modifier.size(NuvioTheme.spacing.xl),
-                    contentScale = ContentScale.Fit
-                )
-                Text(
-                    text = formatMDBListRating(provider, resolvedRating),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = NuvioTheme.extendedColors.textSecondary
-                )
-            }
+        orderedProviders.forEach { provider ->
+            val rating = getRatingValue(ratings, provider) ?: return@forEach
+            RatingBadge(provider = provider, rating = rating, ratings = ratings, iconSize = iconSize)
         }
+    }
+}
 
-        ratings.audience?.let { rating ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+@Composable
+private fun RatingBadge(
+    provider: String,
+    rating: Double,
+    ratings: MDBListRatings,
+    iconSize: Dp = NuvioTheme.spacing.xl
+) {
+    val squareIconSize = iconSize * 0.75f
+
+    val context = LocalContext.current
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        when (provider) {
+            "audience" -> {
                 Image(
                     painter = painterResource(
                         id = when (ratings.audienceStatus) {
@@ -87,34 +73,62 @@ fun MDBListRatingsRow(
                         }
                     ),
                     contentDescription = null,
-                    modifier = Modifier.size(NuvioTheme.spacing.xl)
-                )
-                Text(
-                    text = formatMDBListRating("audience", rating),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = NuvioTheme.extendedColors.textSecondary
+                    modifier = Modifier.size(squareIconSize)
                 )
             }
-        }
-
-        ratings.metacritic?.let { rating ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            "metacritic" -> {
                 Image(
                     painter = painterResource(id = R.drawable.mdblist_metacritic),
                     contentDescription = null,
-                    modifier = Modifier.size(NuvioTheme.spacing.xl)
+                    modifier = Modifier.size(squareIconSize)
                 )
-                Text(
-                    text = formatMDBListRating("metacritic", rating),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = NuvioTheme.extendedColors.textSecondary
+            }
+            else -> {
+                val isImdb = provider == "imdb"
+                val rawRes = when (provider) {
+                    "trakt" -> R.raw.mdblist_trakt
+                    "imdb" -> R.raw.imdb_logo_2016
+                    "tmdb" -> R.raw.mdblist_tmdb
+                    "letterboxd" -> R.raw.mdblist_letterboxd
+                    "mal" -> R.raw.mdblist_mal
+                    "tomatoes" -> when (ratings.tomatoesStatus) {
+                        RottenTomatoesStatus.CERTIFIED_FRESH -> R.raw.mdblist_tomatoes_certified
+                        RottenTomatoesStatus.ROTTEN -> R.raw.mdblist_tomatoes_rotten
+                        else -> R.raw.mdblist_tomatoes
+                    }
+                    else -> return
+                }
+                val model = remember(context, rawRes) {
+                    ImageRequest.Builder(context)
+                        .data(rawRes)
+                        .build()
+                }
+                AsyncImage(
+                    model = model,
+                    contentDescription = null,
+                    modifier = Modifier.size(if (isImdb) iconSize else squareIconSize),
+                    contentScale = ContentScale.Fit
                 )
             }
         }
+        Text(
+            text = formatMDBListRating(provider, rating),
+            style = MaterialTheme.typography.labelMedium,
+            color = NuvioTheme.extendedColors.textSecondary
+        )
     }
+}
+
+private fun getRatingValue(ratings: MDBListRatings, provider: String): Double? = when (provider) {
+    "trakt" -> ratings.trakt
+    "imdb" -> ratings.imdb
+    "tmdb" -> ratings.tmdb
+    "letterboxd" -> ratings.letterboxd
+    "tomatoes" -> ratings.tomatoes
+    "audience" -> ratings.audience
+    "metacritic" -> ratings.metacritic
+    "mal" -> ratings.mal
+    else -> null
 }
 
 private fun formatMDBListRating(provider: String, rating: Double): String {

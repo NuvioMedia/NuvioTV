@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.util.Log
 import com.nuvio.tv.R
 import com.nuvio.tv.core.torrent.TorrentState
+import com.nuvio.tv.core.torrent.torrentInitialLoadingProgress
 import com.nuvio.tv.domain.model.Stream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
@@ -11,10 +12,6 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "PlayerTorrent"
 
-/**
- * Starts a torrent stream via TorrServer. Returns the HTTP stream URL for ExoPlayer.
- * TorrServer handles all piece management, buffering, and seeking internally.
- */
 internal suspend fun PlayerRuntimeController.startTorrentStream(
     infoHash: String,
     fileIdx: Int?,
@@ -27,13 +24,13 @@ internal suspend fun PlayerRuntimeController.startTorrentStream(
 
     setLoadingStatus(
         phase = "torrent_starting_engine",
-        message = context.getString(com.nuvio.tv.R.string.player_torrent_starting_engine),
+        message = context.getString(R.string.player_torrent_starting_engine),
         showOverlay = true
     )
     _uiState.update {
         it.copy(
             showLoadingOverlay = true,
-            loadingMessage = context.getString(com.nuvio.tv.R.string.player_torrent_starting_engine),
+            loadingMessage = context.getString(R.string.player_torrent_starting_engine),
             loadingProgress = null,
             isTorrentStream = true
         )
@@ -43,9 +40,6 @@ internal suspend fun PlayerRuntimeController.startTorrentStream(
     return torrentService.startStream(infoHash, fileIdx, effectiveFilename, trackers)
 }
 
-/**
- * Stops the current torrent stream and cleans up state.
- */
 internal fun PlayerRuntimeController.stopTorrentStream() {
     torrentStreamJob?.cancel()
     torrentStreamJob = null
@@ -61,89 +55,19 @@ internal fun PlayerRuntimeController.stopTorrentStream() {
     currentFileIdx = null
 }
 
-/**
- * Collects TorrentService state and maps it to PlayerUiState fields.
- */
 internal fun PlayerRuntimeController.observeTorrentState() {
     torrentStateObserverJob?.cancel()
     torrentStateObserverJob = scope.launch {
         torrentService.state.collectLatest { torrentState ->
             when (torrentState) {
-                is TorrentState.Idle -> { /* No-op */ }
-
-                is TorrentState.Connecting -> {
-                    if (!hasRenderedFirstFrame) {
-                        recordLoadingDiagnosticEvent(
-                            phase = "torrent_connecting_peers",
-                            message = context.getString(com.nuvio.tv.R.string.player_torrent_connecting_peers)
-                        )
-                        _uiState.update {
-                            it.copy(
-                                showLoadingOverlay = true,
-                                loadingMessage = context.getString(com.nuvio.tv.R.string.player_torrent_connecting_peers),
-                                loadingProgress = null,
-                                torrentBufferingMessage = null
-                            )
-                        }
-                    }
-                }
-
-                is TorrentState.Streaming -> {
-                    val speed = formatSpeed(context, torrentState.downloadSpeed)
-                    val peerInfo = context.getString(com.nuvio.tv.R.string.player_torrent_peer_info, torrentState.seeds, torrentState.peers)
-                    val mbLoaded = formatMB(context, torrentState.preloadedBytes)
-                    val statsHidden = _uiState.value.hideTorrentStats
-
-                    if (!hasRenderedFirstFrame) {
-                        // Initial load: show preloaded MB with progress bar
-                        // TorrServer preloads ~5MB before streaming starts
-                        val preloadTarget = 5_242_880L // 5MB
-                        val progress = (torrentState.preloadedBytes.toFloat() / preloadTarget).coerceIn(0f, 1f)
-                        val message = if (statsHidden) null else context.getString(com.nuvio.tv.R.string.player_torrent_buffered_status, mbLoaded, peerInfo, speed)
-                        recordLoadingDiagnosticEvent(
-                            phase = "torrent_preloading",
-                            message = message,
-                            progress = progress,
-                            detail = "${torrentState.seeds}/${torrentState.peers}"
-                        )
-                        _uiState.update {
-                            it.copy(
-                                showLoadingOverlay = true,
-                                loadingMessage = message,
-                                loadingProgress = progress,
-                                torrentDownloadSpeed = torrentState.downloadSpeed,
-                                torrentUploadSpeed = torrentState.uploadSpeed,
-                                torrentPeers = torrentState.peers,
-                                torrentSeeds = torrentState.seeds,
-                                torrentBufferProgress = torrentState.bufferProgress,
-                                torrentTotalProgress = torrentState.totalProgress,
-                                torrentBufferingMessage = null
-                            )
-                        }
-                    } else {
-                        // During playback: update stats, rebuffer message is
-                        // handled by the progress loop in PlaybackEvents
-                        val message = if (statsHidden) null else context.getString(com.nuvio.tv.R.string.player_torrent_status, peerInfo, speed)
-                        _uiState.update {
-                            it.copy(
-                                loadingProgress = null,
-                                torrentDownloadSpeed = torrentState.downloadSpeed,
-                                torrentUploadSpeed = torrentState.uploadSpeed,
-                                torrentPeers = torrentState.peers,
-                                torrentSeeds = torrentState.seeds,
-                                torrentBufferProgress = torrentState.bufferProgress,
-                                torrentTotalProgress = torrentState.totalProgress,
-                                torrentBufferingMessage = message
-                            )
-                        }
-                    }
-                }
-
+                is TorrentState.Idle -> Unit
+                is TorrentState.Connecting -> onTorrentConnecting(torrentState)
+                is TorrentState.Streaming -> onTorrentStreaming(torrentState)
                 is TorrentState.Error -> {
                     Log.e(TAG, "Torrent error: ${torrentState.message}")
                     _uiState.update {
                         it.copy(
-                            error = context.getString(com.nuvio.tv.R.string.player_error_torrent, torrentState.message),
+                            error = context.getString(R.string.player_error_torrent, torrentState.message),
                             showLoadingOverlay = false,
                             torrentBufferingMessage = null
                         )
@@ -154,9 +78,100 @@ internal fun PlayerRuntimeController.observeTorrentState() {
     }
 }
 
-/**
- * Launches a torrent stream for source/episode stream switching.
- */
+private fun PlayerRuntimeController.onTorrentConnecting(torrentState: TorrentState.Connecting) {
+    if (hasRenderedFirstFrame) return
+    val phaseLabel = context.getString(
+        when (torrentState.phase) {
+            "add_magnet" -> R.string.player_torrent_fetching_metadata
+            "prepare_stream", "attach_route" -> R.string.player_torrent_preparing_stream
+            else -> R.string.player_torrent_starting_engine
+        }
+    )
+    val message = if (_uiState.value.hideTorrentStats) {
+        phaseLabel
+    } else {
+        context.getString(
+            R.string.player_torrent_connecting_status,
+            phaseLabel,
+            context.getString(R.string.player_torrent_peer_info, torrentState.seeds, torrentState.peers),
+            formatSpeed(context, torrentState.downloadSpeed)
+        )
+    }
+    recordLoadingDiagnosticEvent(
+        phase = "torrent_connecting_peers",
+        message = message
+    )
+    _uiState.update {
+        it.copy(
+            showLoadingOverlay = true,
+            loadingMessage = message,
+            loadingProgress = null,
+            torrentBufferingMessage = null
+        )
+    }
+}
+
+private fun PlayerRuntimeController.onTorrentStreaming(torrentState: TorrentState.Streaming) {
+    val speed = formatSpeed(context, torrentState.downloadSpeed)
+    val peerInfo = context.getString(R.string.player_torrent_peer_info, torrentState.seeds, torrentState.peers)
+    val statsHidden = _uiState.value.hideTorrentStats
+
+    if (!hasRenderedFirstFrame) {
+        val bufferedAheadMs = _exoPlayer
+            ?.let { player -> (player.bufferedPosition - player.currentPosition).coerceAtLeast(0L) }
+            ?: 0L
+        val progress = torrentInitialLoadingProgress(
+            bufferedAheadMs = bufferedAheadMs,
+            downloadedBytes = torrentState.downloadedBytes,
+            deliveredBytes = torrentState.deliveredBytes
+        )
+        val message = if (statsHidden) {
+            null
+        } else {
+            context.getString(
+                R.string.player_torrent_loading_status,
+                formatMB(context, torrentState.loadedBytes),
+                peerInfo,
+                speed
+            )
+        }
+        recordLoadingDiagnosticEvent(
+            phase = "torrent_preloading",
+            message = message,
+            progress = progress,
+            detail = "${torrentState.seeds}/${torrentState.peers}"
+        )
+        _uiState.update {
+            it.copy(
+                showLoadingOverlay = true,
+                loadingMessage = message,
+                loadingProgress = progress,
+                torrentDownloadSpeed = torrentState.downloadSpeed,
+                torrentUploadSpeed = torrentState.uploadSpeed,
+                torrentPeers = torrentState.peers,
+                torrentSeeds = torrentState.seeds,
+                torrentBufferProgress = torrentState.bufferProgress,
+                torrentTotalProgress = torrentState.totalProgress,
+                torrentBufferingMessage = null
+            )
+        }
+    } else {
+        val message = if (statsHidden) null else context.getString(R.string.player_torrent_status, peerInfo, speed)
+        _uiState.update {
+            it.copy(
+                loadingProgress = null,
+                torrentDownloadSpeed = torrentState.downloadSpeed,
+                torrentUploadSpeed = torrentState.uploadSpeed,
+                torrentPeers = torrentState.peers,
+                torrentSeeds = torrentState.seeds,
+                torrentBufferProgress = torrentState.bufferProgress,
+                torrentTotalProgress = torrentState.totalProgress,
+                torrentBufferingMessage = message
+            )
+        }
+    }
+}
+
 internal fun PlayerRuntimeController.launchTorrentSourceStream(
     stream: Stream,
     infoHash: String,
@@ -208,11 +223,11 @@ internal fun PlayerRuntimeController.launchTorrentSourceStream(
 
 private fun formatSpeed(context: android.content.Context, bytesPerSec: Long): String {
     return when {
-        bytesPerSec >= 1_048_576 -> context.getString(com.nuvio.tv.R.string.unit_speed_mb_s, String.format("%.1f", bytesPerSec / 1_048_576.0))
-        bytesPerSec >= 1_024 -> context.getString(com.nuvio.tv.R.string.unit_speed_kb_s, String.format("%.0f", bytesPerSec / 1_024.0))
-        else -> context.getString(com.nuvio.tv.R.string.unit_speed_b_s, bytesPerSec)
+        bytesPerSec >= 1_048_576 -> context.getString(R.string.unit_speed_mb_s, String.format("%.1f", bytesPerSec / 1_048_576.0))
+        bytesPerSec >= 1_024 -> context.getString(R.string.unit_speed_kb_s, String.format("%.0f", bytesPerSec / 1_024.0))
+        else -> context.getString(R.string.unit_speed_b_s, bytesPerSec)
     }
 }
 
 private fun formatMB(context: android.content.Context, bytes: Long): String =
-    context.getString(com.nuvio.tv.R.string.unit_size_mb, String.format("%.1f", bytes / 1_048_576.0))
+    context.getString(R.string.unit_size_mb, String.format("%.1f", bytes / 1_048_576.0))

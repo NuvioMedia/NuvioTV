@@ -291,11 +291,8 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Аккаунт</string>
-    <string name="settings_account_subtitle">Статус аккаунта и синхронизации</string>
     <string name="settings_profiles">Профили</string>
-    <string name="settings_profiles_subtitle">Управление профилями пользователей</string>
     <string name="settings_layout">Интерфейс</string>
-    <string name="settings_layout_subtitle">Структура главного экрана и стиль постеров</string>
     <string name="settings_content_discovery">Контент и поиск</string>
     <string name="settings_content_discovery_subtitle">Аддоны, плагины, каталоги и источники поиска контента</string>
     <string name="settings_content_discovery_addons_subtitle">Управление аддонами, порядком каталогов и коллекциями</string>
@@ -304,10 +301,8 @@
     <string name="settings_plugins_subtitle">Репозитории и провайдеры</string>
     <string name="settings_integration">Интеграции</string>
     <string name="settings_playback">Воспроизведение</string>
-    <string name="settings_playback_subtitle">Плеер, субтитры и автовоспроизведение</string>
     <string name="settings_trakt_subtitle">Настройка подключения к Trakt</string>
     <string name="settings_tracking_title">Отслеживание</string>
-    <string name="settings_tracking_subtitle">Управление подключениями Trakt и Simkl</string>
     <string name="settings_tracking_description">Подключите сервисы отслеживания и выберите, какой из них будет использоваться для Библиотеки и раздела «Продолжить просмотр».</string>
     <string name="tracking_accounts_title">Аккаунты</string>
     <string name="tracking_accounts_subtitle">Подключение и управление сервисами отслеживания</string>
@@ -333,7 +328,6 @@
     <string name="tracking_trakt_progress_required">Доступно, когда Trakt используется как источник прогресса просмотра</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Версия и политики</string>
     <string name="settings_network">Скорость сети</string>
     <string name="settings_network_subtitle">Диагностика задержки и скорости загрузки</string>
     <string name="settings_advanced">Дополнительно</string>
@@ -352,7 +346,6 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Не в сети</string>
     <string name="settings_debug">Отладка</string>
-    <string name="settings_debug_subtitle">Инструменты разработчика и скрытые функции</string>
     <string name="settings_plugins_section_subtitle">Управление репозиториями, провайдерами и состоянием плагинов</string>
     <string name="settings_account_section_subtitle">Аккаунт и статус синхронизации</string>
     <string name="account_stat_addons">аддоны</string>
@@ -432,8 +425,6 @@
     <string name="contributors_profile_unavailable">Ссылка на профиль GitHub недоступна.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Общие</string>
-    <string name="playback_section_general_desc">Основное поведение воспроизведения.</string>
     <string name="playback_loading_overlay">Экран загрузки</string>
     <string name="playback_loading_overlay_sub">Показывать экран загрузки до появления первого кадра видео.</string>
     <string name="playback_pause_overlay">Экран паузы</string>
@@ -443,9 +434,6 @@
     <string name="playback_skip_intro">Пропуск заставки</string>
     <string name="playback_skip_intro_sub">Использовать introdb.app для обнаружения заставок и рекапов.</string>
     <string name="playback_auto_frame_rate">Автоматическая частота кадров</string>
-    <string name="playback_section_player">Плеер и выбор потока</string>
-    <string name="playback_section_player_desc">Предпочтения плеера, автозапуск и фильтрация источников.</string>
-    <string name="playback_player">Плеер</string>
     <string name="playback_player_internal">Встроенный</string>
     <string name="playback_player_external">Внешний</string>
     <string name="playback_player_ask">Спрашивать каждый раз</string>
@@ -454,12 +442,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Бета)</string>
     <string name="playback_auto_switch_internal_player_on_error">Авто-переключение движка при ошибке запуска</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Если запуск потока не удался, автоматически переключаться между ExoPlayer и libmpv.</string>
-    <string name="playback_section_audio">Аудио и видео</string>
-    <string name="playback_section_audio_desc">Настройки аудио и совместимость видео.</string>
     <string name="playback_section_subtitles">Субтитры</string>
     <string name="playback_section_subtitles_desc">Язык, стиль и режим рендеринга.</string>
-    <string name="playback_afr_open">Открыть</string>
-    <string name="playback_afr_closed">Закрыть</string>
     <string name="playback_afr_off">Выкл</string>
     <string name="playback_afr_off_sub">Не изменять частоту обновления экрана.</string>
     <string name="playback_afr_on_start">При старте</string>
@@ -1929,7 +1913,6 @@
     <string name="licenses_attributions_libmpv_title">libmpv / libmpv-android</string>
     <string name="licenses_attributions_libmpv_body">Используется как движок воспроизведения Android. Обёртка libmpv-android лицензирована под MIT; mpv/libmpv и встроенные нативные компоненты сохраняют условия своих лицензий.</string>
     <string name="settings_experience">Режим работы</string>
-    <string name="settings_experience_subtitle">Базовый или расширенный</string>
     <string name="experience_mode_essential">Базовый</string>
     <string name="experience_mode_advanced">Расширенный</string>
     <string name="experience_mode_choose_title">Выберите свой режим Nuvio</string>
@@ -2885,10 +2868,6 @@
     <string name="network_error_unknown">Неизвестная ошибка сети</string>
     <string name="network_fast_error_script_path_missing">Отсутствует путь скрипта fast.com</string>
     <string name="network_fast_error_token_missing">Отсутствует токен fast.com</string>
-    <string name="torrent_error_add_failed">Не удалось добавить торрент</string>
-    <string name="torrent_error_binary_missing">Бинарный файл торрента отсутствует</string>
-    <string name="torrent_error_process_died">Процесс торрента завершился</string>
-    <string name="torrent_error_start_timeout">Время ожидания запуска торрента истекло</string>
     <string name="player_torrent_starting_engine">Запуск движка P2P…</string>
     <string name="player_torrent_rebuffer_status">Перебуферизация %1$s…</string>
     <string name="player_stream_error_invalid_external_url">Неверный внешний URL потока</string>

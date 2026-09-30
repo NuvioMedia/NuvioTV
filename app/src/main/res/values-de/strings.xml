@@ -383,20 +383,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">App-Erlebnis</string>
-    <string name="settings_experience_subtitle">Standard oder Fortgeschritten</string>
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Konto und Synchronisierungsstatus</string>
     <string name="settings_profiles">Profile</string>
-    <string name="settings_profiles_subtitle">Benutzerprofile verwalten</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Startseite-Struktur und Poster-Stile</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Repositorys und Anbieter</string>
     <string name="settings_integration">Integrationen</string>
     <string name="settings_playback">Wiedergabe</string>
-    <string name="settings_playback_subtitle">Player, Untertitel und automatische Wiedergabe</string>
     <string name="settings_trakt_subtitle">Trakt-Verbindungsbildschirm öffnen</string>
-    <string name="settings_about_subtitle">Version und Richtlinien</string>
 <string name="settings_network">Netzwerkgeschwindigkeit</string>
 <string name="settings_network_subtitle">Latenz- und Download-Diagnose</string>
 <string name="settings_advanced">Erweitert</string>
@@ -495,7 +489,6 @@
     <string name="advanced_remember_last_profile">Remember Last Profile</string>
     <string name="advanced_remember_last_profile_subtitle">Remember last selected profile at startup</string>
     <string name="settings_debug">Debugging</string>
-    <string name="settings_debug_subtitle">Entwicklertools und Feature-Flags</string>
     <string name="settings_plugins_section_subtitle">Repositorys, Anbieter und Plugin-Status verwalten</string>
     <string name="settings_account_section_subtitle">Konto und Synchronisierungsstatus</string>
     <string name="account_stat_addons">Add-ons</string>
@@ -554,8 +547,6 @@
     <string name="contributors_profile_unavailable">GitHub-Profil-Link nicht verfügbar.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Allgemein</string>
-    <string name="playback_section_general_desc">Grundlegendes Wiedergabeverhalten.</string>
     <string name="playback_loading_overlay">Lade-Overlay</string>
     <string name="playback_loading_overlay_sub">Lade-Bildschirm anzeigen, bis das erste Videobild erscheint.</string>
     <string name="playback_pause_overlay">Pause-Overlay</string>
@@ -575,9 +566,6 @@
     <string name="auto_skip_outro">Outro / Ending</string>
     <string name="auto_skip_outro_sub">Outros und Anime-Outros automatisch überspringen.</string>
     <string name="playback_auto_frame_rate">Automatische Bildfrequenz</string>
-    <string name="playback_section_player">Player- und Stream-Auswahl</string>
-    <string name="playback_section_player_desc">Player-Einstellungen, automatische Wiedergabe und Quellenfilterung.</string>
-    <string name="playback_player">Player</string>
     <string name="playback_player_internal">Intern</string>
     <string name="playback_player_external">Extern</string>
     <string name="playback_player_ask">Jedes Mal fragen</string>
@@ -586,12 +574,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Auto-switch engine on startup error</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">If stream startup fails, switch between ExoPlayer and libmpv automatically.</string>
-    <string name="playback_section_audio">Audio &amp; Video</string>
-    <string name="playback_section_audio_desc">Audiosteuerung und Videokompatibilität.</string>
     <string name="playback_section_subtitles">Untertitel</string>
     <string name="playback_section_subtitles_desc">Sprache, Stil und Wiedergabemodus.</string>
-    <string name="playback_afr_open">Offen</string>
-    <string name="playback_afr_closed">Geschlossen</string>
     <string name="playback_afr_off">Aus</string>
     <string name="playback_afr_off_sub">Bildfrequenz nicht umschalten.</string>
     <string name="playback_afr_on_start">Beim Start</string>
@@ -2253,10 +2237,6 @@
     <string name="network_fast_error_token_missing">fast.com: token not found in bundle</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Failed to add torrent</string>
-    <string name="torrent_error_binary_missing">TorrServer binary not found at %1$s</string>
-    <string name="torrent_error_process_died">TorrServer process died on startup (exit code %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer failed to start within %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Starting P2P engine…</string>

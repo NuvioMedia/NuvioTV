@@ -367,20 +367,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">பயன்பாட்டு முறை</string>
-    <string name="settings_experience_subtitle">எளிமை அல்லது மேம்பட்டது</string>
     <string name="settings_account">அக்கவுண்ட்</string>
-    <string name="settings_account_subtitle">அக்கவுண்ட் மற்றும் ஒத்திசைவு நிலை</string>
     <string name="settings_profiles">புரொஃபைல்கள்</string>
-    <string name="settings_profiles_subtitle">பயனர் புரொஃபைல்களை நிர்வகி</string>
     <string name="settings_layout">அமைப்பு வடிவம்</string>
-    <string name="settings_layout_subtitle">முகப்பு அமைப்பு மற்றும் போஸ்டர் பாணிகள்</string>
     <string name="settings_plugins">பிளகின்கள்</string>
     <string name="settings_plugins_subtitle">களஞ்சியங்கள் மற்றும் வழங்குநர்கள்</string>
     <string name="settings_integration">ஒருங்கிணைப்புகள்</string>
     <string name="settings_playback">இயக்கம்</string>
-    <string name="settings_playback_subtitle">பிளேயர், வசனவரிகள் மற்றும் தானியங்கு இயக்கம்</string>
     <string name="settings_trakt_subtitle">ட்ராக்ட் இணைப்பு திரையை திற</string>
-    <string name="settings_about_subtitle">பதிப்பு மற்றும் கொள்கைகள்</string>
     <string name="settings_network">இணைய வேகம்</string>
     <string name="settings_network_subtitle">தாமதம் மற்றும் பதிவிறக்க ஆய்வு</string>
     <string name="settings_advanced">மேம்பட்டது</string>
@@ -479,7 +473,6 @@
     <string name="advanced_remember_last_profile">கடைசி புரொஃபைலை நினைவில் வை</string>
     <string name="advanced_remember_last_profile_subtitle">தொடக்கத்தில் கடைசியாக தேர்ந்தெடுத்த புரொஃபைலை நினைவில் வைத்திரு</string>
     <string name="settings_debug">பிழைத்திருத்தம்</string>
-    <string name="settings_debug_subtitle">உருவாக்குநர் கருவிகள் மற்றும் அம்சக் கொடிகள்</string>
     <string name="settings_plugins_section_subtitle">களஞ்சியங்கள், வழங்குநர்கள் மற்றும் பிளகின் நிலைகளை நிர்வகி</string>
     <string name="settings_account_section_subtitle">அக்கவுண்ட் மற்றும் ஒத்திசைவு நிலை</string>
     <string name="account_stat_addons">ஆட்-ஆன்கள்</string>
@@ -538,8 +531,6 @@
     <string name="contributors_profile_unavailable">GitHub சுயவிவர இணைப்பு கிடைக்கவில்லை.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">பொது</string>
-    <string name="playback_section_general_desc">அடிப்படை இயக்க நடத்தை.</string>
     <string name="playback_loading_overlay">ஏற்றும் மேலடுக்கு</string>
     <string name="playback_loading_overlay_sub">முதல் வீடியோ frame தோன்றும் வரை ஏற்றும் திரையை காட்டு.</string>
     <string name="playback_pause_overlay">இடைநிறுத்த மேலடுக்கு</string>
@@ -559,9 +550,6 @@
     <string name="auto_skip_outro">முடிவு / நிறைவு</string>
     <string name="auto_skip_outro_sub">முடிவு மற்றும் anime நிறைவுகளை தானாக தாவு.</string>
     <string name="playback_auto_frame_rate">தானியங்கி Frame Rate &amp; தீர்மானம்</string>
-    <string name="playback_section_player">பிளேயர் &amp; ஸ்ட்ரீம் தேர்வு</string>
-    <string name="playback_section_player_desc">பிளேயர் விருப்பம், தானியங்கி இயக்கம் மற்றும் மூல வடிகட்டி.</string>
-    <string name="playback_player">பிளேயர்</string>
     <string name="playback_player_internal">உள்ளமை</string>
     <string name="playback_player_external">வெளிப்புறம்</string>
     <string name="playback_player_ask">ஒவ்வொரு முறையும் கேள்</string>
@@ -570,12 +558,8 @@
     <string name="playback_engine_mvplayer">Libmpv (பீட்டா)</string>
     <string name="playback_auto_switch_internal_player_on_error">தொடக்க பிழையில் engine-ஐ தானாக மாற்று</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">ஸ்ட்ரீம் தொடக்கம் தோல்வியடைந்தால் ExoPlayer மற்றும் libmpv இடையே தானாக மாறு.</string>
-    <string name="playback_section_audio">ஒலி &amp; வீடியோ</string>
-    <string name="playback_section_audio_desc">ஒலி கட்டுப்பாடுகள் மற்றும் வீடியோ இணக்கத்தன்மை.</string>
     <string name="playback_section_subtitles">உபதலைப்புகள்</string>
     <string name="playback_section_subtitles_desc">மொழி, தோற்றம் மற்றும் render முறை.</string>
-    <string name="playback_afr_open">திறந்தது</string>
-    <string name="playback_afr_closed">மூடியது</string>
     <string name="playback_afr_off">அணை</string>
     <string name="playback_afr_off_sub">திரை refresh rate-ஐ மாற்ற வேண்டாம்.</string>
     <string name="playback_afr_on_start">தொடக்கத்தில்</string>
@@ -2240,10 +2224,6 @@
     <string name="network_fast_error_token_missing">பாஸ்ட்.காம்: தொகுப்பில் டோக்கன் கிடைக்கவில்லை</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">டோரண்டைச் சேர்க்க முடியவில்லை</string>
-    <string name="torrent_error_binary_missing">டோர் சர்வர் பைனரி %1$s இல் கிடைக்கவில்லை</string>
-    <string name="torrent_error_process_died">டோர் சர்வர் செயல்முறை தொடக்கத்தில் முடங்கியது (வெளியேறும் குறியீடு %1$d)</string>
-    <string name="torrent_error_start_timeout">டோர் சர்வர் %1$ds குள் தொடங்க முடியவில்லை</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">பி2பி இயந்திரம் தொடங்குகிறது…</string>

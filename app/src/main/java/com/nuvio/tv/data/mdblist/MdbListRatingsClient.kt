@@ -41,14 +41,15 @@ class MdbListRatingsClient @Inject constructor(
     }
 
     suspend fun getMedia(
+        mediaProvider: String,
         mediaType: String,
-        imdbId: String,
+        mediaId: String,
         credential: MdbListRatingsCredential
     ): MDBListMediaResponseDto? = when (credential) {
-        is MdbListRatingsCredential.ApiKey -> api.getMedia(mediaType, imdbId, credential.value).bodyOrThrow()
+        is MdbListRatingsCredential.ApiKey -> api.getMedia(mediaProvider, mediaType, mediaId, credential.value).bodyOrThrow()
         is MdbListRatingsCredential.Account -> mediaAdapter.fromJson(
             accountApi.get(
-                "/imdb/$mediaType/$imdbId/",
+                "/$mediaProvider/$mediaType/$mediaId/",
                 query = mapOf("append_to_response" to "keyword"),
                 scope = credential.scope
             ).body
@@ -56,16 +57,17 @@ class MdbListRatingsClient @Inject constructor(
     }
 
     suspend fun getMediaBatch(
+        mediaProvider: String,
         mediaType: String,
-        imdbIds: List<String>,
+        mediaIds: List<String>,
         credential: MdbListRatingsCredential
     ): List<MDBListMediaResponseDto>? {
-        val body = MDBListMediaRequestDto(imdbIds)
+        val body = MDBListMediaRequestDto(mediaIds)
         return when (credential) {
-            is MdbListRatingsCredential.ApiKey -> api.getMediaBatch(mediaType, credential.value, body).bodyOrThrow()
+            is MdbListRatingsCredential.ApiKey -> api.getMediaBatch(mediaProvider, mediaType, credential.value, body).bodyOrThrow()
             is MdbListRatingsCredential.Account -> batchAdapter.fromJson(
                 accountApi.post(
-                    "/imdb/$mediaType/",
+                    "/$mediaProvider/$mediaType/",
                     body = requestAdapter.toJson(body),
                     scope = credential.scope
                 ).body

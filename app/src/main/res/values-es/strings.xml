@@ -451,13 +451,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Experiencia</string>
-    <string name="settings_experience_subtitle">Esencial o Avanzado</string>
     <string name="settings_account">Cuenta</string>
-    <string name="settings_account_subtitle">Estado de la cuenta y sincronización</string>
     <string name="settings_profiles">Perfiles</string>
-    <string name="settings_profiles_subtitle">Administra perfiles de usuario</string>
     <string name="settings_layout">Diseño</string>
-    <string name="settings_layout_subtitle">Estructura del inicio y estilos de pósters</string>
     <string name="settings_content_discovery">Contenido &amp; descubrimiento</string>
     <string name="settings_content_discovery_subtitle">Complementos, catálogos y fuentes de descubrimiento</string>
     <string name="settings_content_discovery_addons_subtitle">Administra complementos, orden de catálogos y colecciones</string>
@@ -466,10 +462,8 @@
     <string name="settings_plugins_subtitle">Repositorios y proveedores</string>
     <string name="settings_integration">Integraciones</string>
     <string name="settings_playback">Reproducción</string>
-    <string name="settings_playback_subtitle">Reproductor, subtítulos y reproducción automática</string>
     <string name="settings_trakt_subtitle">Abre la pantalla de conexión de Trakt</string>
     <string name="settings_tracking_title">Seguimiento</string>
-    <string name="settings_tracking_subtitle">Administra tus cuentas de seguimiento</string>
     <string name="settings_tracking_description">Conecta proveedores de seguimiento y elige cuál impulsa tu Biblioteca y Continuar viendo.</string>
     <string name="tracking_accounts_title">Cuentas</string>
     <string name="tracking_accounts_subtitle">Conecta y administra servicios de seguimiento</string>
@@ -496,7 +490,6 @@
     <string name="tracking_trakt_progress_required">Disponible cuando Trakt es la fuente de progreso de visualización</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Versión y políticas</string>
     <string name="settings_network">Velocidad de red</string>
     <string name="settings_network_subtitle">Diagnóstico de latencia y descarga</string>
     <string name="settings_advanced">Avanzado</string>
@@ -627,7 +620,6 @@
     <string name="advanced_confirm_exit_subtitle">Cierra completamente la app y libera memoria al salir. Requiere presionar atrás dos veces para confirmar.</string>
     <string name="confirm_exit_toast">Presiona atrás de nuevo para salir</string>
     <string name="settings_debug">Depuración</string>
-    <string name="settings_debug_subtitle">Herramientas de desarrollador y marcas de características</string>
     <string name="settings_plugins_section_subtitle">Administra repositorios, proveedores y estados de complementos</string>
     <string name="settings_account_section_subtitle">Estado de la cuenta y sincronización</string>
     <string name="account_stat_addons">complementos</string>
@@ -714,8 +706,6 @@
     <string name="contributors_hide_kofi_qr">Ocultar QR de Ko-fi</string>
     <string name="contributors_profile_unavailable">Enlace de perfil de GitHub no disponible.</string>
 
-    <string name="playback_section_general">General</string>
-    <string name="playback_section_general_desc">Comportamiento de reproducción central.</string>
     <string name="playback_loading_overlay">Superposición de carga</string>
     <string name="playback_loading_overlay_sub">Muestra pantalla de carga hasta que aparece el primer fotograma de vídeo.</string>
     <string name="playback_pause_overlay">Superposición de pausa</string>
@@ -739,9 +729,6 @@
     <string name="skip_movie_credits">Saltar créditos</string>
     <string name="skip_to_post_credits">Saltar a la escena post-créditos</string>
     <string name="playback_auto_frame_rate">Frecuencia de fotogramas automática</string>
-    <string name="playback_section_player">Selección de reproductor y transmisión</string>
-    <string name="playback_section_player_desc">Preferencia de reproductor, reproducción automática y filtrado de fuentes.</string>
-    <string name="playback_player">Reproductor</string>
     <string name="playback_player_internal">Interno</string>
     <string name="playback_player_external">Externo</string>
     <string name="playback_player_ask">Preguntar cada vez</string>
@@ -754,12 +741,8 @@
     <string name="playback_external_forward_subtitles_sub">Obtiene subtítulos en tu idioma preferido desde los complementos y los envía al reproductor externo.</string>
     <string name="playback_external_send_skip_segments">Enviar marcas de tiempo de intro y outro</string>
     <string name="playback_external_send_skip_segments_sub">Envía las marcas de tiempo resueltas de salto de intro/outro al reproductor externo para el salto automático. Solo funciona en reproductores compatibles; otros reproductores lo ignoran.</string>
-    <string name="playback_section_audio">Audio y vídeo</string>
-    <string name="playback_section_audio_desc">Controles de audio y compatibilidad de vídeo.</string>
     <string name="playback_section_subtitles">Subtítulos</string>
     <string name="playback_section_subtitles_desc">Idioma, estilo y modo de renderizado.</string>
-    <string name="playback_afr_open">Abierto</string>
-    <string name="playback_afr_closed">Cerrado</string>
     <string name="playback_afr_off">Apagado</string>
     <string name="playback_afr_off_sub">No cambies la frecuencia de actualización de la pantalla.</string>
     <string name="playback_afr_on_start">Al iniciar</string>
@@ -1124,7 +1107,6 @@
     <string name="custom_poster_qr_instruction">Escanea el código QR con tu teléfono para pegar un patrón de URL de póster</string>
 
     <!-- Custom Poster URL - Screen Toggles -->
-    <string name="layout_custom_poster_apply_to">Aplicar pósteres personalizados a:</string>
     <string name="layout_custom_poster_screen_home">Inicio</string>
     <string name="layout_custom_poster_screen_continue_watching">Continuar viendo</string>
     <string name="layout_custom_poster_screen_collections">Colecciones</string>
@@ -2969,10 +2951,6 @@
     <string name="network_fast_error_token_missing">fast.com: no se encontró el token en el paquete</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">No se pudo añadir el torrent</string>
-    <string name="torrent_error_binary_missing">No se encontró el binario de TorrServer en %1$s</string>
-    <string name="torrent_error_process_died">El proceso de TorrServer se cerró inesperadamente al iniciar (código de salida %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer no pudo iniciarse en %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Iniciando motor P2P…</string>

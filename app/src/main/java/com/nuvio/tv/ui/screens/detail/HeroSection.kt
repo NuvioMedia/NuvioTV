@@ -103,8 +103,14 @@ fun HeroContentSection(
     onToggleMovieWatched: () -> Unit,
     trailerAvailable: Boolean = false,
     onTrailerClick: () -> Unit = {},
+    showRandomEpisodeButton: Boolean = false,
+    episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffleSettings = com.nuvio.tv.domain.model.EpisodeShuffleSettings(),
+    shuffleActionPending: Boolean = false,
+    onRandomEpisodeClick: () -> Unit = {},
+    randomEpisodeFocusRequester: FocusRequester? = null,
     hideLogoDuringTrailer: Boolean = false,
     mdbListRatings: MDBListRatings? = null,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     hideMetaInfoImdb: Boolean = false,
     tmdbRating: Float? = null,
     showFullReleaseDate: Boolean = true,
@@ -114,7 +120,8 @@ fun HeroContentSection(
     restorePlayFocusToken: Int = 0,
     onHeroActionFocused: () -> Unit = {},
     onPlayFocusRestored: () -> Unit = {},
-    onShowFullDescription: () -> Unit = {}
+    onShowFullDescription: () -> Unit = {},
+    onTruncationChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     var isSynopsisFocused by remember(meta.id) { mutableStateOf(false) }
@@ -303,6 +310,16 @@ fun HeroContentSection(
                                 onFocused = onHeroActionFocused
                             )
                         }
+
+                        if (showRandomEpisodeButton) {
+                            ShuffleButton(
+                                active = episodeShuffle.enabled,
+                                pending = shuffleActionPending,
+                                onClick = onRandomEpisodeClick,
+                                focusRequester = randomEpisodeFocusRequester,
+                                onFocused = onHeroActionFocused
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
@@ -324,7 +341,7 @@ fun HeroContentSection(
                         }
 
                         if (mdbListRatings?.isEmpty() == false) {
-                            MDBListRatingsRow(ratings = mdbListRatings)
+                            MDBListRatingsRow(ratings = mdbListRatings, order = mdbListRatingOrder)
                             Spacer(modifier = Modifier.height(14.dp))
                         }
 
@@ -334,6 +351,7 @@ fun HeroContentSection(
                                 onShowFullDescription = onShowFullDescription,
                                 upFocusRequester = playButtonFocusRequester,
                                 onFocused = onHeroActionFocused,
+                                onTruncationChanged = onTruncationChanged,
                                 modifier = Modifier
                                     .onFocusChanged { isSynopsisFocused = it.hasFocus }
                                     .fillMaxWidth(0.6f)
@@ -356,10 +374,11 @@ fun HeroContentSection(
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-private fun PlayButton(
+internal fun PlayButton(
     text: String?,
     enabled: Boolean = true,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onLongPress: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
     restoreFocusToken: Int = 0,
@@ -388,7 +407,7 @@ private fun PlayButton(
                 onClick()
             }
         },
-        modifier = Modifier
+        modifier = modifier
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 if (it.isFocused) {
@@ -397,10 +416,13 @@ private fun PlayButton(
             }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
+                if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0 && isSelectKey(native.keyCode)) {
+                    longPressTriggered = false
+                }
                 if (enabled && onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
                     if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
                         longPressTriggered = true
-                        onLongPress()
+                        if (native.repeatCount == 0) onLongPress()
                         return@onPreviewKeyEvent true
                     }
                 }
@@ -525,7 +547,8 @@ private fun ActionIconButton(
     selected: Boolean = false,
     selectedContainerColor: Color = Color(0xFF7CFF9B),
     selectedContentColor: Color = Color.Black,
-    onFocused: () -> Unit = {}
+    onFocused: () -> Unit = {},
+    focusRequester: FocusRequester? = null
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
     val longPressKeyTracker = rememberLongPressKeyTracker()
@@ -540,16 +563,20 @@ private fun ActionIconButton(
         },
         enabled = enabled,
         modifier = Modifier
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .size(NuvioTheme.spacing.xxxl)
             .onFocusChanged { state ->
                 if (state.isFocused) onFocused()
             }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
+                if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0 && isSelectKey(native.keyCode)) {
+                    longPressTriggered = false
+                }
                 if (onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
                     if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
                         longPressTriggered = true
-                        onLongPress()
+                        if (native.repeatCount == 0) onLongPress()
                         return@onPreviewKeyEvent true
                     }
                 }

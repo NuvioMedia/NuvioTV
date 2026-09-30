@@ -446,13 +446,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Korisničko iskustvo</string>
-    <string name="settings_experience_subtitle">Osnovno ili Napredno</string>
     <string name="settings_account">Nalog</string>
-    <string name="settings_account_subtitle">Status naloga i sinhronizacije</string>
     <string name="settings_profiles">Profili</string>
-    <string name="settings_profiles_subtitle">Upravljanje korisničkim profilima</string>
     <string name="settings_layout">Raspored</string>
-    <string name="settings_layout_subtitle">Struktura početnog ekrana i stilovi postera</string>
     <string name="settings_content_discovery">Sadržaj i otkrivanje</string>
     <string name="settings_content_discovery_subtitle">Dodaci, priključci, katalozi i izvori otkrivanja</string>
     <string name="settings_content_discovery_addons_subtitle">Upravljanje dodacima, redosledom kataloga i kolekcijama</string>
@@ -461,10 +457,8 @@
     <string name="settings_plugins_subtitle">Spremišta i provajderi</string>
     <string name="settings_integration">Integracije</string>
     <string name="settings_playback">Reprodukcija</string>
-    <string name="settings_playback_subtitle">Plejer, titlovi i automatsko puštanje</string>
     <string name="settings_trakt_subtitle">Otvori ekran za povezivanje sa Trakt-om</string>
     <string name="settings_tracking_title">Praćenje</string>
-    <string name="settings_tracking_subtitle">Upravljanje Trakt i Simkl povezivanjima</string>
     <string name="settings_tracking_description">Povežite provajdere praćenja i izaberite koji pokreće vašu biblioteku i Nastavak gledanja.</string>
     <string name="tracking_accounts_title">Nalozi</string>
     <string name="tracking_accounts_subtitle">Povežite i upravljajte uslugama praćenja</string>
@@ -490,7 +484,6 @@
     <string name="tracking_trakt_progress_required">Dostupno kada je Trakt izvor napretka gledanja</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">Verzija i politike</string>
     <string name="settings_network">Brzina mreže</string>
     <string name="settings_network_subtitle">Dijagnostika kašnjenja i preuzimanja</string>
     <string name="settings_advanced">Napredno</string>
@@ -622,7 +615,6 @@
     <string name="advanced_confirm_exit_subtitle">Potpuno ugasi aplikaciju i oslobodi memoriju pri izlasku. Zahteva dvostruki pritisak na dugme nazad radi potvrde.</string>
     <string name="confirm_exit_toast">Pritisnite nazad ponovo za izlaz</string>
     <string name="settings_debug">Otklanjanje grešaka (Debug)</string>
-    <string name="settings_debug_subtitle">Programerski alati i zastavice funkcija</string>
     <string name="settings_plugins_section_subtitle">Upravljanje spremištima, provajderima i stanjima priključaka</string>
     <string name="settings_account_section_subtitle">Status naloga i sinhronizacije</string>
     <string name="account_stat_addons">dodaci</string>
@@ -709,8 +701,6 @@
     <string name="contributors_hide_kofi_qr">Sakrij Ko-fi QR</string>
     <string name="contributors_profile_unavailable">Veza za GitHub profil je nedostupna.</string>
 
-    <string name="playback_section_general">Opšte</string>
-    <string name="playback_section_general_desc">Osnovno ponašanje reprodukcije.</string>
     <string name="playback_loading_overlay">Preklop učitavanja</string>
     <string name="playback_loading_overlay_sub">Prikazuj ekran za učitavanje dok se ne pojavi prvi kadar videa.</string>
     <string name="playback_pause_overlay">Preklop pauze</string>
@@ -730,9 +720,6 @@
     <string name="auto_skip_outro">Odjava / Završetak</string>
     <string name="auto_skip_outro_sub">Automatski preskoči odjavne špice i završetke za anime.</string>
     <string name="playback_auto_frame_rate">Auto brzina osvežavanja (AFR) i rezolucija</string>
-    <string name="playback_section_player">Plejer i izbor strima</string>
-    <string name="playback_section_player_desc">Izbor plejera, automatsko puštanje i filtriranje izvora.</string>
-    <string name="playback_player">Plejer</string>
     <string name="playback_player_internal">Interni</string>
     <string name="playback_player_external">Eksterni</string>
     <string name="playback_player_ask">Pitaj svaki put</string>
@@ -745,12 +732,8 @@
     <string name="playback_external_forward_subtitles_sub">Preuzmi titlove na željenom jeziku sa dodataka i prosledi ih eksternom plejeru.</string>
     <string name="playback_external_send_skip_segments">Pošalji vremenske oznake uvoda i odjave</string>
     <string name="playback_external_send_skip_segments_sub">Prosledi razrešene vremenske oznake uvoda/odjave eksternom plejeru za automatsko preskakanje. Radi samo u plejerima koji to podržavaju; ostali plejeri to ignorišu.</string>
-    <string name="playback_section_audio">Zvuk i video</string>
-    <string name="playback_section_audio_desc">Kontrole zvuka i kompatibilnost videa.</string>
     <string name="playback_section_subtitles">Titlovi</string>
     <string name="playback_section_subtitles_desc">Jezik, stil i režim rendersanja.</string>
-    <string name="playback_afr_open">Otvoreno</string>
-    <string name="playback_afr_closed">Zatvoreno</string>
     <string name="playback_afr_off">Isključeno</string>
     <string name="playback_afr_off_sub">Ne menjaj brzinu osvežavanja ekrana.</string>
     <string name="playback_afr_on_start">Pri pokretanju</string>
@@ -2915,10 +2898,6 @@
     <string name="network_fast_error_token_missing">fast.com: token nije pronađen u paketu</string>
 
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Dodavanje torenta nije uspelo</string>
-    <string name="torrent_error_binary_missing">TorrServer binarna datoteka nije pronađena na %1$s</string>
-    <string name="torrent_error_process_died">TorrServer proces je prekinut pri pokretanju (izlazni kod %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer se nije pokrenuo u roku od %1$ds</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Pokretanje P2P motora…</string>
