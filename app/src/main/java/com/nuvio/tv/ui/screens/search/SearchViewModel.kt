@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.search
 
+import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -76,6 +77,13 @@ class SearchViewModel @Inject constructor(
     private val catalogOrder = mutableListOf<String>()
 
     private var activeSearchJobs: List<Job> = emptyList()
+
+    /**
+     * Load-more jobs, tracked separately from [activeSearchJobs] because that list is replaced
+     * wholesale by each search run. Cancelled alongside it in [cancelSearchRun].
+     */
+    private val activeLoadMoreJobs: MutableSet<Job> =
+        java.util.concurrent.ConcurrentHashMap.newKeySet()
     private var searchRunJob: Job? = null
     private var activeSearchQuery: String? = null
     private var searchGeneration = 0L
@@ -227,6 +235,7 @@ class SearchViewModel @Inject constructor(
             SearchEvent.SubmitSearch -> submitSearch()
             SearchEvent.RememberSearchFromTextInput -> rememberSearchFromTextInput()
             SearchEvent.ClearRecentSearches -> clearRecentSearches()
+            is SearchEvent.RemoveRecentSearch -> removeRecentSearch(event.query)
             is SearchEvent.LoadMoreCatalog -> loadMoreCatalogItems(
                 catalogId = event.catalogId,
                 addonId = event.addonId,
@@ -249,8 +258,14 @@ class SearchViewModel @Inject constructor(
     private fun onQueryChanged(query: String) {
         _uiState.update {
             val trimmedInput = query.trim()
+            // Narrow the strip to what still matches before anything is fetched, so a letter
+            // that rules a title out drops it on that keystroke rather than a fetch later.
+            // Narrowing does not clear the strip when every current title stops matching. The
+            // fetch stays authoritative for an empty result.
+            val narrowed = rankedSuggestions(it.suggestions, trimmedInput.lowercase())
             it.copy(
                 query = query,
+                suggestions = if (narrowed.isEmpty()) it.suggestions else narrowed,
                 error = null,
                 isSearching = false,
                 // Keep whatever is on screen while a keystroke waits to run. Clearing here flashed
@@ -302,6 +317,34 @@ class SearchViewModel @Inject constructor(
         return if (everyWordMatches) 3 else null
     }
 
+    /**
+     * The strip contents for [names], best match first, capped at [MAX_SUGGESTIONS].
+     *
+     * Titles of the same rank keep the order of [names], which is the addon's own relevance order.
+     * Sorting them alphabetically put five titles ahead of "Jurassic Park" for "juras", and of
+     * "Slow Horses" for "slo", past the few completions a TV keyboard shows.
+     */
+    private fun rankedSuggestions(names: Collection<String>, queryLower: String): List<String> =
+        names
+            .mapNotNull { name -> suggestionRank(name, queryLower)?.let { name to it } }
+            .sortedBy { it.second }
+            .map { it.first }
+            .take(MAX_SUGGESTIONS)
+
+    /**
+     * Every catalog's titles, taken one position at a time: each catalog's first title, then each
+     * one's second, and so on, in catalog order. Each catalog's best matches lead, and the result
+     * does not depend on which catalog happened to answer first.
+     */
+    private fun mergedCatalogNames(namesByCatalog: Map<Int, List<String>>, catalogCount: Int): List<String> {
+        val catalogs = (0 until catalogCount).mapNotNull { namesByCatalog[it] }
+        val merged = LinkedHashSet<String>()
+        for (position in 0 until (catalogs.maxOfOrNull { it.size } ?: 0)) {
+            catalogs.forEach { names -> names.getOrNull(position)?.let(merged::add) }
+        }
+        return merged.toList()
+    }
+
     private fun fetchSuggestions(query: String) {
         suggestionJob?.cancel()
 
@@ -310,9 +353,10 @@ class SearchViewModel @Inject constructor(
             return
         }
 
-        // Don't show suggestions if the query already matches the submitted search
+        // Already searched, so a fetch would repeat itself and the strip is current. Leave it
+        // standing: live search submits as the user types, so typing a space between words
+        // trims back to the submitted query and lands here mid-query.
         if (query == _uiState.value.submittedQuery.trim() && _uiState.value.catalogRows.isNotEmpty()) {
-            _uiState.update { it.copy(suggestions = emptyList()) }
             return
         }
 
@@ -333,9 +377,10 @@ class SearchViewModel @Inject constructor(
                 return@launch
             }
 
-            val collectedNames = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+            // Each catalog's titles in the order it returned them, keyed by its place in searchTargets.
+            val namesByCatalog = java.util.concurrent.ConcurrentHashMap<Int, List<String>>()
             val queryLower = query.lowercase()
-            val suggestionJobs = searchTargets.map { (addon, catalog) ->
+            val suggestionJobs = searchTargets.mapIndexed { catalogIndex, (addon, catalog) ->
                 launch {
                     try {
                         catalogRepository.getCatalog(
@@ -348,26 +393,32 @@ class SearchViewModel @Inject constructor(
                             skip = 0,
                             skipStep = 100,
                             extraArgs = mapOf("search" to query),
-                            supportsSkip = false
+                            supportsSkip = false,
+                            posterScreen = com.nuvio.tv.core.poster.CustomPosterScreen.SEARCH
                         ).collect { result ->
                             if (result is NetworkResult.Success && _uiState.value.query.trim() == query) {
-                                var added = false
-                                result.data.items.forEach { item ->
-                                    if (collectedNames.add(item.name)) added = true
-                                }
-                                // Push updated suggestions immediately as each addon responds
-                                if (added) {
-                                    val sorted = collectedNames
-                                        .mapNotNull { name ->
-                                            suggestionRank(name, queryLower)?.let { name to it }
-                                        }
-                                        .sortedWith(compareBy({ it.second }, { it.first.lowercase() }))
-                                        .map { it.first }
-                                        .take(MAX_SUGGESTIONS)
-                                    _uiState.update { it.copy(suggestions = sorted) }
+                                val names = result.data.items.map { it.name }
+                                val previous = namesByCatalog.put(catalogIndex, names)
+                                // Catalog results arrive independently and are merged, so a batch
+                                // whose titles all fail the filter ranks to nothing while the batch
+                                // holding the match is still in flight. Only the settle below may
+                                // empty the strip: an empty push tells the keyboard there are no
+                                // completions, and it does not always take them back when the next
+                                // batch lands.
+                                if (names != previous) {
+                                    val ranked = rankedSuggestions(
+                                        mergedCatalogNames(namesByCatalog, searchTargets.size),
+                                        queryLower
+                                    )
+                                    if (ranked.isNotEmpty()) {
+                                        _uiState.update { it.copy(suggestions = ranked) }
+                                    }
                                 }
                             }
                         }
+                    } catch (e: CancellationException) {
+                        // The settle below treats joinAll() as "collection is over".
+                        throw e
                     } catch (_: Exception) {
                         // Ignore per-catalog errors for suggestions
                     }
@@ -376,12 +427,13 @@ class SearchViewModel @Inject constructor(
 
             suggestionJobs.joinAll()
 
-            // Nothing came back for this query. The strip keeps the previous query's titles
-            // while a fetch is in flight, to avoid blinking on every keystroke, so without this
-            // it would keep captioning text the field no longer contains. Live search used to
-            // clear it as a side effect; it no longer does.
-            if (collectedNames.isEmpty() && _uiState.value.query.trim() == query) {
-                _uiState.update { it.copy(suggestions = emptyList()) }
+            // Every catalog job has completed, so this is the first point the query is known
+            // to have no suggestions. Until here the strip keeps the previous query's titles
+            // rather than blinking on every keystroke. It must be cleared here or it would go
+            // on captioning text the field no longer contains.
+            if (_uiState.value.query.trim() == query) {
+                val ranked = rankedSuggestions(mergedCatalogNames(namesByCatalog, searchTargets.size), queryLower)
+                _uiState.update { it.copy(suggestions = ranked) }
             }
         }
     }
@@ -419,6 +471,12 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    private fun removeRecentSearch(query: String) {
+        viewModelScope.launch {
+            searchHistoryDataStore.removeRecentSearch(query)
+        }
+    }
+
     private fun resetCatalogAccumulator() {
         catalogsMap.clear()
         catalogOrder.clear()
@@ -432,6 +490,8 @@ class SearchViewModel @Inject constructor(
         searchRunJob = null
         activeSearchJobs.forEach { it.cancel() }
         activeSearchJobs = emptyList()
+        activeLoadMoreJobs.forEach { it.cancel() }
+        activeLoadMoreJobs.clear()
         activeSearchQuery = null
     }
 
@@ -677,7 +737,8 @@ class SearchViewModel @Inject constructor(
             skip = 0,
             skipStep = skipStep,
             extraArgs = mapOf("search" to query),
-            supportsSkip = supportsSkip
+            supportsSkip = supportsSkip,
+            posterScreen = com.nuvio.tv.core.poster.CustomPosterScreen.SEARCH
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
@@ -711,6 +772,12 @@ class SearchViewModel @Inject constructor(
     private fun isCurrentSearch(generation: Long, query: String): Boolean =
         generation == searchGeneration && uiState.value.submittedQuery.trim() == query
 
+    /**
+     * Pages one row of the current search. The page belongs to the search run that created it:
+     * it is keyed on [SearchUiState.submittedQuery] rather than the live field, and every
+     * assignment back into [catalogsMap] is gated on that run still being current, so a late page
+     * cannot merge into a different query's rows.
+     */
     private fun loadMoreCatalogItems(catalogId: String, addonId: String, type: String) {
         val (key, currentRow) = catalogsMap.entries.firstOrNull { (_, row) ->
             row.addonId == addonId && row.apiType == type && row.catalogId == catalogId
@@ -720,19 +787,19 @@ class SearchViewModel @Inject constructor(
             return
         }
 
-        catalogsMap[key] = currentRow.copy(isLoading = true)
-        scheduleCatalogRowsUpdate()
-
-        val query = uiState.value.query.trim()
+        val generation = searchGeneration
+        val query = uiState.value.submittedQuery.trim()
         if (query.isBlank()) {
             return
         }
 
-        viewModelScope.launch {
+        catalogsMap[key] = currentRow.copy(isLoading = true)
+        scheduleCatalogRowsUpdate()
+
+        val job = viewModelScope.launch {
             val addon = uiState.value.installedAddons.find { it.id == addonId && it.baseUrl == currentRow.addonBaseUrl }
                 ?: uiState.value.installedAddons.find { it.id == addonId } ?: run {
-                catalogsMap[key] = currentRow.copy(isLoading = false)
-                scheduleCatalogRowsUpdate()
+                clearRowLoading(key, generation, query)
                 return@launch
             }
 
@@ -747,23 +814,34 @@ class SearchViewModel @Inject constructor(
                 skip = nextSkip,
                 skipStep = currentRow.skipStep,
                 extraArgs = mapOf("search" to query),
-                supportsSkip = currentRow.supportsSkip
+                supportsSkip = currentRow.supportsSkip,
+                posterScreen = com.nuvio.tv.core.poster.CustomPosterScreen.SEARCH
             ).collect { result ->
                 when (result) {
                     is NetworkResult.Success -> {
-                        val latestRow = catalogsMap[key] ?: currentRow
-                        val mergedRow = latestRow.mergeCatalogPage(result.data)
-                        catalogsMap[key] = mergedRow
+                        if (!isCurrentSearch(generation, query)) return@collect
+                        val latestRow = catalogsMap[key] ?: return@collect
+                        catalogsMap[key] = latestRow.mergeCatalogPage(result.data)
                         scheduleCatalogRowsUpdate()
                     }
                     is NetworkResult.Error -> {
-                        catalogsMap[key] = currentRow.copy(isLoading = false)
-                        scheduleCatalogRowsUpdate()
+                        clearRowLoading(key, generation, query)
                     }
                     NetworkResult.Loading -> Unit
                 }
             }
         }
+        activeLoadMoreJobs.add(job)
+        job.invokeOnCompletion { activeLoadMoreJobs.remove(job) }
+    }
+
+    /** Drops the loading flag for a row, but only while its search run is still current. */
+    private fun clearRowLoading(key: String, generation: Long, query: String) {
+        if (!isCurrentSearch(generation, query)) return
+        val row = catalogsMap[key] ?: return
+        if (!row.isLoading) return
+        catalogsMap[key] = row.copy(isLoading = false)
+        scheduleCatalogRowsUpdate()
     }
 
     private fun scheduleCatalogRowsUpdate() {
@@ -838,7 +916,7 @@ class SearchViewModel @Inject constructor(
                         ?.options
                         .orEmpty()
                     DiscoverCatalog(
-                        key = "${addon.id}_${catalog.apiType}_${catalog.id}",
+                        key = catalogRowLegacyKey(addon.id, catalog.apiType, catalog.id),
                         addonId = addon.id,
                         addonName = addon.displayName,
                         addonBaseUrl = addon.baseUrl,
@@ -1011,7 +1089,8 @@ class SearchViewModel @Inject constructor(
                 skip = skip,
                 skipStep = selectedCatalog.skipStep,
                 extraArgs = extraArgs,
-                supportsSkip = selectedCatalog.supportsSkip
+                supportsSkip = selectedCatalog.supportsSkip,
+                posterScreen = com.nuvio.tv.core.poster.CustomPosterScreen.SEARCH
             ).collect { result ->
                 if (_uiState.value.discoverLocation == DiscoverLocation.OFF) return@collect
                 when (result) {

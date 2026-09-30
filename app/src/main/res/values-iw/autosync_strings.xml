@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Subtitle AutoSync. Hebrew translations. -->
+<resources>
+    <!-- Settings (Playback → Subtitles) -->
+    <string name="autosync_setting_title">סנכרון אוטומטי של כתוביות</string>
+    <string name="autosync_setting_description">התאמת התזמון של כתוביות התוסף שנבחרו לתזמון הכתוביות המוטמעות בסרטון.</string>
+    <string name="autosync_tolerance_title">סטייה מותרת בסנכרון אוטומטי</string>
+    <string name="autosync_tolerance_description">התזמון המקורי נשמר כשהתיקון הנדרש קטן מהערך הזה או שווה לו.</string>
+    <string name="autosync_tolerance_off">כבוי</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">חיפוש יסודי בסנכרון אוטומטי</string>
+    <string name="autosync_thorough_description">השוואה מתמשכת מול כתוביות ואפיקים מוטמעים אחרים לקבלת התאמה קרובה יותר לפני הסנכרון. כשהאפשרות כבויה, ההתאמה החזקה הראשונה תשמש מוקדם יותר. מוחלות רק התאמות ודאיות.</string>
+
+    <!-- Player messages (failures only) -->
+    <string name="autosync_toast_failed">הסנכרון נכשל: הסנכרון האוטומטי לא הצליח להתאים את הכתוביות לסרטון.</string>
+    <string name="autosync_toast_failed_no_reference">הסנכרון נכשל: אין בסרטון הזה כתוביות מוטמעות להשוואה.</string>
+    <string name="autosync_toast_failed_unsupported">הסנכרון נכשל: הסנכרון האוטומטי לא תומך בפורמט הכתוביות הזה.</string>
+
+    <!-- Subtitle list -->
+    <string name="autosync_label_synced">מסונכרן אוטומטית</string>
+</resources>

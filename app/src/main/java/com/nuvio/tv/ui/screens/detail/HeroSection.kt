@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -44,6 +45,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -79,6 +81,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
+import com.nuvio.tv.ui.util.contentTextDirection
 import java.util.Locale
 
 private const val MAX_VISIBLE_HERO_GENRES = 6
@@ -90,6 +93,7 @@ fun HeroContentSection(
     nextEpisode: Video?,
     nextToWatch: NextToWatch?,
     onPlayClick: () -> Unit,
+    isPlayEnabled: Boolean = true,
     onPlayLongPress: (() -> Unit)? = null,
     isInLibrary: Boolean,
     onToggleLibrary: () -> Unit,
@@ -99,8 +103,14 @@ fun HeroContentSection(
     onToggleMovieWatched: () -> Unit,
     trailerAvailable: Boolean = false,
     onTrailerClick: () -> Unit = {},
+    showRandomEpisodeButton: Boolean = false,
+    episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffleSettings = com.nuvio.tv.domain.model.EpisodeShuffleSettings(),
+    shuffleActionPending: Boolean = false,
+    onRandomEpisodeClick: () -> Unit = {},
+    randomEpisodeFocusRequester: FocusRequester? = null,
     hideLogoDuringTrailer: Boolean = false,
     mdbListRatings: MDBListRatings? = null,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     hideMetaInfoImdb: Boolean = false,
     tmdbRating: Float? = null,
     showFullReleaseDate: Boolean = true,
@@ -109,7 +119,8 @@ fun HeroContentSection(
     restorePlayFocusToken: Int = 0,
     onHeroActionFocused: () -> Unit = {},
     onPlayFocusRestored: () -> Unit = {},
-    onShowFullDescription: () -> Unit = {}
+    onShowFullDescription: () -> Unit = {},
+    onTruncationChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val isSeriesApi = remember(meta.apiType) {
@@ -166,6 +177,11 @@ fun HeroContentSection(
         targetValue = if (isTrailerPlaying) 0.25f else 0.4f,
         animationSpec = tween(600),
         label = "logoWidth"
+    )
+    val heroActionsAlpha by animateFloatAsState(
+        targetValue = if (isTrailerPlaying && hideLogoDuringTrailer) 0f else 1f,
+        animationSpec = tween(NuvioMotion.tokens.durations.overlay),
+        label = "heroActionsTrailerAlpha"
     )
 
     Column(
@@ -228,9 +244,10 @@ fun HeroContentSection(
 
             // Everything below the logo fades out during trailer
             AnimatedVisibility(
-                visible = !isTrailerPlaying,
+                visible = !isTrailerPlaying || hideLogoDuringTrailer,
                 enter = fadeIn(tween(NuvioMotion.tokens.durations.overlay)),
-                exit = fadeOut(tween(NuvioMotion.tokens.durations.overlay))
+                exit = fadeOut(tween(NuvioMotion.tokens.durations.overlay)),
+                modifier = Modifier.alpha(heroActionsAlpha)
             ) {
                 Column {
                     Row(
@@ -238,7 +255,8 @@ fun HeroContentSection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         PlayButton(
-                            text = nextToWatch?.displayText,
+                            text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),
+                            enabled = isPlayEnabled,
                             onClick = onPlayClick,
                             onLongPress = onPlayLongPress,
                             focusRequester = playButtonFocusRequester,
@@ -291,6 +309,16 @@ fun HeroContentSection(
                                 onFocused = onHeroActionFocused
                             )
                         }
+
+                        if (showRandomEpisodeButton) {
+                            ShuffleButton(
+                                active = episodeShuffle.enabled,
+                                pending = shuffleActionPending,
+                                onClick = onRandomEpisodeClick,
+                                focusRequester = randomEpisodeFocusRequester,
+                                onFocused = onHeroActionFocused
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
@@ -299,7 +327,9 @@ fun HeroContentSection(
                     if (!creditLine.isNullOrBlank()) {
                         Text(
                             text = creditLine,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                textDirection = creditLine.contentTextDirection()
+                            ),
                             color = NuvioTheme.extendedColors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -309,7 +339,7 @@ fun HeroContentSection(
                     }
 
                     if (mdbListRatings?.isEmpty() == false) {
-                        MDBListRatingsRow(ratings = mdbListRatings)
+                        MDBListRatingsRow(ratings = mdbListRatings, order = mdbListRatingOrder)
                         Spacer(modifier = Modifier.height(14.dp))
                     }
 
@@ -319,6 +349,7 @@ fun HeroContentSection(
                             onShowFullDescription = onShowFullDescription,
                             upFocusRequester = playButtonFocusRequester,
                             onFocused = onHeroActionFocused,
+                            onTruncationChanged = onTruncationChanged,
                             modifier = Modifier
                                 .fillMaxWidth(0.6f)
                                 .padding(bottom = NuvioTheme.spacing.md)
@@ -339,9 +370,11 @@ fun HeroContentSection(
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-private fun PlayButton(
+internal fun PlayButton(
     text: String?,
+    enabled: Boolean = true,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onLongPress: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
     restoreFocusToken: Int = 0,
@@ -362,6 +395,7 @@ private fun PlayButton(
     )
 
     Button(
+        enabled = enabled,
         onClick = {
             if (longPressTriggered) {
                 longPressTriggered = false
@@ -369,7 +403,7 @@ private fun PlayButton(
                 onClick()
             }
         },
-        modifier = Modifier
+        modifier = modifier
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 if (it.isFocused) {
@@ -378,14 +412,17 @@ private fun PlayButton(
             }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
-                if (onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
+                if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0 && isSelectKey(native.keyCode)) {
+                    longPressTriggered = false
+                }
+                if (enabled && onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
                     if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
                         longPressTriggered = true
-                        onLongPress()
+                        if (native.repeatCount == 0) onLongPress()
                         return@onPreviewKeyEvent true
                     }
                 }
-                if (onLongPress != null &&
+                if (enabled && onLongPress != null &&
                     longPressKeyTracker.handle(native, ::isSelectKey) {
                         longPressTriggered = true
                         onLongPress()
@@ -506,7 +543,8 @@ private fun ActionIconButton(
     selected: Boolean = false,
     selectedContainerColor: Color = Color(0xFF7CFF9B),
     selectedContentColor: Color = Color.Black,
-    onFocused: () -> Unit = {}
+    onFocused: () -> Unit = {},
+    focusRequester: FocusRequester? = null
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
     val longPressKeyTracker = rememberLongPressKeyTracker()
@@ -521,16 +559,20 @@ private fun ActionIconButton(
         },
         enabled = enabled,
         modifier = Modifier
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .size(NuvioTheme.spacing.xxxl)
             .onFocusChanged { state ->
                 if (state.isFocused) onFocused()
             }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
+                if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0 && isSelectKey(native.keyCode)) {
+                    longPressTriggered = false
+                }
                 if (onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
                     if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
                         longPressTriggered = true
-                        onLongPress()
+                        if (native.repeatCount == 0) onLongPress()
                         return@onPreviewKeyEvent true
                     }
                 }

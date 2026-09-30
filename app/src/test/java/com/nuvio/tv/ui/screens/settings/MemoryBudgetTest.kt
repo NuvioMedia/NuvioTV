@@ -23,6 +23,17 @@ class MemoryBudgetTest {
     }
 
     @Test
+    fun testParallelOverheadMb() {
+        // 3 parallel connections with 8 MB chunk size:
+        // bufferCount(3) = 3 + 2 = 5 chunks * 8 MB = 40 MB
+        assertEquals(40, MemoryBudget.parallelOverheadMb(connectionCount = 3, chunkSizeMb = 8))
+
+        // 4 parallel connections with 8 MB chunks:
+        // bufferCount(4) = 4 + 2 = 6 chunks * 8 MB = 48 MB
+        assertEquals(48, MemoryBudget.parallelOverheadMb(connectionCount = 4, chunkSizeMb = 8))
+    }
+
+    @Test
     fun testGetUsageStatusNativeAutoMode() {
         // When safeLimitMb = 1000, warningLimitMb = 1250
         // 1. totalUsageMb <= safeLimitMb should be SAFE

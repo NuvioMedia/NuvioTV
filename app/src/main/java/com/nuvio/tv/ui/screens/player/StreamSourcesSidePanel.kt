@@ -66,6 +66,7 @@ internal fun StreamSourcesSidePanel(
     onReload: () -> Unit,
     onAddonFilterSelected: (String?) -> Unit,
     onStreamSelected: (Stream) -> Unit,
+    onExpandStreams: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -114,6 +115,28 @@ internal fun StreamSourcesSidePanel(
         streamFocusRequesters.getOrPut(key) { FocusRequester() }
     }
     var firstCardHasFocus by remember(firstStreamKey) { mutableStateOf(false) }
+
+    var focusedStreamKey by remember { mutableStateOf<String?>(null) }
+    var closeButtonHasFocus by remember { mutableStateOf(false) }
+    var chipsHasFocus by remember { mutableStateOf(false) }
+
+    LaunchedEffect(streamKeys, focusedStreamKey, userMovedFromFirstResult) {
+        if (!userMovedFromFirstResult) return@LaunchedEffect
+        val key = focusedStreamKey ?: return@LaunchedEffect
+        val newIndex = streamKeys.indexOf(key)
+        if (newIndex < 0) return@LaunchedEffect
+        val firstVisible = streamListState.firstVisibleItemIndex
+        val lastVisible = streamListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: firstVisible
+        if (newIndex < firstVisible || newIndex > lastVisible) {
+            streamListState.scrollToItem(newIndex)
+        }
+        if (closeButtonHasFocus || chipsHasFocus) return@LaunchedEffect
+        val requester = streamFocusRequesters[key]
+        if (requester != null) {
+            withFrameNanos { }
+            runCatching { requester.requestFocus() }
+        }
+    }
 
     // Request initial focus when loading finishes and streams are available,
     // only if the user has not navigated away or focused the chips row.
@@ -209,6 +232,7 @@ internal fun StreamSourcesSidePanel(
                     isPrimary = false,
                     modifier = Modifier
                         .focusRequester(closeButtonFocusRequester)
+                        .onFocusChanged { closeButtonHasFocus = it.isFocused }
                         .onKeyEvent { event ->
                             if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
                                 event.key == Key.DirectionDown
@@ -258,25 +282,27 @@ internal fun StreamSourcesSidePanel(
                 enter = fadeIn(animationSpec = tween(200)),
                 exit = fadeOut(animationSpec = tween(120))
             ) {
-                AddonFilterChips(
-                    addons = uiState.sourceAvailableAddons,
-                    sourceChips = uiState.sourceChips,
-                    selectedAddon = uiState.sourceSelectedAddonFilter,
-                    isStillFetching = uiState.isLoadingSourceStreams ||
-                        uiState.sourceChips.any { it.status == SourceChipStatus.LOADING },
-                    onRefresh = {
-                        userMovedFromFirstResult = false
-                        firstResultFocusAssigned = false
-                        onReload()
-                    },
-                    onAddonSelected = { onAddonFilterSelected(it) },
-                    externalFocusRequesters = chipFocusRequesters,
-                    externalOrderedNames = orderedAddonNames,
-                    onUpKey = {
-                        try { closeButtonFocusRequester.requestFocus() } catch (_: Exception) {}
-                    },
-                    debugTag = "SourcesSidePanel"
-                )
+                Box(modifier = Modifier.onFocusChanged { chipsHasFocus = it.hasFocus }) {
+                    AddonFilterChips(
+                        addons = uiState.sourceAvailableAddons,
+                        sourceChips = uiState.sourceChips,
+                        selectedAddon = uiState.sourceSelectedAddonFilter,
+                        isStillFetching = uiState.isLoadingSourceStreams ||
+                            uiState.sourceChips.any { it.status == SourceChipStatus.LOADING },
+                        onRefresh = {
+                            userMovedFromFirstResult = false
+                            firstResultFocusAssigned = false
+                            onReload()
+                        },
+                        onAddonSelected = { onAddonFilterSelected(it) },
+                        externalFocusRequesters = chipFocusRequesters,
+                        externalOrderedNames = orderedAddonNames,
+                        onUpKey = {
+                            try { closeButtonFocusRequester.requestFocus() } catch (_: Exception) {}
+                        },
+                        debugTag = "SourcesSidePanel"
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
@@ -320,6 +346,17 @@ internal fun StreamSourcesSidePanel(
                     )
 
                     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
+
+                    val lastVisibleIndex = remember(streamListState) {
+                        androidx.compose.runtime.derivedStateOf {
+                            streamListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        }
+                    }
+                    LaunchedEffect(lastVisibleIndex.value, uiState.sourceFilteredStreams.size) {
+                        if (lastVisibleIndex.value >= uiState.sourceFilteredStreams.size - 20) {
+                            onExpandStreams()
+                        }
+                    }
 
                     LazyColumn(
                         state = streamListState,
@@ -403,6 +440,9 @@ internal fun StreamSourcesSidePanel(
                                 badgePlacement = uiState.streamBadgePlacement,
                                 onClick = { onStreamSelected(stream) },
                                 onFocusChanged = { focused ->
+                                    if (focused) {
+                                        focusedStreamKey = streamKeys[index]
+                                    }
                                     if (index == 0) {
                                         firstCardHasFocus = focused
                                     }

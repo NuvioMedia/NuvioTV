@@ -55,6 +55,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.request.transitionFactory
 import com.nuvio.tv.R
@@ -96,9 +97,14 @@ internal fun ModernHeroScene(
         requestWidthPx = requestWidthPx,
         requestHeightPx = requestHeightPx
     )
+    val isTrailerPlayingFullScreen = {
+        val s = state()
+        s.fullScreenBackdrop && s.shouldPlayTrailer && s.trailerFirstFrameRendered
+    }
     ModernHeroGradientLayer(
         bgColor = bgColor,
         isFullScreen = isFullScreen,
+        isTrailerPlayingFullScreen = isTrailerPlayingFullScreen,
         modifier = modifier
     )
 }
@@ -203,6 +209,7 @@ internal fun ModernHeroMediaLayer(
 internal fun ModernHeroGradientLayer(
     bgColor: Color,
     isFullScreen: () -> Boolean,
+    isTrailerPlayingFullScreen: () -> Boolean = { false },
     modifier: Modifier
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -210,6 +217,7 @@ internal fun ModernHeroGradientLayer(
         modifier = modifier
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
+                alpha = if (isTrailerPlayingFullScreen()) 0f else 1f
             }
             .drawWithCache {
                 val fullScreen = isFullScreen()
@@ -292,6 +300,8 @@ internal fun HeroTitleBlock(
     enrichmentActive: () -> Boolean = { false },
     portraitMode: Boolean,
     showImdbRatings: Boolean,
+    mdbListShowOnHero: Boolean = false,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     trailerPlaying: () -> Boolean = { false },
     modifier: Modifier = Modifier
 ) {
@@ -321,6 +331,8 @@ internal fun HeroTitleBlock(
             previewProvider = { displayPreview },
             portraitMode = portraitMode,
             showImdbRatings = showImdbRatings,
+            mdbListShowOnHero = mdbListShowOnHero,
+            mdbListRatingOrder = mdbListRatingOrder,
             trailerPlaying = trailerPlaying
         )
     }
@@ -331,6 +343,8 @@ private fun HeroTitleContent(
     previewProvider: () -> HeroPreview?,
     portraitMode: Boolean,
     showImdbRatings: Boolean,
+    mdbListShowOnHero: Boolean = false,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     trailerPlaying: () -> Boolean = { false }
 ) {
     val preview = previewProvider() ?: return
@@ -448,9 +462,11 @@ private fun HeroTitleContent(
         val secondaryDetails = secondaryMeta.details
         val hasSecondaryBadge = ageRatingBadge != null || statusBadge != null
         val hasImdbRatingForLayout = !preview.imdbText.isNullOrBlank()
-        val reserveImdbInPrimary = !preview.isSeries && !hasSecondaryBadge && hasImdbRatingForLayout
+        val hasMdbListRatings = mdbListShowOnHero && preview.mdbListRatings != null && !preview.mdbListRatings.isEmpty()
+        // When MDBList ratings are shown, don't reserve space for standalone IMDb badge.
+        val reserveImdbInPrimary = !hasMdbListRatings && !preview.isSeries && !hasSecondaryBadge && hasImdbRatingForLayout
         val reserveImdbInPrimaryWithHighlight = reserveImdbInPrimary && secondaryHighlightText == null
-        val reserveImdbInSecondary = hasImdbRatingForLayout &&
+        val reserveImdbInSecondary = !hasMdbListRatings && hasImdbRatingForLayout &&
             (preview.isSeries || hasSecondaryBadge || secondaryHighlightText != null)
         val showImdbInPrimaryWithHighlight = showImdbRatings && reserveImdbInPrimaryWithHighlight
         val showImdbInSecondary = showImdbRatings && reserveImdbInSecondary
@@ -525,7 +541,7 @@ private fun HeroTitleContent(
                             imdbText = preview.imdbText.orEmpty(),
                             textStyle = labelMedium,
                             textColor = NuvioTheme.colors.TextSecondary,
-                            logoSize = 30.dp * metaScale,
+                            logoSize = NuvioTheme.spacing.xl * metaScale,
                             spacing = imdbMetaSpacing,
                             visible = showImdbInPrimaryWithHighlight
                         )
@@ -534,7 +550,7 @@ private fun HeroTitleContent(
             }
         }
 
-        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty()) {
+        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty() || hasMdbListRatings) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -552,10 +568,10 @@ private fun HeroTitleContent(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
                     HeroMetaDivider(
                         scale = metaScale,
-                        visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty()
+                        visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
                     )
                 }
                 if (ageRatingBadge != null && statusBadge != null) {
@@ -581,10 +597,10 @@ private fun HeroTitleContent(
                         )
                     }
                 }
-                if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
                     HeroMetaDivider(
                         scale = metaScale,
-                        visible = showImdbInSecondary || secondaryDetails.isNotEmpty()
+                        visible = showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
                     )
                 }
                 if (reserveImdbInSecondary) {
@@ -592,7 +608,7 @@ private fun HeroTitleContent(
                         imdbText = preview.imdbText.orEmpty(),
                         textStyle = labelMedium,
                         textColor = NuvioTheme.colors.TextSecondary,
-                        logoSize = 30.dp * metaScale,
+                        logoSize = NuvioTheme.spacing.xl * metaScale,
                         spacing = imdbMetaSpacing,
                         visible = showImdbInSecondary
                     )
@@ -615,13 +631,27 @@ private fun HeroTitleContent(
                         HeroMetaDivider(metaScale)
                     }
                 }
+                // MDBList ratings inline after other secondary meta.
+                if (showImdbRatings && hasMdbListRatings) {
+                    // Divider before MDBList ratings is already handled by the
+                    // badge/IMDb/details divider logic above — only add one
+                    // when IMDb or details were the last visible element.
+                    if (showImdbInSecondary || secondaryDetails.isNotEmpty()) {
+                        HeroMetaDivider(metaScale)
+                    }
+                    com.nuvio.tv.ui.components.MDBListRatingsRow(
+                        ratings = preview.mdbListRatings!!,
+                        maxItems = 3,
+                        order = mdbListRatingOrder
+                    )
+                }
             }
         }
 
         preview.description?.takeIf { it.isNotBlank() }?.let { description ->
             Text(
                 text = description,
-                style = scaledDescriptionStyle,
+                style = scaledDescriptionStyle.copy(textDirection = description.contentTextDirection()),
                 color = NuvioTheme.colors.TextPrimary,
                 maxLines = descriptionMaxLines,
                 overflow = TextOverflow.Ellipsis,

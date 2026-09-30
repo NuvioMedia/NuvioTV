@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens
 
+import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -96,7 +98,7 @@ fun CatalogSeeAllScreen(
     BackHandler { onBackPress() }
 
     val isSearchMode = searchViewModel != null
-    val catalogKey = "${addonId}_${type}_${catalogId}"
+    val catalogKey = catalogRowLegacyKey(addonId, type, catalogId)
 
     // In search mode, get the catalog row from SearchViewModel's existing results.
     // Otherwise fall back to HomeViewModel's fullCatalogRows (home screen catalogs).
@@ -228,7 +230,9 @@ fun CatalogSeeAllScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+                    columns = GridCells.Adaptive(
+                        minSize = if (com.nuvio.tv.ui.components.LocalLandscapePosterMode.current) posterCardStyle.height else posterCardStyle.width
+                    ),
                     modifier = Modifier.dpadRepeatThrottle(),
                     contentPadding = PaddingValues(
                         start = NuvioTheme.spacing.xxxl,
@@ -291,15 +295,18 @@ fun CatalogSeeAllScreen(
                                 androidx.compose.foundation.shape.RoundedCornerShape(posterCardStyle.cornerRadius)
                             }
                             val cardDepthStyle = com.nuvio.tv.ui.components.LocalCardDepthStyle.current
+                            val globalLandscape = com.nuvio.tv.ui.components.LocalLandscapePosterMode.current
                             Column(
                                 modifier = Modifier
-                                    .width(posterCardStyle.width)
+                                    .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
                             ) {
                                 androidx.tv.material3.Card(
                                     onClick = {},
                                     modifier = Modifier
-                                        .width(posterCardStyle.width)
-                                        .height(posterCardStyle.height)
+                                        .then(
+                                            if (globalLandscape) Modifier.fillMaxWidth().aspectRatio(com.nuvio.tv.domain.model.PosterShape.LANDSCAPE.aspectRatio())
+                                            else Modifier.width(posterCardStyle.width).height(posterCardStyle.height)
+                                        )
                                         .then(Modifier.focusProperties { canFocus = false }),
                                     shape = androidx.tv.material3.CardDefaults.shape(shape = cardShape),
                                     colors = androidx.tv.material3.CardDefaults.colors(
@@ -325,7 +332,7 @@ fun CatalogSeeAllScreen(
                                 }
                                 Spacer(
                                     modifier = Modifier
-                                        .width(posterCardStyle.width)
+                                        .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
                                         .padding(top = NuvioTheme.spacing.sm)
                                         .height(MaterialTheme.typography.titleMedium.lineHeight.value.dp)
                                 )

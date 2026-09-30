@@ -60,6 +60,7 @@ fun SkipIntroButton(
     interval: SkipInterval?,
     dismissed: Boolean,
     controlsVisible: Boolean,
+    targetsPostCredits: Boolean = false,
     suppressFocus: Boolean = false,
     canFocus: Boolean = true,
     onSkip: () -> Unit,
@@ -211,7 +212,7 @@ fun SkipIntroButton(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = getSkipLabel(lastType),
+                        text = getSkipLabel(lastType, targetsPostCredits),
                         color = if (isFocused) NuvioTheme.colors.OnSecondary else Color.White,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(start = NuvioTheme.spacing.sm)
@@ -237,9 +238,11 @@ fun SkipIntroButton(
 }
 
 @Composable
-private fun getSkipLabel(type: String?): String = when (type?.trim()?.lowercase()) {
+private fun getSkipLabel(type: String?, targetsPostCredits: Boolean): String = when (type?.trim()?.lowercase()) {
     "op", "opening", "mixed-op", "intro" -> stringResource(R.string.skip_intro)
-    "ed", "ending", "mixed-ed", "outro", "credits" -> stringResource(R.string.skip_ending)
+    "ed", "ending", "mixed-ed", "outro", "credits" ->
+        stringResource(if (targetsPostCredits) R.string.skip_to_post_credits else R.string.skip_ending)
+    "movie-credits" -> stringResource(if (targetsPostCredits) R.string.skip_to_post_credits else R.string.skip_movie_credits)
     "recap" -> stringResource(R.string.skip_recap)
     else -> stringResource(R.string.skip_generic)
 }

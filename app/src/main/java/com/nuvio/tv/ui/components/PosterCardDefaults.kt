@@ -1,8 +1,12 @@
 package com.nuvio.tv.ui.components
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.Dp
 import com.nuvio.tv.ui.theme.NuvioComponents
+
+val LocalLandscapePosterMode = staticCompositionLocalOf { false }
+val LocalAlwaysBackdropWithLogo = staticCompositionLocalOf { false }
 
 @Immutable
 data class PosterCardStyle(

@@ -82,6 +82,7 @@ class ExternalAutoNextNavigationEventsTest {
         nextVideoId = "episode-$episode",
         nextSeason = 1,
         nextEpisode = episode,
+        profileId = 1,
         requestedAtMs = requestedAtMs
     )
 }

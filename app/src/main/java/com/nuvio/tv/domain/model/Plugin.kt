@@ -85,14 +85,16 @@ data class ScraperInfo(
     val type: RepositoryType = RepositoryType.NUVIO_JS
 ) {
     fun supportsType(type: String): Boolean {
-        val targetTypes = when (type.lowercase()) {
-            "series" -> listOf("series", "tv", "anime")
-            "other" -> listOf("other", "tv")
-            else -> listOf(type.lowercase())
-        }
-        return supportedTypes.map { it.lowercase() }.any { it in targetTypes }
+        val normalizedType = normalizePluginType(type)
+        return supportedTypes.any { normalizePluginType(it) == normalizedType }
     }
 }
+
+private fun normalizePluginType(value: String): String =
+    when (value.lowercase()) {
+        "series", "show", "other" -> "tv"
+        else -> value.lowercase()
+    }
 
 /**
  * Result from a local scraper execution

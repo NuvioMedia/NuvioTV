@@ -10,6 +10,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
 import com.nuvio.tv.domain.model.AppFont
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.domain.model.CustomThemeColors
 import com.nuvio.tv.domain.model.SettingsUiStyle
 
 data class NuvioExtendedColors(
@@ -42,6 +43,8 @@ val LocalNuvioTextStyles = staticCompositionLocalOf { NuvioTextStyles }
 
 val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 
+val LocalThemePalette = staticCompositionLocalOf { ThemeColors.White }
+
 val LocalSettingsUiStyle = staticCompositionLocalOf { SettingsUiStyle.CLASSIC }
 
 val LocalNuvioFocusRingStyle = staticCompositionLocalOf {
@@ -56,9 +59,12 @@ fun NuvioTheme(
     amoledMode: Boolean = false,
     amoledSurfacesMode: Boolean = false,
     settingsUiStyle: SettingsUiStyle = SettingsUiStyle.CLASSIC,
+    customThemeColors: CustomThemeColors = CustomThemeColors.Default,
     content: @Composable () -> Unit
 ) {
-    val palette = ThemeColors.getColorPalette(appTheme)
+    val palette = androidx.compose.runtime.remember(appTheme, customThemeColors) {
+        ThemeColors.getColorPalette(appTheme, customThemeColors)
+    }
     val focusRingStyle = createFocusRingStyle(palette)
     val colorScheme = NuvioColorScheme(
         palette = palette,
@@ -97,6 +103,7 @@ fun NuvioTheme(
         LocalNuvioExtendedColors provides extendedColors,
         LocalNuvioTextStyles provides textStyles,
         LocalAppTheme provides appTheme,
+        LocalThemePalette provides palette,
         LocalSettingsUiStyle provides settingsUiStyle,
         LocalNuvioFocusRingStyle provides focusRingStyle
     ) {
@@ -109,6 +116,11 @@ fun NuvioTheme(
 }
 
 object NuvioTheme {
+    val palette: ThemeColorPalette
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalThemePalette.current
+
     val colors: NuvioColorScheme
         @Composable
         @ReadOnlyComposable

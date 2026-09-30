@@ -72,6 +72,8 @@ import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
+import com.nuvio.tv.domain.model.catalogTypesMatch
+import com.nuvio.tv.domain.model.collectionCatalogKey
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.CollectionSource
 import com.nuvio.tv.domain.model.FolderViewMode
@@ -84,6 +86,8 @@ import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -164,7 +168,7 @@ fun FolderEditorContent(
     val genrePickerSource = genrePickerIndex?.let { folder.sources.getOrNull(it) as? AddonCatalogCollectionSource }
     val genrePickerCatalog = genrePickerSource?.let { source ->
         uiState.availableCatalogs.find {
-            it.addonId == source.addonId && it.type == source.type && it.catalogId == source.catalogId
+            it.addonId == source.addonId && catalogTypesMatch(it.type, source.type) && it.catalogId == source.catalogId
         }
     }
 
@@ -210,8 +214,8 @@ fun FolderEditorContent(
         ) {
             Text(
                 text = stringResource(R.string.collections_editor_edit_folder),
-                style = MaterialTheme.typography.headlineMedium,
-                color = NuvioTheme.colors.TextPrimary
+                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                color = NuvioTheme.colors.TextPrimary,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 NuvioButton(onClick = { viewModel.cancelFolderEdit() }) {
@@ -569,8 +573,8 @@ fun FolderEditorContent(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.collections_editor_hide_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = NuvioTheme.colors.TextPrimary
+                                style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.Content),
+                                color = NuvioTheme.colors.TextPrimary,
                             )
                             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                             Text(
@@ -618,13 +622,13 @@ fun FolderEditorContent(
                 val traktSource = source as? TraktCollectionSource
                 val catalog = addonSource?.let { addon ->
                     uiState.availableCatalogs.find {
-                        it.addonId == addon.addonId && it.type == addon.type && it.catalogId == addon.catalogId
+                        it.addonId == addon.addonId && catalogTypesMatch(it.type, addon.type) && it.catalogId == addon.catalogId
                     }
                 }
                 val addonCatalogInfo = addonSource?.let { src ->
-                    val exactKey = "${src.addonId}|${src.type}|${src.catalogId}"
+                    val exactKey = collectionCatalogKey(src.addonId, src.type, src.catalogId)
                     uiState.addonCatalogInfoByKey[exactKey]
-                        ?: uiState.addonCatalogInfoByKey["${src.addonId}|${src.type}|${src.catalogId.substringBefore(",")}"]
+                        ?: uiState.addonCatalogInfoByKey[collectionCatalogKey(src.addonId, src.type, src.catalogId.substringBefore(","))]
                 }
                 val isMissing = addonSource != null && catalog == null && addonCatalogInfo == null
                 val sourceKey = collectionSourceKey(source)
@@ -669,6 +673,7 @@ fun FolderEditorContent(
                             )
                             Text(
                                 text = when {
+                                    isMissing && addonSource.addonId in uiState.installedAddonIds -> stringResource(R.string.collections_editor_catalog_missing)
                                     isMissing -> stringResource(R.string.collections_editor_addon_missing, addonSource.addonId)
                                     addonSource != null && catalog != null -> "$addonTypeLabel - ${catalog.addonName}"
                                     addonSource != null && addonCatalogInfo != null -> "$addonTypeLabel - ${addonCatalogInfo.addonName}"

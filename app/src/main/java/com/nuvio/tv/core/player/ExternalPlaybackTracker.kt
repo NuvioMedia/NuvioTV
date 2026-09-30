@@ -15,11 +15,13 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
+import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.ui.screens.player.PlayerNextEpisodeRules
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +42,14 @@ import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
+internal fun PlayerSettings.shouldSendSkipSegments(): Boolean = externalPlayerSendSkipSegments
+
+internal fun externalSkipIntervals(
+    intervals: List<SkipInterval>
+): List<SkipInterval> = intervals.map {
+    if (it.type == "movie-credits") it.copy(type = "end-credits") else it
+}
+
 /**
  * Metadata about the content being played in an external player.
  * Stored here so progress can be saved regardless of which screen initiated playback.
@@ -55,7 +65,8 @@ data class ExternalPlaybackMetadata(
     val season: Int?,
     val episode: Int?,
     val episodeTitle: String?,
-    val year: String?
+    val year: String?,
+    val profileId: Int
 ) {
     /**
      * Builds a display title for external players.
@@ -92,6 +103,7 @@ data class ExternalAutoNextEpisode(
     val nextVideoId: String,
     val nextSeason: Int?,
     val nextEpisode: Int,
+    val profileId: Int,
     // Lets the collector skip a value replayed after a config change while still
     // acting on a genuinely new event after a process restart.
     val requestedAtMs: Long = System.currentTimeMillis()
@@ -110,7 +122,8 @@ data class ExternalNextEpisodeSnapshot(
     val metadataResolved: Boolean,
     val nextVideoId: String? = null,
     val nextSeason: Int? = null,
-    val nextEpisode: Int? = null
+    val nextEpisode: Int? = null,
+    val shufflePlayback: Boolean = false
 ) {
     val hasNextEpisode: Boolean?
         get() = if (!metadataResolved) null else nextVideoId != null && nextEpisode != null
@@ -172,11 +185,13 @@ class ExternalPlaybackTracker @Inject constructor(
     private val watchProgressRepository: WatchProgressRepository,
     private val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
     private val metaRepository: MetaRepository,
+    private val episodeShufflePlayback: EpisodeShufflePlayback,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val skipIntroRepository: SkipIntroRepository,
     private val cloudLibraryRepository: CloudLibraryRepository,
     private val cloudPlaybackProgressStore: CloudLibraryPlaybackProgressStore,
-    private val cloudPlaybackSessionStore: CloudLibraryPlaybackSessionStore
+    private val cloudPlaybackSessionStore: CloudLibraryPlaybackSessionStore,
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager
 ) {
     companion object {
         private const val TAG = "ExtPlaybackTracker"
@@ -441,20 +456,21 @@ class ExternalPlaybackTracker @Inject constructor(
     /**
      * Resolves intro/outro skip segments for [metadata] via the same repository the internal
      * player uses, and serializes them to a JSON array string for the external player. Mirrors
-     * the id-format handling in `fetchSkipIntervals`. Returns null when skip is disabled, the
+     * the id-format handling in `fetchSkipIntervals`. Returns null when forwarding is disabled, the
      * content can't be identified, or nothing is found.
      */
     private suspend fun resolveSkipSegmentsJson(metadata: ExternalPlaybackMetadata): String? {
         if (metadata.contentType.equals("cloud", ignoreCase = true)) return null
-        // Opt-in via the External Player setting (not the internal player's "Skip Intro", which is
-        // greyed out while external player is selected).
-        if (!playerSettingsDataStore.playerSettings.first().externalPlayerSendSkipSegments) return null
+        val settings = playerSettingsDataStore.playerSettings.first()
+        if (!settings.shouldSendSkipSegments()) return null
 
         // videoId carries the episode-specific id (e.g. mal:/kitsu:/imdb); fall back to contentId.
         val effectiveId = metadata.videoId.takeIf { it.isNotBlank() } ?: metadata.contentId
 
         val intervals = withTimeoutOrNull(SKIP_RESOLVE_TIMEOUT_MS) {
             when {
+                metadata.contentType.equals("movie", ignoreCase = true) ->
+                    skipIntroRepository.getMovieSkipIntervals(metadata.contentId, effectiveId)
                 effectiveId.startsWith("mal:") -> {
                     val parts = effectiveId.split(":")
                     val malId = parts.getOrNull(1) ?: return@withTimeoutOrNull null
@@ -480,8 +496,10 @@ class ExternalPlaybackTracker @Inject constructor(
         }
         if (intervals.isNullOrEmpty()) return null
 
+        val forwardedIntervals = externalSkipIntervals(intervals)
+
         val arr = org.json.JSONArray()
-        intervals.forEach { iv ->
+        forwardedIntervals.forEach { iv ->
             arr.put(
                 org.json.JSONObject()
                     .put("type", iv.type)
@@ -696,9 +714,14 @@ class ExternalPlaybackTracker @Inject constructor(
 
     private suspend fun currentSavedProgress(metadata: ExternalPlaybackMetadata): WatchProgress? {
         val flow = if (metadata.season != null && metadata.episode != null) {
-            watchProgressRepository.getEpisodeProgress(metadata.contentId, metadata.season, metadata.episode)
+            watchProgressRepository.getEpisodeProgress(
+                metadata.contentId,
+                metadata.season,
+                metadata.episode,
+                metadata.profileId
+            )
         } else {
-            watchProgressRepository.getProgress(metadata.contentId)
+            watchProgressRepository.getProgress(metadata.contentId, metadata.profileId)
         }
         return flow.firstOrNull()
     }
@@ -736,6 +759,7 @@ class ExternalPlaybackTracker @Inject constructor(
             .putInt("episode", m.episode ?: Int.MIN_VALUE)
             .putString("episodeTitle", m.episodeTitle)
             .putString("year", m.year)
+            .putInt("profileId", m.profileId)
             .putString("cloudSessionToken", cloudSessionToken)
             .apply()
     }
@@ -752,6 +776,7 @@ class ExternalPlaybackTracker @Inject constructor(
             .putBoolean("autoNextEnabled", autoNextEnabled == true)
             .putBoolean("nextEpisodeSnapshotPresent", true)
             .putBoolean("nextEpisodeMetadataResolved", snapshot.metadataResolved)
+            .putBoolean("nextEpisodeShufflePlayback", snapshot.shufflePlayback)
             .putString("nextEpisodeVideoId", snapshot.nextVideoId)
             .putInt("nextEpisodeSeason", snapshot.nextSeason ?: Int.MIN_VALUE)
             .putInt("nextEpisodeNumber", snapshot.nextEpisode ?: Int.MIN_VALUE)
@@ -772,6 +797,7 @@ class ExternalPlaybackTracker @Inject constructor(
         return ExternalNextEpisodeSnapshot(
             metadataResolved = p.getBoolean("nextEpisodeMetadataResolved", false),
             nextVideoId = p.getString("nextEpisodeVideoId", null),
+            shufflePlayback = p.getBoolean("nextEpisodeShufflePlayback", false),
             nextSeason = p.getInt("nextEpisodeSeason", Int.MIN_VALUE)
                 .takeIf { it != Int.MIN_VALUE },
             nextEpisode = p.getInt("nextEpisodeNumber", Int.MIN_VALUE)
@@ -782,6 +808,8 @@ class ExternalPlaybackTracker @Inject constructor(
     private fun loadPersistedMetadata(): ExternalPlaybackMetadata? {
         val p = persistedPrefs
         val contentId = p.getString("contentId", null) ?: return null
+        if (!p.contains("profileId")) return null
+        val profileId = p.getInt("profileId", Int.MIN_VALUE).takeIf { it > 0 } ?: return null
         val season = p.getInt("season", Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE }
         val episode = p.getInt("episode", Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE }
         return ExternalPlaybackMetadata(
@@ -795,7 +823,8 @@ class ExternalPlaybackTracker @Inject constructor(
             season = season,
             episode = episode,
             episodeTitle = p.getString("episodeTitle", null),
-            year = p.getString("year", null)
+            year = p.getString("year", null),
+            profileId = profileId
         )
     }
 
@@ -828,7 +857,8 @@ class ExternalPlaybackTracker @Inject constructor(
                 if (refreshedSnapshot.metadataResolved) {
                     // Keep a playable successor captured from the screen's complete episode list
                     // if a background addon refresh returns a thinner list with no successor.
-                    val keepLoadedSuccessor = nextEpisodeSnapshot.hasNextEpisode == true &&
+                    val keepLoadedSuccessor = !refreshedSnapshot.shufflePlayback &&
+                        nextEpisodeSnapshot.hasNextEpisode == true &&
                         refreshedSnapshot.hasNextEpisode == false
                     if (!keepLoadedSuccessor) {
                         nextEpisodeSnapshot = refreshedSnapshot
@@ -865,9 +895,25 @@ class ExternalPlaybackTracker @Inject constructor(
         }
     }
 
-    private suspend fun resolveNextEpisodeSnapshot(
-        metadata: ExternalPlaybackMetadata
+    private var loadedNextEpisodeMeta: Pair<ExternalPlaybackMetadata, List<Video>>? = null
+
+    suspend fun resolveNextEpisodeSnapshot(
+        metadata: ExternalPlaybackMetadata,
+        videos: List<Video>,
+        preferredVideoId: String? = null
     ): ExternalNextEpisodeSnapshot {
+        loadedNextEpisodeMeta = metadata to videos
+        return episodeShufflePlayback.externalSnapshot(metadata, videos, preferredVideoId)
+    }
+
+    private suspend fun resolveNextEpisodeSnapshot(
+        metadata: ExternalPlaybackMetadata,
+        preferredVideoId: String? = null
+    ): ExternalNextEpisodeSnapshot {
+        val loaded = loadedNextEpisodeMeta?.takeIf { it.first == metadata }?.second
+        if (loaded != null && episodeShufflePlayback.isEnabled(metadata)) {
+            return resolveNextEpisodeSnapshot(metadata, loaded, preferredVideoId)
+        }
         val result = withTimeoutOrNull(META_FETCH_TIMEOUT_MS) {
             metaRepository
                 .getMetaFromAllAddons(type = metadata.contentType, id = metadata.contentId)
@@ -875,11 +921,7 @@ class ExternalPlaybackTracker @Inject constructor(
         }
         val meta = (result as? NetworkResult.Success)?.data
             ?: return ExternalNextEpisodeSnapshot.Unknown
-        return resolveExternalNextEpisodeSnapshot(
-            videos = meta.videos,
-            currentSeason = metadata.season,
-            currentEpisode = metadata.episode
-        )
+        return resolveNextEpisodeSnapshot(metadata, meta.videos, preferredVideoId)
     }
 
     // True on a natural end (end_by != "user"), or for players without end_by once the
@@ -898,6 +940,10 @@ class ExternalPlaybackTracker @Inject constructor(
      * [metadata] is captured by value so it survives stopTracking() clearing it.
      */
     private fun maybeTriggerAutoNextEpisode(metadata: ExternalPlaybackMetadata) {
+        if (profileManager.activeProfileId.value != metadata.profileId) {
+            _autoNextOverlay.value = null
+            return
+        }
         val season = metadata.season
         val episode = metadata.episode
         // Season may be null (absolute-numbered anime); only the episode and a series/tv type are
@@ -936,6 +982,10 @@ class ExternalPlaybackTracker @Inject constructor(
                 dismissOverlayIfCurrent()
                 return@launch
             }
+            if (profileManager.activeProfileId.value != metadata.profileId) {
+                dismissOverlayIfCurrent()
+                return@launch
+            }
 
             // A snapshot from the already loaded episode list is immediately authoritative. If
             // that was unavailable, briefly join the background refresh before resolving here.
@@ -944,6 +994,15 @@ class ExternalPlaybackTracker @Inject constructor(
                     withTimeoutOrNull(NEXT_EPISODE_PREFETCH_RETURN_WAIT_MS) { prefetchJob.join() }
                     if (prefetchJob.isActive) prefetchJob.cancel()
                 }
+            }
+            if (nextEpisodeSnapshot.shufflePlayback || episodeShufflePlayback.isEnabled(metadata)) {
+                val loaded = loadedNextEpisodeMeta?.takeIf { it.first == metadata }?.second
+                nextEpisodeSnapshot = if (loaded != null) {
+                    resolveNextEpisodeSnapshot(metadata, loaded, nextEpisodeSnapshot.nextVideoId)
+                } else {
+                    resolveNextEpisodeSnapshot(metadata, preferredVideoId = nextEpisodeSnapshot.nextVideoId)
+                }
+                persistAutoNextState(nextEpisodeSnapshot, autoPlayNextEnabled)
             }
             val resolvedSnapshot = nextEpisodeSnapshot.takeIf { it.metadataResolved }
                 ?: resolveNextEpisodeSnapshot(metadata).also { refreshed ->
@@ -966,6 +1025,10 @@ class ExternalPlaybackTracker @Inject constructor(
                 return@launch
             }
             val nextSeason = resolvedSnapshot.nextSeason
+            if (profileManager.activeProfileId.value != metadata.profileId) {
+                dismissOverlayIfCurrent()
+                return@launch
+            }
 
             val shouldShowLoader = ExternalAutoNextPolicy.shouldRaiseLoader(
                 episode = episode,
@@ -1000,7 +1063,8 @@ class ExternalPlaybackTracker @Inject constructor(
                     year = metadata.year,
                     nextVideoId = nextVideoId,
                     nextSeason = nextSeason,
-                    nextEpisode = nextEpisode
+                    nextEpisode = nextEpisode,
+                    profileId = metadata.profileId
                 )
             )
 
@@ -1326,9 +1390,14 @@ class ExternalPlaybackTracker @Inject constructor(
             return cloudPlaybackProgressStore.load(playbackContext.item, file)?.resumePositionMs ?: 0L
         }
         val flow = if (metadata.season != null && metadata.episode != null) {
-            watchProgressRepository.getEpisodeProgress(metadata.contentId, metadata.season, metadata.episode)
+            watchProgressRepository.getEpisodeProgress(
+                metadata.contentId,
+                metadata.season,
+                metadata.episode,
+                metadata.profileId
+            )
         } else {
-            watchProgressRepository.getProgress(metadata.contentId)
+            watchProgressRepository.getProgress(metadata.contentId, metadata.profileId)
         }
         val wp = flow.firstOrNull() ?: return 0L
         if (wp.isCompleted()) return 0L
@@ -1372,7 +1441,7 @@ class ExternalPlaybackTracker @Inject constructor(
             Log.d(TAG, "Saving progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +
                 "content=${metadata.contentId}, video=${metadata.videoId}, " +
                 "progressPct=${progress.progressPercentage}, isInProgress=${progress.isInProgress()}")
-            watchProgressRepository.saveProgress(progress)
+            watchProgressRepository.saveProgress(progress, metadata.profileId)
 
             val progressPercent = if (effectiveDuration > 0L) {
                 (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)

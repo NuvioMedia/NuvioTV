@@ -66,6 +66,7 @@ class PlayerViewModel @Inject constructor(
     private val streamBadgeSettingsDataStore: StreamBadgeSettingsDataStore,
     private val bingeGroupCacheDataStore: com.nuvio.tv.data.local.BingeGroupCacheDataStore,
     private val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
+    private val episodeShufflePlayback: com.nuvio.tv.core.player.EpisodeShufflePlayback,
     private val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     private val watchedSeriesStateHolder: WatchedSeriesStateHolder,
     private val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
@@ -83,7 +84,10 @@ class PlayerViewModel @Inject constructor(
     private val traktRelatedService: TraktRelatedService,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
+    private val simklRelatedService: com.nuvio.tv.data.simkl.SimklRelatedService,
+    private val simklAuthRepository: com.nuvio.tv.data.simkl.SimklAuthRepository,
     private val directDebridResolver: DirectDebridResolver,
+    private val youTubeStreamResolver: com.nuvio.tv.core.streams.YouTubeStreamResolver,
     private val directDebridStreamPreparer: DirectDebridStreamPreparer,
     private val cloudLibraryRepository: CloudLibraryRepository,
     private val cloudPlaybackProgressStore: CloudLibraryPlaybackProgressStore,
@@ -93,6 +97,7 @@ class PlayerViewModel @Inject constructor(
     private val externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val tvRecommendationManager: com.nuvio.tv.core.recommendations.TvRecommendationManager,
+    profileManager: com.nuvio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -121,6 +126,7 @@ class PlayerViewModel @Inject constructor(
         bingeGroupCacheDataStore = bingeGroupCacheDataStore,
         layoutPreferenceDataStore = layoutPreferenceDataStore,
         watchedItemsPreferences = watchedItemsPreferences,
+        episodeShufflePlayback = episodeShufflePlayback,
         trackPreferenceDataStore = trackPreferenceDataStore,
         audioDelayRouteDataStore = audioDelayRouteDataStore,
         torrentService = torrentService,
@@ -129,6 +135,7 @@ class PlayerViewModel @Inject constructor(
         tmdbMetadataService = tmdbMetadataService,
         tmdbSettingsDataStore = tmdbSettingsDataStore,
         directDebridResolver = directDebridResolver,
+        youTubeStreamResolver = youTubeStreamResolver,
         directDebridStreamPreparer = directDebridStreamPreparer,
         cloudLibraryRepository = cloudLibraryRepository,
         cloudPlaybackProgressStore = cloudPlaybackProgressStore,
@@ -136,6 +143,8 @@ class PlayerViewModel @Inject constructor(
         streamBadgePresentation = streamBadgePresentation,
         playbackIssueReportRepository = playbackIssueReportRepository,
         tvRecommendationManager = tvRecommendationManager,
+        profileId = savedStateHandle.get<String>("profileId")?.toIntOrNull()
+            ?: profileManager.activeProfileId.value,
         savedStateHandle = savedStateHandle,
         scope = viewModelScope
     )
@@ -152,6 +161,8 @@ class PlayerViewModel @Inject constructor(
         traktRelatedService = traktRelatedService,
         traktAuthDataStore = traktAuthDataStore,
         traktSettingsDataStore = traktSettingsDataStore,
+        simklRelatedService = simklRelatedService,
+        simklAuthRepository = simklAuthRepository,
         layoutPreferenceDataStore = layoutPreferenceDataStore,
         watchProgressRepository = watchProgressRepository,
         watchedSeriesStateHolder = watchedSeriesStateHolder,
@@ -186,8 +197,7 @@ class PlayerViewModel @Inject constructor(
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun getPlayerNativeMemoryBytes(): Long? {
         val allocator = controller._loadControl?.allocator as? androidx.media3.exoplayer.upstream.DefaultAllocator ?: return null
-        val activeBytes = allocator.totalBytesAllocated.toLong()
-        return if (activeBytes > 0L) activeBytes else null
+        return allocator.totalBytesAllocated.toLong().coerceAtLeast(0L)
     }
 
     fun stopAndRelease() {
@@ -315,19 +325,10 @@ class PlayerViewModel @Inject constructor(
             season = controller.currentSeason,
             episode = controller.currentEpisode,
             episodeTitle = controller.currentEpisodeTitle,
-            year = controller.year
+            year = controller.year,
+            profileId = controller.profileId
         )
         val headers = controller.getCurrentHeaders()
-        val nextEpisodeSnapshot = controller.metaVideos
-            .takeIf { it.isNotEmpty() }
-            ?.let { videos ->
-                com.nuvio.tv.core.player.resolveExternalNextEpisodeSnapshot(
-                    videos = videos,
-                    currentSeason = metadata.season,
-                    currentEpisode = metadata.episode
-                )
-            }
-
         // Capture already-loaded addon subtitles before handing off. Preparation stays in the
         // ViewModel scope because the player screen remains alive until the intent is sent.
         val subtitleInputs = if (controller.uiState.value.subtitleStyle.preferredLanguage.trim().lowercase() != "none") {
@@ -357,6 +358,9 @@ class PlayerViewModel @Inject constructor(
 
             // Stop the internal player only after preparation has completed and immediately
             // before sending the external intent.
+            val nextEpisodeSnapshot = controller.metaVideos.takeIf { it.isNotEmpty() }?.let {
+                externalPlaybackTracker.resolveNextEpisodeSnapshot(metadata, it)
+            }
             controller.stopAndRelease()
             val launched = try {
                 externalPlaybackTracker.launchPlayer(

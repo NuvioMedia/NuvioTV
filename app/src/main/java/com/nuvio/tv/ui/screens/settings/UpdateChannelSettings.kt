@@ -21,7 +21,10 @@ import com.nuvio.tv.updater.UpdateChannel
 import com.nuvio.tv.updater.UpdateViewModel
 
 @Composable
-internal fun UpdateChannelSettings(initialFocusRequester: FocusRequester?) {
+internal fun UpdateChannelSettings(
+    initialFocusRequester: FocusRequester?,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val viewModel: UpdateViewModel = hiltViewModel(context as ComponentActivity)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -36,11 +39,10 @@ internal fun UpdateChannelSettings(initialFocusRequester: FocusRequester?) {
         subtitle = stringResource(R.string.about_update_channel_subtitle),
         value = channelName,
         onClick = { showChannelDialog = true },
-        modifier = if (initialFocusRequester != null) {
-            Modifier.focusRequester(initialFocusRequester)
-        } else {
-            Modifier
-        }
+        modifier = modifier.then(
+            if (initialFocusRequester != null) Modifier.focusRequester(initialFocusRequester)
+            else Modifier
+        )
     )
 
     SettingsToggleRow(

@@ -66,6 +66,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDirection
+import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -121,6 +123,7 @@ fun CastDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(NuvioTheme.colors.Background)
     ) {
         Crossfade(
             targetState = uiState,
@@ -214,7 +217,7 @@ private fun CastDetailContent(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
         // Left accent gradient overlay
         val accentGradient = remember(accentColor, backgroundColor) {
             Brush.horizontalGradient(
@@ -429,7 +432,8 @@ private fun HeroSection(
                 text = person.name,
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.5).sp
+                    letterSpacing = (-0.5).sp,
+                    textDirection = person.name.contentTextDirection()
                 ),
                 color = NuvioTheme.colors.TextPrimary,
                 maxLines = 1,
@@ -485,7 +489,8 @@ private fun HeroSection(
                         Text(
                             text = bio,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                lineHeight = 20.sp
+                                lineHeight = 20.sp,
+                                textDirection = bio.contentTextDirection()
                             ),
                             color = NuvioTheme.colors.TextSecondary,
                             modifier = Modifier.padding(end = NuvioTheme.spacing.md)
@@ -501,7 +506,8 @@ private fun HeroSection(
                     Text(
                         text = bio,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            lineHeight = 20.sp
+                            lineHeight = 20.sp,
+                            textDirection = bio.contentTextDirection()
                         ),
                         color = NuvioTheme.colors.TextSecondary,
                         maxLines = 5,
@@ -639,7 +645,7 @@ private fun CastDetailSkeleton(personName: String) {
     val accentColor = NuvioTheme.colors.Secondary
     val shimmerBrush = rememberShimmerBrush()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
         val accentGradient = remember(accentColor, backgroundColor) {
             Brush.horizontalGradient(
                 colorStops = arrayOf(
@@ -770,7 +776,9 @@ private fun CastDetailError(
     onRetry: () -> Unit
 ) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NuvioTheme.colors.Background),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -16,19 +16,23 @@ interface IntroDbApi {
     @GET("segments")
     suspend fun getSegments(
         @Query("imdb_id") imdbId: String,
-        @Query("season") season: Int,
-        @Query("episode") episode: Int
+        @Query("season") season: Int? = null,
+        @Query("episode") episode: Int? = null,
+        @Query("is_movie") isMovie: Boolean? = null
     ): Response<IntroDbSegmentsResponse>
 }
 
 @JsonClass(generateAdapter = true)
 data class IntroDbSegmentsResponse(
     @Json(name = "imdb_id") val imdbId: String? = null,
+    @Json(name = "media_type") val mediaType: String? = null,
+    @Json(name = "is_movie") val isMovie: Boolean? = null,
     @Json(name = "season") val season: Int? = null,
     @Json(name = "episode") val episode: Int? = null,
     @Json(name = "intro") val intro: IntroDbSegment? = null,
     @Json(name = "recap") val recap: IntroDbSegment? = null,
-    @Json(name = "outro") val outro: IntroDbSegment? = null
+    @Json(name = "outro") val outro: IntroDbSegment? = null,
+    @Json(name = "post_credits") val postCredits: IntroDbSegment? = null
 )
 
 @JsonClass(generateAdapter = true)
