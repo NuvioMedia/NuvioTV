@@ -245,6 +245,9 @@ class UsenetSidecar private constructor(private val context: Context) {
                     put("fastNzbFetch", configuration.fastNzbFetch)
                     put("cacheNzb", configuration.cacheNzb)
                     put("allowPrivateNetwork", configuration.allowPrivateNetwork)
+                    put("holeFilling", configuration.holeFilling)
+                    put("maxMissingArticles", configuration.maxMissingArticles)
+                    put("maxConsecutiveMissing", configuration.maxConsecutiveMissing)
                 })
             }
             trace.mark("session_request")
