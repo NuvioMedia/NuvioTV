@@ -747,4 +747,95 @@ class LivePlaybackUiPolicyTest {
             assertTrue(filter.lockedToLive)
         }
     }
+
+    @Test
+    fun `forward seek while already live does not move the bar`() {
+        assertNull(
+            LivePlaybackUiPolicy.resolveLivePreviewSeek(
+                playerPosition = 50_000L,
+                pendingPreviewPosition = null,
+                bufferedPosition = 53_000L,
+                deltaMs = 10_000L,
+                isBackBufferEnabled = true,
+                backBufferDurationMs = 15_000L,
+                displayedDelayMs = 0L,
+                rawDelayMs = 0L
+            )
+        )
+    }
+
+    @Test
+    fun `forward seek while the live label hides a real delay still jumps to the edge`() {
+        val resolved = LivePlaybackUiPolicy.resolveLivePreviewSeek(
+            playerPosition = 50_000L,
+            pendingPreviewPosition = null,
+            bufferedPosition = 61_000L,
+            deltaMs = 10_000L,
+            isBackBufferEnabled = true,
+            backBufferDurationMs = 15_000L,
+            displayedDelayMs = 0L,
+            rawDelayMs = 8_000L
+        )
+        assertEquals(58_000L, resolved!!.targetPosition)
+        assertTrue(resolved.snapToLive)
+    }
+
+    @Test
+    fun `repeat backward preview stops at the real back buffer`() {
+        val first = LivePlaybackUiPolicy.resolveLivePreviewSeek(
+            playerPosition = 50_000L,
+            pendingPreviewPosition = null,
+            bufferedPosition = 53_000L,
+            deltaMs = -10_000L,
+            isBackBufferEnabled = true,
+            backBufferDurationMs = 15_000L,
+            displayedDelayMs = 0L,
+            rawDelayMs = 0L
+        )
+        assertEquals(40_000L, first!!.targetPosition)
+        assertEquals(-10_000L, first.uiDeltaMs)
+
+        val second = LivePlaybackUiPolicy.resolveLivePreviewSeek(
+            playerPosition = 50_000L,
+            pendingPreviewPosition = first.targetPosition,
+            bufferedPosition = 53_000L,
+            deltaMs = -10_000L,
+            isBackBufferEnabled = true,
+            backBufferDurationMs = 15_000L,
+            displayedDelayMs = 10_000L,
+            rawDelayMs = 0L
+        )
+        assertEquals(35_000L, second!!.targetPosition)
+        assertEquals(-5_000L, second.uiDeltaMs)
+
+        assertNull(
+            LivePlaybackUiPolicy.resolveLivePreviewSeek(
+                playerPosition = 50_000L,
+                pendingPreviewPosition = second.targetPosition,
+                bufferedPosition = 53_000L,
+                deltaMs = -10_000L,
+                isBackBufferEnabled = true,
+                backBufferDurationMs = 15_000L,
+                displayedDelayMs = 15_000L,
+                rawDelayMs = 0L
+            )
+        )
+    }
+
+    @Test
+    fun `single backward seek reports only the clamped back-buffer movement`() {
+        val resolved = LivePlaybackUiPolicy.resolveLivePreviewSeek(
+            playerPosition = 50_000L,
+            pendingPreviewPosition = null,
+            bufferedPosition = 53_000L,
+            deltaMs = -30_000L,
+            isBackBufferEnabled = true,
+            backBufferDurationMs = 15_000L,
+            displayedDelayMs = 0L,
+            rawDelayMs = 0L
+        )
+        assertEquals(35_000L, resolved!!.targetPosition)
+        assertEquals(-15_000L, resolved.uiDeltaMs)
+        assertFalse(resolved.snapToLive)
+    }
 }

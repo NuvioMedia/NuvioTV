@@ -3,14 +3,6 @@ package com.nuvio.tv.ui.screens.player
 import com.nuvio.tv.data.local.BufferSettings
 import com.nuvio.tv.data.local.PlayerSettings
 
-/**
- * Live TV and VOD both commonly use HLS (.m3u8). The URL is not a reliable
- * discriminator. Use the player's live-window signal (ExoPlayer
- * [androidx.media3.common.Player.isCurrentMediaItemLive], or MPV unseekable)
- * plus the Stremio catalog type `channel`.
- *
- * Do not treat `tv` as live: in this app it is the series synonym.
- */
 object LivePlaybackUiPolicy {
     fun isLiveContentType(contentType: String?): Boolean {
         return contentType.equals("channel", ignoreCase = true)
@@ -60,11 +52,6 @@ object LivePlaybackUiPolicy {
         return (displayedDelayMs - deltaMs) <= LIVE_FORWARD_BUFFER_MIN_ESCAPE_MS
     }
 
-    /**
-     * True live-edge cushion from player positions / live offset only.
-     * Overlay delay must not be added on top — that invents a future timestamp
-     * and ExoPlayer answers by seeking to the default live position (buffer wipe).
-     */
     fun liveEdgePositionMs(
         currentPosition: Long,
         bufferedPosition: Long,
@@ -149,10 +136,56 @@ object LivePlaybackUiPolicy {
         }
     }
 
-    /**
-     * Max / back-buffer durations that the live timeline UI should use so the
-     * progress window matches the LoadControl that will actually be built.
-     */
+    data class LivePreviewSeek(
+        val targetPosition: Long,
+        val uiDeltaMs: Long,
+        val snapToLive: Boolean
+    )
+
+    fun resolveLivePreviewSeek(
+        playerPosition: Long,
+        pendingPreviewPosition: Long?,
+        bufferedPosition: Long,
+        deltaMs: Long,
+        isBackBufferEnabled: Boolean,
+        backBufferDurationMs: Long,
+        displayedDelayMs: Long,
+        rawDelayMs: Long
+    ): LivePreviewSeek? {
+        if (deltaMs == 0L) return null
+        if (deltaMs > 0L &&
+            displayedDelayMs <= 0L &&
+            rawDelayMs <= LIVE_FORWARD_BUFFER_MIN_ESCAPE_MS
+        ) {
+            return null
+        }
+
+        val base = pendingPreviewPosition ?: playerPosition
+        val seekDelta = if (deltaMs < 0L) {
+            (base - playerPosition) + deltaMs
+        } else {
+            deltaMs
+        }
+        val target = calculateLiveSeekTarget(
+            currentPosition = playerPosition,
+            bufferedPosition = bufferedPosition,
+            deltaMs = seekDelta,
+            isBackBufferEnabled = isBackBufferEnabled,
+            backBufferDurationMs = backBufferDurationMs,
+            displayedDelayMs = displayedDelayMs,
+            rawDelayMs = rawDelayMs
+        ) ?: return null
+
+        val snapToLive = deltaMs > 0L && shouldSeekToLiveEdge(displayedDelayMs, deltaMs)
+        val uiDeltaMs = if (deltaMs < 0L) target - base else deltaMs
+        if (!snapToLive && uiDeltaMs == 0L) return null
+        return LivePreviewSeek(
+            targetPosition = target,
+            uiDeltaMs = uiDeltaMs,
+            snapToLive = snapToLive
+        )
+    }
+
     fun configuredBufferDurationsForLiveUi(settings: PlayerSettings): Pair<Int, Int> {
         val customBuffers = settings.bufferEngineEnabled
         val maxMs = when {
@@ -170,11 +203,6 @@ object LivePlaybackUiPolicy {
         return maxMs to backMs
     }
 
-    /**
-     * Forward delay above the live-edge cushion. Do not use total buffered
-     * duration here — that is buffer size, not distance behind live, and it
-     * makes seeks overshoot the live window.
-     */
     fun rawAccumulatedDelayMs(
         currentPosition: Long,
         bufferedPosition: Long,
@@ -191,7 +219,6 @@ object LivePlaybackUiPolicy {
     }
 }
 
-/** Accumulates wall-clock time spent actually playing a live stream. */
 class LivePlaybackWatchClock {
     private var accumulatedMs = 0L
     private var segmentStartedAtElapsedMs: Long? = null
@@ -230,13 +257,6 @@ class LivePlaybackWatchClock {
     }
 }
 
-/**
- * Anti-jitter filter for the live progress bar and LIVE / LIVE -mm:ss clock.
- *
- * While playing at the live edge, HLS chunk arrivals are ignored so the UI stays
- * locked on LIVE. While paused, delay follows wall-clock at 1s/s (no chunk jumps).
- * Progress and delay always come from the same displayed delay.
- */
 class LivePlaybackBufferFilter(
     private val liveEdgeThresholdMs: Long = LivePlaybackUiPolicy.LIVE_EDGE_BUFFER_MS,
     private val deadbandMs: Long = LivePlaybackUiPolicy.LIVE_DEADBAND_MS,
@@ -278,18 +298,11 @@ class LivePlaybackBufferFilter(
         isLockedToLive = false
     }
 
-    /**
-     * Moves the overlay clock/bar by [deltaMs] without reading the real forward
-     * buffer. Forward reduces displayed delay; the player seek mapping consumes
-     * any hidden slew gap so the two meet at the new displayed delay.
-     */
     fun applySeekDelta(
         deltaMs: Long,
         maxBufferMs: Long,
         nowElapsedMs: Long = -1L
     ): Pair<Long, Float> {
-        // Keep the pause clock on the same timeline as update(). A mismatched
-        // clock here (nanoTime vs elapsedRealtime) freezes slew at 0ms/tick.
         if (nowElapsedMs >= 0L) {
             lastUpdateTimeMs = nowElapsedMs
         }
@@ -331,15 +344,10 @@ class LivePlaybackBufferFilter(
         val rawAccumulatedMs = if (rawDelayMs >= 0L) maxOf(fromPositions, rawDelayMs) else fromPositions
 
         if (isSeeking) {
-            // Keep the overlay delay. Raw buffer is mapped onto the player seek
-            // target instead of jumping the bar/clock.
             return displayState(maxBufferMs)
         }
 
         if (!isPlaying) {
-            // Pause: 1s/s wall-clock. HLS raw delay arrives in stalls/jumps, so
-            // extrapolate from the last peak — a stalled 21s report must not freeze
-            // the bar while live keeps moving. Chunk spikes still only catch up at 1s/s.
             val maxAllowedStepMs = (elapsedSinceLastUpdateMs * maxSlewRateMsPerSecond) / 1_000L
             val estimatedRawMs = estimatedPausedRawDelayMs(rawAccumulatedMs, now)
             if (filteredDelayMs < estimatedRawMs) {

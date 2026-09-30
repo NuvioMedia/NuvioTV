@@ -279,7 +279,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         handleNaturalPlaybackEnded()
                     }
                 }
-                delay(500)
+                delay(if (_playbackTimeline.value.isLive && !liveBufferFilter.lockedToLive) 100L else 500L)
                 continue
             }
 
@@ -374,7 +374,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     }
                 }
             }
-            delay(500)
+            delay(if (_playbackTimeline.value.isLive && !liveBufferFilter.lockedToLive) 100L else 500L)
         }
     }
 }
@@ -1232,8 +1232,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 val backBufferMs = maxOf(effectiveBackBufferDurationMs, configuredBackBufferMs).toLong()
                 val displayedDelayMs = liveBufferFilter.displayedDelayMs
                 val rawDelayMs = liveRawDelayMs(current, buffered)
-                val target = LivePlaybackUiPolicy.calculateLiveSeekTarget(
-                    currentPosition = current,
+                val seek = LivePlaybackUiPolicy.resolveLivePreviewSeek(
+                    playerPosition = current,
+                    pendingPreviewPosition = commandedPlaybackPositionMs,
                     bufferedPosition = buffered,
                     deltaMs = event.deltaMs,
                     isBackBufferEnabled = isBackBufferEnabled,
@@ -1250,30 +1251,29 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 }
                 val player = _exoPlayer
                 val maxBuf = _playbackTimeline.value.maxBufferMs
-                val (seekDelay, seekProg) = if (
-                    LivePlaybackUiPolicy.shouldSeekToLiveEdge(displayedDelayMs, event.deltaMs) &&
-                    player != null
-                ) {
+                val (seekDelay, seekProg) = if (seek.snapToLive && player != null) {
+                    armCommandedPlaybackPosition(seek.targetPosition)
                     liveBufferFilter.snapToLive()
                     player.seekToDefaultPosition()
                     liveBufferFilter.update(
-                        currentPosition = target,
+                        currentPosition = seek.targetPosition,
                         bufferedPosition = buffered,
                         isPlaying = hasActivePlayIntent() && !userPausedManually,
                         maxBufferMs = maxBuf,
                         isSeeking = true
                     )
                 } else {
+                    armCommandedPlaybackPosition(seek.targetPosition)
                     val applied = liveBufferFilter.applySeekDelta(
-                        deltaMs = event.deltaMs,
+                        deltaMs = seek.uiDeltaMs,
                         maxBufferMs = maxBuf,
                         nowElapsedMs = android.os.SystemClock.elapsedRealtime()
                     )
-                    seekPlaybackTo(target, seekParameters)
+                    seekPlaybackTo(seek.targetPosition, seekParameters)
                     applied
                 }
                 updatePlaybackTimeline(
-                    currentPosition = target,
+                    currentPosition = seek.targetPosition,
                     liveDelayMs = seekDelay,
                     liveProgress = seekProg
                 )
@@ -1309,15 +1309,14 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             if (_playbackTimeline.value.isLive) {
                 if (isUsingMpvEngine()) return
                 val current = currentPlaybackPositionMs() ?: 0L
-                val basePosition = pendingPreviewSeekPosition ?: current
                 val buffered = _exoPlayer?.bufferedPosition?.coerceAtLeast(current)
                     ?: _playbackTimeline.value.bufferedPosition.coerceAtLeast(current)
                 val backBufferMs = maxOf(effectiveBackBufferDurationMs, configuredBackBufferMs).toLong()
                 val displayedDelayMs = liveBufferFilter.displayedDelayMs
                 val rawDelayMs = liveRawDelayMs(current, buffered)
-                val seekCurrent = if (event.deltaMs < 0L) basePosition else current
-                val target = LivePlaybackUiPolicy.calculateLiveSeekTarget(
-                    currentPosition = seekCurrent,
+                val preview = LivePlaybackUiPolicy.resolveLivePreviewSeek(
+                    playerPosition = current,
+                    pendingPreviewPosition = pendingPreviewSeekPosition,
                     bufferedPosition = buffered,
                     deltaMs = event.deltaMs,
                     isBackBufferEnabled = isBackBufferEnabled,
@@ -1326,22 +1325,21 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     rawDelayMs = rawDelayMs
                 ) ?: return
 
-                pendingPreviewSeekPosition = target
+                commandedPlaybackPositionMs = null
+                pendingPreviewSeekPosition = preview.targetPosition
                 val maxBuf = _playbackTimeline.value.maxBufferMs
-                val (previewDelay, previewProg) = if (
-                    LivePlaybackUiPolicy.shouldSeekToLiveEdge(displayedDelayMs, event.deltaMs)
-                ) {
+                val (previewDelay, previewProg) = if (preview.snapToLive) {
                     liveBufferFilter.snapToLive()
                     0L to 1f
                 } else {
                     liveBufferFilter.applySeekDelta(
-                        deltaMs = event.deltaMs,
+                        deltaMs = preview.uiDeltaMs,
                         maxBufferMs = maxBuf,
                         nowElapsedMs = android.os.SystemClock.elapsedRealtime()
                     )
                 }
                 updatePlaybackTimeline(
-                    currentPosition = target,
+                    currentPosition = preview.targetPosition,
                     liveDelayMs = previewDelay,
                     liveProgress = previewProg
                 )
@@ -1391,6 +1389,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                         liveProgress = commitProg
                     )
                     pendingPreviewSeekPosition = null
+                    armCommandedPlaybackPosition(target)
                     scheduleProgressSyncAfterSeek()
                     if (_uiState.value.showControls) {
                         showControlsTemporarily()
@@ -1422,10 +1421,11 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 val backBufferMs = maxOf(effectiveBackBufferDurationMs, configuredBackBufferMs).toLong()
                 val displayedDelayMs = liveBufferFilter.displayedDelayMs
                 val rawDelayMs = liveRawDelayMs(current, buffered)
-                val target = LivePlaybackUiPolicy.calculateLiveSeekToTarget(
-                    currentPosition = current,
+                val seek = LivePlaybackUiPolicy.resolveLivePreviewSeek(
+                    playerPosition = current,
+                    pendingPreviewPosition = null,
                     bufferedPosition = buffered,
-                    targetPosition = event.position,
+                    deltaMs = event.position - current,
                     isBackBufferEnabled = isBackBufferEnabled,
                     backBufferDurationMs = backBufferMs,
                     displayedDelayMs = displayedDelayMs,
@@ -1435,31 +1435,29 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 pendingPreviewSeekPosition = null
                 val player = _exoPlayer
                 val maxBuf = _playbackTimeline.value.maxBufferMs
-                val seekDeltaMs = event.position - current
-                val (seekToDelay, seekToProg) = if (
-                    LivePlaybackUiPolicy.shouldSeekToLiveEdge(displayedDelayMs, seekDeltaMs) &&
-                    player != null
-                ) {
+                val (seekToDelay, seekToProg) = if (seek.snapToLive && player != null) {
+                    armCommandedPlaybackPosition(seek.targetPosition)
                     liveBufferFilter.snapToLive()
                     player.seekToDefaultPosition()
                     liveBufferFilter.update(
-                        currentPosition = target,
+                        currentPosition = seek.targetPosition,
                         bufferedPosition = buffered,
                         isPlaying = hasActivePlayIntent() && !userPausedManually,
                         maxBufferMs = maxBuf,
                         isSeeking = true
                     )
                 } else {
+                    armCommandedPlaybackPosition(seek.targetPosition)
                     val applied = liveBufferFilter.applySeekDelta(
-                        deltaMs = event.position - current,
+                        deltaMs = seek.uiDeltaMs,
                         maxBufferMs = maxBuf,
                         nowElapsedMs = android.os.SystemClock.elapsedRealtime()
                     )
-                    seekPlaybackTo(target, SeekParameters.CLOSEST_SYNC)
+                    seekPlaybackTo(seek.targetPosition, SeekParameters.CLOSEST_SYNC)
                     applied
                 }
                 updatePlaybackTimeline(
-                    currentPosition = target,
+                    currentPosition = seek.targetPosition,
                     liveDelayMs = seekToDelay,
                     liveProgress = seekToProg
                 )

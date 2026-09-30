@@ -17,8 +17,10 @@ import android.view.ViewGroup
 import androidx.annotation.RawRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -1476,8 +1478,7 @@ fun PlayerScreen(
             visible = uiState.showSeekOverlay && !uiState.showControls && uiState.error == null &&
                 !uiState.showLoadingOverlay && !uiState.showPauseOverlay &&
                 !uiState.showSubtitleDelayOverlay && !uiState.showSubtitleTimingDialog &&
-                !uiState.showMoreDialog &&
-                !viewModel.playbackTimeline.collectAsState().value.isLive,
+                !uiState.showMoreDialog,
             enter = fadeIn(animationSpec = tween(150)),
             exit = fadeOut(animationSpec = tween(150)),
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -2716,18 +2717,24 @@ private fun ProgressBar(
         (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
     } else 0f
 
-    val bufferedProgress = if (duration > 0 && bufferedPosition > currentPosition) {
+    val bufferedProgress = if (isLive) {
+        1f
+    } else if (duration > 0 && bufferedPosition > currentPosition) {
         (bufferedPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
     } else 0f
 
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
-        animationSpec = tween(100),
+        animationSpec = if (isLive) {
+            tween(durationMillis = 100, easing = LinearEasing)
+        } else {
+            tween(100)
+        },
         label = "progress"
     )
     val animatedBufferedProgress by animateFloatAsState(
         targetValue = bufferedProgress,
-        animationSpec = tween(200),
+        animationSpec = if (isLive) snap() else tween(200),
         label = "bufferedProgress"
     )
     var isFocused by remember { mutableStateOf(false) }
@@ -2840,9 +2847,8 @@ private fun ProgressBar(
                     .background(NuvioTheme.colors.Secondary.copy(alpha = 0.35f))
             )
         }
-        // Played fill.
         val playedWidth = if (isLive) {
-            maxOf(trackWidth * animatedProgress, 6.dp)
+            maxOf(trackWidth * animatedProgress, 6.dp).coerceAtMost(trackWidth)
         } else {
             trackWidth * animatedProgress
         }
@@ -2851,8 +2857,14 @@ private fun ProgressBar(
                 .fillMaxHeight()
                 .width(playedWidth)
                 .clip(RoundedCornerShape(3.dp))
-                .background(accentBrush)
-        )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(if (isLive) trackWidth else playedWidth)
+                    .background(accentBrush)
+            )
+        }
     }
 }
 

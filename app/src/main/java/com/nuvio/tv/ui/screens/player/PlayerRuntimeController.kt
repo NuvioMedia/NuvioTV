@@ -341,6 +341,8 @@ class PlayerRuntimeController(
     internal val liveWatchClock = LivePlaybackWatchClock()
     internal val liveBufferFilter = LivePlaybackBufferFilter()
     internal var livePlaybackLatched: Boolean = false
+    internal var commandedPlaybackPositionMs: Long? = null
+    internal var commandedPlaybackAtElapsedMs: Long = 0L
 
     internal fun updatePlaybackTimeline(
         currentPosition: Long = _playbackTimeline.value.currentPosition,
@@ -392,10 +394,8 @@ class PlayerRuntimeController(
         )
         val backBufferEnabled = isBackBufferEnabled
         val maxBuf = if (!isUsingMpvEngine()) configuredMaxBufferMs.toLong() else com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS.toLong()
-        val isSeeking = pendingPreviewSeekPosition != null
-        // Rebuffer must not look like a pause: ExoPlayer reports isPlaying=false while
-        // playWhenReady stays true. MPV cache stalls similarly. Only a real pause
-        // should unlock LIVE and start the delay clock.
+        releaseCommandedPlaybackPositionIfLanded(currentPosition)
+        val isSeeking = pendingPreviewSeekPosition != null || commandedPlaybackPositionMs != null
         val liveUiPlaying = !userPausedManually && (
             isUsingMpvEngine() || _exoPlayer == null || hasActivePlayIntent()
         )
@@ -440,7 +440,22 @@ class PlayerRuntimeController(
         liveWatchClock.reset()
         liveBufferFilter.reset()
         pendingPreviewSeekPosition = null
+        commandedPlaybackPositionMs = null
+        commandedPlaybackAtElapsedMs = 0L
         _playbackTimeline.value = PlaybackTimelineState()
+    }
+
+    internal fun armCommandedPlaybackPosition(target: Long) {
+        commandedPlaybackPositionMs = target
+        commandedPlaybackAtElapsedMs = android.os.SystemClock.elapsedRealtime()
+    }
+
+    internal fun releaseCommandedPlaybackPositionIfLanded(playerPosition: Long) {
+        val commanded = commandedPlaybackPositionMs ?: return
+        val ageMs = android.os.SystemClock.elapsedRealtime() - commandedPlaybackAtElapsedMs
+        if (ageMs >= 3_000L || kotlin.math.abs(commanded - playerPosition) <= 1_500L) {
+            commandedPlaybackPositionMs = null
+        }
     }
 
     internal var _exoPlayer: ExoPlayer? = null
