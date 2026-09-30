@@ -143,6 +143,42 @@ preparation failure and budget exhaustion are retained for the error message.
 * HTTP supports HEAD, suffix/open-ended/single/multipart Range and 416 responses.
   Each request gets its own reader; session cancellation reaches active readers.
 
+## Damaged releases
+
+Permanent failures in required playback data retire the session. Missing articles,
+invalid article/layout data, provider account failures and exhausted hole limits
+return HTTP 410 with a fixed `X-Usenet-Failure` category. The first body read is
+performed before success headers are committed, including the first multipart
+range's preamble. If a response has already delivered bytes it must end short;
+every reopen of that retired session then fails immediately instead of fetching
+the same article again. ExoPlayer bypasses same-source and decoder recovery for
+these native verdicts and tries the next result when automatic fallback is enabled.
+With fallback disabled, it reports the failure. Temporary network failures retain
+normal retries and do not retire the session. This behaviour is always enabled.
+
+**Fill Missing Articles** is a separate device-local option, off by default.
+The user can set the maximum missing articles across one playback (1–50, initially
+5) and the maximum consecutive missing articles (1–10, initially 2, never more
+than the total allowance). Changes apply to the next stream. RAR volumes share
+the same total budget; seeks and overlapping Range readers do not count a hole
+twice. Only a confirmed article miss after configured providers are exhausted can
+be filled. Discovery/header readers and a file's first article never fill holes.
+Timeouts, cancellations, corrupt articles and malformed layouts are not filled.
+
+Hole spans are established from fresh yEnc offsets on the neighbouring available
+articles (and the authoritative file size for a trailing hole), not NZB encoded
+byte estimates or persisted hints. The missing span is generated as zeros directly
+into the caller's buffer, with exact byte count and all later offsets preserved;
+it does not allocate an additional article/video cache. Unprovable spans fail.
+NZBs with missing segment numbers continue to be rejected during parsing.
+
+Filling cannot restore missing audio/video or container structures. It can cause
+visible/audible glitches, and strict demuxers can still reject damaged container
+headers. This implements bounded byte substitution, not PAR2 reconstruction or
+Matroska Void rewriting. If filling exceeds either limit, normal terminal failure
+and source fallback take over. Diagnostics include `filledArticles`,
+`streamFailure`, and a fixed failure category on failed startup range reads.
+
 ## Archives and selection
 
 RAR resolution is lazy for strict file/episode matches. Stored RAR4 and RAR5 entries map directly to
