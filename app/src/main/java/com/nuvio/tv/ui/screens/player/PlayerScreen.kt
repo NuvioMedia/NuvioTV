@@ -2521,10 +2521,22 @@ private fun PlayerControlsProgressBarHost(
     onFocused: (() -> Unit)? = null
 ) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+    val isLive = playbackTimeline.isLive
+    val progressDuration = if (isLive) {
+        playbackTimeline.maxBufferMs.coerceAtLeast(1L)
+    } else {
+        playbackTimeline.duration
+    }
+    val progressPosition = if (isLive) {
+        (playbackTimeline.liveProgress * progressDuration).toLong()
+    } else {
+        playbackTimeline.currentPosition
+    }
+    val progressBuffered = if (isLive) progressDuration else playbackTimeline.bufferedPosition
 
     ProgressBar(
-        currentPosition = playbackTimeline.currentPosition,
-        duration = playbackTimeline.duration,
+        currentPosition = progressPosition,
+        duration = progressDuration,
         onSeekPreview = { delta ->
             viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(delta))
         },
@@ -2536,11 +2548,9 @@ private fun PlayerControlsProgressBarHost(
         downFocusRequester = downFocusRequester,
         onUpKey = onUpKey,
         onFocused = onFocused,
-        bufferedPosition = playbackTimeline.bufferedPosition,
-        isLive = playbackTimeline.isLive,
-        isBackBufferEnabled = playbackTimeline.isBackBufferEnabled,
-        maxBufferMs = playbackTimeline.maxBufferMs,
-        liveProgress = playbackTimeline.liveProgress
+        bufferedPosition = progressBuffered,
+        isLive = isLive,
+        isBackBufferEnabled = playbackTimeline.isBackBufferEnabled
     )
 }
 
@@ -2699,23 +2709,16 @@ private fun ProgressBar(
     /** Position (ms) up to which content is buffered. Pass 0 to skip the overlay. */
     bufferedPosition: Long = 0L,
     isLive: Boolean = false,
-    isBackBufferEnabled: Boolean = false,
-    maxBufferMs: Long = com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS.toLong(),
-    liveProgress: Float = 1f
+    isBackBufferEnabled: Boolean = false
 ) {
     val accentBrush = NuvioTheme.palette.accentBrush()
-    val (progress, bufferedProgress) = if (isLive) {
-        liveProgress to 1f
-    } else {
-        val prog = if (duration > 0) {
-            (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-        } else 0f
+    val progress = if (duration > 0) {
+        (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+    } else 0f
 
-        val bufProg = if (duration > 0 && bufferedPosition > currentPosition) {
-            (bufferedPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-        } else 0f
-        prog to bufProg
-    }
+    val bufferedProgress = if (duration > 0 && bufferedPosition > currentPosition) {
+        (bufferedPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+    } else 0f
 
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
@@ -2871,16 +2874,21 @@ private fun SeekOverlay(
             .padding(horizontal = NuvioTheme.spacing.xxl, vertical = NuvioTheme.spacing.xl)
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            val progressDuration = if (isLive) maxBufferMs.coerceAtLeast(1L) else duration
+            val progressPosition = if (isLive) {
+                (liveProgress * progressDuration).toLong()
+            } else {
+                currentPosition
+            }
+            val progressBuffered = if (isLive) progressDuration else bufferedPosition
             ProgressBar(
-                currentPosition = currentPosition,
-                duration = duration,
+                currentPosition = progressPosition,
+                duration = progressDuration,
                 onSeekPreview = {},
                 onSeekCommit = {},
-                bufferedPosition = bufferedPosition,
+                bufferedPosition = progressBuffered,
                 isLive = isLive,
-                isBackBufferEnabled = isBackBufferEnabled,
-                maxBufferMs = maxBufferMs,
-                liveProgress = liveProgress
+                isBackBufferEnabled = isBackBufferEnabled
             )
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
