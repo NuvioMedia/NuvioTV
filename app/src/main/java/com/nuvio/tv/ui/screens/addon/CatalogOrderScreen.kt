@@ -5,11 +5,11 @@ package com.nuvio.tv.ui.screens.addon
 import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 
-import android.os.SystemClock
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,10 +29,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -58,17 +56,6 @@ fun CatalogOrderScreen(
     onBackPress: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val openedAt = remember { SystemClock.elapsedRealtime() }
-
-    LaunchedEffect(uiState.isLoading, uiState.items.size, uiState.movingKey) {
-        Log.d(
-            "CatalogOrder",
-            "screen loading=${uiState.isLoading} items=${uiState.items.size} " +
-                "movingKey=${uiState.movingKey} follow=${uiState.followAddonsOrder} " +
-                "openMs=${SystemClock.elapsedRealtime() - openedAt} " +
-                "names=${uiState.items.take(6).joinToString { it.catalogName }}",
-        )
-    }
 
     BackHandler(enabled = uiState.movingKey == null) {
         Log.d("CatalogOrder", "screen BACK leave")
@@ -78,6 +65,7 @@ fun CatalogOrderScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(NuvioTheme.colors.Background)
             .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
     ) {
         when {
@@ -237,6 +225,7 @@ private fun CatalogOrderCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(NuvioTheme.radii.md),
         border = cardBorder,
     ) {

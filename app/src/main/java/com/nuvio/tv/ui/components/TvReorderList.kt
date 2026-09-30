@@ -26,12 +26,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -39,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.SubcomposeLayoutState
+import androidx.compose.ui.layout.SubcomposeSlotReusePolicy
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
@@ -51,12 +51,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val MOVE_REPEAT_INITIAL_DELAY_MS = 280L
 private const val MOVE_REPEAT_INTERVAL_MS = 140L
 private const val LIST_TAG = "CatalogOrder"
+
+private const val RETAINED_ROW_SLOTS = 24
 
 private val ReorderTravelSpec = tween<Float>(
     durationMillis = NuvioMotion.tokens.durations.medium,
@@ -87,10 +88,14 @@ fun <T> TvReorderList(
     val scope = rememberCoroutineScope()
     val rowSpacingPx = with(density) { NuvioTheme.spacing.lg.toPx() }
 
-    var viewportHeightPx by remember { mutableFloatStateOf(0f) }
-    var rowHeightPx by remember { mutableFloatStateOf(0f) }
-    var headerHeightPx by remember { mutableFloatStateOf(0f) }
-    val slotStridePx = if (rowHeightPx > 0f) rowHeightPx + rowSpacingPx else 0f
+    val rowHeightPx = remember { FloatArray(1) }
+    val headerHeightPx = remember { FloatArray(1) }
+    val viewportHeightPx = remember { FloatArray(1) }
+
+    fun slotStridePx(): Float {
+        val height = rowHeightPx[0]
+        return if (height > 0f) height + rowSpacingPx else 0f
+    }
 
     fun indicesFrom(source: List<T>): Map<String, Int> {
         return source.mapIndexed { index, item -> key(item) to index }.toMap()
@@ -103,6 +108,9 @@ fun <T> TvReorderList(
     val offsetJobs = remember { mutableMapOf<String, Job>() }
     val rowContentCache = remember(movingKey) {
         mutableMapOf<String, CachedRowContent<T>>()
+    }
+    val subcomposeLayoutState = remember {
+        SubcomposeLayoutState(SubcomposeSlotReusePolicy(RETAINED_ROW_SLOTS))
     }
     val inheritedBringIntoViewSpec = LocalBringIntoViewSpec.current
     val freezeScrollBringIntoView = remember {
@@ -125,9 +133,10 @@ fun <T> TvReorderList(
                 containerSize: Float,
             ): Float {
                 if (containerSize <= 0f || size <= 0f) return 0f
+                if (headerHeightPx[0] <= 0f || rowHeightPx[0] <= 0f) return 0f
                 val itemTopInContent = scrollState.value + offset
-                val firstRowBottom = headerHeightPx + if (rowHeightPx > 0f) rowHeightPx else 1f
-                if (headerHeightPx > 0f && itemTopInContent < firstRowBottom) {
+                val firstRowBottom = headerHeightPx[0] + if (rowHeightPx[0] > 0f) rowHeightPx[0] else 1f
+                if (headerHeightPx[0] > 0f && itemTopInContent < firstRowBottom) {
                     return -scrollState.value.toFloat()
                 }
                 return inheritedBringIntoViewSpec.calculateScrollDistance(offset, size, containerSize)
@@ -178,8 +187,8 @@ fun <T> TvReorderList(
             .take(6)
             .joinToString { "${it.key}=${it.value.toInt()}" }
         return "reason=$reason t=${SystemClock.elapsedRealtime()} movingKey=$movingKey " +
-            "scroll=${scrollState.value}/${scrollState.maxValue} rowH=$rowHeightPx stride=$slotStridePx " +
-            "viewport=$viewportHeightPx items=${itemKeys.take(6)} slots=${slotOrderSample()} " +
+            "scroll=${scrollState.value}/${scrollState.maxValue} rowH=${rowHeightPx[0]} stride=${slotStridePx()} " +
+            "viewport=${viewportHeightPx[0]} items=${itemKeys.take(6)} slots=${slotOrderSample()} " +
             "indicesMatchItems=${itemKeys == animatedOrder} liveOffsets=[$offsetSample]"
     }
 
@@ -251,7 +260,7 @@ fun <T> TvReorderList(
     }
 
     fun animateMove(movedKey: String, oldIndex: Int, newIndex: Int) {
-        if (slotStridePx <= 0f || oldIndex == newIndex) return
+        if (slotStridePx() <= 0f || oldIndex == newIndex) return
         val shiftRange: IntRange
         val slotShift: Int
         if (newIndex > oldIndex) {
@@ -274,9 +283,9 @@ fun <T> TvReorderList(
         offsetJobs[movedKey]?.cancel()
         shifting.forEach { (itemKey, _) -> offsetJobs[itemKey]?.cancel() }
 
-        dragOffsets[movedKey] = (dragOffsets[movedKey] ?: 0f) - movedDeltaSlots * slotStridePx
+        dragOffsets[movedKey] = (dragOffsets[movedKey] ?: 0f) - movedDeltaSlots * slotStridePx()
         shifting.forEach { (itemKey, _) ->
-            dragOffsets[itemKey] = (dragOffsets[itemKey] ?: 0f) - slotShift * slotStridePx
+            dragOffsets[itemKey] = (dragOffsets[itemKey] ?: 0f) - slotShift * slotStridePx()
         }
         animatedIndices[movedKey] = newIndex
         shifting.forEach { (itemKey, slot) ->
@@ -287,7 +296,9 @@ fun <T> TvReorderList(
     }
 
     fun keepNeighborVisible(newIndex: Int, direction: Int) {
-        if (slotStridePx <= 0f || viewportHeightPx <= 0f) return
+        val stride = slotStridePx()
+        val viewport = viewportHeightPx[0]
+        if (stride <= 0f || viewport <= 0f) return
         if (newIndex <= 0) {
             neighborScrollJob?.cancel()
             Log.d(
@@ -300,15 +311,15 @@ fun <T> TvReorderList(
             }
             return
         }
-        val movingTop = headerHeightPx + newIndex * slotStridePx
-        val movingBottom = movingTop + rowHeightPx
-        val peek = rowHeightPx
+        val movingTop = headerHeightPx[0] + newIndex * stride
+        val movingBottom = movingTop + rowHeightPx[0]
+        val peek = rowHeightPx[0]
         val desiredTop = if (direction < 0) (movingTop - peek).coerceAtLeast(0f) else movingTop
         val desiredBottom = if (direction > 0) movingBottom + peek else movingBottom
         val current = scrollState.value.toFloat()
         val target = when {
             desiredTop < current -> desiredTop
-            desiredBottom > current + viewportHeightPx -> desiredBottom - viewportHeightPx
+            desiredBottom > current + viewport -> desiredBottom - viewport
             else -> return
         }.coerceIn(0f, scrollState.maxValue.toFloat())
         neighborScrollJob?.cancel()
@@ -445,35 +456,7 @@ fun <T> TvReorderList(
             } else {
                 0f
             }
-            SideEffect {
-                viewportHeightPx = viewportPx
-            }
-            val slotCount = items.size
-            val visibleSlotRange by remember(slotCount, rowSpacingPx, movingKey, viewportPx) {
-                derivedStateOf {
-                    val lastSlot = slotCount - 1
-                    if (lastSlot < 0) {
-                        IntRange.EMPTY
-                    } else {
-                        val movingSlot = movingKey
-                            ?.let { animatedIndices[it] }
-                            ?.coerceIn(0, lastSlot)
-                        if (viewportPx <= 0f) {
-                            0..lastSlot
-                        } else {
-                            visibleReorderSlotRange(
-                                slotCount = slotCount,
-                                rowHeightPx = rowHeightPx,
-                                rowSpacingPx = rowSpacingPx,
-                                viewportHeightPx = viewportPx,
-                                headerHeightPx = headerHeightPx,
-                                scrollPx = scrollState.value,
-                                movingSlot = movingSlot,
-                            )
-                        }
-                    }
-                }
-            }
+            viewportHeightPx[0] = viewportPx
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -528,12 +511,20 @@ fun <T> TvReorderList(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .onSizeChanged { headerHeightPx = it.height.toFloat() },
+                                .onSizeChanged { size ->
+                                    val measured = size.height.toFloat()
+                                    if (headerHeightPx[0] != measured) {
+                                        headerHeightPx[0] = measured
+                                    }
+                                },
                         ) {
                             header()
                         }
                     }
-                    SubcomposeLayout(modifier = Modifier.fillMaxWidth()) { layoutConstraints ->
+                    SubcomposeLayout(
+                        state = subcomposeLayoutState,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { layoutConstraints ->
                         if (items.isEmpty()) {
                             val emptyWidth = if (layoutConstraints.hasBoundedWidth) {
                                 layoutConstraints.maxWidth
@@ -561,16 +552,6 @@ fun <T> TvReorderList(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .onSizeChanged { size ->
-                                                if (!isMoving && size.height > 0) {
-                                                    val measured = size.height.toFloat()
-                                                    rowHeightPx = if (rowHeightPx == 0f) {
-                                                        measured
-                                                    } else {
-                                                        min(rowHeightPx, measured)
-                                                    }
-                                                }
-                                            }
                                             .offset {
                                                 val dragOffsetPx = dragOffsets[itemKey] ?: 0f
                                                 IntOffset(x = 0, y = dragOffsetPx.roundToInt())
@@ -595,17 +576,18 @@ fun <T> TvReorderList(
                             }
                             val placeable = subcompose(itemKey, content).first().measure(itemConstraints)
                             placeables[index] = placeable
+                            if (rowHeightPx[0] == 0f && !isMoving && placeable.height > 0) {
+                                rowHeightPx[0] = placeable.height.toFloat()
+                            }
                             return placeable
                         }
 
-                        val sampledRowHeight = if (rowHeightPx > 0f) {
-                            rowHeightPx
+                        val sampledRowHeight = if (rowHeightPx[0] > 0f) {
+                            rowHeightPx[0]
                         } else {
                             measureSlot(0).height.toFloat()
                         }
-                        val visibleRange = if (rowHeightPx > 0f) {
-                            visibleSlotRange
-                        } else if (viewportPx <= 0f) {
+                        val visibleRange = if (viewportPx <= 0f) {
                             0..items.lastIndex
                         } else {
                             visibleReorderSlotRange(
@@ -613,7 +595,7 @@ fun <T> TvReorderList(
                                 rowHeightPx = sampledRowHeight,
                                 rowSpacingPx = rowSpacingPx,
                                 viewportHeightPx = viewportPx,
-                                headerHeightPx = headerHeightPx,
+                                headerHeightPx = headerHeightPx[0],
                                 scrollPx = scrollState.value,
                                 movingSlot = movingKey
                                     ?.let { animatedIndices[it] }
