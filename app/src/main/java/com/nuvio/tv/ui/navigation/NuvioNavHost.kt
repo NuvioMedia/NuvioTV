@@ -35,7 +35,6 @@ import com.nuvio.tv.ui.screens.library.LibraryScreen
 import com.nuvio.tv.ui.screens.player.PlayerExitReason
 import com.nuvio.tv.ui.screens.player.PlayerScreen
 import com.nuvio.tv.ui.screens.player.PostPlayRecommendation
-import com.nuvio.tv.ui.screens.player.playerBackOpensCurrentEpisodeStreams
 import com.nuvio.tv.ui.screens.plugin.PluginScreen
 import com.nuvio.tv.ui.screens.search.DiscoverScreen
 import com.nuvio.tv.ui.screens.search.SearchScreen
@@ -375,6 +374,10 @@ private fun PlaybackNavHost(
                             contentId = contentId,
                             contentName = title,
                             runtime = runtime,
+                            pluginContentId = detailArgs?.getString("itemId"),
+                            pluginStreamSourceId = detailArgs?.getString("itemId")?.let { id ->
+                                com.nuvio.tv.domain.model.PluginContentRegistry.selectedStreamSource(id)?.scraperId
+                            },
                             returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
                             contentLanguage = contentLanguage
                         )
@@ -397,6 +400,10 @@ private fun PlaybackNavHost(
                             contentId = contentId,
                             contentName = title,
                             runtime = runtime,
+                            pluginContentId = detailArgs?.getString("itemId"),
+                            pluginStreamSourceId = detailArgs?.getString("itemId")?.let { id ->
+                                com.nuvio.tv.domain.model.PluginContentRegistry.selectedStreamSource(id)?.scraperId
+                            },
                             manualSelection = true,
                             returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
                             contentLanguage = contentLanguage
@@ -420,6 +427,10 @@ private fun PlaybackNavHost(
                             contentId = contentId,
                             contentName = title,
                             runtime = runtime,
+                            pluginContentId = detailArgs?.getString("itemId"),
+                            pluginStreamSourceId = detailArgs?.getString("itemId")?.let { id ->
+                                com.nuvio.tv.domain.model.PluginContentRegistry.selectedStreamSource(id)?.scraperId
+                            },
                             startFromBeginning = true,
                             returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
                             contentLanguage = contentLanguage
@@ -487,6 +498,16 @@ private fun PlaybackNavHost(
                     defaultValue = null
                 },
                 navArgument("runtime") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("pluginContentId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("pluginStreamSourceId") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
@@ -909,7 +930,7 @@ private fun PlaybackNavHost(
                                 navController.popBackStack()
                             }
                         }
-                        playerBackOpensCurrentEpisodeStreams(episodeChangedInPlace, autoPlayEnabled) -> {
+                        episodeChangedInPlace && !autoPlayEnabled -> {
                             // manual stream switch to next episode — go to Stream of current episode
                             val videoId = currentVideoId ?: args?.getString("videoId").orEmpty()
                             if (videoId.isNotBlank() && contentType.isNotBlank()) {

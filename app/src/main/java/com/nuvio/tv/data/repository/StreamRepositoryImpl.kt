@@ -21,6 +21,7 @@ import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.ProxyHeaders
 import com.nuvio.tv.domain.model.ScraperInfo
+import com.nuvio.tv.domain.model.PluginContentRef
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.core.streams.supportsStreamResource
@@ -89,9 +90,12 @@ class StreamRepositoryImpl @Inject constructor(
         videoId: String,
         season: Int?,
         episode: Int?,
-        forceRefresh: Boolean
+        forceRefresh: Boolean,
+        pluginContent: PluginContentRef?,
+        selectedPluginScraperId: String?
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
-        val sourceConfiguration = captureSourceConfiguration()
+        // null represents the Home menu's "All" choice. It must remain unfiltered.
+        val sourceConfiguration = captureSourceConfiguration(selectedPluginScraperId)
         val requestKey = StreamSearchRequestKey(
             profileId = sourceConfiguration.profileId,
             type = type.lowercase(),
@@ -123,18 +127,22 @@ class StreamRepositoryImpl @Inject constructor(
                     addons = sourceConfiguration.addons,
                     debridSettings = sourceConfiguration.debridSettings,
                     hasCompatiblePlugins = sourceConfiguration.pluginsEnabled &&
-                        sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) }
+                        sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) },
+                    pluginContent = pluginContent,
+                    selectedPluginScraperId = selectedPluginScraperId
                 )
             }
         )
     }
 
-    private suspend fun captureSourceConfiguration(): StreamSourceConfigurationSnapshot {
+    private suspend fun captureSourceConfiguration(selectedPluginScraperId: String?): StreamSourceConfigurationSnapshot {
         while (true) {
             val profileId = profileManager.activeProfileId.value
             val addons = addonRepository.getInstalledAddons().first().enabledAddons()
             val pluginsEnabled = pluginManager.pluginsEnabled.first()
-            val enabledScrapers = if (pluginsEnabled) pluginManager.enabledScrapers.first() else emptyList()
+            val enabledScrapers = if (pluginsEnabled) pluginManager.enabledStreamScrapers.first().filter { scraper ->
+                selectedPluginScraperId == null || scraper.id == selectedPluginScraperId
+            } else emptyList()
             val groupPluginsByRepository = pluginsEnabled && pluginManager.groupStreamsByRepository.first()
             val pluginRepositories = if (groupPluginsByRepository) pluginManager.repositories.first() else emptyList()
             val debridSettings = debridSettingsDataStore.settings.first()
@@ -161,13 +169,17 @@ class StreamRepositoryImpl @Inject constructor(
         episode: Int?,
         addons: List<Addon>,
         debridSettings: DebridSettings,
-        hasCompatiblePlugins: Boolean
+        hasCompatiblePlugins: Boolean,
+        pluginContent: PluginContentRef?,
+        selectedPluginScraperId: String?
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         emit(NetworkResult.Loading)
 
         try {
             // Filter addons that support streams for this type and id
-            val streamAddons = addons.filter { addon ->
+            // The Home source menu selects plugin providers. Addon streams remain outside
+            // this catalog-originated flow, while non-plugin playback keeps its old behavior.
+            val streamAddons = if (pluginContent != null) emptyList() else addons.filter { addon ->
                 addon.supportsStreamResource(type, videoId)
             }
 
@@ -251,7 +263,7 @@ class StreamRepositoryImpl @Inject constructor(
 
                         val tmdbId = tmdbService.ensureTmdbId(videoId, type)
                         Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
-                        val pluginRequest = buildPluginRequest(tmdbId, type, videoId)
+                        val pluginRequest = buildPluginRequest(tmdbId, type, videoId, pluginContent)
                             ?: return@launch
                         val (pluginSeason, pluginEpisode) = resolvePluginSeasonEpisode(
                             videoId = videoId,
@@ -267,6 +279,9 @@ class StreamRepositoryImpl @Inject constructor(
                                         pluginSource = pluginRequest.source,
                                         season = pluginSeason,
                                         episode = pluginEpisode,
+                                        selectedPluginScraperId = selectedPluginScraperId,
+                                        contentUrl = pluginContent?.url,
+                                        contentUrlScraperId = pluginContent?.source?.scraperId,
                                         resultChannel = resultChannel
                                     )
                                     emit(Unit)
@@ -356,7 +371,19 @@ class StreamRepositoryImpl @Inject constructor(
         val source: String
     )
 
-    private fun buildPluginRequest(tmdbId: String?, type: String, videoId: String): PluginRequest? {
+    private fun buildPluginRequest(
+        tmdbId: String?, type: String, videoId: String,
+        pluginContent: PluginContentRef?
+    ): PluginRequest? {
+        if (pluginContent != null) {
+            return PluginRequest(
+                id = pluginContent.externalIds.tmdbId
+                    ?: pluginContent.externalIds.imdbId
+                    ?: pluginContent.contentId,
+                mediaType = normalizeTmdbPluginType(type),
+                source = "PLUGIN"
+            )
+        }
         if (tmdbId != null) {
             return PluginRequest(
                 id = tmdbId,
@@ -441,6 +468,9 @@ class StreamRepositoryImpl @Inject constructor(
         pluginSource: String,
         season: Int?,
         episode: Int?,
+        selectedPluginScraperId: String?,
+        contentUrl: String?,
+        contentUrlScraperId: String?,
         resultChannel: Channel<AddonStreams>
     ) {
         // Check if plugins are enabled
@@ -464,7 +494,10 @@ class StreamRepositoryImpl @Inject constructor(
                 tmdbId = pluginId,
                 mediaType = mediaType,
                 season = season,
-                episode = episode
+                episode = episode,
+                scraperId = selectedPluginScraperId,
+                contentUrl = contentUrl,
+                contentUrlScraperId = contentUrlScraperId
             ).collect { (scraper, results) ->
                 if (results.isNotEmpty()) {
                     val addonName = scraper.pluginAddonName(groupByRepository, repositoriesById)

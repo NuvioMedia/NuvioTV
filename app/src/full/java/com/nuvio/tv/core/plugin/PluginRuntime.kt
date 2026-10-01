@@ -139,7 +139,7 @@ class PluginRuntime @Inject constructor() {
                     }
                     var args = JSON.parse(__get_call_args());
                     console.log("Calling getStreams with tmdbId=" + args.tmdbId + " type=" + args.mediaType + " s=" + args.season + " e=" + args.episode);
-                    var result = await getStreams(args.tmdbId, args.mediaType, args.season, args.episode);
+                    var result = await getStreams(args.tmdbId, args.mediaType, args.season, args.episode, args.url);
                     console.log("getStreams returned: " + (result ? result.length : 0) + " streams");
                     __capture_result(JSON.stringify(result || []));
                 } catch (e) {
@@ -218,21 +218,57 @@ class PluginRuntime @Inject constructor() {
         mediaType: String,
         season: Int?,
         episode: Int?,
+        contentUrl: String? = null,
         scraperId: String,
         scraperSettings: Map<String, Any> = emptyMap()
     ): List<LocalScraperResult> = withTimeout(PLUGIN_TIMEOUT_MS) {
-        executePluginInternal(code, tmdbId, mediaType, season, episode, scraperId, scraperSettings)
+        parseJsonResults(executePluginInternal(
+            code, scraperId, scraperSettings, getStaticCallCode(), mapOf(
+                "tmdbId" to tmdbId, "mediaType" to mediaType, "season" to season, "episode" to episode,
+                "url" to contentUrl
+            )
+        ))
+    }
+
+    private fun getCatalogCallCode(): String = """
+        (async function() {
+            try {
+                var getCatalog = module.exports.getCatalog || globalThis.getCatalog;
+                if (!getCatalog) { __capture_result(JSON.stringify({ items: [] })); return; }
+                var args = JSON.parse(__get_call_args());
+                var result = await getCatalog(args);
+                __capture_result(JSON.stringify(result || { items: [] }));
+            } catch (e) {
+                console.error("getCatalog error:", e.message || e);
+                __capture_result(JSON.stringify({ items: [] }));
+            }
+        })();
+    """.trimIndent()
+
+    /** Runs the optional v1 getCatalog entry point and returns its JSON response unchanged. */
+    suspend fun executeCatalog(
+        code: String,
+        catalogId: String,
+        type: String,
+        pageToken: String?,
+        language: String?,
+        scraperId: String,
+        scraperSettings: Map<String, Any> = emptyMap()
+    ): String = withTimeout(PLUGIN_TIMEOUT_MS) {
+        executePluginInternal(
+            code, scraperId, scraperSettings, getCatalogCallCode(), mapOf(
+                "catalogId" to catalogId, "type" to type, "pageToken" to pageToken, "language" to language
+            )
+        )
     }
 
     private suspend fun executePluginInternal(
         code: String,
-        tmdbId: String,
-        mediaType: String,
-        season: Int?,
-        episode: Int?,
         scraperId: String,
-        scraperSettings: Map<String, Any>
-    ): List<LocalScraperResult> {
+        scraperSettings: Map<String, Any>,
+        callCode: String,
+        callArgs: Map<String, Any?>
+    ): String {
         val documentCache = ConcurrentHashMap<String, Document>()
         val loadedDocIds = java.util.Collections.synchronizedList(mutableListOf<String>())
         val elementCache = ConcurrentHashMap<String, Element>()
@@ -477,22 +513,15 @@ class PluginRuntime @Inject constructor() {
                 evaluate<Any?>(wrappedCode)
 
                 // Call getStreams and capture result
-                function("__get_call_args") {
-                    gson.toJson(
-                        mapOf(
-                            "tmdbId" to tmdbId,
-                            "mediaType" to mediaType,
-                            "season" to season,
-                            "episode" to episode
-                        )
-                    )
+                function("__get_call_args") { gson.toJson(callArgs) }
+                if (callCode == getStaticCallCode()) {
+                    evaluate<Any?>(getCompiledCallBytecode(this))
+                } else {
+                    evaluate<Any?>(callCode)
                 }
-
-                val callBytecode = getCompiledCallBytecode(this)
-                evaluate<Any?>(callBytecode)
             }
 
-            return parseJsonResults(resultJson)
+            return resultJson
 
         } catch (e: Exception) {
             Log.e(TAG, "Plugin execution failed: ${e.message}", e)

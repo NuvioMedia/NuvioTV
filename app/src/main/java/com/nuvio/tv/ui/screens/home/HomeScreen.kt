@@ -10,15 +10,23 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
@@ -34,14 +42,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Border
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -159,7 +178,12 @@ fun HomeScreen(
         }
     }
 
-    val onNavigateToDetailStable = remember(onNavigateToDetail) { onNavigateToDetail }
+    val onNavigateToDetailStable = remember(onNavigateToDetail, viewModel) {
+        { itemId: String, itemType: String, addonBaseUrl: String ->
+            viewModel.preparePluginPlayback(itemId)
+            onNavigateToDetail(itemId, itemType, addonBaseUrl)
+        }
+    }
     val onContinueWatchingClickStable = remember(onContinueWatchingClick) { onContinueWatchingClick }
     val onContinueWatchingStartFromBeginningStable = remember(onContinueWatchingStartFromBeginning) { onContinueWatchingStartFromBeginning }
     val onContinueWatchingPlayManuallyStable = remember(onContinueWatchingPlayManually) { onContinueWatchingPlayManually }
@@ -444,6 +468,12 @@ fun HomeScreen(
                 )
             }
         }
+        HomeSourceMenus(
+            uiState = uiState,
+            onCatalogSelected = viewModel::selectHomeCatalogSource,
+            onStreamSelected = viewModel::selectHomeStreamSource,
+            modifier = Modifier.align(Alignment.TopEnd).padding(24.dp)
+        )
     }
 
     val selectedPoster = posterOptionsTarget
@@ -465,6 +495,7 @@ fun HomeScreen(
             isWatchedPending = statusKey in uiState.movieWatchedPending,
             onDismiss = { posterOptionsTarget = null },
             onDetails = {
+                viewModel.preparePluginPlayback(item.id)
                 onNavigateToDetail(item.id, item.apiType, selectedPoster.addonBaseUrl)
                 posterOptionsTarget = null
             },
@@ -518,6 +549,150 @@ fun HomeScreen(
             onDismiss = viewModel::cancelPosterListPickerRemoval
         )
     }
+}
+
+@Composable
+@OptIn(ExperimentalTvMaterial3Api::class)
+private fun HomeSourceMenus(
+    uiState: HomeUiState,
+    onCatalogSelected: (String) -> Unit,
+    onStreamSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var catalogExpanded by remember { mutableStateOf(false) }
+    var streamExpanded by remember { mutableStateOf(false) }
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        HomeSourceDropdownPicker(
+            title = stringResource(R.string.home_catalog_source),
+            selectedId = uiState.selectedCatalogSourceId,
+            expanded = catalogExpanded,
+            options = uiState.catalogSources,
+            onExpandedChange = { catalogExpanded = it },
+            onSelect = { source -> onCatalogSelected(source.id); catalogExpanded = false }
+        )
+        HomeSourceDropdownPicker(
+            title = stringResource(R.string.home_stream_source),
+            selectedId = uiState.selectedStreamSourceId,
+            expanded = streamExpanded,
+            options = uiState.streamSources,
+            onExpandedChange = { streamExpanded = it },
+            onSelect = { source -> onStreamSelected(source.id); streamExpanded = false }
+        )
+    }
+}
+
+@Composable
+@OptIn(ExperimentalTvMaterial3Api::class)
+private fun HomeSourceDropdownPicker(
+    title: String,
+    selectedId: String?,
+    expanded: Boolean,
+    options: List<HomeMenuSource>,
+    onExpandedChange: (Boolean) -> Unit,
+    onSelect: (HomeMenuSource) -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    var anchorSize by remember { mutableStateOf(IntSize.Zero) }
+    var focusedOptionId by remember(expanded) { mutableStateOf(if (expanded) selectedId else null) }
+    val selectedOption = options.firstOrNull { it.id == selectedId }
+    val selectedLabel = selectedOption?.localizedName() ?: title
+
+    Box(modifier = Modifier.width(220.dp)) {
+        Card(
+            onClick = { onExpandedChange(!expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { anchorSize = it }
+                .onFocusChanged { isFocused = it.isFocused },
+            shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
+            colors = CardDefaults.colors(
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                focusedContainerColor = NuvioTheme.colors.FocusBackground
+            ),
+            border = CardDefaults.border(
+                border = Border(
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
+                    shape = RoundedCornerShape(14.dp)
+                ),
+                focusedBorder = Border(
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                    shape = RoundedCornerShape(14.dp)
+                )
+            ),
+            scale = CardDefaults.scale(focusedScale = 1.0f, pressedScale = 1.0f)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)
+            ) {
+                Text(title, style = MaterialTheme.typography.labelSmall, color = NuvioTheme.colors.TextTertiary)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        selectedLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = NuvioTheme.colors.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (expanded) stringResource(R.string.cd_collapse, title) else stringResource(R.string.cd_expand, title),
+                        modifier = Modifier.size(20.dp),
+                        tint = if (isFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.TextSecondary
+                    )
+                }
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { focusedOptionId = null; onExpandedChange(false) },
+            modifier = Modifier
+                .width(with(LocalDensity.current) { anchorSize.width.toDp() })
+                .heightIn(max = 320.dp),
+            shape = RoundedCornerShape(14.dp),
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            tonalElevation = NuvioTheme.spacing.none,
+            shadowElevation = NuvioTheme.spacing.sm,
+            border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border)
+        ) {
+            options.forEach { option ->
+                val isSelected = option.id == selectedId
+                val isOptionFocused = option.id == focusedOptionId
+                val itemTextColor = if (isOptionFocused) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextPrimary
+                val itemBackgroundColor = when {
+                    isOptionFocused -> NuvioTheme.colors.Secondary
+                    isSelected -> NuvioTheme.colors.FocusBackground
+                    else -> Color.Transparent
+                }
+                DropdownMenuItem(
+                    modifier = Modifier
+                        .padding(horizontal = 6.dp, vertical = NuvioTheme.spacing.xxs)
+                        .background(itemBackgroundColor, RoundedCornerShape(10.dp))
+                        .onFocusChanged { state ->
+                            if (state.isFocused || state.hasFocus) focusedOptionId = option.id
+                            else if (focusedOptionId == option.id) focusedOptionId = null
+                        },
+                    text = {
+                        Text(option.localizedName(), color = itemTextColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    },
+                    onClick = { onSelect(option) },
+                    colors = MenuDefaults.itemColors(textColor = itemTextColor, disabledTextColor = NuvioTheme.colors.TextDisabled)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeMenuSource.localizedName(): String = when {
+    name != null -> name
+    nameResId != null -> stringResource(nameResId)
+    else -> ""
 }
 
 @Composable

@@ -5,6 +5,7 @@ import android.os.SystemClock
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.R
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.recommendations.TvRecommendationManager
@@ -23,12 +24,19 @@ import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.stableKey
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.ContentType
+import com.nuvio.tv.domain.model.PluginCatalogDescriptor
+import com.nuvio.tv.domain.model.PluginSourceRef
+import com.nuvio.tv.domain.model.PluginContentRegistry
+import com.nuvio.tv.domain.model.RepositoryType
+import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.data.repository.MDBListRepository
 import com.nuvio.tv.domain.model.MDBListSettings
 import com.nuvio.tv.domain.model.TmdbSettings
@@ -85,6 +93,7 @@ class HomeViewModel @Inject constructor(
     internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
     internal val profileManager: com.nuvio.tv.core.profile.ProfileManager,
     internal val tvRecommendationManager: TvRecommendationManager
+    ,internal val pluginManager: com.nuvio.tv.core.plugin.PluginManager
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -221,6 +230,7 @@ class HomeViewModel @Inject constructor(
     internal val catalogItemKeyIndex = mutableMapOf<String, MutableSet<String>>()
     internal val catalogOrder = mutableListOf<String>()
     internal var addonsCache: List<Addon> = emptyList()
+    internal var pluginScrapersCache: List<com.nuvio.tv.domain.model.ScraperInfo> = emptyList()
     internal var collectionsCache: List<Collection> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
@@ -354,6 +364,7 @@ class HomeViewModel @Inject constructor(
         }
 
         observeStartupAuthNotice()
+        observeHomePluginSources()
         viewModelScope.launch {
             profileManager.activeProfileReady.first { it }
             observeLayoutPreferences()
@@ -435,6 +446,121 @@ class HomeViewModel @Inject constructor(
                     clearAllCwInMemoryCaches()
                 }
             }
+        }
+    }
+
+    private fun observeHomePluginSources() {
+        viewModelScope.launch {
+            pluginManager.enabledScrapers.collectLatest { scrapers ->
+                pluginScrapersCache = scrapers
+                updateHomeSources()
+            }
+        }
+    }
+
+    internal fun updateHomeSources() {
+        val catalogSources = addonsCache
+            .filter { it.catalogs.isNotEmpty() }
+            .map { HomeMenuSource("addon:${it.id}", it.name) } +
+            pluginScrapersCache.filter { it.catalogs.isNotEmpty() }.map { HomeMenuSource("plugin:${it.id}", it.name) }
+        val streamSources = listOf(HomeMenuSource(HOME_ALL_STREAM_SOURCES_ID, nameResId = R.string.stream_filter_all)) +
+            pluginScrapersCache
+                .filter { it.supportsStreams }
+                .map { HomeMenuSource("plugin:${it.id}", it.name) }
+        _uiState.update { current -> current.copy(
+                    catalogSources = catalogSources,
+                    streamSources = streamSources,
+                    selectedCatalogSourceId = current.selectedCatalogSourceId?.takeIf { id -> catalogSources.any { it.id == id } }
+                        ?: catalogSources.firstOrNull()?.id,
+                    selectedStreamSourceId = current.selectedStreamSourceId.takeIf { id -> streamSources.any { it.id == id } }
+                        ?: HOME_ALL_STREAM_SOURCES_ID
+        ) }
+    }
+
+    fun selectHomeCatalogSource(id: String) {
+        _uiState.update { current ->
+            current.copy(
+                selectedCatalogSourceId = id,
+                selectedStreamSourceId = id.takeIf { candidate ->
+                    candidate.startsWith("plugin:") && current.streamSources.any { it.id == candidate }
+                } ?: HOME_ALL_STREAM_SOURCES_ID
+            )
+        }
+        id.removePrefix("addon:").takeIf { id.startsWith("addon:") }?.let { addonId ->
+            addonsCache.firstOrNull { it.id == addonId }?.let { addon ->
+                viewModelScope.launch { loadAllCatalogsPipeline(listOf(addon), forceReload = true) }
+            }
+        }
+        id.removePrefix("plugin:").takeIf { id.startsWith("plugin:") }?.let { scraperId ->
+            pluginScrapersCache.firstOrNull { it.id == scraperId }?.let { scraper ->
+                viewModelScope.launch { loadPluginHomeCatalogs(scraper) }
+            }
+        }
+    }
+
+    fun selectHomeStreamSource(id: String) {
+        _uiState.update { it.copy(selectedStreamSourceId = id) }
+    }
+
+    fun preparePluginPlayback(itemId: String) {
+        val selectedId = _uiState.value.selectedStreamSourceId
+        val source = selectedId.removePrefix("plugin:").takeIf { selectedId.startsWith("plugin:") }
+            ?.let { scraperId -> pluginScrapersCache.firstOrNull { it.id == scraperId } }
+            ?.let { scraper -> PluginSourceRef(RepositoryType.NUVIO_JS, scraper.repositoryId, scraper.id) }
+        PluginContentRegistry.selectStreamSource(itemId, source)
+    }
+
+    /** Replaces addon rows with the declared home catalogs of one JS plugin. */
+    private suspend fun loadPluginHomeCatalogs(scraper: ScraperInfo) {
+        if (scraper.type != RepositoryType.NUVIO_JS) return
+        val descriptors = scraper.catalogs.mapNotNull { catalog ->
+            val type = ContentType.fromString(catalog.type)
+            if (catalog.id.isNotBlank() && catalog.name.isNotBlank() &&
+                (type == ContentType.MOVIE || type == ContentType.SERIES)
+            ) {
+                PluginCatalogDescriptor(catalog.id, catalog.name, type, catalog.supportsPagination)
+            } else {
+                null
+            }
+        }
+        if (descriptors.isEmpty()) return
+
+        catalogLoadGeneration += 1
+        cancelInFlightCatalogLoads()
+        clearCatalogData()
+        synchronized(catalogStateLock) { catalogOrder.clear() }
+        _uiState.update { it.copy(isLoading = true, error = null) }
+
+        val source = PluginSourceRef(RepositoryType.NUVIO_JS, scraper.repositoryId, scraper.id)
+        try {
+            descriptors.forEach { descriptor ->
+                val page = pluginManager.executeCatalog(scraper, descriptor, language = _currentLocaleTag.value)
+                PluginContentRegistry.put(page.items)
+                val row = CatalogRow(
+                    addonId = "plugin:${scraper.id}",
+                    addonName = scraper.name,
+                    addonBaseUrl = "",
+                    catalogId = descriptor.id,
+                    catalogName = descriptor.name,
+                    type = descriptor.type,
+                    items = page.items.map { it.toMetaPreview() },
+                    hasMore = descriptor.supportsPagination && page.nextPageToken != null,
+                    supportsSkip = false,
+                    pluginSource = source,
+                    pluginNextPageToken = page.nextPageToken
+                )
+                val key = row.stableKey()
+                synchronized(catalogStateLock) { catalogOrder += key }
+                replaceCatalogRow(key, row)
+                onCatalogRowItemsChanged(key)
+            }
+            _uiState.update { it.copy(isLoading = false) }
+            scheduleUpdateCatalogRows()
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            _uiState.update { it.copy(isLoading = false, error = error.message) }
+            scheduleUpdateCatalogRows()
         }
     }
 

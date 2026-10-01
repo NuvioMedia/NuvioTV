@@ -35,6 +35,7 @@ import com.nuvio.tv.data.local.StreamLinkCacheDataStore
 import com.nuvio.tv.data.local.BingeGroupCacheDataStore
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Meta
+import com.nuvio.tv.domain.model.PluginContentRegistry
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
@@ -133,6 +134,10 @@ class StreamScreenViewModel @Inject constructor(
     private val year: String? = savedStateHandle.getOptionalString("year")
     private val contentId: String? = savedStateHandle.getOptionalString("contentId")
     private val contentName: String? = savedStateHandle.getOptionalString("contentName")
+    private val pluginContentId: String? = savedStateHandle.getOptionalString("pluginContentId")
+    private val pluginContent = pluginContentId?.let(PluginContentRegistry::get)
+    private val selectedPluginScraperId: String? = savedStateHandle.getOptionalString("pluginStreamSourceId")
+        ?: pluginContentId?.let(PluginContentRegistry::selectedStreamSource)?.scraperId
     private val contentLanguage: String? = savedStateHandle.getOptionalString("contentLanguage")
     private val playbackProfileId: Int = savedStateHandle.get<String>("profileId")?.toIntOrNull()
         ?: profileManager.activeProfileId.value
@@ -216,9 +221,8 @@ class StreamScreenViewModel @Inject constructor(
                             updatedAllStreams.filter { it.addonName == currentFilter }
                         }
                         streamFilterFullList = fullFiltered
-                        val pageEnd = state.filteredStreams.size
+                        val pageEnd = state.filteredStreams.size.coerceAtMost(fullFiltered.size)
                             .coerceAtLeast(STREAM_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
-                            .coerceAtMost(fullFiltered.size)
                         state.copy(
                             addonStreams = updatedAddonStreams,
                             allStreams = updatedAllStreams,
@@ -536,9 +540,7 @@ class StreamScreenViewModel @Inject constructor(
                     allStreams.filter { it.addonName == currentFilter }
                 }
                 streamFilterFullList = fullFiltered
-                val currentPageSize = _uiState.value.filteredStreams.size
-                val isFirstLoad = currentPageSize == 0
-                val paginatedStreams = if (isFirstLoad && fullFiltered.size > STREAM_FILTER_PAGE_SIZE) {
+                val paginatedStreams = if (fullFiltered.size > STREAM_FILTER_PAGE_SIZE) {
                     fullFiltered.subList(0, STREAM_FILTER_PAGE_SIZE)
                 } else {
                     fullFiltered
@@ -643,9 +645,8 @@ class StreamScreenViewModel @Inject constructor(
                                     updatedAllStreams.filter { it.addonName == currentFilter }
                                 }
                                 streamFilterFullList = fullFiltered
-                                val pageEnd = state.filteredStreams.size
+                                val pageEnd = state.filteredStreams.size.coerceAtMost(fullFiltered.size)
                                     .coerceAtLeast(STREAM_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
-                                    .coerceAtMost(fullFiltered.size)
                                 state.copy(
                                     addonStreams = updatedGroups,
                                     allStreams = updatedAllStreams,
@@ -664,7 +665,9 @@ class StreamScreenViewModel @Inject constructor(
                     videoId = videoId,
                     season = season,
                     episode = episode,
-                    forceRefresh = forceRefresh
+                    forceRefresh = forceRefresh,
+                    pluginContent = pluginContent,
+                    selectedPluginScraperId = selectedPluginScraperId
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {

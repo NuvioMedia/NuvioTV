@@ -4,6 +4,7 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.PluginContentRef
 import kotlinx.coroutines.flow.Flow
 
 interface StreamRepository {
@@ -23,7 +24,9 @@ interface StreamRepository {
         videoId: String,
         season: Int? = null,
         episode: Int? = null,
-        forceRefresh: Boolean = false
+        forceRefresh: Boolean = false,
+        pluginContent: PluginContentRef? = null,
+        selectedPluginScraperId: String? = null
     ): Flow<NetworkResult<List<AddonStreams>>>
 
     /**

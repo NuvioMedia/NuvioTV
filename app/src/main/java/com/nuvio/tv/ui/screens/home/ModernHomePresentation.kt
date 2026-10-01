@@ -168,7 +168,9 @@ internal fun buildModernHomePresentation(
                             catalogId = row.catalogId,
                             addonId = row.addonId,
                             apiType = row.apiType,
-                            supportsSkip = row.supportsSkip,
+                            // The presentation only needs to know whether it may request another page.
+                            // Plugin rows use opaque page tokens; the ViewModel selects that path later.
+                            supportsSkip = row.supportsSkip || row.pluginSource != null,
                             hasMore = row.hasMore,
                             isLoading = row.isLoading,
                             items = row.items.mapIndexed { itemIndex, item ->

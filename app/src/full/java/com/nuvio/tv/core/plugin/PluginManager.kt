@@ -15,6 +15,13 @@ import com.nuvio.tv.domain.model.RemotePluginInfo
 import com.nuvio.tv.domain.model.RepositoryType
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.domain.model.ScraperManifestInfo
+import com.nuvio.tv.domain.model.PluginCatalogDescriptor
+import com.nuvio.tv.domain.model.PluginCatalogItem
+import com.nuvio.tv.domain.model.PluginCatalogPage
+import com.nuvio.tv.domain.model.PluginContentRef
+import com.nuvio.tv.domain.model.PluginExternalIds
+import com.nuvio.tv.domain.model.PluginSourceRef
+import com.nuvio.tv.domain.model.ContentType
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,6 +37,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -288,6 +296,11 @@ class PluginManager @Inject constructor(
         pluginsEnabled
     ) { scraperList, enabled ->
         if (enabled) scraperList.filter { it.enabled } else emptyList()
+    }
+
+    /** Enabled providers that declared a stream capability. Catalog-only plugins stay discoverable. */
+    val enabledStreamScrapers: Flow<List<ScraperInfo>> = enabledScrapers.map { scrapers ->
+        scrapers.filter { it.supportsStreams }
     }
     
     /**
@@ -653,7 +666,7 @@ class PluginManager @Inject constructor(
             return@coroutineScope emptyList()
         }
         
-        val enabledScraperList = enabledScrapers.first()
+        val enabledScraperList = enabledStreamScrapers.first()
             .filter { it.supportsType(mediaType) }
         
         if (enabledScraperList.isEmpty()) {
@@ -699,10 +712,13 @@ class PluginManager @Inject constructor(
         tmdbId: String,
         mediaType: String,
         season: Int? = null,
-        episode: Int? = null
+        episode: Int? = null,
+        scraperId: String? = null,
+        contentUrl: String? = null,
+        contentUrlScraperId: String? = null
     ): Flow<Pair<ScraperInfo, List<LocalScraperResult>>> = channelFlow {
-        val enabledList = enabledScrapers.first()
-            .filter { it.supportsType(mediaType) }
+        val enabledList = enabledStreamScrapers.first()
+            .filter { it.supportsType(mediaType) && (scraperId == null || it.id == scraperId) }
         
         if (enabledList.isEmpty() || !dataStore.pluginsEnabled.first()) {
             return@channelFlow
@@ -727,7 +743,10 @@ class PluginManager @Inject constructor(
                     kotlinx.coroutines.delay(index * 60L)
                 }
                 try {
-                    val results = executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode)
+                    val results = executeScraperWithSingleFlight(
+                        scraper, tmdbId, mediaType, season, episode,
+                        contentUrl?.takeIf { scraper.id == contentUrlScraperId }
+                    )
                     if (results.isNotEmpty()) {
                         send(scraper to results)
                     }
@@ -746,9 +765,10 @@ class PluginManager @Inject constructor(
         tmdbId: String,
         mediaType: String,
         season: Int?,
-        episode: Int?
+        episode: Int?,
+        contentUrl: String? = null
     ): List<LocalScraperResult> {
-        val cacheKey = "${scraper.id}:$tmdbId:$mediaType:$season:$episode"
+        val cacheKey = "${scraper.id}:$tmdbId:$mediaType:$season:$episode:${contentUrl.orEmpty()}"
         
         // Check if already in flight
         val existing = inFlightScrapers[cacheKey]
@@ -764,7 +784,7 @@ class PluginManager @Inject constructor(
         return coroutineScope {
             val deferred = async {
                 scraperSemaphore.withPermit {
-                    executeScraper(scraper, tmdbId, mediaType, season, episode)
+                    executeScraper(scraper, tmdbId, mediaType, season, episode, contentUrl)
                 }
             }
             
@@ -789,20 +809,71 @@ class PluginManager @Inject constructor(
         tmdbId: String,
         mediaType: String,
         season: Int?,
-        episode: Int?
+        episode: Int?,
+        contentUrl: String? = null
     ): List<LocalScraperResult> {
         return when (scraper.type) {
             RepositoryType.EXTERNAL_DEX -> executeExternalDexScraper(scraper, tmdbId, mediaType, season, episode)
-            RepositoryType.NUVIO_JS -> executeJsScraper(scraper, tmdbId, mediaType, season, episode)
+            RepositoryType.NUVIO_JS -> executeJsScraper(scraper, tmdbId, mediaType, season, episode, contentUrl)
         }
     }
+
+    /** Executes a declared JS catalog. A missing or malformed item is ignored, not fatal. */
+    suspend fun executeCatalog(
+        scraper: ScraperInfo,
+        descriptor: PluginCatalogDescriptor,
+        pageToken: String? = null,
+        language: String? = null
+    ): PluginCatalogPage {
+        if (scraper.type != RepositoryType.NUVIO_JS) return PluginCatalogPage(emptyList())
+        val declaredCatalog = scraper.catalogs.firstOrNull { catalog ->
+            catalog.id == descriptor.id && ContentType.fromString(catalog.type) == descriptor.type
+        } ?: return PluginCatalogPage(emptyList())
+        if (pageToken != null && !declaredCatalog.supportsPagination) {
+            return PluginCatalogPage(emptyList())
+        }
+        val code = dataStore.getScraperCode(scraper.id) ?: return PluginCatalogPage(emptyList())
+        val raw = runtime.executeCatalog(
+            code, descriptor.id, descriptor.type.toApiString(), pageToken, language,
+            scraper.id, dataStore.getScraperSettings(scraper.id)
+        )
+        val root = com.google.gson.JsonParser.parseString(raw).takeIf { it.isJsonObject }?.asJsonObject
+            ?: return PluginCatalogPage(emptyList())
+        val source = PluginSourceRef(RepositoryType.NUVIO_JS, scraper.repositoryId, scraper.id)
+        val items = root.getAsJsonArray("items")?.mapNotNull { element ->
+            val value = element.takeIf { it.isJsonObject }?.asJsonObject ?: return@mapNotNull null
+            val id = value.string("id") ?: return@mapNotNull null
+            val name = value.string("name") ?: return@mapNotNull null
+            val type = ContentType.fromString(value.string("type") ?: return@mapNotNull null)
+            if (type != descriptor.type) return@mapNotNull null
+            PluginCatalogItem(
+                content = PluginContentRef(
+                    source, id, type, value.string("url"),
+                    PluginExternalIds(value.objectValue("externalIds")?.string("tmdbId"), value.objectValue("externalIds")?.string("imdbId"))
+                ),
+                name = name,
+                year = value.int("year"), poster = value.string("poster"), background = value.string("background"),
+                logo = value.string("logo"), description = value.string("description"),
+                genres = value.getAsJsonArray("genres")?.mapNotNull { it.takeIf { p -> p.isJsonPrimitive }?.asString } ?: emptyList()
+            )
+        }.orEmpty()
+        return PluginCatalogPage(items, root.string("nextPageToken"))
+    }
+
+    private fun com.google.gson.JsonObject.string(name: String): String? =
+        get(name)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString?.takeIf { it.isNotBlank() }
+    private fun com.google.gson.JsonObject.int(name: String): Int? =
+        get(name)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }?.asInt
+    private fun com.google.gson.JsonObject.objectValue(name: String): com.google.gson.JsonObject? =
+        get(name)?.takeIf { it.isJsonObject }?.asJsonObject
 
     private suspend fun executeJsScraper(
         scraper: ScraperInfo,
         tmdbId: String,
         mediaType: String,
         season: Int?,
-        episode: Int?
+        episode: Int?,
+        contentUrl: String?
     ): List<LocalScraperResult> {
         return try {
             val code = dataStore.getScraperCode(scraper.id)
@@ -838,6 +909,7 @@ class PluginManager @Inject constructor(
                         mediaType = mediaType,
                         season = season,
                         episode = episode,
+                        contentUrl = contentUrl,
                         scraperId = scraper.id,
                         scraperSettings = settings
                     )
@@ -1040,7 +1112,9 @@ class PluginManager @Inject constructor(
                     manifestEnabled = info.enabled,
                     logo = info.logo,
                     contentLanguage = info.contentLanguage ?: emptyList(),
-                    formats = info.formats
+                    formats = info.formats,
+                    supportsStreams = info.supportsStreams,
+                    catalogs = info.catalogs
                 )
                 
                 // Save code

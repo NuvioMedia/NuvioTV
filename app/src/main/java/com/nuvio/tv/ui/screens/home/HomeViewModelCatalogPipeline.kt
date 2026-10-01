@@ -13,7 +13,10 @@ import com.nuvio.tv.domain.model.catalogRowStableKey
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.model.legacyKey
 import com.nuvio.tv.domain.model.mergeCatalogPage
+import com.nuvio.tv.domain.model.mergePluginCatalogPage
 import com.nuvio.tv.domain.model.nextCatalogSkip
+import com.nuvio.tv.domain.model.PluginCatalogDescriptor
+import com.nuvio.tv.domain.model.PluginContentRegistry
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.stableKey
 import com.nuvio.tv.domain.model.WatchedItem
@@ -134,6 +137,7 @@ internal fun HomeViewModel.observeInstalledAddonsPipeline() {
             .collectLatest { installedAddons ->
                 val addons = installedAddons.enabledAddons()
                 addonsCache = addons
+                updateHomeSources()
                 loadAllCatalogsPipeline(addons)
             }
     }
@@ -513,8 +517,11 @@ internal fun HomeViewModel.loadCatalogPipeline(
 }
 
 internal fun HomeViewModel.loadMoreCatalogItemsPipeline(catalogId: String, addonId: String, type: String) {
-    val key = catalogKey(addonId = addonId, type = type, catalogId = catalogId)
-    val currentRow = readCatalogRow(key)
+    val addonKey = catalogKey(addonId = addonId, type = type, catalogId = catalogId)
+    val currentRow = readCatalogRow(addonKey) ?: snapshotCatalogState().second.values.firstOrNull { row ->
+        row.addonId == addonId && row.catalogId == catalogId && row.apiType == type
+    }
+    val key = currentRow?.stableKey() ?: addonKey
 
     if (currentRow == null) {
         return
@@ -531,8 +538,48 @@ internal fun HomeViewModel.loadMoreCatalogItemsPipeline(catalogId: String, addon
     _loadingCatalogs.update { it + key }
 
     viewModelScope.launch {
+        val source = currentRow.pluginSource
+        if (source != null) {
+            try {
+                val scraper = pluginScrapersCache.firstOrNull { it.repositoryId == source.repositoryId && it.id == source.scraperId }
+                    ?: return@launch
+                val manifestCatalog = scraper.catalogs.firstOrNull { it.id == catalogId } ?: return@launch
+                val descriptor = PluginCatalogDescriptor(
+                    manifestCatalog.id,
+                    manifestCatalog.name,
+                    currentRow.type,
+                    manifestCatalog.supportsPagination
+                )
+                val page = pluginManager.executeCatalog(
+                    scraper = scraper,
+                    descriptor = descriptor,
+                    pageToken = currentRow.pluginNextPageToken,
+                    language = _currentLocaleTag.value
+                )
+                PluginContentRegistry.put(page.items)
+                val nextPage = currentRow.copy(
+                    items = page.items.map { it.toMetaPreview() },
+                    isLoading = false,
+                    hasMore = descriptor.supportsPagination && page.nextPageToken != null,
+                    pluginNextPageToken = page.nextPageToken
+                )
+                updateCatalogRow(key) { it.mergePluginCatalogPage(nextPage) }
+                onCatalogRowItemsChanged(key)
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                updateCatalogRow(key) { it.copy(isLoading = false) }
+            } finally {
+                _loadingCatalogs.update { it - key }
+                scheduleUpdateCatalogRows()
+            }
+            return@launch
+        }
+
         val addon = addonsCache.find { it.id == addonId }
         if (addon == null) {
+            updateCatalogRow(key) { it.copy(isLoading = false) }
+            _loadingCatalogs.update { it - key }
             return@launch
         }
 

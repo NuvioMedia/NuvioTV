@@ -21,17 +21,21 @@ data class CatalogRow(
     val skipStep: Int = 100,
     val nextSkip: Int = 0,
     val consecutiveDuplicatePages: Int = 0,
-    val extraArgs: Map<String, String> = emptyMap()
+    val extraArgs: Map<String, String> = emptyMap(),
+    val pluginSource: PluginSourceRef? = null,
+    val pluginNextPageToken: String? = null
 ) {
     val apiType: String
         get() = rawType.trim().ifBlank { type.toApiString() }
 }
 
 fun CatalogRow.stableKey(): String {
+    pluginSource?.let { return pluginCatalogRowKey(it, catalogId, apiType) }
     return catalogRowStableKey(addonId, addonBaseUrl, apiType, catalogId)
 }
 
 fun CatalogRow.legacyKey(): String {
+    if (pluginSource != null) return stableKey()
     return catalogRowLegacyKey(addonId, apiType, catalogId)
 }
 
@@ -71,6 +75,7 @@ fun catalogRowLegacyKey(addonId: String, type: String, catalogId: String): Strin
 }
 
 fun CatalogRow.nextCatalogSkip(): Int {
+    require(pluginSource == null) { "Plugin catalogs use opaque page tokens, not addon skip offsets" }
     val fallback = (currentPage + 1) * skipStep
     return if (nextSkip > 0) nextSkip else fallback
 }
@@ -79,6 +84,9 @@ fun CatalogRow.mergeCatalogPage(
     page: CatalogRow,
     incomingItems: List<MetaPreview> = page.items
 ): CatalogRow {
+    require(pluginSource == null && page.pluginSource == null) {
+        "Plugin pages must not use addon pagination"
+    }
     val existingIds = items.asSequence()
         .map { "${it.apiType}:${it.id}" }
         .toHashSet()
@@ -110,5 +118,22 @@ fun CatalogRow.mergeCatalogPage(
         currentPage = currentPage + 1,
         nextSkip = advancedSkip,
         consecutiveDuplicatePages = duplicatePageCount
+    )
+}
+
+/** Merges an opaque-token plugin page without applying addon skip semantics. */
+fun CatalogRow.mergePluginCatalogPage(page: CatalogRow): CatalogRow {
+    require(pluginSource != null && page.pluginSource == pluginSource) {
+        "Plugin pages must come from the same plugin source"
+    }
+    val existingIds = items.mapTo(mutableSetOf()) { "${it.apiType}:${it.id}" }
+    val newItems = page.items.filter { existingIds.add("${it.apiType}:${it.id}") }
+    val nextToken = page.pluginNextPageToken
+    val tokenAdvanced = nextToken != null && nextToken != pluginNextPageToken
+    return page.copy(
+        items = items + newItems,
+        currentPage = currentPage + 1,
+        hasMore = page.hasMore && tokenAdvanced,
+        pluginNextPageToken = nextToken
     )
 }

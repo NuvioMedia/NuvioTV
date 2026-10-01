@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.home
 
 import androidx.compose.runtime.Immutable
+import androidx.annotation.StringRes
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.domain.model.CatalogRow
@@ -16,6 +17,10 @@ import com.nuvio.tv.domain.model.WatchProgress
 
 @Immutable
 data class HomeUiState(
+    val catalogSources: List<HomeMenuSource> = emptyList(),
+    val streamSources: List<HomeMenuSource> = emptyList(),
+    val selectedCatalogSourceId: String? = null,
+    val selectedStreamSourceId: String = HOME_ALL_STREAM_SOURCES_ID,
     val catalogRows: List<CatalogRow> = emptyList(),
     val continueWatchingItems: List<ContinueWatchingItem> = emptyList(),
     val upcomingItems: List<ContinueWatchingItem> = emptyList(),
@@ -75,6 +80,15 @@ data class HomeUiState(
     val mdbListShowOnHero: Boolean = false,
     val mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER
 )
+
+@Immutable
+data class HomeMenuSource(
+    val id: String,
+    val name: String? = null,
+    @StringRes val nameResId: Int? = null
+)
+
+const val HOME_ALL_STREAM_SOURCES_ID = "all"
 
 @Immutable
 sealed class ContinueWatchingItem {

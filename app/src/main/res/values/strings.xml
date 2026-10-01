@@ -979,8 +979,8 @@
     <string name="layout_modern_desc">Fixed hero with a single active row for faster browsing</string>
     <string name="layout_section_home">Home Layout</string>
     <string name="layout_section_home_desc">Choose structure and hero source.</string>
-    <string name="layout_landscape_posters">Landscape Poster Mode</string>
-    <string name="layout_landscape_posters_sub">Use landscape cards everywhere.</string>
+    <string name="layout_landscape_posters">Landscape Posters</string>
+    <string name="layout_landscape_posters_sub">Switch between portrait and landscape cards for Modern view.</string>
     <string name="layout_preview_row">Show Preview Row</string>
     <string name="layout_preview_row_sub">Show a partial preview of the row below in Modern Home layout.</string>
     <string name="layout_hero_catalogs">Hero Catalogs</string>
@@ -2467,6 +2467,8 @@
     <!-- Home errors -->
     <string name="home_error_no_addons">No addons installed</string>
     <string name="home_error_no_catalog_addons">No catalog addons installed</string>
+    <string name="home_catalog_source">Catalog</string>
+    <string name="home_stream_source">Source</string>
 
     <!-- Player errors -->
     <string name="player_error_failed_start_torrent">Failed to start torrent: %1$s</string>
@@ -3335,18 +3337,4 @@
     <string name="shuffle_save_failed">Could not update shuffle. Try again.</string>
     <string name="shuffle_change_selection">Choose episodes</string>
     <string name="shuffle_badge">Episode shuffle enabled</string>
-
-    <!-- Subtitle AutoSync -->
-    <string name="autosync_setting_title">Auto Sync Subtitles</string>
-    <string name="autosync_setting_description">Match the selected add-on subtitle to the timing of the subtitles embedded in the video.</string>
-    <string name="autosync_tolerance_title">Auto Sync Tolerance</string>
-    <string name="autosync_tolerance_description">Keep the original timing when the correction needed is this small or smaller.</string>
-    <string name="autosync_tolerance_off">Off</string>
-    <string name="autosync_tolerance_value">%1$d ms</string>
-    <string name="autosync_thorough_title">Thorough Auto Sync Search</string>
-    <string name="autosync_thorough_description">Keep comparing other subtitles and embedded tracks for a closer match before syncing. When off, the first strong match is used sooner. Only confident matches are ever applied.</string>
-    <string name="autosync_toast_failed">Sync failed: Auto Sync couldn\'t match this subtitle to the video.</string>
-    <string name="autosync_toast_failed_no_reference">Sync failed: this video has no embedded subtitles to compare with.</string>
-    <string name="autosync_toast_failed_unsupported">Sync failed: Auto Sync doesn\'t support this subtitle format.</string>
-    <string name="autosync_label_synced">Auto synced</string>
 </resources>

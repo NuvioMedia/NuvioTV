@@ -29,6 +29,7 @@ import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
 import com.nuvio.tv.domain.model.Meta
+import com.nuvio.tv.domain.model.PluginContentRegistry
 import com.nuvio.tv.domain.model.MetaTrailer
 import com.nuvio.tv.domain.model.NextToWatch
 import com.nuvio.tv.domain.model.TmdbSettings
@@ -110,6 +111,7 @@ class MetaDetailsViewModel @Inject constructor(
     private val itemId: String = savedStateHandle["itemId"] ?: ""
     private val itemType: String = savedStateHandle["itemType"] ?: ""
     private val preferredAddonBaseUrl: String? = savedStateHandle["addonBaseUrl"]
+    private val pluginContentRef = PluginContentRegistry.get(itemId)
 
     private val _uiState = MutableStateFlow(MetaDetailsUiState())
     private val shuffleVisit = System.nanoTime()
@@ -879,6 +881,9 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private suspend fun resolveMetaLookupId(itemId: String, itemType: String): String {
+        pluginContentRef?.externalIds?.tmdbId
+            ?.takeIf { it.isNotBlank() }
+            ?.let { return "tmdb:$it" }
         val raw = itemId.trim()
         if (!raw.startsWith("tmdb:", ignoreCase = true)) return raw
 

@@ -63,7 +63,19 @@ data class ScraperManifestInfo(
     val formats: List<String>? = null,
     val supportedFormats: List<String>? = null,
     val supportsExternalPlayer: Boolean? = null,
-    val limited: Boolean? = null
+    val limited: Boolean? = null,
+    /** Defaults to true so existing getStreams-only manifests remain compatible. */
+    val supportsStreams: Boolean = true,
+    val catalogs: List<PluginCatalogManifestInfo> = emptyList()
+)
+
+/** Optional home catalog declarations supplied by a Nuvio JS scraper. */
+@JsonClass(generateAdapter = true)
+data class PluginCatalogManifestInfo(
+    val id: String,
+    val name: String,
+    val type: String,
+    val supportsPagination: Boolean = false
 )
 
 /**
@@ -82,7 +94,9 @@ data class ScraperInfo(
     val contentLanguage: List<String>,
     val repositoryId: String,
     val formats: List<String>?,
-    val type: RepositoryType = RepositoryType.NUVIO_JS
+    val type: RepositoryType = RepositoryType.NUVIO_JS,
+    val supportsStreams: Boolean = true,
+    val catalogs: List<PluginCatalogManifestInfo> = emptyList()
 ) {
     fun supportsType(type: String): Boolean {
         val normalizedType = normalizePluginType(type)

@@ -1661,6 +1661,8 @@
     <string name="stream_player_internal">Dahili Oynatıcı</string>
     <string name="stream_player_external">Harici Oynatıcı</string>
     <string name="stream_filter_all">Tümü</string>
+    <string name="home_catalog_source">Katalog</string>
+    <string name="home_stream_source">Kaynak</string>
 
     <!-- PlayerScreen -->
     <string name="player_no_external_player">Harici oynatıcı bulunamadı</string>
