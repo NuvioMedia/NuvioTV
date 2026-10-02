@@ -153,6 +153,7 @@ fun ModernHomeContent(
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
     onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
     onFocusedRowKeyChanged: (String?) -> Unit = {},
+    onFocusedItemKeyChanged: (String, String?) -> Unit = { _, _ -> },
     scrollToTopTrigger: Int = 0,
     onRequestLazyCatalogLoad: (String) -> Unit = {},
     onRowItemFocusedCallback: (String, Int, Boolean) -> Unit = { _, _, _ -> },
@@ -233,12 +234,13 @@ fun ModernHomeContent(
     val focusedCardByRow = remember { mutableMapOf<String, FocusedCard>() }
     val rowListsSnapshot = remember { RowListsSnapshot() }
     val latestRowByKey = rememberUpdatedState(rowByKey)
+    val latestOnFocusedItemKeyChanged = rememberUpdatedState(onFocusedItemKeyChanged)
     val recordFocusedCard = remember {
         { rowKey: String, index: Int ->
             val key = latestRowByKey.value[rowKey]?.items?.list?.getOrNull(index)?.key
             if (key != null) focusedCardByRow[rowKey] = FocusedCard(key, index)
             else focusedCardByRow.remove(rowKey)
-            Unit
+            latestOnFocusedItemKeyChanged.value(rowKey, key)
         }
     }
     val stableFocusedItemByRow = remember { StableRef<MutableMap<String, Int>>(focusedItemByRow) }
@@ -436,7 +438,9 @@ fun ModernHomeContent(
         SideEffect {
             pendingRowScrolls.forEach { (state, index) -> state.requestScrollToItem(index) }
             pendingFocusedCards.forEach { (rowKey, card) ->
+                val reportedKey = focusedCardByRow[rowKey]?.key
                 if (card != null) focusedCardByRow[rowKey] = card else focusedCardByRow.remove(rowKey)
+                if (card?.key != reportedKey) latestOnFocusedItemKeyChanged.value(rowKey, card?.key)
             }
             rowListsSnapshot.token = rowListsToken
         }
@@ -445,6 +449,10 @@ fun ModernHomeContent(
     LaunchedEffect(carouselRows, focusState.hasSavedFocus) {
         rowListStates.keys.retainAll(activeRowKeys)
         loadMoreRequestedTotals.keys.retainAll(activeRowKeys)
+        focusedCardByRow.keys.filter { it !in activeRowKeys }.forEach { rowKey ->
+            focusedCardByRow.remove(rowKey)
+            latestOnFocusedItemKeyChanged.value(rowKey, null)
+        }
         val staleSelection = focusedCatalogSelection.value?.let { selection ->
             when (val payload = selection.payload) {
                 is ModernPayload.Catalog -> !payload.itemId.startsWith("__placeholder_") && payload.itemId !in activeCatalogItemIds.set

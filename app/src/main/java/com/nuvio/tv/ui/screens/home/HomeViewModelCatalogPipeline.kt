@@ -15,6 +15,7 @@ import com.nuvio.tv.domain.model.legacyKey
 import com.nuvio.tv.domain.model.mergeCatalogPage
 import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
+import com.nuvio.tv.domain.model.stableItemKeys
 import com.nuvio.tv.domain.model.stableKey
 import com.nuvio.tv.domain.model.WatchedItem
 import com.nuvio.tv.domain.model.supportsExtra
@@ -1111,6 +1112,45 @@ private fun HomeViewModel.reconcileFullyWatchedFromLocalItems(
  *    the focus ring, so the row the user has focus on is left alone and picked up on a later
  *    pass, once focus has moved on.
  */
+/** How a freshly fetched page 1 relates to the row already loaded. */
+internal sealed interface CatalogRefreshChange {
+    /** Page 1 still matches the head of the row. */
+    object Unchanged : CatalogRefreshChange
+
+    /** [addedCount] new items in front, the rest matching the head of the row in order. */
+    data class Prepend(val addedCount: Int) : CatalogRefreshChange
+
+    /** Reorder, removal or turnover: the row has to be rebuilt from page 1. */
+    object Restructure : CatalogRefreshChange
+}
+
+internal fun classifyCatalogRefresh(currentIds: List<String>, freshIds: List<String>): CatalogRefreshChange {
+    if (freshIds == currentIds.take(freshIds.size)) return CatalogRefreshChange.Unchanged
+    val existing = currentIds.toHashSet()
+    val addedCount = freshIds.indexOfFirst { it in existing }.let { if (it < 0) freshIds.size else it }
+    val rest = freshIds.drop(addedCount)
+    val isPrepend = addedCount > 0 && rest.isNotEmpty() &&
+        rest.size <= currentIds.size &&
+        rest.indices.all { rest[it] == currentIds[it] }
+    return if (isPrepend) CatalogRefreshChange.Prepend(addedCount) else CatalogRefreshChange.Restructure
+}
+
+/**
+ * Whether a restructured row is left as it is for now. Rebuilding drops the cards under the
+ * focus ring, and it cuts the row back to page 1: a row whose focused card sits past that page
+ * and is not in it would come back on its first card with the pages behind it gone.
+ *
+ * [focusedIndex] is the focused card's place in the loaded row, -1 when unknown.
+ */
+internal fun keepsRowOnRestructure(
+    rowHasFocus: Boolean,
+    requestedByUser: Boolean,
+    focusedIndex: Int,
+    focusedInFresh: Boolean,
+    freshSize: Int
+): Boolean =
+    !requestedByUser && (rowHasFocus || (focusedIndex >= freshSize && !focusedInFresh))
+
 internal fun HomeViewModel.mergeRefreshedCatalogRow(
     key: String,
     fresh: CatalogRow,
@@ -1130,21 +1170,14 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
     val currentIds = current.items.map(identity)
     val freshIds = fresh.items.map(identity)
 
-    if (freshIds == currentIds.take(freshIds.size)) {
-        return true
-    }
-
-    val existing = currentIds.toHashSet()
-    val added = fresh.items.takeWhile { identity(it) !in existing }
-    val rest = freshIds.drop(added.size)
-    val isPrepend = added.isNotEmpty() && rest.isNotEmpty() &&
-        rest.size <= currentIds.size &&
-        rest.indices.all { rest[it] == currentIds[it] }
+    val change = classifyCatalogRefresh(currentIds, freshIds)
+    if (change == CatalogRefreshChange.Unchanged) return true
 
     val focusedRowKey = liveFocusedRowKey
     val rowHasFocus = focusedRowKey != null && focusedRowKey == fresh.stableKey()
 
-    if (isPrepend) {
+    if (change is CatalogRefreshChange.Prepend) {
+        val added = fresh.items.take(change.addedCount)
         // Nothing is removed and every card already on screen keeps its key, so the focused card
         // only shifts along and its node is reused. That holds in the modern layout, which keeps
         // the whole row; the others cut it at a fixed length, where the focused card can be
@@ -1166,9 +1199,16 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
         return true
     }
 
-    // The row was restructured. Rebuilding it drops the cards under the focus ring, so leave the
-    // focused row alone and pick it up once focus has moved on.
-    return rowHasFocus && !requestedByUser
+    // The row was restructured. Leave it alone while the focus ring is on it, or while its focus
+    // sits past page 1 on a card page 1 no longer has, and pick it up on a later pass.
+    val focusedItemKey = liveFocusedItemKeyByRow[fresh.stableKey()]
+    return keepsRowOnRestructure(
+        rowHasFocus = rowHasFocus,
+        requestedByUser = requestedByUser,
+        focusedIndex = focusedItemKey?.let { current.stableItemKeys().indexOf(it) } ?: -1,
+        focusedInFresh = focusedItemKey != null && focusedItemKey in fresh.stableItemKeys(),
+        freshSize = fresh.items.size
+    )
 }
 
 

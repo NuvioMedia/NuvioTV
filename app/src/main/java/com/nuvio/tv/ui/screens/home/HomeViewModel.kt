@@ -815,6 +815,14 @@ class HomeViewModel @Inject constructor(
     @Volatile
     internal var liveFocusedRowKey: String? = null
 
+    /** Item key of the card each row's focus is on. */
+    internal val liveFocusedItemKeyByRow = ConcurrentHashMap<String, String>()
+
+    fun setLiveFocusedItemKey(rowKey: String, itemKey: String?) {
+        if (itemKey != null) liveFocusedItemKeyByRow[rowKey] = itemKey
+        else liveFocusedItemKeyByRow.remove(rowKey)
+    }
+
     /** Called by the Home content when the focused row changes. */
     fun setLiveFocusedRowKey(rowKey: String?) {
         liveFocusedRowKey = rowKey

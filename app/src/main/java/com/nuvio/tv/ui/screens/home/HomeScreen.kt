@@ -705,6 +705,9 @@ private fun ModernHomeRoute(
         onFocusedRowKeyChanged = remember(viewModel) {
             { key: String? -> viewModel.setLiveFocusedRowKey(key) }
         },
+        onFocusedItemKeyChanged = remember(viewModel) {
+            { rowKey: String, itemKey: String? -> viewModel.setLiveFocusedItemKey(rowKey, itemKey) }
+        },
         onRequestLazyCatalogLoad = remember(viewModel) {
             { catalogKey: String -> viewModel.requestLazyCatalogLoad(catalogKey) }
         }
