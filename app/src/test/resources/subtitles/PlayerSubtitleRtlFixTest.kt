@@ -73,6 +73,10 @@ class PlayerSubtitleRtlFixTest {
         Case("ג'ורג' אמר שלום", "ג'ורג' אמר שלום", emptyList()),
         Case(",\"ל\"הרוזן ממונטה כריסטו", "ל\"הרוזן ממונטה כריסטו\",", listOf(Rule.LEADING_PUNCTUATION)),
 
+        Case("- 'קניון וולבריג -", "- קניון וולבריג'-", listOf(Rule.DASH_ELLIPSIS, Rule.DASH_TO_FRONT)),
+        Case("- 'שלום' -", "- 'שלום' -", emptyList()),
+        Case("- הפתיחה ב-2008-", "- הפתיחה ב-2008-", emptyList()),
+
         // Lines wrapped in RLM marks
         Case(
             "\u200F:מתוקה קטנה\" מציגים\"\u200F",
@@ -128,6 +132,17 @@ class PlayerSubtitleRtlFixTest {
     }
 
     @Test
+    fun detectsSwappedBoundaries() {
+        val swapped = (1..20).map { ".שלום עולם $it" } + (1..30).map { "שלום עולם $it" }
+        val correct = listOf("- مَن أنت؟", "- (لوك بانكول)", "...היא לא יותר מאשליה", "- שלום.", "שלום עולם.") +
+            (1..100).map { "שלום עולם $it." }
+        val lrmNumbers = (1..6).map { "גלונים \u200E7$it" } + (1..100).map { "שלום עולם $it." }
+        assertEquals(true, PlayerSubtitleRtlFix.looksLikeSwappedBoundaries(swapped.asSequence()))
+        assertEquals(false, PlayerSubtitleRtlFix.looksLikeSwappedBoundaries(correct.asSequence()))
+        assertEquals(true, PlayerSubtitleRtlFix.looksLikeSwappedBoundaries(lrmNumbers.asSequence()))
+    }
+
+    @Test
     fun detectsReversedNumbersByYears() {
         val reversed = sequenceOf("שנת 9102", "ב-3591", "ב-0691", "ב-0202")
         val forward = sequenceOf("שנת 2019", "ב-1953", "ב-1960", "ב-2020")
@@ -155,7 +170,7 @@ class PlayerSubtitleRtlFixTest {
         val expected = snapshotFile.readText(Charsets.UTF_8).split("\n")
         val changed = (expected.toSet() - actual.toSet()) + (actual.toSet() - expected.toSet())
         if (changed.isNotEmpty()) {
-            fail("${changed.size} snapshot entries differ (input | numbersMoved | numbersReversed | output | marks):\n" +
+            fail("${changed.size} snapshot entries differ (input | numbersMoved | numbersReversed | swapped | output | marks):\n" +
                 changed.take(40).joinToString("\n"))
         }
         assertEquals(expected.size, actual.size)
@@ -163,14 +178,22 @@ class PlayerSubtitleRtlFixTest {
 
     private fun buildSnapshot(dir: File): List<String> {
         val entries = sortedSetOf<String>()
+        val tags = Regex("<[^>]+>")
         dir.listFiles { file -> file.extension == "srt" }.orEmpty().sortedBy { it.name }.forEach { file ->
             val blocks = file.readText(Charsets.UTF_8).replace("\r\n", "\n").split("\n\n")
-            val lines = blocks.flatMap { block -> block.split("\n").drop(2) }.filter { it.isNotEmpty() }
-            val numbersReversed = PlayerSubtitleRtlFix.looksLikeReversedNumbers(lines.asSequence())
+            val lines = blocks.flatMap { block -> block.split("\n").drop(2) }
+                .map { it.replace(tags, "") }
+                .filter { it.isNotEmpty() }
+            val swapped = PlayerSubtitleRtlFix.looksLikeSwappedBoundaries(lines.asSequence())
+            val numbersReversed = swapped && PlayerSubtitleRtlFix.looksLikeReversedNumbers(lines.asSequence())
             for (line in lines) {
                 for (numbersMoved in listOf(false, true)) {
-                    val repair = PlayerSubtitleRtlFix.repairLine(line, numbersMoved, numbersReversed)
-                    entries.add("$line | $numbersMoved | $numbersReversed | ${repair.text} | ${repair.marks}")
+                    val repair = if (swapped) {
+                        PlayerSubtitleRtlFix.repairLine(line, numbersMoved, numbersReversed)
+                    } else {
+                        PlayerSubtitleRtlFix.LineRepair(line)
+                    }
+                    entries.add("$line | $numbersMoved | $numbersReversed | $swapped | ${repair.text} | ${repair.marks}")
                 }
             }
         }
