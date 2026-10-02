@@ -921,7 +921,11 @@ internal fun ModernRowSection(
                     .recompositionHighlighter()
                     .focusRequester(rowFocusRequester)
                     .focusRestorer {
-                        resolveRowFocusTarget(itemKeys, rowFocusedIndex.value, itemFocusRequesters)
+                        // The fallback is read here, before a rebuilt row has composed its cards:
+                        // the target's requester has to exist already.
+                        val focusedIndex = rowFocusedIndex.value
+                        itemKeys.getOrNull(focusedIndex)?.let { itemFocusRequesters.getOrPut(it) { FocusRequester() } }
+                        resolveRowFocusTarget(itemKeys, focusedIndex, itemFocusRequesters)
                             ?: FocusRequester.Default
                     }
                     .focusGroup(),
