@@ -1228,12 +1228,14 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
     val focusedRowKey = liveFocusedRowKey
     val rowHasFocus = focusedRowKey != null && focusedRowKey == fresh.stableKey()
 
-    if (change is CatalogRefreshChange.Prepend) {
+    // The other layouts hold a row's place by index: a moved title rebuilds the row there, as before.
+    val isModern = _uiState.value.homeLayout == HomeLayout.MODERN
+    if (change is CatalogRefreshChange.Prepend && (isModern || change.moved.isEmpty())) {
         // Nothing is removed and every card already on screen keeps its key, so the focused card
         // only shifts along and its node is reused. That holds in the modern layout, which keeps
         // the whole row; the others cut it at a fixed length, where the focused card can be
         // pushed past the cut and no key brings back a card that has left the list.
-        if (!requestedByUser && rowHasFocus && _uiState.value.homeLayout != HomeLayout.MODERN) {
+        if (!requestedByUser && rowHasFocus && !isModern) {
             return true
         }
         val held = if (rowHasFocus && !requestedByUser) {
