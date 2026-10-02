@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
@@ -115,6 +116,7 @@ fun HeroContentSection(
     tmdbRating: Float? = null,
     showFullReleaseDate: Boolean = true,
     isTrailerPlaying: Boolean = false,
+    isBackgroundTrailerPlaying: Boolean = false,
     playButtonFocusRequester: FocusRequester? = null,
     restorePlayFocusToken: Int = 0,
     onHeroActionFocused: () -> Unit = {},
@@ -123,6 +125,12 @@ fun HeroContentSection(
     onTruncationChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
+    var isSynopsisFocused by remember(meta.id) { mutableStateOf(false) }
+    val detailTextAlpha = animateFloatAsState(
+        targetValue = if (isBackgroundTrailerPlaying && !isSynopsisFocused) 0.85f else 1f,
+        animationSpec = tween(300),
+        label = "backgroundTrailerDetailTextAlpha"
+    )
     val isSeriesApi = remember(meta.apiType) {
         meta.apiType.equals("series", ignoreCase = true) || meta.apiType.equals("tv", ignoreCase = true)
     }
@@ -323,45 +331,48 @@ fun HeroContentSection(
 
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
-                    // Director/Writer line above description
-                    if (!creditLine.isNullOrBlank()) {
-                        Text(
-                            text = creditLine,
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                textDirection = creditLine.contentTextDirection()
-                            ),
-                            color = NuvioTheme.extendedColors.textSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth(0.6f)
+                    Column(modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = detailTextAlpha.value }) {
+                        // Director/Writer line above description
+                        if (!creditLine.isNullOrBlank()) {
+                            Text(
+                                text = creditLine,
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    textDirection = creditLine.contentTextDirection()
+                                ),
+                                color = NuvioTheme.extendedColors.textSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth(0.6f)
+                            )
+                            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+                        }
+
+                        if (mdbListRatings?.isEmpty() == false) {
+                            MDBListRatingsRow(ratings = mdbListRatings, order = mdbListRatingOrder)
+                            Spacer(modifier = Modifier.height(14.dp))
+                        }
+
+                        meta.description?.let { description ->
+                            SynopsisDescription(
+                                description = description,
+                                onShowFullDescription = onShowFullDescription,
+                                upFocusRequester = playButtonFocusRequester,
+                                onFocused = onHeroActionFocused,
+                                onTruncationChanged = onTruncationChanged,
+                                modifier = Modifier
+                                    .onFocusChanged { isSynopsisFocused = it.hasFocus }
+                                    .fillMaxWidth(0.6f)
+                                    .padding(bottom = NuvioTheme.spacing.md)
+                            )
+                        }
+
+                        MetaInfoRow(
+                            meta = meta,
+                            hideImdbRating = hideMetaInfoImdb,
+                            showFullReleaseDate = showFullReleaseDate,
+                            tmdbRating = tmdbRating
                         )
-                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                     }
-
-                    if (mdbListRatings?.isEmpty() == false) {
-                        MDBListRatingsRow(ratings = mdbListRatings, order = mdbListRatingOrder)
-                        Spacer(modifier = Modifier.height(14.dp))
-                    }
-
-                    meta.description?.let { description ->
-                        SynopsisDescription(
-                            description = description,
-                            onShowFullDescription = onShowFullDescription,
-                            upFocusRequester = playButtonFocusRequester,
-                            onFocused = onHeroActionFocused,
-                            onTruncationChanged = onTruncationChanged,
-                            modifier = Modifier
-                                .fillMaxWidth(0.6f)
-                                .padding(bottom = NuvioTheme.spacing.md)
-                        )
-                    }
-
-                    MetaInfoRow(
-                        meta = meta,
-                        hideImdbRating = hideMetaInfoImdb,
-                        showFullReleaseDate = showFullReleaseDate,
-                        tmdbRating = tmdbRating
-                    )
                 }
             }
         }

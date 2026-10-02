@@ -321,8 +321,14 @@ class MetaDetailsViewModel @Inject constructor(
             trailerSettingsDataStore.settings.collectLatest { settings ->
                 trailerAutoplayEnabled = settings.enabled
                 trailerDelayMs = settings.delaySeconds * 1000L
+                _uiState.update { it.copy(backgroundTrailerEnabled = settings.backgroundPlaybackEnabled) }
                 if (!settings.enabled) {
                     idleTimerJob?.cancel()
+                    if (_uiState.value.isTrailerPlaying && !_uiState.value.showTrailerControls) {
+                        handleTrailerEnded()
+                    }
+                } else {
+                    startIdleTimer()
                 }
             }
         }
@@ -2905,7 +2911,8 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun handleUserInteraction() {
         val state = _uiState.value
-        val shouldStopAutoTrailer = state.isTrailerPlaying && !state.showTrailerControls
+        val shouldStopAutoTrailer = state.isTrailerPlaying &&
+            !state.showTrailerControls && !state.isBackgroundTrailerPlaying
         val hasActiveIdleTimer = idleTimerJob?.isActive == true
         if (!isPlayButtonFocused && !hasActiveIdleTimer && !shouldStopAutoTrailer) {
             return

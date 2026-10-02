@@ -56,11 +56,19 @@ internal fun LayoutDetailPageSection(
             }
         )
         if (uiState.detailPageTrailerAutoplayEnabled) {
+            SettingsToggleRow(
+                title = stringResource(R.string.audio_trailer_background),
+                subtitle = stringResource(R.string.audio_trailer_background_sub),
+                checked = uiState.detailPageTrailerBackgroundEnabled,
+                onToggle = {
+                    onEvent(LayoutSettingsEvent.SetDetailPageTrailerBackgroundEnabled(!uiState.detailPageTrailerBackgroundEnabled))
+                }
+            )
             SliderSettingsItem(
                 title = stringResource(R.string.audio_trailer_delay),
                 value = uiState.detailPageTrailerAutoplayDelaySeconds,
                 valueText = "${uiState.detailPageTrailerAutoplayDelaySeconds}s",
-                minValue = 3,
+                minValue = 0,
                 maxValue = 15,
                 step = 1,
                 onValueChange = { seconds ->

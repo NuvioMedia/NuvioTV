@@ -140,6 +140,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
+// Match the home preview's overscan to crop letterboxing baked into trailer frames.
+private const val BACKGROUND_TRAILER_OVERSCAN_ZOOM = 1.35f
+
 private enum class RestoreTarget {
     HERO,
     EPISODE,
@@ -496,16 +499,24 @@ fun MetaDetailsScreen(
             restoreSharedTrailerFocusToken += 1
             viewModel.onEvent(MetaDetailsEvent.OnDismissSharedTrailer)
         } else if (uiState.isTrailerPlaying) {
-            restorePlayFocusAfterTrailerBackToken += 1
+            if (!uiState.isBackgroundTrailerPlaying) {
+                restorePlayFocusAfterTrailerBackToken += 1
+            }
             isTrailerPaused = false
             viewModel.onEvent(MetaDetailsEvent.OnTrailerEnded)
         } else {
+            viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
             onBackPress()
         }
     }
 
     val currentIsTrailerPlaying by rememberUpdatedState(uiState.isTrailerPlaying)
     val currentShowTrailerControls by rememberUpdatedState(uiState.showTrailerControls)
+    val currentBackgroundTrailerPlaying by rememberUpdatedState(uiState.isBackgroundTrailerPlaying)
+
+    LaunchedEffect(childOverlayVisible) {
+        if (childOverlayVisible) viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
+    }
     var trailerSeekOverlayVisible by remember { mutableStateOf(false) }
     val trailerSeekOverlayState = remember { TrailerSeekOverlayState() }
     var trailerSeekToken by remember { mutableIntStateOf(0) }
@@ -548,7 +559,10 @@ fun MetaDetailsScreen(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
+        }
     }
 
     Box(
@@ -556,7 +570,7 @@ fun MetaDetailsScreen(
             .fillMaxSize()
             .background(NuvioTheme.colors.Background)
             .onPreviewKeyEvent { keyEvent ->
-                if (currentIsTrailerPlaying) {
+                if (currentIsTrailerPlaying && !currentBackgroundTrailerPlaying) {
                     if (currentShowTrailerControls) {
                         if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
                             return@onPreviewKeyEvent false
@@ -691,6 +705,7 @@ fun MetaDetailsScreen(
                         Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                         return@playEpisode
                     }
+                    viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
                     onPlayClick(
                         video.id,
                         meta.apiType,
@@ -713,6 +728,7 @@ fun MetaDetailsScreen(
                         Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                         return@playEpisodeManually
                     }
+                    viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
                     onPlayManuallyClick(
                         video.id,
                         meta.apiType,
@@ -735,6 +751,7 @@ fun MetaDetailsScreen(
                         Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                         return@playTitle
                     }
+                    viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
                     onPlayClick(
                         videoId,
                         meta.apiType,
@@ -757,6 +774,7 @@ fun MetaDetailsScreen(
                         Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                         return@playTitleManually
                     }
+                    viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
                     onPlayManuallyClick(
                         videoId,
                         meta.apiType,
@@ -960,6 +978,7 @@ fun MetaDetailsScreen(
                     trailerUrl = uiState.trailerUrl,
                     trailerAudioUrl = uiState.trailerAudioUrl,
                     isTrailerPlaying = uiState.isTrailerPlaying,
+                    isBackgroundTrailerPlaying = uiState.isBackgroundTrailerPlaying,
                     isTrailerPaused = isTrailerPaused,
                     showTrailerControls = uiState.showTrailerControls,
                     hideLogoDuringTrailer = uiState.hideLogoDuringTrailer,
@@ -1230,6 +1249,7 @@ private fun MetaDetailsContent(
     trailerUrl: String?,
     trailerAudioUrl: String?,
     isTrailerPlaying: Boolean,
+    isBackgroundTrailerPlaying: Boolean,
     isTrailerPaused: Boolean = false,
     showTrailerControls: Boolean,
     hideLogoDuringTrailer: Boolean,
@@ -2265,6 +2285,7 @@ private fun MetaDetailsContent(
             trailerUrl = trailerUrl,
             trailerAudioUrl = trailerAudioUrl,
             isTrailerPlaying = isTrailerPlaying,
+            isBackgroundTrailerPlaying = isBackgroundTrailerPlaying,
             isTrailerPaused = isTrailerPaused,
             showTrailerControls = showTrailerControls,
             trailerSeekToken = trailerSeekToken,
@@ -2468,7 +2489,8 @@ private fun MetaDetailsContent(
                         shuffleActionPending = stoppingShuffle,
                         randomEpisodeFocusRequester = randomEpisodeFocusRequester,
                         hideLogoDuringTrailer = hideLogoDuringTrailer,
-                        isTrailerPlaying = isTrailerPlaying,
+                        isTrailerPlaying = isTrailerPlaying && !isBackgroundTrailerPlaying,
+                        isBackgroundTrailerPlaying = isBackgroundTrailerPlaying,
                         playButtonFocusRequester = heroPlayButtonFocusRequester,
                         onHeroActionFocused = {
                             if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
@@ -3166,6 +3188,7 @@ private fun BackdropLayer(
     trailerUrl: String?,
     trailerAudioUrl: String?,
     isTrailerPlaying: Boolean,
+    isBackgroundTrailerPlaying: Boolean,
     isTrailerPaused: Boolean = false,
     showTrailerControls: Boolean,
     trailerSeekToken: Int,
@@ -3186,10 +3209,20 @@ private fun BackdropLayer(
         label = "backdropFade"
     )
     val gradientAlphaState = animateFloatAsState(
-        targetValue = if (isTrailerPlaying || isScrolledPastHero) 0f else 1f,
+        targetValue = when {
+            (isTrailerPlaying && !isBackgroundTrailerPlaying) || isScrolledPastHero -> 0f
+            isBackgroundTrailerPlaying -> 0.85f
+            else -> 1f
+        },
         animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
         label = "gradientFade"
     )
+    val trailerScrimAlphaState = animateFloatAsState(
+        targetValue = if (isBackgroundTrailerPlaying && isScrolledPastHero) 0.7f else 0f,
+        animationSpec = tween(300),
+        label = "backgroundTrailerScrollScrim"
+    )
+    val backgroundColor = NuvioTheme.colors.Background
     Box(modifier = Modifier.fillMaxSize()) {
         // Show hero backdrop from previous screen as persistent underlay
         // to prevent flash/re-render during navigation transition
@@ -3217,6 +3250,9 @@ private fun BackdropLayer(
             trailerAudioUrl = trailerAudioUrl,
             isPlaying = isTrailerPlaying,
             isPaused = isTrailerPaused,
+            focusable = !isBackgroundTrailerPlaying,
+            cropToFill = isBackgroundTrailerPlaying,
+            overscanZoom = if (isBackgroundTrailerPlaying) BACKGROUND_TRAILER_OVERSCAN_ZOOM else 1f,
             seekRequestToken = if (showTrailerControls) trailerSeekToken else 0,
             seekDeltaMs = if (showTrailerControls) trailerSeekDeltaMs else 0L,
             onRemoteKey = onTrailerControlKey,
@@ -3229,6 +3265,9 @@ private fun BackdropLayer(
                 .fillMaxSize()
                 .drawWithCache {
                     onDrawBehind {
+                        if (trailerScrimAlphaState.value > 0f) {
+                            drawRect(backgroundColor, alpha = trailerScrimAlphaState.value)
+                        }
                         if (gradientAlphaState.value > 0f) {
                             drawImage(
                                 leftGradient,

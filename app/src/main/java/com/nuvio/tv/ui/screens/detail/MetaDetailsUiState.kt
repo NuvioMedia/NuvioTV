@@ -39,6 +39,7 @@ data class MetaDetailsUiState(
     val trailerUrl: String? = null,
     val trailerAudioUrl: String? = null,
     val isTrailerPlaying: Boolean = false,
+    val backgroundTrailerEnabled: Boolean = false,
     val isTrailerLoading: Boolean = false,
     val showTrailerControls: Boolean = false,
     val hideLogoDuringTrailer: Boolean = false,
@@ -94,7 +95,10 @@ data class MetaDetailsUiState(
     val selectedComment: TraktCommentReview? = null,
     val userMessage: String? = null,
     val userMessageIsError: Boolean = false
-)
+) {
+    val isBackgroundTrailerPlaying: Boolean
+        get() = isTrailerPlaying && backgroundTrailerEnabled && !showTrailerControls
+}
 
 sealed class MetaDetailsEvent {
     data class OnSeasonSelected(val season: Int) : MetaDetailsEvent()

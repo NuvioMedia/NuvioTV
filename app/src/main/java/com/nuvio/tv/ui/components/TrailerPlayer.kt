@@ -45,6 +45,7 @@ fun TrailerPlayer(
     trailerAudioUrl: String? = null,
     isPlaying: Boolean,
     isPaused: Boolean = false,
+    focusable: Boolean = true,
     onEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit = {},
     muted: Boolean = false,
@@ -227,8 +228,8 @@ fun TrailerPlayer(
                 factory = { ctx ->
                     (LayoutInflater.from(ctx).inflate(R.layout.trailer_player_view, null) as PlayerView).apply {
                         player = trailerPlayer
-                        isFocusable = true
-                        isFocusableInTouchMode = true
+                        isFocusable = focusable
+                        isFocusableInTouchMode = focusable
                         setOnKeyListener { _, keyCode, event ->
                             currentOnRemoteKey(keyCode, event.action, event.repeatCount)
                         }
@@ -241,6 +242,8 @@ fun TrailerPlayer(
                     }
                 },
                 update = { view ->
+                    view.isFocusable = focusable
+                    view.isFocusableInTouchMode = focusable
                     // Re-attach player in case it was reclaimed after yield
                     if (view.player !== trailerPlayer) {
                         view.player = trailerPlayer
