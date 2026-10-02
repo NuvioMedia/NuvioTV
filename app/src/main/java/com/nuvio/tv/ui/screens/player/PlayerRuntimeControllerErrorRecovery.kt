@@ -407,6 +407,45 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.tryPassthroughOpenRetry(error: PlaybackException): Boolean {
+    val failedMime = failedAudioTrackInputFormat(error)?.sampleMimeType
+    if (!PassthroughOpenRetryPolicy.isEligible(
+            errorCode = error.errorCode,
+            failedInputMime = failedMime,
+            policyDenies = currentAudioPassthroughPolicy?.deniesPassthrough(failedMime) == true,
+            pcmFallbackTried = hasTriedAudioPcmFallback
+        )
+    ) {
+        return false
+    }
+    val streamUrl = currentStreamUrl
+    val delayMs = passthroughOpenRetry.nextDelayMs(streamUrl) ?: return false
+
+    val savedPosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
+    val paused = userPausedManually
+
+    Log.w(
+        PlayerRuntimeController.TAG,
+        "AUDIO_OPEN_RETRY: $failedMime refused at open, retrying the same output in ${delayMs}ms, position=${savedPosition}ms"
+    )
+    queuePlaybackRawEventLine("audio_open_retry mime=$failedMime delayMs=$delayMs positionMs=$savedPosition")
+    showRecoveryOverlay()
+
+    errorRetryJob?.cancel()
+    errorRetryJob = scope.launch {
+        releasePlayer(flushPlaybackState = false)
+        delay(delayMs)
+        if (currentStreamUrl != streamUrl) return@launch
+        if (savedPosition > 0L) {
+            _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+        }
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+    }
+
+    return true
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.tryDeniedAudioFfmpegFallback(
     error: PlaybackException
 ): Boolean {

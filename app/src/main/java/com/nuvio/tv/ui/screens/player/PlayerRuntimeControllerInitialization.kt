@@ -1566,6 +1566,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                             return
                         }
 
+                        if (tryPassthroughOpenRetry(error)) {
+                            return
+                        }
+
                         if (error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED) {
                             val failingMime = (error as? androidx.media3.exoplayer.ExoPlaybackException)
                                 ?.rendererFormat?.sampleMimeType
@@ -1865,6 +1869,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         eventTime: AnalyticsListener.EventTime,
                         audioTrackConfig: androidx.media3.exoplayer.audio.AudioSink.AudioTrackConfig
                     ) {
+                        passthroughOpenRetry.onAudioTrackOpened()
                         val entry = AudioRejectionReverifier.ledger.takePendingFor(currentStreamUrl) ?: return
                         val routeKey = AudioRejectionLedger.routeOf(entry) ?: return
                         val group = AudioRejectionLedger.groupOf(entry) ?: return
