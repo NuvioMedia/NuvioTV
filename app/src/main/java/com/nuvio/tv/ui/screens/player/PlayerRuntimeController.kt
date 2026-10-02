@@ -554,6 +554,7 @@ class PlayerRuntimeController(
     internal var audioOutputRouteCallback: AudioDeviceCallback? = null
     internal var tunnelDeadClockSignature: String? = null
     internal var audioRouteChangeJob: Job? = null
+    internal var audioChainEventPending: Boolean = false
 
     internal var lastBufferLogTimeMs: Long = 0L
     internal var pendingSeekFlush: Boolean = false

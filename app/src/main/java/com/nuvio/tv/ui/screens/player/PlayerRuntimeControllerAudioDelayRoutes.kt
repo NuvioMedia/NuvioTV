@@ -132,6 +132,10 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
         "Audio device $reason (count=${devices.size}); scheduling route re-probe"
     )
 
+    if (TvAudioCapabilityPin.touchesOutputChain(false, TvAudioCapabilityPin.sinkTypesOf(devices))) {
+        audioChainEventPending = true
+    }
+
     audioRouteChangeJob?.cancel()
     audioRouteChangeJob = scope.launch {
         delay(AUDIO_ROUTE_CHANGE_DEBOUNCE_MS)
@@ -142,10 +146,20 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
         if (newRoute != null) {
             currentAudioOutputRoute = newRoute
         }
-        AudioRejectionReverifier.ledger.invalidate()
-        AudioChainProbe.invalidate()
-        PlatformIecAudioTrackFactory.invalidateIec61937ProbeMemo()
-        applySurroundResolutionInPlace(reason)
+        val routeKeyChanged = newRoute != null && newRoute.key != oldRoute?.key
+        val chainEvent = audioChainEventPending
+        audioChainEventPending = false
+        if (routeKeyChanged || chainEvent) {
+            AudioRejectionReverifier.ledger.invalidate()
+            AudioChainProbe.invalidate()
+            PlatformIecAudioTrackFactory.invalidateIec61937ProbeMemo()
+            applySurroundResolutionInPlace(reason)
+        } else {
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "Audio device $reason left the output chain untouched; keeping the surround resolution"
+            )
+        }
 
         if (rememberAudioDelayPerDeviceEnabled) {
             applyStoredAudioDelayForCurrentRouteIfEnabled()

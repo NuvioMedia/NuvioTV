@@ -2365,7 +2365,13 @@ private class SubtitleOffsetRenderersFactory(
     ): AudioSink {
         // Bluetooth: pin Media3-equivalent DEFAULT (PCM-only) so TV HDMI profiles / force-optical
         // cannot advertise AC3/DTS passthrough while audio is routed to A2DP.
-        // Non-BT optical: pin expanded capabilities. Otherwise keep live Builder(context).
+        // Non-BT optical: pin expanded capabilities. On a TV, pin the capabilities read now when
+        // they include a bitstream format. Otherwise keep live Builder(context).
+        val pinnedTvCapabilities = if (bluetoothForcePcm || forceOpticalPassthrough) {
+            null
+        } else {
+            TvAudioCapabilityPin.pinnedCapabilities(context)
+        }
         val builder = when {
             bluetoothForcePcm -> {
                 DefaultAudioSink.Builder()
@@ -2374,6 +2380,9 @@ private class SubtitleOffsetRenderersFactory(
             forceOpticalPassthrough -> {
                 DefaultAudioSink.Builder(context)
                     .setAudioCapabilities(buildStableAudioCapabilities(context, true))
+            }
+            pinnedTvCapabilities != null -> {
+                DefaultAudioSink.Builder().setAudioCapabilities(pinnedTvCapabilities)
             }
             else -> DefaultAudioSink.Builder(context)
         }
