@@ -12,7 +12,8 @@ class PlayerSubtitleRtlFixTest {
         val input: String,
         val expected: String,
         val rules: List<Rule>,
-        val numbersMoved: Boolean = false
+        val numbersMoved: Boolean = false,
+        val numbersReversed: Boolean = false
     )
 
     /** Hand-verified lines. A fix that breaks any of them is a regression. */
@@ -65,6 +66,46 @@ class PlayerSubtitleRtlFixTest {
         Case("مرحبا \u200E٧٠", "٧٠ مرحبا", listOf(Rule.LRM_NUMBER)),
         Case(".٣٫٥-كان", "كان-٣٫٥.", listOf(Rule.LEADING_RUN), numbersMoved = true),
 
+        // Apostrophe / geresh and quotes stay attached to the word
+        Case("!'אאוץ", "אאוץ'!", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("'אאוץ", "אאוץ'", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("'שלום'", "'שלום'", emptyList()),
+        Case("ג'ורג' אמר שלום", "ג'ורג' אמר שלום", emptyList()),
+        Case(",\"ל\"הרוזן ממונטה כריסטו", "ל\"הרוזן ממונטה כריסטו\",", listOf(Rule.LEADING_PUNCTUATION)),
+
+        // Lines wrapped in RLM marks
+        Case(
+            "\u200F:מתוקה קטנה\" מציגים\"\u200F",
+            "\u200F\"מתוקה קטנה\" מציגים:\u200F",
+            listOf(Rule.QUOTE, Rule.LEADING_PUNCTUATION)
+        ),
+        Case(
+            "\u200F.\"גרוגנק הברברי וחורבת אבן האודם\"\u200F",
+            "\u200F\"גרוגנק הברברי וחורבת אבן האודם\".\u200F",
+            listOf(Rule.LEADING_PUNCTUATION)
+        ),
+        Case("\u200F.מתוקה קטנה שלי\u200F", "\u200Fמתוקה קטנה שלי.\u200F", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("\u200Fגלונים \u200E70\u200F\r", "\u200F70 גלונים\u200F\r", listOf(Rule.LRM_NUMBER)),
+        Case("\u200Fשלום עולם\u200F", "\u200Fשלום עולם\u200F", emptyList()),
+
+        // Non-RTL text and a dash at the front move to the end
+        Case("Ariel046 - נקרע, תוקן וסונכרן לגירסא זו ע\"י", "נקרע, תוקן וסונכרן לגירסא זו ע\"י - Ariel046", listOf(Rule.LATIN_SEGMENT)),
+        Case("Www.Torec.Net - בלעדית לאתר", "בלעדית לאתר - Www.Torec.Net", listOf(Rule.LATIN_SEGMENT)),
+        Case("[Www.Torec.Net](https://Www.Torec.Net) - בלעדית לאתר", "בלעדית לאתר - [Www.Torec.Net](https://Www.Torec.Net)", listOf(Rule.LATIN_SEGMENT)),
+        Case("\u200FAriel046 - נקרע\u200F", "\u200Fנקרע - Ariel046\u200F", listOf(Rule.LATIN_SEGMENT)),
+        Case("שלום - Hello", "שלום - Hello", emptyList()),
+        Case("Hello - there", "Hello - there", emptyList()),
+
+        // Digit-reversed numbers (only when the track is detected as such)
+        Case("הבנייה אושרה לראשונה ב-0691", "הבנייה אושרה לראשונה ב-1960", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case("הבנייה אושרה לראשונה ב-0691", "הבנייה אושרה לראשונה ב-0691", emptyList()),
+        Case("- 12 ביוני, 9102 -", "- 21 ביוני, 2019 -", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case(".החלו כבר ב-3591", "החלו כבר ב-1953.", listOf(Rule.LEADING_PUNCTUATION, Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case(".ביצענו כבר 271 תשאולים", "ביצענו כבר 172 תשאולים.", listOf(Rule.LEADING_PUNCTUATION, Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case("יש 5 ו-33 ו-121", "יש 5 ו-33 ו-121", emptyList(), numbersReversed = true),
+        Case(".במחוז וינדן לבדו רשומים 213, 12 רכבים", "במחוז וינדן לבדו רשומים 21,312 רכבים.", listOf(Rule.LEADING_PUNCTUATION, Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case("- בשעה 31 :22 -", "- בשעה 22:13 -", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
+
         // Dashes inside numbers (plates, year ranges)
         Case("מספר הרכב \u200E12-345-67", "12-345-67 מספר הרכב", listOf(Rule.LRM_NUMBER)),
         Case("בשנים \u200E1990-2000", "1990-2000 בשנים", listOf(Rule.LRM_NUMBER)),
@@ -78,12 +119,22 @@ class PlayerSubtitleRtlFixTest {
     @Test
     fun handVerifiedCases() {
         val failures = cases.mapNotNull { case ->
-            val repair = PlayerSubtitleRtlFix.repairLine(case.input, case.numbersMoved)
+            val repair = PlayerSubtitleRtlFix.repairLine(case.input, case.numbersMoved, case.numbersReversed)
             val text = repair.text.toString()
             if (text == case.expected && repair.rules == case.rules) null
             else "input   : ${case.input}\n  expected: ${case.expected}  ${case.rules}\n  actual  : $text  ${repair.rules}"
         }
         if (failures.isNotEmpty()) fail("${failures.size} case(s) changed:\n" + failures.joinToString("\n"))
+    }
+
+    @Test
+    fun detectsReversedNumbersByYears() {
+        val reversed = sequenceOf("שנת 9102", "ב-3591", "ב-0691", "ב-0202")
+        val forward = sequenceOf("שנת 2019", "ב-1953", "ב-1960", "ב-2020")
+        val few = sequenceOf("שנת 9102", "ב-3591")
+        assertEquals(true, PlayerSubtitleRtlFix.looksLikeReversedNumbers(reversed))
+        assertEquals(false, PlayerSubtitleRtlFix.looksLikeReversedNumbers(forward))
+        assertEquals(false, PlayerSubtitleRtlFix.looksLikeReversedNumbers(few))
     }
 
     /**
@@ -104,7 +155,7 @@ class PlayerSubtitleRtlFixTest {
         val expected = snapshotFile.readText(Charsets.UTF_8).split("\n")
         val changed = (expected.toSet() - actual.toSet()) + (actual.toSet() - expected.toSet())
         if (changed.isNotEmpty()) {
-            fail("${changed.size} snapshot entries differ (input | numbersMoved | output | marks):\n" +
+            fail("${changed.size} snapshot entries differ (input | numbersMoved | numbersReversed | output | marks):\n" +
                 changed.take(40).joinToString("\n"))
         }
         assertEquals(expected.size, actual.size)
@@ -114,13 +165,12 @@ class PlayerSubtitleRtlFixTest {
         val entries = sortedSetOf<String>()
         dir.listFiles { file -> file.extension == "srt" }.orEmpty().sortedBy { it.name }.forEach { file ->
             val blocks = file.readText(Charsets.UTF_8).replace("\r\n", "\n").split("\n\n")
-            for (block in blocks) {
-                for (line in block.split("\n").drop(2)) {
-                    if (line.isEmpty()) continue
-                    for (numbersMoved in listOf(false, true)) {
-                        val repair = PlayerSubtitleRtlFix.repairLine(line, numbersMoved)
-                        entries.add("$line | $numbersMoved | ${repair.text} | ${repair.marks}")
-                    }
+            val lines = blocks.flatMap { block -> block.split("\n").drop(2) }.filter { it.isNotEmpty() }
+            val numbersReversed = PlayerSubtitleRtlFix.looksLikeReversedNumbers(lines.asSequence())
+            for (line in lines) {
+                for (numbersMoved in listOf(false, true)) {
+                    val repair = PlayerSubtitleRtlFix.repairLine(line, numbersMoved, numbersReversed)
+                    entries.add("$line | $numbersMoved | $numbersReversed | ${repair.text} | ${repair.marks}")
                 }
             }
         }
