@@ -19,21 +19,43 @@ internal object PlayerSubtitleRtlFix {
 
     private val bidiFormatter = BidiFormatter.getInstance(/* rtlContext = */ false)
 
-    /**
-     * Debug marks, inserted in the middle of every processed line:
-     * 1 = boundary punctuation was moved, 2 = line was already correct,
-     * 3 = punctuation and a leading number were moved (Dark-style files).
-     */
-    private const val DEBUG_MODE = false
-    private const val MARK_PUNCTUATION_MOVED = "1"
+    /** Inserts the marks of the rules that fired into the middle of every processed line. */
+    private const val DEBUG_MODE = true
+
+    /** TODO: replace with a real per-track corruption check. */
+    private const val ASSUME_SWAPPED_TRACK = true
+
+    /** Rules listed here are skipped, to check whether one of them causes a problem. */
+    private val disabledRules: Set<Rule> = emptySet()
+
     private const val MARK_UNCHANGED = "2"
-    private const val MARK_NUMBERS_MOVED = "3"
+
+    /** Every repair rule, with the debug mark it leaves on a line (several marks: "5+1"). */
+    internal enum class Rule(val mark: String) {
+        LEADING_PUNCTUATION("1"),
+        LEADING_RUN("3"),
+        LRM_NUMBER("4"),
+        QUOTE("5"),
+        DASH_ELLIPSIS("6"),
+        DASH_TO_FRONT("7")
+    }
+
+    /** The repaired text and the rules that changed it (empty if the line was left as is). */
+    internal class LineRepair(val text: CharSequence, val rules: List<Rule> = emptyList()) {
+        val marks: String get() = if (rules.isEmpty()) MARK_UNCHANGED else rules.joinToString("+") { it.mark }
+    }
 
     private const val CARRIAGE_RETURN = '\r'
     private const val LRM = '\u200E'
     private const val ELLIPSIS = '\u2026'
     private const val SOF_PASUQ = '\u05C3'
     private const val MAQAF = '\u05BE'
+    private const val ARABIC_COMMA = '\u060C'
+    private const val ARABIC_SEMICOLON = '\u061B'
+    private const val ARABIC_QUESTION_MARK = '\u061F'
+    private const val URDU_FULL_STOP = '\u06D4'
+    private const val ARABIC_DECIMAL_SEPARATOR = '\u066B'
+    private const val ARABIC_THOUSANDS_SEPARATOR = '\u066C'
 
     fun fixCueText(
         cue: Cue,
@@ -82,8 +104,7 @@ internal object PlayerSubtitleRtlFix {
         return CuesWithTiming(cues, entry.startTimeUs, durationUs)
     }
 
-    // TODO: replace with a real per-track corruption check.
-    private fun isBoundarySwappedTrack(): Boolean = DEBUG_MODE
+    private fun isBoundarySwappedTrack(): Boolean = ASSUME_SWAPPED_TRACK
 
     /**
      * Dark-style files are recognised by a line that starts with a number glued by a hyphen to a
@@ -111,9 +132,13 @@ internal object PlayerSubtitleRtlFix {
             if (line.isEmpty()) continue
 
             if (boundarySwapped) {
-                val unswapped = unswapLine(line, numbersMoved)
-                if (unswapped !== line) changed = true
-                line = unswapped
+                val repair = repairLine(line, numbersMoved)
+                if (repair.text !== line) changed = true
+                line = repair.text
+                if (DEBUG_MODE) {
+                    line = insertDebugMark(line, repair.marks)
+                    changed = true
+                }
             } else if (DEBUG_MODE) {
                 line = insertDebugMark(line, MARK_UNCHANGED)
                 changed = true
@@ -129,14 +154,18 @@ internal object PlayerSubtitleRtlFix {
         return if (changed) finish(out) else null
     }
 
-    /** Applies the first matching repair rule to a single line. */
-    private fun unswapLine(line: CharSequence, numbersMoved: Boolean): CharSequence {
-        restoreLeadingNumber(line, numbersMoved)?.let { return it }
-        restoreLeadingQuote(line, numbersMoved)?.let { return it }
-        if (numbersMoved && startsWithNumber(line)) {
-            return withDebugMark(moveLeadingRunToEnd(line), MARK_NUMBERS_MOVED)
+    /** Applies the first matching repair rule to a line. Lines without RTL letters are left alone. */
+    internal fun repairLine(line: CharSequence, numbersMoved: Boolean): LineRepair =
+        if (containsStrongRtl(line)) applyRules(line, numbersMoved) else LineRepair(line)
+
+    private fun applyRules(line: CharSequence, numbersMoved: Boolean): LineRepair {
+        if (Rule.LRM_NUMBER !in disabledRules) restoreLeadingNumber(line, numbersMoved)?.let { return it }
+        if (Rule.QUOTE !in disabledRules) restoreLeadingQuote(line, numbersMoved)?.let { return it }
+        if (numbersMoved && Rule.LEADING_RUN !in disabledRules && startsWithNumber(line)) {
+            val moved = moveLeadingRunToEnd(line)
+            return if (moved === line) LineRepair(line) else LineRepair(moved, listOf(Rule.LEADING_RUN))
         }
-        return unswapPunctuation(line)
+        return repairPunctuation(line)
     }
 
     // ---------------------------------------------------------------------------------------
@@ -149,15 +178,16 @@ internal object PlayerSubtitleRtlFix {
         val hasCarriageReturn: Boolean
     )
 
-    private fun restoreLeadingNumber(line: CharSequence, numbersMoved: Boolean): CharSequence? {
+    private fun restoreLeadingNumber(line: CharSequence, numbersMoved: Boolean): LineRepair? {
         val trailing = splitTrailingLrmNumber(line) ?: return null
-        val body = unswapLine(trailing.body, numbersMoved)
-        return buildLike(line) {
+        val body = applyRules(trailing.body, numbersMoved)
+        val text = buildLike(line) {
             append(trailing.number)
             append(' ')
-            append(body)
+            append(body.text)
             if (trailing.hasCarriageReturn) append(CARRIAGE_RETURN)
         }
+        return LineRepair(text, listOf(Rule.LRM_NUMBER) + body.rules)
     }
 
     /** Splits "<text> LRM<number>" at the end of a line; the LRM marks a number that was moved. */
@@ -189,16 +219,17 @@ internal object PlayerSubtitleRtlFix {
     // Rule: opening quote moved to the end ('אנחנו נלחם"' -> '"אנחנו נלחם')
     // ---------------------------------------------------------------------------------------
 
-    private fun restoreLeadingQuote(line: CharSequence, numbersMoved: Boolean): CharSequence? {
+    private fun restoreLeadingQuote(line: CharSequence, numbersMoved: Boolean): LineRepair? {
         val quoteIndex = displacedOpeningQuoteIndex(line)
         if (quoteIndex < 0) return null
 
-        val body = unswapLine(line.subSequence(0, quoteIndex), numbersMoved)
-        return buildLike(line) {
+        val body = applyRules(line.subSequence(0, quoteIndex), numbersMoved)
+        val text = buildLike(line) {
             appendSlice(line, quoteIndex, quoteIndex + 1)
-            append(body)
+            append(body.text)
             if (line.endsWithCarriageReturn()) append(CARRIAGE_RETURN)
         }
+        return LineRepair(text, listOf(Rule.QUOTE) + body.rules)
     }
 
     /**
@@ -263,16 +294,25 @@ internal object PlayerSubtitleRtlFix {
     // Rule: punctuation and dashes moved to the wrong edge
     // ---------------------------------------------------------------------------------------
 
-    private fun unswapPunctuation(line: CharSequence): CharSequence {
+    private fun repairPunctuation(line: CharSequence): LineRepair {
         var source = line
+        val rules = ArrayList<Rule>(2)
+
         if (hasDashAtBothEnds(line)) {
             // "- text -" is a symmetric decoration and stays as is, unless punctuation was
             // displaced to right after the opening dash ("- ...text -").
+            if (Rule.DASH_ELLIPSIS in disabledRules) return LineRepair(line)
             source = swapDashWithFollowingPunctuation(line)
-            if (source === line) return withDebugMark(line, MARK_UNCHANGED)
+            if (source === line) return LineRepair(line)
+            rules.add(Rule.DASH_ELLIPSIS)
         }
-        val moved = moveTrailingDashToFront(source) ?: moveLeadingPunctuationToEnd(source)
-        return withDebugMark(moved, MARK_PUNCTUATION_MOVED)
+
+        val dashMoved = if (Rule.DASH_TO_FRONT in disabledRules) null else moveTrailingDashToFront(source)
+        if (dashMoved != null) return LineRepair(dashMoved, rules + Rule.DASH_TO_FRONT)
+
+        if (Rule.LEADING_PUNCTUATION in disabledRules) return LineRepair(source, rules)
+        val moved = moveLeadingPunctuationToEnd(source)
+        return if (moved === source) LineRepair(source, rules) else LineRepair(moved, rules + Rule.LEADING_PUNCTUATION)
     }
 
     /** "- ...text -" -> "... -text -". Returns the same instance if the pattern doesn't match. */
@@ -384,7 +424,8 @@ internal object PlayerSubtitleRtlFix {
     }
 
     private fun isRunChar(c: Char): Boolean =
-        isBoundaryPunctuation(c) || c.isDigit() || c.isWhitespace() || isBidiControl(c)
+        isBoundaryPunctuation(c) || c.isDigit() || c.isWhitespace() || isBidiControl(c) ||
+            c == ARABIC_DECIMAL_SEPARATOR || c == ARABIC_THOUSANDS_SEPARATOR
 
     /** Splits the run into single characters, with a whole number (e.g. "1,000") as one chunk. */
     private fun splitIntoChunks(line: CharSequence, runEnd: Int): List<IntRange> {
@@ -448,8 +489,12 @@ internal object PlayerSubtitleRtlFix {
     private fun startsWithHyphenatedNumber(line: CharSequence): Boolean {
         val end = leadingNumberEnd(line)
         if (end == -1 || end >= line.length || !isDash(line[end])) return false
-        return end + 1 < line.length && Character.UnicodeBlock.of(line[end + 1]) == Character.UnicodeBlock.HEBREW
+        return end + 1 < line.length && isHebrewOrArabicLetter(line[end + 1])
     }
+
+    private fun isHebrewOrArabicLetter(c: Char): Boolean = c.code in 0x0590..0x06FF ||
+        c.code in 0x0750..0x077F || c.code in 0x08A0..0x08FF ||
+        c.code in 0xFB1D..0xFDFF || c.code in 0xFE70..0xFEFF
 
     private fun hasDashAtBothEnds(line: CharSequence): Boolean {
         var start = 0
@@ -481,13 +526,15 @@ internal object PlayerSubtitleRtlFix {
     // ---------------------------------------------------------------------------------------
 
     private fun isBoundaryPunctuation(c: Char): Boolean = when (c) {
-        '.', ',', '?', '!', '-', ':', ';', ELLIPSIS, ')', '(', SOF_PASUQ -> true
+        '.', ',', '?', '!', '-', ':', ';', ELLIPSIS, ')', '(', SOF_PASUQ,
+        ARABIC_COMMA, ARABIC_SEMICOLON, ARABIC_QUESTION_MARK, URDU_FULL_STOP -> true
         else -> false
     }
 
     /** Boundary punctuation without dashes and brackets. */
     private fun isSentencePunctuation(c: Char): Boolean = when (c) {
-        '.', ',', '?', '!', ':', ';', ELLIPSIS, SOF_PASUQ -> true
+        '.', ',', '?', '!', ':', ';', ELLIPSIS, SOF_PASUQ,
+        ARABIC_COMMA, ARABIC_SEMICOLON, ARABIC_QUESTION_MARK, URDU_FULL_STOP -> true
         else -> false
     }
 
@@ -497,9 +544,10 @@ internal object PlayerSubtitleRtlFix {
     private fun isQuote(c: Char): Boolean =
         c == '"' || c == '\u05F4' || c == '\u201C' || c == '\u201D'
 
-    /** Separators allowed inside a number: "1,000", "3.14", "12:30", "1/2". */
+    /** Separators allowed inside a number: "1,000", "3.14", "12:30", "1/2", "12-345-67", "1990-2000". */
     private fun isNumberSeparator(c: Char): Boolean =
-        c == ',' || c == '.' || c == ':' || c == '/'
+        c == ',' || c == '.' || c == ':' || c == '/' || isDash(c) ||
+            c == ARABIC_DECIMAL_SEPARATOR || c == ARABIC_THOUSANDS_SEPARATOR
 
     private fun isBidiControl(c: Char): Boolean =
         c == LRM || c == '\u200F' || c == '\u061C' ||
@@ -543,9 +591,6 @@ internal object PlayerSubtitleRtlFix {
     private fun Appendable.appendSlice(source: CharSequence, start: Int, end: Int) {
         append(source.subSequence(start, end))
     }
-
-    private fun withDebugMark(line: CharSequence, mark: String): CharSequence =
-        if (DEBUG_MODE) insertDebugMark(line, mark) else line
 
     private fun insertDebugMark(line: CharSequence, mark: String): CharSequence {
         val middle = line.length / 2
