@@ -443,11 +443,15 @@ internal fun HomeViewModel.loadCatalogPipeline(
                             type = catalog.apiType,
                             catalogId = catalog.id
                         )
-                        if (!isRefresh || !mergeRefreshedCatalogRow(key, result.data, requestedByUser, forceReplace)) {
+                        if (isRefresh) {
+                            pendingRefreshMerges[key] =
+                                PendingRefreshMerge(result.data, generation, requestedByUser, forceReplace)
+                        } else {
+                            pendingRefreshMerges.remove(key)
                             replaceCatalogRow(key, result.data)
+                            // Trigger MDBList batch for newly loaded catalog data.
+                            onCatalogRowItemsChanged(key)
                         }
-                        // Trigger MDBList batch for newly loaded catalog data.
-                        onCatalogRowItemsChanged(key)
                         // Remove placeholder descriptor now that real data is available
                         synchronized(catalogStateLock) {
                             placeholderDescriptors.removeAll { it.catalogKey == key }
@@ -1089,6 +1093,26 @@ private fun HomeViewModel.reconcileFullyWatchedFromLocalItems(
         fullyWatchedSeriesIds.updateWithValidation(mergedHolderIds, cacheResolvedIds)
     }
     return mergedHolderIds
+}
+
+internal class PendingRefreshMerge(
+    val fresh: CatalogRow,
+    val generation: Long,
+    val requestedByUser: Boolean,
+    val forceReplace: Boolean
+)
+
+internal fun HomeViewModel.applyPendingRefreshMerges() {
+    if (pendingRefreshMerges.isEmpty()) return
+    val pending = pendingRefreshMerges.toList()
+    pendingRefreshMerges.clear()
+    pending.forEach { (key, merge) ->
+        if (merge.generation != catalogLoadGeneration) return@forEach
+        if (!mergeRefreshedCatalogRow(key, merge.fresh, merge.requestedByUser, merge.forceReplace)) {
+            replaceCatalogRow(key, merge.fresh)
+        }
+        onCatalogRowItemsChanged(key)
+    }
 }
 
 internal sealed interface CatalogRefreshChange {

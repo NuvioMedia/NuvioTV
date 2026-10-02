@@ -228,6 +228,12 @@ class HomeViewModel @Inject constructor(
     internal var customCatalogTitles: Map<String, String> = emptyMap()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
     internal var catalogUpdateJob: Job? = null
+
+    /**
+     * Refreshed pages waiting for the next row update. They are merged right before the rows are
+     * published, so the row the user is on is the one focused then, not when its addon answered.
+     */
+    internal val pendingRefreshMerges = LinkedHashMap<String, PendingRefreshMerge>()
     internal var hasRenderedFirstCatalog = false
     internal val catalogLoadSemaphore = Semaphore(MAX_CATALOG_LOAD_CONCURRENCY)
     internal var pendingCatalogLoads = 0
@@ -885,6 +891,7 @@ class HomeViewModel @Inject constructor(
                 else -> 80L
             }
             delay(debounceMs)
+            applyPendingRefreshMerges()
             updateCatalogRows()
         }
     }
