@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
+import com.nuvio.tv.core.sync.TraktCredentialCleanupService
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktAuthState
@@ -14,15 +15,38 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceTokenRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRefreshTokenRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRevokeRequestDto
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import retrofit2.Response
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val TRAKT_REFRESH_LEEWAY_SECONDS = 60L
+private const val TRAKT_REFRESH_RETRY_DELAY_MS = 15 * 60_000L
+
+internal fun traktTokenRefreshDelayMillis(
+    state: TraktAuthState,
+    nowMillis: Long = System.currentTimeMillis()
+): Long? {
+    if (!state.isAuthenticated) return null
+    val createdAtSeconds = state.createdAt ?: return 0L
+    val expiresInSeconds = state.expiresIn ?: return 0L
+    val refreshAtMillis =
+        (createdAtSeconds + expiresInSeconds - TRAKT_REFRESH_LEEWAY_SECONDS) * 1000L
+    return (refreshAtMillis - nowMillis).coerceAtLeast(0L)
+}
 
 sealed interface TraktTokenPollResult {
     data object Pending : TraktTokenPollResult
@@ -41,9 +65,10 @@ class TraktAuthService @Inject constructor(
     private val traktAuthDataStore: TraktAuthDataStore,
     private val authSessionNoticeDataStore: AuthSessionNoticeDataStore
 ) {
-    private val refreshLeewaySeconds = 60L
     private val writeRequestMutex = Mutex()
     private val tokenRefreshMutex = Mutex()
+    private val tokenRefreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var tokenRefreshSchedulerJob: Job? = null
     private var lastWriteRequestAtMs = 0L
     private val minWriteIntervalMs = 1_000L
     private val transientRetryStatusCodes = setOf(502, 503, 504, 520, 521, 522)
@@ -119,6 +144,36 @@ class TraktAuthService @Inject constructor(
 
     fun hasRequiredCredentials(): Boolean {
         return BuildConfig.TRAKT_CLIENT_ID.isNotBlank() && BuildConfig.TRAKT_CLIENT_SECRET.isNotBlank()
+    }
+
+    /**
+     * Keeps the active profile's Trakt token fresh even when no Trakt API request
+     * happens around its expiry time. Authorized requests still retain their
+     * on-demand refresh as a fallback.
+     */
+    fun startTokenRefreshScheduler() {
+        if (tokenRefreshSchedulerJob?.isActive == true) return
+
+        tokenRefreshSchedulerJob = tokenRefreshScope.launch {
+            traktAuthDataStore.state.collectLatest { state ->
+                val refreshDelayMillis =
+                    traktTokenRefreshDelayMillis(state) ?: return@collectLatest
+                if (!hasRequiredCredentials()) return@collectLatest
+
+                delay(refreshDelayMillis)
+                while (true) {
+                    // Saving the new token emits a new auth state, which cancels this
+                    // collectLatest block. Finish the in-flight refresh bookkeeping first.
+                    val refreshed = withContext(NonCancellable) {
+                        refreshTokenIfNeeded(force = false)
+                    }
+                    if (refreshed) {
+                        return@collectLatest
+                    }
+                    delay(TRAKT_REFRESH_RETRY_DELAY_MS)
+                }
+            }
+        }
     }
 
     suspend fun getCurrentAuthState(): TraktAuthState = traktAuthDataStore.getCurrentState()
@@ -501,11 +556,7 @@ class TraktAuthService @Inject constructor(
     }
 
     private fun isTokenExpiredOrExpiring(state: TraktAuthState): Boolean {
-        val createdAt = state.createdAt ?: return true
-        val expiresIn = state.expiresIn ?: return true
-        val expiresAt = createdAt + expiresIn
-        val nowSeconds = System.currentTimeMillis() / 1000L
-        return nowSeconds >= (expiresAt - refreshLeewaySeconds)
+        return traktTokenRefreshDelayMillis(state) == 0L
     }
 
     private suspend fun delayForRetryAfter(
