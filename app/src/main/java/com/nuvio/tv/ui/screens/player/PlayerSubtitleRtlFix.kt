@@ -22,8 +22,8 @@ internal object PlayerSubtitleRtlFix {
     /** Inserts the marks of the rules that fired into the middle of every processed line. */
     private const val DEBUG_MODE = true
 
-    /** TODO: replace with a real per-track corruption check. */
-    private const val ASSUME_SWAPPED_TRACK = true
+    /** Treats every track as corrupted, skipping the per-track detection (for debugging). */
+    private const val FORCE_SWAPPED_TRACK = false
 
     /** Rules listed here are skipped, to check whether one of them causes a problem. */
     private val disabledRules: Set<Rule> = emptySet()
@@ -72,7 +72,7 @@ internal object PlayerSubtitleRtlFix {
 
     fun fixTimedCues(cues: List<CuesWithTiming>): List<CuesWithTiming> {
         if (cues.isEmpty()) return cues
-        val boundarySwapped = isBoundarySwappedTrack()
+        val boundarySwapped = FORCE_SWAPPED_TRACK || trackHasSwappedBoundaries(cues)
         val numbersMoved = boundarySwapped && trackHasMovedNumbers(cues)
         val numbersReversed = boundarySwapped && trackHasReversedNumbers(cues)
 
@@ -109,8 +109,6 @@ internal object PlayerSubtitleRtlFix {
         return CuesWithTiming(cues, entry.startTimeUs, durationUs)
     }
 
-    private fun isBoundarySwappedTrack(): Boolean = ASSUME_SWAPPED_TRACK
-
     /**
      * Dark-style files are recognised by a line that starts with a number glued by a hyphen to a
      * Hebrew word (".80-זה מתקדם"), which never happens in a correctly ordered file.
@@ -121,6 +119,44 @@ internal object PlayerSubtitleRtlFix {
                 cue.text?.splitByNewlines()?.any { startsWithHyphenatedNumber(it) } == true
             }
         }
+
+    private fun trackHasSwappedBoundaries(cues: List<CuesWithTiming>): Boolean =
+        looksLikeSwappedBoundaries(cues.asSequence().flatMap { it.cues.asSequence() }.mapNotNull { it.text })
+
+    /**
+     * Recognises files whose boundary characters were stored in visual order by two telltale
+     * signs that a correct file practically never has: an RTL line that starts with sentence
+     * punctuation (".שלום"), and a line that ends with an LRM followed by a number. They must
+     * make up at least 1% of the RTL lines.
+     */
+    internal fun looksLikeSwappedBoundaries(texts: Sequence<CharSequence>): Boolean {
+        var rtlLines = 0
+        var telltaleLines = 0
+        for (text in texts) {
+            for (line in text.splitByNewlines()) {
+                if (!containsStrongRtl(line)) continue
+                rtlLines++
+                if (startsWithSentencePunctuation(line) || endsWithLrmNumber(line)) telltaleLines++
+            }
+        }
+        return telltaleLines >= 5 && telltaleLines * 100 >= rtlLines
+    }
+
+    private fun startsWithSentencePunctuation(line: CharSequence): Boolean {
+        var start = 0
+        while (start < line.length && (line[start].isWhitespace() || isBidiControl(line[start]))) start++
+        if (start >= line.length) return false
+        val isEllipsis = line[start] == '.' && start + 1 < line.length && line[start + 1] == '.'
+        return isSentencePunctuation(line[start]) && !isEllipsis
+    }
+
+    private fun endsWithLrmNumber(line: CharSequence): Boolean {
+        var end = line.contentEnd()
+        while (end > 0 && (line[end - 1].isWhitespace() || line[end - 1] == '\u200F')) end--
+        var start = end
+        while (start > 0 && (line[start - 1].isDigit() || isNumberSeparator(line[start - 1]))) start--
+        return start < end && start > 0 && line[start - 1] == LRM
+    }
 
     private fun trackHasReversedNumbers(cues: List<CuesWithTiming>): Boolean =
         looksLikeReversedNumbers(cues.asSequence().flatMap { it.cues.asSequence() }.mapNotNull { it.text })
@@ -176,7 +212,7 @@ internal object PlayerSubtitleRtlFix {
                     line = insertDebugMark(line, repair.marks)
                     changed = true
                 }
-            } else if (DEBUG_MODE) {
+            } else if (DEBUG_MODE && containsStrongRtl(line)) {
                 line = insertDebugMark(line, MARK_UNCHANGED)
                 changed = true
             }
@@ -479,7 +515,7 @@ internal object PlayerSubtitleRtlFix {
         return if (moved === source) LineRepair(source, rules) else LineRepair(moved, rules + Rule.LEADING_PUNCTUATION)
     }
 
-    /** "- ...text -" -> "... -text -". Returns the same instance if the pattern doesn't match. */
+    /** "- ...text -" -> "... -text -" (also for a lone apostrophe). Returns the same instance if there is no match. */
     private fun swapDashWithFollowingPunctuation(line: CharSequence): CharSequence {
         val end = line.contentEnd()
         var dashIndex = 0
@@ -488,8 +524,11 @@ internal object PlayerSubtitleRtlFix {
 
         var punctuationStart = dashIndex + 1
         while (punctuationStart < end && line[punctuationStart].isWhitespace()) punctuationStart++
+        val loneApostrophe = countApostrophesOutsideWords(line, end) == 1
         var punctuationEnd = punctuationStart
-        while (punctuationEnd < end && isSentencePunctuation(line[punctuationEnd])) punctuationEnd++
+        while (punctuationEnd < end &&
+            (isSentencePunctuation(line[punctuationEnd]) || (loneApostrophe && isApostrophe(line[punctuationEnd])))
+        ) punctuationEnd++
         if (punctuationEnd == punctuationStart) return line
 
         return buildLike(line) {
