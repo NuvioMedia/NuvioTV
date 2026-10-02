@@ -16,46 +16,101 @@ class PlayerSubtitleRtlFixTest {
         val numbersReversed: Boolean = false
     )
 
-    /** Hand-verified lines. A fix that breaks any of them is a regression. */
+    /**
+     * Hand-verified lines, one group per rule. They use made-up sentences on purpose: each case
+     * shows the corruption pattern, not a line from a specific movie. A change that breaks any of
+     * them is a regression.
+     */
     private val cases = listOf(
-        // Leading punctuation -> end
+        // LEADING_PUNCTUATION: punctuation stored at the front belongs at the end
         Case(".שלום", "שלום.", listOf(Rule.LEADING_PUNCTUATION)),
-        Case("...ואז", "ואז...", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("?מה שלומך", "מה שלומך?", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("...ואז הלכנו", "ואז הלכנו...", listOf(Rule.LEADING_PUNCTUATION)),
         Case("- שלום", "שלום -", listOf(Rule.LEADING_PUNCTUATION)),
         Case(".שלום\r", "שלום.\r", listOf(Rule.LEADING_PUNCTUATION)),
-        Case(".קראתי את הדו\"חות ממפגשי הטיפול שלך", "קראתי את הדו\"חות ממפגשי הטיפול שלך.", listOf(Rule.LEADING_PUNCTUATION)),
+        Case(".הגענו אל ביה\"ס בזמן", "הגענו אל ביה\"ס בזמן.", listOf(Rule.LEADING_PUNCTUATION)),
 
-        // Dashes
-        Case("- אלברט איינשטיין -", "- אלברט איינשטיין -", emptyList()),
+        // Dashes: a symmetric "- text -" stays, a displaced dash goes back to the front
+        Case("- דנה לוי -", "- דנה לוי -", emptyList()),
+        Case("- הפתיחה ב-2008-", "- הפתיחה ב-2008-", emptyList()),
         Case(
-            "... -היא לא יותר מאשליה עקבית ועיקשת -",
-            "- היא לא יותר מאשליה עקבית ועיקשת...-",
+            "... -זה לא סוף העולם -",
+            "- זה לא סוף העולם...-",
             listOf(Rule.DASH_TO_FRONT)
         ),
         Case(
-            "- ...היא לא יותר מאשליה עקבית ועיקשת -",
-            "- היא לא יותר מאשליה עקבית ועיקשת...-",
+            "- ...זה לא סוף העולם -",
+            "- זה לא סוף העולם...-",
             listOf(Rule.DASH_ELLIPSIS, Rule.DASH_TO_FRONT)
         ),
+        Case("- 'השוק הגדול -", "- השוק הגדול'-", listOf(Rule.DASH_ELLIPSIS, Rule.DASH_TO_FRONT)),
+        Case("- 'שלום' -", "- 'שלום' -", emptyList()),
 
-        // Number moved to the end behind an LRM
-        Case("גלונים \u200E70", "70 גלונים", listOf(Rule.LRM_NUMBER)),
-        Case("גלון. עבור \u200E50", "50 גלון. עבור", listOf(Rule.LRM_NUMBER)),
-        Case("בדקו דלק, פורטיס 1 ו-2", "בדקו דלק, פורטיס 1 ו-2", emptyList()),
-        Case("גובה 1,000. עבור", "גובה 1,000. עבור", emptyList()),
+        // LRM_NUMBER: a number moved to the end behind an LRM goes back to the front
+        Case("מטרים \u200E70", "70 מטרים", listOf(Rule.LRM_NUMBER)),
+        Case("מטר. תודה \u200E50", "50 מטר. תודה", listOf(Rule.LRM_NUMBER)),
+        Case("מספר הרכב \u200E12-345-67", "12-345-67 מספר הרכב", listOf(Rule.LRM_NUMBER)),
+        Case("בשנים \u200E1990-2000", "1990-2000 בשנים", listOf(Rule.LRM_NUMBER)),
+        Case("בדקו את הדוחות, חדרים 1 ו-2", "בדקו את הדוחות, חדרים 1 ו-2", emptyList()),
+        Case("גובה 1,000. תודה", "גובה 1,000. תודה", emptyList()),
 
-        // Quotes
-        Case("\"דנקרק\"", "\"דנקרק\"", emptyList()),
-        Case("אבל היה ניצחון\"", "\"אבל היה ניצחון", listOf(Rule.QUOTE)),
-        Case("\"אל העתיד דרך הלילה", "אל העתיד דרך הלילה\"", listOf(Rule.LEADING_PUNCTUATION)),
-        Case(":מתוקה קטנה\" מציגים\"", "\"מתוקה קטנה\" מציגים:", listOf(Rule.QUOTE, Rule.LEADING_PUNCTUATION)),
-        Case(".\"גרוגנק הברברי וחורבת אבן האודם\"", "\"גרוגנק הברברי וחורבת אבן האודם\".", listOf(Rule.LEADING_PUNCTUATION)),
-        Case("\"בעונה הקרובה של \"פולאאוט", "בעונה הקרובה של \"פולאאוט\"", listOf(Rule.LEADING_PUNCTUATION)),
+        // QUOTE: a lone quote or an unpaired quote moved to the other edge
+        Case("\"שלום\"", "\"שלום\"", emptyList()),
+        Case("זה היה יום טוב\"", "\"זה היה יום טוב", listOf(Rule.QUOTE)),
+        Case("\"אל הבית דרך הגן", "אל הבית דרך הגן\"", listOf(Rule.LEADING_PUNCTUATION)),
+        Case(":חברת שמש\" מציגים\"", "\"חברת שמש\" מציגים:", listOf(Rule.QUOTE, Rule.LEADING_PUNCTUATION)),
+        Case(".\"הנסיך הקטן והדרקון\"", "\"הנסיך הקטן והדרקון\".", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("\"בעונה הקרובה של \"הסדרה", "בעונה הקרובה של \"הסדרה\"", listOf(Rule.LEADING_PUNCTUATION)),
+        Case(",\"ל\"שיר הנושא", "ל\"שיר הנושא\",", listOf(Rule.LEADING_PUNCTUATION)),
 
-        // Lines without RTL letters are never touched
-        Case(".Hello there", ".Hello there", emptyList()),
-        Case("- Hello there", "- Hello there", emptyList()),
-        Case("...and then", "...and then", emptyList()),
+        // Apostrophe and geresh stay attached to the word
+        Case("!'אאוץ", "אאוץ'!", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("'אאוץ", "אאוץ'", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("'שלום'", "'שלום'", emptyList()),
+        Case("ג'ו אמר שלום", "ג'ו אמר שלום", emptyList()),
+
+        // LATIN_SEGMENT: a name or site stored at the front belongs at the end
+        Case("John - תורגם על ידי", "תורגם על ידי - John", listOf(Rule.LATIN_SEGMENT)),
+        Case("example.com - בלעדי לאתר", "בלעדי לאתר - example.com", listOf(Rule.LATIN_SEGMENT)),
+        Case("[Site](https://example.com) - בלעדי לאתר", "בלעדי לאתר - [Site](https://example.com)", listOf(Rule.LATIN_SEGMENT)),
+        Case("Jane תרגום ועריכה על ידי", "תרגום ועריכה על ידי Jane", listOf(Rule.LATIN_SEGMENT)),
+        Case("!Fox צוות", "צוות Fox!", listOf(Rule.LATIN_SEGMENT)),
+        Case("\u200FJohn - שלום\u200F", "\u200Fשלום - John\u200F", listOf(Rule.LATIN_SEGMENT)),
+        Case("שלום - Hello", "שלום - Hello", emptyList()),
+        Case("Hello - there", "Hello - there", emptyList()),
+        Case("iMri & thebarak", "iMri & thebarak", emptyList()),
+        Case("12 ביוני", "12 ביוני", emptyList()),
+        Case("abc123 :תיקון חלקי", "abc123 :תיקון חלקי", emptyList()),
+
+        // Lines wrapped in RLM marks: the marks are kept and don't hide the line edges
+        Case(
+            "\u200F:חברת שמש\" מציגים\"\u200F",
+            "\u200F\"חברת שמש\" מציגים:\u200F",
+            listOf(Rule.QUOTE, Rule.LEADING_PUNCTUATION)
+        ),
+        Case(
+            "\u200F.\"הנסיך הקטן והדרקון\"\u200F",
+            "\u200F\"הנסיך הקטן והדרקון\".\u200F",
+            listOf(Rule.LEADING_PUNCTUATION)
+        ),
+        Case("\u200F.שלום עולם\u200F", "\u200Fשלום עולם.\u200F", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("\u200Fמטרים \u200E70\u200F\r", "\u200F70 מטרים\u200F\r", listOf(Rule.LRM_NUMBER)),
+        Case("\u200Fשלום עולם\u200F", "\u200Fשלום עולם\u200F", emptyList()),
+
+        // LEADING_RUN: punctuation and numbers moved to the front, numbers stay intact
+        Case("?12-בית ספר", "בית ספר-12?", listOf(Rule.LEADING_RUN), numbersMoved = true),
+        Case(".45-זה טוב", "זה טוב-45.", listOf(Rule.LEADING_RUN), numbersMoved = true),
+        Case("?1990-2000 בערך", "בערך 1990-2000?", listOf(Rule.LEADING_RUN), numbersMoved = true),
+
+        // NUMBERS_REVERSED: digit-reversed numbers, only in tracks detected as such
+        Case("הבית נבנה ב-0691", "הבית נבנה ב-1960", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case("הבית נבנה ב-0691", "הבית נבנה ב-0691", emptyList()),
+        Case("- 12 במאי, 9102 -", "- 21 במאי, 2019 -", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case(".התחילו כבר ב-3591", "התחילו כבר ב-1953.", listOf(Rule.LEADING_PUNCTUATION, Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case(".ביצענו כבר 271 בדיקות", "ביצענו כבר 172 בדיקות.", listOf(Rule.LEADING_PUNCTUATION, Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case("יש 5 ו-33 ו-121", "יש 5 ו-33 ו-121", emptyList(), numbersReversed = true),
+        Case(".במחוז רשומים 213, 12 רכבים", "במחוז רשומים 21,312 רכבים.", listOf(Rule.LEADING_PUNCTUATION, Rule.NUMBERS_REVERSED), numbersReversed = true),
+        Case("- בשעה 31 :22 -", "- בשעה 22:13 -", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
 
         // Arabic
         Case(".مرحبا بالعالم", "مرحبا بالعالم.", listOf(Rule.LEADING_PUNCTUATION)),
@@ -66,58 +121,10 @@ class PlayerSubtitleRtlFixTest {
         Case("مرحبا \u200E٧٠", "٧٠ مرحبا", listOf(Rule.LRM_NUMBER)),
         Case(".٣٫٥-كان", "كان-٣٫٥.", listOf(Rule.LEADING_RUN), numbersMoved = true),
 
-        // Apostrophe / geresh and quotes stay attached to the word
-        Case("!'אאוץ", "אאוץ'!", listOf(Rule.LEADING_PUNCTUATION)),
-        Case("'אאוץ", "אאוץ'", listOf(Rule.LEADING_PUNCTUATION)),
-        Case("'שלום'", "'שלום'", emptyList()),
-        Case("ג'ורג' אמר שלום", "ג'ורג' אמר שלום", emptyList()),
-        Case(",\"ל\"הרוזן ממונטה כריסטו", "ל\"הרוזן ממונטה כריסטו\",", listOf(Rule.LEADING_PUNCTUATION)),
-
-        Case("- 'קניון וולבריג -", "- קניון וולבריג'-", listOf(Rule.DASH_ELLIPSIS, Rule.DASH_TO_FRONT)),
-        Case("- 'שלום' -", "- 'שלום' -", emptyList()),
-        Case("- הפתיחה ב-2008-", "- הפתיחה ב-2008-", emptyList()),
-
-        // Lines wrapped in RLM marks
-        Case(
-            "\u200F:מתוקה קטנה\" מציגים\"\u200F",
-            "\u200F\"מתוקה קטנה\" מציגים:\u200F",
-            listOf(Rule.QUOTE, Rule.LEADING_PUNCTUATION)
-        ),
-        Case(
-            "\u200F.\"גרוגנק הברברי וחורבת אבן האודם\"\u200F",
-            "\u200F\"גרוגנק הברברי וחורבת אבן האודם\".\u200F",
-            listOf(Rule.LEADING_PUNCTUATION)
-        ),
-        Case("\u200F.מתוקה קטנה שלי\u200F", "\u200Fמתוקה קטנה שלי.\u200F", listOf(Rule.LEADING_PUNCTUATION)),
-        Case("\u200Fגלונים \u200E70\u200F\r", "\u200F70 גלונים\u200F\r", listOf(Rule.LRM_NUMBER)),
-        Case("\u200Fשלום עולם\u200F", "\u200Fשלום עולם\u200F", emptyList()),
-
-        // Non-RTL text and a dash at the front move to the end
-        Case("Ariel046 - נקרע, תוקן וסונכרן לגירסא זו ע\"י", "נקרע, תוקן וסונכרן לגירסא זו ע\"י - Ariel046", listOf(Rule.LATIN_SEGMENT)),
-        Case("Www.Torec.Net - בלעדית לאתר", "בלעדית לאתר - Www.Torec.Net", listOf(Rule.LATIN_SEGMENT)),
-        Case("[Www.Torec.Net](https://Www.Torec.Net) - בלעדית לאתר", "בלעדית לאתר - [Www.Torec.Net](https://Www.Torec.Net)", listOf(Rule.LATIN_SEGMENT)),
-        Case("\u200FAriel046 - נקרע\u200F", "\u200Fנקרע - Ariel046\u200F", listOf(Rule.LATIN_SEGMENT)),
-        Case("שלום - Hello", "שלום - Hello", emptyList()),
-        Case("Hello - there", "Hello - there", emptyList()),
-
-        // Digit-reversed numbers (only when the track is detected as such)
-        Case("הבנייה אושרה לראשונה ב-0691", "הבנייה אושרה לראשונה ב-1960", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
-        Case("הבנייה אושרה לראשונה ב-0691", "הבנייה אושרה לראשונה ב-0691", emptyList()),
-        Case("- 12 ביוני, 9102 -", "- 21 ביוני, 2019 -", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
-        Case(".החלו כבר ב-3591", "החלו כבר ב-1953.", listOf(Rule.LEADING_PUNCTUATION, Rule.NUMBERS_REVERSED), numbersReversed = true),
-        Case(".ביצענו כבר 271 תשאולים", "ביצענו כבר 172 תשאולים.", listOf(Rule.LEADING_PUNCTUATION, Rule.NUMBERS_REVERSED), numbersReversed = true),
-        Case("יש 5 ו-33 ו-121", "יש 5 ו-33 ו-121", emptyList(), numbersReversed = true),
-        Case(".במחוז וינדן לבדו רשומים 213, 12 רכבים", "במחוז וינדן לבדו רשומים 21,312 רכבים.", listOf(Rule.LEADING_PUNCTUATION, Rule.NUMBERS_REVERSED), numbersReversed = true),
-        Case("- בשעה 31 :22 -", "- בשעה 22:13 -", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
-
-        // Dashes inside numbers (plates, year ranges)
-        Case("מספר הרכב \u200E12-345-67", "12-345-67 מספר הרכב", listOf(Rule.LRM_NUMBER)),
-        Case("בשנים \u200E1990-2000", "1990-2000 בשנים", listOf(Rule.LRM_NUMBER)),
-        Case("?1990-2000 כל", "כל 1990-2000?", listOf(Rule.LEADING_RUN), numbersMoved = true),
-
-        // Dark-style: punctuation and numbers moved to the front
-        Case("?33-כל ה", "כל ה-33?", listOf(Rule.LEADING_RUN), numbersMoved = true),
-        Case(".80-זה מתקדם", "זה מתקדם-80.", listOf(Rule.LEADING_RUN), numbersMoved = true)
+        // Lines without RTL letters are never touched
+        Case(".Hello there", ".Hello there", emptyList()),
+        Case("- Hello there", "- Hello there", emptyList()),
+        Case("...and then", "...and then", emptyList())
     )
 
     @Test
