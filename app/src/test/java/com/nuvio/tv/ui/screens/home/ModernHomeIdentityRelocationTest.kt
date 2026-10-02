@@ -60,6 +60,27 @@ class ModernHomeIdentityRelocationTest {
     }
 
     @Test
+    fun `focus target is the focused card wherever the row still composes it`() {
+        // Relocated 0 -> 2, but the row has not re-measured: only the cards of its old window exist.
+        val composed = mapOf("movie:a" to "A", "movie:b" to "B")
+
+        assertEquals(
+            "A",
+            resolveRowFocusTarget(listOf("movie:x", "movie:y", "movie:a", "movie:b"), 2, composed)
+        )
+    }
+
+    @Test
+    fun `focus target falls back to the first card, then to none`() {
+        val keys = listOf("movie:a", "movie:b", "movie:c")
+
+        assertEquals("A", resolveRowFocusTarget(keys, 2, mapOf("movie:a" to "A")))
+        assertEquals("A", resolveRowFocusTarget(keys, 9, mapOf("movie:a" to "A")))
+        assertNull(resolveRowFocusTarget(keys, 2, mapOf("movie:b" to "B")))
+        assertNull(resolveRowFocusTarget(emptyList(), 0, mapOf("movie:a" to "A")))
+    }
+
+    @Test
     fun `presentation lookups retain ordered payload identities`() {
         val row = HeroCarouselRow(
             key = "catalog",

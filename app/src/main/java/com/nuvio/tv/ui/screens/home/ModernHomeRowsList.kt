@@ -156,7 +156,7 @@ internal fun ModernHomeRowsList(
     val latestOnActiveItemIndexChange = rememberUpdatedState(onActiveItemIndexChange)
 
     val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    val stableItemFocusRequestersByRow = remember { mutableMapOf<String, StableRef<MutableMap<Int, FocusRequester>>>() }
+    val stableItemFocusRequestersByRow = remember { mutableMapOf<String, StableRef<MutableMap<String, FocusRequester>>>() }
 
     val density = LocalDensity.current
     val context = LocalContext.current
