@@ -1272,7 +1272,8 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
     }
 
     // Rebuilt now, or kept as it is for as long as the conditions above hold.
-    val focusedItemKey = liveFocusedItemKeyByRow[fresh.stableKey()]
+    // Only the Modern layout reports focused cards; keys left from it must not hold a row elsewhere.
+    val focusedItemKey = if (isModern) liveFocusedItemKeyByRow[fresh.stableKey()] else null
     return keepsRowOnRestructure(
         rowHasFocus = rowHasFocus,
         requestedByUser = requestedByUser,
