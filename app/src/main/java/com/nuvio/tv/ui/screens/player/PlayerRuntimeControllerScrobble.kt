@@ -103,7 +103,10 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
         // callback fired before the DB read completed, causing the resume
         // seek to be silently skipped — the player would start from 0:00
         // or hang in buffering after a late seek.
-        if (loadSavedProgress) {
+        if (streamFallbackResumePosition != null) {
+            pendingResumeProgress = null
+            _uiState.update { it.copy(pendingSeekPosition = streamFallbackResumePosition) }
+        } else if (loadSavedProgress) {
             recordLoadingDiagnosticEvent(
                 phase = "loading_saved_progress",
                 message = context.getString(com.nuvio.tv.R.string.player_loading_preparing)
@@ -114,7 +117,7 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
             phase = "initializing_player",
             message = context.getString(com.nuvio.tv.R.string.player_loading_building)
         )
-        initializePlayer(playbackUrl, playbackHeaders)
+        initializePlayer(playbackUrl, playbackHeaders, startPaused = streamFallbackResumePosition != null && streamFallbackStartPaused)
     }
 }
 
