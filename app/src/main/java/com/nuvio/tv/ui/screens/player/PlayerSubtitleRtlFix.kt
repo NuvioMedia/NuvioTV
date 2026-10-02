@@ -12,25 +12,25 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.text.CuesWithTiming
 
 /**
- * Repairs Hebrew/RTL subtitle files whose boundary characters (punctuation, dashes, quotes and
- * leading numbers) were stored in visual order, so they land on the wrong side of the line.
+ * Repairs RTL subtitle files whose edge characters (punctuation, dashes, quotes, numbers, Latin
+ * names) were stored in visual order and therefore sit on the wrong side of the line.
  */
 internal object PlayerSubtitleRtlFix {
 
     private val bidiFormatter = BidiFormatter.getInstance(/* rtlContext = */ false)
 
-    /** Inserts the marks of the rules that fired into the middle of every processed line. */
+    /** Adds the marks of the applied rules to each processed line. */
     private const val DEBUG_MODE = true
 
-    /** Treats every track as corrupted, skipping the per-track detection (for debugging). */
+    /** Skips track detection and treats every track as corrupted. */
     private const val FORCE_SWAPPED_TRACK = false
 
-    /** Rules listed here are skipped, to check whether one of them causes a problem. */
+    /** Rules to skip, for isolating a problem. */
     private val disabledRules: Set<Rule> = emptySet()
 
     private const val MARK_UNCHANGED = "2"
 
-    /** Every repair rule, with the debug mark it leaves on a line (several marks: "5+1"). */
+    /** Repair rules and the debug mark each one leaves (several marks: "5+1"). */
     internal enum class Rule(val mark: String) {
         LEADING_PUNCTUATION("1"),
         LEADING_RUN("3"),
@@ -42,7 +42,7 @@ internal object PlayerSubtitleRtlFix {
         NUMBERS_REVERSED("9")
     }
 
-    /** The repaired text and the rules that changed it (empty if the line was left as is). */
+    /** Repaired text and the rules that changed it; no rules means the line is unchanged. */
     internal class LineRepair(val text: CharSequence, val rules: List<Rule> = emptyList()) {
         val marks: String get() = if (rules.isEmpty()) MARK_UNCHANGED else rules.joinToString("+") { it.mark }
     }
@@ -109,10 +109,7 @@ internal object PlayerSubtitleRtlFix {
         return CuesWithTiming(cues, entry.startTimeUs, durationUs)
     }
 
-    /**
-     * Dark-style files are recognised by a line that starts with a number glued by a hyphen to a
-     * Hebrew word (".80-זה מתקדם"), which never happens in a correctly ordered file.
-     */
+    /** A line starting with a number, a hyphen and a word (".45-שלום") does not occur in a correct file. */
     private fun trackHasMovedNumbers(cues: List<CuesWithTiming>): Boolean =
         cues.any { entry ->
             entry.cues.any { cue ->
@@ -124,10 +121,9 @@ internal object PlayerSubtitleRtlFix {
         looksLikeSwappedBoundaries(cues.asSequence().flatMap { it.cues.asSequence() }.mapNotNull { it.text })
 
     /**
-     * Recognises files whose boundary characters were stored in visual order by two telltale
-     * signs that a correct file practically never has: an RTL line that starts with sentence
-     * punctuation (".שלום"), and a line that ends with an LRM followed by a number. They must
-     * make up at least 1% of the RTL lines.
+     * Detects corrupted tracks by two signs a correct file practically never has: an RTL line
+     * starting with sentence punctuation, or a line ending with an LRM and a number. Requires at
+     * least 5 such lines and 1% of the RTL lines.
      */
     internal fun looksLikeSwappedBoundaries(texts: Sequence<CharSequence>): Boolean {
         var rtlLines = 0
@@ -161,10 +157,7 @@ internal object PlayerSubtitleRtlFix {
     private fun trackHasReversedNumbers(cues: List<CuesWithTiming>): Boolean =
         looksLikeReversedNumbers(cues.asSequence().flatMap { it.cues.asSequence() }.mapNotNull { it.text })
 
-    /**
-     * Some files store every number digit-reversed ("9102" for 2019). They are recognised by their
-     * four-digit numbers: reversed years clearly outnumber years that are already in order.
-     */
+    /** Detects digit-reversed numbers ("9102" for 2019): reversed years clearly outnumber ordinary ones. */
     internal fun looksLikeReversedNumbers(texts: Sequence<CharSequence>): Boolean {
         var reversedYears = 0
         var forwardYears = 0
@@ -185,9 +178,7 @@ internal object PlayerSubtitleRtlFix {
     private fun isYear(digits: String): Boolean =
         digits[0] == '1' && (digits[1] == '8' || digits[1] == '9') || digits.startsWith("20")
 
-    // ---------------------------------------------------------------------------------------
-    // Per-cue processing
-    // ---------------------------------------------------------------------------------------
+    // --- Per-cue processing ---
 
     private fun fixText(
         text: CharSequence,
@@ -227,12 +218,11 @@ internal object PlayerSubtitleRtlFix {
         return if (changed) finish(out) else null
     }
 
-    /** Applies the repair rules to a line. Lines without RTL letters are left alone. */
+    /** Applies the repair rules to one line; lines without RTL letters are returned unchanged. */
     internal fun repairLine(line: CharSequence, numbersMoved: Boolean, numbersReversed: Boolean = false): LineRepair {
         if (!containsStrongRtl(line)) return LineRepair(line)
 
-        // Bidi marks around the line (RLM at both ends, and a trailing '\r') are set aside while
-        // the rules run, so they don't hide the real first and last characters.
+        // Bidi marks and a trailing CR are set aside so they don't hide the real line edges.
         var start = 0
         while (start < line.length && isBidiControl(line[start])) start++
         var end = line.length
@@ -264,9 +254,7 @@ internal object PlayerSubtitleRtlFix {
         return repairPunctuation(line)
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Rule: digit-reversed numbers ("9102" -> "2019"), only for tracks that store them that way
-    // ---------------------------------------------------------------------------------------
+    // --- Rule: digit-reversed numbers ---
 
     private fun reverseNumbers(repair: LineRepair): LineRepair {
         val text = repair.text
@@ -301,9 +289,9 @@ internal object PlayerSubtitleRtlFix {
     }
 
     /**
-     * Reversing a number with a separator leaves a space next to the separator in these files:
-     * "213, 12" is "21,312" and "31 :22" is "22:13". Returns the end of such a number that starts
-     * at [start] and whose first group ends at [groupEnd], or null if it isn't one.
+     * Reversed numbers with a separator carry a stray space ("213, 12" is "21,312", "31 :22" is
+     * "22:13"). Returns the end of such a number starting at [start] whose first group ends at
+     * [groupEnd], or null.
      */
     private fun spacedNumberEnd(text: CharSequence, start: Int, groupEnd: Int): Int? {
         val groupLength = groupEnd - start
@@ -320,9 +308,7 @@ internal object PlayerSubtitleRtlFix {
         return if (digits in minDigitsAfter..maxDigitsAfter) digitsEnd else null
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Rule: number moved to the end behind an LRM ("גלונים ‎70" -> "70 גלונים")
-    // ---------------------------------------------------------------------------------------
+    // --- Rule: leading number stored at the end behind an LRM ---
 
     private data class TrailingNumber(
         val body: CharSequence,
@@ -342,7 +328,7 @@ internal object PlayerSubtitleRtlFix {
         return LineRepair(text, listOf(Rule.LRM_NUMBER) + body.rules)
     }
 
-    /** Splits "<text> LRM<number>" at the end of a line; the LRM marks a number that was moved. */
+    /** Splits "<text> LRM<number>" at the end of a line. */
     private fun splitTrailingLrmNumber(line: CharSequence): TrailingNumber? {
         val end = line.contentEnd()
         var numberStart = end
@@ -367,9 +353,7 @@ internal object PlayerSubtitleRtlFix {
             index >= 2 && line[index - 2].isDigit()
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Rule: opening quote moved to the end ('אנחנו נלחם"' -> '"אנחנו נלחם')
-    // ---------------------------------------------------------------------------------------
+    // --- Rule: opening quote stored at the end ---
 
     private fun restoreLeadingQuote(line: CharSequence, numbersMoved: Boolean): LineRepair? {
         val quoteIndex = displacedOpeningQuoteIndex(line)
@@ -385,9 +369,8 @@ internal object PlayerSubtitleRtlFix {
     }
 
     /**
-     * Index of a quote at the end of the line that was really the opening quote, or -1.
-     * That is the case when the other quotes in the line have no opening quote for a closing one
-     * ('מתוקה קטנה" מציגים"'), or when there are no other quotes at all.
+     * Index of the final quote when it is really the opening one: the other quotes contain a
+     * closing quote without an opener, or there are none. Otherwise -1.
      */
     private fun displacedOpeningQuoteIndex(line: CharSequence): Int {
         val index = line.contentEnd() - 1
@@ -398,10 +381,8 @@ internal object PlayerSubtitleRtlFix {
     }
 
     /**
-     * True if the first quote of the line, right after any leading punctuation, was really a
-     * closing quote: the other quotes leave an opening quote unclosed ('"בעונה של "פולאאוט'),
-     * or there are no other quotes at all. An apostrophe or geresh there ("!'אאוץ") counts when it
-     * is the only one outside words.
+     * True if the first quote after any leading punctuation is really the closing one: the other
+     * quotes leave an opener unclosed, or there are none. A lone apostrophe or geresh counts the same way.
      */
     private fun leadingQuoteIsDisplacedClosing(line: CharSequence): Boolean {
         val end = line.contentEnd()
@@ -422,7 +403,7 @@ internal object PlayerSubtitleRtlFix {
 
     private data class QuoteBalance(val count: Int, val unmatchedClosers: Int, val unclosedOpeners: Int)
 
-    /** Pairs up the quotes in [0, end), ignoring the one at [skip] and gershayim inside words. */
+    /** Pairs the quotes in [0, end), ignoring [skip] and in-word marks. */
     private fun quoteBalance(line: CharSequence, end: Int, skip: Int): QuoteBalance {
         var count = 0
         var unmatchedClosers = 0
@@ -438,7 +419,7 @@ internal object PlayerSubtitleRtlFix {
         return QuoteBalance(count, unmatchedClosers, openers)
     }
 
-    /** A quote between two letters is a gershayim mark (ק"מ, דו"ח, ב"הנזל), not a real quote. */
+    /** A quote between two letters is an in-word mark (gershayim), not a quote. */
     private fun isInsideWord(line: CharSequence, index: Int): Boolean =
         index > 0 && index + 1 < line.length && line[index - 1].isLetter() && line[index + 1].isLetter()
 
@@ -449,58 +430,53 @@ internal object PlayerSubtitleRtlFix {
     private fun looksLikeClosingQuote(line: CharSequence, index: Int): Boolean =
         index > 0 && !line[index - 1].isWhitespace()
 
-    // ---------------------------------------------------------------------------------------
-    // Rule: non-RTL text and a dash moved to the front ("Ariel046 - נקרע" -> "נקרע - Ariel046")
-    // ---------------------------------------------------------------------------------------
+    // --- Rule: name or site stored at the front ---
 
     private class LatinSegment(val segmentEnd: Int, val restStart: Int)
 
     private fun restoreTrailingLatinSegment(line: CharSequence, numbersMoved: Boolean): LineRepair? {
         val segment = findLeadingLatinSegment(line) ?: return null
         val rest = applyRules(line.subSequence(segment.restStart, line.length), numbersMoved)
+
+        var punctuationEnd = 0
+        while (punctuationEnd < segment.segmentEnd && isSentencePunctuation(line[punctuationEnd])) punctuationEnd++
+
         val text = buildLike(line) {
             append(rest.text)
             appendSlice(line, segment.segmentEnd, segment.restStart)
-            appendSlice(line, 0, segment.segmentEnd)
+            appendSlice(line, punctuationEnd, segment.segmentEnd)
+            appendSlice(line, 0, punctuationEnd)
         }
         return LineRepair(text, listOf(Rule.LATIN_SEGMENT) + rest.rules)
     }
 
     /**
-     * Finds "<non-RTL text> - <RTL text>": text without RTL letters (a name, a site), a dash
-     * surrounded by whitespace, and RTL text after it. A line that starts with a dash is dialogue
-     * and never matches.
+     * Finds non-RTL text followed by whitespace, an optional dash and RTL text. Sentence
+     * punctuation before that text moves behind it. Lines starting with a dash (dialogue) and
+     * text without a letter (numbers) never match.
      */
     private fun findLeadingLatinSegment(line: CharSequence): LatinSegment? {
-        var dash = 1
-        while (dash < line.length - 1 &&
-            !(isDash(line[dash]) && line[dash - 1].isWhitespace() && line[dash + 1].isWhitespace())
-        ) dash++
-        if (dash >= line.length - 1) return null
+        var restStart = 0
+        while (restStart < line.length && !isStrongRtl(line[restStart].code)) restStart++
+        if (restStart == 0 || restStart >= line.length) return null
 
-        var segmentEnd = dash
-        while (segmentEnd > 0 && line[segmentEnd - 1].isWhitespace()) segmentEnd--
-        var restStart = dash + 1
-        while (restStart < line.length && line[restStart].isWhitespace()) restStart++
-        if (segmentEnd == 0 || restStart >= line.length) return null
+        var segmentEnd = restStart
+        while (segmentEnd > 0 && (line[segmentEnd - 1].isWhitespace() || isDash(line[segmentEnd - 1]))) segmentEnd--
+        if (segmentEnd == 0) return null
+        if ((segmentEnd until restStart).none { line[it].isWhitespace() }) return null
 
-        val segment = line.subSequence(0, segmentEnd)
-        if (isDash(segment[0]) || containsStrongRtl(segment) || segment.none { it.isLetterOrDigit() }) return null
-        if (!containsStrongRtl(line.subSequence(restStart, line.length))) return null
+        if (isDash(line[0]) || (0 until segmentEnd).none { line[it].isLetter() }) return null
         return LatinSegment(segmentEnd, restStart)
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Rule: punctuation and dashes moved to the wrong edge
-    // ---------------------------------------------------------------------------------------
+    // --- Rule: punctuation and dashes at the wrong edge ---
 
     private fun repairPunctuation(line: CharSequence): LineRepair {
         var source = line
         val rules = ArrayList<Rule>(2)
 
         if (hasDashAtBothEnds(line)) {
-            // "- text -" is a symmetric decoration and stays as is, unless punctuation was
-            // displaced to right after the opening dash ("- ...text -").
+            // A symmetric "- text -" stays unless punctuation follows the opening dash.
             if (Rule.DASH_ELLIPSIS in disabledRules) return LineRepair(line)
             source = swapDashWithFollowingPunctuation(line)
             if (source === line) return LineRepair(line)
@@ -515,7 +491,7 @@ internal object PlayerSubtitleRtlFix {
         return if (moved === source) LineRepair(source, rules) else LineRepair(moved, rules + Rule.LEADING_PUNCTUATION)
     }
 
-    /** "- ...text -" -> "... -text -" (also for a lone apostrophe). Returns the same instance if there is no match. */
+    /** Reorders "- ...text -" to "... -text -" (also with a lone apostrophe); otherwise returns [line]. */
     private fun swapDashWithFollowingPunctuation(line: CharSequence): CharSequence {
         val end = line.contentEnd()
         var dashIndex = 0
@@ -541,9 +517,8 @@ internal object PlayerSubtitleRtlFix {
     }
 
     /**
-     * A dialogue dash displaced to the end, with sentence punctuation at the front:
-     * ".ואני אהיה שם-" -> "-ואני אהיה שם."   "!אני -" -> "- אני!"
-     * Returns null if the line doesn't have that shape.
+     * Moves a trailing dash to the front and the leading punctuation to the end
+     * (".text-" -> "-text."). Returns null if the line has another shape.
      */
     private fun moveTrailingDashToFront(line: CharSequence): CharSequence? {
         val end = line.contentEnd()
@@ -562,10 +537,9 @@ internal object PlayerSubtitleRtlFix {
     }
 
     /**
-     * ".שלום עולם" -> "שלום עולם."   "- שלום" -> "שלום -"
-     * The leading run may contain whitespace and bidi marks (dropped); spaces next to the moved
-     * punctuation travel with it. A lone quote counts as punctuation, paired quotes stay put.
-     * Returns the same instance if the leading run has no punctuation.
+     * Moves leading punctuation to the end (".text" -> "text."). Whitespace and bidi marks in
+     * the run are dropped, spaces next to the moved text stay with it. A lone quote counts as
+     * punctuation, paired quotes stay. Returns [line] if the run has no punctuation.
      */
     private fun moveLeadingPunctuationToEnd(line: CharSequence): CharSequence {
         if (line.isEmpty()) return line
@@ -591,7 +565,7 @@ internal object PlayerSubtitleRtlFix {
 
         return buildLike(line) {
             appendSlice(line, runEnd, end)
-            // Quotes and geresh belong to the word, so they come first; the rest follows them.
+            // Quotes and geresh attach to the word first, then the other punctuation.
             for (i in 0 until runEnd) {
                 if (isMovableQuote(line[i])) appendSlice(line, i, i + 1)
             }
@@ -603,14 +577,11 @@ internal object PlayerSubtitleRtlFix {
         }
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Rule: punctuation and numbers moved to the front (Dark-style files)
-    // ---------------------------------------------------------------------------------------
+    // --- Rule: leading run of punctuation and numbers ---
 
     /**
-     * Moves the leading run of punctuation and numbers to the end, reversing the order of its
-     * chunks but keeping each number intact:
-     * "?33-כל ה" -> "כל ה-33?"   ".80-זה מתקדם" -> "זה מתקדם-80."
+     * Moves the leading run of punctuation and numbers to the end. The chunks are reversed, each
+     * number stays intact ("?12-text" -> "text-12?").
      */
     private fun moveLeadingRunToEnd(line: CharSequence): CharSequence {
         if (line.isEmpty()) return line
@@ -635,7 +606,7 @@ internal object PlayerSubtitleRtlFix {
         isBoundaryPunctuation(c) || c.isDigit() || c.isWhitespace() || isBidiControl(c) ||
             c == ARABIC_DECIMAL_SEPARATOR || c == ARABIC_THOUSANDS_SEPARATOR
 
-    /** Splits the run into single characters, with a whole number (e.g. "1,000") as one chunk. */
+    /** Splits the run into single characters; a whole number ("1,000") is one chunk. */
     private fun splitIntoChunks(line: CharSequence, runEnd: Int): List<IntRange> {
         val chunks = ArrayList<IntRange>()
         var i = 0
@@ -676,11 +647,9 @@ internal object PlayerSubtitleRtlFix {
         else -> c
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Line inspection
-    // ---------------------------------------------------------------------------------------
+    // --- Line inspection ---
 
-    /** Skips leading non-alphanumerics and returns the end index of the number that follows, or -1. */
+    /** End index of the number after any leading non-alphanumerics, or -1. */
     private fun leadingNumberEnd(line: CharSequence): Int {
         var i = 0
         while (i < line.length && !line[i].isLetterOrDigit()) i++
@@ -716,22 +685,24 @@ internal object PlayerSubtitleRtlFix {
         var i = 0
         while (i < text.length) {
             val codePoint = Character.codePointAt(text, i)
-            if (codePoint >= 0x0590) {
-                if (codePoint in 0x0590..0x08FF || codePoint in 0xFB1D..0xFEFF) return true
-                when (Character.getDirectionality(codePoint)) {
-                    Character.DIRECTIONALITY_RIGHT_TO_LEFT,
-                    Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC,
-                    Character.DIRECTIONALITY_ARABIC_NUMBER -> return true
-                }
-            }
+            if (isStrongRtl(codePoint)) return true
             i += Character.charCount(codePoint)
         }
         return false
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Character classes
-    // ---------------------------------------------------------------------------------------
+    private fun isStrongRtl(codePoint: Int): Boolean {
+        if (codePoint < 0x0590) return false
+        if (codePoint in 0x0590..0x08FF || codePoint in 0xFB1D..0xFEFF) return true
+        return when (Character.getDirectionality(codePoint)) {
+            Character.DIRECTIONALITY_RIGHT_TO_LEFT,
+            Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC,
+            Character.DIRECTIONALITY_ARABIC_NUMBER -> true
+            else -> false
+        }
+    }
+
+    // --- Character classes ---
 
     private fun isBoundaryPunctuation(c: Char): Boolean = when (c) {
         '.', ',', '?', '!', '-', ':', ';', ELLIPSIS, ')', '(', SOF_PASUQ,
@@ -739,7 +710,7 @@ internal object PlayerSubtitleRtlFix {
         else -> false
     }
 
-    /** Boundary punctuation without dashes and brackets. */
+    /** Boundary punctuation excluding dashes and brackets. */
     private fun isSentencePunctuation(c: Char): Boolean = when (c) {
         '.', ',', '?', '!', ':', ';', ELLIPSIS, SOF_PASUQ,
         ARABIC_COMMA, ARABIC_SEMICOLON, ARABIC_QUESTION_MARK, URDU_FULL_STOP -> true
@@ -752,10 +723,10 @@ internal object PlayerSubtitleRtlFix {
     private fun isQuote(c: Char): Boolean =
         c == '"' || c == '\u05F4' || c == '\u201C' || c == '\u201D'
 
-    /** Apostrophe and geresh: ' ׳ ’ */
+    /** Apostrophe and geresh. */
     private fun isApostrophe(c: Char): Boolean = c == '\'' || c == '\u05F3' || c == '\u2019'
 
-    /** Separators allowed inside a number: "1,000", "3.14", "12:30", "1/2", "12-345-67", "1990-2000". */
+    /** Characters allowed inside a number ("1,000", "12:30", "1990-2000"). */
     private fun isNumberSeparator(c: Char): Boolean =
         c == ',' || c == '.' || c == ':' || c == '/' || isDash(c) ||
             c == ARABIC_DECIMAL_SEPARATOR || c == ARABIC_THOUSANDS_SEPARATOR
@@ -764,16 +735,14 @@ internal object PlayerSubtitleRtlFix {
         c == LRM || c == '\u200F' || c == '\u061C' ||
             c in '\u202A'..'\u202E' || c in '\u2066'..'\u2069' || c == '\uFEFF'
 
-    // ---------------------------------------------------------------------------------------
-    // Text utilities
-    // ---------------------------------------------------------------------------------------
+    // --- Text utilities ---
 
     private fun CharSequence.startsWith(prefix: String, offset: Int): Boolean =
         offset + prefix.length <= length && prefix.indices.all { this[offset + it] == prefix[it] }
 
     private fun CharSequence.endsWithCarriageReturn(): Boolean = lastOrNull() == CARRIAGE_RETURN
 
-    /** End index of the line content, excluding a trailing '\r' (CRLF files). */
+    /** End index of the line content, excluding a trailing CR. */
     private fun CharSequence.contentEnd(): Int = if (endsWithCarriageReturn()) length - 1 else length
 
     private fun CharSequence.splitByNewlines(): List<CharSequence> {
@@ -789,7 +758,7 @@ internal object PlayerSubtitleRtlFix {
         return lines
     }
 
-    /** Spanned input gets a span-preserving builder, plain text a StringBuilder. */
+    /** Span-preserving builder for Spanned input, StringBuilder otherwise. */
     private fun newBuilder(source: CharSequence, extraCapacity: Int = 0): Appendable =
         if (source is Spanned) SpannableStringBuilder() else StringBuilder(source.length + extraCapacity)
 
