@@ -20,7 +20,7 @@ internal object PlayerSubtitleRtlFix {
     private val bidiFormatter = BidiFormatter.getInstance(/* rtlContext = */ false)
 
     /** Adds the marks of the applied rules to each processed line. */
-    private const val DEBUG_MODE = true
+    private const val DEBUG_MODE = false
 
     /** Skips track detection and treats every track as corrupted. */
     private const val FORCE_SWAPPED_TRACK = false
