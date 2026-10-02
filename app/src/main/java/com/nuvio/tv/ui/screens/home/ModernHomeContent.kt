@@ -100,26 +100,32 @@ import kotlin.math.roundToInt
 // Height of the wide card as a fraction of its width, matching the 2.5:1 shape of the mobile card.
 private const val WIDE_CARD_HEIGHT_RATIO = 0.4f
 
-private class ItemIdentitySnapshot(
-    var byRow: Map<String, StableList<String>> = emptyMap()
+private class RowListsSnapshot(
+    var token: Map<String, StableList<String>> = emptyMap()
 )
 
-internal fun findRelocatedItemIndex(
-    previousIdentities: List<String>?,
-    currentIdentities: List<String>,
-    storedIndex: Int?
-): Int? {
-    if (storedIndex == null) return null
-    val previousIdentity = previousIdentities?.getOrNull(storedIndex) ?: return null
-    return currentIdentities.indexOf(previousIdentity).takeIf { it >= 0 }
-}
+internal data class FocusedCard(val key: String, val index: Int)
 
 /**
- * Whether a row's focus index, left unrelocated, is past the end of its new list. Such an index
- * would point at another title once the row grows back. The active row is clamped separately.
+ * Follows the focused card by key. Gone, or recorded for another index: the index is kept, or
+ * reset when past the list, where it would name another title once the row grows back.
  */
-internal fun isFocusedIndexPastRow(storedIndex: Int?, rowSize: Int, isActiveRow: Boolean): Boolean =
-    storedIndex != null && storedIndex !in 0 until rowSize && !isActiveRow
+internal fun resolveFocusedIndex(
+    focused: FocusedCard?,
+    storedIndex: Int,
+    itemKeys: List<String>,
+    isActiveRow: Boolean
+): Int {
+    val followed = focused
+        ?.takeIf { it.index == storedIndex }
+        ?.let { itemKeys.indexOf(it.key) }
+        ?.takeIf { it >= 0 }
+    return when {
+        followed != null -> followed
+        storedIndex in itemKeys.indices || isActiveRow -> storedIndex
+        else -> 0
+    }
+}
 
 @Composable
 fun ModernHomeContent(
@@ -224,7 +230,17 @@ fun ModernHomeContent(
     val loadMoreRequestedTotals = remember { mutableStateMapOf<String, Int>() }
 
     val focusedItemByRow = remember { mutableStateMapOf<String, Int>() }
-    val itemIdentitySnapshot = remember { ItemIdentitySnapshot() }
+    val focusedCardByRow = remember { mutableMapOf<String, FocusedCard>() }
+    val rowListsSnapshot = remember { RowListsSnapshot() }
+    val latestRowByKey = rememberUpdatedState(rowByKey)
+    val recordFocusedCard = remember {
+        { rowKey: String, index: Int ->
+            val key = latestRowByKey.value[rowKey]?.items?.list?.getOrNull(index)?.key
+            if (key != null) focusedCardByRow[rowKey] = FocusedCard(key, index)
+            else focusedCardByRow.remove(rowKey)
+            Unit
+        }
+    }
     val stableFocusedItemByRow = remember { StableRef<MutableMap<String, Int>>(focusedItemByRow) }
     val stableRowListStates = remember { StableRef<MutableMap<String, LazyListState>>(rowListStates) }
     val stableLoadMoreRequestedTotals = remember { StableRef<MutableMap<String, Int>>(loadMoreRequestedTotals) }
@@ -235,7 +251,10 @@ fun ModernHomeContent(
             if (savedItemKey.isBlank()) return@forEach
             val row = rowsByKey[rowKey] ?: return@forEach
             val itemIndex = row.items.list.indexOfFirst { it.key == savedItemKey }
-            if (itemIndex >= 0) focusedItemByRow[rowKey] = itemIndex
+            if (itemIndex >= 0) {
+                focusedItemByRow[rowKey] = itemIndex
+                focusedCardByRow[rowKey] = FocusedCard(savedItemKey, itemIndex)
+            }
         }
     }
 
@@ -293,6 +312,7 @@ fun ModernHomeContent(
         val rowKey = activeRowKey.value ?: return@BackHandler
         val listState = rowListStates[rowKey]
         focusedItemByRow[rowKey] = 0
+        recordFocusedCard(rowKey, 0)
         pendingRowFocusKey.value = rowKey
         pendingRowFocusIndex.value = 0
         pendingRowFocusNonce.intValue++
@@ -379,18 +399,23 @@ fun ModernHomeContent(
         lastRequestedTrailerFocusKey = selection.focusKey
     }
 
-    val currentItemIdentitiesByRow = carouselLookups.itemIdentitiesByRow.map
-    if (itemIdentitySnapshot.byRow !== currentItemIdentitiesByRow) {
+    val rowListsToken = carouselLookups.itemIdentitiesByRow.map
+    if (rowListsSnapshot.token !== rowListsToken) {
         // Issued after composition: requestScrollToItem writes to a LazyListState.
         val pendingRowScrolls = mutableListOf<Pair<LazyListState, Int>>()
-        currentItemIdentitiesByRow.forEach { (rowKey, currentIdentities) ->
-            val storedIndex = focusedItemByRow[rowKey]
-            val relocatedIndex = findRelocatedItemIndex(
-                previousIdentities = itemIdentitySnapshot.byRow[rowKey]?.list,
-                currentIdentities = currentIdentities.list,
-                storedIndex = storedIndex
+        val pendingFocusedCards = mutableListOf<Pair<String, FocusedCard?>>()
+        carouselRows.list.forEach { row ->
+            val rowKey = row.key
+            val itemKeys = row.items.list.map { it.key }
+            val storedIndex = focusedItemByRow[rowKey] ?: 0
+            val relocatedIndex = resolveFocusedIndex(
+                focused = focusedCardByRow[rowKey],
+                storedIndex = storedIndex,
+                itemKeys = itemKeys,
+                isActiveRow = rowKey == activeRowKey.value
             )
-            if (relocatedIndex != null && relocatedIndex != storedIndex) {
+            pendingFocusedCards += rowKey to itemKeys.getOrNull(relocatedIndex)?.let { FocusedCard(it, relocatedIndex) }
+            if (relocatedIndex != storedIndex) {
                 focusedItemByRow[rowKey] = relocatedIndex
                 // The hero reads its own index, synced by an effect keyed on the row size, so it
                 // would land a frame late and show whatever took the old index meanwhile.
@@ -406,15 +431,14 @@ fun ModernHomeContent(
                     val state = rowListStates[rowKey] ?: return@withoutReadObservation
                     pendingRowScrolls += state to relocatedIndex
                 }
-            } else if (
-                isFocusedIndexPastRow(storedIndex, currentIdentities.list.size, rowKey == activeRowKey.value)
-            ) {
-                focusedItemByRow[rowKey] = 0
             }
         }
         SideEffect {
             pendingRowScrolls.forEach { (state, index) -> state.requestScrollToItem(index) }
-            itemIdentitySnapshot.byRow = currentItemIdentitiesByRow
+            pendingFocusedCards.forEach { (rowKey, card) ->
+                if (card != null) focusedCardByRow[rowKey] = card else focusedCardByRow.remove(rowKey)
+            }
+            rowListsSnapshot.token = rowListsToken
         }
     }
 
@@ -457,6 +481,7 @@ fun ModernHomeContent(
         carouselRows.list.forEach { row ->
             if (row.items.list.isNotEmpty() && row.key !in focusedItemByRow) {
                 focusedItemByRow[row.key] = 0
+                recordFocusedCard(row.key, 0)
             }
         }
 
@@ -483,6 +508,7 @@ fun ModernHomeContent(
                 activeRowKey.value = resolvedRow.key
                 activeItemIndex.intValue = resolvedIndex
                 focusedItemByRow[resolvedRow.key] = resolvedIndex
+                recordFocusedCard(resolvedRow.key, resolvedIndex)
                 heroItem.value = resolvedRow.items.getOrNull(resolvedIndex)?.heroPreview
                     ?: resolvedRow.items.firstOrNull()?.heroPreview
                 pendingRowFocusKey.value = resolvedRow.key
@@ -512,6 +538,7 @@ fun ModernHomeContent(
             activeRowKey.value = resolvedActive.key
             activeItemIndex.intValue = resolvedIndex
             focusedItemByRow[resolvedActive.key] = resolvedIndex
+            recordFocusedCard(resolvedActive.key, resolvedIndex)
             heroItem.value = resolvedActive.items.getOrNull(resolvedIndex)?.heroPreview
                 ?: resolvedActive.items.firstOrNull()?.heroPreview
 
@@ -565,6 +592,7 @@ fun ModernHomeContent(
             activeItemIndex.intValue = clampedIndex
         }
         focusedItemByRow[row.key] = clampedIndex
+        recordFocusedCard(row.key, clampedIndex)
     }
 
     val activeHeroItemKey by remember(activeRow, clampedActiveItemIndex) {
@@ -1137,6 +1165,7 @@ fun ModernHomeContent(
             }
             val onRowItemFocusedInternalLambda = remember(onRowItemFocusedPassedDown) {
                 { rowKey: String, index: Int, isCw: Boolean ->
+                    recordFocusedCard(rowKey, index)
                     onRowItemFocusedPassedDown.value.invoke(rowKey, index, isCw)
                 }
             }
