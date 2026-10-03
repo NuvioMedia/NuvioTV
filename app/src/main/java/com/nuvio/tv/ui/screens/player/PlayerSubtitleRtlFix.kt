@@ -613,6 +613,46 @@ internal object PlayerSubtitleRtlFix {
     }
 
     /**
+     * True if an opening bracket in the leading run is really the closing one, stored mirrored at
+     * the front: the rest of the line leaves a bracket unclosed, or has no brackets. A bracket
+     * that pairs with one later in the line is a real opening bracket and stays.
+     */
+    private fun leadingBracketIsDisplacedClosing(line: CharSequence, end: Int): Boolean {
+        var runEnd = 0
+        while (runEnd < end && (isBoundaryPunctuation(line[runEnd]) ||
+                line[runEnd].isWhitespace() || isBidiControl(line[runEnd]))
+        ) runEnd++
+        if ((0 until runEnd).none { line[it] == '(' }) return false
+
+        var openers = 0
+        var unmatchedClosers = 0
+        for (i in 0 until end) {
+            when {
+                line[i] == '(' && i >= runEnd -> openers++
+                line[i] == ')' -> if (openers > 0) openers-- else unmatchedClosers++
+            }
+        }
+        val restHasBrackets = (runEnd until end).any { line[it] == '(' || line[it] == ')' }
+        return unmatchedClosers == 0 && (openers > 0 || !restHasBrackets)
+    }
+
+    /** Reorders '"?text"' to '"text?"': a "?" or "!" after the opening quote belongs inside the pair. */
+    private fun swapQuotePair(line: CharSequence, end: Int): CharSequence? {
+        if (end < 4 || !isQuote(line[0]) || !isQuote(line[end - 1])) return null
+        var marksEnd = 1
+        while (marksEnd < end - 1 && (line[marksEnd] == '?' || line[marksEnd] == '!')) marksEnd++
+        if (marksEnd == 1 || marksEnd >= end - 1) return null
+        if (isInsideWord(line, end - 1) || quoteBalance(line, end = end - 1, skip = 0).count != 0) return null
+
+        return buildLike(line) {
+            appendSlice(line, 0, 1)
+            appendSlice(line, marksEnd, end - 1)
+            appendSlice(line, 1, marksEnd)
+            appendSlice(line, end - 1, line.length)
+        }
+    }
+
+    /**
      * Moves leading punctuation to the end (".text" -> "text."). Whitespace and bidi marks in
      * the run are dropped, spaces next to the moved text stay with it. A lone quote counts as
      * punctuation, paired quotes stay. Returns [line] if the run has no punctuation.
@@ -621,10 +661,13 @@ internal object PlayerSubtitleRtlFix {
         if (line.isEmpty()) return line
         val end = line.contentEnd()
         if (end == 0) return line
+        swapQuotePair(line, end)?.let { return it }
 
         val quotesAreMovable = leadingQuoteIsDisplacedClosing(line)
+        val bracketIsMovable = leadingBracketIsDisplacedClosing(line, end)
         fun isMovableQuote(c: Char) = quotesAreMovable && (isQuote(c) || isApostrophe(c))
-        fun isMovable(c: Char) = isBoundaryPunctuation(c) || isMovableQuote(c)
+        fun isMovable(c: Char) =
+            if (c == '(') bracketIsMovable else isBoundaryPunctuation(c) || isMovableQuote(c)
 
         var runEnd = 0
         var hasPunctuation = false
@@ -647,7 +690,9 @@ internal object PlayerSubtitleRtlFix {
             }
             appendSlice(line, spaceStart, runEnd)
             for (i in 0 until runEnd) {
-                if (isBoundaryPunctuation(line[i]) && !isMovableQuote(line[i])) appendSlice(line, i, i + 1)
+                val c = line[i]
+                if (!isMovable(c) || isMovableQuote(c)) continue
+                if (c == '(') append(')') else appendSlice(line, i, i + 1)
             }
             if (line.endsWithCarriageReturn()) append(CARRIAGE_RETURN)
         }
