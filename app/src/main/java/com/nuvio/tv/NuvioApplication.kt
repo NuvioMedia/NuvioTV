@@ -8,6 +8,7 @@ import android.os.StrictMode
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import com.nuvio.tv.core.image.CustomPosterFallbackInterceptor
+import com.nuvio.tv.core.image.BrowserImageRequestHeadersInterceptor
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.gif.GifDecoder
@@ -100,6 +101,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                 .connectTimeout(4, TimeUnit.SECONDS)
                 .readTimeout(5, TimeUnit.SECONDS)
                 .callTimeout(12, TimeUnit.SECONDS)
+                .addInterceptor(BrowserImageRequestHeadersInterceptor())
                 .addInterceptor { chain ->
                     try {
                         chain.proceed(chain.request())
