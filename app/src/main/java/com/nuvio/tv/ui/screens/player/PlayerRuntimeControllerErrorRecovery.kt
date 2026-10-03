@@ -436,6 +436,7 @@ internal fun PlayerRuntimeController.tryPassthroughOpenRetry(error: PlaybackExce
         releasePlayer(flushPlaybackState = false)
         delay(delayMs)
         if (currentStreamUrl != streamUrl) return@launch
+        if (!awaitOutputForOpenRetry(streamUrl)) return@launch
         if (savedPosition > 0L) {
             _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
         }
@@ -443,6 +444,31 @@ internal fun PlayerRuntimeController.tryPassthroughOpenRetry(error: PlaybackExce
     }
 
     return true
+}
+
+private suspend fun PlayerRuntimeController.awaitOutputForOpenRetry(streamUrl: String): Boolean {
+    val startedMs = android.os.SystemClock.elapsedRealtime()
+    var waiting = false
+    while (true) {
+        if (currentStreamUrl != streamUrl) return false
+        val routeKey = runCatching { AudioOutputRouteDetector.detect(context)?.key }.getOrNull()
+        val ready = PassthroughOpenRetryPolicy.outputReady(
+            liveEncodings = PassthroughOpenRetryPolicy.liveBitstreamEncodings(context),
+            routeIsHdmi = PassthroughOpenRetryPolicy.isHdmiRoute(routeKey)
+        )
+        val waitedMs = android.os.SystemClock.elapsedRealtime() - startedMs
+        if (PassthroughOpenRetryPolicy.mayRetryNow(ready, waitedMs)) {
+            if (waiting) {
+                Log.i(PlayerRuntimeController.TAG, "AUDIO_OPEN_RETRY: output back after ${waitedMs}ms ready=$ready route=$routeKey")
+            }
+            return true
+        }
+        if (!waiting) {
+            Log.w(PlayerRuntimeController.TAG, "AUDIO_OPEN_RETRY: waiting for the audio output, route=$routeKey")
+            waiting = true
+        }
+        delay(PassthroughOpenRetryPolicy.OUTPUT_POLL_MS)
+    }
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)

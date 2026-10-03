@@ -104,4 +104,34 @@ class PassthroughOpenRetryPolicyTest {
         assertNull(failedAudioTrackInputFormat(RuntimeException("decoder")))
         assertNull(failedAudioTrackInputFormat(null))
     }
+
+    @Test
+    fun retryWaitsWhileTheHdmiOutputIsGone() {
+        assertFalse(PassthroughOpenRetryPolicy.outputReady(emptySet(), routeIsHdmi = false))
+    }
+
+    @Test
+    fun retryGoesOnceTheOutputTakesBitstreamOrMediaIsOnHdmi() {
+        val trueHd = setOf(androidx.media3.common.C.ENCODING_DOLBY_TRUEHD)
+        val ac3 = setOf(androidx.media3.common.C.ENCODING_AC3)
+        assertTrue(PassthroughOpenRetryPolicy.outputReady(trueHd, routeIsHdmi = false))
+        assertTrue(PassthroughOpenRetryPolicy.outputReady(ac3, routeIsHdmi = false))
+        assertTrue(PassthroughOpenRetryPolicy.outputReady(emptySet(), routeIsHdmi = true))
+    }
+
+    @Test
+    fun theWaitForTheOutputIsBounded() {
+        val max = PassthroughOpenRetryPolicy.MAX_OUTPUT_WAIT_MS
+        assertFalse(PassthroughOpenRetryPolicy.mayRetryNow(false, max - 1))
+        assertTrue(PassthroughOpenRetryPolicy.mayRetryNow(false, max))
+        assertTrue(PassthroughOpenRetryPolicy.mayRetryNow(true, 0L))
+    }
+
+    @Test
+    fun hdmiRoutesAreRecognised() {
+        assertTrue(PassthroughOpenRetryPolicy.isHdmiRoute("type:hdmi|name:am9_pro"))
+        assertTrue(PassthroughOpenRetryPolicy.isHdmiRoute("type:hdmi_arc|name:tv"))
+        assertFalse(PassthroughOpenRetryPolicy.isHdmiRoute("type:built_in_speaker|name:am9_pro"))
+        assertFalse(PassthroughOpenRetryPolicy.isHdmiRoute(null))
+    }
 }
