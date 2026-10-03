@@ -95,7 +95,8 @@ data class LibraryListTab(
     enum class Type {
         WATCHLIST,
         PERSONAL,
-        STATUS
+        STATUS,
+        EXTERNAL
     }
 }
 
