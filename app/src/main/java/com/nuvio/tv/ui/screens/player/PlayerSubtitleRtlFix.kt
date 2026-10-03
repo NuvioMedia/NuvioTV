@@ -19,8 +19,20 @@ internal object PlayerSubtitleRtlFix {
 
     private val bidiFormatter = BidiFormatter.getInstance(/* rtlContext = */ false)
 
-    /** Adds the marks of the applied rules to each processed line. */
-    private const val DEBUG_MODE = false
+    /**
+     * Debug aid for lines that are not displayed correctly.
+     *
+     * Set to `true`: every RTL line gets a mark in its middle, made of the codes of the rules
+     * applied to it (see [Rule]; several rules are joined, e.g. "5+1"), or [MARK_UNCHANGED] if no
+     * rule changed the line. Lines without RTL letters get no mark.
+     *
+     * To report a problem, send the original line (copy-paste) from the .srt file together with the line as
+     * shown in the player, mark included. The mark identifies the rule that produced the output.
+     *
+     * To isolate a rule, list it in [disabledRules]; to process a track that was not detected as
+     * corrupted, set [FORCE_SWAPPED_TRACK].
+     */
+    private const val DEBUG_MODE = true
 
     /** Skips track detection and treats every track as corrupted. */
     private const val FORCE_SWAPPED_TRACK = false
@@ -28,18 +40,20 @@ internal object PlayerSubtitleRtlFix {
     /** Rules to skip, for isolating a problem. */
     private val disabledRules: Set<Rule> = emptySet()
 
+    /** Mark of a line that no rule changed. */
     private const val MARK_UNCHANGED = "2"
 
     /** Repair rules and the debug mark each one leaves (several marks: "5+1"). */
     internal enum class Rule(val mark: String) {
-        LEADING_PUNCTUATION("1"),
-        LEADING_RUN("3"),
-        LRM_NUMBER("4"),
-        QUOTE("5"),
-        DASH_ELLIPSIS("6"),
-        DASH_TO_FRONT("7"),
-        LATIN_SEGMENT("8"),
-        NUMBERS_REVERSED("9")
+        LEADING_PUNCTUATION("1"), // punctuation stored at the front moves to the end
+        LEADING_RUN("3"),         // leading punctuation and numbers move to the end
+        LRM_NUMBER("4"),          // number stored at the end behind an LRM moves to the front
+        QUOTE("5"),               // opening quote stored at the end moves to the front
+        DASH_ELLIPSIS("6"),       // "- ...text -" is reordered before the dash rule
+        DASH_TO_FRONT("7"),       // trailing dash moves to the front
+        LATIN_SEGMENT("8"),       // name or site stored at the front moves to the end
+        NUMBERS_REVERSED("9"),    // digit-reversed numbers are reversed back
+        MIXED_RUNS("0")           // RTL / Latin / RTL runs stored in visual order are reversed
     }
 
     /** Repaired text and the rules that changed it; no rules means the line is unchanged. */
@@ -247,6 +261,7 @@ internal object PlayerSubtitleRtlFix {
         if (Rule.LRM_NUMBER !in disabledRules) restoreLeadingNumber(line, numbersMoved)?.let { return it }
         if (Rule.QUOTE !in disabledRules) restoreLeadingQuote(line, numbersMoved)?.let { return it }
         if (Rule.LATIN_SEGMENT !in disabledRules) restoreTrailingLatinSegment(line, numbersMoved)?.let { return it }
+        if (Rule.MIXED_RUNS !in disabledRules) reorderMixedRuns(line)?.let { return it }
         if (numbersMoved && Rule.LEADING_RUN !in disabledRules && startsWithNumber(line)) {
             val moved = moveLeadingRunToEnd(line)
             return if (moved === line) LineRepair(line) else LineRepair(moved, listOf(Rule.LEADING_RUN))
@@ -467,6 +482,67 @@ internal object PlayerSubtitleRtlFix {
 
         if (isDash(line[0]) || (0 until segmentEnd).none { line[it].isLetter() }) return null
         return LatinSegment(segmentEnd, restStart)
+    }
+
+    // --- Rule: RTL and Latin runs stored in visual order ---
+
+    private class Run(val start: Int, val end: Int, val isRtl: Boolean)
+
+    /**
+     * Reverses the order of the runs in "RTL Latin RTL" text stored in visual order. Each RTL run
+     * also gets its leading punctuation moved to its end. Edge dashes stay in place; the rule
+     * applies only when both edges have a dash or neither has one.
+     */
+    private fun reorderMixedRuns(line: CharSequence): LineRepair? {
+        val end = line.contentEnd()
+        var coreStart = 0
+        while (coreStart < end && (line[coreStart].isWhitespace() || isDash(line[coreStart]))) coreStart++
+        var coreEnd = end
+        while (coreEnd > coreStart && (line[coreEnd - 1].isWhitespace() || isDash(line[coreEnd - 1]))) coreEnd--
+        if (coreStart == coreEnd) return null
+
+        val prefixHasDash = (0 until coreStart).any { isDash(line[it]) }
+        val suffixHasDash = (coreEnd until end).any { isDash(line[it]) }
+        if (prefixHasDash != suffixHasDash) return null
+
+        val runs = splitIntoRuns(line, coreStart, coreEnd)
+        if (runs.size < 3 || !runs.first().isRtl || !runs.last().isRtl) return null
+
+        val text = buildLike(line) {
+            appendSlice(line, 0, coreStart)
+            for (i in runs.indices.reversed()) {
+                val run = runs[i]
+                val part = line.subSequence(run.start, run.end)
+                append(if (run.isRtl) moveLeadingPunctuationToEnd(part) else part)
+                if (i > 0) appendSlice(line, runs[i - 1].end, run.start)
+            }
+            appendSlice(line, coreEnd, line.length)
+        }
+        return LineRepair(text, listOf(Rule.MIXED_RUNS))
+    }
+
+    /** Groups words into alternating RTL and Latin runs; words without letters join the previous run. */
+    private fun splitIntoRuns(line: CharSequence, start: Int, end: Int): List<Run> {
+        val runs = ArrayList<Run>()
+        var i = start
+        while (i < end) {
+            if (line[i].isWhitespace()) {
+                i++
+                continue
+            }
+            val wordStart = i
+            while (i < end && !line[i].isWhitespace()) i++
+            val word = line.subSequence(wordStart, i)
+            val isRtl = containsStrongRtl(word)
+            val isLatin = !isRtl && word.any { it.isLetter() }
+            val last = runs.lastOrNull()
+            when {
+                last != null && (!isRtl && !isLatin || last.isRtl == isRtl) -> runs[runs.size - 1] = Run(last.start, i, last.isRtl)
+                !isRtl && !isLatin -> runs.add(Run(wordStart, i, isRtl = false))
+                else -> runs.add(Run(wordStart, i, isRtl))
+            }
+        }
+        return runs
     }
 
     // --- Rule: punctuation and dashes at the wrong edge ---
