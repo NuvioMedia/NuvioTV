@@ -514,6 +514,9 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
             if (attemptAutoRetry(error, detailedError)) {
                 return@launch
             }
+            if (tryServerFallback()) {
+                return@launch
+            }
             val userFacingError = error.toDisplayMessage(context)
             _uiState.update {
                 it.copy(

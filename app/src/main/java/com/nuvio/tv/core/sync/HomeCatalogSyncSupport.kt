@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.sync
 
+import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.domain.model.catalogTypeKey
 import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import com.nuvio.tv.domain.model.Addon
@@ -32,6 +33,13 @@ internal fun homeCatalogKey(addonId: String, type: String, catalogId: String): S
 internal fun homeCollectionKey(collectionId: String): String {
     return "collection_${collectionId}"
 }
+
+internal fun List<String>.withLocalServerKeys(local: List<String>): List<String> =
+    local.withIndex()
+        .filter { ServerCatalog.isServerKey(it.value) }
+        .fold(filterNot(ServerCatalog::isServerKey).toMutableList()) { keys, (index, key) ->
+            keys.apply { add(index.coerceAtMost(size), key) }
+        }
 
 internal fun homeLegacyDisabledCatalogKey(
     addonBaseUrl: String,

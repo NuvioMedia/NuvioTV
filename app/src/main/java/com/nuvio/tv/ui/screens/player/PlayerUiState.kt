@@ -94,6 +94,9 @@ data class PlayerUiState(
     val playerStatsHudButtonAvailable: Boolean = false,
     val showPauseOverlay: Boolean = false,
     val audioTracks: List<TrackInfo> = emptyList(),
+    val serverAudioTracks: List<TrackInfo> = emptyList(),
+    val serverSubtitleTracks: List<TrackInfo> = emptyList(),
+    val isServerStream: Boolean = false,
     val subtitleTracks: List<TrackInfo> = emptyList(),
     val selectedAudioTrackIndex: Int = -1,
     val selectedSubtitleTrackIndex: Int = -1,
@@ -395,5 +398,6 @@ data class StreamInfoData(
     val subtitleCodec: String? = null,
     val subtitleLanguage: String? = null,
     val subtitleSource: String? = null,
-    val playerEngine: String? = null
+    val playerEngine: String? = null,
+    val serverPlayback: String? = null
 )

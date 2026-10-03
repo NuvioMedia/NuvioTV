@@ -1,5 +1,6 @@
 package com.nuvio.tv.domain.model
 
+import com.nuvio.tv.data.mediaserver.ServerItemRef
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -169,6 +170,27 @@ class LibrarySyncReducerTest {
 
         assertTrue(state.items.isEmpty())
         assertFalse(state.pendingDeleteKeys.isEmpty())
+    }
+
+    @Test
+    fun snapshotKeepsLocalServerTitles() {
+        val serverItem = libraryItem(ServerItemRef("c1", "42").encode())
+        val state = LibrarySyncState(
+            items = listOf(serverItem, libraryItem("gone")),
+            deltaInitialized = true
+        )
+
+        val result = LibrarySyncReducer.applySnapshot(
+            state = state,
+            remoteItems = listOf(libraryItem("remote")),
+            cursorEventId = 3L
+        )
+
+        assertEquals(
+            setOf("remote", serverItem.id),
+            result.state.items.mapTo(mutableSetOf(), SavedLibraryItem::id)
+        )
+        assertFalse(result.preservedLocalItems)
     }
 
     private fun libraryItem(

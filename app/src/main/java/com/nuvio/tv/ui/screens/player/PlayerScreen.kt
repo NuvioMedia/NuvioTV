@@ -1376,7 +1376,7 @@ fun PlayerScreen(
                             }
                         }
                     }
-                },
+                }.takeUnless { uiState.isServerStream },
                 onShowStreamInfo = {
                     restoreStreamInfoFocus = true
                     viewModel.onEvent(PlayerEvent.OnShowStreamInfo)
@@ -1629,8 +1629,8 @@ fun PlayerScreen(
         // Audio track dialog
         AudioSelectionOverlay(
             visible = uiState.showAudioOverlay,
-            tracks = uiState.audioTracks,
-            selectedIndex = uiState.selectedAudioTrackIndex,
+            tracks = uiState.serverAudioTracks.ifEmpty { uiState.audioTracks },
+            selectedIndex = uiState.serverAudioTracks.firstOrNull { it.isSelected }?.index ?: uiState.selectedAudioTrackIndex,
             audioDelayMs = uiState.audioDelayMs,
             audioAmplificationDb = uiState.audioAmplificationDb,
             isAmplificationAvailable = uiState.isAudioAmplificationAvailable,
@@ -1654,8 +1654,12 @@ fun PlayerScreen(
 
         SubtitleSelectionOverlay(
             visible = uiState.showSubtitleOverlay,
-            internalTracks = uiState.subtitleTracks,
-            selectedInternalIndex = uiState.selectedSubtitleTrackIndex,
+            internalTracks = uiState.serverSubtitleTracks.ifEmpty { uiState.subtitleTracks },
+            selectedInternalIndex = if (uiState.serverSubtitleTracks.isEmpty()) {
+                uiState.selectedSubtitleTrackIndex
+            } else {
+                uiState.serverSubtitleTracks.firstOrNull { it.isSelected }?.index ?: -1
+            },
             addonSubtitles = uiState.addonSubtitles,
             selectedAddonSubtitle = uiState.selectedAddonSubtitle,
             subtitleStyle = uiState.subtitleStyle,
@@ -2159,7 +2163,7 @@ private fun PlayerControlsOverlay(
     onSwitchPlayerEngine: () -> Unit,
     onReportPlaybackIssue: () -> Unit,
     onToggleMoreActions: () -> Unit,
-    onOpenInExternalPlayer: () -> Unit,
+    onOpenInExternalPlayer: (() -> Unit)?,
     onShowStreamInfo: () -> Unit,
     onResetHideTimer: () -> Unit,
     onHideControls: () -> Unit,
@@ -2451,16 +2455,16 @@ private fun PlayerControlsOverlay(
                                 onDownKey = onHideControls,
                                 onFocused = onResetHideTimer
                             )
-                            ControlButton(
-                                icon = Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = stringResource(R.string.cd_open_external_player),
-                                onClick = {
-                                    onOpenInExternalPlayer()
-                                },
-                                upFocusRequester = progressUpTarget,
-                                onDownKey = onHideControls,
-                                onFocused = onResetHideTimer
-                            )
+                            onOpenInExternalPlayer?.let { openInExternalPlayer ->
+                                ControlButton(
+                                    icon = Icons.AutoMirrored.Filled.OpenInNew,
+                                    contentDescription = stringResource(R.string.cd_open_external_player),
+                                    onClick = openInExternalPlayer,
+                                    upFocusRequester = progressUpTarget,
+                                    onDownKey = onHideControls,
+                                    onFocused = onResetHideTimer
+                                )
+                            }
                             ControlButton(
                                 icon = Icons.Default.Info,
                                 contentDescription = stringResource(R.string.cd_stream_info),

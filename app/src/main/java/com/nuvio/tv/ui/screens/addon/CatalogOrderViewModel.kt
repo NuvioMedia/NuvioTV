@@ -7,6 +7,7 @@ import com.nuvio.tv.core.sync.homeCatalogKey
 import com.nuvio.tv.core.sync.homeLegacyDisabledCatalogKey
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.Collection
@@ -27,7 +28,8 @@ class CatalogOrderViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val collectionsDataStore: CollectionsDataStore,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
-    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService,
+    private val serverCatalog: ServerCatalog
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CatalogOrderUiState())
@@ -159,7 +161,9 @@ class CatalogOrderViewModel @Inject constructor(
     private fun observeCatalogs() {
         viewModelScope.launch {
             combine(
-                addonRepository.getInstalledAddons(),
+                combine(addonRepository.getInstalledAddons(), serverCatalog.addons) { installed, servers ->
+                    installed.enabledAddons() + servers
+                },
                 collectionsDataStore.collections,
                 layoutPreferenceDataStore.homeCatalogOrderKeys,
                 layoutPreferenceDataStore.disabledHomeCatalogKeys,
@@ -179,7 +183,7 @@ class CatalogOrderViewModel @Inject constructor(
                 val followAddons = values[5] as Boolean
 
                 val items = buildOrderedCatalogItems(
-                    addons = addons.enabledAddons(),
+                    addons = addons,
                     collections = collections,
                     savedOrderKeys = savedOrderKeys,
                     disabledKeys = disabledKeys,

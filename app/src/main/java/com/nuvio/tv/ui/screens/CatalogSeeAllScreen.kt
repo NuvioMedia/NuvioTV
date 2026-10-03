@@ -78,6 +78,7 @@ fun CatalogSeeAllScreen(
     addonId: String,
     type: String,
     searchViewModel: SearchViewModel? = null,
+    serverCatalog: ServerCatalogViewModel? = null,
     viewModel: HomeViewModel = hiltViewModel(),
     posterOptionsViewModel: com.nuvio.tv.ui.components.posteroptions.PosterOptionsViewModel = hiltViewModel(),
     onNavigateToDetail: (String, String, String) -> Unit,
@@ -111,10 +112,16 @@ fun CatalogSeeAllScreen(
     val homeCatalogRow = fullCatalogRows.find {
         it.legacyKey() == catalogKey
     }
-    val catalogRow = if (isSearchMode) searchCatalogRow else homeCatalogRow
+    val serverRow = serverCatalog?.row?.collectAsState()
+    val serverFailed = serverCatalog?.failed?.collectAsState()
+    val catalogRow = when {
+        serverCatalog != null -> serverRow?.value
+        isSearchMode -> searchCatalogRow
+        else -> homeCatalogRow
+    }
 
     LaunchedEffect(catalogKey, isSearchMode, catalogRow != null) {
-        if (!isSearchMode && catalogRow == null) {
+        if (!isSearchMode && serverCatalog == null && catalogRow == null) {
             viewModel.requestLazyCatalogLoad(catalogKey)
         }
     }
@@ -147,7 +154,9 @@ fun CatalogSeeAllScreen(
                 if (total > 0 && lastVisible >= total - 10) {
                     val row = catalogRow
                     if (row != null && row.hasMore && !row.isLoading) {
-                        if (isSearchMode) {
+                        if (serverCatalog != null) {
+                            serverCatalog.loadMore()
+                        } else if (isSearchMode) {
                             searchViewModel.onEvent(
                                 SearchEvent.LoadMoreCatalog(row.catalogId, row.addonId, row.apiType)
                             )
@@ -221,7 +230,7 @@ fun CatalogSeeAllScreen(
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
         val hasItems = catalogRow?.items?.isNotEmpty() == true
-        val isCatalogLoading = catalogRow == null || catalogRow.isLoading
+        val isCatalogLoading = if (catalogRow == null) serverFailed?.value != true else catalogRow.isLoading
 
         if (hasItems) {
             val seeAllItemKeys = remember(catalogRow?.items) {

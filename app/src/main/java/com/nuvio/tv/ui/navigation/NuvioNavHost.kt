@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.domain.model.ExperienceMode
+import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.ui.screens.CatalogSeeAllScreen
 import com.nuvio.tv.ui.screens.ExperienceModeSelectionScreen
 import com.nuvio.tv.ui.screens.LayoutSelectionScreen
@@ -302,6 +303,10 @@ private fun PlaybackNavHost(
             )
         ) { backStackEntry ->
             val detailArgs = backStackEntry.arguments
+            if (ServerCatalog.isCollection(detailArgs?.getString("itemId"), detailArgs?.getString("itemType"))) {
+                ServerCatalogDestination(navController, backStackEntry)
+                return@composable
+            }
             val savedState = backStackEntry.savedStateHandle
             val returnToHomeOnBack = detailArgs
                 ?.getString("returnToHomeOnBack")
@@ -1167,6 +1172,9 @@ private fun PlaybackNavHost(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },
+                onNavigateToCatalogSeeAll = { catalogId, addonId, type ->
+                    navController.navigate(Screen.CatalogSeeAll.createRoute(catalogId, addonId, type))
+                },
                 onCloudPlaybackResolved = { info ->
                     val filename = info.filename ?: info.file.name
                     navController.navigate(
@@ -1369,6 +1377,10 @@ private fun PlaybackNavHost(
             val addonId = backStackEntry.arguments?.getString("addonId") ?: ""
             val type = backStackEntry.arguments?.getString("type") ?: ""
             val fromSearch = backStackEntry.arguments?.getBoolean("fromSearch") ?: false
+            if (ServerCatalog.isServerAddonId(addonId) && !fromSearch) {
+                ServerCatalogDestination(navController, backStackEntry)
+                return@composable
+            }
 
             // When coming from search, get the SearchViewModel from the Search back stack entry
             // so we share the same data (existing results + pagination)

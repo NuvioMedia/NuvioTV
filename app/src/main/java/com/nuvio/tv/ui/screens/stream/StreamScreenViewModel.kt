@@ -33,6 +33,10 @@ import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
 import com.nuvio.tv.data.local.BingeGroupCacheDataStore
+import com.nuvio.tv.data.mediaserver.ServerPlayback
+import com.nuvio.tv.data.mediaserver.ServerPlaybackTarget
+import com.nuvio.tv.data.mediaserver.ServerStreams
+import com.nuvio.tv.data.mediaserver.serverPlaybackMessageRes
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
@@ -50,6 +54,7 @@ import com.nuvio.tv.ui.screens.player.StreamSidecarSubtitles
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -93,6 +98,8 @@ class StreamScreenViewModel @Inject constructor(
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val torrentService: TorrentService,
+    private val serverStreams: ServerStreams,
+    private val serverPlayback: ServerPlayback,
     profileManager: com.nuvio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -465,7 +472,14 @@ class StreamScreenViewModel @Inject constructor(
                 )
             }
 
-            val installedAddons = addonRepository.getInstalledAddons().first().enabledAddons()
+            val isNativeServerRequest = serverStreams.isNativeRequest(videoId)
+            val serverSourceNames = serverStreams.sources(contentType, videoId, season, episode).map { it.name }
+            val preferredServerNames = serverStreams.preferredSourceNames(contentType, videoId)
+            val installedAddons = if (isNativeServerRequest) {
+                emptyList()
+            } else {
+                addonRepository.getInstalledAddons().first().enabledAddons()
+            }
             val installedAddonOrder = installedAddons.map { it.displayName }
             val directDebridSourceNames = emptyList<String>()
             val directDebridAvailable = false
@@ -477,7 +491,8 @@ class StreamScreenViewModel @Inject constructor(
             fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
                 val orderedAddonStreams = StreamAutoPlaySelector.orderAddonStreams(
                     addonStreamGroups,
-                    installedAddonOrder
+                    installedAddonOrder,
+                    preferredServerNames
                 )
 
                 // Preserve badges already computed by prior badge jobs so they
@@ -602,6 +617,8 @@ class StreamScreenViewModel @Inject constructor(
             updateSourceChipsForFetchStart(
                 installedAddons = installedAddons,
                 directDebridSourceNames = directDebridSourceNames,
+                serverSourceNames = serverSourceNames,
+                includePlugins = !isNativeServerRequest,
                 alreadySucceededNames = alreadySucceededNames
             )
 
@@ -709,7 +726,7 @@ class StreamScreenViewModel @Inject constructor(
                                 // match is found we can start playback immediately
                                 // without waiting for the full timeout.
                                 val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(
-                                    result.data, installedAddonOrder
+                                    result.data, installedAddonOrder, preferredServerNames
                                 )
                                 val allStreams = orderedStreams.flatMap { it.streams }
                                 val earlyMatch = StreamAutoPlaySelector.selectAutoPlayStream(
@@ -902,6 +919,7 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     private fun shouldAttemptEmbeddedMetaStreamLookup(): Boolean {
+        if (serverStreams.isNativeRequest(videoId)) return false
         val metaId = contentId?.takeIf { it.isNotBlank() } ?: return false
         if (contentType.isBlank()) return false
         if (metaRepository.getCachedMeta(contentType, metaId)?.videos?.any {
@@ -916,6 +934,8 @@ class StreamScreenViewModel @Inject constructor(
     private suspend fun updateSourceChipsForFetchStart(
         installedAddons: List<com.nuvio.tv.domain.model.Addon>,
         directDebridSourceNames: List<String>,
+        serverSourceNames: List<String>,
+        includePlugins: Boolean,
         alreadySucceededNames: Set<String> = emptySet()
     ) {
         val addonNames = installedAddons
@@ -923,7 +943,7 @@ class StreamScreenViewModel @Inject constructor(
             .map { it.displayName }
 
         val pluginNames = try {
-            if (pluginManager.pluginsEnabled.first()) {
+            if (includePlugins && pluginManager.pluginsEnabled.first()) {
                 val groupByRepository = pluginManager.groupStreamsByRepository.first()
                 val scrapers = pluginManager.enabledScrapers.first()
                     .filter { it.supportsType(contentType) }
@@ -946,7 +966,7 @@ class StreamScreenViewModel @Inject constructor(
             emptyList()
         }
 
-        val orderedNames = (directDebridSourceNames + addonNames + pluginNames).distinct()
+        val orderedNames = (directDebridSourceNames + serverSourceNames + addonNames + pluginNames).distinct()
         if (orderedNames.isEmpty()) {
             updateUiStateIfChanged { it.copy(sourceChips = emptyList()) }
             return
@@ -1166,6 +1186,7 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     suspend fun resolveStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        stream.serverTarget?.let { target -> return prepareServerStream(stream, target) }
         if (stream.youTubeIdToResolve() != null) {
             return resolveYouTubeStreamForPlayback(stream)
         }
@@ -1255,6 +1276,29 @@ class StreamScreenViewModel @Inject constructor(
                 null
             }
         }
+    }
+
+    private suspend fun prepareServerStream(stream: Stream, target: ServerPlaybackTarget): StreamPlaybackInfo? {
+        val session = try {
+            serverPlayback.prepare(target)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            updateUiStateIfChanged {
+                it.copy(
+                    showDirectAutoPlayOverlay = false,
+                    directAutoPlayMessage = null,
+                    playbackErrorMessage = context.getString(error.serverPlaybackMessageRes())
+                )
+            }
+            return null
+        }
+        StreamSidecarSubtitles.set(session.url, session.subtitles + stream.subtitles)
+        return getStreamForPlayback(stream).copy(
+            url = session.url,
+            headers = session.headers.takeIf { it.isNotEmpty() },
+            isServerStream = true
+        )
     }
 
     private suspend fun resolveYouTubeStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
@@ -1946,7 +1990,8 @@ data class StreamPlaybackInfo(
     val streamDescription: String? = null,
     val fileIdx: Int? = null,
     val sources: List<String>? = null,
-    val contentLanguage: String? = null
+    val contentLanguage: String? = null,
+    val isServerStream: Boolean = false
 )
 
 private fun playbackUrlFor(playbackInfo: StreamPlaybackInfo): String? =

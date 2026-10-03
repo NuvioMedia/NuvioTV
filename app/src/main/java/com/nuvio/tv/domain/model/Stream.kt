@@ -2,6 +2,7 @@ package com.nuvio.tv.domain.model
 
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.core.debrid.DebridProviders
+import com.nuvio.tv.data.mediaserver.ServerPlaybackTarget
 
 /**
  * Represents a stream source from a Stremio addon
@@ -25,7 +26,8 @@ data class Stream(
     val clientResolve: StreamClientResolve? = null,
     val debridCacheStatus: StreamDebridCacheStatus? = null,
     val badges: List<StreamBadge> = emptyList(),
-    val subtitles: List<Subtitle> = emptyList()
+    val subtitles: List<Subtitle> = emptyList(),
+    val serverTarget: ServerPlaybackTarget? = null
 ) {
     /**
      * Returns the primary stream source URL
@@ -144,7 +146,7 @@ data class Stream(
     fun stableKey(occurrence: Int = 0): String = buildString {
         append(addonName)
         append('\u0000')
-        append(url ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: "")
+        append(url ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: serverTarget?.key() ?: "")
         append('\u0000')
         append(getEffectiveFileIdx() ?: "")
         append('\u0000')

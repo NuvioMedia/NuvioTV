@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.google.gson.Gson
+import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.domain.model.WatchedItem
 import com.nuvio.tv.domain.model.WatchedMutationKey
 import com.nuvio.tv.domain.model.mutationKey
@@ -268,6 +269,10 @@ class WatchedItemsPreferences @Inject constructor(
             localItems.forEach { localItem ->
                 val mutationKey = localItem.mutationKey()
                 val itemKey = Triple(localItem.contentId, localItem.season, localItem.episode)
+                if (ServerItemRef.isServerId(localItem.contentId)) {
+                    deduped[itemKey] = localItem
+                    return@forEach
+                }
                 val preservePendingUpsert = mutationKey in pendingUpsertKeys
                 val preserveAfterPush = mutationKey !in pendingDeleteKeys &&
                     itemKey !in deduped &&
