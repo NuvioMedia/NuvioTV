@@ -27,25 +27,20 @@ import retrofit2.Response
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 
-/**
- * The details screen tries [MetaRepositoryImpl.getMeta] first, so it has to handle "tv"
- * the way the multi-addon path does, both in the URL it asks for and in the cache entry
- * it reads and writes. Otherwise opening a series burns a round trip on /meta/tv/ and
- * then walks past a warm entry filed under "series".
- */
+/** Preferred-addon metadata requests keep the declared Stremio type literal. */
 class MetaRepositoryPreferredAddonTypeTest {
 
     private val contentId = "tt0944947"
     private val baseUrl = "https://addon.example"
 
     @Test
-    fun `tv request to a series-only addon goes out as series`() = runTest {
+    fun `tv request does not fall back to a series-only addon`() = runTest {
         val api = apiReturningMeta()
         val repository = newRepository(api, addon(metaTypes = listOf("movie", "series")))
 
         repository.getMeta(baseUrl, "tv", contentId).last()
 
-        assertEquals("$baseUrl/meta/series/$contentId.json", capturedUrl(api))
+        coVerify(exactly = 0) { api.getMeta(any()) }
     }
 
     @Test
@@ -69,25 +64,27 @@ class MetaRepositoryPreferredAddonTypeTest {
     }
 
     @Test
-    fun `meta fetched by the multi-addon path is reused by a tv request for the same addon`() = runTest {
+    fun `meta cache is reused for the same external type`() = runTest {
         val api = apiReturningMeta()
         val repository = newRepository(api, addon(metaTypes = listOf("series")))
 
-        repository.getMetaFromAllAddons("tv", contentId).last()
-        repository.getMeta(baseUrl, "tv", contentId).last()
+        repository.getMetaFromAllAddons("series", contentId).last()
+        repository.getMeta(baseUrl, "series", contentId).last()
 
         coVerify(exactly = 1) { api.getMeta(any()) }
     }
 
     @Test
-    fun `cached meta stored for a tv request is found under the series spelling`() = runTest {
+    fun `series and tv metadata caches remain separate`() = runTest {
         val api = apiReturningMeta()
-        val repository = newRepository(api, addon(metaTypes = listOf("series")))
+        val repository = newRepository(api, addon(metaTypes = listOf("series", "tv")))
 
+        repository.getMetaFromAllAddons("series", contentId).last()
         repository.getMetaFromAllAddons("tv", contentId).last()
 
         assertNotNull(repository.getCachedMeta("series", contentId))
         assertNotNull(repository.getCachedMeta("tv", contentId))
+        coVerify(exactly = 2) { api.getMeta(any()) }
     }
 
     @Test
@@ -97,7 +94,7 @@ class MetaRepositoryPreferredAddonTypeTest {
         // seeded with emptyList(), filled in once manifests are loaded.
         val repository = newRepository(api, flowOf(emptyList(), listOf(addon(metaTypes = listOf("series")))))
 
-        repository.getMeta(baseUrl, "tv", contentId).last()
+        repository.getMeta(baseUrl, "series", contentId).last()
 
         assertEquals("$baseUrl/meta/series/$contentId.json", capturedUrl(api))
     }
@@ -127,13 +124,13 @@ class MetaRepositoryPreferredAddonTypeTest {
         }
         val repository = newRepository(api, addonsFlow)
 
-        repository.getMetaFromAllAddons("tv", contentId).last()
+        repository.getMetaFromAllAddons("series", contentId).last()
 
         val elapsedMs = measureTimeMillis {
-            repository.getMeta(baseUrl, "tv", contentId).last()
+            repository.getMeta(baseUrl, "series", contentId).last()
         }
 
-        // Cached as "series", asked for as "tv". Both spellings get checked.
+        // The exact "series" cache entry is found before resolving the addon list.
         coVerify(exactly = 1) { api.getMeta(any()) }
         assertTrue("warm hit took ${elapsedMs}ms, so it waited on the addon list", elapsedMs < 300L)
     }

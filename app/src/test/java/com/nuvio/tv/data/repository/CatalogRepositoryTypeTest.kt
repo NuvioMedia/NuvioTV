@@ -61,7 +61,7 @@ class CatalogRepositoryTypeTest {
         ).last()
 
         assertEquals(2, requestedUrls.size)
-        assertTrue(requestedUrls.all { it.contains("/catalog/Series/mdblist.123") })
+        assertTrue(requestedUrls.all { it.contains("/catalog/series/mdblist.123") })
         assertEquals(ContentType.SERIES, row.type)
         assertEquals("series", row.items.single().apiType)
     }

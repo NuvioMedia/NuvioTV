@@ -21,23 +21,20 @@ import org.junit.Test
 import retrofit2.Response
 
 /**
- * A meta candidate must only ever be built with a type the addon advertises.
- * Nuvio uses "tv" internally for episodic content while addons declare "series",
- * so a "tv" request against a series-only addon must go out as "series" and never
- * as "tv", which returns null meta and leaves the seasons list empty.
+ * Metadata requests keep Stremio resource types distinct at the addon boundary.
  */
 class MetaRepositoryCandidateTypeTest {
 
     private val contentId = "tt0944947"
 
     @Test
-    fun `tv request against a series-only addon is sent as series`() = runTest {
+    fun `tv request does not match a series-only addon`() = runTest {
         val api = apiReturningMeta()
         val repository = newRepository(api, addon(metaTypes = listOf("movie", "series")))
 
         repository.getMetaFromAllAddons("tv", contentId).last()
 
-        assertEquals("https://addon.example/meta/series/$contentId.json", capturedUrl(api))
+        coVerify(exactly = 0) { api.getMeta(any()) }
     }
 
     @Test
@@ -51,13 +48,13 @@ class MetaRepositoryCandidateTypeTest {
     }
 
     @Test
-    fun `uppercase TV is canonicalized to series`() = runTest {
+    fun `uppercase TV is normalized without changing its type`() = runTest {
         val api = apiReturningMeta()
-        val repository = newRepository(api, addon(metaTypes = listOf("series")))
+        val repository = newRepository(api, addon(metaTypes = listOf(" TV ")))
 
         repository.getMetaFromAllAddons("TV", contentId).last()
 
-        assertEquals("https://addon.example/meta/series/$contentId.json", capturedUrl(api))
+        assertEquals("https://addon.example/meta/tv/$contentId.json", capturedUrl(api))
     }
 
     @Test
@@ -71,13 +68,13 @@ class MetaRepositoryCandidateTypeTest {
     }
 
     @Test
-    fun `addon declaring no meta types still receives the request`() = runTest {
+    fun `addon with an empty meta type list does not receive the request`() = runTest {
         val api = apiReturningMeta()
         val repository = newRepository(api, addon(metaTypes = emptyList()))
 
         repository.getMetaFromAllAddons("tv", contentId).last()
 
-        coVerify(exactly = 1) { api.getMeta(any()) }
+        coVerify(exactly = 0) { api.getMeta(any()) }
     }
 
     @Test
@@ -91,7 +88,7 @@ class MetaRepositoryCandidateTypeTest {
     }
 
     @Test
-    fun `tv in the id is inferred as series when the type is not canonical`() = runTest {
+    fun `unknown type is not inferred from its id`() = runTest {
         val api = apiReturningMeta()
         val repository = newRepository(
             api,
@@ -100,10 +97,7 @@ class MetaRepositoryCandidateTypeTest {
 
         repository.getMetaFromAllAddons("unknown", "tmdb:tv:1399").last()
 
-        assertEquals(
-            "https://addon.example/meta/series/tmdb%3Atv%3A1399.json",
-            capturedUrl(api)
-        )
+        coVerify(exactly = 0) { api.getMeta(any()) }
     }
 
     @Test

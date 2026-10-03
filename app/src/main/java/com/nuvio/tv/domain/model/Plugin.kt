@@ -54,7 +54,7 @@ data class ScraperManifestInfo(
     val description: String? = null,
     val version: String,
     val filename: String,
-    val supportedTypes: List<String> = listOf("movie", "tv"),
+    val supportedTypes: List<String> = listOf("movie", "series"),
     val enabled: Boolean = true,
     val logo: String? = null,
     val contentLanguage: List<String>? = null,
@@ -85,16 +85,10 @@ data class ScraperInfo(
     val type: RepositoryType = RepositoryType.NUVIO_JS
 ) {
     fun supportsType(type: String): Boolean {
-        val normalizedType = normalizePluginType(type)
-        return supportedTypes.any { normalizePluginType(it) == normalizedType }
+        val normalizedType = type.trim()
+        return supportedTypes.any { it.trim().equals(normalizedType, ignoreCase = true) }
     }
 }
-
-private fun normalizePluginType(value: String): String =
-    when (value.lowercase()) {
-        "series", "show", "other" -> "tv"
-        else -> value.lowercase()
-    }
 
 /**
  * Result from a local scraper execution

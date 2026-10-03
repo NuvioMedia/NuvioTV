@@ -5,6 +5,7 @@ import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
 import com.nuvio.tv.core.poster.withCustomPosterUrls
+import com.nuvio.tv.core.streams.canonicalExternalMediaType
 import com.nuvio.tv.data.mapper.toDomainOrNull
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.remote.api.AddonApi
@@ -105,6 +106,7 @@ class CatalogRepositoryImpl @Inject constructor(
         skip: Int,
         extraArgs: Map<String, String>
     ): String {
+        val externalType = canonicalExternalMediaType(type)
         val trimmedBase = baseUrl.trimEnd('/')
         val queryStart = trimmedBase.indexOf('?')
         val basePath = if (queryStart >= 0) trimmedBase.substring(0, queryStart).trimEnd('/') else trimmedBase
@@ -112,9 +114,9 @@ class CatalogRepositoryImpl @Inject constructor(
 
         val catalogPath = if (extraArgs.isEmpty()) {
             if (skip > 0) {
-                "$basePath/catalog/$type/$catalogId/skip=$skip.json"
+                "$basePath/catalog/$externalType/$catalogId/skip=$skip.json"
             } else {
-                "$basePath/catalog/$type/$catalogId.json"
+                "$basePath/catalog/$externalType/$catalogId.json"
             }
         } else {
             val allArgs = LinkedHashMap<String, String>()
@@ -128,7 +130,7 @@ class CatalogRepositoryImpl @Inject constructor(
                 "${encodeArg(key)}=${encodeArg(value)}"
             }
 
-            "$basePath/catalog/$type/$catalogId/$encodedArgs.json"
+            "$basePath/catalog/$externalType/$catalogId/$encodedArgs.json"
         }
 
         return catalogPath + baseQuery
