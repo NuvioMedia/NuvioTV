@@ -63,6 +63,18 @@ class PlayerSubtitleRtlFixTest {
         Case("\"בעונה הקרובה של \"הסדרה", "בעונה הקרובה של \"הסדרה\"", listOf(Rule.LEADING_PUNCTUATION)),
         Case(",\"ל\"שיר הנושא", "ל\"שיר הנושא\",", listOf(Rule.LEADING_PUNCTUATION)),
 
+        // A quote pair with "?" or "!" after the opening quote: the mark belongs inside the quote
+        Case("\"?מה זה\"", "\"מה זה?\"", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("\"!תודה רבה\"", "\"תודה רבה!\"", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("\"?מה זה\"-", "-\"מה זה?\"", listOf(Rule.DASH_TO_FRONT)),
+
+        // Brackets: a leading "(" is a mirrored closing bracket unless it pairs with one later on
+        Case("(מה שלומך? (בספרדית", "מה שלומך? (בספרדית)", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("(א ב. (ג ד", "א ב. (ג ד)", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("(שלום", "שלום)", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("(באנגלית, גם: שלום)", "(באנגלית, גם: שלום)", emptyList()),
+        Case(".(אוז - טקסט)", "(אוז - טקסט).", listOf(Rule.LEADING_PUNCTUATION)),
+
         // Apostrophe and geresh stay attached to the word
         Case("!'אאוץ", "אאוץ'!", listOf(Rule.LEADING_PUNCTUATION)),
         Case("'אאוץ", "אאוץ'", listOf(Rule.LEADING_PUNCTUATION)),
