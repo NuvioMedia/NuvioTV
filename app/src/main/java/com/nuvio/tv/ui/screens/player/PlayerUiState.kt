@@ -97,6 +97,8 @@ data class PlayerUiState(
     val subtitleTracks: List<TrackInfo> = emptyList(),
     val selectedAudioTrackIndex: Int = -1,
     val selectedSubtitleTrackIndex: Int = -1,
+    /** The file's chapters, sorted; empty when it has fewer than two. */
+    val chapters: List<PlayerChapter> = emptyList(),
     val audioDelayMs: Int = 0,
     val audioAmplificationDb: Int = 0,
     val isAudioAmplificationAvailable: Boolean = false,
@@ -280,6 +282,7 @@ sealed class PlayerEvent {
     data class OnPreviewSeekBy(val deltaMs: Long) : PlayerEvent()
     data object OnCommitPreviewSeek : PlayerEvent()
     data class OnSeekTo(val position: Long) : PlayerEvent()
+    data class OnSkipChapter(val forward: Boolean) : PlayerEvent()
     data class OnSelectAudioTrack(val index: Int) : PlayerEvent()
     data class OnSetAudioDelayMs(val delayMs: Int) : PlayerEvent()
     data class OnSetAudioAmplificationDb(val db: Int) : PlayerEvent()

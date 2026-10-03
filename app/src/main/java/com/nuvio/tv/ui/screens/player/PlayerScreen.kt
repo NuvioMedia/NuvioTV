@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -53,6 +54,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.LastPage
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -62,6 +64,7 @@ import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.FirstPage
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -98,6 +101,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -1336,6 +1341,7 @@ fun PlayerScreen(
                 onSeekForward = { viewModel.onEvent(PlayerEvent.OnSeekForward) },
                 onSeekBackward = { viewModel.onEvent(PlayerEvent.OnSeekBackward) },
                 onSeekTo = { viewModel.onEvent(PlayerEvent.OnSeekTo(it)) },
+                onSkipChapter = { forward -> viewModel.onEvent(PlayerEvent.OnSkipChapter(forward)) },
                 onShowEpisodesPanel = { viewModel.onEvent(PlayerEvent.OnShowEpisodesPanel) },
                 onShowSourcesPanel = { viewModel.onEvent(PlayerEvent.OnShowSourcesPanel) },
                 onShowAudioDialog = { viewModel.onEvent(PlayerEvent.OnShowAudioOverlay) },
@@ -1481,7 +1487,7 @@ fun PlayerScreen(
             exit = fadeOut(animationSpec = tween(150)),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            SeekOverlayHost(viewModel = viewModel)
+            SeekOverlayHost(viewModel = viewModel, chapters = uiState.chapters)
         }
 
         // Episodes/streams side panel (slides in from right)
@@ -2150,6 +2156,7 @@ private fun PlayerControlsOverlay(
     onSeekForward: () -> Unit,
     onSeekBackward: () -> Unit,
     onSeekTo: (Long) -> Unit,
+    onSkipChapter: (forward: Boolean) -> Unit,
     onShowEpisodesPanel: () -> Unit,
     onShowSourcesPanel: () -> Unit,
     onShowAudioDialog: () -> Unit,
@@ -2306,6 +2313,7 @@ private fun PlayerControlsOverlay(
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     PlayerControlsProgressBarHost(
                         viewModel = viewModel,
+                        chapters = uiState.chapters,
                         focusRequester = progressBarFocusRequester,
                         upFocusRequester = progressBarUpFocusRequester,
                         downFocusRequester = playPauseFocusRequester,
@@ -2378,6 +2386,25 @@ private fun PlayerControlsOverlay(
                             iconPainter = customAudioPainter,
                             contentDescription = stringResource(R.string.cd_audio_tracks),
                             onClick = onShowAudioDialog,
+                            upFocusRequester = progressUpTarget,
+                            onDownKey = onHideControls,
+                            onFocused = onResetHideTimer
+                        )
+                    }
+
+                    if (uiState.chapters.isNotEmpty() && !isLivePlayback) {
+                        ControlButton(
+                            icon = Icons.Default.FirstPage,
+                            contentDescription = stringResource(R.string.player_chapter_previous),
+                            onClick = { onSkipChapter(false) },
+                            upFocusRequester = progressUpTarget,
+                            onDownKey = onHideControls,
+                            onFocused = onResetHideTimer
+                        )
+                        ControlButton(
+                            icon = Icons.AutoMirrored.Filled.LastPage,
+                            contentDescription = stringResource(R.string.player_chapter_next),
+                            onClick = { onSkipChapter(true) },
                             upFocusRequester = progressUpTarget,
                             onDownKey = onHideControls,
                             onFocused = onResetHideTimer
@@ -2512,6 +2539,7 @@ private fun PlayerControlsOverlay(
 @Composable
 private fun PlayerControlsProgressBarHost(
     viewModel: PlayerViewModel,
+    chapters: List<PlayerChapter>,
     focusRequester: FocusRequester,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
@@ -2520,7 +2548,9 @@ private fun PlayerControlsProgressBarHost(
 ) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
 
+    ChapterTitle(chapters = chapters, positionMs = playbackTimeline.currentPosition)
     ProgressBar(
+        chapters = chapters,
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration,
         onSeekPreview = { delta ->
@@ -2686,7 +2716,9 @@ private fun ProgressBar(
     onUpKey: (() -> Unit)? = null,
     onFocused: (() -> Unit)? = null,
     /** Position (ms) up to which content is buffered. Pass 0 to skip the overlay. */
-    bufferedPosition: Long = 0L
+    bufferedPosition: Long = 0L,
+    /** Each chapter after the first gets a mark where it starts. */
+    chapters: List<PlayerChapter> = emptyList()
 ) {
     val accentBrush = NuvioTheme.palette.accentBrush()
     val progress = if (duration > 0) {
@@ -2823,14 +2855,44 @@ private fun ProgressBar(
                 .clip(RoundedCornerShape(3.dp))
                 .background(accentBrush)
         )
+        if (chapters.isNotEmpty() && duration > 0) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val markWidth = 2.dp.toPx()
+                chapters.forEach { chapter ->
+                    val fraction = chapter.startMs.toFloat() / duration.toFloat()
+                    if (fraction <= 0f || fraction >= 1f) return@forEach
+                    drawRect(
+                        color = Color.Black.copy(alpha = 0.6f),
+                        topLeft = Offset(size.width * fraction - markWidth / 2f, 0f),
+                        size = Size(markWidth, size.height)
+                    )
+                }
+            }
+        }
     }
+}
+
+/** The name of the chapter at [positionMs], or "Chapter N" when the file gives it none. */
+@Composable
+private fun ChapterTitle(chapters: List<PlayerChapter>, positionMs: Long) {
+    val index = PlayerChapters.indexAt(chapters, positionMs)
+    if (index < 0) return
+    Text(
+        text = chapters[index].title ?: stringResource(R.string.player_chapter_number, index + 1),
+        style = MaterialTheme.typography.bodyMedium,
+        color = Color.White.copy(alpha = 0.9f),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(bottom = NuvioTheme.spacing.xs)
+    )
 }
 
 @Composable
 private fun SeekOverlay(
     currentPosition: Long,
     duration: Long,
-    bufferedPosition: Long = 0L
+    bufferedPosition: Long = 0L,
+    chapters: List<PlayerChapter> = emptyList()
 ) {
     Column(
         modifier = Modifier
@@ -2838,12 +2900,14 @@ private fun SeekOverlay(
             .padding(horizontal = NuvioTheme.spacing.xxl, vertical = NuvioTheme.spacing.xl)
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            ChapterTitle(chapters = chapters, positionMs = currentPosition)
             ProgressBar(
                 currentPosition = currentPosition,
                 duration = duration,
                 onSeekPreview = {},
                 onSeekCommit = {},
-                bufferedPosition = bufferedPosition
+                bufferedPosition = bufferedPosition,
+                chapters = chapters
             )
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -2864,13 +2928,14 @@ private fun SeekOverlay(
 }
 
 @Composable
-private fun SeekOverlayHost(viewModel: PlayerViewModel) {
+private fun SeekOverlayHost(viewModel: PlayerViewModel, chapters: List<PlayerChapter>) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
 
     SeekOverlay(
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration,
-        bufferedPosition = playbackTimeline.bufferedPosition
+        bufferedPosition = playbackTimeline.bufferedPosition,
+        chapters = chapters
     )
 }
 
