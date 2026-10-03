@@ -340,14 +340,21 @@ class PlayerRuntimeController(
     val playbackTimeline: StateFlow<PlaybackTimelineState> = _playbackTimeline.asStateFlow()
 
     internal val liveWatchClock = LivePlaybackWatchClock()
+    internal val liveBufferFilter = LivePlaybackBufferFilter()
     internal var livePlaybackLatched: Boolean = false
+    internal var commandedPlaybackPositionMs: Long? = null
+    internal var commandedPlaybackAtElapsedMs: Long = 0L
 
     internal fun updatePlaybackTimeline(
         currentPosition: Long = _playbackTimeline.value.currentPosition,
         duration: Long = _playbackTimeline.value.duration,
         bufferedPosition: Long = _playbackTimeline.value.bufferedPosition,
         isLive: Boolean = _playbackTimeline.value.isLive,
-        watchedDurationMs: Long = _playbackTimeline.value.watchedDurationMs
+        watchedDurationMs: Long = _playbackTimeline.value.watchedDurationMs,
+        isBackBufferEnabled: Boolean = _playbackTimeline.value.isBackBufferEnabled,
+        maxBufferMs: Long = _playbackTimeline.value.maxBufferMs,
+        liveDelayMs: Long = _playbackTimeline.value.liveDelayMs,
+        liveProgress: Float = _playbackTimeline.value.liveProgress
     ) {
         _playbackTimeline.update {
             it.copy(
@@ -355,7 +362,11 @@ class PlayerRuntimeController(
                 duration = duration.coerceAtLeast(0L),
                 bufferedPosition = bufferedPosition.coerceAtLeast(0L),
                 isLive = isLive,
-                watchedDurationMs = watchedDurationMs.coerceAtLeast(0L)
+                watchedDurationMs = watchedDurationMs.coerceAtLeast(0L),
+                isBackBufferEnabled = isBackBufferEnabled,
+                maxBufferMs = maxBufferMs.coerceAtLeast(1_000L),
+                liveDelayMs = liveDelayMs.coerceAtLeast(0L),
+                liveProgress = liveProgress.coerceIn(0f, 1f)
             )
         }
     }
@@ -376,25 +387,83 @@ class PlayerRuntimeController(
             contentType = contentType,
             latchedLive = livePlaybackLatched
         )
+        val nowElapsed = android.os.SystemClock.elapsedRealtime()
         val watched = liveWatchClock.watchedDurationMs(
             isLive = isLive,
             isPlaying = isPlaying,
-            nowElapsedMs = android.os.SystemClock.elapsedRealtime()
+            nowElapsedMs = nowElapsed
         )
+        val backBufferEnabled = isBackBufferEnabled
+        val maxBuf = configuredMaxBufferMs.toLong()
+        releaseCommandedPlaybackPositionIfLanded(currentPosition)
+        val isSeeking = pendingPreviewSeekPosition != null || commandedPlaybackPositionMs != null
+        val liveUiPlaying = !userPausedManually && (
+            isUsingMpvEngine() || _exoPlayer == null || hasActivePlayIntent()
+        )
+        val (liveDelay, liveProg) = if (isLive) {
+            val exo = _exoPlayer
+            val rawDelayMs = LivePlaybackUiPolicy.rawAccumulatedDelayMs(
+                currentPosition = currentPosition,
+                bufferedPosition = bufferedPosition,
+                liveOffsetMs = if (exo != null && !isUsingMpvEngine()) exo.currentLiveOffset else -1L,
+                totalBufferedMs = if (exo != null && !isUsingMpvEngine()) exo.totalBufferedDuration else -1L
+            )
+            maybeRejoinLiveEdge(
+                rawDelayMs = rawDelayMs,
+                maxBufferMs = maxBuf,
+                bufferedAheadMs = (bufferedPosition - currentPosition).coerceAtLeast(0L),
+                isPlaying = liveUiPlaying,
+                isSeeking = isSeeking
+            )
+            liveBufferFilter.update(
+                currentPosition = currentPosition,
+                bufferedPosition = bufferedPosition,
+                isPlaying = liveUiPlaying,
+                maxBufferMs = maxBuf,
+                isSeeking = isSeeking,
+                nowElapsedMs = nowElapsed,
+                rawDelayMs = rawDelayMs
+            )
+        } else {
+            if (_playbackTimeline.value.isLive) {
+                liveBufferFilter.reset()
+            }
+            0L to 1f
+        }
         updatePlaybackTimeline(
             currentPosition = currentPosition,
             duration = duration,
             bufferedPosition = bufferedPosition,
             isLive = isLive,
-            watchedDurationMs = watched
+            watchedDurationMs = watched,
+            isBackBufferEnabled = backBufferEnabled,
+            maxBufferMs = maxBuf,
+            liveDelayMs = liveDelay,
+            liveProgress = liveProg
         )
     }
 
     internal fun resetPlaybackTimeline() {
         livePlaybackLatched = false
         liveWatchClock.reset()
+        liveBufferFilter.reset()
         pendingPreviewSeekPosition = null
+        commandedPlaybackPositionMs = null
+        commandedPlaybackAtElapsedMs = 0L
         _playbackTimeline.value = PlaybackTimelineState()
+    }
+
+    internal fun armCommandedPlaybackPosition(target: Long) {
+        commandedPlaybackPositionMs = target
+        commandedPlaybackAtElapsedMs = android.os.SystemClock.elapsedRealtime()
+    }
+
+    internal fun releaseCommandedPlaybackPositionIfLanded(playerPosition: Long) {
+        val commanded = commandedPlaybackPositionMs ?: return
+        val ageMs = android.os.SystemClock.elapsedRealtime() - commandedPlaybackAtElapsedMs
+        if (ageMs >= 3_000L || kotlin.math.abs(commanded - playerPosition) <= 1_500L) {
+            commandedPlaybackPositionMs = null
+        }
     }
 
     internal var _exoPlayer: ExoPlayer? = null
@@ -488,6 +557,13 @@ class PlayerRuntimeController(
     internal var currentParallelChunkOverheadMb: Int = 0
     /** Back buffer (ms) the user configured, captured at build to restore once DV7 status is known. */
     internal var configuredBackBufferMs: Int = 0
+    internal var configuredMaxBufferMs: Int = com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS
+    val isBackBufferEnabled: Boolean
+        get() = if (isUsingMpvEngine()) {
+            configuredBackBufferMs > 0
+        } else {
+            effectiveBackBufferDurationMs > 0 || (!hasRenderedFirstFrame && configuredBackBufferMs > 0)
+        }
     internal var metaVideos: List<Video> = emptyList()
     internal var playbackShuffleState: com.nuvio.tv.core.player.PlaybackShuffleState? = null
     internal var cloudPlaybackContext: CloudLibraryPlaybackContext? =
@@ -628,6 +704,8 @@ class PlayerRuntimeController(
     internal var forceDv7ToHevc: Boolean = false
     internal var startupRetryCount: Int = 0
     internal var parsingErrorProbeAttempted: Boolean = false
+    internal var behindLiveWindowRecoveryCount: Int = 0
+    internal var liveEdgeRejoinAtElapsedMs: Long = 0L
     internal var hasRetriedCurrentStreamAfterUnexpectedNpe: Boolean = false
     internal var hasRetriedCurrentStreamAfterMediaPeriodHolderCrash: Boolean = false
     internal var timeoutRecoveryAttempts: Int = 0

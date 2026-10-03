@@ -237,7 +237,11 @@ data class PlaybackTimelineState(
     /** True for live windows (Live TV / live HLS), not VOD HLS. */
     val isLive: Boolean = false,
     /** Wall-clock time spent playing the current live stream. */
-    val watchedDurationMs: Long = 0L
+    val watchedDurationMs: Long = 0L,
+    val isBackBufferEnabled: Boolean = false,
+    val maxBufferMs: Long = com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS.toLong(),
+    val liveDelayMs: Long = 0L,
+    val liveProgress: Float = 1f
 )
 
 data class TrackInfo(

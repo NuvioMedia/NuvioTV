@@ -197,9 +197,14 @@ internal fun PlayerRuntimeController.initializePlayer(
             effectiveBackBufferDurationMs = 0
             currentBitrateAwareLoadControl = null
             configuredBackBufferMs = 0
+            configuredMaxBufferMs = com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS
 
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             currentPlayerSettingsForReport = playerSettings
+            val (resolvedMaxBufferMs, resolvedBackBufferMs) =
+                LivePlaybackUiPolicy.configuredBufferDurationsForLiveUi(playerSettings)
+            configuredMaxBufferMs = resolvedMaxBufferMs
+            configuredBackBufferMs = resolvedBackBufferMs
             rememberAudioDelayPerDeviceEnabled = playerSettings.rememberAudioDelayPerDevice
             // Always watch output-device changes so Bluetooth connect/disconnect can switch
             // PCM/passthrough policy in place (Media3 1.8.0 BT semantics; do not rebuild).
@@ -495,11 +500,13 @@ internal fun PlayerRuntimeController.initializePlayer(
             currentParallelChunkOverheadMb = parallelOverheadMb
 
             val loadControl = if (playerSettings.nuvioPerformanceModeEnabled) {
-                effectiveBackBufferDurationMs = NuvioExoPlayerPerformanceHelper.backBufferMs
+                configuredBackBufferMs = NuvioExoPlayerPerformanceHelper.backBufferMs
+                configuredMaxBufferMs = NuvioExoPlayerPerformanceHelper.maxBufferMs
+                effectiveBackBufferDurationMs = configuredBackBufferMs
                 currentBitrateAwareLoadControl = null
                 Log.i(
                     PlayerRuntimeController.TAG,
-                    "BUFFER_GATE: engine=exo-native-perf master=on parallelOverheadMb=$parallelOverheadMb; NuvioExoPlayerPerformanceHelper.buildLoadControl host=${url.safeHost()}"
+                    "BUFFER_GATE: engine=exo-native-perf master=on maxBufferMs=$configuredMaxBufferMs backBufferMs=$configuredBackBufferMs parallelOverheadMb=$parallelOverheadMb; NuvioExoPlayerPerformanceHelper.buildLoadControl host=${url.safeHost()}"
                 )
                 NuvioExoPlayerPerformanceHelper.buildLoadControl(context, parallelOverheadMb)
             } else if (playerSettings.bufferEngineEnabled) {
@@ -517,6 +524,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 // Build with the user's back buffer so seek-back works immediately, except on a heap
                 // bound device, where the load control would hold it for the whole session.
                 configuredBackBufferMs = bufferSettings.backBufferDurationMs
+                configuredMaxBufferMs = bufferSettings.maxBufferMs
                 val backBufferMsAtBuild = if (libdoviConversionActive && MemoryBudget.isLowRamTier) {
                     0
                 } else {
@@ -1450,6 +1458,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                             errorRetryJob = scope.launch {
                                 releasePlayer(flushPlaybackState = false)
                             }
+                            return
+                        }
+
+                        if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW &&
+                            returnToLiveEdge(this@apply, fromError = true)
+                        ) {
                             return
                         }
 
