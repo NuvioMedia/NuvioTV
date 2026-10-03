@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +43,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
 import com.nuvio.tv.domain.model.HomeLayout
+import com.nuvio.tv.domain.model.UiScale
 import com.nuvio.tv.ui.components.ClassicLayoutPreview
 import com.nuvio.tv.ui.components.GridLayoutPreview
 import com.nuvio.tv.ui.components.ModernLayoutPreview
@@ -52,6 +54,7 @@ internal fun LayoutHomeLayoutSection(
     onEvent: (LayoutSettingsEvent) -> Unit
 ) {
     val firstHomeLayoutFocusRequester = remember { FocusRequester() }
+    var showUiScaleDialog by rememberSaveable { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -99,6 +102,36 @@ internal fun LayoutHomeLayoutSection(
             checked = uiState.heroSectionEnabled,
             onToggle = { onEvent(LayoutSettingsEvent.SetHeroSectionEnabled(!uiState.heroSectionEnabled)) }
         )
+    }
+
+    SettingsActionRow(
+        title = stringResource(R.string.layout_ui_scale),
+        subtitle = null,
+        value = "${uiState.uiScalePercent}%",
+        onClick = { showUiScaleDialog = true }
+    )
+    if (showUiScaleDialog) {
+        SettingsSingleChoiceDialog(
+            title = stringResource(R.string.layout_ui_scale),
+            subtitle = null,
+            options = UiScale.options.map { percent ->
+                SettingsPickerOption(
+                    percent,
+                    if (percent == UiScale.DEFAULT_PERCENT) {
+                        stringResource(R.string.layout_ui_scale_default)
+                    } else "$percent%"
+                )
+            },
+            selectedValue = uiState.uiScalePercent,
+            onOptionSelected = { percent ->
+                showUiScaleDialog = false
+                onEvent(LayoutSettingsEvent.SetUiScalePercent(percent))
+            },
+            onDismiss = { showUiScaleDialog = false }
+        )
+    }
+
+    if (uiState.selectedLayout != HomeLayout.MODERN) {
         if (uiState.heroSectionEnabled && uiState.availableCatalogs.isNotEmpty()) {
             Text(
                 text = stringResource(R.string.layout_hero_catalogs),

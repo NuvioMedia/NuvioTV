@@ -1,4 +1,6 @@
 <resources>
+    <string name="layout_ui_scale">UI scale</string>
+    <string name="layout_ui_scale_default">100% (default)</string>
     <string name="app_name">Nuvio</string>
     <string name="tv_channel_continue_watching">Continue Watching</string>
     <string name="type_movie">Movie</string>
