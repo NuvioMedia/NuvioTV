@@ -2357,25 +2357,6 @@ private fun PlayerControlsOverlay(
                         onFocused = onResetHideTimer
                     )
 
-                    if (uiState.chapters.isNotEmpty() && !isLivePlayback) {
-                        ControlButton(
-                            icon = Icons.Default.FirstPage,
-                            contentDescription = stringResource(R.string.player_chapter_previous),
-                            onClick = { onSkipChapter(false) },
-                            upFocusRequester = progressUpTarget,
-                            onDownKey = onHideControls,
-                            onFocused = onResetHideTimer
-                        )
-                        ControlButton(
-                            icon = Icons.AutoMirrored.Filled.LastPage,
-                            contentDescription = stringResource(R.string.player_chapter_next),
-                            onClick = { onSkipChapter(true) },
-                            upFocusRequester = progressUpTarget,
-                            onDownKey = onHideControls,
-                            onFocused = onResetHideTimer
-                        )
-                    }
-
                     if (showNextEpisodeButton) {
                         ControlButton(
                             icon = Icons.Default.SkipNext,
@@ -2405,6 +2386,25 @@ private fun PlayerControlsOverlay(
                             iconPainter = customAudioPainter,
                             contentDescription = stringResource(R.string.cd_audio_tracks),
                             onClick = onShowAudioDialog,
+                            upFocusRequester = progressUpTarget,
+                            onDownKey = onHideControls,
+                            onFocused = onResetHideTimer
+                        )
+                    }
+
+                    if (uiState.chapters.isNotEmpty() && !isLivePlayback) {
+                        ControlButton(
+                            icon = Icons.Default.FirstPage,
+                            contentDescription = stringResource(R.string.player_chapter_previous),
+                            onClick = { onSkipChapter(false) },
+                            upFocusRequester = progressUpTarget,
+                            onDownKey = onHideControls,
+                            onFocused = onResetHideTimer
+                        )
+                        ControlButton(
+                            icon = Icons.AutoMirrored.Filled.LastPage,
+                            contentDescription = stringResource(R.string.player_chapter_next),
+                            onClick = { onSkipChapter(true) },
                             upFocusRequester = progressUpTarget,
                             onDownKey = onHideControls,
                             onFocused = onResetHideTimer
