@@ -68,6 +68,29 @@ private fun isEmojiOrModifier(codePoint: Int): Boolean {
 /** True if the string's own content direction (see [contentTextDirection]) is RTL. */
 fun String.isContentRtl(): Boolean = contentTextDirection() == TextDirection.Rtl
 
+private val RTL_LANGUAGE_CODES = setOf(
+    "ar", // Arabic
+    "he", "iw",
+    "fa", // Persian/Farsi
+    "ur", // Urdu
+    "yi", "ji", // Yiddish
+    "ps", // Pashto
+    "sd", // Sindhi
+    "dv", // Divehi
+    "ckb", // Central Kurdish (Sorani)
+    "ug" // Uyghur
+)
+
+/**
+ * True/false if [code] (an ISO 639-1 language code, e.g. from TMDB's `iso_639_1`) is
+ * known to be a right-to-left script language; null if [code] is null/blank, so callers
+ * can fall back to a different signal (such as [isContentRtl] on visible text).
+ */
+fun isRtlLanguageCode(code: String?): Boolean? {
+    val normalized = code?.trim()?.lowercase()?.takeIf { it.isNotBlank() } ?: return null
+    return normalized in RTL_LANGUAGE_CODES
+}
+
 /**
  * Converts a TextDirection to an absolute horizontal alignment.
  * RTL text directions map to Right, LTR to Left.
