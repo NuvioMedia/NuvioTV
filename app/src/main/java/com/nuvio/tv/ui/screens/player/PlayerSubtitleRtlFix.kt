@@ -32,7 +32,7 @@ internal object PlayerSubtitleRtlFix {
      * To isolate a rule, list it in [disabledRules]; to process a track that was not detected as
      * corrupted, set [FORCE_SWAPPED_TRACK].
      */
-    private const val DEBUG_MODE = true
+    private const val DEBUG_MODE = false
 
     /** Skips track detection and treats every track as corrupted. */
     private const val FORCE_SWAPPED_TRACK = false
@@ -53,7 +53,8 @@ internal object PlayerSubtitleRtlFix {
         DASH_TO_FRONT("7"),       // trailing dash moves to the front
         LATIN_SEGMENT("8"),       // name or site stored at the front moves to the end
         NUMBERS_REVERSED("9"),    // digit-reversed numbers are reversed back
-        MIXED_RUNS("0")           // RTL / Latin / RTL runs stored in visual order are reversed
+        MIXED_RUNS("0"),          // RTL / Latin / RTL runs stored in visual order are reversed
+        SPACING("10")             // space before sentence punctuation is removed
     }
 
     /** Repaired text and the rules that changed it; no rules means the line is unchanged. */
@@ -246,6 +247,7 @@ internal object PlayerSubtitleRtlFix {
         val core = if (start == 0 && end == line.length) line else line.subSequence(start, end)
         var repair = applyRules(core, numbersMoved)
         if (numbersReversed && Rule.NUMBERS_REVERSED !in disabledRules) repair = reverseNumbers(repair)
+        if (Rule.SPACING !in disabledRules) repair = removeSpaceBeforePunctuation(repair)
         if (repair.rules.isEmpty()) return LineRepair(line)
         if (core === line) return repair
 
@@ -322,6 +324,46 @@ internal object PlayerSubtitleRtlFix {
         val digits = digitsEnd - digitsStart
         return if (digits in minDigitsAfter..maxDigitsAfter) digitsEnd else null
     }
+
+    // --- Rule: space before sentence punctuation ---
+
+    private fun removeSpaceBeforePunctuation(repair: LineRepair): LineRepair {
+        val text = repair.text
+        var builder: Appendable? = null
+        var copied = 0
+        var i = 0
+        while (i < text.length) {
+            if (!text[i].isWhitespace()) {
+                i++
+                continue
+            }
+            val spaceStart = i
+            while (i < text.length && text[i].isWhitespace()) i++
+            var punctuationEnd = i
+            while (punctuationEnd < text.length && isSpacingPunctuation(text[punctuationEnd])) punctuationEnd++
+
+            if (punctuationEnd == i || spaceStart == 0) continue
+            if (!canPrecedePunctuation(text[spaceStart - 1])) continue
+            if (punctuationEnd < text.length && !canFollowPunctuation(text[punctuationEnd])) continue
+
+            val target = builder ?: newBuilder(text).also { builder = it }
+            target.appendSlice(text, copied, spaceStart)
+            copied = i
+            i = punctuationEnd
+        }
+        val target = builder ?: return repair
+        target.appendSlice(text, copied, text.length)
+        return LineRepair(finish(target), repair.rules + Rule.SPACING)
+    }
+
+    /** Punctuation that ends a sentence or clause: . , ? ! … (not : or ;). */
+    private fun isSpacingPunctuation(c: Char): Boolean = isSentencePunctuation(c) && c != ':' && c != ';'
+
+    private fun canPrecedePunctuation(c: Char): Boolean =
+        c.isLetterOrDigit() || isQuote(c) || isApostrophe(c) || c == ')' || c == ']' || isSpacingPunctuation(c)
+
+    private fun canFollowPunctuation(c: Char): Boolean =
+        c.isWhitespace() || isQuote(c) || isApostrophe(c) || c == ')' || c == ']' || isDash(c)
 
     // --- Rule: leading number stored at the end behind an LRM ---
 
