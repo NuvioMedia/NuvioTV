@@ -616,6 +616,14 @@ class IecPassthroughAudioSinkTest {
             .build()
     }
 
+    private fun stereoBitstreamFormat(mimeType: String): Format {
+        return Format.Builder()
+            .setSampleMimeType(mimeType)
+            .setChannelCount(2)
+            .setSampleRate(48_000)
+            .build()
+    }
+
     private fun dtsHdFormat(): Format {
         return Format.Builder()
             .setSampleMimeType(MimeTypes.AUDIO_DTS_HD)
@@ -970,6 +978,7 @@ class IecPassthroughAudioSinkTest {
             trackFactory = factory,
             onIecBecameReady = { deliveries++ }
         )
+        sink.getFormatSupport(dtsHdFormat())
         sink.reset()
         probeReady = true
 
@@ -978,6 +987,57 @@ class IecPassthroughAudioSinkTest {
 
         sink.configure(dtsHdFormat(), 0, null)
         assertEquals(1, deliveries)
+    }
+
+    @Test
+    fun configure_doesNotDeliverIecReady_whenNoSelectionWasMadeBeforeTheProbe() {
+        var deliveries = 0
+        val factory = object : IecAudioTrackFactory {
+            override fun open(
+                sampleRate: Int,
+                channelCount: Int,
+                bufferSizeBytes: Int,
+                sessionId: Int
+            ): IecAudioTrack? = FakeIecAudioTrack(192_000, 16)
+
+            override fun iec61937Ready(): Boolean = true
+        }
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = factory,
+            onIecBecameReady = { deliveries++ }
+        )
+        assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(dtsHdFormat()))
+
+        sink.configure(stereoBitstreamFormat(MimeTypes.AUDIO_DTS), 0, null)
+        sink.configure(stereoBitstreamFormat(MimeTypes.AUDIO_AC3), 0, null)
+        sink.configure(stereoBitstreamFormat(MimeTypes.AUDIO_E_AC3), 0, null)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertEquals(0, deliveries)
+    }
+
+    @Test
+    fun probeReady_doesNotNotify_whenOnlyCoreFormatsWereQueried() {
+        var captured: (() -> Unit)? = null
+        val factory = object : IecAudioTrackFactory {
+            override fun open(
+                sampleRate: Int,
+                channelCount: Int,
+                bufferSizeBytes: Int,
+                sessionId: Int
+            ): IecAudioTrack? = null
+
+            override fun setReadyListener(listener: (() -> Unit)?) {
+                captured = listener
+            }
+        }
+        var notified = false
+        val sink = IecPassthroughAudioSink(RecordingSink(), factory) { notified = true }
+        sink.getFormatSupport(stereoBitstreamFormat(MimeTypes.AUDIO_DTS))
+        sink.supportsFormat(stereoBitstreamFormat(MimeTypes.AUDIO_AC3))
+        sink.configure(stereoBitstreamFormat(MimeTypes.AUDIO_DTS), 0, null)
+        captured!!.invoke()
+        assertFalse(notified)
     }
 
     @Test
@@ -1167,7 +1227,8 @@ class IecPassthroughAudioSinkTest {
             }
         }
         var notified = false
-        IecPassthroughAudioSink(RecordingSink(), factory) { notified = true }
+        val sink = IecPassthroughAudioSink(RecordingSink(), factory) { notified = true }
+        sink.supportsFormat(dtsHdFormat())
         captured!!.invoke()
         assertTrue(notified)
     }
