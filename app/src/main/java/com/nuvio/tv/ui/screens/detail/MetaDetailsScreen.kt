@@ -1335,6 +1335,7 @@ private fun MetaDetailsContent(
     val ratingsTabFocusRequester = remember { FocusRequester() }
     val ratingsContentFocusRequester = remember { FocusRequester() }
     val ratingsGridFocusRequester = remember { FocusRequester() }
+    val heroRatingsFocusRequester = remember { FocusRequester() }
     val castSectionFocusRequester = remember { FocusRequester() }
     val moreLikeSectionFocusRequester = remember { FocusRequester() }
     val trailerSectionFocusRequester = remember { FocusRequester() }
@@ -1358,6 +1359,8 @@ private fun MetaDetailsContent(
     var initialHeroFocusRequested by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showHeroPlayOptionsDialog by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showSynopsisOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
+    var showRatingsOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
+    var restoreRatingsFocusToken by rememberSaveable { mutableIntStateOf(0) }
     var showRandomEpisodeOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
     var randomEpisodePlaybackPending by rememberSaveable(meta.id) { mutableStateOf(false) }
     var stoppingShuffle by remember(meta.id) { mutableStateOf(false) }
@@ -2495,6 +2498,15 @@ private fun MetaDetailsContent(
                             clearPendingRestore()
                         },
                         onShowFullDescription = { showSynopsisOverlay = true },
+                        ratingsAvailable = hasRatingsSection,
+                        onRatingsClick = {
+                            showRatingsOverlay = true
+                        },
+                        ratingsButtonFocusRequester = heroRatingsFocusRequester,
+                        restoreRatingsFocusToken = restoreRatingsFocusToken,
+                        onRatingsFocusRestored = {
+                            initialHeroFocusRequested = true
+                        },
                         onTruncationChanged = { synopsisTruncated = it }
                     )
                 }
@@ -3126,6 +3138,21 @@ private fun MetaDetailsContent(
         }
         if (randomEpisodePlaybackPending) {
             PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl ?: meta.backdropUrl)
+        }
+
+        if (showRatingsOverlay) {
+            EpisodeRatingsOverlayDialog(
+                meta = meta,
+                episodes = meta.videos,
+                ratings = visibleEpisodeImdbRatings,
+                isLoading = isEpisodeRatingsLoading,
+                error = episodeRatingsError,
+                onDismiss = {
+                    restoreRatingsFocusToken += 1
+                    showRatingsOverlay = false
+                },
+                backdropModel = backdropRequest
+            )
         }
     }
 }
