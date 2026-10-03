@@ -116,6 +116,16 @@ class PlayerSubtitleRtlFixTest {
         Case("\u200Fמטרים \u200E70\u200F\r", "\u200F70 מטרים\u200F\r", listOf(Rule.LRM_NUMBER)),
         Case("\u200Fשלום עולם\u200F", "\u200Fשלום עולם\u200F", emptyList()),
 
+        // SPACING: no space before , . ? ! ?! ...
+        Case("! אמא", "אמא!", listOf(Rule.LEADING_PUNCTUATION, Rule.SPACING)),
+        Case("?! מה זה", "מה זה?!", listOf(Rule.LEADING_PUNCTUATION, Rule.SPACING)),
+        Case("... מה קרה", "מה קרה...", listOf(Rule.LEADING_PUNCTUATION, Rule.SPACING)),
+        Case("שלום , עולם", "שלום, עולם", listOf(Rule.SPACING)),
+        Case("שלום עולם !", "שלום עולם!", listOf(Rule.SPACING)),
+        Case("שלום, עולם. מה קורה?", "שלום, עולם. מה קורה?", emptyList()),
+        Case("- שלום", "שלום -", listOf(Rule.LEADING_PUNCTUATION)),
+        Case("גובה 3 .5 מטר", "גובה 3 .5 מטר", emptyList()),
+
         // LEADING_RUN: punctuation and numbers moved to the front, numbers stay intact
         Case("?12-בית ספר", "בית ספר-12?", listOf(Rule.LEADING_RUN), numbersMoved = true),
         Case(".45-זה טוב", "זה טוב-45.", listOf(Rule.LEADING_RUN), numbersMoved = true),
