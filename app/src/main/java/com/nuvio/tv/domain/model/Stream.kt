@@ -196,7 +196,9 @@ data class StreamBehaviorHints(
     val proxyHeaders: ProxyHeaders?,
     val videoHash: String? = null,
     val videoSize: Long? = null,
-    val filename: String? = null
+    val filename: String? = null,
+    // Extra audio delay for this stream (ms, >0 = audio later), added on top of the user's/device delay.
+    val audioDelayMs: Int? = null
 )
 
 @Immutable
