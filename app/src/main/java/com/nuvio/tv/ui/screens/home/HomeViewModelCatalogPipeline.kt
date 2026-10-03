@@ -15,6 +15,7 @@ import com.nuvio.tv.domain.model.legacyKey
 import com.nuvio.tv.domain.model.mergeCatalogPage
 import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
+import com.nuvio.tv.domain.model.stableItemKeys
 import com.nuvio.tv.domain.model.stableKey
 import com.nuvio.tv.domain.model.WatchedItem
 import com.nuvio.tv.domain.model.supportsExtra
@@ -442,11 +443,15 @@ internal fun HomeViewModel.loadCatalogPipeline(
                             type = catalog.apiType,
                             catalogId = catalog.id
                         )
-                        if (!isRefresh || !mergeRefreshedCatalogRow(key, result.data, requestedByUser, forceReplace)) {
+                        if (isRefresh) {
+                            pendingRefreshMerges[key] =
+                                PendingRefreshMerge(result.data, generation, requestedByUser, forceReplace)
+                        } else {
+                            pendingRefreshMerges.remove(key)
                             replaceCatalogRow(key, result.data)
+                            // Trigger MDBList batch for newly loaded catalog data.
+                            onCatalogRowItemsChanged(key)
                         }
-                        // Trigger MDBList batch for newly loaded catalog data.
-                        onCatalogRowItemsChanged(key)
                         // Remove placeholder descriptor now that real data is available
                         synchronized(catalogStateLock) {
                             placeholderDescriptors.removeAll { it.catalogKey == key }
@@ -1090,26 +1095,113 @@ private fun HomeViewModel.reconcileFullyWatchedFromLocalItems(
     return mergedHolderIds
 }
 
+internal class PendingRefreshMerge(
+    val fresh: CatalogRow,
+    val generation: Long,
+    val requestedByUser: Boolean,
+    val forceReplace: Boolean
+)
+
+internal fun HomeViewModel.applyPendingRefreshMerges() {
+    if (pendingRefreshMerges.isEmpty()) return
+    val pending = pendingRefreshMerges.toList()
+    pendingRefreshMerges.clear()
+    pending.forEach { (key, merge) ->
+        if (merge.generation != catalogLoadGeneration) return@forEach
+        if (!mergeRefreshedCatalogRow(key, merge.fresh, merge.requestedByUser, merge.forceReplace)) {
+            replaceCatalogRow(key, merge.fresh)
+        }
+        onCatalogRowItemsChanged(key)
+    }
+}
+
+internal sealed interface CatalogRefreshChange {
+    object Unchanged : CatalogRefreshChange
+
+    /** The first [headCount] items go in front: new ones, or [moved] up from further down the row. */
+    data class Prepend(val headCount: Int, val moved: Set<String> = emptySet()) : CatalogRefreshChange {
+        val addedCount: Int get() = headCount - moved.size
+    }
+
+    object Restructure : CatalogRefreshChange
+}
+
+internal fun classifyCatalogRefresh(currentIds: List<String>, freshIds: List<String>): CatalogRefreshChange {
+    if (freshIds == currentIds.take(freshIds.size)) return CatalogRefreshChange.Unchanged
+    // Runs on the main thread for every refreshed row: one pass, a full comparison only where the
+    // next item of page 1 is the first item of the row left once the head is taken out.
+    val headSet = HashSet<String>()
+    var firstLeft = 0
+    for (headCount in 1 until freshIds.size) {
+        headSet += freshIds[headCount - 1]
+        while (firstLeft < currentIds.size && currentIds[firstLeft] in headSet) firstLeft++
+        if (firstLeft == currentIds.size) break
+        if (freshIds[headCount] == currentIds[firstLeft] &&
+            restMatches(currentIds, firstLeft, freshIds, headCount, headSet)
+        ) {
+            val existing = currentIds.toHashSet()
+            return CatalogRefreshChange.Prepend(headCount, headSet.filterTo(HashSet()) { it in existing })
+        }
+    }
+    return CatalogRefreshChange.Restructure
+}
+
+private fun restMatches(
+    currentIds: List<String>,
+    from: Int,
+    freshIds: List<String>,
+    headCount: Int,
+    headSet: Set<String>
+): Boolean {
+    var i = from
+    for (j in headCount until freshIds.size) {
+        while (i < currentIds.size && currentIds[i] in headSet) i++
+        if (i == currentIds.size || currentIds[i] != freshIds[j]) return false
+        i++
+    }
+    return true
+}
+
+// The ViewModel does not know the layout. With the focused card at the row's start, the narrowest
+// portrait cards fit 8 more on a 960 dp wide screen; wider or landscape cards fit fewer.
+private const val ON_SCREEN_CARDS_AFTER_FOCUS = 8
+
 /**
- * Re-request page 1 of every catalog that is already on screen and swap each result in
- * place.  Unlike [loadAllCatalogsPipeline] with `forceReload`, this leaves the row list,
- * its order and the loading placeholders untouched, so the vertical layout never reflows
- * and focus stays on the card the user left it on.
+ * Moved titles left in place on the focused row for now: the ones on screen would vanish under
+ * the user's eyes. Those off screen move straight away.
  */
+internal fun movedTitlesHeldBack(moved: Set<String>, currentIds: List<String>, focusedIndex: Int): Set<String> {
+    if (moved.isEmpty()) return emptySet()
+    if (focusedIndex < 0) return moved
+    val onScreen = currentIds.subList(
+        (focusedIndex - 1).coerceAtLeast(0),
+        (focusedIndex + ON_SCREEN_CARDS_AFTER_FOCUS + 1).coerceAtMost(currentIds.size)
+    ).toHashSet()
+    return moved.filterTo(HashSet()) { it in onScreen }
+}
+
+// Rebuilding cuts the row back to page 1, so a row focused past it would restart on its first card.
+internal fun keepsRowOnRestructure(
+    rowHasFocus: Boolean,
+    requestedByUser: Boolean,
+    focusedIndex: Int,
+    focusedInFresh: Boolean,
+    freshSize: Int
+): Boolean =
+    !requestedByUser && (rowHasFocus || (focusedIndex >= freshSize && !focusedInFresh))
+
 /**
  * Merges a freshly fetched page 1 into the row that is already on screen.
  *
  * Returns true when the row has been dealt with here, false when the caller should just replace
- * it.  Three outcomes, in order:
+ * it.  Three outcomes:
  *
  *  - **nothing changed**: keep the row, and with it the pages the user has already paginated in;
- *  - **a pure prepend**: the addon put items in front and what follows still matches the head of
- *    the row, in order.  Nothing disappears and no card changes identity, so this is applied
- *    straight away even while the row holds focus.  The pagination window moves by the same
- *    amount, otherwise the next page would re-serve items the row already has;
- *  - **a real restructuring**: reorder, removal or turnover.  Rebuilding drops the cards under
- *    the focus ring, so the row the user has focus on is left alone and picked up on a later
- *    pass, once focus has moved on.
+ *  - **a prepend**: new titles, or titles moved up from further down, in front of the row's head.
+ *    Applied straight away, loaded pages kept; on the focused row, moved titles on screen wait;
+ *  - **a restructure**: rebuilt from page 1, except on the focused row, or on a row whose focus
+ *    sits past page 1 on a card page 1 no longer has. Those keep their content until a refresh
+ *    finds them otherwise or the user asks for one.
  */
 internal fun HomeViewModel.mergeRefreshedCatalogRow(
     key: String,
@@ -1130,48 +1222,74 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
     val currentIds = current.items.map(identity)
     val freshIds = fresh.items.map(identity)
 
-    if (freshIds == currentIds.take(freshIds.size)) {
-        return true
-    }
-
-    val existing = currentIds.toHashSet()
-    val added = fresh.items.takeWhile { identity(it) !in existing }
-    val rest = freshIds.drop(added.size)
-    val isPrepend = added.isNotEmpty() && rest.isNotEmpty() &&
-        rest.size <= currentIds.size &&
-        rest.indices.all { rest[it] == currentIds[it] }
+    val change = classifyCatalogRefresh(currentIds, freshIds)
+    if (change == CatalogRefreshChange.Unchanged) return true
 
     val focusedRowKey = liveFocusedRowKey
     val rowHasFocus = focusedRowKey != null && focusedRowKey == fresh.stableKey()
 
-    if (isPrepend) {
+    // The other layouts hold a row's place by index: a moved title rebuilds the row there, as before.
+    val isModern = _uiState.value.homeLayout == HomeLayout.MODERN
+    if (change is CatalogRefreshChange.Prepend && (isModern || change.moved.isEmpty())) {
         // Nothing is removed and every card already on screen keeps its key, so the focused card
         // only shifts along and its node is reused. That holds in the modern layout, which keeps
         // the whole row; the others cut it at a fixed length, where the focused card can be
         // pushed past the cut and no key brings back a card that has left the list.
-        if (!requestedByUser && rowHasFocus && _uiState.value.homeLayout != HomeLayout.MODERN) {
+        if (!requestedByUser && rowHasFocus && !isModern) {
             return true
         }
+        val held = if (rowHasFocus && !requestedByUser) {
+            val focusedKey = liveFocusedItemKeyByRow[fresh.stableKey()]
+            movedTitlesHeldBack(
+                moved = change.moved,
+                currentIds = currentIds,
+                focusedIndex = focusedKey?.let { current.stableItemKeys().indexOf(it) } ?: -1
+            )
+        } else emptySet()
+        val moved = change.moved - held
+        val head = fresh.items.take(change.headCount)
+        val applied = head.indices.filter { identity(head[it]) !in held }
+        if (applied.isEmpty()) return true
+        // Only new items push the rest of the catalog along; a moved one was already counted.
         val shiftedSkip = if (current.supportsSkip && current.nextSkip > 0) {
-            current.nextSkip + added.size
+            current.nextSkip + change.addedCount
         } else {
             current.nextSkip
         }
-        replaceCatalogRow(key, current.copy(items = added + current.items, nextSkip = shiftedSkip))
+        replaceCatalogRow(
+            key,
+            current.copy(
+                items = applied.map { head[it] } + current.items.filter { identity(it) !in moved },
+                nextSkip = shiftedSkip
+            )
+        )
         Log.d(
             HomeViewModel.TAG,
-            "Home catalog refresh: +${added.size} item(s) catalogId=${fresh.catalogId}"
+            "Home catalog refresh: +${change.addedCount} item(s), ${moved.size} moved to front catalogId=${fresh.catalogId}"
         )
         onCatalogRowItemsChanged(key)
         return true
     }
 
-    // The row was restructured. Rebuilding it drops the cards under the focus ring, so leave the
-    // focused row alone and pick it up once focus has moved on.
-    return rowHasFocus && !requestedByUser
+    // Rebuilt now, or kept as it is for as long as the conditions above hold.
+    // Only the Modern layout reports focused cards; keys left from it must not hold a row elsewhere.
+    val focusedItemKey = if (isModern) liveFocusedItemKeyByRow[fresh.stableKey()] else null
+    return keepsRowOnRestructure(
+        rowHasFocus = rowHasFocus,
+        requestedByUser = requestedByUser,
+        focusedIndex = focusedItemKey?.let { current.stableItemKeys().indexOf(it) } ?: -1,
+        focusedInFresh = focusedItemKey != null && focusedItemKey in fresh.stableItemKeys(),
+        freshSize = fresh.items.size
+    )
 }
 
 
+/**
+ * Re-request page 1 of every catalog that is already on screen and swap each result in
+ * place.  Unlike [loadAllCatalogsPipeline] with `forceReload`, this leaves the row list,
+ * its order and the loading placeholders untouched, so the vertical layout never reflows
+ * and focus stays on the card the user left it on.
+ */
 internal fun HomeViewModel.refreshVisibleCatalogsPipeline(requestedByUser: Boolean = false, forceReplace: Boolean = false) {
     val loadedKeys = synchronized(catalogStateLock) { catalogsMap.keys.toSet() }
     if (loadedKeys.isEmpty()) return

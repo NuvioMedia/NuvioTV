@@ -228,6 +228,12 @@ class HomeViewModel @Inject constructor(
     internal var customCatalogTitles: Map<String, String> = emptyMap()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
     internal var catalogUpdateJob: Job? = null
+
+    /**
+     * Refreshed pages waiting for the next row update. They are merged right before the rows are
+     * published, so the row the user is on is the one focused then, not when its addon answered.
+     */
+    internal val pendingRefreshMerges = LinkedHashMap<String, PendingRefreshMerge>()
     internal var hasRenderedFirstCatalog = false
     internal val catalogLoadSemaphore = Semaphore(MAX_CATALOG_LOAD_CONCURRENCY)
     internal var pendingCatalogLoads = 0
@@ -815,6 +821,14 @@ class HomeViewModel @Inject constructor(
     @Volatile
     internal var liveFocusedRowKey: String? = null
 
+    /** Item key of the card each row's focus is on. */
+    internal val liveFocusedItemKeyByRow = ConcurrentHashMap<String, String>()
+
+    fun setLiveFocusedItemKey(rowKey: String, itemKey: String?) {
+        if (itemKey != null) liveFocusedItemKeyByRow[rowKey] = itemKey
+        else liveFocusedItemKeyByRow.remove(rowKey)
+    }
+
     /** Called by the Home content when the focused row changes. */
     fun setLiveFocusedRowKey(rowKey: String?) {
         liveFocusedRowKey = rowKey
@@ -877,6 +891,7 @@ class HomeViewModel @Inject constructor(
                 else -> 80L
             }
             delay(debounceMs)
+            applyPendingRefreshMerges()
             updateCatalogRows()
         }
     }
@@ -965,7 +980,6 @@ class HomeViewModel @Inject constructor(
         focusedRowKey: String?,
         focusedItemKeyByRow: Map<String, String>,
         catalogRowScrollStates: Map<String, Int>,
-        catalogRowScrollAnchors: Map<String, String>,
         focusedRowIndex: Int = 0,
         focusedItemIndex: Int = 0
     ) {
@@ -979,7 +993,6 @@ class HomeViewModel @Inject constructor(
             focusedRowKey = focusedRowKey,
             focusedItemKeyByRow = focusedItemKeyByRow,
             catalogRowScrollStates = catalogRowScrollStates,
-            catalogRowScrollAnchors = catalogRowScrollAnchors,
             focusedRowIndex = focusedRowIndex,
             focusedItemIndex = focusedItemIndex,
             hasSavedFocus = true
