@@ -158,6 +158,43 @@ class SimklSnapshotProjectionTest {
         }
     }
 
+    @Test
+    fun `a watch history recorded completes while a playback row stays a position`() {
+        val show = entry(
+            type = SimklMediaType.SHOWS,
+            status = SimklListStatus.WATCHING,
+            media = media(1, "tt0000001", tmdb = 101),
+            episodes = listOf(SimklEpisode(1, WATCHED_AT))
+        )
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(show),
+            playback = listOf(
+                SimklPlaybackSession(
+                    id = 9,
+                    progress = 90.0,
+                    pausedAt = WATCHED_AT,
+                    episode = SimklPlaybackEpisode(season = 1, number = 2),
+                    show = show.media
+                )
+            )
+        )
+
+        val progress = SimklSnapshotProjection.create(snapshot).episodeProgress("tmdb:101")
+
+        // Episode 1 was recorded into history, so it completes. Episode 2 is only the position Simkl
+        // keeps open: a playback row does not carry the credits marker where it ends, so its ninety
+        // percent is not a finished watch and the episode stays resumable.
+        val fromHistory = progress.getValue(1 to 1)
+        assertFalse(fromHistory.isProviderPlaybackPosition)
+        assertTrue(fromHistory.isCompleted())
+
+        val fromPlayback = progress.getValue(1 to 2)
+        assertEquals(0.90f, fromPlayback.progressPercentage, 0.0005f)
+        assertTrue(fromPlayback.isProviderPlaybackPosition)
+        assertFalse(fromPlayback.isCompleted())
+        assertTrue(fromPlayback.isInProgress())
+    }
+
     private fun entry(
         type: SimklMediaType,
         status: SimklListStatus,

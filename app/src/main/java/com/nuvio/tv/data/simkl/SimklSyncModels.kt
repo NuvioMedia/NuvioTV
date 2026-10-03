@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.simkl
 
+import com.nuvio.tv.core.tracking.RewatchRunPosition
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -72,7 +73,15 @@ data class SimklLibraryEntry(
     val show: SimklMedia? = null,
     val movie: SimklMedia? = null,
     @SerialName("anime_type") val animeType: String? = null,
-    val seasons: List<SimklSeason> = emptyList()
+    val seasons: List<SimklSeason> = emptyList(),
+    /**
+     * Set on the rewatch sidecar row Simkl returns next to the canonical row when a read asks for
+     * rewatches. The sidecar keeps its own [seasons] with the episodes of that viewing, while the
+     * canonical row never moves; see `deriveSimklRewatchRuns` for what the app does with it.
+     */
+    @SerialName("is_rewatch") val isRewatch: Boolean = false,
+    @SerialName("rewatch_id") val rewatchId: Long? = null,
+    @SerialName("rewatch_status") val rewatchStatus: String? = null
 ) {
     val media: SimklMedia?
         get() = movie ?: show
@@ -173,12 +182,23 @@ data class SimklPlaybackSession(
 
 @Serializable
 data class SimklSyncSnapshot(
-    val schemaVersion: Int = 1,
+    val schemaVersion: Int = 2,
     val isInitialized: Boolean = false,
     val watermark: String? = null,
     val activities: SimklActivities? = null,
     val entries: List<SimklLibraryEntry> = emptyList(),
     val playback: List<SimklPlaybackSession> = emptyList(),
+    /**
+     * Rewatch runs read from the account's own sessions. They are not part of [entries]: a sidecar row
+     * shares the show with its canonical row, so mixing them would replace the canonical watch
+     * position with rewatch progress.
+     */
+    val rewatchRuns: List<RewatchRunPosition> = emptyList(),
+    /**
+     * The sessions [rewatchRuns] were derived from, kept so a change of the next up preference can
+     * re-derive them without another read of the account.
+     */
+    val rewatchSessions: List<SimklLibraryEntry> = emptyList(),
     val lastSyncedAtEpochMs: Long? = null,
     val lastCheckedAtEpochMs: Long? = null
 )

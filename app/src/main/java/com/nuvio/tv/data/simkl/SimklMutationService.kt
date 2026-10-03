@@ -55,7 +55,10 @@ class SimklMutationService internal constructor(
     suspend fun removeFromList(items: Collection<TrackingMediaReference>): TrackingMutationResult =
         removeFromHistory(items)
 
-    suspend fun addToHistory(items: Collection<TrackingHistoryItem>): TrackingMutationResult {
+    suspend fun addToHistory(
+        items: Collection<TrackingHistoryItem>,
+        allowRewatch: Boolean = false
+    ): TrackingMutationResult {
         val candidates = items.toList().also { historyItems ->
             require(historyItems.all { item -> item.media.hasResolvableIdentity }) {
                 "Simkl mutation requires a media ID or title for every item"
@@ -66,8 +69,17 @@ class SimklMutationService internal constructor(
             SimklApiRequest(
                 method = SimklHttpMethod.POST,
                 path = "/sync/history",
-                body = buildSimklHistoryMutationBody(candidates, json),
-                retryPolicy = SimklRetryPolicy.SYNC_WRITE
+                query = if (allowRewatch) SIMKL_ALLOW_REWATCH_QUERY else emptyMap(),
+                body = buildSimklHistoryMutationBody(
+                    candidates,
+                    isRewatch = allowRewatch,
+                    json = json
+                ),
+                retryPolicy = SimklRetryPolicy.SYNC_WRITE,
+                // A repeat viewing of an episode the history already holds is answered with the same
+                // conflict a stop scrobble gets, and behind both is a session that was opened. Reading
+                // it as a failure is what made a recorded rewatch report an error.
+                scrobbleStopConflictIsSuccess = allowRewatch
             )
         )
         val receipt = response.toHistoryMutationReceipt(candidates, json)
@@ -93,7 +105,9 @@ class SimklMutationService internal constructor(
 
     internal suspend fun scrobble(
         action: TrackingScrobbleAction,
-        event: TrackingScrobbleEvent
+        event: TrackingScrobbleEvent,
+        recordRewatch: Boolean = false,
+        completionThresholdPercent: Double = SIMKL_REWATCH_MIN_PROGRESS_PERCENT
     ): SimklScrobbleResult {
         require(event.media.hasResolvableIdentity) { "Simkl scrobble requires a media ID or title" }
         require(event.media.kind == TrackingMediaKind.MOVIE || event.media.episode != null) {
@@ -108,6 +122,7 @@ class SimklMutationService internal constructor(
                 SimklApiRequest(
                     method = SimklHttpMethod.POST,
                     path = "/scrobble/${action.wireValue}",
+                    query = if (recordRewatch) SIMKL_ALLOW_REWATCH_QUERY else emptyMap(),
                     body = buildSimklScrobbleBody(event, json),
                     retryPolicy = SimklRetryPolicy.NEVER,
                     scrobbleStopConflictIsSuccess = action == TrackingScrobbleAction.STOP
@@ -127,7 +142,12 @@ class SimklMutationService internal constructor(
             "simkl mutation response action=${action.wireValue} status=${response.status} " +
                 "softSuccess=${response.isSoftSuccess} ${event.scrobbleDiagnosticSummary()}"
         )
-        return response.toSimklScrobbleResult(action, event, json)
+        return response.toSimklScrobbleResult(
+            requestedAction = action,
+            event = event,
+            json = json,
+            completionThresholdPercent = completionThresholdPercent
+        )
     }
 
     private fun Collection<TrackingMediaReference>.validated(): List<TrackingMediaReference> =

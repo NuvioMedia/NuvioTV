@@ -3,6 +3,7 @@ package com.nuvio.tv.data.simkl
 import android.util.Log
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -12,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -25,7 +27,8 @@ class SimklSyncRepository @Inject constructor(
     private val storage: SimklSyncStorage,
     private val authRepository: SimklAuthRepository,
     private val authStorage: SimklAuthStorage,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val settingsDataStore: TraktSettingsDataStore
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -165,6 +168,80 @@ class SimklSyncRepository @Inject constructor(
         }
     }
 
+    /**
+     * Stores the runs the account's rewatch sessions make, so a rewatch the user just confirmed shows
+     * up in Continue Watching at once instead of after the next sync. The sessions come from the
+     * caller, which read them to answer whether the write landed.
+     */
+    internal suspend fun adoptRewatchSessions(sessions: List<SimklLibraryEntry>) =
+        withContext(Dispatchers.IO) {
+            val runs = runCatching {
+                deriveSimklRewatchRuns(
+                    entries = sessions,
+                    minimumRunEpisodes = minimumRewatchRunEpisodes()
+                )
+            }.getOrElse { error ->
+                Log.w(TAG, "Could not read the runs out of the rewatch sessions", error)
+                return@withContext
+            }
+            ensureLoaded()
+            val profileId = profileManager.activeProfileId.value
+            val generation = profileGeneration
+            snapshotMutex.withLock {
+                if (!isCurrent(profileId, generation)) return@withLock
+                val current = _state.value
+                if (
+                    current.snapshot.rewatchRuns == runs &&
+                    current.snapshot.rewatchSessions == sessions
+                ) {
+                    return@withLock
+                }
+                val snapshot = current.snapshot.copy(rewatchRuns = runs, rewatchSessions = sessions)
+                val projection = buildProjection(snapshot)
+                storage.save(profileId, encodeSnapshot(snapshot))
+                if (isCurrent(profileId, generation)) {
+                    _projection.value = projection
+                    _state.value = current.copy(snapshot = snapshot)
+                }
+            }
+        }
+
+    /**
+     * Re-derives the runs after the user changed how much of a rewatch should be offered.
+     *
+     * The sessions of the last read are kept on the snapshot, so the row follows the setting at once
+     * instead of at the next sync, and it works offline. With nothing read yet there is nothing to
+     * re-derive, and the next sync picks the setting up on its own.
+     */
+    internal suspend fun refreshRewatchRuns() = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        val sessions = _state.value.snapshot.rewatchSessions
+        if (sessions.isEmpty()) return@withContext
+        val runs = runCatching {
+            deriveSimklRewatchRuns(
+                entries = sessions,
+                minimumRunEpisodes = minimumRewatchRunEpisodes()
+            )
+        }.getOrElse { error ->
+            Log.w(TAG, "Could not re-derive the runs after a setting change", error)
+            return@withContext
+        }
+        val profileId = profileManager.activeProfileId.value
+        val generation = profileGeneration
+        snapshotMutex.withLock {
+            if (!isCurrent(profileId, generation)) return@withLock
+            val current = _state.value
+            if (current.snapshot.rewatchRuns == runs) return@withLock
+            val snapshot = current.snapshot.copy(rewatchRuns = runs)
+            val projection = buildProjection(snapshot)
+            storage.save(profileId, encodeSnapshot(snapshot))
+            if (isCurrent(profileId, generation)) {
+                _projection.value = projection
+                _state.value = current.copy(snapshot = snapshot)
+            }
+        }
+    }
+
     private suspend fun loadProfile(profileId: Int) = loadMutex.withLock {
         if (loadedProfileId == profileId) return@withLock
         val snapshot = storage.load(profileId)
@@ -211,7 +288,9 @@ class SimklSyncRepository @Inject constructor(
         )
         val projection = if (
             merged.entries === previous.snapshot.entries &&
-            merged.playback === previous.snapshot.playback
+            merged.playback === previous.snapshot.playback &&
+            merged.rewatchRuns == previous.snapshot.rewatchRuns &&
+            merged.rewatchSessions == previous.snapshot.rewatchSessions
         ) {
             _projection.value
         } else {
@@ -247,8 +326,41 @@ class SimklSyncRepository @Inject constructor(
         }
     }
 
+    /*
+     * Difference from mobile: mobile reads `simklRewatchNextUpMode` from `TrackingSettingsRepository`.
+     * TV has no such `object` repository, so the mode is read from `TraktSettingsDataStore`, where the
+     * keys live. The callers are `suspend`, so the read is a single `first()`; the mode maps to the
+     * number of episodes the rewatch chain needs before it is shown at all.
+     */
+    private suspend fun minimumRewatchRunEpisodes(): Int? =
+        settingsDataStore.simklRewatchNextUpMode.first().minimumRunEpisodes
+
+    /*
+     * Difference from mobile: mobile reads `simklWatchedThresholdPercent` from `TrackingSettingsRepository`.
+     * TV has no such `object` repository for UI state, so the threshold is read from `TraktSettingsDataStore`,
+     * the same as `simklRewatchNextUpMode`. The projection is `suspend`, so the read is a single `first()`;
+     * when the setting cannot be read, the threshold is not passed in and a playback row keeps the source
+     * default of 80 percent. The threshold decides on the write side (the scrobbler), that is when a
+     * playback is reported as finished. On the Continue Watching read it no longer decides that a playback
+     * is finished: a playback row is a position the provider keeps open, and such a row is never closed by
+     * a percentage, so an episode stopped at 86 percent with a threshold of 95 stays in the row. The
+     * threshold is still passed to the row, and the row carries it as the number it was reported with.
+     */
+    private suspend fun completionThresholdFraction(): Float? = try {
+        resolvedSimklCompletionFraction(settingsDataStore.simklWatchedThresholdPercent.first())
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Throwable) {
+        null
+    }
+
     private suspend fun buildProjection(snapshot: SimklSyncSnapshot): SimklSnapshotProjection =
-        withContext(Dispatchers.Default) { SimklSnapshotProjection.create(snapshot) }
+        withContext(Dispatchers.Default) {
+            SimklSnapshotProjection.create(
+                snapshot = snapshot,
+                completionThresholdFraction = completionThresholdFraction()
+            )
+        }
 
     private suspend fun decodeSnapshot(payload: String): SimklSyncSnapshot =
         withContext(Dispatchers.Default) { json.decodeFromString(payload) }
