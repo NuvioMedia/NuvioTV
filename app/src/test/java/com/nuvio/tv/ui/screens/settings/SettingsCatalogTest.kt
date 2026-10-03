@@ -110,11 +110,28 @@ class SettingsCatalogTest {
         assertTrue(categories.startsNewGroup(categories.indexOf(SettingsCategory.CONTENT_DISCOVERY)))
     }
 
+    @Test
+    fun `connect phone is available only in full builds for every profile and mode`() {
+        listOf(true, false).forEach { primary ->
+            listOf(true, false).forEach { essential ->
+                listOf(true, false).forEach { debug ->
+                    val full = visibleSettingsCategories(primary, essential, debug, isFullBuild = true)
+                    val store = visibleSettingsCategories(primary, essential, debug, isFullBuild = false)
+                    assertEquals(SettingsCategory.CONNECT_PHONE, full.first())
+                    assertFalse(SettingsCategory.CONNECT_PHONE in store)
+                    assertEquals(store, full - SettingsCategory.CONNECT_PHONE)
+                }
+            }
+        }
+    }
+
     private fun allCombinations(): List<List<SettingsCategory>> =
         listOf(true, false).flatMap { primary ->
             listOf(true, false).flatMap { essential ->
-                listOf(true, false).map { debug ->
-                    visibleSettingsCategories(primary, essential, debug)
+                listOf(true, false).flatMap { debug ->
+                    listOf(true, false).map { full ->
+                        visibleSettingsCategories(primary, essential, debug, isFullBuild = full)
+                    }
                 }
             }
         }

@@ -167,6 +167,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         }
     }
 
+    internal fun isSeekableForRemote(): Boolean = initialized && mpv.getPropertyBoolean("seekable") == true
+
     fun setPaused(paused: Boolean) {
         if (!initialized) return
         mpv.setPropertyBoolean("pause", paused)
