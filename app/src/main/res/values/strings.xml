@@ -790,6 +790,9 @@
     <string name="video_section">Video</string>
     <string name="playback_true_black_letterbox">True black bars</string>
     <string name="playback_true_black_letterbox_sub">Leave the bars around the picture unpainted so HDR stays true black. Keep this off if a bright line appears on the bars.</string>
+    <string name="playback_chapters_label">Chapters</string>
+    <string name="playback_exo_chapters_title">Show Chapters (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Read the chapters of MKV files to mark them on the progress bar and skip between them. Makes a few small extra requests once playback starts. mpv always shows chapters.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Auto-play Trailers</string>
     <string name="audio_autoplay_trailers_sub">Automatically play trailers on detail and post-play screens</string>
@@ -2487,6 +2490,9 @@
     <string name="cd_sources">Sources</string>
     <string name="cd_switch_player_engine">Switch player engine</string>
     <string name="cd_episodes">Episodes</string>
+    <string name="player_chapter_previous">Previous chapter</string>
+    <string name="player_chapter_next">Next chapter</string>
+    <string name="player_chapter_number">Chapter %1$d</string>
     <string name="cd_playback_speed">Playback speed</string>
     <string name="cd_aspect_ratio">Aspect ratio</string>
     <string name="cd_open_external_player">Open in external player</string>

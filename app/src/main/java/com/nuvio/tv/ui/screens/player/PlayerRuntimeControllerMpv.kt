@@ -171,7 +171,8 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
                 audioTracks = emptyList(),
                 subtitleTracks = emptyList(),
                 selectedAudioTrackIndex = -1,
-                selectedSubtitleTrackIndex = -1
+                selectedSubtitleTrackIndex = -1,
+                chapters = emptyList()
             )
         }
         cancelPauseOverlay()
@@ -303,6 +304,7 @@ internal fun PlayerRuntimeController.updateMpvAvailableTracks() {
             val snapshot = view.readTrackSnapshot()
             if (!isUsingMpvEngine() || mpvView !== view || currentStreamUrl != streamUrlAtRefresh) return@launch
             applyMpvTrackSnapshot(snapshot)
+            refreshMpvChapters(view)
             tryAutoSelectPreferredSubtitleFromAvailableTracks()
         } catch (error: CancellationException) {
             throw error

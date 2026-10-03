@@ -640,6 +640,19 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         return tracks
     }
 
+    fun readChapters(): List<PlayerChapter> {
+        if (!initialized) return emptyList()
+        val count = runCatching { mpv.getPropertyInt("chapter-list/count") ?: 0 }.getOrDefault(0)
+        if (count <= 0) return emptyList()
+        return (0 until count).mapNotNull { i ->
+            val seconds = mpv.getPropertyDouble("chapter-list/$i/time") ?: return@mapNotNull null
+            PlayerChapter(
+                startMs = (seconds * 1000.0).roundToLong(),
+                title = mpv.getPropertyString("chapter-list/$i/title")?.trim()?.takeIf { it.isNotBlank() }
+            )
+        }
+    }
+
     fun releasePlayer() {
         if (!initialized) return
         removeCallbacks(aspectReapplyRunnable)

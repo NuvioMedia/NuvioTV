@@ -1278,6 +1278,27 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 showSeekOverlayTemporarily()
             }
         }
+        is PlayerEvent.OnSkipChapter -> {
+            val chapters = _uiState.value.chapters
+            if (chapters.isEmpty() || _playbackTimeline.value.isLive) return
+            val position = pendingPreviewSeekPosition ?: currentPlaybackPositionMs() ?: return
+            val target = if (event.forward) {
+                PlayerChapters.nextStartMs(chapters, position)
+            } else {
+                PlayerChapters.previousStartMs(chapters, position)
+            } ?: return
+            // Exact: a keyframe seek can land before the chapter start, and "next" would then
+            // keep returning to the same chapter.
+            pendingPreviewSeekPosition = null
+            seekPlaybackTo(target, SeekParameters.EXACT)
+            updatePlaybackTimeline(currentPosition = target)
+            scheduleProgressSyncAfterSeek()
+            if (_uiState.value.showControls) {
+                showControlsTemporarily()
+            } else {
+                showSeekOverlayTemporarily()
+            }
+        }
         is PlayerEvent.OnSelectAudioTrack -> {
             logSwitchTrace(
                 stage = "event-select-audio",
