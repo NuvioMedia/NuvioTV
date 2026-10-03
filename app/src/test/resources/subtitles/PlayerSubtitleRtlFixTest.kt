@@ -82,6 +82,13 @@ class PlayerSubtitleRtlFixTest {
         Case("12 ביוני", "12 ביוני", emptyList()),
         Case("abc123 :תיקון חלקי", "abc123 :תיקון חלקי", emptyList()),
 
+        // MIXED_RUNS: RTL / Latin / RTL runs stored in visual order are reversed
+        Case("- :גאים להציג Alpha צוות -", "- צוות Alpha גאים להציג: -", listOf(Rule.MIXED_RUNS)),
+        Case("ג ד Fox א ב", "א ב Fox ג ד", listOf(Rule.MIXED_RUNS)),
+        Case("א Fox ב Bar ג", "ג Bar ב Fox א", listOf(Rule.MIXED_RUNS)),
+        Case("\u200F- :גאים להציג Alpha צוות -\u200F", "\u200F- צוות Alpha גאים להציג: -\u200F", listOf(Rule.MIXED_RUNS)),
+        Case("שלום Hello", "שלום Hello", emptyList()),
+
         // Lines wrapped in RLM marks: the marks are kept and don't hide the line edges
         Case(
             "\u200F:חברת שמש\" מציגים\"\u200F",
