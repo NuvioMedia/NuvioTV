@@ -19,6 +19,7 @@ import com.nuvio.tv.data.simkl.SimklTrackingHistoryWriter
 import com.nuvio.tv.data.simkl.SimklTrackingProgressProvider
 import com.nuvio.tv.data.simkl.SimklTrackingProvider
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
+import com.nuvio.tv.data.floppy.FloppyTrackingProvider
 import com.nuvio.tv.data.mdblist.MdbListTrackingHistoryWriter
 import com.nuvio.tv.data.mdblist.MdbListTrackingProgressProvider
 import com.nuvio.tv.data.mdblist.MdbListTrackingProvider
@@ -32,6 +33,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class TrackingModule {
+    @Binds
+    @IntoSet
+    abstract fun bindFloppyProvider(provider: FloppyTrackingProvider): TrackingProvider
+
     @Binds
     @IntoSet
     abstract fun bindMdbListLibrary(provider: com.nuvio.tv.data.mdblist.MdbListTrackingLibraryProvider): TrackingLibraryProvider
