@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import androidx.media3.exoplayer.SeekParameters
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -11,6 +12,45 @@ internal fun PlayerRuntimeController.refreshMpvChapters(view: NuvioMpvSurfaceVie
     if (chapters.isEmpty()) return
     mpvChaptersStreamUrl = currentStreamUrl
     _uiState.update { it.copy(chapters = chapters) }
+}
+
+/**
+ * Exact: a keyframe seek can land before the chapter start, and "next" would then keep returning
+ * to the same chapter.
+ */
+internal fun PlayerRuntimeController.seekToChapter(startMs: Long) {
+    if (_playbackTimeline.value.isLive) return
+    pendingPreviewSeekPosition = null
+    seekPlaybackTo(startMs, SeekParameters.EXACT)
+    updatePlaybackTimeline(currentPosition = startMs)
+    scheduleProgressSyncAfterSeek()
+    if (_uiState.value.showControls) {
+        showControlsTemporarily()
+    } else {
+        showSeekOverlayTemporarily()
+    }
+}
+
+internal fun PlayerRuntimeController.showChaptersPanel() {
+    if (_uiState.value.chapters.isEmpty()) return
+    hideControlsJob?.cancel()
+    _uiState.update {
+        it.copy(
+            showChaptersPanel = true,
+            showControls = true,
+            showAudioOverlay = false,
+            showSubtitleOverlay = false,
+            showSubtitleStylePanel = false,
+            showSubtitleTimingDialog = false,
+            showSpeedDialog = false,
+            showMoreDialog = false
+        )
+    }
+}
+
+internal fun PlayerRuntimeController.dismissChaptersPanel() {
+    _uiState.update { it.copy(showChaptersPanel = false) }
+    scheduleHideControls()
 }
 
 /**

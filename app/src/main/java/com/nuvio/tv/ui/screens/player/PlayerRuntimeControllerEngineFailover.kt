@@ -39,6 +39,7 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
     _uiState.update {
         it.copy(
             chapters = emptyList(),
+            showChaptersPanel = false,
             internalPlayerEngine = targetEngine,
             showPlayerEngineSwitchInfo = true,
             playerEngineSwitchInfoText = switchMessage
@@ -104,6 +105,7 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
             showSpeedDialog = false,
             showMoreDialog = false,
             chapters = emptyList(),
+            showChaptersPanel = false,
             internalPlayerEngine = targetEngine,
             showPlayerEngineSwitchInfo = true,
             playerEngineSwitchInfoText = switchMessage

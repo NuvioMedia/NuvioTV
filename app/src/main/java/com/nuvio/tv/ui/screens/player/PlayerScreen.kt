@@ -54,7 +54,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.LastPage
+import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -64,7 +64,6 @@ import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
-import androidx.compose.material.icons.filled.FirstPage
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -191,6 +190,7 @@ fun PlayerScreen(
     val playPauseFocusRequester = remember { FocusRequester() }
     val progressBarFocusRequester = remember { FocusRequester() }
     val episodesFocusRequester = remember { FocusRequester() }
+    val chaptersFocusRequester = remember { FocusRequester() }
     val streamsFocusRequester = remember { FocusRequester() }
     val sourceStreamsFocusRequester = remember { FocusRequester() }
     val skipIntroFocusRequester = remember { FocusRequester() }
@@ -335,6 +335,8 @@ fun PlayerScreen(
             } else {
                 viewModel.onEvent(PlayerEvent.OnDismissSourcesPanel)
             }
+        } else if (uiState.showChaptersPanel) {
+            viewModel.onEvent(PlayerEvent.OnDismissChaptersPanel)
         } else if (uiState.showEpisodesPanel) {
             if (uiState.showEpisodeStreams) {
                 viewModel.onEvent(PlayerEvent.OnBackFromEpisodeStreams)
@@ -494,6 +496,7 @@ fun PlayerScreen(
         uiState.showControls,
         uiState.showEpisodesPanel,
         uiState.showSourcesPanel,
+        uiState.showChaptersPanel,
         uiState.showSubtitleStylePanel,
         uiState.showSubtitleDelayOverlay,
         uiState.showSubtitleTimingDialog,
@@ -505,7 +508,7 @@ fun PlayerScreen(
     ) {
         if (shouldConfirmNextEpisodeOnEnd || postPlayRecommendationState.isVisible) return@LaunchedEffect
         if (uiState.error != null) return@LaunchedEffect
-        if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showSourcesPanel &&
+        if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
             !uiState.showAudioOverlay && !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel && !uiState.showSubtitleDelayOverlay &&
             !uiState.showSubtitleTimingDialog &&
@@ -626,7 +629,7 @@ fun PlayerScreen(
                     viewModel.onEvent(PlayerEvent.OnHideSubtitleDelayOverlay)
                 } else if (
                     !uiState.showEpisodesPanel &&
-                    !uiState.showSourcesPanel &&
+                    !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
                     !uiState.showAudioOverlay &&
                     !uiState.showSubtitleOverlay &&
                     !uiState.showSubtitleStylePanel &&
@@ -750,6 +753,7 @@ fun PlayerScreen(
 
                 // When a side panel or dialog is open, let it handle all keys
                 val panelOrDialogOpen = uiState.showEpisodesPanel || uiState.showSourcesPanel ||
+                        uiState.showChaptersPanel ||
                         uiState.showAudioOverlay || uiState.showSubtitleOverlay ||
                         uiState.showSubtitleStylePanel || uiState.showSpeedDialog ||
                         uiState.showSubtitleDelayOverlay || uiState.showSubtitleTimingDialog ||
@@ -875,6 +879,19 @@ fun PlayerScreen(
                         KeyEvent.KEYCODE_MEDIA_STOP -> {
                             viewModel.onEvent(PlayerEvent.OnPlayPause)
                             true
+                        }
+                        KeyEvent.KEYCODE_MEDIA_NEXT,
+                        KeyEvent.KEYCODE_CHANNEL_UP,
+                        KeyEvent.KEYCODE_MEDIA_PREVIOUS,
+                        KeyEvent.KEYCODE_CHANNEL_DOWN -> {
+                            if (uiState.chapters.isEmpty()) {
+                                false
+                            } else {
+                                val forward = keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT ||
+                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_CHANNEL_UP
+                                viewModel.onEvent(PlayerEvent.OnSkipChapter(forward))
+                                true
+                            }
                         }
                         KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
                             viewModel.onEvent(
@@ -1232,7 +1249,7 @@ fun PlayerScreen(
                     !uiState.showPauseOverlay &&
                     !uiState.showStreamInfoOverlay &&
                     !uiState.showEpisodesPanel &&
-                    !uiState.showSourcesPanel &&
+                    !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
                     !uiState.showAudioOverlay &&
                     !uiState.showSubtitleOverlay &&
                     !uiState.showSubtitleStylePanel &&
@@ -1282,7 +1299,7 @@ fun PlayerScreen(
             !uiState.showLoadingOverlay &&
             !uiState.showPauseOverlay &&
             !uiState.showEpisodesPanel &&
-            !uiState.showSourcesPanel &&
+            !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
             !uiState.showAudioOverlay &&
             !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel &&
@@ -1314,7 +1331,7 @@ fun PlayerScreen(
                 !uiState.showSubtitleStylePanel &&
                 !uiState.showSubtitleDelayOverlay &&
                 !uiState.showEpisodesPanel &&
-                !uiState.showSourcesPanel &&
+                !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
                 !uiState.showAudioOverlay &&
                 !uiState.showSubtitleOverlay &&
                 !uiState.showSpeedDialog &&
@@ -1341,7 +1358,7 @@ fun PlayerScreen(
                 onSeekForward = { viewModel.onEvent(PlayerEvent.OnSeekForward) },
                 onSeekBackward = { viewModel.onEvent(PlayerEvent.OnSeekBackward) },
                 onSeekTo = { viewModel.onEvent(PlayerEvent.OnSeekTo(it)) },
-                onSkipChapter = { forward -> viewModel.onEvent(PlayerEvent.OnSkipChapter(forward)) },
+                onShowChaptersPanel = { viewModel.onEvent(PlayerEvent.OnShowChaptersPanel) },
                 onShowEpisodesPanel = { viewModel.onEvent(PlayerEvent.OnShowEpisodesPanel) },
                 onShowSourcesPanel = { viewModel.onEvent(PlayerEvent.OnShowSourcesPanel) },
                 onShowAudioDialog = { viewModel.onEvent(PlayerEvent.OnShowAudioOverlay) },
@@ -1443,7 +1460,7 @@ fun PlayerScreen(
                 !uiState.showPauseOverlay &&
                 !uiState.showSubtitleStylePanel &&
                 !uiState.showEpisodesPanel &&
-                !uiState.showSourcesPanel &&
+                !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
                 !uiState.showAudioOverlay &&
                 !uiState.showSubtitleOverlay &&
                 !uiState.showSubtitleTimingDialog &&
@@ -1488,6 +1505,37 @@ fun PlayerScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             SeekOverlayHost(viewModel = viewModel, chapters = uiState.chapters)
+        }
+
+        // Chapters side panel (slides in from right, over a scrim)
+        AnimatedVisibility(
+            visible = uiState.showChaptersPanel && uiState.chapters.isNotEmpty() && uiState.error == null,
+            enter = fadeIn(animationSpec = tween(120)),
+            exit = fadeOut(animationSpec = tween(120))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f))
+            )
+        }
+        AnimatedVisibility(
+            visible = uiState.showChaptersPanel && uiState.chapters.isNotEmpty() && uiState.error == null,
+            enter = slideInHorizontally(animationSpec = tween(220), initialOffsetX = { it }),
+            exit = slideOutHorizontally(animationSpec = tween(220), targetOffsetX = { it })
+        ) {
+            val chaptersTimeline by viewModel.playbackTimeline.collectAsState()
+            Box(modifier = Modifier.fillMaxSize()) {
+                ChaptersSidePanel(
+                    chapters = uiState.chapters,
+                    positionMs = chaptersTimeline.currentPosition,
+                    durationMs = chaptersTimeline.duration,
+                    focusRequester = chaptersFocusRequester,
+                    onChapterSelected = { viewModel.onEvent(PlayerEvent.OnSelectChapter(it)) },
+                    onClose = { viewModel.onEvent(PlayerEvent.OnDismissChaptersPanel) },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
         }
 
         // Episodes/streams side panel (slides in from right)
@@ -1686,7 +1734,7 @@ fun PlayerScreen(
                 !uiState.showLoadingOverlay &&
                 !uiState.showPauseOverlay &&
                 !uiState.showEpisodesPanel &&
-                !uiState.showSourcesPanel &&
+                !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
                 !uiState.showAudioOverlay &&
                 !uiState.showSubtitleOverlay &&
                 !uiState.showSubtitleStylePanel &&
@@ -2156,7 +2204,7 @@ private fun PlayerControlsOverlay(
     onSeekForward: () -> Unit,
     onSeekBackward: () -> Unit,
     onSeekTo: (Long) -> Unit,
-    onSkipChapter: (forward: Boolean) -> Unit,
+    onShowChaptersPanel: () -> Unit,
     onShowEpisodesPanel: () -> Unit,
     onShowSourcesPanel: () -> Unit,
     onShowAudioDialog: () -> Unit,
@@ -2394,17 +2442,9 @@ private fun PlayerControlsOverlay(
 
                     if (uiState.chapters.isNotEmpty() && !isLivePlayback) {
                         ControlButton(
-                            icon = Icons.Default.FirstPage,
-                            contentDescription = stringResource(R.string.player_chapter_previous),
-                            onClick = { onSkipChapter(false) },
-                            upFocusRequester = progressUpTarget,
-                            onDownKey = onHideControls,
-                            onFocused = onResetHideTimer
-                        )
-                        ControlButton(
-                            icon = Icons.AutoMirrored.Filled.LastPage,
-                            contentDescription = stringResource(R.string.player_chapter_next),
-                            onClick = { onSkipChapter(true) },
+                            icon = Icons.AutoMirrored.Filled.Toc,
+                            contentDescription = stringResource(R.string.player_chapters),
+                            onClick = onShowChaptersPanel,
                             upFocusRequester = progressUpTarget,
                             onDownKey = onHideControls,
                             onFocused = onResetHideTimer
@@ -3795,7 +3835,7 @@ internal fun DialogButton(
     }
 }
 
-private fun formatTime(millis: Long): String {
+internal fun formatTime(millis: Long): String {
     if (millis <= 0) return "0:00"
 
     val hours = TimeUnit.MILLISECONDS.toHours(millis)

@@ -2490,9 +2490,10 @@
     <string name="cd_sources">Sources</string>
     <string name="cd_switch_player_engine">Switch player engine</string>
     <string name="cd_episodes">Episodes</string>
-    <string name="player_chapter_previous">Previous chapter</string>
-    <string name="player_chapter_next">Next chapter</string>
     <string name="player_chapter_number">Chapter %1$d</string>
+    <string name="player_chapters">Chapters</string>
+    <string name="player_chapters_title">Chapters (%1$d)</string>
+    <string name="player_chapter_remaining">%1$s left</string>
     <string name="cd_playback_speed">Playback speed</string>
     <string name="cd_aspect_ratio">Aspect ratio</string>
     <string name="cd_open_external_player">Open in external player</string>
