@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"sort"
 	"sync"
 	"sync/atomic"
 
@@ -164,8 +165,29 @@ func (w *providerWriter) metadata(m nntppool.YEncMeta) {
 		f(m)
 	}
 }
+func (l *poolLease) firstClient() int {
+	if len(l.clients) == 1 {
+		return 0
+	}
+	cumulative := make([]int, len(l.clients))
+	total := 0
+	for i, client := range l.clients {
+		for _, provider := range client.Stats().Providers {
+			if !provider.QuotaExceeded {
+				total += max(1, provider.AvailableSlots)
+			}
+		}
+		cumulative[i] = total
+	}
+	if total == 0 {
+		return 0
+	}
+	slot := int(l.next.Add(1) % uint64(total))
+	return sort.SearchInts(cumulative, slot+1)
+}
+
 func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority bool, meta ...func(nntppool.YEncMeta)) (*nntppool.ArticleBody, error) {
-	start := int(l.next.Add(1)-1) % len(l.clients)
+	start := l.firstClient()
 	var failures []error
 	allMissing := true
 	allAuth, allQuota := true, true
