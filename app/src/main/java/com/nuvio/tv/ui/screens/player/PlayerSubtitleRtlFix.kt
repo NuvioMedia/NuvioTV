@@ -54,7 +54,8 @@ internal object PlayerSubtitleRtlFix {
         LATIN_SEGMENT("8"),       // name or site stored at the front moves to the end
         NUMBERS_REVERSED("9"),    // digit-reversed numbers are reversed back
         MIXED_RUNS("0"),          // RTL / Latin / RTL runs stored in visual order are reversed
-        SPACING("10")             // space before sentence punctuation is removed
+        SPACING("10"),            // space before sentence punctuation is removed
+        DOUBLE_DASH("11")         // "- - text" becomes "- text -"
     }
 
     /** Repaired text and the rules that changed it; no rules means the line is unchanged. */
@@ -264,10 +265,8 @@ internal object PlayerSubtitleRtlFix {
         if (Rule.QUOTE !in disabledRules) restoreLeadingQuote(line, numbersMoved)?.let { return it }
         if (Rule.LATIN_SEGMENT !in disabledRules) restoreTrailingLatinSegment(line, numbersMoved)?.let { return it }
         if (Rule.MIXED_RUNS !in disabledRules) reorderMixedRuns(line)?.let { return it }
-        if (numbersMoved && Rule.LEADING_RUN !in disabledRules && startsWithNumber(line)) {
-            val moved = moveLeadingRunToEnd(line)
-            return if (moved === line) LineRepair(line) else LineRepair(moved, listOf(Rule.LEADING_RUN))
-        }
+        if (Rule.DOUBLE_DASH !in disabledRules) restoreDoubleDash(line)?.let { return it }
+        if (numbersMoved && Rule.LEADING_RUN !in disabledRules) restoreLeadingRun(line)?.let { return it }
         return repairPunctuation(line)
     }
 
@@ -740,7 +739,58 @@ internal object PlayerSubtitleRtlFix {
         }
     }
 
+    // --- Rule: displaced closing dash ---
+
+    /** "- - text" -> "- text -": the closing dash was stored at the front, next to the opening one. */
+    private fun restoreDoubleDash(line: CharSequence): LineRepair? {
+        val end = line.contentEnd()
+        if (end < 3 || !isDash(line[0])) return null
+        var second = 1
+        while (second < end && (line[second].isWhitespace() || isBidiControl(line[second]))) second++
+        if (second >= end || !isDash(line[second])) return null
+        if (hasDashAtBothEnds(line)) return null
+
+        val text = buildLike(line) {
+            appendSlice(line, second, end)
+            append(' ')
+            appendSlice(line, 0, 1)
+            if (line.endsWithCarriageReturn()) append(CARRIAGE_RETURN)
+        }
+        return LineRepair(text, listOf(Rule.DOUBLE_DASH))
+    }
+
     // --- Rule: leading run of punctuation and numbers ---
+
+    /**
+     * Moves a leading number (with its punctuation) to the end of the text. A line that already
+     * ends with a number keeps its leading one. Edge dashes of a "- text -" line stay in place.
+     */
+    private fun restoreLeadingRun(line: CharSequence): LineRepair? {
+        val end = line.contentEnd()
+        fun isEdge(c: Char) = c.isWhitespace() || isDash(c) || isBidiControl(c)
+        var coreStart = 0
+        while (coreStart < end && isEdge(line[coreStart])) coreStart++
+        var coreEnd = end
+        while (coreEnd > coreStart && isEdge(line[coreEnd - 1])) coreEnd--
+        if (coreStart == coreEnd || line[coreEnd - 1].isDigit()) return null
+
+        val framed = hasDashAtBothEnds(line)
+        val core = if (framed) line.subSequence(coreStart, coreEnd) else line
+        if (!startsWithNumber(core) || isPhoneLikeNumber(core)) return null
+        val moved = moveLeadingRunToEnd(core)
+        if (moved === core) return LineRepair(line)
+
+        val text = if (framed) {
+            buildLike(line) {
+                appendSlice(line, 0, coreStart)
+                append(moved)
+                appendSlice(line, coreEnd, line.length)
+            }
+        } else {
+            moved
+        }
+        return LineRepair(text, listOf(Rule.LEADING_RUN))
+    }
 
     /**
      * Moves the leading run of punctuation and numbers to the end. The chunks are reversed, each
@@ -825,6 +875,14 @@ internal object PlayerSubtitleRtlFix {
         isNumberSeparator(line[index]) && index > numberStart && index + 1 < line.length && line[index + 1].isDigit()
 
     private fun startsWithNumber(line: CharSequence): Boolean = leadingNumberEnd(line) != -1
+
+    /** A phone-style number: a dash inside and another hyphen right after it ("1-800-word"). */
+    private fun isPhoneLikeNumber(line: CharSequence): Boolean {
+        var start = 0
+        while (start < line.length && !line[start].isLetterOrDigit()) start++
+        val end = leadingNumberEnd(line)
+        return (start until end).any { isDash(line[it]) } && end < line.length && isDash(line[end])
+    }
 
     private fun startsWithHyphenatedNumber(line: CharSequence): Boolean {
         val end = leadingNumberEnd(line)
