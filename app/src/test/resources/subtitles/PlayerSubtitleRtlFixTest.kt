@@ -131,6 +131,16 @@ class PlayerSubtitleRtlFixTest {
         Case(".45-זה טוב", "זה טוב-45.", listOf(Rule.LEADING_RUN), numbersMoved = true),
         Case("?1990-2000 בערך", "בערך 1990-2000?", listOf(Rule.LEADING_RUN), numbersMoved = true),
 
+        // DOUBLE_DASH: the closing dash was stored next to the opening one
+        Case("- \u200F- 21 במאי, 2019", "- 21 במאי, 2019 -", listOf(Rule.DOUBLE_DASH)),
+        Case("-- שלום עולם --", "-- שלום עולם --", emptyList()),
+
+        // LEADING_RUN with edge dashes, and a leading number that is not moved
+        Case("- 2020 ,יום ראשון -", "- יום ראשון, 2020 -", listOf(Rule.LEADING_RUN), numbersMoved = true),
+        Case("- 10:30 בשעה -", "- בשעה 10:30 -", listOf(Rule.LEADING_RUN), numbersMoved = true),
+        Case("- 21 במאי, 2019 -", "- 21 במאי, 2019 -", emptyList(), numbersMoved = true),
+        Case("- 1-800-שירות -", "- 1-800-שירות -", emptyList(), numbersMoved = true),
+
         // NUMBERS_REVERSED: digit-reversed numbers, only in tracks detected as such
         Case("הבית נבנה ב-0691", "הבית נבנה ב-1960", listOf(Rule.NUMBERS_REVERSED), numbersReversed = true),
         Case("הבית נבנה ב-0691", "הבית נבנה ב-0691", emptyList()),
