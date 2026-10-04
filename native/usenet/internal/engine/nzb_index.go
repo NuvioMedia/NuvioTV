@@ -279,6 +279,9 @@ func (f *nzbCacheFill) indexed(files []*File) string {
 		if f.ctx != nil && f.ctx.Err() != nil {
 			return f.finish(false)
 		}
+		if file.damaged != nil {
+			return f.finish(false)
+		}
 		if err := file.loadSegments(); err != nil {
 			return f.finish(false)
 		}
