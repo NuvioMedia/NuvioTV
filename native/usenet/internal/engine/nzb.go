@@ -45,11 +45,13 @@ type File struct {
 	exact         bool
 	known         []int // sorted authoritative anchors; Range lookup is O(log segments).
 	store         *Store
+	damaged       error
 }
 
 const maxNZBBytes = 64 << 20
 
 var errNZBTooLarge = errors.New("NZB exceeds 64 MiB size limit")
+var errDamagedNZBFile = errors.New("NZB contains missing/duplicate segments or invalid article metadata")
 
 // Unlike LimitReader, crossing the bound returns an explicit error instead of
 // EOF. Probe one byte at the boundary so an exactly full document still works.
@@ -128,12 +130,8 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 			return nil, errors.New("NZB exceeds file limit")
 		}
 		var nf struct {
-			Subject  string `xml:"subject,attr"`
-			Segments []struct {
-				Number int    `xml:"number,attr"`
-				Bytes  int64  `xml:"bytes,attr"`
-				ID     string `xml:",chardata"`
-			} `xml:"segments>segment"`
+			Subject  string       `xml:"subject,attr"`
+			Segments []nzbSegment `xml:"segments>segment"`
 		}
 		if err := decoder.DecodeElement(&nf, &start); err != nil {
 			return nil, fmt.Errorf("invalid NZB file: %w", err)
@@ -159,7 +157,8 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 		for j, s := range nf.Segments {
 			id := strings.Trim(strings.TrimSpace(s.ID), "<>")
 			if s.Number != j+1 || id == "" || len(id) > 998 || strings.ContainsAny(id, "\r\n\x00<>") || s.Bytes <= 0 {
-				return nil, errors.New("NZB contains missing/duplicate segments or invalid article metadata")
+				f.markDamaged(nf.Segments[j:])
+				break
 			}
 			f.segments = append(f.segments, segment{id: id, wire: int64(s.Bytes)})
 			if s.Bytes > (1<<63-1)-f.prefix[j] {
@@ -167,7 +166,9 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 			}
 			f.prefix[j+1] = f.prefix[j] + int64(s.Bytes)
 		}
-		f.size = f.prefix[len(f.segments)]
+		if f.damaged == nil {
+			f.size = f.prefix[len(f.segments)]
+		}
 		files = append(files, f)
 	}
 	if len(files) == 0 {
@@ -279,6 +280,23 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 		diagnostic.Write = outcome
 	}
 	return parseNZBTraced(resp.Body, store, trace)
+}
+
+type nzbSegment struct {
+	Number int    `xml:"number,attr"`
+	Bytes  int64  `xml:"bytes,attr"`
+	ID     string `xml:",chardata"`
+}
+
+func (f *File) markDamaged(rest []nzbSegment) {
+	size := f.prefix[len(f.segments)]
+	for _, s := range rest {
+		if s.Bytes > 0 && s.Bytes <= (1<<63-1)-size {
+			size += s.Bytes
+		}
+	}
+	f.damaged, f.size = errDamagedNZBFile, size
+	f.segments, f.prefix = nil, []int64{0}
 }
 
 func (f *File) Size() int64 { f.mu.RLock(); defer f.mu.RUnlock(); return f.size }
@@ -485,6 +503,9 @@ func (r *FileReader) ReadAt(p []byte, off int64) (int, error) {
 	}
 	if off < 0 {
 		return 0, errors.New("negative file offset")
+	}
+	if r.f.damaged != nil {
+		return 0, r.f.damaged
 	}
 	if err := r.f.loadSegments(); err != nil {
 		return 0, err
