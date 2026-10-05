@@ -434,6 +434,7 @@ class UsenetSidecar private constructor(private val context: Context) {
             require(record.getInt("protocol") == 1)
             val port = record.getInt("port"); require(port in 1..65535)
             endpoint = "http://127.0.0.1:$port"; token = secret
+            UsenetEngineUrls.remember(port)
             trace?.mark("sidecar_ready")
         } catch (e: Exception) { ready.cancel(true); stopLocked(); throw UsenetPreparationException("Usenet engine could not start", UsenetPreparationException.Scope.ENGINE) }
     }
@@ -499,7 +500,7 @@ class UsenetSidecar private constructor(private val context: Context) {
         fun peek(): UsenetSidecar? = instance
         fun onAppForegrounded() { appForeground = true }
         fun stopIdleOnBackground() { appForeground = false; instance?.onAppBackgrounded() }
-        fun isSessionUrl(url: String): Boolean = url.startsWith("http://127.0.0.1:") && "/stream/" in url
-        fun isSubtitleUrl(url: String): Boolean = url.startsWith("http://127.0.0.1:") && "/subtitle/" in url
+        fun isSessionUrl(url: String): Boolean = UsenetEngineUrls.isSession(url)
+        fun isSubtitleUrl(url: String): Boolean = UsenetEngineUrls.isSubtitle(url)
     }
 }
