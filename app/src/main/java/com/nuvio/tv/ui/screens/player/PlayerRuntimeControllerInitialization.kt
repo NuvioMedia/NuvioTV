@@ -151,6 +151,25 @@ private fun PlayerRuntimeController.disposeExoPlayerBeforeRebuild() {
     playbackSpeedAwareAudioSink = null
 }
 
+private fun PlayerRuntimeController.applyPendingSeeksAtReady(player: ExoPlayer) {
+    tryApplyPendingResumeProgress(player)
+    _uiState.value.pendingSeekPosition?.let { position ->
+        player.seekTo(position)
+        if (NuvioExoPlayerPerformanceHelper.enabled) {
+            seekBufferingUiDeferred = true
+            seekBufferingUiJob?.cancel()
+            seekBufferingUiJob = scope.launch {
+                delay(seekBufferingUiDelayMs)
+                seekBufferingUiDeferred = false
+                if (pendingSeekFlush) {
+                    _uiState.update { it.copy(isBuffering = true) }
+                }
+            }
+        }
+        _uiState.update { it.copy(pendingSeekPosition = null) }
+    }
+}
+
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.initializePlayer(
     url: String,
@@ -1358,6 +1377,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                     if (_uiState.value.postPlayDismissedForCurrentEpisode) {
                                         _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
                                     }
+                                    applyPendingSeeksAtReady(this@apply)
                                     if (action.setPlayWhenReady) {
                                         playWhenReady = true
                                     }
@@ -1398,22 +1418,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 }
                                 PlayerStartupPlaybackPolicy.ReadyAction.None -> Unit
                             }
-                            tryApplyPendingResumeProgress(this@apply)
-                            _uiState.value.pendingSeekPosition?.let { position ->
-                                seekTo(position)
-                                if (NuvioExoPlayerPerformanceHelper.enabled) {
-                                    seekBufferingUiDeferred = true
-                                    seekBufferingUiJob?.cancel()
-                                    seekBufferingUiJob = scope.launch {
-                                        delay(seekBufferingUiDelayMs)
-                                        seekBufferingUiDeferred = false
-                                        if (pendingSeekFlush) {
-                                            _uiState.update { it.copy(isBuffering = true) }
-                                        }
-                                    }
-                                }
-                                _uiState.update { it.copy(pendingSeekPosition = null) }
-                            }
+                            applyPendingSeeksAtReady(this@apply)
                             tryAutoSelectPreferredSubtitleFromAvailableTracks()
                             if (!NuvioExoPlayerPerformanceHelper.shouldGuardTrackRebuild() || !hasRenderedFirstFrame) {
                                 trackSelectionParameters = trackSelectionParameters.buildUpon().build()
