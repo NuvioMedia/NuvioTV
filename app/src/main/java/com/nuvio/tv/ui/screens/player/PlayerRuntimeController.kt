@@ -627,6 +627,7 @@ class PlayerRuntimeController(
     internal val audioDisabledForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal val preferFfmpegAudioStreamUrls: MutableSet<String> = mutableSetOf()
     internal val tunnelingDisabledStreamUrls: MutableSet<String> = mutableSetOf()
+    internal val passthroughOpenRetry = PassthroughOpenRetryPolicy()
     internal var currentAudioPassthroughPolicy: com.nuvio.tv.core.player.AudioPassthroughPolicy? = null
     internal var surroundResolveInputs: SurroundResolveInputs? = null
     internal var lastAppliedSurroundResolve: SurroundResolveResult? = null
