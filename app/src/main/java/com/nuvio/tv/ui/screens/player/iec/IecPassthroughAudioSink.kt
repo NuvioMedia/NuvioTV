@@ -56,6 +56,9 @@ internal class IecPassthroughAudioSink(
     private var lastHealthUnderruns: Int = -1
     private var tunnelingRequested: Boolean = false
     private val iecReadyDelivered = AtomicBoolean(false)
+
+    @Volatile
+    private var hbrAnsweredBeforeProbe: Boolean = false
     private val timestampClock = IecAudioTimestampClock(nanoTime)
 
     init {
@@ -74,15 +77,20 @@ internal class IecPassthroughAudioSink(
     }
 
     override fun getFormatSupport(format: Format): Int {
-        if (!iecFailedThisSession && isHbrPassthrough(format) && iecAvailable(format)) {
-            return AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
-        }
+        if (hbrIecRoute(format)) return AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
         return super.getFormatSupport(format)
     }
 
     override fun supportsFormat(format: Format): Boolean {
-        if (!iecFailedThisSession && isHbrPassthrough(format) && iecAvailable(format)) return true
+        if (hbrIecRoute(format)) return true
         return super.supportsFormat(format)
+    }
+
+    private fun hbrIecRoute(format: Format): Boolean {
+        if (iecFailedThisSession || !isHbrPassthrough(format)) return false
+        if (iecAvailable(format)) return true
+        if (hbrIecEnabled && !trackFactory.iec61937Ready()) hbrAnsweredBeforeProbe = true
+        return false
     }
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
@@ -330,6 +338,7 @@ internal class IecPassthroughAudioSink(
     }
 
     private fun deliverIecReady() {
+        if (!hbrAnsweredBeforeProbe) return
         if (!iecReadyDelivered.compareAndSet(false, true)) return
         onIecBecameReady?.invoke()
     }
