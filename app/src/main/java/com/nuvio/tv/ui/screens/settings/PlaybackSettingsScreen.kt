@@ -149,6 +149,7 @@ fun PlaybackSettingsContent(
     val iecProbeChecking = stringResource(R.string.audio_surround_iec_probe_checking)
     val iecProbeAvailable = stringResource(R.string.audio_surround_iec_probe_available)
     val iecProbeUnavailable = stringResource(R.string.audio_surround_iec_probe_unavailable)
+    val tunnelStallsForgotten = stringResource(R.string.audio_forget_tunnel_stalls_done)
     LaunchedEffect(Unit) {
         viewModel.iecProbeFeedback.collect { feedback ->
             val message = when (feedback) {
@@ -347,6 +348,16 @@ fun PlaybackSettingsContent(
                     coroutineScope.launch { viewModel.setRememberAudioDelayPerDevice(enabled) }
                 },
                 onSetTunnelingEnabled = { enabled -> coroutineScope.launch { viewModel.setTunnelingEnabled(enabled) } },
+                onForgetTunnelStalls = {
+                    coroutineScope.launch {
+                        viewModel.forgetTunnelStalls()
+                        android.widget.Toast.makeText(
+                            iecProbeContext,
+                            tunnelStallsForgotten,
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
                 onSetForceOpticalPassthrough = { enabled -> coroutineScope.launch { viewModel.setForceOpticalPassthrough(enabled) } },
                 onResetIecProbe = { viewModel.resetIecPassthroughProbe() },
                 onSetUseSystemPassthrough = { enabled -> coroutineScope.launch { viewModel.setUseSystemPassthrough(enabled) } },

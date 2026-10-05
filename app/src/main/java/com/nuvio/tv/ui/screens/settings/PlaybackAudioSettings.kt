@@ -40,6 +40,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -63,6 +64,19 @@ import com.nuvio.tv.data.local.SurroundFormatMode
 import com.nuvio.tv.data.local.SurroundChannelTarget
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.screens.player.PlayerTunnelAvSyncPolicy
+
+internal fun rememberedTunnelStallClasses(settings: PlayerSettings): Set<String> =
+    settings.tunnelDeadAudioClasses + PlayerTunnelAvSyncPolicy.deadAudioClasses
+
+internal fun tunnelStallSubtitle(
+    classes: Set<String>,
+    remembered: (String) -> String,
+    nothingRemembered: String
+): String {
+    val labels = PlayerTunnelAvSyncPolicy.memoLabels(classes)
+    return if (labels.isEmpty()) nothingRemembered else remembered(labels.joinToString(", "))
+}
 
 internal fun LazyListScope.trailerAndAudioSettingsItems(
     playerSettings: PlayerSettings,
@@ -85,6 +99,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetSkipSilence: (Boolean) -> Unit,
     onSetRememberAudioDelayPerDevice: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
+    onForgetTunnelStalls: () -> Unit,
     onSetForceOpticalPassthrough: (Boolean) -> Unit,
     onResetIecProbe: () -> Unit,
     onSetUseSystemPassthrough: (Boolean) -> Unit,
@@ -275,6 +290,31 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                 onCheckedChange = onSetTunnelingEnabled,
                 onFocused = onItemFocused,
                 enabled = enabled && playerSettings.isTunnelingCompatible
+            )
+        }
+
+        item(key = "audio_forget_tunnel_stalls") {
+            var stallMemoCleared by remember { mutableStateOf(false) }
+            val stallClasses = if (stallMemoCleared) {
+                playerSettings.tunnelDeadAudioClasses
+            } else {
+                rememberedTunnelStallClasses(playerSettings)
+            }
+            val context = LocalContext.current
+            NavigationSettingsItem(
+                icon = Icons.Default.Tune,
+                title = stringResource(R.string.audio_forget_tunnel_stalls_title),
+                subtitle = tunnelStallSubtitle(
+                    stallClasses,
+                    remembered = { formats -> context.getString(R.string.audio_forget_tunnel_stalls_sub, formats) },
+                    nothingRemembered = stringResource(R.string.audio_forget_tunnel_stalls_none)
+                ),
+                onClick = {
+                    stallMemoCleared = true
+                    onForgetTunnelStalls()
+                },
+                onFocused = onItemFocused,
+                enabled = enabled && stallClasses.isNotEmpty()
             )
         }
 

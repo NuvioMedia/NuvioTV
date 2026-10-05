@@ -1196,6 +1196,13 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun clearTunnelDeadAudioClasses() {
+        store().edit { prefs ->
+            prefs.remove(tunnelDeadAudioClassesKey)
+            prefs.remove(tunnelDeadAudioSignatureKey)
+        }
+    }
+
     suspend fun setForceOpticalPassthrough(enabled: Boolean) {
         store().edit { prefs ->
             prefs[forceOpticalPassthroughKey] = enabled

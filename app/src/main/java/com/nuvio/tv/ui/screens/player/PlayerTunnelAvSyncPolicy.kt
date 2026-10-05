@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import androidx.media3.common.MimeTypes
 import com.nuvio.tv.core.player.SurroundFormatResolver
 
 internal object PlayerTunnelAvSyncPolicy {
@@ -40,6 +41,34 @@ internal object PlayerTunnelAvSyncPolicy {
     fun resetMemo() {
         deadAudioClasses.clear()
         seededSignature = null
+    }
+
+    private val CLASS_LABELS: List<Pair<String, String>> = listOf(
+        MimeTypes.AUDIO_AC3 to "AC-3",
+        MimeTypes.AUDIO_E_AC3 to "E-AC-3",
+        MimeTypes.AUDIO_E_AC3_JOC to "E-AC-3 JOC",
+        MimeTypes.AUDIO_AC4 to "AC-4",
+        MimeTypes.AUDIO_TRUEHD to "TrueHD",
+        MimeTypes.AUDIO_DTS to "DTS",
+        MimeTypes.AUDIO_DTS_HD to "DTS-HD",
+        MimeTypes.AUDIO_DTS_EXPRESS to "DTS Express",
+        MimeTypes.AUDIO_DTS_X to "DTS:X",
+        MimeTypes.AUDIO_AAC to "AAC",
+        MimeTypes.AUDIO_MPEG to "MP3",
+        MimeTypes.AUDIO_OPUS to "Opus",
+        MimeTypes.AUDIO_FLAC to "FLAC",
+    )
+
+    fun memoLabels(classes: Collection<String>): List<String> {
+        val present = classes.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val known = CLASS_LABELS.filter { (mime, _) -> mime in present }.map { it.second }
+        val knownMimes = CLASS_LABELS.map { it.first }.toSet()
+        val other = present
+            .filter { it !in knownMimes && it != PlaybackSpeedAwareAudioSink.TUNNEL_AUDIO_CLASS_PCM }
+            .map { it.substringAfter('/').substringBefore(';').uppercase() }
+            .sorted()
+        val pcm = if (PlaybackSpeedAwareAudioSink.TUNNEL_AUDIO_CLASS_PCM in present) listOf("PCM") else emptyList()
+        return (known + other + pcm).distinct()
     }
 
     const val MEMO_CONFIRM_SAMPLES = 20

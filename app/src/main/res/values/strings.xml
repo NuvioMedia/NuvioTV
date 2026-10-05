@@ -810,6 +810,10 @@
     <string name="audio_enable_downmix_subtitle">Uses the FFmpeg downmix path. Requires Prefer app decoders (FFmpeg). When disabled, audio follows the previous Android/device path.</string>
     <string name="audio_tunneled">Tunneled Playback</string>
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
+    <string name="audio_forget_tunnel_stalls_title">Forget Tunnel Stalls</string>
+    <string name="audio_forget_tunnel_stalls_sub">Tunneling is skipped for %1$s after the clock stalled. Clear this to try tunneling again on the next video.</string>
+    <string name="audio_forget_tunnel_stalls_none">No tunnel stalls remembered.</string>
+    <string name="audio_forget_tunnel_stalls_done">Tunnel stalls cleared. The next video will try tunneling again.</string>
     <string name="audio_use_system_passthrough">System Passthrough</string>
     <string name="audio_use_system_passthrough_sub">Sends TrueHD and DTS-HD to your receiver through Android (System path) instead of Nuvio (IEC path). Use this if lossless formats produce noise, drift, or no audio.</string>
     <string name="audio_force_optical_passthrough">Force AC-3 Transcoding (Optical/SPDIF)</string>
