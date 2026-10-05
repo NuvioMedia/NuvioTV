@@ -226,7 +226,8 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("X-Usenet-Failure", "provider")
 			msg = err.Error()
 		} else if errors.Is(err, ErrCompressedRAR) || errors.Is(err, ErrEncryptedRAR) || errors.Is(err, ErrCompressed7z) ||
-			errors.Is(err, Err7zPasswordMissing) || errors.Is(err, Err7zWrongPassword) {
+			errors.Is(err, Err7zPasswordMissing) || errors.Is(err, Err7zWrongPassword) ||
+			errors.Is(err, ErrRARPasswordMissing) || errors.Is(err, ErrRARWrongPassword) {
 			msg = err.Error()
 		} else if !strings.ContainsAny(err.Error(), "<>@") && !strings.Contains(err.Error(), "://") {
 			msg = err.Error()
