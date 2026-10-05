@@ -72,6 +72,9 @@ func (n *nestedRAR) blocks(ctx context.Context, k int, visit func(b rarBlock) bo
 		if err != nil {
 			return err
 		}
+		if b.crypt != nil || b.headerCrypt != nil {
+			return ErrEncryptedRAR // Encrypted RAR inside a 7z is not supported.
+		}
 		if b.end || !visit(b) || b.after {
 			return nil
 		}
@@ -120,7 +123,7 @@ func selectNestedRAR(ctx context.Context, vols []*Content, index *int, consider 
 			}
 			c := &Content{Name: b.name, Size: b.unpacked, nested: n, complete: true}
 			start, header := k, b
-			c.mapLater = func(ctx context.Context) error { return c.mapNested(ctx, start, header) }
+			c.prepare = func(ctx context.Context) error { return c.mapNested(ctx, start, header) }
 			matched, err := consider(c, *index, "")
 			*index++
 			if err != nil || matched {

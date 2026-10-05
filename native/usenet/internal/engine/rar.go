@@ -20,7 +20,7 @@ import (
 )
 
 var ErrCompressedRAR = errors.New("compressed RAR is not supported; use a Stored/uncompressed release")
-var ErrEncryptedRAR = errors.New("encrypted RAR is not supported")
+var ErrEncryptedRAR = errors.New("this RAR encryption method is not supported")
 var errNotRAR = errors.New("not a supported RAR archive")
 
 type rarBlock struct {
@@ -32,6 +32,9 @@ type rarBlock struct {
 	main, template                      bool
 	mainLayout                          rarMainLayout
 	packedWidth                         int
+	crypt                               *rarCrypt // Encrypted file data.
+	headerCrypt                         *rarCrypt // Following headers are encrypted (-hp).
+	headerPrefix                        int64     // On-disk IV/salt before an encrypted header.
 }
 
 type rarMainLayout struct {
@@ -42,9 +45,34 @@ type rarMainLayout struct {
 type rarVolume struct {
 	file     *File
 	version  int
-	start    int64
+	start    int64 // First header to walk: past any RAR5 archive encryption header.
 	template bool
 	layout   rarMainLayout
+	headers  *rarHeaderCrypt
+}
+
+// enableHeaderCrypt switches the volume to encrypted headers after its RAR5
+// archive encryption header or RAR4 -hp main header.
+func (v *rarVolume) enableHeaderCrypt(ctx context.Context, c *rarCrypt) error {
+	h, err := newRARHeaderCrypt(ctx, c, v.file.password)
+	if err != nil {
+		return err
+	}
+	v.headers = h
+	return nil
+}
+
+// first returns the main header, enabling header decryption on the way.
+func (v *rarVolume) first(ctx context.Context) (rarBlock, error) {
+	b, err := v.block(ctx, v.start)
+	if err == nil && b.headerCrypt != nil && !b.main {
+		if err = v.enableHeaderCrypt(ctx, b.headerCrypt); err != nil {
+			return b, err
+		}
+		v.start = b.next
+		b, err = v.block(ctx, v.start)
+	}
+	return b, err
 }
 
 func openRAR(ctx context.Context, f *File) (*rarVolume, error) {
@@ -83,10 +111,42 @@ func (v *rarVolume) block(ctx context.Context, pos int64) (rarBlock, error) {
 	if pos >= v.file.Size() {
 		return rarBlock{end: true}, nil
 	}
+	if v.headers != nil {
+		return v.encryptedBlock(ctx, r, pos)
+	}
 	if v.version == 4 {
 		return rar4Block(r, v.file.Size(), pos)
 	}
 	return rar5Block(r, v.file.Size(), pos)
+}
+
+// encryptedBlock parses a -hp header in plaintext coordinates, then moves its
+// offsets past the IV/salt prefix and the AES padding stored on disk.
+func (v *rarVolume) encryptedBlock(ctx context.Context, r io.ReaderAt, pos int64) (rarBlock, error) {
+	view, prefix, err := v.headers.view(ctx, r, pos)
+	if err != nil {
+		return rarBlock{}, err
+	}
+	var b rarBlock
+	if v.version == 4 {
+		b, err = rar4Block(view, 1<<62, 0)
+	} else {
+		b, err = rar5Block(view, 1<<62, 0)
+	}
+	if err != nil {
+		if strings.Contains(err.Error(), "CRC mismatch") || strings.Contains(err.Error(), "header size") || strings.Contains(err.Error(), "header length") {
+			// Decrypted garbage: the password is wrong.
+			return b, ErrRARWrongPassword
+		}
+		return b, err
+	}
+	b.data = pos + prefix + roundUp16(b.data)
+	b.next = b.data + b.packed
+	b.headerPrefix = prefix
+	if b.packed < 0 || b.packed > v.file.Size()-b.data {
+		return b, errors.New("RAR data exceeds volume")
+	}
+	return b, nil
 }
 
 func rar4Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
@@ -121,7 +181,7 @@ func rar4Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 		b.packed = int64(binary.LittleEndian.Uint32(h[7:11]))
 	}
 	if kind == 0x73 && flags&0x80 != 0 {
-		return b, ErrEncryptedRAR
+		b.headerCrypt = &rarCrypt{version: 4}
 	}
 	if kind == 0x7b {
 		b.end = true
@@ -135,9 +195,6 @@ func rar4Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 		b.before = flags&1 != 0
 		b.after = flags&2 != 0
 		b.directory = flags&0xe0 == 0xe0
-		if flags&4 != 0 {
-			return b, ErrEncryptedRAR
-		}
 		if h[25] != 0x30 {
 			return b, ErrCompressedRAR
 		}
@@ -163,6 +220,14 @@ func rar4Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 			name = name[:j]
 		}
 		b.name = string(name)
+		if flags&4 != 0 {
+			// RAR 3.x AES needs the salt; older RAR 2.x encryption is not supported.
+			saltPos := namePos + nameLen
+			if flags&0x400 == 0 || len(h) < saltPos+8 {
+				return b, ErrEncryptedRAR
+			}
+			b.crypt = &rarCrypt{version: 4, salt: append([]byte(nil), h[saltPos:saltPos+8]...)}
+		}
 	}
 	if b.packed < 0 || b.packed > volumeSize-b.data {
 		return b, errors.New("RAR4 data exceeds volume")
@@ -244,7 +309,17 @@ func rar5Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 		return b, errors.New("RAR5 data exceeds volume")
 	}
 	if kind == 4 {
-		return b, ErrEncryptedRAR
+		// Archive encryption header: every following header is encrypted.
+		if x.num() != 0 {
+			return b, ErrEncryptedRAR
+		}
+		ef := x.num()
+		c, err := rar5CryptFields(&x, ef&1 != 0, false)
+		if err != nil {
+			return b, err
+		}
+		b.headerCrypt = c
+		return b, x.err
 	}
 	if kind == 5 {
 		b.end = true
@@ -300,11 +375,21 @@ func rar5Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 				length := e.num()
 				start := e.pos
 				typ := e.num()
-				if typ == 1 {
-					return b, ErrEncryptedRAR
-				}
 				if length > uint64(len(e.b)-start) || length == 0 {
 					return b, errors.New("invalid RAR5 extra record")
+				}
+				if typ == 1 {
+					// File encryption record: AES-256 version 0 only.
+					rec := vintReader{b: e.b[e.pos : start+int(length)]}
+					if rec.num() != 0 {
+						return b, ErrEncryptedRAR
+					}
+					ef := rec.num()
+					c, err := rar5CryptFields(&rec, ef&1 != 0, true)
+					if err != nil {
+						return b, err
+					}
+					b.crypt = c
 				}
 				e.pos = start + int(length)
 			}
@@ -314,6 +399,33 @@ func rar5Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 		}
 	}
 	return b, x.err
+}
+
+// rar5CryptFields reads KDF count, salt, optional IV and password check.
+func rar5CryptFields(x *vintReader, hasCheck, hasIV bool) (*rarCrypt, error) {
+	need := 1 + 16
+	if hasIV {
+		need += 16
+	}
+	if hasCheck {
+		need += 12
+	}
+	if x.err != nil || len(x.b)-x.pos < need {
+		return nil, errors.New("invalid RAR5 encryption record")
+	}
+	c := &rarCrypt{version: 5, kdf: int(x.b[x.pos])}
+	x.pos++
+	c.salt = append([]byte(nil), x.b[x.pos:x.pos+16]...)
+	x.pos += 16
+	if hasIV {
+		c.iv = append([]byte(nil), x.b[x.pos:x.pos+16]...)
+		x.pos += 16
+	}
+	if hasCheck {
+		c.check = append([]byte(nil), x.b[x.pos:x.pos+12]...)
+		x.pos += 12
+	}
+	return c, nil
 }
 
 type extent struct {
@@ -357,7 +469,7 @@ func (c *rarCursor) resolve(ctx context.Context) (*rarVolume, error) {
 			return nil, e
 		}
 		if v.version == 5 {
-			b, e := v.block(ctx, v.start)
+			b, e := v.first(ctx)
 			if e != nil {
 				return nil, e
 			}
@@ -390,6 +502,19 @@ func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 		b, e := c.volume.block(ctx, c.pos)
 		if e != nil {
 			return b, nil, e
+		}
+		if b.headerCrypt != nil {
+			if e := c.volume.enableHeaderCrypt(ctx, b.headerCrypt); e != nil {
+				return b, nil, e
+			}
+			if !b.main {
+				// RAR5 archive encryption header: the main header follows.
+				if b.next <= c.pos {
+					return b, nil, errors.New("RAR header does not advance")
+				}
+				c.pos, c.volume.start = b.next, b.next
+				continue
+			}
 		}
 		f := c.volume.file
 		b.version = c.volume.version
@@ -436,14 +561,23 @@ type Content struct {
 	cursor       *rarCursor
 	complete     bool
 	predicted    *rarPrediction
-	aes          *sevenZipCipher             // Stored 7z AES: parts hold ciphertext.
+	aes          *cbcCipher                  // Stored AES (7z or RAR): parts hold ciphertext.
+	padded       bool                        // Encrypted RAR: packed data is Size rounded up to 16.
 	pending      map[*File]int64             // Predicted 7z volume sizes not yet confirmed.
 	unusable     error                       // Listed 7z entry that cannot be streamed.
-	mapLater     func(context.Context) error // Lays out a nested RAR file once it is selected.
+	prepare      func(context.Context) error // Selected-only work: nested layout, RAR keys.
 	nested       *nestedRAR                  // RAR set inside a 7z: children map onto its volumes.
 	children     []nestedChild
 	layoutNS     atomic.Int64
 	layoutWaitNS atomic.Int64
+}
+
+// payloadSize is the packed byte count of the selected data in its volumes.
+func (c *Content) payloadSize() int64 {
+	if c.padded {
+		return roundUp16(c.Size)
+	}
+	return c.Size
 }
 
 func (c *Content) extend(ctx context.Context, off int64) error {
@@ -465,10 +599,10 @@ func (c *Content) extend(ctx context.Context, off int64) error {
 			return errors.New("RAR continuation does not match selected file")
 		}
 		start := last.start + last.length
-		if b.packed <= 0 || b.packed > c.Size-start {
+		if b.packed <= 0 || b.packed > c.payloadSize()-start {
 			return errors.New("invalid RAR continuation size")
 		}
-		if !b.after && start+b.packed != c.Size {
+		if !b.after && start+b.packed != c.payloadSize() {
 			return errors.New("incomplete stored RAR data")
 		}
 		c.mu.Lock()
@@ -539,9 +673,14 @@ func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) {
 			main := b.mainLayout
 			delta = int64(max(main.volumeWidth, rarVintLen(int64(i))) - main.volumeWidth)
 			delta += int64(max(main.sizeWidth, rarVintLen(main.size+delta)) - main.sizeWidth)
+			if b.headerPrefix > 0 {
+				// An encrypted main header is stored padded to the AES block.
+				plain := 4 + int64(main.sizeWidth) + main.size
+				delta = roundUp16(plain+delta) - roundUp16(plain)
+			}
 		}
 		packed := b.packed - delta
-		if packed <= 0 || packed >= c.Size-start ||
+		if packed <= 0 || packed >= c.payloadSize()-start ||
 			(b.version == 5 && b.packedWidth == rarVintLen(b.packed) && rarVintLen(packed) != b.packedWidth) {
 			return
 		}
@@ -561,7 +700,7 @@ func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) {
 	last, file, err := lastCursor.next(ctx)
 	if err != nil || ctx.Err() != nil || last.version != b.version || !last.before || last.after ||
 		last.directory || last.name != c.Name || last.unpacked != c.Size ||
-		last.packed <= 0 || last.packed != c.Size-start {
+		last.packed <= 0 || last.packed != c.payloadSize()-start {
 		return
 	}
 	parts = append(parts, extent{file, last.data, last.packed, start})
