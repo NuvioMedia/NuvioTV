@@ -8,6 +8,7 @@ import (
 	"io"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ type Selection struct {
 	FileMustInclude string `json:"fileMustInclude,omitempty"`
 	Season          int    `json:"season,omitempty"`
 	Episode         int    `json:"episode,omitempty"`
+	multiEpisode    bool
 }
 
 var errNoMatchingVideo = errors.New("no video matches the addon's file/episode selector")
@@ -27,6 +29,57 @@ var errNoMatchingVideo = errors.New("no video matches the addon's file/episode s
 // A fallback is only considered after strict matching failed. Any remaining
 // explicit SxxExx/NxNN marker therefore prevents guessing a different episode.
 var episodeMarkerRE = regexp.MustCompile(`(?i)(?:s\d+[ ._-]*e\d+|(?:^|\D)\d+x\d+)`)
+
+var multiEpisodeREs = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)s0*(\d{1,4})[ ._-]*e0*(\d{1,4})`),
+	regexp.MustCompile(`(?i)(?:^|\D)0*(\d{1,4})x0*(\d{1,4})`),
+}
+
+func multiEpisodeMatch(name string, season, episode int) bool {
+	digit := func(b byte) bool { return b >= '0' && b <= '9' }
+	letter := func(b byte) bool { return b|0x20 >= 'a' && b|0x20 <= 'z' && b|0x20 != 'e' && b|0x20 != 'v' }
+	name = name[strings.LastIndexAny(name, "/\\")+1:]
+	for _, re := range multiEpisodeREs {
+		for _, m := range re.FindAllStringSubmatchIndex(name, -1) {
+			if n, _ := strconv.Atoi(name[m[2]:m[3]]); n != season {
+				continue
+			}
+			rest := name[m[5]:]
+			if rest != "" && digit(rest[0]) {
+				continue
+			}
+			previous, _ := strconv.Atoi(name[m[4]:m[5]])
+			for {
+				i := 0
+				for i < len(rest) && strings.IndexByte(" ._-", rest[i]) >= 0 {
+					i++
+				}
+				sep, j := rest[:i], i
+				marked := j < len(rest) && rest[j]|0x20 == 'e'
+				if marked {
+					j++
+				}
+				k := j
+				for k < len(rest) && k-j < 4 && digit(rest[k]) {
+					k++
+				}
+				if k == j || (k < len(rest) && (digit(rest[k]) || letter(rest[k]))) {
+					break
+				}
+				ranged := strings.Contains(sep, "-")
+				if !marked && sep != "-" {
+					break
+				}
+				next, _ := strconv.Atoi(rest[j:k])
+				if next == episode || ranged && previous < episode && episode < next && next-previous <= 30 {
+					return true
+				}
+				previous, rest = next, rest[k:]
+			}
+		}
+	}
+	return false
+}
 
 func (s Selection) episodeOnly() bool {
 	return s.Episode > 0 && s.FileIdx == nil && s.FileMustInclude == ""
@@ -96,7 +149,7 @@ func (s Selection) matcher() (func(string, int) (bool, error), error) {
 			return matched, nil
 		}
 		if episodeRE != nil {
-			return episodeRE.MatchString(name), nil
+			return episodeRE.MatchString(name) || s.multiEpisode && multiEpisodeMatch(name, s.Season, s.Episode), nil
 		}
 		return isVideo(name) && !strings.Contains(strings.ToLower(name), "sample"), nil
 	}, nil
@@ -115,6 +168,10 @@ func sniff(ctx context.Context, f *File) ([]byte, error) {
 func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
 	c, err := selectContent(ctx, files, s, false)
 	if err == errNoMatchingVideo && s.episodeOnly() {
+		s.multiEpisode = true
+		if c, err = selectContent(ctx, files, s, false); err != errNoMatchingVideo {
+			return c, err
+		}
 		// Only ambiguous episode names need a full inventory. Strict matches
 		// keep the lazy RAR startup path, without probing continuation volumes.
 		return selectContent(ctx, files, s, true)
