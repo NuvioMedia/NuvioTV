@@ -46,6 +46,7 @@ internal object PlayerTunnelAvSyncPolicy {
 
     data class Input(
         val isTunnelingActive: Boolean,
+        val isTunnelingApplied: Boolean,
         val hasVideoTrack: Boolean,
         val isReady: Boolean,
         val playWhenReady: Boolean,
@@ -78,7 +79,9 @@ internal object PlayerTunnelAvSyncPolicy {
     )
 
     fun evaluate(input: Input): Result {
-        if (!input.isTunnelingActive || !input.hasVideoTrack || input.tunnelingAlreadyDisarmed) {
+        if (!input.isTunnelingActive || !input.isTunnelingApplied || !input.hasVideoTrack ||
+            input.tunnelingAlreadyDisarmed
+        ) {
             return Result(Decision.Stop, 0L, 0L)
         }
         if (!input.isReady || !input.playWhenReady || input.userPausedManually) {
