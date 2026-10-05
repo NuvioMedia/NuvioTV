@@ -182,7 +182,7 @@ and source fallback take over. Diagnostics include `filledArticles`,
 ## Archives and selection
 
 RAR resolution is lazy for strict file/episode matches. Stored RAR4 and RAR5 entries map directly to
-underlying NNTP-backed extents. Compressed and encrypted RAR entries are rejected.
+underlying NNTP-backed extents. Compressed RAR entries are rejected.
 The engine skips unselected packed data arithmetically and fetches only article
 bodies containing required headers. It returns the selected entry before scanning
 its continuation volumes. Near a volume boundary it resolves and primes the
@@ -219,6 +219,22 @@ sets, other main-header extras and incompatible final remainders use serial
 discovery. The final header is always parsed, since its packed-size
 width and metadata may differ. Selection of unrequested entries stays serial so
 season-pack traversal preserves the cursor position.
+
+### Password-protected RAR
+
+Stored RAR4 (AES-128) and RAR5 (AES-256) entries are streamed with the NZB
+`<head><meta type="password">`, with or without encrypted headers (`-hp`). A
+file's data is one AES-CBC stream from its first part's IV that continues across
+volumes, so it maps onto volume extents like plaintext data (packed sizes are
+rounded up to the AES block) and is decrypted per read, keeping seeks random
+access. With `-hp`, RAR5 headers carry a 16-byte IV under the key of each
+volume's encryption header and RAR4 headers an 8-byte salt; offsets account for
+that prefix and the block padding, including continuation prediction past the
+RAR5 volume-index width change. Keys are derived once per salt (PBKDF2-HMAC-SHA256
+for RAR5, 2^18 SHA-1 rounds for RAR4). A wrong password is detected from the RAR5
+check value, from undecryptable `-hp` headers, or from the decrypted container
+signature. RAR 2.x encryption and encrypted RAR sets nested inside a 7z are
+rejected.
 
 ### 7z archives
 
