@@ -58,6 +58,9 @@ object SurroundFormatResolver {
 
         if (!manualMode && forceOpticalActive) return Resolution.INERT
 
+        val autoOnArc = !manualMode && routeIsHdmiArc
+        val maxPcmChannels = if (autoOnArc) 2 else rawMaxPcmChannels
+
         val policy = if (manualMode) {
             AudioPassthroughPolicy(
                 allowAc3 = allowAc3,
@@ -70,19 +73,22 @@ object SurroundFormatResolver {
             )
         } else if (direct == null) {
             AudioPassthroughPolicy(
+                allowTrueHd = !autoOnArc,
+                allowDtsHd = !autoOnArc,
                 softwareDecodersAvailable = softwareDecodersAvailable,
                 learnedDeniedGroups = learnedDeniedGroups
             )
         } else {
             val dtsHdAllowed = when {
+                autoOnArc -> direct.dts && !direct.dtsHd
                 direct.dtsHd -> true
-                direct.dts -> !(rawMaxPcmChannels != null && rawMaxPcmChannels > 2)
+                direct.dts -> !(maxPcmChannels != null && maxPcmChannels > 2)
                 else -> false
             }
             AudioPassthroughPolicy(
                 allowAc3 = direct.ac3,
                 allowEac3 = direct.eac3,
-                allowTrueHd = direct.trueHd,
+                allowTrueHd = direct.trueHd && !autoOnArc,
                 allowDts = direct.dts,
                 allowDtsHd = dtsHdAllowed,
                 softwareDecodersAvailable = softwareDecodersAvailable,
@@ -95,18 +101,18 @@ object SurroundFormatResolver {
         val transcodePreferred = when {
             !anythingDenied -> false
             manualMode -> manualTranscodePreferred
-            rawMaxPcmChannels != null && rawMaxPcmChannels > 2 -> false
-            rawMaxPcmChannels == 2 -> direct?.ac3 == true
-            rawMaxPcmChannels == null && routeIsHdmiArc -> direct?.ac3 == true
+            maxPcmChannels != null && maxPcmChannels > 2 -> false
+            maxPcmChannels == 2 -> direct?.ac3 ?: autoOnArc
+            maxPcmChannels == null && routeIsHdmiArc -> direct?.ac3 == true
             else -> false
         }
 
         val inferredChannelTarget = when {
             manualChannelTargetChannels != null -> manualChannelTargetChannels
             !anythingDenied -> null
-            rawMaxPcmChannels != null -> when {
-                rawMaxPcmChannels >= 8 -> 8
-                rawMaxPcmChannels >= 6 -> 6
+            maxPcmChannels != null -> when {
+                maxPcmChannels >= 8 -> 8
+                maxPcmChannels >= 6 -> 6
                 else -> 2
             }
             routeIsHdmiArc -> 2

@@ -14,6 +14,7 @@ class SurroundFormatResolverTest {
 
     private val allClaimed = DirectSupport(ac3 = true, eac3 = true, trueHd = true, dts = true, dtsHd = true)
     private val nothingClaimed = DirectSupport(ac3 = false, eac3 = false, trueHd = false, dts = false, dtsHd = false)
+    private val tvReportOverArc = DirectSupport(ac3 = true, eac3 = true, trueHd = true, dts = false, dtsHd = false)
 
     private fun resolve(
         manualMode: Boolean = false,
@@ -47,6 +48,12 @@ class SurroundFormatResolverTest {
         softwareDecodersAvailable = softwareDecodersAvailable,
         forceOpticalActive = forceOpticalActive,
         learnedDeniedGroups = learnedDeniedGroups
+    )
+
+    private fun planned(r: Resolution): Set<String> = DeniedTranscodePlanner.effectiveTranscodeMimes(
+        policy = r.policy,
+        transcodeDeniedToAc3 = r.transcodePreferred,
+        forcePassthroughActive = false
     )
 
     @Test
@@ -259,14 +266,126 @@ class SurroundFormatResolverTest {
     }
 
     @Test
-    fun measuredMultichannel_winsOverAnArcRoute() {
+    fun arcRoute_capsPcmToStereoAndDeniesLossless_evenWhenTheHalClaimsMultichannel() {
         val r = resolve(
             direct = allClaimed.copy(trueHd = false),
             rawMaxPcmChannels = 8,
             routeIsHdmiArc = true
         )
+        assertTrue(r.transcodePreferred)
+        assertEquals(2, r.inferredChannelTarget)
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_E_AC3))
+    }
+
+    @Test
+    fun arcRoute_deniesTrueHd_evenWhenTheProbeClaimsIt() {
+        val r = resolve(direct = allClaimed, rawMaxPcmChannels = 8, routeIsHdmiArc = true)
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_TRUEHD))
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_AC3))
+        assertTrue(r.transcodePreferred)
+        assertEquals(2, r.inferredChannelTarget)
+    }
+
+    @Test
+    fun arcRoute_tvReportFromAUser_convertsToAc3InsteadOfSixChannelPcm() {
+        val r = resolve(direct = tvReportOverArc, rawMaxPcmChannels = 6, routeIsHdmiArc = true)
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_TRUEHD))
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS))
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_AC3))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_E_AC3))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_E_AC3_JOC))
+        assertTrue(r.transcodePreferred)
+        assertEquals(2, r.inferredChannelTarget)
+        val mimes = planned(r)
+        assertTrue(MimeTypes.AUDIO_TRUEHD in mimes)
+        assertTrue(MimeTypes.AUDIO_DTS in mimes)
+        assertTrue(MimeTypes.AUDIO_DTS_HD in mimes)
+        assertFalse(MimeTypes.AUDIO_AC3 in mimes)
+        assertFalse(MimeTypes.AUDIO_E_AC3 in mimes)
+        assertFalse(MimeTypes.AUDIO_E_AC3_JOC in mimes)
+    }
+
+    @Test
+    fun arcRoute_keepsDtsCorePassthrough_whenTheProbeAllowsDtsButNotDtsHd() {
+        val r = resolve(direct = tvReportOverArc.copy(dts = true), rawMaxPcmChannels = 6, routeIsHdmiArc = true)
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_TRUEHD))
+        assertTrue(r.transcodePreferred)
+        assertEquals(2, r.inferredChannelTarget)
+        assertFalse(MimeTypes.AUDIO_DTS in planned(r))
+        assertFalse(MimeTypes.AUDIO_DTS_HD in planned(r))
+    }
+
+    @Test
+    fun arcRoute_decodesToStereo_whenAc3IsNotClaimed() {
+        val direct = DirectSupport(ac3 = false, eac3 = false, trueHd = true, dts = false, dtsHd = false)
+        val r = resolve(direct = direct, rawMaxPcmChannels = 6, routeIsHdmiArc = true)
         assertFalse(r.transcodePreferred)
-        assertEquals(8, r.inferredChannelTarget)
+        assertEquals(2, r.inferredChannelTarget)
+    }
+
+    @Test
+    fun arcRoute_probeNull_deniesOnlyLossless_andConvertsToAc3() {
+        val r = resolve(direct = null, rawMaxPcmChannels = 6, routeIsHdmiArc = true)
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_TRUEHD))
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_AC3))
+        assertTrue(r.transcodePreferred)
+        assertEquals(2, r.inferredChannelTarget)
+    }
+
+    @Test
+    fun arcRoute_manualChannelTargetStillWins() {
+        val r = resolve(
+            direct = tvReportOverArc,
+            rawMaxPcmChannels = 6,
+            routeIsHdmiArc = true,
+            manualChannelTargetChannels = 6
+        )
+        assertTrue(r.transcodePreferred)
+        assertEquals(6, r.inferredChannelTarget)
+    }
+
+    @Test
+    fun earcRoute_isNotTreatedAsArc() {
+        val earc = SurroundFormatResolver.routeKeyIsHdmiArc("type:hdmi_earc|name:soundbar")
+        val r = resolve(direct = allClaimed, rawMaxPcmChannels = 8, routeIsHdmiArc = earc)
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_TRUEHD))
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
+        assertFalse(r.transcodePreferred)
+        assertNull(r.inferredChannelTarget)
+    }
+
+    @Test
+    fun offArc_tvReport_keepsTodaysDecisions() {
+        val r = resolve(direct = tvReportOverArc, rawMaxPcmChannels = 6)
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_TRUEHD))
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS))
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
+        assertFalse(r.transcodePreferred)
+        assertEquals(6, r.inferredChannelTarget)
+    }
+
+    @Test
+    fun arcRoute_manualModeIsUnchanged() {
+        val r = resolve(
+            manualMode = true,
+            allowTrueHd = false,
+            direct = allClaimed,
+            rawMaxPcmChannels = 6,
+            routeIsHdmiArc = true
+        )
+        assertFalse(r.policy.deniesPassthrough(MimeTypes.AUDIO_DTS_HD))
+        assertTrue(r.policy.deniesPassthrough(MimeTypes.AUDIO_TRUEHD))
+        assertFalse(r.transcodePreferred)
+        assertEquals(6, r.inferredChannelTarget)
     }
 
     @Test
