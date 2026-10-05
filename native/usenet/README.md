@@ -216,7 +216,11 @@ do not count as video candidates. Ambiguous multi-video releases and explicit
 `fileIdx`/`fileMustInclude` selectors never use this fallback. Establishing a sole
 video requires scanning archive headers and continuation volumes, skipping packed
 payloads; strict matches retain lazy startup. Bare numbers such as `102` are not
-interpreted as season/episode markers.
+interpreted as season/episode markers. A file that reaches the set's last volume
+fills every volume between, so when the last volume's first block ends that same
+file the inventory resumes there instead of walking the middle volumes; an
+episode with an obfuscated inner name is then established from three headers.
+The skipped entry keeps its own cursor and maps its continuations on demand.
 
 For ordered, uniform stored sets, the second volume supplies a continuation
 template and a direct final-volume probe checks the remaining byte count. The
