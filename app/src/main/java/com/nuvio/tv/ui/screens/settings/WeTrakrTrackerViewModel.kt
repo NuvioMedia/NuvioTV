@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthError
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthException
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthRepository
@@ -43,7 +44,8 @@ data class WeTrakrTrackerUiState(
     val isPolling: Boolean = false,
     val isSyncing: Boolean = false,
     val statusMessage: String? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val continueWatchingDaysCap: Int = TraktSettingsDataStore.DEFAULT_CONTINUE_WATCHING_DAYS_CAP
 )
 
 private data class WeTrakrTrackerAction(
@@ -59,12 +61,19 @@ class WeTrakrTrackerViewModel @Inject constructor(
     private val authStore: WeTrakrAuthStore,
     private val sync: WeTrakrSyncRepository,
     private val profiles: ProfileManager,
+    private val settings: TraktSettingsDataStore,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     private val action = MutableStateFlow(WeTrakrTrackerAction())
     private var connectionJob: Job? = null
     private var disconnectJob: Job? = null
-    val uiState = combine(authStore.state, sync.state, action, profiles.activeProfileId) { authorization, syncState, action, profileId ->
+    val uiState = combine(
+        authStore.state,
+        sync.state,
+        action,
+        profiles.activeProfileId,
+        settings.continueWatchingDaysCap
+    ) { authorization, syncState, action, profileId, daysCap ->
         val current = authorization.scope.profileId == profileId
         val transient = action.takeIf { it.scope == authorization.scope && current } ?: WeTrakrTrackerAction()
         val currentSync = syncState.takeIf { it.scope == authorization.scope && current }
@@ -88,7 +97,8 @@ class WeTrakrTrackerViewModel @Inject constructor(
                 else -> null
             },
             errorMessage = transient.error ?: authorization.error?.takeIf { current }?.message()
-                ?: currentSync?.error?.message()
+                ?: currentSync?.error?.message(),
+            continueWatchingDaysCap = daysCap
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, WeTrakrTrackerUiState(credentialsConfigured = auth.hasRequiredCredentials()))
 
@@ -178,6 +188,10 @@ class WeTrakrTrackerViewModel @Inject constructor(
     }
 
     fun onSyncNow() = sync.refreshAsync(TrackingRefreshIntent.USER_INITIATED)
+
+    fun onContinueWatchingDaysCapSelected(days: Int) {
+        viewModelScope.launch { settings.setContinueWatchingDaysCap(days) }
+    }
     fun onAccountOpened() = sync.refreshAsync(TrackingRefreshIntent.AUTOMATIC)
 
     private fun Exception.messageForUser(): String =

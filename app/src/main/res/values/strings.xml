@@ -1247,6 +1247,11 @@
     <string name="wetrakr_unavailable">Could not sync with WeTrakr. Please try again.</string>
     <string name="wetrakr_rate_limited">WeTrakr’s request limit has been reached. Syncing will resume after the limit resets.</string>
     <string name="wetrakr_quota_exceeded">Your WeTrakr daily request quota has been used. Syncing will resume after it resets at midnight UTC.</string>
+    <string name="tracking_wetrakr_features_title">WeTrakr features</string>
+    <string name="tracking_wetrakr_features_subtitle">WeTrakr-specific history settings</string>
+    <string name="tracking_wetrakr_progress_required">Available when WeTrakr is the Watch Progress source</string>
+    <string name="wetrakr_continue_watching_subtitle">WeTrakr history considered for continue watching</string>
+    <string name="wetrakr_cw_window_subtitle">Choose how much WeTrakr activity should appear in continue watching.</string>
     <string name="wetrakr_revoke_failed">Disconnected on this device. Remove this app in your WeTrakr account settings to revoke its access.</string>
     <string name="mdblist_title">MDBList Ratings</string>
     <string name="mdblist_subtitle">Configure external ratings shown in the detail hero</string>

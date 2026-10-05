@@ -6,6 +6,7 @@ import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tracking.parseTrackingExternalIds
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.repository.traktContinueWatchingCutoffEpochMs
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.WatchedItem
 import javax.inject.Inject
@@ -79,6 +80,8 @@ class WeTrakrTrackingProgressProvider @Inject constructor(
     override fun applyOptimisticRemoval(contentId: String, season: Int?, episode: Int?) = Unit
     override fun clearOptimistic() = Unit
     override fun isHiddenFromProgress(contentId: String): Boolean = false
+    override fun continueWatchingCutoffEpochMs(daysCap: Int, nowEpochMs: Long): Long? =
+        traktContinueWatchingCutoffEpochMs(daysCap, nowEpochMs)
     override suspend fun prepareNextUpSeed(progress: WatchProgress): WatchProgress = progress
     override fun retainsLocalProgress(contentId: String): Boolean =
         parseTrackingExternalIds(contentId).toWeTrakrIds() == null

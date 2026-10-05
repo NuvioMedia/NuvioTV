@@ -85,6 +85,7 @@ fun TrackingSettingsContent(
     val libraryFocusRequester = remember { FocusRequester() }
     val watchProgressFocusRequester = remember { FocusRequester() }
     val continueWatchingFocusRequester = remember { FocusRequester() }
+    val weTrakrContinueWatchingFocusRequester = remember { FocusRequester() }
     val moreLikeThisFocusRequester = remember { FocusRequester() }
 
     var activeProvider by remember { mutableStateOf<TrackingProviderId?>(null) }
@@ -94,6 +95,7 @@ fun TrackingSettingsContent(
     var showLibrarySourceDialog by remember { mutableStateOf(false) }
     var showWatchProgressDialog by remember { mutableStateOf(false) }
     var showDaysCapDialog by remember { mutableStateOf(false) }
+    var daysCapForWeTrakr by remember { mutableStateOf(false) }
     var showMoreLikeThisSourceDialog by remember { mutableStateOf(false) }
     var showAnimeIdDialog by remember { mutableStateOf(false) }
     var showMdbListLibraryListsDialog by remember { mutableStateOf(false) }
@@ -141,6 +143,7 @@ fun TrackingSettingsContent(
                 TrackingFocusTarget.LIBRARY -> libraryFocusRequester.requestFocus()
                 TrackingFocusTarget.WATCH_PROGRESS -> watchProgressFocusRequester.requestFocus()
                 TrackingFocusTarget.CONTINUE_WATCHING -> continueWatchingFocusRequester.requestFocus()
+                TrackingFocusTarget.WETRAKR_CONTINUE_WATCHING -> weTrakrContinueWatchingFocusRequester.requestFocus()
                 TrackingFocusTarget.MORE_LIKE_THIS -> moreLikeThisFocusRequester.requestFocus()
             }
         }
@@ -211,6 +214,7 @@ fun TrackingSettingsContent(
         libraryFocusRequester = libraryFocusRequester,
         watchProgressFocusRequester = watchProgressFocusRequester,
         continueWatchingFocusRequester = continueWatchingFocusRequester,
+        weTrakrContinueWatchingFocusRequester = weTrakrContinueWatchingFocusRequester,
         moreLikeThisFocusRequester = moreLikeThisFocusRequester,
         onTraktClick = { openProvider(TrackingProviderId.TRAKT) },
         onSimklClick = { openProvider(TrackingProviderId.SIMKL) },
@@ -226,6 +230,12 @@ fun TrackingSettingsContent(
         },
         onContinueWatchingWindowClick = {
             restoreFocusTarget = TrackingFocusTarget.CONTINUE_WATCHING
+            daysCapForWeTrakr = false
+            showDaysCapDialog = true
+        },
+        onWeTrakrContinueWatchingWindowClick = {
+            restoreFocusTarget = TrackingFocusTarget.WETRAKR_CONTINUE_WATCHING
+            daysCapForWeTrakr = true
             showDaysCapDialog = true
         },
         onCommentsChanged = traktViewModel::onShowMetaCommentsChanged,
@@ -422,13 +432,19 @@ fun TrackingSettingsContent(
         }
         SettingsSingleChoiceDialog(
             title = stringResource(R.string.trakt_cw_window_title),
-            subtitle = stringResource(R.string.trakt_cw_window_subtitle),
+            subtitle = stringResource(
+                if (daysCapForWeTrakr) R.string.wetrakr_cw_window_subtitle else R.string.trakt_cw_window_subtitle
+            ),
             options = options.map { days ->
                 SettingsPickerOption(days, continueWatchingWindowLabel(days))
             },
-            selectedValue = traktState.continueWatchingDaysCap,
+            selectedValue = if (daysCapForWeTrakr) weTrakrState.continueWatchingDaysCap else traktState.continueWatchingDaysCap,
             onOptionSelected = { days ->
-                traktViewModel.onContinueWatchingDaysCapSelected(days)
+                if (daysCapForWeTrakr) {
+                    weTrakrViewModel.onContinueWatchingDaysCapSelected(days)
+                } else {
+                    traktViewModel.onContinueWatchingDaysCapSelected(days)
+                }
                 showDaysCapDialog = false
             },
             onDismiss = { showDaysCapDialog = false },
@@ -522,6 +538,7 @@ internal fun TrackingSettingsOverview(
     libraryFocusRequester: FocusRequester,
     watchProgressFocusRequester: FocusRequester,
     continueWatchingFocusRequester: FocusRequester,
+    weTrakrContinueWatchingFocusRequester: FocusRequester = remember { FocusRequester() },
     moreLikeThisFocusRequester: FocusRequester,
     onTraktClick: () -> Unit,
     onSimklClick: () -> Unit,
@@ -530,6 +547,7 @@ internal fun TrackingSettingsOverview(
     onLibrarySourceClick: () -> Unit,
     onWatchProgressClick: () -> Unit,
     onContinueWatchingWindowClick: () -> Unit,
+    onWeTrakrContinueWatchingWindowClick: () -> Unit = {},
     onCommentsChanged: (Boolean) -> Unit,
     onMoreLikeThisClick: () -> Unit,
     onAnimeIdClick: () -> Unit,
@@ -543,6 +561,7 @@ internal fun TrackingSettingsOverview(
     val weTrakrPresentation = weTrakrConnectionPresentation(weTrakrState)
     val traktConnected = traktState.mode == TraktConnectionMode.CONNECTED
     val traktProgressActive = trackingState.watchProgressSource == WatchProgressSource.TRAKT
+    val weTrakrProgressActive = trackingState.watchProgressSource == WatchProgressSource.WETRAKR
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -722,6 +741,29 @@ internal fun TrackingSettingsOverview(
                         }
                     }
                 }
+                if (weTrakrState.isConnected) {
+                    item(key = "tracking_wetrakr_features") {
+                        SettingsGroupCard(
+                            title = stringResource(R.string.tracking_wetrakr_features_title),
+                            subtitle = stringResource(R.string.tracking_wetrakr_features_subtitle)
+                        ) {
+                            SettingsActionRow(
+                                title = stringResource(R.string.trakt_continue_watching_window),
+                                subtitle = if (!weTrakrProgressActive) {
+                                    stringResource(R.string.tracking_wetrakr_progress_required)
+                                } else {
+                                    stringResource(R.string.wetrakr_continue_watching_subtitle)
+                                },
+                                value = continueWatchingWindowLabel(weTrakrState.continueWatchingDaysCap),
+                                enabled = weTrakrProgressActive,
+                                onClick = onWeTrakrContinueWatchingWindowClick,
+                                modifier = Modifier
+                                    .focusRequester(weTrakrContinueWatchingFocusRequester)
+                                    .testTag(TrackingSettingsTestTags.WETRAKR_CONTINUE_WATCHING)
+                            )
+                        }
+                    }
+                }
             }
             SettingsVerticalScrollIndicators(state = listState)
         }
@@ -882,6 +924,7 @@ private enum class TrackingFocusTarget {
     LIBRARY,
     WATCH_PROGRESS,
     CONTINUE_WATCHING,
+    WETRAKR_CONTINUE_WATCHING,
     MORE_LIKE_THIS
 }
 
@@ -895,6 +938,7 @@ internal object TrackingSettingsTestTags {
     const val LIBRARY_SOURCE = "tracking_source_library"
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"
     const val CONTINUE_WATCHING = "tracking_trakt_continue_watching"
+    const val WETRAKR_CONTINUE_WATCHING = "tracking_wetrakr_continue_watching"
     const val COMMENTS = "tracking_trakt_comments"
     const val MORE_LIKE_THIS = "tracking_trakt_more_like_this"
 }
