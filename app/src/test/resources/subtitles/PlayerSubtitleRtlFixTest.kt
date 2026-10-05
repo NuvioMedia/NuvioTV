@@ -13,7 +13,9 @@ class PlayerSubtitleRtlFixTest {
         val expected: String,
         val rules: List<Rule>,
         val numbersMoved: Boolean = false,
-        val numbersReversed: Boolean = false
+        val numbersReversed: Boolean = false,
+        val dialogueDashesIntact: Boolean = false,
+        val quoteEdgesIntact: Boolean = false
     )
 
     /**
@@ -72,6 +74,7 @@ class PlayerSubtitleRtlFixTest {
         Case("(מה שלומך? (בספרדית", "מה שלומך? (בספרדית)", listOf(Rule.LEADING_PUNCTUATION)),
         Case("(א ב. (ג ד", "א ב. (ג ד)", listOf(Rule.LEADING_PUNCTUATION)),
         Case("(שלום", "שלום)", listOf(Rule.LEADING_PUNCTUATION)),
+        Case(".(כן, אולי משהו (הכלאה בין א לב", "כן, אולי משהו (הכלאה בין א לב).", listOf(Rule.LEADING_PUNCTUATION)),
         Case("(באנגלית, גם: שלום)", "(באנגלית, גם: שלום)", emptyList()),
         Case(".(אוז - טקסט)", "(אוז - טקסט).", listOf(Rule.LEADING_PUNCTUATION)),
 
@@ -88,6 +91,10 @@ class PlayerSubtitleRtlFixTest {
         Case("Jane תרגום ועריכה על ידי", "תרגום ועריכה על ידי Jane", listOf(Rule.LATIN_SEGMENT)),
         Case("!Fox צוות", "צוות Fox!", listOf(Rule.LATIN_SEGMENT)),
         Case("\u200FJohn - שלום\u200F", "\u200Fשלום - John\u200F", listOf(Rule.LATIN_SEGMENT)),
+        Case("--==< John צוות >==--", "--==< צוות John >==--", listOf(Rule.LATIN_SEGMENT)),
+        Case("- John צוות -", "- צוות John -", listOf(Rule.LATIN_SEGMENT)),
+        Case("--  תרגום וסנכרון  --", "--  תרגום וסנכרון  --", emptyList()),
+        Case("--==< צוות >==--", "--==< צוות >==--", emptyList()),
         Case("שלום - Hello", "שלום - Hello", emptyList()),
         Case("Hello - there", "Hello - there", emptyList()),
         Case("iMri & thebarak", "iMri & thebarak", emptyList()),
@@ -160,6 +167,21 @@ class PlayerSubtitleRtlFixTest {
         Case("مرحبا \u200E٧٠", "٧٠ مرحبا", listOf(Rule.LRM_NUMBER)),
         Case(".٣٫٥-كان", "كان-٣٫٥.", listOf(Rule.LEADING_RUN), numbersMoved = true),
 
+        // Partially corrupted tracks: correct dialogue dashes stay, corrupted lines are still repaired
+        Case("- אל תקנה לה כלום.", "- אל תקנה לה כלום.", emptyList(), dialogueDashesIntact = true),
+        Case("- ...ואז הלכנו", "- ...ואז הלכנו", emptyList(), dialogueDashesIntact = true),
+        Case("\u200F- אל תקנה לה כלום.\u200F", "\u200F- אל תקנה לה כלום.\u200F", emptyList(), dialogueDashesIntact = true),
+        Case("\u200F  - אל תקנה לה כלום.\u200F", "\u200F  - אל תקנה לה כלום.\u200F", emptyList(), dialogueDashesIntact = true),
+        Case(".תניח לזה -", "- תניח לזה.", listOf(Rule.DASH_TO_FRONT), dialogueDashesIntact = true),
+        Case(".שלום", "שלום.", listOf(Rule.LEADING_PUNCTUATION), dialogueDashesIntact = true),
+        Case("\"אה, לא, אנחנו מאוהבים.", "\"אה, לא, אנחנו מאוהבים.", emptyList(), dialogueDashesIntact = true, quoteEdgesIntact = true),
+        Case("היא בסדר גמור.\"", "היא בסדר גמור.\"", emptyList(), dialogueDashesIntact = true, quoteEdgesIntact = true),
+        Case("\u200F\"אה, לא, אנחנו מאוהבים.\u200F", "\u200F\"אה, לא, אנחנו מאוהבים.\u200F", emptyList(), dialogueDashesIntact = true, quoteEdgesIntact = true),
+        Case("היא בסדר גמור.\"", "\"היא בסדר גמור.", listOf(Rule.QUOTE), dialogueDashesIntact = true),
+        Case("\".הברורה של הלילה", "הברורה של הלילה\".", listOf(Rule.LEADING_PUNCTUATION), dialogueDashesIntact = true),
+        Case("\"!כן, זה עובד\"", "\"כן, זה עובד!\"", listOf(Rule.LEADING_PUNCTUATION), dialogueDashesIntact = true),
+        Case("- שלום", "שלום -", listOf(Rule.LEADING_PUNCTUATION)),
+
         // Lines without RTL letters are never touched
         Case(".Hello there", ".Hello there", emptyList()),
         Case("- Hello there", "- Hello there", emptyList()),
@@ -169,7 +191,9 @@ class PlayerSubtitleRtlFixTest {
     @Test
     fun handVerifiedCases() {
         val failures = cases.mapNotNull { case ->
-            val repair = PlayerSubtitleRtlFix.repairLine(case.input, case.numbersMoved, case.numbersReversed)
+            val repair = PlayerSubtitleRtlFix.repairLine(
+                case.input, case.numbersMoved, case.numbersReversed, case.dialogueDashesIntact, case.quoteEdgesIntact
+            )
             val text = repair.text.toString()
             if (text == case.expected && repair.rules == case.rules) null
             else "input   : ${case.input}\n  expected: ${case.expected}  ${case.rules}\n  actual  : $text  ${repair.rules}"
@@ -186,6 +210,26 @@ class PlayerSubtitleRtlFixTest {
         assertEquals(true, PlayerSubtitleRtlFix.looksLikeSwappedBoundaries(swapped.asSequence()))
         assertEquals(false, PlayerSubtitleRtlFix.looksLikeSwappedBoundaries(correct.asSequence()))
         assertEquals(true, PlayerSubtitleRtlFix.looksLikeSwappedBoundaries(lrmNumbers.asSequence()))
+    }
+
+    @Test
+    fun detectsBalancedQuoteEdges() {
+        val opening = (1..10).map { "\"שלום עולם $it" }
+        val closing = (1..10).map { "שלום עולם $it\"" }
+        assertEquals(true, PlayerSubtitleRtlFix.quoteEdgesBalanced((opening + closing).asSequence()))
+        assertEquals(true, PlayerSubtitleRtlFix.quoteEdgesBalanced(emptySequence()))
+        assertEquals(false, PlayerSubtitleRtlFix.quoteEdgesBalanced((closing + opening.take(1)).asSequence()))
+    }
+
+    @Test
+    fun classifiesTracks() {
+        val corrupted = { n: Int -> (1..n).map { ".שלום עולם $it" } }
+        val correct = { n: Int -> (1..n).map { "- שלום עולם $it." } }
+        val kind = { lines: List<String> -> PlayerSubtitleRtlFix.classifyTrack(lines.asSequence()) }
+        assertEquals(PlayerSubtitleRtlFix.TrackKind.SWAPPED, kind(corrupted(80) + correct(20)))
+        assertEquals(PlayerSubtitleRtlFix.TrackKind.PARTIALLY_SWAPPED, kind(corrupted(10) + correct(300)))
+        assertEquals(PlayerSubtitleRtlFix.TrackKind.CORRECT, kind(corrupted(2) + correct(300)))
+        assertEquals(PlayerSubtitleRtlFix.TrackKind.CORRECT, kind(correct(300)))
     }
 
     @Test
@@ -224,22 +268,25 @@ class PlayerSubtitleRtlFixTest {
 
     private fun buildSnapshot(dir: File): List<String> {
         val entries = sortedSetOf<String>()
-        val tags = Regex("<[^>]+>")
+        val tags = Regex("</?[a-zA-Z][^>]*>")
         dir.listFiles { file -> file.extension == "srt" }.orEmpty().sortedBy { it.name }.forEach { file ->
             val blocks = file.readText(Charsets.UTF_8).replace("\r\n", "\n").split("\n\n")
             val lines = blocks.flatMap { block -> block.split("\n").drop(2) }
                 .map { it.replace(tags, "") }
                 .filter { it.isNotEmpty() }
-            val swapped = PlayerSubtitleRtlFix.looksLikeSwappedBoundaries(lines.asSequence())
+            val kind = PlayerSubtitleRtlFix.classifyTrack(lines.asSequence())
+            val swapped = kind != PlayerSubtitleRtlFix.TrackKind.CORRECT
+            val intact = kind == PlayerSubtitleRtlFix.TrackKind.PARTIALLY_SWAPPED
+            val quotesIntact = intact && PlayerSubtitleRtlFix.quoteEdgesBalanced(lines.asSequence())
             val numbersReversed = swapped && PlayerSubtitleRtlFix.looksLikeReversedNumbers(lines.asSequence())
             for (line in lines) {
                 for (numbersMoved in listOf(false, true)) {
                     val repair = if (swapped) {
-                        PlayerSubtitleRtlFix.repairLine(line, numbersMoved, numbersReversed)
+                        PlayerSubtitleRtlFix.repairLine(line, numbersMoved, numbersReversed, intact, quotesIntact)
                     } else {
                         PlayerSubtitleRtlFix.LineRepair(line)
                     }
-                    entries.add("$line | $numbersMoved | $numbersReversed | $swapped | ${repair.text} | ${repair.marks}")
+                    entries.add("$line | $numbersMoved | $numbersReversed | $kind | ${repair.text} | ${repair.marks}")
                 }
             }
         }
