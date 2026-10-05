@@ -16,6 +16,7 @@ Dependencies and adaptations:
 | mnightingale/rapidyenc | 7aafef1eaf1c, MIT | Chunked yEnc wrapper. Android link targets added; upstream desktop archives retained for host tests. |
 | animetosho/rapidyenc | 480bd7b5896f8b3edecc721d23f1384d767ffe2f, public domain / CC0 | Native SIMD kernels compiled from source for every APK ABI. CRC component disabled; Go CRC32 validates articles. |
 | dlclark/regexp2 | v2.7.2, MIT | ECMAScript addon file selectors, with bounded matching time, backtracking stack and retained filename buffers. |
+| javi11/sevenzip | ca961b7f1239 (fork of bodgit/sevenzip), BSD | 7z directory parsing only, including LZMA-compressed and AES-encrypted headers. Entry payloads are mapped and AES-decrypted by the engine, never extracted through the library. Linked dependencies: andybalholm/brotli (MIT), bodgit/plumbing and bodgit/windows (BSD), hashicorp/golang-lru (MPL-2.0), klauspost/compress (BSD), pierrec/lz4 (BSD), spf13/afero (Apache-2.0), ulikunitz/xz (BSD), go4.org (Apache-2.0). |
 
 AltMount's stored archive fixtures and NNTP test server are included under its
 MIT license. `third_party` retains upstream source notices. `licenses` is an APK
