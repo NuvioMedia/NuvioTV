@@ -30,6 +30,7 @@ type rarBlock struct {
 	volume                              int
 	version                             int
 	main, template                      bool
+	firstVolume                         bool // Main header of a set's first volume.
 	mainLayout                          rarMainLayout
 	packedWidth                         int
 	crypt                               *rarCrypt // Encrypted file data.
@@ -171,6 +172,7 @@ func rar4Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 	flags := binary.LittleEndian.Uint16(h[3:5])
 	kind := h[2]
 	b.main = kind == 0x73
+	b.firstVolume = b.main && flags&0x0100 != 0
 	b.template = (b.main && n == 13 && flags&0x40 == 0) || kind == 0x74
 	b.data = pos + int64(n)
 	b.next = b.data
@@ -334,6 +336,7 @@ func rar5Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 		} else {
 			b.volume = 0
 		}
+		b.firstVolume = b.volume == 0
 		b.mainLayout = rarMainLayout{int64(size), nvar, x.pos - start}
 		b.template = flags&^uint64(5) == 0 && af == 3 &&
 			extra == uint64(len(x.b)-x.pos) && rarStableMainExtra(x.b[x.pos:])
@@ -456,38 +459,108 @@ func (c *rarCursor) resolve(ctx context.Context) (*rarVolume, error) {
 		return v, nil
 	}
 	// Obfuscated RAR5 sets may lose even the NZB's volume order. Read only as
-	// many main headers as needed to find this volume; cache header mappings so
-	// later seeks do not repeat discovery. RAR4 relies on release/NZB order.
-	for c.scanned < len(c.files) {
-		i := c.scanned
-		v, e := openRAR(ctx, c.files[i])
-		if errors.Is(e, errNotRAR) {
+	// many main headers as needed to find this volume: the next one first, as
+	// release order usually holds, then small batches so a shuffled set does
+	// not cost one round trip per volume. Cache header mappings so later seeks
+	// do not repeat discovery. RAR4 relies on release/NZB order.
+	for size := 1; c.scanned < len(c.files); size = rarResolveBatch {
+		batch := c.files[c.scanned:min(len(c.files), c.scanned+size)]
+		type header struct {
+			v      *rarVolume
+			volume int
+			err    error
+		}
+		headers := make([]header, len(batch))
+		var wg sync.WaitGroup
+		for k, f := range batch {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				v, e := openRAR(ctx, f)
+				h := header{v: v, volume: -1, err: e}
+				if e == nil && v.version == 5 {
+					b, e := v.first(ctx)
+					h.volume, h.err = b.volume, e
+				}
+				headers[k] = h
+			}()
+		}
+		wg.Wait()
+		for _, h := range headers {
 			c.scanned++
-			continue
-		}
-		if e != nil {
-			return nil, e
-		}
-		if v.version == 5 {
-			b, e := v.first(ctx)
-			if e != nil {
-				return nil, e
+			if errors.Is(h.err, errNotRAR) {
+				continue // Unknown non-archive NZB entries are not volume positions.
 			}
-			i = b.volume
-		} else {
-			// Unknown non-archive NZB entries are not volume positions.
-			i = len(c.resolved)
+			if h.err != nil {
+				return nil, h.err
+			}
+			i := h.volume
+			if h.v.version != 5 {
+				i = len(c.resolved)
+			}
+			if i < 0 || i >= len(c.files) || c.resolved[i] != nil {
+				return nil, errors.New("ambiguous obfuscated RAR volume order")
+			}
+			c.resolved[i] = h.v
 		}
-		c.scanned++
-		if i < 0 || i >= len(c.files) || c.resolved[i] != nil {
-			return nil, errors.New("ambiguous obfuscated RAR volume order")
-		}
-		c.resolved[i] = v
-		if i == c.index {
+		if v := c.resolved[c.index]; v != nil {
 			return v, nil
 		}
 	}
 	return nil, errors.New("missing obfuscated RAR volume")
+}
+
+// rarResolveBatch bounds the main headers read together for an unordered set.
+const rarResolveBatch = 8
+
+// rarFirstVolume reports whether f opens a RAR set whose first file is name.
+// Used to find a first volume posted under another set's name.
+func rarFirstVolume(ctx context.Context, f *File) (string, bool) {
+	v, err := openRAR(ctx, f)
+	if err != nil {
+		return "", false
+	}
+	main, err := v.first(ctx)
+	if err != nil || !main.main || !main.firstVolume || main.next <= v.start {
+		return "", false
+	}
+	for pos := main.next; ; {
+		b, err := v.block(ctx, pos)
+		if err != nil || b.end {
+			return "", false
+		}
+		if b.file && !b.directory {
+			return b.name, !b.before
+		}
+		if b.next <= pos {
+			return "", false
+		}
+		pos = b.next
+	}
+}
+
+// rarFileName returns the first file named in volume f, from its headers.
+func rarFileName(ctx context.Context, f *File) string {
+	v, err := openRAR(ctx, f)
+	if err != nil {
+		return ""
+	}
+	if _, err := v.first(ctx); err != nil {
+		return ""
+	}
+	for pos := v.start; ; {
+		b, err := v.block(ctx, pos)
+		if err != nil || b.end {
+			return ""
+		}
+		if b.file && !b.directory {
+			return b.name
+		}
+		if b.next <= pos {
+			return ""
+		}
+		pos = b.next
+	}
 }
 func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 	for c.index < len(c.files) {
