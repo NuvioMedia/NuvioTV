@@ -513,14 +513,16 @@ func select7z(ctx context.Context, vols []*File, s Selection, index *int, consid
 	// Scene releases are re-wrapped whole: a stored RAR set inside the 7z.
 	var nestedErr error
 	for _, group := range nestedRARGroups(set.entries) {
+		var groupErr error
 		vols := make([]*Content, len(group))
 		for i, j := range group {
 			vols[i] = entries[j]
-			if vols[i].unusable != nil && nestedErr == nil {
-				nestedErr = vols[i].unusable
+			if vols[i].unusable != nil && groupErr == nil {
+				groupErr = vols[i].unusable
 			}
 		}
-		if nestedErr != nil {
+		if groupErr != nil {
+			nestedErr = groupErr
 			continue
 		}
 		c, err := selectNestedRAR(ctx, vols, index, consider)

@@ -319,6 +319,30 @@ func TestSevenZipSessionRanges(t *testing.T) {
 	}
 }
 
+// The multiple-set fixtures contain a-bad.rar followed by a stored two-volume
+// b-good set from regularRARSet(5, 2, 256, 31). a-bad.rar contains "invalid RAR
+// archive"; it is stored in nested_multiple_invalid.7z and LZMA-compressed in
+// nested_multiple_compressed.7z. Made with 7-Zip 25 using -mx0 for stored
+// entries and -mx1 for the compressed entry (added before the stored set).
+func TestSevenZipNestedRARMultipleSets(t *testing.T) {
+	_, want, _ := regularRARSet(5, 2, 256, 31)
+	for _, archive := range []string{"nested_multiple_invalid.7z", "nested_multiple_compressed.7z"} {
+		t.Run(archive, func(t *testing.T) {
+			files := setupWithPassword(t, []inputFile{{name: "release.7z", data: sevenZipFixture(t, archive)}}, "")
+			c, err := Select(context.Background(), files, Selection{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c.Name != "movie.mkv" || c.Size != int64(len(want)) || c.nested == nil || len(c.nested.vols) != 2 {
+				t.Fatalf("selected content = %+v, want movie.mkv from the second RAR set", c)
+			}
+			if got := readAllContent(t, c); !bytes.Equal(got, want) {
+				t.Fatalf("nested RAR payload differs (%d bytes)", len(got))
+			}
+		})
+	}
+}
+
 // nested_rar4.7z and nested_rar5.7z wrap stored RAR sets the way some indexers
 // re-post scene releases (7z -mx0 -mhe=on -p"Pässwörd 7z"). The volumes come
 // from rar4Volume and regularRARSet: RAR4 uses scene .rar/.r00 names with one
