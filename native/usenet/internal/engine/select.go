@@ -198,6 +198,16 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 		}
 	}
 	for _, f := range direct {
+		if f.damaged != nil {
+			matched, err := consider(&Content{Name: f.Name, Size: f.Size(), direct: f}, f.Index, f.Name)
+			if err != nil {
+				return nil, err
+			}
+			if matched {
+				return nil, f.damaged
+			}
+			continue
+		}
 		name := f.Name
 		if s.episodeOnly() {
 			// yEnc may reveal a clean episode name behind an obfuscated subject.
@@ -304,7 +314,19 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 			}
 		}
 	}
+	skipBroken := s.FileIdx == nil && (s.FileMustInclude != "" || s.Episode > 0)
+	var brokenErr error
+	broken := func(err error) error {
+		if !skipBroken || ctx.Err() != nil {
+			return err
+		}
+		if brokenErr == nil {
+			brokenErr = err
+		}
+		return nil
+	}
 	index := 0
+groups:
 	for _, key := range order {
 		vols := groups[key]
 		if key != anonymousRARKey {
@@ -320,7 +342,10 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 					first = 0
 				}
 				if !ok || n != j+first {
-					return nil, errors.New("RAR volume sequence is incomplete")
+					if err := broken(errors.New("RAR volume sequence is incomplete")); err != nil {
+						return nil, err
+					}
+					continue groups
 				}
 			}
 		}
@@ -331,34 +356,57 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 				break
 			}
 			if e != nil {
-				return nil, e
+				if err := broken(e); err != nil {
+					return nil, err
+				}
+				continue groups
 			}
 			if b.before {
-				return nil, errors.New("RAR starts with a missing continuation")
+				if err := broken(errors.New("RAR starts with a missing continuation")); err != nil {
+					return nil, err
+				}
+				continue groups
 			}
 			if b.directory {
 				continue
 			}
 			c := &Content{Name: b.name, Size: b.unpacked, cursor: cursor, complete: !b.after, parts: []extent{{f, b.data, b.packed, 0}}}
 			if c.Size < 0 || b.packed > c.Size || (c.complete && b.packed != c.Size) {
-				return nil, errors.New("invalid stored RAR file size")
+				if err := broken(errors.New("invalid stored RAR file size")); err != nil {
+					return nil, err
+				}
+				continue groups
 			}
 			matched, err := consider(c, index, "")
 			if err != nil {
 				return nil, err
 			}
 			if matched {
+				for _, v := range vols {
+					if v.damaged != nil {
+						return nil, v.damaged
+					}
+				}
 				return c, nil
 			}
 			index++
 			// Reach the next entry using headers only. Selected content returns
 			// above, before resolving ANY continuation volume.
 			if err := c.extend(ctx, -1); err != nil {
-				return nil, err
+				if err := broken(err); err != nil {
+					return nil, err
+				}
+				continue groups
 			}
 		}
 	}
+	if brokenErr != nil {
+		return nil, brokenErr
+	}
 	if allowFallback && videoCount == 1 && fallback != nil {
+		if fallback.direct != nil && fallback.direct.damaged != nil {
+			return nil, fallback.direct.damaged
+		}
 		return fallback, nil
 	}
 	return nil, errNoMatchingVideo
