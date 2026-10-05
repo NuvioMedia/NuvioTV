@@ -1710,7 +1710,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
 
                         if (error.isStuckPlayingNoProgress()) {
-                            if (isTunnelingActiveForCurrentPlayback &&
+                            if (isTunnelingActiveForCurrentPlayback && this@apply.isTunnelingEnabled &&
                                 !tunnelingDisabledStreamUrls.contains(currentStreamUrl)
                             ) {
                                 tunnelingDisabledStreamUrls.add(currentStreamUrl)

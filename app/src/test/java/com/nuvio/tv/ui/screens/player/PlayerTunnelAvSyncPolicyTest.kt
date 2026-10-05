@@ -8,6 +8,7 @@ class PlayerTunnelAvSyncPolicyTest {
 
     private fun baseInput() = PlayerTunnelAvSyncPolicy.Input(
         isTunnelingActive = true,
+        isTunnelingApplied = true,
         hasVideoTrack = true,
         isReady = true,
         playWhenReady = true,
@@ -129,5 +130,20 @@ class PlayerTunnelAvSyncPolicyTest {
         )
         assertEquals(PlayerTunnelAvSyncPolicy.Decision.DisableTunnelingAndRebuild, result.decision)
         assertEquals(PlayerTunnelAvSyncPolicy.Reason.PositionFrozen, result.reason)
+    }
+
+    @Test
+    fun tunnelingRequestedButNotApplied_stopsWithoutDisablingAnything() {
+        val frozen = PlayerTunnelAvSyncPolicy.evaluate(
+            baseInput().copy(isTunnelingApplied = false, stalledMs = 4_000L)
+        )
+        assertEquals(PlayerTunnelAvSyncPolicy.Decision.Stop, frozen.decision)
+        assertNull(frozen.reason)
+
+        val noFrames = PlayerTunnelAvSyncPolicy.evaluate(
+            advancingInput().copy(isTunnelingApplied = false, renderedOutputBufferCount = 0, readyMs = 20_000L)
+        )
+        assertEquals(PlayerTunnelAvSyncPolicy.Decision.Stop, noFrames.decision)
+        assertNull(noFrames.reason)
     }
 }

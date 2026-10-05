@@ -921,6 +921,7 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
 
 internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
     if (!isTunnelingActiveForCurrentPlayback) return
+    if (_exoPlayer?.isTunnelingEnabled != true) return
     if (!currentStreamHasVideoTrack) return
     if (tunnelingDisabledStreamUrls.contains(currentStreamUrl)) return
     if (tunnelAvSyncWatchdogJob?.isActive == true) return
@@ -941,6 +942,7 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
             val result = PlayerTunnelAvSyncPolicy.evaluate(
                 PlayerTunnelAvSyncPolicy.Input(
                     isTunnelingActive = isTunnelingActiveForCurrentPlayback,
+                    isTunnelingApplied = livePlayer.isTunnelingEnabled,
                     hasVideoTrack = currentStreamHasVideoTrack,
                     isReady = livePlayer.playbackState == Player.STATE_READY,
                     playWhenReady = livePlayer.playWhenReady,
