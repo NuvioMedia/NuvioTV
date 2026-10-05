@@ -79,20 +79,29 @@ internal object PlayerSubtitleRtlFix {
         cue: Cue,
         boundarySwapped: Boolean = false,
         numbersMoved: Boolean = false,
-        numbersReversed: Boolean = false
+        numbersReversed: Boolean = false,
+        dialogueDashesIntact: Boolean = false,
+        quoteEdgesIntact: Boolean = false
     ): Cue {
         val text = cue.text ?: return cue
-        val fixed = fixText(text, boundarySwapped, numbersMoved, numbersReversed) ?: return cue
+        val fixed = fixText(
+            text, boundarySwapped, numbersMoved, numbersReversed, dialogueDashesIntact, quoteEdgesIntact
+        ) ?: return cue
         return cue.buildUpon().setText(fixed).build()
     }
 
     fun fixTimedCues(cues: List<CuesWithTiming>): List<CuesWithTiming> {
         if (cues.isEmpty()) return cues
-        val boundarySwapped = FORCE_SWAPPED_TRACK || trackHasSwappedBoundaries(cues)
+        val kind = if (FORCE_SWAPPED_TRACK) TrackKind.SWAPPED else classifyTrack(cues)
+        val boundarySwapped = kind != TrackKind.CORRECT
+        val dialogueDashesIntact = kind == TrackKind.PARTIALLY_SWAPPED
+        val quoteEdgesIntact = dialogueDashesIntact && quoteEdgesBalanced(cues)
         val numbersMoved = boundarySwapped && trackHasMovedNumbers(cues)
         val numbersReversed = boundarySwapped && trackHasReversedNumbers(cues)
 
-        val fixedEntries = cues.map { fixEntry(it, boundarySwapped, numbersMoved, numbersReversed) }
+        val fixedEntries = cues.map {
+            fixEntry(it, boundarySwapped, numbersMoved, numbersReversed, dialogueDashesIntact, quoteEdgesIntact)
+        }
         val anyChanged = fixedEntries.indices.any { fixedEntries[it] !== cues[it] }
         return if (anyChanged) fixedEntries else cues
     }
@@ -101,12 +110,16 @@ internal object PlayerSubtitleRtlFix {
         entry: CuesWithTiming,
         boundarySwapped: Boolean,
         numbersMoved: Boolean,
-        numbersReversed: Boolean
+        numbersReversed: Boolean,
+        dialogueDashesIntact: Boolean,
+        quoteEdgesIntact: Boolean
     ): CuesWithTiming {
         val original = entry.cues
         var fixedCues: ArrayList<Cue>? = null
         for (index in original.indices) {
-            val fixed = fixCueText(original[index], boundarySwapped, numbersMoved, numbersReversed)
+            val fixed = fixCueText(
+                original[index], boundarySwapped, numbersMoved, numbersReversed, dialogueDashesIntact, quoteEdgesIntact
+            )
             if (fixed !== original[index] && fixedCues == null) {
                 fixedCues = ArrayList<Cue>(original.size).apply { addAll(original.subList(0, index)) }
             }
@@ -133,15 +146,19 @@ internal object PlayerSubtitleRtlFix {
             }
         }
 
-    private fun trackHasSwappedBoundaries(cues: List<CuesWithTiming>): Boolean =
-        looksLikeSwappedBoundaries(cues.asSequence().flatMap { it.cues.asSequence() }.mapNotNull { it.text })
+    /** How much of a track is stored in visual order. */
+    internal enum class TrackKind { CORRECT, PARTIALLY_SWAPPED, SWAPPED }
+
+    private fun classifyTrack(cues: List<CuesWithTiming>): TrackKind =
+        classifyTrack(cues.asSequence().flatMap { it.cues.asSequence() }.mapNotNull { it.text })
 
     /**
      * Detects corrupted tracks by two signs a correct file practically never has: an RTL line
-     * starting with sentence punctuation, or a line ending with an LRM and a number. Requires at
-     * least 5 such lines and 1% of the RTL lines.
+     * starting with sentence punctuation, or a line ending with an LRM and a number. Needs at
+     * least 5 such lines and 1% of the RTL lines. From 20% on the whole track is corrupted;
+     * below that only a few lines are, and the other lines (such as dialogue dashes) are correct.
      */
-    internal fun looksLikeSwappedBoundaries(texts: Sequence<CharSequence>): Boolean {
+    internal fun classifyTrack(texts: Sequence<CharSequence>): TrackKind {
         var rtlLines = 0
         var telltaleLines = 0
         for (text in texts) {
@@ -151,8 +168,38 @@ internal object PlayerSubtitleRtlFix {
                 if (startsWithSentencePunctuation(line) || endsWithLrmNumber(line)) telltaleLines++
             }
         }
-        return telltaleLines >= 5 && telltaleLines * 100 >= rtlLines
+        return when {
+            telltaleLines < 5 || telltaleLines * 100 < rtlLines -> TrackKind.CORRECT
+            telltaleLines * 5 >= rtlLines -> TrackKind.SWAPPED
+            else -> TrackKind.PARTIALLY_SWAPPED
+        }
     }
+
+    private fun quoteEdgesBalanced(cues: List<CuesWithTiming>): Boolean =
+        quoteEdgesBalanced(cues.asSequence().flatMap { it.cues.asSequence() }.mapNotNull { it.text })
+
+    /**
+     * In a correct track a quotation spanning several lines opens on one line and closes on a
+     * later one, so lines with a lone opening quote and lines with a lone closing quote are about
+     * equally many. A mirrored track has far more of one kind.
+     */
+    internal fun quoteEdgesBalanced(texts: Sequence<CharSequence>): Boolean {
+        var opening = 0
+        var closing = 0
+        for (text in texts) {
+            for (line in text.splitByNewlines()) {
+                if (!containsStrongRtl(line)) continue
+                val quotes = line.indices.filter { isQuote(line[it]) && !isInsideWord(line, it) }
+                if (quotes.size != 1) continue
+                if (looksLikeOpeningQuote(line, quotes[0])) opening++
+                else if (looksLikeClosingQuote(line, quotes[0])) closing++
+            }
+        }
+        return Math.abs(opening - closing) <= maxOf(2, (opening + closing) / 5)
+    }
+
+    internal fun looksLikeSwappedBoundaries(texts: Sequence<CharSequence>): Boolean =
+        classifyTrack(texts) != TrackKind.CORRECT
 
     private fun startsWithSentencePunctuation(line: CharSequence): Boolean {
         var start = 0
@@ -160,6 +207,44 @@ internal object PlayerSubtitleRtlFix {
         if (start >= line.length) return false
         val isEllipsis = line[start] == '.' && start + 1 < line.length && line[start + 1] == '.'
         return isSentencePunctuation(line[start]) && !isEllipsis
+    }
+
+    /** A line that starts with a dialogue dash followed by text, and does not end with a dash. */
+    private fun isDialogueLine(line: CharSequence): Boolean {
+        val end = line.contentEnd()
+        var dash = 0
+        while (dash < end && (line[dash].isWhitespace() || isBidiControl(line[dash]))) dash++
+        if (dash + 1 >= end || !isDash(line[dash])) return false
+        var next = dash + 1
+        while (next < end && (line[next].isWhitespace() || isBidiControl(line[next]))) next++
+        if (next >= end) return false
+        var last = end - 1
+        while (last > next && (line[last].isWhitespace() || isBidiControl(line[last]))) last--
+        val startsWithText = line[next].isLetterOrDigit() || isQuote(line[next]) || isApostrophe(line[next]) ||
+            line[next] == '(' || line[next] == '[' || line[next] == ELLIPSIS ||
+            (line[next] == '.' && next + 1 < end && line[next + 1] == '.')
+        return startsWithText && !isDash(line[last])
+    }
+
+    /**
+     * A line with a single quote at one edge: the opening or closing quote of a quotation that
+     * spans several lines. Lines with punctuation in front of the quote are not matched.
+     */
+    private fun isMultiLineQuoteEdge(line: CharSequence): Boolean {
+        val end = line.contentEnd()
+        var first = 0
+        while (first < end && (line[first].isWhitespace() || isBidiControl(line[first]))) first++
+        var last = end - 1
+        while (last > first && (line[last].isWhitespace() || isBidiControl(line[last]))) last--
+        if (first >= last) return false
+
+        val quotes = (first..last).filter { isQuote(line[it]) && !isInsideWord(line, it) }
+        if (quotes.size != 1) return false
+        return when (quotes[0]) {
+            first -> (line[first + 1].isLetterOrDigit() || line[first + 1] == '(') && !isDash(line[last])
+            last -> !isSentencePunctuation(line[first]) && !isDash(line[first])
+            else -> false
+        }
     }
 
     private fun endsWithLrmNumber(line: CharSequence): Boolean {
@@ -200,7 +285,9 @@ internal object PlayerSubtitleRtlFix {
         text: CharSequence,
         boundarySwapped: Boolean,
         numbersMoved: Boolean,
-        numbersReversed: Boolean
+        numbersReversed: Boolean,
+        dialogueDashesIntact: Boolean,
+        quoteEdgesIntact: Boolean
     ): CharSequence? {
         val lines = text.splitByNewlines()
         val out = newBuilder(text, extraCapacity = 8)
@@ -212,7 +299,7 @@ internal object PlayerSubtitleRtlFix {
             if (line.isEmpty()) continue
 
             if (boundarySwapped) {
-                val repair = repairLine(line, numbersMoved, numbersReversed)
+                val repair = repairLine(line, numbersMoved, numbersReversed, dialogueDashesIntact, quoteEdgesIntact)
                 if (repair.text !== line) changed = true
                 line = repair.text
                 if (DEBUG_MODE) {
@@ -235,7 +322,13 @@ internal object PlayerSubtitleRtlFix {
     }
 
     /** Applies the repair rules to one line; lines without RTL letters are returned unchanged. */
-    internal fun repairLine(line: CharSequence, numbersMoved: Boolean, numbersReversed: Boolean = false): LineRepair {
+    internal fun repairLine(
+        line: CharSequence,
+        numbersMoved: Boolean,
+        numbersReversed: Boolean = false,
+        dialogueDashesIntact: Boolean = false,
+        quoteEdgesIntact: Boolean = false
+    ): LineRepair {
         if (!containsStrongRtl(line)) return LineRepair(line)
 
         // Bidi marks and a trailing CR are set aside so they don't hide the real line edges.
@@ -246,6 +339,8 @@ internal object PlayerSubtitleRtlFix {
         if (start == end) return LineRepair(line)
 
         val core = if (start == 0 && end == line.length) line else line.subSequence(start, end)
+        if (dialogueDashesIntact && isDialogueLine(core)) return LineRepair(line)
+        if (quoteEdgesIntact && isMultiLineQuoteEdge(core)) return LineRepair(line)
         var repair = applyRules(core, numbersMoved)
         if (numbersReversed && Rule.NUMBERS_REVERSED !in disabledRules) repair = reverseNumbers(repair)
         if (Rule.SPACING !in disabledRules) repair = removeSpaceBeforePunctuation(repair)
@@ -491,6 +586,16 @@ internal object PlayerSubtitleRtlFix {
     private class LatinSegment(val segmentEnd: Int, val restStart: Int)
 
     private fun restoreTrailingLatinSegment(line: CharSequence, numbersMoved: Boolean): LineRepair? {
+        findDecorationFrame(line)?.let { frame ->
+            val repaired = restoreTrailingLatinSegment(line.subSequence(frame.first, frame.last + 1), numbersMoved)
+                ?: return null
+            val text = buildLike(line) {
+                appendSlice(line, 0, frame.first)
+                append(repaired.text)
+                appendSlice(line, frame.last + 1, line.length)
+            }
+            return LineRepair(text, repaired.rules)
+        }
         val segment = findLeadingLatinSegment(line) ?: return null
         val rest = applyRules(line.subSequence(segment.restStart, line.length), numbersMoved)
 
@@ -504,6 +609,20 @@ internal object PlayerSubtitleRtlFix {
             appendSlice(line, 0, punctuationEnd)
         }
         return LineRepair(text, listOf(Rule.LATIN_SEGMENT) + rest.rules)
+    }
+
+    /** Range of the text inside symbol decoration on both sides ("--==< text >==--"), or null. */
+    private fun findDecorationFrame(line: CharSequence): IntRange? {
+        fun isDecoration(c: Char) = c.isWhitespace() || isDash(c) || c in "=<>*~_|#"
+        val end = line.contentEnd()
+        var start = 0
+        while (start < end && isDecoration(line[start])) start++
+        var last = end - 1
+        while (last >= start && isDecoration(line[last])) last--
+        if (start >= last + 1) return null
+        val hasPrefix = (0 until start).any { !line[it].isWhitespace() }
+        val hasSuffix = (last + 1 until end).any { !line[it].isWhitespace() }
+        return if (hasPrefix && hasSuffix) start..last else null
     }
 
     /**
@@ -725,15 +844,15 @@ internal object PlayerSubtitleRtlFix {
 
         return buildLike(line) {
             appendSlice(line, runEnd, end)
-            // Quotes and geresh attach to the word first, then the other punctuation.
+            // Quotes, geresh and closing brackets attach to the word first, then the other punctuation.
             for (i in 0 until runEnd) {
                 if (isMovableQuote(line[i])) appendSlice(line, i, i + 1)
+                else if (line[i] == '(' && bracketIsMovable) append(')')
             }
             appendSlice(line, spaceStart, runEnd)
             for (i in 0 until runEnd) {
                 val c = line[i]
-                if (!isMovable(c) || isMovableQuote(c)) continue
-                if (c == '(') append(')') else appendSlice(line, i, i + 1)
+                if (c != '(' && isMovable(c) && !isMovableQuote(c)) appendSlice(line, i, i + 1)
             }
             if (line.endsWithCarriageReturn()) append(CARRIAGE_RETURN)
         }
