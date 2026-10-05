@@ -313,7 +313,7 @@ func derive7zKey(ctx context.Context, password string, salt []byte, iterations i
 	return h.Sum(key[:0]), nil
 }
 
-type sevenZipCipher struct {
+type cbcCipher struct {
 	block   cipher.Block
 	iv      []byte // folder IV: chains only into the folder's first block.
 	fileRel int64  // selected file's offset inside its folder's plaintext.
@@ -330,7 +330,7 @@ func (z *sevenZipSet) content(ctx context.Context, e sevenZipEntry, name string)
 	}
 	size := int64(info.Size)
 	low, high := int64(0), size
-	var crypt *sevenZipCipher
+	var crypt *cbcCipher
 	if info.Encrypted {
 		if z.password == "" {
 			return nil, Err7zPasswordMissing
@@ -351,7 +351,7 @@ func (z *sevenZipSet) content(ctx context.Context, e sevenZipEntry, name string)
 			z.keys[id] = block
 		}
 		rel := info.Offset - e.folderStart
-		crypt = &sevenZipCipher{block: block, iv: info.AESIV, fileRel: rel}
+		crypt = &cbcCipher{block: block, iv: info.AESIV, fileRel: rel}
 		first := rel / aes.BlockSize * aes.BlockSize
 		low = max(0, first-aes.BlockSize) - rel
 		high = (rel+size+aes.BlockSize-1)/aes.BlockSize*aes.BlockSize - rel
@@ -398,6 +398,9 @@ func (c *Content) checkPassword(ctx context.Context) error {
 	}
 	if !bytes.HasPrefix(head, []byte{0x1a, 0x45, 0xdf, 0xa3}) && !(len(head) >= 8 && string(head[4:8]) == "ftyp") &&
 		!bytes.HasPrefix(head, []byte("RIFF")) {
+		if c.padded {
+			return ErrRARWrongPassword
+		}
 		return Err7zWrongPassword
 	}
 	return nil
@@ -570,11 +573,11 @@ func (c *Content) usable(ctx context.Context) (*Content, error) {
 	if c.unusable != nil {
 		return nil, c.unusable
 	}
-	if c.mapLater != nil {
-		if err := c.mapLater(ctx); err != nil {
+	if c.prepare != nil {
+		if err := c.prepare(ctx); err != nil {
 			return nil, err
 		}
-		c.mapLater = nil
+		c.prepare = nil
 	}
 	if err := c.checkPassword(ctx); err != nil {
 		return nil, err

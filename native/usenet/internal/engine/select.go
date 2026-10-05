@@ -473,7 +473,16 @@ groups:
 				continue
 			}
 			c := &Content{Name: b.name, Size: b.unpacked, cursor: cursor, complete: !b.after, parts: []extent{{f, b.data, b.packed, 0}}}
-			if c.Size < 0 || b.packed > c.Size || (c.complete && b.packed != c.Size) {
+			if b.crypt != nil {
+				// AES data: derive the key only if this entry is selected.
+				crypt, password := b.crypt, f.password
+				c.padded = true
+				c.prepare = func(ctx context.Context) (err error) {
+					c.aes, err = rarDataCipher(ctx, crypt, password)
+					return err
+				}
+			}
+			if c.Size < 0 || b.packed > c.payloadSize() || (c.complete && b.packed != c.payloadSize()) {
 				if err := broken(errors.New("invalid stored RAR file size")); err != nil {
 					return nil, err
 				}
@@ -489,7 +498,7 @@ groups:
 						return nil, v.damaged
 					}
 				}
-				return c, nil
+				return c.usable(ctx)
 			}
 			index++
 			// Reach the next entry using headers only. Selected content returns
