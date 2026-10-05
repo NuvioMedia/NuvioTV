@@ -67,6 +67,7 @@ fun TrackingSettingsContent(
     traktViewModel: TraktViewModel = hiltViewModel(),
     simklViewModel: SimklSettingsViewModel = hiltViewModel(),
     mdbListViewModel: MdbListTrackerViewModel = hiltViewModel(),
+    weTrakrViewModel: WeTrakrTrackerViewModel = hiltViewModel(),
     trackingViewModel: TrackingSettingsViewModel = hiltViewModel(),
     initialFocusRequester: FocusRequester? = null
 ) {
@@ -74,11 +75,13 @@ fun TrackingSettingsContent(
     val simklState by simklViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListState by mdbListViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListLibraryLists by mdbListViewModel.libraryLists.collectAsStateWithLifecycle()
+    val weTrakrState by weTrakrViewModel.uiState.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
     val simklFocusRequester = remember { FocusRequester() }
     val mdbListFocusRequester = remember { FocusRequester() }
+    val weTrakrFocusRequester = remember { FocusRequester() }
     val libraryFocusRequester = remember { FocusRequester() }
     val watchProgressFocusRequester = remember { FocusRequester() }
     val continueWatchingFocusRequester = remember { FocusRequester() }
@@ -109,12 +112,14 @@ fun TrackingSettingsContent(
         dismissOnConnected,
         traktState.mode,
         simklState.mode,
-        mdbListState.isConnected
+        mdbListState.isConnected,
+        weTrakrState.isConnected
     ) {
         val connected = when (dismissOnConnected) {
             TrackingProviderId.TRAKT -> traktState.mode == TraktConnectionMode.CONNECTED
             TrackingProviderId.SIMKL -> simklState.mode == SimklConnectionMode.CONNECTED
             TrackingProviderId.MDBLIST -> mdbListState.isConnected
+            TrackingProviderId.WETRAKR -> weTrakrState.isConnected
             null -> false
         }
         if (activeProvider == dismissOnConnected && connected) {
@@ -132,6 +137,7 @@ fun TrackingSettingsContent(
                 TrackingFocusTarget.TRAKT -> traktFocusRequester.requestFocus()
                 TrackingFocusTarget.SIMKL -> simklFocusRequester.requestFocus()
                 TrackingFocusTarget.MDBLIST -> mdbListFocusRequester.requestFocus()
+                TrackingFocusTarget.WETRAKR -> weTrakrFocusRequester.requestFocus()
                 TrackingFocusTarget.LIBRARY -> libraryFocusRequester.requestFocus()
                 TrackingFocusTarget.WATCH_PROGRESS -> watchProgressFocusRequester.requestFocus()
                 TrackingFocusTarget.CONTINUE_WATCHING -> continueWatchingFocusRequester.requestFocus()
@@ -146,6 +152,7 @@ fun TrackingSettingsContent(
             TrackingProviderId.TRAKT -> TrackingFocusTarget.TRAKT
             TrackingProviderId.SIMKL -> TrackingFocusTarget.SIMKL
             TrackingProviderId.MDBLIST -> TrackingFocusTarget.MDBLIST
+            TrackingProviderId.WETRAKR -> TrackingFocusTarget.WETRAKR
         }
         activeProvider = provider
         disconnectProvider = null
@@ -179,6 +186,15 @@ fun TrackingSettingsContent(
                     mdbListViewModel.onConnect()
                 }
             }
+            TrackingProviderId.WETRAKR -> {
+                if (weTrakrState.isConnected) {
+                    dismissOnConnected = null
+                    weTrakrViewModel.onAccountOpened()
+                } else {
+                    dismissOnConnected = provider
+                    weTrakrViewModel.onConnect()
+                }
+            }
         }
     }
 
@@ -186,10 +202,12 @@ fun TrackingSettingsContent(
         traktState = traktState,
         simklState = simklState,
         mdbListState = mdbListState,
+        weTrakrState = weTrakrState,
         trackingState = trackingState,
         traktFocusRequester = traktFocusRequester,
         simklFocusRequester = simklFocusRequester,
         mdbListFocusRequester = mdbListFocusRequester,
+        weTrakrFocusRequester = weTrakrFocusRequester,
         libraryFocusRequester = libraryFocusRequester,
         watchProgressFocusRequester = watchProgressFocusRequester,
         continueWatchingFocusRequester = continueWatchingFocusRequester,
@@ -197,6 +215,7 @@ fun TrackingSettingsContent(
         onTraktClick = { openProvider(TrackingProviderId.TRAKT) },
         onSimklClick = { openProvider(TrackingProviderId.SIMKL) },
         onMdbListClick = { openProvider(TrackingProviderId.MDBLIST) },
+        onWeTrakrClick = { openProvider(TrackingProviderId.WETRAKR) },
         onLibrarySourceClick = {
             restoreFocusTarget = TrackingFocusTarget.LIBRARY
             showLibrarySourceDialog = true
@@ -282,6 +301,24 @@ fun TrackingSettingsContent(
                 }
             )
         }
+        TrackingProviderId.WETRAKR -> {
+            WeTrakrAccountDialog(
+                state = weTrakrState,
+                onStartConnection = weTrakrViewModel::onConnect,
+                onRetryPolling = weTrakrViewModel::onRetryPolling,
+                onSync = weTrakrViewModel::onSyncNow,
+                onDisconnect = {
+                    activeProvider = null
+                    dismissOnConnected = null
+                    disconnectProvider = TrackingProviderId.WETRAKR
+                },
+                onDismiss = {
+                    if (!weTrakrState.isConnected) weTrakrViewModel.onCancel()
+                    activeProvider = null
+                    dismissOnConnected = null
+                }
+            )
+        }
         null -> Unit
     }
 
@@ -296,6 +333,7 @@ fun TrackingSettingsContent(
                     TrackingProviderId.TRAKT -> R.string.trakt_disconnect_title
                     TrackingProviderId.SIMKL -> R.string.simkl_disconnect_title
                     TrackingProviderId.MDBLIST -> R.string.mdblist_disconnect_title
+                    TrackingProviderId.WETRAKR -> R.string.wetrakr_disconnect_title
                 }
             ),
             subtitle = stringResource(
@@ -303,6 +341,7 @@ fun TrackingSettingsContent(
                     TrackingProviderId.TRAKT -> R.string.trakt_disconnect_subtitle
                     TrackingProviderId.SIMKL -> R.string.simkl_disconnect_subtitle
                     TrackingProviderId.MDBLIST -> R.string.mdblist_disconnect_subtitle
+                    TrackingProviderId.WETRAKR -> R.string.wetrakr_disconnect_subtitle
                 }
             ),
             width = 520.dp,
@@ -324,6 +363,7 @@ fun TrackingSettingsContent(
                             TrackingProviderId.TRAKT -> traktViewModel.onDisconnectClick()
                             TrackingProviderId.SIMKL -> simklViewModel.onDisconnect()
                             TrackingProviderId.MDBLIST -> mdbListViewModel.onDisconnect()
+                            TrackingProviderId.WETRAKR -> weTrakrViewModel.onDisconnect()
                         }
                     },
                     primary = true
@@ -473,10 +513,12 @@ internal fun TrackingSettingsOverview(
     traktState: TraktUiState,
     simklState: SimklSettingsUiState,
     mdbListState: MdbListTrackerUiState,
+    weTrakrState: WeTrakrTrackerUiState = WeTrakrTrackerUiState(),
     trackingState: TrackingSettingsUiState,
     traktFocusRequester: FocusRequester,
     simklFocusRequester: FocusRequester,
     mdbListFocusRequester: FocusRequester,
+    weTrakrFocusRequester: FocusRequester = remember { FocusRequester() },
     libraryFocusRequester: FocusRequester,
     watchProgressFocusRequester: FocusRequester,
     continueWatchingFocusRequester: FocusRequester,
@@ -484,6 +526,7 @@ internal fun TrackingSettingsOverview(
     onTraktClick: () -> Unit,
     onSimklClick: () -> Unit,
     onMdbListClick: () -> Unit,
+    onWeTrakrClick: () -> Unit = {},
     onLibrarySourceClick: () -> Unit,
     onWatchProgressClick: () -> Unit,
     onContinueWatchingWindowClick: () -> Unit,
@@ -497,6 +540,7 @@ internal fun TrackingSettingsOverview(
     val traktPresentation = traktConnectionPresentation(traktState)
     val simklPresentation = simklConnectionPresentation(simklState)
     val mdbListPresentation = mdbListConnectionPresentation(mdbListState)
+    val weTrakrPresentation = weTrakrConnectionPresentation(weTrakrState)
     val traktConnected = traktState.mode == TraktConnectionMode.CONNECTED
     val traktProgressActive = trackingState.watchProgressSource == WatchProgressSource.TRAKT
 
@@ -557,6 +601,18 @@ internal fun TrackingSettingsOverview(
                             modifier = Modifier
                                 .focusRequester(mdbListFocusRequester)
                                 .testTag(TrackingSettingsTestTags.MDBLIST_PROVIDER)
+                        )
+                        SettingsActionRow(
+                            title = stringResource(R.string.wetrakr_name),
+                            subtitle = weTrakrPresentation.subtitle,
+                            value = weTrakrPresentation.value,
+                            valueColor = weTrakrPresentation.color,
+                            leadingRawIconRes = R.raw.wetrakr_icon,
+                            leadingArtworkSize = 40.dp,
+                            onClick = onWeTrakrClick,
+                            modifier = Modifier
+                                .focusRequester(weTrakrFocusRequester)
+                                .testTag(TrackingSettingsTestTags.WETRAKR_PROVIDER)
                         )
                     }
                 }
@@ -757,10 +813,31 @@ private fun mdbListConnectionPresentation(state: MdbListTrackerUiState): Trackin
 }
 
 @Composable
+private fun weTrakrConnectionPresentation(state: WeTrakrTrackerUiState): TrackingConnectionPresentation = when {
+    state.isLoading && !state.isConnected -> TrackingConnectionPresentation(
+        stringResource(R.string.tracking_connecting_provider, stringResource(R.string.wetrakr_name)),
+        stringResource(R.string.tracking_status_connecting), NuvioTheme.colors.Info
+    )
+    state.isConnected -> TrackingConnectionPresentation(
+        stringResource(R.string.wetrakr_connected_as, state.username ?: stringResource(R.string.wetrakr_account_fallback)),
+        stringResource(R.string.tracking_status_connected), NuvioTheme.colors.Success
+    )
+    state.session != null -> TrackingConnectionPresentation(
+        state.errorMessage ?: stringResource(R.string.tracking_finish_connection),
+        stringResource(R.string.tracking_status_waiting), NuvioTheme.colors.Warning
+    )
+    else -> TrackingConnectionPresentation(
+        state.errorMessage ?: stringResource(R.string.wetrakr_tracking_description),
+        stringResource(R.string.tracking_status_disconnected), NuvioTheme.colors.TextSecondary
+    )
+}
+
+@Composable
 private fun watchProgressSourceLabel(source: WatchProgressSource): String = when (source) {
     WatchProgressSource.TRAKT -> stringResource(R.string.trakt_name)
     WatchProgressSource.SIMKL -> stringResource(R.string.simkl_name)
     WatchProgressSource.MDBLIST -> stringResource(R.string.mdblist_name)
+    WatchProgressSource.WETRAKR -> stringResource(R.string.wetrakr_name)
     WatchProgressSource.NUVIO_SYNC -> stringResource(R.string.trakt_watch_progress_source_nuvio)
 }
 
@@ -769,6 +846,7 @@ private fun librarySourceLabel(mode: LibrarySourceMode): String = when (mode) {
     LibrarySourceMode.TRAKT -> stringResource(R.string.trakt_name)
     LibrarySourceMode.SIMKL -> stringResource(R.string.simkl_name)
     LibrarySourceMode.MDBLIST -> stringResource(R.string.mdblist_name)
+    LibrarySourceMode.WETRAKR -> stringResource(R.string.wetrakr_name)
     LibrarySourceMode.LOCAL -> stringResource(R.string.trakt_library_source_nuvio)
 }
 
@@ -800,6 +878,7 @@ private enum class TrackingFocusTarget {
     TRAKT,
     SIMKL,
     MDBLIST,
+    WETRAKR,
     LIBRARY,
     WATCH_PROGRESS,
     CONTINUE_WATCHING,
@@ -811,6 +890,7 @@ internal object TrackingSettingsTestTags {
     const val TRAKT_PROVIDER = "tracking_provider_trakt"
     const val SIMKL_PROVIDER = "tracking_provider_simkl"
     const val MDBLIST_PROVIDER = "tracking_provider_mdblist"
+    const val WETRAKR_PROVIDER = "tracking_provider_wetrakr"
     const val MDBLIST_LIBRARY_LISTS = "tracking_mdblist_library_lists"
     const val LIBRARY_SOURCE = "tracking_source_library"
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"
