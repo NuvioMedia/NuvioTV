@@ -120,12 +120,16 @@ func (s *cachedNZBFile) restoreHints(f *File) {
 
 func (c *Content) startupCache() (*nzbSnapshot, string) {
 	f, offset := c.direct, int64(0)
+	source := c
+	if c.nested != nil && len(c.nested.vols) > 0 {
+		source = c.nested.vols[0] // Nested RAR: key on the first 7z entry's extent.
+	}
 	if f == nil {
-		c.mu.RLock()
-		if len(c.parts) > 0 {
-			f, offset = c.parts[0].file, c.parts[0].offset
+		source.mu.RLock()
+		if len(source.parts) > 0 {
+			f, offset = source.parts[0].file, source.parts[0].offset
 		}
-		c.mu.RUnlock()
+		source.mu.RUnlock()
 	}
 	if f == nil || f.cached == nil {
 		return nil, ""

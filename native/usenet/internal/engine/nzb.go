@@ -46,6 +46,7 @@ type File struct {
 	known         []int // sorted authoritative anchors; Range lookup is O(log segments).
 	store         *Store
 	damaged       error
+	password      string // NZB <head><meta type="password">, shared by every file of the document.
 }
 
 const maxNZBBytes = 64 << 20
@@ -101,6 +102,7 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 	count := 0
 	root := false
 	index := 0
+	password := ""
 	for {
 		token, err := decoder.Token()
 		if err == io.EOF {
@@ -118,6 +120,24 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 				return nil, errors.New("invalid NZB root")
 			}
 			root = true
+			continue
+		}
+		if start.Name.Local == "head" {
+			// Indexers publish the archive password of protected releases here.
+			var head struct {
+				Meta []struct {
+					Type  string `xml:"type,attr"`
+					Value string `xml:",chardata"`
+				} `xml:"meta"`
+			}
+			if err := decoder.DecodeElement(&head, &start); err != nil {
+				return nil, fmt.Errorf("invalid NZB head: %w", err)
+			}
+			for _, m := range head.Meta {
+				if value := strings.TrimSpace(m.Value); strings.EqualFold(m.Type, "password") && value != "" && len(value) <= 1024 {
+					password = value
+				}
+			}
 			continue
 		}
 		if start.Name.Local != "file" {
@@ -173,6 +193,9 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 	}
 	if len(files) == 0 {
 		return nil, errors.New("NZB has no files")
+	}
+	for _, f := range files {
+		f.password = password
 	}
 	return files, nil
 }

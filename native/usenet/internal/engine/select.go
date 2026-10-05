@@ -313,6 +313,18 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 			}
 		}
 	}
+	skipBroken := s.FileIdx == nil && (s.FileMustInclude != "" || s.Episode > 0)
+	var brokenErr error
+	broken := func(err error) error {
+		if !skipBroken || ctx.Err() != nil {
+			return err
+		}
+		if brokenErr == nil {
+			brokenErr = err
+		}
+		return nil
+	}
+	index := 0
 	if (len(groups) == 0 || allowFallback) && len(unknown) > 0 {
 		ordered := true
 		for _, f := range unknown {
@@ -330,6 +342,28 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 			head, e := sniff(ctx, f)
 			if e != nil {
 				return nil, e
+			}
+			if is7zHead(head) {
+				// A named .7z stands alone; the volumes of an extensionless
+				// obfuscated set follow its first one in release order.
+				named := strings.HasSuffix(strings.ToLower(f.Name), ".7z")
+				vols := unknown[i:]
+				if named {
+					vols = vols[:1]
+				}
+				c, err := select7z(ctx, vols, s, &index, consider)
+				if err == nil && c != nil {
+					return c, nil
+				}
+				if err != nil {
+					if err := broken(err); err != nil {
+						return nil, err
+					}
+				}
+				if named {
+					continue
+				}
+				break
 			}
 			if bytes.HasPrefix(head, []byte("Rar!\x1a\x07")) {
 				if allowFallback {
@@ -371,18 +405,6 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 			}
 		}
 	}
-	skipBroken := s.FileIdx == nil && (s.FileMustInclude != "" || s.Episode > 0)
-	var brokenErr error
-	broken := func(err error) error {
-		if !skipBroken || ctx.Err() != nil {
-			return err
-		}
-		if brokenErr == nil {
-			brokenErr = err
-		}
-		return nil
-	}
-	index := 0
 groups:
 	for _, key := range order {
 		vols := groups[key]
@@ -404,6 +426,29 @@ groups:
 					}
 					continue groups
 				}
+			}
+		}
+		if scheme, _, _ := rarname.VolumeNumber(vols[0].Name); key != anonymousRARKey && scheme == rarname.SchemeNumeric {
+			// .001/.002 and .7z.001 sets are often 7z rather than RAR.
+			head, err := sniff(ctx, vols[0])
+			if err == nil && is7zHead(head) {
+				var c *Content
+				if c, err = select7z(ctx, vols, s, &index, consider); err == nil && c != nil {
+					for _, v := range vols {
+						if v.damaged != nil {
+							return nil, v.damaged
+						}
+					}
+					return c, nil
+				}
+			}
+			if err != nil {
+				if err := broken(err); err != nil {
+					return nil, err
+				}
+			}
+			if err != nil || is7zHead(head) {
+				continue groups
 			}
 		}
 		cursor := &rarCursor{files: vols, unordered: key == anonymousRARKey}
@@ -464,7 +509,7 @@ groups:
 		if fallback.direct != nil && fallback.direct.damaged != nil {
 			return nil, fallback.direct.damaged
 		}
-		return fallback, nil
+		return fallback.usable(ctx)
 	}
 	return nil, errNoMatchingVideo
 }

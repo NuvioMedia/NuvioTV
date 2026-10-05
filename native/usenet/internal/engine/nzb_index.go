@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	nzbIndexMagic     = "NVIDX001"
+	nzbIndexMagic     = "NVIDX002" // 002 added the archive password.
 	nzbIndexHeader    = 56
 	nzbDirectoryBytes = 4 << 20
 )
@@ -41,6 +41,9 @@ type nzbRecord struct {
 	Length int64    `json:"l"`
 	Bytes  int64    `json:"b"`
 	Hash   [32]byte `json:"h"`
+	// Archive password from the NZB head. Kept with the private cache because
+	// the indexer only publishes it inside the document being replaced here.
+	Password string `json:"w,omitempty"`
 }
 
 type nzbSnapshot struct {
@@ -259,7 +262,7 @@ func decodeNZBDirectory(b []byte) ([]nzbRecord, error) {
 func (d *nzbSnapshot) files(store *Store) []*File {
 	files := make([]*File, len(d.records))
 	for i, r := range d.records {
-		files[i] = &File{Name: r.Name, Index: r.Index, order: r.Order, size: r.Size, store: store, cached: &cachedNZBFile{doc: d, record: r}}
+		files[i] = &File{Name: r.Name, Index: r.Index, order: r.Order, size: r.Size, store: store, password: r.Password, cached: &cachedNZBFile{doc: d, record: r}}
 	}
 	return files
 }
@@ -285,7 +288,7 @@ func (f *nzbCacheFill) indexed(files []*File) string {
 		if err := file.loadSegments(); err != nil {
 			return f.finish(false)
 		}
-		r := nzbRecord{Name: file.Name, Index: file.Index, Order: file.order, Size: file.prefix[len(file.prefix)-1], Count: len(file.segments), Offset: f.written}
+		r := nzbRecord{Name: file.Name, Index: file.Index, Order: file.order, Size: file.prefix[len(file.prefix)-1], Count: len(file.segments), Offset: f.written, Password: file.password}
 		h := sha256.New()
 		count := &byteCounter{}
 		gz.Reset(f)
