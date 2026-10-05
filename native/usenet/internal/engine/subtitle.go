@@ -20,7 +20,7 @@ func isSubtitle(name string) bool {
 }
 func standaloneSubtitles(files []*File, selection Selection) []*File {
 	var result []*File
-	episodeMatch, _ := (Selection{Season: selection.Season, Episode: selection.Episode}).matcher()
+	episodeMatch, _ := (Selection{Season: selection.Season, Episode: selection.Episode, multiEpisode: true}).matcher()
 	for _, f := range files {
 		ext := strings.ToLower(path.Ext(f.Name))
 		if f.damaged != nil || ext != ".srt" && ext != ".ass" && ext != ".ssa" && ext != ".vtt" && ext != ".sub" {
