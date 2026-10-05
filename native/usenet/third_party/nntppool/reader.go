@@ -37,14 +37,15 @@ type NNTPResponse struct {
 	StatusCode    int
 	CRC           uint32
 
-	eof          bool
-	body         bool
-	hasPart      bool
-	hasEnd       bool
-	hasCrc       bool
-	hasEmptyline bool // for article requests has the empty line separating headers and body been seen
-	presized     bool // output buffer has already been grown to the announced part size
-	onMeta       func(YEncMeta)
+	eof           bool
+	body          bool
+	hasPart       bool
+	hasEnd        bool
+	hasCrc        bool
+	hasEmptyline  bool // for article requests has the empty line separating headers and body been seen
+	presized      bool // output buffer has already been grown to the announced part size
+	onMeta        func(YEncMeta)
+	metadataBytes int
 }
 
 const nntpBody = 222
@@ -55,6 +56,10 @@ const nntpCapabilities = 101
 // maxPresize caps how much a yEnc header is allowed to pre-allocate, so a
 // corrupt or hostile size= field cannot force a huge allocation.
 const maxPresize = 64 << 20
+
+// This budget covers retained text independently of the socket's read slab.
+const maxResponseMetadataBytes = 1 << 20
+const maxResponseMetadataLines = 4096
 
 // Feed consumes raw NNTP protocol bytes from buf, writing any decoded payload bytes to out.
 // It returns (bytesConsumedFromBuf, done, error).
@@ -120,6 +125,10 @@ func (r *NNTPResponse) decode(buf []byte, out io.Writer) (read int, err error) {
 
 			switch r.Format {
 			case rapidyenc.FormatUnknown:
+				if len(r.Lines) >= maxResponseMetadataLines || len(line) > maxResponseMetadataBytes-r.metadataBytes {
+					return read, ErrResponseTooLarge
+				}
+				r.metadataBytes += len(line)
 				r.Lines = append(r.Lines, string(line))
 			case rapidyenc.FormatYenc:
 				r.processYencHeader(line)
@@ -357,7 +366,7 @@ func (r *NNTPResponse) processYencHeader(line []byte) {
 		if begin, err = extractInt(line, []byte(" begin=")); err == nil {
 			r.YEnc.PartBegin = begin - 1
 		}
-		if end, err := extractInt(line, []byte(" end=")); err == nil && end > begin {
+		if end, err := extractInt(line, []byte(" end=")); err == nil && begin > 0 && end >= begin {
 			r.YEnc.PartSize = end - r.YEnc.PartBegin
 		}
 		if r.onMeta != nil {

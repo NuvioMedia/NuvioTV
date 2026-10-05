@@ -38,7 +38,7 @@ type ArticleBody struct {
 
 	CRC         uint32
 	ExpectedCRC uint32
-	CRCValid    bool // true when ExpectedCRC != 0 && CRC == ExpectedCRC
+	CRCValid    bool // true when a checksum is present (including zero) and matches
 
 	byteBuf []byte // internal; transferred to Bytes in Body()
 }
@@ -286,7 +286,7 @@ func (c *Client) finishBody(messageID string, w io.Writer, respCh <-chan Respons
 		CRC:           resp.Meta.CRC,
 		ExpectedCRC:   resp.Meta.ExpectedCRC,
 	}
-	body.CRCValid = body.ExpectedCRC != 0 && body.CRC == body.ExpectedCRC
+	body.CRCValid = resp.Meta.hasCrc && body.CRC == body.ExpectedCRC
 
 	// When w was nil, the decoded bytes were buffered in resp.Body.
 	if w == nil {
@@ -297,7 +297,16 @@ func (c *Client) finishBody(messageID string, w io.Writer, respCh <-chan Respons
 	}
 
 	// Return both the body and a CRC error so callers get data but are warned.
-	if body.ExpectedCRC != 0 && body.CRC != body.ExpectedCRC {
+	if resp.Meta.Format == rapidyenc.FormatYenc {
+		expected := body.YEnc.FileSize
+		if body.YEnc.Part > 0 {
+			expected = body.YEnc.PartSize
+		}
+		if !resp.Meta.hasEnd || expected <= 0 || resp.Meta.EndSize != expected || int64(body.BytesDecoded) != expected {
+			return body, fmt.Errorf("%w: missing trailer or inconsistent payload size", ErrInvalidYEnc)
+		}
+	}
+	if resp.Meta.hasCrc && body.CRC != body.ExpectedCRC {
 		return body, ErrCRCMismatch
 	}
 

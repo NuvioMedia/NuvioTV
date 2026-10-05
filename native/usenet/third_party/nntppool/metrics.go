@@ -1,6 +1,7 @@
 package nntppool
 
 import (
+	"errors"
 	"math"
 	"sync/atomic"
 	"time"
@@ -23,10 +24,12 @@ type PingResult struct {
 // providerStats holds internal atomic counters for a single provider group.
 // Used on the hot path — no mutex, atomic only.
 type providerStats struct {
-	BytesConsumed atomic.Int64 // wire bytes consumed (used to compute AvgSpeed)
-	Missing       atomic.Int64 // 430/423 responses
-	Errors        atomic.Int64 // network errors, bad status codes
-	Ping          PingResult   // result of initial DATE ping
+	authError     atomic.Pointer[authResponseError]
+	authFailed    chan struct{} // closed once a credential rejection is recorded
+	BytesConsumed atomic.Int64  // wire bytes consumed (used to compute AvgSpeed)
+	Missing       atomic.Int64  // 430/423 responses
+	Errors        atomic.Int64  // network errors, bad status codes
+	Ping          PingResult    // result of initial DATE ping
 
 	// ttfbEWMA is the exponentially weighted moving average of observed
 	// time-to-first-byte, in nanoseconds. 0 = no sample yet. Seeded from the
@@ -62,6 +65,27 @@ type providerStats struct {
 	// every transfer.
 	escSuppressedUntil atomic.Int64
 	escFruitless       atomic.Int32
+}
+
+func (s *providerStats) authenticationError() error {
+	if s != nil {
+		if err := s.authError.Load(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *providerStats) rejectAuthentication(err error) bool {
+	var authErr *authResponseError
+	if s == nil || !errors.As(err, &authErr) ||
+		(!errors.Is(authErr, ErrAuthRejected) && !errors.Is(authErr, ErrAuthRequired)) {
+		return false
+	}
+	if s.authError.CompareAndSwap(nil, authErr) && s.authFailed != nil {
+		close(s.authFailed)
+	}
+	return true
 }
 
 // recordTTFB updates the provider's time-to-first-byte EWMA. sample is the
