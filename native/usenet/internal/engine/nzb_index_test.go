@@ -246,8 +246,11 @@ func TestIndexedNZBMKVHintsSurviveRestartWithoutPayloads(t *testing.T) {
 		if err := files[0].loadSegments(); err != nil {
 			t.Fatal(err)
 		}
-		if pass == 1 && (!files[0].exact || len(files[0].known) < 3) {
-			t.Fatal("decoded layout hints not restored")
+		// The readiness marks below guarantee the head and Cues articles only.
+		// Closing warmup can cancel either worker before its second article;
+		// those speculative anchors must not be required for persistence.
+		if pass == 1 && (!files[0].exact || !files[0].segments[0].known || !files[0].segments[2].known) {
+			t.Fatal("decoded head/Cues layout hints not restored")
 		}
 		content, err := Select(context.Background(), files, Selection{})
 		if err != nil {

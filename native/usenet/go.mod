@@ -4,6 +4,8 @@ replace github.com/mnightingale/rapidyenc => ./third_party/rapidyenc
 
 replace github.com/javi11/nntppool/v4 => ./third_party/nntppool
 
+replace github.com/javi11/sevenzip => ./third_party/sevenzip
+
 go 1.27.0
 
 require (

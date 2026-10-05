@@ -238,18 +238,16 @@ func open7zLayout(ctx context.Context, files []*File, vols []sevenZipVolume) (*s
 	archive := newSevenZipArchive(ctx, vols)
 	defer archive.Close()
 	password := files[0].password
-	var r *sevenzip.Reader
-	if password != "" {
-		r, err = sevenzip.NewReaderWithPassword(archive, archive.size, password)
-	} else {
-		r, err = sevenzip.NewReader(archive, archive.size)
-	}
+	r, err := sevenzip.NewReaderWithContext(ctx, archive, archive.size, password)
 	if err != nil {
 		switch {
 		case ctx.Err() != nil:
 			return nil, ctx.Err()
 		case archive.layout != nil:
 			return nil, archive.layout
+		}
+		if errors.Is(err, sevenzip.ErrResourceLimit) {
+			return nil, fmt.Errorf("%w: %v", errInvalidArticle, err)
 		}
 		var readErr *sevenzip.ReadError
 		if errors.As(err, &readErr) && readErr.Encrypted {
@@ -286,7 +284,10 @@ func open7zLayout(ctx context.Context, files []*File, vols []sevenZipVolume) (*s
 
 // derive7zKey is 7-Zip's AES-256 key schedule: SHA-256 over 2^cycles rounds of
 // salt || UTF-16LE(password) || little-endian round counter.
-func derive7zKey(password string, salt []byte, iterations int) []byte {
+func derive7zKey(ctx context.Context, password string, salt []byte, iterations int) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	units := utf16.Encode([]rune(password))
 	secret := append([]byte(nil), salt...)
 	for _, u := range units {
@@ -295,16 +296,21 @@ func derive7zKey(password string, salt []byte, iterations int) []byte {
 	key := make([]byte, sha256.Size)
 	if iterations == 0 {
 		copy(key, secret)
-		return key
+		return key, nil
 	}
 	h := sha256.New()
 	var counter [8]byte
 	for i := uint64(0); i < uint64(iterations); i++ {
+		if i&1023 == 0 {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+		}
 		h.Write(secret)
 		binary.LittleEndian.PutUint64(counter[:], i)
 		h.Write(counter[:])
 	}
-	return h.Sum(key[:0])
+	return h.Sum(key[:0]), nil
 }
 
 type sevenZipCipher struct {
@@ -317,7 +323,7 @@ type sevenZipCipher struct {
 // the entry's own plaintext offsets; Copy+AES keeps ciphertext byte positions
 // identical, so an encrypted entry's parts start up to 31 bytes early, at the
 // AES block that chains into its first byte, and end with its last AES block.
-func (z *sevenZipSet) content(e sevenZipEntry, name string) (*Content, error) {
+func (z *sevenZipSet) content(ctx context.Context, e sevenZipEntry, name string) (*Content, error) {
 	info := e.info
 	if info.Compressed {
 		return nil, ErrCompressed7z
@@ -330,13 +336,16 @@ func (z *sevenZipSet) content(e sevenZipEntry, name string) (*Content, error) {
 			return nil, Err7zPasswordMissing
 		}
 		if len(info.AESIV) != aes.BlockSize || info.KDFIterations < 0 || info.KDFIterations > 1<<24 {
-			return nil, errors.New("unsupported 7z AES parameters")
+			return nil, fmt.Errorf("%w: unsupported 7z AES parameters", errInvalidArticle)
 		}
 		id := fmt.Sprintf("%x/%d", info.AESSalt, info.KDFIterations)
 		block := z.keys[id]
 		if block == nil {
-			var err error
-			if block, err = aes.NewCipher(derive7zKey(z.password, info.AESSalt, info.KDFIterations)); err != nil {
+			key, err := derive7zKey(ctx, z.password, info.AESSalt, info.KDFIterations)
+			if err != nil {
+				return nil, err
+			}
+			if block, err = aes.NewCipher(key); err != nil {
 				return nil, err
 			}
 			z.keys[id] = block
@@ -492,7 +501,10 @@ func select7z(ctx context.Context, vols []*File, s Selection, index *int, consid
 	var largest *Content
 	entries := make([]*Content, len(set.entries))
 	for i, e := range set.entries {
-		c, err := set.content(e, e.name)
+		c, err := set.content(ctx, e, e.name)
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if err != nil {
 			c = &Content{Name: e.name, Size: int64(e.info.Size), unusable: err}
 		}

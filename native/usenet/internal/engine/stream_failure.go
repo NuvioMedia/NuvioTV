@@ -19,7 +19,8 @@ func permanentStreamFailure(err error) string {
 		return "missing-article"
 	case errors.Is(err, errHoleLimit):
 		return "hole-limit"
-	case errors.Is(err, errInvalidArticle), errors.Is(err, ErrCompressedRAR), errors.Is(err, ErrEncryptedRAR),
+	case errors.Is(err, errInvalidArticle), errors.Is(err, nntppool.ErrCRCMismatch), errors.Is(err, nntppool.ErrInvalidYEnc),
+		errors.Is(err, nntppool.ErrResponseTooLarge), errors.Is(err, ErrCompressedRAR), errors.Is(err, ErrEncryptedRAR),
 		errors.Is(err, err7zVolumeLayout):
 		return "invalid-article"
 	case errors.Is(err, errProviderAuthentication):
