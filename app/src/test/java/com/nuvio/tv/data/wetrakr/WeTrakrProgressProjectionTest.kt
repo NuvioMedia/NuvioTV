@@ -55,4 +55,17 @@ class WeTrakrProgressProjectionTest {
         assertFalse(projection.isWatched("tt0903747", 1, 3))
         assertEquals(1, projection.nextUp(preferFurthest = true).size)
     }
+
+    @Test
+    fun `seeds without a title leave the name blank for the catalog to fill`() {
+        val untitled = WeTrakrMedia(WeTrakrIds(imdb = "tt13649510"))
+        val projection = WeTrakrProgressProjection(
+            WeTrakrSyncSnapshot(
+                1,
+                watched = listOf(WeTrakrWatchedRecord(WeTrakrItemType.EPISODE, untitled, "2026-09-21T10:00:00Z", 1, 1))
+            )
+        )
+
+        assertEquals("", projection.nextUp(preferFurthest = true).single().name)
+    }
 }

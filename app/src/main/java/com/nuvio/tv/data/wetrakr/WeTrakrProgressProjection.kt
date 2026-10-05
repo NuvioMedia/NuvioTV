@@ -89,7 +89,7 @@ internal class WeTrakrProgressProjection(snapshot: WeTrakrSyncSnapshot) {
         return WatchProgress(
             contentId = contentId,
             contentType = if (type == WeTrakrItemType.MOVIE) "movie" else "series",
-            name = media.title ?: contentId,
+            name = media.title.orEmpty(),
             poster = media.poster,
             backdrop = media.backdrop,
             logo = null,
