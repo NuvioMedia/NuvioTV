@@ -223,6 +223,14 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.setPropertyDouble("time-pos", seconds)
     }
 
+    /** Exact even when the file was loaded with `hr-seek=no`, where [seekToMs] lands on a keyframe. */
+    fun seekToMsExact(positionMs: Long) {
+        if (!initialized) return
+        val seconds = String.format(Locale.US, "%.3f", positionMs.coerceAtLeast(0L) / 1000.0)
+        runCatching { mpv.command("seek", seconds, "absolute+exact") }
+            .onFailure { Log.w(TAG, "Exact seek failed: ${it.message}") }
+    }
+
     fun currentPositionMs(): Long {
         if (!initialized) return 0L
         val seconds = mpv.getPropertyDouble("time-pos/full")
@@ -560,7 +568,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     /**
      * Polled with playback progress, so only the selection is read each time: what each track is
      * comes from [readTrackList], read again only when the file or its track count changes (a file
-     * can carry close to a hundred tracks, a dozen properties each).
+     * can carry close to a hundred tracks, a dozen properties each), or for a few ticks while an
+     * audio track still lacks its channel count.
      */
     fun readTrackSnapshot(): MpvTrackSnapshot {
         if (!initialized) return MpvTrackSnapshot(emptyList(), emptyList())
@@ -571,10 +580,20 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         }
 
         val path = mpv.getPropertyString("path")
-        val tracks = cachedTrackList
-            ?.takeIf { it.path == path && it.count == trackCount }
-            ?.tracks
-            ?: readTrackList(trackCount).also { cachedTrackList = MpvTrackListCache(path, trackCount, it) }
+        val cached = cachedTrackList?.takeIf { it.path == path && it.count == trackCount }
+        val tracks = if (cached != null && !cached.awaitsChannelCount()) {
+            cached.tracks
+        } else {
+            readTrackList(trackCount).also {
+                cachedTrackList = MpvTrackListCache(
+                    path = path,
+                    count = trackCount,
+                    tracks = it,
+                    channelCountRetriesLeft = cached?.let { previous -> previous.channelCountRetriesLeft - 1 }
+                        ?: TRACK_CHANNEL_COUNT_RETRIES
+                )
+            }
+        }
 
         val selectedAudioTrackId = mpv.getPropertyString("aid")?.toIntOrNull()
             ?: mpv.getPropertyInt("current-tracks/audio/id")
@@ -807,6 +826,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         private const val MPV_MAX_VOLUME_PERCENT = 400.0
         private const val ASPECT_RETRY_DELAY_MS = 120L
         private const val MAX_ASPECT_RETRY_COUNT = 10
+        /** Track list re-reads (one per tick) while an audio track has no channel count yet. */
+        private const val TRACK_CHANNEL_COUNT_RETRIES = 10
         private const val SUBTITLE_VERTICAL_OFFSET_MIN = -20
         private const val SUBTITLE_VERTICAL_OFFSET_MAX = 50
         private const val MPV_SUB_POS_AT_BOTTOM = 103.4
@@ -819,8 +840,12 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 private class MpvTrackListCache(
     val path: String?,
     val count: Int,
-    val tracks: List<MpvTrack>
-)
+    val tracks: List<MpvTrack>,
+    val channelCountRetriesLeft: Int
+) {
+    fun awaitsChannelCount(): Boolean =
+        channelCountRetriesLeft > 0 && tracks.any { it.type == "audio" && it.channelCount == null }
+}
 
 data class MpvTrackSnapshot(
     val audioTracks: List<MpvTrack>,

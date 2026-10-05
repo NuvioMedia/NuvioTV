@@ -15,13 +15,21 @@ internal fun PlayerRuntimeController.refreshMpvChapters(view: NuvioMpvSurfaceVie
 }
 
 /**
- * Exact: a keyframe seek can land before the chapter start, and "next" would then keep returning
- * to the same chapter.
+ * Exact on both engines: a keyframe seek can land before the chapter start, and "next" would then
+ * keep returning to the same chapter. On mpv, setting the position seeks to a keyframe when the
+ * file was loaded with `hr-seek=no` (the Hi10P software fallback), so chapters ask for an exact seek.
  */
 internal fun PlayerRuntimeController.seekToChapter(startMs: Long) {
     if (_playbackTimeline.value.isLive) return
     pendingPreviewSeekPosition = null
-    seekPlaybackTo(startMs, SeekParameters.EXACT)
+    val view = mpvView
+    if (isUsingMpvEngine() && view != null) {
+        view.seekToMsExact(startMs)
+        view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
+        view.setAudioDelayMs(_uiState.value.audioDelayMs)
+    } else {
+        seekPlaybackTo(startMs, SeekParameters.EXACT)
+    }
     updatePlaybackTimeline(currentPosition = startMs)
     scheduleProgressSyncAfterSeek()
     if (_uiState.value.showControls) {
