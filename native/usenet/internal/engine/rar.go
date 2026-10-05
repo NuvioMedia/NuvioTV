@@ -50,25 +50,31 @@ type rarVolume struct {
 func openRAR(ctx context.Context, f *File) (*rarVolume, error) {
 	r := f.headerReader(ctx)
 	defer r.Close()
-	var sig [8]byte
-	if err := readFullAt(r, sig[:7], 0); err != nil {
+	version, start, err := rarSignature(r)
+	if err != nil {
 		return nil, err
 	}
-	v := &rarVolume{file: f, start: 7, version: 4}
+	return &rarVolume{file: f, start: start, version: version}, nil
+}
+
+// rarSignature returns the format version and the first header's offset.
+func rarSignature(r io.ReaderAt) (int, int64, error) {
+	var sig [8]byte
+	if err := readFullAt(r, sig[:7], 0); err != nil {
+		return 0, 0, err
+	}
 	if bytes.Equal(sig[:7], []byte("Rar!\x1a\x07\x00")) {
-		return v, nil
+		return 4, 7, nil
 	}
 	if bytes.Equal(sig[:7], []byte("Rar!\x1a\x07\x01")) {
 		if err := readFullAt(r, sig[7:], 7); err != nil {
-			return nil, err
+			return 0, 0, err
 		}
 		if sig[7] == 0 {
-			v.start = 8
-			v.version = 5
-			return v, nil
+			return 5, 8, nil
 		}
 	}
-	return nil, errNotRAR
+	return 0, 0, errNotRAR
 }
 
 func (v *rarVolume) block(ctx context.Context, pos int64) (rarBlock, error) {
@@ -78,12 +84,12 @@ func (v *rarVolume) block(ctx context.Context, pos int64) (rarBlock, error) {
 		return rarBlock{end: true}, nil
 	}
 	if v.version == 4 {
-		return rar4Block(r, pos)
+		return rar4Block(r, v.file.Size(), pos)
 	}
-	return rar5Block(r, pos)
+	return rar5Block(r, v.file.Size(), pos)
 }
 
-func rar4Block(r *FileReader, pos int64) (rarBlock, error) {
+func rar4Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 	var b rarBlock
 	b.volume = -1
 	base := make([]byte, 7)
@@ -158,7 +164,7 @@ func rar4Block(r *FileReader, pos int64) (rarBlock, error) {
 		}
 		b.name = string(name)
 	}
-	if b.packed < 0 || b.packed > r.f.Size()-b.data {
+	if b.packed < 0 || b.packed > volumeSize-b.data {
 		return b, errors.New("RAR4 data exceeds volume")
 	}
 	b.next = b.data + b.packed
@@ -191,7 +197,7 @@ func (v *vintReader) skip(n int) {
 	v.pos += n
 }
 
-func rar5Block(r *FileReader, pos int64) (rarBlock, error) {
+func rar5Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 	b := rarBlock{volume: -1}
 	var lead [14]byte
 	if err := readFullAt(r, lead[:5], pos); err != nil {
@@ -234,7 +240,7 @@ func rar5Block(r *FileReader, pos int64) (rarBlock, error) {
 	}
 	b.data = pos + 4 + int64(len(h))
 	b.next = b.data + b.packed
-	if b.packed < 0 || b.packed > r.f.Size()-b.data {
+	if b.packed < 0 || b.packed > volumeSize-b.data {
 		return b, errors.New("RAR5 data exceeds volume")
 	}
 	if kind == 4 {
@@ -430,6 +436,12 @@ type Content struct {
 	cursor       *rarCursor
 	complete     bool
 	predicted    *rarPrediction
+	aes          *sevenZipCipher             // Stored 7z AES: parts hold ciphertext.
+	pending      map[*File]int64             // Predicted 7z volume sizes not yet confirmed.
+	unusable     error                       // Listed 7z entry that cannot be streamed.
+	mapLater     func(context.Context) error // Lays out a nested RAR file once it is selected.
+	nested       *nestedRAR                  // RAR set inside a 7z: children map onto its volumes.
+	children     []nestedChild
 	layoutNS     atomic.Int64
 	layoutWaitNS atomic.Int64
 }
@@ -601,6 +613,9 @@ func (c *Content) mappedPart(off int64) (extent, bool) {
 		if c.predicted != nil && !c.predicted.verified[i] {
 			return extent{}, false
 		}
+		if _, pending := c.pending[c.parts[i].file]; pending {
+			return extent{}, false
+		}
 		return c.parts[i], true
 	}
 	return extent{}, false
@@ -629,6 +644,9 @@ func (c *Content) part(ctx context.Context, off int64) (extent, error) {
 	if err := c.verifyRARPart(ctx, off); err != nil {
 		return extent{}, err
 	}
+	if err := c.verifyVolume(ctx, off); err != nil {
+		return extent{}, err
+	}
 	if p, ok := c.mappedPart(off); ok {
 		return p, nil
 	}
@@ -651,19 +669,21 @@ type ContentReader struct {
 	pos           int64
 	boundary      *boundaryRead
 	currentCancel context.CancelFunc
+	cipher        []byte         // Reused ciphertext buffer for encrypted 7z content.
+	inner         *ContentReader // Current 7z entry reader of nested RAR content.
 }
 
 func (c *Content) Reader(ctx context.Context, ahead int) *ContentReader {
 	return &ContentReader{content: c, ctx: ctx, ahead: ahead}
 }
 
-func (r *ContentReader) primeBoundary(e extent) {
+func (r *ContentReader) primeBoundary(e extent, pos int64) {
 	end := e.start + e.length
 	if r.content.direct != nil || r.ahead <= 0 || r.boundary != nil || end >= r.content.Size {
 		return
 	}
 	window := min(e.file.store.readAheadLimit(), int64(r.ahead)*max(int64(1), e.file.Size()/int64(len(e.file.segments))))
-	if end-r.pos > window {
+	if end-pos > window {
 		return
 	}
 	ctx, cancel := context.WithCancel(r.ctx)
@@ -709,10 +729,25 @@ func (r *ContentReader) Read(p []byte) (int, error) {
 	if r.pos >= c.Size {
 		return 0, io.EOF
 	}
+	if c.nested != nil {
+		return r.readNested(p)
+	}
+	if c.aes != nil {
+		return r.readDecrypted(p)
+	}
+	n, err := r.readRaw(p, r.pos)
+	r.pos += int64(n)
+	return n, err
+}
+
+// readRaw reads mapped payload bytes at a content offset. Encrypted 7z content
+// also maps the ciphertext just outside [0, Size) that its AES blocks need.
+func (r *ContentReader) readRaw(p []byte, pos int64) (int, error) {
+	c := r.content
 	e := extent{file: c.direct, length: c.Size}
 	if c.direct == nil {
 		var err error
-		e, err = c.part(r.ctx, r.pos)
+		e, err = c.part(r.ctx, pos)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				err = fmt.Errorf("%w: incomplete RAR continuation: %v", errInvalidArticle, err)
@@ -739,13 +774,12 @@ func (r *ContentReader) Read(p []byte) (int, error) {
 		}
 	}
 	r.current.fill = isVideo(c.Name)
-	n, err := r.current.ReadAt(p[:min(int64(len(p)), e.start+e.length-r.pos)], e.offset+r.pos-e.start)
+	n, err := r.current.ReadAt(p[:min(int64(len(p)), e.start+e.length-pos)], e.offset+pos-e.start)
 	if len(p) > 0 && n == 0 && (err == io.EOF || err == nil) {
 		err = errInvalidArticle
 	}
-	r.pos += int64(n)
 	if err == nil {
-		r.primeBoundary(e)
+		r.primeBoundary(e, pos+int64(n))
 	}
 	return n, err
 }
@@ -769,7 +803,15 @@ func (r *ContentReader) Seek(off int64, w int) (int64, error) {
 	r.pos = off
 	return off, nil
 }
-func (r *ContentReader) Close() error { r.cancelBoundary(); r.closeCurrent(); return nil }
+func (r *ContentReader) Close() error {
+	r.cancelBoundary()
+	r.closeCurrent()
+	if r.inner != nil {
+		r.inner.Close()
+		r.inner = nil
+	}
+	return nil
+}
 
 func isVideo(name string) bool {
 	name = strings.ToLower(name)

@@ -109,6 +109,19 @@ func (s *Session) startMKVWarmup(enabled bool, connections int) {
 					// keeps the tail heuristic; no full-file indexing is attempted.
 					prefix := make([]byte, min(int64(256<<10), e.start+e.length-off, seg.end-e.offset))
 					n := 0
+					if s.content.aes != nil || s.content.nested != nil {
+						// 7z: parse the plaintext of the article pinned above.
+						r := s.content.Reader(ctx, 0)
+						n, _ = io.ReadFull(r, prefix[:min(int64(len(prefix)), s.content.Size)])
+						r.Close()
+						if pos, ok := mkvCuesOffset(prefix[:n], s.content.Size); ok {
+							w.cuesOffset.Store(pos)
+							doc.rememberCues(contentKey, pos)
+							cues <- pos
+							s.trace.mark("cues_located")
+						}
+						n = len(prefix)
+					}
 					for n < len(prefix) {
 						got, er := a.readAt(ctx, prefix[n:], e.offset-seg.begin+int64(n))
 						n += got
@@ -215,6 +228,16 @@ func slabSize(size int64) int64 {
 }
 
 func (p *startupPins) at(ctx context.Context, c *Content, off int64) (*article, extent, segment, error) {
+	if c.nested != nil {
+		// Pin through the 7z entry, then report the extent in c's offsets.
+		ch, err := c.child(ctx, off)
+		if err != nil {
+			return nil, extent{}, segment{}, err
+		}
+		a, e, seg, err := p.at(ctx, c.nested.vols[ch.volume], ch.offset+off-ch.start)
+		lo, hi := max(e.start, ch.offset), min(e.start+e.length, ch.offset+ch.length)
+		return a, extent{e.file, e.offset + lo - e.start, hi - lo, lo - ch.offset + ch.start}, seg, err
+	}
 	e := extent{file: c.direct, length: c.Size}
 	if c.direct == nil {
 		var err error

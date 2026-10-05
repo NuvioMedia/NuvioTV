@@ -182,7 +182,7 @@ and source fallback take over. Diagnostics include `filledArticles`,
 ## Archives and selection
 
 RAR resolution is lazy for strict file/episode matches. Stored RAR4 and RAR5 entries map directly to
-underlying NNTP-backed extents. Compressed and encrypted entries are rejected.
+underlying NNTP-backed extents. Compressed and encrypted RAR entries are rejected.
 The engine skips unselected packed data arithmetically and fetches only article
 bodies containing required headers. It returns the selected entry before scanning
 its continuation volumes. Near a volume boundary it resolves and primes the
@@ -219,6 +219,31 @@ sets, other main-header extras and incompatible final remainders use serial
 discovery. The final header is always parsed, since its packed-size
 width and metadata may differ. Selection of unrequested entries stays serial so
 season-pack traversal preserves the cursor position.
+
+### 7z archives
+
+Some indexers re-post releases as password-protected
+7z volume sets (`.7z.001`, `.001`, a single `.7z`, or extensionless obfuscated
+volumes identified by the 7z signature). The NZB `<head><meta type="password">`
+supplies the password; it is kept with the cached NZB index. Only stored (Copy)
+7z entries are streamed, with or without AES-256 encryption and with or without
+encrypted headers. LZMA and other compressed entries are rejected with an
+actionable error, as are encrypted archives whose NZB has no or a wrong password.
+
+Archive headers, which may themselves be LZMA-compressed and encrypted, are read
+with javi11/sevenzip, the library StreamNZB uses for the same releases. Payload
+bytes never pass through it: a stored entry maps onto NNTP-backed extents like a
+stored RAR entry, and an encrypted one is decrypted per read with AES-CBC. Copy
+keeps ciphertext offsets equal to plaintext offsets, so a Range read only adds
+the 16-byte block that chains into its first block; seeks stay random access.
+The first two and last two volumes are probed for their exact yEnc sizes;
+the others are predicted from them and checked when first read. If the archive
+directory cannot be read with predicted sizes, every volume is probed once.
+
+A stored RAR set inside the 7z (scene releases re-posted this way) is selected
+like an NZB-level RAR set: the first, second and last inner volume headers are
+read, middle volumes are predicted from the second one and verified when a
+reader reaches them, and irregular sets fall back to serial header discovery.
 
 Standalone NZB `.srt`, `.ass`, `.ssa`, `.vtt` and `.sub` entries are exposed as
 stream-provided subtitles. Their article data is fetched only when selected.
