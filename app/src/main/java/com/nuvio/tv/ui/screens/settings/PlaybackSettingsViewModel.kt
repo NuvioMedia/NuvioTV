@@ -149,6 +149,11 @@ class PlaybackSettingsViewModel @Inject constructor(
         PlayerTunnelAvSyncPolicy.resetMemo()
     }
 
+    suspend fun forgetTunnelStalls() {
+        PlayerTunnelAvSyncPolicy.resetMemo()
+        playerSettingsDataStore.clearTunnelDeadAudioClasses()
+    }
+
     suspend fun setForceOpticalPassthrough(enabled: Boolean) {
         playerSettingsDataStore.setForceOpticalPassthrough(enabled)
     }
