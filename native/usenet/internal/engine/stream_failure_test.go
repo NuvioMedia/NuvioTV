@@ -276,7 +276,7 @@ func TestHeaderAndBoundaryReadersCannotSpendHoleBudget(t *testing.T) {
 	sess.content.complete = true
 	r := sess.content.Reader(sess.ctx, 1)
 	r.pos = 19999
-	r.primeBoundary(sess.content.parts[0])
+	r.primeBoundary(sess.content.parts[0], r.pos)
 	if r.boundary == nil {
 		t.Fatal("boundary was not primed")
 	}
