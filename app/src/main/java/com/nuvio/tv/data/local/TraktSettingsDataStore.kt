@@ -26,6 +26,7 @@ enum class WatchProgressSource {
     TRAKT,
     SIMKL,
     MDBLIST,
+    WETRAKR,
     NUVIO_SYNC;
 
     companion object {
