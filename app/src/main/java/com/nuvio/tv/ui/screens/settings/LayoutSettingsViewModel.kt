@@ -67,6 +67,7 @@ data class LayoutSettingsUiState(
     val posterCardCornerRadiusDp: Int = 12,
     val cardDepthStyle: CardDepthStyle = CardDepthStyle(),
     val blurUnwatchedEpisodes: Boolean = false,
+    val randomEpisodeEnabled: Boolean = false,
     val episodeOptionsOverlayStyle: EpisodeOptionsOverlayStyle = EpisodeOptionsOverlayStyle.BLUR,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
     val detailImdbRatingsVisibility: DetailImdbRatingsVisibility = DetailImdbRatingsVisibility.SHOW_ALL,
@@ -75,6 +76,8 @@ data class LayoutSettingsUiState(
     val detailPageTrailerButtonEnabled: Boolean = true,
     val detailPageTrailerAutoplayEnabled: Boolean = true,
     val detailPageTrailerAutoplayDelaySeconds: Int = 7,
+    val detailPageTrailerPlayInBackground: Boolean = false,
+    val detailPageTrailerPauseOnScroll: Boolean = true,
     val preferExternalMetaAddonDetail: Boolean = false,
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
@@ -127,6 +130,7 @@ sealed class LayoutSettingsEvent {
         val enabled: Boolean
     ) : LayoutSettingsEvent()
     data class SetBlurUnwatchedEpisodes(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetRandomEpisodeEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetEpisodeOptionsOverlayStyle(val style: EpisodeOptionsOverlayStyle) : LayoutSettingsEvent()
     data class SetHomeImdbRatingsVisibility(val visibility: HomeImdbRatingsVisibility) : LayoutSettingsEvent()
     data class SetDetailImdbRatingsVisibility(val visibility: DetailImdbRatingsVisibility) : LayoutSettingsEvent()
@@ -135,6 +139,8 @@ sealed class LayoutSettingsEvent {
     data class SetDetailPageTrailerButtonEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerAutoplayEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerAutoplayDelaySeconds(val seconds: Int) : LayoutSettingsEvent()
+    data class SetDetailPageTrailerPlayInBackground(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetDetailPageTrailerPauseOnScroll(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetPreferExternalMetaAddonDetail(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHideUnreleasedContent(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetShowFullReleaseDate(val enabled: Boolean) : LayoutSettingsEvent()
@@ -315,6 +321,11 @@ class LayoutSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            layoutPreferenceDataStore.randomEpisodeEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(randomEpisodeEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
             layoutPreferenceDataStore.episodeOptionsOverlayStyle.distinctUntilChanged().collectLatest { style ->
                 updateUiStateIfChanged { it.copy(episodeOptionsOverlayStyle = style) }
             }
@@ -349,7 +360,9 @@ class LayoutSettingsViewModel @Inject constructor(
                 updateUiStateIfChanged {
                     it.copy(
                         detailPageTrailerAutoplayEnabled = settings.enabled,
-                        detailPageTrailerAutoplayDelaySeconds = settings.delaySeconds
+                        detailPageTrailerAutoplayDelaySeconds = settings.delaySeconds,
+                        detailPageTrailerPlayInBackground = settings.playInBackground,
+                        detailPageTrailerPauseOnScroll = settings.pauseOnScroll
                     )
                 }
             }
@@ -454,6 +467,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetCardDepthSurfaceEnabled ->
                 setCardDepthSurfaceEnabled(event.surface, event.enabled)
             is LayoutSettingsEvent.SetBlurUnwatchedEpisodes -> setBlurUnwatchedEpisodes(event.enabled)
+            is LayoutSettingsEvent.SetRandomEpisodeEnabled -> setRandomEpisodeEnabled(event.enabled)
             is LayoutSettingsEvent.SetEpisodeOptionsOverlayStyle -> setEpisodeOptionsOverlayStyle(event.style)
             is LayoutSettingsEvent.SetHomeImdbRatingsVisibility -> setHomeImdbRatingsVisibility(event.visibility)
             is LayoutSettingsEvent.SetDetailImdbRatingsVisibility -> setDetailImdbRatingsVisibility(event.visibility)
@@ -462,6 +476,8 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetDetailPageTrailerButtonEnabled -> setDetailPageTrailerButtonEnabled(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerAutoplayEnabled -> setDetailPageTrailerAutoplayEnabled(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerAutoplayDelaySeconds -> setDetailPageTrailerAutoplayDelaySeconds(event.seconds)
+            is LayoutSettingsEvent.SetDetailPageTrailerPlayInBackground -> setDetailPageTrailerPlayInBackground(event.enabled)
+            is LayoutSettingsEvent.SetDetailPageTrailerPauseOnScroll -> setDetailPageTrailerPauseOnScroll(event.enabled)
             is LayoutSettingsEvent.SetPreferExternalMetaAddonDetail -> setPreferExternalMetaAddonDetail(event.enabled)
             is LayoutSettingsEvent.SetHideUnreleasedContent -> setHideUnreleasedContent(event.enabled)
             is LayoutSettingsEvent.SetShowFullReleaseDate -> setShowFullReleaseDate(event.enabled)
@@ -749,6 +765,20 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setDetailPageTrailerPlayInBackground(enabled: Boolean) {
+        if (_uiState.value.detailPageTrailerPlayInBackground == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setPlayInBackground(enabled)
+        }
+    }
+
+    private fun setDetailPageTrailerPauseOnScroll(enabled: Boolean) {
+        if (_uiState.value.detailPageTrailerPauseOnScroll == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setPauseOnScroll(enabled)
+        }
+    }
+
     private fun setBlurUnwatchedEpisodes(enabled: Boolean) {
         if (_uiState.value.blurUnwatchedEpisodes == enabled) return
         viewModelScope.launch {
@@ -760,6 +790,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.episodeOptionsOverlayStyle == style) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setEpisodeOptionsOverlayStyle(style)
+        }
+    }
+
+    private fun setRandomEpisodeEnabled(enabled: Boolean) {
+        if (_uiState.value.randomEpisodeEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setRandomEpisodeEnabled(enabled)
         }
     }
 

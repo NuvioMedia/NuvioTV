@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.sentry.android.gradle)
 }
 
+import com.android.build.gradle.internal.tasks.L8DexDesugarLibTask
 import java.io.File
 import java.util.Properties
 
@@ -105,8 +106,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1065
-        versionName = "1.1.0-beta.2"
+        versionCode = 1067
+        versionName = "1.1.0-beta.4"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -194,7 +195,7 @@ android {
     buildTypes {
         debug {
             signingConfig = signingConfigs.getByName("release")
-            isDebuggable = false
+            isDebuggable = parseBooleanProperty(providers.gradleProperty("debuggable").orNull)
             isMinifyEnabled = false
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
@@ -336,6 +337,14 @@ androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         val isPlaystore = variant.productFlavors.any { it.second == "playstore" }
         variant.applicationId.set(if (isPlaystore) "com.nuvio.appdebug" else "com.nuviodebug.com")
+    }
+}
+
+afterEvaluate {
+    tasks.withType<L8DexDesugarLibTask>().configureEach {
+        if (name.endsWith("AndroidTest")) {
+            keepRulesConfigurations.add("-keep class j\$.** { *; }")
+        }
     }
 }
 
@@ -483,7 +492,7 @@ dependencies {
         "libs/lib-decoder-mpegh-release.aar"
     ))
     add("fullImplementation", files("libs/lib-decoder-iamf-release.aar"))
-    implementation(files("libs/lib-nuvio-engine-android-0.1.2.aar"))
+    implementation(files("libs/lib-nuvio-engine-android-0.1.4.aar"))
     if (useLocalFfmpegDecoder) {
         implementation(project(":ffmpeg-decoder-downmix"))
     } else {

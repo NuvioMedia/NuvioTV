@@ -80,6 +80,7 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
+import com.nuvio.tv.ui.components.LocalLandscapePosterMode
 import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.ui.screens.home.ClassicFocusArtwork
@@ -157,6 +158,7 @@ fun FolderDetailScreen(
             trailerPreviewUrls = trailerPreviewUrls,
             trailerPreviewAudioUrls = trailerPreviewAudioUrls,
             onRequestTrailerPreview = viewModel::requestTrailerPreview,
+            onFocusedRowKeyChanged = viewModel::onFocusedRowChanged,
             scrollToTopTrigger = scrollToTopTrigger
         )
     } else {
@@ -515,6 +517,12 @@ private fun TabbedGridContent(
                     ) {
                         val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
                         val cardDepthStyle = LocalCardDepthStyle.current
+                        val globalLandscape = LocalLandscapePosterMode.current
+                        val effectiveCardHeight = if (globalLandscape) {
+                            posterCardStyle.width / com.nuvio.tv.domain.model.PosterShape.LANDSCAPE.aspectRatio()
+                        } else {
+                            posterCardStyle.height
+                        }
                         Column(
                             modifier = Modifier.width(posterCardStyle.width)
                         ) {
@@ -522,7 +530,7 @@ private fun TabbedGridContent(
                                 onClick = {},
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(posterCardStyle.height)
+                                    .height(effectiveCardHeight)
                                     .focusProperties { canFocus = false },
                                 shape = CardDefaults.shape(shape = cardShape),
                                 colors = CardDefaults.colors(
@@ -767,6 +775,12 @@ private fun RowsContent(
                         tab.label
                     }
                 }
+                val globalLandscape = LocalLandscapePosterMode.current
+                val containerHeight = if (globalLandscape) {
+                    posterCardStyle.width / com.nuvio.tv.domain.model.PosterShape.LANDSCAPE.aspectRatio()
+                } else {
+                    posterCardStyle.height
+                }
                 when {
                     tab.isLoading -> {
                         Column(modifier = Modifier.fillMaxWidth()) {
@@ -779,7 +793,7 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(posterCardStyle.height),
+                                    .height(containerHeight),
                                 contentAlignment = Alignment.Center
                             ) {
                                 LoadingIndicator()
@@ -797,7 +811,7 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(posterCardStyle.height),
+                                    .height(containerHeight),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(text = tab.error, color = NuvioTheme.colors.TextSecondary)
@@ -878,6 +892,7 @@ private fun FollowLayoutContent(
     trailerPreviewUrls: Map<String, String> = emptyMap(),
     trailerPreviewAudioUrls: Map<String, String> = emptyMap(),
     onRequestTrailerPreview: (String, String, String?, String) -> Unit = { _, _, _, _ -> },
+    onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0
 ) {
     val homeState = uiState.followLayoutHomeState
@@ -992,6 +1007,7 @@ private fun FollowLayoutContent(
             onItemFocus = onItemFocus,
             onPreloadAdjacentItem = onPreloadAdjacentItem,
             onSaveFocusState = onSaveFocusState,
+            onFocusedRowKeyChanged = onFocusedRowKeyChanged,
             scrollToTopTrigger = scrollToTopTrigger,
             blockLeftOnFirstExpandedItem = true
         )

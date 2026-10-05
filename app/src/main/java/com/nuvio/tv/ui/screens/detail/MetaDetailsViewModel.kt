@@ -55,6 +55,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -96,6 +98,8 @@ class MetaDetailsViewModel @Inject constructor(
     private val simklRelatedService: com.nuvio.tv.data.simkl.SimklRelatedService,
     private val simklAuthRepository: com.nuvio.tv.data.simkl.SimklAuthRepository,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val episodeShuffleStore: com.nuvio.tv.data.local.EpisodeShuffleStore,
+    private val episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffle,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val profileManager: ProfileManager,
     private val metaDetailsSessionState: MetaDetailsSessionState,
@@ -108,7 +112,12 @@ class MetaDetailsViewModel @Inject constructor(
     private val preferredAddonBaseUrl: String? = savedStateHandle["addonBaseUrl"]
 
     private val _uiState = MutableStateFlow(MetaDetailsUiState())
-    val uiState: StateFlow<MetaDetailsUiState> = _uiState.asStateFlow()
+    private val shuffleVisit = System.nanoTime()
+    val uiState: StateFlow<MetaDetailsUiState> = combine(
+        _uiState, episodeShuffleStore.profiles, watchProgressRepository.continueWatching
+    ) { state, profile, progress ->
+        applyDetailShuffle(state, profile, progress, episodeShuffle, shuffleVisit, localizedContext)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, MetaDetailsUiState())
 
     private val _posterCardCornerRadiusDp = MutableStateFlow(12)
     val posterCardCornerRadiusDp: StateFlow<Int> = _posterCardCornerRadiusDp.asStateFlow()
@@ -133,6 +142,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private var trailerDelayMs = 7000L
     private var trailerAutoplayEnabled = false
+    private var trailerPlayInBackground = false
     private var trailerHasPlayed = false
     private var suppressSeasonAutoSwitch = false
 
@@ -258,10 +268,12 @@ class MetaDetailsViewModel @Inject constructor(
     private fun setTrailerPlaybackState(
         isPlaying: Boolean,
         showControls: Boolean,
-        hideLogo: Boolean
+        hideLogo: Boolean,
+        isBackgroundPlaying: Boolean = false
     ) {
         _uiState.update { state ->
             if (state.isTrailerPlaying == isPlaying &&
+                state.isBackgroundTrailerPlaying == isBackgroundPlaying &&
                 state.showTrailerControls == showControls &&
                 state.hideLogoDuringTrailer == hideLogo
             ) {
@@ -269,6 +281,7 @@ class MetaDetailsViewModel @Inject constructor(
             } else {
                 state.copy(
                     isTrailerPlaying = isPlaying,
+                    isBackgroundTrailerPlaying = isBackgroundPlaying,
                     showTrailerControls = showControls,
                     hideLogoDuringTrailer = hideLogo
                 )
@@ -312,6 +325,14 @@ class MetaDetailsViewModel @Inject constructor(
             trailerSettingsDataStore.settings.collectLatest { settings ->
                 trailerAutoplayEnabled = settings.enabled
                 trailerDelayMs = settings.delaySeconds * 1000L
+                trailerPlayInBackground = settings.playInBackground
+                _uiState.update { state ->
+                    if (state.pauseBackgroundTrailerOnScroll == settings.pauseOnScroll) {
+                        state
+                    } else {
+                        state.copy(pauseBackgroundTrailerOnScroll = settings.pauseOnScroll)
+                    }
+                }
                 if (!settings.enabled) {
                     idleTimerJob?.cancel()
                 }
@@ -614,6 +635,30 @@ class MetaDetailsViewModel @Inject constructor(
                         }
                     }
                 }
+        }
+    }
+
+    suspend fun setEpisodeShuffle(settings: com.nuvio.tv.domain.model.EpisodeShuffleSettings): Boolean {
+        val meta = uiState.value.meta ?: return false
+        val profileId = profileManager.activeProfileId.value
+        val previous = uiState.value.episodeShuffle
+        return try {
+            episodeShuffleStore.save(meta.id, settings, profileId)
+            if (profileManager.activeProfileId.value != profileId) return false
+            if (previous.enabled != settings.enabled || (settings.enabled && previous.includeWatched != settings.includeWatched)) {
+                val message = when {
+                    !settings.enabled -> R.string.shuffle_disabled
+                    settings.includeWatched -> R.string.shuffle_enabled_all
+                    else -> R.string.shuffle_enabled_unwatched
+                }
+                showMessage(localizedContext.getString(message))
+            }
+            true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            showMessage(localizedContext.getString(R.string.shuffle_save_failed), isError = true)
+            false
         }
     }
 
@@ -1376,6 +1421,7 @@ class MetaDetailsViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 mdbListRatings = ratingsResult?.ratings,
+                mdbListRatingOrder = settings.enabledRatingOrder(),
                 isMdbListRatingsActive = isMdbListActive
             )
         }
@@ -2848,7 +2894,7 @@ class MetaDetailsViewModel @Inject constructor(
         if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
 
         val state = _uiState.value
-        if (state.trailerUrl == null || state.isTrailerPlaying) return
+        if (state.trailerUrl == null || state.isTrailerPlaying || state.isBackgroundTrailerPlaying) return
         if (!trailerAutoplayEnabled) return
         if (trailerHasPlayed) return
         if (!isPlayButtonFocused) return
@@ -2856,9 +2902,10 @@ class MetaDetailsViewModel @Inject constructor(
         idleTimerJob = viewModelScope.launch {
             delay(trailerDelayMs)
             setTrailerPlaybackState(
-                isPlaying = true,
+                isPlaying = !trailerPlayInBackground,
                 showControls = false,
-                hideLogo = false
+                hideLogo = false,
+                isBackgroundPlaying = trailerPlayInBackground
             )
         }
     }
@@ -2895,7 +2942,7 @@ class MetaDetailsViewModel @Inject constructor(
         isPlayButtonFocused = false
         dismissSharedTrailerOverlay()
         val state = _uiState.value
-        if (state.isTrailerPlaying && !state.showTrailerControls) {
+        if ((state.isTrailerPlaying && !state.showTrailerControls) || state.isBackgroundTrailerPlaying) {
             trailerHasPlayed = true
             setTrailerPlaybackState(isPlaying = false, showControls = false, hideLogo = false)
         }
@@ -2950,7 +2997,7 @@ class MetaDetailsViewModel @Inject constructor(
 
         idleTimerJob?.cancel()
         isPlayButtonFocused = false
-        if (_uiState.value.isTrailerPlaying) {
+        if (_uiState.value.isTrailerPlaying || _uiState.value.isBackgroundTrailerPlaying) {
             setTrailerPlaybackState(
                 isPlaying = false,
                 showControls = false,

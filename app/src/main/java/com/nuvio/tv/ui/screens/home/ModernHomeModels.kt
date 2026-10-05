@@ -58,6 +58,8 @@ data class HeroPreview(
     val poster: String?,
     val backdrop: String?,
     val imageUrl: String?,
+    val mdbListRatings: com.nuvio.tv.domain.model.MDBListRatings? = null,
+    val mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     /** Snapshot of the backdrop URL captured before TMDB enrichment.
      *  Survives cache rebuilds so landscape cards keep their original art
      *  even after navigation away and back. */
@@ -350,7 +352,8 @@ internal fun buildContinueWatchingItem(
                     item.customLandscapePoster ?: item.progress.backdrop ?: item.progress.poster
                 } else {
                     item.progress.poster ?: item.progress.backdrop
-                }
+                },
+                mdbListRatings = item.mdbListRatings
             )
         }
         is ContinueWatchingItem.NextUp -> {
@@ -380,7 +383,8 @@ internal fun buildContinueWatchingItem(
                     item.customLandscapePoster ?: firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
                 } else {
                     firstNonBlank(item.info.poster, item.info.backdrop, item.info.thumbnail)
-                }
+                },
+                mdbListRatings = item.info.mdbListRatings
             )
         }
     }
@@ -497,6 +501,8 @@ internal fun buildCatalogItem(
         } else {
             item.poster ?: item.backdropUrl
         },
+        mdbListRatings = item.mdbListRatings,
+        mdbListRatingOrder = item.mdbListRatingOrder,
         frozenBackdropUrl = frozenBackdrop,
         frozenLogoUrl = frozenLogo
     )
@@ -576,7 +582,7 @@ internal fun buildCollectionFolderItem(
 }
 
 internal fun continueWatchingItemKey(item: ContinueWatchingItem): String {
-    return when (item) {
+    return item.shuffleFocusKey ?: when (item) {
         is ContinueWatchingItem.InProgress ->
             "cw_inprogress_${item.progress.contentId}_${item.progress.season ?: -1}_${item.progress.episode ?: -1}"
         is ContinueWatchingItem.NextUp ->

@@ -12,12 +12,14 @@ import kotlinx.coroutines.launch
 
 internal class MdbListRatingsLoader(
     private val client: MdbListRatingsClient,
+    private val diskCache: MdbListRatingsDiskCache? = null,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
     private val now: () -> Long = System::currentTimeMillis
 ) {
     private data class RequestKey(
+        val mediaProvider: String,
         val mediaType: String,
-        val imdbId: String,
+        val mediaId: String,
         val credential: MdbListRatingsCredential
     )
 
@@ -30,12 +32,14 @@ internal class MdbListRatingsLoader(
     private var batchScheduled = false
 
     suspend fun getRatings(
+        mediaProvider: String,
         mediaType: String,
-        imdbId: String,
+        mediaId: String,
         credential: MdbListRatingsCredential
     ): MDBListRatings? {
         client.checkCredential(credential)
-        val key = RequestKey(mediaType, imdbId, credential)
+        val key = RequestKey(mediaProvider, mediaType, mediaId, credential)
+        val diskKey = "$mediaProvider:$mediaType:$mediaId"
         val deferred = synchronized(lock) {
             cache[key]?.let { cached ->
                 if (cached.expiresAtMs > now()) return cached.ratings
@@ -53,19 +57,37 @@ internal class MdbListRatingsLoader(
                 }
             }
         }
+        // Check disk cache before waiting for network.
+        val diskCached = diskCache?.get(diskKey)
+        if (diskCached != null) {
+            synchronized(lock) {
+                cache[key] = CacheEntry(diskCached, now() + CACHE_TTL_MS)
+                inFlight.remove(key)
+                pending.remove(key)
+            }
+            deferred.complete(diskCached)
+            return diskCached
+        }
         val ratings = deferred.await()
         client.checkCredential(credential)
         return ratings
     }
+
+    suspend fun getRatings(
+        mediaType: String,
+        imdbId: String,
+        credential: MdbListRatingsCredential
+    ): MDBListRatings? = getRatings("imdb", mediaType, imdbId, credential)
 
     private suspend fun flushPending() {
         val requests = synchronized(lock) {
             batchScheduled = false
             pending.toList().also { pending.clear() }
         }
-        requests.groupBy { (key, _) -> key.mediaType to key.credential }.values.forEach { group ->
-            group.chunked(MAX_BATCH_SIZE).forEach { fetchBatch(it) }
-        }
+        requests.groupBy { (key, _) -> Triple(key.mediaProvider, key.mediaType, key.credential) }
+            .values.forEach { group ->
+                group.chunked(MAX_BATCH_SIZE).forEach { fetchBatch(it) }
+            }
     }
 
     private suspend fun fetchBatch(batch: List<Pair<RequestKey, CompletableDeferred<MDBListRatings?>>>) {
@@ -73,19 +95,26 @@ internal class MdbListRatingsLoader(
         try {
             client.checkCredential(first.credential)
             val ratings = if (batch.size == 1) {
-                val media = requireNotNull(client.getMedia(first.mediaType, first.imdbId, first.credential))
-                mapOf(first.imdbId to media.toRatings())
+                val media = requireNotNull(client.getMedia(first.mediaProvider, first.mediaType, first.mediaId, first.credential))
+                mapOf(first.mediaId to media.toRatings())
             } else {
-                requireNotNull(client.getMediaBatch(first.mediaType, batch.map { it.first.imdbId }, first.credential))
-                    .mapNotNull { media -> media.resolvedImdbId()?.let { it to media.toRatings() } }.toMap()
+                val provider = first.mediaProvider
+                val response = requireNotNull(client.getMediaBatch(provider, first.mediaType, batch.map { it.first.mediaId }, first.credential))
+                response.mapNotNull { media ->
+                        val responseId = resolveResponseId(media, provider) ?: return@mapNotNull null
+                        responseId to media.toRatings()
+                    }.toMap()
             }
             client.checkCredential(first.credential)
             synchronized(lock) {
                 batch.forEach { (key, deferred) ->
-                    val result = ratings[key.imdbId] ?: MDBListRatings()
+                    val result = ratings[key.mediaId] ?: MDBListRatings()
                     cache[key] = CacheEntry(result, now() + CACHE_TTL_MS)
                     inFlight.remove(key)
                     deferred.complete(result)
+                    if (!result.isEmpty()) {
+                        diskCache?.put("${key.mediaProvider}:${key.mediaType}:${key.mediaId}", result)
+                    }
                 }
             }
         } catch (error: Exception) {
@@ -98,6 +127,16 @@ internal class MdbListRatingsLoader(
                 }
             }
         }
+    }
+
+    private fun resolveResponseId(
+        media: com.nuvio.tv.data.remote.dto.mdblist.MDBListMediaResponseDto,
+        provider: String
+    ): String? {
+        if (provider == "imdb") return media.resolvedImdbId()
+        val raw = media.ids?.get(provider) ?: return null
+        val str = raw.toString()
+        return if (str.endsWith(".0")) str.dropLast(2) else str
     }
 
     private companion object {

@@ -124,7 +124,8 @@ class LibraryRepositoryImpl @Inject constructor(
                             imdbRating = saved.imdbRating,
                             genres = saved.genres,
                             addonBaseUrl = saved.addonBaseUrl,
-                            listedAt = saved.addedAt
+                            listedAt = saved.addedAt,
+                            rawPosterUrl = saved.poster
                         )
                     }
                 }

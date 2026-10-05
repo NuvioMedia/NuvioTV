@@ -1087,7 +1087,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         ),
                         stripDvRpu = stripDvRpuEnabled,
                         stripHdr10PlusSei = stripHdr10PlusSei
-                    )
+                    ).let { autoSyncExtractorsFactory(it, url, headers) } // AutoSync hook
 
             setLoadingStatus(
                 phase = "building_player",

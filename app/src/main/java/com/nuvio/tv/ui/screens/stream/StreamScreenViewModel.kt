@@ -25,6 +25,7 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.core.streams.StreamBadgePresentation
+import com.nuvio.tv.core.streams.YouTubeStreamResolver
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -87,6 +88,7 @@ class StreamScreenViewModel @Inject constructor(
     private val directDebridResolver: DirectDebridResolver,
     private val directDebridStreamPreparer: DirectDebridStreamPreparer,
     private val debridStreamPresentation: DebridStreamPresentation,
+    private val youTubeStreamResolver: YouTubeStreamResolver,
     private val externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker,
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
@@ -214,8 +216,9 @@ class StreamScreenViewModel @Inject constructor(
                             updatedAllStreams.filter { it.addonName == currentFilter }
                         }
                         streamFilterFullList = fullFiltered
-                        val pageEnd = state.filteredStreams.size.coerceAtMost(fullFiltered.size)
+                        val pageEnd = state.filteredStreams.size
                             .coerceAtLeast(STREAM_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
+                            .coerceAtMost(fullFiltered.size)
                         state.copy(
                             addonStreams = updatedAddonStreams,
                             allStreams = updatedAllStreams,
@@ -533,7 +536,9 @@ class StreamScreenViewModel @Inject constructor(
                     allStreams.filter { it.addonName == currentFilter }
                 }
                 streamFilterFullList = fullFiltered
-                val paginatedStreams = if (fullFiltered.size > STREAM_FILTER_PAGE_SIZE) {
+                val currentPageSize = _uiState.value.filteredStreams.size
+                val isFirstLoad = currentPageSize == 0
+                val paginatedStreams = if (isFirstLoad && fullFiltered.size > STREAM_FILTER_PAGE_SIZE) {
                     fullFiltered.subList(0, STREAM_FILTER_PAGE_SIZE)
                 } else {
                     fullFiltered
@@ -638,8 +643,9 @@ class StreamScreenViewModel @Inject constructor(
                                     updatedAllStreams.filter { it.addonName == currentFilter }
                                 }
                                 streamFilterFullList = fullFiltered
-                                val pageEnd = state.filteredStreams.size.coerceAtMost(fullFiltered.size)
+                                val pageEnd = state.filteredStreams.size
                                     .coerceAtLeast(STREAM_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
+                                    .coerceAtMost(fullFiltered.size)
                                 state.copy(
                                     addonStreams = updatedGroups,
                                     allStreams = updatedAllStreams,
@@ -1160,6 +1166,9 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     suspend fun resolveStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        if (stream.youTubeIdToResolve() != null) {
+            return resolveYouTubeStreamForPlayback(stream)
+        }
         if (!directDebridResolver.shouldResolveToPlayableStream(stream)) {
             Log.d(TAG, "resolveStreamForPlayback: no debrid resolve needed, using direct URL")
             return getStreamForPlayback(stream)
@@ -1246,6 +1255,42 @@ class StreamScreenViewModel @Inject constructor(
                 null
             }
         }
+    }
+
+    private suspend fun resolveYouTubeStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        Log.d(TAG, "resolveStreamForPlayback: resolving YouTube stream=${stream.name} addon=${stream.addonName}")
+        val showLoadingStatus = playerSettingsDataStore.playerSettings.first().showPlayerLoadingStatus
+        updateUiStateIfChanged {
+            it.copy(
+                showDirectAutoPlayOverlay = true,
+                directAutoPlayMessage = if (showLoadingStatus) {
+                    context.getString(R.string.youtube_resolving_stream)
+                } else {
+                    null
+                },
+                playbackErrorMessage = null
+            )
+        }
+
+        val resolved = youTubeStreamResolver.resolve(stream)
+        if (resolved == null) {
+            showDirectDebridPlaybackError(context.getString(R.string.youtube_resolution_failed), refreshStreams = false)
+            return null
+        }
+        if (!_uiState.value.isDirectAutoPlayFlow) {
+            updateUiStateIfChanged {
+                it.copy(
+                    showDirectAutoPlayOverlay = false,
+                    directAutoPlayMessage = null
+                )
+            }
+        } else {
+            updateUiStateIfChanged {
+                it.copy(directAutoPlayMessage = null)
+            }
+        }
+        // The resolved URL stops working after a few hours, so it isn't kept for reusing the last link.
+        return getStreamForPlayback(resolved, saveLastLink = false)
     }
 
     fun onPlaybackErrorShown() {
@@ -1348,7 +1393,7 @@ class StreamScreenViewModel @Inject constructor(
     /**
      * Gets the selected stream for playback
      */
-    fun getStreamForPlayback(stream: Stream): StreamPlaybackInfo {
+    fun getStreamForPlayback(stream: Stream, saveLastLink: Boolean = true): StreamPlaybackInfo {
         cancelStreamsLoad()
         val playbackInfo = StreamPlaybackInfo(
             url = stream.getStreamUrl(),
@@ -1385,7 +1430,7 @@ class StreamScreenViewModel @Inject constructor(
         StreamSidecarSubtitles.set(playbackUrlFor(playbackInfo), stream.subtitles)
 
         val url = playbackInfo.url
-        if (!url.isNullOrBlank() && !playbackInfo.isExternal) {
+        if (saveLastLink && !url.isNullOrBlank() && !playbackInfo.isExternal) {
             pendingCacheSaveJob = viewModelScope.launch {
                 streamLinkCacheDataStore.save(
                     contentKey = streamCacheKey,
@@ -1670,11 +1715,7 @@ class StreamScreenViewModel @Inject constructor(
             subtitles = subtitleInputs,
             autoLaunch = autoLaunch,
             nextEpisodeSnapshot = playbackMetaVideos?.let { videos ->
-                com.nuvio.tv.core.player.resolveExternalNextEpisodeSnapshot(
-                    videos = videos,
-                    currentSeason = metadata.season,
-                    currentEpisode = metadata.episode
-                )
+                externalPlaybackTracker.resolveNextEpisodeSnapshot(metadata, videos)
             },
             context = context
         )

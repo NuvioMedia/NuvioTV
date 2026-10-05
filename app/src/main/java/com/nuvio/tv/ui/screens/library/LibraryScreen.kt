@@ -106,6 +106,8 @@ import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 import com.nuvio.tv.R
 
 private const val KEY_REPEAT_THROTTLE_MS = 80L
@@ -164,6 +166,8 @@ fun LibraryScreen(
         }
     }
     val posterCardStyle = PosterCardDefaults.Style.copy(
+        width = uiState.posterCardWidthDp.dp,
+        height = (uiState.posterCardWidthDp * 3 / 2).dp,
         cornerRadius = uiState.posterCardCornerRadiusDp.dp
     )
 
@@ -271,8 +275,12 @@ fun LibraryScreen(
 
     val lastKeyRepeatTime = remember { longArrayOf(0L) }
 
+    val globalLandscape = com.nuvio.tv.ui.components.LocalLandscapePosterMode.current
+
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+        columns = GridCells.Adaptive(
+            minSize = if (globalLandscape) posterCardStyle.height else posterCardStyle.width
+        ),
         state = gridState,
         modifier = Modifier
             .fillMaxSize()
@@ -865,7 +873,8 @@ private fun CloudLibrarySearchRow(
                     }
                 ),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = NuvioTheme.colors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary,
+                                            textDirection = TextDirection.Content
                 ),
                 cursorBrush = SolidColor(
                     if (editing) NuvioTheme.colors.FocusRing else Color.Transparent

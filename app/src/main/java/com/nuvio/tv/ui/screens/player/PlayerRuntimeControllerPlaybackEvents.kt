@@ -29,9 +29,14 @@ internal const val AUDIO_AMPLIFICATION_MIN_DB = 0
 internal const val AUDIO_AMPLIFICATION_MAX_DB = 10
 internal const val CENTER_MIX_LEVEL_MIN_DB = -10
 internal const val CENTER_MIX_LEVEL_MAX_DB = 30
-internal const val AUDIO_DELAY_MIN_MS = -3000
-internal const val AUDIO_DELAY_MAX_MS = 3000
+internal const val AUDIO_DELAY_MIN_MS = -60000
+internal const val AUDIO_DELAY_MAX_MS = 60000
 internal const val AUDIO_DELAY_STEP_MS = 25
+internal const val AUDIO_DELAY_HOLD_STEP_MS = 50
+internal const val AUDIO_DELAY_HOLD_FAST_STEP_MS = 100
+internal const val AUDIO_DELAY_HOLD_THRESHOLD_MS = 1000L
+internal const val AUDIO_DELAY_HOLD_FAST_THRESHOLD_MS = 2000L
+internal const val AUDIO_DELAY_HOLD_REPEAT_INTERVAL_MS = 100L
 internal const val WATCH_PROGRESS_SAVE_INTERVAL_MS = 90_000L
 
 internal fun PlayerRuntimeController.applyAudioDelay(
@@ -204,6 +209,8 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                                 (pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L))
                             if (firstFrameReady) {
                                 hasRenderedFirstFrame = true
+                                resetMpvStartupWatchdog()
+                                scheduleMpvStableProgressReset()
                                 val clickToFirstFrameMs = launchStartedAtElapsedMs
                                     ?.let { (android.os.SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) }
                                     ?: -1L
@@ -221,6 +228,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                                 }
                             }
                         }
+                    maybeRunMpvStartupWatchdog(view)
                     if (playerDuration > lastKnownDuration) {
                         lastKnownDuration = playerDuration
                     }
@@ -1102,8 +1110,7 @@ internal fun PlayerRuntimeController.setSubtitleDelayMs(targetMs: Int, showOverl
         _uiState.update {
             it.copy(
                 subtitleDelayMs = newDelayMs,
-                showSubtitleDelayOverlay = false,
-                showControls = true
+                showSubtitleDelayOverlay = false
             )
         }
     }
@@ -1339,6 +1346,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
             resetSubtitleAutoSyncState()
+            cancelAutomaticSubtitleSync() // AutoSync hook
             rememberInternalSubtitleSelection(event.index)
             selectSubtitleTrack(event.index)
             _uiState.update {
@@ -1362,6 +1370,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
             resetSubtitleAutoSyncState()
+            cancelAutomaticSubtitleSync() // AutoSync hook
             rememberSubtitleDisabled()
             disableSubtitles()
             _uiState.update {
@@ -1384,6 +1393,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             autoSubtitleSelected = true
             rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
+            runSelectedAutomaticSubtitleSync(event.subtitle) // AutoSync hook
             _uiState.update {
                 it.copy(
                     showSubtitleOverlay = true,

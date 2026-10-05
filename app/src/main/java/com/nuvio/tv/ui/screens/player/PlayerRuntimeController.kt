@@ -62,6 +62,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.nuvio.tv.core.util.withAppLocale
 import java.lang.ref.WeakReference
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 class PlayerRuntimeController(
@@ -82,6 +83,7 @@ class PlayerRuntimeController(
     internal val streamBadgeSettingsDataStore: StreamBadgeSettingsDataStore,
     internal val bingeGroupCacheDataStore: BingeGroupCacheDataStore,
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
+    internal val episodeShufflePlayback: com.nuvio.tv.core.player.EpisodeShufflePlayback,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
     internal val audioDelayRouteDataStore: AudioDelayRouteDataStore,
@@ -91,6 +93,7 @@ class PlayerRuntimeController(
     internal val tmdbMetadataService: com.nuvio.tv.core.tmdb.TmdbMetadataService,
     internal val tmdbSettingsDataStore: com.nuvio.tv.data.local.TmdbSettingsDataStore,
     internal val directDebridResolver: DirectDebridResolver,
+    internal val youTubeStreamResolver: com.nuvio.tv.core.streams.YouTubeStreamResolver,
     internal val directDebridStreamPreparer: DirectDebridStreamPreparer,
     internal val cloudLibraryRepository: CloudLibraryRepository,
     internal val cloudPlaybackProgressStore: CloudLibraryPlaybackProgressStore,
@@ -422,8 +425,11 @@ class PlayerRuntimeController(
     internal var hidePlayerEngineSwitchInfoJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var subtitleAutoSyncLoadJob: Job? = null
+    internal var automaticSubtitleSyncJob: Job? = null // AutoSync hook
     /** ExoPlayer sidecar path: external addon cues without setMediaSource (preserves buffer). */
     internal var sidecarSubtitleJob: Job? = null
+    internal var sidecarGenerationCounter: Long = 0L // AutoSync hook
+    internal var activeSidecarGeneration: Long = 0L // AutoSync hook
     internal var activeSidecarSubtitleKey: String? = null
     internal var sidecarTimedCues: List<androidx.media3.extractor.text.CuesWithTiming> = emptyList()
     internal var lastSidecarCueSignature: Long? = null
@@ -487,12 +493,15 @@ class PlayerRuntimeController(
     /** Back buffer (ms) the user configured, captured at build to restore once DV7 status is known. */
     internal var configuredBackBufferMs: Int = 0
     internal var metaVideos: List<Video> = emptyList()
+    internal var playbackShuffleState: com.nuvio.tv.core.player.PlaybackShuffleState? = null
     internal var cloudPlaybackContext: CloudLibraryPlaybackContext? =
         cloudPlaybackSessionStore.load(cloudSessionToken)
     internal var metaGenres: List<String> = emptyList()
     internal var metaCountry: String? = null
     internal var metaFetchJob: Job? = null
     internal var nextEpisodeVideo: Video? = null
+    internal var nextEpisodePreloadJob: Job? = null
+    internal var nextEpisodePreloadTriggered: Boolean = false
     internal var userPausedManually = false
 
     internal var isInBackground: Boolean = false
@@ -536,6 +545,8 @@ class PlayerRuntimeController(
     internal var streamAutoPlayModeSetting: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
     internal var streamAutoPlayPreferBingeGroupForNextEpisodeSetting: Boolean = false
+    internal var streamAutoPlayTimeoutSecondsSetting: Int = 10
+    internal var preloadNextEpisodeSourcesSetting: Boolean = false
     internal var nextEpisodeThresholdModeSetting: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
     internal var nextEpisodeThresholdPercentSetting: Float = 98f
     internal var nextEpisodeThresholdMinutesBeforeEndSetting: Float = 2f
@@ -582,6 +593,19 @@ class PlayerRuntimeController(
     internal var mpvTrackRefreshJob: Job? = null
     internal var mpvTrackRefreshInProgress: Boolean = false
     internal var pendingMpvHardRestartOnNextAttach: Boolean = false
+    internal var mpvEventRelay: MpvEventRelay? = null
+    internal var mpvEventRelayEpoch: Long = 0
+    internal var mpvSurfaceWaitTicks: Int = 0
+    internal var mpvIdleActiveTicks: Int = 0
+    internal var mpvStartupStallTicks: Int = 0
+    internal var mpvStartupAbsoluteTicks: Int = 0
+    internal var mpvLastDemuxerCacheSec: Double = 0.0
+    internal var mpvActivePlaylistEntryId: Long? = null
+    internal var mpvLastFileError: String? = null
+    internal var mpvErrorRecoveryArmed: Boolean = false
+    internal var mpvStableProgressResetJob: Job? = null
+    @Volatile internal var mpvLastErrorLogLine: String? = null
+    internal val mpvErrorHandlingInProgress = AtomicBoolean(false)
     internal var delayMpvResumeSeekUntilVideoTrack: Boolean = false
     internal var mpvDelayStartAfterAfrSwitch: Boolean = false
     internal var pauseOverlayJob: Job? = null

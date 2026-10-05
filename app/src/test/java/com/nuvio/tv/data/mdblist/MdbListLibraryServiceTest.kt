@@ -59,6 +59,49 @@ class MdbListLibraryServiceTest {
     }
 
     @Test
+    fun `hidden lists are left out of tabs items and membership and are not synced`() = runTest {
+        val h = MdbListSyncTestHarness(backgroundScope)
+        h.seedLibrary(mdbListLibrarySnapshot(h.http.now).copy(
+            itemsByList = mapOf(MDBLIST_WATCHLIST_KEY to emptyList()),
+            hiddenListKeys = setOf(MDBLIST_TEST_LIST_KEY)
+        ))
+        val service = h.libraryService(backgroundScope)
+        assertEquals(listOf(MDBLIST_WATCHLIST_KEY), service.tabs.first().map { it.key })
+        assertEquals(listOf(MdbListLibraryListOption(MDBLIST_TEST_LIST_KEY, "Favourites", false)), service.listOptions.first())
+        val membership = service.getMembershipSnapshot(LibraryEntryInput("tt0111161", "movie", "Shawshank"))
+        assertEquals(setOf(MDBLIST_WATCHLIST_KEY), membership.listMembership.keys)
+
+        h.http.reply(body = mdbListLibraryListsBody("v2"))
+        h.http.reply(body = MDBLIST_LIBRARY_MOVIE_PAGE)
+        service.refresh(TrackingRefreshIntent.USER_INITIATED)
+        assertEquals(listOf("/lists/user", "/watchlist/items"), h.http.engine.requests.map { it.path })
+        assertEquals(setOf(MDBLIST_TEST_LIST_KEY), h.repository.currentSnapshot()!!.library!!.hiddenListKeys)
+        assertEquals(listOf(listOf(MDBLIST_WATCHLIST_KEY)), service.items.first().map { it.listKeys.toList() })
+    }
+
+    @Test
+    fun `showing a hidden list loads its items and hiding drops them`() = runTest {
+        val h = MdbListSyncTestHarness(backgroundScope)
+        h.seedLibrary(mdbListLibrarySnapshot(h.http.now).copy(
+            itemsByList = mapOf(MDBLIST_WATCHLIST_KEY to emptyList()),
+            hiddenListKeys = setOf(MDBLIST_TEST_LIST_KEY)
+        ))
+        val service = h.libraryService(backgroundScope)
+        h.http.reply(body = MDBLIST_LIBRARY_MOVIE_PAGE)
+        service.setListVisible(MDBLIST_TEST_LIST_KEY, true)
+        assertEquals(listOf("/lists/7/items"), h.http.engine.requests.map { it.path })
+        assertEquals(listOf(MDBLIST_WATCHLIST_KEY, MDBLIST_TEST_LIST_KEY), service.tabs.first().map { it.key })
+        assertEquals(listOf("Shawshank"), service.items.first().map { it.name })
+
+        service.setListVisible(MDBLIST_TEST_LIST_KEY, false)
+        assertEquals(1, h.http.engine.requests.size)
+        assertEquals(listOf(MDBLIST_WATCHLIST_KEY), service.tabs.first().map { it.key })
+        assertTrue(service.items.first().isEmpty())
+        assertEquals(null, h.repository.currentSnapshot()!!.library!!.itemsByList[MDBLIST_TEST_LIST_KEY])
+        expectMdbListFailure<IllegalArgumentException> { service.setListVisible(MDBLIST_WATCHLIST_KEY, false) }
+    }
+
+    @Test
     fun `cached library membership and repeated browsing make no requests`() = runTest {
         val h = MdbListSyncTestHarness(backgroundScope)
         h.seedLibrary()

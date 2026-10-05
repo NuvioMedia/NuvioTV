@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -29,12 +30,16 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MergingMediaSource
+import com.nuvio.tv.core.player.LetterboxDetector
+import com.nuvio.tv.core.player.LetterboxSampler
+import com.nuvio.tv.core.player.LetterboxTracker
 import com.nuvio.tv.core.player.LocalTrailerPlayerPool
 import com.nuvio.tv.core.player.TrailerPlayerPool
 import com.nuvio.tv.data.trailer.YoutubeChunkedDataSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import android.view.LayoutInflater
+import android.view.TextureView
 import com.nuvio.tv.R
 import kotlinx.coroutines.delay
 
@@ -54,6 +59,7 @@ fun TrailerPlayer(
     onRemoteKey: (keyCode: Int, action: Int, repeatCount: Int) -> Boolean = { _, _, _ -> false },
     cropToFill: Boolean = false,
     overscanZoom: Float = 1f,
+    autoCropLetterbox: Boolean = false,
     modifier: Modifier = Modifier,
     enter: EnterTransition = fadeIn(animationSpec = tween(800)),
     exit: ExitTransition = fadeOut(animationSpec = tween(500)),
@@ -75,6 +81,13 @@ fun TrailerPlayer(
         targetValue = if (isPlaying && hasRenderedFirstFrame) 1f else 0f,
         animationSpec = tween(durationMillis = 300),
         label = "trailerFirstFrameAlpha"
+    )
+    val playerViewRef = remember { mutableStateOf<PlayerView?>(null) }
+    var letterboxZoom by remember(trailerUrl) { mutableFloatStateOf(1f) }
+    val letterboxZoomState = animateFloatAsState(
+        targetValue = if (autoCropLetterbox) letterboxZoom else 1f,
+        animationSpec = tween(durationMillis = 400),
+        label = "trailerLetterboxZoom"
     )
 
     // Resolve pool: explicit parameter > CompositionLocal
@@ -135,6 +148,27 @@ fun TrailerPlayer(
             C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
         } else {
             C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+        }
+    }
+
+    LaunchedEffect(autoCropLetterbox, hasRenderedFirstFrame, trailerPlayer) {
+        letterboxZoom = 1f
+        if (!autoCropLetterbox || !hasRenderedFirstFrame) return@LaunchedEffect
+        val player = trailerPlayer ?: return@LaunchedEffect
+        val tracker = LetterboxTracker()
+        val sampler = LetterboxSampler()
+        try {
+            while (true) {
+                delay(LetterboxDetector.SAMPLE_INTERVAL_MS)
+                if (LetterboxDetector.isSampleWindowOver(player.currentPosition, player.duration)) break
+                if (!player.isPlaying) continue
+                val textureView = playerViewRef.value?.videoSurfaceView as? TextureView ?: continue
+                val bar = sampler.sample(textureView) ?: continue
+                letterboxZoom = tracker.onSample(bar) ?: continue
+                break
+            }
+        } finally {
+            sampler.release()
         }
     }
 
@@ -226,6 +260,7 @@ fun TrailerPlayer(
             AndroidView(
                 factory = { ctx ->
                     (LayoutInflater.from(ctx).inflate(R.layout.trailer_player_view, null) as PlayerView).apply {
+                        playerViewRef.value = this
                         player = trailerPlayer
                         isFocusable = true
                         isFocusableInTouchMode = true
@@ -252,6 +287,7 @@ fun TrailerPlayer(
                     }
                 },
                 onRelease = { view ->
+                    playerViewRef.value = null
                     view.player = null
                     view.keepScreenOn = false
                 },
@@ -259,8 +295,8 @@ fun TrailerPlayer(
                     .clipToBounds()
                     .graphicsLayer {
                         alpha = playerAlphaState.value
-                        scaleX = zoomScale
-                        scaleY = zoomScale
+                        scaleX = zoomScale * letterboxZoomState.value
+                        scaleY = zoomScale * letterboxZoomState.value
                     }
             )
         }

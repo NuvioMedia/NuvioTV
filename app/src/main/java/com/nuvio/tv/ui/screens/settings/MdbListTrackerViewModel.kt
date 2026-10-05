@@ -13,6 +13,8 @@ import com.nuvio.tv.data.mdblist.MdbListAuthScope
 import com.nuvio.tv.data.mdblist.MdbListAuthStore
 import com.nuvio.tv.data.mdblist.MdbListDevicePollResult
 import com.nuvio.tv.data.mdblist.MdbListDeviceSession
+import com.nuvio.tv.data.mdblist.MdbListLibraryListOption
+import com.nuvio.tv.data.mdblist.MdbListLibraryService
 import com.nuvio.tv.data.mdblist.MdbListSyncError
 import com.nuvio.tv.data.mdblist.MdbListSyncRepository
 import com.nuvio.tv.data.mdblist.toMdbListSyncError
@@ -46,6 +48,18 @@ data class MdbListTrackerUiState(
     val errorMessage: String? = null
 )
 
+data class MdbListLibraryListsUiState(
+    val lists: List<MdbListLibraryListOption> = emptyList(),
+    val pendingKey: String? = null,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
+)
+
+private data class MdbListLibraryListsAction(
+    val pendingKey: String? = null,
+    val error: String? = null
+)
+
 private data class MdbListTrackerAction(
     val scope: MdbListAuthScope? = null,
     val loading: Boolean = false,
@@ -58,12 +72,14 @@ class MdbListTrackerViewModel @Inject constructor(
     private val auth: MdbListAuthRepository,
     private val authStore: MdbListAuthStore,
     private val sync: MdbListSyncRepository,
+    private val library: MdbListLibraryService,
     private val profiles: ProfileManager,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     private val action = MutableStateFlow(MdbListTrackerAction())
     private var connectionJob: Job? = null
     private var disconnectJob: Job? = null
+    private val listsAction = MutableStateFlow(MdbListLibraryListsAction())
     val uiState = combine(authStore.state, sync.state, action, profiles.activeProfileId) { authorization, syncState, action, profileId ->
         val current = authorization.scope.profileId == profileId
         val transient = action.takeIf { it.scope == authorization.scope && current } ?: MdbListTrackerAction()
@@ -91,6 +107,10 @@ class MdbListTrackerViewModel @Inject constructor(
                 ?: currentSync?.error?.message()
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, MdbListTrackerUiState(credentialsConfigured = auth.hasRequiredCredentials()))
+
+    val libraryLists = combine(library.listOptions, listsAction, library.isRefreshing) { lists, action, refreshing ->
+        MdbListLibraryListsUiState(lists, action.pendingKey, refreshing && lists.isEmpty(), action.error)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MdbListLibraryListsUiState())
 
     init {
         var previousProfile = profiles.activeProfileId.value
@@ -174,6 +194,27 @@ class MdbListTrackerViewModel @Inject constructor(
             } catch (error: Exception) {
                 if (profiles.activeProfileId.value == profileId) action.value = MdbListTrackerAction(authStore.scope(), error = error.messageForUser())
             }
+        }
+    }
+
+    fun onLibraryListsOpened() {
+        listsAction.value = MdbListLibraryListsAction()
+        viewModelScope.launch(Dispatchers.IO) { library.refresh(TrackingRefreshIntent.AUTOMATIC) }
+    }
+
+    fun onToggleLibraryList(option: MdbListLibraryListOption) {
+        if (listsAction.value.pendingKey != null) return
+        listsAction.value = MdbListLibraryListsAction(pendingKey = option.key)
+        viewModelScope.launch(Dispatchers.IO) {
+            val error = try {
+                library.setListVisible(option.key, !option.visible)
+                null
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                error.messageForUser()
+            }
+            listsAction.value = MdbListLibraryListsAction(error = error)
         }
     }
 

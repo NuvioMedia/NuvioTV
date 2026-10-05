@@ -38,7 +38,8 @@ internal class MdbListLibraryProjection(snapshot: MdbListLibrarySnapshot) {
                     traktId = media.ids.trakt?.takeIf { it <= Int.MAX_VALUE }?.toInt(),
                     trackingProviderId = "mdblist",
                     trackingProviderItemId = media.ids.mdblist,
-                    trackingSourceUrl = media.ids.mdblist?.let { "https://mdblist.com/${if (item.type == MdbListItemType.MOVIE) "movie" else "show"}/$it" }
+                    trackingSourceUrl = media.ids.mdblist?.let { "https://mdblist.com/${if (item.type == MdbListItemType.MOVIE) "movie" else "show"}/$it" },
+                    rawPosterUrl = media.poster
                 )
                 media.ids.aliases().forEach { alias -> memberships[item.type to alias] = listKeys }
             }

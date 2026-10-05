@@ -8,6 +8,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +40,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -79,16 +82,19 @@ fun GridContentCard(
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
     val cardDepthStyle = LocalCardDepthStyle.current
     val density = LocalDensity.current
+    val globalLandscape = LocalLandscapePosterMode.current
+    val effectivePosterShape = if (globalLandscape) PosterShape.LANDSCAPE else item.posterShape
 
     // Derive card height from item's posterShape aspect ratio while keeping width from posterCardStyle.
     // This ensures grids and rows display landscape/square shapes correctly.
-    val cardHeight = when (item.posterShape) {
+    val cardHeight = when (effectivePosterShape) {
         PosterShape.POSTER -> posterCardStyle.height
         PosterShape.LANDSCAPE -> posterCardStyle.width / PosterShape.LANDSCAPE.aspectRatio()
         PosterShape.SQUARE -> posterCardStyle.width
     }
 
-    val requestWidthPx = remember(density, posterCardStyle.width) { with(density) { posterCardStyle.width.roundToPx() }.coerceAtLeast(1) }
+    val requestCardWidth = if (globalLandscape) posterCardStyle.height else posterCardStyle.width
+    val requestWidthPx = remember(density, requestCardWidth) { with(density) { requestCardWidth.roundToPx() }.coerceAtLeast(1) }
     val requestHeightPx = remember(density, cardHeight) { with(density) { cardHeight.roundToPx() }.coerceAtLeast(1) }
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
@@ -97,7 +103,7 @@ fun GridContentCard(
 
     Column(
         modifier = modifier
-            .width(posterCardStyle.width)
+            .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
             .recompositionHighlighter()
     ) {
         Card(
@@ -109,8 +115,10 @@ fun GridContentCard(
                 }
             },
             modifier = Modifier
-                .width(posterCardStyle.width)
-                .height(cardHeight)
+                .then(
+                    if (globalLandscape) Modifier.fillMaxWidth().aspectRatio(PosterShape.LANDSCAPE.aspectRatio())
+                    else Modifier.width(posterCardStyle.width).height(cardHeight)
+                )
                 .then(
                     if (focusRequester != null) Modifier.focusRequester(focusRequester)
                     else Modifier
@@ -188,25 +196,32 @@ fun GridContentCard(
                 val context = LocalContext.current
                 val bgCardColor = NuvioTheme.colors.BackgroundCard
                 val bgPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
-                val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(item.poster)
-                val imageModel = remember(item.poster, requestWidthPx, requestHeightPx, revalidationKey) {
+                val alwaysBackdropWithLogo = LocalAlwaysBackdropWithLogo.current
+                val effectiveLandscapePoster = if (globalLandscape && alwaysBackdropWithLogo) null else item.landscapePoster
+                val effectiveImageUrl = if (globalLandscape) {
+                    effectiveLandscapePoster ?: item.background ?: item.poster
+                } else {
+                    item.poster
+                }
+                val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(effectiveImageUrl)
+                val imageModel = remember(effectiveImageUrl, requestWidthPx, requestHeightPx, revalidationKey) {
                     val builder = ImageRequest.Builder(context)
-                        .data(item.poster)
+                        .data(effectiveImageUrl)
                         .crossfade(imageCrossfade)
                         .size(width = requestWidthPx, height = requestHeightPx)
-                        .memoryCacheKey("${item.poster}_${requestWidthPx}x${requestHeightPx}_v$revalidationKey")
+                        .memoryCacheKey("${effectiveImageUrl}_${requestWidthPx}x${requestHeightPx}_v$revalidationKey")
                     if (revalidationKey > 0) {
-                        builder.placeholderMemoryCacheKey("${item.poster}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
+                        builder.placeholderMemoryCacheKey("${effectiveImageUrl}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
                     }
                     val fallbackUrl = item.rawPosterUrl
-                    if (!fallbackUrl.isNullOrBlank() && fallbackUrl != item.poster) {
+                    if (!fallbackUrl.isNullOrBlank() && fallbackUrl != effectiveImageUrl) {
                         builder.memoryCacheKeyExtras(
                             mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
                         )
                     }
                     builder.build()
                 }
-                if (item.poster.isNullOrBlank()) {
+                if (effectiveImageUrl.isNullOrBlank()) {
                     MonochromePosterPlaceholder()
                 } else {
                     AsyncImage(
@@ -220,7 +235,74 @@ fun GridContentCard(
                     )
                 }
 
-                if (showLogo && !item.logo.isNullOrBlank()) {
+                // Landscape clearlogo overlay on backdrop cards
+                val isLandscapeBackdropCard = globalLandscape &&
+                    effectiveLandscapePoster.isNullOrBlank()
+                val showLandscapeClearlogo = isLandscapeBackdropCard &&
+                    !item.logo.isNullOrBlank()
+                if (showLandscapeClearlogo) {
+                    var landscapeLogoFailed by remember(item.logo) { mutableStateOf(false) }
+                    if (!landscapeLogoFailed) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .drawWithCache {
+                                    val gradient = Brush.verticalGradient(
+                                        colorStops = arrayOf(
+                                            0.0f to Color.Transparent,
+                                            0.58f to Color.Transparent,
+                                            1.0f to Color.Black.copy(alpha = 0.75f)
+                                        )
+                                    )
+                                    onDrawBehind { drawRect(gradient) }
+                                }
+                        )
+                        val logoRequest = remember(item.logo) {
+                            ImageRequest.Builder(context)
+                                .data(item.logo)
+                                .crossfade(true)
+                                .build()
+                        }
+                        AsyncImage(
+                            model = logoRequest,
+                            contentDescription = item.name,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .fillMaxWidth(0.62f)
+                                .then(if (globalLandscape) Modifier.fillMaxHeight(0.34f) else Modifier.height(cardHeight * 0.34f))
+                                .padding(start = 10.dp, end = 10.dp, bottom = NuvioTheme.spacing.sm),
+                            contentScale = ContentScale.Fit,
+                            alignment = Alignment.CenterStart,
+                            onError = { landscapeLogoFailed = true }
+                        )
+                    }
+                } else if (isLandscapeBackdropCard && !showLandscapeClearlogo && !showLabel) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .drawWithCache {
+                                val gradient = Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Transparent,
+                                        0.58f to Color.Transparent,
+                                        1.0f to Color.Black.copy(alpha = 0.75f)
+                                    )
+                                )
+                                onDrawBehind { drawRect(gradient) }
+                            }
+                    )
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth(0.62f)
+                            .padding(start = 10.dp, end = 10.dp, bottom = NuvioTheme.spacing.md)
+                    )
+                } else if (showLogo && !item.logo.isNullOrBlank()) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -272,7 +354,7 @@ fun GridContentCard(
                 style = MaterialTheme.typography.titleMedium,
                 color = NuvioTheme.colors.TextPrimary,
                 modifier = Modifier
-                    .width(posterCardStyle.width)
+                    .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
                     .padding(top = NuvioTheme.spacing.sm, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
             )
         }

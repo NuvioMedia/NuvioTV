@@ -6,14 +6,22 @@ internal class MdbListLibraryRemote(private val api: MdbListApiClient, private v
         val items = linkedMapOf(MDBLIST_WATCHLIST_KEY to items(MDBLIST_WATCHLIST_KEY))
         val previousLists = previous?.lists.orEmpty().associateBy { it.id }
         val addedOrders = previous?.addedOrders.orEmpty().toMutableMap().apply { remove(MDBLIST_WATCHLIST_KEY) }
+        val hidden = previous?.hiddenListKeys.orEmpty()
         for (list in lists) {
+            // Hidden lists are not shown anywhere, so skip downloading their items.
+            if (list.key in hidden) {
+                addedOrders.remove(list.key)
+                continue
+            }
             val cached = previous?.itemsByList?.get(list.key)
             val unchanged = previous?.invalidated != true && list.updatedAt != null &&
                 previousLists[list.id]?.updatedAt == list.updatedAt
             items[list.key] = if (unchanged && cached != null) cached else items(list.key)
             if (!unchanged || cached == null) addedOrders.remove(list.key)
         }
-        return MdbListLibrarySnapshot(lists, items, now, addedOrders = addedOrders.filterKeys { it in items })
+        val snapshot = MdbListLibrarySnapshot(lists, items, now, addedOrders = addedOrders.filterKeys { it in items })
+        // Drop hidden keys of lists that were deleted in MDBList.
+        return snapshot.copy(hiddenListKeys = hidden intersect snapshot.tabs().mapTo(mutableSetOf()) { it.key })
     }
 
     suspend fun items(key: String, addedOrder: String? = null): List<MdbListLibraryItem> {

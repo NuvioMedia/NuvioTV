@@ -83,14 +83,14 @@ class MDBListRepositoryTest {
         assertEquals(1, account.engine.requests.size)
         assertEquals("/imdb/movie/tt1234567/", account.engine.requests.single().path)
         assertEquals("access-one", account.engine.requests.single().accessToken)
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     @Test
     fun `api key overrides connected account and clearing it restores account ratings`() = runTest {
         account.connected()
         account.reply(body = """{"ratings":[{"source":"imdb","value":8.1}]}""")
-        coEvery { api.getMedia("movie", "tt1234567", "separate-key", "keyword") } returns imdbResponse(7.2)
+        coEvery { api.getMedia("imdb", "movie", "tt1234567", "separate-key", "keyword") } returns imdbResponse(7.2)
         val repository = repository(imdbSettings.copy(apiKey = ""))
 
         assertEquals(8.1, repository.getRatingsForMeta(meta(), "tt1234567", "movie")?.ratings?.imdb)
@@ -100,7 +100,7 @@ class MDBListRepositoryTest {
         assertEquals(8.1, repository.getRatingsForMeta(meta(), "tt1234567", "movie")?.ratings?.imdb)
 
         assertEquals(1, account.engine.requests.size)
-        coVerify(exactly = 1) { api.getMedia("movie", "tt1234567", "separate-key", "keyword") }
+        coVerify(exactly = 1) { api.getMedia("imdb", "movie", "tt1234567", "separate-key", "keyword") }
     }
 
     @Test
@@ -135,12 +135,12 @@ class MDBListRepositoryTest {
         assertNull(repository.getImdbRatingForItem("tt1234567", "movie"))
         assertNull(repository.getRatingsForMeta(meta(), "tt1234567", "movie"))
         assertTrue(account.engine.requests.isEmpty())
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     @Test
     fun `both rotten tomatoes scores share one lookup and are cached`() = runTest {
-        coEvery { api.getMedia("movie", "tt1234567", "test-key", "keyword") } returns Response.success(media)
+        coEvery { api.getMedia("imdb", "movie", "tt1234567", "test-key", "keyword") } returns Response.success(media)
         val repository = repository(settings.copy(showImdb = true))
 
         val first = repository.getRatingsForMeta(meta(), "tt1234567", "movie")
@@ -151,13 +151,13 @@ class MDBListRepositoryTest {
         assertTrue(first!!.hasImdbRating)
         assertEquals(RottenTomatoesStatus.CERTIFIED_FRESH, first.ratings.tomatoesStatus)
         assertEquals(RottenTomatoesStatus.VERIFIED_HOT, first.ratings.audienceStatus)
-        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     @Test
     fun `audience only uses one show lookup and respects disabled critics`() = runTest {
-        coEvery { api.getMedia("show", "tt1234567", "test-key", "keyword") } returns Response.success(media)
+        coEvery { api.getMedia("imdb", "show", "tt1234567", "test-key", "keyword") } returns Response.success(media)
 
         val result = repository(settings.copy(showTomatoes = false))
             .getRatingsForMeta(meta("series"), "tt1234567", "series")
@@ -167,41 +167,41 @@ class MDBListRepositoryTest {
         assertNull(result.ratings.tomatoesStatus)
         assertEquals(85.0, result.ratings.audience)
         assertFalse(result.hasImdbRating)
-        coVerify(exactly = 1) { api.getMedia("show", "tt1234567", "test-key", "keyword") }
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMedia("imdb", "show", "tt1234567", "test-key", "keyword") }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     @Test
     fun `imdb only selects its rating from one full media response`() = runTest {
-        coEvery { api.getMedia("movie", "tt1234567", "test-key", "keyword") } returns Response.success(media)
+        coEvery { api.getMedia("imdb", "movie", "tt1234567", "test-key", "keyword") } returns Response.success(media)
 
         val result = repository(imdbSettings).getRatingsForMeta(meta(), "tt1234567", "movie")
 
         assertEquals(8.1, result?.ratings?.imdb)
         assertNull(result?.ratings?.tomatoes)
         assertNull(result?.ratings?.tmdb)
-        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     @Test
     fun `failed metadata can be retried without individual provider fallback requests`() = runTest {
-        coEvery { api.getMedia(any(), any(), any(), any()) } throws IOException("Unavailable")
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } throws IOException("Unavailable")
         val repository = repository()
 
         assertNull(repository.getRatingsForMeta(meta(), "tt1234567", "movie"))
-        coEvery { api.getMedia(any(), any(), any(), any()) } returns Response.success(media)
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(media)
         val result = repository.getRatingsForMeta(meta(), "tt1234567", "movie")
 
         assertEquals(RottenTomatoesStatus.CERTIFIED_FRESH, result?.ratings?.tomatoesStatus)
         assertEquals(RottenTomatoesStatus.VERIFIED_HOT, result?.ratings?.audienceStatus)
-        coVerify(exactly = 2) { api.getMedia(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 2) { api.getMedia(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     @Test
     fun `missing providers stay absent without fallback requests`() = runTest {
-        coEvery { api.getMedia(any(), any(), any(), any()) } returns Response.success(
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(
             media.copy(ratings = listOf(MDBListMediaRatingDto("popcorn", 85.0)))
         )
 
@@ -211,13 +211,13 @@ class MDBListRepositoryTest {
         assertNull(result!!.ratings.tomatoes)
         assertFalse(result.ratings.tomatoesCertified)
         assertEquals(RottenTomatoesStatus.VERIFIED_HOT, result.ratings.audienceStatus)
-        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     @Test
     fun `home ratings detail ratings and source toggles reuse one complete response`() = runTest {
-        coEvery { api.getMedia(any(), any(), any(), any()) } returns Response.success(media)
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(media)
         val repository = repository(imdbSettings)
 
         assertEquals(8.1, repository.getImdbRatingForItem("tt1234567", "movie"))
@@ -235,20 +235,20 @@ class MDBListRepositoryTest {
         assertNull(filtered.ratings.audienceStatus)
         assertFalse(filtered.ratings.audienceCertified)
         assertEquals(8.1, repository.getImdbRatingForItem("tt1234567", "movie"))
-        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `concurrent home and detail lookups share one request`() = runTest {
-        coEvery { api.getMedia(any(), any(), any(), any()) } returns Response.success(media)
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(media)
         val repository = repository(MDBListSettings(enabled = true, apiKey = "test-key"))
         val home = async { repository.getImdbRatingForItem("tt1234567", "movie") }
         val detail = async { repository.getRatingsForMeta(meta(), "tt1234567", "movie") }
 
         assertEquals(8.1, home.await())
         assertEquals(4.2, detail.await()?.ratings?.letterboxd)
-        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     @Test
@@ -256,8 +256,8 @@ class MDBListRepositoryTest {
         val repository = repository(settings.copy(showTomatoes = false, showAudience = false))
 
         assertNull(repository.getRatingsForMeta(meta(), "tt1234567", "movie"))
-        coVerify(exactly = 0) { api.getMedia(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMedia(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     private fun TestScope.repository(initialSettings: MDBListSettings = settings): MDBListRepository {
@@ -267,7 +267,7 @@ class MDBListRepositoryTest {
         val client = MdbListRatingsClient(
             api, account.api, account.store, Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
         )
-        return MDBListRepository(client, store, mockk<TmdbService>(), MdbListRatingsLoader(client, backgroundScope))
+        return MDBListRepository(client, store, mockk<TmdbService>(), MdbListRatingsLoader(client, scope = backgroundScope))
     }
 
     private fun meta(mediaType: String = "movie"): Meta = mockk {
