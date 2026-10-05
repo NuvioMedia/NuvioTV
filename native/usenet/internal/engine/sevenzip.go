@@ -18,7 +18,9 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode/utf16"
@@ -583,4 +585,73 @@ func (c *Content) usable(ctx context.Context) (*Content, error) {
 		return nil, err
 	}
 	return c, nil
+}
+
+var sevenZipVolumeName = regexp.MustCompile(`(?i)^(.*)\.7z\.(\d+)$`)
+
+// obfuscated7zVolumes picks the volumes of a 7z set from obfuscated NZB files
+// that follow its first volume. Posters obfuscate the PAR2 files too and
+// interleave them, and their yEnc headers often keep the real volume names.
+// Every candidate's first article is read (a few at a time): PAR2 files are
+// dropped by signature, and when yEnc names number the volumes they decide
+// membership and order. Otherwise release order stands.
+func obfuscated7zVolumes(ctx context.Context, files []*File) ([]*File, error) {
+	heads := make([][]byte, len(files))
+	errs := make([]error, len(files))
+	var wg sync.WaitGroup
+	limit := make(chan struct{}, 8)
+	for i, f := range files {
+		wg.Add(1)
+		limit <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-limit }()
+			heads[i], errs[i] = sniff(ctx, f)
+		}()
+	}
+	wg.Wait()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if errs[0] != nil {
+		return nil, errs[0]
+	}
+	recovered := func(f *File) string {
+		f.mu.RLock()
+		defer f.mu.RUnlock()
+		return f.recoveredName
+	}
+	stem := ""
+	if m := sevenZipVolumeName.FindStringSubmatch(recovered(files[0])); m != nil {
+		stem = strings.ToLower(m[1])
+	}
+	type volume struct {
+		f *File
+		n int
+	}
+	var vols []volume
+	for i, f := range files {
+		if bytes.HasPrefix(heads[i], []byte("PAR2\x00PKT")) {
+			continue
+		}
+		if stem != "" {
+			m := sevenZipVolumeName.FindStringSubmatch(recovered(f))
+			if m == nil || strings.ToLower(m[1]) != stem {
+				continue
+			}
+			n, _ := strconv.Atoi(m[2])
+			vols = append(vols, volume{f, n})
+			continue
+		}
+		if errs[i] != nil {
+			return nil, errs[i]
+		}
+		vols = append(vols, volume{f, i})
+	}
+	sort.SliceStable(vols, func(i, j int) bool { return vols[i].n < vols[j].n })
+	out := make([]*File, len(vols))
+	for i, v := range vols {
+		out[i] = v.f
+	}
+	return out, nil
 }

@@ -197,6 +197,17 @@ fully anonymous RAR4 sets require meaningful NZB subject/release ordering or XML
 ordering. Arbitrarily shuffled, completely anonymous RAR4 volumes cannot be
 reconstructed authoritatively from their headers alone.
 
+Real posts often number volumes inconsistently. A reposted copy of a volume is
+dropped in favour of the copy whose NZB metadata is intact. When a set mixes
+numbering schemes and one scheme lacks only its first volume, a file of another
+scheme whose headers start the same file (an old-style `.rar` posted as
+`.partNN.rar`) completes it. Names that do not number the volumes (shuffled
+`hash.N` obfuscation) are ordered by RAR5 main-header volume numbers, read a
+small batch at a time; RAR4 has none, so such a set stays rejected. A single
+random name that ends in digits is not a set and stays with the other
+obfuscated files. Obfuscated 7z volumes drop interleaved PAR2 files by
+signature and follow yEnc `.7z.NNN` names when the poster kept them.
+
 Episode selection first matches `SxxExx` or `NxNN`, including recovered yEnc
 names for direct videos. If no strict match exists, exactly one non-sample video
 across the release may be selected when neither its filename nor its original
