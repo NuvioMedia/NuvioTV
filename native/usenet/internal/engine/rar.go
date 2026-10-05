@@ -624,6 +624,27 @@ func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 	return rarBlock{}, nil, io.EOF
 }
 
+// skipToLastPart moves the cursor past the end of a split file when the
+// set's last volume holds that file's final part, without reading the volumes
+// between. It reports false, leaving the cursor unchanged, when the last
+// volume does not prove it (another file, an unordered set, a read error).
+func (c *rarCursor) skipToLastPart(ctx context.Context, name string, size int64) (bool, error) {
+	last := len(c.files) - 1
+	if c.unordered || c.volume != nil || c.index >= last {
+		return false, nil
+	}
+	probe := rarCursor{files: c.files, index: last}
+	b, _, err := probe.next(ctx)
+	if ctx.Err() != nil {
+		return false, ctx.Err()
+	}
+	if err != nil || !b.before || b.after || b.directory || b.name != name || b.unpacked != size {
+		return false, nil
+	}
+	*c = probe
+	return true, nil
+}
+
 type Content struct {
 	Name         string
 	Size         int64

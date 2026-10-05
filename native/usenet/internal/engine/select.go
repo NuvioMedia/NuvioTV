@@ -529,6 +529,19 @@ groups:
 				return c.usable(ctx)
 			}
 			index++
+			// A file that reaches the last volume fills every volume between,
+			// so the next entry can only follow it there: skip the middle
+			// volumes. The unselected entry keeps its own cursor and maps its
+			// continuations lazily if it is chosen as the fallback.
+			if b.after {
+				resume := *cursor
+				if skipped, err := cursor.skipToLastPart(ctx, b.name, b.unpacked); err != nil {
+					return nil, err
+				} else if skipped {
+					c.cursor = &resume
+					continue
+				}
+			}
 			// Reach the next entry using headers only. Selected content returns
 			// above, before resolving ANY continuation volume.
 			if err := c.extend(ctx, -1); err != nil {
