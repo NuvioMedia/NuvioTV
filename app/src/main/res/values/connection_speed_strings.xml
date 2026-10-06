@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_stream_connection_fit_title">Match streams to connection</string>
+    <string name="settings_stream_connection_fit_description">Keep your addon\'s stream order, but move streams likely too heavy for your connection to the end. Speed is learned from your own playback.</string>
+    <string name="settings_stream_connection_fit_learning">Learning your speed on this network from playback. Stream order is unchanged until then.</string>
+    <string name="settings_stream_connection_fit_measured">About %1$d Mbps on this network. Your stream order is kept; streams likely too heavy for it go last.</string>
+</resources>

@@ -187,6 +187,17 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         return mpv.getPropertyDouble("demuxer-cache-duration") ?: 0.0
     }
 
+    /** Feeds mpv's download rate to connection-speed learning (core/connection). */
+    fun sampleThroughput(context: Context, streamUrl: String?) {
+        if (!initialized) return
+        com.nuvio.tv.core.connection.PlaybackThroughput.onMpvTick(
+            context = context,
+            streamUrl = streamUrl,
+            bytesPerSecond = mpv.getPropertyDouble("cache-speed")?.toLong() ?: 0L,
+            isFetching = mpv.getPropertyBoolean("demuxer-cache-idle") == false
+        )
+    }
+
     fun isCoreIdleNow(): Boolean {
         if (!initialized) return false
         return mpv.getPropertyBoolean("core-idle") == true

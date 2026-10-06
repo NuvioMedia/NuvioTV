@@ -269,6 +269,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         )
                     }
                     updateMpvAvailableTracks()
+                    view.sampleThroughput(context, currentStreamUrl)
                     updateActiveSkipInterval(pos)
                     if (!_playbackTimeline.value.isLive) {
                         evaluatePostPlayOverlayVisibility(
@@ -300,6 +301,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     playerReportsLive = player.isCurrentMediaItemLive,
                     isPlaying = player.isPlaying
                 )
+                com.nuvio.tv.core.connection.PlaybackThroughput.onExoTick(context, currentStreamUrl, player.isLoading)
                 playbackAnalyticsDiagnostics.recordProgressSnapshot(
                     player = player,
                     hasRenderedFirstFrame = hasRenderedFirstFrame,

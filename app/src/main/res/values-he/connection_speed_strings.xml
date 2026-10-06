@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_stream_connection_fit_title">התאמת מקורות למהירות החיבור</string>
+    <string name="settings_stream_connection_fit_description">שומר על סדר המקורות של התוסף, אך מעביר מקורות כבדים מדי לחיבור לסוף הרשימה. מהירות הגלישה נלמדת מניגון בפועל.</string>
+    <string name="settings_stream_connection_fit_learning">לומד את מהירות החיבור ברשת זו מתוך ניגון. סדר המקורות לא ישתנה עד להשלמת המדידה.</string>
+    <string name="settings_stream_connection_fit_measured">כ-%1$d מגה-ביט/שנייה ברשת זו. סדר המקורות נשמר; מקורות כבדים מדי עבור הרשת מועברים לסוף.</string>
+</resources>

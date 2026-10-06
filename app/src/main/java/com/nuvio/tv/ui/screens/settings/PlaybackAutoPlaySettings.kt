@@ -139,6 +139,8 @@ internal fun PlaybackStreamSelectionSection(
         }
     }
 
+    ConnectionSpeedSettingsRow()
+
     val timeoutSeconds = settings.streamAutoPlayTimeoutSeconds
     SliderSettingsItem(
         title = stringResource(R.string.autoplay_timeout_title),

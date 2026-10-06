@@ -474,11 +474,22 @@ class StreamScreenViewModel @Inject constructor(
                 contentId?.let { bingeGroupCacheDataStore.get(it) }
             } else null
 
+            // One connection snapshot per load, taken once the runtime is known.
+            var connectionFit: com.nuvio.tv.core.connection.StreamConnectionFit? = null
+            var connectionFitCaptured = false
+
             fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
-                val orderedAddonStreams = StreamAutoPlaySelector.orderAddonStreams(
+                if (!connectionFitCaptured) {
+                    _uiState.value.runtime?.let { runtimeMinutes ->
+                        connectionFit = com.nuvio.tv.core.connection.StreamConnectionFit.capture(context, runtimeMinutes)
+                        connectionFitCaptured = true
+                    }
+                }
+                val addonOrderedStreams = StreamAutoPlaySelector.orderAddonStreams(
                     addonStreamGroups,
                     installedAddonOrder
                 )
+                val orderedAddonStreams = connectionFit?.applyToGroups(addonOrderedStreams) ?: addonOrderedStreams
 
                 // Preserve badges already computed by prior badge jobs so they
                 // don't vanish when repository emits fresh (badge-less) streams.

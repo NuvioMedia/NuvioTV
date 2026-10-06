@@ -167,7 +167,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         cacheKey: String? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
-        val httpDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
+        val httpDataSourceFactory = com.nuvio.tv.core.connection.PlaybackThroughput.countingNetworkBytes(
+            PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
+        )
 
         val resolvedMimeType = mimeTypeOverride ?: inferMimeType(
             url = url,
@@ -211,6 +213,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 if (sanitizedHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
                     setUserAgent(DEFAULT_USER_AGENT)
                 }
+                setTransferListener(com.nuvio.tv.core.connection.PlaybackThroughput.networkByteCounter)
             }
             val sessionConnections = parallelConnectionCount
             val sessionChunkBytes = parallelChunkSizeKb
