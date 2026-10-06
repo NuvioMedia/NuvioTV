@@ -166,6 +166,21 @@ func sniff(ctx context.Context, f *File) ([]byte, error) {
 }
 
 func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
+	c, err := selectPass(ctx, files, s)
+	if !par2Worth(ctx, err, files) {
+		return c, err
+	}
+	// Last resort for fully obfuscated releases: real names from PAR2.
+	if renamed, perr := recoverPAR2Names(ctx, files); perr != nil || renamed == 0 {
+		if perr != nil && ctx.Err() != nil {
+			return nil, perr
+		}
+		return c, err
+	}
+	return selectPass(ctx, files, s)
+}
+
+func selectPass(ctx context.Context, files []*File, s Selection) (*Content, error) {
 	c, err := selectContent(ctx, files, s, false)
 	if err == errNoMatchingVideo && s.episodeOnly() {
 		s.multiEpisode = true
