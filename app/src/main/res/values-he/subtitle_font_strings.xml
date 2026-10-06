@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_font_title">גופן כתוביות</string>
+    <string name="subtitle_font_default">ברירת מחדל (גופן המערכת)</string>
+    <string name="subtitle_font_dialog_description">השתמש בגופן TTF או OTF מותאם אישית עבור כתוביות בשני הנגנים (עד 20 מ״ב). כתוביות ASS מעוצבות שומרות על הגופנים המוטמעים שלהן.</string>
+    <string name="subtitle_font_current">גופן נוכחי: %1$s</string>
+    <string name="subtitle_font_phone_instruction">סרוק באמצעות הטלפון, או פתח כתובת זו במחשב באותה רשת, כדי לשלוח קובץ גופן לטלוויזיה.</string>
+    <string name="subtitle_font_choose_file">בחר קובץ</string>
+    <string name="subtitle_font_from_url">מכתובת אינטרנט (URL)</string>
+    <string name="subtitle_font_reset">אפס לברירת מחדל</string>
+    <string name="subtitle_font_done">סיום</string>
+    <string name="subtitle_font_importing">מייבא גופן…</string>
+    <string name="subtitle_font_imported">הגופן יובא בהצלחה: %1$s</string>
+    <string name="subtitle_font_invalid">קובץ זה אינו גופן TTF או OTF תקין.</string>
+    <string name="subtitle_font_too_large">קובץ הגופן גדול מ-20 מ״ב.</string>
+    <string name="subtitle_font_download_failed">הורדת הגופן נכשלה.</string>
+    <string name="subtitle_font_no_picker">לטלוויזיה זו אין בורר קבצים. שלח את הגופן מהטלפון במקום זאת.</string>
+    <string name="subtitle_font_url_title">ייבוא גופן מכתובת URL</string>
+    <string name="subtitle_font_url_description">קישור ישיר לקובץ TTF או OTF, עד 20 מ״ב.</string>
+    <string name="subtitle_font_url_import">ייבא</string>
+    <string name="subtitle_font_web_title">שליחת גופן כתוביות</string>
+    <string name="subtitle_font_web_subtitle">בחר קובץ TTF או OTF (עד 20 מ״ב). הטלוויזיה תשתמש בו לכתוביות בשני הנגנים.</string>
+    <string name="subtitle_font_web_choose">בחר קובץ גופן תחילה</string>
+    <string name="subtitle_font_web_upload">שלח לטלוויזיה</string>
+    <string name="subtitle_font_web_uploading">שולח…</string>
+    <string name="subtitle_font_web_current">גופן נוכחי:</string>
+    <string name="subtitle_font_web_imported">הגופן יובא בהצלחה</string>
+    <string name="subtitle_font_web_connection_error">שגיאת חיבור</string>
+</resources>

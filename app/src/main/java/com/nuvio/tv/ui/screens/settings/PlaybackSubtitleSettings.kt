@@ -120,6 +120,7 @@ internal fun PlaybackSubtitlesSection(
         onToggle = { onUpdate { setSubtitleBold(!style.bold) } },
         enabled = enabled
     )
+    SubtitleFontSettingsRow(enabled = enabled)
     ColorSettingsItem(
         title = stringResource(R.string.sub_text_color),
         currentColor = Color(style.textColor),
