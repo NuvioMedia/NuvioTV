@@ -208,6 +208,14 @@ random name that ends in digits is not a set and stays with the other
 obfuscated files. Obfuscated 7z volumes drop interleaved PAR2 files by
 signature and follow yEnc `.7z.NNN` names when the poster kept them.
 
+When selection still fails and names carry no usable volume or file name
+(bare hashes, random extensions, `hash.N` numbering), the release's PAR2 index
+supplies them: it lists every file's real name, length and the MD5 of its first
+16 KiB. One article per candidate file is read, eight at a time; obfuscated PAR2
+files are found by signature. Files are matched by content, never by position,
+renamed, and selection runs again. This recovers fully obfuscated RAR4 sets,
+whose headers carry no volume number. Correctly named sets never pay for it.
+
 Episode selection first matches `SxxExx` or `NxNN`, including recovered yEnc
 names for direct videos. If no strict match exists, exactly one non-sample video
 across the release may be selected when neither its filename nor its original
