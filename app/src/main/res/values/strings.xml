@@ -1829,6 +1829,8 @@
     <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_live_watched">LIVE  %1$s</string>
+    <string name="player_live">LIVE</string>
+    <string name="player_live_delayed">LIVE -%1$s</string>
     <string name="player_via">via %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
