@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_autosync_bubble_toast">הודעות בועת זכוכית</string>
+    <string name="settings_autosync_bubble_toast_description">חיווי סנכרון מעוצב ושקוף בתחתית המסך במקום הודעות טקסט פשוטות</string>
+    <string name="autosync_bubble_label">AutoSync</string>
+
+    <string name="autosync_toast_analyzing">Auto Sync • מנתח…</string>
+    <string name="autosync_toast_synced">Auto Sync • הכתוביות סונכרנו</string>
+    <string name="autosync_toast_synced_replaced">Auto Sync • עבר לכתובית שמתאימה יותר</string>
+    <string name="autosync_toast_in_sync">Auto Sync • הכתוביות כבר מסונכרנות</string>
+    <string name="autosync_toast_bubble_failed">Auto Sync • הסנכרון נכשל • תזמון הכתוביות לא השתנה</string>
+    <string name="autosync_toast_bubble_failed_no_reference">Auto Sync • אין כתוביות מוטמעות להשוואה • תזמון הכתוביות לא השתנה</string>
+    <string name="autosync_toast_bubble_failed_unsupported">Auto Sync • פורמט הכתוביות אינו נתמך • תזמון הכתוביות לא השתנה</string>
+    <string name="autosync_toast_failed_audio_fallback">Auto Sync • לא נמצאה התאמה • מסנכרן לפי השמע…</string>
+</resources>

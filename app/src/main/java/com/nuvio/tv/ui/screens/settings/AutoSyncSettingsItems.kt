@@ -13,6 +13,7 @@ import com.nuvio.tv.ui.screens.player.autosync.AutoSyncPreferences
 internal fun autoSyncSettingsItems(enabled: Boolean) {
     val context = LocalContext.current
     AutoSyncPreferences.ensureLoaded(context)
+    com.nuvio.tv.ui.screens.player.autosync.bubble.AutoSyncBubbleToasts.ensureLoaded(context)
     val checked by AutoSyncPreferences.enabled.collectAsStateWithLifecycle()
 
     SettingsToggleRow(
@@ -47,6 +48,17 @@ internal fun autoSyncSettingsItems(enabled: Boolean) {
             subtitle = stringResource(R.string.autosync_thorough_description),
             checked = thorough,
             onToggle = { AutoSyncPreferences.setAggressiveMode(context, !thorough) },
+            enabled = enabled,
+        )
+
+        val bubbleEnabled by com.nuvio.tv.ui.screens.player.autosync.bubble.AutoSyncBubbleToasts.enabled.collectAsStateWithLifecycle()
+        SettingsToggleRow(
+            title = stringResource(R.string.settings_autosync_bubble_toast),
+            subtitle = stringResource(R.string.settings_autosync_bubble_toast_description),
+            checked = bubbleEnabled,
+            onToggle = {
+                com.nuvio.tv.ui.screens.player.autosync.bubble.AutoSyncBubbleToasts.setEnabled(context, !bubbleEnabled)
+            },
             enabled = enabled,
         )
 

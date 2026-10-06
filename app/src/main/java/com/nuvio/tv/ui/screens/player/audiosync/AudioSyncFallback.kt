@@ -19,6 +19,8 @@ import com.nuvio.tv.ui.screens.player.PlayerPlaybackNetworking
 import com.nuvio.tv.ui.screens.player.PlayerRuntimeController
 import com.nuvio.tv.ui.screens.player.autosync.AutomaticSubtitleSync
 import com.nuvio.tv.ui.screens.player.autosync.AutoSyncSyncedSubtitle
+import com.nuvio.tv.ui.screens.player.autosync.bubble.AutoSyncBubbleKind
+import com.nuvio.tv.ui.screens.player.autosync.bubble.showAutoSyncMessage
 import com.nuvio.tv.ui.screens.player.commitPreparedSidecarSubtitle
 import com.nuvio.tv.ui.screens.player.currentSidecarGenerationFor
 import com.nuvio.tv.ui.screens.player.parseSidecarTimedCuesRobust
@@ -289,9 +291,7 @@ internal class AudioSyncFallback private constructor(
 
     private fun toast(status: AudioSyncStatus) {
         val message = status.message(appContext) ?: return
-        android.os.Handler(android.os.Looper.getMainLooper()).post {
-            android.widget.Toast.makeText(appContext, message, android.widget.Toast.LENGTH_SHORT).show()
-        }
+        showAutoSyncMessage(appContext, status.bubbleKind(), message)
     }
 
     companion object {
@@ -419,6 +419,13 @@ internal object AudioSyncTaps {
 }
 
 
+
+/** How the AutoSync bubble shows [this]: the audio sync is still at it, done, or gave up. */
+private fun AudioSyncStatus.bubbleKind(): AutoSyncBubbleKind = when (this) {
+    is AudioSyncStatus.Synced, is AudioSyncStatus.Adjusted -> AutoSyncBubbleKind.Success
+    AudioSyncStatus.Withdrawn -> AutoSyncBubbleKind.Failure
+    else -> AutoSyncBubbleKind.Working
+}
 
 private fun AudioSyncStatus.message(context: Context): String? = when (this) {
     AudioSyncStatus.Listening -> null // AutoSync's takeover toast already said so
