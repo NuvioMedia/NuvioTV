@@ -142,6 +142,11 @@ internal fun isAudioTrackFailure(errorCode: Int, combinedMessage: String): Boole
         combinedMessage.contains("audiotrack write failed", ignoreCase = true)
 }
 
+internal fun isStuckBufferingWatchdog(errorCode: Int, combinedMessage: String): Boolean {
+    if (errorCode != PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK) return false
+    return combinedMessage.contains("stuck buffering and not loading", ignoreCase = true)
+}
+
 internal fun httpStatusExplanation(context: android.content.Context, code: Int): String {
     return when (code) {
         401, 410 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
@@ -317,6 +322,11 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
  * Resets the retry counter. Call this whenever playback enters a healthy state
  * (first frame rendered, or user-initiated retry).
  */
+internal fun PlayerRuntimeController.markAudioPcmFallbackTried() {
+    hasTriedAudioPcmFallback = true
+    pendingAudioPcmFallbackRebuild = true
+}
+
 internal fun PlayerRuntimeController.resetErrorRetryState() {
     startupRetryCount = 0
     errorRetryCount = 0
@@ -377,8 +387,7 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     if (cachedDecoderPriority != 1) return false // Only for EXTENSION_RENDERER_MODE_ON
     if (_uiState.value.tunnelingEnabled) return false
 
-    hasTriedAudioPcmFallback = true
-    pendingAudioPcmFallbackRebuild = true
+    markAudioPcmFallbackTried()
 
     val player = _exoPlayer ?: return false
     val savedPosition = player.currentPosition.takeIf { it > 0L } ?: 0L
@@ -388,6 +397,107 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     showRecoveryOverlay()
 
     errorRetryJob?.cancel()
+    errorRetryJob = scope.launch {
+        releasePlayer(flushPlaybackState = false)
+        if (savedPosition > 0L) {
+            _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+        }
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+    }
+
+    return true
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.tryPassthroughOpenRetry(error: PlaybackException): Boolean {
+    val failedMime = failedAudioTrackInputFormat(error)?.sampleMimeType
+    if (!PassthroughOpenRetryPolicy.isEligible(
+            errorCode = error.errorCode,
+            failedInputMime = failedMime,
+            policyDenies = currentAudioPassthroughPolicy?.deniesPassthrough(failedMime) == true,
+            pcmFallbackTried = hasTriedAudioPcmFallback
+        )
+    ) {
+        return false
+    }
+    val streamUrl = currentStreamUrl
+    val delayMs = passthroughOpenRetry.nextDelayMs(streamUrl) ?: return false
+
+    val savedPosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
+    val paused = userPausedManually
+
+    Log.w(
+        PlayerRuntimeController.TAG,
+        "AUDIO_OPEN_RETRY: $failedMime refused at open, retrying the same output in ${delayMs}ms, position=${savedPosition}ms"
+    )
+    queuePlaybackRawEventLine("audio_open_retry mime=$failedMime delayMs=$delayMs positionMs=$savedPosition")
+    showRecoveryOverlay()
+
+    errorRetryJob?.cancel()
+    errorRetryJob = scope.launch {
+        releasePlayer(flushPlaybackState = false)
+        delay(delayMs)
+        if (currentStreamUrl != streamUrl) return@launch
+        if (!awaitOutputForOpenRetry(streamUrl)) return@launch
+        if (savedPosition > 0L) {
+            _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+        }
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+    }
+
+    return true
+}
+
+private suspend fun PlayerRuntimeController.awaitOutputForOpenRetry(streamUrl: String): Boolean {
+    val startedMs = android.os.SystemClock.elapsedRealtime()
+    var waiting = false
+    while (true) {
+        if (currentStreamUrl != streamUrl) return false
+        val routeKey = runCatching { AudioOutputRouteDetector.detect(context)?.key }.getOrNull()
+        val ready = PassthroughOpenRetryPolicy.outputReady(
+            liveEncodings = PassthroughOpenRetryPolicy.liveBitstreamEncodings(context),
+            routeIsHdmi = PassthroughOpenRetryPolicy.isHdmiRoute(routeKey)
+        )
+        val waitedMs = android.os.SystemClock.elapsedRealtime() - startedMs
+        if (PassthroughOpenRetryPolicy.mayRetryNow(ready, waitedMs)) {
+            if (waiting) {
+                Log.i(PlayerRuntimeController.TAG, "AUDIO_OPEN_RETRY: output back after ${waitedMs}ms ready=$ready route=$routeKey")
+            }
+            return true
+        }
+        if (!waiting) {
+            Log.w(PlayerRuntimeController.TAG, "AUDIO_OPEN_RETRY: waiting for the audio output, route=$routeKey")
+            waiting = true
+        }
+        delay(PassthroughOpenRetryPolicy.OUTPUT_POLL_MS)
+    }
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.tryDeniedAudioFfmpegFallback(
+    error: PlaybackException
+): Boolean {
+    if (error.errorCode != PlaybackException.ERROR_CODE_DECODER_INIT_FAILED) return false
+    if (currentStreamUrl in preferFfmpegAudioStreamUrls) return false
+    if (cachedDecoderPriority == 0) return false
+    val failingMime = (error as? androidx.media3.exoplayer.ExoPlaybackException)
+        ?.rendererFormat?.sampleMimeType
+    if (failingMime == null || !androidx.media3.common.MimeTypes.isAudio(failingMime)) return false
+    val policy = currentAudioPassthroughPolicy ?: return false
+    if (!policy.deniesPassthrough(failingMime)) return false
+
+    preferFfmpegAudioStreamUrls.add(currentStreamUrl)
+
+    val savedPosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
+    val paused = userPausedManually
+
+    Log.d(
+        PlayerRuntimeController.TAG,
+        "Decoder init failed (4001) on policy-denied audio $failingMime - retrying with FFmpeg audio preferred, position=${savedPosition}ms"
+    )
+    showRecoveryOverlay()
+
+    resetErrorRetryState()
     errorRetryJob = scope.launch {
         releasePlayer(flushPlaybackState = false)
         if (savedPosition > 0L) {

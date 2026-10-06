@@ -6,6 +6,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.util.Log
 import com.nuvio.tv.data.local.AudioOutputChannels
+import com.nuvio.tv.ui.screens.player.iec.PlatformIecAudioTrackFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -131,6 +132,10 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
         "Audio device $reason (count=${devices.size}); scheduling route re-probe"
     )
 
+    if (TvAudioCapabilityPin.touchesOutputChain(false, TvAudioCapabilityPin.sinkTypesOf(devices))) {
+        audioChainEventPending = true
+    }
+
     audioRouteChangeJob?.cancel()
     audioRouteChangeJob = scope.launch {
         delay(AUDIO_ROUTE_CHANGE_DEBOUNCE_MS)
@@ -140,6 +145,20 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
         val newRoute = AudioOutputRouteDetector.detect(context)
         if (newRoute != null) {
             currentAudioOutputRoute = newRoute
+        }
+        val routeKeyChanged = newRoute != null && newRoute.key != oldRoute?.key
+        val chainEvent = audioChainEventPending
+        audioChainEventPending = false
+        if (routeKeyChanged || chainEvent) {
+            AudioRejectionReverifier.ledger.invalidate()
+            AudioChainProbe.invalidate()
+            PlatformIecAudioTrackFactory.invalidateIec61937ProbeMemo()
+            applySurroundResolutionInPlace(reason)
+        } else {
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "Audio device $reason left the output chain untouched; keeping the surround resolution"
+            )
         }
 
         if (rememberAudioDelayPerDeviceEnabled) {
