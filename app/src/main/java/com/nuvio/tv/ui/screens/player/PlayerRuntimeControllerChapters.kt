@@ -22,14 +22,7 @@ internal fun PlayerRuntimeController.refreshMpvChapters(view: NuvioMpvSurfaceVie
 internal fun PlayerRuntimeController.seekToChapter(startMs: Long) {
     if (_playbackTimeline.value.isLive) return
     pendingPreviewSeekPosition = null
-    val view = mpvView
-    if (isUsingMpvEngine() && view != null) {
-        view.seekToMsExact(startMs)
-        view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
-        view.setAudioDelayMs(_uiState.value.audioDelayMs)
-    } else {
-        seekPlaybackTo(startMs, SeekParameters.EXACT)
-    }
+    seekPlaybackTo(startMs, SeekParameters.EXACT, exact = true)
     updatePlaybackTimeline(currentPosition = startMs)
     scheduleProgressSyncAfterSeek()
     if (_uiState.value.showControls) {

@@ -544,13 +544,18 @@ internal fun PlayerRuntimeController.hasActivePlayIntent(): Boolean {
     }
 }
 
+/**
+ * [exact] makes the mpv seek exact even when the file was loaded with `hr-seek=no`, where a plain
+ * seek lands on a keyframe; ExoPlayer takes its precision from [seekParameters] alone.
+ */
 internal fun PlayerRuntimeController.seekPlaybackTo(
     positionMs: Long,
-    seekParameters: SeekParameters = SeekParameters.CLOSEST_SYNC
+    seekParameters: SeekParameters = SeekParameters.CLOSEST_SYNC,
+    exact: Boolean = false
 ) {
     if (isUsingMpvEngine()) {
         mpvView?.let { view ->
-            view.seekToMs(positionMs)
+            if (exact) view.seekToMsExact(positionMs) else view.seekToMs(positionMs)
             // Keep subtitle/audio delay sticky during FF/RW seeks.
             view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
             view.setAudioDelayMs(_uiState.value.audioDelayMs)
