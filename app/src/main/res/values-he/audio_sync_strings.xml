@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_sync_fallback_title">סנכרון חלופי לפי שמע</string>
+    <string name="audio_sync_fallback_description">כאשר אין כתוביות מוטמעות או שההתאמה חלשה מדי, הכתוביות יסונכרנו לפי פס הקול.</string>
+    <string name="audio_sync_show_statistics_title">הצגת נתוני סנכרון שמע</string>
+    <string name="audio_sync_show_statistics_description">הצגת לוח אבחון חי בפינה השמאלית העליונה של הנגן עם המידע שנקלט בשמע וסיבת מצב הסנכרון.</string>
+    <string name="player_audio_sync_listening">AutoSync שמר על התזמון המקורי, מסנכרן כתוביות לפי השמע…</string>
+    <string name="player_audio_sync_model_downloading">מוריד מודל זיהוי דיבור (%1$s מ״ב) לסנכרון כתוביות מהיר יותר…</string>
+    <string name="player_audio_sync_model_needs_wifi">התחבר פעם אחת ל-Wi-Fi כדי להוריד את מודל הדיבור (%1$s מ״ב) לסנכרון כתוביות מהיר יותר</string>
+    <string name="player_audio_sync_live_only">אין אפשרות לקריאה מקדימה של שמע %1$s במכשיר זה, מסנכרן משמע חי (איטי יותר)</string>
+    <string name="player_audio_sync_withdrawn">לא ניתן היה לאמת את סנכרון הכתוביות, התזמון המקורי שוחזר</string>
+    <string name="player_audio_sync_estimated">מסנכרן כתוביות לשמע (%1$s), מכוונן…</string>
+    <string name="player_audio_sync_synced">סנכרון הכתוביות אומת (%1$s)</string>
+    <string name="player_audio_sync_synced_rate">סנכרון הכתוביות אומת (%1$s, קצב פריימים תוקן)</string>
+    <string name="player_audio_sync_adjusted">תזמון הכתוביות השתנה, סונכרן מחדש (%1$s)</string>
+</resources>

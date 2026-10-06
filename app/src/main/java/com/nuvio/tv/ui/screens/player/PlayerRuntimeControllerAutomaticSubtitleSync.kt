@@ -20,6 +20,8 @@ import com.nuvio.tv.ui.screens.player.autosync.EmbeddedSubtitleTimelineLoader
 import com.nuvio.tv.ui.screens.player.autosync.applyAutoSyncSidecarTimeline
 import com.nuvio.tv.ui.screens.player.autosync.maxAlignmentShiftMs
 import com.nuvio.tv.ui.screens.player.autosync.replaceAutoSyncSidecarSubtitle
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncTaps
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
@@ -47,7 +49,8 @@ internal fun PlayerRuntimeController.autoSyncExtractorsFactory(
 ): ExtractorsFactory {
     AutoSyncPreferences.ensureLoaded(context)
     if (!AutoSyncPreferences.isEnabled(context)) return delegate
-    val factory = AutoSyncExtractorsFactory(delegate = delegate, sourceKey = url)
+    val wrapped = AudioSyncTaps.wrapExtractors(delegate, url)
+    val factory = AutoSyncExtractorsFactory(delegate = wrapped, sourceKey = url)
     prefetchAutoSyncIndex(url, headers)
     return factory
 }
@@ -72,6 +75,11 @@ internal fun PlayerRuntimeController.runSelectedAutomaticSubtitleSync(subtitle: 
 internal fun PlayerRuntimeController.cancelAutomaticSubtitleSync() {
     automaticSubtitleSyncJob?.cancel()
     automaticSubtitleSyncJob = null
+    AudioSyncFallback.release(this)
+}
+
+internal fun PlayerRuntimeController.resetSubtitleDelayForAutoSync() {
+    setSubtitleDelayMs(targetMs = 0, showOverlay = false)
 }
 
 internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
@@ -129,6 +137,8 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
         .buildUpon()
         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
         .build()
+    val audioFallback = AudioSyncFallback.of(this)
+    audioFallback?.arm()
 
     automaticSubtitleSyncJob = scope.launch {
         launch {
@@ -196,13 +206,27 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
             )
 
             if (resolved == null) {
-                if (!stillRelevant()) return@launch
+                if (!stillRelevant()) {
+                    audioFallback?.disarm()
+                    return@launch
+                }
                 if (activeSidecarSubtitleKey == null) {
                     startSidecarAddonSubtitle(selectedSubtitle)
                 }
-                showAutoSyncToast(context.buildAutoSyncFailureToast(analysisOutcome))
+                val audioTakesOver =
+                    if (analysisOutcome != AutoSyncAnalysisOutcome.SUBTITLE_UNAVAILABLE && currentStreamUrl == sourceUrlAtStart) {
+                        audioFallback?.takeOver(selectedUrl) == true
+                    } else {
+                        audioFallback?.disarm()
+                        false
+                    }
+                if (!audioTakesOver) {
+                    showAutoSyncToast(context.buildAutoSyncFailureToast(analysisOutcome))
+                }
                 return@launch
             }
+
+            audioFallback?.disarm()
 
             if (currentStreamUrl != sourceUrlAtStart) return@launch
             val activeSubtitleUrl = _uiState.value.selectedAddonSubtitle?.url
@@ -259,6 +283,7 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
             }
 
             if (!applied) {
+                audioFallback?.disarm()
                 if (!stillRelevant()) return@launch
                 if (activeSidecarSubtitleKey == null) {
                     startSidecarAddonSubtitle(selectedSubtitle)
@@ -276,11 +301,13 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
                 }
                 rememberAddonSubtitleSelection(chosenSubtitle)
             }
-            setSubtitleDelayMs(targetMs = 0, showOverlay = false)
+            resetSubtitleDelayForAutoSync()
             AutoSyncSyncedSubtitle.mark(chosenSubtitle.url)
         } catch (cancel: CancellationException) {
+            audioFallback?.disarm()
             throw cancel
         } catch (error: Throwable) {
+            audioFallback?.disarm()
             Log.w(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 failed", error)
             if (!stillRelevant()) return@launch
             if (activeSidecarSubtitleKey == null) {

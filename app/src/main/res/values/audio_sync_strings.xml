@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_sync_fallback_title">Audio sync fallback</string>
+    <string name="audio_sync_fallback_description">When there are no embedded subtitles or the match is too weak, sync subtitles by listening to the audio.</string>
+    <string name="audio_sync_show_statistics_title">Show AudioSync statistics</string>
+    <string name="audio_sync_show_statistics_description">Shows a live panel in the top-left corner of the player with what audio sync has heard and why it is or isn\'t synced yet.</string>
+    <string name="player_audio_sync_listening">AutoSync kept the original timing, syncing subtitles to the audio…</string>
+    <string name="player_audio_sync_model_downloading">Downloading speech recognition model (%1$s MB) for faster subtitle sync…</string>
+    <string name="player_audio_sync_model_needs_wifi">Connect to Wi-Fi once to download the %1$s MB speech model for faster subtitle sync</string>
+    <string name="player_audio_sync_live_only">No look-ahead for %1$s audio on this device, syncing from live audio (slower)</string>
+    <string name="player_audio_sync_withdrawn">Couldn\'t confirm subtitle sync, restored original timing</string>
+    <string name="player_audio_sync_estimated">Syncing subtitles to audio (%1$s), fine-tuning…</string>
+    <string name="player_audio_sync_synced">Subtitle sync confirmed (%1$s)</string>
+    <string name="player_audio_sync_synced_rate">Subtitle sync confirmed (%1$s, frame rate corrected)</string>
+    <string name="player_audio_sync_adjusted">Subtitle timing changed, re-synced (%1$s)</string>
+</resources>

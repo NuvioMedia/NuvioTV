@@ -49,5 +49,28 @@ internal fun autoSyncSettingsItems(enabled: Boolean) {
             onToggle = { AutoSyncPreferences.setAggressiveMode(context, !thorough) },
             enabled = enabled,
         )
+
+        val audioFallbackEnabled by com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings.fallbackEnabled.collectAsStateWithLifecycle()
+        SettingsToggleRow(
+            title = stringResource(R.string.audio_sync_fallback_title),
+            subtitle = stringResource(R.string.audio_sync_fallback_description),
+            checked = audioFallbackEnabled,
+            onToggle = {
+                com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback.initialize(context)
+                com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings.setFallbackEnabled(!audioFallbackEnabled)
+            },
+            enabled = enabled,
+        )
+
+        if (audioFallbackEnabled) {
+            val showStats by com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings.showStatistics.collectAsStateWithLifecycle()
+            SettingsToggleRow(
+                title = stringResource(R.string.audio_sync_show_statistics_title),
+                subtitle = stringResource(R.string.audio_sync_show_statistics_description),
+                checked = showStats,
+                onToggle = { com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings.setShowStatistics(!showStats) },
+                enabled = enabled,
+            )
+        }
     }
 }

@@ -2077,6 +2077,8 @@
     <string name="library_sort_provider_order">לפי סדר ספק</string>
     <string name="library_sort_added_desc">התווסף ↓</string>
     <string name="library_sort_added_asc">התווסף ↑</string>
+    <string name="library_sort_released_desc">יצא לאור ↓</string>
+    <string name="library_sort_released_asc">יצא לאור ↑</string>
     <string name="library_sort_title_asc">כותרת א׳-ת׳</string>
     <string name="library_sort_title_desc">כותרת ת׳-א׳</string>
     <string name="library_error_sort_failed">לא ניתן היה לטעון את סדר המיון. מוצג סדר הספק.</string>
