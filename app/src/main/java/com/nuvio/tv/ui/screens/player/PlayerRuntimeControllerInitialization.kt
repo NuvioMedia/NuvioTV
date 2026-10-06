@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncTaps
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.RectF
@@ -2217,7 +2218,7 @@ private class SubtitleOffsetRenderersFactory(
         )
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())
         onPlaybackSpeedAwareAudioSinkCreated(playbackSpeedAwareAudioSink)
-        return playbackSpeedAwareAudioSink
+        return AudioSyncTaps.wrapAudioSink(playbackSpeedAwareAudioSink)
     }
 
     override fun buildAudioRenderers(

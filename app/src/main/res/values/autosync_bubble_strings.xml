@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_autosync_bubble_toast">Bubble notifications</string>
+    <string name="settings_autosync_bubble_toast_description">Show AutoSync progress and results in a small animated frosted bubble at the bottom of the player instead of plain toasts</string>
+    <string name="autosync_bubble_label">AutoSync</string>
+
+    <string name="autosync_toast_analyzing">Auto Sync • Analyzing…</string>
+    <string name="autosync_toast_synced">Auto Sync • Subtitles synced</string>
+    <string name="autosync_toast_synced_replaced">Auto Sync • Switched to a better-matching subtitle</string>
+    <string name="autosync_toast_in_sync">Auto Sync • Subtitles already in sync</string>
+    <string name="autosync_toast_bubble_failed">Auto Sync • Sync failed • subtitle timing not changed</string>
+    <string name="autosync_toast_bubble_failed_no_reference">Auto Sync • No embedded subtitles to compare with • subtitle timing not changed</string>
+    <string name="autosync_toast_bubble_failed_unsupported">Auto Sync • Subtitle format not supported • subtitle timing not changed</string>
+    <string name="autosync_toast_failed_audio_fallback">Auto Sync • No match found • syncing to the audio instead…</string>
+</resources>

@@ -13,6 +13,7 @@ import com.nuvio.tv.ui.screens.player.autosync.AutoSyncPreferences
 internal fun autoSyncSettingsItems(enabled: Boolean) {
     val context = LocalContext.current
     AutoSyncPreferences.ensureLoaded(context)
+    com.nuvio.tv.ui.screens.player.autosync.bubble.AutoSyncBubbleToasts.ensureLoaded(context)
     val checked by AutoSyncPreferences.enabled.collectAsStateWithLifecycle()
 
     SettingsToggleRow(
@@ -49,5 +50,39 @@ internal fun autoSyncSettingsItems(enabled: Boolean) {
             onToggle = { AutoSyncPreferences.setAggressiveMode(context, !thorough) },
             enabled = enabled,
         )
+
+        val bubbleEnabled by com.nuvio.tv.ui.screens.player.autosync.bubble.AutoSyncBubbleToasts.enabled.collectAsStateWithLifecycle()
+        SettingsToggleRow(
+            title = stringResource(R.string.settings_autosync_bubble_toast),
+            subtitle = stringResource(R.string.settings_autosync_bubble_toast_description),
+            checked = bubbleEnabled,
+            onToggle = {
+                com.nuvio.tv.ui.screens.player.autosync.bubble.AutoSyncBubbleToasts.setEnabled(context, !bubbleEnabled)
+            },
+            enabled = enabled,
+        )
+
+        val audioFallbackEnabled by com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings.fallbackEnabled.collectAsStateWithLifecycle()
+        SettingsToggleRow(
+            title = stringResource(R.string.audio_sync_fallback_title),
+            subtitle = stringResource(R.string.audio_sync_fallback_description),
+            checked = audioFallbackEnabled,
+            onToggle = {
+                com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback.initialize(context)
+                com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings.setFallbackEnabled(!audioFallbackEnabled)
+            },
+            enabled = enabled,
+        )
+
+        if (audioFallbackEnabled) {
+            val showStats by com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings.showStatistics.collectAsStateWithLifecycle()
+            SettingsToggleRow(
+                title = stringResource(R.string.audio_sync_show_statistics_title),
+                subtitle = stringResource(R.string.audio_sync_show_statistics_description),
+                checked = showStats,
+                onToggle = { com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings.setShowStatistics(!showStats) },
+                enabled = enabled,
+            )
+        }
     }
 }

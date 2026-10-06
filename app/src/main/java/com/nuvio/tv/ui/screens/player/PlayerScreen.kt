@@ -6,6 +6,8 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.ui.theme.NuvioMotion
+import com.nuvio.tv.ui.screens.player.audiosync.SubtitleSyncStatusPanel
+import com.nuvio.tv.ui.screens.player.autosync.bubble.AutoSyncBubbleToastHost
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.accentBrush
@@ -1094,6 +1096,9 @@ fun PlayerScreen(
                 .fillMaxSize()
                 .zIndex(2.5f)
         )
+
+        SubtitleSyncStatusPanel(NuvioTheme.spacing.xl)
+        AutoSyncBubbleToastHost(controlsVisible = uiState.showControls)
 
         StreamInfoOverlay(
             visible = uiState.showStreamInfoOverlay && uiState.error == null &&
