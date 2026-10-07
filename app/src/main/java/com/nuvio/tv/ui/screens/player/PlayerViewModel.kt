@@ -172,6 +172,9 @@ class PlayerViewModel @Inject constructor(
         scope = viewModelScope
     )
 
+    /** Seek-preview thumbnails; see the seekpreview package. */
+    val seekPreview = com.nuvio.tv.ui.screens.player.seekpreview.SeekPreviewState(viewModelScope, controller)
+
     val uiState: StateFlow<PlayerUiState>
         get() = controller.uiState
 
@@ -258,7 +261,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun onEvent(event: PlayerEvent) {
-        controller.onEvent(event)
+        controller.onEvent(seekPreview.intercept(event))
     }
 
     fun bindExoSubtitleView(subtitleView: androidx.media3.ui.SubtitleView?) {

@@ -959,6 +959,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         stripDvRpu = stripDvRpuEnabled,
                         stripHdr10PlusSei = stripHdr10PlusSei
                     ).let { autoSyncExtractorsFactory(it, url, headers) } // AutoSync hook
+                    .let { com.nuvio.tv.ui.screens.player.seekpreview.local.LocalPreviewSources.register(this, context, url, it) }
 
             setLoadingStatus(
                 phase = "building_player",

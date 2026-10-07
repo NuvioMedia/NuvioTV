@@ -2304,6 +2304,7 @@ private fun PlayerControlsOverlay(
             if (!isLivePlayback) {
                 // Progress bar — always LTR regardless of locale
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    com.nuvio.tv.ui.screens.player.seekpreview.SeekPreviewAboveProgressBar(viewModel = viewModel)
                     PlayerControlsProgressBarHost(
                         viewModel = viewModel,
                         focusRequester = progressBarFocusRequester,
@@ -2534,7 +2535,14 @@ private fun PlayerControlsProgressBarHost(
         downFocusRequester = downFocusRequester,
         onUpKey = onUpKey,
         onFocused = onFocused,
-        bufferedPosition = playbackTimeline.bufferedPosition
+        bufferedPosition = playbackTimeline.bufferedPosition,
+        overlay = {
+            com.nuvio.tv.ui.screens.player.seekpreview.SeekPreviewCueTicks(
+                viewModel = viewModel,
+                durationMs = playbackTimeline.duration,
+                modifier = Modifier.matchParentSize()
+            )
+        }
     )
 }
 
@@ -2686,7 +2694,8 @@ private fun ProgressBar(
     onUpKey: (() -> Unit)? = null,
     onFocused: (() -> Unit)? = null,
     /** Position (ms) up to which content is buffered. Pass 0 to skip the overlay. */
-    bufferedPosition: Long = 0L
+    bufferedPosition: Long = 0L,
+    overlay: @Composable BoxScope.() -> Unit = {}
 ) {
     val accentBrush = NuvioTheme.palette.accentBrush()
     val progress = if (duration > 0) {
@@ -2823,6 +2832,7 @@ private fun ProgressBar(
                 .clip(RoundedCornerShape(3.dp))
                 .background(accentBrush)
         )
+        overlay()
     }
 }
 
@@ -2830,7 +2840,9 @@ private fun ProgressBar(
 private fun SeekOverlay(
     currentPosition: Long,
     duration: Long,
-    bufferedPosition: Long = 0L
+    bufferedPosition: Long = 0L,
+    preview: @Composable () -> Unit = {},
+    progressOverlay: @Composable BoxScope.() -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -2838,12 +2850,14 @@ private fun SeekOverlay(
             .padding(horizontal = NuvioTheme.spacing.xxl, vertical = NuvioTheme.spacing.xl)
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            preview()
             ProgressBar(
                 currentPosition = currentPosition,
                 duration = duration,
                 onSeekPreview = {},
                 onSeekCommit = {},
-                bufferedPosition = bufferedPosition
+                bufferedPosition = bufferedPosition,
+                overlay = progressOverlay
             )
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -2870,7 +2884,9 @@ private fun SeekOverlayHost(viewModel: PlayerViewModel) {
     SeekOverlay(
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration,
-        bufferedPosition = playbackTimeline.bufferedPosition
+        bufferedPosition = playbackTimeline.bufferedPosition,
+        preview = { com.nuvio.tv.ui.screens.player.seekpreview.SeekPreviewThumbnailHost(viewModel = viewModel) },
+        progressOverlay = { com.nuvio.tv.ui.screens.player.seekpreview.SeekPreviewCueTicks(viewModel, playbackTimeline.duration, Modifier.matchParentSize()) }
     )
 }
 

@@ -157,6 +157,8 @@ internal fun PlaybackVideoSection(
             enabled = enabled
         )
     }
+
+    SeekPreviewSettingsRow()
 }
 
 @Composable
