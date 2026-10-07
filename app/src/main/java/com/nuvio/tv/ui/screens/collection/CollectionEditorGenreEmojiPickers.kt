@@ -49,6 +49,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -323,9 +328,15 @@ fun EmojiPickerContent(
                             val emoji = emojis[index]
                             val isSelected = emoji == selectedEmoji
                             val isFirstEmoji = category == firstCategory && index == 0
+                            val emojiDescription = stringResource(R.string.cd_emoji_option, emoji)
                             Card(
                                 onClick = { onSelect(emoji) },
                                 modifier = (if (isFirstEmoji) Modifier.focusRequester(firstEmojiFocusRequester) else Modifier)
+                                    .clearAndSetSemantics {
+                                        contentDescription = emojiDescription
+                                        role = Role.RadioButton
+                                        selected = isSelected
+                                    }
                                     .width(NuvioTheme.spacing.huge)
                                     .height(NuvioTheme.spacing.huge),
                                 colors = CardDefaults.colors(

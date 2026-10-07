@@ -42,6 +42,12 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
@@ -56,8 +62,10 @@ import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.AVAILABLE_TMDB_LANGUAGES
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.displayName
+import com.nuvio.tv.domain.model.formatHexColor
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
@@ -112,6 +120,9 @@ internal fun ColorSelectionDialog(
     onDismiss: () -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
+    // The opacity stepper buttons are glyph-only, so they need their own names.
+    val decreaseLabel = stringResource(R.string.cd_decrease)
+    val increaseLabel = stringResource(R.string.cd_increase)
 
     val initialChip = colors.find { it.toArgb() == selectedColor.toArgb() }
         ?: colors.find { it.copy(alpha = 1f).toArgb() == selectedColor.copy(alpha = 1f).toArgb() }
@@ -187,6 +198,11 @@ internal fun ColorSelectionDialog(
                 )
                 Card(
                     onClick = { alphaPercent = (alphaPercent - 10).coerceAtLeast(0) },
+                    // The glyph is not a name, so the Card itself is the named button node.
+                    modifier = Modifier.clearAndSetSemantics {
+                        contentDescription = decreaseLabel
+                        role = Role.Button
+                    },
                     colors = CardDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundElevated,
                         focusedContainerColor = NuvioTheme.colors.Primary
@@ -228,6 +244,11 @@ internal fun ColorSelectionDialog(
                 )
                 Card(
                     onClick = { alphaPercent = (alphaPercent + 10).coerceAtMost(100) },
+                    // The glyph is not a name, so the Card itself is the named button node.
+                    modifier = Modifier.clearAndSetSemantics {
+                        contentDescription = increaseLabel
+                        role = Role.Button
+                    },
                     colors = CardDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundElevated,
                         focusedContainerColor = NuvioTheme.colors.Primary
@@ -324,12 +345,26 @@ private fun ColorOption(
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
+    // The swatch is a bare circle, so announce the colour itself (hex, like the theme picker).
+    // Translucent swatches (e.g. the "transparent" option) keep their alpha in the label.
+    val swatchColorLabel = if (color.alpha < 1f) {
+        String.format(Locale.US, "#%08X", color.toArgb())
+    } else {
+        formatHexColor(color.toArgb() and 0xFFFFFF)
+    }
+    val swatchDescription = stringResource(R.string.cd_color_swatch, swatchColorLabel)
+
     Card(
         onClick = onClick,
         modifier = Modifier
             .size(NuvioTheme.spacing.xxxl)
             .then(modifier)
-            .onFocusChanged { isFocused = it.isFocused },
+            .onFocusChanged { isFocused = it.isFocused }
+            .semantics {
+                contentDescription = swatchDescription
+                role = Role.RadioButton
+                this.selected = isSelected
+            },
         colors = CardDefaults.colors(
             containerColor = Color.Transparent
         ),
@@ -371,7 +406,7 @@ private fun ColorOption(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = stringResource(R.string.cd_selected),
+                    contentDescription = null,
                     tint = if (color == Color.White || color == Color.Yellow) Color.Black else Color.White,
                     modifier = Modifier.size(20.dp)
                 )

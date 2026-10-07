@@ -64,6 +64,11 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.LayoutDirection
@@ -500,6 +505,10 @@ private fun CommentModeButton(
                 if (rightFocusRequester != null) {
                     right = rightFocusRequester
                 }
+            }
+            .semantics {
+                role = Role.Tab
+                this.selected = selected
             },
         colors = ButtonDefaults.colors(
             containerColor = if (selected) NuvioTheme.colors.Secondary else NuvioTheme.colors.BackgroundCard,
@@ -684,7 +693,10 @@ private fun EpisodeCommentPickerDialog(
                         }
                         Button(
                             onClick = { onSeasonSelected(seasonNumber) },
-                            modifier = seasonModifier,
+                            modifier = seasonModifier.semantics {
+                                role = Role.Tab
+                                selected = seasonNumber == season
+                            },
                             colors = ButtonDefaults.colors(
                                 containerColor = if (seasonNumber == season) {
                                     NuvioTheme.colors.Secondary
@@ -847,6 +859,9 @@ fun CommentOverlay(
                     .padding(top = 6.dp, end = NuvioTheme.spacing.xs)
                     .focusRequester(primaryFocusRequester)
                     .focusable()
+                    // The node itself has no text: it is the Trakt wordmark plus the
+                    // "click back to close" hint, so merge those two children into its name.
+                    .semantics(mergeDescendants = true) { }
                     .focusProperties {
                         down = mainContentFocusRequester
                     },
@@ -951,6 +966,9 @@ private fun CommentOverlayContent(
                     .verticalScroll(commentScrollState)
                     .focusRequester(mainContentFocusRequester)
                     .focusable()
+                    // The scrollable body captures D-pad scrolling, so it needs the comment text
+                    // as its name rather than being an unnamed focus stop.
+                    .semantics { contentDescription = commentText }
                     .focusProperties {
                         up = primaryFocusRequester
                     }

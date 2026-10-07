@@ -10,6 +10,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import com.nuvio.tv.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -463,6 +467,14 @@ private fun CastMemberItem(
         modifier = Modifier.width(itemWidth),
         horizontalAlignment = Alignment.Start
     ) {
+        // The visible name/character live in the sibling Column below and the portrait carries the
+        // photo's description, so the focusable card replaces all of them with one stable name:
+        // the person plus their character. With no photo the card would otherwise degrade to the
+        // fallback initial ("N" or "?").
+        val cardDescription = member.character
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "${member.name}, $it" }
+            ?: member.name
         Card(
             onClick = onClick,
             modifier = modifier
@@ -471,6 +483,10 @@ private fun CastMemberItem(
                 .onFocusChanged { state ->
                     isFocused = state.isFocused
                     if (state.isFocused) onFocused()
+                }
+                .clearAndSetSemantics {
+                    contentDescription = cardDescription
+                    role = Role.Button
                 },
             shape = CardDefaults.shape(
                 shape = CircleShape

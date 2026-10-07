@@ -73,6 +73,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
@@ -1381,6 +1382,9 @@ private fun AddonCardContent(
                 }
             }
             if (!isReadOnly) {
+                // The card carries the name as visible text, but the toggle is its own node, so
+                // without this a screen reader hears only "switch, on".
+                val toggleLabel = stringResource(R.string.cd_enable_addon, addon.displayName)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                     verticalAlignment = Alignment.CenterVertically
@@ -1391,6 +1395,7 @@ private fun AddonCardContent(
                             .focusRequester(toggleFocusRequester ?: remember { FocusRequester() })
                             .semantics {
                                 role = Role.Switch
+                                contentDescription = toggleLabel
                                 toggleableState = if (addon.enabled) ToggleableState.On else ToggleableState.Off
                             },
                         colors = ClickableSurfaceDefaults.colors(

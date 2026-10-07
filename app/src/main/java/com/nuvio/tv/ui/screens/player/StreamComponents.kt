@@ -223,7 +223,9 @@ internal fun StreamItem(
                     if (addonLogoModel != null) {
                         AsyncImage(
                             model = addonLogoModel,
-                            contentDescription = stream.addonName,
+                            // Decorative: the addon name is announced by the sibling Text below,
+                            // so naming the logo too would duplicate it in the merged card.
+                            contentDescription = null,
                             modifier = Modifier
                                 .size(NuvioTheme.spacing.xxl)
                                 .clip(RoundedCornerShape(NuvioTheme.radii.xs)),

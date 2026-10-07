@@ -41,6 +41,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -393,12 +397,17 @@ private fun CwStyleCard(
 
     Card(
         onClick = onClick,
-        modifier = modifier.onFocusChanged { state ->
-            val nowFocused = state.isFocused
-            if (isFocused != nowFocused) {
-                isFocused = nowFocused
+        modifier = modifier
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                }
             }
-        },
+            .semantics {
+                role = Role.RadioButton
+                this.selected = isSelected
+            },
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.Background,
             focusedContainerColor = NuvioTheme.colors.Background
@@ -443,7 +452,7 @@ private fun CwStyleCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = stringResource(R.string.cd_selected),
+                        contentDescription = null,
                         tint = NuvioTheme.colors.FocusRing,
                         modifier = Modifier
                             .size(NuvioTheme.spacing.lg)

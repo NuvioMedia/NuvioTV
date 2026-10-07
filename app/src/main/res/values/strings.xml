@@ -2523,6 +2523,12 @@
     <string name="cd_remove">Remove</string>
     <string name="cd_preview">Preview</string>
     <string name="cd_test">Test</string>
+    <string name="cd_enable_scraper">Enable %1$s</string>
+    <string name="cd_enable_addon">Enable %1$s</string>
+    <string name="cd_color_swatch">Colour %1$s</string>
+    <string name="cd_emoji_option">Emoji %1$s</string>
+    <string name="cd_trailer_controls">Trailer controls</string>
+    <string name="cd_seek_bar">Seek bar</string>
     <string name="cd_unlink">Unlink</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Trakt Logo</string>

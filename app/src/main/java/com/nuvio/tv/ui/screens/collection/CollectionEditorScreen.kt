@@ -53,6 +53,12 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -204,7 +210,12 @@ fun CollectionEditorScreen(
         item(key = "pin_to_top") {
             Card(
                 onClick = { viewModel.setPinToTop(!uiState.pinToTop) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        role = Role.Switch
+                        toggleableState = if (uiState.pinToTop) ToggleableState.On else ToggleableState.Off
+                    },
                 colors = CardDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundCard,
                     focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -257,7 +268,12 @@ fun CollectionEditorScreen(
         item(key = "focus_glow") {
             Card(
                 onClick = { viewModel.setFocusGlowEnabled(!uiState.focusGlowEnabled) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        role = Role.Switch
+                        toggleableState = if (uiState.focusGlowEnabled) ToggleableState.On else ToggleableState.Off
+                    },
                 colors = CardDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundCard,
                     focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -327,6 +343,10 @@ fun CollectionEditorScreen(
                     val isSelected = uiState.viewMode == mode
                     Button(
                         onClick = { viewModel.setViewMode(mode) },
+                        modifier = Modifier.semantics {
+                            role = Role.RadioButton
+                            selected = isSelected
+                        },
                         colors = ButtonDefaults.colors(
                             containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (isSelected) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -356,7 +376,12 @@ fun CollectionEditorScreen(
             item(key = "show_all_tab") {
                 Card(
                     onClick = { viewModel.setShowAllTab(!uiState.showAllTab) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            role = Role.Switch
+                            toggleableState = if (uiState.showAllTab) ToggleableState.On else ToggleableState.Off
+                        },
                     colors = CardDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -463,7 +488,7 @@ fun CollectionEditorScreen(
                     },
                     modifier = Modifier.focusRequester(addFolderFocusRequester)
                 ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.cd_add))
+                    Icon(imageVector = Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                     Text(stringResource(R.string.collections_editor_add_folder))
                 }

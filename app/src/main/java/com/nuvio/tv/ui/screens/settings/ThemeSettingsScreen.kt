@@ -53,6 +53,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -515,6 +516,10 @@ private fun SettingsStyleOptionCard(
                 if (isFocused != nowFocused) {
                     isFocused = nowFocused
                 }
+            }
+            .semantics {
+                role = Role.RadioButton
+                this.selected = isSelected
             },
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.Background,
@@ -549,7 +554,7 @@ private fun SettingsStyleOptionCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = stringResource(R.string.cd_selected),
+                        contentDescription = null,
                         tint = NuvioTheme.colors.Secondary,
                         modifier = Modifier
                             .size(16.dp)

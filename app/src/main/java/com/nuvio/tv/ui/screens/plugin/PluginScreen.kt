@@ -66,6 +66,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
@@ -1350,12 +1351,16 @@ private fun ScraperCard(
 
                     // Enable toggle
                     if (!isReadOnly) {
+                        // The card carries the name as visible text, but the toggle is its own
+                        // node, so without this a screen reader hears only "switch, on".
+                        val toggleLabel = stringResource(R.string.cd_enable_scraper, scraper.name)
                         Surface(
                             onClick = { onToggle(!scraper.enabled) },
                             modifier = Modifier
                                 .onFocusChanged { isToggleFocused = it.isFocused }
                                 .semantics {
                                     role = Role.Switch
+                                    contentDescription = toggleLabel
                                     toggleableState = if (scraper.enabled) ToggleableState.On else ToggleableState.Off
                                 },
                             colors = ClickableSurfaceDefaults.colors(

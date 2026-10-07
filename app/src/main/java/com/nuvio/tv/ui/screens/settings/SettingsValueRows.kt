@@ -39,6 +39,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -50,6 +56,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import kotlin.math.roundToInt
 
 @Composable
 internal fun SliderSettingsItem(
@@ -74,6 +81,12 @@ internal fun SliderSettingsItem(
         subtitle = subtitle,
         enabled = enabled,
         progressFraction = progress,
+        sliderValue = value.toFloat(),
+        sliderRange = minValue.toFloat()..maxValue.toFloat(),
+        onSliderProgressChange = { target ->
+            val newValue = target.roundToInt().coerceIn(minValue, maxValue)
+            if (newValue != value) onValueChange(newValue)
+        },
         onDecrease = {
             val newValue = (value - step).coerceAtLeast(minValue)
             if (newValue != value) onValueChange(newValue)
@@ -111,6 +124,12 @@ internal fun SliderSettingsItem(
         subtitle = subtitle,
         enabled = enabled,
         progressFraction = progress,
+        sliderValue = index.toFloat(),
+        sliderRange = 0f..lastIndex.toFloat(),
+        onSliderProgressChange = { target ->
+            val newValue = values[target.roundToInt().coerceIn(0, lastIndex)]
+            if (newValue != selected) onValueChange(newValue)
+        },
         onDecrease = {
             val newValue = values[(index - 1).coerceAtLeast(0)]
             if (newValue != selected) onValueChange(newValue)
@@ -131,6 +150,9 @@ private fun SliderSettingsItemLayout(
     subtitle: String?,
     enabled: Boolean,
     progressFraction: Float,
+    sliderValue: Float,
+    sliderRange: ClosedFloatingPointRange<Float>,
+    onSliderProgressChange: (Float) -> Unit,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
     onFocused: () -> Unit,
@@ -165,6 +187,13 @@ private fun SliderSettingsItemLayout(
                         true
                     }
                     else -> false
+                }
+            }
+            .semantics {
+                progressBarRangeInfo = ProgressBarRangeInfo(sliderValue, sliderRange)
+                setProgress { target ->
+                    onSliderProgressChange(target)
+                    true
                 }
             },
         colors = settingsRowColors(),

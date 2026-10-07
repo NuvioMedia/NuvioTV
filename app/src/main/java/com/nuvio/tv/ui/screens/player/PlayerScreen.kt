@@ -95,6 +95,10 @@ import androidx.compose.ui.layout.onPlaced
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -2689,6 +2693,7 @@ private fun ProgressBar(
     bufferedPosition: Long = 0L
 ) {
     val accentBrush = NuvioTheme.palette.accentBrush()
+    val seekBarLabel = stringResource(R.string.cd_seek_bar)
     val progress = if (duration > 0) {
         (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
     } else 0f
@@ -2732,6 +2737,9 @@ private fun ProgressBar(
                 if (it.isFocused) onFocused?.invoke()
             }
             .focusable()
+            .semantics {
+                contentDescription = seekBarLabel
+            }
             .onPreviewKeyEvent { keyEvent ->
                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP) {
                     when (keyEvent.nativeKeyEvent.keyCode) {

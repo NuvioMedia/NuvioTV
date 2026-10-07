@@ -39,6 +39,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -101,6 +102,11 @@ fun SharedTrailerOverlay(
                 .background(Color.Black)
                 .focusRequester(overlayFocusRequester)
                 .focusable()
+                // This surface exists only to capture remote keys (back/play/pause/seek) and has no
+                // label of its own, so merge the overlay's own text (title + "press back" hint)
+                // into it. Merging leaves exactly one named node on the overlay; a bare
+                // contentDescription here would leave those texts as separate named siblings.
+                .semantics(mergeDescendants = true) { }
                 .onPreviewKeyEvent { keyEvent ->
                     if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
                         return@onPreviewKeyEvent false

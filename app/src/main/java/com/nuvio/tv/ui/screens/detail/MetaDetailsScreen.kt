@@ -78,6 +78,13 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import androidx.lifecycle.Lifecycle
@@ -1140,11 +1147,15 @@ fun MetaDetailsScreen(
         }
 
         if (uiState.isTrailerPlaying && uiState.showTrailerControls) {
+            // This surface exists only to capture remote keys (back/play/pause/seek) while the
+            // trailer is playing, so it has no visible label of its own to announce.
+            val trailerControlsDescription = stringResource(R.string.cd_trailer_controls)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .focusRequester(trailerControllerFocusRequester)
                     .focusable()
+                    .semantics { contentDescription = trailerControlsDescription }
             )
         }
 
@@ -3388,6 +3399,10 @@ private fun PeopleSectionTabButton(
                 if (focusedNow) {
                     onFocused()
                 }
+            }
+            .semantics {
+                role = Role.Tab
+                this.selected = selected
             },
         colors = CardDefaults.colors(
             containerColor = Color.Transparent,
@@ -3454,16 +3469,22 @@ private fun LibraryListPickerDialog(
         ) {
             items(tabs, key = { it.key }) { tab ->
                 val selected = membership[tab.key] == true
-                val titleText = if (selected) "\u2713 ${tab.localizedMembershipTitle()}" else tab.localizedMembershipTitle()
+                // The membership state is exposed through semantics below instead of a leading
+                // glyph in the label, so screen readers hear one clean name plus the state.
+                val titleText = tab.localizedMembershipTitle()
+                val rowModifier = if (tab.key == tabs.firstOrNull()?.key) {
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(primaryFocusRequester)
+                } else {
+                    Modifier.fillMaxWidth()
+                }
                 Button(
                     onClick = { onToggle(tab.key) },
                     enabled = !isPending,
-                    modifier = if (tab.key == tabs.firstOrNull()?.key) {
-                        Modifier
-                            .fillMaxWidth()
-                            .focusRequester(primaryFocusRequester)
-                    } else {
-                        Modifier.fillMaxWidth()
+                    modifier = rowModifier.semantics {
+                        role = Role.Checkbox
+                        toggleableState = if (selected) ToggleableState.On else ToggleableState.Off
                     },
                     colors = ButtonDefaults.colors(
                         containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,

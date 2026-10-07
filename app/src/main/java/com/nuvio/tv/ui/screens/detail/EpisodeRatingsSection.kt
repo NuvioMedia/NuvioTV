@@ -37,6 +37,12 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
 
@@ -183,6 +189,10 @@ fun EpisodeRatingsSection(
                                     if (state.isFocused && selectedSeason != season) {
                                         selectedSeason = season
                                     }
+                                }
+                                .semantics {
+                                    role = Role.Tab
+                                    selected = isSelected
                                 },
                             shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
                             colors = CardDefaults.colors(
@@ -230,6 +240,13 @@ fun EpisodeRatingsSection(
                     items(seasonRatings, key = { "${it.seasonNumber}:${it.episodeNumber}" }) { episodeRating ->
                         val isFirstEpisode = episodeRating == seasonRatings.firstOrNull()
 
+                        // These chips only display a rating and have no action, but their focus is
+                        // load-bearing: the season tabs point "down" at this row and the row's
+                        // focusRestorer resolves to the first chip, so dropping them from the D-pad
+                        // order would strand the whole ratings row. Keep the stop and name it.
+                        val ratingDescription =
+                            "S${episodeRating.seasonNumber}E${episodeRating.episodeNumber}, ${episodeRating.ratingText}"
+
                         Card(
                             onClick = { },
                             modifier = Modifier
@@ -240,7 +257,11 @@ fun EpisodeRatingsSection(
                                 }
                                 .then(
                                     if (isFirstEpisode) Modifier.focusRequester(firstEpisodeRatingFocusRequester) else Modifier
-                                ),
+                                )
+                                // (tv-material3's Card only has the clickable overload, so the
+                                // empty onClick stays; clearAndSetSemantics replaces the chip's two
+                                // Texts with one name that carries both the episode and its rating.)
+                                .clearAndSetSemantics { contentDescription = ratingDescription },
                             shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
                             colors = CardDefaults.colors(
                                 containerColor = episodeRating.chipColor,
