@@ -61,14 +61,16 @@ internal class LocalPreviewTrack(
     private val keyframeIndex: (positionMs: Long, toleranceMs: Long) -> Long? = { _, _ -> null },
 ) : SeekPreviewTrack {
     /**
-     * Largest picture decoded for previews. Boxes with under 3 GB of RAM skip streams above
-     * 1080p: a software decoder's 4K buffers next to 4K playback risk the low-memory killer.
+     * Largest picture decoded for previews. Truly low-memory devices (under 1.5 GB of RAM or
+     * system marked isLowRamDevice) skip streams above 1080p to prevent low-memory killer pressure.
+     * Standard 2 GB+ TV devices (Fire TV Stick 4K, Chromecast with Google TV, Onn 4K, Mi Box, etc.)
+     * decode 4K streams smoothly because keyframe decoding is transient and downscaled immediately.
      */
     private val maxPixels: Long = run {
         val memory = ActivityManager.MemoryInfo()
         val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         manager?.getMemoryInfo(memory)
-        val lowMemory = manager == null || manager.isLowRamDevice || memory.totalMem < LOW_MEMORY_BYTES
+        val lowMemory = manager?.isLowRamDevice == true || (memory.totalMem in 1 until LOW_MEMORY_BYTES)
         if (lowMemory) FULL_HD_PIXELS else Long.MAX_VALUE
     }
 
@@ -628,7 +630,7 @@ internal class LocalPreviewTrack(
         private const val KEYFRAME_LOOKBEHIND_MS = 1_000L
         private const val MAX_DECODED = 48
         private const val STAND_IN_SAMPLE_SIZE = 4
-        private const val LOW_MEMORY_BYTES = 3L * 1024L * 1024L * 1024L
+        private const val LOW_MEMORY_BYTES = 1_500_000_000L // 1.5 GB
         private const val FULL_HD_PIXELS = 1920L * 1088L
         private const val TAP_QUEUE = 3
         private const val UI_UPDATE_INTERVAL_MS = 250L
