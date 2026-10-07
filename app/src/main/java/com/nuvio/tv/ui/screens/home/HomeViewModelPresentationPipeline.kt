@@ -1080,7 +1080,7 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
                             }.getOrNull()
                         } else null
 
-                        val enrichment = tmdbDeferred.await() ?: return@withPermit item
+                        val enrichment = tmdbDeferred.await()
                         val mdbResult = mdbDeferred?.await()
 
                         var enriched = item
@@ -1093,6 +1093,8 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
                                 imdbRating = mdbResult.ratings.imdb?.toFloat() ?: enriched.imdbRating
                             )
                         }
+
+                        if (enrichment == null) return@withPermit enriched
 
                         if (settings.useArtwork) {
                             enriched = enriched.copy(

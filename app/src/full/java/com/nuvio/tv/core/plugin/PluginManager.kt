@@ -835,7 +835,7 @@ class PluginManager @Inject constructor(
                     runtime.executePlugin(
                         code = code,
                         tmdbId = tmdbId,
-                        mediaType = mediaType,
+                        mediaType = jsPluginMediaType(mediaType, scraper.supportedTypes, season, episode),
                         season = season,
                         episode = episode,
                         scraperId = scraper.id,

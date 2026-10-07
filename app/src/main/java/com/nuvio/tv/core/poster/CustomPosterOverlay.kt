@@ -117,17 +117,30 @@ fun LibraryEntry.withCustomPosterUrl(
 
     val ids = CustomPosterUrlResolver.extractIds(id, explicitImdbId = imdbId)
     val type = this.type.let { if (it.equals("tv", ignoreCase = true)) "series" else it }
+    val supportsShape = "{shape}" in pattern
 
     val resolvedPoster = CustomPosterUrlResolver.resolve(
         pattern = pattern,
         ids = ids,
         type = type,
         shape = "poster"
-    ) ?: return this
+    )
+
+    val resolvedLandscape = if (supportsShape) {
+        CustomPosterUrlResolver.resolve(
+            pattern = pattern,
+            ids = ids,
+            type = type,
+            shape = "landscape"
+        )
+    } else null
+
+    if (resolvedPoster == null && resolvedLandscape == null) return this
 
     return copy(
-        poster = resolvedPoster,
-        rawPosterUrl = rawPosterUrl ?: poster
+        poster = resolvedPoster ?: poster,
+        rawPosterUrl = rawPosterUrl ?: poster,
+        landscapePoster = resolvedLandscape ?: landscapePoster
     )
 }
 

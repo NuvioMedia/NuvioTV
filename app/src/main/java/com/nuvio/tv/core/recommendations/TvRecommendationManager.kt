@@ -6,8 +6,11 @@ import android.util.Log
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -25,6 +28,19 @@ class TvRecommendationManager @Inject constructor(
 
     private val mutex = Mutex()
     private val syncedFingerprints = ConcurrentHashMap<String, ProgramFingerprint>()
+    private val deferScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // Latest progress seen while frames are on screen. Leanback IPC is deferred until playback
+    // stops so the provider write does not hitch the player, and so the position is not dropped.
+    private var pendingWatchNext: WatchProgress? = null
+
+    init {
+        deferScope.launch {
+            isPlaybackActive.collect { active ->
+                if (!active) flushPendingWatchNext()
+            }
+        }
+    }
 
     private data class ProgramFingerprint(
         val title: String?,
@@ -119,48 +135,76 @@ class TvRecommendationManager @Inject constructor(
     suspend fun updateSingleWatchNextProgram(progress: WatchProgress) {
         if (!isTvDevice()) return
         mutex.withLock {
-            withContext(Dispatchers.IO) {
-                try {
-                    val id = programBuilder.watchNextId(progress)
-                    val newFingerprint = ProgramFingerprint(
-                        title = progress.name,
-                        position = progress.position,
-                        duration = progress.duration,
-                        poster = progress.poster,
-                        backdrop = progress.backdrop,
-                        season = progress.season,
-                        episode = progress.episode
-                    )
-                    val oldFingerprint = syncedFingerprints[id]
-                    if (oldFingerprint != null &&
-                        oldFingerprint.title == newFingerprint.title &&
-                        oldFingerprint.poster == newFingerprint.poster &&
-                        oldFingerprint.backdrop == newFingerprint.backdrop &&
-                        oldFingerprint.season == newFingerprint.season &&
-                        oldFingerprint.episode == newFingerprint.episode &&
-                        oldFingerprint.duration == newFingerprint.duration &&
-                        abs(oldFingerprint.position - newFingerprint.position) < 2_000L
-                    ) {
-                        return@withContext
-                    }
+            pendingWatchNext = progress
+            if (isPlaybackActive.value) return@withLock
+            pendingWatchNext = null
+            upsertSingleWatchNextLocked(progress)
+        }
+    }
 
-                    val program = programBuilder.buildWatchNextProgram(progress)
-                    programBuilder.upsertWatchNextProgram(program, id)
-                    syncedFingerprints[id] = newFingerprint
-                } catch (e: Exception) {
-                    Log.w(TAG, "updateSingleWatchNextProgram failed", e)
+    private suspend fun flushPendingWatchNext() {
+        if (!isTvDevice()) return
+        mutex.withLock {
+            if (isPlaybackActive.value) return@withLock
+            val progress = pendingWatchNext ?: return@withLock
+            pendingWatchNext = null
+            upsertSingleWatchNextLocked(progress)
+        }
+    }
+
+    private suspend fun upsertSingleWatchNextLocked(progress: WatchProgress) {
+        withContext(Dispatchers.IO) {
+            if (isPlaybackActive.value) {
+                pendingWatchNext = progress
+                return@withContext
+            }
+            try {
+                val id = programBuilder.watchNextId(progress)
+                val newFingerprint = ProgramFingerprint(
+                    title = progress.name,
+                    position = progress.position,
+                    duration = progress.duration,
+                    poster = progress.poster,
+                    backdrop = progress.backdrop,
+                    season = progress.season,
+                    episode = progress.episode
+                )
+                val oldFingerprint = syncedFingerprints[id]
+                if (oldFingerprint != null &&
+                    oldFingerprint.title == newFingerprint.title &&
+                    oldFingerprint.poster == newFingerprint.poster &&
+                    oldFingerprint.backdrop == newFingerprint.backdrop &&
+                    oldFingerprint.season == newFingerprint.season &&
+                    oldFingerprint.episode == newFingerprint.episode &&
+                    oldFingerprint.duration == newFingerprint.duration &&
+                    abs(oldFingerprint.position - newFingerprint.position) < 2_000L
+                ) {
+                    return@withContext
                 }
+
+                val program = programBuilder.buildWatchNextProgram(progress)
+                programBuilder.upsertWatchNextProgram(program, id)
+                syncedFingerprints[id] = newFingerprint
+            } catch (e: Exception) {
+                Log.w(TAG, "updateSingleWatchNextProgram failed", e)
             }
         }
     }
 
     suspend fun onProgressRemoved(contentId: String) {
         if (!isTvDevice()) return
-        withContext(Dispatchers.IO) {
-            try {
-                programBuilder.removeWatchNextByContentId(contentId)
-                syncedFingerprints.keys.removeAll { watchNextIdMatchesContentId(it, contentId) }
-            } catch (_: Exception) {
+        mutex.withLock {
+            pendingWatchNext?.let { pending ->
+                if (watchNextIdMatchesContentId(programBuilder.watchNextId(pending), contentId)) {
+                    pendingWatchNext = null
+                }
+            }
+            withContext(Dispatchers.IO) {
+                try {
+                    programBuilder.removeWatchNextByContentId(contentId)
+                    syncedFingerprints.keys.removeAll { watchNextIdMatchesContentId(it, contentId) }
+                } catch (_: Exception) {
+                }
             }
         }
     }

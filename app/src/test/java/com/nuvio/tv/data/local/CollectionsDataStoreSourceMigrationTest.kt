@@ -9,13 +9,16 @@ import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.domain.model.TraktCollectionSource
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CollectionsDataStoreSourceMigrationTest {
+    private val context = mockk<Context>(relaxed = true)
     private val store = CollectionsDataStore(
-        appContext = mockk<Context>(relaxed = true),
+        appContext = context,
         factory = mockk<ProfileDataStoreFactory>(relaxed = true),
         profileManager = mockk<ProfileManager>(relaxed = true)
     )
@@ -157,8 +160,15 @@ class CollectionsDataStoreSourceMigrationTest {
 
         val result = store.validateCollectionsJson(json)
 
-        assertTrue(!result.valid)
-        assertTrue(result.error?.contains("Trakt list ID") == true)
+        assertFalse(result.valid)
+        verify {
+            context.getString(
+                com.nuvio.tv.R.string.collections_import_error_missing_trakt_list_id,
+                "Trakt",
+                "Public Lists",
+                1
+            )
+        }
     }
 
     @Test

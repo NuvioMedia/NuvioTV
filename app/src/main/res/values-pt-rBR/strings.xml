@@ -1127,6 +1127,12 @@
     <string name="mdblist_dialog_placeholder">Digite sua chave API MDBList</string>
     <string name="mdblist_not_set">Não definido</string>
     <string name="mdblist_invalid_api_key">Chave API inválida</string>
+    <string name="mdblist_library_lists">Listas da Biblioteca</string>
+    <string name="mdblist_library_lists_description">Escolha quais listas do MDBList aparecem na Biblioteca e em Gerenciar Listas. A Minha Lista sempre aparece.</string>
+    <string name="mdblist_library_lists_empty">Nenhuma lista encontrada na sua conta MDBList ainda. Sincronize para carregá-las.</string>
+    <string name="mdblist_library_lists_summary">%1$d de %2$d visíveis</string>
+    <string name="tracking_mdblist_features_title">Recursos do MDBList</string>
+    <string name="tracking_mdblist_features_subtitle">Configurações específicas do MDBList</string>
 
     <string name="debrid_title">Serviços Debrid</string>
     <string name="debrid_subtitle">Conecte suas contas para resolver links e acessar seu serviço debrid.</string>
@@ -1932,6 +1938,8 @@
     <string name="library_sort_provider_order">Ordem do provedor</string>
     <string name="library_sort_added_desc">Adicionados ↓</string>
     <string name="library_sort_added_asc">Adicionados ↑</string>
+    <string name="library_sort_released_desc">Lançamento ↓</string>
+    <string name="library_sort_released_asc">Lançamento ↑</string>
     <string name="library_sort_title_asc">Título A-Z</string>
     <string name="library_sort_title_desc">Título Z-A</string>
     <string name="library_manage_lists">Gerenciar Listas</string>

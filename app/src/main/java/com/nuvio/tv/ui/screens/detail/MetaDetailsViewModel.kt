@@ -142,6 +142,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private var trailerDelayMs = 7000L
     private var trailerAutoplayEnabled = false
+    private var trailerPlayInBackground = false
     private var trailerHasPlayed = false
     private var suppressSeasonAutoSwitch = false
 
@@ -267,10 +268,12 @@ class MetaDetailsViewModel @Inject constructor(
     private fun setTrailerPlaybackState(
         isPlaying: Boolean,
         showControls: Boolean,
-        hideLogo: Boolean
+        hideLogo: Boolean,
+        isBackgroundPlaying: Boolean = false
     ) {
         _uiState.update { state ->
             if (state.isTrailerPlaying == isPlaying &&
+                state.isBackgroundTrailerPlaying == isBackgroundPlaying &&
                 state.showTrailerControls == showControls &&
                 state.hideLogoDuringTrailer == hideLogo
             ) {
@@ -278,6 +281,7 @@ class MetaDetailsViewModel @Inject constructor(
             } else {
                 state.copy(
                     isTrailerPlaying = isPlaying,
+                    isBackgroundTrailerPlaying = isBackgroundPlaying,
                     showTrailerControls = showControls,
                     hideLogoDuringTrailer = hideLogo
                 )
@@ -321,6 +325,14 @@ class MetaDetailsViewModel @Inject constructor(
             trailerSettingsDataStore.settings.collectLatest { settings ->
                 trailerAutoplayEnabled = settings.enabled
                 trailerDelayMs = settings.delaySeconds * 1000L
+                trailerPlayInBackground = settings.playInBackground
+                _uiState.update { state ->
+                    if (state.pauseBackgroundTrailerOnScroll == settings.pauseOnScroll) {
+                        state
+                    } else {
+                        state.copy(pauseBackgroundTrailerOnScroll = settings.pauseOnScroll)
+                    }
+                }
                 if (!settings.enabled) {
                     idleTimerJob?.cancel()
                 }
@@ -2882,7 +2894,7 @@ class MetaDetailsViewModel @Inject constructor(
         if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
 
         val state = _uiState.value
-        if (state.trailerUrl == null || state.isTrailerPlaying) return
+        if (state.trailerUrl == null || state.isTrailerPlaying || state.isBackgroundTrailerPlaying) return
         if (!trailerAutoplayEnabled) return
         if (trailerHasPlayed) return
         if (!isPlayButtonFocused) return
@@ -2890,9 +2902,10 @@ class MetaDetailsViewModel @Inject constructor(
         idleTimerJob = viewModelScope.launch {
             delay(trailerDelayMs)
             setTrailerPlaybackState(
-                isPlaying = true,
+                isPlaying = !trailerPlayInBackground,
                 showControls = false,
-                hideLogo = false
+                hideLogo = false,
+                isBackgroundPlaying = trailerPlayInBackground
             )
         }
     }
@@ -2929,7 +2942,7 @@ class MetaDetailsViewModel @Inject constructor(
         isPlayButtonFocused = false
         dismissSharedTrailerOverlay()
         val state = _uiState.value
-        if (state.isTrailerPlaying && !state.showTrailerControls) {
+        if ((state.isTrailerPlaying && !state.showTrailerControls) || state.isBackgroundTrailerPlaying) {
             trailerHasPlayed = true
             setTrailerPlaybackState(isPlaying = false, showControls = false, hideLogo = false)
         }
@@ -2984,7 +2997,7 @@ class MetaDetailsViewModel @Inject constructor(
 
         idleTimerJob?.cancel()
         isPlayButtonFocused = false
-        if (_uiState.value.isTrailerPlaying) {
+        if (_uiState.value.isTrailerPlaying || _uiState.value.isBackgroundTrailerPlaying) {
             setTrailerPlaybackState(
                 isPlaying = false,
                 showControls = false,

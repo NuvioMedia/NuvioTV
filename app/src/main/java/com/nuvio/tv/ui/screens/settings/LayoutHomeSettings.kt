@@ -72,14 +72,6 @@ internal fun LayoutHomeLayoutSection(
 
     if (uiState.selectedLayout == HomeLayout.MODERN) {
         SettingsToggleRow(
-            title = stringResource(R.string.layout_landscape_posters),
-            subtitle = stringResource(R.string.layout_landscape_posters_sub),
-            checked = uiState.modernLandscapePostersEnabled,
-            onToggle = {
-                onEvent(LayoutSettingsEvent.SetModernLandscapePostersEnabled(!uiState.modernLandscapePostersEnabled))
-            }
-        )
-        SettingsToggleRow(
             title = stringResource(R.string.layout_fullscreen_hero_backdrop),
             subtitle = stringResource(R.string.layout_fullscreen_hero_backdrop_sub),
             checked = uiState.modernHeroFullScreenBackdropEnabled,

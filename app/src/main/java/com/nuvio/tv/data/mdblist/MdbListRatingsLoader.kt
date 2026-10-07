@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 
 internal class MdbListRatingsLoader(
     private val client: MdbListRatingsClient,
+    private val diskCache: MdbListRatingsDiskCache? = null,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
     private val now: () -> Long = System::currentTimeMillis
 ) {
@@ -38,6 +39,7 @@ internal class MdbListRatingsLoader(
     ): MDBListRatings? {
         client.checkCredential(credential)
         val key = RequestKey(mediaProvider, mediaType, mediaId, credential)
+        val diskKey = "$mediaProvider:$mediaType:$mediaId"
         val deferred = synchronized(lock) {
             cache[key]?.let { cached ->
                 if (cached.expiresAtMs > now()) return cached.ratings
@@ -54,6 +56,17 @@ internal class MdbListRatingsLoader(
                     }
                 }
             }
+        }
+        // Check disk cache before waiting for network.
+        val diskCached = diskCache?.get(diskKey)
+        if (diskCached != null) {
+            synchronized(lock) {
+                cache[key] = CacheEntry(diskCached, now() + CACHE_TTL_MS)
+                inFlight.remove(key)
+                pending.remove(key)
+            }
+            deferred.complete(diskCached)
+            return diskCached
         }
         val ratings = deferred.await()
         client.checkCredential(credential)
@@ -86,8 +99,8 @@ internal class MdbListRatingsLoader(
                 mapOf(first.mediaId to media.toRatings())
             } else {
                 val provider = first.mediaProvider
-                requireNotNull(client.getMediaBatch(provider, first.mediaType, batch.map { it.first.mediaId }, first.credential))
-                    .mapNotNull { media ->
+                val response = requireNotNull(client.getMediaBatch(provider, first.mediaType, batch.map { it.first.mediaId }, first.credential))
+                response.mapNotNull { media ->
                         val responseId = resolveResponseId(media, provider) ?: return@mapNotNull null
                         responseId to media.toRatings()
                     }.toMap()
@@ -99,6 +112,9 @@ internal class MdbListRatingsLoader(
                     cache[key] = CacheEntry(result, now() + CACHE_TTL_MS)
                     inFlight.remove(key)
                     deferred.complete(result)
+                    if (!result.isEmpty()) {
+                        diskCache?.put("${key.mediaProvider}:${key.mediaType}:${key.mediaId}", result)
+                    }
                 }
             }
         } catch (error: Exception) {
@@ -118,7 +134,9 @@ internal class MdbListRatingsLoader(
         provider: String
     ): String? {
         if (provider == "imdb") return media.resolvedImdbId()
-        return media.ids?.get(provider)?.toString()?.takeIf { it.isNotBlank() }
+        val raw = media.ids?.get(provider) ?: return null
+        val str = raw.toString()
+        return if (str.endsWith(".0")) str.dropLast(2) else str
     }
 
     private companion object {

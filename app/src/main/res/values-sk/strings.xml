@@ -7,7 +7,7 @@
     <string name="type_series_plural">Seriály</string>
     <string name="type_unknown">Neznáme</string>
 
-    <!-- WebConfigServers -->
+    
     <string name="web_manage_addons_title">Spravovať doplnky</string>
     <string name="web_manage_addons_subtitle">Spravovať doplnky, katalógy a kolekcie</string>
     <string name="web_manage_addons_only_subtitle">Inštalovať alebo odstrániť doplnky</string>
@@ -97,14 +97,14 @@
     <string name="web_import_success">Importovaných {count} kolekcií. Skontrolujte a stlačte Uložiť zmeny pre použitie.</string>
     <string name="web_import_invalid_json">Neplatný JSON</string>
 
-    <!-- HomeScreen -->
+    
     <string name="home_no_addons">Žiadne doplnky nie sú nainštalované. Pridajte jeden pre začiatok.</string>
     <string name="home_no_catalog_addons">Žiadne katalógové doplnky. Nainštalujte katalógový doplnok pre zobrazenie obsahu.</string>
     <string name="auth_notice_nuvio_logged_out">Boli ste odhlásení z Nuvio. Prihláste sa znova.</string>
     <string name="auth_notice_trakt_logged_out">Boli ste odhlásení z Trakt. Znova sa pripojte.</string>
     <string name="error_generic">Vyskytla sa chyba</string>
 
-    <!-- ErrorState -->
+    
     <string name="action_retry">Skúsiť znova</string>
     <string name="error_state_generic_issue">Niečo sa pokazilo.</string>
     <string name="error_state_possible_fix">Možná oprava: %1$s</string>
@@ -139,7 +139,7 @@
     <string name="error_stream_tried_generic">Vyskúšané stream doplnky: %1$s. Streamy sa nepodarilo načítať pre id=%2$s (typ=%3$s).</string>
     <string name="error_stream_tried_issues">Vyskúšané stream doplnky: %1$s. Streamy sa nepodarilo načítať pre id=%2$s (typ=%3$s). Problémy: %4$s.</string>
 
-    <!-- ContinueWatchingSection -->
+    
     <string name="continue_watching">Pokračovať v sledovaní</string>
     <string name="cw_upcoming">Čoskoro</string>
     <string name="cw_next_up">Ďalšia epizóda</string>
@@ -165,7 +165,7 @@
     <string name="cw_dialog_subtitle">Vyberte, čo chcete s touto položkou urobiť.</string>
     <string name="home_poster_dialog_subtitle">Možnosti titulu</string>
 
-    <!-- Short versions for compact card styles (wide/poster) -->
+    
     <string name="cw_next_up_short">Ďalšie</string>
     <string name="cw_new_episode_short">Nové</string>
     <string name="cw_airs_date_short">%1$s</string>
@@ -178,12 +178,12 @@
         <item quantity="other">O %d dní</item>
     </plurals>
 
-    <!-- CatalogRowSection -->
+    
     <string name="catalog_from_addon">z %1$s</string>
     <string name="action_see_all">Zobraziť všetko</string>
     <string name="action_load_more">Načítať viac</string>
 
-    <!-- HeroSection -->
+    
     <string name="hero_creator">Tvorca: %1$s</string>
     <string name="hero_director">Režisér: %1$s</string>
     <string name="hero_writer">Scenár: %1$s</string>
@@ -197,7 +197,7 @@
     <string name="hero_press_back_trailer">Stlačte späť pre ukončenie traileru</string>
     <string name="cd_rating">Hodnotenie</string>
 
-    <!-- EpisodesSection -->
+    
     <string name="episodes_season">Séria %1$d</string>
     <string name="episodes_specials">Špeciály</string>
     <string name="episodes_episode">Epizóda</string>
@@ -214,7 +214,7 @@
     <string name="play_manually">Prehrať manuálne</string>
     <string name="episodes_season_actions">Akcie série</string>
 
-    <!-- MetaDetailsViewModel -->
+    
     <string name="detail_added_to_library">Pridané do knižnice</string>
     <string name="detail_removed_from_library">Odstránené z knižnice</string>
     <string name="detail_episode_marked_watched">Epizóda označená ako videná</string>
@@ -230,7 +230,7 @@
     <string name="detail_marked_episodes_unwatched">Epizódy označené ako nevidené: %1$d</string>
     <string name="detail_marked_previous_watched">Predchádzajúce epizódy označené ako videné: %1$d</string>
 
-    <!-- MetaDetailsScreen -->
+    
     <string name="detail_btn_play">Prehrať</string>
     <string name="detail_btn_resume">Pokračovať</string>
     <string name="detail_btn_play_episode">Prehrať S%1$d E%2$d</string>
@@ -294,7 +294,7 @@
     <string name="tmdb_entity_empty_title">Nenašli sa žiadne tituly</string>
     <string name="tmdb_entity_empty_subtitle">TMDB momentálne nemá prehliadateľné tituly pre tento výber.</string>
     <string name="episodes_unavailable">Nedostupné</string>
-        <!-- Status labels for series (some languages need gendered forms) -->
+        
     <string name="series_status_ended">Ukončené</string>
     <string name="series_status_continuing">Prebieha</string>
     <string name="series_status_current">Aktuálne</string>
@@ -304,7 +304,7 @@
     <string name="series_status_rumored">Nepotvrdené</string>
     <string name="series_status_in_production">Vo výrobe</string>
     <string name="series_status_post_production">V postprodukcii</string>
-    <!-- Status labels for movies (allows gendered translations in languages that need it) -->
+    
     <string name="movie_status_ended">Ukončené</string>
     <string name="movie_status_continuing">Prebieha</string>
     <string name="movie_status_current">Aktuálne</string>
@@ -319,19 +319,19 @@
     <string name="action_save">Uložiť</string>
     <string name="action_saving">Ukladá sa…</string>
 
-    <!-- AppLanguage -->
+    
     <string name="appearance_language">Jazyk aplikácie</string>
     <string name="appearance_language_subtitle">Prepísať jazyk systému</string>
     <string name="appearance_language_system">Predvolené podľa systému</string>
     <string name="appearance_language_dialog_title">Vyberte jazyk</string>
     <string name="appearance_language_restart_hint">Reštartujte aplikáciu pre použitie zmeny jazyka.</string>
 
-    <!-- Font -->
+    
     <string name="appearance_font">Písmo aplikácie</string>
     <string name="appearance_font_subtitle">Vyberte preferované písmo</string>
     <string name="appearance_font_dialog_title">Vyberte písmo</string>
 
-    <!-- ThemeSettingsScreen -->
+    
     <string name="appearance_title">Vzhľad</string>
     <string name="appearance_subtitle">Vyberte farebnú tému, písmo a jazyk</string>
     <string name="appearance_color_theme">Farebná téma</string>
@@ -351,7 +351,7 @@
     <string name="appearance_font_and_language_subtitle">Vyberte písmo a miestne nastavenie používané v celej aplikácii</string>
     <string name="cd_selected">Vybrané</string>
 
-    <!-- AboutScreen -->
+    
     <string name="about_title">O aplikácii</string>
     <string name="about_subtitle">Informácie o aplikácii, aktualizácie a právne odkazy</string>
     <string name="about_made_with_love">Vytvorené s ❤️ tímom Tapframe a priateľmi</string>
@@ -386,7 +386,7 @@
     <string name="licenses_attributions_libmpv_title">libmpv / libmpv-android</string>
     <string name="licenses_attributions_libmpv_body">Používaný ako Android engine prehrávania. Wrapper libmpv-android je licencovaný pod MIT licenciou; mpv/libmpv a pribalené natívne komponenty si zachovávajú svoje upstream licenčné podmienky.</string>
 
-    <!-- SettingsScreen categories -->
+    
     <string name="settings_experience">Skúsenosť</string>
     <string name="settings_account">Účet</string>
     <string name="settings_profiles">Profily</string>
@@ -426,7 +426,7 @@
     <string name="essential_p2p_streams_subtitle">Povoliť peer-to-peer zdroje streamov.</string>
     <string name="essential_subtitle_language_subtitle">Preferovaný jazyk titulkov.</string>
     <string name="essential_audio_language_subtitle">Preferovaný jazyk audia.</string>
-    <!-- Account / sign-in error messages -->
+    
     <string name="account_error_incorrect_pin">Nesprávny PIN.</string>
     <string name="account_error_sync_code_expired">Synchronizačný kód vypršal.</string>
     <string name="account_error_invalid_sync_code">Neplatný synchronizačný kód.</string>
@@ -456,7 +456,7 @@
     <string name="account_error_invalid_request">Neplatná požiadavka. Skontrolujte svoj vstup.</string>
     <string name="account_error_unexpected">Vyskytla sa neočakávaná chyba.</string>
     <string name="experience_mode_switch_to_essential">Prepnúť na Základnú</string>
-    <string name="experience_mode_switch_to_essential_subtitle">Skryť pokročilé nastavenia bez zmeny uložených hodnôt</string>
+    <string name="experience_mode_switch_to_essential_subtitle">Skryť pokročilé nastavenia bez zmeny uložených hodnôt.</string>
     <string name="experience_mode_switch_to_advanced">Prepnúť na Pokročilú</string>
     <string name="experience_mode_switch_to_advanced_header_subtitle">Prepnite na Pokročilú pre úplné nastavenia.</string>
     <string name="experience_mode_switch_to_advanced_subtitle">Zobraziť úplné rozloženie, pluginy, integrácie, katalóg, kolekcie a nastavenia ladenia.</string>
@@ -481,9 +481,9 @@
     <string name="advanced_section_diagnostics">Diagnostika</string>
     <string name="advanced_section_cache">Cache</string>
     <string name="advanced_fast_horizontal_navigation">Rýchla horizontálna navigácia</string>
-    <string name="advanced_fast_horizontal_navigation_subtitle">Zvýšiť rýchlosť opakovania D-padu v radoch pri zachovaní obmedzovania opakovania</string>
+    <string name="advanced_fast_horizontal_navigation_subtitle">Zvýšiť rýchlosť opakovania D-padu v radoch pri zachovaní obmedzovania opakovania.</string>
     <string name="advanced_nuvio_focus_scroll">Nuvio rolovanie zamerania</string>
-    <string name="advanced_nuvio_focus_scroll_subtitle">Použiť vlastnú globálnu animáciu rolovania zamerania a polohovanie Nuvio</string>
+    <string name="advanced_nuvio_focus_scroll_subtitle">Použiť vlastnú globálnu animáciu rolovania zamerania a polohovanie Nuvio.</string>
     <string name="advanced_memory_only_vertical_scroll">Iba pamäťové vertikálne rolovanie</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Preskočiť požiadavky na obrázky z disku a siete počas vertikálneho rolovania domácich radov.</string>
     <string name="advanced_compose_highlighter">Zvýrazňovač Compose</string>
@@ -508,7 +508,7 @@
     <string name="settings_animeskip_subtitle">Časové značky preskočenia intra/outra anime</string>
     <string name="settings_debrid_subtitle">Experimentálne cloudové zdroje účtov</string>
 
-    <!-- PlaybackSettingsScreen -->
+    
     <string name="playback_title">Nastavenia prehrávania</string>
     <string name="playback_subtitle">Konfigurácia videa a titulkov</string>
     <string name="cd_decrease">Znížiť</string>
@@ -519,7 +519,7 @@
     <string name="action_none">Žiadne</string>
     <string name="action_close">Zavrieť</string>
 
-    <!-- SupportersContributorsScreen -->
+    
     <string name="supporters_contributors_title">Podporovatelia a Prispievatelia</string>
     <string name="supporters_contributors_subtitle">Ľudia podporujúci Nuvio a prispievatelia budujúci ho pre TV a mobil.</string>
     <string name="supporters_contributors_supporters_copy">Podporovatelia a darcovia pomáhajú posúvať projekt vpred, financujú infraštruktúru a vytvárajú priestor pre vývoj náročnejších funkcií.</string>
@@ -552,25 +552,25 @@
     <string name="contributors_hide_kofi_qr">Skryť Ko-fi QR</string>
     <string name="contributors_profile_unavailable">Odkaz na GitHub profil nie je dostupný.</string>
    
-    <!-- PlaybackSettingsSections -->
+    
     <string name="playback_loading_overlay">Načítavacia obrazovka</string>
-    <string name="playback_loading_overlay_sub">Zobraziť načítavaciu obrazovku až do prvého video rámca</string>
+    <string name="playback_loading_overlay_sub">Zobraziť načítavaciu obrazovku až do prvého video rámca.</string>
     <string name="playback_pause_overlay">Pauzovacia obrazovka</string>
-    <string name="playback_pause_overlay_sub">Zobraziť detaily po 5 sekundách pauzy</string>
-    <string name="playback_show_clock_sub">Zobraziť aktuálny čas a čas ukončenia počas zobrazenia ovládacích prvkov</string>
+    <string name="playback_pause_overlay_sub">Zobraziť detaily po 5 sekundách pauzy.</string>
+    <string name="playback_show_clock_sub">Zobraziť aktuálny čas a čas ukončenia počas zobrazenia ovládacích prvkov.</string>
     <string name="playback_osd_clock">Hodiny na obrazovke</string>
     <string name="playback_skip_intro">Preskočiť intro</string>
-    <string name="playback_skip_intro_sub">Použiť introdb.app na detekciu úvodov a rekapitulácií</string>
+    <string name="playback_skip_intro_sub">Použiť introdb.app na detekciu úvodov a rekapitulácií.</string>
     <string name="playback_parental_guide">Upozornenia na obsah</string>
-    <string name="playback_parental_guide_sub">Zobraziť rodičovský sprievodca pri spustení prehrávania</string>
+    <string name="playback_parental_guide_sub">Zobraziť rodičovský sprievodca pri spustení prehrávania.</string>
     <string name="playback_auto_skip_segments">Automatické preskočenie</string>
-    <string name="playback_auto_skip_segments_sub">Vyberte, ktoré segmenty sa preskočia automaticky</string>
+    <string name="playback_auto_skip_segments_sub">Vyberte, ktoré segmenty sa preskočia automaticky.</string>
     <string name="auto_skip_intro">Intro / Úvod</string>
-    <string name="auto_skip_intro_sub">Automaticky preskočiť intrá a anime úvody</string>
+    <string name="auto_skip_intro_sub">Automaticky preskočiť intrá a anime úvody.</string>
     <string name="auto_skip_recap">Rekapitulácia</string>
-    <string name="auto_skip_recap_sub">Automaticky preskočiť segmenty rekapitulácie</string>
+    <string name="auto_skip_recap_sub">Automaticky preskočiť segmenty rekapitulácie.</string>
     <string name="auto_skip_outro">Outro / Záver</string>
-    <string name="auto_skip_outro_sub">Automaticky preskočiť outrá a anime závery</string>
+    <string name="auto_skip_outro_sub">Automaticky preskočiť outrá a anime závery.</string>
     <string name="playback_auto_frame_rate">Automatická snímková frekvencia a rozlíšenie</string>
     <string name="playback_player_internal">Interný</string>
     <string name="playback_player_external">Externý</string>
@@ -579,9 +579,9 @@
     <string name="playback_engine_exoplayer">ExoPlayer</string>
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automaticky prepnúť engine pri chybe spustenia</string>
-    <string name="playback_auto_switch_internal_player_on_error_sub">Ak spustenie streamu zlyhá, automaticky prepnúť medzi ExoPlayer a libmpv</string>
+    <string name="playback_auto_switch_internal_player_on_error_sub">Ak spustenie streamu zlyhá, automaticky prepnúť medzi ExoPlayer a libmpv.</string>
     <string name="playback_section_subtitles">Titulky</string>
-    <string name="playback_section_subtitles_desc">Jazyk, štýl a režim renderovania</string>
+    <string name="playback_section_subtitles_desc">Jazyk, štýl a režim renderovania.</string>
     <string name="playback_afr_off">Vypnuté</string>
     <string name="playback_afr_off_sub">Nemeniť obnovovaciu frekvenciu displeja.</string>
     <string name="playback_afr_on_start">Pri spustení</string>
@@ -605,7 +605,7 @@
     <string name="playback_engine_exoplayer_desc">Najlepšia kompatibilita s aktuálnymi funkciami Nuvio.</string>
     <string name="playback_engine_mvplayer_desc">Používa libmpv s ovládaním Nuvio OSD. Experimentálne.</string>
 
-    <!-- PlaybackAudioSettings -->
+    
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Automaticky prehrávať trailery</string>
     <string name="audio_autoplay_trailers_sub">Automaticky prehrať trailery na detailnej obrazovke po čase nečinnosti</string>
@@ -649,7 +649,7 @@
     <string name="audio_decoder_prefer_app_desc">Použiť FFmpeg dekodéry, ak sú dostupné. Lepšia podpora formátov, ale vyššie zaťaženie CPU.</string>
     <string name="audio_decoder_controls">Určuje, či sa pre audio a video použijú hardvérové alebo softvérové (FFmpeg) dekodéry</string>
 
-    <!-- PlaybackSubtitleSettings -->
+    
     <string name="sub_section">Titulky</string>
     <string name="sub_not_set">Nenastavené</string>
     <string name="sub_forced_lang">Vynútené</string>
@@ -689,7 +689,7 @@
     <string name="sub_org_by_lang_desc">Zoskupiť titulky podľa jazyka.</string>
     <string name="sub_org_by_addon_desc">Zoskupiť titulky podľa zdroja doplnku.</string>
 
-    <!-- PlaybackAutoPlaySettings -->
+    
     <string name="autoplay_reuse_last_link">Použiť posledný odkaz</string>
     <string name="autoplay_reuse_last_link_sub">Automaticky prehrať váš posledný funkčný stream pre ten istý film/epizódu, ak je cache stále platná</string>
     <string name="autoplay_last_link_cache">Doba platnosti cache posledného odkazu</string>
@@ -703,24 +703,24 @@
     <string name="autoplay_mode_regex">Automaticky prehrať podľa regexu</string>
     <string name="autoplay_stream_selection">Automatický výber streamu</string>
     <string name="autoplay_next_episode">Automaticky prehrať ďalšiu epizódu</string>
-    <string name="autoplay_next_episode_sub">Automaticky spustiť ďalšiu epizódu, keď sa zobrazí výzva</string>
+    <string name="autoplay_next_episode_sub">Automaticky spustiť ďalšiu epizódu, keď sa zobrazí výzva.</string>
     <string name="autoplay_prefer_binge_group">Preferovať binge skupinu (ďalšia epizóda)</string>
-    <string name="autoplay_prefer_binge_group_sub">Najprv skúsiť rovnaký profil zdroja (rovnaký doplnok/skupina kvality) pred bežnými pravidlami automatického prehrávania</string>
+    <string name="autoplay_prefer_binge_group_sub">Najprv skúsiť rovnaký profil zdroja (rovnaký doplnok/skupina kvality) pred bežnými pravidlami automatického prehrávania.</string>
     <string name="autoplay_reuse_binge_group">Znovu použiť binge skupinu</string>
     <string name="autoplay_reuse_binge_group_sub">Zapamätať si a znovu použiť poslednú binge skupinu naprieč reláciami (Pokračovať v sledovaní, Detaily atď.).</string>
     <string name="autoplay_threshold_pct">Percento</string>
     <string name="autoplay_threshold_min">Minúty pred koncom</string>
     <string name="autoplay_threshold_mode">Režim prahu pre ďalšiu epizódu</string>
     <string name="autoplay_threshold_pct_title">Percentuálny prah</string>
-    <string name="autoplay_threshold_pct_sub">Použije sa ako záloha, keď neexistuje časová značka outro</string>
+    <string name="autoplay_threshold_pct_sub">Použije sa ako záloha, keď neexistuje časová značka outro.</string>
     <string name="autoplay_threshold_min_title">Prahové minúty</string>
-    <string name="autoplay_threshold_min_sub">Použije sa ako záloha, keď neexistuje časová značka outro</string>
+    <string name="autoplay_threshold_min_sub">Použije sa ako záloha, keď neexistuje časová značka outro.</string>
     <string name="autoplay_scope_all">Všetky zdroje</string>
     <string name="autoplay_scope_addons">Iba nainštalované doplnky</string>
     <string name="autoplay_scope_plugins">Iba povolené pluginy</string>
     <string name="autoplay_scope">Rozsah zdrojov pre automatické prehrávanie</string>
     <string name="autoplay_timeout_title">Časový limit výberu streamu</string>
-    <string name="autoplay_timeout_sub">Čas čakania na doplnky pred výberom</string>
+    <string name="autoplay_timeout_sub">Čas čakania na doplnky pred výberom.</string>
     <string name="autoplay_timeout_instant">Okamžite</string>
     <string name="autoplay_timeout_unlimited">Neobmedzene</string>
     <string name="autoplay_allowed_addons">Povolené doplnky</string>
@@ -736,13 +736,13 @@
     <string name="autoplay_scope_all_desc">Automatické prehrávanie môže používať nainštalované doplnky aj povolené pluginy.</string>
     <string name="autoplay_scope_addons_desc">Automatické prehrávanie zohľadňuje iba streamy z vašich nainštalovaných doplnkov.</string>
     <string name="autoplay_scope_plugins_desc">Automatické prehrávanie zohľadňuje iba streamy z povolených pluginov.</string>
-    <string name="autoplay_threshold_pct_desc">Zobraziť podľa percent prehrávania, keď nie je dostupná časová značka outro</string>
-    <string name="autoplay_threshold_min_desc">Zobraziť toľko minút pred koncom epizódy, keď nie je dostupná časová značka outro</string>
+    <string name="autoplay_threshold_pct_desc">Zobraziť podľa percent prehrávania, keď nie je dostupná časová značka outro.</string>
+    <string name="autoplay_threshold_min_desc">Zobraziť toľko minút pred koncom epizódy, keď nie je dostupná časová značka outro.</string>
     <string name="autoplay_regex_matches">Porovnáva názov/titul/popis/doplnok/url streamu. Príklad: 4K|2160p|Remux</string>
     <string name="autoplay_regex_presets">Predvoľby</string>
     <string name="autoplay_invalid_regex">Neplatný regex vzor</string>
 
-        <!-- LayoutSettingsScreen -->
+        
     <string name="layout_title">Nastavenia rozloženia</string>
     <string name="layout_subtitle">Upravte domáce rozloženie, viditeľnosť obsahu a správanie posterov</string>
     <string name="layout_classic">Klasické zobrazenie</string>
@@ -752,57 +752,57 @@
     <string name="layout_grid_desc">Prehliadajte všetko vo vertikálnej mriežke s hero sekciou</string>
     <string name="layout_modern_desc">Fixný hero s jedným aktívnym riadkom pre rýchlejšie prehliadanie</string>
     <string name="layout_section_home">Domáce rozloženie</string>
-    <string name="layout_section_home_desc">Vyberte štruktúru a zdroj hero obsahu</string>
+    <string name="layout_section_home_desc">Vyberte štruktúru a zdroj hero obsahu.</string>
     <string name="layout_landscape_posters">Na šírku</string>
-    <string name="layout_landscape_posters_sub">Prepínať medzi portrétnymi a landscape kartami v modernom zobrazení</string>
+    <string name="layout_landscape_posters_sub">Prepínať medzi portrétnymi a landscape kartami v modernom zobrazení.</string>
     <string name="layout_preview_row">Zobraziť náhľadový riadok</string>
-    <string name="layout_preview_row_sub">Zobraziť čiastočný náhľad nasledujúceho riadku v modernom rozložení</string>
+    <string name="layout_preview_row_sub">Zobraziť čiastočný náhľad nasledujúceho riadku v modernom rozložení.</string>
     <string name="layout_hero_catalogs">Hero katalógy</string>
     <string name="layout_hero_catalogs_sub">Vyberte jeden alebo viac katalógov pre hero obsah.</string>
     <string name="layout_section_content">Obsah domovskej obrazovky</string>
-    <string name="layout_section_content_desc">Ovládajte, čo sa zobrazuje na domovskej obrazovke a v hľadaní</string>
+    <string name="layout_section_content_desc">Ovládajte, čo sa zobrazuje na domovskej obrazovke a v hľadaní.</string>
     <string name="layout_collapse_sidebar">Skryť bočný panel</string>
-    <string name="layout_collapse_sidebar_sub">Skryť bočný panel predvolene; zobraziť pri zameraní</string>
+    <string name="layout_collapse_sidebar_sub">Skryť bočný panel predvolene; zobraziť pri zameraní.</string>
     <string name="layout_modern_sidebar">Moderný bočný panel</string>
-    <string name="layout_modern_sidebar_sub">Povoliť plávajúcu bočnú navigáciu</string>
+    <string name="layout_modern_sidebar_sub">Povoliť plávajúcu bočnú navigáciu.</string>
     <string name="layout_modern_sidebar_blur">Rozmazanie bočného panelu</string>
-    <string name="layout_modern_sidebar_blur_sub">Prepínať efekt rozmazania pre moderný bočný panel</string>
+    <string name="layout_modern_sidebar_blur_sub">Prepínať efekt rozmazania pre moderný bočný panel.</string>
     <string name="layout_fullscreen_hero_backdrop">Celostránkové pozadie hero sekcie</string>
-    <string name="layout_fullscreen_hero_backdrop_sub">Rozšíriť pozadie hero sekcie na celú obrazovku</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Rozšíriť pozadie hero sekcie na celú obrazovku.</string>
     <string name="layout_classic_focus_gradient">Gradient zameranej položky</string>
-    <string name="layout_classic_focus_gradient_sub">Prelínať farby grafiky do pravej strany klasickej domovskej obrazovky</string>
+    <string name="layout_classic_focus_gradient_sub">Prelínať farby grafiky do pravej strany klasickej domovskej obrazovky.</string>
     <string name="layout_show_hero">Zobraziť hero sekciu</string>
-    <string name="layout_show_hero_sub">Zobraziť hero karusel v hornej časti domovskej obrazovky</string>
+    <string name="layout_show_hero_sub">Zobraziť hero karusel v hornej časti domovskej obrazovky.</string>
     <string name="layout_show_discover">Zobraziť/Skryť Objavovať</string>
-    <string name="layout_show_discover_sub">Pridá sekciu Objavovať pre prehliadanie</string>
+    <string name="layout_show_discover_sub">Pridá sekciu Objavovať pre prehliadanie.</string>
     <string name="layout_discover_location_action">Umiestnenie Objavovania</string>
     <string name="layout_discover_location_dialog_title">Umiestnenie Objavovania</string>
     <string name="layout_discover_location_in_search">Zobraziť v Hľadaní</string>
-    <string name="layout_discover_location_in_search_desc">Objavovanie sa zobrazí v záložke Hľadať</string>
+    <string name="layout_discover_location_in_search_desc">Objavovanie sa zobrazí v záložke Hľadať.</string>
     <string name="layout_discover_location_in_sidebar">Zobraziť v bočnom paneli</string>
-    <string name="layout_discover_location_in_sidebar_desc">Objavovanie dostane vlastnú položku v bočnom paneli</string>
+    <string name="layout_discover_location_in_sidebar_desc">Objavovanie dostane vlastnú položku v bočnom paneli.</string>
     <string name="layout_poster_labels">Zobraziť názvy posterov</string>
     <string name="layout_poster_labels_sub">Zobraziť názvy pod postermi v radoch, mriežke a zobrazení všetkých.</string>
     <string name="layout_addon_name">Zobraziť názov doplnku</string>
-    <string name="layout_addon_name_sub">Zobraziť názov zdroja pod katalógovými titulmi</string>
+    <string name="layout_addon_name_sub">Zobraziť názov zdroja pod katalógovými titulmi.</string>
     <string name="layout_catalog_type">Zobraziť typ katalógu</string>
-    <string name="layout_catalog_type_sub">Zobraziť typ (Film/Seriál) vedľa názvu katalógu</string>
+    <string name="layout_catalog_type_sub">Zobraziť typ (Film/Seriál) vedľa názvu katalógu.</string>
     <string name="layout_hide_unreleased">Skryť nevydaný obsah</string>
-    <string name="layout_hide_unreleased_sub">Skryť filmy a seriály, ktoré ešte neboli vydané</string>
+    <string name="layout_hide_unreleased_sub">Skryť filmy a seriály, ktoré ešte neboli vydané.</string>
     <string name="layout_section_detail">Detailná stránka</string>
-    <string name="layout_section_detail_desc">Nastavenia pre detailnú a epizódovú obrazovku</string>
+    <string name="layout_section_detail_desc">Nastavenia pre detailnú a epizódovú obrazovku.</string>
     <string name="layout_section_continue_watching">Pokračovať v sledovaní</string>
-    <string name="layout_section_continue_watching_desc">Nastavenia pre sekciu Pokračovať v sledovaní</string>
+    <string name="layout_section_continue_watching_desc">Nastavenia pre sekciu Pokračovať v sledovaní.</string>
     <string name="layout_use_episode_thumbnails_cw">Použiť miniatúry epizód v Pokračovať v sledovaní</string>
-    <string name="layout_use_episode_thumbnails_cw_sub">Použiť miniatúry epizód ako predvolený obrázok; keď je zakázané, použije sa pozadie</string>
+    <string name="layout_use_episode_thumbnails_cw_sub">Použiť miniatúry epizód ako predvolený obrázok; keď je zakázané, použije sa pozadie.</string>
     <string name="layout_blur_unwatched">Rozmazať nevidené epizódy</string>
-    <string name="layout_blur_unwatched_sub">Rozmazať náhľady epizód, kým nie sú videné, aby sa predišlo spoilerom</string>
+    <string name="layout_blur_unwatched_sub">Rozmazať náhľady epizód, kým nie sú videné, aby sa predišlo spoilerom.</string>
     <string name="layout_blur_cw_next_up">Rozmazať nevidené v Pokračovať v sledovaní</string>
-    <string name="layout_blur_cw_next_up_sub">Rozmazať náhľady ďalších epizód v pokračovať v sledovaní, aby sa predišlo spoilerom</string>
+    <string name="layout_blur_cw_next_up_sub">Rozmazať náhľady ďalších epizód v pokračovať v sledovaní, aby sa predišlo spoilerom.</string>
     <string name="layout_next_up_furthest_episode">Ďalšia epizóda v poradí</string>
-    <string name="layout_next_up_furthest_episode_sub">Zobraziť ďalšiu epizódu na základe najďalej sledovanej epizódy; zakážte pre opätovné sledovanie, aby sa použila naposledy sledovaná epizóda</string>
+    <string name="layout_next_up_furthest_episode_sub">Zobraziť ďalšiu epizódu na základe najďalej sledovanej epizódy; zakážte pre opätovné sledovanie, aby sa použila naposledy sledovaná epizóda.</string>
     <string name="layout_show_unaired_next_up">Zobraziť nevysielané epizódy</string>
-    <string name="layout_show_unaired_next_up_sub">Zahrnúť nadchádzajúce epizódy do Pokračovať v sledovaní pred ich odvysielaním</string>
+    <string name="layout_show_unaired_next_up_sub">Zahrnúť nadchádzajúce epizódy do Pokračovať v sledovaní pred ich odvysielaním.</string>
     <string name="layout_cw_sort_mode">Poradie zoradenia</string>
     <string name="layout_cw_sort_mode_sub">Ako sú usporiadané položky Pokračovať v sledovaní</string>
     <string name="layout_cw_sort_default">Predvolené</string>
@@ -810,26 +810,26 @@
     <string name="layout_cw_sort_streaming">Štýl streamovania</string>
     <string name="layout_cw_sort_streaming_desc">Vydané položky ako prvé, nadchádzajúce na konci</string>
     <string name="layout_trailer_button">Zobraziť tlačidlo traileru</string>
-    <string name="layout_trailer_button_sub">Zobraziť tlačidlo traileru na detailnej stránke (iba ak je dostupný)</string>
+    <string name="layout_trailer_button_sub">Zobraziť tlačidlo traileru na detailnej stránke (iba ak je dostupný).</string>
     <string name="layout_prefer_external_meta">Preferovať externé metadáta</string>
-    <string name="layout_prefer_external_meta_sub">Použiť metadáta z externého doplnku namiesto katalógového</string>
+    <string name="layout_prefer_external_meta_sub">Použiť metadáta z externého doplnku namiesto katalógového.</string>
     <string name="layout_show_full_release_date">Zobraziť úplný dátum vydania</string>
-    <string name="layout_show_full_release_date_sub">Pre filmy zobraziť úplný dátum vydania namiesto iba roku</string>
+    <string name="layout_show_full_release_date_sub">Pre filmy zobraziť úplný dátum vydania namiesto iba roku.</string>
     <string name="layout_section_focused">Zameraná karta</string>
-    <string name="layout_section_focused_desc">Pokročilé správanie pre zamerané karty</string>
+    <string name="layout_section_focused_desc">Pokročilé správanie pre zamerané karty.</string>
     <string name="layout_expand_poster">Rozšíriť zameraný poster na pozadie</string>
-    <string name="layout_expand_poster_sub">Rozšíriť zameraný poster po oneskorení</string>
+    <string name="layout_expand_poster_sub">Rozšíriť zameraný poster po oneskorení.</string>
     <string name="layout_expand_delay">Oneskorenie rozšírenia</string>
-    <string name="layout_expand_delay_sub">Ako dlho čakať pred rozšírením zameraných kariet</string>
+    <string name="layout_expand_delay_sub">Ako dlho čakať pred rozšírením zameraných kariet.</string>
     <string name="layout_autoplay_trailer">Automaticky prehrať trailer</string>
     <string name="layout_autoplay_trailer_expanded">Automaticky prehrať trailer v rozšírenej karte</string>
-    <string name="layout_autoplay_trailer_sub">Prehrať trailer pre zameraný obsah, ak je dostupný</string>
+    <string name="layout_autoplay_trailer_sub">Prehrať trailer pre zameraný obsah, ak je dostupný.</string>
     <string name="layout_autoplay_trailer_expanded_sub">Prehrať trailer v rozšírenom pozadí, ak je dostupný.</string>
     <string name="layout_trailer_muted">Prehrať trailer bez zvuku</string>
     <string name="layout_trailer_muted_sub_preview">Stlmiť zvuk traileru počas náhľadu.</string>
     <string name="layout_trailer_muted_sub_expanded">Stlmiť zvuk traileru v rozšírených kartách.</string>
-    <string name="layout_section_card_style">Poster</string>
-    <string name="layout_section_card_style_desc">Upraviť šírku a zaoblenie rohov kariet</string>
+    <string name="layout_section_card_style">Plagáty</string>
+    <string name="layout_section_card_style_desc">Upraviť šírku a zaoblenie rohov kariet.</string>
     <string name="layout_open">Otvorené</string>
     <string name="layout_closed">Zatvorené</string>
     <string name="layout_trailer_location">Umiestnenie traileru v modernom zobrazení</string>
@@ -855,7 +855,7 @@
     <string name="layout_custom">Vlastné</string>
 
     
-    <!-- MDBListSettingsScreen -->
+    
     <string name="mdblist_title">MDBList hodnotenia</string>
     <string name="mdblist_subtitle">Nastavenie externých hodnotení zobrazených v detaile</string>
     <string name="mdblist_enable_title">Povoliť MDBList hodnotenia</string>
@@ -901,14 +901,14 @@
     <string name="debrid_provider_torbox">Torbox</string>
     <string name="debrid_provider_available">Torbox</string>
     <string name="debrid_api_key_title">Torbox</string>
-    <string name="debrid_api_key_subtitle">Pripojte svoj účet Torbox</string>
-    <string name="debrid_provider_description">Pripojte svoj účet %1$s</string>
-    <string name="debrid_provider_device_description">Prepojte svoj účet %1$s v prehliadači</string>
+    <string name="debrid_api_key_subtitle">Pripojte svoj účet Torbox.</string>
+    <string name="debrid_provider_description">Pripojte svoj účet %1$s.</string>
+    <string name="debrid_provider_device_description">Prepojte svoj účet %1$s v prehliadači.</string>
     <string name="debrid_api_key_dialog_title">API kľúč %1$s</string>
-    <string name="debrid_api_key_dialog_subtitle">Zadajte svoj API kľúč %1$s</string>
+    <string name="debrid_api_key_dialog_subtitle">Zadajte svoj API kľúč %1$s.</string>
     <string name="debrid_api_key_dialog_placeholder">Zadajte API kľúč %1$s</string>
     <string name="debrid_dialog_title">API kľúč Torbox</string>
-    <string name="debrid_dialog_subtitle">Zadajte svoj API kľúč Torbox</string>
+    <string name="debrid_dialog_subtitle">Zadajte svoj API kľúč Torbox.</string>
     <string name="debrid_dialog_placeholder">Zadajte API kľúč Torbox</string>
     <string name="debrid_real_debrid_api_key_title">API token Real-Debrid</string>
     <string name="debrid_real_debrid_api_key_subtitle">Vyžaduje sa pre lokálne rozlišovanie odkazov Real-Debrid</string>
@@ -967,7 +967,7 @@
     <string name="debrid_stream_codec_hevc">HEVC / H.265</string>
     <string name="debrid_stream_codec_av1">AV1</string>
 
-    <!-- Debrid stream filter dialogs (per-resolution / quality / size / multi-choice pickers) -->
+    
     <string name="debrid_stream_per_resolution_limit_title">Limit na rozlíšenie</string>
     <string name="debrid_stream_per_resolution_limit_subtitle">Obmedziť opakujúce sa výsledky 2160p, 1080p a 720p po zoradení.</string>
     <string name="debrid_stream_per_quality_limit_title">Limit na kvalitu</string>
@@ -1006,7 +1006,7 @@
     <string name="debrid_formatter_reset_subtitle">Obnoviť predvolené formátovanie zdrojov.</string>
     <string name="debrid_formatter_qr_instruction">Naskenujte tento QR kód na telefóne pre konfiguráciu nastavení Debrid zdrojov.</string>
 
-    <!-- Anime-Skip -->
+    
     <string name="animeskip_title">Anime Skip</string>
     <string name="animeskip_subtitle">Nakonfigurujte svoj Anime Skip Client ID pre preskakovanie anime intra/outra</string>
     <string name="animeskip_enable_title">Povoliť Anime Skip</string>
@@ -1019,7 +1019,7 @@
     <string name="animeskip_invalid_client_id">Neplatný Client ID</string>
     <string name="action_clear">Vymazať</string>
 
-    <!-- TmdbSettingsScreen -->
+    
     <string name="tmdb_title">TMDB obohatenie</string>
     <string name="tmdb_subtitle">Vyberte, ktoré polia metadát majú pochádzať z TMDB</string>
     <string name="tmdb_enable_title">Povoliť TMDB obohatenie</string>
@@ -1053,7 +1053,7 @@
 
     <string name="tmdb_language_dialog_title">Jazyk TMDB</string>
 
-    <!-- TraktScreen -->
+    
     <string name="trakt_description">Synchronizujte svoj watchlist, postup sledovania, pokračovanie v sledovaní, scrobbly a osobné zoznamy s Trakt.</string>
     <string name="trakt_connected_as">Pripojený ako %1$s</string>
     <string name="trakt_account_login">Prihlásenie do účtu</string>
@@ -1131,7 +1131,7 @@
     <string name="trakt_all_history">Celá história</string>
     <string name="trakt_days_format">%1$d dní</string>
 
-    <!-- DebugSettingsScreen -->
+    
     <string name="debug_title">Debug</string>
     <string name="debug_subtitle">Nástroje pre vývojárov a testovacie funkcie (iba debug buildy)</string>
     <string name="debug_section_popup">Testovanie popupov / dialógov</string>
@@ -1159,7 +1159,7 @@
     <string name="debug_generate_library_button">Generovať</string>
     <string name="debug_generating_library">Generuje sa…</string>
 
-        <!-- ProfileSettingsContent -->
+        
     <string name="profile_title">Profily</string>
     <string name="profile_subtitle">Spravovať používateľské profily pre tento účet</string>
     <string name="profile_manage_button">Spravovať profily</string>
@@ -1231,15 +1231,15 @@
     <string name="profile_pin_overlay_back_hint">Stlačte späť pre zrušenie</string>
 
     
-    <!-- Essential addon setup wizard -->
+    
     <string name="essential_addon_setup_title">Nastaviť doplnky</string>
     <string name="essential_addon_setup_subtitle">Nainštalujte jeden doplnok pre začatie streamovania. Ďalšie môžete pridať neskôr z Doplnkov.</string>
     <string name="essential_addon_show_qr">Zobraziť QR</string>
-    <!-- Collection editor fallbacks -->
+    
     <string name="collection_editor_no_trakt_lists_found">Nenašli sa žiadne Trakt zoznamy</string>
     <string name="collection_editor_untitled_folder">Bez názvu</string>
     <string name="collection_editor_untitled_collection">Kolekcia bez názvu</string>
-    <!-- AddonManagerScreen -->
+    
     <string name="addon_title">Doplnky</string>
     <string name="addon_readonly_notice">Používajú sa doplnky primárneho profilu a nemožno ich meniť</string>
     <string name="addon_install_title">Nainštalovať doplnok</string>
@@ -1279,7 +1279,7 @@
     <string name="addon_pending_collections_updated">Kolekcie aktualizované</string>
     <string name="addon_pending_collections_replace">%1$d kolekcií nahradí aktuálne kolekcie</string>
 
-    <!-- CatalogOrderScreen -->
+    
     <string name="catalog_order_title">Zmeniť poradie katalógov</string>
     <string name="catalog_order_subtitle">Ovláda poradie katalógov na domovskej obrazovke (Klasické + Moderné + Mriežka).</string>
     <string name="catalog_order_follow_addons">Sledovať poradie doplnkov</string>
@@ -1290,7 +1290,7 @@
     <string name="catalog_order_disable">Vypnúť</string>
 
     
-    <!-- StreamScreen -->
+    
     <string name="stream_retry">Skúsiť znova</string>
     <string name="stream_no_streams">Nenašli sa žiadne streamy</string>
     <string name="stream_no_streams_hint">Skúste nainštalovať viac doplnkov</string>
@@ -1318,7 +1318,7 @@
     <string name="stream_player_external">Externý</string>
     <string name="stream_filter_all">Všetky</string>
 
-    <!-- PlayerScreen -->
+    
     <string name="player_no_external_player">Nenašiel sa žiadny externý prehrávač</string>
     <string name="player_loading_preparing">Pripravuje sa stream…</string>
     <string name="player_loading_detecting_format">Zisťuje sa formát streamu…</string>
@@ -1335,7 +1335,7 @@
     <string name="player_engine_switching_message">Spustenie zlyhalo. Prepína sa na %1$s…</string>
     <string name="player_engine_switching_manual_message">Prepína sa na %1$s...</string>
     <string name="playback_show_loading_status">Zobraziť stav načítavania</string>
-    <string name="playback_show_loading_status_sub">Zobraziť postup krok za krokom počas inicializácie prehrávača</string>
+    <string name="playback_show_loading_status_sub">Zobraziť postup krok za krokom počas inicializácie prehrávača.</string>
     <string name="player_sync_line">Synchronizačná línia</string>
     <string name="subtitle_timing_press_sync">Stlačte Synchronizovať, keď počujete dialógovú líniu.</string>
     <string name="subtitle_timing_sync_button">Synchronizovať</string>
@@ -1348,7 +1348,7 @@
     <string name="subtitle_timing_captured_at">Zachytené o %1$s</string>
     <string name="subtitle_timing_capturing">Zachytáva sa…</string>
 
-    <!-- ParentalGuideOverlay -->
+    
     <string name="parental_nudity">Nahota</string>
     <string name="parental_violence">Násilie</string>
     <string name="parental_profanity">Vulgarizmy</string>
@@ -1359,7 +1359,7 @@
     <string name="parental_severity_mild">Mierne</string>
     <string name="player_ends_at">Končí o %1$s</string>
     <string name="player_via">cez %1$s</string>
-    <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
+    
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Oneskorenie titulkov</string>
     <string name="player_error_title">Chyba prehrávania</string>
@@ -1370,7 +1370,7 @@
     <string name="player_more_aspect_ratio">Pomer strán</string>
     <string name="player_more_open_external">Otvoriť v externom prehrávači</string>
 
-    <!-- StreamInfoOverlay -->
+    
     <string name="stream_info_section_source">ZDROJ</string>
     <string name="stream_info_section_file">SÚBOR</string>
     <string name="stream_info_section_video">VIDEO</string>
@@ -1391,14 +1391,14 @@
     <string name="stream_info_subtitle_source_embedded">Vstavané</string>
     <string name="stream_info_player_engine">Engine prehrávača</string>
 
-    <!-- StreamSourcesSidePanel -->
+    
     <string name="sources_title">Zdroje</string>
     <string name="sources_reload">Obnoviť</string>
     <string name="sources_close">Zavrieť</string>
     <string name="sources_playing">Prehráva sa</string>
     <string name="sources_no_streams">Nenašli sa žiadne streamy</string>
 
-    <!-- EpisodesSidePanel -->
+    
     <string name="episodes_panel_close">Zavrieť</string>
     <string name="episodes_panel_back">Späť</string>
     <string name="episodes_panel_reload">Obnoviť</string>
@@ -1416,7 +1416,7 @@
     <string name="player_aspect_mode_slight_zoom">Mierny zoom</string>
     <string name="player_aspect_mode_cinema_zoom">Kino zoom</string>
 
-    <!-- AudioDialog -->
+    
     <string name="audio_dialog_title">Audio</string>
     <string name="audio_dialog_tab_tracks">Audio</string>
     <string name="audio_dialog_tab_mix">Mix</string>
@@ -1432,11 +1432,11 @@
     <string name="audio_center_mix_label">Downmix: Úroveň stredového kanála</string>
     <string name="audio_center_mix_value_db">%1$d dB</string>
     <string name="audio_center_mix_help">Úroveň stredového mixu v dB relatívne k metadátam alebo predvolenej hodnote (-3 dB)</string>
-    <string name="audio_center_mix_unavailable">Stredový mix je dostupný iba pri aktívnom FFmpeg downmixe</string>
+    <string name="audio_center_mix_unavailable">Stredový mix je dostupný iba pri aktívnom FFmpeg downmixe.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">Zachovať pôvodné audio pri downmixe</string>
-    <string name="audio_maintain_original_audio_on_downmix_subtitle">Keď je vypnuté, normalizácia downmixu môže znížiť celkovú hlasitosť</string>
+    <string name="audio_maintain_original_audio_on_downmix_subtitle">Keď je vypnuté, normalizácia downmixu môže znížiť celkovú hlasitosť.</string>
 
-    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    
     <string name="subtitle_dialog_title">Titulky</string>
     <string name="subtitle_no_builtin">Nie sú dostupné žiadne vstavané titulky</string>
     <string name="subtitle_loading_addon">Načítavajú sa titulky z doplnkov…</string>
@@ -1476,13 +1476,13 @@
     <string name="panel_failed_load_streams">Nepodarilo sa načítať streamy</string>
     <string name="panel_failed_load_episodes">Nepodarilo sa načítať epizódy</string>
 
-    <!-- PauseOverlay -->
+    
     <string name="pause_you_are_watching">Sledujete</string>
     <string name="pause_cast_label">Obsadenie</string>
     <string name="pause_back_to_details">Späť na detaily</string>
     <string name="pause_as_character">ako %1$s</string>
 
-    <!-- PostPlayOverlay -->
+    
     <string name="next_episode_label">Ďalšia epizóda</string>
     <string name="next_episode_finding_source">Hľadá sa zdroj…</string>
     <string name="next_episode_playing_via">Prehrávanie cez %1$s o %2$ds</string>
@@ -1498,9 +1498,9 @@
     <string name="still_watching_exit">Ukončiť</string>
     <string name="still_watching_countdown">Zastavenie o %1$d</string>
     <string name="still_watching_setting_title">Stále sledujete?</string>
-    <string name="still_watching_setting_sub">Zobraziť výzvu po po sebe idúcich automaticky prehratých epizódach</string>
+    <string name="still_watching_setting_sub">Zobraziť výzvu po po sebe idúcich automaticky prehratých epizódach.</string>
     <string name="still_watching_threshold_title">Prah epizód</string>
-    <string name="still_watching_threshold_sub">Počet automaticky prehratých epizód pred zobrazením výzvy</string>
+    <string name="still_watching_threshold_sub">Počet automaticky prehratých epizód pred zobrazením výzvy.</string>
     <string name="skip_intro">Preskočiť intro</string>
     <string name="skip_ending">Preskočiť záver</string>
     <string name="skip_recap">Preskočiť rekapituláciu</string>
@@ -1509,7 +1509,7 @@
     <string name="display_mode_resolution">Rozlíšenie</string>
 
     
-    <!-- SearchScreen -->
+    
     <string name="search_keyboard_hint">Stlačte Hotovo na klávesnici pre vyhľadávanie</string>
     <string name="search_placeholder">Hľadať filmy a seriály</string>
     <string name="search_start_title">Začnite vyhľadávať</string>
@@ -1522,7 +1522,7 @@
     <string name="search_voice_failed">Rozpoznávanie hlasu zlyhalo. Skúste to znova.</string>
     <string name="search_voice_unavailable">Hlasové vyhľadávanie nie je na tomto zariadení dostupné.</string>
 
-    <!-- LibraryScreen -->
+    
     <string name="library_syncing">Synchronizuje sa knižnica Trakt…</string>
     <string name="library_title">Knižnica</string>
     <string name="library_filter_list">Zoznam</string>
@@ -1530,7 +1530,7 @@
     <string name="library_filter_sort">Zoradiť</string>
     <string name="library_filter_genre">Žáner</string>
     <string name="library_filter_year">Rok</string>
-    <!-- Genre names (from TMDB movie + TV) -->
+    
     <string name="genre_action">Akčný</string>
     <string name="genre_adventure">Dobrodružný</string>
     <string name="genre_animation">Animovaný</string>
@@ -1550,7 +1550,7 @@
     <string name="genre_thriller">Thriller</string>
     <string name="genre_war">Vojnový</string>
     <string name="genre_western">Western</string>
-    <!-- TV-specific genres -->
+    
     <string name="genre_action_adventure">Akčný a Dobrodružný</string>
     <string name="genre_kids">Detský</string>
     <string name="genre_news">Správy</string>
@@ -1624,7 +1624,7 @@
     <string name="cloud_library_type_web">Web</string>
     <string name="cloud_library_type_files">Súbory</string>
 
-    <!-- AccountSettingsContent -->
+    
     <string name="account_loading">Načítava sa…</string>
     <string name="account_sync_description">Synchronizujte knižnicu, postup sledovania, doplnky a pluginy medzi zariadeniami.</string>
     <string name="account_sync_restart_note">Synchronizácia nie je v reálnom čase medzi aktívnymi zariadeniami. Reštartujte toto zariadenie po prihlásení alebo pre načítanie zmien vykonaných inde.</string>
@@ -1635,12 +1635,12 @@
     <string name="account_loading_sync">Načítavajú sa synchronizačné údaje…</string>
     <string name="account_sign_out">Odhlásiť sa</string>
 
-    <!-- AuthSignInScreen -->
+    
     <string name="auth_signin_title">Prihlásiť sa</string>
     <string name="auth_signin_tv_disabled">Zadávanie e-mailu/hesla na TV je vypnuté. Pokračujte prihlásením cez QR.</string>
     <string name="auth_signin_qr_btn">Pokračovať cez QR</string>
 
-    <!-- AuthQrSignInScreen -->
+    
     <string name="auth_qr_title">Prihlásiť sa cez QR</string>
     <string name="auth_qr_finishing">Dokončuje sa prihlásenie…</string>
     <string name="auth_qr_code_label">Kód: %1$s</string>
@@ -1657,7 +1657,7 @@
     <string name="auth_qr_continue">Pokračovať</string>
     <string name="auth_qr_back">Späť</string>
 
-    <!-- SyncCodeGenerateScreen -->
+    
     <string name="sync_generate_title">Vygenerovať synchronizačný kód</string>
     <string name="sync_generate_subtitle">Vytvorte PIN na ochranu synchronizačného kódu. Zdieľajte kód s ostatnými zariadeniami.</string>
     <string name="sync_generate_code_label">Váš synchronizačný kód</string>
@@ -1666,7 +1666,7 @@
     <string name="sync_generate_pin_label">Vyberte PIN (4–8 znakov)</string>
     <string name="sync_generate_pin_placeholder">Zadajte PIN</string>
 
-    <!-- SyncCodeClaimScreen -->
+    
     <string name="sync_claim_title">Prepojiť zariadenie</string>
     <string name="sync_claim_subtitle">Zadajte synchronizačný kód a PIN z druhého zariadenia, aby ste prepojili toto zariadenie.</string>
     <string name="sync_claim_success">Zariadenie bolo úspešne prepojené! Vaše doplnky a pluginy sa teraz budú synchronizovať.</string>
@@ -1676,7 +1676,7 @@
     <string name="sync_claim_pin_label">PIN</string>
     <string name="sync_claim_pin_placeholder">Zadajte PIN</string>
 
-    <!-- PluginScreen -->
+    
     <string name="plugin_readonly_notice">Používajú sa pluginy primárneho profilu a nemožno ich meniť</string>
     <string name="plugin_repositories_section">Repozitáre (%1$d)</string>
     <string name="plugin_providers_section">Poskytovatelia (%1$d)</string>
@@ -1711,7 +1711,7 @@
     <string name="plugin_test_btn">Testovať</string>
     <string name="plugin_test_results">Výsledky testu (%1$d streamov)</string>
 
-    <!-- ProfileSelectionScreen -->
+    
     <string name="profile_selection_title">Kto sleduje?</string>
     <string name="profile_selection_subtitle">Vyberte profil pre pokračovanie</string>
     <string name="profile_selection_hint">Podržte pre správu profilu</string>
@@ -1723,7 +1723,7 @@
     <string name="profile_delete_btn">Odstrániť profil</string>
     <string name="profile_saving">Ukladá sa…</string>
 
-    <!-- CastDetailScreen -->
+    
     <string name="cast_detail_error">Niečo sa pokazilo</string>
     <string name="cast_detail_retry">Skúsiť znova</string>
     <string name="cast_detail_filmography">Filmografia</string>
@@ -1731,23 +1731,23 @@
     <string name="cast_detail_born_died">Narodený: %1$s — †%2$s</string>
     <string name="cast_detail_age">vek %1$d</string>
 
-    <!-- CatalogSeeAllScreen -->
+    
     <string name="catalog_see_all_from">z %1$s</string>
     <string name="catalog_see_all_empty_title">Žiadne položky nie sú dostupné</string>
     <string name="catalog_see_all_empty_subtitle">Skúste iný katalóg alebo sa vráťte neskôr</string>
 
-    <!-- LayoutSelectionScreen -->
+    
     <string name="layout_selection_welcome">Vitajte v Nuvio</string>
     <string name="layout_selection_subtitle">Vyberte rozloženie domovskej obrazovky</string>
     <string name="layout_selection_continue">Pokračovať</string>
 
-    <!-- UpdatePromptDialog -->
+    
     <string name="update_title">Aktualizácia aplikácie</string>
     <string name="update_downloading">Sťahuje sa aktualizácia</string>
     <string name="update_download">Stiahnuť</string>
     <string name="update_downloading_ellipsis">Sťahuje sa…</string>
     <string name="update_unknown_sources">Povoľte inštalácie z neznámych zdrojov, aby ste mohli pokračovať.</string>
-    <!-- AccountScreen -->
+    
     <string name="account_title">Účet</string>
     <string name="account_sign_in_description">Prihláste sa, aby sa synchronizovala vaša knižnica, postup sledovania, doplnky a pluginy medzi zariadeniami. Synchronizácia knižnice používa Nuvio Sync, keď Trakt nie je pripojený, a postup sledovania môže používať Trakt alebo Nuvio Sync.</string>
     <string name="account_sync_code_title">Synchronizačný kód</string>
@@ -1756,13 +1756,13 @@
     <string name="account_no_linked_devices">Žiadne prepojené zariadenia</string>
     <string name="account_unlink">Odpojiť</string>
 
-    <!-- EpisodeRatingsSection -->
+    
     <string name="ratings_loading">Načítavajú sa hodnotenia epizód...</string>
     <string name="ratings_unavailable">Hodnotenia epizód nie sú dostupné.</string>
     <string name="ratings_load_error">Hodnotenia epizód sa nepodarilo načítať.</string>
     <string name="ratings_season_summary">Séria %1$d - %2$d epizód</string>
 
-    <!-- SearchDiscoverSection -->
+    
     <string name="discover_title">Objavovať</string>
     <string name="discover_load_more">Načítať viac</string>
     <string name="discover_loading">Načítava sa...</string>
@@ -1776,26 +1776,26 @@
     <string name="discover_empty_no_content_title">Nenašiel sa žiadny obsah</string>
     <string name="discover_empty_no_content_subtitle">Skúste iný žáner alebo katalóg</string>
 
-    <!-- AddonManagerScreen -->
+    
     <string name="addon_confirm_total_addons">Celkový počet doplnkov: %1$d</string>
     <string name="addon_confirm_total_catalogs">Celkový počet katalógov: %1$d</string>
     <string name="addon_catalogs_types">Katalógy: %1$d - Typy: %2$s</string>
 
-    <!-- PluginScreen -->
+    
     <string name="plugin_and_more">... a ďalších %1$d</string>
     <string name="plugin_providers_count">%1$d poskytovateľov</string>
     <string name="plugin_enabled">Povolené</string>
     <string name="plugin_disabled">Zakázané</string>
     <string name="plugin_no_repos">Zatiaľ neboli pridané žiadne repozitáre.\nPridajte repozitár pre začiatok.</string>
 
-    <!-- ProfileSettingsContent -->
+    
     <string name="profile_edit_title_id">Upraviť profil %1$d</string>
 
-    <!-- PlaybackAudioSettings -->
+    
     <string name="audio_passthrough_info">Priechod zvuku (TrueHD, DTS, AC-3 atď.) funguje automaticky. Pri pripojení ku kompatibilnému AV prijímaču alebo soundbaru cez HDMI sa bezstratový zvuk odosiela bez dekódovania.</string>
     <string name="audio_dv_title">DV7 - HEVC fallback</string>
 
-    <!-- SidebarNavigation / MainActivity -->
+    
     <string name="nav_home">Domov</string>
     <string name="nav_discover">Objavovať</string>
     <string name="nav_search">Hľadať</string>
@@ -1818,7 +1818,7 @@
     <string name="watchlist_added">Pridané do watchlistu</string>
     <string name="watchlist_removed">Odstránené z watchlistu</string>
 
-    <!-- Profile PIN errors -->
+    
     <string name="profile_pin_save_error">Nepodarilo sa uložiť PIN. Skúste to znova.</string>
     <string name="profile_pin_locked">Profil je uzamknutý. Skúste to znova o %1$ds.</string>
     <string name="profile_pin_invalid">Neplatný PIN. Skúste to znova.</string>
@@ -1826,7 +1826,7 @@
     <string name="profile_pin_incorrect">Aktuálny PIN je nesprávny.</string>
     <string name="profile_pin_current_required">Tento profil už má PIN. Zadajte aktuálny PIN pre jeho zmenu.</string>
 
-    <!-- Account Screen -->
+    
     <string name="account_signin_create_title">Prihlásiť sa / Vytvoriť účet</string>
     <string name="account_signin_create_desc">Použite e-mail a heslo na vytvorenie alebo prihlásenie do účtu.</string>
     <string name="account_generate_sync_desc">Vytvorte kód na tomto zariadení, aby sa k nemu mohli pripojiť ďalšie zariadenia.</string>
@@ -1835,28 +1835,28 @@
     <string name="account_generate_sync_signed_in_desc">Vytvorte kód, aby sa ďalšie zariadenia mohli synchronizovať s týmto účtom.</string>
     <string name="account_unknown_device">Neznáme zariadenie</string>
 
-    <!-- Sync screens -->
+    
     <string name="sync_claim_linking">Prepája sa…</string>
     <string name="sync_generate_generating">Generuje sa…</string>
     <string name="sync_generate_code_btn">Generovať kód</string>
 
-    <!-- Search -->
+    
     <string name="search_no_results_title">Žiadne výsledky</string>
     <string name="search_no_results_subtitle">Skúste vyhľadávať pomocou iných kľúčových slov</string>
     <string name="discover_disabled_title">Objavovanie je vypnuté</string>
     <string name="discover_disabled_subtitle">Povoľte Objavovanie v nastaveniach Rozloženia</string>
 
-    <!-- Library -->
+    
     <string name="library_list_create_dialog_title">Vytvoriť zoznam</string>
     <string name="library_list_edit_dialog_title">Upraviť zoznam</string>
     <string name="library_sync_btn">Synchronizovať</string>
     <string name="library_syncing_btn">Synchronizuje sa…</string>
 
-    <!-- Error messages (shared) -->
+    
     <string name="error_network_required">Pripojte sa k Wi‑Fi alebo Ethernetu, aby ste mohli používať túto funkciu</string>
     <string name="error_server_ports_unavailable">Nepodarilo sa spustiť server. Všetky porty sú obsadené.</string>
 
-    <!-- Plugin errors -->
+    
     <string name="plugin_error_invalid_url">Zadajte platnú URL</string>
     <string name="plugin_error_add_repo">Nepodarilo sa pridať repozitár: %1$s</string>
     <string name="plugin_error_refresh">Nepodarilo sa obnoviť: %1$s</string>
@@ -1867,7 +1867,7 @@
     <string name="plugin_repo_removed">Repozitár odstránený</string>
     <string name="plugin_repo_refreshed">Repozitár obnovený</string>
 
-    <!-- Trakt errors -->
+    
     <string name="trakt_error_code_expired">Kód zariadenia vypršal. Začnite znova.</string>
     <string name="trakt_error_code_used">Kód zariadenia už bol použitý. Začnite znova.</string>
     <string name="trakt_error_denied">Autorizácia bola na Trakt zamietnutá.</string>
@@ -1891,39 +1891,39 @@
     <string name="trakt_user_fallback">Používateľ Trakt</string>
     <string name="trakt_error_failed_start">Nepodarilo sa spustiť Trakt autentifikáciu</string>
 
-    <!-- General errors -->
+    
     <string name="error_unknown">Neznáma chyba</string>
     <string name="addon_error_not_found">Doplnok sa nenašiel</string>
 
-    <!-- Account errors -->
+    
     <string name="account_error_signin_required">Najprv sa prihláste pomocou účtu.</string>
 
-    <!-- Search errors -->
+    
     <string name="search_error_no_catalogs">V nainštalovaných doplnkoch sa nenašli žiadne prehľadávateľné katalógy</string>
 
-    <!-- Home errors -->
+    
     <string name="home_error_no_addons">Žiadne doplnky nie sú nainštalované</string>
     <string name="home_error_no_catalog_addons">Žiadne katalógové doplnky nie sú nainštalované</string>
 
-    <!-- Player errors -->
+    
     <string name="player_error_no_stream_url">Nebola poskytnutá URL streamu</string>
     <string name="player_error_failed_start_torrent">Nepodarilo sa spustiť torrent: %1$s</string>
 
-    <!-- Playback subtitle settings -->
+    
     <string name="sub_mode_overlay_canvas_sub">Podpora HDR s Canvas renderovaním. Môže blokovať UI vlákno.</string>
     <string name="subtitle_style_weight">Hrúbka</string>
 
-    <!-- Plugin screen -->
+    
     <string name="plugin_version">Verzia %1$s</string>
 
-    <!-- Stream screen -->
+    
     <string name="stream_episode_label">S%1$d E%2$d</string>
 
-    <!-- Episode ratings -->
+    
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
 
-    <!-- Content descriptions -->
+    
     <string name="cd_play">Prehrať</string>
     <string name="cd_pause">Pozastaviť</string>
     <string name="cd_subtitles">Titulky</string>
@@ -1966,13 +1966,13 @@
     <string name="cd_qr_login">QR prihlasovací kód</string>
     <string name="cd_nuvio">Nuvio</string>
 
-    <!-- Debug -->
+    
     <string name="debug_signin_success">Úspešne prihlásený</string>
     <string name="debug_generate_description">Debugom vygenerovaná položka %1$s #%2$d</string>
     <string name="debug_generate_result_failed">Zlyhalo: %1$s</string>
     <string name="debug_generate_library_result_added">Do knižnice bolo pridaných %1$d položiek</string>
 
-    <!-- Collection Management -->
+    
     <string name="collections_header">Kolekcie</string>
     <string name="collections_delete_confirm_title">Odstrániť kolekciu?</string>
     <string name="collections_delete_confirm">Odstrániť</string>
@@ -2010,7 +2010,7 @@
     <string name="collections_confirm_import">Potvrdiť import</string>
     <string name="collections_folder_count">%1$d priečinkov</string>
 
-        <!-- Collection Editor -->
+        
     <string name="collections_editor_row_title">Názov riadku</string>
     <string name="collections_editor_save">Uložiť</string>
     <string name="collections_editor_backdrop">Obrázok pozadia</string>
@@ -2235,10 +2235,10 @@
     <string name="tmdb_entity_error_load_named">Nepodarilo sa načítať %1$s</string>
     <string name="tmdb_entity_error_load">Nepodarilo sa načítať TMDB entitu</string>
 
-    <!-- Catalog see-all fallback -->
+    
     <string name="catalog_see_all_title_fallback">Katalóg</string>
 
-    <!-- Collection editor: emoji categories -->
+    
     <string name="collections_editor_emoji_category_streaming">Streamovanie</string>
     <string name="collections_editor_emoji_category_genres">Žánre</string>
     <string name="collections_editor_emoji_category_sports">Športy</string>
@@ -2251,7 +2251,7 @@
     <string name="collections_editor_emoji_category_objects">Predmety</string>
     <string name="collections_editor_emoji_category_flags">Vlajky</string>
     <string name="collections_editor_emoji_category_symbols">Symboly</string>
-    <!-- Collection editor: TMDB picker placeholders + genres -->
+    
     <string name="collections_editor_tmdb_network_placeholder_example">213 pre Netflix, 49 pre HBO, 2739 pre Disney+</string>
     <string name="collections_editor_tmdb_collection_placeholder_example">10 pre Star Wars Collection</string>
     <string name="collections_editor_tmdb_company_placeholder_example">Marvel Studios, 420 alebo URL spoločnosti</string>
@@ -2264,7 +2264,7 @@
     <string name="collections_editor_tmdb_genre_drama">Dráma</string>
     <string name="collections_editor_tmdb_genre_crime">Krimi</string>
     <string name="collections_editor_tmdb_genre_reality">Reality</string>
-    <!-- Auto-play regex presets -->
+    
     <string name="autoplay_regex_preset_any_1080p_plus">Akékoľvek 1080p+</string>
     <string name="autoplay_regex_preset_4k_remux">4K / Remux</string>
     <string name="autoplay_regex_preset_1080p_standard">1080p štandard</string>
@@ -2279,10 +2279,10 @@
     <string name="autoplay_regex_preset_no_cam_ts">Bez CAM/TS</string>
     <string name="autoplay_regex_preset_no_remux_hdr">Bez REMUX/HDR</string>
 
-    <!-- Playback settings sections -->
+    
     <string name="playback_player_internal_desc">Použiť vstavaný prehrávač NuvioTV</string>
 
-    <!-- Player runtime: torrent overlay + tracks -->
+    
     <string name="player_torrent_peer_info">%1$d seedov · %2$d peerov</string>
     <string name="player_torrent_buffered_status">%1$s v bufferi · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
@@ -2291,7 +2291,7 @@
     <string name="player_track_audio_fallback">Audio %1$d</string>
     <string name="player_track_subtitle_fallback">Titulky %1$d</string>
 
-    <!-- Player runtime: error recovery -->
+    
     <string name="player_error_stream_blocked">\n\nZdroj streamu je zablokovaný alebo obmedzený. Skúste iný zdroj.</string>
     <string name="player_error_stream_removed">\n\nOdkaz na stream vypršal alebo bol odstránený. Skúste iný zdroj.</string>
     <string name="player_error_stream_expired">\n\nOdkaz na stream vypršal. Skúste iný zdroj.</string>
@@ -2305,13 +2305,13 @@
     <string name="player_error_mpv_playback_failed">Nepodarilo sa inicializovať prehrávanie libmpv</string>
     <string name="player_error_torrent">Chyba torrentu: %1$s</string>
     <string name="player_error_playback_fallback">Chyba prehrávania</string>
-    <!-- Subtitle timing recovery -->
+    
     <string name="subtitle_timing_file_no_lines">V tomto súbore sa nenašli žiadne riadky titulkov.</string>
     <string name="subtitle_timing_load_lines_failed">Nepodarilo sa načítať riadky titulkov.</string>
     <string name="subtitle_download_failed_http">Sťahovanie titulkov zlyhalo (HTTP %1$d)</string>
     <string name="subtitle_download_empty_content">Sťahovanie titulkov vrátilo prázdny obsah.</string>
 
-    <!-- Collection import errors -->
+    
     <string name="collections_import_error_empty_input">Prázdny vstup</string>
     <string name="collections_import_error_expected_array">Neplatný formát: očakávalo sa pole</string>
     <string name="collections_import_error_empty_array">Prázdne pole: nenašli sa žiadne kolekcie</string>
@@ -2329,7 +2329,7 @@
     <string name="collections_import_error_missing_trakt_list_id">Kolekcia „%1$s“, priečinok „%2$s“, zdroj %3$d: chýba ID Trakt zoznamu</string>
     <string name="collections_import_error_json_parse">Chyba spracovania JSON: %1$s</string>
 
-    <!-- Library messages -->
+    
     <string name="library_synced">Knižnica synchronizovaná</string>
     <string name="library_error_refresh_failed">Nepodarilo sa obnoviť knižnicu</string>
     <string name="library_list_created">Zoznam vytvorený</string>
@@ -2341,13 +2341,13 @@
     <string name="library_list_order_updated">Poradie zoznamov aktualizované</string>
     <string name="library_error_reorder_lists_failed">Nepodarilo sa zmeniť poradie zoznamov</string>
     <string name="library_list_fallback_title">Zoznam</string>
-    <!-- Library privacy display labels -->
+    
     <string name="library_privacy_private">Súkromný</string>
     <string name="library_privacy_link">Odkaz</string>
     <string name="library_privacy_friends">Priatelia</string>
     <string name="library_privacy_public">Verejný</string>
 
-    <!-- Trakt errors -->
+    
     <string name="trakt_error_auth_required">Vyžaduje sa prihlásenie do Trakt</string>
     <string name="trakt_library_error_request_failed">Požiadavka Trakt zlyhala</string>
     <string name="trakt_library_error_create_list_failed">Nepodarilo sa vytvoriť zoznam</string>
@@ -2369,7 +2369,7 @@
     <string name="trakt_error_request_failed">Požiadavka Trakt zlyhala</string>
     <string name="trakt_error_mark_watched_failed">Nepodarilo sa označiť ako videné v Trakt (%1$d)</string>
 
-    <!-- Detail / poster options errors -->
+    
     <string name="detail_error_update_library_failed">Nepodarilo sa aktualizovať knižnicu</string>
     <string name="detail_error_load_lists_failed">Nepodarilo sa načítať zoznamy</string>
     <string name="detail_error_update_lists_failed">Nepodarilo sa aktualizovať zoznamy</string>
@@ -2378,11 +2378,11 @@
     <string name="poster_options_error_load_lists_failed">Nepodarilo sa načítať zoznamy</string>
     <string name="poster_options_error_update_lists_failed">Nepodarilo sa aktualizovať zoznamy</string>
 
-    <!-- Search errors -->
+    
     <string name="search_error_load_addons_failed">Nepodarilo sa načítať doplnky</string>
     <string name="search_error_failed">Vyhľadávanie zlyhalo</string>
 
-    <!-- Stream / TMDB / addons fallbacks -->
+    
     <string name="stream_unknown">Neznámy stream</string>
     <string name="stream_embedded_group">Vstavané streamy</string>
     <string name="stream_embedded_fallback_name">Vstavaný stream</string>
@@ -2393,10 +2393,10 @@
     <string name="web_tmdb_collection_fallback">Kolekcia TMDB %1$d</string>
     <string name="web_error_invalid_request_body">Neplatné telo požiadavky</string>
 
-    <!-- Subtitle preferred language fallback -->
+    
     <string name="language_english">Angličtina</string>
 
-    <!-- Supporters / contributors / sponsors errors -->
+    
     <string name="supporters_error_load">Nepodarilo sa načítať podporovateľov.</string>
     <string name="contributors_error_load">Nepodarilo sa načítať prispievateľov.</string>
     <string name="sponsors_error_load">Nepodarilo sa načítať sponzorov.</string>
@@ -2405,21 +2405,21 @@
     <string name="supporters_error_api_http">Chyba API darov: %1$d</string>
     <string name="sponsors_error_api_http">Chyba API sponzorov: %1$d</string>
 
-    <!-- Contributor role badges -->
+    
     <string name="contributor_role_translator">Prekladateľ</string>
     <string name="contributor_role_maintainer">Správca</string>
 
-    <!-- Network / safe API errors -->
+    
     <string name="network_error_empty_response_body">Prázdne telo odpovede</string>
     <string name="network_error_unknown">Vyskytla sa neznáma chyba</string>
 
-    <!-- Network settings: fast.com errors -->
+    
     <string name="network_fast_error_script_path_missing">fast.com: cesta k skriptu sa nenašla</string>
     <string name="network_fast_error_token_missing">fast.com: token sa nenašiel v balíku</string>
 
-    <!-- Torrent service / TorrServer binary errors -->
+    
 
-    <!-- Player runtime: stream / external link errors -->
+    
     <string name="player_torrent_starting_engine">Spúšťa sa P2P engine…</string>
     <string name="player_torrent_rebuffer_status">%1$s v bufferi</string>
     <string name="player_stream_error_invalid_external_url">Neplatná externá URL</string>
@@ -2427,7 +2427,7 @@
     <string name="player_stream_error_invalid_url">Neplatná URL streamu</string>
     <string name="player_stream_error_missing_content_type">Chýba typ obsahu</string>
 
-    <!-- Meta repository: addon detail error fragments -->
+    
     <string name="meta_error_detail_no_metadata_for_id">nevrátil žiadne metadáta pre toto id</string>
     <string name="meta_error_detail_addon_unreachable">nepodarilo sa dosiahnuť server doplnku</string>
     <string name="meta_error_detail_addon_connection_failed">pripojenie k doplnku zlyhalo</string>
@@ -2435,7 +2435,7 @@
     <string name="meta_error_detail_addon_cleartext_blocked">doplnok používa nezabezpečené HTTP pripojenie zablokované Androidom</string>
     <string name="meta_error_detail_addon_request_failed">požiadavka doplnku zlyhala</string>
 
-    <!-- Stream repository: addon detail error fragments + fetch -->
+    
     <string name="stream_error_detail_no_streams_for_id">nevrátil žiadne streamy pre toto id</string>
     <string name="stream_error_detail_addon_unreachable">nepodarilo sa dosiahnuť server doplnku</string>
     <string name="stream_error_detail_addon_connection_failed">pripojenie k doplnku zlyhalo</string>
@@ -2444,18 +2444,18 @@
     <string name="stream_error_detail_addon_request_failed">požiadavka doplnku zlyhala</string>
     <string name="stream_error_fetch_failed">Nepodarilo sa načítať streamy</string>
 
-    <!-- Trakt: paginated fetch + comments -->
+    
     <string name="trakt_library_error_paginated_fetch_failed">Stránkované načítanie Trakt zlyhalo (%1$d)</string>
 
-    <!-- Home: poster long-press list picker errors -->
+    
     <string name="home_poster_lists_error_load_failed">Nepodarilo sa načítať zoznamy</string>
     <string name="home_poster_lists_error_update_failed">Nepodarilo sa aktualizovať zoznamy</string>
 
-    <!-- Profile selection: PIN overlay messages -->
+    
     <string name="profile_pin_saved_for_profile">PIN uložený pre %1$s.</string>
     <string name="profile_pin_lock_removed_for_profile">Zámok PIN odstránený pre %1$s.</string>
 
-    <!-- Trakt: Related / comments / list items error fallbacks -->
+    
     <string name="trakt_related_error_request_failed">Požiadavka Trakt related zlyhala</string>
     <string name="trakt_comments_error_request_failed">Požiadavka Trakt komentárov zlyhala</string>
     <string name="trakt_library_error_fetch_list_items">Nepodarilo sa načítať položky zoznamu</string>
@@ -2480,7 +2480,7 @@
 <string name="settings_content_discovery_plugins_subtitle">Spravovať repozitáre a poskytovateľov streamov</string>
 <string name="external_auto_next_loading">Načítavanie ďalšej epizódy…</string>
 <string name="advanced_sentry_reports">Hlásenia o pádoch (Sentry)</string>
-<string name="advanced_sentry_reports_subtitle">Odosielať hlásenia o pádoch a zamrznutiach (ANR) s bezpečným kontextom; predvolene zapnuté</string>
+<string name="advanced_sentry_reports_subtitle">Odosielať hlásenia o pádoch a zamrznutiach (ANR) s bezpečným kontextom; predvolene zapnuté.</string>
 <string name="advanced_playback_issue_reports">Hlásenia o problémoch s prehrávaním</string>
 <string name="advanced_playback_issue_reports_subtitle">Zobrazovať tlačidlá hlásení počas prehrávania, dlhého načítavania a chýb prehrávania</string>
 <string name="sentry_enable_dialog_title">Zapnúť hlásenia o pádoch?</string>
@@ -2549,12 +2549,12 @@
 <string name="dv7_libdovi_mode_4_title">Režim 4 — 8.4 (statický)</string>
 <string name="dv7_libdovi_mode_4_sub">Konvertovať na statický profil 8.4.</string>
 <string name="layout_section_streams">Streamy</string>
-<string name="layout_section_streams_desc">Nastavenia zobrazenia pre výsledky streamov a panely zdrojov prehrávača</string>
+<string name="layout_section_streams_desc">Nastavenia zobrazenia pre výsledky streamov a panely zdrojov prehrávača.</string>
 <string name="layout_cw_sort_split_upcoming">Oddelený riadok Nespustené</string>
 <string name="layout_cw_sort_split_upcoming_desc">Presunie neodvysielané epizódy do samostatného riadka Nespustené</string>
 <string name="upcoming_section_title">Nespustené</string>
 <string name="settings_card_depth_title">Efekt hĺbky karty</string>
-<string name="settings_card_depth_description">Pridáva osvetlený horný okraj a lesk kartám s obrázkami pre jemný pocit hĺbky</string>
+<string name="settings_card_depth_description">Pridáva osvetlený horný okraj a lesk kartám s obrázkami pre jemný pocit hĺbky.</string>
 <string name="settings_card_depth_enabled">Povoliť efekt hĺbky</string>
 <string name="settings_card_depth_edge">Žiara okrajov</string>
 <string name="settings_card_depth_edge_subtle">Jemná</string>
@@ -2567,7 +2567,7 @@
 <string name="settings_card_depth_apply_to">Aplikovať na</string>
 <string name="settings_card_depth_fine_tune">Prispôsobiť</string>
 <string name="settings_card_depth_fine_tune_title">Detailné nastavenie hĺbky</string>
-<string name="settings_card_depth_fine_tune_hint_tv">Použite ľavú a pravú šípku na diaľkovom ovládači na úpravu jednotlivých hodnôt</string>
+<string name="settings_card_depth_fine_tune_hint_tv">Použite ľavú a pravú šípku na diaľkovom ovládači na úpravu jednotlivých hodnôt.</string>
 <string name="settings_card_depth_edge_value">Žiara okrajov</string>
 <string name="settings_card_depth_sheen_value">Lesk</string>
 <string name="settings_card_depth_edge_coverage">Pokrytie okrajov</string>
@@ -2590,14 +2590,14 @@
 <string name="debrid_stream_sort_language">Najprv preferovaný jazyk</string>
 <string name="settings_stream_badges_section">Štýl Fusion</string>
 <string name="settings_stream_size_badges_title">Odznaky veľkosti</string>
-<string name="settings_stream_size_badges_description">Zobrazovať odznaky veľkosti súboru vo výsledkoch streamov a paneloch zdrojov prehrávača</string>
+<string name="settings_stream_size_badges_description">Zobrazovať odznaky veľkosti súboru vo výsledkoch streamov a paneloch zdrojov prehrávača.</string>
 <string name="settings_stream_addon_logo_title">Logo doplnku</string>
-<string name="settings_stream_addon_logo_description">Zobrazovať logo a názov doplnku vedľa zdrojov streamov</string>
+<string name="settings_stream_addon_logo_description">Zobrazovať logo a názov doplnku vedľa zdrojov streamov.</string>
 <string name="settings_stream_display_section">Zobrazenie</string>
 <string name="settings_stream_badge_position_title">Pozícia odznakov</string>
 <string name="settings_stream_badge_position_description">Vyberte, či sa odznaky Fusion a veľkosti zobrazia nad alebo pod kartami streamov.</string>
 <string name="settings_stream_badge_position_dialog_title">Pozícia odznaku</string>
-<string name="settings_stream_badge_position_dialog_description">Vyberte umiestnenie odznakov na kartách streamov</string>
+<string name="settings_stream_badge_position_dialog_description">Vyberte umiestnenie odznakov na kartách streamov.</string>
 <string name="settings_stream_badge_position_top">Horná časť</string>
 <string name="settings_stream_badge_position_bottom">Spodná časť</string>
 <string name="settings_stream_badge_urls_title">Adresy URL odznakov Fusion</string>
@@ -2630,8 +2630,8 @@
 <string name="debug_buffer_logs_subtitle">Odosielať pravidelnú diagnostiku vyrovnávacej pamäte prehrávača do logcatu (predvolene vypnuté)</string>
 <string name="external_player_loading_skip_segments">Načítavanie segmentov úvodu/záveru…</string>
 <string name="player_report_issue">Nahlásiť problém</string>
-<string name="player_report_issue_sending">Odosiela sa hlásenie o prehrávaní…</string>
-<string name="player_report_issue_sending_button">Odosiela sa…</string>
+<string name="player_report_issue_sending">Odosiela sa hlásenie o prehrávaní….</string>
+<string name="player_report_issue_sending_button">Odosiela sa….</string>
 <string name="player_report_issue_sent">Hlásenie odoslané: %1$s</string>
 <string name="player_report_issue_sent_button">Hlásenie odoslané</string>
 <string name="player_report_issue_failed">Nepodarilo sa odoslať hlásenie</string>
@@ -2740,7 +2740,7 @@
 <string name="web_stream_badge_error_url_scheme">Adresa URL odznaku musí začínať na http:// alebo https://.</string>
 <string name="web_stream_badge_error_import_limit">Možno importovať maximálne %1$d adries URL pre odznaky.</string>
 <string name="playback_section_buffer_network">Vyrovnávacia pamäť a sieť</string>
-<string name="playback_section_buffer_network_desc">Určuje veľkosť pamäte pre ukladanie obsahu a spôsob načítavania streamov</string>
+<string name="playback_section_buffer_network_desc">Určuje veľkosť pamäte pre ukladanie obsahu a spôsob načítavania streamov.</string>
 <string name="playback_net_device_memory_info">Pamäť zariadenia: %1$s | Odporúčaný bezpečný limit: %2$d MB</string>
 <string name="playback_net_nuvio_performance_mode">Natívna pamäť ExoPlayer</string>
 <string name="playback_net_nuvio_performance_mode_sub">Povoľuje natívny alokátor mimo haldy a optimalizácie čistenia pamäte.</string>
@@ -2847,13 +2847,13 @@
 <string name="stream_test_server_label">Server: %1$s</string>
 <string name="stream_test_no_stream">Nezaznamenalo sa žiadne prehrávanie. Prehrajte video, aby ste mohli spustiť diagnostický test na jeho hostiteľovi.</string>
 <string name="stream_test_btn_start">Spustiť test</string>
-<string name="stream_test_btn_measuring_baseline">Meranie základnej línie…</string>
-<string name="stream_test_btn_measuring_parallel1">Meranie paralelného sťahovania (1 MB časti)…</string>
-<string name="stream_test_btn_measuring_parallel4">Meranie paralelného sťahovania (4 MB časti)…</string>
-<string name="stream_test_btn_measuring_parallel8">Meranie paralelného sťahovania (8 MB časti)…</string>
-<string name="stream_test_btn_measuring_parallel16">Meranie paralelného sťahovania (16 MB časti)…</string>
+<string name="stream_test_btn_measuring_baseline">Meranie základnej línie….</string>
+<string name="stream_test_btn_measuring_parallel1">Meranie paralelného sťahovania (1 MB časti)….</string>
+<string name="stream_test_btn_measuring_parallel4">Meranie paralelného sťahovania (4 MB časti)….</string>
+<string name="stream_test_btn_measuring_parallel8">Meranie paralelného sťahovania (8 MB časti)….</string>
+<string name="stream_test_btn_measuring_parallel16">Meranie paralelného sťahovania (16 MB časti)….</string>
 <string name="stream_test_btn_run_again">Spustiť znova</string>
-<string name="stream_test_btn_running">Prebieha testovanie…</string>
+<string name="stream_test_btn_running">Prebieha testovanie….</string>
 <string name="stream_test_label_baseline">Štandardné jedno pripojenie (základná línia)</string>
 <string name="stream_test_label_parallel1">Paralelné pripojenie (1 MB časti)</string>
 <string name="stream_test_label_parallel4">Paralelné pripojenie (4 MB časti)</string>
@@ -2977,25 +2977,25 @@
     <string name="sub_strip_sdh">Odstrániť SDH titulky</string>
     <string name="sub_strip_sdh_desc">Skryť opisy zvukov a označenia rečníkov z textových titulkov</string>
     <string name="autoplay_next_episode_fallback">Záložná možnosť pri zlyhaní binge skupiny</string>
-    <string name="autoplay_next_episode_fallback_sub">Automaticky vybrať prvý dostupný stream, ak sa nenájde binge skupina; keď je možnosť vypnutá, zobrazí sa namiesto toho výber streamu</string>
+    <string name="autoplay_next_episode_fallback_sub">Automaticky vybrať prvý dostupný stream, ak sa nenájde binge skupina; keď je možnosť vypnutá, zobrazí sa namiesto toho výber streamu.</string>
     <string name="layout_overall_ratings">Celkové hodnotenia</string>
-    <string name="layout_overall_ratings_sub_on">Zobrazujú sa štandardné hodnotenia a hodnotenia TMDB</string>
-    <string name="layout_overall_ratings_sub_off">Štandardné hodnotenia a hodnotenia TMDB sú skryté. Na stránkach detailov majú prioritu nastavenia poskytovateľa MDBList</string>
+    <string name="layout_overall_ratings_sub_on">Zobrazujú sa štandardné hodnotenia a hodnotenia TMDB.</string>
+    <string name="layout_overall_ratings_sub_off">Štandardné hodnotenia a hodnotenia TMDB sú skryté. Na stránkach detailov majú prioritu nastavenia poskytovateľa MDBList.</string>
     <string name="layout_episode_ratings">Hodnotenia epizód</string>
-    <string name="layout_episode_ratings_sub">Vyberte, ktoré hodnotenia epizód budú viditeľné</string>
+    <string name="layout_episode_ratings_sub">Vyberte, ktoré hodnotenia epizód budú viditeľné.</string>
     <string name="layout_ratings_show">Zobraziť</string>
     <string name="layout_ratings_hide">Skryť</string>
     <string name="layout_ratings_hide_unwatched">Skryť nepozerané</string>
     <string name="layout_cw_enabled">Zobraziť Pokračovať v sledovaní</string>
-    <string name="layout_cw_enabled_sub">Zobraziť riadok Pokračovať v sledovaní na domovskej obrazovke</string>
+    <string name="layout_cw_enabled_sub">Zobraziť riadok Pokračovať v sledovaní na domovskej obrazovke.</string>
     <string name="layout_episode_options_overlay">Prekrytie možností epizódy</string>
-    <string name="layout_episode_options_overlay_sub">Vyberte vzhľad zobrazený pri podržaní epizódy</string>
+    <string name="layout_episode_options_overlay_sub">Vyberte vzhľad zobrazený pri podržaní epizódy.</string>
     <string name="layout_episode_options_overlay_none">Žiadne</string>
-    <string name="layout_episode_options_overlay_none_desc">Použiť celoobrazovkový prechod (gradient) bez obrázka epizódy</string>
+    <string name="layout_episode_options_overlay_none_desc">Použiť celoobrazovkový prechod (gradient) bez obrázka epizódy.</string>
     <string name="layout_episode_options_overlay_artwork">Obrázok</string>
-    <string name="layout_episode_options_overlay_artwork_desc">Použiť celoobrazovkové rozloženie s obrázkom epizódy</string>
+    <string name="layout_episode_options_overlay_artwork_desc">Použiť celoobrazovkové rozloženie s obrázkom epizódy.</string>
     <string name="layout_episode_options_overlay_blur">Rozostrenie</string>
-    <string name="layout_episode_options_overlay_blur_desc">Použiť celoobrazovkové rozloženie s rozostreným obrázkom epizódy</string>
+    <string name="layout_episode_options_overlay_blur_desc">Použiť celoobrazovkové rozloženie s rozostreným obrázkom epizódy.</string>
     <string name="layout_cw_card_style_card">Karta</string>
     <string name="layout_cw_card_style_wide">Široká</string>
     <string name="layout_cw_card_style_poster">Plagát</string>
@@ -3098,12 +3098,12 @@
 
     <string name="advanced_player_stats_hud">Prekrytie štatistík prehrávania</string>
     <string name="advanced_confirm_exit">Úplné ukončenie pri zavretí</string>
-    <string name="advanced_confirm_exit_subtitle">Pri ukončení úplne zatvoriť aplikáciu a uvoľniť pamäť; vyžaduje dvojité stlačenie tlačidla Späť na potvrdenie</string>
+    <string name="advanced_confirm_exit_subtitle">Pri ukončení úplne zatvoriť aplikáciu a uvoľniť pamäť; vyžaduje dvojité stlačenie tlačidla Späť na potvrdenie.</string>
     <string name="confirm_exit_toast">Stlačte Späť ešte raz pre ukončenie</string>
     <string name="autoplay_post_play_recommendations">Odporúčania po prehratí</string>
-    <string name="autoplay_post_play_recommendations_sub">Zobraziť odporúčania pred koncom filmov a seriálov</string>
+    <string name="autoplay_post_play_recommendations_sub">Zobraziť odporúčania pred koncom filmov a seriálov.</string>
     <string name="autoplay_post_play_movie_threshold">Časovanie odporúčaní pre filmy</string>
-    <string name="autoplay_post_play_movie_threshold_sub">Vyberte, kedy sa zobrazia odporúčania pre filmy; epizódy sa riadia nastavením Prahovej hodnoty pre ďalšiu epizódu</string>
+    <string name="autoplay_post_play_movie_threshold_sub">Vyberte, kedy sa zobrazia odporúčania pre filmy; epizódy sa riadia nastavením Prahovej hodnoty pre ďalšiu epizódu.</string>
     <string name="player_live_watched">NAŽIVO %1$s</string>
     <string name="stream_info_bitrate_file">Dátový tok (súbor)</string>
     <string name="stream_info_hud">HUD</string>
@@ -3138,8 +3138,8 @@
     <string name="update_channel_stable">Stabilný</string>
     <string name="update_channel_beta">Beta</string>
     <string name="update_channel_dialog_subtitle">Vyberte typ aktualizácií, ktoré chcete prijímať</string>
-    <string name="update_channel_stable_description">Určené na každodenné používanie</string>
-    <string name="update_channel_beta_description">Skoršie aktualizácie, ktoré môžu obsahovať chyby, nefunkčné funkcie alebo sa správať neočakávane</string>
+    <string name="update_channel_stable_description">Určené na každodenné používanie.</string>
+    <string name="update_channel_beta_description">Skoršie aktualizácie, ktoré môžu obsahovať chyby, nefunkčné funkcie alebo sa správať neočakávane.</string>
     <string name="advanced_player_stats_hud_subtitle">Zobraziť tlačidlo v informáciách o streame na zapnutie/vypnutie živých údajov o CPU, pamäti, vyrovnávacej pamäti, dátovom toku a teplote počas prehrávania</string>
     <string name="profile_copy_settings_label">Kopírovať nastavenia</string>
     <string name="profile_copy_settings_setup_title">Nastavenia profilu</string>
@@ -3170,7 +3170,7 @@
     <string name="audio_mpv_hi10p_gnext_sw_title">Softvérová záloha Hi10P G-NEXT (iba pre MPV)</string>
     <string name="audio_mpv_hi10p_gnext_sw_subtitle">Použiť softvérové dekódovanie G-NEXT, ak podrobnosti streamu identifikujú H.264 Hi10P. Štandardne vypnuté; zapnite iba vtedy, ak sa prehrávanie Hi10P zasekáva alebo zlyháva.</string>
     <string name="layout_hide_floating_pill">Skryť plávajúci indikátor</string>
-    <string name="layout_hide_floating_pill_sub">Skryť plávajúci navigačný indikátor na domovskej obrazovke</string>
+    <string name="layout_hide_floating_pill_sub">Skryť plávajúci navigačný indikátor na domovskej obrazovke.</string>
     <string name="cd_remove_recent_search">Odstrániť %1$s z nedávnych vyhľadávaní</string>
 
     <string name="playback_unavailable">Prehrávanie nie je k dispozícii</string>
@@ -3269,4 +3269,118 @@
     <string name="diag_value_disk_cache_unavailable">Nedostupné</string>
     <string name="diag_value_disk_cache_not_used">Vypnuté - nepoužíva sa pre tento stream</string>
     <string name="diag_value_disk_cache_usage">%1$s prečítané, %2$s uvoľnené</string>
+
+    <string name="advanced_section_startup">Spustenie a ukončenie</string>
+    <string name="advanced_section_network_tests">Testy siete</string>
+    <string name="playback_section_player_title">Prehrávač</string>
+    <string name="playback_section_player_title_desc">Predvolený prehrávač, interné jadro a záložná možnosť pri chybe.</string>
+    <string name="playback_section_stream_selection">Výber streamu</string>
+    <string name="playback_section_stream_selection_desc">Spôsob výberu streamu po stlačení tlačidla prehrávania.</string>
+    <string name="playback_section_up_next">Nasleduje</string>
+    <string name="playback_section_up_next_desc">Automatické prehrávanie ďalšej epizódy a návrhy po dohraní.</string>
+    <string name="playback_section_skip">Preskakovanie segmentov</string>
+    <string name="playback_section_skip_desc">Preskakovanie úvodov, zhrnutí a záverečných titulkov.</string>
+    <string name="playback_section_interface">Rozhranie prehrávača</string>
+    <string name="playback_section_interface_desc">Informačné vrstvy, hodiny a podrobnosti zobrazené počas prehrávania.</string>
+    <string name="playback_section_audio_only_desc">Jazyky, dekódovanie a zvukový výstup.</string>
+    <string name="playback_section_video_desc">Prispôsobenie snímkovej frekvencie, Dolby Vision a HDR.</string>
+    <string name="playback_default_player">Predvolený prehrávač</string>
+    <string name="playback_external_player_label">Externý prehrávač</string>
+    <string name="playback_afr_mode">Prispôsobenie snímkovej frekvencie</string>
+    <string name="playback_dv_hdr_label">Dolby Vision a HDR</string>
+    <string name="playback_mpv_decoding_label">Dekódovanie MPV</string>
+    <string name="playback_network_label">Sieť</string>
+    <string name="sub_languages_label">Jazyky</string>
+    <string name="sub_style_label">Štýl</string>
+    <string name="autoplay_selected_count">%1$d vybraných</string>
+    <string name="playback_true_black_letterbox">Skutočne čierne pruhy</string>
+    <string name="playback_true_black_letterbox_sub">Ponechá pruhy okolo obrazu nevykreslené, aby zostala čierna v HDR skutočne čierna. Ponechajte vypnuté, ak sa na pruhoch zobrazuje svetlý pruh.</string>
+    <string name="autoplay_preload_next_episode">Prednačítať zdroje ďalšej epizódy</string>
+    <string name="autoplay_preload_next_episode_sub">Spustiť vyhľadávanie zdrojov na pozadí predtým, ako sa zobrazí tlačidlo ďalšej epizódy.</string>
+    <string name="layout_section_sidebar">Bočný panel a navigácia</string>
+    <string name="layout_section_sidebar_desc">Štýl bočného panela a umiestnenie záložky Objaviť.</string>
+    <string name="layout_section_card_depth_desc">Svetlo okrajov a odlesk na kartách obrázkov.</string>
+    <string name="layout_section_custom_poster_desc">Použiť plagáty z externej služby.</string>
+    <string name="layout_trailer_play_in_background">Prehrať na pozadí</string>
+    <string name="layout_trailer_play_in_background_sub">Prehrať upútavku namiesto pozadia, zatiaľ čo stránka zostáva viditeľná.</string>
+    <string name="layout_trailer_pause_on_scroll">Pozastaviť pri posúvaní</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Pozastaviť upútavku pri posúvaní nadol a obnoviť ju po návrate nahor.</string>
+    <string name="layout_detail_group_episodes">Epizódy</string>
+    <string name="layout_detail_group_trailers">Upútavky</string>
+    <string name="layout_detail_group_metadata">Metadáta</string>
+    <string name="layout_always_show_landscape_clearlogo">Vždy pozadie s logom pre plagáty na šírku</string>
+    <string name="layout_always_show_landscape_clearlogo_sub">Ignorovať plagát na šírku z doplnku a namiesto neho použiť pozadie s prekrytím priesvitného loga.</string>
+    <string name="mdblist_show_on_hero_title">Použiť hodnotenia v hlavnom sekčnom paneli</string>
+    <string name="mdblist_show_on_hero_subtitle">Zobrazovať hodnotenia MDBList v hlavnom karuseli (moderné aj klasické/mriežka)</string>
+    <string name="mdblist_rating_order_title">Poradie hodnotení</string>
+    <string name="mdblist_rating_order_subtitle">Prvé 3 povolené a dostupné hodnotenia sa zobrazia v modernom hlavnom paneli. Zmeňte poradie pomocou šípok.</string>
+    <string name="mdblist_library_lists">Zoznamy v knižnici</string>
+    <string name="mdblist_library_lists_description">Vyberte, ktoré zoznamy MDBList sa zobrazia v Knižnici a v Správe zoznamov. Zoznam sledovaných sa zobrazuje vždy.</string>
+    <string name="mdblist_library_lists_empty">Vo vašom účte MDBList sa zatiaľ nenašli žiadne zoznamy. Synchronizujte pre ich načítanie.</string>
+    <string name="mdblist_library_lists_summary">Zobrazené %1$d z %2$d</string>
+    <string name="tracking_mdblist_features_title">Funkcie MDBList</string>
+    <string name="tracking_mdblist_features_subtitle">Nastavenia špecifické pre MDBList</string>
+    <string name="youtube_resolving_stream">Načítava sa video z YouTube</string>
+    <string name="youtube_resolution_failed">Toto video z YouTube sa nepodarilo načítať.</string>
+    <string name="settings_p2p_profile_title">Profil torrentu</string>
+    <string name="settings_p2p_profile_soft">Šetrný</string>
+    <string name="settings_p2p_profile_balanced">Vyvážený</string>
+    <string name="settings_p2p_profile_fast">Rýchly</string>
+    <string name="settings_p2p_profile_soft_description">Používa menej spojení s peerov na zníženie záťaže batérie a siete</string>
+    <string name="settings_p2p_profile_balanced_description">Odporúčaná rovnováha medzi rýchlosťou spustenia a stabilitou pripojenia</string>
+    <string name="settings_p2p_profile_fast_description">Používa viac spojení s peerov pre náročné torrenty alebo torrenty s vysokým dátovým tokom</string>
+    <string name="settings_p2p_cache_size_title">Veľkosť vyrovnávacej pamäte torrentu</string>
+    <string name="settings_p2p_cache_size_description">Stiahnuté dáta torrentu uložené na tomto zariadení pre rýchlejšie opätovné prehrávanie</string>
+    <string name="settings_p2p_cache_none">Bez trvalej vyrovnávacej pamäte</string>
+    <string name="settings_p2p_cache_2_gb">2 GB</string>
+    <string name="settings_p2p_cache_5_gb">5 GB</string>
+    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_clear_cache_title">Vymazať vyrovnávaciu pamäť torrentu</string>
+    <string name="settings_p2p_clear_cache_usage">Aktuálne využité: %1$s</string>
+    <string name="settings_p2p_clear_cache_usage_pending">Využitie sa meria po spustení P2P; výberom vymažete uložené dáta torrentu</string>
+    <string name="settings_p2p_clear_cache_clearing">Mažú sa neaktívne dáta torrentov…</string>
+    <string name="settings_p2p_clear_cache_playback_active">Pred vymazaním vyrovnávacej pamäte zastavte prehrávanie P2P</string>
+    <string name="settings_p2p_clear_cache_done">Vymazaných %1$s neaktívnych dát torrentov</string>
+    <string name="settings_p2p_clear_cache_failed">Nepodarilo sa vymazať vyrovnávaciu pamäť torrentov</string>
+    <string name="library_sort_released_desc">Dátum vydania ↓</string>
+    <string name="library_sort_released_asc">Dátum vydania ↑</string>
+    <string name="collections_editor_catalog_missing">Katalóg nie je k dispozícii</string>
+    <string name="player_torrent_fetching_metadata">Načítavajú sa metadáta torrentu…</string>
+    <string name="player_torrent_preparing_stream">Pripravuje sa stream torrentu…</string>
+    <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
+    <string name="player_torrent_loading_status">Stiahnuté %1$s · %2$s · %3$s</string>
+    <string name="torrent_error_start_timeout">Stream torrentu sa nespustil do %1$d s</string>
+    <string name="random_episode_title">Náhodný výber</string>
+    <string name="layout_random_episode_sub">Náhodne prehrávať epizódy z akéhokoľvek seriálu. Vypnutím tejto možnosti pozastavíte náhodný výber.</string>
+    <string name="random_episode_unwatched">Nevidené epizódy</string>
+    <string name="random_episode_include_watched">Všetky epizódy</string>
+    <string name="random_episode_empty_subtitle">Nie sú k dispozícii žiadne epizódy na náhodné prehrávanie.</string>
+    <string name="random_episode_caught_up">Pozreli ste si každú epizódu. Ak chcete pozerať znova, zvoľte Všetky epizódy.</string>
+    <string name="random_episode_loading">Načítavajú sa epizódy…</string>
+    <string name="shuffle_starting">Spúšťa sa náhodný výber…</string>
+    <string name="shuffle_choose_episodes">Vyberte, ktoré epizódy sa majú náhodne prehrávať.</string>
+    <string name="shuffle_preview_title">Vaša epizóda</string>
+    <string name="shuffle_play_episode">Prehrať epizódu</string>
+    <string name="shuffle_again">Vybrať znova náhodne</string>
+    <string name="shuffle_only_episode">Toto je jediná epizóda vo vašom výbere.</string>
+    <string name="shuffle_artwork_hidden">Obrázok bol skrytý, aby nedošlo k spoilerom</string>
+    <string name="shuffle_stop">Zastaviť náhodný výber</string>
+    <string name="shuffle_enabled_all">Náhodný výber zapnutý · Všetky epizódy</string>
+    <string name="shuffle_enabled_unwatched">Náhodný výber zapnutý · Nevidené epizódy</string>
+    <string name="shuffle_disabled">Náhodný výber vypnutý</string>
+    <string name="shuffle_save_failed">Nepodarilo sa aktualizovať náhodný výber. Skúste to znova.</string>
+    <string name="shuffle_change_selection">Vybrať epizódy</string>
+    <string name="shuffle_badge">Náhodný výber epizód zapnutý</string>
+    <string name="autosync_setting_title">Automatická synchronizácia titulkov</string>
+    <string name="autosync_setting_description">Prispôsobiť časovanie vybraných titulkov z doplnku podľa titulkov vložených vo videu.</string>
+    <string name="autosync_tolerance_title">Tolerancia automatickej synchronizácie</string>
+    <string name="autosync_tolerance_description">Ponechať pôvodné časovanie, ak je potrebná oprava rovná alebo menšia ako táto hodnota.</string>
+    <string name="autosync_tolerance_off">Vypnuté</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">Dôkladné vyhľadávanie automatickej synchronizácie</string>
+    <string name="autosync_thorough_description">Pred synchronizáciou pokračovať v porovnávaní ostatných titulkov a vložených stôp pre presnejšiu zhodu. Keď je možnost vypnutá, prvý silný zhoda sa použije skôr. Použijú sa iba dostatočne spoľahlivé zhody.</string>
+    <string name="autosync_toast_failed">Synchronizácia zlyhala: Automatickej synchronizácii sa nepodarilo priradiť tieto titulky k videu.</string>
+    <string name="autosync_toast_failed_no_reference">Synchronizácia zlyhala: toto video nemá žiadne vložené titulky na porovnanie.</string>
+    <string name="autosync_toast_failed_unsupported">Synchronizácia zlyhala: Automatická synchronizácia nepodporuje tento formát titulkov.</string>
+    <string name="autosync_label_synced">Automaticky synchronizované</string>
 </resources>

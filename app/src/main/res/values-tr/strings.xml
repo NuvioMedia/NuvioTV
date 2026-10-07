@@ -244,6 +244,7 @@
     <string name="detail_tab_trailer">Fragman</string>
     <string name="detail_more_like_this_powered_by_tmdb">TMDB tarafından desteklenmektedir</string>
     <string name="detail_more_like_this_powered_by_trakt">Trakt tarafından desteklenmektedir</string>
+    <string name="detail_more_like_this_powered_by_simkl">Simkl tarafından desteklenmektedir</string>
     <string name="detail_comments_title">Yorumlar</string>
     <string name="detail_comments_subtitle">Trakt incelemeleri</string>
     <string name="detail_comments_subtitle_episode">S%1$dE%2$d için Trakt incelemeleri</string>
@@ -595,6 +596,8 @@
     <string name="sentry_turn_off">Kapat</string>
     <string name="sentry_turn_on">Aç</string>
     <string name="advanced_section_cache">Önbellek</string>
+    <string name="advanced_section_startup">Başlangıç ve Çıkış</string>
+    <string name="advanced_section_network_tests">Ağ Testleri</string>
     <string name="advanced_section_dv_diagnostics">DV Tanılama</string>
     <string name="advanced_fast_horizontal_navigation">Hızlı Yatay Gezinme</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Performans için yatay listelerde daha pürüzsüz kaydırma sağlar</string>
@@ -709,6 +712,27 @@
     <string name="contributors_show_kofi_qr">Ko-fi QR Kodunu Göster</string>
     <string name="contributors_hide_kofi_qr">Ko-fi QR Kodunu Gizle</string>
     <string name="contributors_profile_unavailable">Bu kişinin GitHub profiline ulaşılamıyor.</string>
+    <string name="playback_section_player_title">Oynatıcı</string>
+    <string name="playback_section_player_title_desc">Varsayılan oynatıcı, dahili motor ve hata durumunda alternatif oynatıcı.</string>
+    <string name="playback_section_stream_selection">Yayın Seçimi</string>
+    <string name="playback_section_stream_selection_desc">Oynat\'a bastığınızda yayının nasıl seçileceğini belirler.</string>
+    <string name="playback_section_up_next">Sıradaki</string>
+    <string name="playback_section_up_next_desc">Sonraki bölümü otomatik oynatma ve oynatma sonrası öneriler.</string>
+    <string name="playback_section_skip">Segment Atlama</string>
+    <string name="playback_section_skip_desc">Açılışları, özetleri ve jenerikleri atla.</string>
+    <string name="playback_section_interface">Oynatıcı Arayüzü</string>
+    <string name="playback_section_interface_desc">Oynatma sırasında gösterilen katmanlar, saat ve ayrıntılar.</string>
+    <string name="playback_section_audio_only_desc">Diller, kod çözme ve ses çıkışı.</string>
+    <string name="playback_section_video_desc">Kare hızı eşleştirme, Dolby Vision ve HDR.</string>
+    <string name="playback_default_player">Varsayılan Oynatıcı</string>
+    <string name="playback_external_player_label">Harici Oynatıcı</string>
+    <string name="playback_afr_mode">Kare Hızı Eşleştirme</string>
+    <string name="playback_dv_hdr_label">Dolby Vision ve HDR</string>
+    <string name="playback_mpv_decoding_label">MPV Kod Çözme</string>
+    <string name="playback_network_label">Ağ</string>
+    <string name="sub_languages_label">Diller</string>
+    <string name="sub_style_label">Stil</string>
+    <string name="autoplay_selected_count">%1$d seçildi</string>
 
     <!-- PlaybackSettingsSections -->
     <string name="playback_loading_overlay">Yükleme Ekranı</string>
@@ -729,6 +753,10 @@
     <string name="auto_skip_recap_sub">Özet bölümlerini otomatik atla.</string>
     <string name="auto_skip_outro">Jenerik / Kapanış</string>
     <string name="auto_skip_outro_sub">Jenerik ve anime kapanışlarını otomatik atla.</string>
+    <string name="auto_skip_movie_credits">Bitiş Jeneriği</string>
+    <string name="auto_skip_movie_credits_sub">Film jeneriğini otomatik atlar; jenerik sonrası sahneleri korur.</string>
+    <string name="skip_movie_credits">Jeneriği Atla</string>
+    <string name="skip_to_post_credits">Jenerik Sonrasına Atla</string>
     <string name="playback_auto_frame_rate">Otomatik Kare Hızı</string>
     <string name="playback_player_internal">Dahili</string>
     <string name="playback_player_external">Harici</string>
@@ -895,6 +923,8 @@
     <string name="sub_org_by_addon_desc">Altyazıları eklenti kaynağına göre gruplandır.</string>
 
     <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_preload_next_episode">Sonraki Bölüm Kaynaklarını Önceden Yükle</string>
+    <string name="autoplay_preload_next_episode_sub">Sonraki bölüm düğmesi görünmeden önce kaynakları arka planda aramaya başla.</string>
     <string name="autoplay_reuse_last_link">Son Bağlantıyı Yeniden Kullan</string>
     <string name="autoplay_reuse_last_link_sub">Aynı film/bölüm için önbellek hala geçerliyken çalışan son yayınınızı otomatik oynatın</string>
     <string name="autoplay_last_link_cache">Son Bağlantı Önbellek Süresi</string>
@@ -972,6 +1002,10 @@
     <string name="layout_hero_catalogs_sub">Ana alandaki içerikler için bir veya daha fazla katalog seçin.</string>
     <string name="layout_section_content">Ana Sayfa İçeriği</string>
     <string name="layout_section_content_desc">Ana sayfada ve aramada nelerin görüneceğini kontrol edin.</string>
+    <string name="layout_section_sidebar">Kenar Çubuğu ve Gezinme</string>
+    <string name="layout_section_sidebar_desc">Kenar çubuğu stili ve Keşfet\'in nerede görüneceği.</string>
+    <string name="layout_section_card_depth_desc">Görsel kartlarda kenar ışığı ve parlaklık.</string>
+    <string name="layout_section_custom_poster_desc">Harici bir poster servisinden görseller kullanın.</string>
     <string name="layout_collapse_sidebar">Yan Menüyü Daralt</string>
     <string name="layout_collapse_sidebar_sub">Yan menüyü varsayılan olarak gizle; odaklanıldığında göster.</string>
     <string name="layout_hide_floating_pill">Yüzen Göstergeyi Gizle</string>
@@ -1119,6 +1153,56 @@
     <string name="layout_card_radius">Köşe Yarıçapı</string>
     <string name="layout_reset_default">Varsayılana Sıfırla</string>
     <string name="layout_custom">Özel</string>
+    <string name="layout_custom_poster_title">Özel Poster Kaynağı</string>
+    <string name="layout_custom_poster_description">Harici bir servisten poster URL şablonu girin. Belirli bir başlık için yer tutucu değeri yoksa orijinal poster kullanılır.</string>
+    <string name="layout_custom_poster_clear">Temizle</string>
+    <string name="layout_custom_poster_active">✓ Özel poster kaynağı etkin</string>
+    <string name="layout_custom_poster_qr">Telefon ile Yapılandır</string>
+    <string name="custom_poster_qr_instruction">Telefonunuzla QR kodu tarayarak bir poster URL şablonu yapıştırın</string>
+    <string name="layout_custom_poster_screen_home">Ana Sayfa</string>
+    <string name="layout_custom_poster_screen_continue_watching">İzlemeye Devam Et</string>
+    <string name="layout_custom_poster_screen_collections">Koleksiyonlar</string>
+    <string name="layout_custom_poster_screen_library">Kütüphane</string>
+    <string name="layout_custom_poster_screen_search">Arama</string>
+    <string name="layout_custom_poster_screen_details">Detay Ekranı</string>
+    <string name="layout_always_show_landscape_clearlogo">Yatay Posterlerde Her Zaman Logolu Arka Plan</string>
+    <string name="layout_always_show_landscape_clearlogo_sub">Eklentiden gelen yatay posteri yoksayar ve bunun yerine logo katmanlı arka plan kullanır.</string>
+    <string name="web_custom_poster_title">Özel Poster Kaynağı</string>
+    <string name="web_custom_poster_subtitle">Aşağıya bir poster URL şablonu yapıştırın ve Kaydet\'e basın.</string>
+    <string name="web_custom_poster_label">URL Şablonu</string>
+    <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
+    <string name="web_custom_poster_save">Kaydet</string>
+    <string name="web_custom_poster_clear">Temizle</string>
+    <string name="web_custom_poster_saved">Kaydedildi!</string>
+    <string name="web_custom_poster_cleared">Temizlendi</string>
+    <string name="web_custom_poster_error_empty">Bir URL şablonu girin</string>
+    <string name="web_custom_poster_error_save">Kaydetme başarısız</string>
+    <string name="web_custom_poster_error_clear">Temizleme başarısız</string>
+    <string name="web_custom_poster_error_connection">Bağlantı hatası</string>
+    <string name="web_custom_poster_current">Geçerli:</string>
+    <string name="web_custom_poster_none">Şablon ayarlanmadı</string>
+    <string name="web_custom_poster_loading">Yükleniyor…</string>
+    <string name="web_custom_poster_placeholders_info">Yer tutucular: {id} tüm içerik kimliklerini iletir. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} tek bir kimlik türünü hedefler — kullanılamıyorsa orijinal poster korunur. {imdb_id|tmdb_id|kitsu_id} desteklenen kimlik türlerini belirtir — eşleşen kullanılır, aksi halde orijinal poster korunur. Bir yer tutucuyu isteğe bağlı yapmak için ? ekleyin (atlanmak yerine boş bırakılır): {imdb_id?}. Diğer yer tutucular: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="mdblist_name">MDBList</string>
+    <string name="mdblist_tracking_description">İzleme geçmişini ve oynatma ilerlemesini cihazlar arasında eşitler</string>
+    <string name="mdblist_connected_as">%1$s olarak bağlı</string>
+    <string name="mdblist_account_fallback">MDBList kullanıcısı</string>
+    <string name="mdblist_insufficient_scope">MDBList izleme geçmişini güncelleme izni vermedi. Yeniden bağlanın ve yazma erişimine izin verin.</string>
+    <string name="mdblist_awaiting_instruction">QR kodu tarayın veya aşağıdaki adreste bu kodu girin.</string>
+    <string name="mdblist_qr_description">MDBList hesabınızı bağlamak için QR kodu</string>
+    <string name="mdblist_status_enter_code">Bağlantıyı MDBList hesabınızda onaylayın.</string>
+    <string name="mdblist_status_syncing">İzleme geçmişi ve oynatma ilerlemesi eşitleniyor…</string>
+    <string name="mdblist_last_synced">Son eşitleme: %1$s</string>
+    <string name="mdblist_disconnect_title">MDBList bağlantısı kesilsin mi?</string>
+    <string name="mdblist_disconnect_subtitle">Bu profilden izleme güncellemelerini göndermeyi durdurur. MDBList geçmişiniz korunur.</string>
+    <string name="mdblist_missing_client">MDBList bağlantısı bu derlemede kullanılamıyor.</string>
+    <string name="mdblist_invalid_response">MDBList eksik bir yanıt döndürdü. Lütfen tekrar deneyin.</string>
+    <string name="mdblist_code_expired">Bu kodun süresi doldu. Yeni kod almak için tekrar deneyin.</string>
+    <string name="mdblist_access_denied">Bağlantı reddedildi. Hesabınızı bağlamak için tekrar deneyin.</string>
+    <string name="mdblist_authorization_revoked">MDBList bağlantınızın süresi doldu veya erişim iptal edildi. Eşitlemeye devam etmek için yeniden bağlanın.</string>
+    <string name="mdblist_unavailable">MDBList ile eşitleme yapılamadı. Lütfen tekrar deneyin.</string>
+    <string name="mdblist_rate_limited">MDBList istek limitine ulaşıldı. Limit sıfırlandığında eşitleme devam edecek.</string>
+    <string name="mdblist_revoke_failed">Bu cihazda bağlantı kesildi. Erişimi iptal etmek için MDBList hesap ayarlarınızdan bu uygulamayı kaldırın.</string>
 
 
     <!-- MDBListSettingsScreen -->
@@ -1128,6 +1212,9 @@
     <string name="mdblist_enable_subtitle">Harici sağlayıcılardan değerlendirme çeker</string>
     <string name="mdblist_api_key_title">API Anahtarı</string>
     <string name="mdblist_api_key_subtitle">MDBList\'ten veri alabilmek için gerekli</string>
+    <string name="mdblist_ratings_credentials_subtitle">İzleme Takibi bölümünde bağlı MDBList hesabınızı kullanın veya derecelendirmeler için ayrı bir API anahtarı girin.</string>
+    <string name="mdblist_ratings_connected_account">Bağlı hesap kullanılıyor</string>
+    <string name="mdblist_ratings_key_override_subtitle">Girilen API anahtarı, derecelendirmeler için bağlı hesabınızın yerine geçer. Bağlı hesabı tekrar kullanmak için anahtarı temizleyin.</string>
     <string name="mdblist_trakt_title">Trakt</string>
     <string name="mdblist_trakt_subtitle">Trakt puanını göster</string>
     <string name="mdblist_imdb_title">IMDb</string>
@@ -1144,6 +1231,10 @@
     <string name="mdblist_metacritic_subtitle">Metacritic puanını göster</string>
     <string name="mdblist_mal_title">MyAnimeList</string>
     <string name="mdblist_mal_subtitle">MyAnimeList puanını göster</string>
+    <string name="mdblist_show_on_hero_title">Hero Alanında Puanları Göster</string>
+    <string name="mdblist_show_on_hero_subtitle">Hero karuselinde MDBList puanlarını göster (modern ve klasik/ızgara)</string>
+    <string name="mdblist_rating_order_title">Puan Sıralaması</string>
+    <string name="mdblist_rating_order_subtitle">Etkin ve kullanılabilir ilk 3 puan modern hero alanında gösterilir. Sıralamak için okları kullanın.</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Harici verileri çekmek için API anahtarınızı girin</string>
     <string name="mdblist_dialog_placeholder">MDBList API Anahtarını Girin</string>
@@ -1423,7 +1514,7 @@
     <string name="trakt_cw_window_title">İzlemeye Devam Etme Penceresi</string>
     <string name="trakt_cw_window_subtitle">Trakt aktivitenizin ne kadarının \u0027izlemeye devam ediliyor\u0027 kısmında görüneceğini seçin.</string>
     <string name="trakt_unaired_dialog_title">Yayınlanmamış Sıradaki Bölümler</string>
-    <string name="trakt_unaired_dialog_subtitle">Yaklaşan bölümlerin yayınlanmadan önce "İzlemeye Devam Et" sekmesine dahil edilip edilmeyeceğini seçin.</string>
+    <string name="trakt_unaired_dialog_subtitle">Yaklaşan bölümlerin yayınlanmadan önce \"İzlemeye Devam Et\" sekmesine dahil edilip edilmeyeceğini seçin.</string>
     <string name="trakt_show_unaired">Yayınlanmamış bölümleri göster</string>
     <string name="trakt_hide_unaired">Yayınlanmamış bölümleri gizle</string>
     <string name="trakt_all_history">Tüm geçmiş</string>
@@ -1555,7 +1646,7 @@
     <string name="profile_pin_overlay_unlock_heading">%1$s profiline girmek için PIN girin.</string>
     <string name="profile_pin_overlay_set_heading">%1$s için 4 haneli PIN oluşturun.</string>
     <string name="profile_pin_overlay_confirm_heading">Yeni PIN onaylayın.</string>
-    <string name="profile_pin_overlay_unlock_support">Girmek için uzaktan kumanda veya klavyenizi kullanın.</string>
+    <string name="profile_pin_overlay_unlock_support">4 haneli şifreyi girmek için uzaktan kumandanızı veya klavyenizi kullanın.</string>
     <string name="profile_pin_overlay_change_verify_kicker">Güvenlik doğrulaması gerekiyor.</string>
     <string name="profile_pin_overlay_change_verify_heading">%1$s profilinin PINini değiştirmek için mevcut PIN girin.</string>
     <string name="profile_pin_overlay_change_verify_support">Yeni PIN belirlemeden önce mevcut 4 haneli PIN girin.</string>
@@ -1644,6 +1735,8 @@
     <string name="debrid_missing_api_key">Ayarlar\'dan bir Debrid API anahtarı ekleyin.</string>
     <string name="debrid_not_cached">Bu serviste önbelleğe alınmamış.</string>
     <string name="debrid_resolution_failed">Bu Debrid yayını çözümlenemedi.</string>
+    <string name="youtube_resolving_stream">YouTube videosu yükleniyor…</string>
+    <string name="youtube_resolution_failed">Bu YouTube videosu yüklenemedi.</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
     <string name="p2p_consent_title">P2P Yayın</string>
@@ -1654,6 +1747,26 @@
     <string name="settings_p2p_subtitle">Eşler arası (torrent) yayınlara izin ver</string>
     <string name="settings_p2p_hide_stats_title">Torrent istatistiklerini gizle</string>
     <string name="settings_p2p_hide_stats_subtitle">Yükleme ve oynatma sırasında tampon, tohum, eş ve indirme hızı bilgisini gizle</string>
+    <string name="settings_p2p_profile_title">Torrent Profili</string>
+    <string name="settings_p2p_profile_soft">Hafif</string>
+    <string name="settings_p2p_profile_balanced">Dengeli</string>
+    <string name="settings_p2p_profile_fast">Hızlı</string>
+    <string name="settings_p2p_profile_soft_description">Pil ve ağ yükünü azaltmak için daha az eş bağlantısı kullanır</string>
+    <string name="settings_p2p_profile_balanced_description">Başlangıç hızı ile bağlantı kararlılığı arasında önerilen denge</string>
+    <string name="settings_p2p_profile_fast_description">Zor veya yüksek bit hızlı torrentler için daha fazla eş bağlantısı kullanır</string>
+    <string name="settings_p2p_cache_size_title">Torrent Önbellek Boyutu</string>
+    <string name="settings_p2p_cache_size_description">Daha hızlı tekrar oynatma için bu cihazda saklanan indirilen torrent verileri</string>
+    <string name="settings_p2p_cache_none">Kalıcı önbellek yok</string>
+    <string name="settings_p2p_cache_2_gb">2 GB</string>
+    <string name="settings_p2p_cache_5_gb">5 GB</string>
+    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_clear_cache_title">Torrent Önbelleğini Temizle</string>
+    <string name="settings_p2p_clear_cache_usage">Şu anda %1$s kullanılıyor</string>
+    <string name="settings_p2p_clear_cache_usage_pending">Kullanım P2P başladıktan sonra ölçülür; önbelleğe alınan torrent verilerini temizlemek için seçin</string>
+    <string name="settings_p2p_clear_cache_clearing">Etkin olmayan torrent verileri temizleniyor…</string>
+    <string name="settings_p2p_clear_cache_playback_active">Önbelleği temizlemeden önce P2P oynatmayı durdurun</string>
+    <string name="settings_p2p_clear_cache_done">%1$s etkin olmayan torrent verisi temizlendi</string>
+    <string name="settings_p2p_clear_cache_failed">Torrent önbelleği temizlenemedi</string>
     <string name="p2p_download_title">P2P Motoru İndiriliyor</string>
     <string name="p2p_download_subtitle">Bu, P2P yayın için gereken tek seferlik bir indirmedir.</string>
     <string name="stream_type_external">Harici</string>
@@ -1955,6 +2068,7 @@
     <string name="library_sort_added_asc">İlk Eklenenler</string>
     <string name="library_sort_title_asc">A\'dan Z\'ye İsim</string>
     <string name="library_sort_title_desc">Z\'den A\'ya İsim</string>
+    <string name="library_error_sort_failed">Sıralama düzeni yüklenemedi. Sağlayıcı sırası gösteriliyor.</string>
     <string name="library_manage_lists">Listeleri Yönet</string>
     <string name="library_manage_trakt_lists">Trakt Listelerini Yönet</string>
     <string name="library_no_lists">Henüz kişisel liste yok.</string>
@@ -2434,6 +2548,7 @@
     <string name="playback_cache_info_manual_headroom">Manuel mod, yaklaşık %1$d MB boş alan payı bırakır.</string>
     <string name="playback_cache_info_free_disk">Kullanılabilir boş alan: %1$s.</string>
     <string name="playback_cache_info_restart">Modlar veya boyutlar arasında geçiş yapıldığında, yeni önbellek sınırı uygulama yeniden başlatıldıktan sonra geçerli olur.</string>
+    <string name="playback_cache_write_warning">Dahili depolamaya sahip cihazlarda yazma etkinliği süreklidir ve zamanla aşınmaya yol açabilir.</string>
     <string name="playback_reset_to_default">Varsayılana Sıfırla</string>
     <string name="playback_net_custom">Özel Ağ Yapılandırması</string>
     <string name="playback_net_custom_sub">Aşamalı yayınları indirmek için birden çok paralel bağlantı kullanır. Kapalıyken tek bağlantı kullanılır.</string>
@@ -2465,8 +2580,15 @@
     <string name="diag_label_source_profile">Kaynak Profili</string>
     <string name="diag_label_conversions">Dönüştürmeler</string>
     <string name="diag_label_signal_rewrites">Sinyal Yeniden Yazımları</string>
+    <string name="diag_label_last_convert">Son Dönüştürme</string>
     <string name="diag_label_custom_buffers">Özel Arabellekler</string>
     <string name="diag_label_custom_network_cache">Özel Ağ/Önbellek</string>
+    <string name="diag_label_disk_cache">Disk Önbelleği</string>
+    <string name="diag_label_disk_cache_usage">Disk Önbelleği Kullanımı</string>
+    <string name="diag_value_disk_cache_on">Açık — %1$s</string>
+    <string name="diag_value_disk_cache_unavailable">Kullanılamıyor</string>
+    <string name="diag_value_disk_cache_not_used">Kapalı — Bu yayın için kullanılmıyor</string>
+    <string name="diag_value_disk_cache_usage">%1$s okundu, %2$s temizlendi</string>
     <string name="diag_section_outcome">Sonuç</string>
     <string name="diag_label_hdr_format_intended">HDR Formatı (hedeflenen)</string>
     <string name="diag_label_first_frame">İlk Kare</string>
@@ -2703,9 +2825,9 @@
     <!-- Collection Editor -->
     <string name="collections_delete_confirm_title">Koleksiyon silinsin mi?</string>
     <string name="collections_delete_confirm">Sil</string>
-    <string name="collections_delete_confirm_subtitle">"%1$s" kalıcı olarak silinecek. Bu işlem geri alınamaz.</string>
+    <string name="collections_delete_confirm_subtitle">\"%1$s\" kalıcı olarak silinecek. Bu işlem geri alınamaz.</string>
     <string name="collections_editor_delete_folder_title">Klasör silinsin mi?</string>
-    <string name="collections_editor_delete_folder_subtitle">"%1$s" ve içindekiler kalıcı olarak silinecek.</string>
+    <string name="collections_editor_delete_folder_subtitle">\"%1$s\" ve içindekiler kalıcı olarak silinecek.</string>
     <string name="collections_editor_row_title">Satır Başlığı</string>
     <string name="collections_editor_save">Kaydet</string>
     <string name="collections_editor_backdrop">Arka Plan Görseli</string>
@@ -2749,6 +2871,7 @@
     <string name="collections_editor_shape_wide">Geniş</string>
     <string name="collections_editor_shape_square">Kare</string>
     <string name="collections_editor_addon_missing">Eklenti kurulu değil: %1$s</string>
+    <string name="collections_editor_catalog_missing">Katalog kullanılamıyor</string>
     <string name="collections_editor_add_tmdb_source">TMDB Kaynağı Ekle</string>
     <string name="collections_editor_add_trakt_source">Trakt Listesi Ekle</string>
     <string name="collections_editor_edit_tmdb_source">TMDB Kaynağını Düzenle</string>
@@ -2927,11 +3050,11 @@
     <string name="collections_editor_tmdb_tv_title_placeholder">En İyi Aksiyon Filmleri, Kore Dizileri, 2024 Animasyon</string>
     <string name="collections_editor_tmdb_person_title_placeholder">Tom Hanks Filmleri, Favori Oyuncular</string>
     <string name="collections_editor_tmdb_director_title_placeholder">Christopher Nolan Filmleri, Favori Yönetmenler</string>
-    <string name="collections_editor_tmdb_keywords_placeholder">- süper kahraman</string>
+    <string name="collections_editor_tmdb_keywords_placeholder">Süper kahraman için 9715</string>
     <string name="collections_editor_tmdb_without_keywords_placeholder">9715</string>
-    <string name="collections_editor_tmdb_companies_placeholder">- Marvel Studios</string>
+    <string name="collections_editor_tmdb_companies_placeholder">Marvel Studios için 420</string>
     <string name="collections_editor_tmdb_without_companies_placeholder">420</string>
-    <string name="collections_editor_tmdb_networks_placeholder">- Netflix</string>
+    <string name="collections_editor_tmdb_networks_placeholder">Netflix için 213</string>
     <string name="folder_detail_not_found">Klasör bulunamadı</string>
     <string name="cast_error_load_details_for">%1$s detayları yüklenemedi</string>
     <string name="tmdb_entity_error_load_named">%1$s yüklenemedi</string>
@@ -2964,8 +3087,8 @@
     <string name="collections_editor_tmdb_without_watch_providers_helper">Seçilen bölgede bu TMDB platform kimliklerinde bulunan yapımları hariç tutun.</string>
     <string name="collections_editor_tmdb_without_watch_providers_placeholder">8|337|350</string>
     <string name="collections_editor_tmdb_quick_watch_providers">Hızlı platform seçimi</string>
-    <string name="collections_editor_tmdb_network_placeholder_example">Netflix, 49 HBO, 2739 Disney+</string>
-    <string name="collections_editor_tmdb_collection_placeholder_example">- Star Wars Koleksiyonu</string>
+    <string name="collections_editor_tmdb_network_placeholder_example">Netflix için 213, HBO için 49, Disney+ için 2739</string>
+    <string name="collections_editor_tmdb_collection_placeholder_example">Star Wars Koleksiyonu için 10</string>
     <string name="collections_editor_tmdb_company_placeholder_example">Marvel Studios, 420 veya şirket URL\'si</string>
     <string name="collections_editor_tmdb_genre_action">Aksiyon</string>
     <string name="collections_editor_tmdb_genre_adventure">Macera</string>
@@ -3000,6 +3123,10 @@
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%%</string>
     <string name="player_torrent_connecting_peers">Eşlere bağlanılıyor…</string>
+    <string name="player_torrent_fetching_metadata">Torrent meta verileri alınıyor…</string>
+    <string name="player_torrent_preparing_stream">Torrent yayını hazırlanıyor…</string>
+    <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
+    <string name="player_torrent_loading_status">%1$s indirildi · %2$s · %3$s</string>
     <string name="player_torrent_starting_engine">P2P motoru başlatılıyor…</string>
     <string name="player_torrent_rebuffer_status">%1$s yüklendi</string>
     <string name="player_track_audio_fallback">Ses %1$d</string>
@@ -3114,7 +3241,7 @@
     <string name="simkl_error_authorization_revoked">Simkl yetkisi iptal edildi. Tekrar bağlan.</string>
     <string name="simkl_error_network">Simkl\'a ulaşılamıyor. Tekrar dene.</string>
     <string name="tracking_removal_title">%1$s üzerinden kaldırılsın mı?</string>
-    <string name="tracking_removal_message">"%1$s" kaydını %2$s üzerinden kaldırmak, oradaki %3$s da siler. Bu geri alınamaz.</string>
+    <string name="tracking_removal_message">“%1$s” kaydını %2$s üzerinden kaldırmak, oradaki %3$s verisini de siler. Bu işlem geri alınamaz.</string>
     <string name="tracking_removal_impact_history">izleme geçmişini</string>
     <string name="tracking_removal_impact_rating">puanını</string>
     <string name="tracking_removal_impact_history_rating">izleme geçmişini ve puanını</string>
@@ -3126,6 +3253,7 @@
     <string name="trakt_more_like_this_source_dialog_subtitle">Detay sayfalarında gösterilen öneriler için kaynağı seçin.</string>
     <string name="trakt_more_like_this_source_trakt">Trakt</string>
     <string name="trakt_more_like_this_source_tmdb">TMDB</string>
+    <string name="trakt_more_like_this_source_simkl">Simkl</string>
 
     <!-- Detail / poster options errors -->
     <string name="detail_error_update_library_failed">Kütüphane güncellenemedi</string>
@@ -3167,6 +3295,7 @@
     <string name="network_error_unknown">Bilinmeyen bir hata oluştu</string>
     <string name="network_fast_error_script_path_missing">fast.com: betik yolu bulunamadı</string>
     <string name="network_fast_error_token_missing">fast.com: pakette token bulunamadı</string>
+    <string name="torrent_error_start_timeout">Torrent yayını %1$d saniye içinde başlamadı</string>
 
     <!-- Subtitle preferred language fallback -->
     <string name="language_english">İngilizce</string>
@@ -3203,5 +3332,40 @@
     <string name="stream_test_error_prefix">Hata: %1$s</string>
     <string name="stream_test_video_bitrate">Ortalama Video Bitrate: %1$s</string>
     <string name="stream_test_error_connection">Bağlantı başarısız. Son oynatılan video linkinin süresi dolmuş veya sunucuya erişilemiyor olabilir. Lütfen videoyu tekrar oynatıp testi yeniden deneyin.</string>
+    <string name="random_episode_title">Karıştır</string>
+    <string name="layout_random_episode_sub">Herhangi bir diziden bölümleri karıştırır. Kapatıldığında karıştırma duraklatılır.</string>
+    <string name="random_episode_unwatched">İzlenmemiş Bölümler</string>
+    <string name="random_episode_include_watched">Tüm Bölümler</string>
+    <string name="random_episode_empty_subtitle">Karıştırılacak bölüm bulunamadı.</string>
+    <string name="random_episode_caught_up">Tüm bölümleri izlediniz. Tekrar izlemek için \"Tüm Bölümler\" seçeneğini kullanın.</string>
+    <string name="random_episode_loading">Bölümler yükleniyor…</string>
+    <string name="shuffle_starting">Karıştırma başlatılıyor…</string>
+    <string name="shuffle_choose_episodes">Hangi bölümlerin karıştırılacağını seçin.</string>
+    <string name="shuffle_preview_title">Seçilen Bölüm</string>
+    <string name="shuffle_play_episode">Bölümü Oynat</string>
+    <string name="shuffle_again">Yeniden Karıştır</string>
+    <string name="shuffle_only_episode">Seçiminizdeki tek bölüm bu.</string>
+    <string name="shuffle_artwork_hidden">Spoiler olmaması için görsel gizlendi</string>
+    <string name="shuffle_stop">Karıştırmayı Durdur</string>
+    <string name="shuffle_enabled_all">Karıştırma açık · Tüm bölümler</string>
+    <string name="shuffle_enabled_unwatched">Karıştırma açık · İzlenmemiş bölümler</string>
+    <string name="shuffle_disabled">Karıştırma kapalı</string>
+    <string name="shuffle_save_failed">Karıştırma güncellenemedi. Tekrar deneyin.</string>
+    <string name="shuffle_change_selection">Bölümleri Seç</string>
+    <string name="shuffle_badge">Bölüm karıştırma etkin</string>
 
+
+    <!-- Subtitle AutoSync -->
+    <string name="autosync_setting_title">Altyazıları Otomatik Eşitle</string>
+    <string name="autosync_setting_description">Seçilen eklenti altyazısını videoya gömülü altyazıların zamanlamasıyla eşleştirir.</string>
+    <string name="autosync_tolerance_title">Otomatik Eşitleme Toleransı</string>
+    <string name="autosync_tolerance_description">Gereken düzeltme bu değerde veya daha küçük olduğunda orijinal zamanlamayı korur.</string>
+    <string name="autosync_tolerance_off">Kapalı</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">Kapsamlı Otomatik Eşitleme Araması</string>
+    <string name="autosync_thorough_description">Eşitlemeden önce daha yakın bir eşleşme için diğer altyazıları ve gömülü parçaları karşılaştırmaya devam eder. Kapalıyken ilk güçlü eşleşme daha hızlı kullanılır. Yalnızca güvenilir eşleşmeler uygulanır.</string>
+    <string name="autosync_toast_failed">Eşitleme başarısız: Otomatik Eşitleme bu altyazıyı video ile eşleştiremedi.</string>
+    <string name="autosync_toast_failed_no_reference">Eşitleme başarısız: Bu videoda karşılaştırılacak gömülü altyazı yok.</string>
+    <string name="autosync_toast_failed_unsupported">Eşitleme başarısız: Otomatik Eşitleme bu altyazı formatını desteklemiyor.</string>
+    <string name="autosync_label_synced">Otomatik eşitlendi</string>
 </resources>

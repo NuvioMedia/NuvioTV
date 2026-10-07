@@ -1,26 +1,101 @@
 package com.nuvio.tv.data.mdblist
 
+import android.util.Log
+import kotlinx.coroutines.CancellationException
+
 internal class MdbListLibraryRemote(private val api: MdbListApiClient, private val scope: MdbListAuthScope) {
-    suspend fun synchronize(previous: MdbListLibrarySnapshot?, accountId: Long, now: Long): MdbListLibrarySnapshot {
+    /**
+     * [reloadItems] downloads unchanged lists too: changing only a list's saved sort order on
+     * mdblist.com does not change its update time.
+     */
+    suspend fun synchronize(
+        previous: MdbListLibrarySnapshot?,
+        accountId: Long,
+        now: Long,
+        reloadItems: Boolean = false
+    ): MdbListLibrarySnapshot {
         val lists = decodeMdbListLibraryLists(api.get("/lists/user", mapOf("unified" to "false", "sort" to "ranked"), scope).body, accountId)
         val items = linkedMapOf(MDBLIST_WATCHLIST_KEY to items(MDBLIST_WATCHLIST_KEY))
+        val reuseItems = !reloadItems && previous?.itemsOrder == MDBLIST_ITEMS_ORDER
         val previousLists = previous?.lists.orEmpty().associateBy { it.id }
         val addedOrders = previous?.addedOrders.orEmpty().toMutableMap().apply { remove(MDBLIST_WATCHLIST_KEY) }
+        val hidden = previous?.hiddenListKeys.orEmpty()
         for (list in lists) {
-            val cached = previous?.itemsByList?.get(list.key)
-            val unchanged = previous?.invalidated != true && list.updatedAt != null &&
-                previousLists[list.id]?.updatedAt == list.updatedAt
-            items[list.key] = if (unchanged && cached != null) cached else items(list.key)
-            if (!unchanged || cached == null) addedOrders.remove(list.key)
+            // Hidden lists are not shown anywhere, so skip downloading their items.
+            if (list.key in hidden) {
+                addedOrders.remove(list.key)
+                continue
+            }
+            items[list.key] = cachedOrFetched(previous, list.key, list.updatedAt, previousLists[list.id]?.updatedAt,
+                reuseItems, addedOrders)
         }
-        return MdbListLibrarySnapshot(lists, items, now, addedOrders = addedOrders.filterKeys { it in items })
+        val externalLists = synchronizeExternal(previous, hidden, reuseItems, items, addedOrders)
+        val snapshot = MdbListLibrarySnapshot(lists, items, now, addedOrders = addedOrders.filterKeys { it in items },
+            itemsOrder = MDBLIST_ITEMS_ORDER, externalLists = externalLists)
+        // Drop hidden keys of lists that were deleted in MDBList.
+        return snapshot.copy(hiddenListKeys = hidden intersect snapshot.tabs().mapTo(mutableSetOf()) { it.key })
     }
 
-    suspend fun items(key: String, addedOrder: String? = null): List<MdbListLibraryItem> {
+    // External lists are optional extras: if MDBList cannot serve them, keep the cached copy
+    // instead of blocking the watchlist and static lists.
+    private suspend fun synchronizeExternal(
+        previous: MdbListLibrarySnapshot?,
+        hidden: Set<String>,
+        reuseItems: Boolean,
+        items: MutableMap<String, List<MdbListLibraryItem>>,
+        addedOrders: MutableMap<String, Map<String, List<MdbListLibraryOrderItem>>>
+    ): List<MdbListExternalList> {
+        val fetched = linkedMapOf<String, List<MdbListLibraryItem>>()
+        val externalLists = try {
+            val lists = decodeMdbListExternalLists(api.get("/external/lists/user", scope = scope).body)
+            val previousLists = previous?.externalLists.orEmpty().associateBy { it.id }
+            for (list in lists) {
+                if (list.key in hidden) {
+                    addedOrders.remove(list.key)
+                    continue
+                }
+                fetched[list.key] = cachedOrFetched(previous, list.key, list.updatedAt, previousLists[list.id]?.updatedAt,
+                    reuseItems, addedOrders)
+            }
+            lists
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            if ((error as? MdbListApiException)?.retryAtEpochMs != null) throw error
+            Log.w(TAG, "External lists sync failed", error)
+            val cachedItems = previous?.itemsByList.orEmpty()
+            // Hidden lists have no cached items but must stay listed so they remain hidden.
+            previous?.externalLists.orEmpty().filter { it.key in cachedItems || it.key in hidden }
+                .onEach { list -> cachedItems[list.key]?.let { fetched[list.key] = it } }
+        }
+        items += fetched
+        return externalLists
+    }
+
+    private companion object {
+        const val TAG = "MdbListLibraryRemote"
+    }
+
+    private suspend fun cachedOrFetched(
+        previous: MdbListLibrarySnapshot?,
+        key: String,
+        updatedAt: String?,
+        previousUpdatedAt: String?,
+        reuseItems: Boolean,
+        addedOrders: MutableMap<String, Map<String, List<MdbListLibraryOrderItem>>>
+    ): List<MdbListLibraryItem> {
+        val cached = previous?.itemsByList?.get(key)
+        val unchanged = previous?.invalidated != true && updatedAt != null && previousUpdatedAt == updatedAt
+        if (!unchanged || cached == null) addedOrders.remove(key)
+        return if (unchanged && reuseItems && cached != null) cached else items(key)
+    }
+
+    // Without a sort, MDBList returns the list in the sort order its owner saved on mdblist.com.
+    suspend fun items(key: String, sort: String? = null, order: String = "asc"): List<MdbListLibraryItem> {
         val path = mdbListLibraryItemsPath(key)
-        val initial = mapOf("limit" to "1000", "sort" to if (addedOrder == null) "rank" else "added",
-            "order" to (addedOrder ?: "asc"), "unified" to "true") +
-            if (addedOrder == null) mapOf("append_to_response" to "poster,description,genres") else emptyMap()
+        val initial = mapOf("limit" to "1000", "unified" to "true") +
+            if (sort == null) mapOf("append_to_response" to "poster,description,genres")
+            else mapOf("sort" to sort, "order" to order)
         var query = initial
         val visited = mutableSetOf<Map<String, String>>()
         val items = mutableListOf<MdbListLibraryItem>()
@@ -41,8 +116,14 @@ internal class MdbListLibraryRemote(private val api: MdbListApiClient, private v
     }
 }
 
-internal fun mdbListLibraryItemsPath(key: String): String =
-    if (key == MDBLIST_WATCHLIST_KEY) "/watchlist/items" else "/lists/${mdbListPersonalListId(key)}/items"
+internal fun mdbListLibraryItemsPath(key: String): String = when {
+    key == MDBLIST_WATCHLIST_KEY -> "/watchlist/items"
+    key.startsWith(MDBLIST_EXTERNAL_LIST_KEY_PREFIX) -> "/external/lists/${mdbListExternalListId(key)}/items"
+    else -> "/lists/${mdbListPersonalListId(key)}/items"
+}
+
+internal fun mdbListExternalListId(key: String): Long =
+    requireNotNull(key.removePrefix(MDBLIST_EXTERNAL_LIST_KEY_PREFIX).toLongOrNull()?.takeIf { it > 0 }) { "Invalid MDBList list" }
 
 internal fun mdbListPersonalListId(key: String): Long {
     require(key.startsWith(MDBLIST_LIST_KEY_PREFIX)) { "Invalid MDBList list" }

@@ -45,6 +45,8 @@ internal fun PlayerRuntimeController.autoSyncExtractorsFactory(
     url: String,
     headers: Map<String, String>,
 ): ExtractorsFactory {
+    AutoSyncPreferences.ensureLoaded(context)
+    if (!AutoSyncPreferences.isEnabled(context)) return delegate
     val factory = AutoSyncExtractorsFactory(delegate = delegate, sourceKey = url)
     prefetchAutoSyncIndex(url, headers)
     return factory

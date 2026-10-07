@@ -512,6 +512,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setStreamAutoPlayTimeoutSeconds(seconds)
     }
 
+    suspend fun setPreloadNextEpisodeSources(enabled: Boolean) {
+        playerSettingsDataStore.setPreloadNextEpisodeSources(enabled)
+    }
+
     suspend fun setStillWatchingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setStillWatchingEnabled(enabled)
     }

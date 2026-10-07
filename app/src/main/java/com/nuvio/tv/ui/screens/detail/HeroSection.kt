@@ -177,7 +177,6 @@ fun HeroContentSection(
         animationSpec = tween(600),
         label = "logoWidth"
     )
-
     Column(
         modifier = Modifier
             .fillMaxWidth()

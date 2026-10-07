@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.runtime.Composable
@@ -65,7 +65,7 @@ internal fun SettingsCollapsibleSection(
             value = stringResource(if (expanded) R.string.layout_open else R.string.layout_closed),
             onClick = onToggle,
             leadingIcon = icon,
-            trailingIcon = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+            trailingIcon = if (expanded) Icons.Default.ExpandMore else Icons.AutoMirrored.Filled.KeyboardArrowRight,
             modifier = if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier,
             onFocused = onFocused
         )
