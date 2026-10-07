@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_pill_nav_title">Pill menu</string>
+    <string name="settings_pill_nav_description">A floating text menu at the top of the screen with a sliding highlight. Replaces the sidebar. Press Up to reach it and Back to jump to it.</string>
+</resources>

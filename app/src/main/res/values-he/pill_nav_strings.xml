@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_pill_nav_title">תפריט קפסולה עליון</string>
+    <string name="settings_pill_nav_description">תפריט צף בראש המסך עם אפקט זכוכית והדגשה נעה. מחליף את תפריט הצד. לחץ למעלה כדי להגיע אליו ולחץ חזור כדי לקפוץ אליו.</string>
+</resources>
