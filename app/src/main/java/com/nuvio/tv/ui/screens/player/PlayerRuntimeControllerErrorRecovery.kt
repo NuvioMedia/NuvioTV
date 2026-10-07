@@ -142,6 +142,17 @@ internal fun isAudioTrackFailure(errorCode: Int, combinedMessage: String): Boole
         combinedMessage.contains("audiotrack write failed", ignoreCase = true)
 }
 
+internal fun httpStatusExplanation(context: android.content.Context, code: Int): String {
+    return when (code) {
+        401, 410 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
+        404 -> context.getString(com.nuvio.tv.R.string.player_error_stream_removed)
+        429 -> context.getString(com.nuvio.tv.R.string.player_error_stream_rate_limited)
+        in 500..599 -> context.getString(com.nuvio.tv.R.string.player_error_stream_unavailable)
+        in 400..499 -> context.getString(com.nuvio.tv.R.string.player_error_stream_blocked)
+        else -> ""
+    }
+}
+
 internal fun PlaybackException.findInvalidResponseCodeException(): HttpDataSource.InvalidResponseCodeException? {
     var current: Throwable? = cause
     while (current != null) {
@@ -157,16 +168,7 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
     if (responseException != null) {
         val code = responseException.responseCode
         val statusText = responseException.responseMessage?.takeIf { it.isNotBlank() }
-        val providerHint = when (code) {
-            400 -> context.getString(com.nuvio.tv.R.string.player_error_stream_blocked)
-            401 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
-            403 -> context.getString(com.nuvio.tv.R.string.player_error_stream_blocked)
-            404 -> context.getString(com.nuvio.tv.R.string.player_error_stream_removed)
-            410 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
-            429 -> context.getString(com.nuvio.tv.R.string.player_error_stream_rate_limited)
-            500, 502, 503, 504 -> context.getString(com.nuvio.tv.R.string.player_error_stream_unavailable)
-            else -> ""
-        }
+        val providerHint = httpStatusExplanation(context, code)
         return buildString {
             append("HTTP $code")
             statusText?.let { append(" $it") }

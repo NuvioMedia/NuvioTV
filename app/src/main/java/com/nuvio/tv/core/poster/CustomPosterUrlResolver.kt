@@ -67,11 +67,13 @@ object CustomPosterUrlResolver {
         shape: String = "poster"
     ): String? {
         if (pattern.isBlank()) return null
+        val decoded = decodePatternPlaceholders(pattern)
+        if (!containsPlaceholder(decoded)) return null
 
-        val result = if (isRpdbFamily(pattern)) {
-            resolveRpdbWithFallback(pattern, ids, type, shape)
+        val result = if (isRpdbFamily(decoded)) {
+            resolveRpdbWithFallback(decoded, ids, type, shape)
         } else {
-            resolvePattern(pattern, ids, type, shape)
+            resolvePattern(decoded, ids, type, shape)
         }
 
         return result
@@ -228,6 +230,15 @@ object CustomPosterUrlResolver {
 
     private fun isRpdbFamily(pattern: String): Boolean =
         RPDB_DOMAINS.any { domain -> domain in pattern }
+
+    private fun containsPlaceholder(pattern: String): Boolean =
+        pattern.contains(Regex("""\{[a-z_]+[|?]?"""))
+
+    private fun decodePatternPlaceholders(pattern: String): String =
+        pattern
+            .replace("%7B", "{", ignoreCase = true)
+            .replace("%7D", "}", ignoreCase = true)
+            .replace("%7C", "|", ignoreCase = true)
 
     /**
      * For RPDB-compatible services, try the pattern as-is, then swap the ID type segment

@@ -166,6 +166,8 @@ fun LibraryScreen(
         }
     }
     val posterCardStyle = PosterCardDefaults.Style.copy(
+        width = uiState.posterCardWidthDp.dp,
+        height = (uiState.posterCardWidthDp * 3 / 2).dp,
         cornerRadius = uiState.posterCardCornerRadiusDp.dp
     )
 
@@ -273,8 +275,12 @@ fun LibraryScreen(
 
     val lastKeyRepeatTime = remember { longArrayOf(0L) }
 
+    val globalLandscape = com.nuvio.tv.ui.components.LocalLandscapePosterMode.current
+
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+        columns = GridCells.Adaptive(
+            minSize = if (globalLandscape) posterCardStyle.height else posterCardStyle.width
+        ),
         state = gridState,
         modifier = Modifier
             .fillMaxSize()

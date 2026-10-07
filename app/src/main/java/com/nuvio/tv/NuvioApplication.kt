@@ -100,7 +100,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                 .dns(IPv4FirstDns())
                 .connectTimeout(4, TimeUnit.SECONDS)
                 .readTimeout(5, TimeUnit.SECONDS)
-                .callTimeout(12, TimeUnit.SECONDS)
+                .callTimeout(8, TimeUnit.SECONDS)
                 .addInterceptor { chain ->
                     try {
                         chain.proceed(chain.request())

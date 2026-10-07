@@ -33,6 +33,8 @@ object StreamAutoPlaySelector {
     private fun isPlayable(stream: Stream): Boolean {
         // External URL streams (e.g. error pages, web links) are not playable.
         if (stream.isExternal()) return false
+        // Streams with a direct URL are always playable regardless of debrid cache status.
+        if (stream.getStreamUrl() != null) return true
         when (stream.debridCacheStatus?.state) {
             StreamDebridCacheState.CHECKING,
             StreamDebridCacheState.NOT_CACHED,
@@ -40,7 +42,12 @@ object StreamAutoPlaySelector {
             StreamDebridCacheState.CACHED,
             null -> Unit
         }
-        return stream.getStreamUrl() != null || stream.isTorrent() || stream.isDirectDebrid() || stream.isUsenet()
+        return stream.isTorrent() ||
+            stream.isDirectDebrid() ||
+            stream.isUsenet() ||
+            // A YouTube id is resolved to a playable URL on the device when the stream is played.
+            // Builds without in-app YouTube playback open the watch page instead, an external link.
+            (AppFeaturePolicy.inAppTrailerPlaybackEnabled && stream.youTubeIdToResolve() != null)
     }
 
 
@@ -80,12 +87,16 @@ object StreamAutoPlaySelector {
         }
         if (candidateStreams.isEmpty()) return null
 
-        // Binge group matching takes priority over mode — even in MANUAL mode,
+        // Binge group matching takes priority over mode and source filters — even in MANUAL mode,
         // a persisted binge group should auto-play without showing the picker.
+        // Search ALL streams, not just candidateStreams, since binge group reuse should
+        // not be limited by autoplay source/addon selection filters.
         val targetBingeGroup = preferredBingeGroup?.trim().orEmpty()
         if (preferBingeGroupInSelection && targetBingeGroup.isNotEmpty()) {
-            val bingeGroupMatch = candidateStreams.firstOrNull { stream ->
-                stream.behaviorHints?.bingeGroup == targetBingeGroup && isPlayable(stream)
+            val bingeGroupMatch = streams.firstOrNull { stream ->
+                !stream.isExternal() &&
+                    stream.behaviorHints?.bingeGroup == targetBingeGroup &&
+                    isPlayable(stream)
             }
             if (bingeGroupMatch != null) return bingeGroupMatch
             // When bingeGroupOnly is set (MANUAL mode with only binge-group

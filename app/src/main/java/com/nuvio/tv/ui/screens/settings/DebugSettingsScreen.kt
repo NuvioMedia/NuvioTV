@@ -338,7 +338,7 @@ private fun DebugToggleCard(
 
             Switch(
                 checked = checked,
-                onCheckedChange = { onToggle(it) },
+                onCheckedChange = null,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = NuvioTheme.colors.Secondary,
                     checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),

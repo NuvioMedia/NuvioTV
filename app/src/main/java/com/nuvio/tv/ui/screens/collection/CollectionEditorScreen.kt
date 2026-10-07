@@ -241,7 +241,7 @@ fun CollectionEditorScreen(
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                     Switch(
                         checked = uiState.pinToTop,
-                        onCheckedChange = { viewModel.setPinToTop(it) },
+                        onCheckedChange = null,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = NuvioTheme.colors.Secondary,
                             checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),
@@ -294,7 +294,7 @@ fun CollectionEditorScreen(
                     Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                     Switch(
                         checked = uiState.focusGlowEnabled,
-                        onCheckedChange = { viewModel.setFocusGlowEnabled(it) },
+                        onCheckedChange = null,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = NuvioTheme.colors.Secondary,
                             checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),
@@ -393,7 +393,7 @@ fun CollectionEditorScreen(
                         Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                         Switch(
                             checked = uiState.showAllTab,
-                            onCheckedChange = { viewModel.setShowAllTab(it) },
+                            onCheckedChange = null,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = NuvioTheme.colors.Secondary,
                                 checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),

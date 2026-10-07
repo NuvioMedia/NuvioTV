@@ -11,13 +11,13 @@ internal class MdbListLibraryProjection(snapshot: MdbListLibrarySnapshot) {
         snapshot.itemsByList.values.flatten().forEach { index.add(it.type, it.media) }
         val combined = linkedMapOf<String, LibraryEntry>()
         snapshot.itemsByList.forEach { (listKey, items) ->
-            val hasRanks = items.all { it.rank != null }
             items.forEachIndexed { position, item ->
                 val media = index.resolve(item.type, item.media.ids)
                 val key = "${item.type}:${media.ids.key}"
                 val previous = combined[key]
                 val listKeys = previous?.listKeys.orEmpty() + listKey
-                val ranks = previous?.listRanks.orEmpty() + (listKey to if (hasRanks) requireNotNull(item.rank) else position)
+                // Items arrive in the list's saved MDBList order, which is the provider order.
+                val ranks = previous?.listRanks.orEmpty() + (listKey to position)
                 combined[key] = LibraryEntry(
                     id = media.ids.contentId,
                     type = if (item.type == MdbListItemType.MOVIE) "movie" else "series",
@@ -38,7 +38,8 @@ internal class MdbListLibraryProjection(snapshot: MdbListLibrarySnapshot) {
                     traktId = media.ids.trakt?.takeIf { it <= Int.MAX_VALUE }?.toInt(),
                     trackingProviderId = "mdblist",
                     trackingProviderItemId = media.ids.mdblist,
-                    trackingSourceUrl = media.ids.mdblist?.let { "https://mdblist.com/${if (item.type == MdbListItemType.MOVIE) "movie" else "show"}/$it" }
+                    trackingSourceUrl = media.ids.mdblist?.let { "https://mdblist.com/${if (item.type == MdbListItemType.MOVIE) "movie" else "show"}/$it" },
+                    rawPosterUrl = media.poster
                 )
                 media.ids.aliases().forEach { alias -> memberships[item.type to alias] = listKeys }
             }

@@ -3,8 +3,11 @@ package com.nuvio.tv.core.torrent
 import com.nuvio.engine.NuvioTorrentProfile
 import com.nuvio.engine.NuvioUploadMode
 import java.io.File
+import java.nio.file.Files
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TorrentEngineConfigTest {
@@ -103,5 +106,55 @@ class TorrentEngineConfigTest {
         )
         assertEquals(0.375f, engineOnly, 0.0001f)
         assertEquals(0.95f, torrentInitialLoadingProgress(60_000L, 0L, 0L), 0.0001f)
+    }
+
+    @Test
+    fun `nested payload moves to the engine payload directory`() {
+        val cacheDirectory = Files.createTempDirectory("nuvio-engine-cache-").toFile()
+        try {
+            val legacy = File(cacheDirectory, "payload/payload/$TORRENT_ID").apply { mkdirs() }
+            File(legacy, "video.mkv").writeText("cached")
+
+            migrateNestedPayloadDirectory(cacheDirectory)
+
+            assertEquals("cached", File(cacheDirectory, "payload/$TORRENT_ID/video.mkv").readText())
+            assertFalse(File(cacheDirectory, "payload/payload").exists())
+        } finally {
+            cacheDirectory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `nested payload never replaces current payload`() {
+        val cacheDirectory = Files.createTempDirectory("nuvio-engine-cache-").toFile()
+        try {
+            val current = File(cacheDirectory, "payload/$TORRENT_ID").apply { mkdirs() }
+            File(current, "video.mkv").writeText("current")
+            val legacy = File(cacheDirectory, "payload/payload/$TORRENT_ID").apply { mkdirs() }
+            File(legacy, "video.mkv").writeText("stale")
+
+            migrateNestedPayloadDirectory(cacheDirectory)
+
+            assertEquals("current", File(current, "video.mkv").readText())
+            assertFalse(File(cacheDirectory, "payload/payload").exists())
+        } finally {
+            cacheDirectory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `missing nested payload leaves cache untouched`() {
+        val cacheDirectory = Files.createTempDirectory("nuvio-engine-cache-").toFile()
+        try {
+            migrateNestedPayloadDirectory(cacheDirectory)
+
+            assertTrue(cacheDirectory.listFiles().isNullOrEmpty())
+        } finally {
+            cacheDirectory.deleteRecursively()
+        }
+    }
+
+    private companion object {
+        const val TORRENT_ID = "0123456789abcdef0123456789abcdef01234567"
     }
 }

@@ -22,6 +22,7 @@ internal fun LayoutDetailPageSection(
     var showOverlayStyleDialog by rememberSaveable { mutableStateOf(false) }
     var showRatingsDialog by rememberSaveable { mutableStateOf(false) }
 
+    SettingsSectionLabel(text = stringResource(R.string.layout_detail_group_episodes))
     SettingsActionRow(
         title = stringResource(R.string.layout_episode_options_overlay),
         subtitle = stringResource(R.string.layout_episode_options_overlay_sub),
@@ -46,6 +47,8 @@ internal fun LayoutDetailPageSection(
         value = episodeRatingsVisibilityLabel(uiState.detailImdbRatingsVisibility),
         onClick = { showRatingsDialog = true }
     )
+
+    SettingsSectionLabel(text = stringResource(R.string.layout_detail_group_trailers))
     if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
         SettingsToggleRow(
             title = stringResource(R.string.audio_autoplay_trailers),
@@ -56,6 +59,24 @@ internal fun LayoutDetailPageSection(
             }
         )
         if (uiState.detailPageTrailerAutoplayEnabled) {
+            SettingsToggleRow(
+                title = stringResource(R.string.layout_trailer_play_in_background),
+                subtitle = stringResource(R.string.layout_trailer_play_in_background_sub),
+                checked = uiState.detailPageTrailerPlayInBackground,
+                onToggle = {
+                    onEvent(LayoutSettingsEvent.SetDetailPageTrailerPlayInBackground(!uiState.detailPageTrailerPlayInBackground))
+                }
+            )
+            if (uiState.detailPageTrailerPlayInBackground) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.layout_trailer_pause_on_scroll),
+                    subtitle = stringResource(R.string.layout_trailer_pause_on_scroll_sub),
+                    checked = uiState.detailPageTrailerPauseOnScroll,
+                    onToggle = {
+                        onEvent(LayoutSettingsEvent.SetDetailPageTrailerPauseOnScroll(!uiState.detailPageTrailerPauseOnScroll))
+                    }
+                )
+            }
             SliderSettingsItem(
                 title = stringResource(R.string.audio_trailer_delay),
                 value = uiState.detailPageTrailerAutoplayDelaySeconds,
@@ -77,6 +98,8 @@ internal fun LayoutDetailPageSection(
             onEvent(LayoutSettingsEvent.SetDetailPageTrailerButtonEnabled(!uiState.detailPageTrailerButtonEnabled))
         }
     )
+
+    SettingsSectionLabel(text = stringResource(R.string.layout_detail_group_metadata))
     SettingsToggleRow(
         title = stringResource(R.string.layout_prefer_external_meta),
         subtitle = stringResource(R.string.layout_prefer_external_meta_sub),
