@@ -177,7 +177,13 @@ fun GenrePickerOptionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clearAndSetSemantics {
+                contentDescription = title
+                role = Role.RadioButton
+                this.selected = selected
+            },
         colors = CardDefaults.colors(
             containerColor = if (selected) NuvioTheme.colors.Secondary.copy(alpha = 0.15f) else NuvioTheme.colors.BackgroundCard,
             focusedContainerColor = NuvioTheme.colors.FocusBackground
