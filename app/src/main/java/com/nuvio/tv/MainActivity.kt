@@ -93,6 +93,9 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import com.nuvio.tv.domain.model.UiScale
+import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -237,6 +240,7 @@ data class DrawerItem(
 )
 
 private data class MainUiPrefs(
+    val uiScalePercent: Int = UiScale.DEFAULT_PERCENT,
     val theme: AppTheme = AppTheme.WHITE,
     val customThemeColors: CustomThemeColors = CustomThemeColors.Default,
     val memberAccess: MemberAccess = MemberAccess.None,
@@ -561,7 +565,9 @@ open class MainActivity : ComponentActivity() {
                 ) { landscape, backdropWithLogo -> landscape to backdropWithLogo }
 
                 combine(
-                    themeAndExperienceFlow,
+                    combine(themeAndExperienceFlow, layoutPreferenceDataStore.uiScalePercent) { themePrefs, uiScalePercent ->
+                        themePrefs.copy(uiScalePercent = uiScalePercent)
+                    },
                     layoutAndFeaturesFlow,
                     extraFeaturesFlow,
                     layoutPreferenceDataStore.cardDepthStyle,
@@ -609,11 +615,22 @@ open class MainActivity : ComponentActivity() {
                     defaultBringIntoViewSpec
                 }
                 val systemDensity = LocalDensity.current
-                val clampedFontScaleDensity = remember(systemDensity) {
+                val systemConfiguration = LocalConfiguration.current
+                val uiScaleFactor = UiScale.factor(mainUiPrefs.uiScalePercent)
+                val clampedFontScaleDensity = remember(systemDensity, uiScaleFactor) {
                     Density(
-                        density = systemDensity.density,
+                        density = systemDensity.density * uiScaleFactor,
                         fontScale = systemDensity.fontScale.coerceAtMost(MAX_SUPPORTED_FONT_SCALE)
                     )
+                }
+                // Keep configuration-based layouts consistent with the scaled Compose density.
+                val scaledConfiguration = remember(systemConfiguration, uiScaleFactor) {
+                    Configuration(systemConfiguration).apply {
+                        densityDpi = (systemConfiguration.densityDpi * uiScaleFactor).roundToInt()
+                        screenWidthDp = (systemConfiguration.screenWidthDp / uiScaleFactor).roundToInt()
+                        screenHeightDp = (systemConfiguration.screenHeightDp / uiScaleFactor).roundToInt()
+                        smallestScreenWidthDp = (systemConfiguration.smallestScreenWidthDp / uiScaleFactor).roundToInt()
+                    }
                 }
                 val highlighterEnabled = BuildConfig.IS_DEBUG_BUILD && mainUiPrefs.composeHighlighterEnabled
                 com.nuvio.tv.ui.util.RecompositionHighlighterFlag.enabled = highlighterEnabled
@@ -694,6 +711,7 @@ open class MainActivity : ComponentActivity() {
                 }
                 CompositionLocalProvider(
                     LocalDensity provides clampedFontScaleDensity,
+                    LocalConfiguration provides scaledConfiguration,
                     LocalBringIntoViewSpec provides bringIntoViewSpec,
                     LocalFastHorizontalNavigationEnabled provides mainUiPrefs.fastHorizontalNavigationEnabled,
                     LocalRecompositionHighlighterEnabled provides highlighterEnabled,

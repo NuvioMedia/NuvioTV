@@ -29,6 +29,7 @@ import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
 import com.nuvio.tv.domain.model.HomeLayout
+import com.nuvio.tv.domain.model.UiScale
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val gson = Gson()
 
     private val layoutKey = stringPreferencesKey("selected_layout")
+    private val uiScalePercentKey = intPreferencesKey("ui_scale_percent")
     private val hasChosenKey = booleanPreferencesKey("has_chosen_layout")
     private val heroCatalogKey = stringPreferencesKey("hero_catalog_key")
     private val heroCatalogKeysKey = stringPreferencesKey("hero_catalog_keys")
@@ -159,6 +161,17 @@ class LayoutPreferenceDataStore @Inject constructor(
             HomeLayout.valueOf(layoutName)
         } catch (e: IllegalArgumentException) {
             HomeLayout.MODERN
+        }
+    }
+
+    // Local layout preference; intentionally excluded from cross-device catalog sync.
+    val uiScalePercent: Flow<Int> = profileFlow { prefs ->
+        UiScale.normalize(prefs[uiScalePercentKey] ?: UiScale.DEFAULT_PERCENT)
+    }
+
+    suspend fun setUiScalePercent(percent: Int) {
+        store().edit { prefs ->
+            prefs[uiScalePercentKey] = UiScale.normalize(percent)
         }
     }
 
