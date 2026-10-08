@@ -13,7 +13,7 @@ internal object LocalSeekPreviewSettings {
     private const val PREFS = "nuvio_seekr_settings"
     private const val KEY_LOCAL_ENABLED = "local_previews_enabled"
 
-    private val _enabled = MutableStateFlow(true)
+    private val _enabled = MutableStateFlow(false)
 
     @Volatile
     private var loaded = false
@@ -22,7 +22,7 @@ internal object LocalSeekPreviewSettings {
         if (loaded) return
         synchronized(this) {
             if (loaded) return
-            _enabled.value = prefs(context).getBoolean(KEY_LOCAL_ENABLED, true)
+            _enabled.value = prefs(context).getBoolean(KEY_LOCAL_ENABLED, false)
             loaded = true
         }
     }
