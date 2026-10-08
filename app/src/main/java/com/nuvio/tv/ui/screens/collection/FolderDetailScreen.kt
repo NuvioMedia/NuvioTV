@@ -40,6 +40,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -537,6 +538,7 @@ private fun TabbedGridContent(
                                 modifier = Modifier
                                     .width(posterCardStyle.width)
                                     .height(loadingCardHeight)
+                                    .clearAndSetSemantics {}
                                     .focusProperties { canFocus = false },
                                 shape = CardDefaults.shape(shape = cardShape),
                                 colors = CardDefaults.colors(

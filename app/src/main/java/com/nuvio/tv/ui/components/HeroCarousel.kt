@@ -52,6 +52,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
@@ -136,6 +138,7 @@ fun HeroCarousel(
             .onFocusChanged {
                 isFocused = it.hasFocus || it.isFocused
             }
+            .semantics { this.contentDescription = items.getOrNull(activeIndex)?.name.orEmpty() }
             .focusable()
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {

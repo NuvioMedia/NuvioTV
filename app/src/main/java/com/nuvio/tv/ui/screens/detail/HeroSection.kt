@@ -60,6 +60,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
@@ -380,6 +381,7 @@ internal fun PlayButton(
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
     val longPressKeyTracker = rememberLongPressKeyTracker()
+    val playFallbackLabel = stringResource(R.string.hero_play)
 
     LaunchedEffect(restoreFocusToken) {
         if (restoreFocusToken > 0 && focusRequester != null) {
@@ -440,7 +442,14 @@ internal fun PlayButton(
                 }
                 false
             }
-            .focusProperties { up = FocusRequester.Cancel },
+            .focusProperties { up = FocusRequester.Cancel }
+            .then(
+                if (text == null) {
+                    Modifier.semantics { this.contentDescription = playFallbackLabel }
+                } else {
+                    Modifier
+                }
+            ),
         colors = ButtonDefaults.colors(
             containerColor = androidx.compose.ui.graphics.Color.White,
             focusedContainerColor = androidx.compose.ui.graphics.Color.White,

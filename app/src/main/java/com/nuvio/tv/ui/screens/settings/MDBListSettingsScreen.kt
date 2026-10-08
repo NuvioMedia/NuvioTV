@@ -29,6 +29,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -309,6 +312,8 @@ private fun RatingOrderToggleRow(
     onMoveUp: (() -> Unit)?,
     onMoveDown: (() -> Unit)?
 ) {
+    val moveUpLabel = stringResource(R.string.cd_move_up)
+    val moveDownLabel = stringResource(R.string.cd_move_down)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -327,7 +332,9 @@ private fun RatingOrderToggleRow(
         Button(
             onClick = { onMoveUp?.invoke() },
             enabled = onMoveUp != null,
-            modifier = Modifier.width(40.dp),
+            modifier = Modifier
+                .width(40.dp)
+                .semantics { this.contentDescription = moveUpLabel },
             colors = ButtonDefaults.colors(
                 containerColor = NuvioTheme.colors.BackgroundElevated,
                 contentColor = NuvioTheme.colors.TextPrimary,
@@ -337,12 +344,14 @@ private fun RatingOrderToggleRow(
             scale = ButtonDefaults.scale(focusedScale = 1.05f),
             contentPadding = PaddingValues(0.dp)
         ) {
-            Text("▲", style = MaterialTheme.typography.bodySmall)
+            Text("▲", style = MaterialTheme.typography.bodySmall, modifier = Modifier.clearAndSetSemantics {})
         }
         Button(
             onClick = { onMoveDown?.invoke() },
             enabled = onMoveDown != null,
-            modifier = Modifier.width(40.dp),
+            modifier = Modifier
+                .width(40.dp)
+                .semantics { this.contentDescription = moveDownLabel },
             colors = ButtonDefaults.colors(
                 containerColor = NuvioTheme.colors.BackgroundElevated,
                 contentColor = NuvioTheme.colors.TextPrimary,
@@ -352,7 +361,7 @@ private fun RatingOrderToggleRow(
             scale = ButtonDefaults.scale(focusedScale = 1.05f),
             contentPadding = PaddingValues(0.dp)
         ) {
-            Text("▼", style = MaterialTheme.typography.bodySmall)
+            Text("▼", style = MaterialTheme.typography.bodySmall, modifier = Modifier.clearAndSetSemantics {})
         }
     }
 }
