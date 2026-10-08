@@ -1,0 +1,103 @@
+package com.nuvio.tv.ui.screens.settings
+
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
+import com.nuvio.tv.core.usenet.UsenetConfiguration
+
+@Composable
+internal fun UsenetSettingsCard(
+    configuration: UsenetConfiguration,
+    update: (UsenetConfiguration) -> Unit,
+    initialFocusRequester: FocusRequester? = null
+) {
+    var picker by remember { mutableStateOf<String?>(null) }
+    val automatic = stringResource(R.string.usenet_automatic)
+    val profiles = listOf(
+        SettingsPickerOption("low-memory", stringResource(R.string.usenet_low_memory)),
+        SettingsPickerOption("balanced", stringResource(R.string.usenet_balanced)),
+        SettingsPickerOption("throughput", stringResource(R.string.usenet_throughput))
+    )
+    SettingsGroupCard(title = stringResource(R.string.usenet_title)) {
+        SettingsToggleRow(title = stringResource(R.string.usenet_self_hosted),
+            subtitle = stringResource(R.string.usenet_self_hosted_description),
+            checked = configuration.allowPrivateNetwork,
+            onToggle = { update(configuration.copy(allowPrivateNetwork = !configuration.allowPrivateNetwork)) })
+        SettingsToggleRow(title = stringResource(R.string.usenet_fallback),
+            subtitle = stringResource(R.string.usenet_fallback_description),
+            checked = configuration.fallbackEnabled,
+            onToggle = { update(configuration.copy(fallbackEnabled = !configuration.fallbackEnabled)) },
+            modifier = initialFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+        SettingsActionRow(title = stringResource(R.string.usenet_fallback_max_attempts),
+            subtitle = stringResource(R.string.usenet_fallback_max_attempts_description),
+            value = configuration.fallbackMaxAttempts.toString(), onClick = { picker = "fallbackAttempts" })
+        SettingsToggleRow(title = stringResource(R.string.usenet_hole_filling),
+            subtitle = stringResource(R.string.usenet_hole_filling_description),
+            checked = configuration.holeFilling,
+            onToggle = { update(configuration.copy(holeFilling = !configuration.holeFilling)) })
+        if (configuration.holeFilling) {
+            SettingsActionRow(title = stringResource(R.string.usenet_max_missing_articles),
+                subtitle = stringResource(R.string.usenet_max_missing_articles_description),
+                value = configuration.maxMissingArticles.toString(), onClick = { picker = "missingArticles" })
+            SettingsActionRow(title = stringResource(R.string.usenet_max_consecutive_missing),
+                subtitle = stringResource(R.string.usenet_max_consecutive_missing_description),
+                value = configuration.maxConsecutiveMissing.toString(), onClick = { picker = "consecutiveMissing" })
+        }
+        SettingsToggleRow(title = stringResource(R.string.usenet_prefetch_results),
+            subtitle = stringResource(R.string.usenet_prefetch_results_description),
+            checked = configuration.prefetchResults,
+            onToggle = { update(configuration.copy(prefetchResults = !configuration.prefetchResults)) })
+        SettingsToggleRow(title = stringResource(R.string.usenet_cache_nzb),
+            subtitle = stringResource(R.string.usenet_cache_nzb_description),
+            checked = configuration.cacheNzb,
+            onToggle = { update(configuration.copy(cacheNzb = !configuration.cacheNzb)) })
+        SettingsToggleRow(title = stringResource(R.string.usenet_fast_mkv),
+            subtitle = stringResource(R.string.usenet_fast_mkv_description),
+            checked = configuration.fastMkvStartup,
+            onToggle = { update(configuration.copy(fastMkvStartup = !configuration.fastMkvStartup)) })
+        SettingsToggleRow(title = stringResource(R.string.usenet_fast_nzb),
+            subtitle = stringResource(R.string.usenet_fast_nzb_description),
+            checked = configuration.fastNzbFetch,
+            onToggle = { update(configuration.copy(fastNzbFetch = !configuration.fastNzbFetch)) })
+        SettingsToggleRow(title = stringResource(R.string.usenet_prewarm),
+            subtitle = stringResource(R.string.usenet_prewarm_description),
+            checked = configuration.prewarmOnLaunch,
+            onToggle = { update(configuration.copy(prewarmOnLaunch = !configuration.prewarmOnLaunch)) })
+        SettingsActionRow(title = stringResource(R.string.usenet_profile),
+            subtitle = stringResource(R.string.usenet_profile_description),
+            value = profiles.first { it.value == configuration.profile }.title, onClick = { picker = "profile" })
+        SettingsActionRow(title = stringResource(R.string.usenet_read_ahead),
+            subtitle = stringResource(R.string.usenet_read_ahead_description),
+            value = configuration.readAhead.takeIf { it > 0 }?.toString() ?: automatic, onClick = { picker = "ahead" })
+        SettingsActionRow(title = stringResource(R.string.usenet_connections),
+            subtitle = stringResource(R.string.usenet_connections_description),
+            value = configuration.maxConnections.takeIf { it > 0 }?.toString() ?: automatic, onClick = { picker = "connections" })
+    }
+    when (picker) {
+        "missingArticles" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_max_missing_articles),
+            options = (1..50).map { SettingsPickerOption(it, it.toString()) },
+            selectedValue = configuration.maxMissingArticles, onOptionSelected = {
+                update(configuration.copy(maxMissingArticles = it, maxConsecutiveMissing = minOf(configuration.maxConsecutiveMissing, it)))
+                picker = null
+            }, onDismiss = { picker = null })
+        "consecutiveMissing" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_max_consecutive_missing),
+            options = (1..minOf(10, configuration.maxMissingArticles)).map { SettingsPickerOption(it, it.toString()) },
+            selectedValue = configuration.maxConsecutiveMissing, onOptionSelected = {
+                update(configuration.copy(maxConsecutiveMissing = it)); picker = null
+            }, onDismiss = { picker = null })
+        "fallbackAttempts" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_fallback_max_attempts),
+            options = (1..50).map { SettingsPickerOption(it, it.toString()) },
+            selectedValue = configuration.fallbackMaxAttempts, onOptionSelected = { update(configuration.copy(fallbackMaxAttempts = it)); picker = null }, onDismiss = { picker = null })
+        "profile" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_profile), options = profiles,
+            selectedValue = configuration.profile, onOptionSelected = { update(configuration.copy(profile = it)); picker = null }, onDismiss = { picker = null })
+        "ahead" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_read_ahead),
+            options = listOf(0, 2, 4, 8, 16, 24, 32, 48, 64, 96, 128, 256, 512).map { SettingsPickerOption(it, if (it == 0) automatic else it.toString()) },
+            selectedValue = configuration.readAhead, onOptionSelected = { update(configuration.copy(readAhead = it)); picker = null }, onDismiss = { picker = null })
+        "connections" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_connections),
+            options = listOf(0, 4, 8, 12, 16, 20, 24, 32, 40, 50, 60, 80, 100, 150, 200, 300, 500).map { SettingsPickerOption(it, if (it == 0) automatic else it.toString()) },
+            selectedValue = configuration.maxConnections, onOptionSelected = { update(configuration.copy(maxConnections = it)); picker = null }, onDismiss = { picker = null })
+    }
+}

@@ -433,6 +433,11 @@ class PlayerRuntimeController(
     internal var stillWatchingPromptJob: Job? = null
     internal var startupLoadingReportJob: Job? = null
     internal var sourceStreamsJob: Job? = null
+    internal var streamFallbackSession: com.nuvio.tv.core.player.StreamFallbackSession? = null
+    internal var streamFallbackJob: Job? = null
+    internal var streamFallbackResumePosition: Long? = null
+    internal var streamFallbackStartPaused: Boolean = false
+    internal var streamFallbackError: String? = null
     internal var sourceBadgeJob: Job? = null
     internal var sourceFilterFullList: List<com.nuvio.tv.domain.model.Stream> = emptyList()
     internal var sourceBadgedAddonNames: Set<String> = emptySet()
@@ -755,6 +760,8 @@ class PlayerRuntimeController(
     }
 
     fun onCleared() {
+        cancelStreamFallback()
+        com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.release(currentStreamUrl)
         releasePlayer()
         stopTorrentStream()
         torrentService.shutdown()

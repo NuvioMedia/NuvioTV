@@ -16,6 +16,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
     if (initialPlaybackStarted) return
 
     initialPlaybackStarted = true
+    streamCacheKey?.let { key ->
+        streamFallbackSession = com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, initialStreamUrl)
+            ?: com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, currentStreamUrl)
+    }
 
     // Persist binge group from navigation args so that subsequent plays
     // (from CW, Details, or next-episode) can reuse the same source group.

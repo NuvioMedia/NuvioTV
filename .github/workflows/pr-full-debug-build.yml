@@ -66,8 +66,11 @@ jobs:
             echo "NUVIO_RELEASE_STORE_PASSWORD=android"
           } >> "$GITHUB_ENV"
 
-      - name: Test updater and build fullDebug APK
-        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullDebug --stacktrace
+      - name: Verify Usenet Android sidecars
+        run: python3 native/usenet/scripts/check_prebuilts.py
+
+      - name: Test updater and Usenet and build fullDebug APK
+        run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests '*Usenet*' --tests 'com.nuvio.tv.core.player.StreamFallbackSessionTest' :app:assembleFullDebug --stacktrace
 
       - name: Upload fullDebug APK
         uses: actions/upload-artifact@v7

@@ -269,6 +269,7 @@ internal fun PlayerRuntimeController.handleMpvPlaybackError(
             mpvView?.currentPositionMs()?.coerceAtLeast(0L) ?: 0L
         }
         if (attemptMpvAutoRetry(detailedError = detailedError, savedPosition = savedPosition)) return
+        if (tryNextStream(detailedError)) return
 
         finishLoadingDiagnostics("mpv_error")
         cancelNextEpisodeAutoPlayOnFatalError()
