@@ -208,6 +208,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (rememberAudioDelayPerDeviceEnabled) {
                 applyStoredAudioDelayForCurrentRouteIfEnabled()
             }
+            applyStreamAudioDelay()
             cachedDecoderPriority = playerSettings.decoderPriority
             val preferredAudioLanguages = resolvePreferredAudioLanguages(
                 preferredAudioLanguage = playerSettings.preferredAudioLanguage,

@@ -50,8 +50,18 @@ internal fun PlayerRuntimeController.applyAudioDelay(
         mpvView?.setAudioDelayMs(clampedDelayMs)
     }
     if (persistForCurrentRoute) {
-        persistAudioDelayForCurrentRoute(clampedDelayMs)
+        persistAudioDelayForCurrentRoute(clampedDelayMs - appliedStreamAudioDelayMs)
     }
+}
+
+internal fun combinedAudioDelayMs(deviceDelayMs: Int, streamDelayMs: Int): Int =
+    (deviceDelayMs.toLong() + streamDelayMs).coerceIn(AUDIO_DELAY_MIN_MS.toLong(), AUDIO_DELAY_MAX_MS.toLong()).toInt()
+
+/** Swaps the previous stream's delay for the current one, keeping the user's/device part unchanged. */
+internal fun PlayerRuntimeController.applyStreamAudioDelay() {
+    val deviceDelayMs = _uiState.value.audioDelayMs - appliedStreamAudioDelayMs
+    appliedStreamAudioDelayMs = streamAudioDelayMs
+    applyAudioDelay(combinedAudioDelayMs(deviceDelayMs, streamAudioDelayMs), persistForCurrentRoute = false)
 }
 
 internal fun PlayerRuntimeController.skipActiveInterval(): Boolean {

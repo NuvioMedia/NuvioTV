@@ -111,7 +111,8 @@ fun BehaviorHintsDto.toDomain(): StreamBehaviorHints = StreamBehaviorHints(
     proxyHeaders = proxyHeaders?.toDomain(),
     videoHash = videoHash,
     videoSize = videoSize,
-    filename = filename
+    filename = filename,
+    audioDelayMs = audioDelayMs
 )
 
 fun ProxyHeadersDto.toDomain(): ProxyHeaders = ProxyHeaders(

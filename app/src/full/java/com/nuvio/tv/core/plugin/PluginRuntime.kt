@@ -1443,7 +1443,9 @@ class PluginRuntime @Inject constructor() {
                     peers = (item["peers"] as? Number)?.toInt(),
                     infoHash = item["infoHash"]?.toString()?.takeIf { !it.contains("[object") },
                     headers = headers,
-                    subtitles = parseSubtitles(item["subtitles"])
+                    subtitles = parseSubtitles(item["subtitles"]),
+                    audioDelayMs = ((item["behaviorHints"] as? Map<*, *>)?.get("audioDelayMs") as? Number)
+                        ?.toDouble()?.takeIf { it.isFinite() }?.toInt()
                 )
             }?.filter { it.url.isNotBlank() } ?: emptyList()
         } catch (e: Exception) {
