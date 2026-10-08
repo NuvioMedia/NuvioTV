@@ -256,7 +256,9 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     fun applyAudioAmplificationDb(db: Int) {
         if (!initialized) return
         val clampedDb = db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
-        val linearScale = 10.0.pow(clampedDb / 20.0)
+        // mpv's volume property operates on a cubic scale (gain = (volume/100)^3),
+        // so +N dB requires volume = 100 * 10^(N/60), rather than 10^(N/20).
+        val linearScale = 10.0.pow(clampedDb / 60.0)
         val targetVolumePercent = (100.0 * linearScale).coerceIn(0.0, MPV_MAX_VOLUME_PERCENT)
         runCatching {
             mpv.setPropertyDouble("volume", targetVolumePercent)
