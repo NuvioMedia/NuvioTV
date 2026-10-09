@@ -9,6 +9,7 @@ internal enum class SettingsRailGroup {
 }
 
 internal enum class SettingsCategory(val group: SettingsRailGroup) {
+    CONNECT_PHONE(SettingsRailGroup.YOU),
     ACCOUNT(SettingsRailGroup.YOU),
     PROFILES(SettingsRailGroup.YOU),
     APPEARANCE(SettingsRailGroup.LOOK),
@@ -26,9 +27,11 @@ internal enum class SettingsCategory(val group: SettingsRailGroup) {
 internal fun visibleSettingsCategories(
     isPrimaryProfile: Boolean,
     isEssentialMode: Boolean,
-    isDebugBuild: Boolean
+    isDebugBuild: Boolean,
+    isFullBuild: Boolean = false
 ): List<SettingsCategory> = SettingsCategory.entries.filter { category ->
     when (category) {
+        SettingsCategory.CONNECT_PHONE -> isFullBuild
         SettingsCategory.ACCOUNT,
         SettingsCategory.PROFILES -> isPrimaryProfile
         SettingsCategory.DEBUG -> isDebugBuild && !isEssentialMode
