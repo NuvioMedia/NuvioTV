@@ -33,6 +33,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
+    testOptions {
+        targetSdk = 36 // Match NuvioTV; do not run Surface regressions in legacy target mode.
+    }
+
     externalNativeBuild {
         cmake {
             path = file("src/main/jni/CMakeLists.txt")
