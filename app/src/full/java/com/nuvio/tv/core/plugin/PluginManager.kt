@@ -236,6 +236,18 @@ class PluginManager @Inject constructor(
     val pluginsEnabled: Flow<Boolean> = dataStore.pluginsEnabled
 
     val groupStreamsByRepository: Flow<Boolean> = dataStore.groupStreamsByRepository
+
+    suspend fun getScraperSettings(scraperId: String): Map<String, Any> =
+        dataStore.getScraperSettings(scraperId)
+
+    suspend fun setScraperSettings(scraperId: String, settings: Map<String, Any>) =
+        dataStore.setScraperSettings(scraperId, settings)
+
+    suspend fun getScraperSettingsLayout(scraperId: String): String? {
+        val code = dataStore.getScraperCode(scraperId) ?: return null
+        val scraperSettings = dataStore.getScraperSettings(scraperId)
+        return withContext(pluginDispatcher) { runtime.getSettingsLayout(scraperId, code, scraperSettings) }
+    }
     
     private val syncScope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + Dispatchers.IO
@@ -1040,7 +1052,8 @@ class PluginManager @Inject constructor(
                     manifestEnabled = info.enabled,
                     logo = info.logo,
                     contentLanguage = info.contentLanguage ?: emptyList(),
-                    formats = info.formats
+                    formats = info.formats,
+                    hasSettings = info.hasSettings
                 )
                 
                 // Save code

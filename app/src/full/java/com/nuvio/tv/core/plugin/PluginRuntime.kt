@@ -1,6 +1,8 @@
 package com.nuvio.tv.core.plugin
 
 import android.util.Log
+import co.touchlab.kermit.Logger
+import com.dokar.quickjs.QuickJs
 import com.dokar.quickjs.binding.define
 import com.dokar.quickjs.binding.function
 import com.dokar.quickjs.quickJs
@@ -11,6 +13,8 @@ import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.toStreamAudioDelayLanguage
 import com.nuvio.tv.domain.model.toStreamAudioDelayMs
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeout
@@ -38,6 +42,7 @@ import java.util.zip.InflaterInputStream
 import kotlin.text.Charsets
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val TAG = "PluginRuntime"
 private const val PLUGIN_TIMEOUT_MS = 60_000L
@@ -47,6 +52,92 @@ private const val MAX_FETCH_BODY_CHARS = 1024 * 1024
 class PluginRuntime @Inject constructor() {
 
     private val gson: Gson = GsonBuilder().create()
+
+    private fun wrapPluginModule(code: String): String = """
+        var module = { exports: {} };
+        var exports = module.exports;
+        (function() {
+            $code
+        })();
+    """.trimIndent()
+
+    private fun registerHostFunctions(
+        runtime: QuickJs,
+        scraperId: String,
+        scraperSettingsJson: String,
+        tmdbApiKey: String,
+        onResult: (String) -> Unit
+    ) {
+        val log = Logger.withTag(TAG)
+        fun convertArgs( args: Array<Any?> ): String {
+            return args.joinToString(" ") {
+                when (it) {
+                    is com.dokar.quickjs.binding.JsObject -> gson.toJson(it)
+                    is com.dokar.quickjs.binding.JsFunction ->
+                        "${if (it.isAsync) "async " else ""}function ${it.name}() {[native quickjs code]}"
+                    else -> it?.toString() ?: "null"
+                }
+            }
+        }
+        // Define console object - must return null to avoid quickjs conversion issues
+        runtime.define("console") {
+            function("log") { args ->
+                val message = convertArgs(args)
+                log.d { "Plugin:$scraperId $message" }
+                null
+            }
+            function("error") { args ->
+                log.e { "Plugin:$scraperId ${convertArgs(args)}" }
+                null
+            }
+            function("warn") { args ->
+                log.w { "Plugin:$scraperId ${convertArgs(args)}" }
+                null
+            }
+            function("info") { args ->
+                log.i { "Plugin:$scraperId ${convertArgs(args)}" }
+                null
+            }
+            function("debug") { args ->
+                log.d { "Plugin:$scraperId ${convertArgs(args)}" }
+                null
+            }
+        }
+        runtime.function("__get_scraper_id") { scraperId }
+        runtime.function("__get_scraper_settings") { scraperSettingsJson }
+        runtime.function("__get_tmdb_api_key") { tmdbApiKey }
+        runtime.function("__capture_result") { args ->
+            onResult(args.getOrNull(0)?.toString() ?: "[]")
+            null
+        }
+    }
+
+    suspend fun getSettingsLayout(scraperId: String, code: String, scraperSettings: Map<String, Any> = mapOf()): String? = withTimeout(
+        PLUGIN_TIMEOUT_MS.milliseconds
+    ) {
+        val deferred = CompletableDeferred<String?>()
+        quickJs(Dispatchers.Default) {
+            try {
+                val scraperSettingsJson = gson.toJson(scraperSettings)
+                registerHostFunctions(
+                    this,
+                    "${scraperId}:settings-preview",
+                    scraperSettingsJson,
+                    BuildConfig.TMDB_API_KEY,
+                ) { deferred.complete(it) }
+                evaluate<Any?>(getCompiledPolyfillBytecode(this))
+                getCompiledCryptoJsBytecode(this)?.let { evaluate<Any?>(it) }
+                evaluate<Any?>(wrapPluginModule(code))
+                evaluate<String?>(getCompiledSettingsCallBytecode(this))
+                deferred.await()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                Log.e(TAG, "Plugin settings layout failed: ${e.message}", e)
+                throw e
+            }
+        }
+    }
 
     private val httpClient = OkHttpClient.Builder()
         .dns(com.nuvio.tv.core.network.IPv4FirstDns())
@@ -82,6 +173,8 @@ class PluginRuntime @Inject constructor() {
 
     @Volatile
     private var compiledCallBytecode: ByteArray? = null
+
+    private var compiledSettingsCallBytecode: ByteArray? = null
 
     private fun getCompiledCryptoJsBytecode(qjs: com.dokar.quickjs.QuickJs): ByteArray? {
         compiledCryptoJsBytecode?.let { return it }
@@ -127,6 +220,40 @@ class PluginRuntime @Inject constructor() {
                 throw e
             }
         }
+    }
+
+    private fun getCompiledSettingsCallBytecode(qjs: com.dokar.quickjs.QuickJs): ByteArray {
+        compiledSettingsCallBytecode?.let { return it }
+        synchronized(this) {
+            compiledSettingsCallBytecode?.let { return it }
+            try {
+                val bytecode = qjs.compile(getStaticSettingsCallCode(), "settings-call.js", false)
+                compiledSettingsCallBytecode = bytecode
+                return bytecode
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to compile call code to bytecode: ${e.message}", e)
+                throw e
+            }
+        }
+    }
+
+    private fun getStaticSettingsCallCode(): String {
+        return """
+            (async function() {
+                try {
+                    var onSettings = (typeof module !== 'undefined' && module.exports && module.exports.onSettings) || globalThis.onSettings;
+                    if (typeof onSettings === 'function') {
+                        var layout = await onSettings();
+                        __capture_result(JSON.stringify(layout || []));
+                    } else {
+                        __capture_result("[]");
+                    }
+                } catch (e) {
+                    console.error("onSettings error:", e);
+                    __capture_result("[]");
+                }
+            })();
+        """.trimIndent()
     }
 
     private fun getStaticCallCode(): String {
@@ -262,30 +389,6 @@ class PluginRuntime @Inject constructor() {
         try {
             quickJs(parentDispatcher) {
                 qjsInstance = this
-                // Define console object - must return null to avoid quickjs conversion issues
-                define("console") {
-                        function("log") { args ->
-                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("error") { args ->
-                            Log.e("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("warn") { args ->
-                            Log.w("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("info") { args ->
-                            Log.i("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("debug") { args ->
-                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                    }
-
                     function("__native_fetch") { args ->
                         val url = args.getOrNull(0)?.toString() ?: ""
                         val method = args.getOrNull(1)?.toString() ?: "GET"
@@ -447,17 +550,15 @@ class PluginRuntime @Inject constructor() {
 
                 // Note: crypto-js is now loaded as a real library (WebJars) before plugin execution.
 
-                // Function to capture results - must return null to avoid quickjs conversion issues
-                function("__capture_result") { args ->
-                    resultJson = args.getOrNull(0)?.toString() ?: "[]"
-                    null
-                }
-
                 // Inject JavaScript polyfills
                 val settingsJson = gson.toJson(scraperSettings)
-                function("__get_scraper_id") { scraperId }
-                function("__get_scraper_settings") { settingsJson }
-                function("__get_tmdb_api_key") { BuildConfig.TMDB_API_KEY }
+                registerHostFunctions(
+                    this,
+                    scraperId,
+                    settingsJson,
+                    BuildConfig.TMDB_API_KEY,
+                )
+                { result -> resultJson = result }
 
                 val polyfillBytecode = getCompiledPolyfillBytecode(this)
                 evaluate<Any?>(polyfillBytecode)
@@ -469,14 +570,7 @@ class PluginRuntime @Inject constructor() {
 
                 // Execute plugin code with module wrapper - wrapped in IIFE to avoid
                 // redeclaration conflicts with polyfill vars (e.g. cheerio, URL, fetch).
-                val wrappedCode = """
-                    var module = { exports: {} };
-                    var exports = module.exports;
-                    (function() {
-                        $code
-                    })();
-                """.trimIndent()
-                evaluate<Any?>(wrappedCode)
+                evaluate<Any?>(wrapPluginModule(code))
 
                 // Call getStreams and capture result
                 function("__get_call_args") {
@@ -1419,7 +1513,7 @@ class PluginRuntime @Inject constructor() {
                     is Map<*, *> -> (urlValue["url"] as? String)?.takeIf { it.isNotBlank() }
                     else -> null
                 } ?: return@mapNotNull null
-                
+
                 // Parse headers if present
                 val headersValue = item["headers"]
                 val headers: Map<String, String>? = when (headersValue) {
@@ -1429,10 +1523,10 @@ class PluginRuntime @Inject constructor() {
                         .takeIf { it.isNotEmpty() }
                     else -> null
                 }
-                
+
                 LocalScraperResult(
-                    title = item["title"]?.toString()?.takeIf { !it.contains("[object") } 
-                        ?: item["name"]?.toString()?.takeIf { !it.contains("[object") } 
+                    title = item["title"]?.toString()?.takeIf { !it.contains("[object") }
+                        ?: item["name"]?.toString()?.takeIf { !it.contains("[object") }
                         ?: "Unknown",
                     name = item["name"]?.toString()?.takeIf { !it.contains("[object") },
                     url = url,

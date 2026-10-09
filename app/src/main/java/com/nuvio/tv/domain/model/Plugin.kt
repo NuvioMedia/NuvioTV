@@ -63,7 +63,8 @@ data class ScraperManifestInfo(
     val formats: List<String>? = null,
     val supportedFormats: List<String>? = null,
     val supportsExternalPlayer: Boolean? = null,
-    val limited: Boolean? = null
+    val limited: Boolean? = null,
+    val hasSettings: Boolean = false,
 )
 
 /**
@@ -82,6 +83,7 @@ data class ScraperInfo(
     val contentLanguage: List<String>,
     val repositoryId: String,
     val formats: List<String>?,
+    val hasSettings: Boolean = false,
     val type: RepositoryType = RepositoryType.NUVIO_JS
 ) {
     fun supportsType(type: String): Boolean {

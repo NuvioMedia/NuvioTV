@@ -92,6 +92,9 @@ class PluginViewModel @Inject constructor(
             is PluginUiEvent.ToggleScraper -> toggleScraper(event.scraperId, event.enabled)
             is PluginUiEvent.ToggleAllScrapersForRepo -> toggleAllScrapersForRepo(event.repoId, event.enabled)
             is PluginUiEvent.TestScraper -> testScraper(event.scraperId)
+            is PluginUiEvent.EditScraperSettings -> loadScraperSettings(event.scraperId)
+            is PluginUiEvent.SaveScraperSettings -> saveScraperSettings(event.scraperId, event.settings)
+            PluginUiEvent.DismissScraperSettings -> _uiState.update { it.copy(editingSettingsFor = null) }
             is PluginUiEvent.SetPluginsEnabled -> setPluginsEnabled(event.enabled)
             is PluginUiEvent.SetGroupStreamsByRepository -> setGroupStreamsByRepository(event.enabled)
             PluginUiEvent.ClearTestResults -> _uiState.update { it.copy(testResults = null, testDiagnostics = null, testScraperId = null) }
@@ -268,6 +271,34 @@ class PluginViewModel @Inject constructor(
                     }
                 }
             )
+        }
+    }
+
+    private fun loadScraperSettings(scraperId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(editingSettingsFor = scraperId, settingsLayoutJson = null) }
+            runCatching { pluginManager.getScraperSettingsLayout(scraperId) }
+                .onFailure { _uiState.update { state -> state.copy(editingSettingsFor = null, errorMessage = context.getString(R.string.plugin_settings_load_failed)) } }
+                .onSuccess { layout ->
+                    val settings = pluginManager.getScraperSettings(scraperId)
+                    _uiState.update {
+                        it.copy(
+                            editingSettingsFor = scraperId,
+                            settingsLayoutJson = layout ?: "[]",
+                            scraperSettings = it.scraperSettings + (scraperId to settings))
+                    }
+                }
+        }
+    }
+
+    private fun saveScraperSettings(scraperId: String, settings: Map<String, Any>) {
+        if (isReadOnly) return
+        viewModelScope.launch {
+            pluginManager.setScraperSettings(scraperId, settings)
+            _uiState.update {
+                it.copy(editingSettingsFor = null, settingsLayoutJson = null, scraperSettings = it.scraperSettings + (scraperId to settings),
+                    successMessage = context.getString(R.string.plugin_settings_saved))
+            }
         }
     }
 
