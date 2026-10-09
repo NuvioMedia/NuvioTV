@@ -526,7 +526,10 @@ private fun AudioControlsContent(
         ) {
             AdjustmentSection(
                 title = stringResource(R.string.audio_mix_label),
-                valueText = stringResource(R.string.audio_mix_value_db, currentDb),
+                valueText = stringResource(
+                    R.string.audio_mix_value_db,
+                    if (isAmplificationAvailable) currentDb else 0,
+                ),
                 helperText = amplificationHelperText,
                 canDecrease = canDecreaseAmp,
                 canIncrease = canIncreaseAmp,
@@ -560,6 +563,11 @@ private fun AudioControlsContent(
                         runCatching { ampMinusFocusRequester.requestFocus() }
                     }
                 }
+            )
+            VolumeBoostBar(
+                gainDb = currentDb,
+                maxDb = AUDIO_AMPLIFICATION_MAX_DB,
+                enabled = isAmplificationAvailable,
             )
 
             AdjustmentSection(
