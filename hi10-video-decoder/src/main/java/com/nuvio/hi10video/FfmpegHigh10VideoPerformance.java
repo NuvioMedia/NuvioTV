@@ -25,7 +25,10 @@ public final class FfmpegHigh10VideoPerformance {
   public final long inputQueued;
   public final long decodeStarted;
   public final long decodedFrames;
+  /** Successful native Surface submissions, not confirmed physical presentation. */
   public final long renderedFrames;
+  /** Abandoned/invalid Surface drops; separate from Media3's dropped output counters. */
+  public final long surfaceDroppedFrames;
   public final int inputQueueDepth;
   public final int inputQueueHighWater;
   public final int outputDepth;
@@ -74,6 +77,7 @@ public final class FfmpegHigh10VideoPerformance {
     decodeStarted = pipeline.decodeStarted;
     decodedFrames = pipeline.decodedFrames;
     renderedFrames = pipeline.renderedFrames;
+    surfaceDroppedFrames = pipeline.surfaceDroppedFrames;
     inputQueueDepth = pipeline.inputQueueDepth;
     inputQueueHighWater = pipeline.inputQueueHighWater;
     outputDepth = pipeline.outputDepth;

@@ -15,8 +15,9 @@ import java.nio.ByteBuffer;
 final class FfmpegHigh10VideoDecoder implements Decoder<
     DecoderInputBuffer, VideoDecoderOutputBuffer, FfmpegHigh10VideoDecoderException> {
   private static final String TAG = "NuvioHi10";
-  private static final int OTHER_ERROR = -2;
-  private static final int SURFACE_ERROR = -4;
+  private static final int SUBMITTED = 0;
+  private static final int SURFACE_DROPPED = 1;
+  enum SurfaceSubmission { SUBMITTED, SURFACE_DROPPED, STALE }
   private final Object renderLock = new Object();
   private final High10DecoderLifecycle lifecycle;
   @Nullable private final High10PipelineProbe pipelineProbe = BuildConfig.DEBUG
@@ -76,7 +77,9 @@ final class FfmpegHigh10VideoDecoder implements Decoder<
   }
   @Override @Nullable public VideoDecoderOutputBuffer dequeueOutputBuffer()
       throws FfmpegHigh10VideoDecoderException { return lifecycle.dequeueOutputBuffer(); }
-  @Override public void flush() { lifecycle.flush(); }
+  @Override public void flush() {
+    synchronized (renderLock) { lifecycle.flush(); } // Fence in-progress posts before new generation.
+  }
   @Override public void release() { lifecycle.release(); }
   boolean isCurrentOutput(VideoDecoderOutputBuffer output) { return lifecycle.isCurrentOutput(output); }
 
@@ -100,18 +103,27 @@ final class FfmpegHigh10VideoDecoder implements Decoder<
   void onFrameRendered(VideoDecoderOutputBuffer output) {
     if (pipelineProbe != null) pipelineProbe.frameRendered(output);
   }
+  void onSurfaceDropped() {
+    if (pipelineProbe != null) pipelineProbe.surfaceDropped();
+  }
 
-  void renderToSurface(VideoDecoderOutputBuffer output, Surface surface)
+  SurfaceSubmission renderToSurface(VideoDecoderOutputBuffer output, Surface surface)
       throws FfmpegHigh10VideoDecoderException {
     synchronized (renderLock) {
+      if (!lifecycle.isCurrentOutput(output)) return SurfaceSubmission.STALE;
+      if (!surface.isValid()) return SurfaceSubmission.SURFACE_DROPPED;
       if (nativeContext == 0 || output.mode != C.VIDEO_OUTPUT_MODE_SURFACE_YUV) {
         throw new FfmpegHigh10VideoDecoderException("Invalid decoder context or output mode.");
       }
       int result = nativeRenderFrame(nativeContext, surface, output, output.width, output.height);
-      if (result == OTHER_ERROR || result == SURFACE_ERROR) {
-        throw new FfmpegHigh10VideoDecoderException("Surface render failed: " + result);
-      }
+      return wasSubmitted(result) ? SurfaceSubmission.SUBMITTED : SurfaceSubmission.SURFACE_DROPPED;
     }
+  }
+
+  static boolean wasSubmitted(int result) throws FfmpegHigh10VideoDecoderException {
+    if (result == SUBMITTED) return true;
+    if (result == SURFACE_DROPPED) return false;
+    throw new FfmpegHigh10VideoDecoderException("Surface render failed: " + result);
   }
 
   private final class NativeBackend implements High10DecodeBackend {

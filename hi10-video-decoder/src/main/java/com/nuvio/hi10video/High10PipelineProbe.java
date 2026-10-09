@@ -12,6 +12,7 @@ final class High10PipelineProbe {
   private long decodeStarted;
   private long decodedFrames;
   private long renderedFrames;
+  private long surfaceDroppedFrames;
   private long packetAgeTotalUs;
   private long packetAgeCount;
   private long maxPacketAgeUs;
@@ -66,6 +67,8 @@ final class High10PipelineProbe {
     frameDecodedAtNs.remove(output);
   }
 
+  synchronized void surfaceDropped() { surfaceDroppedFrames++; }
+
   synchronized void pendingDepth(int depth) {
     pendingHighWater = Math.max(pendingHighWater, depth);
   }
@@ -90,6 +93,7 @@ final class High10PipelineProbe {
         decodeStarted,
         decodedFrames,
         renderedFrames,
+        surfaceDroppedFrames,
         inputQueuedAtNs.size(),
         inputQueueHighWater,
         frameDecodedAtNs.size(),
@@ -106,6 +110,7 @@ final class High10PipelineProbe {
     final long decodeStarted;
     final long decodedFrames;
     final long renderedFrames;
+    final long surfaceDroppedFrames;
     final int inputQueueDepth;
     final int inputQueueHighWater;
     final int outputDepth;
@@ -121,6 +126,7 @@ final class High10PipelineProbe {
         long decodeStarted,
         long decodedFrames,
         long renderedFrames,
+        long surfaceDroppedFrames,
         int inputQueueDepth,
         int inputQueueHighWater,
         int outputDepth,
@@ -134,6 +140,7 @@ final class High10PipelineProbe {
       this.decodeStarted = decodeStarted;
       this.decodedFrames = decodedFrames;
       this.renderedFrames = renderedFrames;
+      this.surfaceDroppedFrames = surfaceDroppedFrames;
       this.inputQueueDepth = inputQueueDepth;
       this.inputQueueHighWater = inputQueueHighWater;
       this.outputDepth = outputDepth;

@@ -170,8 +170,13 @@ public final class FfmpegHigh10VideoRenderer extends DecoderVideoRenderer {
         throw new FfmpegHigh10VideoDecoderException("Decoder is not initialized.");
       }
       if (decoder.isCurrentOutput(outputBuffer)) {
-        decoder.renderToSurface(outputBuffer, surface);
-        decoder.onFrameRendered(outputBuffer);
+        FfmpegHigh10VideoDecoder.SurfaceSubmission submission =
+            decoder.renderToSurface(outputBuffer, surface);
+        if (submission == FfmpegHigh10VideoDecoder.SurfaceSubmission.SUBMITTED) {
+          decoder.onFrameRendered(outputBuffer);
+        } else if (submission == FfmpegHigh10VideoDecoder.SurfaceSubmission.SURFACE_DROPPED) {
+          decoder.onSurfaceDropped();
+        }
       }
     } finally {
       outputBuffer.release();

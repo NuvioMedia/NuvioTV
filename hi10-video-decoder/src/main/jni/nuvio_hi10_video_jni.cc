@@ -40,6 +40,7 @@ constexpr jint kInvalidData = -1;
 constexpr jint kOtherError = -2;
 constexpr jint kTryAgain = -3;
 constexpr jint kSurfaceError = -4;
+constexpr jint kSurfaceDropped = 1;
 constexpr int kImageFormatYv12 = 0x32315659;
 constexpr int kStageCount = 8;
 constexpr int kStageSampleCapacity = 512;
@@ -73,7 +74,7 @@ struct DecoderContext {
   int window_width = 0;
   int window_height = 0;
   bool logged_pixel_format = false;
-  AVColorSpace color_space = AVCOL_SPC_UNSPECIFIED;
+  std::mutex color_mutex;
   AVColorRange color_range = AVCOL_RANGE_UNSPECIFIED;
   AVColorPrimaries color_primaries = AVCOL_PRI_UNSPECIFIED;
   jfieldID data_field = nullptr;
@@ -212,7 +213,8 @@ const int* SwsCoefficients(AVColorSpace color_space) {
   }
 }
 
-int32_t AndroidDataSpace(const DecoderContext* context) {
+int32_t AndroidDataSpace(DecoderContext* context) {
+  std::lock_guard<std::mutex> lock(context->color_mutex);
   switch (context->color_primaries) {
     case AVCOL_PRI_BT2020:
       return ADATASPACE_BT2020;
@@ -248,9 +250,11 @@ bool ConvertToYuv420p(
     AVFrame* source,
     uint8_t* const destination_data[4],
     const int destination_linesize[4]) {
-  context->color_space = source->colorspace;
-  context->color_range = source->color_range;
-  context->color_primaries = source->color_primaries;
+  {
+    std::lock_guard<std::mutex> lock(context->color_mutex);
+    context->color_range = source->color_range;
+    context->color_primaries = source->color_primaries;
+  }
   if (!context->logged_pixel_format) {
     const char* name = av_get_pix_fmt_name(static_cast<AVPixelFormat>(source->format));
     LOGI("decoder=FFmpeg h264 profile=High10 sourcePixelFormat=%s "
@@ -588,7 +592,7 @@ jint NativeRenderFrame(
       if (result == -19) {
         LOGI("Surface abandoned during geometry update; dropping frame");
         ReleaseWindow(env, context);
-        return kSuccess;
+        return kSurfaceDropped;
       }
       return kSurfaceError;
     }
@@ -605,7 +609,7 @@ jint NativeRenderFrame(
     if (result == -19) {
       LOGI("Surface abandoned during lock; dropping frame");
       ReleaseWindow(env, context);
-      return kSuccess;
+      return kSurfaceDropped;
     }
     return kSurfaceError;
   }
@@ -646,6 +650,10 @@ jint NativeRenderFrame(
   const int64_t surface_post_start_us = NowUs();
   result = ANativeWindow_unlockAndPost(context->window);
   RecordStage(context, kStageSurfacePost, surface_post_start_us);
+  if (result == -19) {
+    ReleaseWindow(env, context);
+    return kSurfaceDropped;
+  }
   return result == 0 ? kSuccess : kSurfaceError;
 }
 

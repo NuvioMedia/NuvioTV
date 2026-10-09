@@ -5,7 +5,9 @@ import static org.junit.Assert.*;
 
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.graphics.SurfaceTexture;
 import android.os.SystemClock;
+import android.view.Surface;
 import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.decoder.DecoderInputBuffer;
@@ -22,6 +24,8 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -68,6 +72,88 @@ public final class High10NativeLifecycleTest {
       assertEquals(600, pts.size());
       assertNull(session.decoder.dequeueOutputBuffer());
       assertNull("Post-EOS input must be rejected", session.decoder.dequeueInputBuffer());
+    }
+  }
+
+  @Test public void surfaceAbandonDoesNotCountSubmission() throws Exception {
+    try (Session session = new Session()) {
+      SurfaceTexture texture = new SurfaceTexture(false);
+      Surface surface = new Surface(texture);
+      try {
+        texture.release(); // Abandon native consumer while producer Surface remains referenced.
+        FfmpegHigh10VideoRenderer renderer = rendererFor(session);
+        renderer.renderOutputBufferToSurface(firstOutput(session), surface);
+        assertEquals("Abandoned Surface was incorrectly counted as submitted", 0,
+            session.decoder.getPerformanceSnapshot(0, 0, 0, 0).renderedFrames);
+        assertEquals(1, session.decoder.getPerformanceSnapshot(0, 0, 0, 0).surfaceDroppedFrames);
+      } finally {
+        surface.release();
+        texture.release();
+      }
+    }
+  }
+
+  @Test public void successfulPostCountsOnce() throws Exception {
+    try (Session session = new Session()) {
+      SurfaceTexture texture = new SurfaceTexture(false);
+      Surface surface = new Surface(texture);
+      try {
+        rendererFor(session).renderOutputBufferToSurface(firstOutput(session), surface);
+        FfmpegHigh10VideoPerformance snapshot = session.decoder.getPerformanceSnapshot(0, 0, 0, 0);
+        assertEquals(1, snapshot.renderedFrames);
+        assertEquals(1, snapshot.stage("surface_post").count);
+        // Successful BufferQueue submission is not confirmed physical display presentation.
+      } finally {
+        surface.release();
+        texture.release();
+      }
+    }
+  }
+
+  private static FfmpegHigh10VideoRenderer rendererFor(Session session) throws Exception {
+    FfmpegHigh10VideoRenderer renderer = new FfmpegHigh10VideoRenderer(0, null, null, 1, 4, 4, 16);
+    java.lang.reflect.Field field = FfmpegHigh10VideoRenderer.class.getDeclaredField("decoder");
+    field.setAccessible(true);
+    field.set(renderer, session.decoder); // Test-only binding; actual renderer/JNI remain unmocked.
+    return renderer;
+  }
+
+  @Test public void releaseDuringOutputReplacementDoesNotDeadlock() throws Exception {
+    try (Session session = new Session()) {
+      AtomicReference<Throwable> failure = new AtomicReference<>();
+      CountDownLatch start = new CountDownLatch(1);
+      Thread replacement = new Thread(() -> {
+        try {
+          start.await();
+          for (int i = 0; i < 100; i++) session.decoder.setOutputMode(C.VIDEO_OUTPUT_MODE_SURFACE_YUV);
+        } catch (Throwable error) { failure.set(error); }
+      }, "hi10-output-replacement-test");
+      firstOutput(session).release();
+      replacement.start();
+      start.countDown();
+      releaseWithinDeadline(session);
+      replacement.join(2_000);
+      assertFalse("Output replacement deadlocked", replacement.isAlive());
+      assertNull(failure.get());
+    }
+  }
+
+  @Test public void flushedHeldOutputIsNeitherPostedNorCountedAsSurfaceDrop() throws Exception {
+    try (Session session = new Session()) {
+      SurfaceTexture texture = new SurfaceTexture(false);
+      Surface surface = new Surface(texture);
+      try {
+        VideoDecoderOutputBuffer held = firstOutput(session);
+        session.decoder.flush();
+        rendererFor(session).renderOutputBufferToSurface(held, surface);
+        FfmpegHigh10VideoPerformance snapshot = session.decoder.getPerformanceSnapshot(0, 0, 0, 0);
+        assertEquals(0, snapshot.renderedFrames);
+        assertEquals(0, snapshot.surfaceDroppedFrames);
+        assertEquals(0, snapshot.stage("surface_post").count);
+      } finally {
+        surface.release();
+        texture.release();
+      }
     }
   }
 
