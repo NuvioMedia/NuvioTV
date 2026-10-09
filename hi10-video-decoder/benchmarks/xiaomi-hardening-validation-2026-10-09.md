@@ -114,11 +114,65 @@ Fresh independent reviewer could not initialize due token-optimizer MCP handshak
 failure; author review is weaker. This report does not declare whole application
 production-ready or authorize distribution/merge. No PR or push.
 
+## Additional player-level seek gate
+
+Follow-up on the same Xiaomi exposed a real early-seek failure: a seek before the
+first output clears Media3 1.8's `formatQueue` while its first-input format marker
+remains false. `DecoderVideoRenderer.processOutputBuffer` then receives a null
+`outputFormat` and fails at line879. The bundled ExoPlayer AAR bytecode was inspected,
+not assumed identical to upstream. A real Media3 feed/format-queue regression failed
+with the expected format missing before the fix.
+
+The isolated High10 renderer now re-registers the unchanged input format through
+the protected API after a position reset. Decoder reuse is allowed only during
+that synthetic notification, for equal formats; ordinary format-change reuse
+policy remains unchanged. No FFmpeg, MC, Surface, threading or audio change.
+
+Actual Episode07 programmatic seeks after the fix:
+
+|Target(ms)|Observed READY position(ms)|Decoder generation|
+|---|---|---|
+|80000|80307|1|
+|35000|35090|2|
+|100000|100334|3|
+|45000|45206|4|
+|65000|65134|5|
+
+Five additional rapid alternating seek calls reached generation10 and recovered
+READY playback at66127ms, with no player error and no stale queued output at the
+checked boundaries. Recovery took8557ms. An earlier observer's fixed5s wait expired
+while buffering; this is not presented as a deadlock or a performance improvement.
+The corrected observer uses a bounded30s READY/error condition. Queue snapshots
+are not proof of physical display presentation; separate JNI generation/Surface
+tests supply the ownership evidence.
+
+All57 module unit tests passed after the change and full Debug built successfully.
+Debug APK SHA256 `9850f1aeca07ad1663bed35e1718c22a510c9ad8e659899d97b7cb1dfafc6c14`;
+its native videoSO remains byte-identical to the prior clean Debug binary
+(`7a2e57d4f781595f0946d47158e2393f157c7ffd8064ee8adc6832b44cf78d56`).
+The earlier six A/B windows and minified Release playback above predate this
+seek-only correction; they are not relabeled as tests of this final revision.
+Fresh minified FullRelease build passed(11m9s), with3 application policy tests and
+57 module tests; final module rerun also passed57/57. Debug and Release actual DEX
+checks each passed all12 JNI registrations; fresh Release zipalign-P16 passed.
+New isolated Release APK SHA256
+`bb7d20c49ee256d701b781b5119e9c926e582fa1ae74d5e2f75c00846e646cd2`.
+Both Release native video/audio libraries match the earlier hashes above exactly.
+The isolated Release was installed and cold-started successfully; no AndroidRuntime
+error in its observed startup process. Repeated exact player seeks above were tested
+in Debug, not relabeled as minified Release seek tests. Validation signing/identity
+are local only, not production-distribution signing. Temporary addon removed again;
+official installation/account/history unchanged.
+Independent review remains unavailable:
+another reviewer failed to initialize at the same required MCP handshake, before
+any code review ran. Whole-application exclusions and coverage limits still apply.
+
 ## Independent commit order
 
 Temporary acceptance/signing code is absent. No new performance optimization was
-introduced after retained MC integration. Final aggregate verification above covers
-all changes together; it is not a claim that every historical revision was rerun.
+introduced after retained MC integration. Initial hardening verification covers the
+first six code/test commits; the seek correction has separate follow-up evidence.
+Every historical revision was not rerun.
 
 | Commit | Subject / problem | Main files/area | Verification evidence |
 |---|---|---|---|
@@ -128,7 +182,9 @@ all changes together; it is not a claim that every historical revision was rerun
 |18ef1d13e|`fix(hi10): resolve Surface color metadata from libnativewindow` — owning-library symbol resolution|JNI data-space lookup, fixture/Surface tests and test Activity|Real black/white range and repeated paused-style Surface recreation/readback|
 |2c3b2ffe9|`fix(hi10): distinguish Surface drops from successful submissions` — avoid false native-post telemetry|JNI/decoder/renderer/performance/probe, submission tests|Submission-status JVM regression and actual abandoned-Surface test|
 |37c61de79|`test(hi10): match player target SDK in device regressions` — no legacy test target mismatch|Module testOptions only|56 JVM and9actualJNI/Surface tests under test targetSdk36|
+|122f79357|`docs(hi10): record production hardening validation` — reproducibility and bounded acceptance evidence|README and this report|Documentation-only; preserved matching unit/build/device evidence|
+|2242e86b4|`fix(hi10): restore format after early seeks` — prevent null output format before first frame|High10 renderer and real-Media3 format-queue regression|RED→GREEN;57 JVM/3 app policy tests, Debug/Release builds, actual Episode07 five precise plus five rapid seeks; native binaries unchanged|
 
-Hardening as a whole preserved24postfps/0windowdrops across three pairs. CPU/lead
+Initial hardening comparison preserved24postfps/0windowdrops across three pairs. CPU/lead
 variance is documented, not attributed to an individual commit. Documentation-only
-acceptance commit follows these six; generated media/binaries/logs are not committed.
+acceptance updates are separate; generated media/binaries/logs are not committed.

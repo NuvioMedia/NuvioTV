@@ -86,6 +86,12 @@ existing paths. DRM and rotated tracks are not claimed by this software renderer
 unsupported High10 must produce an actionable error rather than audio-only playback
 or initialize an explicitly incompatible platform AVC decoder.
 
+The renderer also restores the unchanged input-format notification after seek/reset:
+Media3 1.8 clears its format queue even if the first output has not yet established
+an output format. Scoped reuse for this notification preserves the existing decoder;
+ordinary format-change reuse behavior is unchanged. The real-Media3 regression
+`High10SeekFormatTest` covers repeated resets before the first output.
+
 `High10DecoderLifecycle` owns fixed input/output pools (4/16 on Xiaomi). One worker
 feeds FFmpeg and converts synchronously. A rejected EAGAIN packet retains its input
 slot while output is drained; no unbounded copied-packet queue exists. EOS sends a
