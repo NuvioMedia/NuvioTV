@@ -2709,7 +2709,7 @@ private fun ProgressBar(
     )
     var isFocused by remember { mutableStateOf(false) }
 
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(if (isFocused) NuvioTheme.spacing.md else NuvioTheme.spacing.sm)
@@ -2801,29 +2801,13 @@ private fun ProgressBar(
                 if (isFocused) Color.White.copy(alpha = 0.45f)
                 else Color.White.copy(alpha = 0.3f)
             )
-    ) {
-        val trackWidth = maxWidth
-
-        // Buffered-ahead overlay: the theme accent, faded so it reads under the played
-        // fill and on light themes.
-        if (animatedBufferedProgress > 0f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(trackWidth * animatedBufferedProgress)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(NuvioTheme.colors.Secondary.copy(alpha = 0.35f))
+            .playerProgressFill(
+                progress = { animatedProgress },
+                bufferedProgress = { animatedBufferedProgress },
+                bufferedColor = NuvioTheme.colors.Secondary,
+                playedBrush = accentBrush
             )
-        }
-        // Played fill.
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(trackWidth * animatedProgress)
-                .clip(RoundedCornerShape(3.dp))
-                .background(accentBrush)
-        )
-    }
+    )
 }
 
 @Composable
