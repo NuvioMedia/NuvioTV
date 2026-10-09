@@ -2,6 +2,7 @@ package com.nuvio.hi10video;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import androidx.media3.common.Format;
 import androidx.media3.common.MimeTypes;
@@ -64,6 +65,15 @@ public final class AvcHigh10ProfileDetectorTest {
             .setInitializationData(Collections.singletonList(new byte[] {1, 110, 0, 31}))
             .build();
     assertTrue(AvcHigh10ProfileDetector.isHigh10(format));
+  }
+
+  @Test
+  public void spsFallback_preservesProfileConstraintsAndLevelForCapabilityChecks() throws Exception {
+    Format format = new Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H264)
+        .setInitializationData(Collections.singletonList(
+            new byte[] {0, 0, 0, 1, 0x67, 110, 0x10, 40})).build();
+    Format capabilityFormat = AvcHigh10ProfileDetector.withAvcCodecString(format);
+    assertEquals("avc1.6E1028", capabilityFormat.codecs);
   }
 
   private static boolean isHigh10(String sampleMimeType, String codecs) {

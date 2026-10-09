@@ -19,6 +19,24 @@ public final class AvcHigh10ProfileDetector {
 
   private AvcHigh10ProfileDetector() {}
 
+  /** Retains SPS profile/constraints/level when extractor metadata omitted codecs. */
+  static Format withAvcCodecString(Format format) {
+    if (CodecSpecificDataUtil.getCodecProfileAndLevel(format) != null) return format;
+    for (byte[] data : format.initializationData) {
+      int offset;
+      if (data.length >= 4 && data[0] == 1) {
+        offset = 1;
+      } else {
+        offset = startCodeLength(data);
+        if (data.length < offset + 4 || (data[offset] & 0x1F) != 7) continue;
+        offset++;
+      }
+      return format.buildUpon().setCodecs(String.format(Locale.US, "avc1.%02X%02X%02X",
+          data[offset] & 0xFF, data[offset + 1] & 0xFF, data[offset + 2] & 0xFF)).build();
+    }
+    return format;
+  }
+
   /** Returns whether {@code format} is conclusively AVC High 10 Profile. */
   public static boolean isHigh10(Format format) {
     if (!MimeTypes.VIDEO_H264.equals(format.sampleMimeType)) {

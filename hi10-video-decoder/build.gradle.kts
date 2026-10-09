@@ -51,4 +51,5 @@ dependencies {
     testImplementation(libs.media3.decoder)
     testImplementation("com.google.guava:guava:33.3.1-android")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.14.2")
 }

@@ -8,8 +8,6 @@ import static androidx.media3.exoplayer.DecoderReuseEvaluation.DISCARD_REASON_MI
 import static androidx.media3.exoplayer.DecoderReuseEvaluation.REUSE_RESULT_NO;
 
 import android.os.Handler;
-import android.os.Build;
-import android.media.MediaCodecList;
 import android.util.Log;
 import android.view.Surface;
 import androidx.annotation.Nullable;
@@ -26,8 +24,11 @@ import androidx.media3.decoder.VideoDecoderOutputBuffer;
 import androidx.media3.exoplayer.DecoderCounters;
 import androidx.media3.exoplayer.DecoderReuseEvaluation;
 import androidx.media3.exoplayer.RendererCapabilities;
+import androidx.media3.exoplayer.mediacodec.MediaCodecInfo;
+import androidx.media3.exoplayer.mediacodec.MediaCodecUtil;
 import androidx.media3.exoplayer.video.DecoderVideoRenderer;
 import androidx.media3.exoplayer.video.VideoRendererEventListener;
+import java.util.List;
 
 /** Software renderer that intentionally claims only AVC High 10 Profile. */
 @UnstableApi
@@ -37,7 +38,6 @@ public final class FfmpegHigh10VideoRenderer extends DecoderVideoRenderer {
   private static final int DEFAULT_OUTPUT_BUFFERS = 16;
   private static final int DEFAULT_INPUT_BUFFER_SIZE =
       Util.ceilDivide(1920, 64) * Util.ceilDivide(1080, 64) * (64 * 64 * 3 / 2) / 2;
-  @Nullable private static volatile Boolean platformHardwareHigh10;
   @Nullable private static volatile FfmpegHigh10VideoRenderer activeRenderer;
 
   private final int threads;
@@ -81,14 +81,26 @@ public final class FfmpegHigh10VideoRenderer extends DecoderVideoRenderer {
 
   @Override
   public @RendererCapabilities.Capabilities int supportsFormat(Format format) {
+    boolean nativeAvailable = NuvioHi10VideoLibrary.hasH264Decoder();
     boolean shouldQueryHardware =
         MimeTypes.VIDEO_H264.equals(format.sampleMimeType)
             && AvcHigh10ProfileDetector.isHigh10(format)
-            && NuvioHi10VideoLibrary.hasH264Decoder();
+            && nativeAvailable
+            && format.cryptoType == C.CRYPTO_TYPE_NONE
+            && format.rotationDegrees == 0;
+    boolean hardwareAvailable = false;
+    if (shouldQueryHardware) {
+      try {
+        hardwareAvailable = hasCompatibleHardwareDecoder(
+            format, MediaCodecUtil.getDecoderInfos(MimeTypes.VIDEO_H264, false, false));
+      } catch (MediaCodecUtil.DecoderQueryException error) {
+        Log.w(TAG, "Hardware query failed; isolated software decoder remains eligible", error);
+      }
+    }
     return supportsFormatForTest(
         format,
-        NuvioHi10VideoLibrary.hasH264Decoder(),
-        shouldQueryHardware && platformHardwareAdvertisesAvcHigh10());
+        nativeAvailable,
+        hardwareAvailable);
   }
 
   static @RendererCapabilities.Capabilities int supportsFormatForTest(
@@ -109,44 +121,22 @@ public final class FfmpegHigh10VideoRenderer extends DecoderVideoRenderer {
     if (format.cryptoType != C.CRYPTO_TYPE_NONE) {
       return RendererCapabilities.create(C.FORMAT_UNSUPPORTED_DRM);
     }
+    if (format.rotationDegrees != 0) {
+      return RendererCapabilities.create(C.FORMAT_UNSUPPORTED_SUBTYPE);
+    }
     return RendererCapabilities.create(
         C.FORMAT_HANDLED, ADAPTIVE_NOT_SEAMLESS, TUNNELING_NOT_SUPPORTED);
   }
 
-  private static boolean platformHardwareAdvertisesAvcHigh10() {
-    Boolean cached = platformHardwareHigh10;
-    if (cached != null) {
-      return cached;
-    }
-    if (Build.VERSION.SDK_INT < 29) {
-      Log.i(TAG, "Hardware High10 query unavailable below API 29; enabling software renderer");
-      platformHardwareHigh10 = false;
-      return false;
-    }
-    for (android.media.MediaCodecInfo codecInfo : new MediaCodecList(MediaCodecList.ALL_CODECS).getCodecInfos()) {
-      if (codecInfo.isEncoder() || !codecInfo.isHardwareAccelerated()) {
-        continue;
-      }
-      try {
-        for (android.media.MediaCodecInfo.CodecProfileLevel profileLevel :
-            codecInfo.getCapabilitiesForType(MimeTypes.VIDEO_H264).profileLevels) {
-          Log.i(
-              TAG,
-              "AVC candidate=" + codecInfo.getName()
-                  + " hardware=true profile=" + profileLevel.profile
-                  + " level=" + profileLevel.level);
-          if (profileLevel.profile == 16) {
-            Log.i(TAG, "Deferring AVC High10 to hardware codec=" + codecInfo.getName());
-            platformHardwareHigh10 = true;
-            return true;
-          }
-        }
-      } catch (IllegalArgumentException ignored) {
-        // Codec does not expose video/avc capabilities.
+  static boolean hasCompatibleHardwareDecoder(Format format, List<MediaCodecInfo> decoders)
+      throws MediaCodecUtil.DecoderQueryException {
+    for (MediaCodecInfo codec : decoders) {
+      // Media3 supplies hardware classification on API24–28 as well as API29+.
+      if (codec.hardwareAccelerated && !codec.softwareOnly && !codec.secure
+          && High10MediaCodecVideoRenderer.isCompatible(format, codec)) {
+        return true;
       }
     }
-    Log.i(TAG, "No hardware AVC High10 profile=16 capability; enabling software renderer");
-    platformHardwareHigh10 = false;
     return false;
   }
 
@@ -154,6 +144,10 @@ public final class FfmpegHigh10VideoRenderer extends DecoderVideoRenderer {
   protected Decoder<DecoderInputBuffer, VideoDecoderOutputBuffer, FfmpegHigh10VideoDecoderException>
       createDecoder(Format format, @Nullable CryptoConfig cryptoConfig)
           throws FfmpegHigh10VideoDecoderException {
+    if (cryptoConfig != null
+        || RendererCapabilities.getFormatSupport(supportsFormatForTest(format, true)) != C.FORMAT_HANDLED) {
+      throw new FfmpegHigh10VideoDecoderException("Unsupported software AVC High10 format.");
+    }
     TraceUtil.beginSection("createFfmpegHigh10VideoDecoder");
     try {
       int initialInputBufferSize =

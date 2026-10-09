@@ -78,6 +78,7 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
  * Decoder-init and DRM errors are considered fatal.
  */
 internal fun isRetryablePlaybackError(error: PlaybackException): Boolean {
+    if (PlayerHigh10SupportPolicy.hasNoCompatibleDecoder(error)) return false
     return when (error.errorCode) {
         // --- Source / IO errors (the 2xxx range) ---
         PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
@@ -164,6 +165,9 @@ internal fun PlaybackException.findInvalidResponseCodeException(): HttpDataSourc
 
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlaybackException.toDisplayMessage(context: android.content.Context): String {
+    if (PlayerHigh10SupportPolicy.hasNoCompatibleDecoder(this)) {
+        return context.getString(R.string.player_error_high10_unsupported)
+    }
     val responseException = findInvalidResponseCodeException()
     if (responseException != null) {
         val code = responseException.responseCode

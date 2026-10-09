@@ -69,6 +69,7 @@ import com.nuvio.tv.core.player.DolbyVisionConversionStats
 import com.nuvio.tv.core.player.DolbyVisionExtractorsFactory
 import com.nuvio.tv.core.player.DoviBridge
 import com.nuvio.hi10video.FfmpegHigh10VideoRenderer
+import com.nuvio.hi10video.High10MediaCodecVideoRenderer
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
@@ -909,6 +910,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
                 initialForcePcm = hasTriedAudioPcmFallback || isBluetoothAudioOutput,
                 preferSoftwareAudioOnly = isBluetoothAudioOutput,
+                mapDv7ToHevc = mapDv7ToHevcEnabled,
                 onPlaybackSpeedAwareAudioSinkCreated = { playbackSpeedAwareAudioSink = it },
                 onFfmpegAudioRendererChanged = { renderer ->
                     ffmpegAudioRenderer = renderer
@@ -2157,6 +2159,7 @@ private class SubtitleOffsetRenderersFactory(
      * platform MediaCodec path so Bluetooth PCM policy does not force software video decode.
      */
     private val preferSoftwareAudioOnly: Boolean = false,
+    private val mapDv7ToHevc: Boolean = false,
     private val onPlaybackSpeedAwareAudioSinkCreated: (PlaybackSpeedAwareAudioSink) -> Unit,
     private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit
 ) : DefaultRenderersFactory(context) {
@@ -2186,6 +2189,22 @@ private class SubtitleOffsetRenderersFactory(
             allowedVideoJoiningTimeMs,
             out
         )
+        // Preserve stock extensions and video settings; constrain only incompatible AVC High10.
+        for (index in out.indices) {
+            if (out[index] is MediaCodecVideoRenderer) {
+                out[index] = High10MediaCodecVideoRenderer(
+                    MediaCodecVideoRenderer.Builder(context)
+                        .setCodecAdapterFactory(getCodecAdapterFactory())
+                        .setMediaCodecSelector(mediaCodecSelector)
+                        .setAllowedJoiningTimeMs(allowedVideoJoiningTimeMs)
+                        .setEnableDecoderFallback(enableDecoderFallback)
+                        .setEventHandler(eventHandler)
+                        .setEventListener(eventListener)
+                        .setMaxDroppedFramesToNotify(MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY)
+                        .setMapDV7ToHevc(mapDv7ToHevc)
+                )
+            }
+        }
         out.add(
             0,
             FfmpegHigh10VideoRenderer(
