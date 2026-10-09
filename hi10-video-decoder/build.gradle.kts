@@ -12,6 +12,7 @@ android {
 
     defaultConfig {
         minSdk = 24
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
         ndk {
             abiFilters += "armeabi-v7a"
@@ -52,4 +53,13 @@ dependencies {
     testImplementation("com.google.guava:guava:33.3.1-android")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.14.2")
+
+    androidTestImplementation(files("../app/libs/lib-common-release.aar"))
+    androidTestImplementation(files("../app/libs/lib-exoplayer-release.aar"))
+    androidTestImplementation(libs.media3.decoder) {
+        exclude(group = "androidx.media3", module = "media3-common") // Local fork above.
+    }
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation("com.google.guava:guava:33.3.1-android") // Local AAR has no POM.
 }

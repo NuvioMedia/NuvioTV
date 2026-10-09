@@ -169,8 +169,10 @@ public final class FfmpegHigh10VideoRenderer extends DecoderVideoRenderer {
       if (decoder == null) {
         throw new FfmpegHigh10VideoDecoderException("Decoder is not initialized.");
       }
-      decoder.renderToSurface(outputBuffer, surface);
-      decoder.onFrameRendered(outputBuffer);
+      if (decoder.isCurrentOutput(outputBuffer)) {
+        decoder.renderToSurface(outputBuffer, surface);
+        decoder.onFrameRendered(outputBuffer);
+      }
     } finally {
       outputBuffer.release();
     }

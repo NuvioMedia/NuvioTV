@@ -35,6 +35,7 @@ extern "C" {
 namespace {
 
 constexpr jint kSuccess = 0;
+constexpr jint kEndOfStream = -5;
 constexpr jint kInvalidData = -1;
 constexpr jint kOtherError = -2;
 constexpr jint kTryAgain = -3;
@@ -438,8 +439,9 @@ jint NativeSendPacket(
   AVPacket packet = {};
   packet.data = static_cast<uint8_t*>(env->GetDirectBufferAddress(encoded_data));
   packet.size = length;
-  packet.pts = time_us;
-  packet.dts = time_us;
+  // Media3 provides presentation time, not decoding time. Do not fabricate DTS.
+  packet.pts = time_us == INT64_MIN + 1 ? AV_NOPTS_VALUE : time_us;
+  packet.dts = AV_NOPTS_VALUE;
   const int64_t send_start_us = NowUs();
   int result = avcodec_send_packet(context->codec, &packet);
   RecordStage(context, kStageSend, send_start_us);
@@ -453,6 +455,25 @@ jint NativeSendPacket(
   }
   if (result < 0) {
     LogAvError("avcodec_send_packet", result);
+    return kOtherError;
+  }
+  if constexpr (NUVIO_HI10_DIAGNOSTICS) ++context->send_accepted;
+  return kSuccess;
+}
+
+jint NativeBeginDrain(JNIEnv*, jobject, jlong native_context) {
+  DecoderContext* context = reinterpret_cast<DecoderContext*>(native_context);
+  if (context == nullptr || context->codec == nullptr) return kOtherError;
+  const int64_t send_start_us = NowUs();
+  const int result = avcodec_send_packet(context->codec, nullptr);
+  RecordStage(context, kStageSend, send_start_us);
+  if constexpr (NUVIO_HI10_DIAGNOSTICS) ++context->send_attempts;
+  if (result == AVERROR(EAGAIN)) {
+    if constexpr (NUVIO_HI10_DIAGNOSTICS) ++context->send_again;
+    return kTryAgain;
+  }
+  if (result < 0) {
+    LogAvError("avcodec_send_packet drain", result);
     return kOtherError;
   }
   if constexpr (NUVIO_HI10_DIAGNOSTICS) ++context->send_accepted;
@@ -486,12 +507,19 @@ jint NativeReceiveFrame(
   } else if (result >= 0) {
     if constexpr (NUVIO_HI10_DIAGNOSTICS) ++context->receive_frames;
   }
-  if (result == AVERROR(EAGAIN) || result == AVERROR_EOF || decode_only) {
+  if (result == AVERROR(EAGAIN) || result == AVERROR_EOF) {
     av_frame_free(&frame);
-    return kInvalidData;
+    return result == AVERROR_EOF ? kEndOfStream : kTryAgain;
   }
   if (result < 0) {
     LogAvError("avcodec_receive_frame", result);
+    av_frame_free(&frame);
+    return result == AVERROR_INVALIDDATA ? kInvalidData : kOtherError;
+  }
+
+  const int64_t presentation_time = frame->best_effort_timestamp != AV_NOPTS_VALUE
+      ? frame->best_effort_timestamp : frame->pts;
+  if (presentation_time == AV_NOPTS_VALUE || decode_only) {
     av_frame_free(&frame);
     return kOtherError;
   }
@@ -512,9 +540,7 @@ jint NativeReceiveFrame(
     av_frame_free(&frame);
     return kOtherError;
   }
-  if (frame->pts != AV_NOPTS_VALUE) {
-    env->SetLongField(output_buffer, context->pts_field, frame->pts);
-  }
+  env->SetLongField(output_buffer, context->pts_field, presentation_time);
   jobject data_buffer = env->GetObjectField(output_buffer, context->data_field);
   uint8_t* destination =
       static_cast<uint8_t*>(env->GetDirectBufferAddress(data_buffer));
@@ -662,6 +688,7 @@ const JNINativeMethod kDecoderMethods[] = {
     {"nativeReset", "(J)J", reinterpret_cast<void*>(NativeReset)},
     {"nativeRelease", "(J)V", reinterpret_cast<void*>(NativeRelease)},
     {"nativeSendPacket", "(JLjava/nio/ByteBuffer;IJ)I", reinterpret_cast<void*>(NativeSendPacket)},
+    {"nativeBeginDrain", "(J)I", reinterpret_cast<void*>(NativeBeginDrain)},
     {"nativeReceiveFrame", "(JILandroidx/media3/decoder/VideoDecoderOutputBuffer;Z)I", reinterpret_cast<void*>(NativeReceiveFrame)},
     {"nativeRenderFrame", "(JLandroid/view/Surface;Landroidx/media3/decoder/VideoDecoderOutputBuffer;II)I", reinterpret_cast<void*>(NativeRenderFrame)},
     {"nativeReleaseWindow", "(J)V", reinterpret_cast<void*>(NativeReleaseWindow)},
