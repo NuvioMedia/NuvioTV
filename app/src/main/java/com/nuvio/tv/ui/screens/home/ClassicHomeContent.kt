@@ -106,7 +106,7 @@ fun ClassicHomeContent(
     onRequestTrailerPreview: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
     catalogSeeAllLabel: String? = null,
-    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
+    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
     onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0,
     onRequestLazyCatalogLoad: (String) -> Unit = {}
@@ -301,7 +301,6 @@ fun ClassicHomeContent(
                 currentFocusSnapshot.rowKey,
                 emptyMap(), // Classic doesn't use ID-based restoration for inner rows yet
                 focusState.catalogRowScrollStates + rowStates.mapValues { it.value.firstVisibleItemIndex },
-                focusState.catalogRowScrollAnchors,
                 currentFocusSnapshot.rowIndex,
                 currentFocusSnapshot.itemIndex
             )

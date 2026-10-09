@@ -5,10 +5,10 @@ import androidx.compose.runtime.Immutable
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
 import com.nuvio.tv.core.util.withAppLocale
+import com.nuvio.tv.domain.model.stableItemKeys
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
-import com.nuvio.tv.domain.model.stableItemKey
 import com.nuvio.tv.ui.util.StableList
 import com.nuvio.tv.ui.util.asStable
 import kotlinx.coroutines.withContext
@@ -156,6 +156,8 @@ internal fun buildModernHomePresentation(
                     } else {
                         val rowItemOccurrenceCounts = mutableMapOf<String, Int>()
                         val rowItemCache = cache.catalogItemCache.getOrPut(rowKey) { mutableMapOf() }
+                        // The keys the ViewModel looks the focused card up by.
+                        val itemKeys = row.stableItemKeys()
                         HeroCarouselRow(
                             key = rowKey,
                             title = catalogRowTitle(
@@ -183,7 +185,7 @@ internal fun buildModernHomePresentation(
                                     cachedItem.showImdbRatings == input.showImdbRatings
                                 ) {
                                     cachedItem.carouselItem.let { cached ->
-                                        val stableItemKey = row.stableItemKey(item, occurrence)
+                                        val stableItemKey = itemKeys[itemIndex]
                                         if (cached.key == stableItemKey) cached
                                         else cached.copy(key = stableItemKey)
                                     }
@@ -198,7 +200,7 @@ internal fun buildModernHomePresentation(
                                         showFullReleaseDate = input.showFullReleaseDate,
                                         showImdbRatings = input.showImdbRatings,
                                         previousCachedItem = cachedItem?.carouselItem
-                                    ).copy(key = row.stableItemKey(item, occurrence))
+                                    ).copy(key = itemKeys[itemIndex])
                                     rowItemCache[cacheKey] = CachedCarouselItem(
                                         source = item,
                                         useLandscapePosters = input.useLandscapePosters,

@@ -48,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Brush
@@ -423,6 +424,15 @@ private fun ModernCatalogRowItem(
     )
 }
 
+// By key, so the focused card is found wherever the row currently composes it.
+internal fun <T> resolveRowFocusTarget(
+    itemKeys: List<String>,
+    focusedIndex: Int,
+    targetsByKey: Map<String, T>
+): T? =
+    itemKeys.getOrNull(focusedIndex)?.let { targetsByKey[it] }
+        ?: itemKeys.firstOrNull()?.let { targetsByKey[it] }
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun ModernRowSection(
@@ -432,8 +442,6 @@ internal fun ModernRowSection(
     isVerticalRowsScrollingState: State<Boolean>,
     rowTitleBottom: Dp,
     defaultBringIntoViewSpec: BringIntoViewSpec,
-    focusStateCatalogRowScrollIndex: Int,
-    focusStateCatalogRowScrollAnchor: String?,
     focusedItemByRow: StableRef<MutableMap<String, Int>>,
     rowListStates: StableRef<MutableMap<String, LazyListState>>,
     loadMoreRequestedTotals: StableRef<MutableMap<String, Int>>,
@@ -477,7 +485,7 @@ internal fun ModernRowSection(
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit,
     sharedPlaceholderShimmerOffsetState: State<Float>?,
-    itemFocusRequesters: StableRef<MutableMap<Int, FocusRequester>> = StableRef(mutableMapOf())
+    itemFocusRequesters: StableRef<MutableMap<String, FocusRequester>> = StableRef(mutableMapOf())
 ) {
     // Unwrap StableRef wrappers
     @Suppress("NAME_SHADOWING") val focusedItemByRow = focusedItemByRow.value
@@ -518,6 +526,20 @@ internal fun ModernRowSection(
         pinnedItemKey.value = null
         pinSpent.value = true
     }
+    val itemKeys = remember(row.items, pinFirstCard.value, pinnedItemKey.value) {
+        val pinned = pinnedItemKey.value
+        row.items.list.mapIndexed { index, item ->
+            when {
+                !pinFirstCard.value -> item.key
+                pinned != null -> if (item.key == pinned) firstCardKey else item.key
+                index == 0 -> firstCardKey
+                else -> item.key
+            }
+        }.also { keys ->
+            // Drops requesters of cards that left the row; the map is not observed by composition.
+            itemFocusRequesters.keys.retainAll(keys.toSet())
+        }
+    }
     Column(
         modifier = Modifier.then(
             if (blockingFocusExit.value) {
@@ -545,11 +567,9 @@ internal fun ModernRowSection(
         )
 
         val rowListState = rowListStates.getOrPut(row.key) {
-            // Resolved when the row is built, so a refresh that already moved the card is seen.
-            val restoredIndex = focusStateCatalogRowScrollAnchor
-                ?.let { anchor -> row.items.list.indexOfFirst { it.key == anchor } }
-                ?.takeIf { it >= 0 }
-                ?: focusStateCatalogRowScrollIndex
+            // Read unobserved: only the row's first composition needs it.
+            val restoredIndex = Snapshot.withoutReadObservation { rowFocusedIndex.value }
+                .takeIf { it in row.items.list.indices } ?: 0
             LazyListState(
                 firstVisibleItemIndex = restoredIndex,
                 prefetchStrategy = LazyListPrefetchStrategy(nestedPrefetchItemCount = NESTED_PREFETCH_COUNT)
@@ -901,9 +921,11 @@ internal fun ModernRowSection(
                     .recompositionHighlighter()
                     .focusRequester(rowFocusRequester)
                     .focusRestorer {
-                        val savedIdx = rowFocusedIndex.value
-                        itemFocusRequesters[savedIdx]
-                            ?: itemFocusRequesters[0]
+                        // The fallback is read here, before a rebuilt row has composed its cards:
+                        // the target's requester has to exist already.
+                        val focusedIndex = rowFocusedIndex.value
+                        itemKeys.getOrNull(focusedIndex)?.let { itemFocusRequesters.getOrPut(it) { FocusRequester() } }
+                        resolveRowFocusTarget(itemKeys, focusedIndex, itemFocusRequesters)
                             ?: FocusRequester.Default
                     }
                     .focusGroup(),
@@ -912,15 +934,7 @@ internal fun ModernRowSection(
             ) {
                 itemsIndexed(
                     items = row.items.list,
-                    key = { index, item ->
-                        val pinned = pinnedItemKey.value
-                        when {
-                            !pinFirstCard.value -> item.key
-                            pinned != null -> if (item.key == pinned) firstCardKey else item.key
-                            index == 0 -> firstCardKey
-                            else -> item.key
-                        }
-                    },
+                    key = { index, item -> itemKeys.getOrElse(index) { item.key } },
                     contentType = { _, item ->
                         when (val payload = item.payload) {
                             is ModernPayload.ContinueWatching -> "modern_cw_card"
@@ -929,7 +943,7 @@ internal fun ModernRowSection(
                         }
                     }
                 ) { index, item ->
-                    val requester = itemFocusRequesters.getOrPut(index) { FocusRequester() }
+                    val requester = itemFocusRequesters.getOrPut(itemKeys.getOrElse(index) { item.key }) { FocusRequester() }
                     val isContinueWatchingRow = row.key == MODERN_CONTINUE_WATCHING_ROW_KEY || row.key == MODERN_UPCOMING_ROW_KEY
                     val onFocused = remember(row.key, index, isContinueWatchingRow) {
                         {
