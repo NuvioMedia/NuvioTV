@@ -38,7 +38,7 @@ $env:JAVA_HOME='C:\Users\akai\.jdks\jbr-21.0.11'
 `high10_qpel_family_neon.c` retains the validated coherent 8/16-wide High10 put/avg
 qpel family. Dispatch replaces these entries only for depth 10 with NEON available;
 other depths, no-NEON CPUs, and smaller block entries retain FFmpeg's original tables.
-No changes to frame threading, conversion, audio decoding, or Media3 feed/drain.
+MC integration does not change FFmpeg threading, conversion or audio decoding.
 Xiaomi baseline remains four frame workers and sixteen output buffers; existing
 processor-count-based thread selection on other devices is unchanged.
 
@@ -71,8 +71,88 @@ The implementation is LGPL-2.1-or-later (see source header); distribution must r
 FFmpeg/candidate source and corresponding build instructions and meet applicable
 LGPL obligations. This integration is currently ARMv7-only, not new ARM64 SIMD coverage.
 Stage clocks/counters and Java pipeline probes are Debug-only; the temporary burst
-acceptance probe is removed. Release playback on target hardware remains an acceptance
-gate before distribution; building successfully is not proof of production readiness.
+acceptance probe is removed. Target-device minified Release playback and exact burst
+results are recorded in
+[`benchmarks/xiaomi-hardening-validation-2026-10-09.md`](benchmarks/xiaomi-hardening-validation-2026-10-09.md).
+Its remaining limits still apply; successful builds or one TV do not prove wider
+production readiness.
+
+## Production scope and lifecycle
+
+Software eligibility is clear AVC High10, ARMv7, rotation=0, ordinary Surface output.
+Prefer hardware only when Media3 advertises High10 and supports the actual track's
+profile/level, size and frame rate. Non-High10 AVC, HEVC Main10 and AV1 keep their
+existing paths. DRM and rotated tracks are not claimed by this software renderer;
+unsupported High10 must produce an actionable error rather than audio-only playback
+or initialize an explicitly incompatible platform AVC decoder.
+
+`High10DecoderLifecycle` owns fixed input/output pools (4/16 on Xiaomi). One worker
+feeds FFmpeg and converts synchronously. A rejected EAGAIN packet retains its input
+slot while output is drained; no unbounded copied-packet queue exists. EOS sends a
+null packet and receives through native EOF before publishing one EOS. Decoded
+best-effort timestamp, then frame PTS, controls output-start filtering; missing PTS
+is an explicit error, never guessed from whichever input happened to trigger receive.
+
+Flush invalidates generations, queues and pending drain immediately; worker flushes
+native codec before processing new-generation input. In-flight and caller-held
+storage is not prematurely recycled. Release wakes queue waiters, joins outside
+queue/render locks, then releases native context. Surface control/render operations
+share ownership protection; shared native color metadata uses a short mutex.
+
+`ANativeWindow_setBuffersDataSpace` is resolved from its owning `libnativewindow.so`,
+not `RTLD_DEFAULT`. Its API28+ availability remains optional on older Android APIs;
+API24–27 retain the original platform fallback and require separate color acceptance.
+One platform-library handle is retained process-wide, not once per decoder.
+Surface submission/drop/stale-generation outcomes are distinct. Debug
+`renderedFrames` counts successful native posts, `surfaceDroppedFrames` counts
+abandoned/invalid Surface drops, and Media3 `rendered`/`dropped` counters keep their
+own semantics. None of these proves physical HDMI presentation.
+
+## Actual JNI/Surface regression gate
+
+Test APK is independent of the installed player. Use a local synthetic fixture,
+not copyrighted episode media. Reuse existing `avc-hi10.mp4` when available. Fixture
+contract: AVC High10 with B-frames, 1280x720, 30fps, 20s/600 frames, limited-range
+BT.709 testsrc (black/white corners). A compatible host FFmpeg/libx264 build can
+generate it in a dedicated fixture directory:
+
+```bash
+ffmpeg -f lavfi -i testsrc=size=1280x720:rate=30 -t 20 \
+  -vf format=yuv420p10le -c:v libx264 -profile:v high10 -bf 2 \
+  -color_range tv -colorspace bt709 -color_trc bt709 -color_primaries bt709 \
+  -an avc-hi10.mp4
+ffmpeg -i avc-hi10.mp4 -an -sws_flags bilinear -pix_fmt yuv420p \
+  -f framemd5 avc-hi10-yuv8.framemd5
+python -m http.server 18019 --bind 127.0.0.1 --directory /absolute/fixture/directory
+```
+
+From another terminal with the intended device connected:
+
+```bash
+adb -s DEVICE_SERIAL reverse tcp:18019 tcp:18019
+./gradlew :hi10-video-decoder:connectedDebugAndroidTest
+adb -s DEVICE_SERIAL reverse --remove tcp:18019
+```
+
+Windows uses `gradlew.bat`. If Gradle UTP fails before running tests with an invalid
+device-provider output path, run the same standalone APK directly (keep the fixture
+server/reverse active):
+
+```bash
+./gradlew :hi10-video-decoder:assembleDebugAndroidTest
+adb -s DEVICE_SERIAL install -r hi10-video-decoder/build/outputs/apk/androidTest/debug/hi10-video-decoder-debug-androidTest.apk
+adb -s DEVICE_SERIAL shell am instrument -w com.nuvio.hi10video.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Test-only `fixtureBaseUrl` instrumentation argument
+defaults to `http://127.0.0.1:18019/`. Stop the local server after testing. No addon
+or account installation is needed. Tests compare all decoded PTS/hashes including
+last delayed frame, five seeks, flush during drain, full-pool release, stale-output
+rejection, native Surface-abandon accounting and release/output-replacement races.
+Real SurfaceHolder recreation reuses its Java Surface and verifies black/white
+range plus pixel-identical PixelCopy readback without submitting a newer frame.
+Readback is not physical display proof; real player pause/resume, A/V/subtitles,
+thermal matched playback and minified Release remain separate acceptance gates.
 
 ## Symbol isolation
 
