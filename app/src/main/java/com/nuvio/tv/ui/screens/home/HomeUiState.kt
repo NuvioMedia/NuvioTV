@@ -137,6 +137,12 @@ data class NextUpInfo(
     val seedSeason: Int? = null,
     val seedEpisode: Int? = null,
     val contentLanguage: String? = null,
+    val isSeriesPremiere: Boolean = false,
+    val isSeasonPremiere: Boolean = false,
+    val isMidSeasonPremiere: Boolean = false,
+    val isMidSeasonFinale: Boolean = false,
+    val isSeasonFinale: Boolean = false,
+    val isSeriesFinale: Boolean = false,
     val mdbListRatings: com.nuvio.tv.domain.model.MDBListRatings? = null
 )
 
