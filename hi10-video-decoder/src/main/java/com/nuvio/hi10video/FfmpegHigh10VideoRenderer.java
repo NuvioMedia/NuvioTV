@@ -6,6 +6,7 @@ package com.nuvio.hi10video;
 
 import static androidx.media3.exoplayer.DecoderReuseEvaluation.DISCARD_REASON_MIME_TYPE_CHANGED;
 import static androidx.media3.exoplayer.DecoderReuseEvaluation.REUSE_RESULT_NO;
+import static androidx.media3.exoplayer.DecoderReuseEvaluation.REUSE_RESULT_YES_WITHOUT_RECONFIGURATION;
 
 import android.os.Handler;
 import android.util.Log;
@@ -23,6 +24,8 @@ import androidx.media3.decoder.DecoderInputBuffer;
 import androidx.media3.decoder.VideoDecoderOutputBuffer;
 import androidx.media3.exoplayer.DecoderCounters;
 import androidx.media3.exoplayer.DecoderReuseEvaluation;
+import androidx.media3.exoplayer.ExoPlaybackException;
+import androidx.media3.exoplayer.FormatHolder;
 import androidx.media3.exoplayer.RendererCapabilities;
 import androidx.media3.exoplayer.mediacodec.MediaCodecInfo;
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil;
@@ -44,6 +47,8 @@ public final class FfmpegHigh10VideoRenderer extends DecoderVideoRenderer {
   private final int inputBuffers;
   private final int outputBuffers;
   @Nullable private FfmpegHigh10VideoDecoder decoder;
+  @Nullable private Format currentInputFormat;
+  private boolean restoringSeekFormat;
 
   public FfmpegHigh10VideoRenderer(
       long allowedJoiningTimeMs,
@@ -198,14 +203,43 @@ public final class FfmpegHigh10VideoRenderer extends DecoderVideoRenderer {
   }
 
   @Override
+  protected void onInputFormatChanged(FormatHolder formatHolder) throws ExoPlaybackException {
+    super.onInputFormatChanged(formatHolder);
+    currentInputFormat = formatHolder.format;
+  }
+
+  @Override
+  protected void onPositionReset(long positionUs, boolean joining) throws ExoPlaybackException {
+    super.onPositionReset(positionUs, joining);
+    if (currentInputFormat != null) {
+      // Media3 1.8 clears formatQueue on seek without rearming its first-input marker.
+      // Before the first output, that leaves outputFormat null. Register the unchanged
+      // format for the next input through the protected API, without replacing decoder.
+      FormatHolder holder = new FormatHolder();
+      holder.format = currentInputFormat;
+      restoringSeekFormat = true;
+      try {
+        super.onInputFormatChanged(holder);
+      } finally {
+        restoringSeekFormat = false;
+      }
+    }
+  }
+
+  @Override
   protected DecoderReuseEvaluation canReuseDecoder(
       String decoderName, Format oldFormat, Format newFormat) {
+    if (restoringSeekFormat && oldFormat.equals(newFormat)) {
+      return new DecoderReuseEvaluation(
+          decoderName, oldFormat, newFormat, REUSE_RESULT_YES_WITHOUT_RECONFIGURATION, 0);
+    }
     return new DecoderReuseEvaluation(
         decoderName, oldFormat, newFormat, REUSE_RESULT_NO, DISCARD_REASON_MIME_TYPE_CHANGED);
   }
 
   @Override
   protected void onDisabled() {
+    currentInputFormat = null;
     DecoderCounters counters = decoderCounters;
     super.onDisabled();
     counters.ensureUpdated();
