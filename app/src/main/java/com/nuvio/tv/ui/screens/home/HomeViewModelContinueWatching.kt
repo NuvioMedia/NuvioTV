@@ -4,9 +4,13 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.tracking.RewatchRunPosition
 import com.nuvio.tv.core.util.isEpisodeReleaseAired
 import com.nuvio.tv.core.util.parseEpisodeReleaseInstant
 import com.nuvio.tv.core.util.selectEpisodeReleaseValue
+import com.nuvio.tv.data.simkl.canonicalContentId
+import com.nuvio.tv.data.simkl.isRunningRewatchSession
+import com.nuvio.tv.data.simkl.mediaReference
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
@@ -24,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -67,7 +72,12 @@ private data class ContinueWatchingSettingsSnapshot(
     val nextUpFromFurthestEpisode: Boolean,
     val continueWatchingSortMode: ContinueWatchingSortMode,
     val watchedItemsVersion: Int,  // triggers re-evaluation when watched items change
-    val hasLoadedRemoteProgress: Boolean
+    val hasLoadedRemoteProgress: Boolean,
+    /**
+     * The account's rewatch runs. A run decides which episode a series offers next, so a change of
+     * the account's runs has to re-run the pipeline rather than wait for a watch to move.
+     */
+    val rewatchRuns: List<RewatchRunPosition> = emptyList()
 )
 
 /**
@@ -283,8 +293,11 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 arrayOf(daysCap, dismissedNextUp, showUnairedNextUp, nextUpFromFurthest, sortMode)
             },
             watchProgressRepository.watchedItems.map { it.size },
-            cwPipelineRefreshTrigger
-        ) { progressSnapshot, settingsSnapshot, watchedItemsSize, _ ->
+            cwPipelineRefreshTrigger,
+            simklSyncRepository.state
+                .map { state -> state.snapshot.rewatchRuns }
+                .distinctUntilChanged()
+        ) { progressSnapshot, settingsSnapshot, watchedItemsSize, _, rewatchRuns ->
             val (items, nextUpSeeds, hasLoadedRemoteProgress) = progressSnapshot
             @Suppress("UNCHECKED_CAST")
             val daysCap = settingsSnapshot[0] as Int
@@ -301,7 +314,8 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 nextUpFromFurthestEpisode = nextUpFromFurthestEpisode,
                 continueWatchingSortMode = continueWatchingSortMode,
                 watchedItemsVersion = watchedItemsSize,
-                hasLoadedRemoteProgress = hasLoadedRemoteProgress
+                hasLoadedRemoteProgress = hasLoadedRemoteProgress,
+                rewatchRuns = rewatchRuns
             )
         }.debounce(CW_PROGRESS_DEBOUNCE_MS).collectLatest { snapshot ->
             val debug = CwDebugSession()
@@ -311,7 +325,14 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 val cycleStartMs = SystemClock.elapsedRealtime()
                 val useTrackingProvider = watchProgressRepository.hasActiveTrackingProgressProvider()
                 val items = snapshot.items
-                val nextUpSeeds = snapshot.nextUpSeeds
+                // A rewatch run the user is following decides where its series sits in Next Up, so
+                // a seed a run is newer than carries the run position instead of the old watch
+                // position. Everything downstream reads this list, which is why the runs are
+                // applied here rather than at the resolver: the resolver offers the episode after
+                // the seed it is given, and with the run as the seed that is the next step of the
+                // run. A run whose series has no local seed at all is added as a seed, because with
+                // a provider owning the completed history there is nothing else to carry it.
+                val nextUpSeeds = applyRewatchRunPositions(snapshot.nextUpSeeds, snapshot.rewatchRuns)
                 val daysCap = snapshot.daysCap
                 val dismissedNextUp = snapshot.dismissedNextUp
                 val showUnairedNextUp = snapshot.showUnairedNextUp
@@ -2252,7 +2273,8 @@ private fun resolveNextUpVideoFromMeta(
     meta: CwMetaSummary
 ): CwVideoSummary? = resolveNextUpVideoFromMeta(progress, meta, showUnairedNextUp = true)
 
-private const val CW_NEXT_UP_NEW_SEASON_UNAIRED_WINDOW_DAYS = 7
+// Shared with the detail screen run offer, so both read the same window.
+internal const val CW_NEXT_UP_NEW_SEASON_UNAIRED_WINDOW_DAYS = 7
 
 // An episode with no date is no more watchable than one dated ahead, so a missing date counts as unaired and stays under the same setting instead of passing as aired.
 internal fun isNextUpEpisodeUnaired(releaseDate: LocalDate?, today: LocalDate): Boolean =
@@ -3195,6 +3217,36 @@ internal fun nextUpDismissKey(
     return contentId.trim()
 }
 
+/**
+ * Ends the run a Continue Watching card stands for, when the card is the run.
+ *
+ * The account holds the run, so a card of a running rewatch cannot be taken out of the row locally:
+ * Continue Watching reads the sessions, and the next read, here or on any other device, would put it
+ * back. Closing the session takes the card out everywhere it is read and keeps the watch history
+ * Simkl already has. A card whose series runs no session is left alone.
+ */
+internal suspend fun HomeViewModel.closeRunningRewatchFor(contentId: String) {
+    val snapshot = simklSyncRepository.state.value.snapshot
+    // The same matcher the row used to place the card, so the two cannot disagree about which run
+    // the card stands for.
+    val run = snapshot.rewatchRuns.firstOrNull { run -> run.matches(contentId) } ?: return
+    val sessionId = snapshot.rewatchSessions
+        .firstOrNull { entry ->
+            entry.isRewatch &&
+                entry.isRunningRewatchSession() &&
+                entry.media?.canonicalContentId() == run.contentId
+        }
+        ?.rewatchId
+        ?: return
+    simklRewatchWriter.closeRewatchSession(
+        media = snapshot.mediaReference(contentId = run.contentId, contentType = SERIES_CONTENT_TYPE),
+        rewatchId = sessionId
+    )
+}
+
+/** The content type the catalogue uses for series, which is what a run is read as. */
+private const val SERIES_CONTENT_TYPE = "series"
+
 internal fun HomeViewModel.removeContinueWatchingPipeline(
     contentId: String,
     season: Int? = null,
@@ -3232,6 +3284,9 @@ internal fun HomeViewModel.removeContinueWatchingPipeline(
         viewModelScope.launch {
             traktSettingsDataStore.addDismissedNextUpKey(dismissKey)
         }
+        // Removing a card of a running rewatch is dropping the run, and the run lives on the
+        // account: the session is closed, which is what takes the card out of the row everywhere.
+        viewModelScope.launch { closeRunningRewatchFor(contentId) }
         return
     }
     viewModelScope.launch {

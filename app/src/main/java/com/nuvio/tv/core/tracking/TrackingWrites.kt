@@ -26,12 +26,26 @@ enum class TrackingListStatus(val wireValue: String) {
 
 data class TrackingHistoryItem(
     val media: TrackingMediaReference,
-    val watchedAtEpochMs: Long? = null
+    val watchedAtEpochMs: Long? = null,
+    /**
+     * The viewing session this write belongs to, for a provider that keeps rewatches as sessions
+     * beside the watch history. Simkl asks for it on every write after the one that opened the
+     * session, so a run is continued rather than forked. Providers without the concept leave it unset
+     * and it is then never sent.
+     */
+    val rewatchId: Long? = null
 )
 
 data class TrackingScrobbleEvent(
     val media: TrackingMediaReference,
-    val progressPercent: Double
+    val progressPercent: Double,
+    /**
+     * Where the content really ends, in percent of its duration, when IntroDB knows the credits.
+     *
+     * A playback that reached the credits is over, even when the user set the completion point higher
+     * than that. Null means no marker is known for this item, and the percentage decides on its own.
+     */
+    val contentEndPercent: Double? = null
 )
 
 data class TrackingMutationResult(

@@ -84,7 +84,9 @@ class HomeViewModel @Inject constructor(
     internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
     internal val profileManager: com.nuvio.tv.core.profile.ProfileManager,
-    internal val tvRecommendationManager: TvRecommendationManager
+    internal val tvRecommendationManager: TvRecommendationManager,
+    internal val simklSyncRepository: com.nuvio.tv.data.simkl.SimklSyncRepository,
+    internal val simklRewatchWriter: com.nuvio.tv.data.simkl.SimklRewatchWriter
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -362,6 +364,7 @@ class HomeViewModel @Inject constructor(
             watchedSeriesStateHolder.loadFromDisk()
             observeExternalMetaPrefetchPreference()
             observeContinueWatchingSortMode()
+            observeRewatchRuns()
             loadHomeCatalogOrderPreference()
             loadFollowAddonsOrder()
             loadDisabledHomeCatalogPreference()
@@ -489,6 +492,35 @@ class HomeViewModel @Inject constructor(
                         return@collect
                     }
                     // Clear caches so the new sort is applied immediately on next pipeline run
+                    clearAllCwInMemoryCaches()
+                }
+        }
+    }
+
+    /**
+     * Rewatches in Continue Watching: the runs decide which series the row follows, and the caches hold
+     * the answers for the previous ones per content id. A run that appears or moves (a confirmed
+     * rewatch, a sync, or the mode setting re-deriving them) has to drop those answers, or the row
+     * keeps the one it already had until the app restarts.
+     */
+    private fun observeRewatchRuns() {
+        viewModelScope.launch {
+            var initial = true
+            simklSyncRepository.state
+                .map { state -> state.snapshot.rewatchRuns }
+                .distinctUntilChanged()
+                .collect { runs ->
+                    // A run the account is in belongs in the row on every device, so a dismissal the
+                    // row saved earlier must not keep hiding it here: a build that could not close
+                    // the session stored one and the run stayed, leaving the row and the account
+                    // disagreeing about the same run. The keys are the id forms the card can carry.
+                    runs.flatMap { run -> run.matchKeys }
+                        .distinct()
+                        .forEach { key -> traktSettingsDataStore.removeDismissedNextUpKeysForContent(key) }
+                    if (initial) {
+                        initial = false
+                        return@collect
+                    }
                     clearAllCwInMemoryCaches()
                 }
         }

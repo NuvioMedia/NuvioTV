@@ -6,16 +6,19 @@ import com.nuvio.tv.core.tracking.TrackingCapability
 import com.nuvio.tv.core.tracking.TrackingProvider
 import com.nuvio.tv.core.tracking.TrackingProviderDescriptor
 import com.nuvio.tv.core.tracking.TrackingProviderId
+import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.TrackingScrobbler
 import com.nuvio.tv.core.tracking.scrobbleDiagnosticSummary
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -23,7 +26,9 @@ import kotlinx.coroutines.flow.stateIn
 class SimklTrackingScrobbler @Inject constructor(
     private val authRepository: SimklAuthRepository,
     private val syncRepository: SimklSyncRepository,
-    private val mutationService: SimklMutationService
+    private val mutationService: SimklMutationService,
+    private val rewatchConsentRepository: SimklRewatchConsentRepository,
+    private val settingsDataStore: TraktSettingsDataStore
 ) : TrackingScrobbler {
     override val providerId = TrackingProviderId.SIMKL
 
@@ -54,19 +59,142 @@ class SimklTrackingScrobbler @Inject constructor(
             TRACKING_SCROBBLE_DIAGNOSTIC_TAG,
             "simkl adapter enriched action=${action.wireValue} ${enrichedEvent.scrobbleDiagnosticSummary()}"
         )
-        val result = mutationService.scrobble(
-            action = action,
-            event = enrichedEvent
+        val mode = rewatchMode()
+        val accountType = authRepository.state.value.accountType
+        // One number for the whole path: pause, stop, the rewatch gates and the local commit. The
+        // content end marker comes from the player (`TrackingScrobbleEvent.contentEndPercent`), so a
+        // playback that reached the credits is finished even with a higher user threshold. An external
+        // player and a start have no marker, and there the user threshold alone decides.
+        val completionThresholdPercent = resolvedSimklCompletionPercent(
+            userThresholdPercent = watchedThresholdPercent().toDouble(),
+            contentEndPercent = enrichedEvent.contentEndPercent
         )
-        if (action != TrackingScrobbleAction.START) {
+        // A playback stopped below the threshold is a pause for Simkl: as a stop the account would
+        // apply its own 80 percent rule and mark the title watched anyway, even though the user
+        // threshold is higher. The same action holds for the rewatch gate, the prompt and the commit.
+        val reportingAction = simklReportingAction(
+            action = action,
+            progressPercent = enrichedEvent.progressPercent,
+            completionThresholdPercent = completionThresholdPercent
+        )
+        // The run of the item, when the account already has one, and the answer the user gave to
+        // the question before the playback: together they decide whether the scrobble asks Simkl for
+        // a rewatch. A session the account runs releases the answer, which was for the run it opened.
+        val knownSnapshot = syncRepository.state.value.snapshot
+        val runningSessionId = knownSnapshot.rewatchSessions.activeRewatchSessionId(enrichedEvent.media)
+        if (runningSessionId != null) {
+            rewatchConsentRepository.releaseGrant(enrichedEvent.media)
+        }
+        val recordRewatch = shouldRecordSimklRewatchOnStop(
+            mode = mode,
+            accountType = accountType,
+            action = reportingAction,
+            progressPercent = enrichedEvent.progressPercent,
+            completionThresholdPercent = completionThresholdPercent,
+            hasRunningSession = runningSessionId != null,
+            consented = rewatchConsentRepository.grantedFor(enrichedEvent.media)
+        )
+        val result = mutationService.scrobble(
+            action = reportingAction,
+            event = enrichedEvent,
+            recordRewatch = recordRewatch,
+            completionThresholdPercent = completionThresholdPercent
+        )
+        // The prior watch has to be read before the commit, or the playback looks like a repeat
+        // viewing of itself. A stop asks whether the viewing that ended is a rewatch, a start
+        // whether the viewing that is beginning opens a run.
+        val priorWatch = if (
+            reportingAction == TrackingScrobbleAction.STOP ||
+            reportingAction == TrackingScrobbleAction.START
+        ) {
+            syncRepository.state.value.snapshot.priorWatchForScrobble(result)
+        } else {
+            SimklPriorWatch.None
+        }
+        if (reportingAction != TrackingScrobbleAction.START) {
             syncRepository.commitScrobble(result)
+        }
+        if (recordRewatch || result.rewatchStatus != null) {
+            Log.i(
+                TRACKING_SCROBBLE_DIAGNOSTIC_TAG,
+                "simkl rewatch action=${reportingAction.wireValue} status=" +
+                    "${result.rewatchStatus?.name?.lowercase() ?: "none"} " +
+                    "rewatching=${result.rewatchId != null}"
+            )
+        }
+        // Simkl named the plan the account is on, and it is not the one this client had cached: every
+        // rewatch decision below is gated on that plan, so the cache is corrected where the answer is,
+        // instead of at the next read of the user settings. The watch itself is unaffected, and only
+        // the plan is written, so an account that resubscribes finds its setting as it left it.
+        val planAllowsRewatches = if (result.rewatchStatus == SimklRewatchStatus.PRO_REQUIRED) {
+            Log.i(
+                TRACKING_SCROBBLE_DIAGNOSTIC_TAG,
+                "simkl rewatch plan no longer covers sessions; correcting the cached plan"
+            )
+            authRepository.markPlanAsFree()
+            false
+        } else {
+            isSimklRewatchPlanEligible(accountType)
+        }
+        if (reportingAction == TrackingScrobbleAction.START) {
+            val askToStartRun = shouldAskToStartSimklRewatch(
+                mode = mode,
+                accountType = accountType,
+                action = reportingAction,
+                priorWatch = priorWatch,
+                nowEpochMs = System.currentTimeMillis(),
+                hasRunningSession = runningSessionId != null
+            )
+            if (askToStartRun && planAllowsRewatches) {
+                rewatchConsentRepository.ask(enrichedEvent.media)
+            }
+        }
+        // A session the account just took is not on the snapshot until the sessions are read again,
+        // and Continue Watching follows that read: asking for a refresh keeps the row current
+        // instead of waiting for the next sync.
+        if (reportingAction == TrackingScrobbleAction.STOP && result.rewatchId != null) {
+            syncRepository.refreshAsync(TrackingRefreshIntent.INVALIDATED)
         }
         Log.d(
             TRACKING_SCROBBLE_DIAGNOSTIC_TAG,
-            "simkl adapter complete action=${action.wireValue} ${enrichedEvent.scrobbleDiagnosticSummary()}"
+            "simkl adapter complete action=${reportingAction.wireValue} " +
+                enrichedEvent.scrobbleDiagnosticSummary()
         )
     }
+
+    /*
+     * Difference from mobile: mobile reads `simklRewatchMode` and `simklWatchedThresholdPercent` from
+     * `TrackingSettingsRepository`. TV has no such `object` repository, so both values are read from
+     * `TraktSettingsDataStore`, where the keys live. `scrobble` is `suspend`, so the read is a single
+     * `first()` at the start of the path, the same as `minimumRewatchRunEpisodes` in
+     * `SimklSyncRepository.kt` and `SimklSyncEngine.kt`. A change on the settings screen therefore
+     * changes the behaviour at the next scrobble.
+     */
+    private suspend fun rewatchMode(): SimklRewatchMode =
+        settingsDataStore.simklRewatchMode.first()
+
+    private suspend fun watchedThresholdPercent(): Int =
+        settingsDataStore.simklWatchedThresholdPercent.first()
 }
+
+/**
+ * The action Simkl is actually told about.
+ *
+ * A playback the user stopped below the completion threshold is reported as a pause, because a stop
+ * there would have Simkl apply its own 80 percent rule and mark the title watched anyway, while the
+ * user's own number says the playback did not finish. The same action is then what the rewatch gate,
+ * the prompt and the local commit are decided with.
+ */
+internal fun simklReportingAction(
+    action: TrackingScrobbleAction,
+    progressPercent: Double,
+    completionThresholdPercent: Double
+): TrackingScrobbleAction =
+    if (action == TrackingScrobbleAction.STOP && progressPercent < completionThresholdPercent) {
+        TrackingScrobbleAction.PAUSE
+    } else {
+        action
+    }
 
 @Singleton
 class SimklTrackingProvider @Inject constructor(

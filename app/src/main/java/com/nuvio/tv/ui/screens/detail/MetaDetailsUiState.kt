@@ -63,6 +63,11 @@ data class MetaDetailsUiState(
     val isMovieWatched: Boolean = false,
     val isMovieWatchedPending: Boolean = false,
     val watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
+    /**
+     * The episodes the running rewatch of this item has covered, empty when no run is open. The
+     * episode list marks them apart from the ones watched before the run.
+     */
+    val rewatchEpisodes: Set<Pair<Int, Int>> = emptySet(),
     val episodeWatchedPendingKeys: Set<String> = emptySet(),
     val blurUnwatchedEpisodes: Boolean = false,
     val randomEpisodeEnabled: Boolean = false,

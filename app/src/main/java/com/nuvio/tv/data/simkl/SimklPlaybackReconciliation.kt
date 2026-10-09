@@ -3,11 +3,13 @@ package com.nuvio.tv.data.simkl
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.WatchedItem
 
-internal fun SimklSyncSnapshot.reconcileWatchedPlayback(): SimklSyncSnapshot {
+internal fun SimklSyncSnapshot.reconcileWatchedPlayback(
+    completionThresholdFraction: Float? = null
+): SimklSyncSnapshot {
     if (playback.isEmpty()) return this
     val watchedItems = toSimklWatchedProjection().items
     val retainedPlayback = playback.filterNot { session ->
-        session.toWatchProgress(entries)?.let { progress ->
+        session.toWatchProgress(entries, completionThresholdFraction)?.let { progress ->
             entries.any { entry -> entry.hidesPlayback(progress) } ||
                 watchedItems.any { watched -> watched.supersedes(progress) }
         } == true

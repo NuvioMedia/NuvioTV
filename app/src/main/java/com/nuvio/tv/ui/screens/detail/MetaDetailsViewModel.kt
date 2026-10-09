@@ -27,6 +27,7 @@ import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
+import com.nuvio.tv.data.simkl.rewatchedEpisodesOf
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaTrailer
@@ -105,6 +106,7 @@ class MetaDetailsViewModel @Inject constructor(
     private val metaDetailsSessionState: MetaDetailsSessionState,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+    private val simklSyncRepository: com.nuvio.tv.data.simkl.SimklSyncRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val itemId: String = savedStateHandle["itemId"] ?: ""
@@ -180,8 +182,47 @@ class MetaDetailsViewModel @Inject constructor(
         }
         observeShowFullReleaseDate()
         observeHideUnreleasedContent()
+        observeRewatchRuns()
         loadMeta()
     }
+
+    /**
+     * Re-derives the play action when the account's rewatch runs change.
+     *
+     * A run is read from the account and can arrive after the screen has already computed the
+     * button, so without this the button would keep offering the old watch position until something
+     * else moved.
+     */
+    private fun observeRewatchRuns() {
+        viewModelScope.launch {
+            simklSyncRepository.state
+                .map { state -> state.snapshot.rewatchRuns }
+                .distinctUntilChanged()
+                .collectLatest { calculateNextToWatch() }
+        }
+    }
+
+    /**
+     * The episodes the running rewatch of the item has covered, for the marker the episode list draws.
+     *
+     * Only a run's own episodes are collected; without a run the set is empty and the list draws its
+     * marker exactly as it did before rewatches existed.
+     */
+    private fun refreshRewatchEpisodes() {
+        val snapshot = simklSyncRepository.state.value.snapshot
+        val run = rewatchRunFor(_uiState.value.meta?.id) ?: rewatchRunFor(_effectiveContentId.value)
+        val episodes = run
+            ?.let { active -> snapshot.rewatchSessions.rewatchedEpisodesOf(active.contentId) }
+            .orEmpty()
+        _uiState.update { state ->
+            if (state.rewatchEpisodes == episodes) state else state.copy(rewatchEpisodes = episodes)
+        }
+    }
+
+    /** The rewatch run that matches a content id, if the account is in the middle of one. */
+    private fun rewatchRunFor(contentId: String?): com.nuvio.tv.core.tracking.RewatchRunPosition? =
+        simklSyncRepository.state.value.snapshot.rewatchRuns
+            .firstOrNull { run -> run.matches(contentId) }
 
     private fun observeHideUnreleasedContent() {
         viewModelScope.launch {
@@ -1849,6 +1890,7 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun calculateNextToWatch() {
+        refreshRewatchEpisodes()
         val meta = _uiState.value.meta ?: return
         val progressMap = _uiState.value.episodeProgressMap
         val watchedEpisodes = _uiState.value.watchedEpisodes
@@ -1916,6 +1958,31 @@ class MetaDetailsViewModel @Inject constructor(
 
         val nonSpecialEpisodes = allEpisodes.filter { (it.season ?: 0) > 0 }
         val episodePool = if (nonSpecialEpisodes.isNotEmpty()) nonSpecialEpisodes else allEpisodes
+
+        // A rewatch run the user is following decides where Play goes: the run sits at that episode,
+        // so the next step of the run is the right offer even though the series was watched to the
+        // end long ago, and before the resume of the old position. When the run has no episode
+        // after it, or the account holds no run for this series, the canonical position decides
+        // exactly as it does without a run.
+        val rewatchRun = rewatchRunFor(meta.id) ?: rewatchRunFor(_effectiveContentId.value)
+        if (rewatchRun != null) {
+            val runEpisode = nextEpisodeAfterRun(
+                episodes = episodePool,
+                run = rewatchRun,
+                showUnairedNextUp = layoutPreferenceDataStore.showUnairedNextUp.first(),
+            )
+            if (runEpisode != null) {
+                return NextToWatch(
+                    watchProgress = null,
+                    isResume = false,
+                    nextVideoId = runEpisode.id,
+                    nextSeason = runEpisode.season,
+                    nextEpisode = runEpisode.episode,
+                    displayText = localizedContext.getString(R.string.detail_btn_next_episode, runEpisode.season, runEpisode.episode)
+                )
+            }
+        }
+
         val useFurthestEpisode = layoutPreferenceDataStore.nextUpFromFurthestEpisode.first()
         val latestSeriesProgress = if (useFurthestEpisode) {
             // When using furthest episode mode, consider both progressMap entries

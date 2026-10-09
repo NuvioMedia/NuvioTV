@@ -16,6 +16,38 @@ internal enum class SimklScrobbleOutcome {
     SCROBBLE
 }
 
+/**
+ * What an `allow_rewatch=yes` call said about the session it opened.
+ *
+ * Simkl answers a rewatch write with a wider set of values than `/sync/all-items` carries, so the
+ * client keeps its own enum instead of sharing the one the library rows use. A value the client does
+ * not know is kept as [UNKNOWN] rather than dropped: the rewatch is still worth logging.
+ */
+internal enum class SimklRewatchStatus {
+    ACTIVE,
+    COMPLETED,
+    CLOSED,
+    FIRST_WATCH,
+    TOO_SOON,
+    NOT_ELIGIBLE,
+    PRO_REQUIRED,
+    UNKNOWN;
+
+    companion object {
+        fun fromWire(value: String?): SimklRewatchStatus? = when (value?.trim()?.lowercase()) {
+            null, "" -> null
+            "active" -> ACTIVE
+            "completed" -> COMPLETED
+            "closed" -> CLOSED
+            "first_watch" -> FIRST_WATCH
+            "too_soon" -> TOO_SOON
+            "not_eligible" -> NOT_ELIGIBLE
+            "pro_required" -> PRO_REQUIRED
+            else -> UNKNOWN
+        }
+    }
+}
+
 internal data class SimklScrobbleResult(
     val outcome: SimklScrobbleOutcome,
     val playbackId: Long?,
@@ -23,13 +55,16 @@ internal data class SimklScrobbleResult(
     val mediaType: SimklMediaType,
     val media: SimklMedia,
     val episode: SimklPlaybackEpisode?,
-    val watchedAt: String? = null
+    val watchedAt: String? = null,
+    val rewatchId: Long? = null,
+    val rewatchStatus: SimklRewatchStatus? = null
 )
 
 internal fun SimklApiResponse.toSimklScrobbleResult(
     requestedAction: TrackingScrobbleAction,
     event: TrackingScrobbleEvent,
-    json: Json
+    json: Json,
+    completionThresholdPercent: Double = SIMKL_REWATCH_MIN_PROGRESS_PERCENT
 ): SimklScrobbleResult {
     val payload = body.takeIf(String::isNotBlank)
         ?.let { value -> runCatching { json.parseToJsonElement(value).jsonObject }.getOrNull() }
@@ -47,7 +82,7 @@ internal fun SimklApiResponse.toSimklScrobbleResult(
         isSoftSuccess && status == 409 -> SimklScrobbleOutcome.SCROBBLE
         else -> payload.stringValue("action")
             ?.toSimklScrobbleOutcome()
-            ?: requestedAction.fallbackOutcome(progress)
+            ?: requestedAction.fallbackOutcome(progress, completionThresholdPercent)
     }
     return SimklScrobbleResult(
         outcome = outcome,
@@ -57,7 +92,9 @@ internal fun SimklApiResponse.toSimklScrobbleResult(
         media = responseMedia?.mergeMissing(fallbackMedia) ?: fallbackMedia,
         episode = episode,
         watchedAt = payload.stringValue("watched_at")
-            ?.takeIf { value -> parseSimklUtcEpochMs(value) != null }
+            ?.takeIf { value -> parseSimklUtcEpochMs(value) != null },
+        rewatchId = payload.longValue("rewatch_id"),
+        rewatchStatus = SimklRewatchStatus.fromWire(payload.stringValue("rewatch_status"))
     )
 }
 
@@ -123,12 +160,26 @@ internal fun TrackingMediaKind.toSimklMediaType(): SimklMediaType = when (this) 
     TrackingMediaKind.ANIME -> SimklMediaType.ANIME
 }
 
-private fun TrackingScrobbleAction.fallbackOutcome(progress: Double): SimklScrobbleOutcome =
+/*
+ * A stop the account did not answer with an action is read against the completion threshold and not
+ * against Simkl's own 80 percent. The two only part ways above 80, and there the user's number is the
+ * one the app reports a finished playback with, so it has to be the one this reads. Staying below the
+ * threshold is answered as a pause, which is what the caller sends in the first place; see
+ * SimklMutationService.scrobble.
+ */
+private fun TrackingScrobbleAction.fallbackOutcome(
+    progress: Double,
+    completionThresholdPercent: Double
+): SimklScrobbleOutcome =
     when (this) {
         TrackingScrobbleAction.START -> SimklScrobbleOutcome.START
         TrackingScrobbleAction.PAUSE -> SimklScrobbleOutcome.PAUSE
         TrackingScrobbleAction.STOP -> {
-            if (progress >= 80.0) SimklScrobbleOutcome.SCROBBLE else SimklScrobbleOutcome.PAUSE
+            if (progress >= completionThresholdPercent) {
+                SimklScrobbleOutcome.SCROBBLE
+            } else {
+                SimklScrobbleOutcome.PAUSE
+            }
         }
     }
 

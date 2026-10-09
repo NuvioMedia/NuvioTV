@@ -55,7 +55,10 @@ class SimklMutationService internal constructor(
     suspend fun removeFromList(items: Collection<TrackingMediaReference>): TrackingMutationResult =
         removeFromHistory(items)
 
-    suspend fun addToHistory(items: Collection<TrackingHistoryItem>): TrackingMutationResult {
+    suspend fun addToHistory(
+        items: Collection<TrackingHistoryItem>,
+        allowRewatch: Boolean = false
+    ): TrackingMutationResult {
         val candidates = items.toList().also { historyItems ->
             require(historyItems.all { item -> item.media.hasResolvableIdentity }) {
                 "Simkl mutation requires a media ID or title for every item"
@@ -66,13 +69,47 @@ class SimklMutationService internal constructor(
             SimklApiRequest(
                 method = SimklHttpMethod.POST,
                 path = "/sync/history",
-                body = buildSimklHistoryMutationBody(candidates, json),
-                retryPolicy = SimklRetryPolicy.SYNC_WRITE
+                query = if (allowRewatch) SIMKL_ALLOW_REWATCH_QUERY else emptyMap(),
+                body = buildSimklHistoryMutationBody(
+                    candidates,
+                    isRewatch = allowRewatch,
+                    json = json
+                ),
+                retryPolicy = SimklRetryPolicy.SYNC_WRITE,
+                // A repeat viewing of an episode the history already holds is answered with the same
+                // conflict a stop scrobble gets, and behind both is a session that was opened. Reading
+                // it as a failure is what made a recorded rewatch report an error.
+                scrobbleStopConflictIsSuccess = allowRewatch
             )
         )
         val receipt = response.toHistoryMutationReceipt(candidates, json)
         onMutationCommitted(receipt)
         return receipt.result
+    }
+
+    /**
+     * Moves a running rewatch session to `closed`, which is how a run is dropped.
+     *
+     * The transition is documented on Simkl's rewatches guide: the session keeps its watched
+     * episodes and can be resumed by another write, so dropping a run never loses history. Nothing
+     * is committed locally from the answer: what the account keeps is read back from the sessions by
+     * the caller, which is also what Continue Watching reads.
+     */
+    suspend fun closeRewatchSession(
+        media: TrackingMediaReference,
+        rewatchId: Long
+    ): Boolean {
+        require(media.hasResolvableIdentity) { "Simkl mutation requires a media ID or title for the item" }
+        val response = client.execute(
+            SimklApiRequest(
+                method = SimklHttpMethod.POST,
+                path = "/sync/history",
+                query = SIMKL_ALLOW_REWATCH_QUERY,
+                body = buildSimklRewatchCloseBody(media, rewatchId, json),
+                retryPolicy = SimklRetryPolicy.SYNC_WRITE
+            )
+        )
+        return response.status in 200..299 || response.isSoftSuccess
     }
 
     suspend fun removeFromHistory(items: Collection<TrackingMediaReference>): TrackingMutationResult {
@@ -93,7 +130,9 @@ class SimklMutationService internal constructor(
 
     internal suspend fun scrobble(
         action: TrackingScrobbleAction,
-        event: TrackingScrobbleEvent
+        event: TrackingScrobbleEvent,
+        recordRewatch: Boolean = false,
+        completionThresholdPercent: Double = SIMKL_REWATCH_MIN_PROGRESS_PERCENT
     ): SimklScrobbleResult {
         require(event.media.hasResolvableIdentity) { "Simkl scrobble requires a media ID or title" }
         require(event.media.kind == TrackingMediaKind.MOVIE || event.media.episode != null) {
@@ -108,6 +147,7 @@ class SimklMutationService internal constructor(
                 SimklApiRequest(
                     method = SimklHttpMethod.POST,
                     path = "/scrobble/${action.wireValue}",
+                    query = if (recordRewatch) SIMKL_ALLOW_REWATCH_QUERY else emptyMap(),
                     body = buildSimklScrobbleBody(event, json),
                     retryPolicy = SimklRetryPolicy.NEVER,
                     scrobbleStopConflictIsSuccess = action == TrackingScrobbleAction.STOP
@@ -127,7 +167,12 @@ class SimklMutationService internal constructor(
             "simkl mutation response action=${action.wireValue} status=${response.status} " +
                 "softSuccess=${response.isSoftSuccess} ${event.scrobbleDiagnosticSummary()}"
         )
-        return response.toSimklScrobbleResult(action, event, json)
+        return response.toSimklScrobbleResult(
+            requestedAction = action,
+            event = event,
+            json = json,
+            completionThresholdPercent = completionThresholdPercent
+        )
     }
 
     private fun Collection<TrackingMediaReference>.validated(): List<TrackingMediaReference> =

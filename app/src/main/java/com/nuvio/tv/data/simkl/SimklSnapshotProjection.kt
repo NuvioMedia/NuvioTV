@@ -76,10 +76,13 @@ internal class SimklSnapshotProjection private constructor(
     companion object {
         val Empty = create(SimklSyncSnapshot())
 
-        fun create(snapshot: SimklSyncSnapshot): SimklSnapshotProjection {
+        fun create(
+            snapshot: SimklSyncSnapshot,
+            completionThresholdFraction: Float? = null
+        ): SimklSnapshotProjection {
             val library = snapshot.toSimklLibraryProjection()
             val watched = snapshot.toSimklWatchedProjection()
-            val progress = snapshot.toSimklProgressEntries()
+            val progress = snapshot.toSimklProgressEntries(completionThresholdFraction)
             val canonicalIdByAlias = linkedMapOf<String, String>()
             val siblings = linkedMapOf<String, MutableSet<String>>()
             val hiddenContentIds = linkedSetOf<String>()
@@ -169,8 +172,11 @@ internal class SimklSnapshotProjection private constructor(
 }
 
 internal fun SimklSyncSnapshot.toSimklNextUpSeeds(
-    preferFurthestEpisode: Boolean
-): List<WatchProgress> = SimklSnapshotProjection.create(this).nextUp(preferFurthestEpisode)
+    preferFurthestEpisode: Boolean,
+    completionThresholdFraction: Float? = null
+): List<WatchProgress> = SimklSnapshotProjection
+    .create(this, completionThresholdFraction)
+    .nextUp(preferFurthestEpisode)
 
 private fun SimklSyncSnapshot.simklWatchedMovieIds(progress: List<WatchProgress>): Set<String> {
     val watched = linkedSetOf<String>()

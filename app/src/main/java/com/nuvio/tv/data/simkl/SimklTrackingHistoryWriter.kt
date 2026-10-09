@@ -25,7 +25,7 @@ class SimklTrackingHistoryWriter @Inject constructor(
         // A mark without episode coordinates describes a whole series, and Simkl answers such a mark by
         // marking every episode of the show watched. Only films may travel without coordinates; the
         // episodes of a whole-series action are reported one by one by the caller anyway.
-        val pushableItems = items.filterNot(TrackingHistoryItem::isWholeSeriesMark)
+        val pushableItems = simklHistoryPushItems(items)
         if (pushableItems.isEmpty()) return TrackingMutationResult(0)
         syncRepository.ensureLoaded()
         val snapshot = syncRepository.state.value.snapshot
@@ -57,12 +57,15 @@ class SimklTrackingHistoryWriter @Inject constructor(
  *
  * A mark without episode coordinates describes a whole series. Simkl turns that into a show-level
  * entry and answers by marking every episode of the show watched, including episodes the user never
- * opened, which is how a single ill-timed mark wiped a full series. Only films are allowed through
+ * opened, which is how a single ill-timed mark wiped a full series. Only a movie is allowed through
  * without coordinates. An anime mark is dropped too: without more metadata the app cannot tell an
- * anime film from an anime series.
+ * anime movie from an anime series.
  */
-private fun TrackingHistoryItem.isWholeSeriesMark(): Boolean =
-    media.episode == null && media.kind.name.lowercase() !in MOVIE_LIKE_WATCHED_TYPES
+internal fun simklHistoryPushItems(items: Collection<TrackingHistoryItem>): List<TrackingHistoryItem> =
+    items.filterNot(TrackingHistoryItem::isWholeSeriesMark)
 
-/** Content types that stand on their own and need no episode to be a real mark. */
-private val MOVIE_LIKE_WATCHED_TYPES = setOf("movie", "film")
+private fun TrackingHistoryItem.isWholeSeriesMark(): Boolean =
+    media.episode == null && media.kind.name.lowercase() !in MOVIE_WATCHED_TYPES
+
+/** The one content type that stands on its own and needs no episode to be a real mark. */
+private val MOVIE_WATCHED_TYPES = setOf("movie")
