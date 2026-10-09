@@ -1144,8 +1144,8 @@ open class MainActivity : ComponentActivity() {
                             hasSelectedProfileThisSession = false
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
-                            if (com.nuvio.tv.ui.reshaped.pillnav.rememberPillNavEnabled()) {
-                                com.nuvio.tv.ui.reshaped.pillnav.PillNavScaffold(
+                            if (com.nuvio.tv.ui.components.pillnav.rememberPillNavEnabled()) {
+                                com.nuvio.tv.ui.components.pillnav.PillNavScaffold(
                                     longPressBackHeld = longPressBackHeld,
                                     navController = navController,
                                     startDestination = startDestination,

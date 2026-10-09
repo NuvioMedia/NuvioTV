@@ -194,12 +194,12 @@ internal fun LayoutSidebarSection(
     onEvent: (LayoutSettingsEvent) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val pillNavEnabled = com.nuvio.tv.ui.reshaped.pillnav.rememberPillNavEnabled()
+    val pillNavEnabled = com.nuvio.tv.ui.components.pillnav.rememberPillNavEnabled()
     SettingsToggleRow(
         title = stringResource(R.string.settings_pill_nav_title),
         subtitle = stringResource(R.string.settings_pill_nav_description),
         checked = pillNavEnabled,
-        onToggle = { com.nuvio.tv.ui.reshaped.pillnav.PillNavPreferences.setEnabled(context, !pillNavEnabled) }
+        onToggle = { com.nuvio.tv.ui.components.pillnav.PillNavPreferences.setEnabled(context, !pillNavEnabled) }
     )
     SettingsToggleRow(
         title = stringResource(R.string.layout_modern_sidebar),

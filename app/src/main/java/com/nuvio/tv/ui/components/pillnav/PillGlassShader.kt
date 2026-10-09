@@ -1,4 +1,4 @@
-package com.nuvio.tv.ui.reshaped.pillnav
+package com.nuvio.tv.ui.components.pillnav
 
 // The phone pill's liquid glass (NuvioMobile features/pillnav/PillGlassShader.kt) for Android 13+ TVs:
 // - the whole capsule is a lens with a circular edge profile that magnifies towards the rim;

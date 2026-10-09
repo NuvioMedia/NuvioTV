@@ -1,4 +1,4 @@
-package com.nuvio.tv.ui.reshaped.pillnav
+package com.nuvio.tv.ui.components.pillnav
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
@@ -79,9 +79,8 @@ internal fun PillNavScaffold(
     topBannerVisible: Boolean = false,
 ) {
     val showBar = currentRoute in rootRoutes
-    // Settings and Live TV keep the pill in their header band; every other root screen scrolls under it, so it tucks away.
-    val autoHide = showBar && currentRoute != Screen.Settings.route &&
-        currentRoute != com.nuvio.tv.reshaped.livetv.LIVE_TV_ROUTE
+    // Settings keeps the pill in its header band; every other root screen scrolls under it, so it tucks away.
+    val autoHide = showBar && currentRoute != Screen.Settings.route
     val hiddenUnlessFocused = currentRoute == Screen.Search.route
     val state = remember { PillNavBarState() }
     // Liquid glass on capable TVs only. The screen is recorded only while the pill is on it, never during

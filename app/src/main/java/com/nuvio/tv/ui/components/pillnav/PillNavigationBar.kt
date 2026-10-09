@@ -1,4 +1,4 @@
-package com.nuvio.tv.ui.reshaped.pillnav
+package com.nuvio.tv.ui.components.pillnav
 
 import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
