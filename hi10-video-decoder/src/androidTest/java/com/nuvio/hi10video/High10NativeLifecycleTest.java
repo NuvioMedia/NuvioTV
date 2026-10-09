@@ -129,7 +129,7 @@ public final class High10NativeLifecycleTest {
     assertFalse("Native worker release deadlocked", thread.isAlive());
   }
 
-  private static VideoDecoderOutputBuffer firstOutput(Session session) throws Exception {
+  static VideoDecoderOutputBuffer firstOutput(Session session) throws Exception {
     long deadline = SystemClock.elapsedRealtime() + 10_000;
     while (SystemClock.elapsedRealtime() < deadline) {
       session.feed();
@@ -187,7 +187,7 @@ public final class High10NativeLifecycleTest {
     return result.toString();
   }
 
-  private static final class Session implements AutoCloseable {
+  static final class Session implements AutoCloseable {
     final MediaExtractor extractor = new MediaExtractor();
     final FfmpegHigh10VideoDecoder decoder;
     final List<Long> inputPts = new ArrayList<>();

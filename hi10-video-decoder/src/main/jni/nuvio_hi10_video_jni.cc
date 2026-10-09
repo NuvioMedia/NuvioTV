@@ -231,8 +231,13 @@ int32_t AndroidDataSpace(const DecoderContext* context) {
 
 void SetBuffersDataSpaceIfAvailable(ANativeWindow* window, int32_t data_space) {
   using SetBuffersDataSpace = int32_t (*)(ANativeWindow*, int32_t);
-  auto set_buffers_data_space = reinterpret_cast<SetBuffersDataSpace>(
-      dlsym(RTLD_DEFAULT, "ANativeWindow_setBuffersDataSpace"));
+  // API28 symbol belongs to libnativewindow, not libandroid. Its dependency is
+  // outside our RTLD_DEFAULT lookup group. Older APIs retain the existing fallback.
+  static void* native_window_library = dlopen("libnativewindow.so", RTLD_NOW | RTLD_LOCAL);
+  static auto set_buffers_data_space = native_window_library == nullptr ? nullptr
+      : reinterpret_cast<SetBuffersDataSpace>(
+          dlsym(native_window_library, "ANativeWindow_setBuffersDataSpace"));
+  // Keep this one process-wide platform-library handle alive while cached code is callable.
   if (set_buffers_data_space != nullptr) {
     set_buffers_data_space(window, data_space);
   }
