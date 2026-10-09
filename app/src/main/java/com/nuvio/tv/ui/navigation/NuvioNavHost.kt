@@ -358,7 +358,7 @@ private fun PlaybackNavHost(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     childNav.navigateNestedDetail(itemId, itemType, addonBaseUrl)
                 },
-                onPlayClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
+                onPlayClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage, logoLanguage ->
                     navController.navigate(
                         Screen.Stream.createRoute(
                             videoId = videoId,
@@ -376,11 +376,12 @@ private fun PlaybackNavHost(
                             contentName = title,
                             runtime = runtime,
                             returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
-                            contentLanguage = contentLanguage
+                            contentLanguage = contentLanguage,
+                            logoLanguage = logoLanguage
                         )
                     )
                 },
-                onPlayManuallyClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
+                onPlayManuallyClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage, logoLanguage ->
                     navController.navigate(
                         Screen.Stream.createRoute(
                             videoId = videoId,
@@ -399,11 +400,12 @@ private fun PlaybackNavHost(
                             runtime = runtime,
                             manualSelection = true,
                             returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
-                            contentLanguage = contentLanguage
+                            contentLanguage = contentLanguage,
+                            logoLanguage = logoLanguage
                         )
                     )
                 },
-                onPlayStartFromBeginningClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
+                onPlayStartFromBeginningClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage, logoLanguage ->
                     navController.navigate(
                         Screen.Stream.createRoute(
                             videoId = videoId,
@@ -422,7 +424,8 @@ private fun PlaybackNavHost(
                             runtime = runtime,
                             startFromBeginning = true,
                             returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
-                            contentLanguage = contentLanguage
+                            contentLanguage = contentLanguage,
+                            logoLanguage = logoLanguage
                         )
                     )
                 }
@@ -512,6 +515,11 @@ private fun PlaybackNavHost(
                     defaultValue = "false"
                 },
                 navArgument("contentLanguage") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("logoLanguage") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
@@ -610,6 +618,7 @@ private fun PlaybackNavHost(
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
                                 contentLanguage = playbackInfo.contentLanguage,
+                                logoLanguage = playbackInfo.logoLanguage,
                                 profileId = playbackInfo.profileId
                             )
                         )
@@ -651,6 +660,7 @@ private fun PlaybackNavHost(
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
                                 contentLanguage = playbackInfo.contentLanguage,
+                                logoLanguage = playbackInfo.logoLanguage,
                                 profileId = playbackInfo.profileId
                             )
                         ) {
@@ -787,6 +797,11 @@ private fun PlaybackNavHost(
                     defaultValue = null
                 },
                 navArgument("contentLanguage") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("logoLanguage") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
