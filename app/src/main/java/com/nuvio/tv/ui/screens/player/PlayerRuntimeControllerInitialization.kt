@@ -68,6 +68,7 @@ import com.nuvio.tv.core.player.DolbyVisionConversionConfig
 import com.nuvio.tv.core.player.DolbyVisionConversionStats
 import com.nuvio.tv.core.player.DolbyVisionExtractorsFactory
 import com.nuvio.tv.core.player.DoviBridge
+import com.nuvio.hi10video.FfmpegHigh10VideoRenderer
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
@@ -2184,6 +2185,15 @@ private class SubtitleOffsetRenderersFactory(
             eventListener,
             allowedVideoJoiningTimeMs,
             out
+        )
+        out.add(
+            0,
+            FfmpegHigh10VideoRenderer(
+                allowedVideoJoiningTimeMs,
+                eventHandler,
+                eventListener,
+                MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY
+            )
         )
     }
 
