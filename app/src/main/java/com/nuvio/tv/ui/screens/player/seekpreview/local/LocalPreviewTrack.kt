@@ -43,7 +43,7 @@ import kotlinx.coroutines.withContext
  * and dropped: debrid CDNs rate limit the burst of range requests it makes.
  *
  * Lookups return the nearest filled slot marked approximate (a low-resolution copy that reads as
- * blurred, or replaced by a Seekr frame when one is loaded). Thumbnails are small JPEGs kept in
+ * blurred). Thumbnails are small JPEGs kept in
  * memory and in a disk cache per title/release, so a rewatch starts with every part watched
  * before. Decoding runs on one background thread behind a short queue that drops keyframes when
  * it falls behind, so a slow box never stalls playback's loader.

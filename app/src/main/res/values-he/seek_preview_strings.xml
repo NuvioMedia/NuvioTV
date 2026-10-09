@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="player_seek_preview_sync">סנכרון תצוגה מקדימה</string>
-    <string name="player_seek_preview_sync_hint">הסט עד שהתמונה הממוזערת תתאים לפריים שמתנגן ברקע.</string>
-    <string name="player_seek_preview_sync_keys">שמאלה/ימינה לכיוונון · אישור לאיפוס · למטה לשימוש בערך המוצע · למעלה או חזור לסגירה</string>
-    <string name="player_seek_preview_sync_suggested">מוצע: %1$s (הפרש משך מול מקור התצוגה המקדימה)</string>
-    <string name="cd_seek_preview_sync">סנכרון תצוגה מקדימה</string>
     <string name="settings_seek_preview_local">תצוגה מקדימה בסרגל הגרירה</string>
     <string name="settings_seek_preview_local_description">מייצר תמונות ממוזערות ישירות מנתוני הווידאו שנוגן, להצגת רצועת פריימים חיה (Filmstrip) בעת גרירה ללא צריכת נתונים נוספת.</string>
 </resources>

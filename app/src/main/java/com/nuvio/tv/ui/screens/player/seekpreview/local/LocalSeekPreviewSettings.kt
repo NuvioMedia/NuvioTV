@@ -6,11 +6,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * "Generate previews on device" (default on). Stored next to the user's Seekr key, under the
- * same preference names the phone app uses.
+ * "Generate previews on device" (default disabled, opt-in).
  */
 internal object LocalSeekPreviewSettings {
-    private const val PREFS = "nuvio_seekr_settings"
+    private const val PREFS = "nuvio_preview_settings"
     private const val KEY_LOCAL_ENABLED = "local_previews_enabled"
 
     private val _enabled = MutableStateFlow(false)

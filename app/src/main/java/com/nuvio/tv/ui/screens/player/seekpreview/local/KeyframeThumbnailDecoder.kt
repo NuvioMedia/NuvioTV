@@ -19,8 +19,7 @@ import kotlin.math.roundToInt
  * frame is downscaled straight from its YUV planes, so the full-size picture is never converted
  * to RGB. Only software decoders are used: TV SoCs often have a single hardware instance per
  * codec, and holding it would stop playback from recreating its own decoder (track, resolution
- * or engine changes). A format no software decoder handles gets no on-device previews (Seekr
- * still covers it). All calls are serialised.
+ * or engine changes). A format no software decoder handles gets no on-device previews. All calls are serialised.
  */
 internal class KeyframeThumbnailDecoder(
     private val targetWidth: Int = THUMB_WIDTH,

@@ -41,6 +41,9 @@ interface SeekPreviewTrack {
      */
     suspend fun sideThumbnailFor(positionMs: Long): SeekPreviewThumbnail? = thumbnailFor(positionMs)
 
+    /** The playing file's keyframe near a time, from its index. */
+    fun keyframeNear(positionMs: Long, toleranceMs: Long): Long? = null
+
     /** Stops background work; the track is not fed again. */
     fun close() = Unit
 }

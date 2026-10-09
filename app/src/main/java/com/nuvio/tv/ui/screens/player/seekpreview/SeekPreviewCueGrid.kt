@@ -6,15 +6,9 @@ import kotlin.math.roundToLong
 /**
  * The time window of a single seek-preview cue, expressed in the **playback** timebase.
  *
- * Seekr sprite sheets hold one frame per cue (a ~10 second grid today), so a preview
- * thumbnail never represents an exact millisecond — it represents the whole window
- * [startMs]..[endMs]. Resolving that window and keeping it in player state is what lets the
- * scrubber move in whole cues instead of promising a precision the sprite sheet cannot back
- * up.
- *
- * The cue times reported by the SDK are on the *preview* timeline; callers must subtract the
- * active sync offset before constructing this so both ends are directly comparable with
- * playback positions.
+ * Preview grids hold one frame per cue (a ~10 second grid), so a preview
+ * thumbnail represents the whole window [startMs]..[endMs]. Resolving that window
+ * and keeping it in player state is what lets the scrubber move in whole cues.
  */
 data class SeekPreviewCue(
     val startMs: Long,
