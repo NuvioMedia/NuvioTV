@@ -153,6 +153,16 @@ public final class FfmpegLibrary {
         return "h264";
       case MimeTypes.VIDEO_H265:
         return "hevc";
+      case MimeTypes.VIDEO_VC1:
+        return "vc1";
+      case "video/x-ms-wmv":
+      case "video/wmv":
+      case "video/x-ms-wmv3":
+        return "wmv3";
+      case "video/x-ms-wmv1":
+        return "wmv1";
+      case "video/x-ms-wmv2":
+        return "wmv2";
       default:
         return null;
     }
