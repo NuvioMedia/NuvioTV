@@ -37,12 +37,7 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
 
     if (frameRateMatchingMode == FrameRateMatchingMode.OFF) {
         _uiState.update {
-            it.copy(
-                detectedFrameRateRaw = 0f,
-                detectedFrameRate = 0f,
-                detectedFrameRateSource = null,
-                afrProbeRunning = false
-            )
+            it.clearFrameRateDetection().copy(afrProbeRunning = false)
         }
         return
     }
@@ -59,12 +54,7 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     }
 
     _uiState.update {
-        it.copy(
-            detectedFrameRateRaw = 0f,
-            detectedFrameRate = 0f,
-            detectedFrameRateSource = null,
-            afrProbeRunning = true
-        )
+        it.clearFrameRateDetection().copy(afrProbeRunning = true)
     }
 
     // Original stream headers (without Range) – used for NextLib bypass decision.

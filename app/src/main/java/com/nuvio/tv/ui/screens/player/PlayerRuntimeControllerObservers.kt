@@ -368,12 +368,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             if (settings.frameRateMatchingMode == FrameRateMatchingMode.OFF) {
                 frameRateProbeJob?.cancel()
                 _uiState.update {
-                    it.copy(
-                        detectedFrameRateRaw = 0f,
-                        detectedFrameRate = 0f,
-                        detectedFrameRateSource = null,
-                        afrProbeRunning = false
-                    )
+                    it.clearFrameRateDetection().copy(afrProbeRunning = false)
                 }
             }
 
