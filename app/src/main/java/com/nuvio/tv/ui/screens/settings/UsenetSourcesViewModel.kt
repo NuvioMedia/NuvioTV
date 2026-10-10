@@ -97,7 +97,7 @@ class UsenetSourcesViewModel @Inject constructor(
     }
 
     suspend fun test(indexer: UsenetIndexer): Boolean = withContext(Dispatchers.IO) {
-        try { indexer.validate(); client.capabilities(indexer, live = true); true }
+        try { indexer.validate(); client.verify(indexer); true }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { false }
     }

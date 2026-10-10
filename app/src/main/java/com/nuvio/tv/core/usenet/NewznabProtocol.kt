@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.usenet
 
 import java.io.StringReader
+import java.text.Normalizer
 import java.time.ZonedDateTime
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -72,7 +73,9 @@ object NewznabProtocol {
         if (idParam != null) {
             builder.setQueryParameter(idParam.first, idParam.second)
         } else {
-            val title = request.title?.takeIf { it.isNotBlank() } ?: return null
+            // Query the way release names are spelled: "Amélie" and "Marvel's" are posted as Amelie and Marvels.
+            val title = request.title?.let { releaseSpelling(it).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim() }
+                ?.takeIf { it.isNotBlank() } ?: return null
             if ("q" !in params) {
                 if (!caps.searchAvailable) return null
                 builder.setQueryParameter("t", "search")
@@ -98,6 +101,11 @@ object NewznabProtocol {
             .setQueryParameter("limit", caps.limit.coerceIn(1, 100).toString())
             .setQueryParameter("offset", offset.toString()).build()
     }
+
+    /** Whether [url] names the content by id rather than by title. */
+    fun isIdSearch(url: HttpUrl) = ID_PARAMS.any { url.queryParameter(it) != null }
+
+    private val ID_PARAMS = listOf("imdbid", "tvdbid", "tmdbid")
 
     fun capabilities(xml: String): NewznabCapabilities {
         val root = document(xml)
@@ -155,15 +163,17 @@ object NewznabProtocol {
     fun matches(release: UsenetRelease, request: UsenetSearchRequest, idSearch: Boolean,
         requireNumbering: Boolean = false): Boolean {
         if (!idSearch) {
-            fun normalize(value: String) = value.lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
-            val title = request.title?.let(::normalize)?.takeIf { it.isNotEmpty() } ?: return false
-            if (!" ${normalize(release.title)} ".contains(" $title ")) return false
+            val name = " ${words(release.title)} "
+            // Umlauts are posted both ways: König as Koenig or Konig.
+            val title = request.title?.let { listOf(words(it), words(it, umlauts = false)) }.orEmpty()
+                .filter { it.isNotEmpty() }.firstOrNull { name.contains(" $it ") } ?: return false
             if (!request.series && request.year != null) {
                 // Year-like title words (Blade Runner 2049, 1917) are not release years.
                 val titleWords = title.split(' ').toSet()
                 val years = Regex("(?<![\\p{L}\\p{N}])((?:19|20)\\d{2})(?![\\p{L}\\p{N}])").findAll(release.title)
                     .map { it.groupValues[1] }.toList()
-                if (request.year.toString() !in years && years.any { it !in titleWords }) return false
+                // Festival and release years often differ by one, and so do the years releases carry.
+                if (years.none { it.toInt() in request.year - 1..request.year + 1 } && years.any { it !in titleWords }) return false
             }
         }
         if (request.series) {
@@ -186,6 +196,32 @@ object NewznabProtocol {
         }
         return true
     }
+
+    /**
+     * Spells [value] the way release names do: Latin letters without accents and no apostrophes.
+     * [umlauts] writes ä, ö, ü and ø as ae, oe, ue and oe; otherwise as a, o, u and o, the other common spelling.
+     */
+    fun releaseSpelling(value: String, umlauts: Boolean = true): String {
+        val letters = buildString {
+            for (c in value) {
+                val lower = c.lowercaseChar()
+                val spelled = (if (umlauts) UMLAUTS[lower] else null) ?: LETTERS[lower]
+                if (spelled == null) append(c)
+                else append(if (c.isUpperCase()) spelled.replaceFirstChar { it.uppercaseChar() } else spelled)
+            }
+        }
+        // Only marks on Latin letters: in other scripts (kana voicing) they are part of the letter.
+        val unaccented = Normalizer.normalize(letters, Normalizer.Form.NFD).replace(Regex("(?<=\\p{IsLatin})\\p{M}+"), "")
+        return Normalizer.normalize(unaccented, Normalizer.Form.NFC).replace(Regex("['’‘`´ʼ]"), "")
+    }
+
+    /** Lowercase words of a title or release name, for comparing one with the other. */
+    private fun words(value: String, umlauts: Boolean = true) = releaseSpelling(value, umlauts).lowercase(Locale.ROOT)
+        .replace("&", " and ").replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+
+    private val UMLAUTS = mapOf('ä' to "ae", 'ö' to "oe", 'ü' to "ue", 'ø' to "oe")
+    private val LETTERS = mapOf('ß' to "ss", 'æ' to "ae", 'œ' to "oe", 'ø' to "o", 'đ' to "d", 'ð' to "d",
+        'ł' to "l", 'þ' to "th", 'ı' to "i")
 
     /**
      * Keeps one copy of a release found by several indexers: the one from the highest

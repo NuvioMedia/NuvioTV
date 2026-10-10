@@ -151,17 +151,41 @@ class NewznabProtocolTest {
             config.copy(sort = UsenetSort.INDEXER, indexers = config.indexers.reversed())).first().title)
     }
 
+    @Test fun `titles match release spellings without accents, apostrophes or ampersands`() {
+        fun matches(title: String, release: String, year: Int? = null) =
+            NewznabProtocol.matches(UsenetRelease(release, "url"), UsenetSearchRequest(title = title, year = year), false)
+        assertTrue(matches("Amélie", "Amelie.2001.1080p", 2001))
+        assertTrue(matches("Der König der Löwen", "Der.Koenig.der.Loewen.2019.German.1080p", 2019))
+        assertTrue(matches("Der König der Löwen", "Der.Konig.der.Lowen.2019.1080p", 2019))
+        assertTrue(matches("Marvel's The Avengers", "Marvels.The.Avengers.2012.1080p", 2012))
+        assertTrue(matches("Marvel’s The Avengers", "Marvel's.The.Avengers.2012.1080p", 2012))
+        assertTrue(matches("Fast & Furious", "Fast.and.Furious.2009.1080p", 2009))
+        assertTrue(matches("Fast and Furious", "Fast.&.Furious.2009.1080p", 2009))
+        assertTrue(matches("Straße", "Strasse.2020.1080p"))
+        assertFalse(matches("Amélie", "Amelia.2001.1080p", 2001))
+
+        val caps = NewznabCapabilities(movieParams = setOf("q"))
+        fun query(title: String) = NewznabProtocol.searchUrl(indexer, UsenetSearchRequest(title = title), caps)!!.queryParameter("q")
+        assertEquals("Amelie", query("Amélie"))
+        assertEquals("Der Koenig der Loewen", query("Der König der Löwen"))
+        assertEquals("Marvels The Avengers", query("Marvel's The Avengers"))
+        assertEquals("Mission Impossible Fallout", query("Mission: Impossible – Fallout"))
+        // Marks belong to the letter outside the Latin script.
+        assertEquals("ガンダム", query("ガンダム"))
+    }
+
     @Test fun `text fallback rejects wrong title year and episode but allows season packs`() {
         val movie = UsenetSearchRequest(title = "The Movie", year = 2020)
         assertTrue(NewznabProtocol.matches(UsenetRelease("The.Movie.2020.1080p", "url"), movie, false))
-        assertFalse(NewznabProtocol.matches(UsenetRelease("The.Movie.2021.1080p", "url"), movie, false))
+        assertTrue(NewznabProtocol.matches(UsenetRelease("The.Movie.2021.1080p", "url"), movie, false))
+        assertFalse(NewznabProtocol.matches(UsenetRelease("The.Movie.2022.1080p", "url"), movie, false))
         assertFalse(NewznabProtocol.matches(UsenetRelease("Another.Movie.2020.1080p", "url"), movie, false))
         assertTrue(NewznabProtocol.matches(UsenetRelease("The.Movie.(2020).1080p", "url"), movie, false))
         // Year-like words in the title are not the release year.
         val sequel = UsenetSearchRequest(title = "Blade Runner 2049", year = 2017)
         assertTrue(NewznabProtocol.matches(UsenetRelease("Blade.Runner.2049.2017.2160p", "url"), sequel, false))
         assertTrue(NewznabProtocol.matches(UsenetRelease("Blade.Runner.2049.1080p", "url"), sequel, false))
-        assertFalse(NewznabProtocol.matches(UsenetRelease("Blade.Runner.2049.2018.1080p", "url"), sequel, false))
+        assertFalse(NewznabProtocol.matches(UsenetRelease("Blade.Runner.2049.2019.1080p", "url"), sequel, false))
         assertTrue(NewznabProtocol.matches(UsenetRelease("1917.2019.1080p", "url"), UsenetSearchRequest(title = "1917", year = 2019), false))
         val series = UsenetSearchRequest(title = "A Show", series = true, season = 1, episode = 5)
         assertFalse(NewznabProtocol.matches(UsenetRelease("A.Show.S01E04.1080p", "url"), series, true))

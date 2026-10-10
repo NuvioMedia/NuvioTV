@@ -71,17 +71,25 @@ Use **Test provider** to connect, negotiate TLS and sign in with the entered
 settings before saving. It applies the same local-address rule as playback, and
 reports unreachable hosts, TLS failures, rejected credentials and refused
 connections (such as a reached connection limit) separately. Use **Test
-indexer** to check an indexer's capabilities. Each source can be edited,
+indexer** to check an indexer's capabilities and API key: after the
+capabilities, it makes a one-result search (one API hit), because many indexers
+serve capabilities without checking the key. Each source can be edited,
 disabled, deleted, reprioritized or reordered. Credentials are stored as AES-GCM
 ciphertext protected by Android Keystore, separately for each profile. They
 are device-local and are not included in account/profile synchronization.
 
 Searches use advertised movie/TV capabilities, preferring IMDb, then TVDB (TV
 only, looked up through TMDB) and TMDB IDs.
-Title searches are used when the indexer does not support an available ID;
-they require TMDB metadata. Series searches require a season and episode,
-including season zero for specials. Contradictory episode filenames are
-removed; season packs remain playable through the engine's episode selection.
+Title searches are used when the indexer does not support an available ID, and
+when an ID search finds nothing (some indexers have thin ID coverage); this
+costs one more API hit only in that case. They require TMDB metadata. Titles
+are queried and compared the way release names spell them: without accents
+(umlauts match both `Koenig` and `Konig`), without apostrophes, and with `&`
+equal to `and`. A movie's release year may differ from TMDB's by one year,
+which is common between festival and release dates. Series searches require a
+season and episode, including season zero for specials. Contradictory episode
+filenames are removed; season packs remain playable through the engine's
+episode selection.
 Unsupported media identifiers without a TMDB mapping cannot be searched.
 
 The **Built-in Usenet** result group updates as indexers finish, independently
