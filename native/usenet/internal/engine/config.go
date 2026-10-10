@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"cmp"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -76,9 +77,9 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 		return nil, err
 	}
 	preferred := slices.Min(priorities)
-	ps := make([]nntppool.Provider, 0, len(servers))
-	remaining := cfg.MaxConnections
-	total := 0
+	urls := make([]*url.URL, len(servers))
+	ports := make([]string, len(servers))
+	allowances := make([]int, len(servers))
 	for i, raw := range servers {
 		u, e := url.Parse(raw)
 		if e != nil || (u.Scheme != "nntp" && u.Scheme != "nntps") || u.Hostname() == "" {
@@ -103,15 +104,17 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 				return nil, fmt.Errorf("invalid NNTP connection allowance")
 			}
 		}
-		if cfg.MaxConnections > 0 {
-			// Retain each provider for missing-article failover. Divide the global
-			// allowance across providers instead of silently removing backups.
-			if cfg.MaxConnections < len(servers) {
-				return nil, fmt.Errorf("Max Connections must allow at least one per server")
-			}
-			connections = min(connections, max(1, remaining/(len(servers)-i)))
-			remaining -= connections
-		}
+		urls[i], ports[i], allowances[i] = u, port, connections
+	}
+	if cfg.MaxConnections > 0 && cfg.MaxConnections < len(servers) {
+		// Retain each provider for missing-article failover instead of silently removing backups.
+		return nil, fmt.Errorf("Max Connections must allow at least one per server")
+	}
+	shares := shareConnections(allowances, priorities, cfg.MaxConnections)
+	ps := make([]nntppool.Provider, 0, len(servers))
+	total := 0
+	for i, u := range urls {
+		port, connections := ports[i], shares[i]
 		// Bound abandoned downloads on shared links: draining an entire old
 		// read-ahead window can delay seeks even when it preserves the sockets.
 		p := nntppool.Provider{
@@ -143,6 +146,39 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 		}
 	}
 	return ps, nil
+}
+
+// shareConnections fits per-provider allowances into the global limit (0 means
+// none). The preferred tier takes it first, in list order. Every lower-priority
+// provider keeps one connection for failover, plus whatever the preferred tier
+// cannot use, in failover order. With a single tier this is an even split in
+// list order. The caller guarantees limit >= len(allowances) when it is set.
+func shareConnections(allowances, priorities []int, limit int) []int {
+	shares := slices.Clone(allowances)
+	if limit <= 0 {
+		return shares
+	}
+	preferred := slices.Min(priorities)
+	var front, backups []int
+	for i, p := range priorities {
+		if p == preferred {
+			front = append(front, i)
+		} else {
+			backups = append(backups, i)
+		}
+	}
+	slices.SortStableFunc(backups, func(a, b int) int { return cmp.Compare(priorities[a], priorities[b]) })
+	budget := limit - len(backups)
+	for n, i := range front {
+		shares[i] = min(allowances[i], max(1, budget/(len(front)-n)))
+		budget -= shares[i]
+	}
+	budget += len(backups)
+	for n, i := range backups {
+		shares[i] = min(allowances[i], max(1, budget/(len(backups)-n)))
+		budget -= shares[i]
+	}
+	return shares
 }
 
 // ProviderPriorities reads each server's optional ?priority=N (0 when absent).
