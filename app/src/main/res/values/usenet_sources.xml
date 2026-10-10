@@ -53,5 +53,14 @@
     <string name="usenet_indexer_fallback_description">Off: every indexer is searched. On: lower-priority indexers are only searched when the higher ones find nothing, which saves API hits.</string>
     <string name="usenet_hide_duplicates">Hide repeated releases</string>
     <string name="usenet_hide_duplicates_description">Show a release found by several indexers once, from the indexer with the highest priority.</string>
+    <string name="usenet_provider_test">Test provider</string>
+    <string name="usenet_provider_test_running">Connecting to the provider…</string>
+    <string name="usenet_provider_test_success">Connected and signed in.</string>
+    <string name="usenet_provider_test_connected">Connected. No sign-in was needed.</string>
+    <string name="usenet_provider_test_unreachable">Could not connect. Check the host, port and TLS setting.</string>
+    <string name="usenet_provider_test_tls">Secure connection failed. Check the TLS setting and port (usually 563 with TLS, 119 without).</string>
+    <string name="usenet_provider_test_auth">Sign-in failed. Check the username and password.</string>
+    <string name="usenet_provider_test_refused">The provider refused the connection. It may have reached its connection limit, or the account may be inactive.</string>
+    <string name="usenet_provider_test_private">This is a local network address. Enable Allow self-hosted servers to use it.</string>
     <string name="usenet_sources_save_error">Could not load or save Usenet sources. Check device storage and try again.</string>
 </resources>

@@ -45,6 +45,7 @@ internal fun UsenetSettingsContent(
                     if (sources.loaded) UsenetSourcesCard(sources.configuration,
                         update = { sourcesViewModel.update(it, sources.profileId) },
                         testIndexer = sourcesViewModel::test,
+                        testProvider = sourcesViewModel::testProvider,
                         initialFocusRequester = initialFocusRequester)
                     if (sources.error) Text(stringResource(R.string.usenet_sources_save_error))
                 }

@@ -45,6 +45,7 @@ internal fun UsenetSourcesCard(
     configuration: UsenetSourceConfiguration,
     update: (UsenetSourceConfiguration) -> Unit,
     testIndexer: suspend (UsenetIndexer) -> Boolean,
+    testProvider: suspend (UsenetProvider) -> ProviderTestResult?,
     initialFocusRequester: FocusRequester
 ) {
     var provider by remember { mutableStateOf<UsenetProvider?>(null) }
@@ -210,7 +211,7 @@ internal fun UsenetSourcesCard(
         }
     }
     provider?.let { item -> ProviderEditor(item, isNew = configuration.providers.none { it.id == item.id },
-        onDismiss = { provider = null }, onSave = {
+        testProvider, onDismiss = { provider = null }, onSave = {
         update(configuration.copy(providers = configuration.providers.replaceOrAdd(it) { p -> p.id }))
         provider = null
     }) }
@@ -235,7 +236,8 @@ private fun priorityLabel(priority: Int) = when (priority) {
 }
 
 @Composable
-private fun ProviderEditor(item: UsenetProvider, isNew: Boolean, onDismiss: () -> Unit, onSave: (UsenetProvider) -> Unit) {
+private fun ProviderEditor(item: UsenetProvider, isNew: Boolean, test: suspend (UsenetProvider) -> ProviderTestResult?,
+    onDismiss: () -> Unit, onSave: (UsenetProvider) -> Unit) {
     var name by remember { mutableStateOf(item.name) }
     var host by remember { mutableStateOf(item.host) }
     var port by remember { mutableStateOf(item.port.toString()) }
@@ -244,6 +246,12 @@ private fun ProviderEditor(item: UsenetProvider, isNew: Boolean, onDismiss: () -
     var password by remember { mutableStateOf(item.password) }
     var tls by remember { mutableStateOf(item.tls) }
     var error by remember { mutableStateOf(false) }
+    var testing by remember { mutableStateOf(false) }
+    // Keyed by the tested values, so editing any field clears a stale result.
+    var tested by remember { mutableStateOf<Pair<UsenetProvider, ProviderTestResult>?>(null) }
+    val scope = rememberCoroutineScope()
+    fun value() = item.copy(name = name.trim(), host = host.trim(), port = port.toIntOrNull() ?: 0,
+        connections = connections.toIntOrNull() ?: 0, tls = tls, username = username, password = password)
     NuvioDialog(title = stringResource(if (isNew) R.string.usenet_add_provider else R.string.usenet_edit_provider), onDismiss = onDismiss) {
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SourceField(stringResource(R.string.usenet_source_name), name, { name = it })
@@ -256,13 +264,35 @@ private fun ProviderEditor(item: UsenetProvider, isNew: Boolean, onDismiss: () -
             SourceField(stringResource(R.string.usenet_provider_username), username, { username = it })
             SourceField(stringResource(R.string.usenet_provider_password), password, { password = it }, secret = true)
             SourceField(stringResource(R.string.usenet_provider_connections), connections, { connections = it }, numeric = true)
-            if (error) Text(stringResource(R.string.usenet_provider_invalid), color = NuvioTheme.colors.TextSecondary)
         }
+        // Outside the scrolling fields, so messages are visible next to the buttons.
+        if (error) Text(stringResource(R.string.usenet_provider_invalid), color = NuvioTheme.colors.TextSecondary)
+        val result = tested?.takeIf { it.first == value() }?.second
+        if (testing || result != null) Text(stringResource(when (result) {
+            null -> R.string.usenet_provider_test_running
+            ProviderTestResult.SUCCESS -> if (username.isEmpty() && password.isEmpty()) {
+                R.string.usenet_provider_test_connected
+            } else R.string.usenet_provider_test_success
+            ProviderTestResult.UNREACHABLE -> R.string.usenet_provider_test_unreachable
+            ProviderTestResult.TLS -> R.string.usenet_provider_test_tls
+            ProviderTestResult.AUTH -> R.string.usenet_provider_test_auth
+            ProviderTestResult.REFUSED -> R.string.usenet_provider_test_refused
+            ProviderTestResult.PRIVATE_NETWORK -> R.string.usenet_provider_test_private
+        }), color = NuvioTheme.colors.TextSecondary)
         SettingsDialogActionRow {
             SettingsDialogActionButton(text = stringResource(R.string.action_cancel), onClick = onDismiss)
+            SettingsDialogActionButton(text = stringResource(R.string.usenet_provider_test), enabled = !testing, onClick = {
+                val value = value()
+                scope.launch {
+                    testing = true
+                    tested = null
+                    val outcome = test(value)
+                    if (outcome == null) error = true else tested = value to outcome
+                    testing = false
+                }
+            })
             SettingsDialogActionButton(text = stringResource(R.string.action_save), primary = true, onClick = {
-                val value = item.copy(name = name.trim(), host = host.trim(), port = port.toIntOrNull() ?: 0,
-                    connections = connections.toIntOrNull() ?: 0, tls = tls, username = username, password = password)
+                val value = value()
                 if (runCatching { value.validate() }.isSuccess) onSave(value) else error = true
             })
         }

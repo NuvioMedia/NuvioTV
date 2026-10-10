@@ -38,7 +38,7 @@ class UsenetSourcesCardTest {
             var configuration by remember { mutableStateOf(saved) }
             NuvioTheme {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    UsenetSourcesCard(configuration, { saved = it; configuration = it }, { true }, remember { FocusRequester() })
+                    UsenetSourcesCard(configuration, { saved = it; configuration = it }, { true }, { ProviderTestResult.SUCCESS }, remember { FocusRequester() })
                 }
             }
         }
@@ -58,6 +58,26 @@ class UsenetSourcesCardTest {
         }
     }
 
+    @Test fun providerTestShowsTheResultUntilAFieldChanges() {
+        var tested: UsenetProvider? = null
+        compose.setContent {
+            NuvioTheme {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    UsenetSourcesCard(UsenetSourceConfiguration(), {}, { true },
+                        { tested = it; ProviderTestResult.AUTH }, remember { FocusRequester() })
+                }
+            }
+        }
+        compose.onNodeWithText(label(R.string.usenet_add_provider)).performScrollTo().pressRemote()
+        compose.onNodeWithTag(label(R.string.usenet_source_name)).performTextInput("Test News")
+        compose.onNodeWithTag(label(R.string.usenet_provider_host)).performTextInput("news.test")
+        compose.onNodeWithText(label(R.string.usenet_provider_test)).pressRemote()
+        compose.onNodeWithText(label(R.string.usenet_provider_test_auth)).assertExists()
+        compose.runOnIdle { assertEquals("news.test", tested?.host) }
+        compose.onNodeWithTag(label(R.string.usenet_provider_host)).performTextInput("x")
+        compose.onNodeWithText(label(R.string.usenet_provider_test_auth)).assertDoesNotExist()
+    }
+
     @Test fun sourceDeletionRequiresConfirmationAndPreservesOtherSources() {
         val news = UsenetProvider(name = "News", host = "news.test")
         val indexer = UsenetIndexer(name = "Index", apiUrl = "https://index.test/api")
@@ -66,7 +86,7 @@ class UsenetSourcesCardTest {
             var configuration by remember { mutableStateOf(saved) }
             NuvioTheme {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    UsenetSourcesCard(configuration, { saved = it; configuration = it }, { true }, remember { FocusRequester() })
+                    UsenetSourcesCard(configuration, { saved = it; configuration = it }, { true }, { ProviderTestResult.SUCCESS }, remember { FocusRequester() })
                 }
             }
         }
