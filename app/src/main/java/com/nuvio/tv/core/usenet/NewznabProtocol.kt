@@ -232,8 +232,8 @@ object NewznabProtocol {
         if (root.localName == "error") {
             val code = root.getAttribute("code")
             if (code in setOf("429", "500", "501")) throw NewznabQuotaException()
+            if (code in setOf("100", "101", "102")) throw NewznabAuthException()
             error(when (code) {
-                "100", "101", "102" -> "Indexer authentication failed"
                 "200", "201", "202", "203" -> "Indexer does not support this search"
                 else -> "Indexer returned an API error"
             })
@@ -241,11 +241,17 @@ object NewznabProtocol {
         return root
     }
 
-    /** Some indexers pair an HTTP error status with a Newznab error document. */
-    fun throwIfQuotaError(xml: String) {
-        try { document(xml) } catch (e: NewznabQuotaException) { throw e } catch (_: Exception) { }
+    /** Some indexers pair an HTTP error status with a Newznab quota or authentication error document. */
+    fun throwIfKnownError(xml: String) {
+        try { document(xml) }
+        catch (e: NewznabQuotaException) { throw e }
+        catch (e: NewznabAuthException) { throw e }
+        catch (_: Exception) { }
     }
 }
 
 /** The indexer reported its request or download quota as spent (Newznab 429/500/501). */
 class NewznabQuotaException : IllegalStateException("Indexer rate limit reached")
+
+/** The indexer rejected the API key or account (Newznab 100-102). */
+class NewznabAuthException : IllegalStateException("Indexer authentication failed")

@@ -26,6 +26,7 @@ internal fun UsenetSettingsContent(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sources by sourcesViewModel.uiState.collectAsStateWithLifecycle()
+    val indexerStatuses by sourcesViewModel.indexerStatuses.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -46,6 +47,7 @@ internal fun UsenetSettingsContent(
                         update = { sourcesViewModel.update(it, sources.profileId) },
                         testIndexer = sourcesViewModel::test,
                         testProvider = sourcesViewModel::testProvider,
+                        indexerStatuses = indexerStatuses,
                         initialFocusRequester = initialFocusRequester)
                     if (sources.error) Text(stringResource(R.string.usenet_sources_save_error))
                 }

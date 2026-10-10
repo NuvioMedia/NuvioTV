@@ -36,6 +36,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.core.usenet.*
+import java.text.DateFormat
+import java.util.Date
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
 import kotlinx.coroutines.launch
@@ -46,7 +48,8 @@ internal fun UsenetSourcesCard(
     update: (UsenetSourceConfiguration) -> Unit,
     testIndexer: suspend (UsenetIndexer) -> Boolean,
     testProvider: suspend (UsenetProvider) -> ProviderTestResult?,
-    initialFocusRequester: FocusRequester
+    initialFocusRequester: FocusRequester,
+    indexerStatuses: Map<String, IndexerStatus> = emptyMap()
 ) {
     var provider by remember { mutableStateOf<UsenetProvider?>(null) }
     var indexer by remember { mutableStateOf<UsenetIndexer?>(null) }
@@ -76,8 +79,9 @@ internal fun UsenetSourcesCard(
         SettingsActionRow(title = stringResource(R.string.usenet_add_indexer),
             subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer() })
         configuration.indexers.forEachIndexed { i, item ->
-            SettingsActionRow(title = item.name, subtitle = "${i + 1}. ${item.apiUrl.substringBefore('?')} • " +
-                stringResource(R.string.usenet_priority_value, item.priority),
+            SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.apiUrl.substringBefore('?')}",
+                stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id]))
+                .joinToString(" • "),
                 value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
                 onClick = { selectedId = item.id; picker = "indexer" })
         }
@@ -227,6 +231,22 @@ private fun <T> List<T>.moved(position: Int, delta: Int): List<T> = toMutableLis
 
 private fun <T> List<T>.replaceOrAdd(value: T, id: (T) -> String): List<T> =
     if (any { id(it) == id(value) }) map { if (id(it) == id(value)) value else it } else this + value
+
+/** A pause wins over an older failure: it is what currently keeps the indexer out of searches. */
+@Composable
+private fun indexerStatusLabel(status: IndexerStatus?): String? {
+    if (status == null) return null
+    if (status.pausedUntil > System.currentTimeMillis()) {
+        return stringResource(R.string.usenet_indexer_paused,
+            DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(status.pausedUntil)))
+    }
+    return when (status.problem) {
+        IndexerProblem.AUTH -> stringResource(R.string.usenet_indexer_problem_auth)
+        IndexerProblem.UNREACHABLE -> stringResource(R.string.usenet_indexer_problem_unreachable)
+        IndexerProblem.RESPONSE -> stringResource(R.string.usenet_indexer_problem_response)
+        null -> null
+    }
+}
 
 @Composable
 private fun priorityLabel(priority: Int) = when (priority) {

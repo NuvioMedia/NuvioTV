@@ -62,5 +62,9 @@
     <string name="usenet_provider_test_auth">Sign-in failed. Check the username and password.</string>
     <string name="usenet_provider_test_refused">The provider refused the connection. It may have reached its connection limit, or the account may be inactive.</string>
     <string name="usenet_provider_test_private">This is a local network address. Enable Allow self-hosted servers to use it.</string>
+    <string name="usenet_indexer_paused">Paused until %1$s: limit reached</string>
+    <string name="usenet_indexer_problem_auth">Last request failed: API key rejected</string>
+    <string name="usenet_indexer_problem_unreachable">Last request failed: could not reach the indexer</string>
+    <string name="usenet_indexer_problem_response">Last request failed: unexpected response</string>
     <string name="usenet_sources_save_error">Could not load or save Usenet sources. Check device storage and try again.</string>
 </resources>

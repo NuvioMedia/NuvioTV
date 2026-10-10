@@ -20,6 +20,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -123,12 +124,16 @@ class NewznabClient @Inject constructor(
         parse: (String) -> T): T {
         val blockedUntil = states.get(indexer)?.blockedUntil ?: 0
         if (!ignoreCooldown && blockedUntil > now()) throw IndexerCooldownException(blockedUntil)
-        val response = get(url)
+        val response = try { get(url) }
+            catch (e: CancellationException) { throw e }
+            catch (e: IOException) { note(indexer, IndexerProblem.UNREACHABLE); throw e }
+            catch (e: Exception) { note(indexer, IndexerProblem.RESPONSE); throw e }
         val retryAfter = retryAfterMs(response.headers["Retry-After"])
         if (response.code == 429) throw cooldown(indexer, retryAfter?.coerceAtMost(MAX_THROTTLE_MS) ?: THROTTLE_MS)
         return try {
             if (response.code !in 200..299) {
-                NewznabProtocol.throwIfQuotaError(response.body)
+                NewznabProtocol.throwIfKnownError(response.body)
+                if (response.code == 401 || response.code == 403) throw NewznabAuthException()
                 error("Indexer HTTP ${response.code}")
             }
             parse(response.body).also {
@@ -136,11 +141,27 @@ class NewznabClient @Inject constructor(
                 if (REMAINING_HEADERS.any { response.headers[it]?.trim()?.toIntOrNull() == 0 }) {
                     cooldown(indexer, EXHAUSTED_MS)
                 }
+                note(indexer, null)
             }
         } catch (_: NewznabQuotaException) {
             throw cooldown(indexer, retryAfter ?: QUOTA_MS)
+        } catch (e: NewznabAuthException) {
+            note(indexer, IndexerProblem.AUTH); throw e
+        } catch (e: Exception) {
+            note(indexer, IndexerProblem.RESPONSE); throw e
         }
     }
+
+    /** Most requests succeed: only a changed outcome is written. */
+    private fun note(indexer: UsenetIndexer, problem: IndexerProblem?) {
+        if (states.get(indexer)?.problem != problem) states.update(indexer) { it.copy(problem = problem) }
+    }
+
+    /** Increments whenever an indexer status may have changed. */
+    val statusChanges: StateFlow<Int> get() = states.revision
+
+    fun status(indexer: UsenetIndexer): IndexerStatus =
+        states.get(indexer).let { IndexerStatus(it?.blockedUntil ?: 0, it?.problem) }
 
     /** Extends, never shortens, the cooldown: concurrent refusals must not undercut each other. */
     private fun cooldown(indexer: UsenetIndexer, durationMs: Long): IndexerCooldownException {

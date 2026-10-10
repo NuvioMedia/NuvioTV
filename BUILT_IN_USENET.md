@@ -95,8 +95,13 @@ sources. Configuration changes invalidate the stream search session cache.
   30 minutes for a spent quota. A response announcing zero remaining API hits
   or grabs (`X-RateLimit-Daily-Remaining`, `x-api-remaining`,
   `X-DNZBLimit-Daily-Remaining`, `x-grab-remaining`) pauses it for 15 minutes.
-  Pauses survive restarts. A paused indexer counts as failed, so lower
-  priorities are searched instead.
+  Pauses survive restarts. A paused indexer counts as failed; with fallback
+  search on, lower priorities are searched instead.
+- **Status:** each indexer row in settings shows a pause ("Paused until 18:30")
+  or the category of the last failed request: API key rejected (Newznab
+  100-102, HTTP 401/403), could not reach the indexer, or unexpected response.
+  The next successful request clears it, and so does editing the URL or key.
+  Raw error messages are never shown, since they could contain the key.
 - **NZBs** are cached by the engine for 14 days, so playing a release again does
   not grab it again.
 
