@@ -308,7 +308,7 @@ object NuvioExoPlayerPerformanceHelper {
                         "native arena chunk $NATIVE_ARENA_CHUNK_SIZE; native pooling is disabled"
                 )
             }
-            val allocator = DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 64, enabled)
+            val allocator = DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 0, enabled)
             liveAllocator = allocator
             android.util.Log.i(
                 "ExoPerformance",
