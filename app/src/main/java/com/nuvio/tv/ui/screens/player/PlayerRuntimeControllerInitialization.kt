@@ -889,9 +889,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                 shouldStripSdhProvider = {
                     currentPlayerSettingsForReport.subtitleStyle.stripSdh
                 },
-                isBuiltInSubtitleProvider = {
-                    _uiState.value.selectedAddonSubtitle == null
-                },
                 isSidecarAddonSubtitleActiveProvider = {
                     isSidecarAddonSubtitleActive()
                 },
@@ -2143,7 +2140,6 @@ private class SubtitleOffsetRenderersFactory(
     private val audioDelayUsProvider: () -> Long,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val shouldStripSdhProvider: () -> Boolean,
-    private val isBuiltInSubtitleProvider: () -> Boolean,
     private val isSidecarAddonSubtitleActiveProvider: () -> Boolean = { false },
     private val videoBoundsFractionProvider: () -> RectF?,
     private val gainAudioProcessor: GainAudioProcessor,
@@ -2273,7 +2269,6 @@ private class SubtitleOffsetRenderersFactory(
         val normalizingOutput = CueNormalizingTextOutput(
             delegate = SdhFilteringTextOutput(output, shouldStripSdhProvider),
             shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider,
-            isBuiltInSubtitleProvider = isBuiltInSubtitleProvider,
             isSidecarAddonSubtitleActiveProvider = isSidecarAddonSubtitleActiveProvider,
             videoBoundsFractionProvider = videoBoundsFractionProvider
         )
@@ -2323,7 +2318,6 @@ private fun FfmpegAudioRenderer.applyDownmixSettings(
 private class CueNormalizingTextOutput(
     private val delegate: TextOutput,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
-    private val isBuiltInSubtitleProvider: () -> Boolean,
     private val isSidecarAddonSubtitleActiveProvider: () -> Boolean,
     private val videoBoundsFractionProvider: () -> RectF?
 ) : TextOutput {
@@ -2392,7 +2386,7 @@ private class CueNormalizingTextOutput(
 
     private fun processCue(cue: Cue): Cue {
         var processed = SubtitleMojibakeSanitizer.sanitizeCue(cue)
-        processed = PlayerSubtitleRtlFix.fixCueText(processed, isBuiltInSubtitleProvider())
+        processed = PlayerSubtitleRtlFix.fixCueText(processed)
         if (shouldNormalizeCuePositionProvider()) {
             processed = normalizeCuePosition(processed)
         }
