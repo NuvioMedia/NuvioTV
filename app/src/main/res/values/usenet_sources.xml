@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="usenet_sources_title">Built-in Usenet sources</string>
+    <string name="usenet_builtin_enabled">Search built-in indexers</string>
+    <string name="usenet_builtin_description">Find NZBs and play them directly with your providers. Credentials stay on this device, in this profile.</string>
+    <string name="usenet_add_provider">Add NNTP provider</string>
+    <string name="usenet_add_indexer">Add Newznab indexer</string>
+    <string name="usenet_indexer_hint">Enter the complete API URL, including /api. Supports Newznab and compatible Prowlarr or NZBHydra endpoints.</string>
+    <string name="usenet_sources_needed">Add and enable at least one provider and one indexer to search.</string>
+    <string name="usenet_source_name">Name</string>
+    <string name="usenet_source_enabled">Enabled</string>
+    <string name="usenet_source_disabled">Disabled</string>
+    <string name="usenet_source_edit">Edit</string>
+    <string name="usenet_source_delete">Delete source</string>
+    <string name="usenet_delete_confirm">Remove this source and its saved credentials from this profile?</string>
+    <string name="usenet_move_up">Move up</string>
+    <string name="usenet_move_down">Move down</string>
+    <string name="usenet_sort_results">Sort results</string>
+    <string name="usenet_sort_quality">Best resolution first</string>
+    <string name="usenet_sort_largest">Largest first</string>
+    <string name="usenet_sort_smallest">Smallest first</string>
+    <string name="usenet_sort_newest">Newest first</string>
+    <string name="usenet_sort_indexer">Indexer priority</string>
+    <string name="usenet_min_resolution">Minimum resolution</string>
+    <string name="usenet_max_size">Maximum release size</string>
+    <string name="usenet_max_age">Maximum release age in days</string>
+    <string name="usenet_result_limit">Maximum results</string>
+    <string name="usenet_no_limit">No limit</string>
+    <string name="usenet_exclude_low_quality">Exclude CAM, telesync and screener releases</string>
+    <string name="usenet_provider_host">Server host (for example news.example.com)</string>
+    <string name="usenet_provider_port">Port</string>
+    <string name="usenet_provider_tls">Use TLS</string>
+    <string name="usenet_provider_username">Username</string>
+    <string name="usenet_provider_password">Password</string>
+    <string name="usenet_provider_connections">Connection allowance</string>
+    <string name="usenet_provider_invalid">Check the name, host, port (1–65535), credentials and connections (1–4096).</string>
+    <string name="usenet_indexer_url">Complete API URL</string>
+    <string name="usenet_indexer_key">API key</string>
+    <string name="usenet_indexer_invalid">Enter a name and a valid HTTP or HTTPS API URL.</string>
+    <string name="usenet_test_indexer">Test indexer</string>
+    <string name="usenet_test_running">Checking indexer capabilities…</string>
+    <string name="usenet_test_success">Indexer connection succeeded.</string>
+    <string name="usenet_test_failed">Could not connect. Check the API URL, key and indexer limits.</string>
+    <string name="usenet_sources_save_error">Could not load or save Usenet sources. Check device storage and try again.</string>
+</resources>
