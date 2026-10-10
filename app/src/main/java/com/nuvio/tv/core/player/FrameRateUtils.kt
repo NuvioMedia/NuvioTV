@@ -40,6 +40,7 @@ object FrameRateUtils {
     private const val SWITCH_POLL_INTERVAL_MS = 60L
     private const val SWITCH_REQUIRED_STABLE_POLLS = 2
     private const val RESOLUTION_MATCH_MIN_SHORT_SIDE = 720
+    private val CLEAN_REFRESH_MULTIPLES = listOf(3f, 4f, 5f, 6f)
 
     data class DisplayModeSwitchResult(
         val appliedMode: Display.Mode
@@ -256,9 +257,11 @@ object FrameRateUtils {
     ): DisplayModeSpec {
         val modeExact = pickBestForTarget(modes, frameRate)
         val modeDouble = pickBestForTarget(modes, frameRate * 2f)
+        // Lowest clean multiple first (24 fps: 72, 96, 120, 144 Hz), before 3:2 pulldown at 60 Hz.
+        val modeMultiple = CLEAN_REFRESH_MULTIPLES.firstNotNullOfOrNull { pickBestForTarget(modes, frameRate * it) }
         val modePulldown = pickBestForTarget(modes, frameRate * 2.5f)
         val modeFallback = modes.minByOrNull { refreshWeight(it.refreshRate, frameRate) }
-        return modeExact ?: modeDouble ?: modePulldown ?: modeFallback ?: activeMode
+        return modeExact ?: modeDouble ?: modeMultiple ?: modePulldown ?: modeFallback ?: activeMode
     }
 
     private fun hasValidVideoSize(videoWidth: Int?, videoHeight: Int?): Boolean {
