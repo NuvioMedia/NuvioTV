@@ -16,6 +16,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.Text
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.screens.addon.QrCodeOverlay
 
 @OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
 @Composable
@@ -27,6 +28,7 @@ internal fun UsenetSettingsContent(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sources by sourcesViewModel.uiState.collectAsStateWithLifecycle()
     val indexerStatuses by sourcesViewModel.indexerStatuses.collectAsStateWithLifecycle()
+    val phoneSetup by sourcesViewModel.phoneSetup.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -47,6 +49,8 @@ internal fun UsenetSettingsContent(
                         update = { sourcesViewModel.update(it, sources.profileId) },
                         testIndexer = sourcesViewModel::test,
                         testProvider = sourcesViewModel::testProvider,
+                        setUpFromPhone = sourcesViewModel::startPhoneSetup,
+                        phoneSetupOpen = phoneSetup != null,
                         indexerStatuses = indexerStatuses,
                         initialFocusRequester = initialFocusRequester)
                     if (sources.error) Text(stringResource(R.string.usenet_sources_save_error))
@@ -62,5 +66,14 @@ internal fun UsenetSettingsContent(
             usenetDiagnosticsCardItems()
         }
         SettingsVerticalScrollIndicators(state = listState)
+        phoneSetup?.let { setup ->
+            QrCodeOverlay(
+                qrBitmap = setup.qrCode,
+                serverUrl = setup.url,
+                instruction = stringResource(R.string.usenet_phone_qr_instruction),
+                onClose = sourcesViewModel::stopPhoneSetup,
+                status = setup.lastSaved?.let { stringResource(R.string.usenet_phone_saved_on_tv, it) }
+            )
+        }
     }
 }

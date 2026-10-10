@@ -13,6 +13,25 @@ higher ones cannot use.
 For a private/local NNTP server, enable **Allow self-hosted servers** in the
 performance settings.
 
+## Set up from phone
+
+**Set up from phone** shows a QR code. Scanning it with a phone on the same
+network opens a page served by the TV, where providers and indexers can be added
+or edited, and tested, with the phone's keyboard. Each save is applied on the TV
+immediately; the QR screen names the last source saved.
+
+- The link carries a random token created for that QR code. Requests without
+  it are refused, and the server stops when the QR screen is closed or Usenet
+  settings are left.
+- Saved passwords and API keys are never sent to the phone. Leave them blank
+  when editing to keep the saved ones.
+- The page edits the profile that was active when the code was shown; it stops
+  saving if the TV switches profile.
+- Like the app's other phone setup pages, it uses plain HTTP on the local
+  network, so use it on a trusted network.
+
+Enabling, deleting and reordering sources stay on the TV.
+
 ## Source hierarchy
 
 Every provider and indexer has a priority from 1 (highest) to 5. The list is

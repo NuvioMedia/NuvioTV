@@ -49,8 +49,17 @@ internal fun UsenetSourcesCard(
     testIndexer: suspend (UsenetIndexer) -> Boolean,
     testProvider: suspend (UsenetProvider) -> ProviderTestResult?,
     initialFocusRequester: FocusRequester,
-    indexerStatuses: Map<String, IndexerStatus> = emptyMap()
+    indexerStatuses: Map<String, IndexerStatus> = emptyMap(),
+    setUpFromPhone: (() -> Unit)? = null,
+    phoneSetupOpen: Boolean = false
 ) {
+    val phoneRow = remember { FocusRequester() }
+    var phoneSetupShown by remember { mutableStateOf(false) }
+    // The QR overlay took focus; give it back to the row that opened it, not the side menu.
+    LaunchedEffect(phoneSetupOpen) {
+        if (phoneSetupOpen) phoneSetupShown = true
+        else if (phoneSetupShown) { phoneSetupShown = false; runCatching { phoneRow.requestFocus() } }
+    }
     var provider by remember { mutableStateOf<UsenetProvider?>(null) }
     var indexer by remember { mutableStateOf<UsenetIndexer?>(null) }
     var picker by remember { mutableStateOf<String?>(null) }
@@ -68,6 +77,9 @@ internal fun UsenetSourcesCard(
             subtitle = stringResource(R.string.usenet_builtin_description), checked = configuration.enabled,
             onToggle = { update(configuration.copy(enabled = !configuration.enabled)) },
             modifier = Modifier.focusRequester(initialFocusRequester))
+        if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_phone_setup),
+            subtitle = stringResource(R.string.usenet_phone_setup_description), onClick = setUpFromPhone,
+            modifier = Modifier.focusRequester(phoneRow))
         SettingsActionRow(title = stringResource(R.string.usenet_add_provider),
             subtitle = stringResource(R.string.usenet_provider_priority_hint), onClick = { provider = UsenetProvider() })
         configuration.providers.forEachIndexed { i, item ->
@@ -288,17 +300,9 @@ private fun ProviderEditor(item: UsenetProvider, isNew: Boolean, test: suspend (
         // Outside the scrolling fields, so messages are visible next to the buttons.
         if (error) Text(stringResource(R.string.usenet_provider_invalid), color = NuvioTheme.colors.TextSecondary)
         val result = tested?.takeIf { it.first == value() }?.second
-        if (testing || result != null) Text(stringResource(when (result) {
-            null -> R.string.usenet_provider_test_running
-            ProviderTestResult.SUCCESS -> if (username.isEmpty() && password.isEmpty()) {
-                R.string.usenet_provider_test_connected
-            } else R.string.usenet_provider_test_success
-            ProviderTestResult.UNREACHABLE -> R.string.usenet_provider_test_unreachable
-            ProviderTestResult.TLS -> R.string.usenet_provider_test_tls
-            ProviderTestResult.AUTH -> R.string.usenet_provider_test_auth
-            ProviderTestResult.REFUSED -> R.string.usenet_provider_test_refused
-            ProviderTestResult.PRIVATE_NETWORK -> R.string.usenet_provider_test_private
-        }), color = NuvioTheme.colors.TextSecondary)
+        if (testing || result != null) Text(stringResource(
+            result?.messageRes(anonymous = username.isEmpty() && password.isEmpty()) ?: R.string.usenet_provider_test_running
+        ), color = NuvioTheme.colors.TextSecondary)
         SettingsDialogActionRow {
             SettingsDialogActionButton(text = stringResource(R.string.action_cancel), onClick = onDismiss)
             SettingsDialogActionButton(text = stringResource(R.string.usenet_provider_test), enabled = !testing, onClick = {

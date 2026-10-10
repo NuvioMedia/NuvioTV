@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.usenet
 
+import com.nuvio.tv.R
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -16,6 +17,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
 
 enum class ProviderTestResult { SUCCESS, UNREACHABLE, TLS, AUTH, REFUSED, PRIVATE_NETWORK }
+
+/** [anonymous]: the provider was tested without a username or password. */
+fun ProviderTestResult.messageRes(anonymous: Boolean) = when (this) {
+    ProviderTestResult.SUCCESS -> if (anonymous) R.string.usenet_provider_test_connected else R.string.usenet_provider_test_success
+    ProviderTestResult.UNREACHABLE -> R.string.usenet_provider_test_unreachable
+    ProviderTestResult.TLS -> R.string.usenet_provider_test_tls
+    ProviderTestResult.AUTH -> R.string.usenet_provider_test_auth
+    ProviderTestResult.REFUSED -> R.string.usenet_provider_test_refused
+    ProviderTestResult.PRIVATE_NETWORK -> R.string.usenet_provider_test_private
+}
 
 /**
  * Connects and signs in to an NNTP provider the way playback will, so settings

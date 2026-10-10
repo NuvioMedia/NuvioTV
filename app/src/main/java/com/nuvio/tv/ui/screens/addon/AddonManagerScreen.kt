@@ -872,7 +872,8 @@ internal fun QrCodeOverlay(
     instruction: String,
     onClose: () -> Unit,
     hasPendingChange: Boolean = false,
-    qrSize: Dp = 220.dp
+    qrSize: Dp = 220.dp,
+    status: String? = null
 ) {
     val focusRequester = remember { FocusRequester() }
 
@@ -918,6 +919,16 @@ internal fun QrCodeOverlay(
                     text = serverUrl,
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioTheme.colors.TextTertiary,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            if (status != null) {
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NuvioTheme.colors.TextPrimary,
                     textAlign = TextAlign.Center
                 )
             }

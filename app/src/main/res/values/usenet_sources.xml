@@ -66,5 +66,17 @@
     <string name="usenet_indexer_problem_auth">Last request failed: API key rejected</string>
     <string name="usenet_indexer_problem_unreachable">Last request failed: could not reach the indexer</string>
     <string name="usenet_indexer_problem_response">Last request failed: unexpected response</string>
+    <string name="usenet_phone_setup">Set up from phone</string>
+    <string name="usenet_phone_setup_description">Type server addresses, passwords and API keys on your phone instead of the remote.</string>
+    <string name="usenet_phone_qr_instruction">Scan this QR code with a phone on the same network to add or edit Usenet providers and indexers.</string>
+    <string name="usenet_phone_saved_on_tv">Saved from phone: %1$s</string>
+    <string name="usenet_phone_intro">Changes are saved on the TV right away. Saved passwords and API keys are never shown here: leave them blank to keep them.</string>
+    <string name="usenet_phone_providers">Providers</string>
+    <string name="usenet_phone_indexers">Indexers</string>
+    <string name="usenet_phone_none">None yet.</string>
+    <string name="usenet_phone_keep_secret">Saved. Leave blank to keep it.</string>
+    <string name="usenet_phone_saved">Saved on the TV.</string>
+    <string name="usenet_phone_link_expired">This link is no longer valid. Scan the QR code on the TV again.</string>
+    <string name="usenet_phone_unavailable">The TV could not save this. Keep its Usenet settings open, on the same profile, and try again.</string>
     <string name="usenet_sources_save_error">Could not load or save Usenet sources. Check device storage and try again.</string>
 </resources>
