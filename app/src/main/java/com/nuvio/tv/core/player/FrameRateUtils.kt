@@ -40,6 +40,8 @@ object FrameRateUtils {
     private const val SWITCH_POLL_INTERVAL_MS = 60L
     private const val SWITCH_REQUIRED_STABLE_POLLS = 2
     private const val RESOLUTION_MATCH_MIN_SHORT_SIDE = 720
+    private val CLEAN_REFRESH_MULTIPLES = listOf(3f, 4f, 5f, 6f)
+    private const val REFRESH_ERROR_SLACK = 0.0001f
 
     data class DisplayModeSwitchResult(
         val appliedMode: Display.Mode
@@ -171,6 +173,8 @@ object FrameRateUtils {
         return if (matchesTargetRefresh(closest.refreshRate, target)) closest else null
     }
 
+    private fun refreshError(refreshRate: Float, target: Float): Float = abs(refreshRate - target) / target
+
     private fun refreshWeight(refresh: Float, fps: Float): Float {
         if (fps <= 0f || refresh <= 0f) return Float.MAX_VALUE
         val div = refresh / fps
@@ -257,8 +261,16 @@ object FrameRateUtils {
         val modeExact = pickBestForTarget(modes, frameRate)
         val modeDouble = pickBestForTarget(modes, frameRate * 2f)
         val modePulldown = pickBestForTarget(modes, frameRate * 2.5f)
+        val pulldownError = modePulldown?.let { refreshError(it.refreshRate, frameRate * 2.5f) } ?: Float.MAX_VALUE
+        // Lowest clean multiple first (24 fps: 72, 96, 120, 144 Hz), before 3:2 pulldown at 60 Hz,
+        // but only when it matches the frame rate at least as closely as the pulldown mode does.
+        val modeMultiple = CLEAN_REFRESH_MULTIPLES.firstNotNullOfOrNull { multiple ->
+            val target = frameRate * multiple
+            pickBestForTarget(modes, target)
+                ?.takeIf { refreshError(it.refreshRate, target) <= pulldownError + REFRESH_ERROR_SLACK }
+        }
         val modeFallback = modes.minByOrNull { refreshWeight(it.refreshRate, frameRate) }
-        return modeExact ?: modeDouble ?: modePulldown ?: modeFallback ?: activeMode
+        return modeExact ?: modeDouble ?: modeMultiple ?: modePulldown ?: modeFallback ?: activeMode
     }
 
     private fun hasValidVideoSize(videoWidth: Int?, videoHeight: Int?): Boolean {
