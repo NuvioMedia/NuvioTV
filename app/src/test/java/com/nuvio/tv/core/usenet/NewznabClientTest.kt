@@ -176,6 +176,30 @@ class NewznabClientTest {
         }
     }
 
+    @Test fun `verifying an indexer checks the API key, not only the public caps`() = runBlocking {
+        MockWebServer().use { server ->
+            val client = NewznabClient(MemoryStorage())
+            server.enqueue(MockResponse().setBody(capsXml))
+            server.enqueue(MockResponse().setBody("""<error code="100" description="Incorrect user credentials"/>"""))
+            assertThrows(NewznabAuthException::class.java) { runBlocking { client.verify(server.indexer(key = "wrong")) } }
+            assertEquals("caps", server.takeRequest().requestUrl!!.queryParameter("t"))
+            val search = server.takeRequest().requestUrl!!
+            assertEquals("search", search.queryParameter("t"))
+            assertEquals("1", search.queryParameter("limit"))
+            assertEquals("wrong", search.queryParameter("apikey"))
+            assertEquals(IndexerProblem.AUTH, client.status(server.indexer(key = "wrong")).problem)
+
+            server.enqueue(MockResponse().setBody(capsXml))
+            server.enqueue(MockResponse().setBody(server.page("Latest.Release", 1)))
+            client.verify(server.indexer())
+            // A search refused for its parameters still accepted the key.
+            server.enqueue(MockResponse().setBody(capsXml))
+            server.enqueue(MockResponse().setBody("""<error code="201" description="Incorrect parameter"/>"""))
+            client.verify(server.indexer())
+            assertEquals(6, server.requestCount)
+        }
+    }
+
     @Test fun `spent quota from an error document or headers pauses the indexer`() = runBlocking {
         MockWebServer().use { server ->
             val caps = NewznabCapabilities()

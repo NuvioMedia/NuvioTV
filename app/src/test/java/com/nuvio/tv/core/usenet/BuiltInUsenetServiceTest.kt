@@ -2,13 +2,16 @@ package com.nuvio.tv.core.usenet
 
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.remote.api.TmdbApi
+import com.nuvio.tv.data.remote.api.TmdbDetailsResponse
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
+import retrofit2.Response
 
 class BuiltInUsenetServiceTest {
     @Test fun `failed indexer does not cancel good results and episode suffixes are resolved`() = runTest {
@@ -116,5 +119,30 @@ class BuiltInUsenetServiceTest {
         val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
         assertTrue(service.search(UsenetSourceConfiguration(), "movie", "tt123", null, null).toList().isEmpty())
         coVerify(exactly = 0) { client.capabilities(any()) }
+    }
+
+    @Test fun `an empty id search is asked again by title`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities(movieParams = setOf("imdbid", "q"))
+        coEvery { client.search(indexer, match { it.imdbId != null }, any()) } returns emptyList()
+        coEvery { client.search(indexer, match { it.imdbId == null }, any()) } returns listOf(release(indexer, "The.Movie.2020.1080p"))
+        coEvery { tmdb.ensureTmdbId("tt1", "movie") } returns "10"
+        coEvery { tmdbApi.getMovieDetails(10, any(), any()) } returns Response.success(mockk<TmdbDetailsResponse>(relaxed = true) {
+            every { title } returns "The Movie"
+            every { releaseDate } returns "2020-05-01"
+        })
+        val service = BuiltInUsenetService(client, tmdb, tmdbApi)
+        val streams = service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams
+        assertEquals(listOf("The.Movie.2020.1080p"), streams.map { it.title })
+        coVerify { client.search(indexer, match { it.imdbId == null && it.tmdbId == null && it.title == "The Movie" && it.year == 2020 }, any()) }
+
+        // A title search that also finds nothing is not repeated.
+        coEvery { client.search(indexer, match { it.imdbId == null }, any()) } returns emptyList()
+        assertTrue(service.search(config, "movie", "tt1", null, null).toList().none { it.group != null })
+        coVerify(exactly = 2) { client.search(indexer, match { it.imdbId == null }, any()) }
     }
 }

@@ -73,9 +73,20 @@ class NewznabClient @Inject constructor(
             ?.filter { NewznabProtocol.matches(it, request, idSearch = true, requireNumbering = true) }
             ?.takeIf { it.isNotEmpty() }?.let { return it }
         val url = NewznabProtocol.searchUrl(indexer, request, caps) ?: return emptyList()
-        val idSearch = ID_PARAMS.any { url.queryParameter(it) != null }
         return pages(indexer, url, request, caps)
-            .filter { NewznabProtocol.matches(it, request, idSearch) }
+            .filter { NewznabProtocol.matches(it, request, NewznabProtocol.isIdSearch(url)) }
+    }
+
+    /**
+     * Checks the endpoint and the API key with live requests. Caps alone prove nothing about
+     * the key, since many indexers serve them publicly; a one-result search uses it.
+     */
+    suspend fun verify(indexer: UsenetIndexer) {
+        capabilities(indexer, live = true)
+        val latest = NewznabProtocol.apiUrl(indexer, "search").setQueryParameter("limit", "1").build()
+        // Only a rejected key, a spent quota or a broken endpoint fails: a search refused for
+        // its parameters still means the key was accepted.
+        request(indexer, latest, ignoreCooldown = true, NewznabProtocol::throwIfKnownError)
     }
 
     /**
@@ -214,7 +225,6 @@ class NewznabClient @Inject constructor(
         const val EXHAUSTED_MS = 15 * 60_000L
         const val SEASON_TTL_MS = 2 * 3600_000L
         const val MAX_SEASONS = 50
-        val ID_PARAMS = listOf("imdbid", "tvdbid", "tmdbid")
         val REMAINING_HEADERS = listOf("X-RateLimit-Daily-Remaining", "x-api-remaining",
             "X-DNZBLimit-Daily-Remaining", "x-grab-remaining")
     }
@@ -264,7 +274,8 @@ class BuiltInUsenetService @Inject constructor(
                             val caps = client.capabilities(indexer)
                             val canSearchId = NewznabProtocol.searchUrl(indexer, request, caps) != null
                             val search = if (canSearchId) request else metadata.await() ?: error("Metadata unavailable")
-                            Result.success(client.search(indexer, search, caps))
+                            val found = client.search(indexer, search, caps)
+                            Result.success(if (found.isEmpty()) byTitle(indexer, search, caps) { metadata.await() } ?: found else found)
                         } catch (e: CancellationException) { throw e }
                         catch (e: Exception) { Result.failure(e) }
                         results.send(indexer to result)
@@ -290,6 +301,23 @@ class BuiltInUsenetService @Inject constructor(
             }
             metadata.cancel()
         }
+    }
+
+    /**
+     * Indexers with thin ID coverage can list a title their ID search does not find, so an
+     * empty ID search is asked again by title. Null when there is nothing else to ask.
+     */
+    private suspend fun byTitle(indexer: UsenetIndexer, searched: UsenetSearchRequest, caps: NewznabCapabilities,
+        metadata: suspend () -> UsenetSearchRequest?): List<UsenetRelease>? {
+        val url = NewznabProtocol.searchUrl(indexer, searched, caps) ?: return null
+        if (!NewznabProtocol.isIdSearch(url)) return null
+        val title = (metadata() ?: return null).copy(imdbId = null, tmdbId = null, tvdbId = null)
+        if (NewznabProtocol.searchUrl(indexer, title, caps) == null) return null
+        return try { client.search(indexer, title, caps) }
+        catch (e: CancellationException) { throw e }
+        catch (e: IndexerCooldownException) { throw e }
+        // The ID search succeeded; a failed second attempt only means nothing more was found.
+        catch (_: Exception) { null }
     }
 
     private suspend fun metadata(request: UsenetSearchRequest, videoId: String, type: String): UsenetSearchRequest {
