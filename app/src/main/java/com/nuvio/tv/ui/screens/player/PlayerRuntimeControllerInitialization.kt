@@ -160,6 +160,7 @@ internal fun PlayerRuntimeController.initializePlayer(
         return
     }
     mpvMediaLoadPrepared = false
+    val afrPreflightToken = afrPreflightGate.token()
 
     scope.launch {
         try {
@@ -272,7 +273,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     headers = headers,
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled,
-                    mimeType = currentStreamMimeType
+                    mimeType = currentStreamMimeType,
+                    preflightToken = afrPreflightToken
                 )
             }
             if (effectiveInternalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
@@ -285,6 +287,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                         Log.w(PlayerRuntimeController.TAG, "AFR preflight await timed out in MPV branch; cancelling afrJob")
                         afrJob.cancel()
                     }
+                    // A switch or release during the preflight replaced this start-up.
+                    if (!afrPreflightGate.isCurrent(afrPreflightToken)) return@launch
                     if (mpvDelayStartAfterAfrSwitch) {
                         Log.d(PlayerRuntimeController.TAG, "AFR display mode switched; delaying MPV start by ${MPV_AFR_SETTLE_DELAY_MS}ms")
                         delay(MPV_AFR_SETTLE_DELAY_MS)
@@ -293,6 +297,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         phase = "mpv_buffering",
                         message = context.getString(R.string.player_loading_buffering)
                     )
+                    if (!afrPreflightGate.isCurrent(afrPreflightToken)) return@launch
                     initializeMpvPlayer(url = url, headers = headers, allowEngineFailover = allowEngineFailover)
                     fetchAddonSubtitles()
                 } finally {
@@ -626,6 +631,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                 Log.w(PlayerRuntimeController.TAG, "AFR preflight await timed out in ExoPlayer branch; cancelling afrJob")
                 afrJob.cancel()
             }
+
+            if (!afrPreflightGate.isCurrent(afrPreflightToken)) return@launch
 
             // ── Libass Setup (From 0.5.7-beta/Left) ──
             requestedUseLibassByUser = playerSettings.useLibass

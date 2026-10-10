@@ -38,6 +38,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     seekSourceLogJob?.cancel()
     seekSourceLogJob = null
     frameRateProbeJob?.cancel()
+    cancelAfrPreflight()
     hideStreamSourceIndicatorJob?.cancel()
     hideStreamSourceIndicatorJob = null
     _uiState.update { it.copy(showStreamSourceIndicator = false) }
