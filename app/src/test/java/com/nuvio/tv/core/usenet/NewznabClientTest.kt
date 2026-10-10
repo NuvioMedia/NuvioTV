@@ -83,6 +83,50 @@ class NewznabClientTest {
         }
     }
 
+    @Test fun `one season search serves following episodes and missing episodes are searched alone`() = runBlocking {
+        MockWebServer().use { server ->
+            fun items(vararg titles: String) = titles.mapIndexed { i, title ->
+                """<item><title>$title</title><enclosure type="application/x-nzb" url="${server.url("/get?id=$title$i")}" length="100"/></item>"""
+            }.joinToString("")
+            server.enqueue(MockResponse().setBody("""<rss><channel>${items("Show.S01E01.1080p", "Show.S01E02.1080p", "a8f3k2b9")}</channel></rss>"""))
+            server.enqueue(MockResponse().setBody("""<rss><channel>${items("Show.S01E03.1080p")}</channel></rss>"""))
+            val client = NewznabClient(MemoryStorage())
+            val indexer = server.indexer()
+            fun episode(n: Int) = UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = n)
+            val caps = NewznabCapabilities()
+
+            // Season results need explicit numbering: an obfuscated name could be any episode.
+            assertEquals(listOf("Show.S01E01.1080p"), client.search(indexer, episode(1), caps).map { it.title })
+            assertEquals(listOf("Show.S01E02.1080p"), client.search(indexer, episode(2), caps).map { it.title })
+            assertEquals(1, server.requestCount)
+            val season = server.takeRequest().requestUrl!!
+            assertEquals("1", season.queryParameter("season"))
+            assertNull(season.queryParameter("ep"))
+
+            // Episode 3 is not in the cached season, so it is searched alone.
+            assertEquals(listOf("Show.S01E03.1080p"), client.search(indexer, episode(3), caps).map { it.title })
+            assertEquals(2, server.requestCount)
+            assertEquals("3", server.takeRequest().requestUrl!!.queryParameter("ep"))
+        }
+    }
+
+    @Test fun `season search falls back to the episode when the indexer rejects it`() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setResponseCode(400))
+            server.enqueue(MockResponse().setBody(server.page("Show.S02E05.1080p", 1)))
+            server.enqueue(MockResponse().setBody(server.page("Show.S02E06.1080p", 2)))
+            val client = NewznabClient(MemoryStorage())
+            fun episode(n: Int) = UsenetSearchRequest(imdbId = "tt1", series = true, season = 2, episode = n)
+            assertEquals(listOf("Show.S02E05.1080p"), client.search(server.indexer(), episode(5), NewznabCapabilities()).map { it.title })
+            assertEquals(listOf("Show.S02E06.1080p"), client.search(server.indexer(), episode(6), NewznabCapabilities()).map { it.title })
+            // The rejected season search is not retried for the next episode.
+            assertEquals(3, server.requestCount)
+            assertNull(server.takeRequest().requestUrl!!.queryParameter("ep"))
+            assertEquals("5", server.takeRequest().requestUrl!!.queryParameter("ep"))
+            assertEquals("6", server.takeRequest().requestUrl!!.queryParameter("ep"))
+        }
+    }
+
     @Test fun `spent quota from an error document or headers pauses the indexer`() = runBlocking {
         MockWebServer().use { server ->
             val caps = NewznabCapabilities()

@@ -46,6 +46,10 @@ class NewznabClient @Inject constructor(
     private val client = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS).callTimeout(25, TimeUnit.SECONDS).build()
     private val states = NewznabIndexerStates(storage, ::now)
+    private val seasons = object : LinkedHashMap<String, Pair<Long, List<UsenetRelease>>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, List<UsenetRelease>>>) =
+            size > MAX_SEASONS
+    }
 
     /** Caps cost an API hit on most indexers and rarely change; [live] skips the cache and any cooldown. */
     suspend fun capabilities(indexer: UsenetIndexer, live: Boolean = false): NewznabCapabilities {
@@ -64,20 +68,50 @@ class NewznabClient @Inject constructor(
 
     suspend fun search(indexer: UsenetIndexer, request: UsenetSearchRequest,
         caps: NewznabCapabilities): List<UsenetRelease> {
+        seasonReleases(indexer, request, caps)
+            ?.filter { NewznabProtocol.matches(it, request, idSearch = true, requireNumbering = true) }
+            ?.takeIf { it.isNotEmpty() }?.let { return it }
         val url = NewznabProtocol.searchUrl(indexer, request, caps) ?: return emptyList()
+        val idSearch = ID_PARAMS.any { url.queryParameter(it) != null }
+        return pages(indexer, url, request, caps)
+            .filter { NewznabProtocol.matches(it, request, idSearch) }
+    }
+
+    /**
+     * Watching a series asks for one episode after another, and a single season
+     * search answers them all for [SEASON_TTL_MS]. An episode it has nothing for
+     * (one that aired since, or a season with more releases than two pages hold)
+     * is then searched on its own. Memory only: release URLs carry the API key.
+     */
+    private suspend fun seasonReleases(indexer: UsenetIndexer, request: UsenetSearchRequest,
+        caps: NewznabCapabilities): List<UsenetRelease>? {
+        val url = NewznabProtocol.searchUrl(indexer, request, caps, wholeSeason = true) ?: return null
+        val key = url.toString()
+        synchronized(seasons) { seasons[key] }?.takeIf { now() - it.first < SEASON_TTL_MS }?.let { return it.second }
+        val releases = try {
+            pages(indexer, url, request, caps, wholeSeason = true)
+        } catch (e: CancellationException) { throw e }
+        catch (e: IndexerCooldownException) { throw e }
+        // Some indexers reject season-only searches; remember it so each episode does not retry.
+        catch (_: Exception) { emptyList() }
+        synchronized(seasons) { seasons[key] = now() to releases }
+        return releases
+    }
+
+    /** Bound both API usage and memory to two pages; never download NZBs during a search. */
+    private suspend fun pages(indexer: UsenetIndexer, url: HttpUrl, request: UsenetSearchRequest,
+        caps: NewznabCapabilities, wholeSeason: Boolean = false): List<UsenetRelease> {
         val first = request(indexer, url) { NewznabProtocol.releases(it, indexer) }
         val limit = caps.limit.coerceIn(1, 100)
-        // Bound both API usage and memory; never download NZBs during a search.
         val second = if (first.total > limit && first.releases.size >= limit) {
             try {
-                NewznabProtocol.searchUrl(indexer, request, caps, limit)?.let { next ->
+                NewznabProtocol.searchUrl(indexer, request, caps, limit, wholeSeason)?.let { next ->
                     request(indexer, next) { NewznabProtocol.releases(it, indexer) }.releases
                 }.orEmpty()
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) { emptyList() }
         } else emptyList()
-        val idSearch = url.queryParameter("imdbid") != null || url.queryParameter("tmdbid") != null
-        return (first.releases + second).filter { NewznabProtocol.matches(it, request, idSearch) }
+        return first.releases + second
     }
 
     /**
@@ -157,6 +191,9 @@ class NewznabClient @Inject constructor(
         const val MAX_THROTTLE_MS = 15 * 60_000L
         const val QUOTA_MS = 30 * 60_000L
         const val EXHAUSTED_MS = 15 * 60_000L
+        const val SEASON_TTL_MS = 2 * 3600_000L
+        const val MAX_SEASONS = 50
+        val ID_PARAMS = listOf("imdbid", "tvdbid", "tmdbid")
         val REMAINING_HEADERS = listOf("X-RateLimit-Daily-Remaining", "x-api-remaining",
             "X-DNZBLimit-Daily-Remaining", "x-grab-remaining")
     }
@@ -244,7 +281,11 @@ class BuiltInUsenetService @Inject constructor(
             }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { null }
-        return request.copy(imdbId = imdb, tmdbId = id, title = details?.title ?: details?.name,
+        val tvdb = if (!request.series) null else try {
+            id?.toIntOrNull()?.let { tmdbApi.getTvExternalIds(it, BuildConfig.TMDB_API_KEY).body()?.tvdbId?.toString() }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { null }
+        return request.copy(imdbId = imdb, tmdbId = id, tvdbId = tvdb, title = details?.title ?: details?.name,
             year = (details?.releaseDate ?: details?.firstAirDate)?.take(4)?.toIntOrNull())
     }
 
