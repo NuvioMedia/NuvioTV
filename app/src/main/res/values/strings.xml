@@ -1076,6 +1076,8 @@
     <string name="layout_trailer_play_in_background_sub">Play the trailer in place of the backdrop while the page stays visible.</string>
     <string name="layout_trailer_pause_on_scroll">Pause When Scrolling</string>
     <string name="layout_trailer_pause_on_scroll_sub">Pause the trailer when you scroll down and resume it when you return to the top.</string>
+    <string name="layout_trailer_4k">4K Trailers</string>
+    <string name="layout_trailer_4k_sub">Play trailers above 1080p when available. Uses much more memory; off by default on devices with 2 GB of RAM or less.</string>
     <string name="layout_detail_group_episodes">Episodes</string>
     <string name="layout_detail_group_trailers">Trailers</string>
     <string name="layout_detail_group_metadata">Metadata</string>

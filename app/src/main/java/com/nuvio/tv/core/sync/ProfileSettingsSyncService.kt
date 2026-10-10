@@ -144,6 +144,11 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "nuvio_performance_mode_enabled"
 )
 
+// 4K trailers depend on the device's RAM, so a choice made on one device must not reach another.
+private val localOnlyTrailerProfileSettingsKeys = setOf(
+    "trailer_allow_4k"
+)
+
 private val credentialProfileSettingsKeys = mapOf(
     "debrid_settings" to setOf(
         "torbox_api_key",
@@ -160,6 +165,7 @@ internal fun shouldExcludePreferenceFromProfileSettingsSync(feature: String, key
         feature == "layout_settings" && keyName in localOnlyLayoutProfileSettingsKeys -> true
         feature == "layout_settings" && keyName == "search_discover_enabled" -> true
         feature == PLAYER_SETTINGS_FEATURE && keyName in localOnlyPlayerProfileSettingsKeys -> true
+        feature == "trailer_settings" && keyName in localOnlyTrailerProfileSettingsKeys -> true
         feature == PluginDataStore.FEATURE && keyName != PluginDataStore.GROUP_STREAMS_BY_REPOSITORY -> true
         keyName in credentialProfileSettingsKeys[feature].orEmpty() -> true
         else -> false
@@ -679,6 +685,7 @@ class ProfileSettingsSyncService @Inject constructor(
         val keyNames = when (feature) {
             "layout_settings" -> catalogKeysExcludedFromProfileSettingsBlob + localOnlyLayoutProfileSettingsKeys
             PLAYER_SETTINGS_FEATURE -> localOnlyPlayerProfileSettingsKeys
+            "trailer_settings" -> localOnlyTrailerProfileSettingsKeys
             else -> credentialProfileSettingsKeys[feature].orEmpty()
         }
         if (keyNames.isEmpty()) return emptyMap()

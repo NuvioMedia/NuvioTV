@@ -1,8 +1,10 @@
 package com.nuvio.tv.data.trailer
 
 import android.util.Log
+import com.nuvio.tv.core.player.TrailerVideoPolicy
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.data.remote.api.TmdbVideoResult
 import com.nuvio.tv.data.remote.api.TrailerApi
@@ -22,6 +24,12 @@ private const val TMDB_TRAILER_FALLBACK_LANGUAGE = "en-US"
 private val YOUTUBE_SOURCE_CACHE_TTL: Duration = Duration.ofHours(3)
 private val YOUTUBE_VIDEO_ID_REGEX = Regex("^[a-zA-Z0-9_-]{11}$")
 
+// Top level so the lambda doesn't capture the TrailerService instance from its constructor call.
+private fun trailerHeightCap(trailerSettingsDataStore: TrailerSettingsDataStore): suspend () -> Int = {
+    val allow4k = runCatching { trailerSettingsDataStore.settings.first().allow4k }.getOrDefault(true)
+    TrailerVideoPolicy.maxTrailerVideoHeight(allow4k)
+}
+
 @Singleton
 class TrailerService(
     private val trailerApi: TrailerApi,
@@ -29,7 +37,8 @@ class TrailerService(
     private val inAppYouTubeExtractor: InAppYouTubeExtractor,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
     private val tmdbService: TmdbService,
-    private val clock: Clock
+    private val clock: Clock = Clock.systemUTC(),
+    private val maxTrailerVideoHeight: suspend () -> Int = { Int.MAX_VALUE }
 ) {
     @Inject
     constructor(
@@ -37,17 +46,20 @@ class TrailerService(
         tmdbApi: TmdbApi,
         inAppYouTubeExtractor: InAppYouTubeExtractor,
         tmdbSettingsDataStore: TmdbSettingsDataStore,
-        tmdbService: TmdbService
+        tmdbService: TmdbService,
+        trailerSettingsDataStore: TrailerSettingsDataStore
     ) : this(
         trailerApi = trailerApi,
         tmdbApi = tmdbApi,
         inAppYouTubeExtractor = inAppYouTubeExtractor,
         tmdbSettingsDataStore = tmdbSettingsDataStore,
         tmdbService = tmdbService,
-        clock = Clock.systemUTC()
+        clock = Clock.systemUTC(),
+        maxTrailerVideoHeight = trailerHeightCap(trailerSettingsDataStore)
     )
 
-    // Cache: "title|year|tmdbId|type" -> trailer playback source (NEGATIVE_CACHE sentinel for misses)
+    // Cache: "title|year|tmdbId|type|maxHeight" -> trailer playback source (NEGATIVE_CACHE sentinel for misses).
+    // The height is part of the key so toggling 4K trailers takes effect without a restart.
     private val cache = ConcurrentHashMap<String, TrailerPlaybackSource>()
     private val NEGATIVE_CACHE = TrailerPlaybackSource(videoUrl = "")
     // Time-bound cache: youtubeVideoId -> resolved playback source (success-only)
@@ -79,7 +91,7 @@ class TrailerService(
         }
         val tmdbLanguage = normalizeTmdbTrailerLanguage(tmdbSettings?.language)
 
-        val cacheKey = "$title|$year|$tmdbId|$type"
+        val cacheKey = "$title|$year|$tmdbId|$type|${maxTrailerVideoHeight()}"
 
         cache[cacheKey]?.let { cached ->
             val hit = cached !== NEGATIVE_CACHE
@@ -232,19 +244,22 @@ class TrailerService(
         year: String? = null
     ): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
         try {
+            val maxHeight = maxTrailerVideoHeight()
             val youtubeKey = extractYouTubeVideoId(youtubeUrl)
-            if (!youtubeKey.isNullOrBlank()) {
-                getValidCachedYoutubeSource(youtubeKey)?.let { cached ->
+            // Same video, different source per height cap, so the cap is part of the cache key.
+            val sourceCacheKey = youtubeKey?.takeIf { it.isNotBlank() }?.let { "$it|$maxHeight" }
+            if (sourceCacheKey != null) {
+                getValidCachedYoutubeSource(sourceCacheKey)?.let { cached ->
                     Log.d(TAG, "YouTube cache hit for key=${obfuscateYoutubeKey(youtubeKey)}")
                     return@withContext cached
                 }
             }
 
             Log.d(TAG, "Attempting in-app YouTube extraction for ${summarizeUrl(youtubeUrl)}")
-            val localSource = inAppYouTubeExtractor.extractPlaybackSource(youtubeUrl)
+            val localSource = inAppYouTubeExtractor.extractPlaybackSource(youtubeUrl, maxHeight)
             if (localSource != null) {
-                if (!youtubeKey.isNullOrBlank()) {
-                    youtubeSourceCache[youtubeKey] = CachedTrailerPlaybackSource(
+                if (sourceCacheKey != null) {
+                    youtubeSourceCache[sourceCacheKey] = CachedTrailerPlaybackSource(
                         playbackSource = localSource,
                         cachedAt = Instant.now(clock),
                         expiresAt = extractUrlExpireInstant(localSource)
@@ -269,9 +284,9 @@ class TrailerService(
             val fallbackUrl = response.body()?.url ?: return@withContext null
             if (!isValidUrl(fallbackUrl)) return@withContext null
 
-            if (!youtubeKey.isNullOrBlank()) {
+            if (sourceCacheKey != null) {
                 val fallbackSource = TrailerPlaybackSource(videoUrl = fallbackUrl)
-                youtubeSourceCache[youtubeKey] = CachedTrailerPlaybackSource(
+                youtubeSourceCache[sourceCacheKey] = CachedTrailerPlaybackSource(
                     playbackSource = fallbackSource,
                     cachedAt = Instant.now(clock),
                     expiresAt = extractUrlExpireInstant(fallbackSource)
