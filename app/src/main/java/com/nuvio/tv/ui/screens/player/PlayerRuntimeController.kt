@@ -412,6 +412,7 @@ class PlayerRuntimeController(
     internal var seekProgressSyncJob: Job? = null
     internal var frameRateProbeJob: Job? = null
     internal var frameRateProbeToken: Long = 0L
+    internal val afrPreflightGate = AfrPreflightGate()
     internal var hideAspectRatioIndicatorJob: Job? = null
     internal var hideStreamSourceIndicatorJob: Job? = null
     internal var hidePlayerEngineSwitchInfoJob: Job? = null

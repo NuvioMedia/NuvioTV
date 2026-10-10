@@ -1416,6 +1416,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     // Pause current playback immediately so the old stream doesn't continue
     // playing audio/video in the background while the new episode is being prepared.
     _exoPlayer?.stop()
+    cancelAfrPreflight()
 
     val newHeaders = PlayerMediaSourceFactory.sanitizeHeaders(
         stream.behaviorHints?.proxyHeaders?.request
