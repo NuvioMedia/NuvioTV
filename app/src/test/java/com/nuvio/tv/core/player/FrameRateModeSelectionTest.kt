@@ -161,6 +161,20 @@ class FrameRateModeSelectionTest {
     }
 
     @Test
+    fun `an inexact multiple never beats an exact pulldown`() {
+        assertEquals(59.94f, pickRate(listOf(59.94f, 60f, 120f), film))
+        assertEquals(59.94f, pickRate(listOf(59.94f, 60f, 144f), film))
+    }
+
+    @Test
+    fun `an exact multiple is still picked`() {
+        assertEquals(119.88f, pickRate(listOf(59.94f, 60f, 119.88f, 120f), film))
+        assertEquals(119.88013f, pickRate(listOf(59.94006f, 60.000004f, 119.88013f, 120.00001f), film))
+        assertEquals(120f, pickRate(listOf(60f, 120f), 24f))
+        assertEquals(100f, pickRate(listOf(60f, 100f), 25f))
+    }
+
+    @Test
     fun `a rate that is not a multiple is never picked over pulldown`() {
         assertEquals(60f, pickRate(listOf(60f, 165f), 24f))
     }
