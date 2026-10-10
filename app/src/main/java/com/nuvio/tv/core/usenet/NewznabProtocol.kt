@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
+import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.w3c.dom.Element
@@ -21,6 +22,7 @@ data class UsenetSearchRequest(
     val series: Boolean = false
 )
 
+@Serializable
 data class NewznabCapabilities(
     val movieParams: Set<String> = setOf("imdbid"),
     val tvParams: Set<String> = setOf("imdbid", "season", "ep"),
@@ -201,13 +203,21 @@ object NewznabProtocol {
         val root = factory.newDocumentBuilder().parse(InputSource(StringReader(xml))).documentElement
         if (root.localName == "error") {
             val code = root.getAttribute("code")
+            if (code in setOf("429", "500", "501")) throw NewznabQuotaException()
             error(when (code) {
                 "100", "101", "102" -> "Indexer authentication failed"
-                "500", "501" -> "Indexer rate limit reached"
                 "200", "201", "202", "203" -> "Indexer does not support this search"
                 else -> "Indexer returned an API error"
             })
         }
         return root
     }
+
+    /** Some indexers pair an HTTP error status with a Newznab error document. */
+    fun throwIfQuotaError(xml: String) {
+        try { document(xml) } catch (e: NewznabQuotaException) { throw e } catch (_: Exception) { }
+    }
 }
+
+/** The indexer reported its request or download quota as spent (Newznab 429/500/501). */
+class NewznabQuotaException : IllegalStateException("Indexer rate limit reached")

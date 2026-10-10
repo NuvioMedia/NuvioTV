@@ -65,6 +65,27 @@ Searches have a 25-second timeout per request and fetch at most two pages of
 opt-in prefetch path needs them. Failed indexers do not cancel successful
 sources. Configuration changes invalidate the stream search session cache.
 
+## Saving indexer API hits
+
+- **Search results** are reused for 15 minutes by the stream search session
+  cache. They are not kept longer, so new releases show up.
+- **Capabilities** (`t=caps`) are stored on the device for 7 days and survive
+  restarts. An edited URL or API key fetches them again. When a refresh fails,
+  the expired copy is used. **Test indexer** always makes a live request.
+- **Limits:** an indexer that throttles (HTTP 429) or reports a spent quota
+  (Newznab error 500/501) is paused without further requests: for its
+  `Retry-After`, otherwise 60 seconds for throttling (at most 15 minutes) and
+  30 minutes for a spent quota. A response announcing zero remaining API hits
+  or grabs (`X-RateLimit-Daily-Remaining`, `x-api-remaining`,
+  `X-DNZBLimit-Daily-Remaining`, `x-grab-remaining`) pauses it for 15 minutes.
+  Pauses survive restarts. A paused indexer counts as failed, so lower
+  priorities are searched instead.
+- **NZBs** are cached by the engine for 14 days, so playing a release again does
+  not grab it again.
+
+This state is device-local, keyed by a hash of the endpoint and key, and holds
+no credentials.
+
 Protocol references (implementation is native Kotlin):
 
 - [Newznab Web API](https://newznab.readthedocs.io/en/latest/misc/api.html)
