@@ -177,6 +177,22 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         } else {
             bestVideoTrackSupport
         }
+        if (PlayerHigh10SupportPolicy.shouldReject(effectiveVideoFormat, currentVideoTrackBestSupport)) {
+            errorRetryJob?.cancel()
+            cancelFirstFrameWatchdog()
+            _exoPlayer?.stop()
+            _uiState.update { state ->
+                state.copy(
+                    error = context.getString(com.nuvio.tv.R.string.player_error_high10_unsupported),
+                    isPlaying = false,
+                    isBuffering = false,
+                    showLoadingOverlay = false,
+                    showPauseOverlay = false,
+                    showControls = true
+                )
+            }
+            return
+        }
         currentVideoTrackIsLikelyVc1 = Vc1VideoFormatHeuristics.isLikelyVc1(
             sampleMimeType = effectiveVideoFormat.sampleMimeType,
             codecs = effectiveVideoFormat.codecs,
