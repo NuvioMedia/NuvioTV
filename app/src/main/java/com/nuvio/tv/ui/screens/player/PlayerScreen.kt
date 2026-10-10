@@ -184,6 +184,7 @@ fun PlayerScreen(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val containerFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
+    var restorePlayPauseAfterSkip by remember { mutableStateOf(false) }
     val progressBarFocusRequester = remember { FocusRequester() }
     val episodesFocusRequester = remember { FocusRequester() }
     val streamsFocusRequester = remember { FocusRequester() }
@@ -526,6 +527,16 @@ fun PlayerScreen(
             }
             // If skip or next episode card is visible, their own LaunchedEffect will request focus
         }
+    }
+
+    LaunchedEffect(restorePlayPauseAfterSkip) {
+        if (!restorePlayPauseAfterSkip) return@LaunchedEffect
+        delay(300)
+        if (uiState.showControls && uiState.error == null) {
+            runCatching { playPauseFocusRequester.requestFocus() }
+            playPauseFocusRequester.requestFocusAfterFrames(frames = 0)
+        }
+        restorePlayPauseAfterSkip = false
     }
 
     // Initial focus on container - the LaunchedEffect above will handle focusing controls
@@ -1192,7 +1203,11 @@ fun PlayerScreen(
             suppressFocus = (uiState.postPlayMode is PostPlayMode.AutoPlay &&
                 postPlayRecommendationState.recommendation == null) || !skipIntroCanFocus,
             canFocus = skipIntroCanFocus,
-            onSkip = { viewModel.onEvent(PlayerEvent.OnSkipIntro) },
+            onSkip = {
+                val controlsWereVisible = uiState.showControls
+                viewModel.onEvent(PlayerEvent.OnSkipIntro)
+                if (controlsWereVisible) restorePlayPauseAfterSkip = true
+            },
             onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissSkipIntro) },
             onVisibilityChanged = { skipButtonActuallyVisible = it },
             onFocused = { viewModel.scheduleHideControls() },
