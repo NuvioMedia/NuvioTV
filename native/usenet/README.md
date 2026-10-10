@@ -267,7 +267,9 @@ are preserved. The latest timings appear directly in Usenet Settings.
 Advanced Settings contains Performance Profile, Read-Ahead Segments and Max
 Connections. Zero overrides mean automatic. Provider URLs can specify their own
 connection allowance; Automatic respects that allowance. An explicit global cap
-is divided across providers while preserving failover. Remaining connection
+goes to the preferred priority tier first, split evenly in list order. Every
+lower-priority provider keeps one connection for failover, plus whatever the
+preferred tier cannot use. Remaining connection
 slots open lazily; the useful initial read-ahead window is pre-warmed in parallel
 with the NZB download.
 

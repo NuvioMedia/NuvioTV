@@ -7,6 +7,9 @@ this source. Existing addon sources can still be used alongside it.
 Providers accept a host, port, TLS setting, username, password and connection
 allowance. Add multiple providers for missing-article failover. The existing
 global maximum-connections setting can further limit their combined allowance.
+When it does, providers of the highest priority get the limit first; each
+lower-priority provider keeps one connection for failover, plus whatever the
+higher ones cannot use.
 For a private/local NNTP server, enable **Allow self-hosted servers** in the
 performance settings.
 

@@ -108,3 +108,39 @@ func TestProviderPrioritiesParseAndSkipBackupPrewarm(t *testing.T) {
 		}
 	}
 }
+
+func TestGlobalConnectionLimitFavoursThePreferredTier(t *testing.T) {
+	connections := func(max int, servers ...string) []int {
+		t.Helper()
+		providers, err := Providers(servers, Config{MaxConnections: max}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []int
+		for _, p := range providers {
+			got = append(got, p.Connections)
+		}
+		return got
+	}
+	for _, tc := range []struct {
+		name    string
+		max     int
+		servers []string
+		want    []int
+	}{
+		{"one tier keeps the even split", 10, []string{"nntp://a.test/20", "nntp://b.test/20"}, []int{5, 5}},
+		{"backups keep one connection", 10, []string{"nntp://a.test/20", "nntp://b.test/20", "nntp://c.test/20?priority=1"}, []int{4, 5, 1}},
+		{"backups take what the preferred tier cannot use", 10, []string{"nntp://a.test/2", "nntp://c.test/20?priority=1"}, []int{2, 8}},
+		{"list order does not outrank priority", 6, []string{"nntp://c.test/20?priority=2", "nntp://b.test/20?priority=1", "nntp://a.test/20"}, []int{1, 1, 4}},
+		{"no limit keeps allowances", 0, []string{"nntp://a.test/20", "nntp://c.test/30?priority=1"}, []int{20, 30}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := connections(tc.max, tc.servers...); !slices.Equal(got, tc.want) {
+				t.Fatalf("connections = %v, want %v", got, tc.want)
+			}
+		})
+	}
+	if _, err := Providers([]string{"nntp://a.test/20", "nntp://c.test/20?priority=1"}, Config{MaxConnections: 1}, nil); err == nil {
+		t.Fatal("a limit below one connection per server was accepted")
+	}
+}
