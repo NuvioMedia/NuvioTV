@@ -882,7 +882,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
     resetLoadingOverlayForNewStream()
 
     _uiState.update {
-        it.copy(
+        it.clearFrameRateDetection().copy(
             isBuffering = true,
             error = null,
             currentStreamName = stream.name ?: stream.addonName,
@@ -897,10 +897,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
             showSourcesPanel = false,
             isLoadingSourceStreams = false,
             sourceStreamsError = null,
-            isTorrentStream = false,
-            detectedFrameRateRaw = 0f,
-            detectedFrameRate = 0f,
-            detectedFrameRateSource = null
+            isTorrentStream = false
         )
     }
     showStreamSourceIndicator(stream)
@@ -997,7 +994,7 @@ private fun PlayerRuntimeController.switchToTorrentSourceStream(
     pendingRestoredAddonSubtitle = null
     lastSavedPosition = 0L
     _uiState.update {
-        it.copy(
+        it.clearFrameRateDetection().copy(
             isBuffering = true,
             error = null,
             currentStreamName = stream.name ?: stream.addonName,
@@ -1012,10 +1009,7 @@ private fun PlayerRuntimeController.switchToTorrentSourceStream(
             showSourcesPanel = false,
             isLoadingSourceStreams = false,
             sourceStreamsError = null,
-            isTorrentStream = true,
-            detectedFrameRateRaw = 0f,
-            detectedFrameRate = 0f,
-            detectedFrameRateSource = null
+            isTorrentStream = true
         )
     }
     applyStreamMetadata(stream)
@@ -1472,7 +1466,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     lastSavedPosition = 0L
 
     _uiState.update {
-        it.copy(
+        it.clearFrameRateDetection().copy(
             isBuffering = true,
             error = null,
             currentSeason = currentSeason,
@@ -1504,9 +1498,6 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
             postPlayDismissedForCurrentEpisode = true,
             playbackEnded = false,
             isNextEpisodeMetadataResolved = false,
-            detectedFrameRateRaw = 0f,
-            detectedFrameRate = 0f,
-            detectedFrameRateSource = null,
         )
     }
     showStreamSourceIndicator(stream)
@@ -1588,7 +1579,7 @@ private fun PlayerRuntimeController.switchToEpisodeStreamCommon(
     resetLoadingOverlayForNewStream()
 
     _uiState.update {
-        it.copy(
+        it.clearFrameRateDetection().copy(
             isBuffering = true,
             error = null,
             currentSeason = currentSeason,
@@ -1619,9 +1610,6 @@ private fun PlayerRuntimeController.switchToEpisodeStreamCommon(
             postPlayDismissedForCurrentEpisode = true,
             playbackEnded = false,
             isNextEpisodeMetadataResolved = false,
-            detectedFrameRateRaw = 0f,
-            detectedFrameRate = 0f,
-            detectedFrameRateSource = null,
         )
     }
     showStreamSourceIndicator(stream)
