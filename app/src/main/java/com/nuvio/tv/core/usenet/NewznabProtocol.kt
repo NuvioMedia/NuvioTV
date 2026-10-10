@@ -15,6 +15,7 @@ import org.xml.sax.InputSource
 data class UsenetSearchRequest(
     val imdbId: String? = null,
     val tmdbId: String? = null,
+    val tvdbId: String? = null,
     val title: String? = null,
     val year: Int? = null,
     val season: Int? = null,
@@ -53,16 +54,21 @@ object NewznabProtocol {
         .newBuilder().setQueryParameter("apikey", indexer.apiKey)
         .setQueryParameter("t", action).setQueryParameter("o", "xml")
 
+    /** [wholeSeason] drops the episode from an ID search so one request covers a season. */
     fun searchUrl(indexer: UsenetIndexer, request: UsenetSearchRequest,
-        caps: NewznabCapabilities, offset: Int = 0): HttpUrl? {
+        caps: NewznabCapabilities, offset: Int = 0, wholeSeason: Boolean = false): HttpUrl? {
         val params = if (request.series) caps.tvParams else caps.movieParams
         val builder = apiUrl(indexer, if (request.series) "tvsearch" else "movie")
         val idParam = when {
             request.series && !("season" in params && "ep" in params) -> null
             request.imdbId != null && "imdbid" in params -> "imdbid" to request.imdbId.removePrefix("tt")
+            // TVDB is the TV identifier Newznab indexers support most widely.
+            request.series && request.tvdbId != null && "tvdbid" in params -> "tvdbid" to request.tvdbId
             request.tmdbId != null && "tmdbid" in params -> "tmdbid" to request.tmdbId
             else -> null
         }
+        // Season-wide text searches are too broad to share between episodes.
+        if (wholeSeason && (!request.series || idParam == null)) return null
         if (idParam != null) {
             builder.setQueryParameter(idParam.first, idParam.second)
         } else {
@@ -86,7 +92,7 @@ object NewznabProtocol {
             if (request.season == null || request.episode == null) return null
             if (idParam != null && !("season" in params && "ep" in params)) return null
             if ("season" in params) builder.setQueryParameter("season", request.season.toString())
-            if ("ep" in params) builder.setQueryParameter("ep", request.episode.toString())
+            if ("ep" in params && !wholeSeason) builder.setQueryParameter("ep", request.episode.toString())
         }
         return builder.setQueryParameter("cat", if (request.series) "5000" else "2000")
             .setQueryParameter("limit", caps.limit.coerceIn(1, 100).toString())
@@ -142,8 +148,12 @@ object NewznabProtocol {
         return NewznabPage(results, response?.getAttribute("total")?.toIntOrNull() ?: results.size)
     }
 
-    /** Aggregators may fall back to text search. Reject contradictory filename metadata. */
-    fun matches(release: UsenetRelease, request: UsenetSearchRequest, idSearch: Boolean): Boolean {
+    /**
+     * Aggregators may fall back to text search. Reject contradictory filename metadata.
+     * [requireNumbering] rejects unnumbered series releases, which only an episode search vouches for.
+     */
+    fun matches(release: UsenetRelease, request: UsenetSearchRequest, idSearch: Boolean,
+        requireNumbering: Boolean = false): Boolean {
         if (!idSearch) {
             fun normalize(value: String) = value.lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
             val title = request.title?.let(::normalize)?.takeIf { it.isNotEmpty() } ?: return false
@@ -171,7 +181,8 @@ object NewznabProtocol {
             val seasons = Regex("(?i)(?:^|[ ._-])(?:S|Season[ ._-]*)(\\d{1,3})(?:$|[ ._-])")
                 .findAll(release.title).map { it.groupValues[1].toInt() }.toList()
             if (seasons.isNotEmpty()) return request.season in seasons
-            return idSearch // Obfuscated ID-matched releases rely on the engine's file selection.
+            // Obfuscated ID-matched releases rely on the engine's file selection.
+            return idSearch && !requireNumbering
         }
         return true
     }

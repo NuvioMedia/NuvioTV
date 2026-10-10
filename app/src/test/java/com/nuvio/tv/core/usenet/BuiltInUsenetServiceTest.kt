@@ -94,6 +94,23 @@ class BuiltInUsenetServiceTest {
         assertEquals(listOf("Usenet • Ids"), results.mapNotNull { it.group }.last().streams.map { it.name })
     }
 
+    @Test fun `tvdb id is looked up for indexers that only search tv by tvdb`() = runTest {
+        val tvdbOnly = UsenetIndexer(id = "tvdb", name = "Tvdb", apiUrl = "https://tvdb.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(tvdbOnly))
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(tvdbOnly) } returns NewznabCapabilities(tvParams = setOf("tvdbid", "season", "ep"))
+        coEvery { client.search(tvdbOnly, any(), any()) } returns listOf(release(tvdbOnly, "Show.S01E02.1080p"))
+        coEvery { tmdb.ensureTmdbId(any(), any()) } returns "1399"
+        coEvery { tmdbApi.getTvDetails(1399, any(), any()) } throws java.io.IOException("offline")
+        coEvery { tmdbApi.getTvExternalIds(1399, any()) } returns
+            retrofit2.Response.success(com.nuvio.tv.data.remote.api.TmdbExternalIdsResponse(1399, "tt0944947", 121361))
+        val results = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt0944947:1:2", null, null).toList()
+        assertEquals(listOf("Usenet • Tvdb"), results.mapNotNull { it.group }.last().streams.map { it.name })
+        coVerify { client.search(tvdbOnly, match { it.tvdbId == "121361" && it.episode == 2 }, any()) }
+    }
+
     @Test fun `disabled configuration never contacts indexers`() = runTest {
         val client = mockk<NewznabClient>()
         val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())

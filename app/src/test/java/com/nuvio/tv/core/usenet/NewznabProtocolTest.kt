@@ -40,6 +40,25 @@ class NewznabProtocolTest {
         assertNull(NewznabProtocol.searchUrl(indexer, UsenetSearchRequest(imdbId = "tt123", series = true), NewznabCapabilities()))
     }
 
+    @Test fun `tv searches use tvdb when imdb is unsupported and season searches drop only the episode`() {
+        val caps = NewznabCapabilities(tvParams = setOf("q", "tvdbid", "season", "ep"))
+        val episode = UsenetSearchRequest(imdbId = "tt1", tvdbId = "121361", series = true, season = 1, episode = 2)
+        val url = NewznabProtocol.searchUrl(indexer, episode, caps)!!
+        assertEquals("121361", url.queryParameter("tvdbid"))
+        assertNull(url.queryParameter("imdbid"))
+        val season = NewznabProtocol.searchUrl(indexer, episode, caps, wholeSeason = true)!!
+        assertEquals("121361", season.queryParameter("tvdbid"))
+        assertEquals("1", season.queryParameter("season"))
+        assertNull(season.queryParameter("ep"))
+        // Season-wide text searches and movies are never shared.
+        assertNull(NewznabProtocol.searchUrl(indexer, episode.copy(tvdbId = null, title = "A Show"), caps, wholeSeason = true))
+        assertNull(NewznabProtocol.searchUrl(indexer, UsenetSearchRequest(imdbId = "tt1"), NewznabCapabilities(), wholeSeason = true))
+        assertNull(NewznabProtocol.searchUrl(indexer, UsenetSearchRequest(tvdbId = "1"), NewznabCapabilities(movieParams = setOf("tvdbid"))))
+        val obfuscated = UsenetRelease("a8f3k2b9", "url")
+        assertTrue(NewznabProtocol.matches(obfuscated, episode, idSearch = true))
+        assertFalse(NewznabProtocol.matches(obfuscated, episode, idSearch = true, requireNumbering = true))
+    }
+
     @Test fun `capabilities select tmdb searches and respect disabled search types`() {
         val caps = NewznabProtocol.capabilities("""<caps><limits max="50"/><searching><movie-search available="yes" supportedParams="q,tmdbid,year"/><tv-search available="no"/><search available="yes"/></searching></caps>""")
         val url = NewznabProtocol.searchUrl(indexer, UsenetSearchRequest(imdbId = "tt1", tmdbId = "20"), caps)!!
