@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_font_title">Subtitle font</string>
+    <string name="subtitle_font_default">Default (system font)</string>
+    <string name="subtitle_font_dialog_description">Use your own .ttf or .otf font for subtitles in both players (up to 20 MB). Styled ASS subtitles keep their own fonts.</string>
+    <string name="subtitle_font_current">Current font: %1$s</string>
+    <string name="subtitle_font_phone_instruction">Scan with your phone, or open this address on a computer on the same network, to send a font file to the TV.</string>
+    <string name="subtitle_font_choose_file">Choose file</string>
+    <string name="subtitle_font_from_url">From URL</string>
+    <string name="subtitle_font_reset">Reset to default</string>
+    <string name="subtitle_font_done">Done</string>
+    <string name="subtitle_font_importing">Importing font…</string>
+    <string name="subtitle_font_imported">Font imported: %1$s</string>
+    <string name="subtitle_font_invalid">That file isn\'t a usable TTF or OTF font.</string>
+    <string name="subtitle_font_too_large">That font is larger than 20 MB.</string>
+    <string name="subtitle_font_download_failed">Couldn\'t download the font.</string>
+    <string name="subtitle_font_no_picker">This TV has no file picker. Send the font from your phone instead.</string>
+    <string name="subtitle_font_url_title">Import font from URL</string>
+    <string name="subtitle_font_url_description">Direct link to a .ttf or .otf file, up to 20 MB.</string>
+    <string name="subtitle_font_url_import">Import</string>
+    <string name="subtitle_font_web_title">Send a subtitle font</string>
+    <string name="subtitle_font_web_subtitle">Choose a .ttf or .otf file (up to 20 MB). Your TV uses it for subtitles in both players.</string>
+    <string name="subtitle_font_web_choose">Choose a font file first</string>
+    <string name="subtitle_font_web_upload">Send to TV</string>
+    <string name="subtitle_font_web_uploading">Sending…</string>
+    <string name="subtitle_font_web_current">Current font:</string>
+    <string name="subtitle_font_web_imported">Font imported</string>
+    <string name="subtitle_font_web_connection_error">Connection error</string>
+</resources>
