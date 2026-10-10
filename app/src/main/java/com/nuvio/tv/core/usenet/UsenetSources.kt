@@ -16,11 +16,14 @@ data class UsenetProvider(
     val username: String = "",
     val password: String = "",
     val connections: Int = 20,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    /** Equal priorities share article traffic; lower priorities only fill missing articles. */
+    val priority: Int = 1
 ) {
     fun validate() {
         require(name.isNotBlank() && host.isNotBlank()) { "Name and server host are required" }
         require(port in 1..65535 && connections in 1..4096) { "Invalid port or connection limit" }
+        require(priority in USENET_PRIORITIES) { "Invalid priority" }
         require(!host.contains(Regex("[\\s/@?#]"))) { "Enter a server host without a URL or port" }
         require(!username.contains(':') && !(username + password).contains(Regex("[\\r\\n\\u0000]"))) {
             "Invalid provider credentials"
@@ -33,7 +36,7 @@ data class UsenetProvider(
         val credentials = if (username.isNotEmpty() || password.isNotEmpty()) {
             "${encode(username)}:${encode(password)}@"
         } else ""
-        return "${if (tls) "nntps" else "nntp"}://$credentials$authority:$port/$connections"
+        return "${if (tls) "nntps" else "nntp"}://$credentials$authority:$port/$connections?priority=$priority"
     }
 
     override fun toString() = "UsenetProvider(id=$id, enabled=$enabled)"
@@ -46,11 +49,14 @@ data class UsenetIndexer(
     /** Complete Newznab API endpoint, including /api or a Prowlarr indexer path. */
     val apiUrl: String = "",
     val apiKey: String = "",
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    /** Equal priorities are searched together; lower priorities only when higher ones find nothing. */
+    val priority: Int = 1
 ) {
     fun validate() {
         val url = apiUrl.toHttpUrlOrNull()
         require(name.isNotBlank() && url != null) { "A name and valid HTTP(S) API URL are required" }
+        require(priority in USENET_PRIORITIES) { "Invalid priority" }
         require(url.username.isEmpty() && url.password.isEmpty() && url.fragment == null) {
             "Use an API URL without user credentials or a fragment"
         }
@@ -72,9 +78,16 @@ data class UsenetSourceConfiguration(
     val maxSizeGb: Int = 0,
     val maxAgeDays: Int = 0,
     val maxResults: Int = 50,
-    val excludeLowQuality: Boolean = true
+    val excludeLowQuality: Boolean = true,
+    /** On: lower indexer priorities are only searched when higher ones find nothing. */
+    val indexerFallback: Boolean = false,
+    /** On: a release found by several indexers is shown once, from the highest priority. */
+    val hideDuplicates: Boolean = false
 ) {
     val ready: Boolean get() = enabled && providers.any { it.enabled } && indexers.any { it.enabled }
+
+    /** List order is the hierarchy: by priority, then by the user's order within a priority. */
+    fun normalized() = copy(providers = providers.sortedBy { it.priority }, indexers = indexers.sortedBy { it.priority })
 
     fun validate() {
         require(providers.size <= 64 && indexers.size <= 20) { "Too many providers or indexers" }
@@ -87,5 +100,8 @@ data class UsenetSourceConfiguration(
         require(maxSizeGb in 0..1000 && maxAgeDays in 0..10000 && maxResults in 1..200)
     }
 }
+
+/** 1 is the highest priority. */
+val USENET_PRIORITIES = 1..5
 
 private fun encode(value: String) = URLEncoder.encode(value, "UTF-8").replace("+", "%20")

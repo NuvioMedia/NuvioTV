@@ -161,6 +161,16 @@ class StreamRepositoryPluginIsolationTest {
         coVerify(exactly = 0) { harness.api.getStreams(any()) }
     }
 
+    @Test fun `failing built in search does not cancel addon results`() = runTest {
+        val source = MutableStateFlow(UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")),
+            indexers = listOf(UsenetIndexer(name = "Indexer", apiUrl = "https://indexer.test/api"))))
+        val harness = newHarness(emptyList(), source, flow { throw IllegalStateException("secret-api-key") })
+        val success = harness.repository.getStreamsFromAllAddons("movie", "tt123", null, null).toList()
+            .last() as NetworkResult.Success
+        assertEquals(listOf("Fast Addon"), success.data.map { it.addonName })
+    }
+
     private fun newHarness(enabledScrapers: List<ScraperInfo>,
         sources: MutableStateFlow<UsenetSourceConfiguration> = MutableStateFlow(UsenetSourceConfiguration()),
         usenetResults: Flow<BuiltInUsenetResult> = emptyFlow(),

@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
+import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.w3c.dom.Element
@@ -21,6 +22,7 @@ data class UsenetSearchRequest(
     val series: Boolean = false
 )
 
+@Serializable
 data class NewznabCapabilities(
     val movieParams: Set<String> = setOf("imdbid"),
     val tvParams: Set<String> = setOf("imdbid", "season", "ep"),
@@ -147,8 +149,11 @@ object NewznabProtocol {
             val title = request.title?.let(::normalize)?.takeIf { it.isNotEmpty() } ?: return false
             if (!" ${normalize(release.title)} ".contains(" $title ")) return false
             if (!request.series && request.year != null) {
-                val year = Regex("(?:^|[ ._-])((?:19|20)\\d{2})(?:$|[ ._-])").find(release.title)?.groupValues?.get(1)?.toInt()
-                if (year != null && year != request.year) return false
+                // Year-like title words (Blade Runner 2049, 1917) are not release years.
+                val titleWords = title.split(' ').toSet()
+                val years = Regex("(?<![\\p{L}\\p{N}])((?:19|20)\\d{2})(?![\\p{L}\\p{N}])").findAll(release.title)
+                    .map { it.groupValues[1] }.toList()
+                if (request.year.toString() !in years && years.any { it !in titleWords }) return false
             }
         }
         if (request.series) {
@@ -169,6 +174,23 @@ object NewznabProtocol {
             return idSearch // Obfuscated ID-matched releases rely on the engine's file selection.
         }
         return true
+    }
+
+    /**
+     * Keeps one copy of a release found by several indexers: the one from the highest
+     * indexer priority (then list order) that passes the filters. Names are compared
+     * ignoring case and punctuation, since indexers write separators differently.
+     */
+    fun withoutDuplicates(releases: List<UsenetRelease>, config: UsenetSourceConfiguration,
+        now: Long = System.currentTimeMillis()): List<UsenetRelease> {
+        val order = config.indexers.mapIndexed { i, indexer -> indexer.id to i }.toMap()
+        fun name(release: UsenetRelease) =
+            release.title.lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+        return releases.groupBy(::name).values.map { copies ->
+            // A preferred copy hidden by a filter (no size, passworded) must not hide the others.
+            copies.filter { arrange(listOf(it), config, now).isNotEmpty() }.ifEmpty { copies }
+                .minBy { order[it.indexerId] ?: Int.MAX_VALUE }
+        }
     }
 
     fun arrange(releases: List<UsenetRelease>, config: UsenetSourceConfiguration,
@@ -198,13 +220,21 @@ object NewznabProtocol {
         val root = factory.newDocumentBuilder().parse(InputSource(StringReader(xml))).documentElement
         if (root.localName == "error") {
             val code = root.getAttribute("code")
+            if (code in setOf("429", "500", "501")) throw NewznabQuotaException()
             error(when (code) {
                 "100", "101", "102" -> "Indexer authentication failed"
-                "500", "501" -> "Indexer rate limit reached"
                 "200", "201", "202", "203" -> "Indexer does not support this search"
                 else -> "Indexer returned an API error"
             })
         }
         return root
     }
+
+    /** Some indexers pair an HTTP error status with a Newznab error document. */
+    fun throwIfQuotaError(xml: String) {
+        try { document(xml) } catch (e: NewznabQuotaException) { throw e } catch (_: Exception) { }
+    }
 }
+
+/** The indexer reported its request or download quota as spent (Newznab 429/500/501). */
+class NewznabQuotaException : IllegalStateException("Indexer rate limit reached")

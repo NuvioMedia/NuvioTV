@@ -15,7 +15,18 @@ class NewznabProtocolTest {
         assertEquals("a@b:a:+ %/", uri.userInfo)
         assertEquals(563, uri.port)
         assertEquals("/30", uri.path)
+        assertEquals("priority=1", uri.query)
         assertFalse(provider.toString().contains(provider.password))
+    }
+
+    @Test fun `hierarchy orders sources by priority and keeps user order within a priority`() {
+        val providers = listOf(3, 1, 2, 1).mapIndexed { i, p -> UsenetProvider(id = "p$i", name = "P", host = "h", priority = p) }
+        val indexers = listOf(2, 1).mapIndexed { i, p -> indexer.copy(id = "i$i", priority = p) }
+        val normalized = UsenetSourceConfiguration(providers = providers, indexers = indexers).normalized()
+        assertEquals(listOf("p1", "p3", "p2", "p0"), normalized.providers.map { it.id })
+        assertEquals(listOf("i1", "i0"), normalized.indexers.map { it.id })
+        assertThrows(IllegalArgumentException::class.java) { providers[0].copy(priority = 0).validate() }
+        assertThrows(IllegalArgumentException::class.java) { indexer.copy(priority = 6).validate() }
     }
 
     @Test fun `episode id search keeps season zero and encoded keys`() {
@@ -61,6 +72,18 @@ class NewznabProtocolTest {
         assertTrue(release.passworded)
         assertTrue(release.publishedAt > 0)
         assertEquals("https://indexer.test/get?id=1&apikey=secret", release.nzbUrl)
+    }
+
+    @Test fun `repeated releases keep the highest priority copy that passes the filters`() {
+        val low = indexer.copy(id = "low", priority = 2)
+        val config = UsenetSourceConfiguration(indexers = listOf(indexer, low))
+        val preferred = UsenetRelease("Show.S01E01.1080p-GRP", "https://a/1", indexerId = indexer.id)
+        val repeat = UsenetRelease("show s01e01 1080p grp", "https://b/1", indexerId = low.id)
+        val other = UsenetRelease("Show.S01E01.720p-GRP", "https://b/2", indexerId = low.id)
+        assertEquals(listOf(preferred, other), NewznabProtocol.withoutDuplicates(listOf(repeat, preferred, other), config))
+        // A passworded preferred copy is filtered out later; the repeat must survive instead.
+        assertEquals(listOf(repeat, other),
+            NewznabProtocol.withoutDuplicates(listOf(preferred.copy(passworded = true), repeat, other), config))
     }
 
     @Test fun `sort filters duplicates and is stable regardless of response order`() {
@@ -114,6 +137,13 @@ class NewznabProtocolTest {
         assertTrue(NewznabProtocol.matches(UsenetRelease("The.Movie.2020.1080p", "url"), movie, false))
         assertFalse(NewznabProtocol.matches(UsenetRelease("The.Movie.2021.1080p", "url"), movie, false))
         assertFalse(NewznabProtocol.matches(UsenetRelease("Another.Movie.2020.1080p", "url"), movie, false))
+        assertTrue(NewznabProtocol.matches(UsenetRelease("The.Movie.(2020).1080p", "url"), movie, false))
+        // Year-like words in the title are not the release year.
+        val sequel = UsenetSearchRequest(title = "Blade Runner 2049", year = 2017)
+        assertTrue(NewznabProtocol.matches(UsenetRelease("Blade.Runner.2049.2017.2160p", "url"), sequel, false))
+        assertTrue(NewznabProtocol.matches(UsenetRelease("Blade.Runner.2049.1080p", "url"), sequel, false))
+        assertFalse(NewznabProtocol.matches(UsenetRelease("Blade.Runner.2049.2018.1080p", "url"), sequel, false))
+        assertTrue(NewznabProtocol.matches(UsenetRelease("1917.2019.1080p", "url"), UsenetSearchRequest(title = "1917", year = 2019), false))
         val series = UsenetSearchRequest(title = "A Show", series = true, season = 1, episode = 5)
         assertFalse(NewznabProtocol.matches(UsenetRelease("A.Show.S01E04.1080p", "url"), series, true))
         assertFalse(NewznabProtocol.matches(UsenetRelease("A.Show.1x04.1080p", "url"), series, true))

@@ -212,6 +212,13 @@ class StreamRepositoryImpl @Inject constructor(
                                     StreamFailureKind.REQUEST_FAILED, it)
                             }
                         }
+                    } catch (e: Exception) {
+                        // Like addon jobs: a failure here must not cancel the sibling searches.
+                        if (e is CancellationException) throw e
+                        Log.e(TAG, "Built-in Usenet search failed: ${e.javaClass.simpleName}")
+                        attemptedFailures += StreamAttemptFailure(BuiltInUsenetService.GROUP_NAME,
+                            StreamFailureKind.REQUEST_FAILED,
+                            context.getString(com.nuvio.tv.R.string.stream_error_detail_addon_request_failed))
                     } finally {
                         if (completedJobs.incrementAndGet() >= totalJobs) resultChannel.close()
                     }

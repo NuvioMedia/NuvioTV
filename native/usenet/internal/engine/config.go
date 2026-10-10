@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -70,6 +71,11 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 	if len(servers) > 64 {
 		return nil, fmt.Errorf("too many Usenet servers")
 	}
+	priorities, err := ProviderPriorities(servers)
+	if err != nil {
+		return nil, err
+	}
+	preferred := slices.Min(priorities)
 	ps := make([]nntppool.Provider, 0, len(servers))
 	remaining := cfg.MaxConnections
 	total := 0
@@ -115,6 +121,10 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 			SkipPing:       true, IdleTimeout: 45 * time.Second, StallTimeout: 12 * time.Second,
 			AbortDrainBytes: 64 << 10,
 		}
+		if priorities[i] > preferred {
+			// Lower-priority providers only serve failover; do not hold idle sockets.
+			p.MinConnections = 0
+		}
 		if u.User != nil {
 			p.Auth.Username = u.User.Username()
 			p.Auth.Password, _ = u.User.Password()
@@ -133,4 +143,24 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 		}
 	}
 	return ps, nil
+}
+
+// ProviderPriorities reads each server's optional ?priority=N (0 when absent).
+// Lower values are preferred; servers with equal values share article traffic.
+func ProviderPriorities(servers []string) ([]int, error) {
+	priorities := make([]int, len(servers))
+	for i, raw := range servers {
+		u, err := url.Parse(raw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Usenet server %d", i+1)
+		}
+		if s := u.Query().Get("priority"); s != "" {
+			n, err := strconv.Atoi(s)
+			if err != nil || n < 0 || n > 99 {
+				return nil, fmt.Errorf("invalid Usenet server priority")
+			}
+			priorities[i] = n
+		}
+	}
+	return priorities, nil
 }

@@ -184,7 +184,8 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	// Cancelling the open HTTP request tears down its work. Once committed,
 	// session lifetime is independent of this one request.
 	stop := context.AfterFunc(r.Context(), cancel)
-	pool, err := s.pools.acquireForRequest(s.ctx, ctx, providers, req.Config.AllowPrivateNetwork)
+	priorities, _ := ProviderPriorities(req.Servers) // Validated by Providers.
+	pool, err := s.pools.acquireForRequest(s.ctx, ctx, providers, priorities, req.Config.AllowPrivateNetwork)
 	if err != nil {
 		stop()
 		cancel()

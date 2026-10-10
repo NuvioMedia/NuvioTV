@@ -1,6 +1,8 @@
 package com.nuvio.tv.core.di
 
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
+import com.nuvio.tv.core.usenet.NewznabStateStorage
+import com.nuvio.tv.core.usenet.SharedPreferencesNewznabStateStorage
 import com.nuvio.tv.core.usenet.UsenetSourceSettings
 import dagger.Binds
 import dagger.Module
@@ -14,4 +16,11 @@ abstract class UsenetModule {
     @Binds
     @IntoSet
     abstract fun bindUsenetCredentials(store: UsenetSourceSettings): ProfileScopedCredentialStore
+
+    @Binds
+    abstract fun bindNewznabStateStorage(storage: SharedPreferencesNewznabStateStorage): NewznabStateStorage
+
+    @Binds
+    @IntoSet
+    abstract fun bindNewznabStateReset(storage: SharedPreferencesNewznabStateStorage): ProfileScopedCredentialStore
 }

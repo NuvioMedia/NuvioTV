@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -35,7 +36,7 @@ class UsenetSourcesViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            settings.snapshots.collectLatest { (profileId, result) ->
+            settings.snapshots.flowOn(Dispatchers.IO).collectLatest { (profileId, result) ->
                 state.value = result.fold(
                     onSuccess = { UsenetSourcesUiState(profileId, it, loaded = true) },
                     onFailure = { UsenetSourcesUiState(profileId, error = true) }
@@ -46,14 +47,16 @@ class UsenetSourcesViewModel @Inject constructor(
 
     fun update(configuration: UsenetSourceConfiguration, profileId: Int) {
         if (!state.value.loaded || profiles.activeProfileId.value != profileId) return
+        // Synchronous so that quick successive edits never build on a stale configuration.
+        val normalized = configuration.normalized()
         try {
-            settings.update(configuration, profileId)
-            state.value = UsenetSourcesUiState(profileId, configuration, loaded = true)
+            settings.update(normalized, profileId)
+            state.value = UsenetSourcesUiState(profileId, normalized, loaded = true)
         } catch (_: Exception) { state.value = state.value.copy(error = true) }
     }
 
     suspend fun test(indexer: UsenetIndexer): Boolean = withContext(Dispatchers.IO) {
-        try { indexer.validate(); client.capabilities(indexer); true }
+        try { indexer.validate(); client.capabilities(indexer, live = true); true }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { false }
     }
