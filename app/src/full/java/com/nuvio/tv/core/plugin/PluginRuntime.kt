@@ -66,6 +66,7 @@ class PluginRuntime @Inject constructor() {
         scraperId: String,
         scraperSettingsJson: String,
         tmdbApiKey: String,
+        localStorage: MutableMap<String, String>,
         onResult: (String) -> Unit
     ) {
         val log = Logger.withTag(TAG)
@@ -106,13 +107,32 @@ class PluginRuntime @Inject constructor() {
         runtime.function("__get_scraper_id") { scraperId }
         runtime.function("__get_scraper_settings") { scraperSettingsJson }
         runtime.function("__get_tmdb_api_key") { tmdbApiKey }
+        runtime.function("__local_storage_get") { args ->
+            localStorage[args.getOrNull(0)?.toString() ?: ""]
+        }
+        runtime.function("__local_storage_set") { args ->
+            val key = args.getOrNull(0)?.toString() ?: "undefined"
+            val value = if (args.size > 1) args[1]?.toString() ?: "null" else "undefined"
+            localStorage[key] = value
+            null
+        }
+        runtime.function("__local_storage_remove") { args ->
+            localStorage.remove(args.getOrNull(0)?.toString() ?: "undefined")
+            null
+        }
+        runtime.function("__local_storage_clear") {
+            localStorage.clear()
+            null
+        }
+        runtime.function("__local_storage_keys") { gson.toJson(localStorage.keys.toList()) }
+        runtime.function("__local_storage_length") { localStorage.size }
         runtime.function("__capture_result") { args ->
             onResult(args.getOrNull(0)?.toString() ?: "[]")
             null
         }
     }
 
-    suspend fun getSettingsLayout(scraperId: String, code: String, scraperSettings: Map<String, Any> = mapOf()): String? = withTimeout(
+    suspend fun getSettingsLayout(scraperId: String, code: String, scraperSettings: Map<String, Any> = mapOf(), localStorage: MutableMap<String, String> = mutableMapOf()): String? = withTimeout(
         PLUGIN_TIMEOUT_MS.milliseconds
     ) {
         val deferred = CompletableDeferred<String?>()
@@ -124,6 +144,7 @@ class PluginRuntime @Inject constructor() {
                     "${scraperId}:settings-preview",
                     scraperSettingsJson,
                     BuildConfig.TMDB_API_KEY,
+                    localStorage
                 ) { deferred.complete(it) }
                 evaluate<Any?>(getCompiledPolyfillBytecode(this))
                 getCompiledCryptoJsBytecode(this)?.let { evaluate<Any?>(it) }
@@ -348,9 +369,10 @@ class PluginRuntime @Inject constructor() {
         season: Int?,
         episode: Int?,
         scraperId: String,
-        scraperSettings: Map<String, Any> = emptyMap()
+        scraperSettings: Map<String, Any> = emptyMap(),
+        localStorage: MutableMap<String, String> = mutableMapOf()
     ): List<LocalScraperResult> = withTimeout(PLUGIN_TIMEOUT_MS) {
-        executePluginInternal(code, tmdbId, mediaType, season, episode, scraperId, scraperSettings)
+        executePluginInternal(code, tmdbId, mediaType, season, episode, scraperId, scraperSettings, localStorage)
     }
 
     private suspend fun executePluginInternal(
@@ -360,7 +382,8 @@ class PluginRuntime @Inject constructor() {
         season: Int?,
         episode: Int?,
         scraperId: String,
-        scraperSettings: Map<String, Any>
+        scraperSettings: Map<String, Any>,
+        localStorage: MutableMap<String, String>
     ): List<LocalScraperResult> {
         val documentCache = ConcurrentHashMap<String, Document>()
         val loadedDocIds = java.util.Collections.synchronizedList(mutableListOf<String>())
@@ -557,6 +580,7 @@ class PluginRuntime @Inject constructor() {
                     scraperId,
                     settingsJson,
                     BuildConfig.TMDB_API_KEY,
+                    localStorage,
                 )
                 { result -> resultJson = result }
 
@@ -815,6 +839,68 @@ class PluginRuntime @Inject constructor() {
             if (typeof globalThis.self === 'undefined') {
                 globalThis.self = globalThis;
             }
+
+            // localStorage is isolated by scraper and profile on the host side.
+            var __localStorageTarget = {};
+            var __localStorageMethods = {
+                getItem: function(key) {
+                    key = String(key);
+                    var value = __local_storage_get(key);
+                    return value === null || value === undefined ? null : String(value);
+                },
+                setItem: function(key, value) {
+                    __local_storage_set(String(key), String(value));
+                },
+                removeItem: function(key) {
+                    __local_storage_remove(String(key));
+                },
+                clear: function() {
+                    __local_storage_clear();
+                },
+                key: function(index) {
+                    index = Number(index);
+                    if (!Number.isFinite(index) || index < 0) return null;
+                    var keys = JSON.parse(__local_storage_keys());
+                    return keys[Math.floor(index)] === undefined ? null : keys[Math.floor(index)];
+                }
+            };
+            var localStorage = new Proxy(__localStorageTarget, {
+                get: function(target, property) {
+                    if (property === 'length') return __local_storage_length();
+                    if (property === Symbol.toStringTag) return 'Storage';
+                    if (typeof property !== 'string') return undefined;
+                    if (Object.prototype.hasOwnProperty.call(__localStorageMethods, property))
+                        return __localStorageMethods[property];
+                    var value = __local_storage_get(property);
+                    return value === null || value === undefined ? undefined : String(value);
+                },
+                set: function(target, property, value) {
+                    if (typeof property !== 'string') return false;
+                    __local_storage_set(property, String(value));
+                    return true;
+                },
+                deleteProperty: function(target, property) {
+                    if (typeof property === 'string') __local_storage_remove(property);
+                    return true;
+                },
+                ownKeys: function() {
+                    return JSON.parse(__local_storage_keys());
+                },
+                has: function(target, property) {
+                    if (typeof property !== 'string') return false;
+                    return __localStorageMethods[property] !== undefined ||
+                        (property === 'length' ||
+                            (__local_storage_get(property) !== null && __local_storage_get(property) !== undefined));
+                },
+                getOwnPropertyDescriptor: function(target, property) {
+                    var value = typeof property === 'string' ? __local_storage_get(property) : null;
+                    if (value !== null && value !== undefined)
+                        return { configurable: true, enumerable: true, writable: true,
+                            value: value };
+                    return undefined;
+                }
+            });
+            globalThis.localStorage = localStorage;
 
             // Fetch implementation (async)
             function __fetch_bytes_to_base64(bytes) {
