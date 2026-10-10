@@ -74,6 +74,18 @@ class NewznabProtocolTest {
         assertEquals("https://indexer.test/get?id=1&apikey=secret", release.nzbUrl)
     }
 
+    @Test fun `repeated releases keep the highest priority copy that passes the filters`() {
+        val low = indexer.copy(id = "low", priority = 2)
+        val config = UsenetSourceConfiguration(indexers = listOf(indexer, low))
+        val preferred = UsenetRelease("Show.S01E01.1080p-GRP", "https://a/1", indexerId = indexer.id)
+        val repeat = UsenetRelease("show s01e01 1080p grp", "https://b/1", indexerId = low.id)
+        val other = UsenetRelease("Show.S01E01.720p-GRP", "https://b/2", indexerId = low.id)
+        assertEquals(listOf(preferred, other), NewznabProtocol.withoutDuplicates(listOf(repeat, preferred, other), config))
+        // A passworded preferred copy is filtered out later; the repeat must survive instead.
+        assertEquals(listOf(repeat, other),
+            NewznabProtocol.withoutDuplicates(listOf(preferred.copy(passworded = true), repeat, other), config))
+    }
+
     @Test fun `sort filters duplicates and is stable regardless of response order`() {
         val now = 1800000000000L
         val config = UsenetSourceConfiguration(indexers = listOf(indexer), maxResults = 2, minResolution = 720, maxSizeGb = 10, maxAgeDays = 30)

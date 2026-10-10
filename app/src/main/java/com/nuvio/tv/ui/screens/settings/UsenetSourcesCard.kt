@@ -80,6 +80,12 @@ internal fun UsenetSourcesCard(
                 value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
                 onClick = { selectedId = item.id; picker = "indexer" })
         }
+        SettingsToggleRow(title = stringResource(R.string.usenet_indexer_fallback),
+            subtitle = stringResource(R.string.usenet_indexer_fallback_description), checked = configuration.indexerFallback,
+            onToggle = { update(configuration.copy(indexerFallback = !configuration.indexerFallback)) })
+        SettingsToggleRow(title = stringResource(R.string.usenet_hide_duplicates),
+            subtitle = stringResource(R.string.usenet_hide_duplicates_description), checked = configuration.hideDuplicates,
+            onToggle = { update(configuration.copy(hideDuplicates = !configuration.hideDuplicates)) })
         if (configuration.enabled && !configuration.ready) {
             Text(stringResource(R.string.usenet_sources_needed), color = NuvioTheme.colors.TextSecondary)
         }

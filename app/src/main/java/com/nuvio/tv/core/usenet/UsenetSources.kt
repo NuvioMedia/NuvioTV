@@ -78,7 +78,11 @@ data class UsenetSourceConfiguration(
     val maxSizeGb: Int = 0,
     val maxAgeDays: Int = 0,
     val maxResults: Int = 50,
-    val excludeLowQuality: Boolean = true
+    val excludeLowQuality: Boolean = true,
+    /** On: lower indexer priorities are only searched when higher ones find nothing. */
+    val indexerFallback: Boolean = false,
+    /** On: a release found by several indexers is shown once, from the highest priority. */
+    val hideDuplicates: Boolean = false
 ) {
     val ready: Boolean get() = enabled && providers.any { it.enabled } && indexers.any { it.enabled }
 

@@ -192,8 +192,12 @@ class BuiltInUsenetService @Inject constructor(
                 catch (_: Exception) { null }
             }
             val releases = mutableListOf<UsenetRelease>()
-            // Equal priorities are searched together; lower ones only when nothing playable was found.
-            val tiers = config.indexers.filter { it.enabled }.groupBy { it.priority }.toSortedMap().values
+            fun arranged() = NewznabProtocol.arrange(
+                if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config)
+            val enabled = config.indexers.filter { it.enabled }
+            // Every indexer is searched at once unless the user chose priority fallback: then equal
+            // priorities are searched together and lower ones only when nothing playable was found.
+            val tiers = if (config.indexerFallback) enabled.groupBy { it.priority }.toSortedMap().values else listOf(enabled)
             for (tier in tiers) {
                 val results = Channel<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>(Channel.UNLIMITED)
                 val jobs = tier.map { indexer ->
@@ -219,12 +223,12 @@ class BuiltInUsenetService @Inject constructor(
                         } else "${indexer.name}: indexer search failed. Check the API URL, key and limits."))
                     } else {
                         releases += result.getOrThrow()
-                        val arranged = NewznabProtocol.arrange(releases, config)
+                        val arranged = arranged()
                         if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
                             arranged.map { it.toStream(config) })))
                     }
                 }
-                if (NewznabProtocol.arrange(releases, config).isNotEmpty()) break
+                if (arranged().isNotEmpty()) break
             }
             metadata.cancel()
         }

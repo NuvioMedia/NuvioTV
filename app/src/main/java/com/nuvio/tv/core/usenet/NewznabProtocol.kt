@@ -176,6 +176,23 @@ object NewznabProtocol {
         return true
     }
 
+    /**
+     * Keeps one copy of a release found by several indexers: the one from the highest
+     * indexer priority (then list order) that passes the filters. Names are compared
+     * ignoring case and punctuation, since indexers write separators differently.
+     */
+    fun withoutDuplicates(releases: List<UsenetRelease>, config: UsenetSourceConfiguration,
+        now: Long = System.currentTimeMillis()): List<UsenetRelease> {
+        val order = config.indexers.mapIndexed { i, indexer -> indexer.id to i }.toMap()
+        fun name(release: UsenetRelease) =
+            release.title.lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+        return releases.groupBy(::name).values.map { copies ->
+            // A preferred copy hidden by a filter (no size, passworded) must not hide the others.
+            copies.filter { arrange(listOf(it), config, now).isNotEmpty() }.ifEmpty { copies }
+                .minBy { order[it.indexerId] ?: Int.MAX_VALUE }
+        }
+    }
+
     fun arrange(releases: List<UsenetRelease>, config: UsenetSourceConfiguration,
         now: Long = System.currentTimeMillis()): List<UsenetRelease> {
         val priority = config.indexers.mapIndexed { i, indexer -> indexer.id to i }.toMap()

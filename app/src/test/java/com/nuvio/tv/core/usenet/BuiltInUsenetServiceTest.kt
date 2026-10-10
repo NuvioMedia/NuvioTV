@@ -38,11 +38,30 @@ class BuiltInUsenetServiceTest {
     private fun release(indexer: UsenetIndexer, title: String = "Movie.2020.1080p") =
         UsenetRelease(title, "${indexer.apiUrl}/nzb/$title", indexerId = indexer.id, indexerName = indexer.name)
 
-    @Test fun `lower priority indexers are only searched when higher ones find nothing`() = runTest {
+    @Test fun `every indexer is searched by default and repeated releases are kept unless hidden`() = runTest {
+        val first = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api", priority = 1)
+        val backup = UsenetIndexer(id = "c", name = "C", apiUrl = "https://c.test/api", priority = 2)
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(first, backup))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(first, any(), any()) } returns listOf(release(first, "Movie.2020.1080p-GRP"))
+        coEvery { client.search(backup, any(), any()) } returns
+            listOf(release(backup, "Movie 2020 1080p-GRP"), release(backup, "Movie.2020.720p-GRP"))
+        val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
+        suspend fun names(config: UsenetSourceConfiguration) =
+            service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams.map { it.title }
+        assertEquals(listOf("Movie.2020.1080p-GRP", "Movie 2020 1080p-GRP", "Movie.2020.720p-GRP"), names(config))
+        coVerify { client.search(backup, any(), any()) }
+        // Hidden repeats keep the higher-priority indexer's copy.
+        assertEquals(listOf("Movie.2020.1080p-GRP", "Movie.2020.720p-GRP"), names(config.copy(hideDuplicates = true)))
+    }
+
+    @Test fun `with fallback on lower priority indexers are only searched when higher ones find nothing`() = runTest {
         val first = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api", priority = 1)
         val shared = UsenetIndexer(id = "b", name = "B", apiUrl = "https://b.test/api", priority = 1)
         val backup = UsenetIndexer(id = "c", name = "C", apiUrl = "https://c.test/api", priority = 2)
-        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(backup, first, shared))
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(backup, first, shared),
+            indexerFallback = true)
         val client = mockk<NewznabClient>()
         coEvery { client.capabilities(any()) } returns NewznabCapabilities()
         coEvery { client.search(first, any(), any()) } returns listOf(release(first))

@@ -48,6 +48,10 @@
     <string name="usenet_priority_highest">%1$d (highest)</string>
     <string name="usenet_priority_lowest">%1$d (lowest)</string>
     <string name="usenet_provider_priority_hint">Providers with the same priority share traffic. Lower priorities are only used for articles the higher ones are missing.</string>
-    <string name="usenet_indexer_priority_hint">Indexers with the same priority are searched together. Lower priorities are only searched when the higher ones find nothing.</string>
+    <string name="usenet_indexer_priority_hint">Priority orders your indexers. It decides which copy of a repeated release is kept when Hide repeated releases is on, and which indexers are searched first when Search lower priorities only as fallback is on.</string>
+    <string name="usenet_indexer_fallback">Search lower priorities only as fallback</string>
+    <string name="usenet_indexer_fallback_description">Off: every indexer is searched. On: lower-priority indexers are only searched when the higher ones find nothing, which saves API hits.</string>
+    <string name="usenet_hide_duplicates">Hide repeated releases</string>
+    <string name="usenet_hide_duplicates_description">Show a release found by several indexers once, from the indexer with the highest priority.</string>
     <string name="usenet_sources_save_error">Could not load or save Usenet sources. Check device storage and try again.</string>
 </resources>

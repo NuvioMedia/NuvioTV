@@ -23,13 +23,18 @@ priority.
   every higher-priority provider is missing or failed to serve, so a block
   account behind an unlimited one is only charged for those articles. They
   open no idle connections in advance.
-- **Indexers with the same priority are searched together** and their results
-  merged. Lower-priority indexers are only queried when the higher ones
-  produced no result that passes the filters (including when they failed),
-  which saves API hits on limited indexers.
+- **Indexers are all searched by default**, and their results merged. Their
+  priority only matters through two options, both off by default:
+  - **Hide repeated releases** shows a release found by several indexers once:
+    the copy from the highest priority (then list order) that passes the
+    filters. Names are compared ignoring case and punctuation.
+  - **Search lower priorities only as fallback** searches equal priorities
+    together and queries lower ones only when the higher ones produced no
+    result that passes the filters (including when they failed). This saves
+    API hits on limited indexers.
 
-Keep everything at priority 1 to balance all sources; give each its own
-priority for a strict preference order. Providers pass their priority to the
+For providers, keep everything at priority 1 to balance them, or give each its
+own priority for a strict preference order. Providers pass their priority to the
 engine as `?priority=N` on the server URL. Lower values are preferred, and a
 server without one counts as 0. Addon-supplied servers can use the same
 parameter.
