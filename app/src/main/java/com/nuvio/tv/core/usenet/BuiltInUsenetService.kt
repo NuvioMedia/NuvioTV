@@ -18,6 +18,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
@@ -115,31 +116,42 @@ class BuiltInUsenetService @Inject constructor(
             episode = resolvedEpisode, series = series)
         if (series && (resolvedSeason == null || resolvedSeason < 0 || resolvedEpisode == null || resolvedEpisode < 1)) return@flow
         coroutineScope {
-            val metadata = async(start = CoroutineStart.LAZY) { metadata(request, videoId, type) }
-            val results = Channel<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>(Channel.UNLIMITED)
-            val jobs = config.indexers.filter { it.enabled }.map { indexer ->
-                launch {
-                    val result = try {
-                        val caps = client.capabilities(indexer)
-                        val canSearchId = NewznabProtocol.searchUrl(indexer, request, caps) != null
-                        Result.success(client.search(indexer, if (canSearchId) request else metadata.await(), caps))
-                    } catch (e: CancellationException) { throw e }
-                    catch (e: Exception) { Result.failure(e) }
-                    results.send(indexer to result)
-                }
+            // A failed child would cancel this scope; keep lookup failures per indexer.
+            val metadata = async(start = CoroutineStart.LAZY) {
+                try { metadata(request, videoId, type) }
+                catch (e: CancellationException) { throw e }
+                catch (_: Exception) { null }
             }
-            launch { jobs.forEach { it.join() }; results.close() }
             val releases = mutableListOf<UsenetRelease>()
-            for ((indexer, result) in results) {
-                if (result.isFailure) {
-                    // Never display raw exception messages: network/parser errors can contain keys.
-                    emit(BuiltInUsenetResult(failure = "${indexer.name}: indexer search failed. Check the API URL, key and limits."))
-                } else {
-                    releases += result.getOrThrow()
-                    val arranged = NewznabProtocol.arrange(releases, config)
-                    if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
-                        arranged.map { it.toStream(config) })))
+            // Equal priorities are searched together; lower ones only when nothing playable was found.
+            val tiers = config.indexers.filter { it.enabled }.groupBy { it.priority }.toSortedMap().values
+            for (tier in tiers) {
+                val results = Channel<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>(Channel.UNLIMITED)
+                val jobs = tier.map { indexer ->
+                    launch {
+                        val result = try {
+                            val caps = client.capabilities(indexer)
+                            val canSearchId = NewznabProtocol.searchUrl(indexer, request, caps) != null
+                            val search = if (canSearchId) request else metadata.await() ?: error("Metadata unavailable")
+                            Result.success(client.search(indexer, search, caps))
+                        } catch (e: CancellationException) { throw e }
+                        catch (e: Exception) { Result.failure(e) }
+                        results.send(indexer to result)
+                    }
                 }
+                launch { jobs.joinAll(); results.close() }
+                for ((indexer, result) in results) {
+                    if (result.isFailure) {
+                        // Never display raw exception messages: network/parser errors can contain keys.
+                        emit(BuiltInUsenetResult(failure = "${indexer.name}: indexer search failed. Check the API URL, key and limits."))
+                    } else {
+                        releases += result.getOrThrow()
+                        val arranged = NewznabProtocol.arrange(releases, config)
+                        if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
+                            arranged.map { it.toStream(config) })))
+                    }
+                }
+                if (NewznabProtocol.arrange(releases, config).isNotEmpty()) break
             }
             metadata.cancel()
         }

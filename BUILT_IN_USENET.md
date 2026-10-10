@@ -5,11 +5,34 @@ provider, and add a Newznab-compatible indexer. No stream addon is needed for
 this source. Existing addon sources can still be used alongside it.
 
 Providers accept a host, port, TLS setting, username, password and connection
-allowance. Add multiple providers for missing-article failover. Article traffic
-is shared according to available connection capacity; provider ordering controls
-the subsequent failover traversal. The existing global maximum-connections setting
-can further limit their combined allowance. For a private/local NNTP server,
-enable **Allow self-hosted servers** in the performance settings.
+allowance. Add multiple providers for missing-article failover. The existing
+global maximum-connections setting can further limit their combined allowance.
+For a private/local NNTP server, enable **Allow self-hosted servers** in the
+performance settings.
+
+## Source hierarchy
+
+Every provider and indexer has a priority from 1 (highest) to 5. The list is
+always ordered by priority; **Move up/down** changes the order within one
+priority.
+
+- **Providers with the same priority are load balanced.** Article traffic is
+  shared by available connection capacity, then fails over through the rest of
+  that priority in list order.
+- **Lower-priority providers are backups.** They only receive articles that
+  every higher-priority provider is missing or failed to serve, so a block
+  account behind an unlimited one is only charged for those articles. They
+  open no idle connections in advance.
+- **Indexers with the same priority are searched together** and their results
+  merged. Lower-priority indexers are only queried when the higher ones
+  produced no result that passes the filters (including when they failed),
+  which saves API hits on limited indexers.
+
+Keep everything at priority 1 to balance all sources; give each its own
+priority for a strict preference order. Providers pass their priority to the
+engine as `?priority=N` on the server URL. Lower values are preferred, and a
+server without one counts as 0. Addon-supplied servers can use the same
+parameter.
 
 Indexers accept a complete API endpoint and API key. Examples:
 
@@ -18,7 +41,7 @@ Indexers accept a complete API endpoint and API key. Examples:
 - `http://prowlarr.local:9696/1/api` (the individual indexer's Newznab endpoint)
 
 Use **Test indexer** to check its capabilities. Each source can be edited,
-disabled, deleted or moved in priority. Credentials are stored as AES-GCM
+disabled, deleted, reprioritized or reordered. Credentials are stored as AES-GCM
 ciphertext protected by Android Keystore, separately for each profile. They
 are device-local and are not included in account/profile synchronization.
 

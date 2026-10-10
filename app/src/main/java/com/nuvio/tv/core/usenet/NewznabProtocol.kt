@@ -147,8 +147,11 @@ object NewznabProtocol {
             val title = request.title?.let(::normalize)?.takeIf { it.isNotEmpty() } ?: return false
             if (!" ${normalize(release.title)} ".contains(" $title ")) return false
             if (!request.series && request.year != null) {
-                val year = Regex("(?:^|[ ._-])((?:19|20)\\d{2})(?:$|[ ._-])").find(release.title)?.groupValues?.get(1)?.toInt()
-                if (year != null && year != request.year) return false
+                // Year-like title words (Blade Runner 2049, 1917) are not release years.
+                val titleWords = title.split(' ').toSet()
+                val years = Regex("(?<![\\p{L}\\p{N}])((?:19|20)\\d{2})(?![\\p{L}\\p{N}])").findAll(release.title)
+                    .map { it.groupValues[1] }.toList()
+                if (request.year.toString() !in years && years.any { it !in titleWords }) return false
             }
         }
         if (request.series) {
