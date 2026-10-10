@@ -25,6 +25,18 @@ class AfrPreflightGateTest {
     }
 
     @Test
+    fun `a start-up replaced by an episode switch after its preflight stays stale until it builds`() {
+        val gate = AfrPreflightGate()
+        val oldStartup = gate.token()
+        assertTrue(gate.isCurrent(oldStartup))
+        gate.cancel()
+        val newStartup = gate.token()
+        assertFalse(gate.isCurrent(oldStartup))
+        assertTrue(gate.isCurrent(newStartup))
+        assertFalse(gate.isCurrent(oldStartup))
+    }
+
+    @Test
     fun `a token taken before two switches stays stale`() {
         val gate = AfrPreflightGate()
         val first = gate.token()
