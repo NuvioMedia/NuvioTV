@@ -41,6 +41,7 @@ sentryGradle = "6.14.0"
 benchmarkMacro = "1.4.1"
 androidxTestExtJunit = "1.2.1"
 androidxTestRunner = "1.6.2"
+espresso = "3.7.0"
 uiautomator = "2.3.0"
 profileinstaller = "1.4.1"
 baselineProfilePlugin = "1.4.1"
@@ -136,6 +137,7 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacro" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
+androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 
