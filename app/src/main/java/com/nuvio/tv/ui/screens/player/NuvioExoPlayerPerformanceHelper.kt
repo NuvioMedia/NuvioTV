@@ -105,13 +105,17 @@ object NuvioExoPlayerPerformanceHelper {
     @Volatile
     var enableHttp2: Boolean = false
 
+    /** The HTTP/2 toggle is only shown while Custom Network is on, so it only applies then. */
+    fun http2InEffect(settings: PlayerSettings): Boolean =
+        settings.enableHttp2 && settings.parallelNetworkEnabled
+
     /**
      * Updates the performance helper with customized settings from PlayerSettings.
      */
     fun updateSettings(settings: PlayerSettings, context: Context) {
         val customBuffers = settings.bufferEngineEnabled
         val bufferSettings = settings.bufferSettings
-        enableHttp2 = settings.enableHttp2
+        enableHttp2 = http2InEffect(settings)
         
         minBufferMs = if (customBuffers) bufferSettings.minBufferMs else DEFAULT_NUVIO_MIN_BUFFER_MS
         maxBufferMs = if (customBuffers) bufferSettings.maxBufferMs else DEFAULT_NUVIO_MAX_BUFFER_MS
