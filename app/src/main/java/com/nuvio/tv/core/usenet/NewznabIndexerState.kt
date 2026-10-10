@@ -6,6 +6,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -32,12 +35,20 @@ class SharedPreferencesNewznabStateStorage @Inject constructor(
     private companion object { const val KEY = "indexers" }
 }
 
+/** Why the last request to an indexer failed. Categories only: raw errors could echo keys. */
+@Serializable
+enum class IndexerProblem { AUTH, UNREACHABLE, RESPONSE }
+
+/** What settings show for an indexer: a limit pause and the last failure, if any. */
+data class IndexerStatus(val pausedUntil: Long = 0, val problem: IndexerProblem? = null)
+
 @Serializable
 internal data class NewznabIndexerState(
     val caps: NewznabCapabilities? = null,
     val capsFetchedAt: Long = 0,
     val blockedUntil: Long = 0,
-    val touchedAt: Long = 0
+    val touchedAt: Long = 0,
+    val problem: IndexerProblem? = null
 )
 
 /**
@@ -51,6 +62,9 @@ internal class NewznabIndexerStates(private val storage: NewznabStateStorage, pr
         runCatching { json.decodeFromString<Map<String, NewznabIndexerState>>(storage.load() ?: "{}") }
             .getOrDefault(emptyMap()).toMutableMap()
     }
+    private val changes = MutableStateFlow(0)
+    /** Increments on every change, so settings can show statuses that searches update. */
+    val revision: StateFlow<Int> = changes.asStateFlow()
 
     @Synchronized
     fun get(indexer: UsenetIndexer): NewznabIndexerState? = states[key(indexer)]
@@ -63,6 +77,7 @@ internal class NewznabIndexerStates(private val storage: NewznabStateStorage, pr
         states.entries.removeAll { now() - it.value.touchedAt > RETENTION_MS }
         while (states.size > MAX_ENTRIES) states.remove(states.minBy { it.value.touchedAt }.key)
         storage.save(json.encodeToString(states.toMap()))
+        changes.value += 1
     }
 
     private fun key(indexer: UsenetIndexer) = MessageDigest.getInstance("SHA-256")

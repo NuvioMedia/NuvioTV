@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.usenet.IndexerStatus
 import com.nuvio.tv.core.usenet.NewznabClient
 import com.nuvio.tv.core.usenet.NntpProviderTester
 import com.nuvio.tv.core.usenet.ProviderTestResult
@@ -17,8 +18,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -39,6 +44,12 @@ class UsenetSourcesViewModel @Inject constructor(
 ) : ViewModel() {
     private val state = MutableStateFlow(UsenetSourcesUiState())
     val uiState = state.asStateFlow()
+
+    /** By indexer id; searches update these while settings are open. */
+    val indexerStatuses: StateFlow<Map<String, IndexerStatus>> =
+        combine(uiState, client.statusChanges) { ui, _ ->
+            ui.configuration.indexers.associate { it.id to client.status(it) }
+        }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     init {
         viewModelScope.launch {

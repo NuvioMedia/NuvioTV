@@ -8,8 +8,9 @@ import org.junit.Test
 
 class NewznabClientTest {
     private class MemoryStorage(var value: String? = null) : NewznabStateStorage {
+        var saves = 0
         override fun load() = value
-        override fun save(value: String) { this.value = value }
+        override fun save(value: String) { this.value = value; saves++ }
     }
 
     private val capsXml = """<caps><limits max="1"/><searching><movie-search available="yes" supportedParams="imdbid"/></searching></caps>"""
@@ -124,6 +125,54 @@ class NewznabClientTest {
             assertNull(server.takeRequest().requestUrl!!.queryParameter("ep"))
             assertEquals("5", server.takeRequest().requestUrl!!.queryParameter("ep"))
             assertEquals("6", server.takeRequest().requestUrl!!.queryParameter("ep"))
+        }
+    }
+
+    @Test fun `status records the last failure by category until a request succeeds`() = runBlocking {
+        MockWebServer().use { server ->
+            val storage = MemoryStorage()
+            val client = NewznabClient(storage)
+            val indexer = server.indexer()
+            val caps = NewznabCapabilities()
+            suspend fun search() = runCatching { client.search(indexer, UsenetSearchRequest(imdbId = "tt1"), caps) }
+            assertEquals(IndexerStatus(), client.status(indexer))
+
+            server.enqueue(MockResponse().setBody("""<error code="100" description="Incorrect user credentials"/>"""))
+            search()
+            assertEquals(IndexerProblem.AUTH, client.status(indexer).problem)
+            server.enqueue(MockResponse().setResponseCode(403))
+            search()
+            assertEquals(IndexerProblem.AUTH, client.status(indexer).problem)
+            server.enqueue(MockResponse().setResponseCode(500).setBody("oops"))
+            search()
+            assertEquals(IndexerProblem.RESPONSE, client.status(indexer).problem)
+
+            val revision = client.statusChanges.value
+            server.enqueue(MockResponse().setBody(server.page("Movie.1080p", 1)))
+            server.enqueue(MockResponse().setBody(server.page("Movie.1080p", 1)))
+            search(); val saves = storage.saves; search()
+            assertNull(client.status(indexer).problem)
+            assertTrue(client.statusChanges.value > revision)
+            assertEquals("an unchanged outcome must not rewrite the store", saves, storage.saves)
+            // The status survives a restart.
+            server.enqueue(MockResponse().setBody("""<error code="101" description="Account suspended"/>"""))
+            search()
+            assertEquals(IndexerProblem.AUTH, NewznabClient(storage).status(indexer).problem)
+        }
+        val closed = MockWebServer().apply { start() }
+        val gone = closed.indexer()
+        closed.shutdown()
+        val client = NewznabClient(MemoryStorage())
+        runCatching { client.search(gone, UsenetSearchRequest(imdbId = "tt1"), NewznabCapabilities()) }
+        assertEquals(IndexerProblem.UNREACHABLE, client.status(gone).problem)
+    }
+
+    @Test fun `a pause shows in the status`() = runBlocking {
+        MockWebServer().use { server ->
+            val client = NewznabClient(MemoryStorage())
+            server.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "120"))
+            runCatching { client.search(server.indexer(), UsenetSearchRequest(imdbId = "tt1"), NewznabCapabilities()) }
+            assertTrue(client.status(server.indexer()).pausedUntil > System.currentTimeMillis())
         }
     }
 
