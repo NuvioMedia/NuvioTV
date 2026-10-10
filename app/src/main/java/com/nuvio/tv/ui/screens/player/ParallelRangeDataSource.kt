@@ -24,6 +24,9 @@ import com.nuvio.tv.data.local.PlayerSettings
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import android.os.SystemClock
+import androidx.annotation.VisibleForTesting
+import androidx.media3.exoplayer.upstream.Allocation
+import androidx.media3.exoplayer.upstream.DefaultAllocatorNative
 
 import java.nio.ByteBuffer
 import java.util.LinkedHashMap
@@ -62,6 +65,11 @@ internal class ParallelRangeDataSource(
         private const val HEDGE_STALL_RATE_USENET = 128L * 1024L
         private const val HEDGE_WINDOWS_CDN = 1
         private const val HEDGE_WINDOWS_USENET = 2
+
+        @VisibleForTesting
+        internal var allocateChunk: (Int) -> Allocation? = { DefaultAllocatorNative.createAllocation(it) }
+        @VisibleForTesting
+        internal var freeChunk: (Allocation) -> Unit = { DefaultAllocatorNative.freeAllocation(it) }
 
         private val readBufferLocal = object : ThreadLocal<ByteArray>() {
             override fun initialValue(): ByteArray = ByteArray(READ_BUFFER_SIZE)
@@ -258,6 +266,10 @@ internal class ParallelRangeDataSource(
         private var pendingChunkSession: ChunkSession? = null
 
         private fun releaseSessionBuffer(buffer: PooledBuffer, chunkSz: Long, poolCap: Int) {
+            buffer.release { recycleBuffer(it, chunkSz, poolCap) }
+        }
+
+        private fun recycleBuffer(buffer: PooledBuffer, chunkSz: Long, poolCap: Int) {
             if (poolCap > 0) {
                 val pool = globalBufferPool.computeIfAbsent(chunkSz) { ConcurrentLinkedDeque() }
                 if (pool.size < poolCap) {
@@ -265,8 +277,12 @@ internal class ParallelRangeDataSource(
                     return
                 }
             }
+            freeBuffer(buffer)
+        }
+
+        private fun freeBuffer(buffer: PooledBuffer) {
             if (buffer.allocation != null) {
-                androidx.media3.exoplayer.upstream.DefaultAllocatorNative.freeAllocation(buffer.allocation)
+                freeChunk(buffer.allocation)
             } else if (buffer.byteBuffer.isDirect) {
                 freeDirectBuffer(buffer.byteBuffer)
             }
@@ -423,12 +439,7 @@ internal class ParallelRangeDataSource(
         internal fun drainIdleBuffers(chunkSize: Long) {
             val pool = globalBufferPool[chunkSize] ?: return
             while (true) {
-                val buf = pool.pollLast() ?: break
-                if (buf.allocation != null) {
-                    androidx.media3.exoplayer.upstream.DefaultAllocatorNative.freeAllocation(buf.allocation)
-                } else if (buf.byteBuffer.isDirect) {
-                    freeDirectBuffer(buf.byteBuffer)
-                }
+                freeBuffer(pool.pollLast() ?: break)
             }
         }
 
@@ -461,12 +472,7 @@ internal class ParallelRangeDataSource(
         private fun clearGlobalPool() {
             globalBufferPool.values.forEach { pool ->
                 while (true) {
-                    val buf = pool.pollFirst() ?: break
-                    if (buf.allocation != null) {
-                        androidx.media3.exoplayer.upstream.DefaultAllocatorNative.freeAllocation(buf.allocation)
-                    } else if (buf.byteBuffer.isDirect) {
-                        freeDirectBuffer(buf.byteBuffer)
-                    }
+                    freeBuffer(pool.pollFirst() ?: break)
                 }
             }
             globalBufferPool.clear()
@@ -478,16 +484,46 @@ internal class ParallelRangeDataSource(
         activeInstances.incrementAndGet()
     }
 
+    // Readers lease the memory per copy; it is recycled once, after release and the last lease.
     private class PooledBuffer(
-        val allocation: androidx.media3.exoplayer.upstream.Allocation?,
+        val allocation: Allocation?,
         val byteBuffer: ByteBuffer
-    )
+    ) {
+        // Bit 0 is the owner's reference, every lease adds 2.
+        private val refs = AtomicInteger(1)
+        private val recycler = java.util.concurrent.atomic.AtomicReference<((PooledBuffer) -> Unit)?>(null)
+
+        fun lease(): Boolean {
+            while (true) {
+                val current = refs.get()
+                if ((current and 1) == 0) return false
+                if (refs.compareAndSet(current, current + 2)) return true
+            }
+        }
+
+        fun endLease() {
+            if (refs.addAndGet(-2) == 0) recycler.get()?.invoke(this)
+        }
+
+        fun release(recycle: (PooledBuffer) -> Unit) {
+            if (!recycler.compareAndSet(null, recycle)) return
+            if (refs.decrementAndGet() == 0) recycle(this)
+        }
+
+        inline fun <T> leased(block: (ByteBuffer) -> T): T? {
+            if (!lease()) return null
+            try {
+                return block(byteBuffer)
+            } finally {
+                endLease()
+            }
+        }
+    }
 
     private class DownloadedChunk(val buffer: PooledBuffer, val size: Int)
 
     private class InFlightChunk(buffer: PooledBuffer) {
-        val lock = Any()
-        var buffer: PooledBuffer? = buffer
+        @Volatile var buffer: PooledBuffer? = buffer
         @Volatile var watermark: Int = 0
     }
 
@@ -893,9 +929,16 @@ internal class ParallelRangeDataSource(
 
         val readSize = minOf(toRead, available)
 
-        val readBuf = chunk.buffer.byteBuffer.duplicate()
-        readBuf.position(currentChunkReadOffset)
-        readBuf.get(buffer, offset, readSize)
+        val copied = chunk.buffer.leased { bytes ->
+            val readBuf = bytes.duplicate()
+            readBuf.position(currentChunkReadOffset)
+            readBuf.get(buffer, offset, readSize)
+        }
+        if (copied == null) {
+            currentChunk = null
+            currentChunkIndex = -1
+            return read(buffer, offset, length)
+        }
         currentChunkReadOffset += readSize
         position += readSize
         bytesRemaining -= readSize
@@ -941,11 +984,9 @@ internal class ParallelRangeDataSource(
         inFlight: InFlightChunk,
         buffer: PooledBuffer
     ) {
-        synchronized(inFlight.lock) {
-            inFlight.buffer = null
-            activeSession.inFlight.remove(chunkIndex, inFlight)
-            releaseBuffer(buffer)
-        }
+        inFlight.buffer = null
+        activeSession.inFlight.remove(chunkIndex, inFlight)
+        releaseBuffer(buffer)
     }
 
     private fun escalateReaderBlockedChunk(
@@ -1016,12 +1057,12 @@ internal class ParallelRangeDataSource(
                 val available = inFlight.watermark - offsetInChunk
                 if (available > 0) {
                     val toCopy = minOf(maxLength, available)
-                    synchronized(inFlight.lock) {
-                        val buf = inFlight.buffer ?: return 0
-                        val view = buf.byteBuffer.duplicate()
+                    val buf = inFlight.buffer ?: return 0
+                    buf.leased { bytes ->
+                        val view = bytes.duplicate()
                         view.position(offsetInChunk)
                         view.get(target, targetOffset, toCopy)
-                    }
+                    } ?: return 0
                     val waitedMs = SystemClock.elapsedRealtime() - waitT0
                     if (!inFlightServeLogged) {
                         inFlightServeLogged = true
@@ -1470,13 +1511,13 @@ internal class ParallelRangeDataSource(
 
     private fun acquireBuffer(): PooledBuffer {
         val pool = globalBufferPool.computeIfAbsent(chunkSize) { ConcurrentLinkedDeque() }
-        val buf = pool.pollLast()
-        if (buf != null) {
-            buf.byteBuffer.clear()
-            return buf
+        val idle = pool.pollLast()
+        if (idle != null) {
+            idle.byteBuffer.clear()
+            return PooledBuffer(idle.allocation, idle.byteBuffer)
         }
         return if (useNativeMemory) {
-            val allocation = androidx.media3.exoplayer.upstream.DefaultAllocatorNative.createAllocation(chunkSize.toInt())
+            val allocation = allocateChunk(chunkSize.toInt())
             val allocBuffer = allocation?.buffer
             if (allocation != null && allocBuffer != null) {
                 PooledBuffer(allocation, allocBuffer)
@@ -1489,16 +1530,7 @@ internal class ParallelRangeDataSource(
     }
 
     private fun releaseBuffer(buffer: PooledBuffer) {
-        val pool = globalBufferPool.computeIfAbsent(chunkSize) { ConcurrentLinkedDeque() }
-        if (pool.size < maxPoolSize) {
-            pool.offerLast(buffer)
-        } else {
-            if (buffer.allocation != null) {
-                androidx.media3.exoplayer.upstream.DefaultAllocatorNative.freeAllocation(buffer.allocation)
-            } else if (buffer.byteBuffer.isDirect) {
-                freeDirectBuffer(buffer.byteBuffer)
-            }
-        }
+        releaseSessionBuffer(buffer, chunkSize, maxPoolSize)
     }
 
     private fun resetLocalReadState() {
@@ -1656,10 +1688,17 @@ internal class ParallelRangeDataSource(
         }
 
         val readSize = minOf(toRead, available)
-        val src = chunk.buffer.byteBuffer.duplicate()
-        src.position(currentChunkReadOffset)
-        src.limit(currentChunkReadOffset + readSize)
-        buffer.put(src)
+        val copied = chunk.buffer.leased { bytes ->
+            val src = bytes.duplicate()
+            src.position(currentChunkReadOffset)
+            src.limit(currentChunkReadOffset + readSize)
+            buffer.put(src)
+        }
+        if (copied == null) {
+            currentChunk = null
+            currentChunkIndex = -1
+            return read(buffer, length)
+        }
 
         currentChunkReadOffset += readSize
         position += readSize
