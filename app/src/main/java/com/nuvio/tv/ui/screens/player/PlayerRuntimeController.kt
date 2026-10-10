@@ -210,6 +210,9 @@ class PlayerRuntimeController(
         PlayerMediaSourceFactory.vodCachePlayheadBytesProvider = vodCachePlayheadBytesProvider
     }
 
+    // Closed on exit (stopAndRelease) or when the ViewModel is cleared, whichever comes first.
+    private val playerSession = com.nuvio.tv.core.player.PlayerSessionTracker.open()
+
     internal var currentVideoHash: String? = navigationArgs.videoHash
     internal var currentVideoSize: Long? = navigationArgs.videoSize
     internal var currentFilename: String? = navigationArgs.filename
@@ -276,6 +279,7 @@ class PlayerRuntimeController(
         releaseProcessWideReferences()
         mediaSourceFactory.evictCachedSession()
         releasePlayer()
+        playerSession.close()
     }
 
     // These are process wide, so without this the exited player stays reachable until the next one
@@ -761,6 +765,7 @@ class PlayerRuntimeController(
     }
 
     fun onCleared() {
+        playerSession.close()
         stopServerPlayback()
         releasePlayer()
         stopTorrentStream()
