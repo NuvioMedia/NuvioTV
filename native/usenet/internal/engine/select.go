@@ -85,6 +85,20 @@ func (s Selection) episodeOnly() bool {
 	return s.Episode > 0 && s.FileIdx == nil && s.FileMustInclude == ""
 }
 
+// whole reports a request for the release's main video, with no file or episode selector.
+func (s Selection) whole() bool {
+	return s.FileIdx == nil && s.FileMustInclude == "" && s.Episode == 0
+}
+
+// setSize is the NZB size of an archive set, an upper bound for any entry in it.
+func setSize(vols []*File) int64 {
+	var n int64
+	for _, v := range vols {
+		n += v.Size()
+	}
+	return n
+}
+
 func selectionVideo(name string) bool {
 	return isVideo(name) && !strings.Contains(strings.ToLower(name), "sample")
 }
@@ -275,7 +289,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 	}
 	// Largest direct candidate first when the addon supplies no file selector.
 	// This uses NZB metadata and does not probe other candidates for sizing.
-	if s.FileIdx == nil && s.FileMustInclude == "" && s.Episode == 0 {
+	if s.whole() {
 		sort.SliceStable(direct, func(i, j int) bool { return direct[i].Size() > direct[j].Size() })
 	}
 	if s.episodeOnly() {
@@ -358,9 +372,13 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 		}
 	}
 	skipBroken := s.FileIdx == nil && (s.FileMustInclude != "" || s.Episode > 0)
+	// Without a selector an archive serves its largest video. Disc folders
+	// (BDMV/STREAM) hold menus and extras before the feature.
+	var largest *Content
+	var largestVols []*File
 	var brokenErr error
 	broken := func(err error) error {
-		if !skipBroken || ctx.Err() != nil {
+		if (!skipBroken && largest == nil) || ctx.Err() != nil {
 			return err
 		}
 		if brokenErr == nil {
@@ -454,6 +472,9 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 	}
 groups:
 	for _, key := range order {
+		if largest != nil {
+			break
+		}
 		vols := groups[key]
 		unordered := key == anonymousRARKey
 		if !unordered {
@@ -535,13 +556,17 @@ groups:
 			if err != nil {
 				return nil, err
 			}
-			if matched {
+			if matched && (!s.whole() || c.Size >= setSize(vols)/2) {
+				// No other entry can be larger than one filling half the set.
 				for _, v := range vols {
 					if v.damaged != nil {
 						return nil, v.damaged
 					}
 				}
 				return c.usable(ctx)
+			}
+			if matched && (largest == nil || c.Size > largest.Size) {
+				largest, largestVols = c, vols
 			}
 			index++
 			// A file that reaches the last volume fills every volume between,
@@ -566,6 +591,14 @@ groups:
 				continue groups
 			}
 		}
+	}
+	if largest != nil {
+		for _, v := range largestVols {
+			if v.damaged != nil {
+				return nil, v.damaged
+			}
+		}
+		return largest.usable(ctx)
 	}
 	if brokenErr != nil {
 		return nil, brokenErr

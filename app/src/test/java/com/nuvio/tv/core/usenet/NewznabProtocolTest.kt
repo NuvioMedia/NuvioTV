@@ -122,6 +122,22 @@ class NewznabProtocolTest {
         assertEquals("Good.1080p", NewznabProtocol.arrange(releases, config.copy(sort = UsenetSort.SMALLEST), now).first().title)
     }
 
+    @Test fun `full disc releases are recognised and hidden unless allowed`() {
+        listOf("The.Drama.2026.COMPLETE.UHD.BLURAY-GRP", "Movie.2020.Complete.Bluray-GRP", "Movie 2020 BD50",
+            "Movie.2020.1080p.BDMV.AVC.DTS-HD.MA", "Movie.2020.DVD9-GRP", "Movie.2020.ISO", "[Movie 2020 BD25]",
+            "Show.S01.COMPLETE.BLURAY.AVC.DTS-HD.MA.5.1-GRP"
+        ).forEach { assertTrue(it, UsenetRelease(it, "url").fullDisc) }
+        listOf("The.Drama.2026.2160p.UHD.Remux.HEVC.DoVi.TrueHD.Atmos.7.1-playBD",
+            "Movie.2020.COMPLETE.BLURAY.REMUX-GRP", "Show.S01.COMPLETE.BluRay.1080p.x264-GRP", "Movie.2020.BDRip.x265",
+            "Movie.2020.Complete.BDRip", "Movie.2020.1080p.BluRay.DTS-HD.MA", "Isolation.2020.1080p", "Show.S01.Complete.DVDRip"
+        ).forEach { assertFalse(it, UsenetRelease(it, "url").fullDisc) }
+        val releases = listOf(UsenetRelease("Disc.COMPLETE.UHD.BLURAY", "https://test/1"),
+            UsenetRelease("Remux.2160p.REMUX", "https://test/2"))
+        val config = UsenetSourceConfiguration(indexers = listOf(indexer))
+        assertEquals(listOf("Remux.2160p.REMUX"), NewznabProtocol.arrange(releases, config).map { it.title })
+        assertEquals(2, NewznabProtocol.arrange(releases, config.copy(excludeFullDisc = false)).size)
+    }
+
     @Test fun `entity declarations are rejected without accessing external resources`() {
         assertThrows(IllegalArgumentException::class.java) {
             NewznabProtocol.releases("""<!DOCTYPE rss [<!ENTITY secret SYSTEM "file:///secret">]><rss/>""", indexer)
