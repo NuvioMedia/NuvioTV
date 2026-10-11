@@ -27,6 +27,10 @@ cd NuvioTV
 
 Nuvio TV is built with Kotlin, Jetpack Compose, TV Material 3, and Media3. Development requires Android Studio, a JDK, and the Android SDK.
 
+## Plugin development
+
+See the [plugin and scraper integration guide](./PLUGIN_INTEGRATION.md) for the repository manifest format, JavaScript provider contract, stream result fields, and settings.
+
 ## License
 
 [GNU General Public License v3.0](./LICENSE)
