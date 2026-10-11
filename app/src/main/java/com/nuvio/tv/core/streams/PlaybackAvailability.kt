@@ -16,10 +16,15 @@ internal fun Addon.supportsStreamResource(type: String, videoId: String): Boolea
             }
     }
 
+/** The types the built-in Usenet sources search; see BuiltInUsenetService.search. */
+private val builtInUsenetTypes = setOf("movie", "series", "tv", "show")
+
 internal data class PlaybackAvailability(
     val addons: List<Addon> = emptyList(),
     val scrapers: List<ScraperInfo> = emptyList(),
     val isLoaded: Boolean = false,
+    /** True when the built-in Usenet sources are enabled and have a provider and an indexer. */
+    val usenetReady: Boolean = false,
     private val cachedMeta: (String, String) -> Meta? = { _, _ -> null }
 ) {
     fun canStream(
@@ -30,5 +35,7 @@ internal data class PlaybackAvailability(
     ): Boolean = video?.takeIf { it.id == videoId }?.streams?.isNotEmpty() == true ||
         cachedMeta(type, contentId)?.videos?.any { it.id == videoId && it.streams.isNotEmpty() } == true ||
         addons.any { it.enabled && it.supportsStreamResource(type, videoId) } ||
-        scrapers.any { it.enabled && it.supportsType(type) }
+        scrapers.any { it.enabled && it.supportsType(type) } ||
+        // Built-in sources are searched on play, so a title can play even with no addon installed.
+        (usenetReady && type.lowercase() in builtInUsenetTypes)
 }

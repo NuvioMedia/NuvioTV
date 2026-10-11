@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.streams.PlaybackAvailability
+import com.nuvio.tv.core.usenet.UsenetSourceSettings
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
@@ -18,6 +19,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -27,7 +29,8 @@ internal val LocalPlaybackAvailability = compositionLocalOf { PlaybackAvailabili
 internal class PlaybackAvailabilityViewModel @Inject constructor(
     addonRepository: AddonRepository,
     pluginDataStore: PluginDataStore,
-    metaRepository: MetaRepository
+    metaRepository: MetaRepository,
+    usenetSettings: UsenetSourceSettings
 ) : ViewModel() {
     private val enabledScrapers = if (AppFeaturePolicy.pluginsEnabled) {
         combine(pluginDataStore.scrapers, pluginDataStore.pluginsEnabled) { scrapers, enabled ->
@@ -37,8 +40,11 @@ internal class PlaybackAvailabilityViewModel @Inject constructor(
         flowOf(emptyList())
     }
 
-    val availability = combine(addonRepository.getInstalledAddons(), enabledScrapers) { addons, scrapers ->
-        PlaybackAvailability(addons, scrapers, isLoaded = true, cachedMeta = metaRepository::getCachedMeta)
+    private val usenetReady = usenetSettings.snapshots.map { (_, result) -> result.getOrNull()?.ready == true }
+
+    val availability = combine(addonRepository.getInstalledAddons(), enabledScrapers, usenetReady) { addons, scrapers, usenet ->
+        PlaybackAvailability(addons, scrapers, isLoaded = true, usenetReady = usenet,
+            cachedMeta = metaRepository::getCachedMeta)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlaybackAvailability())
 }
 
