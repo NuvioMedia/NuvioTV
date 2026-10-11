@@ -39,9 +39,13 @@ import kotlin.coroutines.resumeWithException
 class IndexerCooldownException(val until: Long) : IllegalStateException("Indexer limit reached")
 
 @Singleton
-class NewznabClient @Inject constructor(
-    storage: NewznabStateStorage
+class NewznabClient internal constructor(
+    storage: NewznabStateStorage,
+    /** The User-Agent of the next request; settings can change it at any time. */
+    private val agent: () -> String = { NUVIO_USER_AGENT }
 ) {
+    @Inject constructor(storage: NewznabStateStorage, settings: UsenetSettings) : this(storage, { settings.settings.value.agent })
+
     // API keys are in query strings: use a dedicated client without URL logging,
     // Sentry breadcrumbs or a disk response cache.
     private val client = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS)
@@ -202,7 +206,7 @@ class NewznabClient @Inject constructor(
     private class IndexerResponse(val code: Int, val headers: Headers, val body: String)
 
     private suspend fun get(url: HttpUrl): IndexerResponse = suspendCancellableCoroutine { continuation ->
-        val call = client.newCall(Request.Builder().url(url).header("User-Agent", "Nuvio/${BuildConfig.VERSION_NAME}")
+        val call = client.newCall(Request.Builder().url(url).header(USER_AGENT, agent())
             .header("Cache-Control", "no-store").build())
         continuation.invokeOnCancellation { call.cancel() }
         call.enqueue(object : Callback {
