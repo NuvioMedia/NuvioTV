@@ -200,6 +200,37 @@ class NewznabClientTest {
         }
     }
 
+    @Test fun `api hits and grabs left are kept for a day, across restarts`() = runBlocking {
+        MockWebServer().use { server ->
+            val storage = MemoryStorage()
+            val indexer = server.indexer()
+            server.enqueue(MockResponse().setBody(server.page("Movie.1080p", 1))
+                .setHeader("x-api-remaining", "42").setHeader("x-grab-remaining", "1"))
+            NewznabClient(storage).search(indexer, UsenetSearchRequest(imdbId = "tt1"), NewznabCapabilities())
+            // A new client stands in for an app restart.
+            val status = NewznabClient(storage).status(indexer)
+            assertEquals(42, status.apiHitsLeft)
+            assertEquals(1, status.grabsLeft)
+            assertEquals(0L, status.pausedUntil)
+            assertTrue(System.currentTimeMillis() - status.leftAt < 60_000)
+            assertFalse(storage.value!!.contains("secret"))
+
+            // Daily counts from before the indexer's last reset are not shown.
+            val yesterday = System.currentTimeMillis() - 25L * 3600 * 1000
+            NewznabIndexerStates(storage) { yesterday }.update(indexer) { it.copy(leftAt = yesterday) }
+            val stale = NewznabClient(storage).status(indexer)
+            assertNull(stale.apiHitsLeft)
+            assertNull(stale.grabsLeft)
+
+            // Each report replaces the last: one with only API hits shows no grab count.
+            val client = NewznabClient(storage)
+            server.enqueue(MockResponse().setBody(server.page("Movie.2160p", 3)).setHeader("X-RateLimit-Daily-Remaining", "7"))
+            client.search(indexer, UsenetSearchRequest(imdbId = "tt2"), NewznabCapabilities())
+            assertEquals(7, client.status(indexer).apiHitsLeft)
+            assertNull(client.status(indexer).grabsLeft)
+        }
+    }
+
     @Test fun `spent quota from an error document or headers pauses the indexer`() = runBlocking {
         MockWebServer().use { server ->
             val caps = NewznabCapabilities()

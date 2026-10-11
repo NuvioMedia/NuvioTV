@@ -23,6 +23,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -244,7 +245,10 @@ private fun <T> List<T>.moved(position: Int, delta: Int): List<T> = toMutableLis
 private fun <T> List<T>.replaceOrAdd(value: T, id: (T) -> String): List<T> =
     if (any { id(it) == id(value) }) map { if (id(it) == id(value)) value else it } else this + value
 
-/** A pause wins over an older failure: it is what currently keeps the indexer out of searches. */
+/**
+ * A pause wins over an older failure: it is what currently keeps the indexer out of searches.
+ * Without either, what the indexer last reported left for today.
+ */
 @Composable
 private fun indexerStatusLabel(status: IndexerStatus?): String? {
     if (status == null) return null
@@ -256,7 +260,16 @@ private fun indexerStatusLabel(status: IndexerStatus?): String? {
         IndexerProblem.AUTH -> stringResource(R.string.usenet_indexer_problem_auth)
         IndexerProblem.UNREACHABLE -> stringResource(R.string.usenet_indexer_problem_unreachable)
         IndexerProblem.RESPONSE -> stringResource(R.string.usenet_indexer_problem_response)
-        null -> null
+        null -> {
+            val resources = LocalContext.current.resources
+            listOfNotNull(
+                status.apiHitsLeft?.let { resources.getQuantityString(R.plurals.usenet_indexer_api_hits_left, it, it) },
+                status.grabsLeft?.let { resources.getQuantityString(R.plurals.usenet_indexer_grabs_left, it, it) }
+            ).takeIf { it.isNotEmpty() }?.let {
+                stringResource(R.string.usenet_indexer_left_as_of, it.joinToString(", "),
+                    DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(status.leftAt)))
+            }
+        }
     }
 }
 
