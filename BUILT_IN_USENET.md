@@ -23,8 +23,12 @@ immediately; the QR screen names the last source saved.
 - The link carries a random token created for that QR code. Requests without
   it are refused, and the server stops when the QR screen is closed or Usenet
   settings are left.
-- Saved passwords and API keys are never sent to the phone. Leave them blank
-  when editing to keep the saved ones.
+- Saved passwords and API keys are never sent to the phone, and neither is the
+  query part of an indexer URL, which can hold keys. Leave a password or key
+  blank when editing to keep the saved one. It is kept only for the server it
+  was saved for: after changing a provider's host, port, TLS setting or
+  username, or an indexer's URL or API path, enter it again, so a saved secret
+  is never sent to another server.
 - The page edits the profile that was active when the code was shown; it stops
   saving if the TV switches profile.
 - Like the app's other phone setup pages, it uses plain HTTP on the local

@@ -17,6 +17,8 @@ import kotlinx.serialization.json.Json
 interface NewznabStateStorage {
     fun load(): String?
     fun save(value: String)
+    /** Changes when the stored state is cleared from outside, so a loaded copy is dropped. */
+    val generation: Int get() = 0
 }
 
 @Singleton
@@ -27,10 +29,15 @@ class SharedPreferencesNewznabStateStorage @Inject constructor(
 
     override fun load(): String? = preferences.getString(KEY, null)
     override fun save(value: String) { preferences.edit().putString(KEY, value).apply() }
+    @Volatile override var generation = 0
+        private set
 
     // Holds no credentials and is shared by profiles; only an account reset clears it.
     override fun removeProfile(profileId: Int) = Unit
-    override fun clearAllProfiles() { preferences.edit().clear().apply() }
+    override fun clearAllProfiles() {
+        preferences.edit().clear().apply()
+        generation += 1
+    }
 
     private companion object { const val KEY = "indexers" }
 }
@@ -72,10 +79,17 @@ internal data class NewznabIndexerState(
  */
 internal class NewznabIndexerStates(private val storage: NewznabStateStorage, private val now: () -> Long) {
     private val json = Json { ignoreUnknownKeys = true }
-    private val states: MutableMap<String, NewznabIndexerState> by lazy {
-        runCatching { json.decodeFromString<Map<String, NewznabIndexerState>>(storage.load() ?: "{}") }
-            .getOrDefault(emptyMap()).toMutableMap()
-    }
+    private var loaded: MutableMap<String, NewznabIndexerState>? = null
+    private var loadedGeneration = 0
+
+    /** Loaded on first use, and again after an account reset cleared the storage. */
+    private val states: MutableMap<String, NewznabIndexerState>
+        get() {
+            loaded?.takeIf { loadedGeneration == storage.generation }?.let { return it }
+            loadedGeneration = storage.generation
+            return runCatching { json.decodeFromString<Map<String, NewznabIndexerState>>(storage.load() ?: "{}") }
+                .getOrDefault(emptyMap()).toMutableMap().also { loaded = it }
+        }
     private val changes = MutableStateFlow(0)
     /** Increments on every change, so settings can show statuses that searches update. */
     val revision: StateFlow<Int> = changes.asStateFlow()
