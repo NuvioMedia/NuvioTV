@@ -140,9 +140,39 @@ class BuiltInUsenetServiceTest {
         assertEquals(listOf("The.Movie.2020.1080p"), streams.map { it.title })
         coVerify { client.search(indexer, match { it.imdbId == null && it.tmdbId == null && it.title == "The Movie" && it.year == 2020 }, any()) }
 
-        // A title search that also finds nothing is not repeated.
+        // A title search that also finds nothing is not repeated (the original title equals it here).
         coEvery { client.search(indexer, match { it.imdbId == null }, any()) } returns emptyList()
         assertTrue(service.search(config, "movie", "tt1", null, null).toList().none { it.group != null })
         coVerify(exactly = 2) { client.search(indexer, match { it.imdbId == null }, any()) }
+    }
+
+    @Test fun `the original title is searched when the id and the title find nothing`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities(movieParams = setOf("imdbid", "q"))
+        coEvery { client.search(indexer, any(), any()) } returns emptyList()
+        coEvery { client.search(indexer, match { it.title == "La casa de papel" }, any()) } returns
+            listOf(release(indexer, "La.Casa.de.Papel.2017.1080p"))
+        coEvery { tmdb.ensureTmdbId("tt1", "movie") } returns "10"
+        fun details(original: String) = Response.success(mockk<TmdbDetailsResponse>(relaxed = true) {
+            every { title } returns "Money Heist"
+            every { originalTitle } returns original
+            every { releaseDate } returns "2017-05-02"
+        })
+        coEvery { tmdbApi.getMovieDetails(10, any(), any()) } returns details("La casa de papel")
+        val service = BuiltInUsenetService(client, tmdb, tmdbApi)
+        val streams = service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams
+        assertEquals(listOf("La.Casa.de.Papel.2017.1080p"), streams.map { it.title })
+        // The English title is still accepted when the query used the original one.
+        coVerify { client.search(indexer, match { it.imdbId == null && it.title == "Money Heist" }, any()) }
+        coVerify { client.search(indexer, match { it.title == "La casa de papel" && it.originalTitle == "Money Heist" }, any()) }
+
+        // Indexers search Latin text, so an original title in another script is not searched.
+        coEvery { tmdbApi.getMovieDetails(10, any(), any()) } returns details("ペーパー・ハウス")
+        assertTrue(service.search(config, "movie", "tt1", null, null).toList().none { it.group != null })
+        coVerify(exactly = 0) { client.search(indexer, match { it.title == "ペーパー・ハウス" }, any()) }
     }
 }
