@@ -325,7 +325,7 @@ class BuiltInUsenetService @Inject constructor(
         val attempts = listOfNotNull(
             byTitle.takeIf { NewznabProtocol.isIdSearch(url) },
             // Indexers search Latin text; an original title in another script would find nothing.
-            byTitle.originalTitle?.takeIf { LATIN.containsMatchIn(it) }
+            byTitle.originalTitle?.takeIf { NewznabProtocol.hasLatinLetter(it) }
                 ?.let { byTitle.copy(title = it, originalTitle = byTitle.title) }
         )
         for (attempt in attempts) {
@@ -374,6 +374,5 @@ class BuiltInUsenetService @Inject constructor(
 
     companion object {
         const val GROUP_NAME = "Built-in Usenet"
-        private val LATIN = Regex("\\p{IsLatin}")
     }
 }
