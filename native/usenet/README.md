@@ -189,6 +189,12 @@ its continuation volumes. Near a volume boundary it resolves and primes the
 next extent using the current reader's read-ahead window; seeks cancel that work.
 Mapped reads continue while another reader discovers later headers.
 
+Without a file or episode selector an archive serves its largest video. An entry
+filling at least half the set is returned at once, so a single-video release keeps
+the lazy path. Otherwise every entry header is read first: a Blu-ray folder lists
+menu clips (`BDMV/STREAM/00277.m2ts`) before the feature. 7z sets list every entry
+in their header and choose the same way.
+
 Numeric part names, `.rar/.r00/...`, `.001/...`, width-mismatched names, season
 selection, yEnc name recovery and anonymous RAR5 volume numbers are supported.
 Anonymous RAR5 headers are inspected only until the next required volume is found,
