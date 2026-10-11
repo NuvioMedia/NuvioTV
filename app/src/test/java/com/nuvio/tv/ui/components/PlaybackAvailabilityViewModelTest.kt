@@ -5,6 +5,8 @@ import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.AddonResource
+import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
+import com.nuvio.tv.core.usenet.UsenetSourceSettings
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
@@ -15,6 +17,7 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -43,7 +46,9 @@ class PlaybackAvailabilityViewModelTest {
             every { pluginDataStore.scrapers } returns scrapers
             every { pluginDataStore.pluginsEnabled } returns pluginsEnabled
             every { metaRepository.getCachedMeta(any(), any()) } returns null
-            val viewModel = PlaybackAvailabilityViewModel(addonRepository, pluginDataStore, metaRepository)
+            val usenetSettings = mockk<UsenetSourceSettings>()
+            every { usenetSettings.snapshots } returns flowOf(0 to Result.success(UsenetSourceConfiguration()))
+            val viewModel = PlaybackAvailabilityViewModel(addonRepository, pluginDataStore, metaRepository, usenetSettings)
             viewModelStore.put("availability", viewModel)
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
                 viewModel.availability.collect {}
