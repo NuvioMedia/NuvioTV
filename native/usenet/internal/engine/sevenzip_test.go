@@ -243,7 +243,10 @@ func TestSevenZipPasswordSurvivesNZBCache(t *testing.T) {
 
 func TestDerive7zKeyMatchesSevenZip(t *testing.T) {
 	// Cross-checked by the fixtures above; this pins the no-hash mode too.
-	key := derive7zKey("ab", []byte{1, 2}, 0)
+	key, err := derive7zKey(context.Background(), "ab", []byte{1, 2}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !bytes.Equal(key[:6], []byte{1, 2, 'a', 0, 'b', 0}) || len(key) != 32 {
 		t.Fatalf("key = %x", key)
 	}

@@ -3,6 +3,7 @@ package com.nuvio.tv.data.repository
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.MDBListSettingsDataStore
 import com.nuvio.tv.data.mdblist.MdbListRatingsClient
+import com.nuvio.tv.data.mdblist.MdbListRatingsDiskCache
 import com.nuvio.tv.data.mdblist.MdbListRatingsLoader
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.MDBListRatingsResult
@@ -24,8 +25,9 @@ class MDBListRepository internal constructor(
     @Inject constructor(
         api: MdbListRatingsClient,
         settingsDataStore: MDBListSettingsDataStore,
-        tmdbService: TmdbService
-    ) : this(api, settingsDataStore, tmdbService, MdbListRatingsLoader(api))
+        tmdbService: TmdbService,
+        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context
+    ) : this(api, settingsDataStore, tmdbService, MdbListRatingsLoader(api, MdbListRatingsDiskCache(context)))
 
     fun isAvailable(settings: MDBListSettings): Boolean = settings.enabled && api.credential(settings.apiKey) != null
 
@@ -120,9 +122,6 @@ class MDBListRepository internal constructor(
             ?: extractPrefixedId(fallbackItemId, "tmdb")
 
         if (tmdbId != null) {
-            // First try to get IMDB ID (preferred for cache dedup across providers).
-            val imdb = runCatching { tmdbService.tmdbToImdb(tmdbId.toInt(), fallbackItemType) }.getOrNull()
-            if (!imdb.isNullOrBlank() && imdb.startsWith("tt")) return MediaRef("imdb", imdb, mediaType)
             return MediaRef("tmdb", tmdbId, mediaType)
         }
 

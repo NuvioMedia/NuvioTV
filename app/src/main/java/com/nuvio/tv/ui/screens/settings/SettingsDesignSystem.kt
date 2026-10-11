@@ -37,7 +37,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -66,6 +68,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -399,7 +406,12 @@ internal fun SettingsRailButton(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = SettingsRailItemHeight),
+                .heightIn(min = SettingsRailItemHeight)
+                .clearAndSetSemantics {
+                    contentDescription = title
+                    role = Role.Tab
+                    this.selected = isSelected
+                },
             contentAlignment = Alignment.CenterStart
         ) {
             Row(
@@ -460,7 +472,7 @@ internal fun SettingsRailButton(
 
                 if (!zen) {
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
                         tint = NuvioTheme.colors.TextTertiary,
                         modifier = Modifier.size(18.dp)
@@ -728,6 +740,8 @@ internal fun SettingsToggleRow(
             .focusProperties { canFocus = enabled }
             .semantics {
                 if (!enabled) disabled()
+                role = Role.Switch
+                toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
             }
             .onFocusChanged { state ->
                 val nowFocused = state.isFocused
@@ -797,7 +811,7 @@ internal fun SettingsActionRow(
     modifier: Modifier = Modifier,
     onFocused: () -> Unit = {},
     enabled: Boolean = true,
-    trailingIcon: ImageVector = Icons.Default.ChevronRight,
+    trailingIcon: ImageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
     titleTrailingIcon: ImageVector? = null,
     titleTrailingIconTint: Color = NuvioTheme.colors.TextPrimary,
     leadingIcon: ImageVector? = null,
@@ -816,6 +830,7 @@ internal fun SettingsActionRow(
             .focusProperties { canFocus = enabled }
             .semantics {
                 if (!enabled) disabled()
+                role = Role.Button
             }
             .onFocusChanged { state ->
                 val nowFocused = state.isFocused

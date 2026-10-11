@@ -25,7 +25,7 @@ class NuvioExoPlayerPerformanceHelperTest {
         every { helperSpy.getDevicePhysicalRamBytes(any()) } returns 0L
 
         assertEquals("Unknown", helperSpy.getFriendlyRamLabel(context))
-        assertEquals(250, helperSpy.getSafeNativeMemoryLimitMb(context))
+        assertEquals(200, helperSpy.getSafeNativeMemoryLimitMb(context))
     }
 
     @Test
@@ -37,7 +37,7 @@ class NuvioExoPlayerPerformanceHelperTest {
         every { helperSpy.getDevicePhysicalRamBytes(any()) } returns (0.9 * gb).toLong()
 
         assertEquals("1 GB", helperSpy.getFriendlyRamLabel(context))
-        assertEquals(150, helperSpy.getSafeNativeMemoryLimitMb(context))
+        assertEquals(100, helperSpy.getSafeNativeMemoryLimitMb(context))
     }
 
     @Test
@@ -61,7 +61,7 @@ class NuvioExoPlayerPerformanceHelperTest {
         every { helperSpy.getDevicePhysicalRamBytes(any()) } returns (1.7 * gb).toLong()
 
         assertEquals("2 GB", helperSpy.getFriendlyRamLabel(context))
-        assertEquals(250, helperSpy.getSafeNativeMemoryLimitMb(context))
+        assertEquals(200, helperSpy.getSafeNativeMemoryLimitMb(context))
     }
 
     @Test

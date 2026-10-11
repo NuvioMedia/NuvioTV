@@ -91,18 +91,14 @@ class TorrentService @Inject constructor(
             _cacheState.value = _cacheState.value.copy(isClearing = true)
             try {
                 val activeEngine = ensureEngine()
-                if (!_cacheState.value.hasMeasurement) {
-                    delay(SAMPLE_INTERVAL_MS + 100L)
-                    val initial = activeEngine.stats.value
-                    updateCacheState(initial.diskCacheUsedBytes, initial.diskCacheProtectedBytes)
-                }
                 val before = activeEngine.stats.value
                 activeEngine.reclaimDiskCache(0L)
                 delay(SAMPLE_INTERVAL_MS + 100L)
                 val after = activeEngine.stats.value
                 updateCacheState(after.diskCacheUsedBytes, after.diskCacheProtectedBytes)
                 TorrentCacheClearResult(
-                    reclaimedBytes = (before.diskCacheUsedBytes - after.diskCacheUsedBytes).coerceAtLeast(0L),
+                    reclaimedBytes = (after.diskCacheReclaimedBytes - before.diskCacheReclaimedBytes)
+                        .coerceAtLeast(0L),
                     remainingBytes = after.diskCacheUsedBytes,
                     protectedBytes = after.diskCacheProtectedBytes
                 )
@@ -320,13 +316,14 @@ class TorrentService @Inject constructor(
         closeEngine(engine)
         currentCoroutineContext().ensureActive()
         val stateDirectory = File(context.noBackupFilesDir, "nuvio-engine/state")
-        val cacheDirectory = File(context.cacheDir, "nuvio-engine/payload")
+        val cacheDirectory = File(context.cacheDir, "nuvio-engine")
         check(stateDirectory.mkdirs() || stateDirectory.isDirectory) {
             "Could not create the Nuvio Engine state directory"
         }
         check(cacheDirectory.mkdirs() || cacheDirectory.isDirectory) {
             "Could not create the Nuvio Engine cache directory"
         }
+        migrateNestedPayloadDirectory(cacheDirectory)
         return NuvioEngine.create(
             buildTorrentEngineConfig(
                 stateDirectory = stateDirectory,
@@ -364,6 +361,13 @@ class TorrentService @Inject constructor(
     private fun observeEngineEvents(activeEngine: NuvioEngine) {
         engineEventsJob?.cancel()
         engineEventsJob = scope.launch {
+            launch {
+                activeEngine.stats.collect { stats ->
+                    if (engine === activeEngine) {
+                        updateCacheState(stats.diskCacheUsedBytes, stats.diskCacheProtectedBytes)
+                    }
+                }
+            }
             activeEngine.events.collect { event ->
                 Log.i(
                     TorrentDiagnosticTag,
@@ -429,7 +433,6 @@ class TorrentService @Inject constructor(
                         null
                     }
                     val aggregate = activeEngine.stats.value
-                    updateCacheState(aggregate.diskCacheUsedBytes, aggregate.diskCacheProtectedBytes)
                     val nowMs = SystemClock.elapsedRealtime()
                     if (nowMs >= nextSampleAtMs) {
                         nextSampleAtMs = nowMs + SAMPLE_INTERVAL_MS

@@ -64,7 +64,9 @@ fun GridContinueWatchingSection(
     blurUnwatchedEpisodes: Boolean = false,
     useEpisodeThumbnails: Boolean = true,
     cardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
-    cornerRadius: Dp = NuvioTheme.radii.md
+    cornerRadius: Dp = NuvioTheme.radii.md,
+    posterCardWidth: Dp? = null,
+    posterCardHeight: Dp? = null
 ) {
     if (items.isEmpty()) return
 
@@ -170,12 +172,12 @@ fun GridContinueWatchingSection(
                             }
                         },
                     cardWidth = when (cardStyle) {
-                        ContinueWatchingCardStyle.POSTER -> 120.dp
+                        ContinueWatchingCardStyle.POSTER -> posterCardWidth ?: posterCardHeight?.let { it * (2f / 3f) } ?: 120.dp
                         ContinueWatchingCardStyle.WIDE -> 320.dp
                         ContinueWatchingCardStyle.CARD -> 220.dp
                     },
                     imageHeight = when (cardStyle) {
-                        ContinueWatchingCardStyle.POSTER -> 180.dp
+                        ContinueWatchingCardStyle.POSTER -> posterCardHeight ?: posterCardWidth?.let { it * 1.5f } ?: 180.dp
                         ContinueWatchingCardStyle.WIDE -> 128.dp
                         ContinueWatchingCardStyle.CARD -> 124.dp
                     }

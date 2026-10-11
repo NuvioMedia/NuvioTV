@@ -154,6 +154,13 @@ internal fun PlaybackStreamSelectionSection(
     )
 
     SettingsToggleRow(
+        title = stringResource(R.string.autoplay_preload_next_episode),
+        subtitle = stringResource(R.string.autoplay_preload_next_episode_sub),
+        checked = settings.preloadNextEpisodeSources,
+        onToggle = { onUpdate { setPreloadNextEpisodeSources(!settings.preloadNextEpisodeSources) } }
+    )
+
+    SettingsToggleRow(
         title = stringResource(R.string.autoplay_reuse_last_link),
         subtitle = stringResource(R.string.autoplay_reuse_last_link_sub),
         checked = settings.streamReuseLastLinkEnabled,

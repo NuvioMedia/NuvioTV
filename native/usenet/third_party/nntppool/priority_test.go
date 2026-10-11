@@ -1,6 +1,7 @@
 package nntppool
 
 import (
+	"bufio"
 	"context"
 	"net"
 	"strings"
@@ -86,12 +87,13 @@ func TestTryNextRequest_EmptyReturnsNotGot(t *testing.T) {
 // connection index served each message-id. The id in slowID blocks until
 // release is closed, holding that connection's reader busy.
 type bodySteeringServer struct {
-	mu       sync.Mutex
-	servedBy map[string]int // message-id -> connection index
-	conns    int
-	slowID   string
-	release  chan struct{}
-	started  chan struct{} // closed once slowID has reached the server
+	mu          sync.Mutex
+	servedBy    map[string]int // message-id -> connection index
+	conns       int
+	slowID      string
+	release     chan struct{}
+	started     chan struct{} // closed once slowID has reached the server
+	startedOnce sync.Once
 }
 
 func (s *bodySteeringServer) factory(t *testing.T) ConnFactory {
@@ -106,13 +108,13 @@ func (s *bodySteeringServer) factory(t *testing.T) ConnFactory {
 		go func() {
 			defer func() { _ = server.Close() }()
 			_, _ = server.Write([]byte("200 ready\r\n"))
-			buf := make([]byte, 4096)
+			reader := bufio.NewReader(server)
 			for {
-				n, err := server.Read(buf)
+				line, err := reader.ReadString('\n')
 				if err != nil {
 					return
 				}
-				cmd := strings.TrimRight(string(buf[:n]), "\r\n")
+				cmd := strings.TrimRight(line, "\r\n")
 				if strings.HasPrefix(cmd, "DATE") {
 					_, _ = server.Write([]byte("111 20240101000000\r\n"))
 					continue
@@ -127,8 +129,8 @@ func (s *bodySteeringServer) factory(t *testing.T) ConnFactory {
 				s.mu.Unlock()
 
 				if id == s.slowID {
-					close(s.started) // the connection is now genuinely busy
-					<-s.release      // hold its reader until the test releases it
+					s.startedOnce.Do(func() { close(s.started) }) // retries may reach another socket
+					<-s.release                                   // hold its reader until the test releases it
 				}
 				_, _ = server.Write(yencSinglePart([]byte("payload"), "f.bin"))
 			}

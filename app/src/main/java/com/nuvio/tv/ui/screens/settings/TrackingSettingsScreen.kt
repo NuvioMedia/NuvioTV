@@ -51,6 +51,7 @@ fun TrackingSettingsScreen(
     val traktState by traktViewModel.uiState.collectAsStateWithLifecycle()
     val simklState by simklViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListState by mdbListViewModel.uiState.collectAsStateWithLifecycle()
+    val mdbListLibraryLists by mdbListViewModel.libraryLists.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val traktFocusRequester = remember { FocusRequester() }
     val simklFocusRequester = remember { FocusRequester() }
@@ -69,6 +70,7 @@ fun TrackingSettingsScreen(
     var showDaysCapDialog by remember { mutableStateOf(false) }
     var showMoreLikeThisSourceDialog by remember { mutableStateOf(false) }
     var showAnimeIdDialog by remember { mutableStateOf(false) }
+    var showMdbListLibraryListsDialog by remember { mutableStateOf(false) }
 
     val hasOverlay = activeProvider != null ||
         disconnectProvider != null ||
@@ -76,7 +78,8 @@ fun TrackingSettingsScreen(
         showWatchProgressDialog ||
         showDaysCapDialog ||
         showMoreLikeThisSourceDialog ||
-        showAnimeIdDialog
+        showAnimeIdDialog ||
+        showMdbListLibraryListsDialog
 
     BackHandler(enabled = !hasOverlay) {
         onBackPress()
@@ -199,6 +202,11 @@ fun TrackingSettingsScreen(
         },
         onAnimeIdClick = {
             showAnimeIdDialog = true
+        },
+        mdbListLibraryLists = mdbListLibraryLists,
+        onMdbListLibraryListsClick = {
+            mdbListViewModel.onLibraryListsOpened()
+            showMdbListLibraryListsDialog = true
         }
     )
 
@@ -404,6 +412,14 @@ fun TrackingSettingsScreen(
         )
     }
 
+    if (showMdbListLibraryListsDialog) {
+        MdbListLibraryListsDialog(
+            state = mdbListLibraryLists,
+            onToggle = mdbListViewModel::onToggleLibraryList,
+            onDismiss = { showMdbListLibraryListsDialog = false }
+        )
+    }
+
     if (showAnimeIdDialog) {
         SettingsSingleChoiceDialog(
             title = stringResource(R.string.tracking_simkl_anime_id_title),
@@ -459,7 +475,9 @@ internal fun TrackingSettingsOverview(
     onContinueWatchingWindowClick: () -> Unit,
     onCommentsChanged: (Boolean) -> Unit,
     onMoreLikeThisClick: () -> Unit,
-    onAnimeIdClick: () -> Unit
+    onAnimeIdClick: () -> Unit,
+    mdbListLibraryLists: MdbListLibraryListsUiState = MdbListLibraryListsUiState(),
+    onMdbListLibraryListsClick: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val traktPresentation = traktConnectionPresentation(traktState)
@@ -621,6 +639,24 @@ internal fun TrackingSettingsOverview(
                             }
                         }
                     }
+                    if (mdbListState.isConnected) {
+                        item(key = "tracking_mdblist_features") {
+                            SettingsGroupCard(
+                                title = stringResource(R.string.tracking_mdblist_features_title),
+                                subtitle = stringResource(R.string.tracking_mdblist_features_subtitle)
+                            ) {
+                                SettingsActionRow(
+                                    title = stringResource(R.string.mdblist_library_lists),
+                                    subtitle = stringResource(R.string.mdblist_library_lists_description),
+                                    value = mdbListLibraryLists.lists.takeIf { it.isNotEmpty() }?.let { lists ->
+                                        stringResource(R.string.mdblist_library_lists_summary, lists.count { it.visible }, lists.size)
+                                    },
+                                    onClick = onMdbListLibraryListsClick,
+                                    modifier = Modifier.testTag(TrackingSettingsTestTags.MDBLIST_LIBRARY_LISTS)
+                                )
+                            }
+                        }
+                    }
                 }
                 SettingsVerticalScrollIndicators(state = listState)
             }
@@ -767,6 +803,7 @@ internal object TrackingSettingsTestTags {
     const val TRAKT_PROVIDER = "tracking_provider_trakt"
     const val SIMKL_PROVIDER = "tracking_provider_simkl"
     const val MDBLIST_PROVIDER = "tracking_provider_mdblist"
+    const val MDBLIST_LIBRARY_LISTS = "tracking_mdblist_library_lists"
     const val LIBRARY_SOURCE = "tracking_source_library"
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"
     const val CONTINUE_WATCHING = "tracking_trakt_continue_watching"

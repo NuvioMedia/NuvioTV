@@ -182,7 +182,7 @@ and source fallback take over. Diagnostics include `filledArticles`,
 ## Archives and selection
 
 RAR resolution is lazy for strict file/episode matches. Stored RAR4 and RAR5 entries map directly to
-underlying NNTP-backed extents. Compressed and encrypted RAR entries are rejected.
+underlying NNTP-backed extents. Compressed RAR entries are rejected.
 The engine skips unselected packed data arithmetically and fetches only article
 bodies containing required headers. It returns the selected entry before scanning
 its continuation volumes. Near a volume boundary it resolves and primes the
@@ -197,6 +197,25 @@ fully anonymous RAR4 sets require meaningful NZB subject/release ordering or XML
 ordering. Arbitrarily shuffled, completely anonymous RAR4 volumes cannot be
 reconstructed authoritatively from their headers alone.
 
+Real posts often number volumes inconsistently. A reposted copy of a volume is
+dropped in favour of the copy whose NZB metadata is intact. When a set mixes
+numbering schemes and one scheme lacks only its first volume, a file of another
+scheme whose headers start the same file (an old-style `.rar` posted as
+`.partNN.rar`) completes it. Names that do not number the volumes (shuffled
+`hash.N` obfuscation) are ordered by RAR5 main-header volume numbers, read a
+small batch at a time; RAR4 has none, so such a set stays rejected. A single
+random name that ends in digits is not a set and stays with the other
+obfuscated files. Obfuscated 7z volumes drop interleaved PAR2 files by
+signature and follow yEnc `.7z.NNN` names when the poster kept them.
+
+When selection still fails and names carry no usable volume or file name
+(bare hashes, random extensions, `hash.N` numbering), the release's PAR2 index
+supplies them: it lists every file's real name, length and the MD5 of its first
+16 KiB. One article per candidate file is read, eight at a time; obfuscated PAR2
+files are found by signature. Files are matched by content, never by position,
+renamed, and selection runs again. This recovers fully obfuscated RAR4 sets,
+whose headers carry no volume number. Correctly named sets never pay for it.
+
 Episode selection first matches `SxxExx` or `NxNN`, including recovered yEnc
 names for direct videos. If no strict match exists, exactly one non-sample video
 across the release may be selected when neither its filename nor its original
@@ -205,7 +224,11 @@ do not count as video candidates. Ambiguous multi-video releases and explicit
 `fileIdx`/`fileMustInclude` selectors never use this fallback. Establishing a sole
 video requires scanning archive headers and continuation volumes, skipping packed
 payloads; strict matches retain lazy startup. Bare numbers such as `102` are not
-interpreted as season/episode markers.
+interpreted as season/episode markers. A file that reaches the set's last volume
+fills every volume between, so when the last volume's first block ends that same
+file the inventory resumes there instead of walking the middle volumes; an
+episode with an obfuscated inner name is then established from three headers.
+The skipped entry keeps its own cursor and maps its continuations on demand.
 
 For ordered, uniform stored sets, the second volume supplies a continuation
 template and a direct final-volume probe checks the remaining byte count. The
@@ -219,6 +242,22 @@ sets, other main-header extras and incompatible final remainders use serial
 discovery. The final header is always parsed, since its packed-size
 width and metadata may differ. Selection of unrequested entries stays serial so
 season-pack traversal preserves the cursor position.
+
+### Password-protected RAR
+
+Stored RAR4 (AES-128) and RAR5 (AES-256) entries are streamed with the NZB
+`<head><meta type="password">`, with or without encrypted headers (`-hp`). A
+file's data is one AES-CBC stream from its first part's IV that continues across
+volumes, so it maps onto volume extents like plaintext data (packed sizes are
+rounded up to the AES block) and is decrypted per read, keeping seeks random
+access. With `-hp`, RAR5 headers carry a 16-byte IV under the key of each
+volume's encryption header and RAR4 headers an 8-byte salt; offsets account for
+that prefix and the block padding, including continuation prediction past the
+RAR5 volume-index width change. Keys are derived once per salt (PBKDF2-HMAC-SHA256
+for RAR5, 2^18 SHA-1 rounds for RAR4). A wrong password is detected from the RAR5
+check value, from undecryptable `-hp` headers, or from the decrypted container
+signature. RAR 2.x encryption and encrypted RAR sets nested inside a 7z are
+rejected.
 
 ### 7z archives
 

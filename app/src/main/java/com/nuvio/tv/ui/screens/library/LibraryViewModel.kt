@@ -73,11 +73,14 @@ enum class LibrarySortOption(
     DEFAULT("default", R.string.library_sort_provider_order),
     ADDED_DESC("added_desc", R.string.library_sort_added_desc),
     ADDED_ASC("added_asc", R.string.library_sort_added_asc),
+    RELEASED_DESC("released_desc", R.string.library_sort_released_desc),
+    RELEASED_ASC("released_asc", R.string.library_sort_released_asc),
     TITLE_ASC("title_asc", R.string.library_sort_title_asc),
     TITLE_DESC("title_desc", R.string.library_sort_title_desc);
 
     companion object {
         val TrackingOptions = listOf(DEFAULT, ADDED_DESC, ADDED_ASC, TITLE_ASC, TITLE_DESC)
+        val MdbListOptions = listOf(DEFAULT, ADDED_DESC, ADDED_ASC, RELEASED_DESC, RELEASED_ASC, TITLE_ASC, TITLE_DESC)
         val LocalOptions = listOf(ADDED_DESC, ADDED_ASC, TITLE_ASC, TITLE_DESC)
     }
 }
@@ -128,7 +131,7 @@ data class LibraryUiState(
     val selectedTypeTab: LibraryTypeTab? = null,
     val selectedSortOption: LibrarySortOption = LibrarySortOption.DEFAULT,
     val sortSelectionVersion: Long = 0L,
-    val providerAddedOrder: LibraryProviderOrder? = null,
+    val providerSortOrder: LibraryProviderOrder? = null,
     val availableGenres: List<FilterOption> = emptyList(),
     val availableYears: List<FilterOption> = emptyList(),
     val selectedGenre: String? = null,
@@ -310,18 +313,24 @@ class LibraryViewModel @Inject constructor(
                 profileId to Triple(state.sourceMode.takeIf { state.isTrackingAuthenticated },
                     state.selectedListKey, state.selectedSortOption)
             }.distinctUntilChanged().collectLatest { (profileId, selection) ->
-                _uiState.update { it.copy(providerAddedOrder = null).withVisibleItems() }
+                _uiState.update { it.copy(providerSortOrder = null).withVisibleItems() }
                 val (source, listKey, sortOption) = selection
-                if (source == null || listKey == null ||
-                    sortOption !in listOf(LibrarySortOption.ADDED_ASC, LibrarySortOption.ADDED_DESC)) return@collectLatest
+                if (source == null || listKey == null) return@collectLatest
                 val sorter = source.providerId?.let(trackingProviderRegistry::provider)?.listSorter ?: return@collectLatest
+                val order = when (sortOption) {
+                    LibrarySortOption.ADDED_DESC, LibrarySortOption.ADDED_ASC ->
+                        sorter.observeAddedOrder(listKey, sortOption == LibrarySortOption.ADDED_DESC)
+                    LibrarySortOption.RELEASED_DESC, LibrarySortOption.RELEASED_ASC ->
+                        sorter.observeReleaseOrder(listKey, sortOption == LibrarySortOption.RELEASED_DESC)
+                    else -> return@collectLatest
+                }
                 try {
-                    sorter.observeAddedOrder(listKey, sortOption == LibrarySortOption.ADDED_DESC).collect { keys ->
+                    order.collect { keys ->
                         if (profileManager.activeProfileId.value != profileId) return@collect
                         _uiState.update { current ->
                             if (current.sourceMode != source || current.selectedListKey != listKey ||
                                 current.selectedSortOption != sortOption) current else current.copy(
-                                providerAddedOrder = keys?.let { LibraryProviderOrder(source, listKey, sortOption,
+                                providerSortOrder = keys?.let { LibraryProviderOrder(source, listKey, sortOption,
                                     it.withIndex().associate { (index, key) -> key to index }) }
                             ).withVisibleItems()
                         }
@@ -681,7 +690,9 @@ class LibraryViewModel @Inject constructor(
                     val nextSelectedType = current.selectedTypeTab
                         ?: persistedTypeKey?.let { key -> LibraryTypeTab(key = key, label = "") }
                         ?: LibraryTypeTab.All.copy(label = context.getString(R.string.library_type_all))
-                    val sortOptions = if (sourceMode.providerId != null && isTrackingAuthenticated) {
+                    val sortOptions = if (sourceMode == LibrarySourceMode.MDBLIST && isTrackingAuthenticated) {
+                        LibrarySortOption.MdbListOptions
+                    } else if (sourceMode.providerId != null && isTrackingAuthenticated) {
                         LibrarySortOption.TrackingOptions
                     } else {
                         LibrarySortOption.LocalOptions
@@ -987,17 +998,11 @@ class LibraryViewModel @Inject constructor(
         }
 
         // Step 6: Sort
-        val addedOrder = providerAddedOrder?.takeIf {
+        val providerOrder = providerSortOrder?.takeIf {
             it.source == sourceMode && it.listKey == selectedListKey && it.sortOption == selectedSortOption
         }?.comparator()
         val sorted = when (selectedSortOption) {
             LibrarySortOption.DEFAULT -> when {
-                sourceMode == LibrarySourceMode.MDBLIST -> watchedFiltered.sortedWith(
-                    compareByDescending<LibraryEntry> { it.listedAt }
-                        .thenByDescending { it.listRanks[selectedListKey] ?: Int.MIN_VALUE }
-                        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
-                        .thenBy { it.id }
-                )
                 sourceMode.providerId != null -> watchedFiltered.sortedWith(
                     compareBy<LibraryEntry> { it.listRanks[selectedListKey] ?: it.traktRank ?: Int.MAX_VALUE }
                         .thenByDescending { it.listedAt }
@@ -1007,12 +1012,22 @@ class LibraryViewModel @Inject constructor(
                 else -> watchedFiltered
             }
             LibrarySortOption.ADDED_DESC -> watchedFiltered.sortedWith(
-                addedOrder ?: compareByDescending<LibraryEntry> { it.listedAt }
+                providerOrder ?: compareByDescending<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )
             LibrarySortOption.ADDED_ASC -> watchedFiltered.sortedWith(
-                addedOrder ?: compareBy<LibraryEntry> { it.listedAt }
+                providerOrder ?: compareBy<LibraryEntry> { it.listedAt }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
+                    .thenBy { it.id }
+            )
+            LibrarySortOption.RELEASED_DESC -> watchedFiltered.sortedWith(
+                providerOrder ?: compareByDescending<LibraryEntry> { it.extractYear() }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
+                    .thenBy { it.id }
+            )
+            LibrarySortOption.RELEASED_ASC -> watchedFiltered.sortedWith(
+                providerOrder ?: compareBy<LibraryEntry, String?>(nullsLast()) { it.extractYear() }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )

@@ -28,6 +28,19 @@ internal fun buildTorrentEngineConfig(
     streamInactivityTimeoutMilliseconds = 0
 )
 
+internal fun migrateNestedPayloadDirectory(cacheDirectory: File) {
+    val payloadDirectory = File(cacheDirectory, "payload")
+    val nestedDirectory = File(payloadDirectory, "payload")
+    val entries = nestedDirectory.listFiles() ?: return
+    entries.forEach { entry ->
+        val target = File(payloadDirectory, entry.name)
+        if (target.exists() || !entry.renameTo(target)) {
+            entry.deleteRecursively()
+        }
+    }
+    nestedDirectory.deleteRecursively()
+}
+
 internal fun unexpectedStreamStopError(
     requestId: Long,
     eventStreamId: String?,
