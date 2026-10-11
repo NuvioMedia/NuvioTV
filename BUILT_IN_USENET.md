@@ -61,11 +61,18 @@ engine as `?priority=N` on the server URL. Lower values are preferred, and a
 server without one counts as 0. Addon-supplied servers can use the same
 parameter.
 
-Indexers accept a complete API endpoint and API key. Examples:
+Indexers take a URL, an API path and an API key. The API path is appended to
+the URL to form the Newznab endpoint; new indexers start with `/api`, which most
+indexers use. A URL that already ends with the path is used as is, so a pasted
+complete endpoint still works. Indexers saved before the field existed have an
+empty path, since their URL is already the complete endpoint. Examples:
 
-- `https://indexer.example/api`
-- `http://hydra.local:5076/api`
-- `http://prowlarr.local:9696/1/api` (the individual indexer's Newznab endpoint)
+- `https://api.nzbgeek.info/` with path `/api`
+- `http://hydra.local:5076` with path `/api`
+- `http://prowlarr.local:9696/1` with path `/api` (the individual indexer's
+  Newznab endpoint)
+- An endpoint that is not under a path, such as a query-only URL: leave the
+  path empty and enter the complete URL.
 
 Use **Test provider** to connect, negotiate TLS and sign in with the entered
 settings before saving. It applies the same local-address rule as playback, and

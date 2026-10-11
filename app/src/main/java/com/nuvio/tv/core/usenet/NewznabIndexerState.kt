@@ -95,7 +95,7 @@ internal class NewznabIndexerStates(private val storage: NewznabStateStorage, pr
     }
 
     private fun key(indexer: UsenetIndexer) = MessageDigest.getInstance("SHA-256")
-        .digest("${indexer.apiUrl}\n${indexer.apiKey}".toByteArray())
+        .digest("${indexer.endpoint}\n${indexer.apiKey}".toByteArray())
         .joinToString("") { "%02x".format(it) }
 
     private companion object {
