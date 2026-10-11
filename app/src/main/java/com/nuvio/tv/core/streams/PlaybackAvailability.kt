@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.streams
 
+import com.nuvio.tv.core.usenet.builtInUsenetCanSearch
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.ScraperInfo
@@ -15,9 +16,6 @@ internal fun Addon.supportsStreamResource(type: String, videoId: String): Boolea
                 prefixes == null || prefixes.any { videoId.startsWith(it) }
             }
     }
-
-/** The types the built-in Usenet sources search; see BuiltInUsenetService.search. */
-private val builtInUsenetTypes = setOf("movie", "series", "tv", "show")
 
 internal data class PlaybackAvailability(
     val addons: List<Addon> = emptyList(),
@@ -37,5 +35,5 @@ internal data class PlaybackAvailability(
         addons.any { it.enabled && it.supportsStreamResource(type, videoId) } ||
         scrapers.any { it.enabled && it.supportsType(type) } ||
         // Built-in sources are searched on play, so a title can play even with no addon installed.
-        (usenetReady && type.lowercase() in builtInUsenetTypes)
+        (usenetReady && builtInUsenetCanSearch(type, videoId))
 }

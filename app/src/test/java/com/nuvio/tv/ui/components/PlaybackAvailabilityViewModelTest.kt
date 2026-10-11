@@ -5,6 +5,8 @@ import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.AddonResource
+import com.nuvio.tv.core.usenet.UsenetIndexer
+import com.nuvio.tv.core.usenet.UsenetProvider
 import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
 import com.nuvio.tv.core.usenet.UsenetSourceSettings
 import com.nuvio.tv.domain.model.ScraperInfo
@@ -19,6 +21,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
@@ -53,7 +56,7 @@ class PlaybackAvailabilityViewModelTest {
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
                 viewModel.availability.collect {}
             }
-            runCurrent()
+            settle { viewModel.availability.value.isLoaded }
             assertTrue(viewModel.availability.value.isLoaded)
             assertFalse(viewModel.availability.value.canStream("movie", "tt123"))
 
@@ -92,5 +95,53 @@ class PlaybackAvailabilityViewModelTest {
             runCurrent()
             Dispatchers.resetMain()
         }
+    }
+
+    @Test
+    fun `ready usenet sources make movies playable and a failed read does not`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val viewModelStore = ViewModelStore()
+        try {
+            val addonRepository = mockk<AddonRepository>()
+            val pluginDataStore = mockk<PluginDataStore>()
+            val metaRepository = mockk<MetaRepository>()
+            every { addonRepository.getInstalledAddons() } returns MutableStateFlow(emptyList())
+            every { pluginDataStore.scrapers } returns MutableStateFlow(emptyList())
+            every { pluginDataStore.pluginsEnabled } returns MutableStateFlow(true)
+            every { metaRepository.getCachedMeta(any(), any()) } returns null
+            val ready = UsenetSourceConfiguration(enabled = true,
+                providers = listOf(UsenetProvider(name = "News", host = "news.test")),
+                indexers = listOf(UsenetIndexer(name = "Indexer", apiUrl = "https://indexer.test/api")))
+            val snapshots = MutableStateFlow<Pair<Int, Result<UsenetSourceConfiguration>>>(0 to Result.success(ready))
+            val usenetSettings = mockk<UsenetSourceSettings>()
+            every { usenetSettings.snapshots } returns snapshots
+            val viewModel = PlaybackAvailabilityViewModel(addonRepository, pluginDataStore, metaRepository, usenetSettings)
+            viewModelStore.put("availability", viewModel)
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.availability.collect {}
+            }
+            settle { viewModel.availability.value.canStream("movie", "tt123") }
+            assertTrue(viewModel.availability.value.canStream("movie", "tt123"))
+            assertFalse(viewModel.availability.value.canStream("series", "tt123"))
+
+            // Settings that cannot be read (a keystore failure) are not ready.
+            snapshots.value = 0 to Result.failure(IllegalStateException("keystore"))
+            settle { !viewModel.availability.value.canStream("movie", "tt123") }
+            assertFalse(viewModel.availability.value.canStream("movie", "tt123"))
+        } finally {
+            viewModelStore.clear()
+            runCurrent()
+            Dispatchers.resetMain()
+        }
+    }
+
+    /** The Usenet settings are read on Dispatchers.IO, outside the test scheduler: wait for them. */
+    private fun TestScope.settle(condition: () -> Boolean) {
+        repeat(200) {
+            runCurrent()
+            if (condition()) return
+            Thread.sleep(10)
+        }
+        runCurrent()
     }
 }

@@ -17,7 +17,10 @@ import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -40,7 +43,9 @@ internal class PlaybackAvailabilityViewModel @Inject constructor(
         flowOf(emptyList())
     }
 
+    // Reading the settings decrypts them: keep it off the main thread, and only pass on changes.
     private val usenetReady = usenetSettings.snapshots.map { (_, result) -> result.getOrNull()?.ready == true }
+        .distinctUntilChanged().flowOn(Dispatchers.IO)
 
     val availability = combine(addonRepository.getInstalledAddons(), enabledScrapers, usenetReady) { addons, scrapers, usenet ->
         PlaybackAvailability(addons, scrapers, isLoaded = true, usenetReady = usenet,
