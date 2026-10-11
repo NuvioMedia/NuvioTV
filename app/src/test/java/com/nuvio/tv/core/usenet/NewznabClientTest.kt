@@ -40,6 +40,29 @@ class NewznabClientTest {
         }
     }
 
+    @Test fun `requests send the user agent from the settings, which is Nuvio unless changed`() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody(capsXml))
+            server.enqueue(MockResponse().setBody(capsXml))
+            var settings = UsenetConfiguration()
+            val client = NewznabClient(MemoryStorage()) { settings.agent }
+            client.capabilities(server.indexer(), live = true)
+            settings = settings.copy(userAgent = "MyClient/1.0")
+            client.capabilities(server.indexer(), live = true)
+            assertEquals(NUVIO_USER_AGENT, server.takeRequest().getHeader("User-Agent"))
+            assertTrue(NUVIO_USER_AGENT.startsWith("Nuvio/"))
+            assertEquals("MyClient/1.0", server.takeRequest().getHeader("User-Agent"))
+        }
+    }
+
+    @Test fun `only a user agent the user chose is kept, and only in plain text`() {
+        assertEquals(NUVIO_USER_AGENT, UsenetConfiguration(userAgent = "  ").agent)
+        assertEquals("MyClient/1.0", UsenetConfiguration(userAgent = " MyClient/1.0 ").agent)
+        assertTrue(isValidUserAgent("MyClient/1.0 (Linux; x86_64)"))
+        // A line break would inject headers; HTTP clients refuse other characters outright.
+        for (agent in listOf("Nuvio\r\nX-Injected: 1", "Nüvio", "x".repeat(257))) assertFalse(agent, isValidUserAgent(agent))
+    }
+
     @Test fun `caps survive a restart, refetch for an edited key and fall back when expired and unreachable`() = runBlocking {
         MockWebServer().use { server ->
             val storage = MemoryStorage()

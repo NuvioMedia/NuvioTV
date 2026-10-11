@@ -96,6 +96,18 @@ class UsenetSettingsTest {
             settings.update(settings.settings.value.copy(fallbackEnabled = false))
             assertFalse(settings.settings.value.fallbackEnabled)
             assertFalse(UsenetSettings(context).settings.value.fallbackEnabled)
+
+            // Only a User-Agent the user chose is stored: Nuvio's own stays automatic and follows app updates.
+            assertEquals(NUVIO_USER_AGENT, settings.settings.value.agent)
+            settings.update(settings.settings.value.copy(userAgent = "MyClient/1.0"))
+            assertEquals("MyClient/1.0", UsenetSettings(context).settings.value.agent)
+            settings.update(settings.settings.value.copy(userAgent = " $NUVIO_USER_AGENT "))
+            assertEquals("", UsenetSettings(context).settings.value.userAgent)
+            assertThrows(IllegalArgumentException::class.java) {
+                settings.update(settings.settings.value.copy(userAgent = "a\r\nb: c"))
+            }
+            values["userAgent"] = "Nüvio"
+            assertEquals(NUVIO_USER_AGENT, UsenetSettings.read(context).agent)
         } finally {
             unmockkObject(UsenetSidecar.Companion)
         }

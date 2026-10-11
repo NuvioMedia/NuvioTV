@@ -90,4 +90,9 @@
     <string name="usenet_phone_secret_needed">Enter the password or API key again: a saved one is only used for the server it was saved for.</string>
     <string name="usenet_phone_unavailable">The TV could not save this. Keep its Usenet settings open, on the same profile, and try again.</string>
     <string name="usenet_sources_save_error">Could not load or save Usenet sources. Check device storage and try again.</string>
+    <string name="usenet_user_agent">User-Agent</string>
+    <string name="usenet_user_agent_description">How Nuvio names itself to indexers, for searches and NZB downloads. Change it only if an indexer asks for a different one.</string>
+    <string name="usenet_user_agent_default">%1$s (default)</string>
+    <string name="usenet_user_agent_invalid">Use plain text on one line, up to 256 characters.</string>
+    <string name="usenet_user_agent_reset">Reset to default</string>
 </resources>

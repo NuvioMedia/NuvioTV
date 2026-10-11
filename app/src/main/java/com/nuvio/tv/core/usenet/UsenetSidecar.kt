@@ -77,10 +77,21 @@ class UsenetSidecar private constructor(private val context: Context) {
         val configuration: UsenetConfiguration, val profileId: Int?
     )
 
-    private fun preparationKey(stream: Stream, season: Int?, episode: Int?, profileId: Int?) =
-        PreparationKey(stream.nzbUrl, stream.servers?.toList(),
-            stream.behaviorHints?.proxyHeaders?.request.orEmpty().toMap(), stream.fileIdx,
-            stream.fileMustInclude, season, episode, UsenetSettings.read(context), profileId)
+    private fun preparationKey(stream: Stream, season: Int?, episode: Int?, profileId: Int?): PreparationKey {
+        val configuration = UsenetSettings.read(context)
+        return PreparationKey(stream.nzbUrl, stream.servers?.toList(), nzbHeaders(stream, configuration), stream.fileIdx,
+            stream.fileMustInclude, season, episode, configuration, profileId)
+    }
+
+    /**
+     * The engine downloads the NZB with these. Without a User-Agent from the addon it sends the one
+     * indexer searches send, so a grab names the same client, never Go's default.
+     */
+    private fun nzbHeaders(stream: Stream, configuration: UsenetConfiguration): Map<String, String> {
+        val headers = stream.behaviorHints?.proxyHeaders?.request.orEmpty().toMap()
+        return if (headers.keys.any { it.equals(USER_AGENT, ignoreCase = true) }) headers
+        else headers + (USER_AGENT to configuration.agent)
+    }
 
     /** Start immediately. Only one candidate may own a prepared session. */
     fun prefetch(owner: Any, stream: Stream, season: Int?, episode: Int?, profileId: Int?): Job {
@@ -236,7 +247,7 @@ class UsenetSidecar private constructor(private val context: Context) {
                 stream.fileMustInclude?.let { put("fileMustInclude", it) }
                 season?.let { put("season", it) }
                 episode?.let { put("episode", it) }
-                put("headers", JSONObject(stream.behaviorHints?.proxyHeaders?.request.orEmpty()))
+                put("headers", JSONObject(nzbHeaders(stream, configuration)))
                 put("config", JSONObject().apply {
                     put("profile", configuration.profile)
                     put("readAhead", configuration.readAhead)

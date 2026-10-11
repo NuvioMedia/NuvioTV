@@ -78,6 +78,17 @@ empty path, since their URL is already the complete endpoint. Examples:
 - An endpoint that is not under a path, such as a query-only URL: leave the
   path empty and enter the complete URL.
 
+Indexer searches and the NZB download that starts playback (the grab) send
+one User-Agent, so an indexer sees the same client for both. It is set in
+Usenet settings and shows `Nuvio/<version>` by default, like the app's other
+HTTP requests. The default is not stored: it is built from the installed
+version, so it follows every app update. Only a different User-Agent the user
+enters is saved, for an indexer that asks for one; Reset to default, or saving
+it blank, returns to Nuvio's. NZBs from addons are downloaded with it too,
+unless the addon supplies its own User-Agent. The engine keeps the User-Agent
+when an indexer redirects the download to another host, and the NZB cache
+ignores it, so a new version or User-Agent keeps cached NZBs.
+
 Use **Test provider** to connect, negotiate TLS and sign in with the entered
 settings before saving. It applies the same local-address rule as playback, and
 reports unreachable hosts, TLS failures, rejected credentials and refused
