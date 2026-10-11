@@ -785,6 +785,8 @@
   <string name="sub_strip_sdh">Αφαίρεση υποτίτλων SDH</string>
   <string name="sub_strip_sdh_desc">Απόκρυψη περιγραφών ήχου και ετικετών ομιλητών από τους υποτίτλους κειμένου</string>
   <!-- PlaybackAutoPlaySettings -->
+  <string name="autoplay_preload_next_episode">Προφόρτωση πηγών επόμενου επεισοδίου</string>
+  <string name="autoplay_preload_next_episode_sub">Ξεκινήστε την αναζήτηση πηγών στο παρασκήνιο πριν εμφανιστεί το κουμπί του επόμενου επεισοδίου.</string>
   <string name="autoplay_reuse_last_link">Επαναχρησιμοποίηση τελευταίας σύνδεσης</string>
   <string name="autoplay_reuse_last_link_sub">Αυτόματη αναπαραγωγή της τελευταίας λειτουργικής ροής για την ίδια ταινία/επεισόδιο όταν η προσωρινή μνήμη είναι ακόμα έγκυρη</string>
   <string name="autoplay_last_link_cache">Διάρκεια προσωρινής μνήμης τελευταίας σύνδεσης</string>
@@ -941,6 +943,13 @@
   <string name="layout_cw_sort_streaming_desc">Κυκλοφορημένα πρώτα, επερχόμενα στο τέλος</string>
   <string name="layout_trailer_button">Εμφάνιση κουμπιού τρέιλερ</string>
   <string name="layout_trailer_button_sub">Εμφάνιση κουμπιού τρέιλερ στην οθόνη λεπτομερειών (μόνο όταν υπάρχει τρέιλερ).</string>
+  <string name="layout_trailer_play_in_background">Αναπαραγωγή στο παρασκήνιο</string>
+  <string name="layout_trailer_play_in_background_sub">Αναπαραγωγή του τρέιλερ στη θέση του φόντου όσο η σελίδα παραμένει ορατή.</string>
+  <string name="layout_trailer_pause_on_scroll">Παύση κατά την κύλιση</string>
+  <string name="layout_trailer_pause_on_scroll_sub">Παύση του τρέιλερ όταν κάνετε κύλιση προς τα κάτω και συνέχιση όταν επιστρέφετε στην κορυφή.</string>
+  <string name="layout_detail_group_episodes">Επεισόδια</string>
+  <string name="layout_detail_group_trailers">Τρέιλερ</string>
+  <string name="layout_detail_group_metadata">Μεταδεδομένα</string>
   <string name="layout_prefer_external_meta">Προτίμηση μεταδεδομένων από εξωτερικό πρόσθετο</string>
   <string name="layout_prefer_external_meta_sub">Χρήση μεταδεδομένων από εξωτερικό πρόσθετο αντί για πρόσθετο καταλόγου.</string>
   <string name="layout_show_full_release_date">Εμφάνιση πλήρους ημερομηνίας κυκλοφορίας</string>
@@ -1096,6 +1105,12 @@
   <string name="mdblist_dialog_placeholder">Εισάγετε κλειδί API MDBList</string>
   <string name="mdblist_not_set">Δεν έχει οριστεί</string>
   <string name="mdblist_invalid_api_key">Μη έγκυρο κλειδί API MDBList</string>
+  <string name="mdblist_library_lists">Λίστες βιβλιοθήκης</string>
+  <string name="mdblist_library_lists_description">Επιλέξτε ποιες λίστες MDBList εμφανίζονται στη Βιβλιοθήκη και στη Διαχείριση λιστών. Η λίστα παρακολούθησης εμφανίζεται πάντα.</string>
+  <string name="mdblist_library_lists_empty">Δεν βρέθηκαν ακόμη λίστες στον λογαριασμό σας MDBList. Συγχρονίστε για να φορτωθούν.</string>
+  <string name="mdblist_library_lists_summary">%1$d από %2$d ορατές</string>
+  <string name="tracking_mdblist_features_title">Δυνατότητες MDBList</string>
+  <string name="tracking_mdblist_features_subtitle">Ρυθμίσεις ειδικά για το MDBList</string>
   <string name="debrid_title">Συνδεδεμένες υπηρεσίες</string>
   <string name="debrid_subtitle">Συνδέστε λογαριασμούς για συνδέσμους και πρόσβαση στη βιβλιοθήκη</string>
   <string name="debrid_experimental_notice">Η υποστήριξη Debrid είναι πειραματική και μπορεί να διατηρηθεί, να αλλάξει ή να αφαιρεθεί αργότερα.</string>
@@ -3245,4 +3260,16 @@
   <string name="shuffle_save_failed">Δεν ήταν δυνατή η ενημέρωση του ανακατέματος. Δοκιμάστε ξανά.</string>
   <string name="shuffle_change_selection">Επιλογή επεισοδίων</string>
   <string name="shuffle_badge">Ενεργό ανακάτεμα επεισοδίων</string>
+  <string name="autosync_setting_title">Αυτόματος συγχρονισμός υποτίτλων</string>
+  <string name="autosync_setting_description">Αντιστοιχίστε τον επιλεγμένο υπότιτλο του πρόσθετου με τον χρονισμό των υποτίτλων που είναι ενσωματωμένοι στο βίντεο.</string>
+  <string name="autosync_tolerance_title">Ανοχή αυτόματου συγχρονισμού</string>
+  <string name="autosync_tolerance_description">Διατηρήστε τον αρχικό χρονισμό όταν η απαιτούμενη διόρθωση είναι τόσο μικρή ή μικρότερη.</string>
+  <string name="autosync_tolerance_off">Ανενεργό</string>
+  <string name="autosync_tolerance_value">%1$d ms</string>
+  <string name="autosync_thorough_title">Εξονυχιστική αναζήτηση αυτόματου συγχρονισμού</string>
+  <string name="autosync_thorough_description">Συνεχίστε τη σύγκριση άλλων υποτίτλων και ενσωματωμένων κομματιών για ακριβέστερη αντιστοίχιση πριν από τον συγχρονισμό. Όταν είναι ανενεργό, χρησιμοποιείται νωρίτερα η πρώτη ισχυρή αντιστοίχιση. Εφαρμόζονται μόνο αντιστοιχίσεις υψηλής βεβαιότητας.</string>
+  <string name="autosync_toast_failed">Ο συγχρονισμός απέτυχε: ο αυτόματος συγχρονισμός δεν μπόρεσε να αντιστοιχίσει αυτόν τον υπότιτλο με το βίντεο.</string>
+  <string name="autosync_toast_failed_no_reference">Ο συγχρονισμός απέτυχε: αυτό το βίντεο δεν έχει ενσωματωμένους υπότιτλους για σύγκριση.</string>
+  <string name="autosync_toast_failed_unsupported">Ο συγχρονισμός απέτυχε: ο αυτόματος συγχρονισμός δεν υποστηρίζει αυτή τη μορφή υποτίτλων.</string>
+  <string name="autosync_label_synced">Αυτόματα συγχρονισμένος</string>
 </resources>

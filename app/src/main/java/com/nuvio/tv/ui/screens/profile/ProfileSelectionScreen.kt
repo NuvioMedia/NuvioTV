@@ -20,6 +20,9 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -1152,6 +1155,7 @@ private fun ProfileCard(
                 indication = null,
                 onClick = onClick
             )
+            .semantics { role = Role.Button }
             .padding(
                 horizontal = ProfileSelectionSpacing.CardPaddingHorizontal,
                 vertical = ProfileSelectionSpacing.CardPaddingVertical
@@ -1315,6 +1319,7 @@ private fun AddProfileCard(
                 indication = null,
                 onClick = onClick
             )
+            .semantics { role = Role.Button }
             .padding(
                 horizontal = ProfileSelectionSpacing.CardPaddingHorizontal,
                 vertical = ProfileSelectionSpacing.CardPaddingVertical
@@ -2628,6 +2633,7 @@ private fun OverlayButton(
                 enabled = enabled,
                 onClick = onClick
             )
+            .semantics { role = Role.Button }
             .padding(horizontal = 28.dp, vertical = NuvioTheme.spacing.md),
         contentAlignment = Alignment.Center
     ) {

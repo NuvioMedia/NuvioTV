@@ -166,6 +166,21 @@ func sniff(ctx context.Context, f *File) ([]byte, error) {
 }
 
 func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
+	c, err := selectPass(ctx, files, s)
+	if !par2Worth(ctx, err, files) {
+		return c, err
+	}
+	// Last resort for fully obfuscated releases: real names from PAR2.
+	if renamed, perr := recoverPAR2Names(ctx, files); perr != nil || renamed == 0 {
+		if perr != nil && ctx.Err() != nil {
+			return nil, perr
+		}
+		return c, err
+	}
+	return selectPass(ctx, files, s)
+}
+
+func selectPass(ctx context.Context, files []*File, s Selection) (*Content, error) {
 	c, err := selectContent(ctx, files, s, false)
 	if err == errNoMatchingVideo && s.episodeOnly() {
 		s.multiEpisode = true
@@ -214,8 +229,20 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 	groups := map[string][]*File{}
 	var order []string
 	var direct, unknown []*File
+	volumeNames := map[string]int{}
 	for _, f := range files {
 		if key, ok := rarname.SetKey(f.Name); ok {
+			lower := strings.ToLower(f.Name)
+			if j, seen := volumeNames[lower]; seen {
+				// A reposted copy of a volume already in the set: keep the
+				// copy whose NZB metadata is intact and most complete.
+				if old := groups[key][j]; (old.damaged != nil && f.damaged == nil) ||
+					((old.damaged == nil) == (f.damaged == nil) && f.Size() > old.Size()) {
+					groups[key][j] = f
+				}
+				continue
+			}
+			volumeNames[lower] = len(groups[key])
 			if _, seen := groups[key]; !seen {
 				order = append(order, key)
 			}
@@ -228,6 +255,23 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 				unknown = append(unknown, f)
 			}
 		}
+	}
+	if len(unknown) > 0 {
+		// Random obfuscated names occasionally end in digits. A single such
+		// name is not a volume set; it belongs with the other obfuscated files.
+		kept := order[:0]
+		for _, key := range order {
+			if vols := groups[key]; len(vols) == 1 {
+				if scheme, _, _ := rarname.VolumeNumber(vols[0].Name); scheme == rarname.SchemeNumeric {
+					unknown = append(unknown, vols[0])
+					delete(groups, key)
+					continue
+				}
+			}
+			kept = append(kept, key)
+		}
+		order = kept
+		sort.SliceStable(unknown, func(i, j int) bool { return unknown[i].Index < unknown[j].Index })
 	}
 	// Largest direct candidate first when the addon supplies no file selector.
 	// This uses NZB metadata and does not probe other candidates for sizing.
@@ -348,8 +392,11 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 				// obfuscated set follow its first one in release order.
 				named := strings.HasSuffix(strings.ToLower(f.Name), ".7z")
 				vols := unknown[i:]
+				var err error
 				if named {
 					vols = vols[:1]
+				} else if vols, err = obfuscated7zVolumes(ctx, vols); err != nil {
+					return nil, err
 				}
 				c, err := select7z(ctx, vols, s, &index, consider)
 				if err == nil && c != nil {
@@ -408,24 +455,20 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 groups:
 	for _, key := range order {
 		vols := groups[key]
-		if key != anonymousRARKey {
-			sort.SliceStable(vols, func(i, j int) bool {
-				_, a, _ := rarname.VolumeNumber(vols[i].Name)
-				_, b, _ := rarname.VolumeNumber(vols[j].Name)
-				return a < b
-			})
-			for j, f := range vols {
-				scheme, n, ok := rarname.VolumeNumber(f.Name)
-				first := 1
-				if scheme == rarname.SchemeRoll {
-					first = 0
-				}
-				if !ok || n != j+first {
+		unordered := key == anonymousRARKey
+		if !unordered {
+			var sequenced bool
+			if vols, sequenced = rarSequence(ctx, vols); !sequenced {
+				// Names that do not number the volumes (shuffled obfuscated
+				// numbering) leave the order to RAR5 main headers. RAR4 has no
+				// volume numbers, so a gap there stays a broken set.
+				if rarSetVersion(ctx, vols) != 5 {
 					if err := broken(errors.New("RAR volume sequence is incomplete")); err != nil {
 						return nil, err
 					}
 					continue groups
 				}
+				unordered = true
 			}
 		}
 		if scheme, _, _ := rarname.VolumeNumber(vols[0].Name); key != anonymousRARKey && scheme == rarname.SchemeNumeric {
@@ -451,7 +494,7 @@ groups:
 				continue groups
 			}
 		}
-		cursor := &rarCursor{files: vols, unordered: key == anonymousRARKey}
+		cursor := &rarCursor{files: vols, unordered: unordered}
 		for {
 			b, f, e := cursor.next(ctx)
 			if e == io.EOF {
@@ -473,7 +516,16 @@ groups:
 				continue
 			}
 			c := &Content{Name: b.name, Size: b.unpacked, cursor: cursor, complete: !b.after, parts: []extent{{f, b.data, b.packed, 0}}}
-			if c.Size < 0 || b.packed > c.Size || (c.complete && b.packed != c.Size) {
+			if b.crypt != nil {
+				// AES data: derive the key only if this entry is selected.
+				crypt, password := b.crypt, f.password
+				c.padded = true
+				c.prepare = func(ctx context.Context) (err error) {
+					c.aes, err = rarDataCipher(ctx, crypt, password)
+					return err
+				}
+			}
+			if c.Size < 0 || b.packed > c.payloadSize() || (c.complete && b.packed != c.payloadSize()) {
 				if err := broken(errors.New("invalid stored RAR file size")); err != nil {
 					return nil, err
 				}
@@ -489,9 +541,22 @@ groups:
 						return nil, v.damaged
 					}
 				}
-				return c, nil
+				return c.usable(ctx)
 			}
 			index++
+			// A file that reaches the last volume fills every volume between,
+			// so the next entry can only follow it there: skip the middle
+			// volumes. The unselected entry keeps its own cursor and maps its
+			// continuations lazily if it is chosen as the fallback.
+			if b.after {
+				resume := *cursor
+				if skipped, err := cursor.skipToLastPart(ctx, b.name, b.unpacked); err != nil {
+					return nil, err
+				} else if skipped {
+					c.cursor = &resume
+					continue
+				}
+			}
 			// Reach the next entry using headers only. Selected content returns
 			// above, before resolving ANY continuation volume.
 			if err := c.extend(ctx, -1); err != nil {
@@ -527,4 +592,87 @@ func recoveredVideo(f *File, head []byte) (string, bool) {
 		}
 	}
 	return name, video
+}
+
+// rarSequence orders a named volume set by its names and reports whether the
+// names number it completely. Releases mix other files into the same stem.
+// With several numbering schemes, a scheme's volumes that lack only their
+// first one are completed first by a file of another scheme whose own headers
+// start the same file (an old-style .rar reposted as .partNN.rar); otherwise
+// a completely numbered scheme stands alone. Other members are dropped.
+func rarSequence(ctx context.Context, vols []*File) ([]*File, bool) {
+	sort.SliceStable(vols, func(i, j int) bool {
+		_, a, _ := rarname.VolumeNumber(vols[i].Name)
+		_, b, _ := rarname.VolumeNumber(vols[j].Name)
+		return a < b
+	})
+	byScheme := map[rarname.Scheme][]*File{}
+	var schemes []rarname.Scheme
+	for _, f := range vols {
+		scheme, _, _ := rarname.VolumeNumber(f.Name)
+		if len(byScheme[scheme]) == 0 {
+			schemes = append(schemes, scheme)
+		}
+		byScheme[scheme] = append(byScheme[scheme], f)
+	}
+	// Largest scheme first; equal sizes keep a stable, name-independent order.
+	sort.SliceStable(schemes, func(i, j int) bool {
+		if a, b := len(byScheme[schemes[i]]), len(byScheme[schemes[j]]); a != b {
+			return a > b
+		}
+		return schemes[i] < schemes[j]
+	})
+	numbered := func(set []*File, first int) bool {
+		for j, f := range set {
+			if _, n, ok := rarname.VolumeNumber(f.Name); !ok || n != j+first {
+				return false
+			}
+		}
+		return true
+	}
+	firstNumber := func(scheme rarname.Scheme) int {
+		if scheme == rarname.SchemeRoll {
+			return 0
+		}
+		return 1
+	}
+	if len(schemes) > 1 {
+		for _, scheme := range schemes {
+			set := byScheme[scheme]
+			if !numbered(set, firstNumber(scheme)+1) {
+				continue
+			}
+			name := rarFileName(ctx, set[0])
+			if name == "" {
+				continue
+			}
+			for _, other := range schemes {
+				if other == scheme {
+					continue
+				}
+				for _, f := range byScheme[other] {
+					if starts, ok := rarFirstVolume(ctx, f); ok && starts == name {
+						return append([]*File{f}, set...), true
+					}
+				}
+			}
+		}
+	}
+	for _, scheme := range schemes {
+		set := byScheme[scheme]
+		if numbered(set, firstNumber(scheme)) || (scheme == rarname.SchemeNumeric && numbered(set, 0)) {
+			return set, true
+		}
+	}
+	return vols, false
+}
+
+// rarSetVersion is the format of the first RAR volume in vols, or 0.
+func rarSetVersion(ctx context.Context, vols []*File) int {
+	for _, f := range vols[:min(len(vols), 3)] {
+		if v, err := openRAR(ctx, f); err == nil {
+			return v.version
+		}
+	}
+	return 0
 }

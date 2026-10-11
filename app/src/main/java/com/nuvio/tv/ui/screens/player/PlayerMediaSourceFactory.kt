@@ -132,6 +132,26 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             .build()
     }
 
+    private val chunkSessionLanes = java.util.concurrent.ConcurrentHashMap<Int, okhttp3.Call.Factory>()
+
+    private fun chunkSessionCallFactory(connections: Int, url: String): okhttp3.Call.Factory {
+        // Plain http:// never negotiates HTTP/2, so lanes would only split the idle sockets.
+        if (url.startsWith("http://", ignoreCase = true)) return playbackHttpClient
+        val factory = chunkSessionLanes.getOrPut(connections) {
+            HttpLanes.callFactory(
+                playbackHttpClient,
+                connections,
+                NuvioExoPlayerPerformanceHelper::lanePool
+            ).also { factory ->
+                if (factory is LaneCallFactory) {
+                    Log.i("PlayerMediaSourceFactory", "HTTP2_LANES lanes=${factory.lanes.size}")
+                }
+            }
+        }
+        (factory as? LaneCallFactory)?.restart()
+        return factory
+    }
+
     private fun computePrefetchDepthChunks(
         connections: Int,
         chunkBytes: Long
@@ -205,21 +225,19 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 "backBufferMs=${NuvioExoPlayerPerformanceHelper.backBufferMs} " +
                 "targetMb=${NuvioExoPlayerPerformanceHelper.targetBufferSizeMb} " +
                 "safeNativeMb=${NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)} " +
-                "parallel=${if (useParallelConnections) parallelConnectionCount else 0} chunkKb=$parallelChunkSizeKb " +
-                PlayerMemoryReporter.snapshot(context)
+                "parallel=${if (useParallelConnections) parallelConnectionCount else 0} chunkKb=$parallelChunkSizeKb"
         )
-        PlayerMemoryReporter.startSampling(context)
         val useChunkSessionSource = !nativeUsenet && !directLoopback &&
             useParallelConnections && !isHls && !isDash
         parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
         val progressiveUpstreamFactory: DataSource.Factory = if (useChunkSessionSource) {
-            val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
+            val sessionConnections = parallelConnectionCount
+            val okHttpFactory = OkHttpDataSource.Factory(chunkSessionCallFactory(sessionConnections, url)).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
                 if (sanitizedHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
                     setUserAgent(DEFAULT_USER_AGENT)
                 }
             }
-            val sessionConnections = parallelConnectionCount
             val sessionChunkBytes = parallelChunkSizeKb
                 .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
                 .toLong() * 1024L

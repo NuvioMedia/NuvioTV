@@ -591,6 +591,8 @@
     <string name="sentry_turn_off">Tắt</string>
     <string name="sentry_turn_on">Bật</string>
     <string name="advanced_section_cache">Bộ nhớ đệm</string>
+    <string name="advanced_section_startup">Khởi động &amp; thoát</string>
+    <string name="advanced_section_network_tests">Kiểm tra mạng</string>
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Điều hướng ngang nhanh</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Tăng tốc độ lặp của phím điều hướng trong các hàng nhưng vẫn bật tính năng giới hạn tốc độ lặp.</string>
@@ -704,6 +706,27 @@
     <string name="contributors_hide_kofi_qr">Ẩn mã QR Ko-fi</string>
     <string name="contributors_profile_unavailable">Liên kết hồ sơ GitHub không có sẵn.</string>
 
+    <string name="playback_section_player_title">Trình phát</string>
+    <string name="playback_section_player_title_desc">Trình phát mặc định, lõi bên trong và xử lý khi có lỗi.</string>
+    <string name="playback_section_stream_selection">Lựa chọn luồng</string>
+    <string name="playback_section_stream_selection_desc">Cách chọn luồng khi bạn nhấn phát.</string>
+    <string name="playback_section_up_next">Tiếp theo</string>
+    <string name="playback_section_up_next_desc">Tự động phát tập kế tiếp và gợi ý sau khi phát xong.</string>
+    <string name="playback_section_skip">Bỏ qua phân đoạn</string>
+    <string name="playback_section_skip_desc">Bỏ qua giới thiệu, tóm tắt và danh đề.</string>
+    <string name="playback_section_interface">Giao diện trình phát</string>
+    <string name="playback_section_interface_desc">Lớp phủ, đồng hồ và chi tiết hiển thị trong khi phát.</string>
+    <string name="playback_section_audio_only_desc">Ngôn ngữ, giải mã và đầu ra âm thanh.</string>
+    <string name="playback_section_video_desc">Khớp tốc độ khung hình, Dolby Vision và HDR.</string>
+    <string name="playback_default_player">Trình phát mặc định</string>
+    <string name="playback_external_player_label">Trình phát bên ngoài</string>
+    <string name="playback_afr_mode">Khớp tốc độ khung hình</string>
+    <string name="playback_dv_hdr_label">Dolby Vision &amp; HDR</string>
+    <string name="playback_mpv_decoding_label">Giải mã MPV</string>
+    <string name="playback_network_label">Mạng</string>
+    <string name="sub_languages_label">Ngôn ngữ</string>
+    <string name="sub_style_label">Kiểu</string>
+    <string name="autoplay_selected_count">%1$d đã chọn</string>
     <string name="playback_loading_overlay">Lớp phủ Đang tải</string>
     <string name="playback_loading_overlay_sub">Hiển thị màn hình tải đến khi khung hình video đầu tiên xuất hiện.</string>
     <string name="playback_pause_overlay">Lớp phủ Tạm dừng</string>
@@ -801,7 +824,7 @@
     <string name="dv7_mode_auto">Tự động (khuyến nghị)</string>
     <string name="dv7_mode_auto_desc">Tự động nhận diện màn hình và chọn chế độ phù hợp nhất. Nếu gặp sự cố khi phát, vui lòng thử lớp nền HDR10.</string>
     <string name="dv7_mode_hdr10_base_layer">Lớp nền HDR10</string>
-    <string name="dv7_mode_hdr10_base_layer_desc">Bỏ qua dữ liệu nâng cao Dolby Vision. Có thể giúp trên các thiết bị hỗ trợ HDR nhưng gặp vấn đề với DV Profile 7.</string>
+    <string name="dv7_mode_hdr10_base_layer_desc">Bỏ qua dữ liệu nâng cao Dolby Vision. Có thể giúp ích trên các thiết bị hỗ trợ HDR nhưng gặp vấn đề với DV Profile 7.</string>
     <string name="dv7_mode_dv81_libdovi">Chuyển đổi sang DV8.1</string>
     <string name="dv7_mode_dv81_libdovi_desc">Chuyển DV7 sang DV8.1 một lớp. Yêu cầu thiết bị hiển thị hỗ trợ Dolby Vision.</string>
     <string name="dv7_mode_off">Tắt (gốc)</string>
@@ -888,6 +911,9 @@
     <string name="sub_org_by_lang_desc">Nhóm phụ đề theo ngôn ngữ.</string>
     <string name="sub_org_by_addon_desc">Nhóm phụ đề theo nguồn của tiện ích.</string>
 
+    <string name="autoplay_preload_next_episode">Tải trước nguồn tập tiếp theo</string>
+    <string name="autoplay_preload_next_episode_sub">Bắt đầu tìm kiếm nguồn phát trong nền trước khi nút tập tiếp theo xuất hiện.</string>
+
     <string name="autoplay_reuse_last_link">Dùng lại liên kết cuối</string>
     <string name="autoplay_reuse_last_link_sub">Tự động phát luồng hoạt động gần nhất cho cùng một phim điện ảnh/tập phim khi bộ nhớ đệm vẫn còn hiệu lực.</string>
     <string name="autoplay_last_link_cache">Thời gian lưu bộ nhớ đệm liên kết cuối</string>
@@ -964,6 +990,10 @@
     <string name="layout_hero_catalogs_sub">Chọn một hoặc nhiều danh mục cho nội dung Khu vực Nổi bật.</string>
     <string name="layout_section_content">Nội dung Trang chủ</string>
     <string name="layout_section_content_desc">Kiểm soát nội dung hiển thị trên Trang chủ và tìm kiếm.</string>
+    <string name="layout_section_sidebar">Thanh bên &amp; Điều hướng</string>
+    <string name="layout_section_sidebar_desc">Kiểu thanh bên và vị trí hiển thị của mục Khám phá.</string>
+    <string name="layout_section_card_depth_desc">Ánh sáng viền và độ bóng trên các thẻ hình ảnh.</string>
+    <string name="layout_section_custom_poster_desc">Sử dụng ảnh hiển thị từ dịch vụ poster bên ngoài.</string>
     <string name="layout_collapse_sidebar">Thu gọn thanh bên</string>
     <string name="layout_collapse_sidebar_sub">Ẩn thanh bên theo mặc định; hiển thị khi đang chọn.</string>
     <string name="layout_hide_floating_pill">Ẩn thanh điều hướng nổi</string>
@@ -1042,6 +1072,13 @@
     <string name="upcoming_section_title">Sắp ra mắt</string>
     <string name="layout_trailer_button">Hiển thị nút Trailer</string>
     <string name="layout_trailer_button_sub">Hiển thị nút trailer trên trang chi tiết (chỉ khi có trailer).</string>
+    <string name="layout_trailer_play_in_background">Phát ở phông nền</string>
+    <string name="layout_trailer_play_in_background_sub">Phát trailer thay cho phông nền trong khi trang vẫn hiển thị.</string>
+    <string name="layout_trailer_pause_on_scroll">Tạm dừng khi cuộn</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Tạm dừng trailer khi cuộn xuống và tiếp tục phát khi quay lại đầu trang.</string>
+    <string name="layout_detail_group_episodes">Tập phim</string>
+    <string name="layout_detail_group_trailers">Trailer</string>
+    <string name="layout_detail_group_metadata">Siêu dữ liệu</string>
     <string name="layout_prefer_external_meta">Ưu tiên siêu dữ liệu từ tiện ích bên ngoài</string>
     <string name="layout_prefer_external_meta_sub">Dùng siêu dữ liệu từ tiện ích bên ngoài thay vì tiện ích danh mục.</string>
     <string name="layout_show_full_release_date">Hiển thị ngày phát hành đầy đủ</string>
@@ -1194,11 +1231,21 @@
     <string name="mdblist_metacritic_subtitle">Hiển thị điểm Metacritic</string>
     <string name="mdblist_mal_title">MyAnimeList</string>
     <string name="mdblist_mal_subtitle">Hiển thị điểm MyAnimeList</string>
+    <string name="mdblist_show_on_hero_title">Sử dụng điểm đánh giá trên Khu vực nổi bật</string>
+    <string name="mdblist_show_on_hero_subtitle">Hiển thị điểm đánh giá MDBList trên vòng quay khu vực nổi bật (hiện đại và cổ điển/lưới)</string>
+    <string name="mdblist_rating_order_title">Thứ tự điểm đánh giá</string>
+    <string name="mdblist_rating_order_subtitle">Chọn 3 điểm đánh giá được bật và có sẵn đầu tiên sẽ hiển thị trên khu vực nổi bật hiện đại. Dùng mũi tên để sắp xếp lại.</string>
     <string name="mdblist_dialog_title">Mã khóa API của MDBList</string>
     <string name="mdblist_dialog_subtitle">Nhập mã khóa API để lấy điểm đánh giá bên ngoài</string>
     <string name="mdblist_dialog_placeholder">Nhập mã khóa API của MDBList</string>
     <string name="mdblist_not_set">Chưa đặt</string>
     <string name="mdblist_invalid_api_key">Mã khóa API của MDBList không hợp lệ</string>
+    <string name="mdblist_library_lists">Danh sách Thư viện</string>
+    <string name="mdblist_library_lists_description">Chọn danh sách MDBList nào xuất hiện trong Thư viện và trong quản lý danh sách. Danh sách Theo dõi luôn được hiển thị.</string>
+    <string name="mdblist_library_lists_empty">Không tìm thấy danh sách nào trong tài khoản MDBList của bạn. Đồng bộ để tải chúng.</string>
+    <string name="mdblist_library_lists_summary">%1$d trong số %2$d được hiển thị</string>
+    <string name="tracking_mdblist_features_title">Tính năng MDBList</string>
+    <string name="tracking_mdblist_features_subtitle">Cài đặt riêng cho MDBList</string>
 
     <string name="debrid_title">Dịch vụ liên kết</string>
     <string name="debrid_subtitle">Kết nối tài khoản để truy cập liên kết và thư viện nội dung</string>
@@ -1700,6 +1747,8 @@
     <string name="debrid_missing_api_key">Thêm mã khóa API Debrid trong phần Cài đặt</string>
     <string name="debrid_not_cached">Chưa được lưu sẵn trên dịch vụ này.</string>
     <string name="debrid_resolution_failed">Không thể phân giải luồng Debrid này.</string>
+    <string name="youtube_resolving_stream">Đang tải video YouTube</string>
+    <string name="youtube_resolution_failed">Không thể tải video YouTube này.</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
     <string name="p2p_consent_title">Phát luồng P2P</string>
@@ -1815,7 +1864,7 @@
     <string name="stream_info_size">Dung lượng</string>
     <string name="stream_info_codec">Codec</string>
     <string name="stream_info_resolution">Độ phân giải</string>
-    <string name="stream_info_frame_rate">Tỉ lệ khung hình</string>
+    <string name="stream_info_frame_rate">Tốc độ khung hình</string>
     <string name="stream_info_bitrate">Bitrate</string>
     <string name="stream_info_bitrate_file">Bitrate (tệp)</string>
     <string name="stream_info_hud">HUD</string>
@@ -2025,6 +2074,8 @@
     <string name="library_sort_provider_order">Thứ tự nhà cung cấp</string>
     <string name="library_sort_added_desc">Đã thêm ↓</string>
     <string name="library_sort_added_asc">Đã thêm ↑</string>
+    <string name="library_sort_released_desc">Đã phát hành ↓</string>
+    <string name="library_sort_released_asc">Đã phát hành ↑</string>
     <string name="library_sort_title_asc">Tên A-Z</string>
     <string name="library_sort_title_desc">Tên Z-A</string>
     <string name="library_error_sort_failed">Không thể tải thứ tự sắp xếp. Đang hiển thị theo thứ tự của nhà cung cấp.</string>
@@ -3281,4 +3332,39 @@
     <string name="stream_test_video_bitrate">Bitrate video trung bình: %1$s</string>
     <string name="stream_test_error_connection">Kết nối không thành công. Liên kết luồng đã phát gần nhất có thể đã hết hạn hoặc không thể truy cập. Vui lòng phát lại video rồi thử lại.</string>
 
+    <string name="random_episode_title">Phát ngẫu nhiên</string>
+    <string name="layout_random_episode_sub">Phát ngẫu nhiên các tập từ bất kỳ loạt phim nào. Tắt tùy chọn này sẽ tạm dừng phát ngẫu nhiên.</string>
+    <string name="random_episode_unwatched">Tập chưa xem</string>
+    <string name="random_episode_include_watched">Tất cả tập</string>
+    <string name="random_episode_empty_subtitle">Không có tập nào để phát ngẫu nhiên.</string>
+    <string name="random_episode_caught_up">Bạn đã xem hết mọi tập phim. Chọn Tất cả tập để xem lại.</string>
+    <string name="random_episode_loading">Đang tải các tập phim…</string>
+    <string name="shuffle_starting">Đang bắt đầu phát ngẫu nhiên…</string>
+    <string name="shuffle_choose_episodes">Chọn các tập để phát ngẫu nhiên.</string>
+    <string name="shuffle_preview_title">Tập phim</string>
+    <string name="shuffle_play_episode">Phát tập phim</string>
+    <string name="shuffle_again">Phát ngẫu nhiên lại</string>
+    <string name="shuffle_only_episode">Đây là tập phim duy nhất trong danh sách bạn chọn.</string>
+    <string name="shuffle_artwork_hidden">Ẩn ảnh hiển thị để tránh tiết lộ nội dung</string>
+    <string name="shuffle_stop">Dừng phát ngẫu nhiên</string>
+    <string name="shuffle_enabled_all">Bật phát ngẫu nhiên · Tất cả tập</string>
+    <string name="shuffle_enabled_unwatched">Bật phát ngẫu nhiên · Tập chưa xem</string>
+    <string name="shuffle_disabled">Tắt phát ngẫu nhiên</string>
+    <string name="shuffle_save_failed">Không thể cập nhật phát ngẫu nhiên. Vui lòng thử lại.</string>
+    <string name="shuffle_change_selection">Chọn các tập phim</string>
+    <string name="shuffle_badge">Đã bật phát ngẫu nhiên tập phim</string>
+
+    <!-- Subtitle AutoSync -->
+    <string name="autosync_setting_title">Tự động đồng bộ phụ đề</string>
+    <string name="autosync_setting_description">Khớp phụ đề từ tiện ích đã chọn với thời gian của phụ đề nhúng sẵn trong video.</string>
+    <string name="autosync_tolerance_title">Dung sai tự động đồng bộ</string>
+    <string name="autosync_tolerance_description">Giữ nguyên thời gian gốc nếu độ lệch cần hiệu chỉnh nhỏ hơn hoặc bằng giá trị này.</string>
+    <string name="autosync_tolerance_off">Tắt</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">Tìm kiếm tự động đồng bộ chính xác</string>
+    <string name="autosync_thorough_description">Tiếp tục so sánh các phụ đề khác với bản nhúng sẵn để tìm bản khớp hơn trước khi đồng bộ. Khi tắt, bản khớp đầu tiên sẽ được dùng ngay. Chỉ bản khớp có độ tin cậy cao mới được áp dụng</string>
+    <string name="autosync_toast_failed">Đồng bộ thất bại: Tự động đồng bộ không thể khớp phụ đề này với video.</string>
+    <string name="autosync_toast_failed_no_reference">Đồng bộ thất bại: video này không có phụ đề nhúng sẵn để so sánh.</string>
+    <string name="autosync_toast_failed_unsupported">Đồng bộ thất bại: Tự động đồng bộ không hỗ trợ đồng bộ định dạng phụ đề này.</string>
+    <string name="autosync_label_synced">Đã tự động đồng bộ</string>
 </resources>

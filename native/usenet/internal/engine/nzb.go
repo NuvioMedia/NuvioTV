@@ -50,6 +50,7 @@ type File struct {
 }
 
 const maxNZBBytes = 64 << 20
+const maxNZBSegments = 500000
 
 var errNZBTooLarge = errors.New("NZB exceeds 64 MiB size limit")
 var errDamagedNZBFile = errors.New("NZB contains missing/duplicate segments or invalid article metadata")
@@ -150,34 +151,33 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 			return nil, errors.New("NZB exceeds file limit")
 		}
 		var nf struct {
-			Subject  string       `xml:"subject,attr"`
-			Segments []nzbSegment `xml:"segments>segment"`
+			Subject  string             `xml:"subject,attr"`
+			Segments boundedNZBSegments `xml:"segments"`
 		}
+		nf.Segments.remaining = maxNZBSegments - count
 		if err := decoder.DecodeElement(&nf, &start); err != nil {
 			return nil, fmt.Errorf("invalid NZB file: %w", err)
 		}
 		i := index
 		index++
-		if len(nf.Segments) == 0 {
+		segments := nf.Segments.items
+		if len(segments) == 0 {
 			continue
 		}
-		count += len(nf.Segments)
-		if count > 500000 {
-			return nil, errors.New("NZB exceeds segment metadata limit")
-		}
-		sort.Slice(nf.Segments, func(i, j int) bool { return nf.Segments[i].Number < nf.Segments[j].Number })
+		count += len(segments)
+		sort.Slice(segments, func(i, j int) bool { return segments[i].Number < segments[j].Number })
 		subject, err := nzbparser.ParseSubject(nf.Subject)
 		if err != nil {
 			return nil, errors.New("invalid NZB subject")
 		}
-		f := &File{Name: strings.Trim(subject.Filename, "\" '"), Index: i, store: store, prefix: make([]int64, len(nf.Segments)+1), segments: make([]segment, 0, len(nf.Segments))}
+		f := &File{Name: strings.Trim(subject.Filename, "\" '"), Index: i, store: store, prefix: make([]int64, len(segments)+1), segments: make([]segment, 0, len(segments))}
 		if subject.TotalFiles > 1 {
 			f.order = subject.File
 		}
-		for j, s := range nf.Segments {
+		for j, s := range segments {
 			id := strings.Trim(strings.TrimSpace(s.ID), "<>")
 			if s.Number != j+1 || id == "" || len(id) > 998 || strings.ContainsAny(id, "\r\n\x00<>") || s.Bytes <= 0 {
-				f.markDamaged(nf.Segments[j:])
+				f.markDamaged(segments[j:])
 				break
 			}
 			f.segments = append(f.segments, segment{id: id, wire: int64(s.Bytes)})
@@ -198,6 +198,44 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 		f.password = password
 	}
 	return files, nil
+}
+
+// Enforce the document budget before decoding/allocating the next segment,
+// including when a single file contains the entire oversized document.
+type boundedNZBSegments struct {
+	items     []nzbSegment
+	remaining int
+}
+
+func (s *boundedNZBSegments) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	for {
+		token, err := d.Token()
+		if err != nil {
+			return err
+		}
+		switch token := token.(type) {
+		case xml.StartElement:
+			if token.Name.Local != "segment" {
+				if err := d.Skip(); err != nil {
+					return err
+				}
+				continue
+			}
+			if s.remaining == 0 {
+				return errors.New("NZB exceeds segment metadata limit")
+			}
+			var item nzbSegment
+			if err := d.DecodeElement(&item, &token); err != nil {
+				return err
+			}
+			s.items = append(s.items, item)
+			s.remaining--
+		case xml.EndElement:
+			if token.Name == start.Name {
+				return nil
+			}
+		}
+	}
 }
 
 func FetchNZB(ctx context.Context, client *http.Client, raw string, headers map[string]string, store *Store, fastNZBFetch bool) ([]*File, error) {

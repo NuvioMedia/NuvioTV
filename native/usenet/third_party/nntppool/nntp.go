@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -141,6 +142,9 @@ func (e *greetingError) Error() string {
 }
 
 func (e *greetingError) Is(target error) bool {
+	if connectionLimitMessage(e.Message) {
+		return target == ErrMaxConnections
+	}
 	return target == ErrMaxConnections && (e.StatusCode == 502 || e.StatusCode == 400)
 }
 
@@ -159,7 +163,33 @@ func (e *authResponseError) Error() string {
 }
 
 func (e *authResponseError) Is(target error) bool {
+	if connectionLimitMessage(e.Message) {
+		return target == ErrMaxConnections
+	}
+	message := strings.ToLower(e.Message)
+	credentialFailure := e.StatusCode == 481 || e.StatusCode == 482 ||
+		strings.Contains(message, "invalid username") || strings.Contains(message, "invalid password") ||
+		strings.Contains(message, "authentication failed") || strings.Contains(message, "authentication rejected") ||
+		strings.Contains(message, "invalid login") || strings.Contains(message, "incorrect password")
+	if credentialFailure {
+		return target == ErrAuthRejected
+	}
+	if e.StatusCode == 480 {
+		return target == ErrAuthRequired
+	}
 	return target == ErrMaxConnections && (e.StatusCode == 502 || e.StatusCode == 400)
+}
+
+// Providers use several status codes for account connection ceilings. Preserve
+// the distinction from rejected credentials, particularly for 481 and 482.
+func connectionLimitMessage(message string) bool {
+	message = strings.ToLower(message)
+	for _, phrase := range []string{"too many connections", "maximum connections", "max connections", "connection limit", "connections limit"} {
+		if strings.Contains(message, phrase) {
+			return true
+		}
+	}
+	return false
 }
 
 type Request struct {
@@ -323,7 +353,8 @@ type NNTPConnection struct {
 	prioBodySem     chan struct{}
 	abortDrainBytes int64 // see Provider.AbortDrainBytes; 0 = never abort
 
-	rb readBuffer
+	rb           readBuffer
+	handshakeCtx context.Context // only set during greeting/authentication/probe
 
 	Greeting NNTPResponse
 
@@ -401,6 +432,16 @@ func newNNTPConnectionFromConn(ctx context.Context, conn net.Conn, inflightLimit
 		done:      make(chan struct{}),
 		userAgent: userAgent,
 	}
+	handshakeCtx, finishHandshake := watchHandshake(cctx, conn)
+	c.handshakeCtx = handshakeCtx
+	success := false
+	defer func() {
+		finishHandshake()
+		c.handshakeCtx = nil
+		if !success {
+			cancel()
+		}
+	}()
 
 	// Server greeting is sent immediately upon connect.
 	greeting, err := c.readOneResponse(io.Discard)
@@ -423,7 +464,35 @@ func newNNTPConnectionFromConn(ctx context.Context, conn net.Conn, inflightLimit
 		}
 	}
 
+	if err := handshakeCtx.Err(); err != nil {
+		return nil, err
+	}
+	success = true
 	return c, nil
+}
+
+// Context cancellation must interrupt both socket reads and writes, including
+// before Run installs its normal connection teardown. The timeout bounds the
+// entire NNTP greeting/authentication phase, not each individual response.
+func watchHandshake(ctx context.Context, conn net.Conn) (context.Context, func()) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(ctx, defaultHandshakeTimeout)
+	closed := make(chan struct{})
+	stop := context.AfterFunc(ctx, func() {
+		_ = conn.Close()
+		close(closed)
+	})
+	deadline, _ := ctx.Deadline()
+	_ = conn.SetWriteDeadline(deadline)
+	return ctx, func() {
+		if !stop() {
+			<-closed
+		}
+		cancel()
+		_ = conn.SetWriteDeadline(time.Time{})
+	}
 }
 
 func NewNNTPConnection(ctx context.Context, addr string, tlsConfig *tls.Config, inflightLimit int, reqCh <-chan *Request, auth Auth, userAgent string) (*NNTPConnection, error) {
@@ -1010,6 +1079,9 @@ func runConnSlot(ctx context.Context, reqCh <-chan *Request, prioCh <-chan *Requ
 	var sharedBuf readBuffer
 
 	for {
+		if stats.authenticationError() != nil {
+			return
+		}
 		// preWarm slots have no request to wait on, so unlike the cold path
 		// below they never block on a select that observes ctx.Done(). Check
 		// explicitly here so a cancelled group context stops the goroutine
@@ -1098,6 +1170,13 @@ func runConnSlot(ctx context.Context, reqCh <-chan *Request, prioCh <-chan *Requ
 		nc, err := newNNTPConnectionFromConn(ctx, conn, statInflight, reqCh, prioCh, auth, userAgent, &sharedBuf, stats)
 		if err != nil {
 			_ = conn.Close()
+			if stats.rejectAuthentication(err) {
+				gate.exit()
+				if firstReq != nil {
+					failRequest(firstReq.RespCh, fmt.Errorf("%s: %w", providerName, err))
+				}
+				return
+			}
 			if firstReq != nil {
 				failRequest(firstReq.RespCh, fmt.Errorf("%s: %w", providerName, err))
 			}
@@ -1949,7 +2028,11 @@ func (c *NNTPConnection) readerLoop() {
 // Any unread bytes remain buffered in c.rbuf[c.rstart:c.rend] for subsequent reads.
 func (c *NNTPConnection) readOneResponse(out io.Writer) (NNTPResponse, error) {
 	resp := NNTPResponse{}
-	if err := c.rb.feedUntilDone(c.conn, &resp, out, func(int) (time.Time, bool) { return time.Time{}, false }); err != nil {
+	deadline := time.Now().Add(defaultHandshakeTimeout)
+	if c.handshakeCtx != nil {
+		deadline, _ = c.handshakeCtx.Deadline()
+	}
+	if err := c.rb.feedUntilDone(c.conn, &resp, out, func(int) (time.Time, bool) { return deadline, true }); err != nil {
 		return resp, err
 	}
 	return resp, nil
@@ -2282,11 +2365,14 @@ func pingProvider(ctx context.Context, factory ConnFactory, auth Auth) PingResul
 		return PingResult{Err: fmt.Errorf("ping dial: factory returned nil connection")}
 	}
 	defer func() { _ = conn.Close() }()
+	handshakeCtx, finishHandshake := watchHandshake(ctx, conn)
+	defer finishHandshake()
 
 	rb := readBuffer{buf: make([]byte, defaultReadBufSize)}
 	nc := &NNTPConnection{
-		conn: conn,
-		rb:   rb,
+		conn:         conn,
+		rb:           rb,
+		handshakeCtx: handshakeCtx,
 	}
 
 	// Read greeting.
@@ -2401,6 +2487,7 @@ func (c *Client) newProviderGroup(p Provider, index int) (*providerGroup, ConnFa
 		quotaPeriod:   p.QuotaPeriod,
 	}
 	g.stats.quotaBytes = p.QuotaBytes
+	g.stats.authFailed = make(chan struct{})
 	g.stats.bgFloor = resolveBackgroundFloor(p.Connections, p.BackgroundFloor)
 	if p.QuotaBytes > 0 {
 		if p.QuotaUsed > 0 {
@@ -2431,6 +2518,7 @@ func (c *Client) pingProviderGroup(g *providerGroup, p Provider, factory ConnFac
 	}
 	pingCtx, pingCancel := context.WithTimeout(c.ctx, defaultHandshakeTimeout)
 	g.stats.Ping = pingProvider(pingCtx, factory, p.Auth)
+	g.stats.rejectAuthentication(g.stats.Ping.Err)
 	pingCancel()
 	// Seed the TTFB EWMA from the measured RTT so the adaptive attempt
 	// timeout has a sensible starting point before any request completes.
@@ -2942,6 +3030,9 @@ func (c *Client) tryGroupTimeout(
 	ln lane,
 	attemptTimeout time.Duration,
 ) (resp Response, ok bool, done bool) {
+	if err := g.stats.authenticationError(); err != nil {
+		return Response{Err: fmt.Errorf("%s: %w", g.name, err)}, true, false
+	}
 	attemptTimeout = g.windowOr(attemptTimeout)
 	reqCtx, reqCancel := context.WithCancel(ctx)
 	defer reqCancel()
@@ -3009,6 +3100,8 @@ func (c *Client) tryGroupTimeout(
 		case hotCh <- req:
 		default:
 			select {
+			case <-g.stats.authFailed:
+				return Response{Err: fmt.Errorf("%s: %w", g.name, g.stats.authenticationError())}, true, false
 			case <-c.ctx.Done():
 				return Response{}, false, true
 			case <-reqCtx.Done():
@@ -3027,6 +3120,8 @@ func (c *Client) tryGroupTimeout(
 
 	for {
 		select {
+		case <-g.stats.authFailed:
+			return Response{Err: fmt.Errorf("%s: %w", g.name, g.stats.authenticationError())}, true, false
 		case resp, ok = <-innerCh:
 			return resp, ok, false
 		case <-c.ctx.Done():

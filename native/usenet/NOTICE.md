@@ -12,7 +12,7 @@ Dependencies and adaptations:
 | --- | --- | --- |
 | javi11/nntppool | v4.23.0, MIT | Vendored pipelined NNTP pool. Commit buffered replies before writing decoded bytes; suppress callbacks for abandoned attempts; join the reader before reusing a connection's slab. Regression test included. |
 | javi11/nzbparser | v0.5.5, MIT | Subject parsing; XML handling adapted to decode one NZB file at a time and preserve addon file indices. |
-| javi11/rardecode | v2.2.4, BSD | RAR4/RAR5 header fields and stored-data extent mapping adapted from archive15.go, archive50.go and archive_info.go. No decompression code is included in the engine. |
+| javi11/rardecode | v2.2.4, BSD | RAR4/RAR5 header fields, stored-data extent mapping, header/file encryption records and the RAR4/RAR5 AES key schedules adapted from archive15.go, archive50.go and archive_info.go. No decompression code is included in the engine. |
 | mnightingale/rapidyenc | 7aafef1eaf1c, MIT | Chunked yEnc wrapper. Android link targets added; upstream desktop archives retained for host tests. |
 | animetosho/rapidyenc | 480bd7b5896f8b3edecc721d23f1384d767ffe2f, public domain / CC0 | Native SIMD kernels compiled from source for every APK ABI. CRC component disabled; Go CRC32 validates articles. |
 | dlclark/regexp2 | v2.7.2, MIT | ECMAScript addon file selectors, with bounded matching time, backtracking stack and retained filename buffers. |
