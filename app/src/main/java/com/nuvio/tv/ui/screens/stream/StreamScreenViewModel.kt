@@ -1501,6 +1501,8 @@ class StreamScreenViewModel @Inject constructor(
             torrentService.stopStream()
             isTorrentStreamStarted = false
         }
+        // Like the torrent above: otherwise the engine keeps the session's memory and connections.
+        pendingUsenetPlayback.externalPlayerReturned()
         if (com.nuvio.tv.core.player.ZidooPlayerMonitor.isZidooDevice()) {
             externalPlaybackTracker.dismissOverlayOnly()
         } else {
@@ -1613,6 +1615,7 @@ class StreamScreenViewModel @Inject constructor(
     override fun onCleared() {
         usenetPlayerLaunchJob?.cancel()
         abandonPendingUsenetPlayback()
+        pendingUsenetPlayback.externalPlayerReturned()
         streamResolutionJob?.cancel()
         com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
         super.onCleared()
@@ -1911,7 +1914,8 @@ class StreamScreenViewModel @Inject constructor(
                 )
             }
         } else {
-            pendingUsenetPlayback.handoff(playbackInfo.url)
+            // The external player cannot close the Usenet session; stopExternalPlayerTracking does.
+            pendingUsenetPlayback.handoffExternal(playbackInfo.url)
         }
     }
 

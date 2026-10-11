@@ -85,6 +85,55 @@ func TestLowerPriorityProviderOnlyServesMissingArticles(t *testing.T) {
 	}
 }
 
+func TestRetryOfAnArticleBrokenOffGoesToTheBackupFirst(t *testing.T) {
+	primary, err := nntpserver.New(nntpserver.Config{ArticleSize: 4096, CutAfter: map[string]int{"cut@test": 512}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer primary.Close()
+	backup, err := nntpserver.New(nntpserver.Config{ArticleSize: 4096})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backup.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var pools providerPools
+	lease, err := pools.acquireForRequest(ctx, ctx, []nntppool.Provider{
+		{Host: primary.Addr(), Connections: 2, SkipPing: true},
+		{Host: backup.Addr(), Connections: 2, SkipPing: true},
+	}, []int{0, 1}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lease.Close()
+	// The preferred provider starts the article and breaks it off: bytes already went out,
+	// so this attempt fails, and the store retries it.
+	if _, err := lease.BodyStream(ctx, "cut@test", io.Discard); err == nil {
+		t.Fatal("an article broken off was reported complete")
+	}
+	if got := backup.Counters().Bodies; got != 0 {
+		t.Fatalf("backup BODY calls = %d, want 0 before the retry", got)
+	}
+	if _, err := lease.BodyStream(ctx, "cut@test", io.Discard); err != nil {
+		t.Fatalf("the retry did not read the backup's complete copy: %v", err)
+	}
+	if got := backup.Counters().Bodies; got != 1 {
+		t.Fatalf("backup BODY calls = %d, want 1", got)
+	}
+	if lease.brokenBy("cut@test") != 0 {
+		t.Fatal("a read article must be forgotten")
+	}
+	// Other articles still go to the preferred provider.
+	before := primary.Counters().Bodies
+	if _, err := lease.BodyStream(ctx, "present@test", io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if primary.Counters().Bodies != before+1 || backup.Counters().Bodies != 1 {
+		t.Fatal("an article nobody broke off must follow priority")
+	}
+}
+
 func TestProviderPrioritiesParseAndSkipBackupPrewarm(t *testing.T) {
 	servers := []string{"nntps://a.test:563/20?priority=0", "nntps://b.test/20?priority=3", "nntp://c.test/4"}
 	priorities, err := ProviderPriorities(servers)

@@ -78,6 +78,9 @@ type Config struct {
 	Missing map[string]struct{}
 	// RequireAuth makes the server reject commands until AUTHINFO succeeds.
 	RequireAuth bool
+	// CutAfter drops the connection after this many body bytes of the given
+	// message-ids, like a provider that breaks off an article it started.
+	CutAfter map[string]int
 }
 
 // Counters is a snapshot of what the server has served.
@@ -230,6 +233,7 @@ func (s *Server) acceptLoop() {
 type response struct {
 	head []byte
 	body []byte
+	cut  bool // Close the connection after body, without the terminating dot.
 }
 
 func (s *Server) serve(conn net.Conn) {
@@ -347,6 +351,9 @@ func (s *Server) answer(cmd string) response {
 				return response{head: []byte("430 no such article\r\n")}
 			}
 		}
+		if n, cut := s.cfg.CutAfter[id]; cut {
+			return response{head: fmt.Appendf(nil, "222 0 %s\r\n", id), body: article[:min(n, len(article))], cut: true}
+		}
 		return response{
 			head: fmt.Appendf(nil, "222 0 %s\r\n", id),
 			body: article,
@@ -373,6 +380,11 @@ func (s *Server) writeLoop(conn net.Conn, futures <-chan chan response) {
 		}
 		if resp.body != nil {
 			if err := s.writeThrottled(w, resp.body); err != nil {
+				return
+			}
+			if resp.cut {
+				_ = w.Flush()
+				conn.Close()
 				return
 			}
 			if _, err := w.Write([]byte(".\r\n")); err != nil {

@@ -55,6 +55,38 @@ class NewznabClientTest {
         }
     }
 
+    @Test fun `a key check needs a newznab answer, not a login page served after public caps`() = runBlocking {
+        MockWebServer().use { server ->
+            val caps = """<caps><searching><search available="yes"/></searching></caps>"""
+            server.enqueue(MockResponse().setBody(caps))
+            server.enqueue(MockResponse().setBody("<html><body>Sign in required</body></html>"))
+            assertTrue(runCatching { NewznabClient(MemoryStorage()).verify(server.indexer()) }.isFailure)
+            // A search refused only for its parameters still accepted the key.
+            server.enqueue(MockResponse().setBody(caps))
+            server.enqueue(MockResponse().setBody("""<error code="201" description="Incorrect parameter"/>"""))
+            NewznabClient(MemoryStorage()).verify(server.indexer())
+            server.enqueue(MockResponse().setBody(caps))
+            server.enqueue(MockResponse().setBody(server.page("Movie.1080p", 1)))
+            NewznabClient(MemoryStorage()).verify(server.indexer())
+        }
+    }
+
+    @Test fun `releases reused from the season cache name the indexer that asked`() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody(server.page("Show.S01E02.1080p", 1)))
+            // Another profile's indexer, or a renamed one, with the same endpoint and key.
+            val first = server.indexer().copy(id = "one", name = "Old name")
+            val current = first.copy(id = "two", name = "Current name")
+            val client = NewznabClient(MemoryStorage())
+            val request = UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = 2)
+            client.search(first, request, NewznabCapabilities())
+            val reused = client.search(current, request, NewznabCapabilities()).single()
+            assertEquals(1, server.requestCount)
+            assertEquals("two", reused.indexerId)
+            assertEquals("Current name", reused.indexerName)
+        }
+    }
+
     @Test fun `only a user agent the user chose is kept, and only in plain text`() {
         assertEquals(NUVIO_USER_AGENT, UsenetConfiguration(userAgent = "  ").agent)
         assertEquals("MyClient/1.0", UsenetConfiguration(userAgent = " MyClient/1.0 ").agent)
