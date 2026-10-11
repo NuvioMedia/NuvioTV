@@ -41,6 +41,7 @@ import java.text.DateFormat
 import java.util.Date
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -60,6 +61,13 @@ internal fun UsenetSourcesCard(
     LaunchedEffect(phoneSetupOpen) {
         if (phoneSetupOpen) phoneSetupShown = true
         else if (phoneSetupShown) { phoneSetupShown = false; runCatching { phoneRow.requestFocus() } }
+    }
+    // Pauses end on their own: refresh the labels when the next one ends, not only when a status changes.
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(indexerStatuses, now) {
+        val nextEnd = indexerStatuses.values.map { it.pausedUntil }.filter { it > now }.minOrNull() ?: return@LaunchedEffect
+        delay(nextEnd - System.currentTimeMillis() + 1)
+        now = System.currentTimeMillis()
     }
     var provider by remember { mutableStateOf<UsenetProvider?>(null) }
     var indexer by remember { mutableStateOf<UsenetIndexer?>(null) }
@@ -93,7 +101,7 @@ internal fun UsenetSourcesCard(
             subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer(apiPath = DEFAULT_API_PATH) })
         configuration.indexers.forEachIndexed { i, item ->
             SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.endpoint.substringBefore('?')}",
-                stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id]))
+                stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id], now))
                 .joinToString(" • "),
                 value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
                 onClick = { selectedId = item.id; picker = "indexer" })
@@ -242,17 +250,14 @@ private fun <T> List<T>.moved(position: Int, delta: Int): List<T> = toMutableLis
     val item = removeAt(position); add(position + delta, item)
 }
 
-private fun <T> List<T>.replaceOrAdd(value: T, id: (T) -> String): List<T> =
-    if (any { id(it) == id(value) }) map { if (id(it) == id(value)) value else it } else this + value
-
 /**
  * A pause wins over an older failure: it is what currently keeps the indexer out of searches.
  * Without either, what the indexer last reported left for today.
  */
 @Composable
-private fun indexerStatusLabel(status: IndexerStatus?): String? {
+private fun indexerStatusLabel(status: IndexerStatus?, now: Long): String? {
     if (status == null) return null
-    if (status.pausedUntil > System.currentTimeMillis()) {
+    if (status.pausedUntil > now) {
         return stringResource(R.string.usenet_indexer_paused,
             DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(status.pausedUntil)))
     }
@@ -345,26 +350,29 @@ private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (Us
     var key by remember { mutableStateOf(item.apiKey) }
     var error by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
-    var testResult by remember { mutableStateOf<Boolean?>(null) }
+    // Keyed by the tested values, so a result that arrives after an edit is not shown for the new values.
+    var tested by remember { mutableStateOf<Pair<UsenetIndexer, Boolean>?>(null) }
     val scope = rememberCoroutineScope()
     fun value() = item.copy(name = name.trim(), apiUrl = url.trim(), apiPath = path.trim(), apiKey = key.trim())
     NuvioDialog(title = stringResource(if (isNew) R.string.usenet_add_indexer else R.string.usenet_edit_indexer), subtitle = stringResource(R.string.usenet_indexer_hint), onDismiss = onDismiss) {
         // Scrolls, so the buttons below stay on screen.
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SourceField(stringResource(R.string.usenet_source_name), name, { name = it; testResult = null })
-            SourceField(stringResource(R.string.usenet_indexer_url), url, { url = it; testResult = null })
-            SourceField(stringResource(R.string.usenet_indexer_api_path), path, { path = it; testResult = null })
-            SourceField(stringResource(R.string.usenet_indexer_key), key, { key = it; testResult = null }, secret = true)
+            SourceField(stringResource(R.string.usenet_source_name), name, { name = it })
+            SourceField(stringResource(R.string.usenet_indexer_url), url, { url = it })
+            SourceField(stringResource(R.string.usenet_indexer_api_path), path, { path = it })
+            SourceField(stringResource(R.string.usenet_indexer_key), key, { key = it }, secret = true)
         }
         if (error) Text(stringResource(R.string.usenet_indexer_invalid), color = NuvioTheme.colors.TextSecondary)
-        if (testing || testResult != null) Text(stringResource(when {
+        val result = tested?.takeIf { it.first == value() }?.second
+        if (testing || result != null) Text(stringResource(when {
             testing -> R.string.usenet_test_running
-            testResult == true -> R.string.usenet_test_success
+            result == true -> R.string.usenet_test_success
             else -> R.string.usenet_test_failed
         }), color = NuvioTheme.colors.TextSecondary)
         SettingsDialogActionRow {
             SettingsDialogActionButton(text = stringResource(R.string.usenet_test_indexer), enabled = !testing, onClick = {
-                scope.launch { testing = true; testResult = test(value()); testing = false }
+                val value = value()
+                scope.launch { testing = true; tested = null; tested = value to test(value); testing = false }
             })
             SettingsDialogActionButton(text = stringResource(R.string.action_save), primary = true, onClick = {
                 if (runCatching { value().validate() }.isSuccess) onSave(value()) else error = true

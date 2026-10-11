@@ -129,6 +129,10 @@ data class UsenetSourceConfiguration(
 /** The usual Newznab API path, filled in for new indexers. */
 const val DEFAULT_API_PATH = "/api"
 
+/** Replaces the element with the same id as [value], or adds it at the end. */
+internal fun <T> List<T>.replaceOrAdd(value: T, id: (T) -> String): List<T> =
+    if (any { id(it) == id(value) }) map { if (id(it) == id(value)) value else it } else this + value
+
 /** 1 is the highest priority. */
 val USENET_PRIORITIES = 1..5
 
