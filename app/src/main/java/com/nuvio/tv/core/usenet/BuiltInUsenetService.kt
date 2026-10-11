@@ -88,9 +88,9 @@ class NewznabClient internal constructor(
     suspend fun verify(indexer: UsenetIndexer) {
         capabilities(indexer, live = true)
         val latest = NewznabProtocol.apiUrl(indexer, "search").setQueryParameter("limit", "1").build()
-        // Only a rejected key, a spent quota or a broken endpoint fails: a search refused for
-        // its parameters still means the key was accepted.
-        request(indexer, latest, ignoreCooldown = true, NewznabProtocol::throwIfKnownError)
+        // A search refused for its parameters still means the key was accepted; a page that is
+        // no Newznab answer (a login page served with the public caps) does not.
+        request(indexer, latest, ignoreCooldown = true, NewznabProtocol::requireSearchAnswer)
     }
 
     /**
@@ -103,7 +103,11 @@ class NewznabClient internal constructor(
         caps: NewznabCapabilities): List<UsenetRelease>? {
         val url = NewznabProtocol.searchUrl(indexer, request, caps, wholeSeason = true) ?: return null
         val key = url.toString()
-        synchronized(seasons) { seasons[key] }?.takeIf { now() - it.first < SEASON_TTL_MS }?.let { return it.second }
+        // Keyed by the endpoint and key, which another profile or a renamed indexer can share:
+        // reused releases take the asking indexer's id and name, which ordering and deduplication use.
+        synchronized(seasons) { seasons[key] }?.takeIf { now() - it.first < SEASON_TTL_MS }?.let { cached ->
+            return cached.second.map { it.copy(indexerId = indexer.id, indexerName = indexer.name) }
+        }
         val releases = try {
             pages(indexer, url, request, caps, wholeSeason = true)
         } catch (e: CancellationException) { throw e }

@@ -40,10 +40,19 @@ type poolLease struct {
 	owner        *providerPools
 	keys         []providerKey
 	clients      []*nntppool.Client
-	tiers        []int // Ascending priority of each client; equal tiers share load.
+	tiers        []int           // Ascending priority of each client; equal tiers share load.
 	next         []atomic.Uint64 // One rotation counter per tier start, so tiers never skew each other.
 	once         sync.Once
+	// Clients that broke off an article after it started, by message-id (bit i is clients[i]).
+	// The store retries such an article; without this a lone preferred provider would take
+	// every retry and a complete copy on a backup would never be read.
+	brokeMu    sync.Mutex
+	broke      map[string]uint64
+	brokeCount atomic.Int32
 }
+
+// maxBrokenArticles bounds what a lease remembers; past it, retries simply follow order.
+const maxBrokenArticles = 4096
 
 func (p *providerPools) acquire(ctx context.Context, providers []nntppool.Provider, allowPrivate ...bool) (*poolLease, error) {
 	return p.acquireForRequest(ctx, ctx, providers, nil, len(allowPrivate) > 0 && allowPrivate[0])
@@ -238,12 +247,72 @@ func (l *poolLease) order() iter.Seq[int] {
 	}
 }
 
+// attempts is order for article id, with the clients that broke it off before
+// moved to the end: a retry goes to another copy first, and still to them last.
+func (l *poolLease) attempts(id string) iter.Seq[int] {
+	broke := l.brokenBy(id)
+	if broke == 0 {
+		return l.order()
+	}
+	return func(yield func(int) bool) {
+		for index := range l.order() {
+			if broke&(1<<index) == 0 && !yield(index) {
+				return
+			}
+		}
+		for index := range l.clients {
+			if broke&(1<<index) != 0 && !yield(index) {
+				return
+			}
+		}
+	}
+}
+
+func (l *poolLease) brokenBy(id string) uint64 {
+	if l.brokeCount.Load() == 0 {
+		return 0
+	}
+	l.brokeMu.Lock()
+	defer l.brokeMu.Unlock()
+	return l.broke[id]
+}
+
+func (l *poolLease) markBroken(id string, index int) {
+	if index >= 64 {
+		return
+	}
+	l.brokeMu.Lock()
+	defer l.brokeMu.Unlock()
+	if _, known := l.broke[id]; !known {
+		if len(l.broke) >= maxBrokenArticles {
+			return
+		}
+		if l.broke == nil {
+			l.broke = make(map[string]uint64)
+		}
+		l.brokeCount.Add(1)
+	}
+	l.broke[id] |= 1 << index
+}
+
+func (l *poolLease) forgetBroken(id string) {
+	if l.brokeCount.Load() == 0 {
+		return
+	}
+	l.brokeMu.Lock()
+	defer l.brokeMu.Unlock()
+	if _, known := l.broke[id]; known {
+		delete(l.broke, id)
+		l.brokeCount.Add(-1)
+	}
+}
+
 func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority bool, meta ...func(nntppool.YEncMeta)) (*nntppool.ArticleBody, error) {
 	var failures []error
 	allMissing := true
 	allAuth, allQuota := true, true
 	allPrivate := true
-	for index := range l.order() {
+	for index := range l.attempts(id) {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
@@ -268,6 +337,13 @@ func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority
 		committed := writer.committed
 		writer.mu.Unlock()
 		if err == nil || committed {
+			// Bytes already reached out, so no other client can continue this attempt; the
+			// store's retry can, starting elsewhere. A cancelled read is no client's fault.
+			if err == nil {
+				l.forgetBroken(id)
+			} else if ctx.Err() == nil {
+				l.markBroken(id, index)
+			}
 			return body, err
 		}
 		allMissing = allMissing && errors.Is(err, nntppool.ErrArticleNotFound)

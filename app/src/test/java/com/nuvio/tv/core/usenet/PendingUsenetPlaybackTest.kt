@@ -22,6 +22,29 @@ class PendingUsenetPlaybackTest {
         assertEquals(emptyList<String>(), released)
     }
 
+    @Test fun `an external player keeps its session while the screen stops and releases it on return`() {
+        val released = mutableListOf<String>()
+        val pending = PendingUsenetPlayback { released += it }
+        pending.replace("session-a")
+        pending.handoffExternal("session-a")
+        pending.release() // The results screen stops while the external player plays.
+        assertEquals(emptyList<String>(), released)
+        pending.externalPlayerReturned()
+        pending.externalPlayerReturned() // The screen is then cleared.
+        assertEquals(listOf("session-a"), released)
+    }
+
+    @Test fun `a stale external handoff adopts nothing`() {
+        val released = mutableListOf<String>()
+        val pending = PendingUsenetPlayback { released += it }
+        pending.replace("session-b")
+        pending.handoffExternal("session-a") // Not a Usenet session, or an older one.
+        pending.externalPlayerReturned()
+        assertEquals(emptyList<String>(), released)
+        pending.release()
+        assertEquals(listOf("session-b"), released)
+    }
+
     @Test fun `replacement releases old selection and stale handoff cannot adopt the new one`() {
         val released = mutableListOf<String>()
         val pending = PendingUsenetPlayback { released += it }

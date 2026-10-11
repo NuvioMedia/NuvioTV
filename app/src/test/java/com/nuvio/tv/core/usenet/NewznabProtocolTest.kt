@@ -217,6 +217,17 @@ class NewznabProtocolTest {
         assertFalse(NewznabProtocol.matches(UsenetRelease("A.Show.S01E04.1080p", "url"), series, true))
         assertFalse(NewznabProtocol.matches(UsenetRelease("A.Show.1x04.1080p", "url"), series, true))
         assertTrue(NewznabProtocol.matches(UsenetRelease("A.Show.S01E01-E10", "url"), series, false))
+        // A hyphen spans a range; episodes written one after another are a list of exactly those.
+        fun episode(title: String, number: Int) =
+            NewznabProtocol.matches(UsenetRelease(title, "url"), series.copy(episode = number), true)
+        assertTrue(episode("A.Show.S01E01-05.1080p", 3))
+        assertTrue(episode("A.Show.S01E04E05E06.1080p", 6))
+        assertTrue(episode("A.Show.S01E04E05E06.1080p", 5))
+        assertFalse(episode("A.Show.S01E04E06.1080p", 5))
+        assertTrue(episode("A.Show.S01E04E06.1080p", 6))
+        assertTrue(episode("A.Show.S01E01E02-E04.1080p", 3))
+        assertTrue(episode("A.Show.1x04-06.1080p", 5))
+        assertFalse(episode("A.Show.S01E04-1080p", 5))
         assertTrue(NewznabProtocol.matches(UsenetRelease("A.Show.S01.Complete", "url"), series, false))
         assertFalse(NewznabProtocol.matches(UsenetRelease("A.Show.S02.Complete", "url"), series, true))
     }
