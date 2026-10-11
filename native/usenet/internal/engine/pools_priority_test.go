@@ -35,7 +35,7 @@ func TestPriorityTiersBalanceWithinTierAndOrderFailover(t *testing.T) {
 	}
 	counts := make([]int, len(lease.clients))
 	for range 400 {
-		order := lease.order()
+		order := slices.Collect(lease.order())
 		counts[order[0]]++
 		if order[2] != 2 {
 			t.Fatalf("order = %v, lower tier must be tried last", order)
@@ -142,5 +142,37 @@ func TestGlobalConnectionLimitFavoursThePreferredTier(t *testing.T) {
 	}
 	if _, err := Providers([]string{"nntp://a.test/20", "nntp://c.test/20?priority=1"}, Config{MaxConnections: 1}, nil); err == nil {
 		t.Fatal("a limit below one connection per server was accepted")
+	}
+}
+
+func TestEachTierRotatesOnItsOwnAndBackupsAreWeighedOnlyWhenReached(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var pools providerPools
+	// Equal weights in both tiers. With one counter shared by the tiers, each
+	// article advanced it twice and the preferred tier always started at a.
+	lease, err := pools.acquireForRequest(ctx, ctx, []nntppool.Provider{
+		{Host: "a", Name: "a", Connections: 1, SkipPing: true},
+		{Host: "b", Name: "b", Connections: 1, SkipPing: true},
+		{Host: "c", Name: "c", Connections: 1, SkipPing: true},
+		{Host: "d", Name: "d", Connections: 1, SkipPing: true},
+	}, []int{0, 0, 1, 1}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lease.Close()
+	first := map[string]int{}
+	for range 100 {
+		first[clientName(lease.clients[slices.Collect(lease.order())[0]])]++
+	}
+	if first["a"] != 50 || first["b"] != 50 {
+		t.Fatalf("preferred tier starts = %v, want a and b 50 each", first)
+	}
+	backupPicks := lease.next[2].Load()
+	for range lease.order() {
+		break // The preferred provider served the article.
+	}
+	if got := lease.next[2].Load(); got != backupPicks {
+		t.Fatalf("backup tier was weighed %d times without being reached", got-backupPicks)
 	}
 }

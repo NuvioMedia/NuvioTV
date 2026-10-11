@@ -174,7 +174,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	trace.mark("provider_setup_started")
-	providers, err := Providers(req.Servers, req.Config, s.roots)
+	providers, priorities, err := ProvidersWithPriorities(req.Servers, req.Config, s.roots)
 	if err != nil {
 		w.Header().Set("X-Usenet-Failure", "provider")
 		http.Error(w, err.Error(), 400)
@@ -184,7 +184,6 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	// Cancelling the open HTTP request tears down its work. Once committed,
 	// session lifetime is independent of this one request.
 	stop := context.AfterFunc(r.Context(), cancel)
-	priorities, _ := ProviderPriorities(req.Servers) // Validated by Providers.
 	pool, err := s.pools.acquireForRequest(s.ctx, ctx, providers, priorities, req.Config.AllowPrivateNetwork)
 	if err != nil {
 		stop()
