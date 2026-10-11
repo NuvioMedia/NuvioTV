@@ -104,7 +104,9 @@ private fun normalizePluginType(value: String): String =
 data class LocalScraperResult(
     val title: String,
     val name: String? = null,
-    val url: String,
+    val url: String?,
+    val externalUrl: String? = null,
+    val ytId: String? = null,
     val quality: String? = null,
     val size: String? = null,
     val language: String? = null,
@@ -113,10 +115,15 @@ data class LocalScraperResult(
     val seeders: Int? = null,
     val peers: Int? = null,
     val infoHash: String? = null,
+    val fileIdx: Int? = null,
     val headers: Map<String, String>? = null,
     val subtitles: List<Subtitle> = emptyList(),
     val audioDelayMs: Int? = null,
-    val audioDelayLanguage: String? = null
+    val audioDelayLanguage: String? = null,
+    val bingeGroup: String? = null,
+    val videoHash: String? = null,
+    val videoSize: Long? = null,
+    val filename: String? = null
 )
 
 /**
@@ -148,44 +155,3 @@ data class ExternalPluginEntry(
     val fileSize: Long? = null,
     val repositoryUrl: String? = null
 )
-
-/**
- * Convert LocalScraperResult to Stream
- */
-fun LocalScraperResult.toStream(scraper: ScraperInfo): com.nuvio.tv.domain.model.Stream {
-    val displayTitle = buildString {
-        append(title)
-        if (!quality.isNullOrBlank() && !title.contains(quality)) {
-            append(" $quality")
-        }
-    }
-    
-    val displayName = buildString {
-        append(name ?: scraper.name)
-        if (!quality.isNullOrBlank() && !(name ?: "").contains(quality)) {
-            append(" - $quality")
-        }
-    }
-    
-    return Stream(
-        name = displayName,
-        title = displayTitle,
-        description = size,
-        url = url,
-        ytId = null,
-        infoHash = infoHash,
-        fileIdx = null,
-        externalUrl = null,
-        behaviorHints = StreamBehaviorHints(
-            notWebReady = null,
-            bingeGroup = "local-plugin-${scraper.id}",
-            countryWhitelist = null,
-            proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
-            audioDelayMs = audioDelayMs,
-            audioDelayLanguage = audioDelayLanguage
-        ),
-        addonName = scraper.name,
-        addonLogo = scraper.logo,
-        subtitles = subtitles
-    )
-}

@@ -567,24 +567,23 @@ class StreamRepositoryImpl @Inject constructor(
             url = url,
             addonName = addonName,
             pluginSourceName = scraper.name,
-            addonLogo = null,
+            addonLogo = scraper.logo,
             description = buildDescription(this),
-            behaviorHints = if (headers != null || audioDelayMs != null || audioDelayLanguage != null) {
-                StreamBehaviorHints(
-                    notWebReady = null,
-                    bingeGroup = null,
-                    countryWhitelist = null,
-                    proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
-                    audioDelayMs = audioDelayMs,
-                    audioDelayLanguage = audioDelayLanguage
-                )
-            } else {
-                null
-            },
+            behaviorHints = StreamBehaviorHints(
+                notWebReady = null,
+                bingeGroup = "local-plugin-${scraper.id}${bingeGroup?.let { "|${it}" }}",
+                countryWhitelist = null,
+                proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
+                videoHash = videoHash,
+                videoSize = videoSize,
+                filename = filename,
+                audioDelayMs = audioDelayMs,
+                audioDelayLanguage = audioDelayLanguage,
+            ),
             infoHash = infoHash,
-            fileIdx = null,
-            ytId = null,
-            externalUrl = null,
+            fileIdx = fileIdx,
+            ytId = ytId,
+            externalUrl = externalUrl,
             quality = quality,
             qualityValue = parseQualityValue(quality),
             subtitles = subtitles
