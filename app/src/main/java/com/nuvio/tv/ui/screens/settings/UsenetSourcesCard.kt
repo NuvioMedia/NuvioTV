@@ -129,6 +129,9 @@ internal fun UsenetSourcesCard(
         SettingsToggleRow(title = stringResource(R.string.usenet_exclude_low_quality), subtitle = null,
             checked = configuration.excludeLowQuality,
             onToggle = { update(configuration.copy(excludeLowQuality = !configuration.excludeLowQuality)) })
+        SettingsToggleRow(title = stringResource(R.string.usenet_exclude_full_disc),
+            subtitle = stringResource(R.string.usenet_exclude_full_disc_description), checked = configuration.excludeFullDisc,
+            onToggle = { update(configuration.copy(excludeFullDisc = !configuration.excludeFullDisc)) })
     }
     when (picker) {
         "sort" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_sort_results), options = sortOptions,

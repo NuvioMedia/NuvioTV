@@ -131,7 +131,7 @@ without a TMDB mapping cannot be searched.
 The **Built-in Usenet** result group updates as indexers finish, independently
 of addon/plugin searches. Sort by resolution, size, age or indexer priority.
 Filters cover minimum resolution, maximum size, maximum age, CAM/screener
-releases and result count. Passworded NZBs are always excluded. Unknown sizes
+releases, full Blu-ray/DVD discs (on by default; remuxes still show) and result count. Passworded NZBs are always excluded. Unknown sizes
 or dates are excluded when their corresponding maximum filter is enabled.
 Duplicate download URLs are removed while alternative indexer URLs remain
 available for playback fallback.
