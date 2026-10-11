@@ -370,6 +370,7 @@ private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (Us
             else -> R.string.usenet_test_failed
         }), color = NuvioTheme.colors.TextSecondary)
         SettingsDialogActionRow {
+            SettingsDialogActionButton(text = stringResource(R.string.action_cancel), onClick = onDismiss)
             SettingsDialogActionButton(text = stringResource(R.string.usenet_test_indexer), enabled = !testing, onClick = {
                 val value = value()
                 scope.launch { testing = true; tested = null; tested = value to test(value); testing = false }

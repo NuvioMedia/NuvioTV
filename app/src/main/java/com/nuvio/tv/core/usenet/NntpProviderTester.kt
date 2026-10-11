@@ -34,16 +34,19 @@ fun ProviderTestResult.messageRes(anonymous: Boolean) = when (this) {
  * errors could echo credentials.
  */
 @Singleton
-class NntpProviderTester @Inject constructor() {
+class NntpProviderTester internal constructor(private val resolve: (String) -> Array<InetAddress>) {
+    @Inject constructor() : this(InetAddress::getAllByName)
+
     suspend fun test(provider: UsenetProvider, allowPrivateNetwork: Boolean): ProviderTestResult =
         runInterruptible(Dispatchers.IO) {
-            val addresses = try { InetAddress.getAllByName(provider.host.removeSurrounding("[", "]")) }
+            val addresses = try { resolve(provider.host.removeSurrounding("[", "]")) }
                 catch (_: IOException) { return@runInterruptible ProviderTestResult.UNREACHABLE }
-            // Mirror the engine's dial policy, or a test could pass where playback is refused.
-            if (addresses.any { !allowed(it, allowPrivateNetwork) }) return@runInterruptible ProviderTestResult.PRIVATE_NETWORK
-            val socket = Socket()
+            // Mirror the engine's dial policy, or a test could pass where playback is refused:
+            // it skips the addresses it may not dial and tries the others.
+            val usable = addresses.filter { allowed(it, allowPrivateNetwork) }
+            if (usable.isEmpty()) return@runInterruptible ProviderTestResult.PRIVATE_NETWORK
+            val socket = connect(usable, provider.port) ?: return@runInterruptible ProviderTestResult.UNREACHABLE
             try {
-                socket.connect(InetSocketAddress(addresses.first(), provider.port), TIMEOUT_MS)
                 socket.soTimeout = TIMEOUT_MS
                 val stream = if (provider.tls) secure(socket, provider.host) else socket
                 session(stream, provider)
@@ -51,6 +54,26 @@ class NntpProviderTester @Inject constructor() {
             catch (_: IOException) { ProviderTestResult.UNREACHABLE }
             finally { runCatching { socket.close() } }
         }
+
+    /**
+     * Tries each address in turn within one time budget, like the engine's dialer: a host whose
+     * first address does not answer (IPv6 without a route, one server down) still connects.
+     */
+    private fun connect(addresses: List<InetAddress>, port: Int): Socket? {
+        val deadline = System.nanoTime() + TIMEOUT_MS * 1_000_000L
+        addresses.forEachIndexed { i, address ->
+            val left = ((deadline - System.nanoTime()) / 1_000_000).toInt()
+            if (left <= 0) return null
+            // Share what is left, so a silent address leaves time for the next ones.
+            val timeout = maxOf(left / (addresses.size - i), minOf(left, MIN_ATTEMPT_MS))
+            val socket = Socket()
+            try {
+                socket.connect(InetSocketAddress(address, port), timeout)
+                return socket
+            } catch (_: IOException) { runCatching { socket.close() } }
+        }
+        return null
+    }
 
     private fun session(socket: Socket, provider: UsenetProvider): ProviderTestResult {
         val input = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.ISO_8859_1))
@@ -91,6 +114,7 @@ class NntpProviderTester @Inject constructor() {
 
     private companion object {
         const val TIMEOUT_MS = 10_000
+        const val MIN_ATTEMPT_MS = 2_000
 
         fun allowed(address: InetAddress, allowPrivate: Boolean): Boolean {
             if (address.isAnyLocalAddress || address.isMulticastAddress || address.isLinkLocalAddress) return false
