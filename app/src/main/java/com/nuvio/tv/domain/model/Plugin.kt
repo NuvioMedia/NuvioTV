@@ -104,7 +104,9 @@ private fun normalizePluginType(value: String): String =
 data class LocalScraperResult(
     val title: String,
     val name: String? = null,
-    val url: String,
+    val url: String?,
+    val externalUrl: String? = null,
+    val ytId: String? = null,
     val quality: String? = null,
     val size: String? = null,
     val language: String? = null,
@@ -113,10 +115,15 @@ data class LocalScraperResult(
     val seeders: Int? = null,
     val peers: Int? = null,
     val infoHash: String? = null,
+    val fileIdx: Int? = null,
     val headers: Map<String, String>? = null,
     val subtitles: List<Subtitle> = emptyList(),
     val audioDelayMs: Int? = null,
-    val audioDelayLanguage: String? = null
+    val audioDelayLanguage: String? = null,
+    val bingeGroup: String? = null,
+    val videoHash: String? = null,
+    val videoSize: Long? = null,
+    val filename: String? = null
 )
 
 /**
@@ -155,6 +162,7 @@ private const val PLUGIN_BINGE_GROUP_SEPARATOR = "|"
 /**
  * Binge group for one plugin stream.
  * Format: `local-plugin-{scraperId}|{sorted identity tokens}`.
+ * If the plugin provides a bingeGroup, then it is used as the main identity token.
  * Tokens are the plugin's own name, title, language, and quality. Episode-specific
  * pieces are not stripped here; [indexOfPluginBingeMatch] drops whatever the next
  * episode's own results no longer share.
@@ -162,12 +170,17 @@ private const val PLUGIN_BINGE_GROUP_SEPARATOR = "|"
 fun pluginBingeGroup(
     scraperId: String,
     url: String? = null,
+    bingeGroup: String? = null,
     name: String? = null,
     title: String? = null,
     language: String? = null,
     quality: String? = null
 ): String {
-    val tokens = pluginIdentityTokens(name, title, language, quality)
+    val tokens = if (!bingeGroup.isNullOrEmpty()) {
+        tokenizePluginText(bingeGroup)
+    } else {
+        pluginIdentityTokens(name, title, language, quality)
+    }
     return if (tokens.isEmpty()) {
         "$PLUGIN_BINGE_GROUP_PREFIX$scraperId"
     } else {
@@ -322,27 +335,28 @@ fun LocalScraperResult.toStream(scraper: ScraperInfo): com.nuvio.tv.domain.model
             append(" $quality")
         }
     }
-    
+
     val displayName = buildString {
         append(name ?: scraper.name)
         if (!quality.isNullOrBlank() && !(name ?: "").contains(quality)) {
             append(" - $quality")
         }
     }
-    
+
     return Stream(
         name = displayName,
         title = displayTitle,
         description = size,
         url = url,
-        ytId = null,
+        ytId = ytId,
         infoHash = infoHash,
-        fileIdx = null,
-        externalUrl = null,
+        fileIdx = fileIdx,
+        externalUrl = externalUrl,
         behaviorHints = StreamBehaviorHints(
             notWebReady = null,
             bingeGroup = pluginBingeGroup(
                 scraperId = scraper.id,
+                bingeGroup = bingeGroup,
                 url = url,
                 name = name,
                 title = title,
@@ -352,7 +366,10 @@ fun LocalScraperResult.toStream(scraper: ScraperInfo): com.nuvio.tv.domain.model
             countryWhitelist = null,
             proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
             audioDelayMs = audioDelayMs,
-            audioDelayLanguage = audioDelayLanguage
+            audioDelayLanguage = audioDelayLanguage,
+            videoHash = videoHash,
+            videoSize = videoSize,
+            filename = filename,
         ),
         addonName = scraper.name,
         addonLogo = scraper.logo,
