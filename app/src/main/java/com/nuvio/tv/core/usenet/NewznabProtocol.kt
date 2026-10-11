@@ -189,10 +189,8 @@ object NewznabProtocol {
         if (request.series) {
             val episodes = EPISODES.flatMap { it.findAll(release.title).toList() }
             if (episodes.isNotEmpty()) return episodes.any {
-                val season = it.groupValues[1].toInt()
-                val first = it.groupValues[2].toInt()
-                val last = it.groupValues[3].toIntOrNull() ?: first
-                season == request.season && request.episode?.let { episode -> episode in first..last } == true
+                it.groupValues[1].toInt() == request.season && request.episode != null &&
+                    names(request.episode, it.groupValues[2].toInt(), it.groupValues[3])
             }
             val seasons = SEASON.findAll(release.title).map { it.groupValues[1].toInt() }.toList()
             if (seasons.isNotEmpty()) return request.season in seasons
@@ -228,12 +226,29 @@ object NewznabProtocol {
     private val NON_WORD = Regex("[^\\p{L}\\p{N}]+")
     private val APOSTROPHES = Regex("['’‘`´ʼ]")
     private val RELEASE_YEAR = Regex("(?<![\\p{L}\\p{N}])((?:19|20)\\d{2})(?![\\p{L}\\p{N}])")
-    private const val EPISODE_RANGE = "(?:(?:[ ._]*E|[ ._]*-[ ._]*E?)(\\d{1,3})(?=$|[ ._-]))?"
+    /** The episodes after the first: E02E03 lists them, -E03 or -03 spans a range. */
+    private const val MORE_EPISODES = "((?:(?:[ ._]*E|[ ._]*-[ ._]*E?)\\d{1,3})+(?=$|[ ._-]))?"
     private val EPISODES = listOf(
-        Regex("(?i)S(\\d{1,3})[ ._-]*E(\\d{1,3})(?!\\d)$EPISODE_RANGE"),
-        Regex("(?i)(?<!\\d)(\\d{1,2})x(\\d{1,3})(?!\\d)$EPISODE_RANGE")
+        Regex("(?i)S(\\d{1,3})[ ._-]*E(\\d{1,3})(?!\\d)$MORE_EPISODES"),
+        Regex("(?i)(?<!\\d)(\\d{1,2})x(\\d{1,3})(?!\\d)$MORE_EPISODES")
     )
+    private val NEXT_EPISODE = Regex("(?i)([ ._]*-[ ._]*E?|[ ._]*E)(\\d{1,3})")
     private val SEASON = Regex("(?i)(?:^|[ ._-])(?:S|Season[ ._-]*)(\\d{1,3})(?:$|[ ._-])")
+    /**
+     * Whether a release numbered [first] then [more] holds [episode]. E01E02E03 lists three
+     * episodes; only a hyphen spans the ones between, as in E01-E03, so E01E03 is not E02.
+     */
+    private fun names(episode: Int, first: Int, more: String): Boolean {
+        if (episode == first) return true
+        var previous = first
+        for (next in NEXT_EPISODE.findAll(more)) {
+            val number = next.groupValues[2].toInt()
+            if (episode == number || '-' in next.groupValues[1] && episode in previous..number) return true
+            previous = number
+        }
+        return false
+    }
+
     private val ARTICLES = setOf("the", "a", "an")
     private val YEAR = Regex("(?:19|20)\\d{2}")
     private val RELEASE_MARKER = Regex("(?:19|20)\\d{2}|s\\d{1,3}(?:e\\d{1,4})*|e\\d{1,4}|\\d{1,2}x\\d{1,3}|" +
@@ -342,12 +357,19 @@ object NewznabProtocol {
             val code = root.getAttribute("code")
             if (code in setOf("429", "500", "501")) throw NewznabQuotaException()
             if (code in setOf("100", "101", "102")) throw NewznabAuthException()
-            error(when (code) {
-                "200", "201", "202", "203" -> "Indexer does not support this search"
-                else -> "Indexer returned an API error"
-            })
+            if (code in setOf("200", "201", "202", "203")) throw NewznabUnsupportedSearchException()
+            error("Indexer returned an API error")
         }
         return root
+    }
+
+    /**
+     * Checks the answer to a key check's search. Results accept the key, and so does a search refused
+     * only for its parameters (Newznab 200-203). Anything else, such as a login page, fails.
+     */
+    fun requireSearchAnswer(xml: String) {
+        val root = try { document(xml) } catch (_: NewznabUnsupportedSearchException) { return }
+        require(root.localName == "rss") { "Invalid indexer search response" }
     }
 
     /** Some indexers pair an HTTP error status with a Newznab quota or authentication error document. */
@@ -361,6 +383,9 @@ object NewznabProtocol {
 
 /** The indexer reported its request or download quota as spent (Newznab 429/500/501). */
 class NewznabQuotaException : IllegalStateException("Indexer rate limit reached")
+
+/** The indexer accepted the request but not its search parameters (Newznab 200-203). */
+class NewznabUnsupportedSearchException : IllegalStateException("Indexer does not support this search")
 
 /** The indexer rejected the API key or account (Newznab 100-102). */
 class NewznabAuthException : IllegalStateException("Indexer authentication failed")
