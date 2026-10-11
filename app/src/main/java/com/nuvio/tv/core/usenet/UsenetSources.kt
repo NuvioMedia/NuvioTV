@@ -4,6 +4,7 @@ import java.net.URI
 import java.net.URLEncoder
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @Serializable
@@ -46,17 +47,41 @@ data class UsenetProvider(
 data class UsenetIndexer(
     val id: String = UUID.randomUUID().toString(),
     val name: String = "",
-    /** Complete Newznab API endpoint, including /api or a Prowlarr indexer path. */
+    /** The indexer's URL; [apiPath] is appended to it. */
     val apiUrl: String = "",
     val apiKey: String = "",
     val enabled: Boolean = true,
     /** Equal priorities are searched together; lower priorities only when higher ones find nothing. */
-    val priority: Int = 1
+    val priority: Int = 1,
+    /**
+     * Path of the Newznab API under [apiUrl], usually /api. New indexers start with /api; indexers
+     * saved before this field existed have none, because their URL is already the complete endpoint.
+     */
+    val apiPath: String = ""
 ) {
+    /**
+     * The Newznab endpoint: [apiUrl] with [apiPath] appended, keeping the URL's query parameters.
+     * A URL that already ends with the path is used as is, so a pasted complete endpoint still works.
+     */
+    fun endpointUrl(): HttpUrl? {
+        val url = apiUrl.trim().toHttpUrlOrNull() ?: return null
+        val path = apiPath.trim().trim('/')
+        if (path.isEmpty()) return url
+        val segments = path.split('/')
+        if (url.pathSegments.filter { it.isNotEmpty() }.takeLast(segments.size) == segments) return url
+        return url.newBuilder().addPathSegments(path).build()
+    }
+
+    /** [endpointUrl] as text; the URL as entered while it is invalid or has no path to add. */
+    val endpoint: String get() = if (apiPath.isBlank()) apiUrl else endpointUrl()?.toString() ?: apiUrl
+
     fun validate() {
-        val url = apiUrl.toHttpUrlOrNull()
+        val url = endpointUrl()
         require(name.isNotBlank() && url != null) { "A name and valid HTTP(S) API URL are required" }
         require(priority in USENET_PRIORITIES) { "Invalid priority" }
+        require(!apiPath.contains(Regex("[?#\\\\\\s]")) && apiPath.split('/').none { it == "." || it == ".." }) {
+            "Enter an API path such as /api"
+        }
         require(url.username.isEmpty() && url.password.isEmpty() && url.fragment == null) {
             "Use an API URL without user credentials or a fragment"
         }
@@ -100,6 +125,9 @@ data class UsenetSourceConfiguration(
         require(maxSizeGb in 0..1000 && maxAgeDays in 0..10000 && maxResults in 1..200)
     }
 }
+
+/** The usual Newznab API path, filled in for new indexers. */
+const val DEFAULT_API_PATH = "/api"
 
 /** 1 is the highest priority. */
 val USENET_PRIORITIES = 1..5

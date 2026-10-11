@@ -200,19 +200,24 @@ internal data class PhoneIndexer(
     val id: String? = null,
     val name: String = "",
     val apiUrl: String = "",
+    val apiPath: String = "",
     val apiKey: String = "",
     val hasKey: Boolean = false,
     val priority: Int = 1,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    /** Shown in the list only: the URL with its API path. */
+    val endpoint: String = ""
 ) {
     fun merge(existing: UsenetIndexer?) = (existing ?: UsenetIndexer()).copy(
-        name = name.trim(), apiUrl = apiUrl.trim(), apiKey = apiKey.trim().ifEmpty { existing?.apiKey.orEmpty() },
+        name = name.trim(), apiUrl = apiUrl.trim(), apiPath = apiPath.trim(),
+        apiKey = apiKey.trim().ifEmpty { existing?.apiKey.orEmpty() },
         priority = priority
     )
 
     companion object {
-        fun of(indexer: UsenetIndexer) = PhoneIndexer(indexer.id, indexer.name, indexer.apiUrl,
-            hasKey = indexer.apiKey.isNotEmpty(), priority = indexer.priority, enabled = indexer.enabled)
+        fun of(indexer: UsenetIndexer) = PhoneIndexer(indexer.id, indexer.name, indexer.apiUrl, indexer.apiPath,
+            hasKey = indexer.apiKey.isNotEmpty(), priority = indexer.priority, enabled = indexer.enabled,
+            endpoint = indexer.endpoint)
     }
 }
 

@@ -53,7 +53,7 @@ data class NewznabPage(val releases: List<UsenetRelease>, val total: Int = 0)
 
 /** Protocol functions are independent of Android and never include credentials in errors. */
 object NewznabProtocol {
-    fun apiUrl(indexer: UsenetIndexer, action: String): HttpUrl.Builder = indexer.apiUrl.toHttpUrl()
+    fun apiUrl(indexer: UsenetIndexer, action: String): HttpUrl.Builder = indexer.endpoint.toHttpUrl()
         .newBuilder().setQueryParameter("apikey", indexer.apiKey)
         .setQueryParameter("t", action).setQueryParameter("o", "xml")
 
@@ -141,7 +141,7 @@ object NewznabProtocol {
                 .firstOrNull { it.getAttribute("type").contains("nzb", ignoreCase = true) }
             val download = enclosure?.getAttribute("url")?.takeIf { it.isNotBlank() }
                 ?: text("link").takeIf { it.isNotBlank() && enclosures.length == 0 } ?: return@mapNotNull null
-            val url = indexer.apiUrl.toHttpUrl().resolve(download) ?: return@mapNotNull null
+            val url = indexer.endpoint.toHttpUrl().resolve(download) ?: return@mapNotNull null
             val title = text("title").takeIf { it.isNotBlank() } ?: return@mapNotNull null
             val published = listOfNotNull(attributes["usenetdate"], text("pubDate")).firstNotNullOfOrNull { date ->
                 runCatching { ZonedDateTime.parse(date, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() }.getOrNull()
