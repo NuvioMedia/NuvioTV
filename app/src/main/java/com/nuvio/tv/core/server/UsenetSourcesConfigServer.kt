@@ -6,6 +6,7 @@ import com.nuvio.tv.core.usenet.UsenetIndexer
 import com.nuvio.tv.core.usenet.UsenetProvider
 import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
 import com.nuvio.tv.core.usenet.messageRes
+import com.nuvio.tv.core.usenet.replaceOrAdd
 import fi.iki.elonen.NanoHTTPD
 import java.io.ByteArrayInputStream
 import java.security.MessageDigest
@@ -79,6 +80,7 @@ class UsenetSourcesConfigServer(
         val input = parse<PhoneProvider>(body) ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_provider_invalid)
         val configuration = setup.configuration() ?: return error(Response.Status.CONFLICT, R.string.usenet_phone_unavailable)
         val provider = input.merge(configuration.providers.find { it.id == input.id })
+            ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_phone_secret_needed)
         if (runCatching { provider.validate() }.isFailure) return error(Response.Status.BAD_REQUEST, R.string.usenet_provider_invalid)
         val saved = setup.save(provider.name) { it.copy(providers = it.providers.replaceOrAdd(provider) { p -> p.id }) }
         return if (saved) ok(json.encodeToString(Saved(provider.id, text(R.string.usenet_phone_saved))))
@@ -89,6 +91,7 @@ class UsenetSourcesConfigServer(
         val input = parse<PhoneIndexer>(body) ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_indexer_invalid)
         val configuration = setup.configuration() ?: return error(Response.Status.CONFLICT, R.string.usenet_phone_unavailable)
         val indexer = input.merge(configuration.indexers.find { it.id == input.id })
+            ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_phone_secret_needed)
         if (runCatching { indexer.validate() }.isFailure) return error(Response.Status.BAD_REQUEST, R.string.usenet_indexer_invalid)
         val saved = setup.save(indexer.name) { it.copy(indexers = it.indexers.replaceOrAdd(indexer) { i -> i.id }) }
         return if (saved) ok(json.encodeToString(Saved(indexer.id, text(R.string.usenet_phone_saved))))
@@ -99,6 +102,7 @@ class UsenetSourcesConfigServer(
         val input = parse<PhoneProvider>(body) ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_provider_invalid)
         val configuration = setup.configuration() ?: return error(Response.Status.CONFLICT, R.string.usenet_phone_unavailable)
         val provider = input.merge(configuration.providers.find { it.id == input.id })
+            ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_phone_secret_needed)
         val result = setup.testProvider(provider) ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_provider_invalid)
         val anonymous = provider.username.isEmpty() && provider.password.isEmpty()
         return ok(json.encodeToString(Tested(result == ProviderTestResult.SUCCESS, text(result.messageRes(anonymous)))))
@@ -108,6 +112,7 @@ class UsenetSourcesConfigServer(
         val input = parse<PhoneIndexer>(body) ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_indexer_invalid)
         val configuration = setup.configuration() ?: return error(Response.Status.CONFLICT, R.string.usenet_phone_unavailable)
         val indexer = input.merge(configuration.indexers.find { it.id == input.id })
+            ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_phone_secret_needed)
         if (runCatching { indexer.validate() }.isFailure) return error(Response.Status.BAD_REQUEST, R.string.usenet_indexer_invalid)
         val success = setup.testIndexer(indexer)
         return ok(json.encodeToString(Tested(success, text(if (success) R.string.usenet_test_success else R.string.usenet_test_failed))))
@@ -181,11 +186,19 @@ internal data class PhoneProvider(
     val priority: Int = 1,
     val enabled: Boolean = true
 ) {
-    /** Edits [existing] when the phone edited a saved provider, so its id and enabled state are kept. */
-    fun merge(existing: UsenetProvider?) = (existing ?: UsenetProvider()).copy(
-        name = name.trim(), host = host.trim(), port = port, tls = tls, username = username,
-        password = password.ifEmpty { existing?.password.orEmpty() }, connections = connections, priority = priority
-    )
+    /**
+     * Edits [existing] when the phone edited a saved provider, so its id and enabled state are kept.
+     * A blank password keeps the saved one only for the server it was saved for, so it is never sent
+     * to another host. Null when the host, port, TLS setting or username changed and it is needed again.
+     */
+    fun merge(existing: UsenetProvider?): UsenetProvider? {
+        val edited = (existing ?: UsenetProvider()).copy(name = name.trim(), host = host.trim(), port = port, tls = tls,
+            username = username, password = password, connections = connections, priority = priority)
+        if (password.isNotEmpty() || existing == null || existing.password.isEmpty()) return edited
+        val sameServer = edited.host == existing.host && edited.port == existing.port && edited.tls == existing.tls &&
+            edited.username == existing.username
+        return if (sameServer) edited.copy(password = existing.password) else null
+    }
 
     companion object {
         fun of(provider: UsenetProvider) = PhoneProvider(provider.id, provider.name, provider.host, provider.port,
@@ -208,18 +221,24 @@ internal data class PhoneIndexer(
     /** Shown in the list only: the URL with its API path. */
     val endpoint: String = ""
 ) {
-    fun merge(existing: UsenetIndexer?) = (existing ?: UsenetIndexer()).copy(
-        name = name.trim(), apiUrl = apiUrl.trim(), apiPath = apiPath.trim(),
-        apiKey = apiKey.trim().ifEmpty { existing?.apiKey.orEmpty() },
-        priority = priority
-    )
+    /**
+     * Edits [existing] like [PhoneProvider.merge]. The phone gets the URL without its query, which can
+     * hold keys; the same URL coming back keeps the saved one. A blank API key keeps the saved one
+     * only for the same endpoint; null when the endpoint changed and the key is needed again.
+     */
+    fun merge(existing: UsenetIndexer?): UsenetIndexer? {
+        val url = apiUrl.trim().let { if (existing != null && it == withoutQuery(existing.apiUrl)) existing.apiUrl else it }
+        val edited = (existing ?: UsenetIndexer()).copy(name = name.trim(), apiUrl = url, apiPath = apiPath.trim(),
+            apiKey = apiKey.trim(), priority = priority)
+        if (edited.apiKey.isNotEmpty() || existing == null || existing.apiKey.isEmpty()) return edited
+        return if (edited.endpoint == existing.endpoint) edited.copy(apiKey = existing.apiKey) else null
+    }
 
     companion object {
-        fun of(indexer: UsenetIndexer) = PhoneIndexer(indexer.id, indexer.name, indexer.apiUrl, indexer.apiPath,
-            hasKey = indexer.apiKey.isNotEmpty(), priority = indexer.priority, enabled = indexer.enabled,
-            endpoint = indexer.endpoint)
+        fun of(indexer: UsenetIndexer) = PhoneIndexer(indexer.id, indexer.name, withoutQuery(indexer.apiUrl),
+            indexer.apiPath, hasKey = indexer.apiKey.isNotEmpty(), priority = indexer.priority,
+            enabled = indexer.enabled, endpoint = withoutQuery(indexer.endpoint))
+
+        private fun withoutQuery(url: String) = url.substringBefore('?')
     }
 }
-
-private fun <T> List<T>.replaceOrAdd(value: T, id: (T) -> String): List<T> =
-    if (any { id(it) == id(value) }) map { if (id(it) == id(value)) value else it } else this + value

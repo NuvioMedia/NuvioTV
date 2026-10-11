@@ -43,10 +43,16 @@ data class UsenetRelease(
     val indexerName: String = "",
     val passworded: Boolean = false
 ) {
-    val resolution: Int get() = Regex("(?i)(?<!\\d)(2160|1080|720|480|360)p?(?!\\d)")
-        .find(title)?.groupValues?.get(1)?.toInt() ?: if (Regex("(?i)\\b4k\\b").containsMatchIn(title)) 2160 else 0
-    val lowQuality: Boolean get() = Regex("(?i)(?:^|[ ._-])(?:cam|hdcam|telesync|telecine|hdts|ts|tc|scr|dvdscr)(?:$|[ ._-])")
-        .containsMatchIn(title)
+    // Read from the title once: filtering and sorting read these thousands of times per search.
+    val resolution: Int = RESOLUTION.find(title)?.groupValues?.get(1)?.toInt()
+        ?: if (FOUR_K.containsMatchIn(title)) 2160 else 0
+    val lowQuality: Boolean = LOW_QUALITY.containsMatchIn(title)
+
+    private companion object {
+        val RESOLUTION = Regex("(?i)(?<!\\d)(2160|1080|720|480|360)p?(?!\\d)")
+        val FOUR_K = Regex("(?i)\\b4k\\b")
+        val LOW_QUALITY = Regex("(?i)(?:^|[ ._-])(?:cam|hdcam|telesync|telecine|hdts|ts|tc|scr|dvdscr)(?:$|[ ._-])")
+    }
 }
 
 data class NewznabPage(val releases: List<UsenetRelease>, val total: Int = 0)
