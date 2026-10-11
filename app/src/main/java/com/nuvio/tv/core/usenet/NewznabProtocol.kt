@@ -250,13 +250,36 @@ object NewznabProtocol {
             }
         }
         // Only marks on Latin letters: in other scripts (kana voicing) they are part of the letter.
-        val unaccented = Normalizer.normalize(letters, Normalizer.Form.NFD).replace(Regex("(?<=\\p{IsLatin})\\p{M}+"), "")
+        val unaccented = withoutLatinMarks(Normalizer.normalize(letters, Normalizer.Form.NFD))
         return Normalizer.normalize(unaccented, Normalizer.Form.NFC).replace(Regex("['’‘`´ʼ]"), "")
+    }
+
+    /**
+     * Drops the combining marks that follow a Latin letter. Done without a regex: Android's
+     * regex engine does not support script names such as the IsLatin property.
+     */
+    private fun withoutLatinMarks(decomposed: String): String = buildString {
+        var afterLatin = false
+        for (c in decomposed) {
+            if (c.isCombiningMark()) {
+                if (!afterLatin) append(c)
+            } else {
+                afterLatin = c.isLatinLetter()
+                append(c)
+            }
+        }
     }
 
     /** Lowercase words of a title or release name, for comparing one with the other. */
     private fun words(value: String, umlauts: Boolean = true) = releaseSpelling(value, umlauts).lowercase(Locale.ROOT)
         .replace("&", " and ").replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+
+    /** Whether [value] has a Latin letter, the script indexers search and name releases in. */
+    fun hasLatinLetter(value: String) = value.any { it.isLatinLetter() }
+
+    private fun Char.isLatinLetter() = isLetter() && Character.UnicodeScript.of(code) == Character.UnicodeScript.LATIN
+
+    private fun Char.isCombiningMark() = category.let { it == CharCategory.NON_SPACING_MARK || it == CharCategory.COMBINING_SPACING_MARK || it == CharCategory.ENCLOSING_MARK }
 
     private val UMLAUTS = mapOf('ä' to "ae", 'ö' to "oe", 'ü' to "ue", 'ø' to "oe")
     private val LETTERS = mapOf('ß' to "ss", 'æ' to "ae", 'œ' to "oe", 'ø' to "o", 'đ' to "d", 'ð' to "d",
