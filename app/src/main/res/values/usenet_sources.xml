@@ -66,6 +66,15 @@
     <string name="usenet_indexer_problem_auth">Last request failed: API key rejected</string>
     <string name="usenet_indexer_problem_unreachable">Last request failed: could not reach the indexer</string>
     <string name="usenet_indexer_problem_response">Last request failed: unexpected response</string>
+    <plurals name="usenet_indexer_api_hits_left">
+        <item quantity="one">%d API hit left</item>
+        <item quantity="other">%d API hits left</item>
+    </plurals>
+    <plurals name="usenet_indexer_grabs_left">
+        <item quantity="one">%d grab left</item>
+        <item quantity="other">%d grabs left</item>
+    </plurals>
+    <string name="usenet_indexer_left_as_of">%1$s (as of %2$s)</string>
     <string name="usenet_phone_setup">Set up from phone</string>
     <string name="usenet_phone_setup_description">Type server addresses, passwords and API keys on your phone instead of the remote.</string>
     <string name="usenet_phone_qr_instruction">Scan this QR code with a phone on the same network to add or edit Usenet providers and indexers.</string>

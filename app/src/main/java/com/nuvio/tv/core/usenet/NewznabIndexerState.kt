@@ -39,8 +39,18 @@ class SharedPreferencesNewznabStateStorage @Inject constructor(
 @Serializable
 enum class IndexerProblem { AUTH, UNREACHABLE, RESPONSE }
 
-/** What settings show for an indexer: a limit pause and the last failure, if any. */
-data class IndexerStatus(val pausedUntil: Long = 0, val problem: IndexerProblem? = null)
+/**
+ * What settings show for an indexer: a limit pause, the last failure, and the API hits and
+ * grabs it reported left for today, when it reports them.
+ */
+data class IndexerStatus(
+    val pausedUntil: Long = 0,
+    val problem: IndexerProblem? = null,
+    val apiHitsLeft: Int? = null,
+    val grabsLeft: Int? = null,
+    /** When the indexer reported what is left. */
+    val leftAt: Long = 0
+)
 
 @Serializable
 internal data class NewznabIndexerState(
@@ -48,7 +58,11 @@ internal data class NewznabIndexerState(
     val capsFetchedAt: Long = 0,
     val blockedUntil: Long = 0,
     val touchedAt: Long = 0,
-    val problem: IndexerProblem? = null
+    val problem: IndexerProblem? = null,
+    val apiHitsLeft: Int? = null,
+    val grabsLeft: Int? = null,
+    /** When the indexer last reported what is left. */
+    val leftAt: Long = 0
 )
 
 /**

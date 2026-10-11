@@ -146,6 +146,12 @@ sources. Configuration changes invalidate the stream search session cache.
   100-102, HTTP 401/403), could not reach the indexer, or unexpected response.
   The next successful request clears it, and so does editing the URL or key.
   Raw error messages are never shown, since they could contain the key.
+  Otherwise, when the indexer reports them in those headers, the row shows the
+  API hits and grabs left for today and when they were reported ("42 API hits
+  left, 8 grabs left (as of 14:05)"). Counts older than 24 hours are hidden,
+  since the indexer's daily quota has reset since then. Only searches update
+  the counts: NZBs are downloaded by the engine, so grabs made since the last
+  search are not yet subtracted.
 - **NZBs** are cached by the engine for 14 days, so playing a release again does
   not grab it again.
 

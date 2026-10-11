@@ -148,11 +148,13 @@ class NewznabClient @Inject constructor(
                 error("Indexer HTTP ${response.code}")
             }
             parse(response.body).also {
+                val apiHitsLeft = left(response.headers, API_LEFT_HEADERS)
+                val grabsLeft = left(response.headers, GRABS_LEFT_HEADERS)
                 // Indexers announce a spent daily quota before they start refusing requests.
-                if (REMAINING_HEADERS.any { response.headers[it]?.trim()?.toIntOrNull() == 0 }) {
-                    cooldown(indexer, EXHAUSTED_MS)
-                }
-                note(indexer, null)
+                if (apiHitsLeft == 0 || grabsLeft == 0) cooldown(indexer, EXHAUSTED_MS)
+                if (apiHitsLeft != null || grabsLeft != null) states.update(indexer) {
+                    it.copy(problem = null, apiHitsLeft = apiHitsLeft, grabsLeft = grabsLeft, leftAt = now())
+                } else note(indexer, null)
             }
         } catch (_: NewznabQuotaException) {
             throw cooldown(indexer, retryAfter ?: QUOTA_MS)
@@ -171,8 +173,15 @@ class NewznabClient @Inject constructor(
     /** Increments whenever an indexer status may have changed. */
     val statusChanges: StateFlow<Int> get() = states.revision
 
-    fun status(indexer: UsenetIndexer): IndexerStatus =
-        states.get(indexer).let { IndexerStatus(it?.blockedUntil ?: 0, it?.problem) }
+    fun status(indexer: UsenetIndexer): IndexerStatus = states.get(indexer).let { state ->
+        // The counts are daily: one from before the indexer's last reset would mislead.
+        val fresh = state != null && now() - state.leftAt < LEFT_TTL_MS
+        IndexerStatus(state?.blockedUntil ?: 0, state?.problem, state?.apiHitsLeft?.takeIf { fresh },
+            state?.grabsLeft?.takeIf { fresh }, state?.leftAt?.takeIf { fresh } ?: 0)
+    }
+
+    private fun left(headers: Headers, names: List<String>) =
+        names.firstNotNullOfOrNull { headers[it]?.trim()?.toIntOrNull() }?.coerceAtLeast(0)
 
     /** Extends, never shortens, the cooldown: concurrent refusals must not undercut each other. */
     private fun cooldown(indexer: UsenetIndexer, durationMs: Long): IndexerCooldownException {
@@ -225,8 +234,9 @@ class NewznabClient @Inject constructor(
         const val EXHAUSTED_MS = 15 * 60_000L
         const val SEASON_TTL_MS = 2 * 3600_000L
         const val MAX_SEASONS = 50
-        val REMAINING_HEADERS = listOf("X-RateLimit-Daily-Remaining", "x-api-remaining",
-            "X-DNZBLimit-Daily-Remaining", "x-grab-remaining")
+        const val LEFT_TTL_MS = 24 * 3600_000L
+        val API_LEFT_HEADERS = listOf("X-RateLimit-Daily-Remaining", "x-api-remaining")
+        val GRABS_LEFT_HEADERS = listOf("X-DNZBLimit-Daily-Remaining", "x-grab-remaining")
     }
 }
 
