@@ -174,6 +174,32 @@ class NewznabProtocolTest {
         assertEquals("ガンダム", query("ガンダム"))
     }
 
+    @Test fun `titles inside other titles are rejected and original titles are accepted`() {
+        fun movie(title: String, release: String, year: Int, original: String? = null) = NewznabProtocol.matches(
+            UsenetRelease(release, "url"), UsenetSearchRequest(title = title, originalTitle = original, year = year), false)
+        fun episode(title: String, release: String) = NewznabProtocol.matches(UsenetRelease(release, "url"),
+            UsenetSearchRequest(title = title, series = true, season = 1, episode = 1), false)
+
+        // Another title that contains the requested one, before or after it.
+        assertFalse(movie("Interstellar", "The.Science.of.Interstellar.2014.1080p", 2014))
+        assertTrue(movie("Interstellar", "Interstellar.2014.IMAX.2160p", 2014))
+        assertTrue(movie("Interstellar", "Interstellar.German.DL.1080p.BluRay", 2014))
+        assertFalse(episode("The Rookie", "The.Rookie.Feds.S01E01.1080p"))
+        assertTrue(episode("The Rookie", "The.Rookie.S01E01.1080p"))
+        // Only the year judges what comes between a movie title and its year.
+        assertTrue(movie("Star Wars", "Star.Wars.Episode.IV.A.New.Hope.1977.1080p", 1977))
+        assertFalse(movie("Cars", "Cars.2.2011.1080p", 2006))
+        assertFalse(movie("Cars", "Cars.2.1080p", 2006))
+        // Series names keep prefixes and country tags; an article still makes a one-word title another show.
+        assertTrue(episode("Daredevil", "Marvels.Daredevil.S01E01.1080p"))
+        assertTrue(episode("The Office", "The.Office.US.S01E01.720p"))
+        assertTrue(episode("Doctor Who", "Doctor.Who.2005.S01E01.720p"))
+        assertFalse(episode("Batman", "The.Batman.S01E01.720p"))
+
+        assertTrue(movie("Money Heist", "La.Casa.de.Papel.2017.1080p", 2017, original = "La casa de papel"))
+        assertFalse(movie("Money Heist", "La.Casa.de.Papel.2017.1080p", 2017))
+    }
+
     @Test fun `text fallback rejects wrong title year and episode but allows season packs`() {
         val movie = UsenetSearchRequest(title = "The Movie", year = 2020)
         assertTrue(NewznabProtocol.matches(UsenetRelease("The.Movie.2020.1080p", "url"), movie, false))
