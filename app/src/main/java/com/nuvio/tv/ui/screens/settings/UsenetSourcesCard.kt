@@ -90,9 +90,9 @@ internal fun UsenetSourcesCard(
                 onClick = { selectedId = item.id; picker = "provider" })
         }
         SettingsActionRow(title = stringResource(R.string.usenet_add_indexer),
-            subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer() })
+            subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer(apiPath = DEFAULT_API_PATH) })
         configuration.indexers.forEachIndexed { i, item ->
-            SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.apiUrl.substringBefore('?')}",
+            SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.endpoint.substringBefore('?')}",
                 stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id]))
                 .joinToString(" • "),
                 value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
@@ -341,15 +341,17 @@ private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (Us
     onDismiss: () -> Unit, onSave: (UsenetIndexer) -> Unit) {
     var name by remember { mutableStateOf(item.name) }
     var url by remember { mutableStateOf(item.apiUrl) }
+    var path by remember { mutableStateOf(item.apiPath) }
     var key by remember { mutableStateOf(item.apiKey) }
     var error by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<Boolean?>(null) }
     val scope = rememberCoroutineScope()
-    fun value() = item.copy(name = name.trim(), apiUrl = url.trim(), apiKey = key.trim())
+    fun value() = item.copy(name = name.trim(), apiUrl = url.trim(), apiPath = path.trim(), apiKey = key.trim())
     NuvioDialog(title = stringResource(if (isNew) R.string.usenet_add_indexer else R.string.usenet_edit_indexer), subtitle = stringResource(R.string.usenet_indexer_hint), onDismiss = onDismiss) {
         SourceField(stringResource(R.string.usenet_source_name), name, { name = it; testResult = null })
         SourceField(stringResource(R.string.usenet_indexer_url), url, { url = it; testResult = null })
+        SourceField(stringResource(R.string.usenet_indexer_api_path), path, { path = it; testResult = null })
         SourceField(stringResource(R.string.usenet_indexer_key), key, { key = it; testResult = null }, secret = true)
         if (error) Text(stringResource(R.string.usenet_indexer_invalid), color = NuvioTheme.colors.TextSecondary)
         if (testing || testResult != null) Text(stringResource(when {

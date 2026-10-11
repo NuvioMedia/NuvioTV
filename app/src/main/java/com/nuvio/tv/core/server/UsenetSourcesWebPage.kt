@@ -3,6 +3,7 @@ package com.nuvio.tv.core.server
 import android.content.Context
 import android.content.res.Configuration
 import com.nuvio.tv.R
+import com.nuvio.tv.core.usenet.DEFAULT_API_PATH
 import java.util.Locale
 
 object UsenetSourcesWebPage {
@@ -125,7 +126,9 @@ object UsenetSourcesWebPage {
       <label for="iName">${s(R.string.usenet_source_name)}</label>
       <input id="iName" required>
       <label for="iUrl">${s(R.string.usenet_indexer_url)}</label>
-      <input id="iUrl" type="url" autocapitalize="none" spellcheck="false" placeholder="https://indexer.example/api" required>
+      <input id="iUrl" type="url" autocapitalize="none" spellcheck="false" placeholder="https://indexer.example" required>
+      <label for="iPath">${s(R.string.usenet_indexer_api_path)}</label>
+      <input id="iPath" autocapitalize="none" spellcheck="false" placeholder="/api">
       <label for="iKey">${s(R.string.usenet_indexer_key)}</label>
       <input id="iKey" type="password" autocomplete="new-password" autocapitalize="none" spellcheck="false">
       <label for="iPriority">${s(R.string.usenet_priority)}</label>
@@ -182,7 +185,7 @@ function render() {
     '</span></button>').join('') : '<div class="empty">${js(R.string.usenet_phone_none)}</div>';
   $('indexerList').innerHTML = sources.indexers.length ? sources.indexers.map((x, i) =>
     '<button class="item" type="button" data-indexer="' + i + '"><b>' + escapeHtml(x.name) + '</b><span>' +
-    escapeHtml(x.apiUrl.split('?')[0]) + ' • ' + priorityText(x.priority) + ' • ' + state(x.enabled) +
+    escapeHtml((x.endpoint || x.apiUrl).split('?')[0]) + ' • ' + priorityText(x.priority) + ' • ' + state(x.enabled) +
     '</span></button>').join('') : '<div class="empty">${js(R.string.usenet_phone_none)}</div>';
   document.querySelectorAll('[data-provider]').forEach(b => b.onclick = () => openProvider(sources.providers[b.dataset.provider]));
   document.querySelectorAll('[data-indexer]').forEach(b => b.onclick = () => openIndexer(sources.indexers[b.dataset.indexer]));
@@ -215,6 +218,7 @@ function openIndexer(x) {
   $('indexerTitle').textContent = x ? '${js(R.string.usenet_edit_indexer)}' : '${js(R.string.usenet_add_indexer)}';
   $('iName').value = x ? x.name : '';
   $('iUrl').value = x ? x.apiUrl : '';
+  $('iPath').value = x ? (x.apiPath || '') : '${DEFAULT_API_PATH}';
   secretHint($('iKey'), x && x.hasKey);
   $('iPriority').value = x ? x.priority : 1;
   $('indexerForm').classList.add('open');
@@ -227,7 +231,7 @@ function providerValue() {
     password: $('pPassword').value, priority: parseInt($('pPriority').value, 10) };
 }
 function indexerValue() {
-  return { id: editing.indexer, name: $('iName').value, apiUrl: $('iUrl').value, apiKey: $('iKey').value,
+  return { id: editing.indexer, name: $('iName').value, apiUrl: $('iUrl').value, apiPath: $('iPath').value, apiKey: $('iKey').value,
     priority: parseInt($('iPriority').value, 10) };
 }
 async function run(button, pending, action) {

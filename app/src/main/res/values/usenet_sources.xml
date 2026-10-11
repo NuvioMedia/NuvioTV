@@ -5,7 +5,7 @@
     <string name="usenet_builtin_description">Find NZBs and play them directly with your providers. Credentials stay on this device, in this profile.</string>
     <string name="usenet_add_provider">Add NNTP provider</string>
     <string name="usenet_add_indexer">Add Newznab indexer</string>
-    <string name="usenet_indexer_hint">Enter the complete API URL, including /api. Supports Newznab and compatible Prowlarr or NZBHydra endpoints.</string>
+    <string name="usenet_indexer_hint">Enter the indexer URL; the API path (usually /api) is added to it. Supports Newznab and compatible Prowlarr or NZBHydra endpoints.</string>
     <string name="usenet_sources_needed">Add and enable at least one provider and one indexer to search.</string>
     <string name="usenet_source_name">Name</string>
     <string name="usenet_source_enabled">Enabled</string>
@@ -34,9 +34,10 @@
     <string name="usenet_provider_password">Password</string>
     <string name="usenet_provider_connections">Connection allowance</string>
     <string name="usenet_provider_invalid">Check the name, host, port (1–65535), credentials and connections (1–4096).</string>
-    <string name="usenet_indexer_url">Complete API URL</string>
+    <string name="usenet_indexer_url">URL</string>
+    <string name="usenet_indexer_api_path">API path</string>
     <string name="usenet_indexer_key">API key</string>
-    <string name="usenet_indexer_invalid">Enter a name and a valid HTTP or HTTPS API URL.</string>
+    <string name="usenet_indexer_invalid">Enter a name, a valid HTTP or HTTPS URL and an API path such as /api.</string>
     <string name="usenet_test_indexer">Test indexer</string>
     <string name="usenet_test_running">Checking indexer capabilities…</string>
     <string name="usenet_test_success">Indexer connection succeeded.</string>
