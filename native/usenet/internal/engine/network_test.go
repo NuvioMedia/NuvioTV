@@ -70,6 +70,9 @@ func TestNZBRedirectStripsSecretsAcrossOrigins(t *testing.T) {
 				t.Errorf("forwarded %s", key)
 			}
 		}
+		if got := r.Header.Get("User-Agent"); got != "Nuvio/test" {
+			t.Errorf("User-Agent across origins = %q", got)
+		}
 		io.WriteString(w, xml)
 	}))
 	defer target.Close()
@@ -88,6 +91,7 @@ func TestNZBRedirectStripsSecretsAcrossOrigins(t *testing.T) {
 	defer client.CloseIdleConnections()
 	_, err := FetchNZB(context.Background(), client, source.URL+"/start", map[string]string{
 		"Authorization": "Bearer secret", "Cookie": "key=secret", "X-Api-Key": "secret", "Referer": "https://example.com/?key=secret", "Proxy-Authorization": "secret",
+		"User-Agent": "Nuvio/test",
 	}, nil, true)
 	if err != nil || !reached.Load() {
 		t.Fatalf("redirect: %v", err)

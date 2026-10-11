@@ -82,7 +82,7 @@ object NewznabProtocol {
             builder.setQueryParameter(idParam.first, idParam.second)
         } else {
             // Query the way release names are spelled: "Amélie" and "Marvel's" are posted as Amelie and Marvels.
-            val title = request.title?.let { releaseSpelling(it).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim() }
+            val title = request.title?.let { releaseSpelling(it).replace(NON_WORD, " ").trim() }
                 ?.takeIf { it.isNotBlank() } ?: return null
             if ("q" !in params) {
                 if (!caps.searchAvailable) return null
@@ -180,26 +180,21 @@ object NewznabProtocol {
             if (!request.series && request.year != null) {
                 // Year-like title words (Blade Runner 2049, 1917) are not release years.
                 val titleWords = title.toSet()
-                val years = Regex("(?<![\\p{L}\\p{N}])((?:19|20)\\d{2})(?![\\p{L}\\p{N}])").findAll(release.title)
+                val years = RELEASE_YEAR.findAll(release.title)
                     .map { it.groupValues[1] }.toList()
                 // Festival and release years often differ by one, and so do the years releases carry.
                 if (years.none { it.toInt() in request.year - 1..request.year + 1 } && years.any { it !in titleWords }) return false
             }
         }
         if (request.series) {
-            val range = "(?:(?:[ ._]*E|[ ._]*-[ ._]*E?)(\\d{1,3})(?=$|[ ._-]))?"
-            val episodes = listOf(
-                Regex("(?i)S(\\d{1,3})[ ._-]*E(\\d{1,3})(?!\\d)$range"),
-                Regex("(?i)(?<!\\d)(\\d{1,2})x(\\d{1,3})(?!\\d)$range")
-            ).flatMap { it.findAll(release.title).toList() }
+            val episodes = EPISODES.flatMap { it.findAll(release.title).toList() }
             if (episodes.isNotEmpty()) return episodes.any {
                 val season = it.groupValues[1].toInt()
                 val first = it.groupValues[2].toInt()
                 val last = it.groupValues[3].toIntOrNull() ?: first
                 season == request.season && request.episode?.let { episode -> episode in first..last } == true
             }
-            val seasons = Regex("(?i)(?:^|[ ._-])(?:S|Season[ ._-]*)(\\d{1,3})(?:$|[ ._-])")
-                .findAll(release.title).map { it.groupValues[1].toInt() }.toList()
+            val seasons = SEASON.findAll(release.title).map { it.groupValues[1].toInt() }.toList()
             if (seasons.isNotEmpty()) return request.season in seasons
             // Obfuscated ID-matched releases rely on the engine's file selection.
             return idSearch && !requireNumbering
@@ -229,6 +224,16 @@ object NewznabProtocol {
             leading && trailing
         }
 
+    // Compiled once: matching reads every title of every result page.
+    private val NON_WORD = Regex("[^\\p{L}\\p{N}]+")
+    private val APOSTROPHES = Regex("['’‘`´ʼ]")
+    private val RELEASE_YEAR = Regex("(?<![\\p{L}\\p{N}])((?:19|20)\\d{2})(?![\\p{L}\\p{N}])")
+    private const val EPISODE_RANGE = "(?:(?:[ ._]*E|[ ._]*-[ ._]*E?)(\\d{1,3})(?=$|[ ._-]))?"
+    private val EPISODES = listOf(
+        Regex("(?i)S(\\d{1,3})[ ._-]*E(\\d{1,3})(?!\\d)$EPISODE_RANGE"),
+        Regex("(?i)(?<!\\d)(\\d{1,2})x(\\d{1,3})(?!\\d)$EPISODE_RANGE")
+    )
+    private val SEASON = Regex("(?i)(?:^|[ ._-])(?:S|Season[ ._-]*)(\\d{1,3})(?:$|[ ._-])")
     private val ARTICLES = setOf("the", "a", "an")
     private val YEAR = Regex("(?:19|20)\\d{2}")
     private val RELEASE_MARKER = Regex("(?:19|20)\\d{2}|s\\d{1,3}(?:e\\d{1,4})*|e\\d{1,4}|\\d{1,2}x\\d{1,3}|" +
@@ -257,7 +262,7 @@ object NewznabProtocol {
         }
         // Only marks on Latin letters: in other scripts (kana voicing) they are part of the letter.
         val unaccented = withoutLatinMarks(Normalizer.normalize(letters, Normalizer.Form.NFD))
-        return Normalizer.normalize(unaccented, Normalizer.Form.NFC).replace(Regex("['’‘`´ʼ]"), "")
+        return Normalizer.normalize(unaccented, Normalizer.Form.NFC).replace(APOSTROPHES, "")
     }
 
     /**
@@ -278,7 +283,7 @@ object NewznabProtocol {
 
     /** Lowercase words of a title or release name, for comparing one with the other. */
     private fun words(value: String, umlauts: Boolean = true) = releaseSpelling(value, umlauts).lowercase(Locale.ROOT)
-        .replace("&", " and ").replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+        .replace("&", " and ").replace(NON_WORD, " ").trim()
 
     /** Whether [value] has a Latin letter, the script indexers search and name releases in. */
     fun hasLatinLetter(value: String) = value.any { it.isLatinLetter() }
@@ -300,7 +305,7 @@ object NewznabProtocol {
         now: Long = System.currentTimeMillis()): List<UsenetRelease> {
         val order = config.indexers.mapIndexed { i, indexer -> indexer.id to i }.toMap()
         fun name(release: UsenetRelease) =
-            release.title.lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+            release.title.lowercase(Locale.ROOT).replace(NON_WORD, " ").trim()
         return releases.groupBy(::name).values.map { copies ->
             // A preferred copy hidden by a filter (no size, passworded) must not hide the others.
             copies.filter { arrange(listOf(it), config, now).isNotEmpty() }.ifEmpty { copies }

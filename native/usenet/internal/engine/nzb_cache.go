@@ -51,10 +51,14 @@ func newNZBCache(dir string) *nzbCache {
 func nzbCacheKey(req *http.Request, scope string) string {
 	// JSON sorts header keys. Request URLs and headers contribute only to the
 	// digest; they are not written as cache metadata alongside the NZB document.
+	// The User-Agent names the app version, which must not empty the cache on
+	// every update; it never changes which document a server returns.
+	headers := req.Header.Clone()
+	headers.Del("User-Agent")
 	b, _ := json.Marshal(struct {
 		Scope, URL string
 		Headers    http.Header
-	}{scope, req.URL.String(), req.Header})
+	}{scope, req.URL.String(), headers})
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
 }

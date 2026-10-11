@@ -13,6 +13,25 @@ import (
 	"time"
 )
 
+func TestNZBCacheKeyIgnoresUserAgent(t *testing.T) {
+	request := func(agent string) *http.Request {
+		r, _ := http.NewRequest("GET", "https://indexer.example/getnzb?id=1", nil)
+		r.Header.Set("Accept-Encoding", "gzip")
+		if agent != "" {
+			r.Header.Set("User-Agent", agent)
+		}
+		return r
+	}
+	// An app update changes the version in the User-Agent; cached NZBs must stay valid.
+	key := nzbCacheKey(request(""), "1")
+	if nzbCacheKey(request("Nuvio/1.0"), "1") != key || nzbCacheKey(request("Nuvio/2.0"), "1") != key {
+		t.Fatal("the User-Agent changed the cache key")
+	}
+	if nzbCacheKey(request("Nuvio/1.0"), "2") == key {
+		t.Fatal("ignoring the User-Agent must not merge profiles")
+	}
+}
+
 func TestNZBCachePersistsAndSeparatesHeadersAndProfiles(t *testing.T) {
 	xml, _ := fixture([]inputFile{{"movie.mkv", payload(1024), nil}})
 	var requests atomic.Int32
