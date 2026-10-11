@@ -275,7 +275,7 @@ class BuiltInUsenetService @Inject constructor(
                             val canSearchId = NewznabProtocol.searchUrl(indexer, request, caps) != null
                             val search = if (canSearchId) request else metadata.await() ?: error("Metadata unavailable")
                             val found = client.search(indexer, search, caps)
-                            Result.success(if (found.isEmpty()) byTitle(indexer, search, caps) { metadata.await() } ?: found else found)
+                            Result.success(if (found.isEmpty()) askAgain(indexer, search, caps) { metadata.await() } ?: found else found)
                         } catch (e: CancellationException) { throw e }
                         catch (e: Exception) { Result.failure(e) }
                         results.send(indexer to result)
@@ -304,20 +304,30 @@ class BuiltInUsenetService @Inject constructor(
     }
 
     /**
-     * Indexers with thin ID coverage can list a title their ID search does not find, so an
-     * empty ID search is asked again by title. Null when there is nothing else to ask.
+     * Asks again when a search found nothing: by title after an ID search (some indexers have thin
+     * ID coverage), then by the original title, under which foreign releases are often posted.
+     * Each attempt is made only when the ones before it found nothing. Null when none found anything.
      */
-    private suspend fun byTitle(indexer: UsenetIndexer, searched: UsenetSearchRequest, caps: NewznabCapabilities,
+    private suspend fun askAgain(indexer: UsenetIndexer, searched: UsenetSearchRequest, caps: NewznabCapabilities,
         metadata: suspend () -> UsenetSearchRequest?): List<UsenetRelease>? {
         val url = NewznabProtocol.searchUrl(indexer, searched, caps) ?: return null
-        if (!NewznabProtocol.isIdSearch(url)) return null
-        val title = (metadata() ?: return null).copy(imdbId = null, tmdbId = null, tvdbId = null)
-        if (NewznabProtocol.searchUrl(indexer, title, caps) == null) return null
-        return try { client.search(indexer, title, caps) }
-        catch (e: CancellationException) { throw e }
-        catch (e: IndexerCooldownException) { throw e }
-        // The ID search succeeded; a failed second attempt only means nothing more was found.
-        catch (_: Exception) { null }
+        val byTitle = (metadata() ?: return null).copy(imdbId = null, tmdbId = null, tvdbId = null)
+        val attempts = listOfNotNull(
+            byTitle.takeIf { NewznabProtocol.isIdSearch(url) },
+            // Indexers search Latin text; an original title in another script would find nothing.
+            byTitle.originalTitle?.takeIf { LATIN.containsMatchIn(it) }
+                ?.let { byTitle.copy(title = it, originalTitle = byTitle.title) }
+        )
+        for (attempt in attempts) {
+            if (NewznabProtocol.searchUrl(indexer, attempt, caps) == null) continue
+            val found = try { client.search(indexer, attempt, caps) }
+            catch (e: CancellationException) { throw e }
+            catch (e: IndexerCooldownException) { throw e }
+            // The first search succeeded; a failed later attempt only means nothing more was found.
+            catch (_: Exception) { continue }
+            if (found.isNotEmpty()) return found
+        }
+        return null
     }
 
     private suspend fun metadata(request: UsenetSearchRequest, videoId: String, type: String): UsenetSearchRequest {
@@ -334,7 +344,10 @@ class BuiltInUsenetService @Inject constructor(
             id?.toIntOrNull()?.let { tmdbApi.getTvExternalIds(it, BuildConfig.TMDB_API_KEY).body()?.tvdbId?.toString() }
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { null }
-        return request.copy(imdbId = imdb, tmdbId = id, tvdbId = tvdb, title = details?.title ?: details?.name,
+        val title = details?.title ?: details?.name
+        val original = (details?.originalTitle ?: details?.originalName)
+            ?.takeIf { it.isNotBlank() && !it.equals(title, ignoreCase = true) }
+        return request.copy(imdbId = imdb, tmdbId = id, tvdbId = tvdb, title = title, originalTitle = original,
             year = (details?.releaseDate ?: details?.firstAirDate)?.take(4)?.toIntOrNull())
     }
 
@@ -349,5 +362,8 @@ class BuiltInUsenetService @Inject constructor(
             quality = resolution.takeIf { it > 0 }?.let { "${it}p" }, qualityValue = resolution)
     }
 
-    companion object { const val GROUP_NAME = "Built-in Usenet" }
+    companion object {
+        const val GROUP_NAME = "Built-in Usenet"
+        private val LATIN = Regex("\\p{IsLatin}")
+    }
 }
