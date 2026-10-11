@@ -18,6 +18,8 @@ data class UsenetSearchRequest(
     val tmdbId: String? = null,
     val tvdbId: String? = null,
     val title: String? = null,
+    /** Set when it differs from [title]: releases of foreign titles are often posted under it. */
+    val originalTitle: String? = null,
     val year: Int? = null,
     val season: Int? = null,
     val episode: Int? = null,
@@ -163,13 +165,15 @@ object NewznabProtocol {
     fun matches(release: UsenetRelease, request: UsenetSearchRequest, idSearch: Boolean,
         requireNumbering: Boolean = false): Boolean {
         if (!idSearch) {
-            val name = " ${words(release.title)} "
+            val name = words(release.title).split(' ')
             // Umlauts are posted both ways: König as Koenig or Konig.
-            val title = request.title?.let { listOf(words(it), words(it, umlauts = false)) }.orEmpty()
-                .filter { it.isNotEmpty() }.firstOrNull { name.contains(" $it ") } ?: return false
+            val title = listOfNotNull(request.title, request.originalTitle)
+                .flatMap { listOf(words(it), words(it, umlauts = false)) }
+                .filter { it.isNotEmpty() }.distinct().map { it.split(' ') }
+                .firstOrNull { isNamedAs(name, it, request.series) } ?: return false
             if (!request.series && request.year != null) {
                 // Year-like title words (Blade Runner 2049, 1917) are not release years.
-                val titleWords = title.split(' ').toSet()
+                val titleWords = title.toSet()
                 val years = Regex("(?<![\\p{L}\\p{N}])((?:19|20)\\d{2})(?![\\p{L}\\p{N}])").findAll(release.title)
                     .map { it.groupValues[1] }.toList()
                 // Festival and release years often differ by one, and so do the years releases carry.
@@ -196,6 +200,41 @@ object NewznabProtocol {
         }
         return true
     }
+
+    /**
+     * Whether release [name] is named after [title] rather than after another title that contains it:
+     * The Science of Interstellar is not Interstellar, and The Rookie Feds is not The Rookie. Before
+     * the title only articles may come; after it, the year, the episode or release tags.
+     *
+     * Series names often keep a prefix the metadata title drops (Marvels Daredevil); the episode
+     * number vouches for those, except an article before a one-word title (The Batman is not Batman).
+     * A movie may carry a subtitle before its year (Star Wars Episode IV A New Hope 1977), which the
+     * year check then judges, so a sequel only passes if it came out within a year.
+     */
+    private fun isNamedAs(name: List<String>, title: List<String>, series: Boolean): Boolean =
+        (0..name.size - title.size).any { i ->
+            if (name.subList(i, i + title.size) != title) return@any false
+            val before = name.subList(0, i)
+            val leading = if (series) title.size > 1 || before.isEmpty() || before.any { it !in ARTICLES }
+                else before.all { it in ARTICLES }
+            val after = name.subList(i + title.size, name.size)
+            val marker = after.indexOfFirst { it in RELEASE_TAGS || RELEASE_MARKER.matches(it) }
+            val trailing = marker == 0 || after.isEmpty() || (!series && marker > 0 && YEAR.matches(after[marker]))
+            leading && trailing
+        }
+
+    private val ARTICLES = setOf("the", "a", "an")
+    private val YEAR = Regex("(?:19|20)\\d{2}")
+    private val RELEASE_MARKER = Regex("(?:19|20)\\d{2}|s\\d{1,3}(?:e\\d{1,4})*|e\\d{1,4}|\\d{1,2}x\\d{1,3}|" +
+        "\\d{3,4}[pi]|[48]k|\\d{1,2}bit|season|complete")
+    /** Words that start the tags of a release name: language, edition, source, codec, country. */
+    private val RELEASE_TAGS = setOf("german", "french", "truefrench", "vostfr", "ita", "italian", "spanish",
+        "castellano", "latino", "multi", "dl", "dual", "dubbed", "subbed", "nordic", "dutch", "polish", "russian",
+        "hindi", "korean", "japanese", "bluray", "bdrip", "brrip", "webrip", "web", "webdl", "hdtv", "hdrip",
+        "dvdrip", "dvd", "remux", "uhd", "hdr", "hdr10", "dv", "dovi", "sdr", "x264", "x265", "h264", "h265",
+        "hevc", "avc", "xvid", "av1", "imax", "extended", "unrated", "remastered", "proper", "repack", "internal",
+        "limited", "directors", "uncut", "theatrical", "cam", "ts", "telesync", "hdcam", "dvdscr", "screener",
+        "3d", "amzn", "nf", "dsnp", "hmax", "atvp", "us", "uk", "au", "ca", "nz")
 
     /**
      * Spells [value] the way release names do: Latin letters without accents and no apostrophes.

@@ -86,11 +86,25 @@ costs one more API hit only in that case. They require TMDB metadata. Titles
 are queried and compared the way release names spell them: without accents
 (umlauts match both `Koenig` and `Konig`), without apostrophes, and with `&`
 equal to `and`. A movie's release year may differ from TMDB's by one year,
-which is common between festival and release dates. Series searches require a
-season and episode, including season zero for specials. Contradictory episode
-filenames are removed; season packs remain playable through the engine's
-episode selection.
-Unsupported media identifiers without a TMDB mapping cannot be searched.
+which is common between festival and release dates.
+
+A release must be named after the title, not after another title containing
+it: *The Science of Interstellar* is not *Interstellar*, and *The Rookie Feds*
+is not *The Rookie*. Only articles may come before a movie title, and nothing
+may follow a series title before its episode or tags (country tags such as
+`US` are allowed). Series names may keep a prefix the metadata title drops
+(`Marvels.Daredevil`), except an article before a one-word title. A movie may
+carry a subtitle before its year, which the year check then judges.
+
+TMDB's original title is accepted as well, since foreign releases are often
+posted under it. When the title search finds nothing either, the original title
+is searched too (one more API hit, only in that case), unless it is written in
+a non-Latin script.
+
+Series searches require a season and episode, including season zero for
+specials. Contradictory episode filenames are removed; season packs remain
+playable through the engine's episode selection. Unsupported media identifiers
+without a TMDB mapping cannot be searched.
 
 The **Built-in Usenet** result group updates as indexers finish, independently
 of addon/plugin searches. Sort by resolution, size, age or indexer priority.
