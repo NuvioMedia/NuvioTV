@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"iter"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -40,7 +41,7 @@ type poolLease struct {
 	keys         []providerKey
 	clients      []*nntppool.Client
 	tiers        []int // Ascending priority of each client; equal tiers share load.
-	next         atomic.Uint64
+	next         []atomic.Uint64 // One rotation counter per tier start, so tiers never skew each other.
 	once         sync.Once
 }
 
@@ -83,6 +84,7 @@ func (p *providerPools) acquireForRequest(lifetime, wait context.Context, provid
 		clients[i], tiers[i] = l.clients[j], l.tiers[j]
 	}
 	l.clients, l.tiers = clients, tiers
+	l.next = make([]atomic.Uint64, len(l.clients))
 	return l, nil
 }
 
@@ -214,23 +216,26 @@ func (l *poolLease) pick(from, to int) int {
 	if total == 0 {
 		return from
 	}
-	slot := int(l.next.Add(1) % uint64(total))
+	slot := int(l.next[from].Add(1) % uint64(total))
 	return from + sort.SearchInts(cumulative, slot+1)
 }
 
-// order lists the clients to try for one article: each tier in priority order,
-// starting inside a tier at a capacity-weighted pick.
-func (l *poolLease) order() []int {
-	order := make([]int, 0, len(l.clients))
-	for from := 0; from < len(l.clients); {
-		to := l.tierEnd(from)
-		start := l.pick(from, to)
-		for i := range to - from {
-			order = append(order, from+(start-from+i)%(to-from))
+// order yields the clients to try for one article: each tier in priority order,
+// starting inside a tier at a capacity-weighted pick. A tier is weighed only when
+// the iteration reaches it, so backup tiers cost nothing while a preferred one serves.
+func (l *poolLease) order() iter.Seq[int] {
+	return func(yield func(int) bool) {
+		for from := 0; from < len(l.clients); {
+			to := l.tierEnd(from)
+			start := l.pick(from, to)
+			for i := range to - from {
+				if !yield(from + (start-from+i)%(to-from)) {
+					return
+				}
+			}
+			from = to
 		}
-		from = to
 	}
-	return order
 }
 
 func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority bool, meta ...func(nntppool.YEncMeta)) (*nntppool.ArticleBody, error) {
@@ -238,7 +243,7 @@ func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority
 	allMissing := true
 	allAuth, allQuota := true, true
 	allPrivate := true
-	for _, index := range l.order() {
+	for index := range l.order() {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
