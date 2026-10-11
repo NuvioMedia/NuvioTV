@@ -250,12 +250,11 @@ class BuiltInUsenetService @Inject constructor(
 ) {
     fun search(config: UsenetSourceConfiguration, type: String, videoId: String,
         season: Int?, episode: Int?): Flow<BuiltInUsenetResult> = flow {
-        if (!config.ready || type.lowercase() !in listOf("movie", "series", "tv", "show")) return@flow
+        if (!config.ready || type.lowercase() !in BUILT_IN_USENET_TYPES) return@flow
         val series = type.lowercase() != "movie"
-        val parts = videoId.split(':')
-        val hasEpisodeSuffix = parts.size >= if (videoId.startsWith("tmdb:")) 4 else 3
-        val resolvedSeason = season ?: if (hasEpisodeSuffix) parts[parts.lastIndex - 1].toIntOrNull() else null
-        val resolvedEpisode = episode ?: if (hasEpisodeSuffix) parts.last().toIntOrNull() else null
+        val (idSeason, idEpisode) = episodeNumbers(videoId)
+        val resolvedSeason = season ?: idSeason
+        val resolvedEpisode = episode ?: idEpisode
         val baseImdb = videoId.substringBefore(':').takeIf { it.matches(Regex("tt\\d+")) }
         val baseTmdb = videoId.removePrefix("tmdb:").substringBefore(':')
             .takeIf { it.toIntOrNull() != null }
