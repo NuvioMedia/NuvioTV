@@ -47,11 +47,16 @@ data class UsenetRelease(
     val resolution: Int = RESOLUTION.find(title)?.groupValues?.get(1)?.toInt()
         ?: if (FOUR_K.containsMatchIn(title)) 2160 else 0
     val lowQuality: Boolean = LOW_QUALITY.containsMatchIn(title)
+    /** A whole Blu-ray or DVD (disc folder or ISO): the feature is one clip among many, not one video. */
+    val fullDisc: Boolean = FULL_DISC.containsMatchIn(title) && !NOT_DISC.containsMatchIn(title)
 
     private companion object {
         val RESOLUTION = Regex("(?i)(?<!\\d)(2160|1080|720|480|360)p?(?!\\d)")
         val FOUR_K = Regex("(?i)\\b4k\\b")
         val LOW_QUALITY = Regex("(?i)(?:^|[ ._-])(?:cam|hdcam|telesync|telecine|hdts|ts|tc|scr|dvdscr)(?:$|[ ._-])")
+        val FULL_DISC = Regex("(?i)(?:^|[ ._(\\[-])(?:complete[ ._-]+(?:uhd[ ._-]+)?(?:blu-?ray|bd|dvd|mpeg)|bd(?:25|50|66|100)|bdmv|dvd[59]|iso)(?:$|[ ._)\\]-])")
+        // Remuxes, encodes and rips of a disc are single videos, even when named after it.
+        val NOT_DISC = Regex("(?i)(?:^|[ ._-])(?:remux|[xh][ .]?26[45]|[a-z]*rip|web-?dl)(?:$|[ ._-])")
     }
 }
 
@@ -332,7 +337,7 @@ object NewznabProtocol {
         now: Long = System.currentTimeMillis()): List<UsenetRelease> {
         val priority = config.indexers.mapIndexed { i, indexer -> indexer.id to i }.toMap()
         val filtered = releases.filter {
-            !it.passworded && (!config.excludeLowQuality || !it.lowQuality) &&
+            !it.passworded && (!config.excludeLowQuality || !it.lowQuality) && (!config.excludeFullDisc || !it.fullDisc) &&
                 (config.minResolution == 0 || it.resolution >= config.minResolution) &&
                 (config.maxSizeGb == 0 || it.size in 1..config.maxSizeGb.toLong() * 1024 * 1024 * 1024) &&
                 (config.maxAgeDays == 0 || it.publishedAt > 0 && now - it.publishedAt <= config.maxAgeDays.toLong() * 86400000)
