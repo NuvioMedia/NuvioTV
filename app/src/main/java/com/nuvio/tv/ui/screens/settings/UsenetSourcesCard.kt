@@ -383,7 +383,7 @@ private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (Us
 }
 
 @Composable
-private fun SourceField(label: String, value: String, changed: (String) -> Unit,
+internal fun SourceField(label: String, value: String, changed: (String) -> Unit,
     secret: Boolean = false, numeric: Boolean = false) {
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
