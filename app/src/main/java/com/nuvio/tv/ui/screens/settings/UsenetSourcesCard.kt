@@ -349,10 +349,13 @@ private fun IndexerEditor(item: UsenetIndexer, isNew: Boolean, test: suspend (Us
     val scope = rememberCoroutineScope()
     fun value() = item.copy(name = name.trim(), apiUrl = url.trim(), apiPath = path.trim(), apiKey = key.trim())
     NuvioDialog(title = stringResource(if (isNew) R.string.usenet_add_indexer else R.string.usenet_edit_indexer), subtitle = stringResource(R.string.usenet_indexer_hint), onDismiss = onDismiss) {
-        SourceField(stringResource(R.string.usenet_source_name), name, { name = it; testResult = null })
-        SourceField(stringResource(R.string.usenet_indexer_url), url, { url = it; testResult = null })
-        SourceField(stringResource(R.string.usenet_indexer_api_path), path, { path = it; testResult = null })
-        SourceField(stringResource(R.string.usenet_indexer_key), key, { key = it; testResult = null }, secret = true)
+        // Scrolls, so the buttons below stay on screen.
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SourceField(stringResource(R.string.usenet_source_name), name, { name = it; testResult = null })
+            SourceField(stringResource(R.string.usenet_indexer_url), url, { url = it; testResult = null })
+            SourceField(stringResource(R.string.usenet_indexer_api_path), path, { path = it; testResult = null })
+            SourceField(stringResource(R.string.usenet_indexer_key), key, { key = it; testResult = null }, secret = true)
+        }
         if (error) Text(stringResource(R.string.usenet_indexer_invalid), color = NuvioTheme.colors.TextSecondary)
         if (testing || testResult != null) Text(stringResource(when {
             testing -> R.string.usenet_test_running
