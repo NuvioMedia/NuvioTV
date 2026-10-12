@@ -655,6 +655,7 @@ type Content struct {
 	cursor       *rarCursor
 	complete     bool
 	predicted    *rarPrediction
+	retry        *rarRetry                   // Guarded by layoutGate, like the cursor.
 	aes          *cbcCipher                  // Stored AES (7z or RAR): parts hold ciphertext.
 	padded       bool                        // Encrypted RAR: packed data is Size rounded up to 16.
 	pending      map[*File]int64             // Predicted 7z volume sizes not yet confirmed.
@@ -683,6 +684,18 @@ func (c *Content) extend(ctx context.Context, off int64) error {
 		if finished {
 			return nil
 		}
+		if r := c.retry; r != nil {
+			// A cancelled reader cut the prediction short. The cursor still
+			// sits after part 2, so this reader tries it before walking on.
+			c.retry = nil
+			if off >= 0 {
+				if !c.predictRAR(ctx, r.block, r.file) {
+					c.retry = r
+					return ctx.Err()
+				}
+				continue
+			}
+		}
 		layoutStart := time.Now()
 		b, f, e := c.cursor.next(ctx)
 		c.layoutNS.Add(time.Since(layoutStart).Nanoseconds())
@@ -705,8 +718,9 @@ func (c *Content) extend(ctx context.Context, off int64) error {
 		c.mu.Unlock()
 		// Selection must leave the cursor at the real end of an unselected
 		// entry. Only playback may replace discovery with a predicted layout.
-		if off >= 0 && b.after && len(c.parts) == 2 {
-			c.predictRAR(ctx, b, f)
+		if off >= 0 && b.after && len(c.parts) == 2 && !c.predictRAR(ctx, b, f) {
+			c.retry = &rarRetry{b, f}
+			return ctx.Err()
 		}
 	}
 }
@@ -743,24 +757,37 @@ func rarStableMainExtra(extra []byte) bool {
 // header. NZB sizes are wire estimates, so they must never supply byte offsets.
 // The final header independently checks the total; each intermediate header is
 // checked on demand before its predicted extent can be used by a reader.
+// rarRetry is a prediction a cancelled reader cut short, kept for the next one.
+type rarRetry struct {
+	block rarBlock
+	file  *File
+}
+
 type rarPrediction struct {
+	base       int // Volume holding the first part: parts[i] is in volume base+i.
 	volumeSize int64
 	version    int
 	verified   []bool
 }
 
-func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) {
+// predictRAR reports false only when ctx ended it before an answer; any other
+// outcome, with or without a prediction, is final.
+func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) bool {
 	layoutStart := time.Now()
 	defer func() { c.layoutNS.Add(time.Since(layoutStart).Nanoseconds()) }()
 	cur := c.cursor
+	// A disc's clip can start and end inside a set of other files: the
+	// prediction runs from its own first volume to the one holding its end.
+	base := cur.index - 2
 	volumeSize := f.Size()
-	if cur.unordered || cur.index != 2 || len(cur.files) < 4 || !b.template ||
-		f != cur.files[1] || cur.files[0].Size() != volumeSize {
-		return
+	if cur.unordered || base < 0 || len(cur.files)-base < 4 || !b.template ||
+		f != cur.files[base+1] || c.parts[0].file != cur.files[base] || cur.files[base].Size() != volumeSize {
+		return true
 	}
 	parts := append([]extent(nil), c.parts...)
 	start := parts[1].start + parts[1].length
-	for i := 2; i < len(cur.files)-1; i++ {
+	end := -1
+	for i := base + 2; i < len(cur.files); i++ {
 		delta := int64(0)
 		if b.version == 5 {
 			// Volume numbers are zero-based: part129 is the first two-byte index.
@@ -774,35 +801,45 @@ func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) {
 			}
 		}
 		packed := b.packed - delta
-		if packed <= 0 || packed >= c.payloadSize()-start ||
-			(b.version == 5 && b.packedWidth == rarVintLen(b.packed) && rarVintLen(packed) != b.packedWidth) {
-			return
+		if packed <= 0 || (b.version == 5 && b.packedWidth == rarVintLen(b.packed) && rarVintLen(packed) != b.packedWidth) {
+			return true
+		}
+		if packed >= c.payloadSize()-start {
+			end = i // The rest fits: this volume holds the last part.
+			break
 		}
 		file := cur.files[i]
 		file.mu.RLock()
 		wrongSize := file.exact && file.size != volumeSize
 		file.mu.RUnlock()
 		if wrongSize {
-			return
+			return true
 		}
 		parts = append(parts, extent{file, b.data + delta, packed, start})
 		start += packed
 	}
+	if end < 0 {
+		return true
+	}
 	// The last header may use a different packed-size width, hashes or extra
-	// fields, and the selected file need not consume all of the last volume.
-	lastCursor := rarCursor{files: cur.files, index: len(cur.files) - 1}
+	// fields, and the selected file need not consume all of its volume.
+	lastCursor := rarCursor{files: cur.files, index: end}
 	last, file, err := lastCursor.next(ctx)
-	if err != nil || ctx.Err() != nil || last.version != b.version || !last.before || last.after ||
+	if ctx.Err() != nil {
+		return false
+	}
+	if err != nil || last.version != b.version || !last.before || last.after ||
 		last.directory || last.name != c.Name || last.unpacked != c.Size ||
 		last.packed <= 0 || last.packed != c.payloadSize()-start {
-		return
+		return true
 	}
 	parts = append(parts, extent{file, last.data, last.packed, start})
-	prediction := &rarPrediction{volumeSize: volumeSize, version: b.version, verified: make([]bool, len(parts))}
+	prediction := &rarPrediction{base: base, volumeSize: volumeSize, version: b.version, verified: make([]bool, len(parts))}
 	prediction.verified[0], prediction.verified[1], prediction.verified[len(parts)-1] = true, true, true
 	c.mu.Lock()
 	c.parts, c.predicted, c.complete = parts, prediction, true
 	c.mu.Unlock()
+	return true
 }
 
 // Called with layoutGate held. Keep the original cursor at part3 so a failed
@@ -818,7 +855,7 @@ func (c *Content) verifyRARPart(ctx context.Context, off int64) error {
 	part := c.parts[i]
 	c.mu.RUnlock()
 	layoutStart := time.Now()
-	cur := rarCursor{files: c.cursor.files, index: i}
+	cur := rarCursor{files: c.cursor.files, index: prediction.base + i}
 	b, f, err := cur.next(ctx)
 	c.layoutNS.Add(time.Since(layoutStart).Nanoseconds())
 	if err != nil {
