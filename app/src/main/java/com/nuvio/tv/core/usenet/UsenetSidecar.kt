@@ -276,7 +276,7 @@ class UsenetSidecar private constructor(private val context: Context) {
             openedId = newId
             // The engine reconciled abandoned sessions before this open.
             retiredSessions.clear()
-            val url = "$endpoint/stream/$newId/${Uri.encode(result.getString("filename").substringAfterLast('/'))}"
+            val url = UsenetEngineUrls.stream(requireNotNull(endpoint), newId, newPath)
             val nativeSubtitles = result.optJSONArray("subtitles")?.let { items ->
                 (0 until items.length()).map { index ->
                     val item = items.getJSONObject(index)

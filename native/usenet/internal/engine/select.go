@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"regexp"
 	"sort"
 	"strconv"
@@ -377,6 +378,14 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 	var largest *Content
 	var largestVols []*File
 	var brokenErr error
+	clipInfo := map[string]*Content{}
+	selected := func(c *Content) (*Content, error) {
+		c, err := c.usable(ctx)
+		if c != nil {
+			c.clipInfo = clipInfo[clipInfoName(c.Name)]
+		}
+		return c, err
+	}
 	broken := func(err error) error {
 		if (!skipBroken && largest == nil) || ctx.Err() != nil {
 			return err
@@ -552,6 +561,10 @@ groups:
 				}
 				continue groups
 			}
+			if c.complete && b.crypt == nil && c.Size <= maxClipInfoBytes && isClipInfo(c.Name) {
+				// Listed before the clips, so selection passes it on the way.
+				clipInfo[strings.ToLower(c.Name)] = &Content{Name: c.Name, Size: c.Size, parts: c.parts, complete: true}
+			}
 			matched, err := consider(c, index, "")
 			if err != nil {
 				return nil, err
@@ -563,7 +576,7 @@ groups:
 						return nil, v.damaged
 					}
 				}
-				return c.usable(ctx)
+				return selected(c)
 			}
 			if matched && (largest == nil || c.Size > largest.Size) {
 				largest, largestVols = c, vols
@@ -604,7 +617,7 @@ groups:
 				return nil, v.damaged
 			}
 		}
-		return largest.usable(ctx)
+		return selected(largest)
 	}
 	if brokenErr != nil {
 		return nil, brokenErr
@@ -714,4 +727,42 @@ func rarSetVersion(ctx context.Context, vols []*File) int {
 		}
 	}
 	return 0
+}
+
+// A Blu-ray clip's stream languages live in its CLPI, BDMV/CLIPINF/<clip>.clpi,
+// not in the .m2ts. Players fetch it beside the clip.
+const maxClipInfoBytes = 1 << 20
+
+var discClipRE = regexp.MustCompile(`(?i)^(.*/)?BDMV/STREAM/([^/]+)\.m2ts$`)
+
+func isClipInfo(name string) bool {
+	name = strings.ToLower(name)
+	return strings.HasSuffix(name, ".clpi") && (strings.HasPrefix(name, "bdmv/clipinf/") || strings.Contains(name, "/bdmv/clipinf/"))
+}
+
+// clipInfoName is the lowercase name of a disc clip's CLPI, or "" for any other file.
+func clipInfoName(name string) string {
+	m := discClipRE.FindStringSubmatch(name)
+	if m == nil {
+		return ""
+	}
+	return strings.ToLower(m[1] + "BDMV/CLIPINF/" + m[2] + ".clpi")
+}
+
+// streamPath names a disc clip by its BDMV/STREAM path, so its CLPI resolves
+// beside it as ../CLIPINF/<clip>.clpi. Other files keep their base name.
+func streamPath(name string) string {
+	if m := discClipRE.FindStringSubmatch(name); m != nil {
+		return "BDMV/STREAM/" + m[2] + ".m2ts"
+	}
+	return path.Base(name)
+}
+
+// clipInfoPath is where a disc clip's CLPI is served, beside its streamPath.
+func clipInfoPath(name string) string {
+	m := discClipRE.FindStringSubmatch(name)
+	if m == nil {
+		return ""
+	}
+	return "BDMV/CLIPINF/" + m[2] + ".clpi"
 }
