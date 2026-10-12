@@ -8,7 +8,15 @@ a normalized format, with random access to each file's segment list.
 ## Layout and lookup
 
 Each request still maps to a SHA-256 key over its URL, effective headers and
-profile scope. Request credentials and URLs are not saved alongside the entry.
+the client's scope. Request credentials and URLs are not saved alongside the entry.
+The app sends one scope for every profile: the URL already carries the indexer
+key, and a profile switch must not download an NZB again.
+
+An NZB the indexer refuses with HTTP 429 is remembered under the same key until
+its `Retry-After` (5 minutes without one, a day at most), in memory and, while the
+cache is on, as `<key>.retry`. Retries, source fallback and a restarted sidecar
+fail at once instead of asking again; nzb.life refuses a repeat download for 24 h.
+
 The private `<key>.nzb` container contains:
 
 1. A 56-byte header: format/version magic, directory offset and length, and a

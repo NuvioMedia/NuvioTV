@@ -65,7 +65,8 @@ The parser separately limits
 both downloaded and decompressed NZB bytes to 64 MiB, with an explicit size-limit
 error, and retains its 10,000-file and 500,000-segment bounds.
 Entries are keyed by a digest of the
-request URL, headers and profile scope; each hit creates fresh session metadata.
+request URL, headers and client scope; each hit creates fresh session metadata.
+A 429 refusal is remembered until its `Retry-After`, so the NZB is not asked for again early.
 Expired/corrupt entries refetch normally, incomplete writes are discarded, and
 disk errors do not fail playback. Record corruption during a lazy read triggers
 one shared source recovery per session, with a metadata digest check before
