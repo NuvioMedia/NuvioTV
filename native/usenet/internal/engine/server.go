@@ -252,7 +252,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	trace.mark("session_ready")
-	err = json.NewEncoder(w).Encode(map[string]any{"id": id, "path": "/stream/" + id + "/" + path.Base(v.content.Name), "filename": v.content.Name, "size": v.content.Size, "subtitles": subtitleManifest(id, v.subtitles), "startup": trace.snapshot()})
+	err = json.NewEncoder(w).Encode(map[string]any{"id": id, "path": "/stream/" + id + "/" + streamPath(v.content.Name), "filename": v.content.Name, "size": v.content.Size, "subtitles": subtitleManifest(id, v.subtitles), "startup": trace.snapshot()})
 	if err != nil {
 		s.mu.Lock()
 		delete(s.sessions, id)
@@ -284,6 +284,17 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	stop := context.AfterFunc(session.ctx, cancel)
 	defer stop()
+	if info := session.content.clipInfo; info != nil && len(parts) == 2 && strings.EqualFold(parts[1], clipInfoPath(session.content.Name)) {
+		reader := info.Reader(ctx, 0)
+		defer reader.Close()
+		w.Header().Set("Content-Type", "application/octet-stream")
+		http.ServeContent(w, r, path.Base(info.Name), time.Time{}, reader)
+		return
+	}
+	if len(parts) == 2 && len(parts[1]) > len("BDMV/CLIPINF/") && strings.EqualFold(parts[1][:len("BDMV/CLIPINF/")], "BDMV/CLIPINF/") {
+		http.NotFound(w, r) // Not the selected clip's CLPI, or not in the set.
+		return
+	}
 	reader := session.content.Reader(ctx, session.ahead)
 	reader.warmup = session.warmup
 	defer reader.Close()

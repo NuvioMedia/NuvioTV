@@ -715,6 +715,7 @@ type Content struct {
 	prepare      func(context.Context) error // Selected-only work: nested layout, RAR keys.
 	nested       *nestedRAR                  // RAR set inside a 7z: children map onto its volumes.
 	children     []nestedChild
+	clipInfo     *Content // A disc clip's CLPI from the same set, served beside it.
 	layoutNS     atomic.Int64
 	layoutWaitNS atomic.Int64
 }

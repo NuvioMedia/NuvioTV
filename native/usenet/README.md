@@ -197,6 +197,12 @@ the lazy path. Otherwise every entry header is read first: a Blu-ray folder list
 menu clips (`BDMV/STREAM/00277.m2ts`) before the feature. 7z sets list every entry
 in their header and choose the same way.
 
+A clip's stream languages live in its `BDMV/CLIPINF/<clip>.clpi`, which rar lists
+before the clips. Selection keeps the location of each small stored CLPI it passes,
+and a selected disc clip is served as `/stream/<id>/BDMV/STREAM/<clip>.m2ts` with its
+CLPI beside it at `BDMV/CLIPINF/<clip>.clpi`; any other CLIPINF path is 404. Other
+files keep their base name.
+
 Numeric part names, `.rar/.r00/...`, `.001/...`, width-mismatched names, season
 selection, yEnc name recovery and anonymous RAR5 volume numbers are supported.
 Anonymous RAR5 headers are inspected only until the next required volume is found,
