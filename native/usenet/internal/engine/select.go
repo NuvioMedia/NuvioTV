@@ -571,11 +571,17 @@ groups:
 			index++
 			// A file that reaches the last volume fills every volume between,
 			// so the next entry can only follow it there: skip the middle
-			// volumes. The unselected entry keeps its own cursor and maps its
-			// continuations lazily if it is chosen as the fallback.
+			// volumes. One that ends earlier, like a disc's clip, is skipped
+			// to the volume its continuation template predicts. The unselected
+			// entry keeps its own cursor and maps its continuations lazily if
+			// it is chosen as the fallback.
 			if b.after {
 				resume := *cursor
-				if skipped, err := cursor.skipToLastPart(ctx, b.name, b.unpacked); err != nil {
+				skipped, err := cursor.skipToLastPart(ctx, b.name, b.unpacked)
+				if err == nil && !skipped {
+					skipped, err = cursor.skipToPredictedEnd(ctx, b, c.payloadSize())
+				}
+				if err != nil {
 					return nil, err
 				} else if skipped {
 					c.cursor = &resume
