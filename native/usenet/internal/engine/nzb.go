@@ -239,7 +239,7 @@ func (s *boundedNZBSegments) UnmarshalXML(d *xml.Decoder, start xml.StartElement
 }
 
 func FetchNZB(ctx context.Context, client *http.Client, raw string, headers map[string]string, store *Store, fastNZBFetch bool) ([]*File, error) {
-	return fetchNZB(ctx, client, raw, headers, store, fastNZBFetch, nil, nil, "", nil)
+	return fetchNZB(ctx, client, raw, headers, store, fastNZBFetch, nil, nil, "", "", nil)
 }
 
 // refusedError names when a refused NZB may be asked for again.
@@ -253,7 +253,7 @@ func refusedError(until time.Time) error {
 
 // fetchNZB reads [cache] for the document when the NZB cache is on. [refusals] is the
 // same store whether or not it is, so an NZB refused with 429 is not asked for again early.
-func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[string]string, store *Store, fastNZBFetch bool, cache, refusals *nzbCache, scope string, trace *startupTrace) ([]*File, error) {
+func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[string]string, store *Store, fastNZBFetch bool, cache, refusals *nzbCache, scope, legacyScope string, trace *startupTrace) ([]*File, error) {
 	diagnostic := nzbCacheDiagnostic{Lookup: "disabled"}
 	defer func() { trace.recordNZBCache(diagnostic) }()
 	u, err := url.Parse(raw)
@@ -287,12 +287,18 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 			doc := store.nzb
 			store.mu.Unlock()
 			if doc != nil {
-				doc.recover = func() ([]*File, error) { return fetchNZB(ctx, client, raw, headers, store, fastNZBFetch, nil, nil, "", nil) }
+				doc.recover = func() ([]*File, error) {
+					return fetchNZB(ctx, client, raw, headers, store, fastNZBFetch, nil, nil, "", "", nil)
+				}
 			}
 		}()
 	}
 	if cache != nil {
 		key = nzbCacheKey(req, scope)
+		if legacyScope != "" && legacyScope != scope {
+			// Entries written under the client's former scope (the profile) become this key's.
+			cache.adopt(nzbCacheKey(req, legacyScope), key)
+		}
 		trace.mark("nzb_cache_lookup_started")
 		files, reason, size := cache.read(key, store)
 		trace.mark("nzb_cache_lookup_finished")

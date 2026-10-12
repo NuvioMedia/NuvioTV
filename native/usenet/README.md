@@ -66,6 +66,7 @@ both downloaded and decompressed NZB bytes to 64 MiB, with an explicit size-limi
 error, and retains its 10,000-file and 500,000-segment bounds.
 Entries are keyed by a digest of the
 request URL, headers and client scope; each hit creates fresh session metadata.
+An entry still under the former per-profile scope is renamed to its new key once.
 A 429 refusal is remembered until its `Retry-After`, so the NZB is not asked for again early.
 Expired/corrupt entries refetch normally, incomplete writes are discarded, and
 disk errors do not fail playback. Record corruption during a lazy read triggers

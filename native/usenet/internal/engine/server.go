@@ -18,11 +18,13 @@ import (
 
 type OpenRequest struct {
 	// Present for ownership-aware clients. Empty retains no previous session.
-	KeepSessionID *string           `json:"keepSessionId,omitempty"`
-	CacheScope    string            `json:"cacheScope,omitempty"`
-	NZBURL        string            `json:"nzbUrl"`
-	Servers       []string          `json:"servers"`
-	Headers       map[string]string `json:"headers,omitempty"`
+	KeepSessionID *string `json:"keepSessionId,omitempty"`
+	CacheScope    string  `json:"cacheScope,omitempty"`
+	// The scope entries were written under before, adopted on a miss so an update re-downloads nothing.
+	LegacyCacheScope string            `json:"legacyCacheScope,omitempty"`
+	NZBURL           string            `json:"nzbUrl"`
+	Servers          []string          `json:"servers"`
+	Headers          map[string]string `json:"headers,omitempty"`
 	Selection
 	Config Config `json:"config"`
 }
@@ -211,7 +213,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	if req.Config.AllowPrivateNetwork {
 		client = s.privateClient
 	}
-	files, err := fetchNZB(ctx, client, req.NZBURL, req.Headers, store, req.Config.FastNZBFetch, cache, s.nzbCache, req.CacheScope, trace)
+	files, err := fetchNZB(ctx, client, req.NZBURL, req.Headers, store, req.Config.FastNZBFetch, cache, s.nzbCache, req.CacheScope, req.LegacyCacheScope, trace)
 	trace.mark("nzb_loaded")
 	if err == nil {
 		trace.mark("selection_started")

@@ -46,7 +46,7 @@ func TestNZBCachePersistsAndSeparatesHeadersAndProfiles(t *testing.T) {
 		t.Helper()
 		store := NewStore(context.Background(), stalledBody{}, 32<<20)
 		t.Cleanup(store.Close)
-		files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, map[string]string{"Authorization": auth}, store, false, c, nil, scope, nil)
+		files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, map[string]string{"Authorization": auth}, store, false, c, nil, scope, "", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -86,7 +86,7 @@ func TestNZBCacheExpiryAndCorruptionFallBack(t *testing.T) {
 	cache := newNZBCache(t.TempDir())
 	read := func() {
 		t.Helper()
-		if _, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, cache, nil, "1", nil); err != nil {
+		if _, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, cache, nil, "1", "", nil); err != nil {
 			t.Fatal(err)
 		}
 	}
