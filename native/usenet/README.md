@@ -238,11 +238,15 @@ file the inventory resumes there instead of walking the middle volumes; an
 episode with an obfuscated inner name is then established from three headers.
 The skipped entry keeps its own cursor and maps its continuations on demand.
 
-For ordered, uniform stored sets, the second volume supplies a continuation
-template and a direct final-volume probe checks the remaining byte count. The
+For ordered, uniform stored sets, the file's second volume supplies a continuation
+template and a direct probe of the volume that should hold its end checks the
+remaining byte count. The file need not start in the first volume or end in the
+last: a disc's clips are stored back to back, so a feature starts and ends among
+other clips. The
 engine predicts intermediate extents in memory, accounting for RAR5 volume-index
 width changes (first at part129). This assumes equal decoded volume sizes and
 repeated continuation headers; NZB wire sizes never supply payload offsets.
+A prediction cut short by a cancelled reader is tried again by the next one.
 Each predicted intermediate volume is header-checked when first accessed. A
 layout mismatch discards the prediction and resumes serial discovery. RAR5 Quick
 Open locators and padded integer widths are retained in the template. Unordered
