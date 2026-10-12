@@ -51,12 +51,15 @@ func (s *Session) diagnostics() map[string]any {
 		v["filledArticles"] = holes.count
 		holes.mu.Unlock()
 	}
-	if s.content != nil {
-		v["archiveDiscoveryMs"] = float64(s.content.layoutNS.Load()) / 1e6
-		v["archiveWaitMs"] = float64(s.content.layoutWaitNS.Load()) / 1e6
-		s.content.mu.RLock()
-		v["archiveExtents"] = len(s.content.parts)
-		s.content.mu.RUnlock()
+	if layout := s.content; layout != nil {
+		if n := layout.nested; n != nil && len(n.vols) == 1 {
+			layout = n.vols[0] // A disc image's clip: the archive maps the image.
+		}
+		v["archiveDiscoveryMs"] = float64(layout.layoutNS.Load()) / 1e6
+		v["archiveWaitMs"] = float64(layout.layoutWaitNS.Load()) / 1e6
+		layout.mu.RLock()
+		v["archiveExtents"] = len(layout.parts)
+		layout.mu.RUnlock()
 	}
 	return v
 }

@@ -203,6 +203,15 @@ and a selected disc clip is served as `/stream/<id>/BDMV/STREAM/<clip>.m2ts` wit
 CLPI beside it at `BDMV/CLIPINF/<clip>.clpi`; any other CLIPINF path is 404. Other
 files keep their base name.
 
+A Blu-ray disc image (`.iso`, posted on its own or as a stored RAR entry) is read
+as its UDF 2.50 file system: the volume descriptors, the metadata partition and
+the `BDMV/STREAM` directory, all in the image's first megabytes. Its largest clip
+is served as byte ranges of the image, like a RAR set inside a 7z, and plays
+like the same clip from a disc folder. The image is read through its own RAR
+cursor, so selection still walks the set past it. DVD images, images without
+`BDMV/STREAM`, and sparable or virtual partitions fail with a message that says
+so. Images are not expanded when a file or episode selector is given.
+
 Numeric part names, `.rar/.r00/...`, `.001/...`, width-mismatched names, season
 selection, yEnc name recovery and anonymous RAR5 volume numbers are supported.
 Anonymous RAR5 headers are inspected only until the next required volume is found,

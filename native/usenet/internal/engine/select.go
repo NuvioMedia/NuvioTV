@@ -218,6 +218,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 		return nil, errors.New("invalid file index")
 	}
 	var fallback *Content
+	var isoErr error // Why a disc image gave no clip, when nothing else plays.
 	videoCount := 0
 	consider := func(c *Content, index int, originalName string) (bool, error) {
 		if !s.episodeOnly() {
@@ -262,7 +263,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 				order = append(order, key)
 			}
 			groups[key] = append(groups[key], f)
-		} else if isVideo(f.Name) {
+		} else if isVideo(f.Name) || isISO(f.Name) {
 			direct = append(direct, f)
 		} else {
 			l := strings.ToLower(f.Name)
@@ -337,6 +338,28 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 			f.mu.RUnlock()
 		}
 		c := &Content{Name: name, Size: f.Size(), direct: f}
+		if isISO(name) {
+			if !s.whole() {
+				continue // A selector names a file; an image is not one.
+			}
+			// A disc image serves its feature clip. Its decoded size bounds the reads.
+			if _, err := sniff(ctx, f); err != nil {
+				return nil, err
+			}
+			c.Size = f.Size()
+			clip, err := isoClip(ctx, c)
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			if err != nil {
+				isoErr = err
+				continue
+			}
+			if matched, err := consider(clip, f.Index, f.Name); err != nil || matched {
+				return clip, err
+			}
+			continue
+		}
 		matched, err := consider(c, f.Index, f.Name)
 		if err != nil {
 			return nil, err
@@ -565,21 +588,37 @@ groups:
 				// Listed before the clips, so selection passes it on the way.
 				clipInfo[strings.ToLower(c.Name)] = &Content{Name: c.Name, Size: c.Size, parts: c.parts, complete: true}
 			}
-			matched, err := consider(c, index, "")
+			candidate := c
+			if s.whole() && isISO(c.Name) && b.crypt == nil {
+				// Read the image through its own cursor: selection's must stay
+				// where this entry ends, to reach the next one.
+				resume := *cursor
+				iso := &Content{Name: c.Name, Size: c.Size, cursor: &resume, complete: c.complete, parts: append([]extent(nil), c.parts...)}
+				clip, err := isoClip(ctx, iso)
+				if ctx.Err() != nil {
+					return nil, ctx.Err()
+				}
+				if err != nil {
+					isoErr = err
+				} else {
+					candidate = clip
+				}
+			}
+			matched, err := consider(candidate, index, "")
 			if err != nil {
 				return nil, err
 			}
-			if matched && (!s.whole() || c.Size >= setSize(vols)/2) {
+			if matched && (!s.whole() || candidate.Size >= setSize(vols)/2) {
 				// No other entry can be larger than one filling half the set.
 				for _, v := range vols {
 					if v.damaged != nil {
 						return nil, v.damaged
 					}
 				}
-				return selected(c)
+				return selected(candidate)
 			}
-			if matched && (largest == nil || c.Size > largest.Size) {
-				largest, largestVols = c, vols
+			if matched && (largest == nil || candidate.Size > largest.Size) {
+				largest, largestVols = candidate, vols
 			}
 			index++
 			// A file that reaches the last volume fills every volume between,
@@ -627,6 +666,9 @@ groups:
 			return nil, fallback.direct.damaged
 		}
 		return fallback.usable(ctx)
+	}
+	if isoErr != nil {
+		return nil, isoErr
 	}
 	return nil, errNoMatchingVideo
 }
