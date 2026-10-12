@@ -259,6 +259,15 @@ func TestDiscImageServesItsFeatureClip(t *testing.T) {
 			if got := readAllContent(t, c); !bytes.Equal(got, feature) {
 				t.Fatal("feature bytes differ")
 			}
+			if c.clipInfo == nil || c.clipInfo.Name != "Movie.2026.BluRay.iso/BDMV/CLIPINF/00800.clpi" {
+				t.Fatalf("clip info = %v", c.clipInfo)
+			}
+			if got := readAllContent(t, c.clipInfo); !bytes.Equal(got, payload(300)) {
+				t.Fatal("clip info bytes differ")
+			}
+			if streamPath(c.Name) != "BDMV/STREAM/00800.m2ts" || clipInfoPath(c.Name) != "BDMV/CLIPINF/00800.clpi" {
+				t.Fatalf("served as %s and %s", streamPath(c.Name), clipInfoPath(c.Name))
+			}
 			// Reads that start inside and across every range of the image.
 			r := c.Reader(context.Background(), 0)
 			defer r.Close()

@@ -535,9 +535,25 @@ func isoClip(ctx context.Context, iso *Content) (*Content, error) {
 	if best == nil || best.embedded != nil || best.size == 0 {
 		return nil, errNoBluray
 	}
-	children := make([]nestedChild, 0, len(best.extents))
+	clip, err := imageFile(iso, iso.Name+"/BDMV/STREAM/"+bestName, best)
+	if err != nil {
+		return nil, err
+	}
+	// The clip's CLPI names its stream languages; it is served beside the clip.
+	if dir, _ := img.find(bdmv, "CLIPINF"); dir != nil {
+		stem := strings.TrimSuffix(bestName, pathExtension(bestName))
+		if f, _ := img.find(dir, stem+".clpi"); f != nil && f.embedded == nil && f.size > 0 && f.size <= maxClipInfoBytes {
+			clip.clipInfo, _ = imageFile(iso, iso.Name+"/BDMV/CLIPINF/"+stem+".clpi", f)
+		}
+	}
+	return clip, nil
+}
+
+// imageFile serves a file of the image as byte ranges of it.
+func imageFile(iso *Content, name string, f *udfFile) (*Content, error) {
+	children := make([]nestedChild, 0, len(f.extents))
 	start := int64(0)
-	for _, e := range best.extents {
+	for _, e := range f.extents {
 		if n := len(children); n > 0 && children[n-1].offset+children[n-1].length == e.offset {
 			children[n-1].length += e.length
 		} else {
@@ -545,10 +561,10 @@ func isoClip(ctx context.Context, iso *Content) (*Content, error) {
 		}
 		start += e.length
 	}
-	if start != best.size {
-		return nil, fmt.Errorf("%w: clip extents", errUDFUnreadable)
+	if start != f.size {
+		return nil, fmt.Errorf("%w: file extents", errUDFUnreadable)
 	}
-	return &Content{Name: iso.Name + "/BDMV/STREAM/" + bestName, Size: best.size, nested: &nestedRAR{vols: []*Content{iso}}, children: children}, nil
+	return &Content{Name: name, Size: f.size, nested: &nestedRAR{vols: []*Content{iso}}, children: children}, nil
 }
 
 func isISO(name string) bool {

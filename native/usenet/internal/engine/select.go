@@ -404,8 +404,11 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 	clipInfo := map[string]*Content{}
 	selected := func(c *Content) (*Content, error) {
 		c, err := c.usable(ctx)
+		// A disc image's clip brings its own CLPI from the image.
 		if c != nil {
-			c.clipInfo = clipInfo[clipInfoName(c.Name)]
+			if info := clipInfo[clipInfoName(c.Name)]; info != nil {
+				c.clipInfo = info
+			}
 		}
 		return c, err
 	}
