@@ -56,7 +56,7 @@ data class UsenetRelease(
         val LOW_QUALITY = Regex("(?i)(?:^|[ ._-])(?:cam|hdcam|telesync|telecine|hdts|ts|tc|scr|dvdscr)(?:$|[ ._-])")
         val FULL_DISC = Regex("(?i)(?:^|[ ._(\\[-])(?:complete[ ._-]+(?:uhd[ ._-]+)?(?:blu-?ray|bd|dvd|mpeg)|bd(?:25|50|66|100)|bdmv|dvd[59]|iso)(?:$|[ ._)\\]-])")
         // Remuxes, encodes and rips of a disc are single videos, even when named after it.
-        val NOT_DISC = Regex("(?i)(?:^|[ ._-])(?:remux|[xh][ .]?26[45]|[a-z]*rip|web-?dl)(?:$|[ ._-])")
+        val NOT_DISC = Regex("(?i)(?:^|[ ._-])(?:remux|[xh][ .]?26[45]|av1|re-?encode|[a-z]*rip|web-?dl)(?:$|[ ._-])")
     }
 }
 
@@ -170,27 +170,32 @@ object NewznabProtocol {
     }
 
     /**
+     * Whether [release] names only years more than one from [year]. Festival and release years
+     * often differ by one, and so do the years releases carry. Year-like [titleWords]
+     * (Blade Runner 2049, 1917) are not release years.
+     */
+    private fun contradictsYear(release: String, year: Int, titleWords: Collection<String>): Boolean {
+        val years = RELEASE_YEAR.findAll(release).map { it.groupValues[1] }.toList()
+        return years.none { it.toInt() in year - 1..year + 1 } && years.any { it !in titleWords }
+    }
+
+    /**
      * Aggregators may fall back to text search. Reject contradictory filename metadata.
      * [requireNumbering] rejects unnumbered series releases, which only an episode search vouches for.
      */
     fun matches(release: UsenetRelease, request: UsenetSearchRequest, idSearch: Boolean,
         requireNumbering: Boolean = false): Boolean {
+        // Umlauts are posted both ways: König as Koenig or Konig.
+        val titles = listOfNotNull(request.title, request.originalTitle)
+            .flatMap { listOf(words(it), words(it, umlauts = false)) }
+            .filter { it.isNotEmpty() }.distinct().map { it.split(' ') }
         if (!idSearch) {
             val name = words(release.title).split(' ')
-            // Umlauts are posted both ways: König as Koenig or Konig.
-            val title = listOfNotNull(request.title, request.originalTitle)
-                .flatMap { listOf(words(it), words(it, umlauts = false)) }
-                .filter { it.isNotEmpty() }.distinct().map { it.split(' ') }
-                .firstOrNull { isNamedAs(name, it, request.series) } ?: return false
-            if (!request.series && request.year != null) {
-                // Year-like title words (Blade Runner 2049, 1917) are not release years.
-                val titleWords = title.toSet()
-                val years = RELEASE_YEAR.findAll(release.title)
-                    .map { it.groupValues[1] }.toList()
-                // Festival and release years often differ by one, and so do the years releases carry.
-                if (years.none { it.toInt() in request.year - 1..request.year + 1 } && years.any { it !in titleWords }) return false
-            }
-        }
+            val title = titles.firstOrNull { isNamedAs(name, it, request.series) } ?: return false
+            if (!request.series && request.year != null && contradictsYear(release.title, request.year, title)) return false
+        } else if (!request.series && request.year != null &&
+            // Indexers mis-tag IDs too: a 2011 sequel filed under the 2001 film. The name's year decides.
+            contradictsYear(release.title, request.year, titles.flatten())) return false
         if (request.series) {
             val episodes = EPISODES.flatMap { it.findAll(release.title).toList() }
             if (episodes.isNotEmpty()) return episodes.any {
