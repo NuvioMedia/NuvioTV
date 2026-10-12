@@ -125,10 +125,15 @@ const discClip = "BDMV/STREAM/00065.m2ts"
 // discRARSet places the feature after one clip and before another. The feature
 // spans part129, where RAR5 volume numbers take two bytes.
 func discRARSet(t *testing.T, version int, size func(int) int) ([]inputFile, []byte, []rarSetPart) {
+	return discRARSetLead(t, version, size, 5)
+}
+
+// discRARSetLead puts a clip of about lead volumes before the feature.
+func discRARSetLead(t *testing.T, version int, size func(int) int, lead int) ([]inputFile, []byte, []rarSetPart) {
 	distinct := func(n, seed int) []byte { return payload(n + seed)[seed:] }
 	movie := distinct(150*2048, 0)
 	in, parts := packedRARSet(t, version, size,
-		rar4Entry{"BDMV/STREAM/00001.m2ts", distinct(5*2048+300, 7), 5*2048 + 300, 0},
+		rar4Entry{"BDMV/STREAM/00001.m2ts", distinct(lead*2048+300, 7), lead*2048 + 300, 0},
 		rar4Entry{discClip, movie, len(movie), 0},
 		rar4Entry{"BDMV/STREAM/00002.m2ts", distinct(4*2048+77, 13), 4*2048 + 77, 0})
 	var clip []rarSetPart
@@ -280,6 +285,65 @@ func TestCancelledPredictionIsTriedAgain(t *testing.T) {
 			}
 			if fetched := server.Counters().Bodies - before; fetched > 4 {
 				t.Fatalf("fetched %d articles for a clip over %d volumes", fetched, len(clip))
+			}
+		})
+	}
+}
+
+// Selection reaches the feature past the clips before it with two headers per
+// clip, and can skip the feature itself to select a clip after it.
+func TestSelectionSkipsClipsInsideTheSet(t *testing.T) {
+	for _, version := range []int{4, 5} {
+		t.Run(fmt.Sprintf("RAR%d", version), func(t *testing.T) {
+			in, want, _ := discRARSetLead(t, version, func(int) int { return 2048 }, 40)
+			files, _, server := setup(t, in, 0, 4, 4)
+			c, err := Select(context.Background(), files, Selection{})
+			if err != nil || c.Name != discClip {
+				t.Fatalf("selected %v, %v", c, err)
+			}
+			if bodies := server.Counters().Bodies; bodies > 4 {
+				t.Fatalf("selection read %d articles to pass a 40-volume clip", bodies)
+			}
+			if got := readAllContent(t, c); !bytes.Equal(got, want) {
+				t.Fatal("feature bytes differ")
+			}
+
+			files, _, server = setup(t, in, 0, 4, 4)
+			c, err = Select(context.Background(), files, Selection{FileMustInclude: "00002"})
+			if err != nil || c.Name != "BDMV/STREAM/00002.m2ts" {
+				t.Fatalf("selected %v, %v", c, err)
+			}
+			if bodies := server.Counters().Bodies; bodies > 6 {
+				t.Fatalf("selection read %d articles to pass two clips", bodies)
+			}
+			if got := readAllContent(t, c); !bytes.Equal(got, payload(4*2048 + 77 + 13)[13:]) {
+				t.Fatal("bytes of the clip after the feature differ")
+			}
+		})
+	}
+}
+
+// A clip whose volumes do not follow the template is walked as before.
+func TestSelectionSkipInsideTheSetIsChecked(t *testing.T) {
+	for _, version := range []int{4, 5} {
+		t.Run(fmt.Sprintf("RAR%d", version), func(t *testing.T) {
+			size := func(i int) int {
+				if i == 20 {
+					return 2048 - 7
+				}
+				return 2048
+			}
+			in, want, _ := discRARSetLead(t, version, size, 40)
+			files, _, server := setup(t, in, 0, 4, 4)
+			c, err := Select(context.Background(), files, Selection{})
+			if err != nil || c.Name != discClip {
+				t.Fatalf("selected %v, %v", c, err)
+			}
+			if bodies := server.Counters().Bodies; bodies < 40 {
+				t.Fatalf("selection read %d articles: an irregular clip was skipped", bodies)
+			}
+			if got := readAllContent(t, c); !bytes.Equal(got, want) {
+				t.Fatal("feature bytes differ")
 			}
 		})
 	}

@@ -236,6 +236,9 @@ interpreted as season/episode markers. A file that reaches the set's last volume
 fills every volume between, so when the last volume's first block ends that same
 file the inventory resumes there instead of walking the middle volumes; an
 episode with an obfuscated inner name is then established from three headers.
+An entry that ends earlier, like a disc's clip, is skipped the same way to the
+volume its second volume's continuation template predicts, once that volume's
+header proves the end; otherwise the volumes are walked as before.
 The skipped entry keeps its own cursor and maps its continuations on demand.
 
 For ordered, uniform stored sets, the file's second volume supplies a continuation

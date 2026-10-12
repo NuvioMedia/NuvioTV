@@ -645,6 +645,58 @@ func (c *rarCursor) skipToLastPart(ctx context.Context, name string, size int64)
 	return true, nil
 }
 
+// skipToPredictedEnd moves the cursor past the end of a split file that ends
+// before the set's last volume, as a disc's clips do. The file's second volume
+// supplies the continuation template, the volume that should hold its end is
+// found arithmetically, and that volume's header must prove the end. Two
+// headers are read instead of one per volume. It reports false, leaving the
+// cursor unchanged, when anything disagrees.
+func (c *rarCursor) skipToPredictedEnd(ctx context.Context, first rarBlock, payload int64) (bool, error) {
+	if c.unordered || c.volume != nil || c.index < 1 || c.index >= len(c.files) {
+		return false, nil
+	}
+	second := rarCursor{files: c.files, index: c.index}
+	b, f, err := second.next(ctx)
+	if ctx.Err() != nil {
+		return false, ctx.Err()
+	}
+	if err != nil || !b.before || !b.after || !b.template || b.directory || b.name != first.name ||
+		b.unpacked != first.unpacked || c.files[c.index-1].Size() != f.Size() {
+		return false, nil
+	}
+	volumeSize := f.Size()
+	start := first.packed + b.packed
+	for i := c.index + 1; i < len(c.files); i++ {
+		delta, ok := rarContinuationShift(b, i)
+		if !ok {
+			return false, nil
+		}
+		if packed := b.packed - delta; packed < payload-start {
+			file := c.files[i]
+			file.mu.RLock()
+			wrongSize := file.exact && file.size != volumeSize
+			file.mu.RUnlock()
+			if wrongSize {
+				return false, nil
+			}
+			start += packed
+			continue
+		}
+		probe := rarCursor{files: c.files, index: i}
+		last, _, err := probe.next(ctx)
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+		if err != nil || !last.before || last.after || last.directory || last.name != first.name ||
+			last.unpacked != first.unpacked || last.packed != payload-start {
+			return false, nil
+		}
+		*c = probe
+		return true, nil
+	}
+	return false, nil
+}
+
 type Content struct {
 	Name         string
 	Size         int64
@@ -757,6 +809,26 @@ func rarStableMainExtra(extra []byte) bool {
 // header. NZB sizes are wire estimates, so they must never supply byte offsets.
 // The final header independently checks the total; each intermediate header is
 // checked on demand before its predicted extent can be used by a reader.
+// rarContinuationShift is how much longer volume i's headers are than those of
+// the template volume b came from. The shift comes out of the packed data that
+// follows them. It reports false when the packed size no longer fits its width.
+func rarContinuationShift(b rarBlock, i int) (int64, bool) {
+	delta := int64(0)
+	if b.version == 5 {
+		// Volume numbers are zero-based: part129 is the first two-byte index.
+		main := b.mainLayout
+		delta = int64(max(main.volumeWidth, rarVintLen(int64(i))) - main.volumeWidth)
+		delta += int64(max(main.sizeWidth, rarVintLen(main.size+delta)) - main.sizeWidth)
+		if b.headerPrefix > 0 {
+			// An encrypted main header is stored padded to the AES block.
+			plain := 4 + int64(main.sizeWidth) + main.size
+			delta = roundUp16(plain+delta) - roundUp16(plain)
+		}
+	}
+	packed := b.packed - delta
+	return delta, packed > 0 && (b.version != 5 || b.packedWidth != rarVintLen(b.packed) || rarVintLen(packed) == b.packedWidth)
+}
+
 // rarRetry is a prediction a cancelled reader cut short, kept for the next one.
 type rarRetry struct {
 	block rarBlock
@@ -788,22 +860,11 @@ func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) bool {
 	start := parts[1].start + parts[1].length
 	end := -1
 	for i := base + 2; i < len(cur.files); i++ {
-		delta := int64(0)
-		if b.version == 5 {
-			// Volume numbers are zero-based: part129 is the first two-byte index.
-			main := b.mainLayout
-			delta = int64(max(main.volumeWidth, rarVintLen(int64(i))) - main.volumeWidth)
-			delta += int64(max(main.sizeWidth, rarVintLen(main.size+delta)) - main.sizeWidth)
-			if b.headerPrefix > 0 {
-				// An encrypted main header is stored padded to the AES block.
-				plain := 4 + int64(main.sizeWidth) + main.size
-				delta = roundUp16(plain+delta) - roundUp16(plain)
-			}
-		}
-		packed := b.packed - delta
-		if packed <= 0 || (b.version == 5 && b.packedWidth == rarVintLen(b.packed) && rarVintLen(packed) != b.packedWidth) {
+		delta, ok := rarContinuationShift(b, i)
+		if !ok {
 			return true
 		}
+		packed := b.packed - delta
 		if packed >= c.payloadSize()-start {
 			end = i // The rest fits: this volume holds the last part.
 			break
