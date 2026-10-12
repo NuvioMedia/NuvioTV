@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -29,13 +30,20 @@ type nzbCache struct {
 	filling bool
 	active  map[string]int
 	invalid map[string]bool
+	refused map[string]time.Time
 }
+
+const (
+	// Without Retry-After a refused NZB waits this long; nzb.life asks 24 h for a repeat download.
+	nzbRefusalDefault = 5 * time.Minute
+	nzbRefusalMax     = 24 * time.Hour
+)
 
 func newNZBCache(dir string) *nzbCache {
 	if dir == "" {
 		return nil
 	}
-	c := &nzbCache{dir: dir, active: make(map[string]int), invalid: make(map[string]bool)}
+	c := &nzbCache{dir: dir, active: make(map[string]int), invalid: make(map[string]bool), refused: make(map[string]time.Time)}
 	// One sidecar owns this private directory. Remove unfinished writes left by
 	// an earlier process, without creating a directory when caching is disabled.
 	entries, _ := os.ReadDir(dir)
@@ -61,6 +69,54 @@ func nzbCacheKey(req *http.Request, scope string) string {
 	}{scope, req.URL.String(), headers})
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
+}
+
+// refusedUntil reports when an NZB an indexer refused with 429 may be asked for again.
+// A refusal is kept in memory and, when [persist] (the NZB cache is on), on disk, so
+// the app's retries, source fallback and a restarted sidecar do not ask again sooner.
+func (c *nzbCache) refusedUntil(key string, persist bool) time.Time {
+	if c == nil {
+		return time.Time{}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	until := c.refused[key]
+	if until.IsZero() && persist {
+		if b, err := os.ReadFile(filepath.Join(c.dir, key+".retry")); err == nil {
+			if sec, err := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64); err == nil {
+				until = time.Unix(sec, 0)
+			}
+		}
+	}
+	if !until.IsZero() && !time.Now().Before(until) {
+		delete(c.refused, key)
+		_ = os.Remove(filepath.Join(c.dir, key+".retry"))
+		return time.Time{}
+	}
+	return until
+}
+
+func (c *nzbCache) refuse(key string, until time.Time, persist bool) {
+	if c == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.refused[key] = until
+	if persist && os.MkdirAll(c.dir, 0o700) == nil {
+		_ = os.WriteFile(filepath.Join(c.dir, key+".retry"), []byte(strconv.FormatInt(until.Unix(), 10)), 0o600)
+	}
+}
+
+// refusalDelay reads Retry-After as seconds or an HTTP date, bounded to a day.
+func refusalDelay(header string, now time.Time) time.Duration {
+	d := nzbRefusalDefault
+	if s, err := strconv.ParseInt(strings.TrimSpace(header), 10, 64); err == nil && s > 0 {
+		d = time.Duration(min(s, int64(nzbRefusalMax/time.Second))) * time.Second
+	} else if t, err := http.ParseTime(header); err == nil && t.After(now) {
+		d = t.Sub(now)
+	}
+	return min(d, nzbRefusalMax)
 }
 
 func (c *nzbCache) read(key string, store *Store) ([]*File, string, int64) {
@@ -197,6 +253,13 @@ func (c *nzbCache) pruneSpace(reserve int64, newEntry bool) bool {
 	weights := make(map[string]int64)
 	for _, e := range entries {
 		name := e.Name()
+		if !e.IsDir() && len(name) == 70 && strings.HasSuffix(name, ".retry") {
+			// Refusals last at most a day; one older than that has expired unread.
+			if info, err := e.Info(); err == nil && time.Since(info.ModTime()) > nzbRefusalMax {
+				_ = os.Remove(filepath.Join(c.dir, name))
+			}
+			continue
+		}
 		if !e.IsDir() && len(name) == 70 && strings.HasSuffix(name, ".hints") {
 			if _, err := os.Stat(filepath.Join(c.dir, name[:64]+".nzb")); os.IsNotExist(err) {
 				if err := os.Remove(filepath.Join(c.dir, name)); err != nil && !os.IsNotExist(err) {

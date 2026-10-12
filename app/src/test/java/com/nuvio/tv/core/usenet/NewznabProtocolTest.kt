@@ -122,6 +122,22 @@ class NewznabProtocolTest {
         assertEquals("Good.1080p", NewznabProtocol.arrange(releases, config.copy(sort = UsenetSort.SMALLEST), now).first().title)
     }
 
+    @Test fun `id search results whose name gives another year are another film`() {
+        val stone = UsenetSearchRequest(imdbId = "tt0241527", title = "Harry Potter and the Sorcerer's Stone", year = 2001)
+        fun byId(release: String, request: UsenetSearchRequest = stone) =
+            NewznabProtocol.matches(UsenetRelease(release, "url"), request, idSearch = true)
+        // An indexer filed Deathly Hallows Part 2 under the 2001 film.
+        assertFalse(byId("Harry.Potter.und.die.Heiligtuemer.des.Todes.Teil.2.2011.German.DL.2160p.HDR.BluRay.AV1-Bi0hazard"))
+        assertTrue(byId("Harry.Potter.and.the.Sorcerers.Stone.2001.2160p.UHD.BluRay.x265"))
+        assertTrue(byId("Harry.Potter.und.der.Stein.der.Weisen.2002.German.1080p")) // Off by one.
+        assertTrue(byId("d-pate-1080p")) // No year: the ID is trusted.
+        assertTrue(byId("Blade.Runner.2049.2017.2160p", UsenetSearchRequest(imdbId = "tt1856101", title = "Blade Runner 2049", year = 2017)))
+        assertTrue(byId("Blade.Runner.2049.1080p", UsenetSearchRequest(imdbId = "tt1856101", title = "Blade Runner 2049", year = 2017)))
+        // Series carry season years; only movies are checked.
+        assertTrue(NewznabProtocol.matches(UsenetRelease("Show.S01E01.1999.1080p", "url"),
+            UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = 1, year = 2010), idSearch = true))
+    }
+
     @Test fun `full disc releases are recognised and hidden unless allowed`() {
         listOf("The.Drama.2026.COMPLETE.UHD.BLURAY-GRP", "Movie.2020.Complete.Bluray-GRP", "Movie 2020 BD50",
             "Movie.2020.1080p.BDMV.AVC.DTS-HD.MA", "Movie.2020.DVD9-GRP", "Movie.2020.ISO", "[Movie 2020 BD25]",
@@ -129,7 +145,10 @@ class NewznabProtocolTest {
         ).forEach { assertTrue(it, UsenetRelease(it, "url").fullDisc) }
         listOf("The.Drama.2026.2160p.UHD.Remux.HEVC.DoVi.TrueHD.Atmos.7.1-playBD",
             "Movie.2020.COMPLETE.BLURAY.REMUX-GRP", "Show.S01.COMPLETE.BluRay.1080p.x264-GRP", "Movie.2020.BDRip.x265",
-            "Movie.2020.Complete.BDRip", "Movie.2020.1080p.BluRay.DTS-HD.MA", "Isolation.2020.1080p", "Show.S01.Complete.DVDRip"
+            "Movie.2020.Complete.BDRip", "Movie.2020.1080p.BluRay.DTS-HD.MA", "Isolation.2020.1080p", "Show.S01.Complete.DVDRip",
+            // DVD5 here is the encode's target size, not a disc.
+            "Oppenheimer.2023.BluRay.2160p.HDR.MULTi.5.1.AV1.Opus.DVD5-CAV1aR",
+            "Interstellar.2014.Complete.BluRay.1080p.Re-Encode.AVC.DTS-HD.MA.5.1-GRP"
         ).forEach { assertFalse(it, UsenetRelease(it, "url").fullDisc) }
         val releases = listOf(UsenetRelease("Disc.COMPLETE.UHD.BLURAY", "https://test/1"),
             UsenetRelease("Remux.2160p.REMUX", "https://test/2"))
