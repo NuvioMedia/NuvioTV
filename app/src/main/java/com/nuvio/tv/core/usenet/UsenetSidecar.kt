@@ -240,7 +240,10 @@ class UsenetSidecar private constructor(private val context: Context) {
             trace.mark("engine_ready")
             val request = JSONObject().apply {
                 put("keepSessionId", previousId ?: "")
-                put("cacheScope", profileId?.toString() ?: "unscoped")
+                // The NZB URL carries the indexer key, so profiles of one account share its cache
+                // entry and a profile switch does not download it again (nzb.life refuses a repeat
+                // download for 24 h). Profiles with their own keys still get their own entries.
+                put("cacheScope", "unscoped")
                 put("nzbUrl", stream.nzbUrl)
                 put("servers", JSONArray(stream.servers.orEmpty()))
                 stream.fileIdx?.let { put("fileIdx", it) }

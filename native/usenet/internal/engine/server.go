@@ -211,7 +211,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	if req.Config.AllowPrivateNetwork {
 		client = s.privateClient
 	}
-	files, err := fetchNZB(ctx, client, req.NZBURL, req.Headers, store, req.Config.FastNZBFetch, cache, req.CacheScope, trace)
+	files, err := fetchNZB(ctx, client, req.NZBURL, req.Headers, store, req.Config.FastNZBFetch, cache, s.nzbCache, req.CacheScope, trace)
 	trace.mark("nzb_loaded")
 	if err == nil {
 		trace.mark("selection_started")
