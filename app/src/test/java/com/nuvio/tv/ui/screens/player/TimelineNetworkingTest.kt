@@ -8,6 +8,35 @@ import org.junit.Test
 import java.util.concurrent.TimeUnit
 
 class TimelineNetworkingTest {
+    @Test fun cancellationOwnsTheResponseBodyAfterDispatcherCompletionAndKeepsOtherSessionsAlive() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody("delayed-frame").setBodyDelay(3, TimeUnit.SECONDS))
+            server.enqueue(MockResponse().setBody("other-session"))
+            val firstLifetime = TimelineCallCancellation()
+            val otherLifetime = TimelineCallCancellation()
+            val url = server.url("/movie").toString()
+            val firstClient = PlayerPlaybackNetworking.createTimelineHttpClient(url, emptyMap(), firstLifetime)
+            val otherClient = PlayerPlaybackNetworking.createTimelineHttpClient(url, emptyMap(), otherLifetime)
+            val first = firstClient.newCall(Request.Builder().url(url).build())
+            val other = otherClient.newCall(Request.Builder().url(url).build())
+            first.execute().use {
+                other.execute().use { otherResponse ->
+                    assertEquals(0, firstClient.dispatcher.runningCallsCount())
+                    assertFalse(first.isCanceled())
+                    firstLifetime.cancel()
+                    firstLifetime.cancel()
+                    assertTrue(first.isCanceled())
+                    assertFalse(other.isCanceled())
+                    assertEquals("other-session", otherResponse.body!!.string())
+                    val late = firstClient.newCall(Request.Builder().url(url).build())
+                    val failure = runCatching { late.execute().close() }.exceptionOrNull()
+                    assertTrue(failure is java.io.IOException)
+                    assertTrue(late.isCanceled())
+                    assertEquals(2, server.requestCount)
+                }
+            }
+        }
+    }
     @Test fun sameOriginRetainsExactHeadersAndGeneratedSeekRange() {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setResponseCode(302).addHeader("Location", "/frame"))

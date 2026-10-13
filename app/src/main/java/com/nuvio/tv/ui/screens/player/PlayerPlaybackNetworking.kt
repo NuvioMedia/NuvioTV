@@ -24,7 +24,8 @@ internal object PlayerPlaybackNetworking {
     private const val LOOPBACK_READ_TIMEOUT_SECONDS = 65L
 
     /** A preview must not weaken TLS or forward addon credentials to a redirect/segment origin. */
-    internal fun createTimelineHttpClient(sourceUrl: String, headers: Map<String, String>): OkHttpClient {
+    internal fun createTimelineHttpClient(sourceUrl: String, headers: Map<String, String>,
+        lifetime: okhttp3.EventListener = okhttp3.EventListener.NONE): OkHttpClient {
         val origin = sourceUrl.toHttpUrlOrNull()
         require(origin != null && origin.username.isEmpty() && origin.password.isEmpty()) { "Invalid preview source" }
         require(headers.size <= 32 && headers.entries.sumOf { it.key.length + it.value.length } <= 16384 &&
@@ -34,6 +35,7 @@ internal object PlayerPlaybackNetworking {
             }) { "Invalid preview headers" }
         val suppliedNames = headers.keys + setOf("Authorization", "Cookie", "Proxy-Authorization")
         return OkHttpClient.Builder()
+            .eventListener(lifetime)
             .dns(IPv4FirstDns())
             .connectTimeout(4, TimeUnit.SECONDS).readTimeout(4, TimeUnit.SECONDS)
             .writeTimeout(4, TimeUnit.SECONDS).callTimeout(6, TimeUnit.SECONDS)
@@ -55,13 +57,14 @@ internal object PlayerPlaybackNetworking {
     }
 
     @UnstableApi
-    internal fun createTimelineDataSourceFactory(context: android.content.Context, url: String, headers: Map<String, String>): DataSource.Factory {
+    internal fun createTimelineDataSourceFactory(context: android.content.Context, url: String, headers: Map<String, String>,
+        lifetime: okhttp3.EventListener = okhttp3.EventListener.NONE): DataSource.Factory {
         val http = if (url.toHttpUrlOrNull() != null) {
-            OkHttpDataSource.Factory(createTimelineHttpClient(url, headers))
+            OkHttpDataSource.Factory(createTimelineHttpClient(url, headers, lifetime))
                 .setUserAgent(PlayerMediaSourceFactory.DEFAULT_USER_AGENT)
         } else {
             // DefaultDataSource handles file/content locally; remote requests still use strict TLS.
-            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
+            OkHttpDataSource.Factory(OkHttpClient.Builder().eventListener(lifetime).build())
         }
         return DefaultDataSource.Factory(context, http)
     }
@@ -217,5 +220,22 @@ internal object PlayerPlaybackNetworking {
             }
             range?.let { setRequestProperty("Range", it) }
         }
+    }
+}
+
+/** Per-preview ownership through response-body completion; never tracks main playback calls. */
+internal class TimelineCallCancellation : okhttp3.EventListener() {
+    private val closed = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val calls = java.util.concurrent.ConcurrentHashMap.newKeySet<okhttp3.Call>()
+    override fun callStart(call: okhttp3.Call) {
+        calls.add(call)
+        if (closed.get()) { call.cancel(); calls.remove(call) }
+    }
+    override fun callEnd(call: okhttp3.Call) { calls.remove(call) }
+    override fun callFailed(call: okhttp3.Call, ioe: java.io.IOException) { calls.remove(call) }
+    fun cancel() {
+        closed.set(true)
+        calls.forEach { it.cancel() }
+        calls.clear()
     }
 }

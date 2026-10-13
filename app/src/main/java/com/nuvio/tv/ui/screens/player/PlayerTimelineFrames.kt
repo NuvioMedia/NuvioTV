@@ -51,6 +51,7 @@ internal class PlayerTimelineFrames(
     val state = mutable.asStateFlow()
     private var session: TimelineFrameSession? = null
     private var extractor: TelumiaFrameExtractor? = null
+    private var httpLifetime: TimelineCallCancellation? = null
     private var job: Job? = null
     private var revision = 0L
     private var closed = false
@@ -112,8 +113,11 @@ internal class PlayerTimelineFrames(
     private suspend fun frame(request: Request, position: Long): TimelineFrameImage {
         val bucket = position / 250
         cache[bucket]?.takeIf { abs(it.decodedMs - position) <= 1250 }?.let { return it.copy(requestedMs = position) }
-        val reader = extractor ?: TelumiaFrameExtractor(context, TelumiaFrameExtractor.Configuration.Builder().build(),
-            sourceFactory.timelineMediaSourceFactory(request.session.url, request.session.headers)).also {
+        val reader = extractor ?: TimelineCallCancellation().let { lifetime ->
+            httpLifetime = lifetime
+            TelumiaFrameExtractor(context, TelumiaFrameExtractor.Configuration.Builder().build(),
+                sourceFactory.timelineMediaSourceFactory(request.session.url, request.session.headers, lifetime))
+        }.also {
             extractor = it
             it.setMediaItem(MediaItem.fromUri(request.session.url), listOf(
                 Presentation.createForWidthAndHeight(320, 180, Presentation.LAYOUT_SCALE_TO_FIT)))
@@ -142,7 +146,12 @@ internal class PlayerTimelineFrames(
         mutable.value = TimelineFrameState.Idle
     }
     fun release() { hide(); closed = true; requests.close() }
-    private fun discardExtractor() { extractor?.release(); extractor = null }
+    private fun discardExtractor() {
+        // A call stays active while its body is read, even after OkHttp's dispatcher is idle.
+        // Cancel only this preview's calls before Media3 waits for its loader to release.
+        httpLifetime?.cancel(); httpLifetime = null
+        extractor?.release(); extractor = null
+    }
     private fun checkMain() = check(Looper.myLooper() == Looper.getMainLooper()) { "Preview application thread required" }
 }
 

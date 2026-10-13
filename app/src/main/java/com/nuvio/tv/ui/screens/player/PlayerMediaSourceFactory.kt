@@ -157,6 +157,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     fun timelineMediaSourceFactory(
         url: String,
         headers: Map<String, String>,
+        lifetime: okhttp3.EventListener = okhttp3.EventListener.NONE,
     ): MediaSource.Factory {
         val uri = Uri.parse(url)
         require(url.length in 1..16384 && url.none { it == '\r' || it == '\n' || it == '\u0000' } &&
@@ -167,7 +168,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 name.none { it == '\r' || it == '\n' || it == '\u0000' } &&
                 value.none { it == '\r' || it == '\n' || it == '\u0000' }
         } && headers.entries.sumOf { it.key.length + it.value.length } <= 16384) { "Invalid preview headers" }
-        val upstream = PlayerPlaybackNetworking.createTimelineDataSourceFactory(context, url, headers.toMap())
+        val upstream = PlayerPlaybackNetworking.createTimelineDataSourceFactory(context, url, headers.toMap(), lifetime)
         val factory = DefaultMediaSourceFactory(upstream, DefaultExtractorsFactory()).apply {
             setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
         }
