@@ -60,7 +60,22 @@ class TimelinePreviewSurfaceTvTest {
             val frames = listOf(0L, 1500L, 3000L, 4500L).map { position ->
                 lateinit var future: com.google.common.util.concurrent.ListenableFuture<TelumiaFrameExtractor.Frame>
                 main { future = reader!!.getFrame(position) }
-                val frame = future.get(8, TimeUnit.SECONDS)
+                val frame = try { future.get(8, TimeUnit.SECONDS) }
+                catch (timeout: java.util.concurrent.TimeoutException) {
+                    var snapshot = ""
+                    main {
+                        val owned = TelumiaFrameExtractor::class.java.getDeclaredField("player").apply {
+                            isAccessible = true
+                        }.get(reader) as ExoPlayer
+                        val counters = owned.videoDecoderCounters
+                        counters?.ensureUpdated()
+                        snapshot = "state=${owned.playbackState}, position=${owned.currentPosition}, " +
+                            "buffered=${owned.bufferedPosition}, duration=${owned.duration}, " +
+                            "queued=${counters?.queuedInputBufferCount}, rendered=${counters?.renderedOutputBufferCount}, " +
+                            "skipped=${counters?.skippedOutputBufferCount}, dropped=${counters?.droppedBufferCount}"
+                    }
+                    throw AssertionError("Native fixture frame request=$position ms; $snapshot", timeout)
+                }
                 assertEquals(position, frame.presentationTimeMs)
                 TimelineFrameImage(position, frame.presentationTimeMs, frame.bitmap)
             }
