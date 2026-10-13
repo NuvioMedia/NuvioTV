@@ -109,7 +109,9 @@ data class UsenetSourceConfiguration(
     /** On: lower indexer priorities are only searched when higher ones find nothing. */
     val indexerFallback: Boolean = false,
     /** On: a release found by several indexers is shown once, from the highest priority. */
-    val hideDuplicates: Boolean = false
+    val hideDuplicates: Boolean = false,
+    /** On: each result shows its release name above its size, age and indexer. */
+    val showReleaseNames: Boolean = true
 ) {
     val ready: Boolean get() = enabled && providers.any { it.enabled } && indexers.any { it.enabled }
 
