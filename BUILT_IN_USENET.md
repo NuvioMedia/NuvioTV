@@ -134,7 +134,8 @@ Filters cover minimum resolution, maximum size, maximum age, CAM/screener
 releases, full Blu-ray/DVD discs (on by default; remuxes still show) and result count. Passworded NZBs are always excluded. Unknown sizes
 or dates are excluded when their corresponding maximum filter is enabled.
 Duplicate download URLs are removed while alternative indexer URLs remain
-available for playback fallback.
+available for playback fallback. Each result shows its release name above its
+size, age and indexer; **Show release names** (on by default) can hide it.
 
 Searches have a 25-second timeout per request and fetch at most two pages of
 100 results per indexer. NZBs are fetched only when the existing playback or

@@ -107,7 +107,7 @@ func TestLargeNZBCachePlainAndGzip(t *testing.T) {
 			dir := t.TempDir()
 			for i := 0; i < 2; i++ {
 				trace := newStartupTrace()
-				files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, true, newNZBCache(dir), nil, "profile", trace)
+				files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, true, newNZBCache(dir), nil, "profile", "", trace)
 				if err != nil || len(files) != 1 {
 					t.Fatalf("fetch: files=%d err=%v", len(files), err)
 				}
@@ -268,7 +268,7 @@ func TestNZBCacheDiagnosticsDisabledAndDiskFailure(t *testing.T) {
 	}
 	for _, c := range []*nzbCache{nil, newNZBCache(blocked)} {
 		trace := newStartupTrace()
-		_, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, c, nil, "profile", trace)
+		_, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, c, nil, "profile", "", trace)
 		if err != nil {
 			t.Fatalf("optional caching broke playback: %v", err)
 		}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"regexp"
 	"sort"
 	"strconv"
@@ -217,6 +218,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 		return nil, errors.New("invalid file index")
 	}
 	var fallback *Content
+	var isoErr error // Why a disc image gave no clip, when nothing else plays.
 	videoCount := 0
 	consider := func(c *Content, index int, originalName string) (bool, error) {
 		if !s.episodeOnly() {
@@ -261,7 +263,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 				order = append(order, key)
 			}
 			groups[key] = append(groups[key], f)
-		} else if isVideo(f.Name) {
+		} else if isVideo(f.Name) || isISO(f.Name) {
 			direct = append(direct, f)
 		} else {
 			l := strings.ToLower(f.Name)
@@ -336,6 +338,28 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 			f.mu.RUnlock()
 		}
 		c := &Content{Name: name, Size: f.Size(), direct: f}
+		if isISO(name) {
+			if !s.whole() {
+				continue // A selector names a file; an image is not one.
+			}
+			// A disc image serves its feature clip. Its decoded size bounds the reads.
+			if _, err := sniff(ctx, f); err != nil {
+				return nil, err
+			}
+			c.Size = f.Size()
+			clip, err := isoClip(ctx, c)
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			if err != nil {
+				isoErr = err
+				continue
+			}
+			if matched, err := consider(clip, f.Index, f.Name); err != nil || matched {
+				return clip, err
+			}
+			continue
+		}
 		matched, err := consider(c, f.Index, f.Name)
 		if err != nil {
 			return nil, err
@@ -377,6 +401,18 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 	var largest *Content
 	var largestVols []*File
 	var brokenErr error
+	clipInfo := map[string]*Content{}
+	seen := map[string]*Content{} // Disc files selection passed, by lowercase name.
+	selected := func(c *Content) (*Content, error) {
+		c, err := c.usable(ctx)
+		// A disc image's clip brings its own CLPI from the image.
+		if c != nil {
+			if info := clipInfo[clipInfoName(c.Name)]; info != nil {
+				c.clipInfo = info
+			}
+		}
+		return c, err
+	}
 	broken := func(err error) error {
 		if (!skipBroken && largest == nil) || ctx.Err() != nil {
 			return err
@@ -552,35 +588,63 @@ groups:
 				}
 				continue groups
 			}
-			matched, err := consider(c, index, "")
+			if c.complete && b.crypt == nil && c.Size <= maxClipInfoBytes && isClipInfo(c.Name) {
+				// Listed before the clips, so selection passes it on the way.
+				clipInfo[strings.ToLower(c.Name)] = &Content{Name: c.Name, Size: c.Size, parts: c.parts, complete: true}
+			}
+			candidate := c
+			if s.whole() && isISO(c.Name) && b.crypt == nil {
+				// Read the image through its own cursor: selection's must stay
+				// where this entry ends, to reach the next one.
+				resume := *cursor
+				iso := &Content{Name: c.Name, Size: c.Size, cursor: &resume, complete: c.complete, parts: append([]extent(nil), c.parts...)}
+				clip, err := isoClip(ctx, iso)
+				if ctx.Err() != nil {
+					return nil, ctx.Err()
+				}
+				if err != nil {
+					isoErr = err
+				} else {
+					candidate = clip
+				}
+			}
+			matched, err := consider(candidate, index, "")
 			if err != nil {
 				return nil, err
 			}
-			if matched && (!s.whole() || c.Size >= setSize(vols)/2) {
+			if matched && (!s.whole() || candidate.Size >= setSize(vols)/2) {
 				// No other entry can be larger than one filling half the set.
 				for _, v := range vols {
 					if v.damaged != nil {
 						return nil, v.damaged
 					}
 				}
-				return c.usable(ctx)
+				if candidate == c && !cursor.unordered {
+					// The rest of the set is walked once the session opens.
+					if d := discFor(c, seen); d != nil {
+						d.rest = walkRest(*cursor, c, b)
+						c.disc = d
+					}
+				}
+				return selected(candidate)
 			}
-			if matched && (largest == nil || c.Size > largest.Size) {
-				largest, largestVols = c, vols
+			if matched && (largest == nil || candidate.Size > largest.Size) {
+				largest, largestVols = candidate, vols
 			}
 			index++
 			// A file that reaches the last volume fills every volume between,
 			// so the next entry can only follow it there: skip the middle
-			// volumes. The unselected entry keeps its own cursor and maps its
-			// continuations lazily if it is chosen as the fallback.
-			if b.after {
-				resume := *cursor
-				if skipped, err := cursor.skipToLastPart(ctx, b.name, b.unpacked); err != nil {
-					return nil, err
-				} else if skipped {
-					c.cursor = &resume
-					continue
+			// volumes. One that ends earlier, like a disc's clip, is skipped
+			// to the volume its continuation template predicts. The unselected
+			// entry keeps its own cursor and maps its continuations lazily if
+			// it is chosen as the fallback.
+			if skipped, err := skipEntry(ctx, cursor, c, b); err != nil {
+				return nil, err
+			} else if skipped {
+				if !cursor.unordered {
+					keepDiscFile(seen, c, b)
 				}
+				continue
 			}
 			// Reach the next entry using headers only. Selected content returns
 			// above, before resolving ANY continuation volume.
@@ -590,15 +654,21 @@ groups:
 				}
 				continue groups
 			}
+			if !cursor.unordered {
+				keepDiscFile(seen, c, b)
+			}
 		}
 	}
 	if largest != nil {
+		if largest.disc == nil && largest.nested == nil {
+			largest.disc = discFor(largest, seen) // The whole set was walked.
+		}
 		for _, v := range largestVols {
 			if v.damaged != nil {
 				return nil, v.damaged
 			}
 		}
-		return largest.usable(ctx)
+		return selected(largest)
 	}
 	if brokenErr != nil {
 		return nil, brokenErr
@@ -608,6 +678,9 @@ groups:
 			return nil, fallback.direct.damaged
 		}
 		return fallback.usable(ctx)
+	}
+	if isoErr != nil {
+		return nil, isoErr
 	}
 	return nil, errNoMatchingVideo
 }
@@ -708,4 +781,42 @@ func rarSetVersion(ctx context.Context, vols []*File) int {
 		}
 	}
 	return 0
+}
+
+// A Blu-ray clip's stream languages live in its CLPI, BDMV/CLIPINF/<clip>.clpi,
+// not in the .m2ts. Players fetch it beside the clip.
+const maxClipInfoBytes = 1 << 20
+
+var discClipRE = regexp.MustCompile(`(?i)^(.*/)?BDMV/STREAM/([^/]+)\.m2ts$`)
+
+func isClipInfo(name string) bool {
+	name = strings.ToLower(name)
+	return strings.HasSuffix(name, ".clpi") && (strings.HasPrefix(name, "bdmv/clipinf/") || strings.Contains(name, "/bdmv/clipinf/"))
+}
+
+// clipInfoName is the lowercase name of a disc clip's CLPI, or "" for any other file.
+func clipInfoName(name string) string {
+	m := discClipRE.FindStringSubmatch(name)
+	if m == nil {
+		return ""
+	}
+	return strings.ToLower(m[1] + "BDMV/CLIPINF/" + m[2] + ".clpi")
+}
+
+// streamPath names a disc clip by its BDMV/STREAM path, so its CLPI resolves
+// beside it as ../CLIPINF/<clip>.clpi. Other files keep their base name.
+func streamPath(name string) string {
+	if m := discClipRE.FindStringSubmatch(name); m != nil {
+		return "BDMV/STREAM/" + m[2] + ".m2ts"
+	}
+	return path.Base(name)
+}
+
+// clipInfoPath is where a disc clip's CLPI is served, beside its streamPath.
+func clipInfoPath(name string) string {
+	m := discClipRE.FindStringSubmatch(name)
+	if m == nil {
+		return ""
+	}
+	return "BDMV/CLIPINF/" + m[2] + ".clpi"
 }
