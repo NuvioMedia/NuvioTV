@@ -46,8 +46,8 @@ class TimelinePreviewSurfaceTvTest {
     private var activeClip: File? = null
     private fun main(block: () -> Unit) = instrumentation.runOnMainSync(block)
 
-    private fun decoded(block: (List<TimelineFrameImage>) -> Unit) {
-        val clip = originalTimelineVideo(context)
+    private fun decoded(durationSeconds: Int = 6, block: (List<TimelineFrameImage>) -> Unit) {
+        val clip = originalTimelineVideo(context, durationSeconds)
         activeClip = clip
         var reader: TelumiaFrameExtractor? = null
         try {
@@ -125,10 +125,11 @@ class TimelinePreviewSurfaceTvTest {
         compose.onNodeWithTag("timeline-preview-image").assertDoesNotExist()
     }
 
-    @Test fun previewTilesDoNotStealDpadFocusAndSeekStillCommitsOnlyOnKeyUp() = decoded { frames ->
+    @Test fun previewTilesDoNotStealDpadFocusAndSeekStillCommitsOnlyOnKeyUp() = decoded(durationSeconds = 30) { frames ->
         val focus = FocusRequester()
         val up = FocusRequester()
-        val pending = mutableStateOf(0L)
+        val pending = mutableStateOf(2000L)
+        var duration = 0L
         var delta: Long? = null
         var commits = 0
         var primary: ExoPlayer? = null
@@ -144,13 +145,14 @@ class TimelinePreviewSurfaceTvTest {
         } }
         try {
             compose.waitUntil(10000) { prepared.get() }
+            main { duration = primary!!.duration; assertEquals(30000L, duration) }
             compose.setContent { NuvioTheme(navigationMotion = NavigationMotion.OFF) {
                 Column(Modifier.fillMaxSize().background(Color(0xFF060C13)).padding(16.dp).testTag("preview-viewport"),
                     verticalArrangement = Arrangement.Bottom) {
                     Button(onClick = {}, modifier = Modifier.focusRequester(up).testTag("preview-up-action")) { Text("Controles") }
                     PlayerTimelinePreviewSurface(TimelineFrameState.Ready(frames.last(), frames.dropLast(1)),4500,4500,
                         compact = LocalConfiguration.current.screenHeightDp < 440)
-                        PlayerProgressBar(pending.value,6000,onSeekPreview = { value -> delta = value; pending.value = value.coerceIn(0,6000) },
+                        PlayerProgressBar(pending.value,duration,onSeekPreview = { value -> delta = value; pending.value = (pending.value + value).coerceIn(0,duration) },
                             onSeekCommit = { commits++; primary!!.seekTo(pending.value) },focusRequester = focus,upFocusRequester = up,
                             modifier = Modifier.testTag("preview-progress"))
                 }
@@ -165,6 +167,23 @@ class TimelinePreviewSurfaceTvTest {
             instrumentation.sendKeySync(KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_RIGHT))
             compose.waitForIdle()
             assertEquals(1, commits)
+            assertEquals(12000L, pending.value)
+            main { assertEquals(pending.value, primary!!.currentPosition) }
+            // End-of-stream is a separate boundary: Media3 clamps to duration - 1 ms.
+            compose.runOnIdle { pending.value = duration - 1000 }
+            instrumentation.sendKeySync(KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_RIGHT))
+            compose.waitForIdle()
+            assertEquals(duration, pending.value)
+            assertEquals(1, commits)
+            main { assertEquals(12000L, primary!!.currentPosition) }
+            instrumentation.sendKeySync(KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_RIGHT))
+            compose.waitForIdle()
+            assertEquals(2, commits)
+            main { assertEquals(duration - 1, primary!!.currentPosition) }
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_LEFT)
+            compose.waitForIdle()
+            assertEquals(3, commits)
+            assertEquals(20000L, pending.value)
             main { assertEquals(pending.value, primary!!.currentPosition) }
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP)
             compose.onNodeWithTag("preview-up-action").assertIsFocused()

@@ -8,8 +8,10 @@ import android.media.MediaMuxer
 import java.io.File
 import java.util.UUID
 
-/** Original six-second red/blue AVC test clip, encoded locally. No downloaded media or external encoder. */
-internal fun originalTimelineVideo(context: Context): File {
+/** Original red/blue AVC clip (six seconds by default), encoded locally. No downloaded media or external encoder. */
+internal fun originalTimelineVideo(context: Context, durationSeconds: Int = 6): File {
+    require(durationSeconds in 6..60)
+    val frameCount = durationSeconds * 2
     val file = File(context.cacheDir, "telumia-timeline-test-${UUID.randomUUID()}.mp4")
     val encoder = MediaCodec.createEncoderByType("video/avc")
     var muxer: MediaMuxer? = null
@@ -46,13 +48,13 @@ internal fun originalTimelineVideo(context: Context): File {
             }
         }
         val deadline = android.os.SystemClock.elapsedRealtime() + 15000
-        for (frame in 0..12) {
+        for (frame in 0..frameCount) {
             var index = encoder.dequeueInputBuffer(10000)
             while (index < 0) {
                 check(android.os.SystemClock.elapsedRealtime() < deadline) { "Fixture encoder timeout" }
                 drain(10000); index = encoder.dequeueInputBuffer(10000)
             }
-            if (frame == 12) encoder.queueInputBuffer(index, 0, 0, 6000000, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+            if (frame == frameCount) encoder.queueInputBuffer(index, 0, 0, durationSeconds * 1000000L, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
             else {
                 val image = encoder.getInputImage(index) ?: error("Fixture YUV input unavailable")
                 val values = if (frame < 6) intArrayOf(81, 90, 240) else intArrayOf(41, 240, 110)
