@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "sourceSha256": "e42321606de1b6f6a65d1db84e2e8aa47f3c29af02d578631bb5af2835666b7d",
+  "sourceSha256": "2e10ff52f0b12645862615b77358a48d6a857e6661524aa16ab172858d821667",
   "binarySha256": {
-    "arm64-v8a": "c042bbec5dcc599e0acec4e3fdd507d0cee5111511a4770b46cb3d644c26ad8a",
-    "armeabi-v7a": "ab84e8005644b713be6391eb55e83fef763c67956466a03e0d8d98297ae57197",
-    "x86_64": "06fbad0eb9ebbed3408eea16e6cf7172fb9ad87b76fc62d00978faaee186085c",
-    "x86": "5a8ecefaafcb97ecc66d68c1a026dd38e239b47181811af9b4c93ccf22e26b1d"
+    "arm64-v8a": "55a27589f2437898c28ae52de5c3f3bdfb71fbbc5f18cd64d45a2ed9d87672b1",
+    "armeabi-v7a": "982a2fcd0c6b616abbd3b8fed8e9b82939207d605cfe4e6bff138b073c9ad8e4",
+    "x86_64": "8b5f405cd4b2a95cc0e34547d57515def3a6823f41d9f1f3fc7e1f8e82246df1",
+    "x86": "a674c551ed074a515fe7b1d42e0359631530292d2d15fd557b4ef381f3117e8d"
   },
   "toolchain": {
     "go": "go version go1.27.2 windows/amd64",
