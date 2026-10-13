@@ -8,6 +8,7 @@ import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Subtitle
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.util.concurrent.Executors
@@ -426,7 +427,7 @@ class UsenetSidecar private constructor(private val context: Context) {
         trace?.mark("sidecar_spawned")
         process = child
         processProfile = cfg.profile
-        startupReader.execute { child.errorStream.use { input -> val bytes = ByteArray(4096); while (input.read(bytes) >= 0) { /* no credentials in Android logs */ } } }
+        startupReader.execute { drainQuietly(child.errorStream) }
         val bootstrap = JSONObject().apply {
             put("token", secret)
             put("nzbCacheDir", File(context.cacheDir, "usenet-nzb").absolutePath)
@@ -519,5 +520,17 @@ class UsenetSidecar private constructor(private val context: Context) {
         fun stopIdleOnBackground() { appForeground = false; instance?.onAppBackgrounded() }
         fun isSessionUrl(url: String): Boolean = UsenetEngineUrls.isSession(url)
         fun isSubtitleUrl(url: String): Boolean = UsenetEngineUrls.isSubtitle(url)
+
+        /**
+         * Reads the engine's stderr until it ends, keeping none of it: no credentials in Android logs.
+         * Stopping the engine closes the stream under this read, which then throws; on an executor
+         * thread an uncaught exception would kill the app.
+         */
+        internal fun drainQuietly(input: InputStream) {
+            try {
+                input.use { val bytes = ByteArray(4096); while (it.read(bytes) >= 0) Unit }
+            } catch (_: IOException) {
+            }
+        }
     }
 }
