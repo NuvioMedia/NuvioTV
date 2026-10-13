@@ -59,6 +59,20 @@ class BuiltInUsenetServiceTest {
         assertEquals(listOf("Movie.2020.1080p-GRP", "Movie.2020.720p-GRP"), names(config.copy(hideDuplicates = true)))
     }
 
+    @Test fun `results show their release name unless turned off`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(
+            UsenetRelease("Movie.2020.1080p-GRP", "https://a.test/nzb/1", size = 2L shl 30, indexerId = indexer.id, indexerName = indexer.name))
+        val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
+        suspend fun description(config: UsenetSourceConfiguration) =
+            service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams.single().description
+        assertEquals("Movie.2020.1080p-GRP\n2.00 GB • A", description(config))
+        assertEquals("2.00 GB • A", description(config.copy(showReleaseNames = false)))
+    }
+
     @Test fun `with fallback on lower priority indexers are only searched when higher ones find nothing`() = runTest {
         val first = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api", priority = 1)
         val shared = UsenetIndexer(id = "b", name = "B", apiUrl = "https://b.test/api", priority = 1)

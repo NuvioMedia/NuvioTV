@@ -55,6 +55,8 @@
     <string name="usenet_indexer_fallback">Search lower priorities only as fallback</string>
     <string name="usenet_indexer_fallback_description">Off: every indexer is searched. On: lower-priority indexers are only searched when the higher ones find nothing, which saves API hits.</string>
     <string name="usenet_hide_duplicates">Hide repeated releases</string>
+    <string name="usenet_show_release_names">Show release names</string>
+    <string name="usenet_show_release_names_description">Show the release name of each result above its size, age and indexer.</string>
     <string name="usenet_hide_duplicates_description">Show a release found by several indexers once, from the indexer with the highest priority.</string>
     <string name="usenet_provider_test">Test provider</string>
     <string name="usenet_provider_test_running">Connecting to the provider…</string>
