@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit
 /** Production surface and progress widget, actual local AVC frames, recording seek callbacks.
  * This is not authenticated MainActivity or all-player-route proof. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class TimelinePreviewSurfaceTvTest {
     @get:Rule val compose = createComposeRule()

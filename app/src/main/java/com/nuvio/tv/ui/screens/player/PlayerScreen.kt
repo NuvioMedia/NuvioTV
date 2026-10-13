@@ -1512,8 +1512,8 @@ fun PlayerScreen(
                 !uiState.showSubtitleDelayOverlay && !uiState.showSubtitleTimingDialog &&
                 !uiState.showMoreDialog &&
                 !viewModel.playbackTimeline.collectAsState().value.isLive,
-            enter = fadeIn(animationSpec = tween(150)),
-            exit = fadeOut(animationSpec = tween(150)),
+            enter = fadeIn(animationSpec = tween(com.nuvio.tv.ui.theme.LocalUiMotion.current.durationMillis(150))),
+            exit = fadeOut(animationSpec = tween(com.nuvio.tv.ui.theme.LocalUiMotion.current.durationMillis(150))),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             SeekOverlayHost(viewModel = viewModel)
