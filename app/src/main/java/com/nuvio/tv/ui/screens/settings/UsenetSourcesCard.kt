@@ -112,6 +112,9 @@ internal fun UsenetSourcesCard(
         SettingsToggleRow(title = stringResource(R.string.usenet_hide_duplicates),
             subtitle = stringResource(R.string.usenet_hide_duplicates_description), checked = configuration.hideDuplicates,
             onToggle = { update(configuration.copy(hideDuplicates = !configuration.hideDuplicates)) })
+        SettingsToggleRow(title = stringResource(R.string.usenet_show_release_names),
+            subtitle = stringResource(R.string.usenet_show_release_names_description), checked = configuration.showReleaseNames,
+            onToggle = { update(configuration.copy(showReleaseNames = !configuration.showReleaseNames)) })
         if (configuration.enabled && !configuration.ready) {
             Text(stringResource(R.string.usenet_sources_needed), color = NuvioTheme.colors.TextSecondary)
         }
