@@ -172,7 +172,13 @@ internal class PlayerTimelineFrames(
         }
         val token = ++revision
         val ready = mutable.value as? TimelineFrameState.Ready
-        if (ready?.image?.requestedMs != positionMs) mutable.value = TimelineFrameState.Loading(positionMs)
+        if (ready?.image?.requestedMs != positionMs) {
+            mutable.value = if (ready != null && latestPreviewInput != null) {
+                // Keep the same session's decoded sample visible between remote repeats.
+                // The surface labels its real timestamp while updating the destination.
+                ready.copy(provisional = true)
+            } else TimelineFrameState.Loading(positionMs)
+        }
         requests.trySend(Request(current, positionMs, filmstrip, token))
     }
 

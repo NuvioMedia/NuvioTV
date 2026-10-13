@@ -276,8 +276,11 @@ class TimelineFramesTvTest {
                 lane!!.bind(input)
             }
             val started = android.os.SystemClock.elapsedRealtime()
-            while (android.os.SystemClock.elapsedRealtime() - started < 1800) {
+            var firstSampleAt: Long? = null
+            while (firstSampleAt == null || android.os.SystemClock.elapsedRealtime() - firstSampleAt!! < 1800) {
                 val elapsed = android.os.SystemClock.elapsedRealtime() - started
+                assertTrue("Cold decoding must publish during the held seek within the bounded frame budget", elapsed < 8500)
+                if (firstSampleAt == null && samples.get() > 0) firstSampleAt = android.os.SystemClock.elapsedRealtime()
                 val phase = (elapsed / 55) % 18
                 val step = if (phase <= 9) phase else 18 - phase
                 main { input.value = first.copy(positionMs = 500 + step * 400) }

@@ -85,9 +85,24 @@ class TimelinePreviewSurfaceTvTest {
     }
 
     private fun capture(name: String) {
-        File(context.getExternalFilesDir(null), name).outputStream().use {
-            assertTrue(instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG, 100, it))
+        compose.waitForIdle()
+        instrumentation.waitForIdleSync()
+        var rendered: Bitmap? = null
+        // Semantic nodes can be ready before the activity's first framebuffer commit.
+        // Require the actual decoded blue frame and the dark viewport in the screenshot.
+        compose.waitUntil(5000) {
+            val candidate = instrumentation.uiAutomation.takeScreenshot()
+            val blue = candidate.getPixel(candidate.width / 2, candidate.height / 5)
+            val backdrop = candidate.getPixel(candidate.width / 10, candidate.height / 2)
+            val visible = android.graphics.Color.blue(blue) > 180 && android.graphics.Color.red(blue) < 60 &&
+                android.graphics.Color.red(backdrop) < 40 && android.graphics.Color.green(backdrop) < 40
+            if (visible) rendered = candidate else candidate.recycle()
+            visible
         }
+        File(context.getExternalFilesDir(null), name).outputStream().use {
+            assertTrue(requireNotNull(rendered).compress(Bitmap.CompressFormat.PNG, 100, it))
+        }
+        rendered!!.recycle()
     }
 
     @Test fun fullMotionShowsRealFramesAndOrderedFilmstripWithinTheViewport() = decoded { frames ->
