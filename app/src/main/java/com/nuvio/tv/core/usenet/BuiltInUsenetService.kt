@@ -371,8 +371,9 @@ class BuiltInUsenetService @Inject constructor(
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration): Stream {
         val sizeLabel = if (size > 0) "%.2f GB".format(Locale.ROOT, size / (1024.0 * 1024 * 1024)) else null
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
+        val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
         return Stream(name = "Usenet • $indexerName", title = title,
-            description = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • "),
+            description = if (config.showReleaseNames) "$title\n$details" else details,
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
             behaviorHints = null, addonName = GROUP_NAME, addonLogo = null,
             nzbUrl = nzbUrl, servers = config.providers.filter { it.enabled }.map { it.serverUrl() },
