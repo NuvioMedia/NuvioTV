@@ -19,6 +19,18 @@ data class WeTrakrSyncState(
         get() = snapshot?.isInitialized == true
 }
 
+data class WeTrakrSyncPause(
+    val untilEpochMs: Long,
+    val reason: WeTrakrSyncError
+)
+
+fun WeTrakrSyncState.pause(nowEpochMs: Long): WeTrakrSyncPause? {
+    val reason = error?.takeIf { it == WeTrakrSyncError.RATE_LIMIT || it == WeTrakrSyncError.QUOTA_EXCEEDED }
+        ?: return null
+    val until = retryAtEpochMs?.takeIf { it > nowEpochMs } ?: return null
+    return WeTrakrSyncPause(until, reason)
+}
+
 internal fun Throwable.toWeTrakrSyncError(): WeTrakrSyncError = when {
     this is WeTrakrAuthException -> WeTrakrSyncError.AUTHORIZATION_REVOKED
     this is WeTrakrDecodingException -> WeTrakrSyncError.INVALID_RESPONSE

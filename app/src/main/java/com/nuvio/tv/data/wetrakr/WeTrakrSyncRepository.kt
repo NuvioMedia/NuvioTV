@@ -6,6 +6,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +37,7 @@ class WeTrakrSyncRepository(
     private val gate = TrackingRefreshGate()
     private val mutableState = MutableStateFlow(WeTrakrSyncState())
     private val mutableProjection = MutableStateFlow(WeTrakrProgressState())
+    private var resumeJob: Job? = null
     val state = mutableState.asStateFlow()
     internal val progressState = mutableProjection.asStateFlow()
 
@@ -96,8 +99,18 @@ class WeTrakrSyncRepository(
                         retryAtEpochMs = (error as? WeTrakrApiException)?.retryAtEpochMs,
                         attemptedAtEpochMs = attemptedAt
                     )
+                    scheduleResume(scope)
                 }
             }
+        }
+    }
+
+    private fun scheduleResume(scope: WeTrakrAuthScope) {
+        val pause = mutableState.value.takeIf { matchesCurrent(it.scope) }?.pause(now()) ?: return
+        resumeJob?.cancel()
+        resumeJob = coroutineScope.launch {
+            delay(pause.untilEpochMs - now())
+            if (matchesCurrent(scope)) refresh(TrackingRefreshIntent.INVALIDATED)
         }
     }
 
