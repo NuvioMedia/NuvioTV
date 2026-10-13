@@ -2,6 +2,7 @@ package engine
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -396,5 +397,40 @@ func TestSevenZipNestedRAR(t *testing.T) {
 				t.Fatalf("sequential read mismatch (%d bytes)", len(got))
 			}
 		})
+	}
+}
+
+// nested_iso.7z.gz is a stored 7z of a RAR5 set holding a Blu-ray disc image,
+// as some UHD releases are posted (7z a -mx0 nested_iso.7z disc.part*.rar),
+// gzipped because the image is mostly padding. The volumes are packedRARSet's,
+// of 16 KiB, over buildUDF(blurayTree(feature, extra)) of the payloads below.
+func TestSevenZipNestedRARDiscImage(t *testing.T) {
+	feature := payload(70000)[1000:]
+	gz, err := gzip.NewReader(bytes.NewReader(sevenZipFixture(t, "nested_iso.7z.gz")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	archive, err := io.ReadAll(gz)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vols := splitVolumes(archive, func(i int) string { return fmt.Sprintf("x.7z.%03d", i+1) }, 9000, repeat(131072, 10)...)
+	files := setupWithPassword(t, vols, "")
+	c, err := Select(context.Background(), files, Selection{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Name != "Movie.2026.BluRay.iso/BDMV/STREAM/00800.m2ts" || c.Size != int64(len(feature)) {
+		t.Fatalf("selected %q (%d bytes)", c.Name, c.Size)
+	}
+	if c.disc == nil || c.clipInfo == nil {
+		t.Fatal("the image's clip lost its disc files")
+	}
+	if got := readAllContent(t, c); !bytes.Equal(got, feature) {
+		t.Fatal("feature bytes differ")
+	}
+	// A selector names a file, and an image is not one.
+	if _, err := Select(context.Background(), files, Selection{FileMustInclude: "00800"}); err == nil {
+		t.Fatal("a selector chose a clip inside the image")
 	}
 }
