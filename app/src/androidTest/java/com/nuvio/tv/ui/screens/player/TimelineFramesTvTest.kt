@@ -13,6 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -253,6 +255,65 @@ class TimelineFramesTvTest {
             main { lane?.release(); scope.cancel() }
             socket.close(); worker.join(2000); clip.delete()
         }
+    }
+
+    @Test fun boundContinuousSeekKeepsItsHoldTimerAndClearsOldOwnership() {
+        val clip = originalTimelineVideo(context)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val url = Uri.fromFile(clip).toString()
+        val owner = com.nuvio.tv.core.player.metadata.SceneBookmarkScope(
+            com.nuvio.tv.core.profile.studio.ProfileAvatarScope("device-local",1,"native-seek-owner"),
+            "fixture","movie","fixture",com.nuvio.tv.core.player.metadata.SceneBookmarkScope.sourceEdition(url))
+        val first = TimelinePreviewInput(owner,url,emptyMap(),6000,500)
+        val input = kotlinx.coroutines.flow.MutableStateFlow<TimelinePreviewInput?>(first)
+        var lane: PlayerTimelineFrames? = null
+        try {
+            val holding = java.util.concurrent.atomic.AtomicBoolean(true)
+            val samples = java.util.concurrent.atomic.AtomicInteger()
+            main {
+                lane = PlayerTimelineFrames(context,PlayerMediaSourceFactory(context),scope)
+                scope.launch { lane!!.state.collect { if (holding.get() && it is TimelineFrameState.Ready) samples.incrementAndGet() } }
+                lane!!.bind(input)
+            }
+            val started = android.os.SystemClock.elapsedRealtime()
+            while (android.os.SystemClock.elapsedRealtime() - started < 1800) {
+                val elapsed = android.os.SystemClock.elapsedRealtime() - started
+                val phase = (elapsed / 55) % 18
+                val step = if (phase <= 9) phase else 18 - phase
+                main { input.value = first.copy(positionMs = 500 + step * 400) }
+                Thread.sleep(55)
+            }
+            holding.set(false)
+            main { input.value = first.copy(positionMs = 3000) }
+            await { (lane!!.state.value as? TimelineFrameState.Ready)?.let { it.image.requestedMs == 3000L && it.neighbors.isNotEmpty() } == true }
+            assertTrue("Continuous seeking must publish real samples, not wait for key release", samples.get() > 0)
+            main {
+                assertTrue(lane!!.isCurrent(input.value))
+                input.value = first.copy(owner = owner.copy(owner = owner.owner.copy(identity = "another-native-owner")))
+            }
+            await { !lane!!.isCurrent(first.copy(positionMs = 3000)) }
+            main { input.value = null }
+            await { lane!!.state.value == TimelineFrameState.Idle }
+            Thread.sleep(250)
+            assertEquals(TimelineFrameState.Idle, lane!!.state.value)
+        } finally { main { lane?.release(); scope.cancel() }; clip.delete() }
+    }
+
+    @Test fun audioOnlySourceBecomesUnavailableWithoutCrashingAndCanRecover() {
+        val audio = com.nuvio.tv.core.player.originalPreviewWave(context)
+        val clip = originalTimelineVideo(context)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        var lane: PlayerTimelineFrames? = null
+        try {
+            main {
+                lane = PlayerTimelineFrames(context, PlayerMediaSourceFactory(context), scope)
+                lane!!.request(TimelineFrameSession(Any(), Uri.fromFile(audio).toString(), emptyMap(), 10000), 500)
+            }
+            await { lane!!.state.value is TimelineFrameState.Unavailable }
+            main { lane!!.request(TimelineFrameSession(Any(), Uri.fromFile(clip).toString(), emptyMap(), 6000), 500) }
+            await { lane!!.state.value is TimelineFrameState.Ready }
+            assertEquals(500L, (lane!!.state.value as TimelineFrameState.Ready).image.decodedMs)
+        } finally { main { lane?.release(); scope.cancel() }; audio.delete(); clip.delete() }
     }
 
     @Test fun filmstripContainsDistinctDecodedNeighborsWithinTheSameSession() {

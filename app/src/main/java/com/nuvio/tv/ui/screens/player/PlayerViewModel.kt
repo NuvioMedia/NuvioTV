@@ -41,6 +41,8 @@ import com.nuvio.tv.data.trailer.TrailerService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -181,6 +183,47 @@ class PlayerViewModel @Inject constructor(
         controller.onEvent(PlayerEvent.OnSeekTo(it))
     }
 
+    private val previewForeground = MutableStateFlow(false)
+    private val previewSeekFocused = MutableStateFlow(false)
+    private val timelineFrames = PlayerTimelineFrames(context, controller.mediaSourceFactory, viewModelScope)
+    internal val timelinePreviewState = timelineFrames.state
+
+    init {
+        timelineFrames.bind(combine(controller.uiState, controller.playbackTimeline, sceneBookmarks.state,
+            previewForeground, previewSeekFocused) { ui, timeline, bookmarks, foreground, focused ->
+            timelinePreviewInput(ui, timeline, bookmarks, foreground, focused)
+        })
+    }
+
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    private fun timelinePreviewInput(ui: PlayerUiState, timeline: PlaybackTimelineState,
+        bookmarks: SceneBookmarkPanelState, foreground: Boolean, focused: Boolean): TimelinePreviewInput? {
+        val primary = controller.exoPlayer
+        val seekableVideo = primary?.videoFormat != null && primary.isCurrentMediaItemSeekable
+        if (!canShowTimelinePreview(ui, timeline, foreground, focused, seekableVideo)) return null
+        val owner = bookmarks.scope?.takeIf(sceneBookmarkRepository::eligible) ?: return null
+        val position = normalizedTimelinePreviewPosition(ui.pendingPreviewSeekPosition!!, timeline.duration) ?: return null
+        val url = controller.getCurrentStreamUrl().takeIf { it.isNotBlank() } ?: return null
+        return TimelinePreviewInput(owner, url, controller.getCurrentHeaders().toMap(), timeline.duration, position)
+    }
+
+    internal fun isTimelinePreviewCurrent(): Boolean = timelineFrames.isCurrent(timelinePreviewInput(
+        controller.uiState.value, controller.playbackTimeline.value, sceneBookmarks.state.value,
+        previewForeground.value, previewSeekFocused.value))
+
+    internal fun setTimelinePreviewForeground(foreground: Boolean) {
+        previewForeground.value = foreground
+        if (!foreground) {
+            controller.pendingPreviewSeekPosition = null
+            timelineFrames.hide()
+        }
+    }
+
+    internal fun setTimelineSeekFocused(focused: Boolean) {
+        previewSeekFocused.value = focused
+        if (!focused && controller.uiState.value.showControls) timelineFrames.hide()
+    }
+
     val playbackTimeline: StateFlow<PlaybackTimelineState>
         get() = controller.playbackTimeline
 
@@ -207,6 +250,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun stopAndRelease() {
+        setTimelinePreviewForeground(false)
         postPlayRecommendationController.stop()
         controller.stopAndRelease()
     }
@@ -252,10 +296,12 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun pauseForLifecycle() {
+        setTimelinePreviewForeground(false)
         controller.pauseForLifecycle()
     }
 
     fun resumeForLifecycle() {
+        setTimelinePreviewForeground(true)
         controller.resumeForLifecycle()
     }
 
@@ -276,6 +322,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        timelineFrames.release()
         postPlayRecommendationController.stop()
         controller.onCleared()
         // Allow the trailer player to be re-created when returning to home screen.

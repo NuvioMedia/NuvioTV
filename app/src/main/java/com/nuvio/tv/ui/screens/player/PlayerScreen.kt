@@ -427,6 +427,7 @@ fun PlayerScreen(
 
     // Handle lifecycle events
     DisposableEffect(lifecycleOwner) {
+        viewModel.setTimelinePreviewForeground(lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
@@ -442,6 +443,7 @@ fun PlayerScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            viewModel.setTimelinePreviewForeground(false)
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
@@ -2258,7 +2260,7 @@ private fun PlayerControlsOverlay(
         ) {
             val skipIntroVisible = uiState.activeSkipInterval != null
 
-            AnimatedVisibility(
+            if (uiState.pendingPreviewSeekPosition == null) AnimatedVisibility(
                 visible = !skipIntroVisible,
                 enter = fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
                 exit = fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.fast))
@@ -2569,6 +2571,8 @@ private fun PlayerControlsProgressBarHost(
     val markers = rememberPlayerTimedMarkers(metadataState.timedMetadata, playbackTimeline.duration) +
         bookmarkState.let { viewModel.sceneBookmarks.markers(playbackTimeline.duration) }
 
+    Column(Modifier.fillMaxWidth()) {
+    PlayerTimelinePreviewHost(viewModel)
     PlayerProgressBar(
         timedMarkers = markers,
         currentPosition = playbackTimeline.currentPosition,
@@ -2584,8 +2588,10 @@ private fun PlayerControlsProgressBarHost(
         downFocusRequester = downFocusRequester,
         onUpKey = onUpKey,
         onFocused = onFocused,
+        onSeekFocusChanged = viewModel::setTimelineSeekFocused,
         bufferedPosition = playbackTimeline.bufferedPosition
     )
+    }
 }
 
 @Composable
@@ -2735,9 +2741,11 @@ internal fun PlayerProgressBar(
     downFocusRequester: FocusRequester? = null,
     onUpKey: (() -> Unit)? = null,
     onFocused: (() -> Unit)? = null,
+    onSeekFocusChanged: ((Boolean) -> Unit)? = null,
     /** Position (ms) up to which content is buffered. Pass 0 to skip the overlay. */
     bufferedPosition: Long = 0L,
-    timedMarkers: List<com.nuvio.tv.core.player.metadata.PlayerTimedMarker> = emptyList()
+    timedMarkers: List<com.nuvio.tv.core.player.metadata.PlayerTimedMarker> = emptyList(),
+    modifier: Modifier = Modifier,
 ) {
     val motion = com.nuvio.tv.ui.theme.LocalUiMotion.current
     val markerDescription = listOf(stringResource(R.string.player_seek_position), timedMarkers.take(12).joinToString(" · ") { it.label }).filter { it.isNotBlank() }.joinToString(" · ")
@@ -2762,8 +2770,12 @@ internal fun PlayerProgressBar(
     )
     var isFocused by remember { mutableStateOf(false) }
 
+    DisposableEffect(onSeekFocusChanged) {
+        onDispose { onSeekFocusChanged?.invoke(false) }
+    }
+
     BoxWithConstraints(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(if (isFocused) NuvioTheme.spacing.md else NuvioTheme.spacing.sm)
             .then(
@@ -2782,6 +2794,7 @@ internal fun PlayerProgressBar(
             )
             .onFocusChanged {
                 isFocused = it.isFocused
+                onSeekFocusChanged?.invoke(it.isFocused)
                 if (it.isFocused) onFocused?.invoke()
             }
             .focusable()
@@ -2887,13 +2900,15 @@ private fun SeekOverlay(
     currentPosition: Long,
     duration: Long,
     bufferedPosition: Long = 0L,
-    timedMarkers: List<com.nuvio.tv.core.player.metadata.PlayerTimedMarker> = emptyList()
+    timedMarkers: List<com.nuvio.tv.core.player.metadata.PlayerTimedMarker> = emptyList(),
+    preview: @Composable () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = NuvioTheme.spacing.xxl, vertical = NuvioTheme.spacing.xl)
     ) {
+        preview()
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             PlayerProgressBar(
                 timedMarkers = timedMarkers,
@@ -2928,6 +2943,7 @@ private fun SeekOverlayHost(viewModel: PlayerViewModel) {
     val bookmarkState by viewModel.sceneBookmarks.state.collectAsState()
 
     SeekOverlay(
+        preview = { PlayerTimelinePreviewHost(viewModel) },
         timedMarkers = rememberPlayerTimedMarkers(metadataState.timedMetadata, playbackTimeline.duration) +
             bookmarkState.let { viewModel.sceneBookmarks.markers(playbackTimeline.duration) },
         currentPosition = playbackTimeline.currentPosition,

@@ -3251,4 +3251,10 @@
     <string name="studio_avatar_decrease">Diminuir %1$s</string>
     <string name="studio_avatar_increase">Aumentar %1$s</string>
     <string name="studio_avatar_save_error">Não foi possível alterar o avatar. A seleção anterior foi mantida.</string>
+    <string name="timeline_preview_position">Prévia · %1$s</string>
+    <string name="timeline_preview_decoded">Cena decodificada em %1$s</string>
+    <string name="timeline_preview_loading">Buscando esta cena…</string>
+    <string name="timeline_preview_unavailable">Prévia da cena indisponível</string>
+    <string name="timeline_preview_filmstrip">Cenas próximas decodificadas</string>
+    <string name="timeline_preview_catching_up">Atualizando a cena…</string>
 </resources>

@@ -551,8 +551,15 @@ public final class TelumiaFrameExtractor {
         // and extractedFrameNeedsRendering remains false. No frames are rendered. Repeat the
         // previously returned frame.
         CallbackToFutureAdapter.Completer<Frame> frameBeingExtractedCompleter =
-            checkNotNull(frameBeingExtractedCompleterAtomicReference.getAndSet(null));
-        frameBeingExtractedCompleter.set(checkNotNull(lastExtractedFrame));
+            frameBeingExtractedCompleterAtomicReference.getAndSet(null);
+        if (frameBeingExtractedCompleter != null) {
+          if (lastExtractedFrame != null) {
+            frameBeingExtractedCompleter.set(lastExtractedFrame);
+          } else {
+            frameBeingExtractedCompleter.setException(new PlaybackException(
+                "No decoded preview frame", null, ERROR_CODE_FAILED_RUNTIME_CHECK));
+          }
+        }
       }
     }
   }
