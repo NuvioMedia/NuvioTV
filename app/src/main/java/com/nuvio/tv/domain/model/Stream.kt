@@ -175,7 +175,12 @@ data class StreamBadge(
     val tagStyle: String = "",
     val textColor: String = "",
     val borderColor: String = ""
-)
+) {
+    companion object {
+        /** A badge a source draws as its name, in its colours, rather than as an image. */
+        const val STYLE_LABEL = "label"
+    }
+}
 
 @Immutable
 data class StreamDebridCacheStatus(
