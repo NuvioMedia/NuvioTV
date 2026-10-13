@@ -5,6 +5,8 @@ import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.StreamBadge
+import com.nuvio.tv.domain.model.StreamBehaviorHints
 import java.io.IOException
 import java.text.DateFormat
 import java.time.ZonedDateTime
@@ -375,12 +377,18 @@ class BuiltInUsenetService @Inject constructor(
         return Stream(name = "Usenet • $indexerName", title = title,
             description = if (config.showReleaseNames) "$title\n$details" else details,
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
-            behaviorHints = null, addonName = GROUP_NAME, addonLogo = null,
+            // The size badge, as other sources show it.
+            behaviorHints = size.takeIf { it > 0 }?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
+            addonName = GROUP_NAME, addonLogo = null,
+            badges = listOfNotNull(blurayLabel?.let {
+                StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+            }),
             nzbUrl = nzbUrl, servers = config.providers.filter { it.enabled }.map { it.serverUrl() },
             quality = resolution.takeIf { it > 0 }?.let { "${it}p" }, qualityValue = resolution)
     }
 
     companion object {
         const val GROUP_NAME = "Built-in Usenet"
+        private const val BLURAY_COLOR = "#0B5ED7"
     }
 }

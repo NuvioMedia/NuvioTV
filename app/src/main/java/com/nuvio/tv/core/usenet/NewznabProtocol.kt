@@ -49,6 +49,11 @@ data class UsenetRelease(
     val lowQuality: Boolean = LOW_QUALITY.containsMatchIn(title)
     /** A whole Blu-ray or DVD (disc folder or ISO): the feature is one clip among many, not one video. */
     val fullDisc: Boolean = FULL_DISC.containsMatchIn(title) && !NOT_DISC.containsMatchIn(title)
+    /** A whole Blu-ray's label on its result; null for anything else, DVDs among them. */
+    val blurayLabel: String? = if (!fullDisc || DVD.containsMatchIn(title)) null else {
+        val uhd = resolution >= 2160 || UHD.containsMatchIn(title)
+        (if (uhd) "UHD BLU-RAY" else "BLU-RAY") + if (ISO.containsMatchIn(title)) " ISO" else ""
+    }
 
     private companion object {
         val RESOLUTION = Regex("(?i)(?<!\\d)(2160|1080|720|480|360)p?(?!\\d)")
@@ -56,6 +61,9 @@ data class UsenetRelease(
         val LOW_QUALITY = Regex("(?i)(?:^|[ ._-])(?:cam|hdcam|telesync|telecine|hdts|ts|tc|scr|dvdscr)(?:$|[ ._-])")
         val FULL_DISC = Regex("(?i)(?:^|[ ._(\\[-])(?:complete[ ._-]+(?:uhd[ ._-]+)?(?:blu-?ray|bd|dvd|mpeg)|bd(?:25|50|66|100)|bdmv|dvd[59]|iso)(?:$|[ ._)\\]-])")
         // Remuxes, encodes and rips of a disc are single videos, even when named after it.
+        val DVD = Regex("(?i)(?:^|[ ._(\\[-])(?:dvd[59r]?|complete[ ._-]+dvd)(?:$|[ ._)\\]-])")
+        val ISO = Regex("(?i)(?:^|[ ._(\\[-])iso(?:$|[ ._)\\]-])")
+        val UHD = Regex("(?i)(?:^|[ ._(\\[-])uhd(?:$|[ ._)\\]-])")
         val NOT_DISC = Regex("(?i)(?:^|[ ._-])(?:remux|[xh][ .]?26[45]|av1|re-?encode|[a-z]*rip|web-?dl)(?:$|[ ._-])")
     }
 }

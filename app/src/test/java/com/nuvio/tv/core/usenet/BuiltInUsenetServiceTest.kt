@@ -9,6 +9,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import com.nuvio.tv.domain.model.StreamBadge
 import org.junit.Assert.*
 import org.junit.Test
 import retrofit2.Response
@@ -57,6 +58,27 @@ class BuiltInUsenetServiceTest {
         coVerify { client.search(backup, any(), any()) }
         // Hidden repeats keep the higher-priority indexer's copy.
         assertEquals(listOf("Movie.2020.1080p-GRP", "Movie.2020.720p-GRP"), names(config.copy(hideDuplicates = true)))
+    }
+
+    @Test fun `a whole Blu-ray carries its label, and every result its size`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer),
+            excludeFullDisc = false)
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(
+            UsenetRelease("Movie.2019.COMPLETE.UHD.BLURAY-GRP", "https://a.test/nzb/1", size = 60L shl 30, indexerId = "a", indexerName = "A"),
+            UsenetRelease("Movie.2019.2160p.BluRay.REMUX.HEVC-GRP", "https://a.test/nzb/2", indexerId = "a", indexerName = "A"))
+        val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
+        val streams = service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams
+        val disc = streams.single { it.title!!.contains("COMPLETE") }
+        assertEquals(listOf("UHD BLU-RAY"), disc.badges.map { it.name })
+        assertEquals(StreamBadge.STYLE_LABEL, disc.badges.single().tagStyle)
+        assertEquals(60L shl 30, disc.behaviorHints?.videoSize)
+        val remux = streams.single { it.title!!.contains("REMUX") }
+        assertTrue(remux.badges.isEmpty())
+        // No size known: no size badge.
+        assertNull(remux.behaviorHints)
     }
 
     @Test fun `results show their release name unless turned off`() = runTest {

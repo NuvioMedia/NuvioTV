@@ -157,6 +157,21 @@ class NewznabProtocolTest {
         assertEquals(2, NewznabProtocol.arrange(releases, config.copy(excludeFullDisc = false)).size)
     }
 
+    @Test fun `a whole Blu-ray is labelled by its kind, and nothing else is`() {
+        mapOf(
+            "Movie.2010.COMPLETE.BLURAY-GRP" to "BLU-RAY",
+            "Movie 2010 BD50" to "BLU-RAY",
+            "Movie.2019.COMPLETE.UHD.BLURAY-GRP" to "UHD BLU-RAY",
+            "Movie.2019.2160p.BDMV.HEVC" to "UHD BLU-RAY",
+            "Reservoir.Dogs.1992.1080p.BluRay.DDP5.1.iso" to "BLU-RAY ISO",
+            "Die.Hard.1.1988.4K.UHD.Bluray.Disc.ISO.File-Sixty" to "UHD BLU-RAY ISO",
+        ).forEach { (title, label) -> assertEquals(title, label, UsenetRelease(title, "url").blurayLabel) }
+        // DVDs play no better as discs; encodes and remuxes are single videos.
+        listOf("Movie.2005.COMPLETE.DVD-GRP", "Movie.2005.DVD9-GRP", "Movie.2005.DVD9.ISO",
+            "Movie.2019.2160p.UHD.BluRay.REMUX.HEVC-GRP", "Movie.2019.1080p.BluRay.x264-GRP"
+        ).forEach { assertNull(it, UsenetRelease(it, "url").blurayLabel) }
+    }
+
     @Test fun `entity declarations are rejected without accessing external resources`() {
         assertThrows(IllegalArgumentException::class.java) {
             NewznabProtocol.releases("""<!DOCTYPE rss [<!ENTITY secret SYSTEM "file:///secret">]><rss/>""", indexer)
