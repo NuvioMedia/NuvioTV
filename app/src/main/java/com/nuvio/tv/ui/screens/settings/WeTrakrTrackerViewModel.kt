@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
+import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.TraktSettingsDataStore
+import com.nuvio.tv.data.local.WatchProgressPreferences
+import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthError
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthException
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthRepository
@@ -17,8 +20,11 @@ import com.nuvio.tv.data.wetrakr.WeTrakrDeviceSession
 import com.nuvio.tv.data.wetrakr.WeTrakrSyncError
 import com.nuvio.tv.data.wetrakr.WeTrakrSyncPause
 import com.nuvio.tv.data.wetrakr.WeTrakrSyncRepository
+import com.nuvio.tv.data.wetrakr.WeTrakrUploadKind
+import com.nuvio.tv.data.wetrakr.WeTrakrUploadPreview
 import com.nuvio.tv.data.wetrakr.pause
 import com.nuvio.tv.data.wetrakr.toWeTrakrSyncError
+import com.nuvio.tv.data.wetrakr.weTrakrUploadPreview
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
@@ -33,10 +39,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class WeTrakrTrackerUiState(
     val isConnected: Boolean = false,
@@ -50,6 +59,20 @@ data class WeTrakrTrackerUiState(
     val errorMessage: String? = null,
     val continueWatchingDaysCap: Int = TraktSettingsDataStore.DEFAULT_CONTINUE_WATCHING_DAYS_CAP
 )
+
+data class WeTrakrLocalUploadUiState(
+    val isOpen: Boolean = false,
+    val isScanning: Boolean = false,
+    val preview: WeTrakrUploadPreview? = null,
+    val selected: Set<WeTrakrUploadKind> = WeTrakrUploadKind.entries.toSet(),
+    val errorMessage: String? = null
+) {
+    val requestCount: Int
+        get() = preview?.requestCount(selected) ?: 0
+
+    val uploadCount: Int
+        get() = preview?.groups?.filter { it.kind in selected }?.sumOf { it.toUpload } ?: 0
+}
 
 private data class WeTrakrTrackerAction(
     val scope: WeTrakrAuthScope? = null,
@@ -65,11 +88,17 @@ class WeTrakrTrackerViewModel @Inject constructor(
     private val sync: WeTrakrSyncRepository,
     private val profiles: ProfileManager,
     private val settings: TraktSettingsDataStore,
+    private val watchedItems: WatchedItemsPreferences,
+    private val library: LibraryPreferences,
+    private val watchProgress: WatchProgressPreferences,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     private val action = MutableStateFlow(WeTrakrTrackerAction())
     private var connectionJob: Job? = null
     private var disconnectJob: Job? = null
+    private var localUploadJob: Job? = null
+    private val mutableLocalUpload = MutableStateFlow(WeTrakrLocalUploadUiState())
+    val localUpload: StateFlow<WeTrakrLocalUploadUiState> = mutableLocalUpload.asStateFlow()
     val uiState = combine(
         authStore.state,
         sync.state,
@@ -113,6 +142,7 @@ class WeTrakrTrackerViewModel @Inject constructor(
             profiles.activeProfileId.collect { profileId ->
                 if (profileId != previousProfile) {
                     connectionJob?.cancel()
+                    onLocalUploadClosed()
                     action.value = WeTrakrTrackerAction()
                     previousProfile = profileId
                 }
@@ -198,6 +228,50 @@ class WeTrakrTrackerViewModel @Inject constructor(
         viewModelScope.launch { settings.setContinueWatchingDaysCap(days) }
     }
     fun onAccountOpened() = sync.refreshAsync(TrackingRefreshIntent.AUTOMATIC)
+
+    fun onLocalUploadOpened() {
+        val scope = authStore.scope()
+        if (!authStore.state.value.isAuthenticated || scope.profileId != profiles.activeProfileId.value) return
+        localUploadJob?.cancel()
+        mutableLocalUpload.value = WeTrakrLocalUploadUiState(isOpen = true, isScanning = true)
+        localUploadJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                runCatching { sync.refresh(TrackingRefreshIntent.AUTOMATIC) }
+                    .onFailure { if (it is CancellationException) throw it }
+                authStore.checkScope(scope)
+                val snapshot = sync.currentSnapshot()?.takeIf { it.isInitialized }
+                if (snapshot == null) {
+                    mutableLocalUpload.value = mutableLocalUpload.value.copy(
+                        isScanning = false,
+                        errorMessage = context.getString(R.string.wetrakr_local_upload_not_synced)
+                    )
+                    return@launch
+                }
+                val watched = watchedItems.getAllItems(scope.profileId)
+                val saved = library.getAllItems(scope.profileId)
+                val progress = watchProgress.getAllRawEntries(scope.profileId).values.toList()
+                val preview = withContext(Dispatchers.Default) { weTrakrUploadPreview(watched, saved, snapshot, progress) }
+                authStore.checkScope(scope)
+                mutableLocalUpload.value = mutableLocalUpload.value.copy(isScanning = false, preview = preview)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                mutableLocalUpload.value = mutableLocalUpload.value.copy(isScanning = false, errorMessage = error.messageForUser())
+            }
+        }
+    }
+
+    fun onLocalUploadKindToggled(kind: WeTrakrUploadKind) {
+        val current = mutableLocalUpload.value
+        mutableLocalUpload.value = current.copy(
+            selected = if (kind in current.selected) current.selected - kind else current.selected + kind
+        )
+    }
+
+    fun onLocalUploadClosed() {
+        localUploadJob?.cancel()
+        mutableLocalUpload.value = WeTrakrLocalUploadUiState()
+    }
 
     private fun WeTrakrSyncPause.message(): String {
         val zone = ZoneId.systemDefault()

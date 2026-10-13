@@ -76,6 +76,7 @@ fun TrackingSettingsContent(
     val mdbListState by mdbListViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListLibraryLists by mdbListViewModel.libraryLists.collectAsStateWithLifecycle()
     val weTrakrState by weTrakrViewModel.uiState.collectAsStateWithLifecycle()
+    val weTrakrLocalUpload by weTrakrViewModel.localUpload.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
@@ -86,6 +87,7 @@ fun TrackingSettingsContent(
     val watchProgressFocusRequester = remember { FocusRequester() }
     val continueWatchingFocusRequester = remember { FocusRequester() }
     val weTrakrContinueWatchingFocusRequester = remember { FocusRequester() }
+    val weTrakrLocalUploadFocusRequester = remember { FocusRequester() }
     val moreLikeThisFocusRequester = remember { FocusRequester() }
 
     var activeProvider by remember { mutableStateOf<TrackingProviderId?>(null) }
@@ -107,7 +109,8 @@ fun TrackingSettingsContent(
         showDaysCapDialog ||
         showMoreLikeThisSourceDialog ||
         showAnimeIdDialog ||
-        showMdbListLibraryListsDialog
+        showMdbListLibraryListsDialog ||
+        weTrakrLocalUpload.isOpen
 
     LaunchedEffect(
         activeProvider,
@@ -144,6 +147,7 @@ fun TrackingSettingsContent(
                 TrackingFocusTarget.WATCH_PROGRESS -> watchProgressFocusRequester.requestFocus()
                 TrackingFocusTarget.CONTINUE_WATCHING -> continueWatchingFocusRequester.requestFocus()
                 TrackingFocusTarget.WETRAKR_CONTINUE_WATCHING -> weTrakrContinueWatchingFocusRequester.requestFocus()
+                TrackingFocusTarget.WETRAKR_LOCAL_UPLOAD -> weTrakrLocalUploadFocusRequester.requestFocus()
                 TrackingFocusTarget.MORE_LIKE_THIS -> moreLikeThisFocusRequester.requestFocus()
             }
         }
@@ -237,6 +241,11 @@ fun TrackingSettingsContent(
             restoreFocusTarget = TrackingFocusTarget.WETRAKR_CONTINUE_WATCHING
             daysCapForWeTrakr = true
             showDaysCapDialog = true
+        },
+        weTrakrLocalUploadFocusRequester = weTrakrLocalUploadFocusRequester,
+        onWeTrakrLocalUploadClick = {
+            restoreFocusTarget = TrackingFocusTarget.WETRAKR_LOCAL_UPLOAD
+            weTrakrViewModel.onLocalUploadOpened()
         },
         onCommentsChanged = traktViewModel::onShowMetaCommentsChanged,
         onMoreLikeThisClick = {
@@ -482,6 +491,14 @@ fun TrackingSettingsContent(
         )
     }
 
+    if (weTrakrLocalUpload.isOpen) {
+        WeTrakrLocalUploadDialog(
+            state = weTrakrLocalUpload,
+            onToggle = weTrakrViewModel::onLocalUploadKindToggled,
+            onDismiss = weTrakrViewModel::onLocalUploadClosed
+        )
+    }
+
     if (showMdbListLibraryListsDialog) {
         MdbListLibraryListsDialog(
             state = mdbListLibraryLists,
@@ -548,6 +565,8 @@ internal fun TrackingSettingsOverview(
     onWatchProgressClick: () -> Unit,
     onContinueWatchingWindowClick: () -> Unit,
     onWeTrakrContinueWatchingWindowClick: () -> Unit = {},
+    weTrakrLocalUploadFocusRequester: FocusRequester = remember { FocusRequester() },
+    onWeTrakrLocalUploadClick: () -> Unit = {},
     onCommentsChanged: (Boolean) -> Unit,
     onMoreLikeThisClick: () -> Unit,
     onAnimeIdClick: () -> Unit,
@@ -761,6 +780,14 @@ internal fun TrackingSettingsOverview(
                                     .focusRequester(weTrakrContinueWatchingFocusRequester)
                                     .testTag(TrackingSettingsTestTags.WETRAKR_CONTINUE_WATCHING)
                             )
+                            SettingsActionRow(
+                                title = stringResource(R.string.wetrakr_local_upload_title),
+                                subtitle = stringResource(R.string.wetrakr_local_upload_row_subtitle),
+                                onClick = onWeTrakrLocalUploadClick,
+                                modifier = Modifier
+                                    .focusRequester(weTrakrLocalUploadFocusRequester)
+                                    .testTag(TrackingSettingsTestTags.WETRAKR_LOCAL_UPLOAD)
+                            )
                         }
                     }
                 }
@@ -925,6 +952,7 @@ private enum class TrackingFocusTarget {
     WATCH_PROGRESS,
     CONTINUE_WATCHING,
     WETRAKR_CONTINUE_WATCHING,
+    WETRAKR_LOCAL_UPLOAD,
     MORE_LIKE_THIS
 }
 
@@ -934,6 +962,7 @@ internal object TrackingSettingsTestTags {
     const val SIMKL_PROVIDER = "tracking_provider_simkl"
     const val MDBLIST_PROVIDER = "tracking_provider_mdblist"
     const val WETRAKR_PROVIDER = "tracking_provider_wetrakr"
+    const val WETRAKR_LOCAL_UPLOAD = "tracking_wetrakr_local_upload"
     const val MDBLIST_LIBRARY_LISTS = "tracking_mdblist_library_lists"
     const val LIBRARY_SOURCE = "tracking_source_library"
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"
