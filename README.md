@@ -16,6 +16,8 @@ Buscar **Iludida** consulta nomes alternativos e prefere a edição brasileira q
 
 ## Desenvolvimento
 
+O código posterior à release 1.0.0 integra miniaturas reais e filmstrip ao seek por D-pad, com timestamp decodificado, preservação do foco e do player principal, cancelamento ao trocar contexto e respeito a movimento Reduzido/Desligado. Passaram 222 testes selecionados; a QA de componentes passou em APIs 24/36 e 720p/1080p/4K. Um timeout de extração observado anteriormente no emulador não foi reproduzido na execução seguinte e continua registrado para investigação. Esses testes não comprovam todas as rotas do player com conta autenticada nem desempenho em TV física. **Os APKs publicados da 1.0.0 ainda não incluem essa integração visual.** [Evidências e limites](https://github.com/Pepeu2010/telumia/blob/main/docs/TV_TIMELINE_SEEK.md).
+
 O código em desenvolvimento inclui o editor de avatar pessoal no fluxo existente de perfis: biblioteca integrada com 64 ilustrações licenciadas, arquivo local, clipboard com URI de imagem, recorte, zoom e versões PNG otimizadas. Em aparelhos sem seletor de documentos, a escolha usa fotos locais com permissão solicitada somente ao abrir a ação. O armazenamento é privado, separado do cache e isolado por conta e identidade do perfil.
 
 Os incrementos anteriores possuem testes de decoder e interface em 720p, 1080p e 4K. A validação usa emulador e imagens controladas; não comprova todos os seletores de fabricantes nem desempenho em TV física. [Evidências e pendências](https://github.com/Pepeu2010/telumia/blob/main/docs/PROFILE_STUDIO.md).
