@@ -88,9 +88,11 @@ func (d *discFiles) add(name string, c *Content) {
 	d.mu.Unlock()
 }
 
-// start walks the rest of the set once, in the background, for the session's lifetime.
+// start walks the rest of the set once, in the background, for the session's lifetime,
+// and reads the disc's playlists as it goes.
 func (d *discFiles) start(ctx context.Context) {
 	d.once.Do(func() {
+		go d.warm(ctx)
 		if d.rest == nil {
 			close(d.done)
 			return
@@ -103,6 +105,55 @@ func (d *discFiles) start(ctx context.Context) {
 			d.mu.Unlock()
 		}()
 	})
+}
+
+// warm reads the disc's playlists into memory as the session opens. A player
+// reads them all before it starts, to find the feature's, and read on demand
+// each waits on the articles that hold it, one after another. Those found by
+// the walk are read once it ends.
+func (d *discFiles) warm(ctx context.Context) {
+	read := func() {
+		for _, rel := range d.unreadPlaylists() {
+			if ctx.Err() != nil {
+				return
+			}
+			_, _, _ = d.lookup(ctx, ctx, rel) // A failure here is the player's to see, when it asks.
+		}
+	}
+	read()
+	select {
+	case <-d.done:
+		read()
+	case <-ctx.Done():
+	}
+}
+
+// unreadPlaylists lists the paths of the playlists not yet read, in order.
+func (d *discFiles) unreadPlaylists() []string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	var keys []string
+	for key := range d.files {
+		if _, read := d.small[key]; !read && strings.HasPrefix(key, "bdmv/playlist/") {
+			keys = append(keys, key)
+		}
+	}
+	for key := range d.lazy {
+		_, read := d.small[key]
+		if _, mapped := d.files[key]; !mapped && !read && strings.HasPrefix(key, "bdmv/playlist/") {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// isRead reports whether a disc file's bytes are in memory.
+func (d *discFiles) isRead(rel string) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	_, ok := d.small[strings.ToLower(rel)]
+	return ok
 }
 
 func (d *discFiles) get(rel string) *Content {

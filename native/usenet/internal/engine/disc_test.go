@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // discServer serves a selected disc clip the way a session does.
@@ -126,4 +127,56 @@ func TestDiscImageServesItsPlaylistsAndClips(t *testing.T) {
 	if status, _ := get(fmt.Sprintf("BDMV/STREAM/%05d.m2ts", 7)); status != 404 {
 		t.Fatal("missing clip served")
 	}
+}
+
+// waitRead waits for the disc's background reads to bring a file into memory.
+func waitRead(t *testing.T, d *discFiles, rel string) {
+	t.Helper()
+	for deadline := time.Now().Add(10 * time.Second); !d.isRead(rel); time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("%s was not read in the background", rel)
+		}
+	}
+}
+
+func TestDiscReadsItsPlaylistsAsTheSessionOpens(t *testing.T) {
+	t.Run("RAR", func(t *testing.T) {
+		in, files := playlistDisc(t, 5, func(int) int { return 2048 })
+		nzb, _, _ := setup(t, in, 0, 4, 4)
+		c, err := Select(context.Background(), nzb, Selection{})
+		if err != nil || c.disc == nil {
+			t.Fatalf("selected %v, %v", c, err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		c.disc.start(ctx)
+		// Both playlists, the one selection passed and the one the walk finds.
+		for _, rel := range []string{"BDMV/PLAYLIST/00000.mpls", "BDMV/PLAYLIST/00001.mpls"} {
+			waitRead(t, c.disc, rel)
+			if _, b, err := c.disc.lookup(ctx, ctx, rel); err != nil || !bytes.Equal(b, files[rel]) {
+				t.Fatalf("%s: %d bytes, %v", rel, len(b), err)
+			}
+		}
+		if c.disc.isRead("BDMV/CLIPINF/00002.clpi") {
+			t.Fatal("clip info is read when asked for, not ahead")
+		}
+	})
+	t.Run("image", func(t *testing.T) {
+		feature, extra, mpls := payload(70000)[1000:], payload(9000)[77:], payload(500)[9:]
+		tree := blurayTree(feature, extra)
+		tree.children[0].children = append(tree.children[0].children,
+			&udfNode{name: "PLAYLIST", children: []*udfNode{{name: "00800.mpls", data: mpls}}})
+		nzb, _, _ := setup(t, []inputFile{{"Disc.iso", buildUDF(tree, false, false, false), nil}}, 0, 4, 4)
+		c, err := Select(context.Background(), nzb, Selection{})
+		if err != nil || c.disc == nil {
+			t.Fatalf("selected %v, %v", c, err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		c.disc.start(ctx)
+		waitRead(t, c.disc, "BDMV/PLAYLIST/00800.mpls")
+		if _, b, _ := c.disc.lookup(ctx, ctx, "BDMV/PLAYLIST/00800.mpls"); !bytes.Equal(b, mpls) {
+			t.Fatalf("read %d bytes", len(b))
+		}
+	})
 }
