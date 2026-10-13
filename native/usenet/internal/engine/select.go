@@ -402,6 +402,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 	var largestVols []*File
 	var brokenErr error
 	clipInfo := map[string]*Content{}
+	seen := map[string]*Content{} // Disc files selection passed, by lowercase name.
 	selected := func(c *Content) (*Content, error) {
 		c, err := c.usable(ctx)
 		// A disc image's clip brings its own CLPI from the image.
@@ -618,6 +619,13 @@ groups:
 						return nil, v.damaged
 					}
 				}
+				if candidate == c && !cursor.unordered {
+					// The rest of the set is walked once the session opens.
+					if d := discFor(c, seen); d != nil {
+						d.rest = walkRest(*cursor, c, b)
+						c.disc = d
+					}
+				}
 				return selected(candidate)
 			}
 			if matched && (largest == nil || candidate.Size > largest.Size) {
@@ -630,18 +638,13 @@ groups:
 			// to the volume its continuation template predicts. The unselected
 			// entry keeps its own cursor and maps its continuations lazily if
 			// it is chosen as the fallback.
-			if b.after {
-				resume := *cursor
-				skipped, err := cursor.skipToLastPart(ctx, b.name, b.unpacked)
-				if err == nil && !skipped {
-					skipped, err = cursor.skipToPredictedEnd(ctx, b, c.payloadSize())
+			if skipped, err := skipEntry(ctx, cursor, c, b); err != nil {
+				return nil, err
+			} else if skipped {
+				if !cursor.unordered {
+					keepDiscFile(seen, c, b)
 				}
-				if err != nil {
-					return nil, err
-				} else if skipped {
-					c.cursor = &resume
-					continue
-				}
+				continue
 			}
 			// Reach the next entry using headers only. Selected content returns
 			// above, before resolving ANY continuation volume.
@@ -651,9 +654,15 @@ groups:
 				}
 				continue groups
 			}
+			if !cursor.unordered {
+				keepDiscFile(seen, c, b)
+			}
 		}
 	}
 	if largest != nil {
+		if largest.disc == nil && largest.nested == nil {
+			largest.disc = discFor(largest, seen) // The whole set was walked.
+		}
 		for _, v := range largestVols {
 			if v.damaged != nil {
 				return nil, v.damaged

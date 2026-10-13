@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
@@ -246,6 +247,9 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		connections += p.Connections
 	}
 	v.startMKVWarmup(req.Config.FastMKVStartup, connections)
+	if d := v.content.disc; d != nil {
+		d.start(v.ctx) // Find the clips after the feature while it starts playing.
+	}
 	id := RandomToken()
 	s.mu.Lock()
 	s.sessions[id] = v
@@ -291,8 +295,44 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 		http.ServeContent(w, r, path.Base(info.Name), time.Time{}, reader)
 		return
 	}
-	if len(parts) == 2 && len(parts[1]) > len("BDMV/CLIPINF/") && strings.EqualFold(parts[1][:len("BDMV/CLIPINF/")], "BDMV/CLIPINF/") {
-		http.NotFound(w, r) // Not the selected clip's CLPI, or not in the set.
+	if d := session.content.disc; d != nil && len(parts) == 2 && !strings.EqualFold(parts[1], streamPath(session.content.Name)) {
+		// The disc's other files: its playlists, clips and their CLPI.
+		if strings.EqualFold(strings.TrimSuffix(parts[1], "/"), "BDMV/PLAYLIST") {
+			names, err := d.playlists(ctx, session.ctx)
+			if err != nil {
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			io.WriteString(w, discListing(names))
+			return
+		}
+		if _, _, ok := discPath(parts[1]); ok {
+			file, small, err := d.lookup(ctx, session.ctx, parts[1])
+			if err != nil && ctx.Err() == nil {
+				streamHTTPError(w, "temporary-read-error", http.StatusBadGateway)
+				return
+			}
+			if small != nil {
+				w.Header().Set("Content-Type", "application/octet-stream")
+				http.ServeContent(w, r, path.Base(parts[1]), time.Time{}, bytes.NewReader(small))
+				return
+			}
+			if file != nil {
+				ahead := session.ahead
+				if !isDiscClip(parts[1]) {
+					ahead = 0 // A playlist or CLPI is read whole, once: no video read-ahead.
+				}
+				reader := file.Reader(ctx, ahead)
+				defer reader.Close()
+				w.Header().Set("Content-Type", "application/octet-stream")
+				http.ServeContent(w, r, path.Base(file.Name), time.Time{}, reader)
+				return
+			}
+		}
+	}
+	if len(parts) == 2 && len(parts[1]) > len("BDMV/") && strings.EqualFold(parts[1][:len("BDMV/")], "BDMV/") &&
+		!strings.EqualFold(parts[1], streamPath(session.content.Name)) {
+		http.NotFound(w, r) // Not a file of this disc, or not in the set.
 		return
 	}
 	reader := session.content.Reader(ctx, session.ahead)

@@ -200,15 +200,28 @@ in their header and choose the same way.
 A clip's stream languages live in its `BDMV/CLIPINF/<clip>.clpi`, which rar lists
 before the clips. Selection keeps the location of each small stored CLPI it passes,
 and a selected disc clip is served as `/stream/<id>/BDMV/STREAM/<clip>.m2ts` with its
-CLPI beside it at `BDMV/CLIPINF/<clip>.clpi`; any other CLIPINF path is 404. Other
-files keep their base name.
+CLPI beside it at `BDMV/CLIPINF/<clip>.clpi`. Other files keep their base name.
+
+The disc's other files are served beside the clip too, so a player can play a
+feature split over several clips from its playlist: `BDMV/PLAYLIST/` is a
+directory listing of the `.mpls` files, and `BDMV/PLAYLIST/<n>.mpls`,
+`BDMV/STREAM/<clip>.m2ts` and `BDMV/CLIPINF/<clip>.clpi` serve each file. A
+playlist or CLPI is read once and kept in memory; a clip streams like the
+feature. Selection records the files it passes, and the clips after the feature
+are found by a walk of the rest of the set that starts when the session opens,
+two headers per clip; a request for a clip it has not reached yet waits for it.
+Any other `BDMV/` path is 404, never the feature. Unordered sets serve only the
+feature and its CLPI.
 
 A Blu-ray disc image (`.iso`, posted on its own or as a stored RAR entry) is read
 as its UDF 2.50 file system: the volume descriptors, the metadata partition and
 the `BDMV/STREAM` directory, all in the image's first megabytes. Its largest clip
 is served as byte ranges of the image, like a RAR set inside a 7z, and plays
-like the same clip from a disc folder. The image is read through its own RAR
-cursor, so selection still walks the set past it. DVD images, images without
+like the same clip from a disc folder, with the image's playlists, other clips
+and CLPI beside it. Selection reads only the directories; each of those files
+is mapped when first asked for, through 1 MiB chunks of the image kept in a
+small cache. The image is read through its own RAR cursor, so selection still
+walks the set past it. DVD images, images without
 `BDMV/STREAM`, and sparable or virtual partitions fail with a message that says
 so. Images are not expanded when a file or episode selector is given.
 
