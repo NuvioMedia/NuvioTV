@@ -153,8 +153,10 @@ class NewznabProtocolTest {
         val releases = listOf(UsenetRelease("Disc.COMPLETE.UHD.BLURAY", "https://test/1"),
             UsenetRelease("Remux.2160p.REMUX", "https://test/2"))
         val config = UsenetSourceConfiguration(indexers = listOf(indexer))
-        assertEquals(listOf("Remux.2160p.REMUX"), NewznabProtocol.arrange(releases, config).map { it.title })
-        assertEquals(2, NewznabProtocol.arrange(releases, config.copy(excludeFullDisc = false)).size)
+        // Discs show by default; the filter hides them.
+        assertEquals(2, NewznabProtocol.arrange(releases, config).size)
+        assertEquals(listOf("Remux.2160p.REMUX"),
+            NewznabProtocol.arrange(releases, config.copy(excludeFullDisc = true)).map { it.title })
     }
 
     @Test fun `a whole Blu-ray is labelled by its kind, and nothing else is`() {

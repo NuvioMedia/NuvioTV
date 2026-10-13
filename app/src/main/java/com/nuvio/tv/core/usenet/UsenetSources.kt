@@ -104,8 +104,8 @@ data class UsenetSourceConfiguration(
     val maxAgeDays: Int = 0,
     val maxResults: Int = 50,
     val excludeLowQuality: Boolean = true,
-    /** On: whole Blu-ray and DVD releases are hidden; players cannot open a disc folder as one video. */
-    val excludeFullDisc: Boolean = true,
+    /** On: whole Blu-ray and DVD releases are hidden. Off by default: a Blu-ray plays from its feature clip. */
+    val excludeFullDisc: Boolean = false,
     /** On: lower indexer priorities are only searched when higher ones find nothing. */
     val indexerFallback: Boolean = false,
     /** On: a release found by several indexers is shown once, from the highest priority. */
