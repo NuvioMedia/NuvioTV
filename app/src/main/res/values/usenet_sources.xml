@@ -28,7 +28,7 @@
     <string name="usenet_no_limit">No limit</string>
     <string name="usenet_exclude_low_quality">Exclude CAM, telesync and screener releases</string>
     <string name="usenet_exclude_full_disc">Exclude full Blu-ray and DVD discs</string>
-    <string name="usenet_exclude_full_disc_description">A disc is a folder of many clips that players cannot open as one video. Remuxes of a disc still show.</string>
+    <string name="usenet_exclude_full_disc_description">Hide whole disc releases. A Blu-ray disc plays from its feature clip; a DVD disc does not play. Remuxes of a disc always show.</string>
     <string name="usenet_provider_host">Server host (for example news.example.com)</string>
     <string name="usenet_provider_port">Port</string>
     <string name="usenet_provider_tls">Use TLS</string>
