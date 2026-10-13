@@ -75,6 +75,37 @@ class TimelineFramesTvTest {
         } finally { main { reader?.release(); primary?.release() }; clip.delete() }
     }
 
+    @Test fun repeatingAnAlreadyReadyPositionCompletesWithoutAnotherPlaybackTransition() {
+        val clip = originalTimelineVideo(context)
+        var reader: TelumiaFrameExtractor? = null
+        var secondary: ExoPlayer? = null
+        try {
+            main {
+                reader = extractor(Uri.fromFile(clip).toString())
+                // Observe the owned extractor's real readiness; never drive it through this field.
+                secondary = TelumiaFrameExtractor::class.java.getDeclaredField("player").apply {
+                    isAccessible = true
+                }.get(reader) as ExoPlayer
+            }
+            for (position in listOf(500L, 4500L)) {
+                lateinit var first: com.google.common.util.concurrent.ListenableFuture<TelumiaFrameExtractor.Frame>
+                main { first = reader!!.getFrame(position) }
+                assertEquals(position, first.get(8, TimeUnit.SECONDS).presentationTimeMs)
+                await {
+                    var ready = false
+                    main { ready = secondary!!.playbackState == Player.STATE_READY && secondary!!.currentPosition == position }
+                    ready
+                }
+                lateinit var repeated: com.google.common.util.concurrent.ListenableFuture<TelumiaFrameExtractor.Frame>
+                main { repeated = reader!!.getFrame(position) }
+                val frame = repeated.get(8, TimeUnit.SECONDS)
+                assertEquals(position, frame.presentationTimeMs)
+                assertColor(frame, red = position == 500L)
+                main { assertEquals(position, secondary!!.currentPosition); assertFalse(secondary!!.playWhenReady) }
+            }
+        } finally { main { reader?.release() }; clip.delete() }
+    }
+
     @Test fun latestRequestWinsAndHidingClearsPendingFramesAndOwnership() {
         val clip = originalTimelineVideo(context)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
