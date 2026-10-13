@@ -1255,6 +1255,26 @@
     <string name="wetrakr_paused_until">Syncing paused until %1$s · %2$s</string>
     <string name="wetrakr_pause_reason_daily">daily WeTrakr limit reached</string>
     <string name="wetrakr_pause_reason_rate">WeTrakr request limit reached</string>
+    <string name="wetrakr_local_upload_title">Sync local data to WeTrakr</string>
+    <string name="wetrakr_local_upload_row_subtitle">Add your Nuvio watched history and library to this WeTrakr account.</string>
+    <string name="wetrakr_local_upload_subtitle">Choose what to add. Titles already on WeTrakr are skipped.</string>
+    <string name="wetrakr_local_upload_scanning">Checking your local data…</string>
+    <string name="wetrakr_local_upload_watched">Watched history</string>
+    <string name="wetrakr_local_upload_library">Library as planning</string>
+    <string name="wetrakr_local_upload_counts">%1$d to add · %2$d already on WeTrakr</string>
+    <string name="wetrakr_local_upload_unmatched">Can\'t be matched (%1$d)</string>
+    <string name="wetrakr_local_upload_unmatched_subtitle">No IMDb, TMDB or TVDB ID, so WeTrakr can\'t find these titles.</string>
+    <string name="wetrakr_local_upload_view">View</string>
+    <string name="wetrakr_local_upload_nothing">Nothing new to add. Everything that can be matched is already on WeTrakr.</string>
+    <string name="wetrakr_local_upload_not_synced">WeTrakr hasn\'t finished syncing yet. Try again in a moment.</string>
+    <plurals name="wetrakr_local_upload_requests">
+        <item quantity="one">Uses about %d WeTrakr request. If the daily WeTrakr limit is reached, syncing pauses and continues after it resets.</item>
+        <item quantity="other">Uses about %d WeTrakr requests. If the daily WeTrakr limit is reached, syncing pauses and continues after it resets.</item>
+    </plurals>
+    <plurals name="wetrakr_local_upload_entries">
+        <item quantity="one">%d entry</item>
+        <item quantity="other">%d entries</item>
+    </plurals>
     <string name="wetrakr_revoke_failed">Disconnected on this device. Remove this app in your WeTrakr account settings to revoke its access.</string>
     <string name="mdblist_title">MDBList Ratings</string>
     <string name="mdblist_subtitle">Configure external ratings shown in the detail hero</string>
