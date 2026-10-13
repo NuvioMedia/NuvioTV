@@ -552,7 +552,7 @@ func select7z(ctx context.Context, vols []*File, s Selection, index *int, consid
 			nestedErr = groupErr
 			continue
 		}
-		c, err := selectNestedRAR(ctx, vols, index, consider)
+		c, err := selectNestedRAR(ctx, vols, index, consider, s.whole())
 		if err != nil {
 			nestedErr = err
 			continue
