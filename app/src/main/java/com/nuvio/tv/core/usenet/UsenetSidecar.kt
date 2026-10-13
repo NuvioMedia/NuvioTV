@@ -244,6 +244,9 @@ class UsenetSidecar private constructor(private val context: Context) {
                 // entry and a profile switch does not download it again (nzb.life refuses a repeat
                 // download for 24 h). Profiles with their own keys still get their own entries.
                 put("cacheScope", "unscoped")
+                // Entries cached before that were scoped by profile; the engine adopts them instead
+                // of downloading them again.
+                put("legacyCacheScope", profileId?.toString() ?: "unscoped")
                 put("nzbUrl", stream.nzbUrl)
                 put("servers", JSONArray(stream.servers.orEmpty()))
                 stream.fileIdx?.let { put("fileIdx", it) }
@@ -273,7 +276,7 @@ class UsenetSidecar private constructor(private val context: Context) {
             openedId = newId
             // The engine reconciled abandoned sessions before this open.
             retiredSessions.clear()
-            val url = "$endpoint/stream/$newId/${Uri.encode(result.getString("filename").substringAfterLast('/'))}"
+            val url = UsenetEngineUrls.stream(requireNotNull(endpoint), newId, newPath)
             val nativeSubtitles = result.optJSONArray("subtitles")?.let { items ->
                 (0 until items.length()).map { index ->
                     val item = items.getJSONObject(index)
