@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
@@ -18,11 +19,13 @@ import (
 
 type OpenRequest struct {
 	// Present for ownership-aware clients. Empty retains no previous session.
-	KeepSessionID *string           `json:"keepSessionId,omitempty"`
-	CacheScope    string            `json:"cacheScope,omitempty"`
-	NZBURL        string            `json:"nzbUrl"`
-	Servers       []string          `json:"servers"`
-	Headers       map[string]string `json:"headers,omitempty"`
+	KeepSessionID *string `json:"keepSessionId,omitempty"`
+	CacheScope    string  `json:"cacheScope,omitempty"`
+	// The scope entries were written under before, adopted on a miss so an update re-downloads nothing.
+	LegacyCacheScope string            `json:"legacyCacheScope,omitempty"`
+	NZBURL           string            `json:"nzbUrl"`
+	Servers          []string          `json:"servers"`
+	Headers          map[string]string `json:"headers,omitempty"`
 	Selection
 	Config Config `json:"config"`
 }
@@ -211,7 +214,7 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	if req.Config.AllowPrivateNetwork {
 		client = s.privateClient
 	}
-	files, err := fetchNZB(ctx, client, req.NZBURL, req.Headers, store, req.Config.FastNZBFetch, cache, s.nzbCache, req.CacheScope, trace)
+	files, err := fetchNZB(ctx, client, req.NZBURL, req.Headers, store, req.Config.FastNZBFetch, cache, s.nzbCache, req.CacheScope, req.LegacyCacheScope, trace)
 	trace.mark("nzb_loaded")
 	if err == nil {
 		trace.mark("selection_started")
@@ -244,13 +247,16 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		connections += p.Connections
 	}
 	v.startMKVWarmup(req.Config.FastMKVStartup, connections)
+	if d := v.content.disc; d != nil {
+		d.start(v.ctx) // Find the clips after the feature while it starts playing.
+	}
 	id := RandomToken()
 	s.mu.Lock()
 	s.sessions[id] = v
 	s.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	trace.mark("session_ready")
-	err = json.NewEncoder(w).Encode(map[string]any{"id": id, "path": "/stream/" + id + "/" + path.Base(v.content.Name), "filename": v.content.Name, "size": v.content.Size, "subtitles": subtitleManifest(id, v.subtitles), "startup": trace.snapshot()})
+	err = json.NewEncoder(w).Encode(map[string]any{"id": id, "path": "/stream/" + id + "/" + streamPath(v.content.Name), "filename": v.content.Name, "size": v.content.Size, "subtitles": subtitleManifest(id, v.subtitles), "startup": trace.snapshot()})
 	if err != nil {
 		s.mu.Lock()
 		delete(s.sessions, id)
@@ -282,6 +288,53 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	stop := context.AfterFunc(session.ctx, cancel)
 	defer stop()
+	if info := session.content.clipInfo; info != nil && len(parts) == 2 && strings.EqualFold(parts[1], clipInfoPath(session.content.Name)) {
+		reader := info.Reader(ctx, 0)
+		defer reader.Close()
+		w.Header().Set("Content-Type", "application/octet-stream")
+		http.ServeContent(w, r, path.Base(info.Name), time.Time{}, reader)
+		return
+	}
+	if d := session.content.disc; d != nil && len(parts) == 2 && !strings.EqualFold(parts[1], streamPath(session.content.Name)) {
+		// The disc's other files: its playlists, clips and their CLPI.
+		if strings.EqualFold(strings.TrimSuffix(parts[1], "/"), "BDMV/PLAYLIST") {
+			names, err := d.playlists(ctx, session.ctx)
+			if err != nil {
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			io.WriteString(w, discListing(names))
+			return
+		}
+		if _, _, ok := discPath(parts[1]); ok {
+			file, small, err := d.lookup(ctx, session.ctx, parts[1])
+			if err != nil && ctx.Err() == nil {
+				streamHTTPError(w, "temporary-read-error", http.StatusBadGateway)
+				return
+			}
+			if small != nil {
+				w.Header().Set("Content-Type", "application/octet-stream")
+				http.ServeContent(w, r, path.Base(parts[1]), time.Time{}, bytes.NewReader(small))
+				return
+			}
+			if file != nil {
+				ahead := session.ahead
+				if !isDiscClip(parts[1]) {
+					ahead = 0 // A playlist or CLPI is read whole, once: no video read-ahead.
+				}
+				reader := file.Reader(ctx, ahead)
+				defer reader.Close()
+				w.Header().Set("Content-Type", "application/octet-stream")
+				http.ServeContent(w, r, path.Base(file.Name), time.Time{}, reader)
+				return
+			}
+		}
+	}
+	if len(parts) == 2 && len(parts[1]) > len("BDMV/") && strings.EqualFold(parts[1][:len("BDMV/")], "BDMV/") &&
+		!strings.EqualFold(parts[1], streamPath(session.content.Name)) {
+		http.NotFound(w, r) // Not a file of this disc, or not in the set.
+		return
+	}
 	reader := session.content.Reader(ctx, session.ahead)
 	reader.warmup = session.warmup
 	defer reader.Close()

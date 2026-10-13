@@ -29,7 +29,7 @@ func TestRefusedNZBIsNotAskedForAgainUntilRetryAfter(t *testing.T) {
 				cache = refusals
 			}
 			fetch := func(r *nzbCache, c *nzbCache) error {
-				_, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, c, r, "unscoped", nil)
+				_, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, c, r, "unscoped", "", nil)
 				return err
 			}
 			err := fetch(refusals, cache)
@@ -67,14 +67,14 @@ func TestExpiredRefusalAllowsTheNZBAgain(t *testing.T) {
 	defer srv.Close()
 	dir := t.TempDir()
 	c := newNZBCache(dir)
-	_, _ = fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, c, c, "", nil)
+	_, _ = fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, c, c, "", "", nil)
 	for key := range c.refused {
 		c.refused[key] = time.Now().Add(-time.Second)
 		if err := os.WriteFile(filepath.Join(dir, key+".retry"), []byte("1"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	_, _ = fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, c, c, "", nil)
+	_, _ = fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, c, c, "", "", nil)
 	if calls.Load() != 2 {
 		t.Fatalf("expired refusal still blocks: %d requests", calls.Load())
 	}

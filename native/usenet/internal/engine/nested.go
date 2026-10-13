@@ -107,11 +107,12 @@ func (n *nestedRAR) fileBlock(ctx context.Context, k int, name string, size int6
 
 // selectNestedRAR offers the files of an inner RAR set to consider and maps
 // the selected one. A nil Content without error means nothing matched.
-func selectNestedRAR(ctx context.Context, vols []*Content, index *int, consider func(*Content, int, string) (bool, error)) (*Content, error) {
+func selectNestedRAR(ctx context.Context, vols []*Content, index *int, consider func(*Content, int, string) (bool, error), whole bool) (*Content, error) {
 	n := &nestedRAR{vols: vols}
 	for k := 0; k < len(vols); k++ {
 		var selected *Content
 		var considerErr error
+		var image *rarBlock
 		continues := false
 		err := n.blocks(ctx, k, func(b rarBlock) bool {
 			if !b.file || b.directory {
@@ -120,6 +121,12 @@ func selectNestedRAR(ctx context.Context, vols []*Content, index *int, consider 
 			continues = b.after
 			if b.before {
 				return true // tail of a file that started in an earlier volume.
+			}
+			if whole && isISO(b.name) {
+				// A disc image serves its feature clip, as one stored in a RAR set does.
+				header := b
+				image = &header
+				return false
 			}
 			c := &Content{Name: b.name, Size: b.unpacked, nested: n, complete: true}
 			start, header := k, b
@@ -142,6 +149,9 @@ func selectNestedRAR(ctx context.Context, vols []*Content, index *int, consider 
 		if err != nil {
 			return nil, err
 		}
+		if image != nil {
+			return nestedImageClip(ctx, n, k, *image, index, consider)
+		}
 		if selected != nil {
 			return selected.usable(ctx)
 		}
@@ -151,6 +161,26 @@ func selectNestedRAR(ctx context.Context, vols []*Content, index *int, consider 
 		}
 	}
 	return nil, nil
+}
+
+// nestedImageClip serves the feature clip of a disc image that starts in
+// volume k with header b, read through the RAR set as any nested file is.
+func nestedImageClip(ctx context.Context, n *nestedRAR, k int, b rarBlock, index *int, consider func(*Content, int, string) (bool, error)) (*Content, error) {
+	iso := &Content{Name: b.name, Size: b.unpacked, nested: n, complete: true}
+	iso.prepare = func(ctx context.Context) error { return iso.mapNested(ctx, k, b) }
+	if _, err := iso.usable(ctx); err != nil {
+		return nil, err
+	}
+	clip, err := isoClip(ctx, iso)
+	if err != nil {
+		return nil, err
+	}
+	matched, err := consider(clip, *index, "")
+	*index++
+	if err != nil || !matched {
+		return nil, err
+	}
+	return clip, nil
 }
 
 // mapNested lays out the selected file that starts in volume k with header b.

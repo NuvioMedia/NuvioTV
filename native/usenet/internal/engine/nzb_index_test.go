@@ -90,7 +90,7 @@ func TestIndexedNZBColdOpenReleasesUnselectedTables(t *testing.T) {
 	defer srv.Close()
 	store := NewStore(context.Background(), stalledBody{}, 32<<20)
 	defer store.Close()
-	files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, store, false, newNZBCache(t.TempDir()), nil, "", nil)
+	files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, store, false, newNZBCache(t.TempDir()), nil, "", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestIndexedNZBCorruptRecordRecoversOnceAndChecksIdentity(t *testing.T) {
 			}))
 			defer srv.Close()
 			cache := newNZBCache(t.TempDir())
-			if _, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, cache, nil, "", nil); err != nil {
+			if _, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, cache, nil, "", "", nil); err != nil {
 				t.Fatal(err)
 			}
 			req, _ := http.NewRequest("GET", srv.URL, nil)
@@ -204,7 +204,7 @@ func TestIndexedNZBCorruptRecordRecoversOnceAndChecksIdentity(t *testing.T) {
 			}
 			store := NewStore(context.Background(), stalledBody{}, 32<<20)
 			defer store.Close()
-			files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, store, false, cache, nil, "", nil)
+			files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, store, false, cache, nil, "", "", nil)
 			if err != nil {
 				t.Fatal(err)
 			}

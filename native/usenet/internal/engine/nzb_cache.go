@@ -71,6 +71,25 @@ func nzbCacheKey(req *http.Request, scope string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// adopt renames an entry stored under [legacyKey] to [key] when [key] has none, so a client that
+// changes its scope keeps what it cached. Without this, every NZB is fetched once more after the
+// change, and nzb.life refuses an NZB downloaded in the last 24 hours.
+func (c *nzbCache) adopt(legacyKey, key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.active[legacyKey] > 0 {
+		return
+	}
+	target := filepath.Join(c.dir, key+".nzb")
+	if _, err := os.Stat(target); err == nil {
+		return
+	}
+	if os.Rename(filepath.Join(c.dir, legacyKey+".nzb"), target) == nil {
+		_ = os.Rename(filepath.Join(c.dir, legacyKey+".hints"), filepath.Join(c.dir, key+".hints"))
+		delete(c.invalid, legacyKey)
+	}
+}
+
 // refusedUntil reports when an NZB an indexer refused with 429 may be asked for again.
 // A refusal is kept in memory and, when [persist] (the NZB cache is on), on disk, so
 // the app's retries, source fallback and a restarted sidecar do not ask again sooner.

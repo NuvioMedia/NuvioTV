@@ -125,6 +125,9 @@ func (c *Content) startupCache() (*nzbSnapshot, string) {
 		source = c.nested.vols[0] // Nested RAR: key on the first 7z entry's extent.
 	}
 	if f == nil {
+		f = source.direct // A clip of a disc image posted without an archive.
+	}
+	if f == nil {
 		source.mu.RLock()
 		if len(source.parts) > 0 {
 			f, offset = source.parts[0].file, source.parts[0].offset
