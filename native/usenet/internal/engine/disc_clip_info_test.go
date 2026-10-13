@@ -66,14 +66,18 @@ func TestDiscClipServesItsClipInfo(t *testing.T) {
 			if got := get(clip, "bytes=29990-30009"); !bytes.Equal(got, movie[29990:30010]) {
 				t.Fatal("clip bytes differ")
 			}
-			// Another clip's CLPI is not served, and never falls back to the clip.
-			resp, err := srv.Client().Get(srv.URL + "/stream/d/BDMV/CLIPINF/00001.clpi")
+			// Another clip's CLPI is served for its playlist; a missing one is
+			// 404 and never falls back to the clip.
+			if got := get("/stream/d/BDMV/CLIPINF/00001.clpi", ""); !bytes.Equal(got, payload(900)[50:]) {
+				t.Fatalf("other CLPI bytes differ (%d)", len(got))
+			}
+			resp, err := srv.Client().Get(srv.URL + "/stream/d/BDMV/CLIPINF/00002.clpi")
 			if err != nil {
 				t.Fatal(err)
 			}
 			resp.Body.Close()
 			if resp.StatusCode != http.StatusNotFound {
-				t.Fatalf("other CLPI status = %d", resp.StatusCode)
+				t.Fatalf("missing CLPI status = %d", resp.StatusCode)
 			}
 		})
 	}

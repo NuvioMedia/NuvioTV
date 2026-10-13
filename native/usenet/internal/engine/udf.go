@@ -14,6 +14,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"sync"
 	"unicode/utf16"
 )
 
@@ -66,16 +67,61 @@ type udfImage struct {
 	size  int64
 	parts []udfPartition // by partition reference number
 	root  udfAD
+	cache *udfCache // Shared by copies that read through other readers.
 }
+
+// udfCache keeps the image's last chunks read. Descriptors, entries and small
+// files sit together, and each small read would otherwise fetch a whole article.
+type udfCache struct {
+	mu     sync.Mutex
+	chunks map[int64][]byte
+	order  []int64
+}
+
+const (
+	udfChunk  = 1 << 20
+	udfChunks = 8
+)
 
 func (img *udfImage) read(off int64, n int) ([]byte, error) {
 	if off < 0 || n < 0 || off+int64(n) > img.size {
 		return nil, errUDFUnreadable
 	}
-	b := make([]byte, n)
-	if _, err := img.r.ReadAt(b, off); err != nil {
+	out := make([]byte, 0, n)
+	for len(out) < n {
+		at := (off + int64(len(out))) / udfChunk * udfChunk
+		chunk, err := img.chunk(at)
+		if err != nil {
+			return nil, err
+		}
+		from := off + int64(len(out)) - at
+		out = append(out, chunk[from:min(int64(len(chunk)), from+int64(n-len(out)))]...)
+	}
+	return out, nil
+}
+
+func (img *udfImage) chunk(at int64) ([]byte, error) {
+	c := img.cache
+	c.mu.Lock()
+	if b, ok := c.chunks[at]; ok {
+		c.mu.Unlock()
+		return b, nil
+	}
+	c.mu.Unlock()
+	b := make([]byte, min(udfChunk, img.size-at))
+	if _, err := img.r.ReadAt(b, at); err != nil {
 		return nil, err
 	}
+	c.mu.Lock()
+	if _, ok := c.chunks[at]; !ok {
+		c.chunks[at] = b
+		c.order = append(c.order, at)
+		if len(c.order) > udfChunks {
+			delete(c.chunks, c.order[0])
+			c.order = c.order[1:]
+		}
+	}
+	c.mu.Unlock()
 	return b, nil
 }
 
@@ -108,7 +154,7 @@ func udfLongAD(b []byte) udfAD {
 }
 
 func openUDF(r io.ReaderAt, size int64) (*udfImage, error) {
-	img := &udfImage{r: r, size: size}
+	img := &udfImage{r: r, size: size, cache: &udfCache{chunks: map[int64][]byte{}}}
 	if size < 257*udfSector {
 		return nil, errNotUDF
 	}
@@ -546,7 +592,63 @@ func isoClip(ctx context.Context, iso *Content) (*Content, error) {
 			clip.clipInfo, _ = imageFile(iso, iso.Name+"/BDMV/CLIPINF/"+stem+".clpi", f)
 		}
 	}
+	clip.disc = imageDisc(img, iso, clip, bdmv, stream)
 	return clip, nil
+}
+
+// imageDisc lists a disc image's playlists, clips and CLPI from its directories.
+// Each file is mapped when first asked for, through a reader of its own, so
+// selection reads only the directories.
+func imageDisc(img *udfImage, iso, clip *Content, bdmv, stream *udfFile) *discFiles {
+	d := newDiscFiles()
+	d.add(clip.Name, clip)
+	if clip.clipInfo != nil {
+		d.add(clip.clipInfo.Name, clip.clipInfo)
+	}
+	playlist, _ := img.find(bdmv, "PLAYLIST")
+	clipinf, _ := img.find(bdmv, "CLIPINF")
+	for _, dir := range []struct {
+		file      *udfFile
+		name, ext string
+	}{{playlist, "PLAYLIST", ".mpls"}, {clipinf, "CLIPINF", ".clpi"}, {stream, "STREAM", ".m2ts"}} {
+		if dir.file == nil {
+			continue
+		}
+		entries, err := img.list(dir.file)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if e.dir || !strings.EqualFold(pathExtension(e.name), dir.ext) {
+				continue
+			}
+			name, icb, small := iso.Name+"/BDMV/"+dir.name+"/"+e.name, e.icb, dir.ext != ".m2ts"
+			if _, rel, _ := discPath(name); d.get(rel) != nil {
+				continue
+			}
+			d.addLazy(name, func(ctx context.Context) (*Content, []byte, error) {
+				r := iso.Reader(ctx, 0)
+				defer r.Close()
+				own := *img
+				own.r = contentAt{r}
+				f, err := own.file(icb)
+				if err != nil || f.size == 0 || (small && f.size > maxClipInfoBytes) {
+					return nil, nil, err
+				}
+				if small {
+					// Read through the image's chunks: the playlists sit together.
+					b, err := own.data(f, maxClipInfoBytes)
+					return nil, b, err
+				}
+				if f.embedded != nil {
+					return nil, nil, nil
+				}
+				c, err := imageFile(iso, name, f)
+				return c, nil, err
+			})
+		}
+	}
+	return d
 }
 
 // imageFile serves a file of the image as byte ranges of it.

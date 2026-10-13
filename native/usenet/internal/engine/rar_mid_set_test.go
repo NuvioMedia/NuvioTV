@@ -73,6 +73,7 @@ func packedRARSet(t *testing.T, version int, size func(int) int, files ...rar4En
 	var in []inputFile
 	var parts []rarSetPart
 	var entries []rar4Entry
+	short := map[int]bool{} // Volumes closed early: no room for the next header.
 	left := room(0)
 	flush := func() {
 		index := len(in)
@@ -103,7 +104,15 @@ func packedRARSet(t *testing.T, version int, size func(int) int, files ...rar4En
 				n--
 			}
 			if n <= 0 {
-				t.Fatalf("no room for %s in volume %d", f.name, len(in)+1)
+				if len(entries) == 0 {
+					t.Fatalf("no room for %s in volume %d", f.name, len(in)+1)
+				}
+				short[len(in)] = true
+				flush()
+				continue
+			}
+			if header(f.name, n, f.total)+n != left {
+				short[len(in)] = true // A wider size field left a byte unused.
 			}
 			entries = append(entries, rar4Entry{f.name, f.data[off : off+n], f.total, flags | 2})
 			parts = append(parts, rarSetPart{f.name, len(in), off, n})
@@ -113,7 +122,7 @@ func packedRARSet(t *testing.T, version int, size func(int) int, files ...rar4En
 	}
 	flush()
 	for i, v := range in[:len(in)-1] {
-		if len(v.data) != size(i) {
+		if len(v.data) != size(i) && !short[i] {
 			t.Fatalf("volume %d holds %d bytes, want %d", i+1, len(v.data), size(i))
 		}
 	}
