@@ -1252,6 +1252,9 @@
     <string name="tracking_wetrakr_progress_required">Available when WeTrakr is the Watch Progress source</string>
     <string name="wetrakr_continue_watching_subtitle">WeTrakr history considered for continue watching</string>
     <string name="wetrakr_cw_window_subtitle">Choose how much WeTrakr activity should appear in continue watching.</string>
+    <string name="wetrakr_paused_until">Syncing paused until %1$s · %2$s</string>
+    <string name="wetrakr_pause_reason_daily">daily WeTrakr limit reached</string>
+    <string name="wetrakr_pause_reason_rate">WeTrakr request limit reached</string>
     <string name="wetrakr_revoke_failed">Disconnected on this device. Remove this app in your WeTrakr account settings to revoke its access.</string>
     <string name="mdblist_title">MDBList Ratings</string>
     <string name="mdblist_subtitle">Configure external ratings shown in the detail hero</string>
