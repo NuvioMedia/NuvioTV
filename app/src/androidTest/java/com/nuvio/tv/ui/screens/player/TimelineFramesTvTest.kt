@@ -184,6 +184,77 @@ class TimelineFramesTvTest {
         } finally { main { reader?.release() }; socket.close(); worker.join(2000); clip.delete() }
     }
 
+    @Test fun releaseBeforePreparationCancelsEveryQueuedFutureAndCannotRestartWork() {
+        val clip = originalTimelineVideo(context)
+        var reader: TelumiaFrameExtractor? = null
+        lateinit var first: com.google.common.util.concurrent.ListenableFuture<TelumiaFrameExtractor.Frame>
+        lateinit var second: com.google.common.util.concurrent.ListenableFuture<TelumiaFrameExtractor.Frame>
+        try {
+            // All operations share a main-loop turn: preparation callbacks are still queued at release.
+            main {
+                reader = extractor(Uri.fromFile(clip).toString())
+                first = reader!!.getFrame(500)
+                second = reader!!.getFrame(4500)
+                reader!!.release()
+                reader!!.release()
+                assertTrue(reader!!.getFrame(1000).isCancelled)
+            }
+            assertTrue("The first queued frame must terminate", first.isDone && first.isCancelled)
+            assertTrue("Later chained frames must also terminate", second.isDone && second.isCancelled)
+            instrumentation.waitForIdleSync()
+            Thread.sleep(250)
+            assertTrue(first.isCancelled && second.isCancelled)
+        } finally { main { reader?.release() }; clip.delete() }
+    }
+
+    @Test fun hidingDuringAnActiveHttpBodyClosesTheConnectionAndCanRecover() {
+        val clip = originalTimelineVideo(context)
+        val socket = ServerSocket(0, 4, java.net.InetAddress.getByName("127.0.0.1"))
+        val bodyStarted = java.util.concurrent.CountDownLatch(1)
+        val peerClosed = java.util.concurrent.CountDownLatch(1)
+        val workerFailure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val worker = Thread {
+            try {
+                socket.accept().use { connection ->
+                    connection.soTimeout = 3000
+                    val input = connection.getInputStream().bufferedReader(Charsets.US_ASCII)
+                    check(input.readLine()?.startsWith("GET ") == true)
+                    while (!input.readLine().isNullOrEmpty()) Unit
+                    val bytes = clip.readBytes()
+                    val output = connection.getOutputStream()
+                    output.write("HTTP/1.1 200 OK\r\nContent-Type: video/mp4\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n".toByteArray(Charsets.US_ASCII))
+                    output.write(bytes, 0, 64.coerceAtMost(bytes.size))
+                    output.flush()
+                    bodyStarted.countDown()
+                    // The remaining video body is deliberately withheld. Only client cancellation
+                    // should close this live connection before the transport's four-second timeout.
+                    try {
+                        if (connection.getInputStream().read() == -1) peerClosed.countDown()
+                    } catch (_: java.net.SocketException) { peerClosed.countDown() }
+                }
+            } catch (failure: Throwable) { workerFailure.set(failure) }
+        }.apply { isDaemon = true; start() }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        var lane: PlayerTimelineFrames? = null
+        try {
+            main {
+                lane = PlayerTimelineFrames(context, PlayerMediaSourceFactory(context), scope)
+                lane!!.request(TimelineFrameSession(Any(), "http://127.0.0.1:${socket.localPort}/slow.mp4", emptyMap(), 6000), 4500)
+            }
+            assertTrue("The real transport must begin the withheld body", bodyStarted.await(4, TimeUnit.SECONDS))
+            Thread.sleep(75)
+            main { lane!!.hide(); assertEquals(TimelineFrameState.Idle, lane!!.state.value) }
+            assertTrue("Hiding must cancel the active connection before its read timeout", peerClosed.await(2, TimeUnit.SECONDS))
+            assertNull(workerFailure.get())
+            main { lane!!.request(TimelineFrameSession(Any(), Uri.fromFile(clip).toString(), emptyMap(), 6000), 500) }
+            await { lane!!.state.value is TimelineFrameState.Ready }
+            assertEquals(500L, (lane!!.state.value as TimelineFrameState.Ready).image.decodedMs)
+        } finally {
+            main { lane?.release(); scope.cancel() }
+            socket.close(); worker.join(2000); clip.delete()
+        }
+    }
+
     @Test fun filmstripContainsDistinctDecodedNeighborsWithinTheSameSession() {
         val clip = originalTimelineVideo(context)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

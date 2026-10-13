@@ -101,6 +101,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -248,6 +250,8 @@ public final class TelumiaFrameExtractor {
   private final Configuration configuration;
   private final ExoPlayer player;
   private final Handler playerApplicationThreadHandler;
+  private final AtomicBoolean releaseRequested = new AtomicBoolean();
+  private final Set<ListenableFuture<Frame>> pendingFrameFutures = ConcurrentHashMap.newKeySet();
 
   /**
    * An {@link AtomicBoolean} that indicates whether the frame being extracted requires decoding and
@@ -328,14 +332,19 @@ public final class TelumiaFrameExtractor {
    *     video frames.
    */
   public void setMediaItem(MediaItem mediaItem, List<Effect> effects) {
+    checkState(!releaseRequested.get(), "Frame extractor released");
     ListenableFuture<Frame> previousRequestedFrame = lastRequestedFrameFuture;
     // TODO: b/350498258 - Extracting the first frame is a workaround for ExoPlayer.setVideoEffects
     // returning incorrect timestamps if we seek the player before rendering starts from zero.
     lastRequestedFrameFuture =
-        CallbackToFutureAdapter.getFuture(
+        trackPendingFrame(CallbackToFutureAdapter.getFuture(
             completer -> {
               previousRequestedFrame.addListener(
                   () -> {
+                    if (releaseRequested.get()) {
+                      completer.setCancelled();
+                      return;
+                    }
                     frameBeingExtractedCompleterAtomicReference.set(completer);
                     lastExtractedFrame = null;
                     player.setVideoEffects(buildVideoEffects(effects));
@@ -345,7 +354,7 @@ public final class TelumiaFrameExtractor {
                   },
                   playerApplicationThreadHandler::post);
               return "TelumiaFrameExtractor.setMediaItem";
-            });
+            }));
   }
 
   /**
@@ -370,15 +379,22 @@ public final class TelumiaFrameExtractor {
    * @return A {@link ListenableFuture} of the result.
    */
   public ListenableFuture<Frame> getFrame(long positionMs, SeekParameters seekParameters) {
+    if (releaseRequested.get()) {
+      return immediateCancelledFuture();
+    }
     ListenableFuture<Frame> previousRequestedFrame = lastRequestedFrameFuture;
     ListenableFuture<Frame> frameListenableFuture =
-        CallbackToFutureAdapter.getFuture(
+        trackPendingFrame(CallbackToFutureAdapter.getFuture(
             completer -> {
               Futures.addCallback(
                   previousRequestedFrame,
                   new FutureCallback<Frame>() {
                     @Override
                     public void onSuccess(Frame result) {
+                      if (releaseRequested.get()) {
+                        completer.setCancelled();
+                        return;
+                      }
                       lastExtractedFrame = result;
                       processNext(positionMs, seekParameters, completer);
                     }
@@ -390,11 +406,20 @@ public final class TelumiaFrameExtractor {
                   },
                   playerApplicationThreadHandler::post);
               return "TelumiaFrameExtractor.getFrame";
-            });
+            }));
     lastRequestedFrameFuture =
         Futures.whenAllComplete(lastRequestedFrameFuture, frameListenableFuture)
             .call(() -> Futures.getDone(frameListenableFuture), directExecutor());
     return frameListenableFuture;
+  }
+
+  private ListenableFuture<Frame> trackPendingFrame(ListenableFuture<Frame> future) {
+    pendingFrameFutures.add(future);
+    future.addListener(() -> pendingFrameFutures.remove(future), directExecutor());
+    if (releaseRequested.get()) {
+      future.cancel(false);
+    }
+    return future;
   }
 
   private void processNext(
@@ -404,6 +429,10 @@ public final class TelumiaFrameExtractor {
     // Cancellation listener is invoked instantaneously if the returned future is already cancelled.
     AtomicBoolean cancelled = new AtomicBoolean(false);
     completer.addCancellationListener(() -> cancelled.set(true), directExecutor());
+    if (releaseRequested.get()) {
+      completer.setCancelled();
+      return;
+    }
     if (cancelled.get()) {
       return;
     }
@@ -436,18 +465,41 @@ public final class TelumiaFrameExtractor {
    * longer required. The frame extractor must not be used after calling this method.
    */
   public void release() {
+    if (!releaseRequested.compareAndSet(false, true)) {
+      return;
+    }
     if (player.getApplicationLooper() == Looper.myLooper()) {
-      player.release();
+      releaseOnApplicationThread();
       return;
     }
     ConditionVariable waitForRelease = new ConditionVariable();
-    playerApplicationThreadHandler.removeCallbacksAndMessages(null);
     playerApplicationThreadHandler.post(
         () -> {
-          player.release();
-          waitForRelease.open();
+          try {
+            releaseOnApplicationThread();
+          } finally {
+            waitForRelease.open();
+          }
         });
     waitForRelease.blockUninterruptible();
+  }
+
+  private void releaseOnApplicationThread() {
+    // Cancel both active and queued futures, including requests waiting for initial preparation.
+    // This Handler is owned by this extractor; never remove other player/UI callbacks.
+    for (ListenableFuture<Frame> future : pendingFrameFutures) {
+      future.cancel(false);
+    }
+    pendingFrameFutures.clear();
+    lastRequestedFrameFuture.cancel(false);
+    playerApplicationThreadHandler.removeCallbacksAndMessages(null);
+    try {
+      player.release();
+    } finally {
+      playerApplicationThreadHandler.removeCallbacksAndMessages(null);
+      frameBeingExtractedCompleterAtomicReference.set(null);
+      lastExtractedFrame = null;
+    }
   }
 
   @VisibleForTesting
@@ -488,6 +540,9 @@ public final class TelumiaFrameExtractor {
 
     @Override
     public void onPlaybackStateChanged(EventTime eventTime, @Player.State int state) {
+      if (releaseRequested.get()) {
+        return;
+      }
       // The player enters STATE_BUFFERING at the start of a seek.
       // At the end of a seek, the player enters STATE_READY after the video renderer position has
       // been reset, and the renderer reports that it's ready.
@@ -625,8 +680,10 @@ public final class TelumiaFrameExtractor {
       bitmap.copyPixelsFromBuffer(byteBuffer);
 
       CallbackToFutureAdapter.Completer<Frame> frameBeingExtractedCompleter =
-          checkNotNull(frameBeingExtractedCompleterAtomicReference.getAndSet(null));
-      frameBeingExtractedCompleter.set(new Frame(usToMs(presentationTimeUs), bitmap));
+          frameBeingExtractedCompleterAtomicReference.getAndSet(null);
+      if (frameBeingExtractedCompleter != null && !releaseRequested.get()) {
+        frameBeingExtractedCompleter.set(new Frame(usToMs(presentationTimeUs), bitmap));
+      }
       // Drop frame: do not call outputListener.onOutputFrameAvailable().
       // Block effects pipeline: do not call inputListener.onReadyToAcceptInputFrame().
       // The effects pipeline will unblock and receive new frames when flushed after a seek.
