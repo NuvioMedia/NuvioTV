@@ -6,7 +6,7 @@
 
 ## Versão 1.0.0
 
-A versão atual é **1.0.0**, sem sufixo alpha, com novo código de versão 10000. A publicação dos novos pacotes está em preparação. O APK universal funciona nas arquiteturas suportadas; também há variantes ARM64, ARM32, x86 e x86_64. A distribuição continua **Android TV Full Debug**, com a identidade e assinatura de desenvolvimento anteriores para permitir atualização. Não há interface específica para celular.
+A versão atual é **1.0.0**, sem sufixo alpha, com novo código de versão 10000. A versão está publicada como release regular e Latest. Passaram 214 testes selecionados, dez casos nativos de frames e startup real de 30 segundos nas APIs 24/36. O APK universal funciona nas arquiteturas suportadas; também há variantes ARM64, ARM32, x86 e x86_64. A distribuição continua **Android TV Full Debug**, com a identidade e assinatura de desenvolvimento anteriores para permitir atualização. Não há interface específica para celular.
 
 Inclui Home e detalhes cinematográficos, seleção e edição local de avatares, navegação/motion por D-pad, cache Auto/Manual, momentos salvos e mesclagem durável de coleções/addons. A base de extração de frames usa decoder Media3 separado, timestamps reais e transporte de prévia restrito à origem. A integração visual das miniaturas/filmstrip com o controle ainda está em desenvolvimento. [Alcance e limites](https://github.com/Pepeu2010/telumia/blob/main/docs/VERSION_100.md).
 
