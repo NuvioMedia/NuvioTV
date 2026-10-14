@@ -98,7 +98,7 @@ fun AccountSettingsContent(
                     )
                 }
                 item(key = "account_sync_note_signed_out") {
-                    AccountInlineNote(text = stringResource(R.string.account_sync_restart_note))
+                    AccountInlineNote(text = stringResource(R.string.account_sync_behavior_note))
                 }
                 item(key = "account_sign_in_qr") {
                     SettingsActionButton(
@@ -151,7 +151,7 @@ private fun SignedInAccountSettingsContent(
                 StatusCard(label = stringResource(R.string.account_signed_in_label), value = authState.email)
             }
             item(key = "account_sync_note_signed_in") {
-                AccountInlineNote(text = stringResource(R.string.account_sync_restart_note))
+                AccountInlineNote(text = stringResource(R.string.account_sync_behavior_note))
             }
 
             val overview = uiState.syncOverview

@@ -2040,7 +2040,7 @@
     <!-- AccountSettingsContent -->
     <string name="account_loading">Carregando\u2026</string>
     <string name="account_sync_description">Sincronize sua biblioteca, progresso e addons entre seus aparelhos.</string>
-    <string name="account_sync_restart_note">A sincronia não é em tempo real. Reinicie o app para atualizar as mudanças feitas em outros dispositivos.</string>
+    <string name="account_sync_behavior_note">Com uma conta conectada, alterações compatíveis são buscadas periodicamente e ao voltar para o app. A atualização pode levar algum tempo; a disponibilidade depende do servidor e das integrações de acompanhamento ativas.</string>
     <string name="account_signin_qr_title">Entrar com QR Code</string>
     <string name="account_signin_qr_subtitle">Escaneie o código e complete o login pelo celular.</string>
     <string name="account_signin_email_title">Entrar</string>
