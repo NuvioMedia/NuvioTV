@@ -20,6 +20,8 @@ O código posterior à release 1.0.0 integra miniaturas reais e filmstrip ao see
 
 O código em desenvolvimento inclui o editor de avatar pessoal no fluxo existente de perfis: biblioteca integrada com 64 ilustrações licenciadas, arquivo local, clipboard com URI de imagem, recorte, zoom e versões PNG otimizadas. Em aparelhos sem seletor de documentos, a escolha usa fotos locais com permissão solicitada somente ao abrir a ação. O armazenamento é privado, separado do cache e isolado por conta e identidade do perfil.
 
+A QA manual também percorreu o fluxo real de instalação de addon, seleção de fonte, reprodução Media3 e seek/retorno por D-pad em uma AVD nova API 36/1080p, com vídeo original e modo convidado. Thumbnail e filmstrip foram capturados enquanto o player principal permanecia pausado. Isso não comprova conta oficial ou todos os providers. Uma falha de início da instrumentação no ambiente frio foi preservada, sem declarar correção por uma repetição aprovada. A nota da tela Conta agora explica a atualização periódica e ao retornar ao app; pt-BR e inglês foram conferidos no APK, e o build posterior passou em 222 testes selecionados. Esses incrementos continuam fora dos APKs publicados da 1.0.0.
+
 Os incrementos anteriores possuem testes de decoder e interface em 720p, 1080p e 4K. A validação usa emulador e imagens controladas; não comprova todos os seletores de fabricantes nem desempenho em TV física. [Evidências e pendências](https://github.com/Pepeu2010/telumia/blob/main/docs/PROFILE_STUDIO.md).
 
 ```sh
