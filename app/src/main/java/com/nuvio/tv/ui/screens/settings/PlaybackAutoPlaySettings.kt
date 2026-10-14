@@ -87,6 +87,9 @@ internal fun PlaybackStreamSelectionSection(
             StreamAutoPlayMode.MANUAL -> stringResource(R.string.autoplay_mode_manual)
             StreamAutoPlayMode.FIRST_STREAM -> stringResource(R.string.autoplay_mode_first)
             StreamAutoPlayMode.REGEX_MATCH -> stringResource(R.string.autoplay_mode_regex)
+            StreamAutoPlayMode.BEST_QUALITY -> stringResource(R.string.source_mode_quality)
+            StreamAutoPlayMode.BALANCED -> stringResource(R.string.source_mode_balanced)
+            StreamAutoPlayMode.DATA_SAVER -> stringResource(R.string.source_mode_saver)
         },
         onClick = { onOpenDialog(PlaybackDialog.STREAM_AUTO_PLAY_MODE) }
     )
@@ -439,6 +442,9 @@ private fun StreamAutoPlayModeDialog(
 ) {
     val options = listOf(
         SettingsPickerOption(StreamAutoPlayMode.MANUAL, stringResource(R.string.autoplay_mode_manual), stringResource(R.string.autoplay_mode_manual_desc)),
+        SettingsPickerOption(StreamAutoPlayMode.BEST_QUALITY, stringResource(R.string.source_mode_quality), stringResource(R.string.source_mode_quality_desc)),
+        SettingsPickerOption(StreamAutoPlayMode.BALANCED, stringResource(R.string.source_mode_balanced), stringResource(R.string.source_mode_balanced_desc)),
+        SettingsPickerOption(StreamAutoPlayMode.DATA_SAVER, stringResource(R.string.source_mode_saver), stringResource(R.string.source_mode_saver_desc)),
         SettingsPickerOption(StreamAutoPlayMode.FIRST_STREAM, stringResource(R.string.autoplay_mode_first), stringResource(R.string.autoplay_mode_first_desc)),
         SettingsPickerOption(StreamAutoPlayMode.REGEX_MATCH, stringResource(R.string.autoplay_mode_regex), stringResource(R.string.autoplay_mode_regex_desc))
     )

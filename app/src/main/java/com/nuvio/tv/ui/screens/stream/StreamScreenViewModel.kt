@@ -159,6 +159,8 @@ class StreamScreenViewModel @Inject constructor(
     )
     val uiState: StateFlow<StreamScreenUiState> = _uiState.asStateFlow()
     val streamBadgeSettings = streamBadgeSettingsDataStore.settings
+    val sourceSelectionMode = playerSettingsDataStore.playerSettings
+        .map { it.streamAutoPlayMode }.distinctUntilChanged()
 
     val playerPreference = playerSettingsDataStore.playerSettings
         .map { it.playerPreference }

@@ -14,6 +14,63 @@ import org.junit.Test
 
 class StreamAutoPlaySelectorTest {
 
+    private fun choose(scored: List<Stream>, mode: StreamAutoPlayMode) = StreamAutoPlaySelector.selectAutoPlayStream(
+        scored, mode, "", StreamAutoPlaySource.ALL_SOURCES, setOf("AddonA"), emptySet(), emptySet()
+    )
+
+    @Test fun `quality and balanced choose different sources independent of provider order`() {
+        val hd = stream("AddonA", url = "https://example.com/hd").copy(qualityValue = 1080)
+        val uhd = hd.copy(url = "https://example.com/uhd", qualityValue = 2160)
+        for (sources in listOf(listOf(hd, uhd), listOf(uhd, hd))) {
+            assertEquals(uhd, choose(sources, StreamAutoPlayMode.BEST_QUALITY))
+            assertEquals(hd, choose(sources, StreamAutoPlayMode.BALANCED))
+        }
+    }
+
+    @Test fun `data saver prefers smaller known files without rewarding unknown size`() {
+        val small = stream("AddonA", url = "https://example.com/small").copy(qualityValue = 720,
+            behaviorHints = StreamBehaviorHints(null, null, null, null, videoSize = 512L * 1024 * 1024))
+        val large = small.copy(url = "https://example.com/large", behaviorHints = small.behaviorHints?.copy(videoSize = 8L * 1024 * 1024 * 1024))
+        val unknown = small.copy(url = "https://example.com/unknown", behaviorHints = null)
+        assertEquals(small, choose(listOf(unknown, large, small), StreamAutoPlayMode.DATA_SAVER))
+    }
+
+    @Test fun `scoring never makes external or uncached sources autoplay candidates`() {
+        val available = stream("AddonA", url = "https://example.com/available").copy(qualityValue = 720)
+        val external = stream("AddonA", externalUrl = "https://example.com/error").copy(qualityValue = 4320)
+        val unavailable = stream("AddonA", infoHash = "hash", cacheState = StreamDebridCacheState.NOT_CACHED).copy(qualityValue = 4320)
+        assertEquals(available, choose(listOf(external, unavailable, available), StreamAutoPlayMode.BEST_QUALITY))
+    }
+
+    @Test fun `unknown declarations remain neutral and ties preserve provider order`() {
+        val first = stream("AddonA", url = "https://example.com/one?token=private", name = "4K HDR HEVC fast")
+        val second = first.copy(url = "https://example.com/two")
+        val score = StreamAutoPlaySelector.scoreSource(first, StreamAutoPlayMode.BEST_QUALITY)
+        assertEquals(0, score.total)
+        assertNull(score.declaredHeight)
+        assertNull(score.declaredBytes)
+        assertEquals(first, choose(listOf(first, second), StreamAutoPlayMode.BEST_QUALITY))
+        assertEquals(second, choose(listOf(second, first), StreamAutoPlayMode.BEST_QUALITY))
+        assertNull(choose(listOf(first, second), StreamAutoPlayMode.MANUAL))
+    }
+
+    @Test fun `smart selection still respects selected addon filters`() {
+        val excluded = stream("Other", url = "https://example.com/excluded").copy(qualityValue = 2160)
+        val allowed = stream("AddonA", url = "https://example.com/allowed").copy(qualityValue = 720)
+        val chosen = StreamAutoPlaySelector.selectAutoPlayStream(listOf(excluded, allowed),
+            StreamAutoPlayMode.BEST_QUALITY, "", StreamAutoPlaySource.INSTALLED_ADDONS_ONLY,
+            setOf("AddonA"), setOf("AddonA"), emptySet())
+        assertEquals(allowed, chosen)
+    }
+
+    @Test fun `oversized and invalid declarations cannot overflow scores`() {
+        val source = stream("AddonA", url = "https://example.com/a").copy(qualityValue = Int.MAX_VALUE,
+            behaviorHints = StreamBehaviorHints(null, null, null, null, videoSize = Long.MAX_VALUE))
+        val score = StreamAutoPlaySelector.scoreSource(source, StreamAutoPlayMode.DATA_SAVER)
+        assertEquals(0, score.total)
+        assertNull(score.declaredHeight)
+    }
+
     @Test
     fun `orderAddonStreams follows installed addon order and leaves plugins last`() {
         val plugin = addonStreams("Plugin")

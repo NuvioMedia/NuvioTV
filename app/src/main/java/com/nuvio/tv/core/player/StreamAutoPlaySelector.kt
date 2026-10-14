@@ -106,6 +106,8 @@ object StreamAutoPlaySelector {
         return when (mode) {
             StreamAutoPlayMode.MANUAL -> null
             StreamAutoPlayMode.FIRST_STREAM -> candidateStreams.firstOrNull { isPlayable(it) }
+            StreamAutoPlayMode.BEST_QUALITY, StreamAutoPlayMode.BALANCED, StreamAutoPlayMode.DATA_SAVER ->
+                candidateStreams.filter { isPlayable(it) }.maxByOrNull { scoreSource(it, mode).total }
             StreamAutoPlayMode.REGEX_MATCH -> {
                 val pattern = regexPattern.trim()
  
@@ -155,5 +157,48 @@ object StreamAutoPlaySelector {
             }
 
         }
+    }
+
+    /** Declarative evidence only: never infers decoder support, bitrate or network health. */
+    data class SourceScore(val resolutionPoints: Int, val sizePoints: Int, val cachedPoints: Int,
+        val declaredHeight: Int?, val declaredBytes: Long?) {
+        val total: Int get() = resolutionPoints + sizePoints + cachedPoints
+    }
+
+    fun scoreSource(stream: Stream, mode: StreamAutoPlayMode): SourceScore {
+        val parsed = stream.clientResolve?.stream?.raw?.parsed
+        val declaredResolution = parsed?.resolution?.trim()?.lowercase(java.util.Locale.ROOT)
+        val height = (when (declaredResolution) {
+            "4k", "2160p", "2160" -> 2160
+            "1080p", "1080" -> 1080
+            "720p", "720" -> 720
+            "480p", "480" -> 480
+            "360p", "360" -> 360
+            else -> stream.qualityValue
+        }).takeIf { it in setOf(360, 480, 720, 800, 1080, 1440, 2160, 4320) }
+        val bytes = stream.behaviorHints?.videoSize?.takeIf { it > 0 }
+            ?: stream.clientResolve?.stream?.raw?.size?.takeIf { it > 0 }
+        val resolutionPoints = when (mode) {
+            StreamAutoPlayMode.BEST_QUALITY -> height?.div(10) ?: 0
+            StreamAutoPlayMode.BALANCED -> when {
+                height == null -> 0
+                height == 1080 -> 120
+                height in 720..800 -> 100
+                height < 720 -> 50
+                else -> 70
+            }
+            StreamAutoPlayMode.DATA_SAVER -> when {
+                height == null -> 0
+                height <= 720 -> 120
+                height <= 1080 -> 50
+                else -> 10
+            }
+            else -> 0
+        }
+        val sizePoints = if (mode == StreamAutoPlayMode.DATA_SAVER && bytes != null) {
+            80 - (bytes / (256L * 1024 * 1024)).coerceAtMost(80).toInt()
+        } else 0
+        val cachedPoints = if (mode.usesSourceScore && stream.debridCacheStatus?.state == StreamDebridCacheState.CACHED) 10 else 0
+        return SourceScore(resolutionPoints, sizePoints, cachedPoints, height, bytes)
     }
 }

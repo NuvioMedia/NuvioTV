@@ -78,6 +78,7 @@ private val localOnlyLayoutProfileSettingsKeys = setOf(
 )
 
 private val localOnlyPlayerProfileSettingsKeys = setOf(
+    "telumia_source_mode_v1",
     "player_preference",
     "internal_player_engine",
     "auto_switch_internal_player_on_error",

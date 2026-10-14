@@ -1,4 +1,11 @@
 <resources>
+    <string name="source_mode_quality">Best quality</string>
+    <string name="source_mode_balanced">Balanced</string>
+    <string name="source_mode_saver">Data saver</string>
+    <string name="source_mode_quality_desc">Prefer higher declared resolution. Decoder, HDR and network suitability are not yet measured.</string>
+    <string name="source_mode_balanced_desc">Prefer declared 1080p, then 720p. Uses available declarations, not a hardware guarantee.</string>
+    <string name="source_mode_saver_desc">Prefer up to 720p and smaller declared files. Actual network usage may differ.</string>
+    <string name="source_score_explanation">Declared score %1$d · resolution %2$d · size %3$d · cached %4$d. Codec, HDR and network unverified.</string>
     <string name="scene_bookmarks_title">Saved moments</string>
     <string name="scene_bookmarks_other_source">Saved with another source</string>
     <string name="scene_bookmarks_confirm_notice">This moment was saved with another source. Confirm it uses the same cut before applying its timestamp.</string>

@@ -5,6 +5,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProfileSettingsCredentialPolicyTest {
+    @Test fun `Telumia source strategy stays local while legacy selection remains shared`() {
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "telumia_source_mode_v1"))
+        assertFalse(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "stream_auto_play_mode"))
+    }
     @Test
     fun `non tracker credentials are excluded from profile settings blobs`() {
         assertTrue(shouldExcludePreferenceFromProfileSettingsSync("debrid_settings", "torbox_api_key"))

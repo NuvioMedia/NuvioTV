@@ -368,7 +368,10 @@ data class PlayerSettings(
 }
 
 enum class StreamAutoPlayMode {
-    MANUAL, FIRST_STREAM, REGEX_MATCH
+    MANUAL, FIRST_STREAM, REGEX_MATCH, BEST_QUALITY, BALANCED, DATA_SAVER;
+
+    val usesSourceScore: Boolean
+        get() = this == BEST_QUALITY || this == BALANCED || this == DATA_SAVER
 }
 
 enum class StreamAutoPlaySource {
@@ -529,6 +532,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val frameRateMatchingModeKey = stringPreferencesKey("frame_rate_matching_mode")
     private val resolutionMatchingEnabledKey = booleanPreferencesKey("resolution_matching_enabled")
     private val streamAutoPlayModeKey = stringPreferencesKey("stream_auto_play_mode")
+    private val telumiaSourceModeKey = stringPreferencesKey("telumia_source_mode_v1")
     private val streamAutoPlaySourceKey = stringPreferencesKey("stream_auto_play_source")
     private val streamAutoPlaySelectedAddonsKey = stringSetPreferencesKey("stream_auto_play_selected_addons")
     private val streamAutoPlaySelectedPluginsKey = stringSetPreferencesKey("stream_auto_play_selected_plugins")
@@ -914,7 +918,9 @@ class PlayerSettingsDataStore @Inject constructor(
                     runCatching { FrameRateMatchingMode.valueOf(it) }.getOrNull()
                 } ?: if (prefs[frameRateMatchingKey] == true) FrameRateMatchingMode.START_STOP else FrameRateMatchingMode.OFF,
                 resolutionMatchingEnabled = prefs[resolutionMatchingEnabledKey] ?: false,
-                streamAutoPlayMode = prefs[streamAutoPlayModeKey]?.let {
+                streamAutoPlayMode = prefs[telumiaSourceModeKey]?.let {
+                    runCatching { StreamAutoPlayMode.valueOf(it) }.getOrNull()?.takeIf { mode -> mode.usesSourceScore }
+                } ?: prefs[streamAutoPlayModeKey]?.let {
                     runCatching { StreamAutoPlayMode.valueOf(it) }.getOrDefault(StreamAutoPlayMode.MANUAL)
                 } ?: StreamAutoPlayMode.MANUAL,
                 streamAutoPlaySource = prefs[streamAutoPlaySourceKey]?.let {
@@ -1265,7 +1271,12 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun setStreamAutoPlayMode(mode: StreamAutoPlayMode) {
         store().edit { prefs ->
-            prefs[streamAutoPlayModeKey] = mode.name
+            if (mode.usesSourceScore) {
+                prefs[telumiaSourceModeKey] = mode.name
+            } else {
+                prefs.remove(telumiaSourceModeKey)
+                prefs[streamAutoPlayModeKey] = mode.name
+            }
         }
     }
 

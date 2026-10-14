@@ -90,6 +90,8 @@ import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.core.streams.StreamBadgeSettings
 import com.nuvio.tv.data.local.PlayerPreference
+import com.nuvio.tv.data.local.StreamAutoPlayMode
+import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
@@ -128,6 +130,7 @@ fun StreamScreen(
     onAutoPlayResolved: (StreamPlaybackInfo) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sourceSelectionMode by viewModel.sourceSelectionMode.collectAsStateWithLifecycle(initialValue = StreamAutoPlayMode.MANUAL)
     val playerPreference by viewModel.playerPreference.collectAsStateWithLifecycle(
         initialValue = null
     )
@@ -439,6 +442,7 @@ fun StreamScreen(
 
                 // Right side - Streams container
                 RightStreamSection(
+                    selectionMode = sourceSelectionMode,
                     isLoading = uiState.isLoading,
                     error = uiState.error,
                     streams = uiState.filteredStreams,
@@ -721,6 +725,7 @@ private fun LeftContentSection(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun RightStreamSection(
+    selectionMode: StreamAutoPlayMode,
     isLoading: Boolean,
     error: String?,
     streams: List<Stream>,
@@ -907,6 +912,7 @@ private fun RightStreamSection(
                     }
                     else -> {
                         StreamsList(
+                            selectionMode = selectionMode,
                             streams = streams,
                             onStreamSelected = onStreamSelected,
                             focusedStreamIndex = focusedStreamIndex,
@@ -1025,6 +1031,7 @@ private fun EmptyState() {
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun StreamsList(
+    selectionMode: StreamAutoPlayMode,
     streams: List<Stream>,
     onStreamSelected: (Stream) -> Unit,
     focusedStreamIndex: Int = 0,
@@ -1182,6 +1189,7 @@ private fun StreamsList(
         }) { index, stream ->
             Box(modifier = Modifier.padding(vertical = NuvioTheme.spacing.xs)) {
                 StreamCard(
+                    selectionMode = selectionMode,
                     stream = stream,
                     showFileSizeBadges = showFileSizeBadges,
                     showAddonLogo = showAddonLogo,
@@ -1214,6 +1222,7 @@ private fun StreamsList(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun StreamCard(
+    selectionMode: StreamAutoPlayMode,
     stream: Stream,
     showFileSizeBadges: Boolean,
     showAddonLogo: Boolean,
@@ -1333,6 +1342,15 @@ private fun StreamCard(
                             color = NuvioTheme.extendedColors.textSecondary
                         )
                     }
+                }
+
+                if (selectionMode.usesSourceScore) {
+                    val score = remember(stream, selectionMode) { StreamAutoPlaySelector.scoreSource(stream, selectionMode) }
+                    Text(
+                        text = stringResource(R.string.source_score_explanation, score.total, score.resolutionPoints, score.sizePoints, score.cachedPoints),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioTheme.extendedColors.textSecondary
+                    )
                 }
 
                 if (hasBadges && badgePlacement == StreamBadgePlacement.BOTTOM) {

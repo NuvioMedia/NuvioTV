@@ -64,6 +64,9 @@ fun EssentialPlaybackSettingsContent(
                             StreamAutoPlayMode.FIRST_STREAM -> stringResource(R.string.stream_auto_play_first_stream)
                             StreamAutoPlayMode.MANUAL -> stringResource(R.string.stream_auto_play_manual_short)
                             StreamAutoPlayMode.REGEX_MATCH -> stringResource(R.string.stream_auto_play_smart_match)
+                            StreamAutoPlayMode.BEST_QUALITY -> stringResource(R.string.source_mode_quality)
+                            StreamAutoPlayMode.BALANCED -> stringResource(R.string.source_mode_balanced)
+                            StreamAutoPlayMode.DATA_SAVER -> stringResource(R.string.source_mode_saver)
                             null -> ""
                         },
                         onClick = {
