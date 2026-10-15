@@ -22,6 +22,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.annotation.PluralsRes
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -53,8 +55,13 @@ internal fun UsenetSourcesCard(
     initialFocusRequester: FocusRequester,
     indexerStatuses: Map<String, IndexerStatus> = emptyMap(),
     setUpFromPhone: (() -> Unit)? = null,
-    phoneSetupOpen: Boolean = false
+    phoneSetupOpen: Boolean = false,
+    expanded: Set<UsenetSettingsSection> = UsenetSettingsSection.entries.toSet(),
+    onToggleSection: (UsenetSettingsSection) -> Unit = {},
+    takeEntryFocus: () -> Boolean = { false }
 ) {
+    // Composed after the sources load: take the page's entry focus if it is still where it landed meanwhile.
+    LaunchedEffect(Unit) { if (takeEntryFocus()) runCatching { initialFocusRequester.requestFocus() } }
     val phoneRow = remember { FocusRequester() }
     var phoneSetupShown by remember { mutableStateOf(false) }
     // The QR overlay took focus; give it back to the row that opened it, not the side menu.
@@ -81,60 +88,72 @@ internal fun UsenetSourcesCard(
         SettingsPickerOption(UsenetSort.INDEXER, stringResource(R.string.usenet_sort_indexer))
     )
     val unlimited = stringResource(R.string.usenet_no_limit)
-    SettingsGroupCard(title = stringResource(R.string.usenet_sources_title)) {
-        SettingsToggleRow(title = stringResource(R.string.usenet_builtin_enabled),
-            subtitle = stringResource(R.string.usenet_builtin_description), checked = configuration.enabled,
-            onToggle = { update(configuration.copy(enabled = !configuration.enabled)) },
-            modifier = Modifier.focusRequester(initialFocusRequester))
-        if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_phone_setup),
-            subtitle = stringResource(R.string.usenet_phone_setup_description), onClick = setUpFromPhone,
-            modifier = Modifier.focusRequester(phoneRow))
-        SettingsActionRow(title = stringResource(R.string.usenet_add_provider),
-            subtitle = stringResource(R.string.usenet_provider_priority_hint), onClick = { provider = UsenetProvider() })
-        configuration.providers.forEachIndexed { i, item ->
-            SettingsActionRow(title = item.name, subtitle = "${i + 1}. ${item.host}:${item.port} • ${item.connections} • " +
-                stringResource(R.string.usenet_priority_value, item.priority),
-                value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
-                onClick = { selectedId = item.id; picker = "provider" })
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        SettingsGroupCard(title = stringResource(R.string.usenet_sources_title)) {
+            SettingsToggleRow(title = stringResource(R.string.usenet_builtin_enabled),
+                subtitle = stringResource(R.string.usenet_builtin_description), checked = configuration.enabled,
+                onToggle = { update(configuration.copy(enabled = !configuration.enabled)) },
+                modifier = Modifier.focusRequester(initialFocusRequester))
+            if (configuration.enabled && !configuration.ready) {
+                SettingsNote(stringResource(R.string.usenet_sources_needed), tone = SettingsNoteTone.Warning)
+            }
+            if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_phone_setup),
+                subtitle = stringResource(R.string.usenet_phone_setup_description), onClick = setUpFromPhone,
+                modifier = Modifier.focusRequester(phoneRow))
         }
-        SettingsActionRow(title = stringResource(R.string.usenet_add_indexer),
-            subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer(apiPath = DEFAULT_API_PATH) })
-        configuration.indexers.forEachIndexed { i, item ->
-            SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.endpoint.substringBefore('?')}",
-                stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id], now))
-                .joinToString(" • "),
-                value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
-                onClick = { selectedId = item.id; picker = "indexer" })
+        UsenetSettingsSection(UsenetSettingsSection.PROVIDERS, expanded, onToggleSection,
+            description = sourcesSummary(configuration.providers.size, configuration.providers.count { it.enabled },
+                R.plurals.usenet_providers_count)) {
+            configuration.providers.forEachIndexed { i, item ->
+                SettingsActionRow(title = item.name, subtitle = "${i + 1}. ${item.host}:${item.port} • ${item.connections} • " +
+                    stringResource(R.string.usenet_priority_value, item.priority),
+                    value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
+                    onClick = { selectedId = item.id; picker = "provider" })
+            }
+            SettingsActionRow(title = stringResource(R.string.usenet_add_provider),
+                subtitle = stringResource(R.string.usenet_provider_priority_hint), onClick = { provider = UsenetProvider() })
         }
-        SettingsToggleRow(title = stringResource(R.string.usenet_indexer_fallback),
-            subtitle = stringResource(R.string.usenet_indexer_fallback_description), checked = configuration.indexerFallback,
-            onToggle = { update(configuration.copy(indexerFallback = !configuration.indexerFallback)) })
-        SettingsToggleRow(title = stringResource(R.string.usenet_hide_duplicates),
-            subtitle = stringResource(R.string.usenet_hide_duplicates_description), checked = configuration.hideDuplicates,
-            onToggle = { update(configuration.copy(hideDuplicates = !configuration.hideDuplicates)) })
-        SettingsToggleRow(title = stringResource(R.string.usenet_show_release_names),
-            subtitle = stringResource(R.string.usenet_show_release_names_description), checked = configuration.showReleaseNames,
-            onToggle = { update(configuration.copy(showReleaseNames = !configuration.showReleaseNames)) })
-        if (configuration.enabled && !configuration.ready) {
-            Text(stringResource(R.string.usenet_sources_needed), color = NuvioTheme.colors.TextSecondary)
+        UsenetSettingsSection(UsenetSettingsSection.INDEXERS, expanded, onToggleSection,
+            description = sourcesSummary(configuration.indexers.size, configuration.indexers.count { it.enabled },
+                R.plurals.usenet_indexers_count)) {
+            configuration.indexers.forEachIndexed { i, item ->
+                SettingsActionRow(title = item.name, subtitle = listOfNotNull("${i + 1}. ${item.endpoint.substringBefore('?')}",
+                    stringResource(R.string.usenet_priority_value, item.priority), indexerStatusLabel(indexerStatuses[item.id], now))
+                    .joinToString(" • "),
+                    value = stringResource(if (item.enabled) R.string.usenet_source_enabled else R.string.usenet_source_disabled),
+                    onClick = { selectedId = item.id; picker = "indexer" })
+            }
+            SettingsActionRow(title = stringResource(R.string.usenet_add_indexer),
+                subtitle = stringResource(R.string.usenet_indexer_hint), onClick = { indexer = UsenetIndexer(apiPath = DEFAULT_API_PATH) })
+            SettingsToggleRow(title = stringResource(R.string.usenet_indexer_fallback),
+                subtitle = stringResource(R.string.usenet_indexer_fallback_description), checked = configuration.indexerFallback,
+                onToggle = { update(configuration.copy(indexerFallback = !configuration.indexerFallback)) })
+            SettingsToggleRow(title = stringResource(R.string.usenet_hide_duplicates),
+                subtitle = stringResource(R.string.usenet_hide_duplicates_description), checked = configuration.hideDuplicates,
+                onToggle = { update(configuration.copy(hideDuplicates = !configuration.hideDuplicates)) })
         }
-        SettingsActionRow(title = stringResource(R.string.usenet_sort_results), subtitle = null,
-            value = sortOptions.first { it.value == configuration.sort }.title, onClick = { picker = "sort" })
-        SettingsActionRow(title = stringResource(R.string.usenet_min_resolution), subtitle = null,
-            value = if (configuration.minResolution == 0) unlimited else "${configuration.minResolution}p",
-            onClick = { picker = "resolution" })
-        SettingsActionRow(title = stringResource(R.string.usenet_max_size), subtitle = null,
-            value = if (configuration.maxSizeGb == 0) unlimited else "${configuration.maxSizeGb} GB", onClick = { picker = "size" })
-        SettingsActionRow(title = stringResource(R.string.usenet_max_age), subtitle = null,
-            value = if (configuration.maxAgeDays == 0) unlimited else "${configuration.maxAgeDays}d", onClick = { picker = "age" })
-        SettingsActionRow(title = stringResource(R.string.usenet_result_limit), subtitle = null,
-            value = configuration.maxResults.toString(), onClick = { picker = "limit" })
-        SettingsToggleRow(title = stringResource(R.string.usenet_exclude_low_quality), subtitle = null,
-            checked = configuration.excludeLowQuality,
-            onToggle = { update(configuration.copy(excludeLowQuality = !configuration.excludeLowQuality)) })
-        SettingsToggleRow(title = stringResource(R.string.usenet_exclude_full_disc),
-            subtitle = stringResource(R.string.usenet_exclude_full_disc_description), checked = configuration.excludeFullDisc,
-            onToggle = { update(configuration.copy(excludeFullDisc = !configuration.excludeFullDisc)) })
+        UsenetSettingsSection(UsenetSettingsSection.SEARCH, expanded, onToggleSection) {
+            SettingsActionRow(title = stringResource(R.string.usenet_sort_results), subtitle = null,
+                value = sortOptions.first { it.value == configuration.sort }.title, onClick = { picker = "sort" })
+            SettingsActionRow(title = stringResource(R.string.usenet_min_resolution), subtitle = null,
+                value = if (configuration.minResolution == 0) unlimited else "${configuration.minResolution}p",
+                onClick = { picker = "resolution" })
+            SettingsActionRow(title = stringResource(R.string.usenet_max_size), subtitle = null,
+                value = if (configuration.maxSizeGb == 0) unlimited else "${configuration.maxSizeGb} GB", onClick = { picker = "size" })
+            SettingsActionRow(title = stringResource(R.string.usenet_max_age), subtitle = null,
+                value = if (configuration.maxAgeDays == 0) unlimited else "${configuration.maxAgeDays}d", onClick = { picker = "age" })
+            SettingsActionRow(title = stringResource(R.string.usenet_result_limit), subtitle = null,
+                value = configuration.maxResults.toString(), onClick = { picker = "limit" })
+            SettingsToggleRow(title = stringResource(R.string.usenet_exclude_low_quality), subtitle = null,
+                checked = configuration.excludeLowQuality,
+                onToggle = { update(configuration.copy(excludeLowQuality = !configuration.excludeLowQuality)) })
+            SettingsToggleRow(title = stringResource(R.string.usenet_exclude_full_disc),
+                subtitle = stringResource(R.string.usenet_exclude_full_disc_description), checked = configuration.excludeFullDisc,
+                onToggle = { update(configuration.copy(excludeFullDisc = !configuration.excludeFullDisc)) })
+            SettingsToggleRow(title = stringResource(R.string.usenet_show_release_names),
+                subtitle = stringResource(R.string.usenet_show_release_names_description), checked = configuration.showReleaseNames,
+                onToggle = { update(configuration.copy(showReleaseNames = !configuration.showReleaseNames)) })
+        }
     }
     when (picker) {
         "sort" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_sort_results), options = sortOptions,
@@ -251,6 +270,12 @@ internal fun UsenetSourcesCard(
         update(configuration.copy(indexers = configuration.indexers.replaceOrAdd(it) { p -> p.id })); indexer = null
     }) }
 }
+
+/** How many sources a section holds and how many of them are switched on. */
+@Composable
+private fun sourcesSummary(count: Int, enabled: Int, @PluralsRes plural: Int): String =
+    if (count == 0) stringResource(R.string.usenet_section_none)
+    else stringResource(R.string.usenet_section_enabled_count, pluralStringResource(plural, count, count), enabled)
 
 private fun <T> List<T>.moved(position: Int, delta: Int): List<T> = toMutableList().apply {
     val item = removeAt(position); add(position + delta, item)
