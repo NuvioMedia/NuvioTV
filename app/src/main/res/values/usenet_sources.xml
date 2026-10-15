@@ -99,4 +99,22 @@
     <string name="usenet_user_agent_default">%1$s (default)</string>
     <string name="usenet_user_agent_invalid">Use plain text on one line, up to 256 characters.</string>
     <string name="usenet_user_agent_reset">Reset to default</string>
+    <string name="usenet_section_providers">NNTP providers</string>
+    <string name="usenet_section_indexers">Newznab indexers</string>
+    <string name="usenet_section_none">None added yet</string>
+    <string name="usenet_section_enabled_count">%1$s, %2$d enabled</string>
+    <plurals name="usenet_providers_count">
+        <item quantity="one">%d provider</item>
+        <item quantity="other">%d providers</item>
+    </plurals>
+    <plurals name="usenet_indexers_count">
+        <item quantity="one">%d indexer</item>
+        <item quantity="other">%d indexers</item>
+    </plurals>
+    <string name="usenet_section_search">Search results</string>
+    <string name="usenet_section_search_desc">Sorting, quality, size and age filters</string>
+    <string name="usenet_section_playback">Playback and engine</string>
+    <string name="usenet_section_playback_desc">Fallback, missing articles, startup and connections</string>
+    <string name="usenet_section_diagnostics">Diagnostics</string>
+    <string name="usenet_section_diagnostics_desc">Timings from the last Usenet startup</string>
 </resources>

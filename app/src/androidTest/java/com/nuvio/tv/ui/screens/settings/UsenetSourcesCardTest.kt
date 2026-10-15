@@ -78,6 +78,26 @@ class UsenetSourcesCardTest {
         compose.onNodeWithText(label(R.string.usenet_provider_test_auth)).assertDoesNotExist()
     }
 
+    @Test fun closedSectionsHideTheirRowsAndSummarizeTheirSources() {
+        val providers = listOf(UsenetProvider(name = "News", host = "news.test"),
+            UsenetProvider(name = "Backup", host = "backup.test", enabled = false))
+        var toggled: UsenetSettingsSection? = null
+        compose.setContent {
+            NuvioTheme {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    UsenetSourcesCard(UsenetSourceConfiguration(providers = providers), {}, { true }, { ProviderTestResult.SUCCESS },
+                        remember { FocusRequester() }, expanded = emptySet(), onToggleSection = { toggled = it })
+                }
+            }
+        }
+        compose.onNodeWithText("News").assertDoesNotExist()
+        compose.onNodeWithText(label(R.string.usenet_add_provider)).assertDoesNotExist()
+        compose.onNodeWithText(context.getString(R.string.usenet_section_enabled_count,
+            context.resources.getQuantityString(R.plurals.usenet_providers_count, 2, 2), 1)).assertExists()
+        compose.onNodeWithText(label(R.string.usenet_section_providers)).performScrollTo().pressRemote()
+        compose.runOnIdle { assertEquals(UsenetSettingsSection.PROVIDERS, toggled) }
+    }
+
     @Test fun sourceDeletionRequiresConfirmationAndPreservesOtherSources() {
         val news = UsenetProvider(name = "News", host = "news.test")
         val indexer = UsenetIndexer(name = "Index", apiUrl = "https://index.test/api")

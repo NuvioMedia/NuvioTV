@@ -3,7 +3,6 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
@@ -16,7 +15,10 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 internal fun UsenetSettingsCard(
     configuration: UsenetConfiguration,
     update: (UsenetConfiguration) -> Unit,
-    initialFocusRequester: FocusRequester? = null
+    expanded: Boolean = true,
+    onToggle: () -> Unit = {},
+    initialFocusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier
 ) {
     var picker by remember { mutableStateOf<String?>(null) }
     val automatic = stringResource(R.string.usenet_automatic)
@@ -25,7 +27,9 @@ internal fun UsenetSettingsCard(
         SettingsPickerOption("balanced", stringResource(R.string.usenet_balanced)),
         SettingsPickerOption("throughput", stringResource(R.string.usenet_throughput))
     )
-    SettingsGroupCard(title = stringResource(R.string.usenet_title)) {
+    val section = UsenetSettingsSection.PLAYBACK
+    SettingsCollapsibleSection(title = stringResource(section.title), description = stringResource(section.description),
+        icon = section.icon, expanded = expanded, onToggle = onToggle, modifier = modifier, focusRequester = initialFocusRequester) {
         SettingsToggleRow(title = stringResource(R.string.usenet_self_hosted),
             subtitle = stringResource(R.string.usenet_self_hosted_description),
             checked = configuration.allowPrivateNetwork,
@@ -38,8 +42,7 @@ internal fun UsenetSettingsCard(
         SettingsToggleRow(title = stringResource(R.string.usenet_fallback),
             subtitle = stringResource(R.string.usenet_fallback_description),
             checked = configuration.fallbackEnabled,
-            onToggle = { update(configuration.copy(fallbackEnabled = !configuration.fallbackEnabled)) },
-            modifier = initialFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+            onToggle = { update(configuration.copy(fallbackEnabled = !configuration.fallbackEnabled)) })
         SettingsActionRow(title = stringResource(R.string.usenet_fallback_max_attempts),
             subtitle = stringResource(R.string.usenet_fallback_max_attempts_description),
             value = configuration.fallbackMaxAttempts.toString(), onClick = { picker = "fallbackAttempts" })
