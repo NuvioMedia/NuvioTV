@@ -341,7 +341,10 @@ class BuiltInUsenetService @Inject constructor(
                 }
                 suspend fun show() {
                     val arranged = arranged()
-                    log("show ${arranged.size} results")
+                    log("show ${arranged.size} results: " + arranged.take(15).joinToString(" | ") {
+                        val state = if (failed(it)) "U" else if (played(it)) "A" else "-"
+                        "$state ${it.resolution} ${it.episodeSize(episodesPerSeason()) / 1_000_000}MB ${it.title.take(40)}"
+                    })
                     if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
                         arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty(),
                             episodes = episodesPerSeason()) })))
