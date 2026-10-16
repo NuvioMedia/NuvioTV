@@ -304,8 +304,7 @@ class BuiltInUsenetService @Inject constructor(
             // ones that played recently go first unless turned off.
             suspend fun arranged() = NewznabProtocol.arrange(
                 if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config,
-                episodesPerSeason = episodesPerSeason())
-                .sortedBy { outcomeRank(failed(it), played(it), config.availableFirst) }
+                episodesPerSeason = episodesPerSeason()) { outcomeRank(failed(it), played(it), config.availableFirst) }
             val enabled = config.indexers.filter { it.enabled }
             // Every indexer is searched at once unless the user chose priority fallback: then equal
             // priorities are searched together and lower ones only when nothing playable was found.
