@@ -1436,6 +1436,13 @@ internal fun PlayerRuntimeController.initializePlayer(
                             usenetResponse?.headerFields.orEmpty()
                         )
                         cancelStableProgressReset()
+                        if (permanentUsenetFailure) {
+                            val kind = usenetResponse?.headerFields.orEmpty().entries
+                                .firstOrNull { it.key.equals("X-Usenet-Failure", ignoreCase = true) }?.value?.firstOrNull()
+                            streamFallbackSession?.current?.let {
+                                com.nuvio.tv.core.usenet.UnplayableReleases.get(context).record(it, kind)
+                            }
+                        }
                         if (permanentUsenetFailure && tryNextStream(detailedError)) return
 
                         if (Vc1VideoFormatHeuristics.isVc1PlaybackFailure(

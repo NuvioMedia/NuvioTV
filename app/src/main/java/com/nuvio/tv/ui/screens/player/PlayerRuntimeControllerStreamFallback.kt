@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.StreamFallbackSession
+import com.nuvio.tv.core.usenet.UnplayableReleases
 import com.nuvio.tv.core.usenet.UsenetSettings
 import com.nuvio.tv.core.usenet.UsenetSidecar
 import com.nuvio.tv.domain.model.Stream
@@ -15,10 +16,12 @@ import kotlinx.coroutines.yield
 internal fun PlayerRuntimeController.beginStreamFallbackSession(stream: Stream, streams: List<Stream>) {
     cancelStreamFallback()
     streamFallbackSession = if (stream.isUsenet()) {
+        val unplayable = UnplayableReleases.get(context)
         StreamFallbackSession(
             stream, streams,
             maxAttempts = UsenetSettings.read(context).fallbackMaxAttempts,
-            isEnabled = { UsenetSettings.read(context).fallbackEnabled }
+            isEnabled = { UsenetSettings.read(context).fallbackEnabled },
+            isUnplayable = { unplayable.contains(it) }
         )
     } else null
     streamFallbackResumePosition = null

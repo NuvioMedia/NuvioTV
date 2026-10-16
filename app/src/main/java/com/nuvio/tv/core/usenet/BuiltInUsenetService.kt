@@ -256,7 +256,8 @@ data class BuiltInUsenetResult(val group: AddonStreams? = null, val failure: Str
 class BuiltInUsenetService @Inject constructor(
     private val client: NewznabClient,
     private val tmdb: TmdbService,
-    private val tmdbApi: TmdbApi
+    private val tmdbApi: TmdbApi,
+    private val unplayable: UnplayableReleases? = null
 ) {
     fun search(config: UsenetSourceConfiguration, type: String, videoId: String,
         season: Int?, episode: Int?): Flow<BuiltInUsenetResult> = flow {
@@ -279,8 +280,12 @@ class BuiltInUsenetService @Inject constructor(
                 catch (_: Exception) { null }
             }
             val releases = mutableListOf<UsenetRelease>()
+            val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
+            fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers) == true
+            // Releases that already failed for good with these providers go last, still selectable.
             fun arranged() = NewznabProtocol.arrange(
                 if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config)
+                .sortedBy { failed(it) }
             val enabled = config.indexers.filter { it.enabled }
             // Every indexer is searched at once unless the user chose priority fallback: then equal
             // priorities are searched together and lower ones only when nothing playable was found.
@@ -313,7 +318,7 @@ class BuiltInUsenetService @Inject constructor(
                         releases += result.getOrThrow()
                         val arranged = arranged()
                         if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
-                            arranged.map { it.toStream(config) })))
+                            arranged.map { it.toStream(config, failed(it)) })))
                     }
                 }
                 if (arranged().isNotEmpty()) break
@@ -370,7 +375,7 @@ class BuiltInUsenetService @Inject constructor(
             year = (details?.releaseDate ?: details?.firstAirDate)?.take(4)?.toIntOrNull())
     }
 
-    private fun UsenetRelease.toStream(config: UsenetSourceConfiguration): Stream {
+    private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false): Stream {
         val sizeLabel = if (size > 0) "%.2f GB".format(Locale.ROOT, size / (1024.0 * 1024 * 1024)) else null
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
         val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
@@ -380,9 +385,12 @@ class BuiltInUsenetService @Inject constructor(
             // The size badge, as other sources show it.
             behaviorHints = size.takeIf { it > 0 }?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
             addonName = GROUP_NAME, addonLogo = null,
-            badges = listOfNotNull(blurayLabel?.let {
-                StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
-            }),
+            badges = listOfNotNull(
+                StreamBadge(name = UNAVAILABLE_LABEL, tagColor = UNAVAILABLE_COLOR, textColor = "#FFFFFF",
+                    tagStyle = StreamBadge.STYLE_LABEL).takeIf { failed },
+                blurayLabel?.let {
+                    StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+                }),
             nzbUrl = nzbUrl, servers = config.providers.filter { it.enabled }.map { it.serverUrl() },
             quality = resolution.takeIf { it > 0 }?.let { "${it}p" }, qualityValue = resolution)
     }
@@ -390,5 +398,8 @@ class BuiltInUsenetService @Inject constructor(
     companion object {
         const val GROUP_NAME = "Built-in Usenet"
         private const val BLURAY_COLOR = "#0B5ED7"
+        /** On a release whose articles were missing or damaged when it was last tried. */
+        const val UNAVAILABLE_LABEL = "UNAVAILABLE"
+        private const val UNAVAILABLE_COLOR = "#6C757D"
     }
 }

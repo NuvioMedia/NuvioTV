@@ -81,6 +81,27 @@ class BuiltInUsenetServiceTest {
         assertNull(remux.behaviorHints)
     }
 
+    @Test fun `a release that failed for good goes last, labelled, and stays selectable`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns
+            listOf(release(indexer, "Movie.2020.2160p-GRP"), release(indexer, "Movie.2020.1080p-GRP"))
+        val unplayable = UnplayableReleases(object : UnplayableReleaseStorage {
+            var value: String? = null
+            override fun load() = value
+            override fun save(value: String) { this.value = value }
+        })
+        unplayable.record("https://a.test/api/nzb/Movie.2020.2160p-GRP", null, null,
+            config.providers.map { it.serverUrl() }, "missing-article")
+        val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>(), unplayable)
+        val streams = service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams
+        assertEquals(listOf("Movie.2020.1080p-GRP", "Movie.2020.2160p-GRP"), streams.map { it.title })
+        assertEquals(listOf(BuiltInUsenetService.UNAVAILABLE_LABEL), streams.last().badges.map { it.name })
+        assertTrue(streams.first().badges.isEmpty())
+    }
+
     @Test fun `results show their release name unless turned off`() = runTest {
         val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
         val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
