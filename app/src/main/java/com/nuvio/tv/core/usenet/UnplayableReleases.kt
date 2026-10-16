@@ -43,9 +43,11 @@ class SharedPreferencesUnplayableReleaseStorage(context: Context) : UnplayableRe
 internal data class UnplayableRelease(val kind: String, val at: Long, val providers: String)
 
 /**
- * Releases the engine found unplayable with the current providers: articles removed or damaged.
- * Such a release fails again on every attempt, and only after its NZB was downloaded, so results
- * put it last and fallback skips it. An entry is keyed by a hash of the NZB URL, exact within one
+ * How releases last went with the current providers. Mostly releases the engine found unplayable:
+ * articles removed or damaged. Such a release fails again on every attempt, and only after its NZB
+ * was downloaded, so results put it last and fallback skips it. Releases that showed their first
+ * frame are kept too, for two weeks: results label them and fallback tries them first, since their
+ * NZB is usually cached and their articles were there. An entry is keyed by a hash of the NZB URL, exact within one
  * indexer, and by one of the title and size in megabytes: another indexer gives the same upload
  * another URL, and only its NZB would prove it is the same. Nothing secret is stored. Other
  * providers may still have the articles, so a change of providers forgets an entry, as do 30 days.
@@ -74,31 +76,62 @@ class UnplayableReleases internal constructor(
     @Synchronized
     fun record(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, kind: String?) {
         if (kind !in KINDS) return
-        val keys = keys(nzbUrl, title, size?.let { it / MB }).ifEmpty { return }
-        val entry = UnplayableRelease(requireNotNull(kind), now(), providersKey(servers))
+        if (put(nzbUrl, title, size, servers, requireNotNull(kind))) {
+            runCatching { android.util.Log.i("UsenetUnplayable", "remembered kind=$kind release=\"${title?.lineSequence()?.firstOrNull()}\" size=${size ?: 0}") }
+        }
+    }
+
+    /**
+     * Remembers a release that showed its first frame. A later failure replaces this, and so does
+     * a newer success: a release already marked within a day is not written again.
+     */
+    @Synchronized
+    fun recordPlayed(nzbUrl: String?, title: String?, size: Long?, servers: List<String>) {
+        val known = find(nzbUrl, title, size, servers)
+        if (known?.kind == PLAYED && now() - known.at < REPLAYED_MS) return
+        put(nzbUrl, title, size, servers, PLAYED)
+    }
+
+    private fun put(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, kind: String): Boolean {
+        val keys = keys(nzbUrl, title, size?.let { it / MB }).ifEmpty { return false }
+        val entry = UnplayableRelease(kind, now(), providersKey(servers))
         keys.forEach { entries[it] = entry }
-        runCatching { android.util.Log.i("UsenetUnplayable", "remembered kind=$kind release=\"${title?.lineSequence()?.firstOrNull()}\" size=${size ?: 0}") }
         entries.entries.removeAll { now() - it.value.at > RETENTION_MS }
         while (entries.size > MAX_ENTRIES) entries.remove(entries.minBy { it.value.at }.key)
         storage.save(json.encodeToString(entries.toMap()))
         changes.value += 1
+        return true
     }
 
-    @Synchronized
-    fun contains(nzbUrl: String?, title: String?, size: Long?, servers: List<String>): Boolean {
+    /** The newest entry for this release with these providers, if any. */
+    private fun find(nzbUrl: String?, title: String?, size: Long?, servers: List<String>): UnplayableRelease? {
         val providers = providersKey(servers)
         // Indexers round sizes differently (one to thousands of bytes): compare by megabyte, either side.
         val megabytes = size?.takeIf { it > 0 }?.let { (it / MB - 1..it / MB + 1).toList() } ?: listOf(null)
-        return megabytes.flatMap { keys(nzbUrl, title, it) }.distinct().any { key ->
-            entries[key]?.let { it.providers == providers && now() - it.at <= RETENTION_MS } == true
-        }
+        return megabytes.flatMap { keys(nzbUrl, title, it) }.distinct().mapNotNull { entries[it] }
+            .filter { it.providers == providers }.maxByOrNull { it.at }
     }
+
+    @Synchronized
+    fun contains(nzbUrl: String?, title: String?, size: Long?, servers: List<String>): Boolean =
+        find(nzbUrl, title, size, servers)?.let { it.kind in KINDS && now() - it.at <= RETENTION_MS } == true
+
+    /** Whether the release showed its first frame with these providers within [PLAYED_MS]. */
+    @Synchronized
+    fun played(nzbUrl: String?, title: String?, size: Long?, servers: List<String>): Boolean =
+        find(nzbUrl, title, size, servers)?.let { it.kind == PLAYED && now() - it.at <= PLAYED_MS } == true
 
     fun record(stream: Stream, kind: String?) =
         record(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty(), kind)
 
     fun contains(stream: Stream): Boolean =
         contains(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty())
+
+    fun recordPlayed(stream: Stream) =
+        recordPlayed(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty())
+
+    fun played(stream: Stream): Boolean =
+        played(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty())
 
     private fun keys(nzbUrl: String?, title: String?, megabytes: Long?): List<String> = listOfNotNull(
         nzbUrl?.takeIf { it.isNotBlank() }?.let { "u:" + sha256(it) },
@@ -117,7 +150,12 @@ class UnplayableReleases internal constructor(
     companion object {
         /** Engine failures that the same release repeats with the same providers. */
         val KINDS = setOf("missing-article", "hole-limit", "invalid-article")
+        /** A release that played; not a failure kind. */
+        private const val PLAYED = "played"
         private const val RETENTION_MS = 30L * 24 * 3600 * 1000
+        /** Articles of a release that played can still be removed later: trust it for two weeks. */
+        private const val PLAYED_MS = 14L * 24 * 3600 * 1000
+        private const val REPLAYED_MS = 24L * 3600 * 1000
         private const val MAX_ENTRIES = 2000
         private const val MB = 1_000_000L
 

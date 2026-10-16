@@ -95,6 +95,7 @@ class StreamScreenViewModel @Inject constructor(
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val torrentService: TorrentService,
+    private val usenetSourceSettings: com.nuvio.tv.core.usenet.UsenetSourceSettings,
     profileManager: com.nuvio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -242,9 +243,9 @@ class StreamScreenViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            // A release found unplayable while this list is shown moves to its end, labelled.
+            // A release tried while this list is shown is labelled: moved to the end when it failed for good.
             val unplayable = com.nuvio.tv.core.usenet.UnplayableReleases.get(context)
-            unplayable.revision.drop(1).collect { arrangeUnplayableStreams(unplayable) }
+            unplayable.revision.drop(1).collect { arrangeUsenetOutcomes(unplayable) }
         }
         viewModelScope.launch {
             _uiState
@@ -1168,9 +1169,11 @@ class StreamScreenViewModel @Inject constructor(
         return parseRuntimeMinutes(meta.runtime)
     }
 
-    private fun arrangeUnplayableStreams(unplayable: com.nuvio.tv.core.usenet.UnplayableReleases) {
+    private fun arrangeUsenetOutcomes(unplayable: com.nuvio.tv.core.usenet.UnplayableReleases) {
+        val availableFirst = usenetSourceSettings.read().availableFirst
         updateUiStateIfChanged { state ->
-            val groups = com.nuvio.tv.core.usenet.BuiltInUsenetService.arrangeUnplayable(state.addonStreams, unplayable::contains)
+            val groups = com.nuvio.tv.core.usenet.BuiltInUsenetService.arrangeOutcomes(state.addonStreams, unplayable::contains,
+                unplayable::played, availableFirst)
             if (groups == state.addonStreams) return@updateUiStateIfChanged state
             val allStreams = groups.flatMap { it.streams }
             val fullFiltered = state.selectedAddonFilter?.let { filter -> allStreams.filter { it.addonName == filter } } ?: allStreams

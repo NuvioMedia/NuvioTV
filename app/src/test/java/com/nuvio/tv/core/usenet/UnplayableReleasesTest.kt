@@ -71,10 +71,54 @@ class UnplayableReleasesTest {
         record(url = "https://a.test/dead")
         val group = com.nuvio.tv.domain.model.AddonStreams(BuiltInUsenetService.GROUP_NAME, null,
             listOf(stream("dead"), stream("good")))
-        val arranged = BuiltInUsenetService.arrangeUnplayable(listOf(group), releases::contains).single().streams
+        val arranged = BuiltInUsenetService.arrangeOutcomes(listOf(group), releases::contains).single().streams
         assertEquals(listOf("good", "dead"), arranged.map { it.title })
         assertEquals(listOf(BuiltInUsenetService.UNAVAILABLE_LABEL), arranged.last().badges.map { it.name })
         // Arranging again changes nothing.
-        assertEquals(arranged, BuiltInUsenetService.arrangeUnplayable(listOf(group.copy(streams = arranged)), releases::contains).single().streams)
+        assertEquals(arranged, BuiltInUsenetService.arrangeOutcomes(listOf(group.copy(streams = arranged)), releases::contains).single().streams)
+    }
+
+    @Test fun `a release that played is available until it fails or two weeks pass`() {
+        val url = "https://a.test/getnzb/1.nzb&r=key"
+        releases.recordPlayed(url, "Show.S01.1080p-GRP", 30_000_000_000, provider)
+        assertTrue(releases.played(url, null, null, provider))
+        assertFalse(releases.contains(url, null, null, provider))
+        // A later failure wins over the earlier success.
+        clock += 1000
+        releases.record(url, "Show.S01.1080p-GRP", 30_000_000_000, provider, "missing-article")
+        assertTrue(releases.contains(url, null, null, provider))
+        assertFalse(releases.played(url, null, null, provider))
+        // A newer success wins again, and expires after two weeks.
+        clock += 1000
+        releases.recordPlayed(url, "Show.S01.1080p-GRP", 30_000_000_000, provider)
+        assertTrue(releases.played(url, null, null, provider))
+        clock += 15L * 24 * 3600 * 1000
+        assertFalse(releases.played(url, null, null, provider))
+    }
+
+    @Test fun `playing again within a day writes nothing`() {
+        releases.recordPlayed("https://a.test/1", "Movie.2026.2160p-GRP", 30_000_000_000, provider)
+        val saved = storage.value
+        clock += 3600_000
+        storage.value = null
+        releases.recordPlayed("https://a.test/1", "Movie.2026.2160p-GRP", 30_000_000_000, provider)
+        assertEquals(null, storage.value)
+        assertTrue(saved != null)
+    }
+
+    @Test fun `available releases go first unless turned off, unplayable ones last`() {
+        fun stream(title: String) = com.nuvio.tv.domain.model.Stream(name = "Usenet • A", title = title, description = null,
+            url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null, behaviorHints = null,
+            addonName = BuiltInUsenetService.GROUP_NAME, addonLogo = null, nzbUrl = "https://a.test/$title", servers = provider)
+        record(url = "https://a.test/dead")
+        releases.recordPlayed("https://a.test/good", null, null, provider)
+        val group = com.nuvio.tv.domain.model.AddonStreams(BuiltInUsenetService.GROUP_NAME, null,
+            listOf(stream("dead"), stream("untried"), stream("good")))
+        fun arranged(availableFirst: Boolean) = BuiltInUsenetService.arrangeOutcomes(listOf(group), releases::contains,
+            releases::played, availableFirst).single().streams
+        assertEquals(listOf("good", "untried", "dead"), arranged(true).map { it.title })
+        assertEquals(listOf("untried", "good", "dead"), arranged(false).map { it.title })
+        assertEquals(listOf(BuiltInUsenetService.AVAILABLE_LABEL), arranged(true).first().badges.map { it.name })
+        assertEquals(listOf(BuiltInUsenetService.UNAVAILABLE_LABEL), arranged(true).last().badges.map { it.name })
     }
 }
