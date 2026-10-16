@@ -142,7 +142,7 @@ Searches have a 25-second timeout per request and fetch at most two pages of
 opt-in prefetch path needs them. Failed indexers do not cancel successful
 sources. Configuration changes invalidate the stream search session cache.
 
-### Unplayable releases
+### Unplayable and available releases
 
 A release whose articles are gone from the providers (NNTP 430), damaged, or
 past the missing-article limit fails every attempt the same way, and only after
@@ -151,6 +151,15 @@ failure came from opening, a prefetch or playback, and then lists them last in
 the **Built-in Usenet** group with an `UNAVAILABLE` label. They stay selectable,
 and automatic fallback skips them. A list already on screen or in the search
 cache is rearranged as soon as a release is added.
+
+Releases that showed their first frame are kept as well, for two weeks, and
+labelled `AVAILABLE`: their articles were there with these providers, and their
+NZB is usually cached, so they open in about a second. For a season pack this
+also labels the pack in its other episodes. **Show available releases first**
+(on by default, under Search results) lists them before the others whatever the
+sort, so a click on the first result and automatic fallback reach them first;
+off, they keep their place. A later failure replaces the label with
+`UNAVAILABLE`, and a release played again within a day is not written again.
 
 The list is stored on the device, shared by all profiles, and cleared by an
 account reset. An entry is keyed by a hash of the NZB URL, exact within one

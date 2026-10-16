@@ -111,7 +111,9 @@ data class UsenetSourceConfiguration(
     /** On: a release found by several indexers is shown once, from the highest priority. */
     val hideDuplicates: Boolean = false,
     /** On: each result shows its release name above its size, age and indexer. */
-    val showReleaseNames: Boolean = true
+    val showReleaseNames: Boolean = true,
+    /** On: releases that played recently are listed first, whatever the sort; fallback reaches them first too. */
+    val availableFirst: Boolean = true
 ) {
     val ready: Boolean get() = enabled && providers.any { it.enabled } && indexers.any { it.enabled }
 
