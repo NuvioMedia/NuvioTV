@@ -128,14 +128,26 @@ specials. Contradictory episode filenames are removed; season packs remain
 playable through the engine's episode selection. Unsupported media identifiers
 without a TMDB mapping cannot be searched.
 
-The **Built-in Usenet** result group updates as indexers finish, independently
-of addon/plugin searches. Sort by resolution, size, age or indexer priority.
+The **Built-in Usenet** result group appears once every indexer answered,
+independently of addon/plugin searches; if an indexer is slow, it shows what came
+after 5 seconds and fills in from there. **Show results as each indexer answers**
+(off by default, under Search results) updates the list as each indexer finishes
+instead. Each result is named after its resolution and indexer, such as
+`Usenet • 4K • geek`. Sort by resolution, size, age or indexer priority.
 Filters cover minimum resolution, maximum size, maximum age, CAM/screener
 releases, full Blu-ray/DVD discs (off by default: a Blu-ray disc plays from its feature clip; remuxes always show) and result count. Passworded NZBs are always excluded. Unknown sizes
 or dates are excluded when their corresponding maximum filter is enabled.
 Duplicate download URLs are removed while alternative indexer URLs remain
 available for playback fallback. Each result shows its release name above its
 size, age and indexer; **Show release names** (on by default) can hide it.
+A season pack is labelled `SEASON PACK` and its size reads "(whole season)" (or
+"(whole pack)" for several seasons): the episode that plays is one file of it.
+For a single-season pack the season's episode count on TMDB, asked once per
+search and only when such a pack is found, gives an episode's share: the size
+badge shows it, the details read "9.60 GB whole season (~1.60 GB per episode)",
+and the maximum size filter and size sorting use it. The list never waits for
+the count; it is arranged again when the count comes, and without it the whole
+size is used.
 
 Searches have a 25-second timeout per request and fetch at most two pages of
 100 results per indexer. NZBs are fetched only when the existing playback or
@@ -156,7 +168,7 @@ Releases that showed their first frame are kept as well, for two weeks, and
 labelled `AVAILABLE`: their articles were there with these providers, and their
 NZB is usually cached, so they open in about a second. For a season pack this
 also labels the pack in its other episodes. **Show available releases first**
-(on by default, under Search results) lists them before the others whatever the
+(off by default, under Search results) lists them before the others whatever the
 sort, so a click on the first result and automatic fallback reach them first;
 off, they keep their place. A later failure replaces the label with
 `UNAVAILABLE`, and a release played again within a day is not written again.

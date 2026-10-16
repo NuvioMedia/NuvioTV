@@ -7,6 +7,37 @@ import org.junit.Test
 class NewznabProtocolTest {
     private val indexer = UsenetIndexer(id = "one", name = "Indexer", apiUrl = "https://indexer.test/api?custom=value", apiKey = "secret &+key")
 
+    @Test fun `season packs are told from episodes`() {
+        assertEquals(listOf(1), NewznabProtocol.packSeasons("Slow.Horses.S01.1080p.ATVP.WEB-DL-NTb"))
+        assertEquals(listOf(2), NewznabProtocol.packSeasons("Show Season 2 Complete 2160p"))
+        assertEquals(listOf(1, 3), NewznabProtocol.packSeasons("Show.S01-S03.1080p"))
+        assertTrue(NewznabProtocol.packSeasons("Slow.Horses.S01E03.1080p").isEmpty())
+        assertTrue(NewznabProtocol.packSeasons("Show.1x03.720p").isEmpty())
+        assertTrue(NewznabProtocol.packSeasons("Movie.2020.2160p").isEmpty())
+    }
+
+    @Test fun `a single-season pack is filtered and sorted by its size per episode`() {
+        val gb = 1L shl 30
+        val pack = UsenetRelease("Show.S01.1080p-GRP", "https://a/pack", size = 9 * gb, indexerId = "one")
+        val episode = UsenetRelease("Show.S01E02.1080p-GRP", "https://a/ep", size = 2 * gb, indexerId = "one")
+        val config = UsenetSourceConfiguration(indexers = listOf(indexer), maxSizeGb = 5, sort = UsenetSort.LARGEST)
+        // Without an episode count the pack is its whole size: over the limit.
+        assertEquals(listOf(episode), NewznabProtocol.arrange(listOf(pack, episode), config))
+        // Nine episodes: 1 GB each, under the limit and smaller than the 2 GB episode.
+        assertEquals(listOf(episode, pack), NewznabProtocol.arrange(listOf(pack, episode), config, episodesPerSeason = 9))
+        assertEquals(listOf(pack, episode),
+            NewznabProtocol.arrange(listOf(pack, episode), config.copy(sort = UsenetSort.SMALLEST), episodesPerSeason = 9))
+    }
+
+    @Test fun `the result limit never cuts a release ranked first`() {
+        val releases = (1..5).map { UsenetRelease("Movie.2020.2160p-G$it", "https://a/$it", size = it.toLong(), indexerId = "one") } +
+            UsenetRelease("Movie.2020.720p-OK", "https://a/ok", indexerId = "one")
+        val config = UsenetSourceConfiguration(indexers = listOf(indexer), maxResults = 3)
+        // Best resolution first would cut the 720p release; ranked first, it stays and leads.
+        val kept = NewznabProtocol.arrange(releases, config) { if (it.title.endsWith("OK")) 0 else 1 }
+        assertEquals(listOf("Movie.2020.720p-OK", "Movie.2020.2160p-G5", "Movie.2020.2160p-G4"), kept.map { it.title })
+    }
+
     @Test fun `provider credentials are encoded once and IPv6 is preserved`() {
         val provider = UsenetProvider(name = "News", host = "2001:db8::1", username = "a@b", password = "a:+ %/", connections = 30)
         provider.validate()

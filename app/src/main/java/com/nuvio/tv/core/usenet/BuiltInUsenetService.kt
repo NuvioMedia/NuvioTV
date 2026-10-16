@@ -20,13 +20,17 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Headers
@@ -281,13 +285,36 @@ class BuiltInUsenetService @Inject constructor(
             }
             val releases = mutableListOf<UsenetRelease>()
             val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
+            // A season's episode count lets single-season packs be filtered and sorted by their size per
+            // episode. It is asked of TMDB once the first such pack shows up, alongside the indexers, and
+            // the list never waits for it: packs count with their whole size until it comes, and the
+            // list is arranged again then. Without an answer within a few seconds nothing changes.
+            val seasonEpisodes = java.util.concurrent.atomic.AtomicReference<Int?>(null)
+            val seasonLookup = if (!series || resolvedSeason == null) null else launch(start = CoroutineStart.LAZY) {
+                val started = System.currentTimeMillis()
+                val count = withTimeoutOrNull(SEASON_LOOKUP_TIMEOUT_MS) {
+                    try {
+                        (request.tmdbId ?: tmdb.ensureTmdbId(videoId, type))?.toIntOrNull()?.let {
+                            tmdbApi.getTvSeasonDetails(it, resolvedSeason, BuildConfig.TMDB_API_KEY).body()?.episodes?.size
+                        }?.takeIf { it > 0 }
+                    } catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { null }
+                }
+                seasonEpisodes.set(count)
+                runCatching { android.util.Log.i("UsenetSearch", "season episodes=$count ms=${System.currentTimeMillis() - started}") }
+            }
+            fun episodesPerSeason(): Int? = seasonEpisodes.get()
             fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers) == true
             fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers) == true
             // Releases that already failed for good with these providers go last, still selectable;
             // ones that played recently go first unless turned off.
-            fun arranged() = NewznabProtocol.arrange(
-                if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config)
-                .sortedBy { outcomeRank(failed(it), played(it), config.availableFirst) }
+            fun arranged(): List<UsenetRelease> {
+                // Each release's outcome is looked up once: the sort compares releases many times.
+                val ranks = releases.associate { it.nzbUrl to outcomeRank(failed(it), played(it), config.availableFirst) }
+                return NewznabProtocol.arrange(
+                    if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config,
+                    episodesPerSeason = episodesPerSeason()) { ranks[it.nzbUrl] ?: 1 }
+            }
             val enabled = config.indexers.filter { it.enabled }
             // Every indexer is searched at once unless the user chose priority fallback: then equal
             // priorities are searched together and lower ones only when nothing playable was found.
@@ -308,7 +335,45 @@ class BuiltInUsenetService @Inject constructor(
                     }
                 }
                 launch { jobs.joinAll(); results.close() }
-                for ((indexer, result) in results) {
+                val tierStarted = System.currentTimeMillis()
+                fun log(message: String) = runCatching {
+                    android.util.Log.i("UsenetSearch", "${System.currentTimeMillis() - tierStarted}ms $message")
+                }
+                suspend fun show() {
+                    val arranged = arranged()
+                    log("show ${arranged.size} results")
+                    if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
+                        arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty(),
+                            episodes = episodesPerSeason()) })))
+                }
+                // Like other sources, the list appears whole once every indexer answered, unless one is
+                // slow: after a short wait it shows what came and fills in from there. Progressive
+                // results show each indexer's answer as it comes.
+                val wait = if (config.progressiveResults) null else async { delay(COMPLETE_RESULTS_WAIT_MS) }
+                var waiting = wait != null
+                var lookupShown = false
+                while (true) {
+                    val event = select<Any> {
+                        results.onReceiveCatching { it }
+                        if (waiting) wait?.onAwait { WAIT_OVER }
+                        // Arranged again once the episode count came, if the list is already shown.
+                        if (!lookupShown && seasonLookup?.isActive == true) seasonLookup.onJoin { SEASON_COUNTED }
+                    }
+                    if (event === WAIT_OVER) {
+                        log("wait over")
+                        waiting = false
+                        show()
+                        continue
+                    }
+                    if (event === SEASON_COUNTED) {
+                        lookupShown = true
+                        if (!waiting && seasonEpisodes.get() != null) show()
+                        continue
+                    }
+                    @Suppress("UNCHECKED_CAST")
+                    val received = event as ChannelResult<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>
+                    val (indexer, result) = received.getOrNull() ?: break
+                    log("${indexer.name} answered: ${result.getOrNull()?.size ?: "failed"}")
                     if (result.isFailure) {
                         // Never display raw exception messages: network/parser errors can contain keys.
                         val cooldown = result.exceptionOrNull() as? IndexerCooldownException
@@ -318,14 +383,22 @@ class BuiltInUsenetService @Inject constructor(
                         } else "${indexer.name}: indexer search failed. Check the API URL, key and limits."))
                     } else {
                         releases += result.getOrThrow()
-                        val arranged = arranged()
-                        if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
-                            arranged.map { it.toStream(config, failed(it), played(it)) })))
+                        if (releases.any { it.packSeasons.size == 1 }) seasonLookup?.start()
+                        if (!waiting) show()
                     }
+                }
+                wait?.cancel()
+                if (waiting) show()
+                // Every indexer answered before the episode count: the list is shown, and is arranged
+                // again when the count comes within its few seconds.
+                if (!lookupShown && seasonLookup?.isActive == true) {
+                    seasonLookup.join()
+                    if (seasonEpisodes.get() != null) show()
                 }
                 if (arranged().isNotEmpty()) break
             }
             metadata.cancel()
+            seasonLookup?.cancel()
         }
     }
 
@@ -378,19 +451,34 @@ class BuiltInUsenetService @Inject constructor(
     }
 
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false,
-        played: Boolean = false): Stream {
-        val sizeLabel = if (size > 0) "%.2f GB".format(Locale.ROOT, size / (1024.0 * 1024 * 1024)) else null
+        played: Boolean = false, pack: Boolean = false, episodes: Int? = null): Stream {
+        fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
+        // A pack's size is the whole season's, not the episode's that plays: with the season's episode
+        // count, the size badge shows an episode's share and the details keep the whole size.
+        val episodeShare = episodeSize(episodes).takeIf { pack && it != size }
+        val sizeLabel = if (size <= 0) null else when {
+            !pack -> gb(size)
+            episodeShare != null -> "${gb(size)} whole season (~${gb(episodeShare)} per episode)"
+            packSeasons.size == 1 -> "${gb(size)} (whole season)"
+            else -> "${gb(size)} (whole pack)"
+        }
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
         val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
-        return Stream(name = "Usenet • $indexerName", title = title,
+        val resolutionLabel = when {
+            resolution >= 2160 -> "4K"
+            resolution > 0 -> "${resolution}p"
+            else -> null
+        }
+        return Stream(name = listOfNotNull("Usenet", resolutionLabel, indexerName).joinToString(" • "), title = title,
             description = if (config.showReleaseNames) "$title\n$details" else details,
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
             // The size badge, as other sources show it.
-            behaviorHints = size.takeIf { it > 0 }?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
+            behaviorHints = (episodeShare ?: size).takeIf { it > 0 }?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
             addonName = GROUP_NAME, addonLogo = null,
             badges = listOfNotNull(
                 UNAVAILABLE_BADGE.takeIf { failed },
                 AVAILABLE_BADGE.takeIf { played && !failed },
+                SEASON_PACK_BADGE.takeIf { pack },
                 blurayLabel?.let {
                     StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
                 }),
@@ -400,6 +488,12 @@ class BuiltInUsenetService @Inject constructor(
 
     companion object {
         const val GROUP_NAME = "Built-in Usenet"
+        private val WAIT_OVER = Any()
+        private val SEASON_COUNTED = Any()
+        /** How long a search may use for a season's episode count; the list never waits for it. */
+        private const val SEASON_LOOKUP_TIMEOUT_MS = 3_000L
+        /** How long a search waits for every indexer before it shows what came. */
+        const val COMPLETE_RESULTS_WAIT_MS = 5_000L
         private const val BLURAY_COLOR = "#0B5ED7"
         /** On a release whose articles were missing or damaged when it was last tried. */
         const val UNAVAILABLE_LABEL = "UNAVAILABLE"
@@ -412,6 +506,11 @@ class BuiltInUsenetService @Inject constructor(
          */
         const val AVAILABLE_LABEL = "AVAILABLE"
         private val AVAILABLE_BADGE = StreamBadge(name = AVAILABLE_LABEL, tagColor = "#198754",
+            textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /** On a release holding a whole season or several, whose size is not the episode's. */
+        const val SEASON_PACK_LABEL = "SEASON PACK"
+        private val SEASON_PACK_BADGE = StreamBadge(name = SEASON_PACK_LABEL, tagColor = "#6F42C1",
             textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
 
         /** Available releases first when chosen, unplayable ones last; the sort applies within each. */
@@ -427,7 +526,7 @@ class BuiltInUsenetService @Inject constructor(
          * when [availableFirst]. Other groups are unchanged.
          */
         fun arrangeOutcomes(groups: List<AddonStreams>, unplayable: (Stream) -> Boolean,
-            available: (Stream) -> Boolean = { false }, availableFirst: Boolean = true): List<AddonStreams> =
+            available: (Stream) -> Boolean = { false }, availableFirst: Boolean = false): List<AddonStreams> =
             groups.map { group ->
                 if (group.addonName != GROUP_NAME) return@map group
                 val marked = group.streams.map { stream ->
