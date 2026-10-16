@@ -235,6 +235,13 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		} else if !strings.ContainsAny(err.Error(), "<>@") && !strings.Contains(err.Error(), "://") {
 			msg = err.Error()
 		}
+		// A release that will fail the same way with these providers, named as a stream reports
+		// it: the app remembers it and stops offering it first.
+		if w.Header().Get("X-Usenet-Failure") == "" {
+			if kind := permanentStreamFailure(err); kind != "" {
+				w.Header().Set("X-Usenet-Failure", kind)
+			}
+		}
 		http.Error(w, msg, http.StatusUnprocessableEntity)
 		return
 	}

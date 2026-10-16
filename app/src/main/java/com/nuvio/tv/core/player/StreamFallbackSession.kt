@@ -13,7 +13,9 @@ internal class StreamFallbackSession(
     orderedStreams: List<Stream>,
     private val maxAttempts: Int = 5,
     private val nanoTime: () -> Long = System::nanoTime,
-    private val isEnabled: () -> Boolean = { false }
+    private val isEnabled: () -> Boolean = { false },
+    /** Releases that already failed for good with these providers; trying them again only costs time. */
+    private val isUnplayable: (Stream) -> Boolean = { false }
 ) {
     private val selectedIsUsenet = selected.isUsenet()
     private var playbackUrl: String? = null
@@ -38,7 +40,8 @@ internal class StreamFallbackSession(
             remaining.any { eligible(it) }
 
     private fun eligible(stream: Stream) = stream.canAutoFallback() &&
-        stream.fallbackKey() !in attempted && stream.servers.orEmpty().sorted() !in failedProviders
+        stream.fallbackKey() !in attempted && stream.servers.orEmpty().sorted() !in failedProviders &&
+        !isUnplayable(stream)
 
     init {
         val key = selected.fallbackKey()
