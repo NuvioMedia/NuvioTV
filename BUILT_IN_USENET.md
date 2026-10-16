@@ -142,6 +142,26 @@ Searches have a 25-second timeout per request and fetch at most two pages of
 opt-in prefetch path needs them. Failed indexers do not cancel successful
 sources. Configuration changes invalidate the stream search session cache.
 
+### Unplayable releases
+
+A release whose articles are gone from the providers (NNTP 430), damaged, or
+past the missing-article limit fails every attempt the same way, and only after
+its NZB has been downloaded again. The app remembers such releases, whether the
+failure came from opening, a prefetch or playback, and then lists them last in
+the **Built-in Usenet** group with an `UNAVAILABLE` label. They stay selectable,
+and automatic fallback skips them. A list already on screen or in the search
+cache is rearranged as soon as a release is added.
+
+The list is stored on the device, shared by all profiles, and cleared by an
+account reset. An entry is keyed by a hash of the NZB URL, exact within one
+indexer, and by a hash of the title and the size in megabytes, so the same upload
+from another indexer is recognised even when one indexer rounds sizes. No URL,
+key or credential is stored. Another provider may still hold the articles: an
+entry only applies with the same provider addresses, and expires after 30 days.
+Logcat shows one `UsenetPrepare` line per source preparation (source, release,
+time, failure) and a `UsenetUnplayable` line per remembered release; URLs in
+messages keep only their host.
+
 ## Saving indexer API hits
 
 - **Search results** are reused for 15 minutes by the stream search session
