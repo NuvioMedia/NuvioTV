@@ -1004,6 +1004,7 @@ type ContentReader struct {
 	currentCancel context.CancelFunc
 	cipher        []byte         // Reused ciphertext buffer for encrypted 7z content.
 	inner         *ContentReader // Current 7z entry reader of nested RAR content.
+	probe         bool           // Never substitutes missing bytes: its zeros are the release's own.
 }
 
 func (c *Content) Reader(ctx context.Context, ahead int) *ContentReader {
@@ -1106,7 +1107,7 @@ func (r *ContentReader) readRaw(p []byte, pos int64) (int, error) {
 			r.current = e.file.Reader(r.ctx, r.ahead)
 		}
 	}
-	r.current.fill = isVideo(c.Name)
+	r.current.fill = isVideo(c.Name) && !r.probe
 	n, err := r.current.ReadAt(p[:min(int64(len(p)), e.start+e.length-pos)], e.offset+pos-e.start)
 	if len(p) > 0 && n == 0 && (err == io.EOF || err == nil) {
 		err = errInvalidArticle
