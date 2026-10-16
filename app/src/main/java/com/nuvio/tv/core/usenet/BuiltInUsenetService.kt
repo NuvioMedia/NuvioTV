@@ -386,8 +386,7 @@ class BuiltInUsenetService @Inject constructor(
             behaviorHints = size.takeIf { it > 0 }?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
             addonName = GROUP_NAME, addonLogo = null,
             badges = listOfNotNull(
-                StreamBadge(name = UNAVAILABLE_LABEL, tagColor = UNAVAILABLE_COLOR, textColor = "#FFFFFF",
-                    tagStyle = StreamBadge.STYLE_LABEL).takeIf { failed },
+                UNAVAILABLE_BADGE.takeIf { failed },
                 blurayLabel?.let {
                     StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
                 }),
@@ -400,6 +399,24 @@ class BuiltInUsenetService @Inject constructor(
         private const val BLURAY_COLOR = "#0B5ED7"
         /** On a release whose articles were missing or damaged when it was last tried. */
         const val UNAVAILABLE_LABEL = "UNAVAILABLE"
-        private const val UNAVAILABLE_COLOR = "#6C757D"
+        private val UNAVAILABLE_BADGE = StreamBadge(name = UNAVAILABLE_LABEL, tagColor = "#6C757D",
+            textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /**
+         * Arranges results already listed, cached or shown, after releases were found unplayable:
+         * in the built-in group those go last with the label, the rest keep their order.
+         */
+        fun arrangeUnplayable(groups: List<AddonStreams>, unplayable: (Stream) -> Boolean): List<AddonStreams> =
+            groups.map { group ->
+                if (group.addonName != GROUP_NAME) return@map group
+                val marked = group.streams.map { stream ->
+                    val failed = unplayable(stream)
+                    val others = stream.badges.filterNot { it.name == UNAVAILABLE_LABEL }
+                    val badges = if (failed) listOf(UNAVAILABLE_BADGE) + others else others
+                    (if (badges == stream.badges) stream else stream.copy(badges = badges)) to failed
+                }
+                val streams = marked.sortedBy { it.second }.map { it.first }
+                if (streams == group.streams) group else group.copy(streams = streams)
+            }
     }
 }

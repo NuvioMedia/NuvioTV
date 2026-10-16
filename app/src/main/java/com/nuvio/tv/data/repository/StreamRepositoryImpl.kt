@@ -12,6 +12,7 @@ import com.nuvio.tv.core.plugin.resolvePluginSeasonEpisode
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.usenet.BuiltInUsenetService
+import com.nuvio.tv.core.usenet.UnplayableReleases
 import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
 import com.nuvio.tv.core.usenet.UsenetSourceSettings
 import com.nuvio.tv.data.local.DebridSettingsDataStore
@@ -40,6 +41,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.withContext
@@ -137,9 +139,15 @@ class StreamRepositoryImpl @Inject constructor(
                     hasCompatiblePlugins = sourceConfiguration.pluginsEnabled &&
                         sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) }
                 )
+            }.map { result ->
+                // Cached results predate releases found unplayable since: arrange them on every delivery.
+                if (result !is NetworkResult.Success) result
+                else NetworkResult.Success(BuiltInUsenetService.arrangeUnplayable(result.data, unplayable::contains))
             }
         )
     }
+
+    private val unplayable by lazy { UnplayableReleases.get(context) }
 
     private suspend fun captureSourceConfiguration(): StreamSourceConfigurationSnapshot {
         while (true) {

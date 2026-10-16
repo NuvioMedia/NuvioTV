@@ -6,6 +6,9 @@ import com.nuvio.tv.domain.model.Stream
 import java.net.URI
 import java.security.MessageDigest
 import java.util.Locale
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -42,16 +45,19 @@ internal data class UnplayableRelease(val kind: String, val at: Long, val provid
 /**
  * Releases the engine found unplayable with the current providers: articles removed or damaged.
  * Such a release fails again on every attempt, and only after its NZB was downloaded, so results
- * put it last and fallback skips it. An entry is keyed by a hash of the NZB URL and by one of the
- * title and size, so the same upload found on another indexer counts too; nothing secret is
- * stored. Other providers may still have the articles, so a change of providers forgets an entry,
- * as do 30 days.
+ * put it last and fallback skips it. An entry is keyed by a hash of the NZB URL, exact within one
+ * indexer, and by one of the title and size in megabytes: another indexer gives the same upload
+ * another URL, and only its NZB would prove it is the same. Nothing secret is stored. Other
+ * providers may still have the articles, so a change of providers forgets an entry, as do 30 days.
  */
 class UnplayableReleases internal constructor(
     private val storage: UnplayableReleaseStorage,
     private val now: () -> Long = System::currentTimeMillis
 ) {
     private val json = Json { ignoreUnknownKeys = true }
+    private val changes = MutableStateFlow(0)
+    /** Increments when a release is remembered, so a shown result list can be arranged again. */
+    val revision: StateFlow<Int> = changes.asStateFlow()
     private var loaded: MutableMap<String, UnplayableRelease>? = null
     private var loadedGeneration = 0
 
@@ -68,19 +74,22 @@ class UnplayableReleases internal constructor(
     @Synchronized
     fun record(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, kind: String?) {
         if (kind !in KINDS) return
-        val keys = keys(nzbUrl, title, size).ifEmpty { return }
+        val keys = keys(nzbUrl, title, size?.let { it / MB }).ifEmpty { return }
         val entry = UnplayableRelease(requireNotNull(kind), now(), providersKey(servers))
         keys.forEach { entries[it] = entry }
         runCatching { android.util.Log.i("UsenetUnplayable", "remembered kind=$kind release=\"${title?.lineSequence()?.firstOrNull()}\" size=${size ?: 0}") }
         entries.entries.removeAll { now() - it.value.at > RETENTION_MS }
         while (entries.size > MAX_ENTRIES) entries.remove(entries.minBy { it.value.at }.key)
         storage.save(json.encodeToString(entries.toMap()))
+        changes.value += 1
     }
 
     @Synchronized
     fun contains(nzbUrl: String?, title: String?, size: Long?, servers: List<String>): Boolean {
         val providers = providersKey(servers)
-        return keys(nzbUrl, title, size).any { key ->
+        // Indexers round sizes differently (one to thousands of bytes): compare by megabyte, either side.
+        val megabytes = size?.takeIf { it > 0 }?.let { (it / MB - 1..it / MB + 1).toList() } ?: listOf(null)
+        return megabytes.flatMap { keys(nzbUrl, title, it) }.distinct().any { key ->
             entries[key]?.let { it.providers == providers && now() - it.at <= RETENTION_MS } == true
         }
     }
@@ -91,10 +100,10 @@ class UnplayableReleases internal constructor(
     fun contains(stream: Stream): Boolean =
         contains(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty())
 
-    private fun keys(nzbUrl: String?, title: String?, size: Long?): List<String> = listOfNotNull(
+    private fun keys(nzbUrl: String?, title: String?, megabytes: Long?): List<String> = listOfNotNull(
         nzbUrl?.takeIf { it.isNotBlank() }?.let { "u:" + sha256(it) },
-        title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() && size != null && size > 0 }
-            ?.let { "t:" + sha256("$it\n$size") }
+        title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() && megabytes != null && megabytes > 0 }
+            ?.let { "t:" + sha256("$it\n${megabytes}MB") }
     )
 
     /** The providers' addresses only: credentials, connections and priorities do not change what they hold. */
@@ -110,6 +119,7 @@ class UnplayableReleases internal constructor(
         val KINDS = setOf("missing-article", "hole-limit", "invalid-article")
         private const val RETENTION_MS = 30L * 24 * 3600 * 1000
         private const val MAX_ENTRIES = 2000
+        private const val MB = 1_000_000L
 
         @Volatile private var storage: SharedPreferencesUnplayableReleaseStorage? = null
         @Volatile private var instance: UnplayableReleases? = null
