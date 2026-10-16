@@ -331,8 +331,13 @@ class BuiltInUsenetService @Inject constructor(
                     }
                 }
                 launch { jobs.joinAll(); results.close() }
+                val tierStarted = System.currentTimeMillis()
+                fun log(message: String) = runCatching {
+                    android.util.Log.i("UsenetSearch", "${System.currentTimeMillis() - tierStarted}ms $message")
+                }
                 suspend fun show() {
                     val arranged = arranged()
+                    log("show ${arranged.size} results")
                     if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
                         arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty()) })))
                 }
@@ -350,6 +355,7 @@ class BuiltInUsenetService @Inject constructor(
                         if (!lookupShown && seasonLookup?.isActive == true) seasonLookup.onJoin { SEASON_COUNTED }
                     }
                     if (event === WAIT_OVER) {
+                        log("wait over")
                         waiting = false
                         show()
                         continue
@@ -362,6 +368,7 @@ class BuiltInUsenetService @Inject constructor(
                     @Suppress("UNCHECKED_CAST")
                     val received = event as ChannelResult<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>
                     val (indexer, result) = received.getOrNull() ?: break
+                    log("${indexer.name} answered: ${result.getOrNull()?.size ?: "failed"}")
                     if (result.isFailure) {
                         // Never display raw exception messages: network/parser errors can contain keys.
                         val cooldown = result.exceptionOrNull() as? IndexerCooldownException
