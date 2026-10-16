@@ -259,6 +259,8 @@ object NewznabProtocol {
         Regex("(?i)S(\\d{1,3})[ ._-]*E(\\d{1,3})(?!\\d)$MORE_EPISODES"),
         Regex("(?i)(?<!\\d)(\\d{1,2})x(\\d{1,3})(?!\\d)$MORE_EPISODES")
     )
+    private val RELEASE_TAG = Regex("(?i)(?:^|[ ._-])(?:(?:2160|1080|720|576|480)[pi]|4k|uhd|web-?dl|web-?rip|blu-?ray|bdrip|hdtv|remux|" +
+        "[xh][ .]?26[45]|hevc|proper|repack)(?=$|[ ._-])")
     private val NEXT_EPISODE = Regex("(?i)([ ._]*-[ ._]*E?|[ ._]*E)(\\d{1,3})")
     // The separator after the number is not consumed, so S01-S03 names both seasons.
     private val SEASON = Regex("(?i)(?:^|[ ._-])(?:S|Season[ ._-]*)(\\d{1,3})(?=$|[ ._-])")
@@ -270,7 +272,10 @@ object NewznabProtocol {
     fun episodeTemplate(title: String): Pair<String, Int>? {
         val matches = EPISODES.flatMap { it.findAll(title).toList() }
         val match = matches.singleOrNull()?.takeIf { it.groupValues[3].isEmpty() } ?: return null
-        return title.replaceRange(match.range, "S${match.groupValues[1].toInt()}E?") to match.groupValues[2].toInt()
+        // The episode's own name, between its number and the first technical tag, differs per episode.
+        val rest = title.substring(match.range.last + 1)
+        val tags = RELEASE_TAG.find(rest)?.let { rest.substring(it.range.first) } ?: rest
+        return title.substring(0, match.range.first) + "S${match.groupValues[1].toInt()}E?" + tags to match.groupValues[2].toInt()
     }
 
     /** The seasons a release title names without naming an episode: a season pack. */
