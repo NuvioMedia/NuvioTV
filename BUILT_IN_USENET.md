@@ -168,7 +168,7 @@ Releases that showed their first frame are kept as well, for two weeks, and
 labelled `AVAILABLE`: their articles were there with these providers, and their
 NZB is usually cached, so they open in about a second. For a season pack this
 also labels the pack in its other episodes. **Show available releases first**
-(on by default, under Search results) lists them before the others whatever the
+(off by default, under Search results) lists them before the others whatever the
 sort, so a click on the first result and automatic fallback reach them first;
 off, they keep their place. A later failure replaces the label with
 `UNAVAILABLE`, and a release played again within a day is not written again.

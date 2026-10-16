@@ -113,7 +113,7 @@ data class UsenetSourceConfiguration(
     /** On: each result shows its release name above its size, age and indexer. */
     val showReleaseNames: Boolean = true,
     /** On: releases that played recently are listed first, whatever the sort; fallback reaches them first too. */
-    val availableFirst: Boolean = true,
+    val availableFirst: Boolean = false,
     /** On: results show as each indexer answers. Off: the list shows once all answered, or after a short wait. */
     val progressiveResults: Boolean = false
 ) {

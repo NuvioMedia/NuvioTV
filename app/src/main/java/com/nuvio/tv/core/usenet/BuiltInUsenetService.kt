@@ -341,10 +341,7 @@ class BuiltInUsenetService @Inject constructor(
                 }
                 suspend fun show() {
                     val arranged = arranged()
-                    log("show ${arranged.size} results: " + arranged.take(15).joinToString(" | ") {
-                        val state = if (failed(it)) "U" else if (played(it)) "A" else "-"
-                        "$state ${it.resolution} ${it.episodeSize(episodesPerSeason()) / 1_000_000}MB ${it.title.take(40)}"
-                    })
+                    log("show ${arranged.size} results")
                     if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
                         arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty(),
                             episodes = episodesPerSeason()) })))
@@ -529,7 +526,7 @@ class BuiltInUsenetService @Inject constructor(
          * when [availableFirst]. Other groups are unchanged.
          */
         fun arrangeOutcomes(groups: List<AddonStreams>, unplayable: (Stream) -> Boolean,
-            available: (Stream) -> Boolean = { false }, availableFirst: Boolean = true): List<AddonStreams> =
+            available: (Stream) -> Boolean = { false }, availableFirst: Boolean = false): List<AddonStreams> =
             groups.map { group ->
                 if (group.addonName != GROUP_NAME) return@map group
                 val marked = group.streams.map { stream ->
