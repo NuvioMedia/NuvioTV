@@ -13,6 +13,8 @@ and its replacements share one attempt budget across selection and playback.
   selections cannot reuse an earlier Usenet queue.
 - Deduplicates by playback identity, including file selection and request headers;
   changing an addon label or title does not create a new attempt.
+- Skips releases already found unplayable with the same providers (see
+  "Unplayable releases" in `BUILT_IN_USENET.md`).
 - Keeps the playback position and paused state when replacing a failed playing source.
 - Propagates cancellation. Back, a new selection, or backgrounding during automatic
   recovery stops that recovery.
