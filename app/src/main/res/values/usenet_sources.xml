@@ -111,6 +111,8 @@
         <item quantity="one">%d indexer</item>
         <item quantity="other">%d indexers</item>
     </plurals>
+    <string name="usenet_progressive_results">Show results as each indexer answers</string>
+    <string name="usenet_progressive_results_description">Off: the list appears once every indexer answered, or after 5 seconds if one is slow, and fills in from there. On: it grows and reorders as each indexer answers.</string>
     <string name="usenet_available_first">Show available releases first</string>
     <string name="usenet_available_first_description">Releases labelled AVAILABLE played recently with your providers, here or in another episode of the same pack. On: they are listed first whatever the sort, and fallback reaches them first. Off: they keep their place.</string>
     <string name="usenet_section_search">Search results</string>

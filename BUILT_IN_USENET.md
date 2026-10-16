@@ -128,8 +128,12 @@ specials. Contradictory episode filenames are removed; season packs remain
 playable through the engine's episode selection. Unsupported media identifiers
 without a TMDB mapping cannot be searched.
 
-The **Built-in Usenet** result group updates as indexers finish, independently
-of addon/plugin searches. Sort by resolution, size, age or indexer priority.
+The **Built-in Usenet** result group appears once every indexer answered,
+independently of addon/plugin searches; if an indexer is slow, it shows what came
+after 5 seconds and fills in from there. **Show results as each indexer answers**
+(off by default, under Search results) updates the list as each indexer finishes
+instead. Each result is named after its resolution and indexer, such as
+`Usenet • 4K • geek`. Sort by resolution, size, age or indexer priority.
 Filters cover minimum resolution, maximum size, maximum age, CAM/screener
 releases, full Blu-ray/DVD discs (off by default: a Blu-ray disc plays from its feature clip; remuxes always show) and result count. Passworded NZBs are always excluded. Unknown sizes
 or dates are excluded when their corresponding maximum filter is enabled.

@@ -150,6 +150,9 @@ internal fun UsenetSourcesCard(
             SettingsToggleRow(title = stringResource(R.string.usenet_exclude_full_disc),
                 subtitle = stringResource(R.string.usenet_exclude_full_disc_description), checked = configuration.excludeFullDisc,
                 onToggle = { update(configuration.copy(excludeFullDisc = !configuration.excludeFullDisc)) })
+            SettingsToggleRow(title = stringResource(R.string.usenet_progressive_results),
+                subtitle = stringResource(R.string.usenet_progressive_results_description), checked = configuration.progressiveResults,
+                onToggle = { update(configuration.copy(progressiveResults = !configuration.progressiveResults)) })
             SettingsToggleRow(title = stringResource(R.string.usenet_available_first),
                 subtitle = stringResource(R.string.usenet_available_first_description), checked = configuration.availableFirst,
                 onToggle = { update(configuration.copy(availableFirst = !configuration.availableFirst)) })
