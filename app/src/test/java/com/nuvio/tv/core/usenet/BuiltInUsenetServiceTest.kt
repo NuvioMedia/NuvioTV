@@ -7,6 +7,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import com.nuvio.tv.domain.model.StreamBadge
@@ -196,11 +197,36 @@ class BuiltInUsenetServiceTest {
             kotlinx.coroutines.delay(60_000); Response.success(com.nuvio.tv.data.remote.api.TmdbSeasonResponse(1, emptyList()))
         }
         val shownAt = mutableListOf<Long>()
-        val lists = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt1:1:2", null, null).toList()
-            .mapNotNull { it.group }.also { shownAt += testScheduler.currentTime }
-        assertTrue("shown after ${shownAt.single()} ms", shownAt.single() <= 3_000)
+        val lists = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt1:1:2", null, null)
+            .onEach { if (it.group != null) shownAt += testScheduler.currentTime }.toList().mapNotNull { it.group }
+        // Shown at once; the lookup timing out later changes nothing.
+        assertEquals(listOf(0L), shownAt)
         // Without the count the 9 GB pack is over the 5 GB limit; the episode shows.
         assertEquals(listOf("Show.S01E02.1080p-GRP"), lists.last().streams.map { it.title })
+    }
+
+    @Test fun `the list is arranged again when the episode count comes`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer), maxSizeGb = 5)
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(
+            UsenetRelease("Show.S01.1080p-GRP", "https://a.test/nzb/pack", size = 9L shl 30, indexerId = "a", indexerName = "A"),
+            UsenetRelease("Show.S01E02.1080p-GRP", "https://a.test/nzb/ep", size = 2L shl 30, indexerId = "a", indexerName = "A"))
+        coEvery { tmdb.ensureTmdbId(any(), any()) } returns "42"
+        coEvery { tmdbApi.getTvSeasonDetails(42, 1, any(), any()) } coAnswers {
+            kotlinx.coroutines.delay(1_000)
+            Response.success(com.nuvio.tv.data.remote.api.TmdbSeasonResponse(1, (1..9).map { com.nuvio.tv.data.remote.api.TmdbEpisode(it) }))
+        }
+        val shownAt = mutableListOf<Long>()
+        val lists = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt1:1:2", null, null)
+            .onEach { if (it.group != null) shownAt += testScheduler.currentTime }.toList().mapNotNull { it.group }
+        assertEquals(listOf(0L, 1_000L), shownAt)
+        assertEquals(listOf("Show.S01E02.1080p-GRP"), lists.first().streams.map { it.title })
+        // 1 GB per episode: the pack joins the list once the count came.
+        assertEquals(setOf("Show.S01E02.1080p-GRP", "Show.S01.1080p-GRP"), lists.last().streams.map { it.title }.toSet())
     }
 
     @Test fun `results show their release name unless turned off`() = runTest {

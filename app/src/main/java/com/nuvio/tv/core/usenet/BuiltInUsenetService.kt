@@ -287,8 +287,8 @@ class BuiltInUsenetService @Inject constructor(
             val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
             // A season's episode count lets single-season packs be filtered and sorted by their size per
             // episode. It is asked of TMDB once the first such pack shows up, alongside the indexers, and
-            // the list never waits for it: until it comes, or if it does not within a few seconds, packs
-            // count with their whole size.
+            // the list never waits for it: packs count with their whole size until it comes, and the
+            // list is arranged again then. Without an answer within a few seconds nothing changes.
             val seasonEpisodes = java.util.concurrent.atomic.AtomicReference<Int?>(null)
             val seasonLookup = if (!series || resolvedSeason == null) null else launch(start = CoroutineStart.LAZY) {
                 val started = System.currentTimeMillis()
@@ -341,16 +341,26 @@ class BuiltInUsenetService @Inject constructor(
                 // results show each indexer's answer as it comes.
                 val wait = if (config.progressiveResults) null else async { delay(COMPLETE_RESULTS_WAIT_MS) }
                 var waiting = wait != null
+                var lookupShown = false
                 while (true) {
-                    val received = select<ChannelResult<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>?> {
+                    val event = select<Any> {
                         results.onReceiveCatching { it }
-                        if (waiting) wait?.onAwait { null }
+                        if (waiting) wait?.onAwait { WAIT_OVER }
+                        // Arranged again once the episode count came, if the list is already shown.
+                        if (!lookupShown && seasonLookup?.isActive == true) seasonLookup.onJoin { SEASON_COUNTED }
                     }
-                    if (received == null) {
+                    if (event === WAIT_OVER) {
                         waiting = false
                         show()
                         continue
                     }
+                    if (event === SEASON_COUNTED) {
+                        lookupShown = true
+                        if (!waiting && seasonEpisodes.get() != null) show()
+                        continue
+                    }
+                    @Suppress("UNCHECKED_CAST")
+                    val received = event as ChannelResult<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>
                     val (indexer, result) = received.getOrNull() ?: break
                     if (result.isFailure) {
                         // Never display raw exception messages: network/parser errors can contain keys.
@@ -366,11 +376,12 @@ class BuiltInUsenetService @Inject constructor(
                     }
                 }
                 wait?.cancel()
-                if (waiting) {
-                    // Every indexer answered within the wait: a season lookup already running gets the
-                    // rest of its few seconds, so packs are filtered per episode in the first list.
-                    if (seasonLookup?.isActive == true) seasonLookup.join()
-                    show()
+                if (waiting) show()
+                // Every indexer answered before the episode count: the list is shown, and is arranged
+                // again when the count comes within its few seconds.
+                if (!lookupShown && seasonLookup?.isActive == true) {
+                    seasonLookup.join()
+                    if (seasonEpisodes.get() != null) show()
                 }
                 if (arranged().isNotEmpty()) break
             }
@@ -458,6 +469,8 @@ class BuiltInUsenetService @Inject constructor(
 
     companion object {
         const val GROUP_NAME = "Built-in Usenet"
+        private val WAIT_OVER = Any()
+        private val SEASON_COUNTED = Any()
         /** How long a search may use for a season's episode count; the list never waits for it. */
         private const val SEASON_LOOKUP_TIMEOUT_MS = 3_000L
         /** How long a search waits for every indexer before it shows what came. */
