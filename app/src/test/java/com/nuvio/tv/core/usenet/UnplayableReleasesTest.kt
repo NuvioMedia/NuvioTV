@@ -130,4 +130,11 @@ class UnplayableReleasesTest {
         storage.generation += 1
         assertTrue(releases.contains(url, null, null, provider))
     }
+
+    @Test fun `a season pack is matched by its title whatever size it lists`() {
+        record(url = "https://a.test/pack", title = "Show.S01.1080p-GRP", size = 9_000_000_000)
+        // Another indexer's copy, listed with an episode's share of the size.
+        assertTrue(releases.contains("https://b.test/pack", "Show.S01.1080p-GRP", 1_500_000_000, provider))
+        assertFalse(releases.contains("https://b.test/pack", "Show.S02.1080p-GRP", 1_500_000_000, provider))
+    }
 }

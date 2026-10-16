@@ -133,11 +133,20 @@ class UnplayableReleases internal constructor(
     fun played(stream: Stream): Boolean =
         played(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty())
 
-    private fun keys(nzbUrl: String?, title: String?, megabytes: Long?): List<String> = listOfNotNull(
-        nzbUrl?.takeIf { it.isNotBlank() }?.let { "u:" + sha256(it) },
-        title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() && megabytes != null && megabytes > 0 }
-            ?.let { "t:" + sha256("$it\n${megabytes}MB") }
-    )
+    private fun keys(nzbUrl: String?, title: String?, megabytes: Long?): List<String> {
+        val name = title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
+        return listOfNotNull(
+            nzbUrl?.takeIf { it.isNotBlank() }?.let { "u:" + sha256(it) },
+            when {
+                name == null -> null
+                // A season pack's title names it, and its listed size changes once the episode count
+                // gives an episode's share: the size is left out of its key.
+                NewznabProtocol.packSeasons(name).isNotEmpty() -> "t:" + sha256("$name\npack")
+                megabytes != null && megabytes > 0 -> "t:" + sha256("$name\n${megabytes}MB")
+                else -> null
+            }
+        )
+    }
 
     private var lastServers: List<String>? = null
     private var lastProvidersKey = ""

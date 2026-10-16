@@ -142,9 +142,12 @@ available for playback fallback. Each result shows its release name above its
 size, age and indexer; **Show release names** (on by default) can hide it.
 A season pack is labelled `SEASON PACK` and its size reads "(whole season)" (or
 "(whole pack)" for several seasons): the episode that plays is one file of it.
-The maximum size filter and size sorting compare a single-season pack by its
-size per episode, from the season's episode count on TMDB, asked once per search
-and only when such a pack is found; without that count the whole size is used.
+For a single-season pack the season's episode count on TMDB, asked once per
+search and only when such a pack is found, gives an episode's share: the size
+badge shows it, the details read "9.60 GB whole season (~1.60 GB per episode)",
+and the maximum size filter and size sorting use it. The list never waits for
+the count; it is arranged again when the count comes, and without it the whole
+size is used.
 
 Searches have a 25-second timeout per request and fetch at most two pages of
 100 results per indexer. NZBs are fetched only when the existing playback or

@@ -127,7 +127,7 @@ class BuiltInUsenetServiceTest {
         assertEquals(listOf(BuiltInUsenetService.AVAILABLE_LABEL), sorted.last().badges.map { it.name })
     }
 
-    @Test fun `a season pack is labelled with its whole size and filtered per episode`() = runTest {
+    @Test fun `a season pack is labelled with its whole size and an episode's share`() = runTest {
         val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
         val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer),
             maxSizeGb = 5, showReleaseNames = false)
@@ -143,9 +143,9 @@ class BuiltInUsenetServiceTest {
         val service = BuiltInUsenetService(client, tmdb, tmdbApi)
         val stream = service.search(config, "series", "tt1:1:2", null, null).toList().mapNotNull { it.group }.last().streams.single()
         assertEquals(listOf(BuiltInUsenetService.SEASON_PACK_LABEL), stream.badges.map { it.name })
-        assertEquals("9.00 GB (whole season) • A", stream.description)
-        // The size badge and the outcome list keep the release's whole size.
-        assertEquals(9L shl 30, stream.behaviorHints?.videoSize)
+        assertEquals("9.00 GB whole season (~1.00 GB per episode) • A", stream.description)
+        // The size badge shows an episode's share once the season's episode count is known.
+        assertEquals(1L shl 30, stream.behaviorHints?.videoSize)
         coVerify(exactly = 1) { tmdbApi.getTvSeasonDetails(42, 1, any(), any()) }
     }
 
