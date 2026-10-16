@@ -519,8 +519,13 @@ groups:
 				// Names that do not number the volumes (shuffled obfuscated
 				// numbering) leave the order to RAR5 main headers. RAR4 has no
 				// volume numbers, so a gap there stays a broken set.
-				if rarSetVersion(ctx, vols) != 5 {
-					if err := broken(errors.New("RAR volume sequence is incomplete")); err != nil {
+				if version, err := rarSetVersion(ctx, vols); version != 5 {
+					// Unreadable volumes are the real failure, such as removed
+					// articles; they are not a gap in the numbering.
+					if err == nil || permanentStreamFailure(err) == "" {
+						err = errors.New("RAR volume sequence is incomplete")
+					}
+					if err := broken(err); err != nil {
 						return nil, err
 					}
 					continue groups
@@ -773,14 +778,17 @@ func rarSequence(ctx context.Context, vols []*File) ([]*File, bool) {
 	return vols, false
 }
 
-// rarSetVersion is the format of the first RAR volume in vols, or 0.
-func rarSetVersion(ctx context.Context, vols []*File) int {
+// rarSetVersion is the format of the first readable RAR volume in vols, or 0
+// with the last read error.
+func rarSetVersion(ctx context.Context, vols []*File) (int, error) {
+	var err error
 	for _, f := range vols[:min(len(vols), 3)] {
-		if v, err := openRAR(ctx, f); err == nil {
-			return v.version
+		var v *rarVolume
+		if v, err = openRAR(ctx, f); err == nil {
+			return v.version, nil
 		}
 	}
-	return 0
+	return 0, err
 }
 
 // A Blu-ray clip's stream languages live in its CLPI, BDMV/CLIPINF/<clip>.clpi,
