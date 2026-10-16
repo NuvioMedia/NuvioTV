@@ -139,13 +139,31 @@ class UnplayableReleases internal constructor(
             ?.let { "t:" + sha256("$it\n${megabytes}MB") }
     )
 
-    /** The providers' addresses only: credentials, connections and priorities do not change what they hold. */
-    private fun providersKey(servers: List<String>): String = sha256(servers.map { server ->
-        runCatching { URI(server).let { "${it.scheme}://${it.host}:${it.port}" } }.getOrDefault("")
-    }.distinct().sorted().joinToString("\n"))
+    private var lastServers: List<String>? = null
+    private var lastProvidersKey = ""
 
-    private fun sha256(value: String) = MessageDigest.getInstance("SHA-256")
-        .digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
+    /** The providers' addresses only: credentials, connections and priorities do not change what they hold. */
+    private fun providersKey(servers: List<String>): String {
+        // A search asks with the same providers for every result.
+        if (servers == lastServers) return lastProvidersKey
+        return sha256(servers.map { server ->
+            runCatching { URI(server).let { "${it.scheme}://${it.host}:${it.port}" } }.getOrDefault("")
+        }.distinct().sorted().joinToString("\n")).also { lastServers = servers; lastProvidersKey = it }
+    }
+
+    // Looking a digest up is slow on some devices: one instance serves every hash, under the
+    // synchronized public calls. Lowercase hex, as stored entries already are.
+    private val digest = MessageDigest.getInstance("SHA-256")
+
+    private fun sha256(value: String): String {
+        val bytes = digest.digest(value.toByteArray())
+        val hex = CharArray(bytes.size * 2)
+        bytes.forEachIndexed { i, b ->
+            hex[i * 2] = HEX[(b.toInt() shr 4) and 0xf]
+            hex[i * 2 + 1] = HEX[b.toInt() and 0xf]
+        }
+        return String(hex)
+    }
 
     companion object {
         /** Engine failures that the same release repeats with the same providers. */
@@ -156,6 +174,7 @@ class UnplayableReleases internal constructor(
         /** Articles of a release that played can still be removed later: trust it for two weeks. */
         private const val PLAYED_MS = 14L * 24 * 3600 * 1000
         private const val REPLAYED_MS = 24L * 3600 * 1000
+        private val HEX = "0123456789abcdef".toCharArray()
         private const val MAX_ENTRIES = 2000
         private const val MB = 1_000_000L
 

@@ -308,9 +308,13 @@ class BuiltInUsenetService @Inject constructor(
             fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers) == true
             // Releases that already failed for good with these providers go last, still selectable;
             // ones that played recently go first unless turned off.
-            fun arranged() = NewznabProtocol.arrange(
-                if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config,
-                episodesPerSeason = episodesPerSeason()) { outcomeRank(failed(it), played(it), config.availableFirst) }
+            fun arranged(): List<UsenetRelease> {
+                // Each release's outcome is looked up once: the sort compares releases many times.
+                val ranks = releases.associate { it.nzbUrl to outcomeRank(failed(it), played(it), config.availableFirst) }
+                return NewznabProtocol.arrange(
+                    if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config,
+                    episodesPerSeason = episodesPerSeason()) { ranks[it.nzbUrl] ?: 1 }
+            }
             val enabled = config.indexers.filter { it.enabled }
             // Every indexer is searched at once unless the user chose priority fallback: then equal
             // priorities are searched together and lower ones only when nothing playable was found.
