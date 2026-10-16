@@ -20,12 +20,15 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
@@ -325,7 +328,27 @@ class BuiltInUsenetService @Inject constructor(
                     }
                 }
                 launch { jobs.joinAll(); results.close() }
-                for ((indexer, result) in results) {
+                suspend fun show() {
+                    val arranged = arranged()
+                    if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
+                        arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty()) })))
+                }
+                // Like other sources, the list appears whole once every indexer answered, unless one is
+                // slow: after a short wait it shows what came and fills in from there. Progressive
+                // results show each indexer's answer as it comes.
+                val wait = if (config.progressiveResults) null else async { delay(COMPLETE_RESULTS_WAIT_MS) }
+                var waiting = wait != null
+                while (true) {
+                    val received = select<ChannelResult<Pair<UsenetIndexer, Result<List<UsenetRelease>>>>?> {
+                        results.onReceiveCatching { it }
+                        if (waiting) wait?.onAwait { null }
+                    }
+                    if (received == null) {
+                        waiting = false
+                        show()
+                        continue
+                    }
+                    val (indexer, result) = received.getOrNull() ?: break
                     if (result.isFailure) {
                         // Never display raw exception messages: network/parser errors can contain keys.
                         val cooldown = result.exceptionOrNull() as? IndexerCooldownException
@@ -335,11 +358,11 @@ class BuiltInUsenetService @Inject constructor(
                         } else "${indexer.name}: indexer search failed. Check the API URL, key and limits."))
                     } else {
                         releases += result.getOrThrow()
-                        val arranged = arranged()
-                        if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
-                            arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty()) })))
+                        if (!waiting) show()
                     }
                 }
+                wait?.cancel()
+                if (waiting) show()
                 if (arranged().isNotEmpty()) break
             }
             metadata.cancel()
@@ -401,7 +424,12 @@ class BuiltInUsenetService @Inject constructor(
             (if (!pack) "" else if (packSeasons.size == 1) " (whole season)" else " (whole pack)") else null
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
         val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
-        return Stream(name = "Usenet • $indexerName", title = title,
+        val resolutionLabel = when {
+            resolution >= 2160 -> "4K"
+            resolution > 0 -> "${resolution}p"
+            else -> null
+        }
+        return Stream(name = listOfNotNull("Usenet", resolutionLabel, indexerName).joinToString(" • "), title = title,
             description = if (config.showReleaseNames) "$title\n$details" else details,
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
             // The size badge, as other sources show it.
@@ -420,6 +448,8 @@ class BuiltInUsenetService @Inject constructor(
 
     companion object {
         const val GROUP_NAME = "Built-in Usenet"
+        /** How long a search waits for every indexer before it shows what came. */
+        const val COMPLETE_RESULTS_WAIT_MS = 5_000L
         private const val BLURAY_COLOR = "#0B5ED7"
         /** On a release whose articles were missing or damaged when it was last tried. */
         const val UNAVAILABLE_LABEL = "UNAVAILABLE"
