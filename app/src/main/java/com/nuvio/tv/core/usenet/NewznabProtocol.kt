@@ -263,6 +263,16 @@ object NewznabProtocol {
     // The separator after the number is not consumed, so S01-S03 names both seasons.
     private val SEASON = Regex("(?i)(?:^|[ ._-])(?:S|Season[ ._-]*)(\\d{1,3})(?=$|[ ._-])")
 
+    /**
+     * A one-episode title with its episode left out, and that episode: an upload's other episodes
+     * share the first. Titles naming several episodes, or none, have none.
+     */
+    fun episodeTemplate(title: String): Pair<String, Int>? {
+        val matches = EPISODES.flatMap { it.findAll(title).toList() }
+        val match = matches.singleOrNull()?.takeIf { it.groupValues[3].isEmpty() } ?: return null
+        return title.replaceRange(match.range, "S${match.groupValues[1].toInt()}E?") to match.groupValues[2].toInt()
+    }
+
     /** The seasons a release title names without naming an episode: a season pack. */
     fun packSeasons(title: String): List<Int> =
         if (EPISODES.any { it.containsMatchIn(title) }) emptyList()

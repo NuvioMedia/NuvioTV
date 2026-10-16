@@ -40,7 +40,10 @@ class SharedPreferencesUnplayableReleaseStorage(context: Context) : UnplayableRe
 }
 
 @Serializable
-internal data class UnplayableRelease(val kind: String, val at: Long, val providers: String)
+internal data class UnplayableRelease(val kind: String, val at: Long, val providers: String, val episode: Int? = null)
+
+/** How another episode of the same upload last went: [episode] failed, or played. */
+data class SiblingOutcome(val episode: Int, val failed: Boolean, val blank: Boolean = false)
 
 /**
  * How releases last went with the current providers. Mostly releases the engine found unplayable:
@@ -96,6 +99,8 @@ class UnplayableReleases internal constructor(
         val keys = keys(nzbUrl, title, size?.let { it / MB }).ifEmpty { return false }
         val entry = UnplayableRelease(kind, now(), providersKey(servers))
         keys.forEach { entries[it] = entry }
+        // The upload's other episodes are told by the newest outcome among its episodes.
+        siblingKey(title)?.let { (key, episode) -> entries[key] = entry.copy(episode = episode) }
         entries.entries.removeAll { now() - it.value.at > RETENTION_MS }
         while (entries.size > MAX_ENTRIES) entries.remove(entries.minBy { it.value.at }.key)
         storage.save(json.encodeToString(entries.toMap()))
@@ -121,6 +126,30 @@ class UnplayableReleases internal constructor(
     @Synchronized
     fun played(nzbUrl: String?, title: String?, size: Long?, servers: List<String>): Boolean =
         find(nzbUrl, title, size, servers)?.let { it.kind == PLAYED && now() - it.at <= PLAYED_MS } == true
+
+    /**
+     * How another episode of this upload last went with these providers: episodes posted together
+     * are usually removed, or kept, together. Null for a pack, or when only this episode was tried.
+     */
+    @Synchronized
+    fun sibling(title: String?, servers: List<String>): SiblingOutcome? {
+        val (key, episode) = siblingKey(title) ?: return null
+        val entry = entries[key]?.takeIf { it.episode != null && it.episode != episode } ?: return null
+        if (entry.providers != providersKey(servers) && entry.kind != BLANK) return null
+        val age = now() - entry.at
+        return when {
+            entry.kind in KINDS && age <= RETENTION_MS -> SiblingOutcome(entry.episode!!, failed = true, blank = entry.kind == BLANK)
+            entry.kind == PLAYED && age <= PLAYED_MS -> SiblingOutcome(entry.episode!!, failed = false)
+            else -> null
+        }
+    }
+
+    fun sibling(stream: Stream): SiblingOutcome? = sibling(stream.title, stream.servers.orEmpty())
+
+    private fun siblingKey(title: String?): Pair<String, Int>? {
+        val name = title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() } ?: return null
+        return NewznabProtocol.episodeTemplate(name)?.let { (template, episode) -> "s:" + sha256(template) to episode }
+    }
 
     fun record(stream: Stream, kind: String?) =
         record(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty(), kind)

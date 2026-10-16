@@ -143,4 +143,42 @@ class UnplayableReleasesTest {
         assertTrue(releases.contains("https://b.test/pack", "Show.S01.1080p-GRP", 1_500_000_000, provider))
         assertFalse(releases.contains("https://b.test/pack", "Show.S02.1080p-GRP", 1_500_000_000, provider))
     }
+
+    @Test fun `another episode of the same upload tells how it went`() {
+        record(url = "https://a.test/e02", title = "Show.S01E02.2160p.WEB-DL-GRP", size = 4_000_000_000)
+        assertEquals(SiblingOutcome(2, failed = true), releases.sibling("Show.S01E03.2160p.WEB-DL-GRP", provider))
+        // The episode that failed says so itself; another upload, season or provider tells nothing.
+        assertEquals(null, releases.sibling("Show.S01E02.2160p.WEB-DL-GRP", provider))
+        assertEquals(null, releases.sibling("Show.S01E03.1080p.WEB-DL-GRP", provider))
+        assertEquals(null, releases.sibling("Show.S02E03.2160p.WEB-DL-GRP", provider))
+        assertEquals(null, releases.sibling("Show.S01E03.2160p.WEB-DL-GRP", listOf("nntps://u:p@backup.example.test:563/8")))
+        // Packs and multi-episode releases are not one episode of an upload.
+        assertEquals(null, releases.sibling("Show.S01.2160p.WEB-DL-GRP", provider))
+        assertEquals(null, releases.sibling("Show.S01E03E04.2160p.WEB-DL-GRP", provider))
+        // The newest outcome among the episodes counts.
+        releases.recordPlayed("https://a.test/e04", "Show.S01E04.2160p.WEB-DL-GRP", 4_000_000_000, provider)
+        assertEquals(SiblingOutcome(4, failed = false), releases.sibling("Show.S01E05.2160p.WEB-DL-GRP", provider))
+        clock += 15L * 24 * 3600 * 1000
+        assertEquals(null, releases.sibling("Show.S01E05.2160p.WEB-DL-GRP", provider))
+    }
+
+    @Test fun `another blank episode counts with any provider and goes last`() {
+        record(url = "https://a.test/e02", title = "Show.S01E02.2160p-FAKE", kind = "blank-content")
+        val others = listOf("nntps://u:p@backup.example.test:563/8")
+        assertEquals(SiblingOutcome(2, failed = true, blank = true), releases.sibling("Show.S01E03.2160p-FAKE", others))
+        fun stream(title: String) = com.nuvio.tv.domain.model.Stream(name = "Usenet • A", title = title, description = null,
+            url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null, behaviorHints = null,
+            addonName = BuiltInUsenetService.GROUP_NAME, addonLogo = null, nzbUrl = "https://a.test/$title", servers = provider)
+        val group = com.nuvio.tv.domain.model.AddonStreams(BuiltInUsenetService.GROUP_NAME, null,
+            listOf(stream("Show.S01E03.2160p-FAKE"), stream("Show.S01E03.2160p-GRP")))
+        val arranged = BuiltInUsenetService.arrangeOutcomes(listOf(group), releases::contains, releases::played,
+            sibling = releases::sibling).single().streams
+        assertEquals(listOf("Show.S01E03.2160p-GRP", "Show.S01E03.2160p-FAKE"), arranged.map { it.title })
+        assertEquals(listOf("E02 FAILED"), arranged.last().badges.map { it.name })
+        // Once tried, the release's own outcome replaces the other episode's.
+        record(url = "https://a.test/Show.S01E03.2160p-FAKE", title = "Show.S01E03.2160p-FAKE", kind = "blank-content")
+        val again = BuiltInUsenetService.arrangeOutcomes(listOf(group.copy(streams = arranged)), releases::contains,
+            releases::played, sibling = releases::sibling).single().streams
+        assertEquals(listOf(BuiltInUsenetService.UNAVAILABLE_LABEL), again.last().badges.map { it.name })
+    }
 }
