@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"strings"
@@ -119,6 +120,39 @@ func TestShuffledNumericRAR5NamesUseHeaderOrder(t *testing.T) {
 	}
 	files = append(files, inputFile{"8c442a49b1caa6c8.15", []byte("release notes"), nil})
 	selectAndRead(t, damagedSetup(t, files), "movie.mkv", want)
+}
+
+// Seen on an indexer: an obfuscated RAR set posted as <hash>.10 to <hash>.85
+// whose articles were all removed. Its unreadable headers are missing
+// articles, not a gap in the numbering.
+func TestRemovedNumericVolumesReportMissingArticles(t *testing.T) {
+	in, _, _ := regularRARSet(4, 5, 60000, 25000)
+	var files []inputFile
+	for k, f := range in {
+		files = append(files, inputFile{fmt.Sprintf("0f0299bba078dae8.%d", 10+k), f.data, nil})
+	}
+	xml, articles := fixture(files)
+	for id := range articles {
+		delete(articles, id)
+	}
+	s, err := nntpserver.New(nntpserver.Config{Articles: articles})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, err := nntppool.NewClient(context.Background(), []nntppool.Provider{{Host: s.Addr(), Connections: 4, Inflight: 4, StreamInflight: 4, SkipPing: true}}, nntppool.WithStatProbe(false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := NewStore(context.Background(), pool, 32<<20)
+	t.Cleanup(func() { store.Close(); pool.Close(); s.Close() })
+	nzb, err := ParseNZB(strings.NewReader(xml), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = Select(context.Background(), nzb, Selection{})
+	if !errors.Is(err, nntppool.ErrArticleNotFound) || permanentStreamFailure(err) != "missing-article" {
+		t.Fatalf("Select error = %v, want missing articles", err)
+	}
 }
 
 func TestNumericNameAmongObfuscatedFilesIsNotASet(t *testing.T) {
