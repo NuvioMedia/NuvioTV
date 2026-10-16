@@ -306,11 +306,14 @@ class BuiltInUsenetService @Inject constructor(
             fun episodesPerSeason(): Int? = seasonEpisodes.get()
             fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers) == true
             fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers) == true
+            fun sibling(release: UsenetRelease) = unplayable?.sibling(release.title, servers)
             // Releases that already failed for good with these providers go last, still selectable;
             // ones that played recently go first unless turned off.
             fun arranged(): List<UsenetRelease> {
                 // Each release's outcome is looked up once: the sort compares releases many times.
-                val ranks = releases.associate { it.nzbUrl to outcomeRank(failed(it), played(it), config.availableFirst) }
+                val ranks = releases.associate {
+                    it.nzbUrl to outcomeRank(failed(it) || sibling(it)?.blank == true, played(it), config.availableFirst)
+                }
                 return NewznabProtocol.arrange(
                     if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config,
                     episodesPerSeason = episodesPerSeason()) { ranks[it.nzbUrl] ?: 1 }
@@ -344,7 +347,7 @@ class BuiltInUsenetService @Inject constructor(
                     log("show ${arranged.size} results")
                     if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
                         arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty(),
-                            episodes = episodesPerSeason()) })))
+                            episodes = episodesPerSeason(), sibling = sibling(it)) })))
                 }
                 // Like other sources, the list appears whole once every indexer answered, unless one is
                 // slow: after a short wait it shows what came and fills in from there. Progressive
@@ -451,7 +454,7 @@ class BuiltInUsenetService @Inject constructor(
     }
 
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false,
-        played: Boolean = false, pack: Boolean = false, episodes: Int? = null): Stream {
+        played: Boolean = false, pack: Boolean = false, episodes: Int? = null, sibling: SiblingOutcome? = null): Stream {
         fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
         // A pack's size is the whole season's, not the episode's that plays: with the season's episode
         // count, the size badge shows an episode's share and the details keep the whole size.
@@ -478,6 +481,7 @@ class BuiltInUsenetService @Inject constructor(
             badges = listOfNotNull(
                 UNAVAILABLE_BADGE.takeIf { failed },
                 AVAILABLE_BADGE.takeIf { played && !failed },
+                sibling?.takeIf { !failed && !played }?.let(::siblingBadge),
                 SEASON_PACK_BADGE.takeIf { pack },
                 blurayLabel?.let {
                     StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
@@ -508,6 +512,19 @@ class BuiltInUsenetService @Inject constructor(
         private val AVAILABLE_BADGE = StreamBadge(name = AVAILABLE_LABEL, tagColor = "#198754",
             textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
 
+        /**
+         * On an untried release whose upload's other episode failed ("E02 FAILED") or played
+         * ("E02 PLAYED"): episodes posted together are usually removed, or kept, together.
+         */
+        private const val SIBLING_FAILED_COLOR = "#FD7E14"
+        private const val SIBLING_PLAYED_COLOR = "#0AA2C0"
+        private val SIBLING_LABEL = Regex("E\\d+ (FAILED|PLAYED)")
+
+        fun siblingBadge(outcome: SiblingOutcome): StreamBadge =
+            StreamBadge(name = "E%02d %s".format(Locale.ROOT, outcome.episode, if (outcome.failed) "FAILED" else "PLAYED"),
+                tagColor = if (outcome.failed) SIBLING_FAILED_COLOR else SIBLING_PLAYED_COLOR,
+                textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
         /** On a release holding a whole season or several, whose size is not the episode's. */
         const val SEASON_PACK_LABEL = "SEASON PACK"
         private val SEASON_PACK_BADGE = StreamBadge(name = SEASON_PACK_LABEL, tagColor = "#6F42C1",
@@ -523,23 +540,29 @@ class BuiltInUsenetService @Inject constructor(
         /**
          * Labels results already listed, cached or shown, by how their releases last went, and orders
          * the built-in group as a fresh search would: unplayable releases last, available ones first
-         * when [availableFirst]. Other groups are unchanged.
+         * when [availableFirst]. An untried release says how its upload's other episode went; one
+         * whose other episode was blank goes last too. Other groups are unchanged.
          */
         fun arrangeOutcomes(groups: List<AddonStreams>, unplayable: (Stream) -> Boolean,
-            available: (Stream) -> Boolean = { false }, availableFirst: Boolean = false): List<AddonStreams> =
+            available: (Stream) -> Boolean = { false }, availableFirst: Boolean = false,
+            sibling: (Stream) -> SiblingOutcome? = { null }): List<AddonStreams> =
             groups.map { group ->
                 if (group.addonName != GROUP_NAME) return@map group
                 val marked = group.streams.map { stream ->
                     val failed = unplayable(stream)
                     val good = !failed && available(stream)
-                    val others = stream.badges.filterNot { it.name == UNAVAILABLE_LABEL || it.name == AVAILABLE_LABEL }
+                    val other = if (failed || good) null else sibling(stream)
+                    val others = stream.badges.filterNot {
+                        it.name == UNAVAILABLE_LABEL || it.name == AVAILABLE_LABEL || SIBLING_LABEL.matches(it.name)
+                    }
                     val badges = when {
                         failed -> listOf(UNAVAILABLE_BADGE) + others
                         good -> listOf(AVAILABLE_BADGE) + others
+                        other != null -> listOf(siblingBadge(other)) + others
                         else -> others
                     }
                     (if (badges == stream.badges) stream else stream.copy(badges = badges)) to
-                        outcomeRank(failed, good, availableFirst)
+                        outcomeRank(failed || other?.blank == true, good, availableFirst)
                 }
                 val streams = marked.sortedBy { it.second }.map { it.first }
                 if (streams == group.streams) group else group.copy(streams = streams)

@@ -143,7 +143,7 @@ class StreamRepositoryImpl @Inject constructor(
                 // Cached results predate releases tried since: label and arrange them on every delivery.
                 if (result !is NetworkResult.Success) result
                 else NetworkResult.Success(BuiltInUsenetService.arrangeOutcomes(result.data, unplayable::contains, unplayable::played,
-                    sourceConfiguration.usenetSources.availableFirst))
+                    sourceConfiguration.usenetSources.availableFirst, unplayable::sibling))
             }
         )
     }
