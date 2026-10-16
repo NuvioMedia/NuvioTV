@@ -121,4 +121,13 @@ class UnplayableReleasesTest {
         assertEquals(listOf(BuiltInUsenetService.AVAILABLE_LABEL), arranged(true).first().badges.map { it.name })
         assertEquals(listOf(BuiltInUsenetService.UNAVAILABLE_LABEL), arranged(true).last().badges.map { it.name })
     }
+
+    @Test fun `entries saved before keep matching`() {
+        fun hex(value: String) = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
+        val url = "https://a.test/getnzb/1.nzb&r=key"
+        storage.value = """{"u:${hex(url)}":{"kind":"missing-article","at":$clock,"providers":"${hex("nntps://news.example.test:563")}"}}"""
+        storage.generation += 1
+        assertTrue(releases.contains(url, null, null, provider))
+    }
 }
