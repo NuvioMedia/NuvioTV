@@ -103,9 +103,10 @@ class BuiltInUsenetServiceTest {
         assertTrue(streams.first().badges.isEmpty())
     }
 
-    @Test fun `a release that played recently is listed first, labelled, unless turned off`() = runTest {
+    @Test fun `a release that played recently is listed first, labelled, when chosen`() = runTest {
         val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
-        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer),
+            availableFirst = true)
         val client = mockk<NewznabClient>()
         coEvery { client.capabilities(any()) } returns NewznabCapabilities()
         coEvery { client.search(indexer, any(), any()) } returns
