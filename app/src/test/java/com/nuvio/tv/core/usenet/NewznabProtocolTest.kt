@@ -29,6 +29,15 @@ class NewznabProtocolTest {
             NewznabProtocol.arrange(listOf(pack, episode), config.copy(sort = UsenetSort.SMALLEST), episodesPerSeason = 9))
     }
 
+    @Test fun `the result limit never cuts a release ranked first`() {
+        val releases = (1..5).map { UsenetRelease("Movie.2020.2160p-G$it", "https://a/$it", size = it.toLong(), indexerId = "one") } +
+            UsenetRelease("Movie.2020.720p-OK", "https://a/ok", indexerId = "one")
+        val config = UsenetSourceConfiguration(indexers = listOf(indexer), maxResults = 3)
+        // Best resolution first would cut the 720p release; ranked first, it stays and leads.
+        val kept = NewznabProtocol.arrange(releases, config) { if (it.title.endsWith("OK")) 0 else 1 }
+        assertEquals(listOf("Movie.2020.720p-OK", "Movie.2020.2160p-G5", "Movie.2020.2160p-G4"), kept.map { it.title })
+    }
+
     @Test fun `provider credentials are encoded once and IPv6 is preserved`() {
         val provider = UsenetProvider(name = "News", host = "2001:db8::1", username = "a@b", password = "a:+ %/", connections = 30)
         provider.validate()

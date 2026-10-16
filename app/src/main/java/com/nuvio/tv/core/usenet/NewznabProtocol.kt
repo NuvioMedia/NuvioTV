@@ -362,9 +362,14 @@ object NewznabProtocol {
         }
     }
 
-    /** [episodesPerSeason] lets a single-season pack be filtered and sorted by its size per episode. */
+    /**
+     * [episodesPerSeason] lets a single-season pack be filtered and sorted by its size per episode.
+     * [rank] orders before the sort and before the result limit, so releases known to play are never
+     * the ones cut and unplayable ones are cut first.
+     */
     fun arrange(releases: List<UsenetRelease>, config: UsenetSourceConfiguration,
-        now: Long = System.currentTimeMillis(), episodesPerSeason: Int? = null): List<UsenetRelease> {
+        now: Long = System.currentTimeMillis(), episodesPerSeason: Int? = null,
+        rank: (UsenetRelease) -> Int = { 0 }): List<UsenetRelease> {
         val priority = config.indexers.mapIndexed { i, indexer -> indexer.id to i }.toMap()
         val filtered = releases.filter {
             !it.passworded && (!config.excludeLowQuality || !it.lowQuality) && (!config.excludeFullDisc || !it.fullDisc) &&
@@ -381,7 +386,7 @@ object NewznabProtocol {
             UsenetSort.NEWEST -> compareByDescending<UsenetRelease> { it.publishedAt }
             UsenetSort.INDEXER -> compareBy<UsenetRelease> { priority[it.indexerId] ?: Int.MAX_VALUE }
         }
-        return filtered.sortedWith(primary.thenBy { priority[it.indexerId] ?: Int.MAX_VALUE }
+        return filtered.sortedWith(compareBy(rank).then(primary).thenBy { priority[it.indexerId] ?: Int.MAX_VALUE }
             .thenByDescending { it.resolution }.thenByDescending { it.episodeSize(episodesPerSeason) }.thenBy { it.title }.thenBy { it.nzbUrl })
             .distinctBy { it.nzbUrl }.take(config.maxResults)
     }
