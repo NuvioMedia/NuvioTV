@@ -74,6 +74,7 @@ class OkHttpWeTrakrEngine(
             .header("wetrakr-api-version", "1")
             .apply {
                 request.accessToken?.let { header("Authorization", "Bearer $it") }
+                request.headers.forEach { (name, value) -> header(name, value) }
                 when (request.method) {
                     WeTrakrHttpMethod.GET -> get()
                     WeTrakrHttpMethod.POST -> post(body ?: "{}".toRequestBody(JSON))

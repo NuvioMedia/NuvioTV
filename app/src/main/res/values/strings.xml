@@ -1271,6 +1271,15 @@
         <item quantity="one">Uses about %d WeTrakr request. If the daily WeTrakr limit is reached, syncing pauses and continues after it resets.</item>
         <item quantity="other">Uses about %d WeTrakr requests. If the daily WeTrakr limit is reached, syncing pauses and continues after it resets.</item>
     </plurals>
+    <string name="wetrakr_local_upload_sync">Sync</string>
+    <plurals name="wetrakr_local_upload_progress">
+        <item quantity="one">Syncing local data to WeTrakr · %1$d%% · %2$d item left</item>
+        <item quantity="other">Syncing local data to WeTrakr · %1$d%% · %2$d items left</item>
+    </plurals>
+    <string name="wetrakr_local_upload_done">Sync finished · %1$d added · %2$d already on WeTrakr · %3$d not found</string>
+    <string name="wetrakr_local_upload_done_failed">Sync finished · %1$d added · %2$d already on WeTrakr · %3$d not found · %4$d failed</string>
+    <string name="wetrakr_local_upload_cancelled">Sync cancelled · %1$d added</string>
+    <string name="wetrakr_local_upload_failed">Sync stopped · %1$d added · %2$s</string>
     <plurals name="wetrakr_local_upload_entries">
         <item quantity="one">%d entry</item>
         <item quantity="other">%d entries</item>

@@ -4,6 +4,7 @@ import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingMutationResult
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,16 +33,21 @@ class WeTrakrHistoryService @Inject constructor(
                 )
             }
         }.distinctBy { "${it.target.type}:${it.target.media.ids.contentId}:${it.target.season}:${it.target.episode}" }
+            .let { changes ->
+                val records = sync.currentSnapshot()?.watched.orEmpty()
+                if (remove || records.isEmpty()) changes else changes.filterNot { it.watchedRecently(records) }
+            }
         var failed = items.size - mapped.size
         val buckets = setOf(WeTrakrSyncBucket.WATCHED_MOVIES, WeTrakrSyncBucket.WATCHED_EPISODES)
         for (batch in mapped.chunked(BATCH_SIZE)) {
             failed += sync.write(scope, buckets) { snapshot ->
                 val response = api.post(
                     if (remove) "/sync/tracking/remove/all" else "/sync/tracking",
-                    weTrakrTrackingBody(batch, "watched"),
+                    weTrakrTrackingBody(batch, "watched", allowRewatch = if (remove) null else true),
                     scope
                 )
-                val notFound = weTrakrNotFoundCount(response.body).coerceAtMost(batch.size)
+                val notFound = (weTrakrNotFoundCount(response.body) + weTrakrErrored(response.body).total)
+                    .coerceAtMost(batch.size)
                 val expandsShow = batch.any { it.target.type == WeTrakrItemType.SHOW }
                 val watched = if (remove) {
                     snapshot.watched.filterNot { record ->
@@ -70,5 +76,17 @@ class WeTrakrHistoryService @Inject constructor(
 
     private companion object {
         const val BATCH_SIZE = 500
+    }
+}
+
+private val WETRAKR_REWATCH_WINDOW: Duration = Duration.ofHours(24)
+
+internal fun WeTrakrTrackingChange.watchedRecently(records: List<WeTrakrWatchedRecord>): Boolean {
+    if (target.type == WeTrakrItemType.SHOW) return false
+    val at = trackedAt?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: return false
+    return records.any { record ->
+        target.matches(record) && runCatching {
+            Duration.between(Instant.parse(record.watchedAt), at).abs() < WETRAKR_REWATCH_WINDOW
+        }.getOrDefault(false)
     }
 }
