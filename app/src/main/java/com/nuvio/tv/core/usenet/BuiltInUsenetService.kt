@@ -281,12 +281,30 @@ class BuiltInUsenetService @Inject constructor(
             }
             val releases = mutableListOf<UsenetRelease>()
             val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
+            // A season's episode count, asked of TMDB once and only when a single-season pack shows up,
+            // lets packs be filtered and sorted by their size per episode.
+            var episodesPerSeason: Int? = null
+            var episodesAsked = false
+            suspend fun episodesPerSeason(): Int? {
+                if (!series || episodesAsked || resolvedSeason == null || releases.none { it.packSeasons.size == 1 }) {
+                    return episodesPerSeason
+                }
+                episodesAsked = true
+                episodesPerSeason = try {
+                    (request.tmdbId ?: tmdb.ensureTmdbId(videoId, type))?.toIntOrNull()?.let {
+                        tmdbApi.getTvSeasonDetails(it, resolvedSeason, BuildConfig.TMDB_API_KEY).body()?.episodes?.size
+                    }?.takeIf { it > 0 }
+                } catch (e: CancellationException) { throw e }
+                catch (_: Exception) { null }
+                return episodesPerSeason
+            }
             fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers) == true
             fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers) == true
             // Releases that already failed for good with these providers go last, still selectable;
             // ones that played recently go first unless turned off.
-            fun arranged() = NewznabProtocol.arrange(
-                if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config)
+            suspend fun arranged() = NewznabProtocol.arrange(
+                if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config,
+                episodesPerSeason = episodesPerSeason())
                 .sortedBy { outcomeRank(failed(it), played(it), config.availableFirst) }
             val enabled = config.indexers.filter { it.enabled }
             // Every indexer is searched at once unless the user chose priority fallback: then equal
@@ -320,7 +338,7 @@ class BuiltInUsenetService @Inject constructor(
                         releases += result.getOrThrow()
                         val arranged = arranged()
                         if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
-                            arranged.map { it.toStream(config, failed(it), played(it)) })))
+                            arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty()) })))
                     }
                 }
                 if (arranged().isNotEmpty()) break
@@ -378,8 +396,10 @@ class BuiltInUsenetService @Inject constructor(
     }
 
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false,
-        played: Boolean = false): Stream {
-        val sizeLabel = if (size > 0) "%.2f GB".format(Locale.ROOT, size / (1024.0 * 1024 * 1024)) else null
+        played: Boolean = false, pack: Boolean = false): Stream {
+        // A pack's size is the whole season's, not the episode's that plays.
+        val sizeLabel = if (size > 0) "%.2f GB".format(Locale.ROOT, size / (1024.0 * 1024 * 1024)) +
+            (if (!pack) "" else if (packSeasons.size == 1) " (whole season)" else " (whole pack)") else null
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
         val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
         return Stream(name = "Usenet • $indexerName", title = title,
@@ -391,6 +411,7 @@ class BuiltInUsenetService @Inject constructor(
             badges = listOfNotNull(
                 UNAVAILABLE_BADGE.takeIf { failed },
                 AVAILABLE_BADGE.takeIf { played && !failed },
+                SEASON_PACK_BADGE.takeIf { pack },
                 blurayLabel?.let {
                     StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
                 }),
@@ -412,6 +433,11 @@ class BuiltInUsenetService @Inject constructor(
          */
         const val AVAILABLE_LABEL = "AVAILABLE"
         private val AVAILABLE_BADGE = StreamBadge(name = AVAILABLE_LABEL, tagColor = "#198754",
+            textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /** On a release holding a whole season or several, whose size is not the episode's. */
+        const val SEASON_PACK_LABEL = "SEASON PACK"
+        private val SEASON_PACK_BADGE = StreamBadge(name = SEASON_PACK_LABEL, tagColor = "#6F42C1",
             textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
 
         /** Available releases first when chosen, unplayable ones last; the sort applies within each. */

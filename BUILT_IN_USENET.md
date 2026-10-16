@@ -136,6 +136,11 @@ or dates are excluded when their corresponding maximum filter is enabled.
 Duplicate download URLs are removed while alternative indexer URLs remain
 available for playback fallback. Each result shows its release name above its
 size, age and indexer; **Show release names** (on by default) can hide it.
+A season pack is labelled `SEASON PACK` and its size reads "(whole season)" (or
+"(whole pack)" for several seasons): the episode that plays is one file of it.
+The maximum size filter and size sorting compare a single-season pack by its
+size per episode, from the season's episode count on TMDB, asked once per search
+and only when such a pack is found; without that count the whole size is used.
 
 Searches have a 25-second timeout per request and fetch at most two pages of
 100 results per indexer. NZBs are fetched only when the existing playback or

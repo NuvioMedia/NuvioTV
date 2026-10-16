@@ -126,6 +126,28 @@ class BuiltInUsenetServiceTest {
         assertEquals(listOf(BuiltInUsenetService.AVAILABLE_LABEL), sorted.last().badges.map { it.name })
     }
 
+    @Test fun `a season pack is labelled with its whole size and filtered per episode`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer),
+            maxSizeGb = 5, showReleaseNames = false)
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(
+            UsenetRelease("Show.S01.1080p-GRP", "https://a.test/nzb/pack", size = 9L shl 30, indexerId = "a", indexerName = "A"))
+        coEvery { tmdb.ensureTmdbId(any(), any()) } returns "42"
+        coEvery { tmdbApi.getTvSeasonDetails(42, 1, any(), any()) } returns Response.success(
+            com.nuvio.tv.data.remote.api.TmdbSeasonResponse(1, (1..9).map { com.nuvio.tv.data.remote.api.TmdbEpisode(it) }))
+        val service = BuiltInUsenetService(client, tmdb, tmdbApi)
+        val stream = service.search(config, "series", "tt1:1:2", null, null).toList().mapNotNull { it.group }.last().streams.single()
+        assertEquals(listOf(BuiltInUsenetService.SEASON_PACK_LABEL), stream.badges.map { it.name })
+        assertEquals("9.00 GB (whole season) • A", stream.description)
+        // The size badge and the outcome list keep the release's whole size.
+        assertEquals(9L shl 30, stream.behaviorHints?.videoSize)
+        coVerify(exactly = 1) { tmdbApi.getTvSeasonDetails(42, 1, any(), any()) }
+    }
+
     @Test fun `results show their release name unless turned off`() = runTest {
         val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
         val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
