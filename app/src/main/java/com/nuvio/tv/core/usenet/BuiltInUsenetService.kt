@@ -343,7 +343,8 @@ class BuiltInUsenetService @Inject constructor(
                     val arranged = arranged()
                     log("show ${arranged.size} results")
                     if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
-                        arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty()) })))
+                        arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty(),
+                            episodes = episodesPerSeason()) })))
                 }
                 // Like other sources, the list appears whole once every indexer answered, unless one is
                 // slow: after a short wait it shows what came and fills in from there. Progressive
@@ -450,10 +451,17 @@ class BuiltInUsenetService @Inject constructor(
     }
 
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false,
-        played: Boolean = false, pack: Boolean = false): Stream {
-        // A pack's size is the whole season's, not the episode's that plays.
-        val sizeLabel = if (size > 0) "%.2f GB".format(Locale.ROOT, size / (1024.0 * 1024 * 1024)) +
-            (if (!pack) "" else if (packSeasons.size == 1) " (whole season)" else " (whole pack)") else null
+        played: Boolean = false, pack: Boolean = false, episodes: Int? = null): Stream {
+        fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
+        // A pack's size is the whole season's, not the episode's that plays: with the season's episode
+        // count, the size badge shows an episode's share and the details keep the whole size.
+        val episodeShare = episodeSize(episodes).takeIf { pack && it != size }
+        val sizeLabel = if (size <= 0) null else when {
+            !pack -> gb(size)
+            episodeShare != null -> "${gb(size)} whole season (~${gb(episodeShare)} per episode)"
+            packSeasons.size == 1 -> "${gb(size)} (whole season)"
+            else -> "${gb(size)} (whole pack)"
+        }
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
         val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
         val resolutionLabel = when {
@@ -465,7 +473,7 @@ class BuiltInUsenetService @Inject constructor(
             description = if (config.showReleaseNames) "$title\n$details" else details,
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
             // The size badge, as other sources show it.
-            behaviorHints = size.takeIf { it > 0 }?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
+            behaviorHints = (episodeShare ?: size).takeIf { it > 0 }?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
             addonName = GROUP_NAME, addonLogo = null,
             badges = listOfNotNull(
                 UNAVAILABLE_BADGE.takeIf { failed },
