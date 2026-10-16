@@ -162,6 +162,24 @@ class UnplayableReleasesTest {
         assertEquals(null, releases.sibling("Show.S01E05.2160p.WEB-DL-GRP", provider))
     }
 
+    @Test fun `episode names in titles do not separate an upload's episodes`() {
+        record(url = "https://a.test/e04", title = "Slow.Horses.2022.S01E04.Visiting.Hours.2160p.ATV.WEB-DL.MULTi.DDP5.1.Atmos.H.265-FUZEER")
+        assertEquals(SiblingOutcome(4, failed = true),
+            releases.sibling("Slow.Horses.2022.S01E06.Follies.2160p.ATV.WEB-DL.MULTi.DDP5.1.Atmos.H.265-FUZEER", provider))
+        releases.recordPlayed("https://a.test/crfw", "Slow Horses S01E04 Visiting Hours 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW",
+            12_000_000_000, provider)
+        assertEquals(SiblingOutcome(4, failed = false),
+            releases.sibling("Slow Horses S01E02 Work Drinks 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW", provider))
+        assertEquals(null, releases.sibling("Slow Horses S01E02 Work Drinks 1080p ATVP WEB-DL DDP5 1 H 264-CRFW", provider))
+        // Played again within a day, an episode still becomes its upload's newest outcome.
+        releases.recordPlayed("https://a.test/crfw2", "Slow Horses S01E02 Work Drinks 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW",
+            12_000_000_000, provider)
+        releases.recordPlayed("https://a.test/crfw", "Slow Horses S01E04 Visiting Hours 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW",
+            12_000_000_000, provider)
+        assertEquals(SiblingOutcome(4, failed = false),
+            releases.sibling("Slow Horses S01E03 Hard Tack 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW", provider))
+    }
+
     @Test fun `another blank episode counts with any provider and goes last`() {
         record(url = "https://a.test/e02", title = "Show.S01E02.2160p-FAKE", kind = "blank-content")
         val others = listOf("nntps://u:p@backup.example.test:563/8")

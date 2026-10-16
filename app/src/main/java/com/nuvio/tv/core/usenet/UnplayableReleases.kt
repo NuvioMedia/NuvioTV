@@ -86,12 +86,16 @@ class UnplayableReleases internal constructor(
 
     /**
      * Remembers a release that showed its first frame. A later failure replaces this, and so does
-     * a newer success: a release already marked within a day is not written again.
+     * a newer success: a release already marked within a day is not written again, unless its
+     * upload's newest outcome is another episode's.
      */
     @Synchronized
     fun recordPlayed(nzbUrl: String?, title: String?, size: Long?, servers: List<String>) {
         val known = find(nzbUrl, title, size, servers)
-        if (known?.kind == PLAYED && now() - known.at < REPLAYED_MS) return
+        val siblingsKnow = siblingKey(title)?.let { (key, episode) ->
+            entries[key]?.let { it.kind == PLAYED && it.episode == episode } == true
+        } ?: true
+        if (known?.kind == PLAYED && now() - known.at < REPLAYED_MS && siblingsKnow) return
         put(nzbUrl, title, size, servers, PLAYED)
     }
 
