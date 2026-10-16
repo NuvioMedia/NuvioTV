@@ -75,6 +75,16 @@ class StreamFallbackSessionTest {
     private fun session(selected: Stream, streams: List<Stream>, maxAttempts: Int = 5) =
         StreamFallbackSession(selected, streams, maxAttempts, isEnabled = { true })
 
+    @Test fun `fallback skips releases that already failed for good`() = runTest {
+        val first = stream("first")
+        val dead = stream("dead")
+        val next = stream("next")
+        val session = StreamFallbackSession(first, listOf(first, dead, next), isEnabled = { true },
+            isUnplayable = { it == dead })
+        assertEquals(next, session.next())
+        assertEquals(1, session.attempts)
+    }
+
     @Test fun `fallback is disabled by default`() = runTest {
         val first = stream("first")
         val session = StreamFallbackSession(first, listOf(first, stream("next")))

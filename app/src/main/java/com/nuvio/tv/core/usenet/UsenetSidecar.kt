@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Base64
+import android.util.Log
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Subtitle
 import java.io.File
@@ -305,6 +306,13 @@ class UsenetSidecar private constructor(private val context: Context) {
             previousId?.let(::retireSessionLocked)
             resolved
         } catch (e: Exception) {
+            // Prefetches open here too, so a release found unplayable before it was chosen counts.
+            (e as? UsenetPreparationException)?.failure?.let { UnplayableReleases.get(context).record(stream, it) }
+            if (e !is CancellationException) runCatching {
+                Log.i("UsenetPrepare", "open failed source=\"${stream.name}\" release=\"${stream.title?.lineSequence()?.firstOrNull()}\" " +
+                    "kind=${(e as? UsenetPreparationException)?.failure ?: "-"} error=${e.javaClass.simpleName}: " +
+                    com.nuvio.tv.core.player.redacted(e.message.orEmpty()))
+            }
             if (previousId != null && sessionId == previousId && process?.let(::isRunning) == true) {
                 openedId?.let(::retireSessionLocked)
             } else {
@@ -471,14 +479,15 @@ class UsenetSidecar private constructor(private val context: Context) {
                         if (!continuation.isActive) return
                         if (it.isSuccessful) continuation.resume(text)
                         else {
-                            val scope = when (it.header("X-Usenet-Failure")) {
+                            val failure = it.header("X-Usenet-Failure")
+                            val scope = when (failure) {
                                 "configuration" -> UsenetPreparationException.Scope.ENGINE
                                 "provider" -> UsenetPreparationException.Scope.PROVIDER
                                 // Busy can be the previous cancelled open still
                                 // unwinding; it is not a permanent engine failure.
                                 else -> UsenetPreparationException.Scope.SOURCE
                             }
-                            continuation.resumeWithException(UsenetPreparationException(text.take(240).ifBlank { "Usenet engine returned HTTP ${it.code}" }, scope))
+                            continuation.resumeWithException(UsenetPreparationException(text.take(240).ifBlank { "Usenet engine returned HTTP ${it.code}" }, scope, failure))
                         }
                     } } catch (e: IOException) {
                         if (continuation.isActive) continuation.resumeWithException(IOException("Usenet engine response was interrupted"))
