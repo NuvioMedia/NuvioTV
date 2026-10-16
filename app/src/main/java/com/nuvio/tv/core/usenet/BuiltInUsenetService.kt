@@ -30,6 +30,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Headers
@@ -284,28 +285,30 @@ class BuiltInUsenetService @Inject constructor(
             }
             val releases = mutableListOf<UsenetRelease>()
             val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
-            // A season's episode count, asked of TMDB once and only when a single-season pack shows up,
-            // lets packs be filtered and sorted by their size per episode.
-            var episodesPerSeason: Int? = null
-            var episodesAsked = false
-            suspend fun episodesPerSeason(): Int? {
-                if (!series || episodesAsked || resolvedSeason == null || releases.none { it.packSeasons.size == 1 }) {
-                    return episodesPerSeason
+            // A season's episode count lets single-season packs be filtered and sorted by their size per
+            // episode. It is asked of TMDB once the first such pack shows up, alongside the indexers, and
+            // the list never waits for it: until it comes, or if it does not within a few seconds, packs
+            // count with their whole size.
+            val seasonEpisodes = java.util.concurrent.atomic.AtomicReference<Int?>(null)
+            val seasonLookup = if (!series || resolvedSeason == null) null else launch(start = CoroutineStart.LAZY) {
+                val started = System.currentTimeMillis()
+                val count = withTimeoutOrNull(SEASON_LOOKUP_TIMEOUT_MS) {
+                    try {
+                        (request.tmdbId ?: tmdb.ensureTmdbId(videoId, type))?.toIntOrNull()?.let {
+                            tmdbApi.getTvSeasonDetails(it, resolvedSeason, BuildConfig.TMDB_API_KEY).body()?.episodes?.size
+                        }?.takeIf { it > 0 }
+                    } catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { null }
                 }
-                episodesAsked = true
-                episodesPerSeason = try {
-                    (request.tmdbId ?: tmdb.ensureTmdbId(videoId, type))?.toIntOrNull()?.let {
-                        tmdbApi.getTvSeasonDetails(it, resolvedSeason, BuildConfig.TMDB_API_KEY).body()?.episodes?.size
-                    }?.takeIf { it > 0 }
-                } catch (e: CancellationException) { throw e }
-                catch (_: Exception) { null }
-                return episodesPerSeason
+                seasonEpisodes.set(count)
+                runCatching { android.util.Log.i("UsenetSearch", "season episodes=$count ms=${System.currentTimeMillis() - started}") }
             }
+            fun episodesPerSeason(): Int? = seasonEpisodes.get()
             fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers) == true
             fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers) == true
             // Releases that already failed for good with these providers go last, still selectable;
             // ones that played recently go first unless turned off.
-            suspend fun arranged() = NewznabProtocol.arrange(
+            fun arranged() = NewznabProtocol.arrange(
                 if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config,
                 episodesPerSeason = episodesPerSeason()) { outcomeRank(failed(it), played(it), config.availableFirst) }
             val enabled = config.indexers.filter { it.enabled }
@@ -358,14 +361,21 @@ class BuiltInUsenetService @Inject constructor(
                         } else "${indexer.name}: indexer search failed. Check the API URL, key and limits."))
                     } else {
                         releases += result.getOrThrow()
+                        if (releases.any { it.packSeasons.size == 1 }) seasonLookup?.start()
                         if (!waiting) show()
                     }
                 }
                 wait?.cancel()
-                if (waiting) show()
+                if (waiting) {
+                    // Every indexer answered within the wait: a season lookup already running gets the
+                    // rest of its few seconds, so packs are filtered per episode in the first list.
+                    if (seasonLookup?.isActive == true) seasonLookup.join()
+                    show()
+                }
                 if (arranged().isNotEmpty()) break
             }
             metadata.cancel()
+            seasonLookup?.cancel()
         }
     }
 
@@ -448,6 +458,8 @@ class BuiltInUsenetService @Inject constructor(
 
     companion object {
         const val GROUP_NAME = "Built-in Usenet"
+        /** How long a search may use for a season's episode count; the list never waits for it. */
+        private const val SEASON_LOOKUP_TIMEOUT_MS = 3_000L
         /** How long a search waits for every indexer before it shows what came. */
         const val COMPLETE_RESULTS_WAIT_MS = 5_000L
         private const val BLURAY_COLOR = "#0B5ED7"

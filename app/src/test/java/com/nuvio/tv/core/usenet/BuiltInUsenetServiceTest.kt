@@ -181,6 +181,28 @@ class BuiltInUsenetServiceTest {
         assertEquals(listOf(1, 2), lists(config))
     }
 
+    @Test fun `a slow season lookup never holds the list back`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer), maxSizeGb = 5)
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(
+            UsenetRelease("Show.S01.1080p-GRP", "https://a.test/nzb/pack", size = 9L shl 30, indexerId = "a", indexerName = "A"),
+            UsenetRelease("Show.S01E02.1080p-GRP", "https://a.test/nzb/ep", size = 2L shl 30, indexerId = "a", indexerName = "A"))
+        coEvery { tmdb.ensureTmdbId(any(), any()) } returns "42"
+        coEvery { tmdbApi.getTvSeasonDetails(42, 1, any(), any()) } coAnswers {
+            kotlinx.coroutines.delay(60_000); Response.success(com.nuvio.tv.data.remote.api.TmdbSeasonResponse(1, emptyList()))
+        }
+        val shownAt = mutableListOf<Long>()
+        val lists = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt1:1:2", null, null).toList()
+            .mapNotNull { it.group }.also { shownAt += testScheduler.currentTime }
+        assertTrue("shown after ${shownAt.single()} ms", shownAt.single() <= 3_000)
+        // Without the count the 9 GB pack is over the 5 GB limit; the episode shows.
+        assertEquals(listOf("Show.S01E02.1080p-GRP"), lists.last().streams.map { it.title })
+    }
+
     @Test fun `results show their release name unless turned off`() = runTest {
         val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
         val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
