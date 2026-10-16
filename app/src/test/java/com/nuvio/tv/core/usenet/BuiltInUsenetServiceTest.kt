@@ -102,6 +102,30 @@ class BuiltInUsenetServiceTest {
         assertTrue(streams.first().badges.isEmpty())
     }
 
+    @Test fun `a release that played recently is listed first, labelled, unless turned off`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns
+            listOf(release(indexer, "Movie.2020.2160p-GRP"), release(indexer, "Movie.2020.720p-GRP"))
+        val outcomes = UnplayableReleases(object : UnplayableReleaseStorage {
+            var value: String? = null
+            override fun load() = value
+            override fun save(value: String) { this.value = value }
+        })
+        outcomes.recordPlayed("https://a.test/api/nzb/Movie.2020.720p-GRP", null, null, config.providers.map { it.serverUrl() })
+        val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>(), outcomes)
+        suspend fun streams(config: UsenetSourceConfiguration) =
+            service.search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams
+        val first = streams(config)
+        assertEquals(listOf("Movie.2020.720p-GRP", "Movie.2020.2160p-GRP"), first.map { it.title })
+        assertEquals(listOf(BuiltInUsenetService.AVAILABLE_LABEL), first.first().badges.map { it.name })
+        val sorted = streams(config.copy(availableFirst = false))
+        assertEquals(listOf("Movie.2020.2160p-GRP", "Movie.2020.720p-GRP"), sorted.map { it.title })
+        assertEquals(listOf(BuiltInUsenetService.AVAILABLE_LABEL), sorted.last().badges.map { it.name })
+    }
+
     @Test fun `results show their release name unless turned off`() = runTest {
         val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
         val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))

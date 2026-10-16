@@ -282,10 +282,12 @@ class BuiltInUsenetService @Inject constructor(
             val releases = mutableListOf<UsenetRelease>()
             val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
             fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers) == true
-            // Releases that already failed for good with these providers go last, still selectable.
+            fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers) == true
+            // Releases that already failed for good with these providers go last, still selectable;
+            // ones that played recently go first unless turned off.
             fun arranged() = NewznabProtocol.arrange(
                 if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config)
-                .sortedBy { failed(it) }
+                .sortedBy { outcomeRank(failed(it), played(it), config.availableFirst) }
             val enabled = config.indexers.filter { it.enabled }
             // Every indexer is searched at once unless the user chose priority fallback: then equal
             // priorities are searched together and lower ones only when nothing playable was found.
@@ -318,7 +320,7 @@ class BuiltInUsenetService @Inject constructor(
                         releases += result.getOrThrow()
                         val arranged = arranged()
                         if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
-                            arranged.map { it.toStream(config, failed(it)) })))
+                            arranged.map { it.toStream(config, failed(it), played(it)) })))
                     }
                 }
                 if (arranged().isNotEmpty()) break
@@ -375,7 +377,8 @@ class BuiltInUsenetService @Inject constructor(
             year = (details?.releaseDate ?: details?.firstAirDate)?.take(4)?.toIntOrNull())
     }
 
-    private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false): Stream {
+    private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false,
+        played: Boolean = false): Stream {
         val sizeLabel = if (size > 0) "%.2f GB".format(Locale.ROOT, size / (1024.0 * 1024 * 1024)) else null
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
         val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
@@ -387,6 +390,7 @@ class BuiltInUsenetService @Inject constructor(
             addonName = GROUP_NAME, addonLogo = null,
             badges = listOfNotNull(
                 UNAVAILABLE_BADGE.takeIf { failed },
+                AVAILABLE_BADGE.takeIf { played && !failed },
                 blurayLabel?.let {
                     StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
                 }),
@@ -403,17 +407,40 @@ class BuiltInUsenetService @Inject constructor(
             textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
 
         /**
-         * Arranges results already listed, cached or shown, after releases were found unplayable:
-         * in the built-in group those go last with the label, the rest keep their order.
+         * On a release whose articles were there recently with these providers: it showed its first
+         * frame, perhaps for another episode of the same pack.
          */
-        fun arrangeUnplayable(groups: List<AddonStreams>, unplayable: (Stream) -> Boolean): List<AddonStreams> =
+        const val AVAILABLE_LABEL = "AVAILABLE"
+        private val AVAILABLE_BADGE = StreamBadge(name = AVAILABLE_LABEL, tagColor = "#198754",
+            textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /** Available releases first when chosen, unplayable ones last; the sort applies within each. */
+        private fun outcomeRank(failed: Boolean, available: Boolean, availableFirst: Boolean) = when {
+            failed -> 2
+            available && availableFirst -> 0
+            else -> 1
+        }
+
+        /**
+         * Labels results already listed, cached or shown, by how their releases last went, and orders
+         * the built-in group as a fresh search would: unplayable releases last, available ones first
+         * when [availableFirst]. Other groups are unchanged.
+         */
+        fun arrangeOutcomes(groups: List<AddonStreams>, unplayable: (Stream) -> Boolean,
+            available: (Stream) -> Boolean = { false }, availableFirst: Boolean = true): List<AddonStreams> =
             groups.map { group ->
                 if (group.addonName != GROUP_NAME) return@map group
                 val marked = group.streams.map { stream ->
                     val failed = unplayable(stream)
-                    val others = stream.badges.filterNot { it.name == UNAVAILABLE_LABEL }
-                    val badges = if (failed) listOf(UNAVAILABLE_BADGE) + others else others
-                    (if (badges == stream.badges) stream else stream.copy(badges = badges)) to failed
+                    val good = !failed && available(stream)
+                    val others = stream.badges.filterNot { it.name == UNAVAILABLE_LABEL || it.name == AVAILABLE_LABEL }
+                    val badges = when {
+                        failed -> listOf(UNAVAILABLE_BADGE) + others
+                        good -> listOf(AVAILABLE_BADGE) + others
+                        else -> others
+                    }
+                    (if (badges == stream.badges) stream else stream.copy(badges = badges)) to
+                        outcomeRank(failed, good, availableFirst)
                 }
                 val streams = marked.sortedBy { it.second }.map { it.first }
                 if (streams == group.streams) group else group.copy(streams = streams)

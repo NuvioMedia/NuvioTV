@@ -111,6 +111,8 @@
         <item quantity="one">%d indexer</item>
         <item quantity="other">%d indexers</item>
     </plurals>
+    <string name="usenet_available_first">Show available releases first</string>
+    <string name="usenet_available_first_description">Releases labelled AVAILABLE played recently with your providers, here or in another episode of the same pack. On: they are listed first whatever the sort, and fallback reaches them first. Off: they keep their place.</string>
     <string name="usenet_section_search">Search results</string>
     <string name="usenet_section_search_desc">Sorting, quality, size and age filters</string>
     <string name="usenet_section_playback">Playback and engine</string>
