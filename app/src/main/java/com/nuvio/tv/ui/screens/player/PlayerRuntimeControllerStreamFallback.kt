@@ -64,6 +64,13 @@ internal suspend fun PlayerRuntimeController.resolveSelectedStreamWithFallback(
     return resolved
 }
 
+/** A Usenet release showed its first frame: results label it and fallback prefers it. */
+internal fun PlayerRuntimeController.recordPlayedRelease() {
+    val stream = streamFallbackSession?.current ?: return
+    if (!stream.isUsenet() || !UsenetSidecar.isSessionUrl(currentStreamUrl)) return
+    runCatching { UnplayableReleases.get(context).recordPlayed(stream) }
+}
+
 /** Called only once the existing same-source/decoder recovery ladder has given up. */
 internal fun PlayerRuntimeController.tryNextStream(detailedError: String): Boolean {
     if (isInBackground || isReleasingPlayer || contentType.equals("cloud", ignoreCase = true)) return false

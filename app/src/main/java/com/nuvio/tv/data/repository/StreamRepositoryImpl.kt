@@ -140,9 +140,10 @@ class StreamRepositoryImpl @Inject constructor(
                         sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) }
                 )
             }.map { result ->
-                // Cached results predate releases found unplayable since: arrange them on every delivery.
+                // Cached results predate releases tried since: label and arrange them on every delivery.
                 if (result !is NetworkResult.Success) result
-                else NetworkResult.Success(BuiltInUsenetService.arrangeUnplayable(result.data, unplayable::contains))
+                else NetworkResult.Success(BuiltInUsenetService.arrangeOutcomes(result.data, unplayable::contains, unplayable::played,
+                    sourceConfiguration.usenetSources.availableFirst))
             }
         )
     }
