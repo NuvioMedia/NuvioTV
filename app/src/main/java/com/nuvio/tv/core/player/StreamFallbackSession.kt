@@ -95,13 +95,21 @@ internal class StreamFallbackSession(
             if (!enabled) 120_000L else if (attempts == 0) 60_000L else 30_000L)
         if (allowance <= 0L) error("Usenet preparation time budget exhausted")
         val start = nanoTime()
+        fun elapsed() = (nanoTime() - start) / 1_000_000L
+        val label = "attempt=$attempts source=\"${stream.name}\" release=\"${stream.title?.lineSequence()?.firstOrNull()}\""
+        logPreparation("start $label allowanceMs=$allowance spentMs=$preparationSpentMs")
         try {
             val prepared = withTimeoutOrNull(allowance) { Prepared(resolve()) }
                 ?: throw UsenetPreparationException("Usenet source preparation timed out")
+            logPreparation("ready $label ms=${elapsed()}")
             return prepared.value
         } catch (cancelled: CancellationException) {
+            logPreparation("cancelled $label ms=${elapsed()}")
             throw cancelled
         } catch (error: Exception) {
+            val failure = (error as? UsenetPreparationException)?.failure
+            logPreparation("failed $label ms=${elapsed()} kind=${failure ?: "-"} error=${error.javaClass.simpleName}: " +
+                redacted(error.message.orEmpty()))
             recordFailure(stream, error)
             throw error
         } finally {
@@ -129,6 +137,15 @@ internal class StreamFallbackSession(
         }
     }
 }
+
+/** One line per Usenet source preparation, so slow or failing indexers and releases show in logcat. */
+private fun logPreparation(message: String) {
+    runCatching { android.util.Log.i("UsenetPrepare", message) }
+}
+
+/** Engine and network messages can carry URLs, whose queries hold API keys: keep only the host. */
+internal fun redacted(message: String): String =
+    message.replace(Regex("""(https?|nntps?)://(?:[^@\s/"]*@)?([^/\s"?]+)[^\s"]*"""), "$1://$2/…").take(240)
 
 private fun Stream.canAutoFallback(): Boolean =
     isUsenet() && !isExternal() && !isYouTube()

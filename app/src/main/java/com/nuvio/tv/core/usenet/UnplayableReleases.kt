@@ -71,6 +71,7 @@ class UnplayableReleases internal constructor(
         val keys = keys(nzbUrl, title, size).ifEmpty { return }
         val entry = UnplayableRelease(requireNotNull(kind), now(), providersKey(servers))
         keys.forEach { entries[it] = entry }
+        runCatching { android.util.Log.i("UsenetUnplayable", "remembered kind=$kind release=\"${title?.lineSequence()?.firstOrNull()}\" size=${size ?: 0}") }
         entries.entries.removeAll { now() - it.value.at > RETENTION_MS }
         while (entries.size > MAX_ENTRIES) entries.remove(entries.minBy { it.value.at }.key)
         storage.save(json.encodeToString(entries.toMap()))

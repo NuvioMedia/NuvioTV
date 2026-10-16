@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Base64
+import android.util.Log
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Subtitle
 import java.io.File
@@ -307,6 +308,11 @@ class UsenetSidecar private constructor(private val context: Context) {
         } catch (e: Exception) {
             // Prefetches open here too, so a release found unplayable before it was chosen counts.
             (e as? UsenetPreparationException)?.failure?.let { UnplayableReleases.get(context).record(stream, it) }
+            if (e !is CancellationException) runCatching {
+                Log.i("UsenetPrepare", "open failed source=\"${stream.name}\" release=\"${stream.title?.lineSequence()?.firstOrNull()}\" " +
+                    "kind=${(e as? UsenetPreparationException)?.failure ?: "-"} error=${e.javaClass.simpleName}: " +
+                    com.nuvio.tv.core.player.redacted(e.message.orEmpty()))
+            }
             if (previousId != null && sessionId == previousId && process?.let(::isRunning) == true) {
                 openedId?.let(::retireSessionLocked)
             } else {
