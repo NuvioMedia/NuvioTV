@@ -247,6 +247,7 @@ fun TrackingSettingsContent(
             restoreFocusTarget = TrackingFocusTarget.WETRAKR_LOCAL_UPLOAD
             weTrakrViewModel.onLocalUploadOpened()
         },
+        weTrakrLocalUploadStatus = weTrakrLocalUpload.runMessage?.takeIf { weTrakrLocalUpload.run?.isActive == true },
         onCommentsChanged = traktViewModel::onShowMetaCommentsChanged,
         onMoreLikeThisClick = {
             restoreFocusTarget = TrackingFocusTarget.MORE_LIKE_THIS
@@ -495,6 +496,8 @@ fun TrackingSettingsContent(
         WeTrakrLocalUploadDialog(
             state = weTrakrLocalUpload,
             onToggle = weTrakrViewModel::onLocalUploadKindToggled,
+            onSync = weTrakrViewModel::onLocalUploadStarted,
+            onCancel = weTrakrViewModel::onLocalUploadCancelled,
             onDismiss = weTrakrViewModel::onLocalUploadClosed
         )
     }
@@ -567,6 +570,7 @@ internal fun TrackingSettingsOverview(
     onWeTrakrContinueWatchingWindowClick: () -> Unit = {},
     weTrakrLocalUploadFocusRequester: FocusRequester = remember { FocusRequester() },
     onWeTrakrLocalUploadClick: () -> Unit = {},
+    weTrakrLocalUploadStatus: String? = null,
     onCommentsChanged: (Boolean) -> Unit,
     onMoreLikeThisClick: () -> Unit,
     onAnimeIdClick: () -> Unit,
@@ -782,7 +786,7 @@ internal fun TrackingSettingsOverview(
                             )
                             SettingsActionRow(
                                 title = stringResource(R.string.wetrakr_local_upload_title),
-                                subtitle = stringResource(R.string.wetrakr_local_upload_row_subtitle),
+                                subtitle = weTrakrLocalUploadStatus ?: stringResource(R.string.wetrakr_local_upload_row_subtitle),
                                 onClick = onWeTrakrLocalUploadClick,
                                 modifier = Modifier
                                     .focusRequester(weTrakrLocalUploadFocusRequester)

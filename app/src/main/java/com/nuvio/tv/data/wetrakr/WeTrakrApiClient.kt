@@ -1,5 +1,7 @@
 package com.nuvio.tv.data.wetrakr
 
+import java.util.UUID
+
 class WeTrakrApiClient(
     private val http: WeTrakrHttpClient,
     private val auth: WeTrakrAuthRepository,
@@ -10,21 +12,23 @@ class WeTrakrApiClient(
         query: Map<String, String> = emptyMap(),
         scope: WeTrakrAuthScope = store.scope(),
         acceptedStatuses: Set<Int> = emptySet()
-    ): WeTrakrHttpResponse = execute(WeTrakrHttpMethod.GET, path, query, null, scope, acceptedStatuses)
+    ): WeTrakrHttpResponse = execute(WeTrakrHttpMethod.GET, path, query, null, scope, acceptedStatuses, null)
 
     suspend fun post(
         path: String,
         body: String,
         scope: WeTrakrAuthScope = store.scope(),
-        acceptedStatuses: Set<Int> = emptySet()
-    ): WeTrakrHttpResponse = execute(WeTrakrHttpMethod.POST, path, emptyMap(), body, scope, acceptedStatuses)
+        acceptedStatuses: Set<Int> = emptySet(),
+        idempotencyKey: String = UUID.randomUUID().toString()
+    ): WeTrakrHttpResponse = execute(WeTrakrHttpMethod.POST, path, emptyMap(), body, scope, acceptedStatuses, idempotencyKey)
 
     suspend fun delete(
         path: String,
         body: String? = null,
         scope: WeTrakrAuthScope = store.scope(),
-        acceptedStatuses: Set<Int> = emptySet()
-    ): WeTrakrHttpResponse = execute(WeTrakrHttpMethod.DELETE, path, emptyMap(), body, scope, acceptedStatuses)
+        acceptedStatuses: Set<Int> = emptySet(),
+        idempotencyKey: String = UUID.randomUUID().toString()
+    ): WeTrakrHttpResponse = execute(WeTrakrHttpMethod.DELETE, path, emptyMap(), body, scope, acceptedStatuses, idempotencyKey)
 
     suspend fun refreshUser(scope: WeTrakrAuthScope = store.scope()): WeTrakrUser {
         val previousLimitKey = limitKey(scope)
@@ -41,7 +45,8 @@ class WeTrakrApiClient(
         query: Map<String, String>,
         body: String?,
         scope: WeTrakrAuthScope,
-        acceptedStatuses: Set<Int>
+        acceptedStatuses: Set<Int>,
+        idempotencyKey: String?
     ): WeTrakrHttpResponse {
         var authorization = auth.authorization(scope)
         repeat(2) { attempt ->
@@ -52,6 +57,7 @@ class WeTrakrApiClient(
                     query = query,
                     body = body,
                     accessToken = authorization.tokens.accessToken,
+                    headers = idempotencyKey?.let { mapOf("Idempotency-Key" to it) }.orEmpty(),
                     limitKey = limitKey(scope)
                 ),
                 checkScope = { store.checkScope(scope) }

@@ -12,6 +12,7 @@ import com.nuvio.tv.data.wetrakr.WeTrakrAuthRepository
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthStore
 import com.nuvio.tv.data.wetrakr.WeTrakrConfiguration
 import com.nuvio.tv.data.wetrakr.WeTrakrHttpClient
+import com.nuvio.tv.data.wetrakr.WeTrakrLocalUploader
 import com.nuvio.tv.data.wetrakr.WeTrakrSyncRepository
 import dagger.Module
 import dagger.Provides
@@ -84,4 +85,9 @@ object WeTrakrModule {
         storage, auth, api, profiles.activeProfileId,
         CoroutineScope(SupervisorJob() + Dispatchers.IO)
     )
+
+    @Provides
+    @Singleton
+    fun localUploader(api: WeTrakrApiClient, sync: WeTrakrSyncRepository, auth: WeTrakrAuthStore) =
+        WeTrakrLocalUploader(api, sync, auth, CoroutineScope(SupervisorJob() + Dispatchers.IO))
 }

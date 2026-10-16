@@ -38,12 +38,15 @@ internal object WeTrakrLocalUploadTestTags {
     const val WATCHED = "wetrakr_local_upload_watched"
     const val LIBRARY = "wetrakr_local_upload_library"
     const val UNMATCHED = "wetrakr_local_upload_unmatched"
+    const val PROGRESS = "wetrakr_local_upload_progress"
 }
 
 @Composable
 internal fun WeTrakrLocalUploadDialog(
     state: WeTrakrLocalUploadUiState,
     onToggle: (WeTrakrUploadKind) -> Unit,
+    onSync: () -> Unit,
+    onCancel: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var showUnmatched by remember { mutableStateOf(false) }
@@ -52,9 +55,14 @@ internal fun WeTrakrLocalUploadDialog(
         return
     }
     val firstFocusRequester = remember { FocusRequester() }
+    val actionFocusRequester = remember { FocusRequester() }
     val preview = state.preview
+    val run = state.run
     LaunchedEffect(preview != null) {
-        if (preview != null) firstFocusRequester.requestFocusAfterFrames()
+        if (preview != null && run == null) firstFocusRequester.requestFocusAfterFrames()
+    }
+    LaunchedEffect(run?.status) {
+        if (run != null) actionFocusRequester.requestFocusAfterFrames()
     }
 
     NuvioDialog(
@@ -65,6 +73,12 @@ internal fun WeTrakrLocalUploadDialog(
         suppressFirstKeyUp = false
     ) {
         when {
+            run != null -> Text(
+                text = state.runMessage.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = NuvioTheme.colors.TextPrimary,
+                modifier = Modifier.testTag(WeTrakrLocalUploadTestTags.PROGRESS)
+            )
             preview != null -> Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 preview.groups.forEachIndexed { index, group ->
                     SettingsToggleRow(
@@ -117,9 +131,24 @@ internal fun WeTrakrLocalUploadDialog(
             )
         }
         SettingsDialogActionRow {
+            if (run?.isActive == true) {
+                SettingsDialogActionButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = onCancel,
+                    modifier = Modifier.focusRequester(actionFocusRequester)
+                )
+            } else if (run == null && preview != null) {
+                SettingsDialogActionButton(
+                    text = stringResource(R.string.wetrakr_local_upload_sync),
+                    onClick = onSync,
+                    primary = true,
+                    enabled = state.uploadCount > 0
+                )
+            }
             SettingsDialogActionButton(
                 text = stringResource(R.string.action_close),
-                onClick = onDismiss
+                onClick = onDismiss,
+                modifier = if (run != null && !run.isActive) Modifier.focusRequester(actionFocusRequester) else Modifier
             )
         }
     }

@@ -19,6 +19,7 @@ class WeTrakrHttpRequest(
     val query: Map<String, String> = emptyMap(),
     val body: String? = null,
     val accessToken: String? = null,
+    val headers: Map<String, String> = emptyMap(),
     val limitKey: String = "public",
     val retrySafe: Boolean = method == WeTrakrHttpMethod.GET,
     val returnsRateLimit: Boolean = false

@@ -6,7 +6,10 @@ import com.nuvio.tv.core.tracking.TrackingMediaReference
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -80,30 +83,27 @@ internal fun WeTrakrIds.requestIds(): JsonObject = buildJsonObject {
     tvdb?.let { put("tvdb", it) }
 }
 
-internal fun WeTrakrIds.singleRequestId(): JsonObject = buildJsonObject {
-    when {
-        tmdb != null -> put("tmdb", tmdb)
-        imdb != null -> put("imdb", imdb)
-        tvdb != null -> put("tvdb", tvdb)
-    }
-}
-
 internal data class WeTrakrTrackingChange(val target: WeTrakrTarget, val trackedAt: String?)
 
-internal fun weTrakrTrackingBody(changes: List<WeTrakrTrackingChange>, status: String): String = buildJsonObject {
+internal fun weTrakrTrackingBody(
+    changes: List<WeTrakrTrackingChange>,
+    status: String,
+    allowRewatch: Boolean? = null
+): String = buildJsonObject {
+    allowRewatch?.let { put("allow_rewatch", it) }
     val movies = changes.filter { it.target.type == WeTrakrItemType.MOVIE }
     val shows = changes.filter { it.target.type != WeTrakrItemType.MOVIE }
         .groupBy { it.target.media.ids.contentId }
         .values
     if (movies.isNotEmpty()) put("movies", JsonArray(movies.map { change ->
         buildJsonObject {
-            put("ids", change.target.media.ids.singleRequestId())
+            put("ids", change.target.media.ids.requestIds())
             put("status", status)
             change.trackedAt?.let { put("tracked_at", it) }
         }
     }))
     if (shows.isNotEmpty()) put("shows", JsonArray(shows.flatMap { group ->
-        val ids = group.first().target.media.ids.singleRequestId()
+        val ids = group.first().target.media.ids.requestIds()
         val whole = group.filter { it.target.type == WeTrakrItemType.SHOW }.map { change ->
             buildJsonObject {
                 put("ids", ids)
@@ -131,18 +131,37 @@ internal fun weTrakrTrackingBody(changes: List<WeTrakrTrackingChange>, status: S
     }))
 }.toString()
 
-internal fun weTrakrNotFoundCount(body: String): Int {
-    val root = weTrakrElement(body).weTrakrObject()
-    val notFound = root.child("notFound") ?: root.child("not_found") ?: return 0
-    return notFound.values.sumOf { value ->
-        when (value) {
-            is JsonArray -> value.sumOf { item ->
-                val seasons = (item as? JsonObject)?.get("seasons") as? JsonArray
-                seasons?.sumOf { season ->
-                    ((season as? JsonObject)?.get("episodes") as? JsonArray)?.size?.coerceAtLeast(1) ?: 1
-                } ?: 1
-            }
-            else -> 0
-        }
+internal fun weTrakrNotFoundCount(body: String): Int = weTrakrResultCount(body, "notFound", "not_found")
+
+internal data class WeTrakrErrored(val alreadyWatched: Int = 0, val other: Int = 0) {
+    val total: Int
+        get() = alreadyWatched + other
+}
+
+internal fun weTrakrErrored(body: String): WeTrakrErrored {
+    val section = weTrakrElement(body).weTrakrObject()["errored"] as? JsonObject ?: return WeTrakrErrored()
+    val items = section.values.filterIsInstance<JsonArray>().flatten().filterIsInstance<JsonObject>()
+    val already = items.count { item ->
+        (item["error"] as? JsonPrimitive)?.contentOrNull?.startsWith(WETRAKR_ALREADY_WATCHED) == true
     }
+    return WeTrakrErrored(already, items.size - already)
+}
+
+private const val WETRAKR_ALREADY_WATCHED = "Already watched!"
+
+private fun weTrakrResultCount(body: String, vararg keys: String): Int {
+    val root = weTrakrElement(body).weTrakrObject()
+    val section = keys.firstNotNullOfOrNull { root[it] } ?: return 0
+    return section.resultItems()
+}
+
+private fun JsonElement.resultItems(): Int = when (this) {
+    is JsonArray -> sumOf { item ->
+        val seasons = (item as? JsonObject)?.get("seasons") as? JsonArray
+        seasons?.sumOf { season ->
+            ((season as? JsonObject)?.get("episodes") as? JsonArray)?.size?.coerceAtLeast(1) ?: 1
+        } ?: 1
+    }
+    is JsonObject -> values.sumOf { it.resultItems() }
+    else -> 0
 }

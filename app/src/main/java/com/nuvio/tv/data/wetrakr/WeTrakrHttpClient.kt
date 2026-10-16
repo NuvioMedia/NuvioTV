@@ -71,17 +71,18 @@ class WeTrakrHttpClient(
 }
 
 internal fun weTrakrLimitResetEpochMs(response: WeTrakrHttpResponse, now: Long): Long {
-    if (response.errorCode() == "QUOTA_EXCEEDED") {
-        response.header("X-Quota-Reset")?.trim()?.toLongOrNull()
-            ?.takeIf { it in 1..172_800L }
-            ?.let { return now + it * 1_000L }
-        return LocalDate.now(ZoneOffset.UTC).plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    }
+    if (response.errorCode() == "QUOTA_EXCEEDED") return weTrakrQuotaResetEpochMs(response, now)
     return response.header("RateLimit-Reset")?.trim()?.toLongOrNull()
         ?.takeIf { it in 1..3_600L }
         ?.let { now + it * 1_000L }
         ?: (now + 60_000L)
 }
+
+internal fun weTrakrQuotaResetEpochMs(response: WeTrakrHttpResponse, now: Long): Long =
+    response.header("X-Quota-Reset")?.trim()?.toLongOrNull()
+        ?.takeIf { it in 1..172_800L }
+        ?.let { now + it * 1_000L }
+        ?: LocalDate.now(ZoneOffset.UTC).plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
 internal fun weTrakrRetryAfterEpochMs(value: String, now: Long): Long? {
     val seconds = value.trim().toLongOrNull()
