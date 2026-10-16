@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.usenet
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,9 +31,11 @@ class UnplayableReleasesTest {
     }
 
     @Test fun `the same upload from another indexer counts, another size does not`() {
-        record()
-        assertTrue(releases.contains("https://b.test/api?t=get&id=9", "movie.2026.2160p-grp", 30_000_000_000, provider))
-        assertFalse(releases.contains("https://b.test/api?t=get&id=9", "Movie.2026.2160p-GRP", 29_000_000_000, provider))
+        record(size = 25_991_001_440)
+        // One indexer rounds sizes to thousands of bytes, another gives them exactly.
+        assertTrue(releases.contains("https://b.test/api?t=get&id=9", "movie.2026.2160p-grp", 25_991_001_000, provider))
+        assertTrue(releases.contains("https://b.test/api?t=get&id=9", "Movie.2026.2160p-GRP", 25_991_999_999, provider))
+        assertFalse(releases.contains("https://b.test/api?t=get&id=9", "Movie.2026.2160p-GRP", 22_087_105_000, provider))
     }
 
     @Test fun `failures that other input or time can fix are not remembered`() {
@@ -59,5 +62,19 @@ class UnplayableReleasesTest {
         record()
         storage.clear()
         assertFalse(releases.contains("https://a.test/getnzb/1.nzb&r=key", null, null, provider))
+    }
+
+    @Test fun `listed results put unplayable releases last with the label`() {
+        fun stream(title: String) = com.nuvio.tv.domain.model.Stream(name = "Usenet • A", title = title, description = null,
+            url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null, behaviorHints = null,
+            addonName = BuiltInUsenetService.GROUP_NAME, addonLogo = null, nzbUrl = "https://a.test/$title", servers = provider)
+        record(url = "https://a.test/dead")
+        val group = com.nuvio.tv.domain.model.AddonStreams(BuiltInUsenetService.GROUP_NAME, null,
+            listOf(stream("dead"), stream("good")))
+        val arranged = BuiltInUsenetService.arrangeUnplayable(listOf(group), releases::contains).single().streams
+        assertEquals(listOf("good", "dead"), arranged.map { it.title })
+        assertEquals(listOf(BuiltInUsenetService.UNAVAILABLE_LABEL), arranged.last().badges.map { it.name })
+        // Arranging again changes nothing.
+        assertEquals(arranged, BuiltInUsenetService.arrangeUnplayable(listOf(group.copy(streams = arranged)), releases::contains).single().streams)
     }
 }

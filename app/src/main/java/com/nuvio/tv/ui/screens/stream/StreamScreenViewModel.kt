@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -240,6 +241,11 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            // A release found unplayable while this list is shown moves to its end, labelled.
+            val unplayable = com.nuvio.tv.core.usenet.UnplayableReleases.get(context)
+            unplayable.revision.drop(1).collect { arrangeUnplayableStreams(unplayable) }
+        }
         viewModelScope.launch {
             _uiState
                 .map { state -> state.directAutoPlayMessage to state.directAutoPlayProgress }
@@ -1160,6 +1166,20 @@ class StreamScreenViewModel @Inject constructor(
             return meta.videos.firstOrNull { it.season == season && it.episode == episode }?.runtime
         }
         return parseRuntimeMinutes(meta.runtime)
+    }
+
+    private fun arrangeUnplayableStreams(unplayable: com.nuvio.tv.core.usenet.UnplayableReleases) {
+        updateUiStateIfChanged { state ->
+            val groups = com.nuvio.tv.core.usenet.BuiltInUsenetService.arrangeUnplayable(state.addonStreams, unplayable::contains)
+            if (groups == state.addonStreams) return@updateUiStateIfChanged state
+            val allStreams = groups.flatMap { it.streams }
+            val fullFiltered = state.selectedAddonFilter?.let { filter -> allStreams.filter { it.addonName == filter } } ?: allStreams
+            streamFilterFullList = fullFiltered
+            val pageEnd = state.filteredStreams.size.coerceAtLeast(STREAM_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
+                .coerceAtMost(fullFiltered.size)
+            state.copy(addonStreams = groups, allStreams = allStreams,
+                filteredStreams = if (pageEnd >= fullFiltered.size) fullFiltered else fullFiltered.subList(0, pageEnd))
+        }
     }
 
     private fun filterByAddon(addonName: String?) {
