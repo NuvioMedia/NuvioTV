@@ -52,6 +52,12 @@ class UnplayableReleasesTest {
         assertTrue(releases.contains("https://a.test/getnzb/1.nzb&r=key", null, null, sameAddress))
     }
 
+    @Test fun `a blank release is unplayable with any provider`() {
+        record(kind = "blank-content")
+        val otherProviders = listOf("nntps://u:p@backup.example.test:563/8")
+        assertTrue(releases.contains("https://a.test/getnzb/1.nzb&r=key", null, null, otherProviders))
+    }
+
     @Test fun `entries expire after 30 days`() {
         record()
         clock += 31L * 24 * 3600 * 1000
