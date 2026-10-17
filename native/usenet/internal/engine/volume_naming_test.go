@@ -122,6 +122,19 @@ func TestShuffledNumericRAR5NamesUseHeaderOrder(t *testing.T) {
 	selectAndRead(t, damagedSetup(t, files), "movie.mkv", want)
 }
 
+// Seen on an indexer: <hash>.1 to <hash>.135, every volume numbered but in
+// shuffled order. The names look complete; the main headers order the set.
+func TestCompletelyNumberedShuffledRAR5NamesUseHeaderOrder(t *testing.T) {
+	in, want, _ := regularRARSet(5, 5, 60000, 25000)
+	for _, names := range [][]int{{2, 5, 1, 4, 3}, {1, 4, 2, 5, 3}} { // .1 a middle volume, then the first.
+		var files []inputFile
+		for k, f := range in {
+			files = append(files, inputFile{fmt.Sprintf("a01b92d0b72af2e9.%d", names[k]), f.data, nil})
+		}
+		selectAndRead(t, damagedSetup(t, files), "movie.mkv", want)
+	}
+}
+
 // Seen on an indexer: an obfuscated RAR set posted as <hash>.10 to <hash>.85
 // whose articles were all removed. Its unreadable headers are missing
 // articles, not a gap in the numbering.
