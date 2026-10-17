@@ -48,7 +48,8 @@ class PlaybackSettingsViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
     private val torrentSettings: TorrentSettings,
-    private val torrentService: TorrentService
+    private val torrentService: TorrentService,
+    private val usenetSourceSettings: com.nuvio.tv.core.usenet.UsenetSourceSettings
 ) : ViewModel() {
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
@@ -74,6 +75,9 @@ class PlaybackSettingsViewModel @Inject constructor(
                 }
             }
             .map { it.displayName }
+            // Auto-play counts built-in Usenet among the addons, so it can be allowed like one.
+            .plus(listOfNotNull(com.nuvio.tv.core.usenet.BuiltInUsenetService.GROUP_NAME
+                .takeIf { runCatching { usenetSourceSettings.read().enabled }.getOrDefault(false) }))
             .distinct()
             .sorted()
     }

@@ -333,6 +333,31 @@ class StreamAutoPlaySelectorTest {
         assertEquals(listOf(regular, cachedDebrid), ordered)
     }
 
+    @Test
+    fun `built-in Usenet is an addon source for the auto-play scope`() {
+        val usenet = stream(addonName = com.nuvio.tv.core.usenet.BuiltInUsenetService.GROUP_NAME, name = "4K • Usenet • A")
+            .copy(nzbUrl = "https://indexer.test/nzb/1", servers = listOf("nntps://news.test:563/20"))
+        val plugin = stream(addonName = "Plugin", url = "https://example.com/plugin.m3u8")
+        fun select(source: StreamAutoPlaySource, addons: Set<String> = emptySet(), plugins: Set<String> = emptySet()) =
+            StreamAutoPlaySelector.selectAutoPlayStream(
+                streams = listOf(usenet, plugin),
+                mode = StreamAutoPlayMode.FIRST_STREAM,
+                regexPattern = "",
+                source = source,
+                installedAddonNames = setOf("AddonA"),
+                selectedAddons = addons,
+                selectedPlugins = plugins
+            )
+        assertEquals(usenet, select(StreamAutoPlaySource.INSTALLED_ADDONS_ONLY))
+        if (AppFeaturePolicy.pluginsEnabled) {
+            assertEquals(plugin, select(StreamAutoPlaySource.ENABLED_PLUGINS_ONLY))
+        }
+        // Allowed like an addon; a plugin selection no longer leaves it out.
+        assertEquals(plugin, select(StreamAutoPlaySource.ALL_SOURCES, addons = setOf("AddonA")))
+        assertEquals(usenet, select(StreamAutoPlaySource.ALL_SOURCES,
+            addons = setOf(com.nuvio.tv.core.usenet.BuiltInUsenetService.GROUP_NAME), plugins = setOf("Other")))
+    }
+
     private fun stream(
         addonName: String,
         url: String? = null,
