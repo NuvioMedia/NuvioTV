@@ -320,8 +320,8 @@ class BuiltInUsenetService @Inject constructor(
                     it.nzbUrl to outcomeRank(failed(it) || sibling(it)?.blank == true, played(it), config.availableFirst)
                 }
                 return NewznabProtocol.arrange(
-                    if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config,
-                    seasonEpisodes = seasonCounts()) { ranks[it.nzbUrl] ?: 1 }
+                    if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config, seasonEpisodes = seasonCounts(), series = series) else releases, config,
+                    seasonEpisodes = seasonCounts(), series = series) { ranks[it.nzbUrl] ?: 1 }
             }
             val enabled = config.indexers.filter { it.enabled }
             // Every indexer is searched at once unless the user chose priority fallback: then equal

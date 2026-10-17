@@ -38,6 +38,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.core.streams.StreamRankingPreset
 import com.nuvio.tv.core.usenet.*
 import java.text.DateFormat
 import java.util.Date
@@ -63,11 +64,13 @@ internal fun UsenetSourcesCard(
     // Composed after the sources load: take the page's entry focus if it is still where it landed meanwhile.
     LaunchedEffect(Unit) { if (takeEntryFocus()) runCatching { initialFocusRequester.requestFocus() } }
     val phoneRow = remember { FocusRequester() }
+    val rankingPhoneRow = remember { FocusRequester() }
+    var phoneEntry by remember { mutableStateOf(phoneRow) }
     var phoneSetupShown by remember { mutableStateOf(false) }
     // The QR overlay took focus; give it back to the row that opened it, not the side menu.
     LaunchedEffect(phoneSetupOpen) {
         if (phoneSetupOpen) phoneSetupShown = true
-        else if (phoneSetupShown) { phoneSetupShown = false; runCatching { phoneRow.requestFocus() } }
+        else if (phoneSetupShown) { phoneSetupShown = false; runCatching { phoneEntry.requestFocus() } }
     }
     // Pauses end on their own: refresh the labels when the next one ends, not only when a status changes.
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -87,6 +90,20 @@ internal fun UsenetSourcesCard(
         SettingsPickerOption(UsenetSort.NEWEST, stringResource(R.string.usenet_sort_newest)),
         SettingsPickerOption(UsenetSort.INDEXER, stringResource(R.string.usenet_sort_indexer))
     )
+    val rankingOptions = listOf(
+        SettingsPickerOption(StreamRankingPreset.ORIGINAL, stringResource(R.string.usenet_ranking_original)),
+        SettingsPickerOption(StreamRankingPreset.BALANCED, stringResource(R.string.usenet_ranking_balanced)),
+        SettingsPickerOption(StreamRankingPreset.BEST_QUALITY, stringResource(R.string.usenet_ranking_best)),
+        SettingsPickerOption(StreamRankingPreset.SMALLER_FILES, stringResource(R.string.usenet_ranking_smaller))
+    ) + if (configuration.ranking.custom != null) listOf(SettingsPickerOption(StreamRankingPreset.CUSTOM,
+        configuration.ranking.custom.name)) else emptyList()
+    val rankingDescription = when (configuration.ranking.preset) {
+        StreamRankingPreset.ORIGINAL -> R.string.usenet_ranking_original_desc
+        StreamRankingPreset.BALANCED -> R.string.usenet_ranking_balanced_desc
+        StreamRankingPreset.BEST_QUALITY -> R.string.usenet_ranking_best_desc
+        StreamRankingPreset.SMALLER_FILES -> R.string.usenet_ranking_smaller_desc
+        StreamRankingPreset.CUSTOM -> R.string.usenet_ranking_custom_desc
+    }
     val unlimited = stringResource(R.string.usenet_no_limit)
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SettingsGroupCard(title = stringResource(R.string.usenet_sources_title)) {
@@ -98,7 +115,7 @@ internal fun UsenetSourcesCard(
                 SettingsNote(stringResource(R.string.usenet_sources_needed), tone = SettingsNoteTone.Warning)
             }
             if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_phone_setup),
-                subtitle = stringResource(R.string.usenet_phone_setup_description), onClick = setUpFromPhone,
+                subtitle = stringResource(R.string.usenet_phone_setup_description), onClick = { phoneEntry = phoneRow; setUpFromPhone() },
                 modifier = Modifier.focusRequester(phoneRow))
         }
         UsenetSettingsSection(UsenetSettingsSection.PROVIDERS, expanded, onToggleSection,
@@ -133,8 +150,15 @@ internal fun UsenetSourcesCard(
                 onToggle = { update(configuration.copy(hideDuplicates = !configuration.hideDuplicates)) })
         }
         UsenetSettingsSection(UsenetSettingsSection.SEARCH, expanded, onToggleSection) {
-            SettingsActionRow(title = stringResource(R.string.usenet_sort_results), subtitle = null,
-                value = sortOptions.first { it.value == configuration.sort }.title, onClick = { picker = "sort" })
+            SettingsActionRow(title = stringResource(R.string.usenet_ranking_title), subtitle = stringResource(rankingDescription),
+                value = rankingOptions.first { it.value == configuration.ranking.preset }.title, onClick = { picker = "ranking" })
+            if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_ranking_phone),
+                subtitle = stringResource(R.string.usenet_ranking_phone_desc),
+                onClick = { phoneEntry = rankingPhoneRow; setUpFromPhone() }, modifier = Modifier.focusRequester(rankingPhoneRow))
+            if (configuration.ranking.preset == StreamRankingPreset.ORIGINAL) {
+                SettingsActionRow(title = stringResource(R.string.usenet_sort_results), subtitle = null,
+                    value = sortOptions.first { it.value == configuration.sort }.title, onClick = { picker = "sort" })
+            }
             SettingsActionRow(title = stringResource(R.string.usenet_min_resolution), subtitle = null,
                 value = if (configuration.minResolution == 0) unlimited else "${configuration.minResolution}p",
                 onClick = { picker = "resolution" })
@@ -162,6 +186,10 @@ internal fun UsenetSourcesCard(
         }
     }
     when (picker) {
+        "ranking" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_ranking_title), options = rankingOptions,
+            selectedValue = configuration.ranking.preset,
+            onOptionSelected = { update(configuration.copy(ranking = configuration.ranking.copy(preset = it))); picker = null },
+            onDismiss = { picker = null })
         "sort" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_sort_results), options = sortOptions,
             selectedValue = configuration.sort, onOptionSelected = { update(configuration.copy(sort = it)); picker = null },
             onDismiss = { picker = null })

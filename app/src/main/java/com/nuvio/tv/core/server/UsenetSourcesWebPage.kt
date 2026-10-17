@@ -43,7 +43,7 @@ object UsenetSourcesWebPage {
   .header img { height: 36px; margin-bottom: 0.5rem; filter: brightness(0) invert(1); opacity: 0.9; }
   .header p { font-size: 0.875rem; font-weight: 300; color: rgba(255,255,255,0.4); }
   .intro { color: rgba(255,255,255,0.5); font-size: 0.875rem; font-weight: 300; margin-bottom: 2rem; }
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem; }
   .tab { border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; background: transparent; color: rgba(255,255,255,0.58);
     font: inherit; font-size: 0.875rem; font-weight: 600; padding: 0.8rem 1rem; }
   .tab.active { background: #fff; border-color: #fff; color: #000; }
@@ -74,6 +74,7 @@ object UsenetSourcesWebPage {
   .add { width: 100%; margin-top: 0.4rem; }
   .status { min-height: 1.5rem; margin-top: 1rem; font-size: 0.875rem; text-align: center; color: rgba(135,239,172,0.95); }
   .status.error { color: rgba(207,102,121,0.95); }
+${UsenetRankingWebPage.style}
 </style>
 </head>
 <body>
@@ -86,6 +87,7 @@ object UsenetSourcesWebPage {
   <div class="tabs">
     <button class="tab active" type="button" data-tab="providers">${s(R.string.usenet_phone_providers)}</button>
     <button class="tab" type="button" data-tab="indexers">${s(R.string.usenet_phone_indexers)}</button>
+    <button class="tab" type="button" data-tab="ranking">${s(R.string.usenet_ranking_tab)}</button>
   </div>
 
   <div id="panel-providers">
@@ -142,6 +144,7 @@ object UsenetSourcesWebPage {
     </form>
   </div>
 
+${UsenetRankingWebPage.panel(context)}
   <div class="status" id="status"></div>
 </div>
 <script>
@@ -193,6 +196,7 @@ function render() {
 async function load() {
   sources = await api('/api/sources');
   render();
+  await loadRanking();
 }
 function secretHint(input, saved) {
   input.value = '';
@@ -278,8 +282,10 @@ document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
   $('panel-providers').hidden = tab.dataset.tab !== 'providers';
   $('panel-indexers').hidden = tab.dataset.tab !== 'indexers';
+  $('panel-ranking').hidden = tab.dataset.tab !== 'ranking';
   setStatus('');
 });
+${UsenetRankingWebPage.script(context)}
 load().catch(e => setStatus(e.message, true));
 </script>
 </body>

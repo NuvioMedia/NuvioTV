@@ -1,5 +1,8 @@
 package com.nuvio.tv.core.server
 
+import com.nuvio.tv.core.streams.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import com.nuvio.tv.core.usenet.ProviderTestResult
 import com.nuvio.tv.core.usenet.UsenetIndexer
 import com.nuvio.tv.core.usenet.UsenetProvider
@@ -20,9 +23,10 @@ class UsenetSourcesConfigServerTest {
 
     private inner class FakeSetup : UsenetPhoneSetup {
         var configuration = UsenetSourceConfiguration(providers = listOf(provider), indexers = listOf(indexer))
+        var available = true
         var saved = mutableListOf<String>()
         var tested: UsenetProvider? = null
-        override fun configuration() = configuration
+        override fun configuration() = configuration.takeIf { available }
         override fun save(name: String, change: (UsenetSourceConfiguration) -> UsenetSourceConfiguration): Boolean {
             configuration = change(configuration).also { it.validate() }
             saved += name
@@ -137,4 +141,70 @@ class UsenetSourcesConfigServerTest {
         assertEquals(200, call("/api/indexers", """{"id":"i1","name":"Renamed","apiUrl":"https://indexer.example/api"}""").first)
         assertEquals(keyed.copy(name = "Renamed"), setup.configuration.indexers.single())
     }
+    @Test fun `ranking endpoints require the token and return no provider credentials`() {
+        assertEquals(403, call("/api/ranking", token = null).first)
+        assertEquals(403, call("/api/ranking/preview", "{}", token = null).first)
+        val (code, body) = call("/api/ranking")
+        assertEquals(200, code)
+        assertFalse(body.contains("provider-secret"))
+        assertFalse(body.contains("api-secret"))
+        assertFalse(body.contains("news.example.com"))
+        val ranking = Json.decodeFromString<PhoneRanking>(body)
+        assertEquals(StreamRankingPreset.ORIGINAL, ranking.settings.preset)
+        assertEquals(4, ranking.presets.size)
+        assertTrue(ranking.presets.any { it.id == StreamRankingPreset.BALANCED })
+    }
+
+    @Test fun `saving and previewing a profile preserve all sources and preview does not save`() {
+        val original = setup.configuration
+        val profile = StreamRankingPresets.profile(StreamRankingPreset.BEST_QUALITY)
+        val settings = StreamRankingSettings(StreamRankingPreset.CUSTOM, profile.copy(name = "Living room"))
+        val preview = RankingPreviewRequest(settings, listOf(
+            RankingPreviewSample("Film.2160p.WEB-DL-FLUX", 10.0),
+            RankingPreviewSample("Film.1080p.BluRay.REMUX-CiNEPHiLES", 20.0)))
+        val (code, body) = call("/api/ranking/preview", Json.encodeToString(preview))
+        assertEquals(200, code)
+        assertTrue(setup.saved.isEmpty())
+        assertEquals(original, setup.configuration)
+        val result = Json.decodeFromString<RankingPreview>(body)
+        assertTrue(result.results.first().title.contains("1080p"))
+        assertEquals(300, result.results.first().score)
+        assertEquals(profile.copy(name = "Living room"), result.profile)
+
+        assertEquals(200, call("/api/ranking", Json.encodeToString(settings)).first)
+        assertEquals(settings, setup.configuration.ranking)
+        assertEquals(original.providers, setup.configuration.providers)
+        assertEquals(original.indexers, setup.configuration.indexers)
+    }
+
+    @Test fun `bad profile regex version and oversized preview are rejected without saving`() {
+        val bad = StreamRankingSettings(StreamRankingPreset.CUSTOM, StreamRankingProfile(rules = listOf(
+            StreamRankingRule(conditions = listOf(StreamRankingCondition(StreamRankingField.TITLE, StreamRankingOperator.MATCHES, "(?<=x)y"))))))
+        assertEquals(400, call("/api/ranking", Json.encodeToString(bad)).first)
+        assertEquals(400, call("/api/ranking", "not json").first)
+        assertEquals(400, call("/api/ranking", Json.encodeToString(StreamRankingSettings(StreamRankingPreset.CUSTOM,
+            StreamRankingProfile(version = 2)))).first)
+        assertEquals(400, call("/api/ranking/preview", Json.encodeToString(RankingPreviewRequest(StreamRankingSettings(), List(51) { RankingPreviewSample("Film") }))).first)
+        assertTrue(setup.saved.isEmpty())
+    }
+
+    @Test fun `phone sorting cannot read preview or save once its TV profile is unavailable`() {
+        setup.available = false
+        assertEquals(409, call("/api/ranking").first)
+        assertEquals(409, call("/api/ranking", Json.encodeToString(StreamRankingSettings(StreamRankingPreset.BALANCED))).first)
+        assertEquals(409, call("/api/ranking/preview", Json.encodeToString(RankingPreviewRequest(StreamRankingSettings(), listOf(RankingPreviewSample("Film"))))).first)
+        assertTrue(setup.saved.isEmpty())
+    }
+
+    @Test fun `preview uses the configured indexer hierarchy without exposing sources`() {
+        val profile = StreamRankingProfile(sort = listOf(StreamRankingSort(StreamRankingKey.INDEXER)), topPerBucket = 0)
+        val settings = StreamRankingSettings(StreamRankingPreset.CUSTOM, profile)
+        val response = call("/api/ranking/preview", Json.encodeToString(RankingPreviewRequest(settings,
+            listOf(RankingPreviewSample("First alphabetically", indexer = "Unknown"), RankingPreviewSample("Last alphabetically", indexer = "Indexer")))))
+        assertEquals(200, response.first)
+        val preview = Json.decodeFromString<RankingPreview>(response.second)
+        assertEquals("Last alphabetically", preview.results.first().title)
+        assertFalse(response.second.contains("api-secret"))
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.usenet
 
+import com.nuvio.tv.core.streams.StreamRankingSettings
 import java.net.URI
 import java.net.URLEncoder
 import java.util.UUID
@@ -99,6 +100,8 @@ data class UsenetSourceConfiguration(
     val providers: List<UsenetProvider> = emptyList(),
     val indexers: List<UsenetIndexer> = emptyList(),
     val sort: UsenetSort = UsenetSort.QUALITY,
+    /** Missing in existing settings: retain their exact ordering until a profile is chosen. */
+    val ranking: StreamRankingSettings = StreamRankingSettings(),
     val minResolution: Int = 0,
     val maxSizeGb: Int = 0,
     val maxAgeDays: Int = 0,
@@ -126,6 +129,7 @@ data class UsenetSourceConfiguration(
     fun normalized() = copy(providers = providers.sortedBy { it.priority }, indexers = indexers.sortedBy { it.priority })
 
     fun validate() {
+        ranking.validate()
         require(providers.size <= 64 && indexers.size <= 20) { "Too many providers or indexers" }
         require(providers.map { it.id }.distinct().size == providers.size)
         require(indexers.map { it.id }.distinct().size == indexers.size)
