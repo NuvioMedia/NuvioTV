@@ -24,7 +24,11 @@ data class CachedStreamLink(
     val sources: List<String>? = null,
     val bingeGroup: String? = null,
     val contentLanguage: String? = null,
-    val year: String? = null
+    val year: String? = null,
+    /** A built-in Usenet release: opened again from its NZB, with its title and post time. */
+    val nzbUrl: String? = null,
+    val releaseTitle: String? = null,
+    val publishedAt: Long? = null
 )
 
 @Singleton
@@ -52,11 +56,17 @@ class StreamLinkCacheDataStore @Inject constructor(
         sources: List<String>? = null,
         bingeGroup: String? = null,
         contentLanguage: String? = null,
-        year: String? = null
+        year: String? = null,
+        nzbUrl: String? = null,
+        releaseTitle: String? = null,
+        publishedAt: Long? = null
     ) {
-        // Loopback Usenet capabilities expire with the playback process.
+        // Loopback Usenet capabilities expire with the playback process; the release is kept instead.
         if (com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)) return
         val payload = JSONObject().apply {
+            nzbUrl?.let { put("nzbUrl", it) }
+            releaseTitle?.let { put("releaseTitle", it) }
+            publishedAt?.let { put("publishedAt", it) }
             put("url", url)
             put("streamName", streamName)
             put("cachedAtMs", System.currentTimeMillis())
@@ -99,9 +109,10 @@ class StreamLinkCacheDataStore @Inject constructor(
             val url = json.optString("url", "")
             val streamName = json.optString("streamName", "")
             val infoHash = json.optString("infoHash", "").ifBlank { null }
-            // Accept entry if it has either a real URL (HTTP stream) or an
-            // infoHash (torrent stream — URL is re-resolved on each playback).
-            if (streamName.isBlank() || (url.isBlank() && infoHash == null)) return@runCatching null
+            val nzbUrl = json.optString("nzbUrl", "").ifBlank { null }
+            // Accept entry if it has either a real URL (HTTP stream), an infoHash (torrent
+            // stream) or an NZB (Usenet release); the last two are opened again on each playback.
+            if (streamName.isBlank() || (url.isBlank() && infoHash == null && nzbUrl == null)) return@runCatching null
 
             val sourcesJson = json.optJSONArray("sources")
             val sources = sourcesJson?.let { arr ->
@@ -123,7 +134,10 @@ class StreamLinkCacheDataStore @Inject constructor(
                 sources = sources,
                 bingeGroup = json.optString("bingeGroup", "").ifBlank { null },
                 contentLanguage = json.optString("contentLanguage", "").ifBlank { null },
-                year = json.optString("year", "").ifBlank { null }
+                year = json.optString("year", "").ifBlank { null },
+                nzbUrl = nzbUrl,
+                releaseTitle = json.optString("releaseTitle", "").ifBlank { null },
+                publishedAt = json.optLong("publishedAt", 0L).takeIf { it > 0L }
             )
         }.getOrNull()
 

@@ -39,6 +39,24 @@ class BuiltInUsenetServiceTest {
         coVerify(exactly = 0) { tmdb.ensureTmdbId(any(), any()) }
     }
 
+    @Test fun `a reused release opens with today's providers`() {
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(
+            UsenetProvider(name = "News", host = "news.test", username = "user", password = "new"),
+            UsenetProvider(name = "Off", host = "off.test", enabled = false)))
+        val stream = BuiltInUsenetService.restoredStream("https://a.test/nzb/1", "4K • Usenet • A",
+            "Show.S01E03.2160p-GRP", 9_000_000_000, 1_600_000_000_000, config)!!
+        assertTrue(stream.isUsenet())
+        assertEquals(BuiltInUsenetService.GROUP_NAME, stream.addonName)
+        assertEquals(listOf("nntps://user:new@news.test:563/20?priority=1"), stream.servers)
+        assertEquals(9_000_000_000, stream.behaviorHints?.videoSize)
+        assertEquals(1_600_000_000_000, stream.publishedAt)
+        // Its next episode keeps to its upload, as a listed result's does.
+        assertEquals(BuiltInUsenetService.bingeGroup("Show.S01E03.2160p-GRP"), stream.behaviorHints?.bingeGroup)
+        // With no provider enabled there is nothing to open it with.
+        assertNull(BuiltInUsenetService.restoredStream("https://a.test/nzb/1", "A", null, null, null,
+            config.copy(providers = config.providers.map { it.copy(enabled = false) })))
+    }
+
     @Test fun `an upload's episodes share a binge group, so the next episode keeps to it`() {
         fun group(title: String) = BuiltInUsenetService.bingeGroup(title)
         val e01 = group("Silo.S01E01.Freedom.Day.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb")
