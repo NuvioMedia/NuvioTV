@@ -41,6 +41,14 @@ func TestMultiEpisodeNamesMatchEachEpisode(t *testing.T) {
 		{"Show.S01E01-E12.Batch/Show - 01.mkv", 5, false},
 		{"Show.S01E01-E12.Batch\\Show - 01.mkv", 5, false},
 		{"Batch.S01E01-E12/Show.S01E04E05.mkv", 5, true},
+		// Episode names that tell the time number no other episode.
+		{"The.Pitt.2025-S01E08-2-00.P.M.WEB-DL-2160p.mkv", 2, false},
+		{"The.Pitt.2025-S01E02-8-00.A.M.WEB-DL-2160p.mkv", 5, false},
+		{"The.Pitt.2025-S01E02-8-00.A.M.WEB-DL-2160p.mkv", 2, true},
+		{"The.Pitt.2025-S01E04-10-00.A.M.WEB-DL-2160p.mkv", 5, false},
+		{"The.Pitt.2025-S01E04-10-00.A.M.WEB-DL-2160p.mkv", 10, false},
+		{"The.Pitt.2025-S01E04-10-00.A.M.WEB-DL-2160p.mkv", 4, true},
+		{"Show.S01E9-10.mkv", 10, true},
 	} {
 		match, err := (Selection{Season: 1, Episode: tc.episode, multiEpisode: true}).matcher()
 		if err != nil {

@@ -36,6 +36,9 @@ var multiEpisodeREs = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)(?:^|\D)0*(\d{1,4})x0*(\d{1,4})`),
 }
 
+// clockNameRE is an episode named by the time it shows, as in S01E04-10-00.A.M.
+var clockNameRE = regexp.MustCompile(`(?i)^[ ._-]*\d{1,2}[ ._:-]\d{2}[ ._-]*[ap]\.?m(?:[^a-z]|$)`)
+
 func multiEpisodeMatch(name string, season, episode int) bool {
 	digit := func(b byte) bool { return b >= '0' && b <= '9' }
 	letter := func(b byte) bool { return b|0x20 >= 'a' && b|0x20 <= 'z' && b|0x20 != 'e' && b|0x20 != 'v' }
@@ -46,10 +49,14 @@ func multiEpisodeMatch(name string, season, episode int) bool {
 				continue
 			}
 			rest := name[m[5]:]
-			if rest != "" && digit(rest[0]) {
+			if rest != "" && digit(rest[0]) || clockNameRE.MatchString(rest) {
 				continue
 			}
 			previous, _ := strconv.Atoi(name[m[4]:m[5]])
+			width := 0 // The first episode's digits, zero padding included.
+			for p := m[5] - 1; p >= 0 && digit(name[p]); p-- {
+				width++
+			}
 			for {
 				i := 0
 				for i < len(rest) && strings.IndexByte(" ._-", rest[i]) >= 0 {
@@ -72,6 +79,12 @@ func multiEpisodeMatch(name string, season, episode int) bool {
 					break
 				}
 				next, _ := strconv.Atoi(rest[j:k])
+				// Each episode follows the one before, and one without an E has at
+				// least the first's digits: names that tell the time, as in
+				// S01E08-2-00.P.M, number no other episode.
+				if next <= previous || !marked && k-j < width {
+					break
+				}
 				if next == episode || ranged && previous < episode && episode < next && next-previous <= 30 {
 					return true
 				}
