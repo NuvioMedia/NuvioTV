@@ -7,8 +7,11 @@ import android.view.SurfaceHolder
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import `is`.xyz.mpv.BaseMPVView
+import `is`.xyz.mpv.MPV
+import `is`.xyz.mpv.MPVNode
 import `is`.xyz.mpv.Utils
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.pow
 import kotlin.math.roundToLong
 
@@ -18,10 +21,29 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 ) : BaseMPVView(context, attrs) {
 
     private var initialized = false
+    private val playbackFailure = AtomicReference<String?>(null)
+    private val failureObserver = object : MPV.EventObserver {
+        override fun event(eventId: Int, data: MPVNode) {
+            if (eventId == MPV.mpvEvent.MPV_EVENT_END_FILE) {
+                mpvPlaybackFailure(data)?.let(playbackFailure::set)
+            }
+        }
+        override fun eventProperty(property: String) = Unit
+        override fun eventProperty(property: String, value: Long) = Unit
+        override fun eventProperty(property: String, value: Boolean) = Unit
+        override fun eventProperty(property: String, value: String) = Unit
+        override fun eventProperty(property: String, value: Double) = Unit
+        override fun eventProperty(property: String, value: MPVNode) = Unit
+    }
+
+    fun consumePlaybackFailure(): String? = playbackFailure.getAndSet(null)
     private var hasQueuedInitialMedia = false
     private var lastMediaRequestKey: String? = null
     private var pendingInitialMediaUrl: String? = null
     private var pendingInitialStartOption: String? = null
+    private var deferredLoadUntilSurface: Boolean = false
+    private var requestedMediaUrl: String? = null
+    private var pathAtMediaRequest: String? = null
     private var hardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
     private var hi10pGnextSoftwareFallbackActive = false
     private var appliedHi10pGnextSoftwareFallback: Boolean? = null
@@ -39,9 +61,11 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             cacheDir = context.cacheDir.path
         )
         initialized = true
+        mpv.addObserver(failureObserver)
     }
 
     fun setMedia(url: String, headers: Map<String, String>, startPositionMs: Long = 0L) {
+        playbackFailure.set(null)
         ensureInitialized()
         val requestKey = buildMediaRequestKey(url = url, headers = headers) +
             "#start=${startPositionMs.coerceAtLeast(0L)}"
@@ -49,6 +73,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             return
         }
         applyHeaders(headers)
+        markMediaRequested(url)
         val startOption = startPositionMs
             .takeIf { it > 0L }
             ?.let {
@@ -64,9 +89,11 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             hasQueuedInitialMedia = true
             pendingInitialMediaUrl = null
             pendingInitialStartOption = null
+            deferredLoadUntilSurface = false
         } else if (startOption != null) {
             pendingInitialMediaUrl = url
             pendingInitialStartOption = startOption
+            deferredLoadUntilSurface = true
             hasQueuedInitialMedia = true
         } else if (hasQueuedInitialMedia) {
             pendingInitialMediaUrl = null
@@ -74,14 +101,17 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             if (holder.surface?.isValid == true) {
                 ensureSurfaceAttachedIfAlreadyAvailable()
                 mpv.command("loadfile", url, "replace")
+                deferredLoadUntilSurface = false
             } else {
                 playFile(url)
+                deferredLoadUntilSurface = true
             }
         } else {
             pendingInitialMediaUrl = null
             pendingInitialStartOption = null
             playFile(url)
             ensureSurfaceAttachedIfAlreadyAvailable()
+            deferredLoadUntilSurface = holder.surface?.isValid != true
             hasQueuedInitialMedia = true
         }
         lastMediaRequestKey = requestKey
@@ -91,6 +121,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
     override fun surfaceCreated(holder: SurfaceHolder) {
         super.surfaceCreated(holder)
+        deferredLoadUntilSurface = false
         val url = pendingInitialMediaUrl ?: return
         val startOption = pendingInitialStartOption
         pendingInitialMediaUrl = null
@@ -115,13 +146,16 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         ensureInitialized()
         val requestKey = buildMediaRequestKey(url = url, headers = headers)
         applyHeaders(headers)
+        markMediaRequested(url)
         pendingInitialMediaUrl = null
         pendingInitialStartOption = null
         if (holder.surface?.isValid == true) {
             ensureSurfaceAttachedIfAlreadyAvailable()
             mpv.command("loadfile", url, "replace")
+            deferredLoadUntilSurface = false
         } else {
             playFile(url)
+            deferredLoadUntilSurface = true
         }
         hasQueuedInitialMedia = true
         lastMediaRequestKey = requestKey
@@ -177,6 +211,25 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     fun isCoreIdleNow(): Boolean {
         if (!initialized) return false
         return mpv.getPropertyBoolean("core-idle") == true
+    }
+
+    fun markMediaRequested(url: String) {
+        val path = if (initialized) mpv.getPropertyString("path") else null
+        pathAtMediaRequest = mpvPathBaselineForRequest(url, requestedMediaUrl, pathAtMediaRequest, path)
+        requestedMediaUrl = url
+    }
+
+    val hasPendingInitialMedia: Boolean
+        get() = pendingInitialMediaUrl != null || deferredLoadUntilSurface
+
+    /** False while mpv still reports the path recorded at the last media request. */
+    fun isPositionFromRequestedMedia(): Boolean {
+        if (!initialized) return false
+        return isMpvPositionFromMediaRequest(
+            requestedUrl = requestedMediaUrl,
+            pathAtRequest = pathAtMediaRequest,
+            currentPath = mpv.getPropertyString("path")
+        )
     }
 
     fun isEofReached(): Boolean {
@@ -605,6 +658,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
     fun releasePlayer() {
         if (!initialized) return
+        mpv.removeObserver(failureObserver)
+        playbackFailure.set(null)
         removeCallbacks(aspectReapplyRunnable)
         runCatching { destroy() }
             .onFailure { Log.w(TAG, "Failed to destroy libmpv view cleanly: ${it.message}") }
@@ -613,11 +668,15 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         lastMediaRequestKey = null
         pendingInitialMediaUrl = null
         pendingInitialStartOption = null
+        deferredLoadUntilSurface = false
+        requestedMediaUrl = null
+        pathAtMediaRequest = null
         appliedHi10pGnextSoftwareFallback = null
     }
 
     override fun initOptions() {
         mpv.setOptionString("profile", "fast")
+        mpv.setOptionString("msg-level", "ffmpeg=warn,vd=warn,ad=warn,vo=warn,ao=warn,demux=warn,lavf=warn,cplayer=warn,autoconvert=warn,hwupload=warn")
         setVo(if (hi10pGnextSoftwareFallbackActive) MPV_VIDEO_OUTPUT_GPU_NEXT else MPV_VIDEO_OUTPUT_GPU)
         mpv.setOptionString("gpu-context", "android")
         mpv.setOptionString("opengl-es", "yes")
@@ -640,6 +699,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.setOptionString("tls-ca-file", "${context.filesDir.path}/cacert.pem")
         mpv.setOptionString("input-default-bindings", "yes")
         mpv.setOptionString("demuxer-max-bytes", "${64 * 1024 * 1024}")
+        mpv.setOptionString("cache-on-disk", "no")
         mpv.setOptionString("demuxer-max-back-bytes", "${64 * 1024 * 1024}")
         mpv.setOptionString("keep-open", "yes")
         mpv.setOptionString("softvol", "yes")
@@ -777,3 +837,33 @@ data class MpvTrack(
     val isForced: Boolean,
     val isExternal: Boolean
 )
+
+/**
+ * The path that position readings for [url] must move off. Null means none: nothing was loaded,
+ * or [url] repeats a request whose media has already loaded. A repeat of a pending request keeps
+ * its baseline.
+ */
+internal fun mpvPathBaselineForRequest(
+    url: String,
+    requestedUrl: String?,
+    pathAtRequest: String?,
+    currentPath: String?
+): String? {
+    if (url != requestedUrl) return currentPath?.takeIf { it.isNotEmpty() }
+    return if (isMpvPositionFromMediaRequest(url, pathAtRequest, currentPath)) null else pathAtRequest
+}
+
+/**
+ * mpv can keep reporting the previous file's properties until a `loadfile replace` starts the new one.
+ * Readings count once `path` equals the requested URL, or differs from the path seen at request
+ * time, since a URL that mpv loads as a playlist reports its entry as `path`.
+ */
+internal fun isMpvPositionFromMediaRequest(
+    requestedUrl: String?,
+    pathAtRequest: String?,
+    currentPath: String?
+): Boolean {
+    if (requestedUrl == null) return true
+    if (currentPath.isNullOrEmpty()) return false
+    return currentPath == requestedUrl || currentPath != pathAtRequest
+}

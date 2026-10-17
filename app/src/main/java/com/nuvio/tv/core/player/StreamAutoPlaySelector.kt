@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.player
 
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.usenet.BuiltInUsenetService
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
@@ -33,6 +34,8 @@ object StreamAutoPlaySelector {
     private fun isPlayable(stream: Stream): Boolean {
         // External URL streams (e.g. error pages, web links) are not playable.
         if (stream.isExternal()) return false
+        // Streams with a direct URL are always playable regardless of debrid cache status.
+        if (stream.getStreamUrl() != null) return true
         when (stream.debridCacheStatus?.state) {
             StreamDebridCacheState.CHECKING,
             StreamDebridCacheState.NOT_CACHED,
@@ -40,7 +43,12 @@ object StreamAutoPlaySelector {
             StreamDebridCacheState.CACHED,
             null -> Unit
         }
-        return stream.getStreamUrl() != null || stream.isTorrent() || stream.isDirectDebrid()
+        return stream.isTorrent() ||
+            stream.isDirectDebrid() ||
+            stream.isUsenet() ||
+            // A YouTube id is resolved to a playable URL on the device when the stream is played.
+            // Builds without in-app YouTube playback open the watch page instead, an external link.
+            (AppFeaturePolicy.inAppTrailerPlaybackEnabled && stream.youTubeIdToResolve() != null)
     }
 
 
@@ -65,14 +73,16 @@ object StreamAutoPlaySelector {
             source
         }
 
+        // Built-in Usenet is a source the user set up like an addon, not a plugin.
+        fun isAddonStream(stream: Stream) =
+            stream.addonName in installedAddonNames || stream.addonName == BuiltInUsenetService.GROUP_NAME
         val sourceScopedStreams = when (effectiveSource) {
             StreamAutoPlaySource.ALL_SOURCES -> streams
-            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { it.addonName in installedAddonNames }
-            StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { it.addonName !in installedAddonNames }
+            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { isAddonStream(it) }
+            StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { !isAddonStream(it) }
         }
         val candidateStreams = sourceScopedStreams.filter { stream ->
-            val isAddonStream = stream.addonName in installedAddonNames
-            if (isAddonStream) {
+            if (isAddonStream(stream)) {
                 selectedAddons.isEmpty() || stream.addonName in selectedAddons
             } else {
                 selectedPlugins.isEmpty() || stream.addonName in selectedPlugins
@@ -80,12 +90,16 @@ object StreamAutoPlaySelector {
         }
         if (candidateStreams.isEmpty()) return null
 
-        // Binge group matching takes priority over mode — even in MANUAL mode,
+        // Binge group matching takes priority over mode and source filters — even in MANUAL mode,
         // a persisted binge group should auto-play without showing the picker.
+        // Search ALL streams, not just candidateStreams, since binge group reuse should
+        // not be limited by autoplay source/addon selection filters.
         val targetBingeGroup = preferredBingeGroup?.trim().orEmpty()
         if (preferBingeGroupInSelection && targetBingeGroup.isNotEmpty()) {
-            val bingeGroupMatch = candidateStreams.firstOrNull { stream ->
-                stream.behaviorHints?.bingeGroup == targetBingeGroup && isPlayable(stream)
+            val bingeGroupMatch = streams.firstOrNull { stream ->
+                !stream.isExternal() &&
+                    stream.behaviorHints?.bingeGroup == targetBingeGroup &&
+                    isPlayable(stream)
             }
             if (bingeGroupMatch != null) return bingeGroupMatch
             // When bingeGroupOnly is set (MANUAL mode with only binge-group

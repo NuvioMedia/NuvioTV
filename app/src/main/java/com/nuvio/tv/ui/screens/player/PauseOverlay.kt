@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
@@ -52,6 +55,7 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import com.nuvio.tv.ui.util.toAbsoluteAlignment
 
 @Composable
 fun PauseOverlay(
@@ -186,6 +190,7 @@ private fun PauseMetadataView(
                 } else {
                     Text(
                         text = title,
+                        modifier = Modifier.align(title.contentTextDirection().toAbsoluteAlignment()),
                         style = MaterialTheme.typography.headlineLarge,
                         color = Color.White,
                         maxLines = 2,
@@ -195,6 +200,7 @@ private fun PauseMetadataView(
             } else {
                 Text(
                     text = title,
+                    modifier = Modifier.align(title.contentTextDirection().toAbsoluteAlignment()),
                     style = MaterialTheme.typography.headlineLarge,
                     color = Color.White,
                     maxLines = 2,
@@ -302,12 +308,14 @@ private fun CastDetailView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onBack)
+                .semantics { role = Role.Button }
                 .padding(bottom = 28.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = stringResource(R.string.cd_back),
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
                 tint = NuvioTheme.colors.TextSecondary,
                 modifier = Modifier.size(NuvioTheme.spacing.xl)
             )
@@ -315,8 +323,7 @@ private fun CastDetailView(
             Text(
                 text = stringResource(R.string.pause_back_to_details),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioTheme.colors.TextSecondary,
-                modifier = Modifier.clickable(onClick = onBack)
+                color = NuvioTheme.colors.TextSecondary
             )
         }
 

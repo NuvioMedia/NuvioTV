@@ -90,7 +90,7 @@ class StreamAutoPlaySelectorTest {
     }
 
     @Test
-    fun `bingeGroup-first respects source and addon plugin filters`() {
+    fun `bingeGroup-first searches all streams despite source and addon plugin filters`() {
         val filteredOutAddonMatch = stream(
             addonName = "AddonFilteredOut",
             url = "https://example.com/addon-match.m3u8",
@@ -114,11 +114,7 @@ class StreamAutoPlaySelectorTest {
             preferBingeGroupInSelection = true
         )
 
-        if (AppFeaturePolicy.pluginsEnabled) {
-            assertEquals(allowedPluginMatch, selected)
-        } else {
-            assertEquals(filteredOutAddonMatch, selected)
-        }
+        assertEquals(filteredOutAddonMatch, selected)
     }
 
     @Test
@@ -243,6 +239,75 @@ class StreamAutoPlaySelectorTest {
     }
 
     @Test
+    fun `first stream selects a stream that only has a YouTube id`() {
+        // The two streams an addon such as Newsio returns for a YouTube video: the bare ytId,
+        // then the watch page as an external link.
+        val youTube = stream(addonName = "AddonA", name = "Play video in app", ytId = "dQw4w9WgXcQ")
+        val watchPage = stream(
+            addonName = "AddonA",
+            name = "Open in YouTube app",
+            externalUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(youTube, watchPage),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("AddonA"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet()
+        )
+
+        if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            assertEquals(youTube, selected)
+        } else {
+            // Without in-app playback the video would open externally, like the watch page.
+            assertNull(selected)
+        }
+    }
+
+    @Test
+    fun `first stream skips a blank YouTube id`() {
+        val blank = stream(addonName = "AddonA", name = "Blank", ytId = "  ")
+        val direct = stream(addonName = "AddonA", url = "https://example.com/direct.m3u8")
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(blank, direct),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("AddonA"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet()
+        )
+
+        assertEquals(direct, selected)
+    }
+
+    @Test
+    fun `regex mode selects a matching stream that only has a YouTube id`() {
+        val direct = stream(addonName = "AddonA", url = "https://example.com/direct.m3u8", name = "Mirror")
+        val youTube = stream(addonName = "AddonA", name = "YouTube", ytId = "dQw4w9WgXcQ")
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(direct, youTube),
+            mode = StreamAutoPlayMode.REGEX_MATCH,
+            regexPattern = "youtube",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("AddonA"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet()
+        )
+
+        if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            assertEquals(youTube, selected)
+        } else {
+            assertNull(selected)
+        }
+    }
+
+    @Test
     fun `orderAddonStreams keeps cached local torrent groups in installed addon order`() {
         val regular = addonStreams(
             "AddonA",
@@ -268,22 +333,49 @@ class StreamAutoPlaySelectorTest {
         assertEquals(listOf(regular, cachedDebrid), ordered)
     }
 
+    @Test
+    fun `built-in Usenet is an addon source for the auto-play scope`() {
+        val usenet = stream(addonName = com.nuvio.tv.core.usenet.BuiltInUsenetService.GROUP_NAME, name = "4K • Usenet • A")
+            .copy(nzbUrl = "https://indexer.test/nzb/1", servers = listOf("nntps://news.test:563/20"))
+        val plugin = stream(addonName = "Plugin", url = "https://example.com/plugin.m3u8")
+        fun select(source: StreamAutoPlaySource, addons: Set<String> = emptySet(), plugins: Set<String> = emptySet()) =
+            StreamAutoPlaySelector.selectAutoPlayStream(
+                streams = listOf(usenet, plugin),
+                mode = StreamAutoPlayMode.FIRST_STREAM,
+                regexPattern = "",
+                source = source,
+                installedAddonNames = setOf("AddonA"),
+                selectedAddons = addons,
+                selectedPlugins = plugins
+            )
+        assertEquals(usenet, select(StreamAutoPlaySource.INSTALLED_ADDONS_ONLY))
+        if (AppFeaturePolicy.pluginsEnabled) {
+            assertEquals(plugin, select(StreamAutoPlaySource.ENABLED_PLUGINS_ONLY))
+        }
+        // Allowed like an addon; a plugin selection no longer leaves it out.
+        assertEquals(plugin, select(StreamAutoPlaySource.ALL_SOURCES, addons = setOf("AddonA")))
+        assertEquals(usenet, select(StreamAutoPlaySource.ALL_SOURCES,
+            addons = setOf(com.nuvio.tv.core.usenet.BuiltInUsenetService.GROUP_NAME), plugins = setOf("Other")))
+    }
+
     private fun stream(
         addonName: String,
         url: String? = null,
         name: String? = null,
         bingeGroup: String? = null,
         infoHash: String? = null,
-        cacheState: StreamDebridCacheState? = null
+        cacheState: StreamDebridCacheState? = null,
+        ytId: String? = null,
+        externalUrl: String? = null
     ): Stream = Stream(
         name = name,
         title = null,
         description = null,
         url = url,
-        ytId = null,
+        ytId = ytId,
         infoHash = infoHash,
         fileIdx = null,
-        externalUrl = null,
+        externalUrl = externalUrl,
         behaviorHints = StreamBehaviorHints(
             notWebReady = null,
             bingeGroup = bingeGroup,

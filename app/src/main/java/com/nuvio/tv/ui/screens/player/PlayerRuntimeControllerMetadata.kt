@@ -256,10 +256,12 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
         return
     }
 
-    val resolvedNext = PlayerNextEpisodeRules.resolveNextEpisode(
-        videos = metaVideos,
-        currentSeason = season,
-        currentEpisode = episode
+    val shuffleState = playbackShuffleState ?: run {
+        clearNextEpisodeAndCancelPostPlay()
+        return
+    }
+    val resolvedNext = episodeShufflePlayback.nextEpisode(
+        profileId, contentId.orEmpty(), metaVideos, season, episode, shuffleState
     )
 
     nextEpisodeVideo = resolvedNext
@@ -278,6 +280,7 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
         overview = resolvedNext.overview,
         released = resolvedNext.released,
         hasAired = hasAired,
+        available = resolvedNext.available,
         unairedMessage = if (hasAired) {
             null
         } else {
@@ -373,7 +376,7 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     if (!_uiState.value.error.isNullOrBlank()) return
 
     val state = _uiState.value
-    if (state.nextEpisode?.hasAired != true || nextEpisodeVideo == null) {
+    if (state.nextEpisode == null || nextEpisodeVideo == null) {
         if (state.postPlayMode != null) {
             _uiState.update { it.copy(postPlayMode = null) }
         }
@@ -382,6 +385,23 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     if (state.postPlayMode != null || state.postPlayDismissedForCurrentEpisode) return
 
     val effectiveDuration = effectiveDurationEarly
+
+    // Preload: start fetching sources for next episode before the button appears.
+    if (preloadNextEpisodeSourcesSetting && !nextEpisodePreloadTriggered && state.nextEpisode != null) {
+        val preloadLeadMs = streamAutoPlayTimeoutSecondsSetting.toLong() * 1_000L
+        val shouldPreload = PlayerNextEpisodeRules.shouldShowNextEpisodeCard(
+            positionMs = positionMs + preloadLeadMs,
+            durationMs = effectiveDuration,
+            skipIntervals = skipIntervals,
+            thresholdMode = nextEpisodeThresholdModeSetting,
+            thresholdPercent = nextEpisodeThresholdPercentSetting,
+            thresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEndSetting
+        )
+        if (shouldPreload) {
+            preloadNextEpisodeSources()
+        }
+    }
+
     val shouldShow = PlayerNextEpisodeRules.shouldShowNextEpisodeCard(
         positionMs = positionMs,
         durationMs = effectiveDuration,
@@ -406,10 +426,15 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     if (shouldEnterStillWatching) {
         enterStillWatchingPromptMode()
     } else {
+        val ne = state.nextEpisode
+        val isUnplayable = !ne.hasAired ||
+            (ne.released.isNullOrBlank() && ne.available == false)
+        if (isUnplayable) return
+
         _uiState.update {
             it.copy(postPlayMode = PostPlayMode.AutoPlay(nextEpisode = state.nextEpisode))
         }
-        if (state.nextEpisode.hasAired && streamAutoPlayNextEpisodeEnabledSetting) {
+        if (streamAutoPlayNextEpisodeEnabledSetting) {
             playNextEpisode()
         }
     }
@@ -449,9 +474,14 @@ internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) 
     val currentActive = _uiState.value.activeSkipInterval
 
     if (active != null) {
-        if (currentActive == null || active.type != currentActive.type || active.startTime != currentActive.startTime) {
+        val targetsPostCredits = active.followingPostCreditsScene(skipIntervals, currentPlaybackDurationMs()) != null
+        if (currentActive != active || targetsPostCredits != _uiState.value.activeSkipTargetsPostCredits) {
             lastActiveSkipType = active.type
-            _uiState.update { it.copy(activeSkipInterval = active, skipIntervalDismissed = false) }
+            _uiState.update { it.copy(
+                activeSkipInterval = active,
+                activeSkipTargetsPostCredits = targetsPostCredits,
+                skipIntervalDismissed = false
+            ) }
         }
         val segmentType = AutoSkipSegmentType.fromSkipIntervalType(active.type)
         val activeKey = active.autoSkipKey()
@@ -483,7 +513,9 @@ internal fun PlayerRuntimeController.fetchParentalGuide(id: String?, type: Strin
     if (!parentalGuideEnabled) return
     if (id.isNullOrBlank()) return
 
-    val imdbId = id.split(":").firstOrNull()?.takeIf { it.startsWith("tt") } ?: return
+    val imdbId = id.split(":").firstOrNull()?.takeIf { it.startsWith("tt") }
+        ?: type?.let { metaRepository.getCachedMeta(it, id)?.imdbId }?.takeIf { it.startsWith("tt") }
+        ?: return
 
     scope.launch {
         val guide = parentalGuideRepository.getParentalGuide(imdbId) ?: return@launch

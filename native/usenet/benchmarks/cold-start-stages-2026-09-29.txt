@@ -1,0 +1,8 @@
+goos: windows
+goarch: amd64
+pkg: github.com/NuvioMedia/NuvioTV/native/usenet/internal/engine
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkNZBColdStartupStages/season-16         	       3	 963198700 ns/op	         9.844 bind-ms/op	         8.631 disk-ms/op	        68.78 index-ms/op	       875.6 parse-ms/op	179890728 B/op	 2919021 allocs/op
+BenchmarkNZBColdStartupStages/single-16         	       3	1149382367 ns/op	        10.32 bind-ms/op	        22.41 disk-ms/op	        81.94 index-ms/op	      1043 parse-ms/op	182932962 B/op	 2881068 allocs/op
+PASS
+ok  	github.com/NuvioMedia/NuvioTV/native/usenet/internal/engine	10.806s

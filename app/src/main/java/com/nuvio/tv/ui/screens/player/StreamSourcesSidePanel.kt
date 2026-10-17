@@ -66,6 +66,7 @@ internal fun StreamSourcesSidePanel(
     onReload: () -> Unit,
     onAddonFilterSelected: (String?) -> Unit,
     onStreamSelected: (Stream) -> Unit,
+    onExpandStreams: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -345,6 +346,17 @@ internal fun StreamSourcesSidePanel(
                     )
 
                     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
+
+                    val lastVisibleIndex = remember(streamListState) {
+                        androidx.compose.runtime.derivedStateOf {
+                            streamListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        }
+                    }
+                    LaunchedEffect(lastVisibleIndex.value, uiState.sourceFilteredStreams.size) {
+                        if (lastVisibleIndex.value >= uiState.sourceFilteredStreams.size - 20) {
+                            onExpandStreams()
+                        }
+                    }
 
                     LazyColumn(
                         state = streamListState,

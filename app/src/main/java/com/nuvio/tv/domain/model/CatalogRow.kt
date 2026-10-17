@@ -24,7 +24,7 @@ data class CatalogRow(
     val extraArgs: Map<String, String> = emptyMap()
 ) {
     val apiType: String
-        get() = type.toApiString(rawType)
+        get() = rawType.trim().ifBlank { type.toApiString() }
 }
 
 fun CatalogRow.stableKey(): String {
@@ -63,11 +63,11 @@ fun catalogRowStableKey(
 ): String {
     val normalizedBaseUrl = addonBaseUrl.trim().trimEnd('/').lowercase()
     val baseUrlKey = "${normalizedBaseUrl.hashCode()}_${normalizedBaseUrl.length}"
-    return "${addonId}_${baseUrlKey}_${type}_${catalogId}"
+    return "${addonId}_${baseUrlKey}_${catalogTypeKey(type)}_${catalogId}"
 }
 
 fun catalogRowLegacyKey(addonId: String, type: String, catalogId: String): String {
-    return "${addonId}_${type}_${catalogId}"
+    return "${addonId}_${catalogTypeKey(type)}_${catalogId}"
 }
 
 fun CatalogRow.nextCatalogSkip(): Int {

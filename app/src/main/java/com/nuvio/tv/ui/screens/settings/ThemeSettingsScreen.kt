@@ -48,6 +48,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -111,7 +116,7 @@ fun ThemeSettingsContent(
         val tags = listOf(
             "en", "ru", "ar", "bg", "bs", "da", "de", "el", "es", "es-419", "hu", "fr", "in", "it",
             "no", "pl", "pt-PT", "pt-BR", "tr", "uk", "cs", "sk", "sl", "sq", "sr-Latn", "sv", "ta", "ro", "ja",
-            "nl", "vi", "hi", "lt", "he", "zh-CN", "zh-TW"
+            "nl", "vi", "hi", "lt", "he", "zh-CN", "zh-TW", "bn", "hr"
         )
         listOf(null to strLanguageSystem) + tags.map { tag ->
             val locale = Locale.forLanguageTag(tag)
@@ -426,6 +431,7 @@ private fun ThemeSwatchChip(
     var isFocused by remember { mutableStateOf(false) }
     val palette = remember(theme, customColors) { ThemeColors.getColorPalette(theme, customColors) }
     val chipShape = RoundedCornerShape(18.dp)
+    val label = theme.localizedName()
 
     Card(
         onClick = onClick,
@@ -454,6 +460,11 @@ private fun ThemeSwatchChip(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clearAndSetSemantics {
+                    contentDescription = label
+                    role = Role.RadioButton
+                    this.selected = isSelected
+                }
                 .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.md),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

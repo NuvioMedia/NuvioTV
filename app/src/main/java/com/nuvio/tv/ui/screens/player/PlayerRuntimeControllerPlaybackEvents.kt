@@ -29,9 +29,14 @@ internal const val AUDIO_AMPLIFICATION_MIN_DB = 0
 internal const val AUDIO_AMPLIFICATION_MAX_DB = 10
 internal const val CENTER_MIX_LEVEL_MIN_DB = -10
 internal const val CENTER_MIX_LEVEL_MAX_DB = 30
-internal const val AUDIO_DELAY_MIN_MS = -3000
-internal const val AUDIO_DELAY_MAX_MS = 3000
+internal const val AUDIO_DELAY_MIN_MS = -60000
+internal const val AUDIO_DELAY_MAX_MS = 60000
 internal const val AUDIO_DELAY_STEP_MS = 25
+internal const val AUDIO_DELAY_HOLD_STEP_MS = 50
+internal const val AUDIO_DELAY_HOLD_FAST_STEP_MS = 100
+internal const val AUDIO_DELAY_HOLD_THRESHOLD_MS = 1000L
+internal const val AUDIO_DELAY_HOLD_FAST_THRESHOLD_MS = 2000L
+internal const val AUDIO_DELAY_HOLD_REPEAT_INTERVAL_MS = 100L
 internal const val WATCH_PROGRESS_SAVE_INTERVAL_MS = 90_000L
 
 internal fun PlayerRuntimeController.applyAudioDelay(
@@ -54,13 +59,19 @@ internal fun PlayerRuntimeController.skipActiveInterval(): Boolean {
 }
 
 internal fun PlayerRuntimeController.skipInterval(interval: SkipInterval): Boolean {
+    if (interval.type == "post-credits") return false
     val duration = currentPlaybackDurationMs().takeIf { it > 0 } ?: Long.MAX_VALUE
-    val seekMs = if (interval.endTime == Double.MAX_VALUE) {
+    val postCredits = interval.followingPostCreditsScene(skipIntervals, currentPlaybackDurationMs())
+    val targetTime = postCredits?.startTime ?: interval.endTime
+    val seekMs = if (targetTime == Double.MAX_VALUE) {
         duration
     } else {
-        (interval.endTime * 1000).toLong()
+        (targetTime * 1000).toLong()
     }
-    seekPlaybackTo(seekMs.coerceAtMost(duration), SeekParameters.NEXT_SYNC)
+    val seekParameters = if (postCredits != null || interval.type == "movie-credits") {
+        SeekParameters.EXACT
+    } else SeekParameters.NEXT_SYNC
+    seekPlaybackTo(seekMs.coerceAtMost(duration), seekParameters)
     scheduleProgressSyncAfterSeek()
     _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = true) }
     return true
@@ -183,6 +194,16 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
             if (isUsingMpvEngine()) {
                 val view = mpvView
                 if (view != null) {
+                    val failure = view.consumePlaybackFailure()
+                    if (failure != null && streamFallbackSession?.ownsPlayback(currentStreamUrl) == true) {
+                        if (!maybeAutoSwitchInternalPlayerOnStartupError(failure, allowEngineFailover = true) &&
+                            !tryNextStream(failure)
+                        ) {
+                            cancelNextEpisodeAutoPlayOnFatalError()
+                            _uiState.update { it.copy(error = failure, isBuffering = false, showLoadingOverlay = false) }
+                        }
+                        return@launch
+                    }
                     val pos = view.currentPositionMs().coerceAtLeast(0L)
                     val playerDuration = view.durationMs().coerceAtLeast(0L)
                     applyPendingMpvSeekIfNeeded(
@@ -194,9 +215,13 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     val cacheBuffering = view.isPausedForCacheNow() || view.isCoreIdleNow()
                     var firstFrameReady = hasRenderedFirstFrame
                         if (!firstFrameReady) {
-                            firstFrameReady = pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L)
+                            firstFrameReady = view.isPositionFromRequestedMedia() &&
+                                (pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L))
                             if (firstFrameReady) {
                                 hasRenderedFirstFrame = true
+                                recordPlayedRelease()
+                                resetMpvStartupWatchdog()
+                                scheduleMpvStableProgressReset()
                                 val clickToFirstFrameMs = launchStartedAtElapsedMs
                                     ?.let { (android.os.SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) }
                                     ?: -1L
@@ -214,6 +239,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                                 }
                             }
                         }
+                    maybeRunMpvStartupWatchdog(view)
                     if (playerDuration > lastKnownDuration) {
                         lastKnownDuration = playerDuration
                     }
@@ -343,16 +369,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         if (NuvioExoPlayerPerformanceHelper.shouldLogMemoryFootprint()) {
                             val defaultAllocator = _loadControl?.allocator as? androidx.media3.exoplayer.upstream.DefaultAllocator
                             val totalFootprintBytes = defaultAllocator?.let { allocator ->
-                                try {
-                                    allocator.memoryFootprint.toLong()
-                                } catch (_: Throwable) {
-                                    try {
-                                        val method = allocator.javaClass.getMethod("getMemoryFootprint")
-                                        (method.invoke(allocator) as? Number)?.toLong() ?: 0L
-                                    } catch (_: Throwable) {
-                                        0L
-                                    }
-                                }
+                                runCatching { allocator.memoryFootprint.toLong() }.getOrDefault(0L)
                             } ?: 0L
                             val totalActiveBytes = defaultAllocator?.totalBytesAllocated?.toLong() ?: 0L
                             val footprintMb = totalFootprintBytes / (1024 * 1024)
@@ -738,7 +755,13 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
                 )
             }
             runCatching { tvRecommendationManager.onProgressRemoved(normalizedProgress.contentId) }
-        } else {
+        } else if (!hasMarkedCurrentEpisodeCompleted) {
+            // Only save in-progress when the episode has not already been
+            // marked as completed during this playback session.  After
+            // natural playback completion the player can report stale
+            // position/duration values (e.g. duration=0 → fallbackPercent=5)
+            // which would overwrite the completed entry in the mutation
+            // store and push an incorrect low-progress value to remote.
             watchProgressRepository.saveProgress(
                 normalizedProgress,
                 profileId = profileId,
@@ -1079,8 +1102,7 @@ internal fun PlayerRuntimeController.setSubtitleDelayMs(targetMs: Int, showOverl
         _uiState.update {
             it.copy(
                 subtitleDelayMs = newDelayMs,
-                showSubtitleDelayOverlay = false,
-                showControls = true
+                showSubtitleDelayOverlay = false
             )
         }
     }
@@ -1316,6 +1338,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
             resetSubtitleAutoSyncState()
+            cancelAutomaticSubtitleSync() // AutoSync hook
             rememberInternalSubtitleSelection(event.index)
             selectSubtitleTrack(event.index)
             _uiState.update {
@@ -1339,6 +1362,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
             resetSubtitleAutoSyncState()
+            cancelAutomaticSubtitleSync() // AutoSync hook
             rememberSubtitleDisabled()
             disableSubtitles()
             _uiState.update {
@@ -1361,6 +1385,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             autoSubtitleSelected = true
             rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
+            runSelectedAutomaticSubtitleSync(event.subtitle) // AutoSync hook
             _uiState.update {
                 it.copy(
                     showSubtitleOverlay = true,
@@ -1571,6 +1596,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             filterSourceStreamsByAddon(event.addonName)
         }
         is PlayerEvent.OnSourceStreamSelected -> {
+            beginStreamFallbackSession(event.stream, _uiState.value.sourceFilteredStreams.ifEmpty { _uiState.value.sourceAllStreams })
             switchToSourceStream(event.stream)
         }
         PlayerEvent.OnDismissTransientOverlay -> {
@@ -1588,6 +1614,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             scheduleHideControls()
         }
         PlayerEvent.OnRetry -> {
+            cancelStreamFallback()
             hasRenderedFirstFrame = false
             endDetectionArmed = false
             mpvEofSeenClear = false
@@ -1713,11 +1740,27 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnToggleAspectRatio -> {
             val state = _uiState.value
             if (state.tunnelingEnabled) {
+                val fill = !state.tunneledSurfaceFill
+                val label = PlayerDisplayModeUtils.resizeModeLabel(
+                    PlayerDisplayModeUtils.exoSurfaceResizeMode(
+                        tunnelingEnabled = true,
+                        tunneledSurfaceFill = fill
+                    ),
+                    context
+                )
+                Log.d(
+                    PlayerRuntimeController.TAG,
+                    "Tunneled surface resize toggled: fill=$fill ($label)"
+                )
                 _uiState.update {
                     it.copy(
+                        tunneledSurfaceFill = fill,
                         showAspectRatioIndicator = true,
-                        aspectRatioIndicatorText = context.getString(R.string.player_aspect_tunneling_unavailable)
+                        aspectRatioIndicatorText = label
                     )
+                }
+                scope.launch {
+                    deviceLocalPlayerPreferences.setTunneledSurfaceFill(fill)
                 }
                 hideAspectRatioIndicatorJob?.cancel()
                 hideAspectRatioIndicatorJob = scope.launch {

@@ -58,6 +58,8 @@ data class HeroPreview(
     val poster: String?,
     val backdrop: String?,
     val imageUrl: String?,
+    val mdbListRatings: com.nuvio.tv.domain.model.MDBListRatings? = null,
+    val mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     /** Snapshot of the backdrop URL captured before TMDB enrichment.
      *  Survives cache rebuilds so landscape cards keep their original art
      *  even after navigation away and back. */
@@ -347,10 +349,11 @@ internal fun buildContinueWatchingItem(
                 poster = item.progress.poster,
                 backdrop = item.progress.backdrop,
                 imageUrl = if (useLandscapePosters) {
-                    item.progress.backdrop ?: item.progress.poster
+                    item.customLandscapePoster ?: item.progress.backdrop ?: item.progress.poster
                 } else {
                     item.progress.poster ?: item.progress.backdrop
-                }
+                },
+                mdbListRatings = item.mdbListRatings
             )
         }
         is ContinueWatchingItem.NextUp -> {
@@ -377,17 +380,18 @@ internal fun buildContinueWatchingItem(
                 poster = item.info.poster,
                 backdrop = item.info.backdrop,
                 imageUrl = if (useLandscapePosters) {
-                    firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
+                    item.customLandscapePoster ?: firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
                 } else {
                     firstNonBlank(item.info.poster, item.info.backdrop, item.info.thumbnail)
-                }
+                },
+                mdbListRatings = item.info.mdbListRatings
             )
         }
     }
 
     val imageUrl = when (item) {
         is ContinueWatchingItem.InProgress -> if (useLandscapePosters) {
-            if (isSeriesType(item.progress.contentType)) {
+            item.customLandscapePoster ?: if (isSeriesType(item.progress.contentType)) {
                 firstNonBlank(item.episodeThumbnail, item.progress.poster, item.progress.backdrop)
             } else {
                 firstNonBlank(item.progress.backdrop, item.progress.poster)
@@ -400,7 +404,7 @@ internal fun buildContinueWatchingItem(
             }
         }
         is ContinueWatchingItem.NextUp -> if (useLandscapePosters) {
-            if (item.info.hasAired) {
+            item.customLandscapePoster ?: if (item.info.hasAired) {
                 firstNonBlank(item.info.thumbnail, item.info.poster, item.info.backdrop)
             } else {
                 firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
@@ -493,10 +497,12 @@ internal fun buildCatalogItem(
         poster = item.poster,
         backdrop = item.backdropUrl,
         imageUrl = if (useLandscapePosters) {
-            item.backdropUrl ?: item.poster
+            item.landscapePoster ?: item.backdropUrl ?: item.poster
         } else {
             item.poster ?: item.backdropUrl
         },
+        mdbListRatings = item.mdbListRatings,
+        mdbListRatingOrder = item.mdbListRatingOrder,
         frozenBackdropUrl = frozenBackdrop,
         frozenLogoUrl = frozenLogo
     )
@@ -506,7 +512,7 @@ internal fun buildCatalogItem(
         title = item.name,
         subtitle = item.releaseInfo,
         imageUrl = if (useLandscapePosters) {
-            item.backdropUrl ?: item.poster
+            item.landscapePoster ?: item.backdropUrl ?: item.poster
         } else {
             item.poster ?: item.backdropUrl
         },
@@ -576,7 +582,7 @@ internal fun buildCollectionFolderItem(
 }
 
 internal fun continueWatchingItemKey(item: ContinueWatchingItem): String {
-    return when (item) {
+    return item.shuffleFocusKey ?: when (item) {
         is ContinueWatchingItem.InProgress ->
             "cw_inprogress_${item.progress.contentId}_${item.progress.season ?: -1}_${item.progress.episode ?: -1}"
         is ContinueWatchingItem.NextUp ->

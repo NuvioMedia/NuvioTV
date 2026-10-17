@@ -1,0 +1,417 @@
+=== RUN   TestNZBStartupStagesColdAndHit
+--- PASS: TestNZBStartupStagesColdAndHit (0.10s)
+=== RUN   TestNZBBodyWaitIsSeparatedFromParseWork
+--- PASS: TestNZBBodyWaitIsSeparatedFromParseWork (0.02s)
+=== RUN   TestMissingArticleIsNotRetried
+=== RUN   TestMissingArticleIsNotRetried/speculative=false
+=== RUN   TestMissingArticleIsNotRetried/speculative=true
+--- PASS: TestMissingArticleIsNotRetried (0.08s)
+    --- PASS: TestMissingArticleIsNotRetried/speculative=false (0.04s)
+    --- PASS: TestMissingArticleIsNotRetried/speculative=true (0.03s)
+=== RUN   TestRangesVariableYEncAndConcurrentReaders
+--- PASS: TestRangesVariableYEncAndConcurrentReaders (0.23s)
+=== RUN   TestActualNNTPPipeline
+=== RUN   TestActualNNTPPipeline/depth2
+    engine_test.go:195: one NNTP connection: pipeline peak=2; exact payload verified
+=== RUN   TestActualNNTPPipeline/depth4
+    engine_test.go:195: one NNTP connection: pipeline peak=4; exact payload verified
+=== RUN   TestActualNNTPPipeline/depth8
+    engine_test.go:195: one NNTP connection: pipeline peak=8; exact payload verified
+--- PASS: TestActualNNTPPipeline (1.07s)
+    --- PASS: TestActualNNTPPipeline/depth2 (0.44s)
+    --- PASS: TestActualNNTPPipeline/depth4 (0.32s)
+    --- PASS: TestActualNNTPPipeline/depth8 (0.31s)
+=== RUN   TestLazyMultipartRARAndCompressedRejection
+--- PASS: TestLazyMultipartRARAndCompressedRejection (0.18s)
+=== RUN   TestAltMountArchiveFixtures
+=== RUN   TestAltMountArchiveFixtures/rar_single
+=== RUN   TestAltMountArchiveFixtures/rar_multi
+=== RUN   TestAltMountArchiveFixtures/rar_widthmismatch
+--- PASS: TestAltMountArchiveFixtures (0.43s)
+    --- PASS: TestAltMountArchiveFixtures/rar_single (0.08s)
+    --- PASS: TestAltMountArchiveFixtures/rar_multi (0.08s)
+    --- PASS: TestAltMountArchiveFixtures/rar_widthmismatch (0.27s)
+=== RUN   TestCancellationAndSharedFlight
+--- PASS: TestCancellationAndSharedFlight (0.43s)
+=== RUN   TestProviderAllowances
+--- PASS: TestProviderAllowances (0.04s)
+=== RUN   TestProviderSeekDrainPolicy
+=== RUN   TestProviderSeekDrainPolicy/production_ordinary_article
+=== RUN   TestProviderSeekDrainPolicy/default_ordinary_article
+=== RUN   TestProviderSeekDrainPolicy/production_large_article
+=== RUN   TestProviderSeekDrainPolicy/default_large_article
+--- PASS: TestProviderSeekDrainPolicy (5.06s)
+    --- PASS: TestProviderSeekDrainPolicy/production_ordinary_article (0.42s)
+    --- PASS: TestProviderSeekDrainPolicy/default_ordinary_article (0.60s)
+    --- PASS: TestProviderSeekDrainPolicy/production_large_article (2.06s)
+    --- PASS: TestProviderSeekDrainPolicy/default_large_article (1.99s)
+=== RUN   TestLastDemandLeaseCancelsInFlightBody
+--- PASS: TestLastDemandLeaseCancelsInFlightBody (0.00s)
+=== RUN   TestHeaderHandoffReusesBodyButPlaybackCanCancelIt
+--- PASS: TestHeaderHandoffReusesBodyButPlaybackCanCancelIt (0.00s)
+=== RUN   TestReadAheadWindowCountAndByteCaps
+=== RUN   TestReadAheadWindowCountAndByteCaps/low_large
+=== RUN   TestReadAheadWindowCountAndByteCaps/balanced_large
+=== RUN   TestReadAheadWindowCountAndByteCaps/throughput_large
+=== RUN   TestReadAheadWindowCountAndByteCaps/small_count_cap
+=== RUN   TestReadAheadWindowCountAndByteCaps/wire_estimates
+=== RUN   TestReadAheadWindowCountAndByteCaps/disabled
+--- PASS: TestReadAheadWindowCountAndByteCaps (0.00s)
+    --- PASS: TestReadAheadWindowCountAndByteCaps/low_large (0.00s)
+    --- PASS: TestReadAheadWindowCountAndByteCaps/balanced_large (0.00s)
+    --- PASS: TestReadAheadWindowCountAndByteCaps/throughput_large (0.00s)
+    --- PASS: TestReadAheadWindowCountAndByteCaps/small_count_cap (0.00s)
+    --- PASS: TestReadAheadWindowCountAndByteCaps/wire_estimates (0.00s)
+    --- PASS: TestReadAheadWindowCountAndByteCaps/disabled (0.00s)
+=== RUN   TestSeekReleasesObsoleteDemandBeforeNextRead
+--- PASS: TestSeekReleasesObsoleteDemandBeforeNextRead (0.00s)
+=== RUN   TestLargeArticlesSurviveRepeatedSeekCancellation
+--- PASS: TestLargeArticlesSurviveRepeatedSeekCancellation (3.64s)
+=== RUN   TestUsenetNetworkAddresses
+--- PASS: TestUsenetNetworkAddresses (0.00s)
+=== RUN   TestGuardedDialValidatesResolvedTarget
+--- PASS: TestGuardedDialValidatesResolvedTarget (0.00s)
+=== RUN   TestNZBRedirectStripsSecretsAcrossOrigins
+--- PASS: TestNZBRedirectStripsSecretsAcrossOrigins (0.00s)
+=== RUN   TestNZBRedirectPolicy
+--- PASS: TestNZBRedirectPolicy (0.00s)
+=== RUN   TestNZBPublicClientBlocksLocalHTTP
+--- PASS: TestNZBPublicClientBlocksLocalHTTP (0.00s)
+=== RUN   TestLargeNZBMetadataWithLowMemoryTarget
+    nzb_cache_policy_test.go:75: XML 37.2 MiB, 160000 segments, parse 11.053758216s, sampled peak Go heap 64.5 MiB under 96 MiB target (host, not Android)
+--- PASS: TestLargeNZBMetadataWithLowMemoryTarget (11.69s)
+=== RUN   TestLargeNZBCachePlainAndGzip
+=== RUN   TestLargeNZBCachePlainAndGzip/gzip=false
+=== RUN   TestLargeNZBCachePlainAndGzip/gzip=true
+--- PASS: TestLargeNZBCachePlainAndGzip (23.63s)
+    --- PASS: TestLargeNZBCachePlainAndGzip/gzip=false (7.91s)
+    --- PASS: TestLargeNZBCachePlainAndGzip/gzip=true (15.52s)
+=== RUN   TestNZBParserExactLimitAndOversize
+=== RUN   TestNZBParserExactLimitAndOversize/gzip=false/extra=0
+=== RUN   TestNZBParserExactLimitAndOversize/gzip=false/extra=1
+=== RUN   TestNZBParserExactLimitAndOversize/gzip=true/extra=0
+=== RUN   TestNZBParserExactLimitAndOversize/gzip=true/extra=1
+--- PASS: TestNZBParserExactLimitAndOversize (59.69s)
+    --- PASS: TestNZBParserExactLimitAndOversize/gzip=false/extra=0 (13.73s)
+    --- PASS: TestNZBParserExactLimitAndOversize/gzip=false/extra=1 (12.25s)
+    --- PASS: TestNZBParserExactLimitAndOversize/gzip=true/extra=0 (16.16s)
+    --- PASS: TestNZBParserExactLimitAndOversize/gzip=true/extra=1 (16.23s)
+=== RUN   TestNZBCacheIdleExpiryAndLRU
+--- PASS: TestNZBCacheIdleExpiryAndLRU (0.03s)
+=== RUN   TestNZBCacheReservesActualGrowth
+--- PASS: TestNZBCacheReservesActualGrowth (0.06s)
+=== RUN   TestNZBCacheDiagnosticsDisabledAndDiskFailure
+--- PASS: TestNZBCacheDiagnosticsDisabledAndDiskFailure (0.00s)
+=== RUN   TestNZBCachePersistsAndSeparatesHeadersAndProfiles
+--- PASS: TestNZBCachePersistsAndSeparatesHeadersAndProfiles (0.02s)
+=== RUN   TestNZBCacheExpiryAndCorruptionFallBack
+--- PASS: TestNZBCacheExpiryAndCorruptionFallBack (0.01s)
+=== RUN   TestNZBCacheBoundsAndAbandonedWrites
+--- PASS: TestNZBCacheBoundsAndAbandonedWrites (0.17s)
+=== RUN   TestIndexedNZBLazySelectionAndRanges
+--- PASS: TestIndexedNZBLazySelectionAndRanges (0.14s)
+=== RUN   TestIndexedNZBColdOpenReleasesUnselectedTables
+--- PASS: TestIndexedNZBColdOpenReleasesUnselectedTables (0.01s)
+=== RUN   TestIndexedNZBLazyRARAndPinnedEviction
+--- PASS: TestIndexedNZBLazyRARAndPinnedEviction (0.08s)
+=== RUN   TestIndexedNZBLegacyMigrationAndDirectoryCorruption
+--- PASS: TestIndexedNZBLegacyMigrationAndDirectoryCorruption (0.00s)
+=== RUN   TestIndexedNZBCorruptRecordRecoversOnceAndChecksIdentity
+=== RUN   TestIndexedNZBCorruptRecordRecoversOnceAndChecksIdentity/false
+=== RUN   TestIndexedNZBCorruptRecordRecoversOnceAndChecksIdentity/true
+--- PASS: TestIndexedNZBCorruptRecordRecoversOnceAndChecksIdentity (0.02s)
+    --- PASS: TestIndexedNZBCorruptRecordRecoversOnceAndChecksIdentity/false (0.01s)
+    --- PASS: TestIndexedNZBCorruptRecordRecoversOnceAndChecksIdentity/true (0.01s)
+=== RUN   TestIndexedNZBMKVHintsSurviveRestartWithoutPayloads
+--- PASS: TestIndexedNZBMKVHintsSurviveRestartWithoutPayloads (0.20s)
+=== RUN   TestIndexedNZBRejectsMalformedDirectoryRecords
+--- PASS: TestIndexedNZBRejectsMalformedDirectoryRecords (0.01s)
+=== RUN   TestNZBHintsAreAdvisoryButFreshLayoutConflictsFail
+--- PASS: TestNZBHintsAreAdvisoryButFreshLayoutConflictsFail (0.00s)
+=== RUN   TestNZBHintCorruptionGenerationAndBounds
+=== RUN   TestNZBHintCorruptionGenerationAndBounds/checksum
+=== RUN   TestNZBHintCorruptionGenerationAndBounds/generation
+=== RUN   TestNZBHintCorruptionGenerationAndBounds/anchor
+=== RUN   TestNZBHintCorruptionGenerationAndBounds/oversized
+--- PASS: TestNZBHintCorruptionGenerationAndBounds (0.01s)
+    --- PASS: TestNZBHintCorruptionGenerationAndBounds/checksum (0.00s)
+    --- PASS: TestNZBHintCorruptionGenerationAndBounds/generation (0.00s)
+    --- PASS: TestNZBHintCorruptionGenerationAndBounds/anchor (0.00s)
+    --- PASS: TestNZBHintCorruptionGenerationAndBounds/oversized (0.01s)
+=== RUN   TestNZBHintBudgetEvictionAndOrphanCleanup
+--- PASS: TestNZBHintBudgetEvictionAndOrphanCleanup (0.00s)
+=== RUN   TestIndexedNZBClosedSessionDoesNotInvalidateCache
+--- PASS: TestIndexedNZBClosedSessionDoesNotInvalidateCache (0.00s)
+=== RUN   TestNZBHintSessionsMergeAndRemainBounded
+--- PASS: TestNZBHintSessionsMergeAndRemainBounded (0.06s)
+=== RUN   TestFastNZBFetchPreservesSignedURL
+=== RUN   TestFastNZBFetchPreservesSignedURL/?id=release&sig=keep%2fthese%20bytes&z=2&a=1/compressed=false
+=== RUN   TestFastNZBFetchPreservesSignedURL/?id=release&sig=keep%2fthese%20bytes&z=2&a=1/compressed=true
+=== RUN   TestFastNZBFetchPreservesSignedURL/?t=get&id=release&sig=a%2Bb&sig=second/compressed=false
+=== RUN   TestFastNZBFetchPreservesSignedURL/?t=get&id=release&sig=a%2Bb&sig=second/compressed=true
+=== RUN   TestFastNZBFetchPreservesSignedURL/?gzip=0&id=release&sig=unchanged/compressed=false
+=== RUN   TestFastNZBFetchPreservesSignedURL/?gzip=0&id=release&sig=unchanged/compressed=true
+--- PASS: TestFastNZBFetchPreservesSignedURL (0.02s)
+    --- PASS: TestFastNZBFetchPreservesSignedURL/?id=release&sig=keep%2fthese%20bytes&z=2&a=1/compressed=false (0.00s)
+    --- PASS: TestFastNZBFetchPreservesSignedURL/?id=release&sig=keep%2fthese%20bytes&z=2&a=1/compressed=true (0.00s)
+    --- PASS: TestFastNZBFetchPreservesSignedURL/?t=get&id=release&sig=a%2Bb&sig=second/compressed=false (0.00s)
+    --- PASS: TestFastNZBFetchPreservesSignedURL/?t=get&id=release&sig=a%2Bb&sig=second/compressed=true (0.01s)
+    --- PASS: TestFastNZBFetchPreservesSignedURL/?gzip=0&id=release&sig=unchanged/compressed=false (0.00s)
+    --- PASS: TestFastNZBFetchPreservesSignedURL/?gzip=0&id=release&sig=unchanged/compressed=true (0.00s)
+=== RUN   TestPerformanceMatrix
+    performance_test.go:23: set NUVIO_BENCHMARK=1 for the TCP tuning experiment
+--- SKIP: TestPerformanceMatrix (0.00s)
+=== RUN   TestProviderCloseDoesNotLockUnrelatedAccounts
+--- PASS: TestProviderCloseDoesNotLockUnrelatedAccounts (0.06s)
+=== RUN   TestProviderCreationDoesNotLockUnrelatedAccounts
+--- PASS: TestProviderCreationDoesNotLockUnrelatedAccounts (0.00s)
+=== RUN   TestRARArithmeticSeek
+=== RUN   TestRARArithmeticSeek/RAR4/50
+=== RUN   TestRARArithmeticSeek/RAR4/132
+=== RUN   TestRARArithmeticSeek/RAR5/50
+=== RUN   TestRARArithmeticSeek/RAR5/132
+--- PASS: TestRARArithmeticSeek (0.59s)
+    --- PASS: TestRARArithmeticSeek/RAR4/50 (0.09s)
+    --- PASS: TestRARArithmeticSeek/RAR4/132 (0.21s)
+    --- PASS: TestRARArithmeticSeek/RAR5/50 (0.09s)
+    --- PASS: TestRARArithmeticSeek/RAR5/132 (0.20s)
+=== RUN   TestRARPredictionFallback
+=== RUN   TestRARPredictionFallback/RAR4/volume_size
+=== RUN   TestRARPredictionFallback/RAR4/final_remainder
+=== RUN   TestRARPredictionFallback/RAR4/header_size
+=== RUN   TestRARPredictionFallback/RAR4/unordered
+=== RUN   TestRARPredictionFallback/RAR4/packed_width
+    rar_seek_test.go:136: RAR4 uses fixed-width packed sizes
+=== RUN   TestRARPredictionFallback/RAR5/volume_size
+=== RUN   TestRARPredictionFallback/RAR5/final_remainder
+=== RUN   TestRARPredictionFallback/RAR5/header_size
+=== RUN   TestRARPredictionFallback/RAR5/unordered
+=== RUN   TestRARPredictionFallback/RAR5/packed_width
+--- PASS: TestRARPredictionFallback (1.88s)
+    --- PASS: TestRARPredictionFallback/RAR4/volume_size (0.19s)
+    --- PASS: TestRARPredictionFallback/RAR4/final_remainder (0.19s)
+    --- PASS: TestRARPredictionFallback/RAR4/header_size (0.18s)
+    --- PASS: TestRARPredictionFallback/RAR4/unordered (0.19s)
+    --- SKIP: TestRARPredictionFallback/RAR4/packed_width (0.00s)
+    --- PASS: TestRARPredictionFallback/RAR5/volume_size (0.18s)
+    --- PASS: TestRARPredictionFallback/RAR5/final_remainder (0.18s)
+    --- PASS: TestRARPredictionFallback/RAR5/header_size (0.19s)
+    --- PASS: TestRARPredictionFallback/RAR5/unordered (0.21s)
+    --- PASS: TestRARPredictionFallback/RAR5/packed_width (0.37s)
+=== RUN   TestRARPredictionConcurrentReaders
+--- PASS: TestRARPredictionConcurrentReaders (0.07s)
+=== RUN   TestRAR5PaddedQuickOpenSeek
+--- PASS: TestRAR5PaddedQuickOpenSeek (0.36s)
+=== RUN   TestPartialArticleReplayDoesNotDuplicatePublishedBytes
+--- PASS: TestPartialArticleReplayDoesNotDuplicatePublishedBytes (0.00s)
+=== RUN   TestSessionCloseWithLeasedReaders
+--- PASS: TestSessionCloseWithLeasedReaders (0.75s)
+=== RUN   TestSmallBudgetConcurrentSeekAndEviction
+--- PASS: TestSmallBudgetConcurrentSeekAndEviction (4.52s)
+=== RUN   TestRAR5ObfuscatedAndSeasonSelection
+--- PASS: TestRAR5ObfuscatedAndSeasonSelection (0.17s)
+=== RUN   TestSeasonPackSkipsUnselectedPayload
+--- PASS: TestSeasonPackSkipsUnselectedPayload (0.16s)
+=== RUN   TestArchiveHeaderCRCRejected
+--- PASS: TestArchiveHeaderCRCRejected (0.03s)
+=== RUN   TestObfuscatedRAR5UnorderedVolumes
+--- PASS: TestObfuscatedRAR5UnorderedVolumes (0.09s)
+=== RUN   TestVolumeBoundaryLookaheadAndSeekCancellation
+--- PASS: TestVolumeBoundaryLookaheadAndSeekCancellation (0.09s)
+=== RUN   TestStandaloneSubtitlesAreLazyAndMemoryBacked
+--- PASS: TestStandaloneSubtitlesAreLazyAndMemoryBacked (0.06s)
+=== RUN   TestAddonJavaScriptSelectors
+--- PASS: TestAddonJavaScriptSelectors (1.66s)
+=== RUN   TestEpisodeSelectionSingleVideoFallback
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/obfuscated
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/numeric
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/scene-number
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/sample-and-subtitle
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/no-video
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/wrong-episode
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/wrong-season
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/wrong-x-marker
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/episode-prefix
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/obfuscated-pack
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/mixed-pack
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/strict-wins
+=== RUN   TestEpisodeSelectionSingleVideoFallback/direct/strict-x-wins
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/obfuscated
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/numeric
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/scene-number
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/sample-and-subtitle
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/no-video
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/wrong-episode
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/wrong-season
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/wrong-x-marker
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/episode-prefix
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/obfuscated-pack
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/mixed-pack
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/strict-wins
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar4/strict-x-wins
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/obfuscated
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/numeric
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/scene-number
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/sample-and-subtitle
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/no-video
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/wrong-episode
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/wrong-season
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/wrong-x-marker
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/episode-prefix
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/obfuscated-pack
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/mixed-pack
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/strict-wins
+=== RUN   TestEpisodeSelectionSingleVideoFallback/rar5/strict-x-wins
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/obfuscated
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/numeric
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/scene-number
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/sample-and-subtitle
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/no-video
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/wrong-episode
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/wrong-season
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/wrong-x-marker
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/episode-prefix
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/obfuscated-pack
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/mixed-pack
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/strict-wins
+=== RUN   TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/strict-x-wins
+--- PASS: TestEpisodeSelectionSingleVideoFallback (1.45s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/obfuscated (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/numeric (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/scene-number (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/sample-and-subtitle (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/no-video (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/wrong-episode (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/wrong-season (0.02s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/wrong-x-marker (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/episode-prefix (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/obfuscated-pack (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/mixed-pack (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/strict-wins (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/direct/strict-x-wins (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/obfuscated (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/numeric (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/scene-number (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/sample-and-subtitle (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/no-video (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/wrong-episode (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/wrong-season (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/wrong-x-marker (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/episode-prefix (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/obfuscated-pack (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/mixed-pack (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/strict-wins (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar4/strict-x-wins (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/obfuscated (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/numeric (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/scene-number (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/sample-and-subtitle (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/no-video (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/wrong-episode (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/wrong-season (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/wrong-x-marker (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/episode-prefix (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/obfuscated-pack (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/mixed-pack (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/strict-wins (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/rar5/strict-x-wins (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/obfuscated (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/numeric (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/scene-number (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/sample-and-subtitle (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/no-video (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/wrong-episode (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/wrong-season (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/wrong-x-marker (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/episode-prefix (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/obfuscated-pack (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/mixed-pack (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/strict-wins (0.03s)
+    --- PASS: TestEpisodeSelectionSingleVideoFallback/anonymous-rar5/strict-x-wins (0.03s)
+=== RUN   TestEpisodeSelectionRecoveredDirectNames
+=== RUN   TestEpisodeSelectionRecoveredDirectNames/named-strict
+=== RUN   TestEpisodeSelectionRecoveredDirectNames/anonymous-strict
+=== RUN   TestEpisodeSelectionRecoveredDirectNames/anonymous-fallback
+=== RUN   TestEpisodeSelectionRecoveredDirectNames/recovered-conflict
+=== RUN   TestEpisodeSelectionRecoveredDirectNames/subject-conflict
+=== RUN   TestEpisodeSelectionRecoveredDirectNames/recovered-sample
+=== RUN   TestEpisodeSelectionRecoveredDirectNames/subject-sample
+--- PASS: TestEpisodeSelectionRecoveredDirectNames (0.19s)
+    --- PASS: TestEpisodeSelectionRecoveredDirectNames/named-strict (0.03s)
+    --- PASS: TestEpisodeSelectionRecoveredDirectNames/anonymous-strict (0.03s)
+    --- PASS: TestEpisodeSelectionRecoveredDirectNames/anonymous-fallback (0.03s)
+    --- PASS: TestEpisodeSelectionRecoveredDirectNames/recovered-conflict (0.03s)
+    --- PASS: TestEpisodeSelectionRecoveredDirectNames/subject-conflict (0.03s)
+    --- PASS: TestEpisodeSelectionRecoveredDirectNames/recovered-sample (0.03s)
+    --- PASS: TestEpisodeSelectionRecoveredDirectNames/subject-sample (0.03s)
+=== RUN   TestEpisodeFallbackPreservesExplicitSelectors
+--- PASS: TestEpisodeFallbackPreservesExplicitSelectors (0.08s)
+=== RUN   TestEpisodeFallbackMultipartRAR
+=== RUN   TestEpisodeFallbackMultipartRAR/4
+=== RUN   TestEpisodeFallbackMultipartRAR/5
+--- PASS: TestEpisodeFallbackMultipartRAR (0.20s)
+    --- PASS: TestEpisodeFallbackMultipartRAR/4 (0.10s)
+    --- PASS: TestEpisodeFallbackMultipartRAR/5 (0.10s)
+=== RUN   TestEpisodeFallbackCountsMixedSources
+=== RUN   TestEpisodeFallbackCountsMixedSources/anonymous-direct=false
+=== RUN   TestEpisodeFallbackCountsMixedSources/anonymous-direct=true
+--- PASS: TestEpisodeFallbackCountsMixedSources (0.06s)
+    --- PASS: TestEpisodeFallbackCountsMixedSources/anonymous-direct=false (0.03s)
+    --- PASS: TestEpisodeFallbackCountsMixedSources/anonymous-direct=true (0.03s)
+=== RUN   TestEpisodeRecoveredNameWinsOverAmbiguousPack
+--- PASS: TestEpisodeRecoveredNameWinsOverAmbiguousPack (0.03s)
+=== RUN   TestEpisodeFallbackRejectsMultipleEntriesInRAR4
+--- PASS: TestEpisodeFallbackRejectsMultipleEntriesInRAR4 (0.03s)
+=== RUN   TestEpisodeFallbackRequiresCompleteInventory
+=== RUN   TestEpisodeFallbackRequiresCompleteInventory/missing-continuation
+=== RUN   TestEpisodeFallbackRequiresCompleteInventory/unreadable-other-archive
+--- PASS: TestEpisodeFallbackRequiresCompleteInventory (0.06s)
+    --- PASS: TestEpisodeFallbackRequiresCompleteInventory/missing-continuation (0.03s)
+    --- PASS: TestEpisodeFallbackRequiresCompleteInventory/unreadable-other-archive (0.03s)
+=== RUN   TestEpisodeFallbackRecognizesAnonymousVideoSignature
+--- PASS: TestEpisodeFallbackRecognizesAnonymousVideoSignature (0.03s)
+=== RUN   TestAddonSelectorRejectsExcessiveBacktracking
+--- PASS: TestAddonSelectorRejectsExcessiveBacktracking (0.20s)
+=== RUN   TestReplacementSharesConnectionAndReconcilesLostDelete
+--- PASS: TestReplacementSharesConnectionAndReconcilesLostDelete (0.13s)
+=== RUN   TestPartiallyOverlappingProviderListsShareSocketsAndFailOver
+--- PASS: TestPartiallyOverlappingProviderListsShareSocketsAndFailOver (0.05s)
+=== RUN   TestExplicitUnknownVideoDoesNotProbeUnrelatedMissingArticle
+--- PASS: TestExplicitUnknownVideoDoesNotProbeUnrelatedMissingArticle (0.03s)
+=== RUN   TestMKVStartupMatrix
+    startup_benchmark_test.go:80: opt-in startup experiment
+--- SKIP: TestMKVStartupMatrix (0.00s)
+=== RUN   TestStartupFixtureServer
+    startup_benchmark_test.go:157: opt-in emulator fixture
+--- SKIP: TestStartupFixtureServer (0.00s)
+=== RUN   TestCuesOffsetBoundedAndSegmentRelative
+--- PASS: TestCuesOffsetBoundedAndSegmentRelative (0.00s)
+=== RUN   TestStartupPinsSurviveRangeRoundTripAndRelease
+=== RUN   TestStartupPinsSurviveRangeRoundTripAndRelease/direct
+=== RUN   TestStartupPinsSurviveRangeRoundTripAndRelease/stored_rar
+--- PASS: TestStartupPinsSurviveRangeRoundTripAndRelease (0.55s)
+    --- PASS: TestStartupPinsSurviveRangeRoundTripAndRelease/direct (0.23s)
+    --- PASS: TestStartupPinsSurviveRangeRoundTripAndRelease/stored_rar (0.32s)
+=== RUN   TestStartupDisabledNonMKVAndSmallPool
+--- PASS: TestStartupDisabledNonMKVAndSmallPool (0.00s)
+=== RUN   TestStartupCancellationDoesNotCancelOverlappingDemand
+--- PASS: TestStartupCancellationDoesNotCancelOverlappingDemand (0.00s)
+=== RUN   TestStartupOversizedArticleYields
+--- PASS: TestStartupOversizedArticleYields (0.50s)
+=== RUN   TestStartupCuesBeforeEOFAndForwardBoundary
+--- PASS: TestStartupCuesBeforeEOFAndForwardBoundary (0.18s)
+=== RUN   TestStartupHeadYieldsToResumeButNotIndex
+=== RUN   TestStartupHeadYieldsToResumeButNotIndex/head
+=== RUN   TestStartupHeadYieldsToResumeButNotIndex/cues
+=== RUN   TestStartupHeadYieldsToResumeButNotIndex/cues_continuation
+=== RUN   TestStartupHeadYieldsToResumeButNotIndex/eof_probe
+=== RUN   TestStartupHeadYieldsToResumeButNotIndex/resume
+--- PASS: TestStartupHeadYieldsToResumeButNotIndex (0.00s)
+    --- PASS: TestStartupHeadYieldsToResumeButNotIndex/head (0.00s)
+    --- PASS: TestStartupHeadYieldsToResumeButNotIndex/cues (0.00s)
+    --- PASS: TestStartupHeadYieldsToResumeButNotIndex/cues_continuation (0.00s)
+    --- PASS: TestStartupHeadYieldsToResumeButNotIndex/eof_probe (0.00s)
+    --- PASS: TestStartupHeadYieldsToResumeButNotIndex/resume (0.00s)
+=== RUN   TestReleasedArticlesAreReusedAndYieldToReadAhead
+--- PASS: TestReleasedArticlesAreReusedAndYieldToReadAhead (0.50s)
+PASS

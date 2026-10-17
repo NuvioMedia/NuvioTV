@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDirection
 import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,6 +90,7 @@ import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.PosterCardDefaults
+import com.nuvio.tv.ui.components.LocalLandscapePosterMode
 import com.nuvio.tv.ui.components.rememberShimmerBrush
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import java.text.SimpleDateFormat
@@ -122,6 +124,7 @@ fun CastDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(NuvioTheme.colors.Background)
     ) {
         Crossfade(
             targetState = uiState,
@@ -185,14 +188,25 @@ private fun CastDetailContent(
             .sortedByDescending { releaseYearSortKey(it.releaseInfo) }
     }
 
-    val filmographyPosterStyle = remember(posterCardCornerRadiusDp) {
-        PosterCardStyle(
-            width = 112.dp,
-            height = 168.dp,
-            cornerRadius = posterCardCornerRadiusDp.dp,
-            focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
-            focusedScale = PosterCardDefaults.Style.focusedScale
-        )
+    val globalLandscape = LocalLandscapePosterMode.current
+    val filmographyPosterStyle = remember(posterCardCornerRadiusDp, globalLandscape) {
+        if (globalLandscape) {
+            PosterCardStyle(
+                width = 112.dp,
+                height = 240.dp,
+                cornerRadius = posterCardCornerRadiusDp.dp,
+                focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
+                focusedScale = PosterCardDefaults.Style.focusedScale
+            )
+        } else {
+            PosterCardStyle(
+                width = 112.dp,
+                height = 168.dp,
+                cornerRadius = posterCardCornerRadiusDp.dp,
+                focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
+                focusedScale = PosterCardDefaults.Style.focusedScale
+            )
+        }
     }
 
     val firstPosterFocusRequester = remember { FocusRequester() }
@@ -215,7 +229,7 @@ private fun CastDetailContent(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
         // Left accent gradient overlay
         val accentGradient = remember(accentColor, backgroundColor) {
             Brush.horizontalGradient(
@@ -430,7 +444,8 @@ private fun HeroSection(
                 text = person.name,
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.5).sp
+                    letterSpacing = (-0.5).sp,
+                    textDirection = person.name.contentTextDirection()
                 ),
                 color = NuvioTheme.colors.TextPrimary,
                 maxLines = 1,
@@ -642,7 +657,7 @@ private fun CastDetailSkeleton(personName: String) {
     val accentColor = NuvioTheme.colors.Secondary
     val shimmerBrush = rememberShimmerBrush()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
         val accentGradient = remember(accentColor, backgroundColor) {
             Brush.horizontalGradient(
                 colorStops = arrayOf(
@@ -773,7 +788,9 @@ private fun CastDetailError(
     onRetry: () -> Unit
 ) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NuvioTheme.colors.Background),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
