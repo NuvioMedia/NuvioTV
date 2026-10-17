@@ -119,6 +119,9 @@ data class UsenetSourceConfiguration(
 ) {
     val ready: Boolean get() = enabled && providers.any { it.enabled } && indexers.any { it.enabled }
 
+    /** The enabled providers, as the engine is given them. */
+    fun servers(): List<String> = providers.filter { it.enabled }.map { it.serverUrl() }
+
     /** List order is the hierarchy: by priority, then by the user's order within a priority. */
     fun normalized() = copy(providers = providers.sortedBy { it.priority }, indexers = indexers.sortedBy { it.priority })
 
