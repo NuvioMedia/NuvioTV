@@ -287,6 +287,8 @@ internal fun buildContinueWatchingItem(
     item: ContinueWatchingItem,
     useLandscapePosters: Boolean,
     showImdbRatings: Boolean,
+    detailImdbRatingsVisibility: com.nuvio.tv.domain.model.DetailImdbRatingsVisibility =
+        com.nuvio.tv.domain.model.DetailImdbRatingsVisibility.SHOW_ALL,
     airsDateTemplate: String,
     upcomingLabel: String,
     context: android.content.Context
@@ -344,6 +346,7 @@ internal fun buildContinueWatchingItem(
                 yearText = extractYearOrRange(item.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
                 imdbText = item.episodeImdbRating
+                    ?.takeIf { !isSeries || detailImdbRatingsVisibility.showEpisodeRating(isWatched = item.progress.isCompleted()) }
                     ?.let { String.format("%.1f", it) },
                 genres = item.genres.asStable(),
                 poster = item.progress.poster,
@@ -375,6 +378,7 @@ internal fun buildContinueWatchingItem(
                 yearText = extractYearOrRange(item.info.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
                 imdbText = item.info.imdbRating
+                    ?.takeIf { detailImdbRatingsVisibility.showEpisodeRating(isWatched = false) }
                     ?.let { String.format("%.1f", it) },
                 genres = item.info.genres.asStable(),
                 poster = item.info.poster,

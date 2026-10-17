@@ -3063,8 +3063,6 @@
     <string name="playback_reset_to_default">Standaardwaarden herstellen</string>
     <string name="playback_net_custom">Aangepast netwerk</string>
     <string name="playback_net_custom_sub">Gebruik meerdere parallelle verbindingen om progressieve streams op te halen. Wanneer dit uitstaat, wordt één verbinding gebruikt.</string>
-    <string name="playback_net_http2">HTTP/2 inschakelen</string>
-    <string name="playback_net_http2_sub">Schakel het HTTP/2-protocol in voor netwerkverbindingen, met multiplexing van verzoeken en snellere handshakes.</string>
     <string name="playback_net_parallel">Parallelle verbindingen</string>
     <string name="playback_net_parallel_sub">Gebruik meerdere verbindingen tegelijk om streams op te halen. Schakel dit in als je last hebt van bufferen terwijl je downloadsnelheid ruim voldoende is.</string>
     <string name="playback_net_connection_count">Aantal verbindingen</string>

@@ -3,6 +3,9 @@ package com.nuvio.tv.ui.components
 import androidx.lifecycle.ViewModelStore
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.PluginDataStore
+import com.nuvio.tv.data.mediaserver.ServerRepository
+import com.nuvio.tv.data.mediaserver.ServerStreams
+import com.nuvio.tv.data.mediaserver.ServersUiState
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.AddonResource
 import com.nuvio.tv.core.usenet.UsenetIndexer
@@ -51,7 +54,20 @@ class PlaybackAvailabilityViewModelTest {
             every { metaRepository.getCachedMeta(any(), any()) } returns null
             val usenetSettings = mockk<UsenetSourceSettings>()
             every { usenetSettings.snapshots } returns flowOf(0 to Result.success(UsenetSourceConfiguration()))
-            val viewModel = PlaybackAvailabilityViewModel(addonRepository, pluginDataStore, metaRepository, usenetSettings)
+            val serverRepository = mockk<ServerRepository> {
+                every { uiState } returns MutableStateFlow(ServersUiState())
+            }
+            val serverStreams = mockk<ServerStreams> {
+                every { canServe(any(), any()) } returns false
+            }
+            val viewModel = PlaybackAvailabilityViewModel(
+                addonRepository,
+                pluginDataStore,
+                metaRepository,
+                usenetSettings,
+                serverRepository,
+                serverStreams
+            )
             viewModelStore.put("availability", viewModel)
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
                 viewModel.availability.collect {}
@@ -115,7 +131,16 @@ class PlaybackAvailabilityViewModelTest {
             val snapshots = MutableStateFlow<Pair<Int, Result<UsenetSourceConfiguration>>>(0 to Result.success(ready))
             val usenetSettings = mockk<UsenetSourceSettings>()
             every { usenetSettings.snapshots } returns snapshots
-            val viewModel = PlaybackAvailabilityViewModel(addonRepository, pluginDataStore, metaRepository, usenetSettings)
+            val serverRepository = mockk<ServerRepository> {
+                every { uiState } returns MutableStateFlow(ServersUiState())
+            }
+            val serverStreams = mockk<ServerStreams> {
+                every { canServe(any(), any()) } returns false
+                every { canServe("movie", "server-item") } returns true
+            }
+            val viewModel = PlaybackAvailabilityViewModel(
+                addonRepository, pluginDataStore, metaRepository, usenetSettings, serverRepository, serverStreams
+            )
             viewModelStore.put("availability", viewModel)
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
                 viewModel.availability.collect {}
@@ -128,6 +153,7 @@ class PlaybackAvailabilityViewModelTest {
             snapshots.value = 0 to Result.failure(IllegalStateException("keystore"))
             settle { !viewModel.availability.value.canStream("movie", "tt123") }
             assertFalse(viewModel.availability.value.canStream("movie", "tt123"))
+            assertTrue(viewModel.availability.value.canStream("movie", "server-item"))
         } finally {
             viewModelStore.clear()
             runCurrent()

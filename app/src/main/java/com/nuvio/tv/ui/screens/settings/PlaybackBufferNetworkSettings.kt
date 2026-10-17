@@ -345,12 +345,6 @@ private fun ParallelNetworkControls(
     updateMemory: PlaybackSettingsUpdate
 ) {
     SettingsToggleRow(
-        title = stringResource(R.string.playback_net_http2),
-        subtitle = stringResource(R.string.playback_net_http2_sub),
-        checked = settings.enableHttp2,
-        onToggle = { updateMemory { setEnableHttp2(!settings.enableHttp2) } }
-    )
-    SettingsToggleRow(
         title = stringResource(R.string.playback_net_parallel),
         subtitle = stringResource(R.string.playback_net_parallel_sub),
         checked = settings.useParallelConnections,

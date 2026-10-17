@@ -1,5 +1,7 @@
 package com.nuvio.tv.core.deeplink
 
+import com.nuvio.tv.core.party.PARTY_CODE_LENGTH
+import com.nuvio.tv.core.party.normalizePartyCode
 import com.nuvio.tv.domain.deeplink.AppDeepLink
 import java.net.URI
 import java.net.URLDecoder
@@ -33,6 +35,10 @@ object DeepLinkParser {
                 if (type.isBlank() || id.isBlank()) null else AppDeepLink.Meta(type = type, id = id)
             }
             "imdb", "tmdb" -> parseProviderMetaDeepLink(host, pathSegments, parsedUrl)
+            "party" -> (pathSegments.firstOrNull() ?: firstParameter(queryParameters(parsedUrl), "code"))
+                ?.let(::normalizePartyCode)
+                ?.takeIf { it.length == PARTY_CODE_LENGTH }
+                ?.let(AppDeepLink::Party)
             "auth" -> null
             else -> {
                 if (looksLikeAddonHost(host)) {

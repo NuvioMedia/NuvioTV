@@ -166,9 +166,16 @@ private fun StreamInfoContent(data: StreamInfoData) {
                 modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
             )
         }
-        if (data.playerEngine != null) {
+        if (data.playerEngine != null || data.serverPlayback != null) {
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
-            InfoItem(label = stringResource(R.string.stream_info_player_engine), value = data.playerEngine)
+            Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
+                InfoItem(label = stringResource(R.string.stream_info_player_engine), value = data.playerEngine)
+                InfoItem(
+                    label = stringResource(R.string.stream_info_server),
+                    value = data.serverPlayback,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     }

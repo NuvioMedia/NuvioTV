@@ -241,7 +241,7 @@
 <string name="detail_comments_mode_episode_change">Cambia episodio (%1$s)</string>
 <string name="detail_comments_episode_picker_title">Scegli episodio</string>
 <string name="detail_comments_episode_picker_subtitle">Scegli un episodio per vederne le recensioni su Trakt</string>
-<string name="detail_section_network">Network</string>
+<string name="detail_section_network">Emittente</string>
 <string name="detail_section_production">Produzione</string>
 <string name="detail_comments_empty">Non ci sono ancora recensioni Trakt.</string>
 <string name="detail_comments_error">Impossibile caricare le recensioni Trakt al momento.</string>
@@ -421,7 +421,7 @@
 <string name="settings_experience">Esperienza</string>
 <string name="settings_account">Account</string>
 <string name="settings_profiles">Profili</string>
-<string name="settings_layout">Layout</string>
+<string name="settings_layout">Aspetto</string>
 <string name="settings_content_discovery">Contenuti e scoperta</string>
 <string name="settings_content_discovery_subtitle">Add-on, plugin, cataloghi e sorgenti di scoperta</string>
 <string name="settings_content_discovery_addons_subtitle">Gestisci add-on, ordine dei cataloghi e collezioni</string>
@@ -561,7 +561,7 @@
 <string name="sentry_turn_off">Disattiva</string>
 <string name="sentry_turn_on">Attiva</string>
 <string name="advanced_section_cache">Cache</string>
-<string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
+<string name="advanced_section_dv_diagnostics" translatable="false">Diagnostica DV</string>
 <string name="advanced_fast_horizontal_navigation">Navigazione Orizzontale Rapida</string>
 <string name="advanced_fast_horizontal_navigation_subtitle">Aumenta la velocità di ripetizione del D-pad nelle righe mantenendo il throttling attivo.</string>
 <string name="advanced_nuvio_performance_mode">Memoria nativa ExoPlayer</string>
@@ -778,29 +778,29 @@
 <string name="audio_strip_hdr10plus_sub">Rimuove i metadati dinamici HDR10+ dai flussi. Quando è attivo anche Converti in DV8.1, la rimozione avviene dopo la conversione.</string>
 <string name="audio_dv7_preserve_mapping_title">Mantieni il mapping DV (DV7 in DV8.1)</string>
 <string name="audio_dv7_preserve_mapping_sub">Mantiene il tone-mapping originale voluto dal creatore, al costo di un po\' più di elaborazione per frame.</string>
-<string name="dv7_libdovi_mode_caption" translatable="false">Conversion mode (auto-selected, do not change unless instructed). Pick one to force it; None uses auto. Active only when DV7 Handling is Convert to DV8.1.</string>
-<string name="dv7_libdovi_mode_row_title" translatable="false">Conversion mode</string>
+<string name="dv7_libdovi_mode_caption" translatable="false">Modalità di conversione (selezionata automaticamente; non modificarla salvo diversa indicazione). Scegline una per forzarla; "Nessuna" usa la modalità automatica. È attiva solo quando "Gestione DV7" è impostata su "Converti in DV8.1".</string>
+<string name="dv7_libdovi_mode_row_title" translatable="false">Modalità di conversione</string>
 <string name="dv7_libdovi_mode_none_title" translatable="false">None</string>
-<string name="dv7_libdovi_mode_none_sub" translatable="false">No override. Uses the automatically selected conversion mode.</string>
-<string name="dv7_libdovi_mode_0_title" translatable="false">Mode 0 — Copy (no convert)</string>
-<string name="dv7_libdovi_mode_0_sub" translatable="false">Parse the RPU and write it back untouched. No profile conversion.</string>
-<string name="dv7_libdovi_mode_1_title" translatable="false">Mode 1 — MEL</string>
-<string name="dv7_libdovi_mode_1_sub" translatable="false">Convert the RPU to be MEL (Minimum Enhancement Layer) compatible.</string>
-<string name="dv7_libdovi_mode_2_title" translatable="false">Mode 2 — 8.1 (no-op mapping)</string>
-<string name="dv7_libdovi_mode_2_sub" translatable="false">Convert to profile 8.1 with luma and chroma mapping set to no-op. The standard conversion.</string>
-<string name="dv7_libdovi_mode_3_title" translatable="false">Mode 3 — Profile 5 to 8.1</string>
-<string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
-<string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
-<string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
+<string name="dv7_libdovi_mode_none_sub" translatable="false">Nessuna sovrascrittura. Usa la modalità di conversione selezionata automaticamente.</string>
+<string name="dv7_libdovi_mode_0_title" translatable="false">Modalità 0 — Copia (nessuna conversione)</string>
+<string name="dv7_libdovi_mode_0_sub" translatable="false">Analizza l\'RPU e lo riscrive senza modifiche. Nessuna conversione del profilo.</string>
+<string name="dv7_libdovi_mode_1_title" translatable="false">Modalità 1 — MEL</string>
+<string name="dv7_libdovi_mode_1_sub" translatable="false">Converte l\'RPU per renderlo compatibile con MEL (Minimum Enhancement Layer).</string>
+<string name="dv7_libdovi_mode_2_title" translatable="false">Modalità 2 — 8.1 (mappatura senza effetto)</string>
+<string name="dv7_libdovi_mode_2_sub" translatable="false">Converte al profilo 8.1 con la mappatura di luminanza e crominanza impostata senza effetto. È la conversione standard.</string>
+<string name="dv7_libdovi_mode_3_title" translatable="false">Modalità 3 — Profilo 5 a 8.1</string>
+<string name="dv7_libdovi_mode_3_sub" translatable="false">Converte gli stream del profilo 5 (DV5) al profilo 8.1. È la stessa conversione dell\'opzione "Converti DV5 in DV8.1".</string>
+<string name="dv7_libdovi_mode_4_title" translatable="false">Modalità 4 — 8.4 (statico)</string>
+<string name="dv7_libdovi_mode_4_sub" translatable="false">Converte al profilo statico 8.4.</string>
 <string name="audio_mpv_hwdec_title">Decodifica Hardware (Solo MPV)</string>
 <string name="audio_mpv_hwdec_dialog_subtitle">Seleziona come libmpv deve utilizzare i decoder hardware.</string>
 <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (diretto -> copia)</string>
 <string name="audio_mpv_hwdec_legacy_direct_copy_desc">Comportamento predefinito precedente: prova prima l\'hardware diretto, poi il copy-back.</string>
 <string name="audio_mpv_hwdec_auto_safe">Automatico (auto-safe)</string>
 <string name="audio_mpv_hwdec_auto_safe_desc">Modalità automatica più sicura con fallback in caso di errore di alcuni decoder hardware.</string>
-<string name="audio_mpv_hwdec_hardware_copy">Hardware (copy) (mediacodec-copy)</string>
+<string name="audio_mpv_hwdec_hardware_copy">Hardware (copia) (mediacodec-copy)</string>
 <string name="audio_mpv_hwdec_hardware_copy_desc">Usa la decodifica hardware con copy-back nella memoria software.</string>
-<string name="audio_mpv_hwdec_hardware_direct">Hardware (direct) (mediacodec)</string>
+<string name="audio_mpv_hwdec_hardware_direct">Hardware (diretto) (mediacodec)</string>
 <string name="audio_mpv_hwdec_hardware_direct_desc">Usa la decodifica hardware diretta. Percorso più veloce su dispositivi compatibili.</string>
 <string name="audio_mpv_hwdec_disabled">Disattivata (no)</string>
 <string name="audio_mpv_hwdec_disabled_desc">Disabilita la decodifica hardware e utilizza solo quella software.</string>
@@ -836,7 +836,7 @@
 <string name="sub_libass_mode">Modalità rendering Libass</string>
 <string name="sub_mode_overlay_gl">Overlay OpenGL (Consigliato)</string>
 <string name="sub_mode_overlay_gl_sub">Migliore qualità con supporto HDR. Esegue il rendering dei sottotitoli su un thread separato.</string>
-<string name="sub_mode_overlay_canvas">Overlay Canvas</string>
+<string name="sub_mode_overlay_canvas">Canvas sovrapposto</string>
 <string name="sub_mode_effects_gl">Effetti OpenGL</string>
 <string name="sub_mode_effects_gl_sub">Supporto animazioni tramite effetti Media3. Più veloce di Canvas.</string>
 <string name="sub_mode_effects_canvas">Effetti Canvas</string>
@@ -1046,7 +1046,7 @@
 <string name="settings_card_depth_surface_posters">Locandine</string>
 <string name="settings_card_depth_surface_continue_watching">Continua a guardare</string>
 <string name="settings_card_depth_surface_episodes">Schede episodi</string>
-<string name="settings_card_depth_surface_cast">Cast</string>
+<string name="settings_card_depth_surface_cast">Interpreti</string>
 <string name="settings_card_depth_surface_trailers">Trailer</string>
 <string name="layout_open">Aperto</string>
 <string name="layout_closed">Chiuso</string>
@@ -1058,7 +1058,7 @@
 <string name="layout_preset_dense">Denso</string>
 <string name="layout_preset_standard">Standard</string>
 <string name="layout_preset_balanced">Bilanciato</string>
-<string name="layout_preset_comfort">Comfort</string>
+<string name="layout_preset_comfort">Comodo</string>
 <string name="layout_preset_large">Grande</string>
 <string name="layout_memory_only_scroll">Scorrimento verticale solo memoria</string>
 <string name="layout_memory_only_scroll_sub">Salta il caricamento di nuove immagini durante lo scorrimento verticale.</string>
@@ -1268,7 +1268,7 @@
 <string name="animeskip_subtitle">Configura il Client ID di Anime Skip per saltare sigle iniziali e finali degli anime</string>
 <string name="animeskip_enable_title">Abilita Anime Skip</string>
 <string name="animeskip_enable_subtitle">Ottieni i timestamps per saltare le scene da anime-skip.com</string>
-<string name="animeskip_client_id_title">Client ID</string>
+<string name="animeskip_client_id_title">ID client</string>
 <string name="animeskip_client_id_subtitle">Necessario per ottenere i timestamps per saltare le scene da anime-skip.com</string>
 <string name="animeskip_dialog_title">Client ID Anime Skip</string>
 <string name="animeskip_dialog_subtitle">Crea il tuo Client ID su anime-skip.com/account/settings</string>
@@ -1286,7 +1286,7 @@
 <string name="tmdb_enrich_continue_watching_subtitle">Applica l\'arricchimento TMDB agli elementi in Continua a guardare</string>
 <string name="tmdb_language_title">Lingua</string>
 <string name="tmdb_language_subtitle">Lingua dei metadati TMDB per titolo, logo e campi abilitati</string>
-<string name="tmdb_artwork_title">Artwork</string>
+<string name="tmdb_artwork_title">Immagini</string>
 <string name="tmdb_artwork_subtitle">Immagini del logo e dello sfondo da TMDB</string>
 <string name="tmdb_basic_info_title">Informazioni di base</string>
 <string name="tmdb_basic_info_subtitle">Descrizione, generi e valutazione da TMDB</string>
@@ -1412,7 +1412,7 @@
 <string name="debug_section_account">Account</string>
 <string name="debug_manual_signin_title">Accesso manuale</string>
 <string name="debug_manual_signin_subtitle">Accedi con email e password (autenticazione Supabase)</string>
-<string name="debug_email_placeholder">Email</string>
+<string name="debug_email_placeholder">Indirizzo email</string>
 <string name="debug_password_placeholder">Password</string>
 <string name="debug_signing_in">Accesso in corso\u2026</string>
 <string name="debug_sign_in">Accedi</string>
@@ -1629,7 +1629,7 @@
 <string name="player_loading_subtitles_addon">Sottotitoli: %1$s (%2$d / %3$d)</string>
 <string name="player_loading_building">Configurazione player…</string>
 <string name="player_loading_starting">Avvio flusso…</string>
-<string name="player_loading_buffering">Buffering…</string>
+<string name="player_loading_buffering">Caricamento…</string>
 <string name="player_loading_fallback_pcm_audio">Inizializzazione traccia audio fallita - passaggio ad audio PCM…</string>
 <string name="player_loading_fallback_hevc_decoder">Inizializzazione decoder fallita - passaggio a decoder HEVC…</string>
 <string name="player_engine_switching_title">Cambio motore player</string>
@@ -1694,7 +1694,7 @@
 <string name="stream_info_size">Dimensione</string>
 <string name="stream_info_codec">Codec</string>
 <string name="stream_info_resolution">Risoluzione</string>
-<string name="stream_info_frame_rate">Frame Rate</string>
+<string name="stream_info_frame_rate">Frequenza fotogrammi</string>
 <string name="stream_info_bitrate">Bitrate</string>
 <string name="stream_info_bitrate_file">Bitrate (file)</string>
 <string name="stream_info_hud">HUD</string>
@@ -1861,7 +1861,7 @@
 <string name="genre_adventure">Avventura</string>
 <string name="genre_animation">Animazione</string>
 <string name="genre_comedy">Commedia</string>
-<string name="genre_crime">Crime</string>
+<string name="genre_crime">Crimine</string>
 <string name="genre_documentary">Documentario</string>
 <string name="genre_drama">Drammatico</string>
 <string name="genre_family">Per famiglie</string>
@@ -1878,17 +1878,17 @@
 <string name="genre_western">Western</string>
 <string name="genre_action_adventure">Azione &amp; Avventura</string>
 <string name="genre_kids">Bambini</string>
-<string name="genre_news">News</string>
-<string name="genre_reality">Reality</string>
-<string name="genre_sci_fi_fantasy">Sci-Fi &amp; Fantasy</string>
-<string name="genre_soap">Soap</string>
-<string name="genre_talk">Talk</string>
+<string name="genre_news">Notizie</string>
+<string name="genre_reality">Reality show</string>
+<string name="genre_sci_fi_fantasy">Fantascienza e fantasy</string>
+<string name="genre_soap">Soap opera</string>
+<string name="genre_talk">Talk show</string>
 <string name="genre_war_politics">Guerra &amp; Politica</string>
 <string name="genre_anime">Anime</string>
 <string name="genre_biography">Biografico</string>
 <string name="genre_children">Bambini</string>
 <string name="genre_donghua">Donghua</string>
-<string name="genre_game_show">Game Show</string>
+<string name="genre_game_show">Programma a quiz</string>
 <string name="genre_holiday">Festività</string>
 <string name="genre_home_and_garden">Casa e giardino</string>
 <string name="genre_mini_series">Miniserie</string>
@@ -1926,7 +1926,7 @@
 <string name="library_source_trakt">TRAKT</string>
 <string name="library_source_saved">Salvati</string>
 <string name="library_source_cloud">Cloud</string>
-<string name="library_watchlist">Watchlist</string>
+<string name="library_watchlist">Lista da guardare</string>
 <string name="library_status_watching">In visione</string>
 <string name="library_status_plan_to_watch">Da guardare</string>
 <string name="library_status_on_hold">In pausa</string>
@@ -2218,7 +2218,7 @@
 
     <!-- PlaybackAudioSettings -->
 <string name="audio_passthrough_info">Il passthrough audio (TrueHD, DTS, AC-3, ecc.) è automatico. Se collegato a un ricevitore AV o soundbar compatibile tramite HDMI, l\'audio lossless viene inviato così com\'è senza decodifica.</string>
-<string name="audio_dv_title">DV7 - HEVC Fallback</string>
+<string name="audio_dv_title">Conversione di ripiego da DV7 a HEVC</string>
 <string name="audio_dv_sub">Mappa Dolby Vision Profile 7 in HEVC standard per i dispositivi senza supporto DV hardware</string>
 
     <!-- SidebarNavigation / MainActivity -->
@@ -2432,7 +2432,7 @@
 <string name="collections_editor_tile_shape">Forma riquadro</string>
 <string name="collections_editor_hide_title">Nascondi titolo</string>
 <string name="collections_editor_hide_title_desc">Mostra solo l\'immagine di copertina</string>
-<string name="collections_editor_display">Display</string>
+<string name="collections_editor_display">Visualizzazione</string>
 <string name="collections_editor_catalogs">Cataloghi</string>
 <string name="collections_editor_add_catalog">Aggiungi catalogo</string>
 <string name="collections_editor_select_catalogs">Seleziona cataloghi</string>
@@ -2478,7 +2478,7 @@
 <string name="collections_editor_tmdb_default_list">Lista TMDB</string>
 <string name="collections_editor_tmdb_default_production">Produzione TMDB</string>
 <string name="collections_editor_tmdb_default_network">Network TMDB</string>
-<string name="collections_editor_tmdb_default_discover">TMDB Discover</string>
+<string name="collections_editor_tmdb_default_discover">Scopri TMDB</string>
 <string name="collections_editor_tmdb_movie_collection">Collezione film TMDB</string>
 <string name="collections_editor_tmdb_mode_presets">Preset</string>
 <string name="collections_editor_tmdb_mode_public_list">Lista pubblica</string>
@@ -2668,8 +2668,8 @@
 <string name="collections_editor_tmdb_genre_horror">Horror</string>
 <string name="collections_editor_tmdb_genre_scifi">Fantascienza</string>
 <string name="collections_editor_tmdb_genre_drama">Drammatico</string>
-<string name="collections_editor_tmdb_genre_crime">Crime</string>
-<string name="collections_editor_tmdb_genre_reality">Reality</string>
+<string name="collections_editor_tmdb_genre_crime">Crimine</string>
+<string name="collections_editor_tmdb_genre_reality">Reality show</string>
     <!-- Auto-play regex presets -->
 <string name="autoplay_regex_preset_any_1080p_plus">Qualsiasi 1080p+</string>
 <string name="autoplay_regex_preset_4k_remux">4K / Remux</string>
@@ -2965,8 +2965,8 @@
     </plurals>
 <string name="debrid_size_range_any">Qualsiasi</string>
 <string name="debrid_size_range_up_to">Fino a %1$dGB</string>
-<string name="debrid_size_range_min_plus">%1$dGB+</string>
-<string name="debrid_size_range_min_max">%1$d-%2$dGB</string>
+<string name="debrid_size_range_min_plus">%1$d GB+</string>
+<string name="debrid_size_range_min_max">%1$d-%2$d GB</string>
 
     <!-- Subtitle selection: unknown language fallback -->
 <string name="subtitle_language_unknown">Sconosciuto</string>
@@ -3049,15 +3049,13 @@
 <string name="playback_cache_vod_size">Dimensione cache VOD</string>
 <string name="playback_cache_vod_size_sub">Utilizzo massimo su disco per la cache VOD progressiva (evict LRU).</string>
 <string name="playback_cache_info_range">Intervallo: %1$d-%2$d MB.</string>
-<string name="playback_cache_info_auto">La modalità automatica punta a circa il 10%% dello spazio libero.</string>
+<string name="playback_cache_info_auto">La modalità automatica punta a circa il 10% dello spazio libero.</string>
 <string name="playback_cache_info_manual_headroom">La modalità manuale mantiene circa %1$dMB di margine.</string>
 <string name="playback_cache_info_free_disk">Spazio libero disponibile: %1$s.</string>
 <string name="playback_cache_info_restart">Il nuovo limite cache si applica dopo il riavvio dell\'app quando si cambia modalità o dimensione.</string>
 <string name="playback_reset_to_default">Ripristina predefinito</string>
 <string name="playback_net_custom">Rete personalizzata</string>
 <string name="playback_net_custom_sub">Usa più connessioni parallele per recuperare flussi progressivi. Quando è disattivato, viene usata una sola connessione.</string>
-<string name="playback_net_http2">Abilita HTTP/2</string>
-<string name="playback_net_http2_sub">Abilita il protocollo HTTP/2 per le connessioni di rete, consentendo il multiplexing delle richieste e tempi di handshake più rapidi.</string>
 <string name="playback_net_parallel">Connessioni parallele</string>
 <string name="playback_net_parallel_sub">Usa più connessioni in parallelo per recuperare i flussi. Attivalo se hai buffering anche se la tua velocità di download è chiaramente sufficiente.</string>
 <string name="playback_net_connection_count">Numero connessioni</string>
@@ -3073,7 +3071,7 @@
 <string name="diag_label_host">Host</string>
 <string name="diag_label_when">Quando</string>
 <string name="diag_label_device">Dispositivo</string>
-<string name="diag_label_display">Display</string>
+<string name="diag_label_display">Visualizzazione</string>
 <string name="diag_label_dv7_decoder">Decoder DV7</string>
 <string name="diag_label_dv_decoder">Decoder DV</string>
 <string name="diag_label_dv_bridge">Bridge DV</string>
@@ -3099,7 +3097,7 @@
 <string name="diag_value_ready">Pronto</string>
 <string name="diag_value_not_ready">Non pronto</string>
 <string name="diag_value_decoder_hidden">%1$s (nascosto)</string>
-<string name="diag_value_on">On</string>
+<string name="diag_value_on">Attivo</string>
 <string name="diag_value_off">Off</string>
 <string name="diag_value_conversions_fmt">%1$d di %2$d riuscite</string>
 <string name="diag_value_never_rendered">Mai renderizzato</string>
@@ -3144,4 +3142,236 @@
 <string name="stream_test_video_bitrate">Bitrate video medio: %1$s</string>
 <string name="stream_test_error_connection">Connessione fallita. Il link dell\'ultimo stream riprodotto potrebbe essere scaduto o non raggiungibile. Riproduci di nuovo il video e riprova.</string>
 
+
+    <string name="playback_unavailable">Riproduzione non disponibile</string>
+    <string name="playback_unavailable_message">La riproduzione non è disponibile per questo titolo con la configurazione attuale.</string>
+    <string name="detail_more_like_this_powered_by_simkl">Offerto da Simkl</string>
+    <string name="theme_color_custom">Personalizzato</string>
+    <string name="custom_theme_title">Il tuo gradiente personalizzato</string>
+    <string name="custom_theme_subtitle">Scegli tre colori per il tema. Seleziona un colore per modificarlo.</string>
+    <string name="custom_theme_solid_title">Il tuo colore personalizzato</string>
+    <string name="custom_theme_solid_subtitle">Scegli un colore per il tema.</string>
+    <string name="custom_theme_mode_gradient">Gradiente</string>
+    <string name="custom_theme_mode_solid">Colore singolo</string>
+    <string name="custom_theme_color_number">Colore %1$d</string>
+    <string name="custom_theme_hue">Tonalità</string>
+    <string name="custom_theme_saturation">Saturazione</string>
+    <string name="custom_theme_brightness">Luminosità</string>
+    <string name="custom_theme_enter_hex">Inserisci il codice esadecimale</string>
+    <string name="custom_theme_hex_title">Colore esadecimale</string>
+    <string name="custom_theme_hex_hint">Scegli sei caratteri (0–9, A–F). Il primo tasto che premi sostituirà il codice attuale.</string>
+    <string name="custom_theme_hex_clear">Cancella</string>
+    <string name="custom_theme_hex_delete">Elimina</string>
+    <string name="custom_theme_use_color">Usa colore</string>
+    <string name="custom_theme_save">Salva tema</string>
+    <string name="custom_theme_remote_hint">← → Regola · ↑ ↓ Sposta · Tieni premuto per regolare più rapidamente</string>
+    <string name="custom_theme_preview">ANTEPRIMA</string>
+    <string name="custom_theme_preview_ring">Elemento selezionato</string>
+    <string name="appearance_startup_splash">Schermata di avvio</string>
+    <string name="appearance_startup_splash_subtitle">Mostra il logo e l\'indicatore di caricamento dopo la selezione di un profilo.</string>
+    <string name="ambient_mode_title">Modalità ambientale</string>
+    <string name="ambient_mode_subtitle">Mostra le immagini dei cataloghi quando la TV è inattiva.</string>
+    <string name="ambient_mode_enabled_subtitle">Riempi lo schermo con gli sfondi dopo un periodo di inattività del telecomando.</string>
+    <string name="ambient_mode_timeout">Avvia dopo</string>
+    <string name="ambient_mode_timeout_subtitle">Attendi questo intervallo prima di avviare la modalità ambientale.</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="other">%1$d minuti</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">Cataloghi</string>
+    <string name="ambient_mode_catalogs_subtitle">Scegli fino a 3 cataloghi da cui caricare le immagini.</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">Scegli fino a 3 cataloghi</string>
+    <string name="ambient_mode_catalogs_default">Come nell\'hero</string>
+    <string name="ambient_mode_catalogs_count">%1$d di %2$d</string>
+    <string name="licenses_attributions_section_ui">LIBRERIE DELL\'INTERFACCIA</string>
+    <string name="licenses_attributions_haze_title">Haze 1.7.2</string>
+    <string name="licenses_attributions_haze_body">Usato per gli effetti di sfocatura dello sfondo. Creato da Chris Banes. Distribuito con licenza Apache 2.0.</string>
+    <string name="tracking_simkl_anime_id_tvdb">Preferisci TVDB</string>
+    <string name="advanced_section_startup">Avvio e uscita</string>
+    <string name="advanced_section_network_tests">Test di rete</string>
+    <string name="playback_section_player_title">Lettore</string>
+    <string name="playback_section_player_title_desc">Lettore predefinito, motore interno e ripiego in caso di errore.</string>
+    <string name="playback_section_stream_selection">Selezione del flusso</string>
+    <string name="playback_section_stream_selection_desc">Come viene scelto un flusso quando premi Riproduci.</string>
+    <string name="playback_section_up_next">In arrivo</string>
+    <string name="playback_section_up_next_desc">Riproduzione automatica dell\'episodio successivo e suggerimenti al termine della visione.</string>
+    <string name="playback_section_skip">SALTA SEGMENTI</string>
+    <string name="playback_section_skip_desc">Salta sigle iniziali, riepiloghi e titoli di coda.</string>
+    <string name="playback_section_interface">Interfaccia del lettore</string>
+    <string name="playback_section_interface_desc">Sovrapposizioni, orologio e dettagli mostrati durante la riproduzione.</string>
+    <string name="playback_section_audio_only_desc">Lingue, decodifica e uscita audio.</string>
+    <string name="playback_section_video_desc">Corrispondenza della frequenza dei fotogrammi, Dolby Vision e HDR.</string>
+    <string name="playback_default_player">Lettore predefinito</string>
+    <string name="playback_external_player_label">Lettore esterno</string>
+    <string name="playback_afr_mode">Corrispondenza della frequenza dei fotogrammi</string>
+    <string name="playback_dv_hdr_label">Dolby Vision e HDR</string>
+    <string name="playback_mpv_decoding_label">Decodifica MPV</string>
+    <string name="playback_network_label">Rete</string>
+    <string name="sub_languages_label">Lingue</string>
+    <string name="sub_style_label">Stile</string>
+    <string name="autoplay_selected_count">%1$d selezionati</string>
+    <string name="auto_skip_movie_credits">Titoli di coda</string>
+    <string name="auto_skip_movie_credits_sub">Salta automaticamente i titoli di coda dei film, mantenendo le scene post-crediti.</string>
+    <string name="skip_movie_credits">Salta i titoli di coda</string>
+    <string name="skip_to_post_credits">Vai alla scena dopo i titoli di coda</string>
+    <string name="playback_true_black_letterbox">Bande nere pure</string>
+    <string name="playback_true_black_letterbox_sub">Lascia senza colore le bande attorno all\'immagine per mantenerle nere in HDR. Disattiva questa opzione se sulle bande compare una linea chiara.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Decodifica software G-NEXT di ripiego per Hi10P (solo MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Usa la decodifica software G-NEXT quando i dettagli del flusso indicano H.264 Hi10P. È disattivata per impostazione predefinita; attivala solo se la riproduzione Hi10P si blocca o non riesce.</string>
+    <string name="autoplay_preload_next_episode">Precarica le sorgenti del prossimo episodio</string>
+    <string name="autoplay_preload_next_episode_sub">Avvia la ricerca delle sorgenti in background prima che compaia il pulsante per l\'episodio successivo.</string>
+    <string name="layout_section_sidebar">Barra laterale e navigazione</string>
+    <string name="layout_section_sidebar_desc">Stile della barra laterale e posizione della sezione Scopri.</string>
+    <string name="layout_section_card_depth_desc">Effetti di luce sul bordo e brillantezza delle schede.</string>
+    <string name="layout_section_custom_poster_desc">Usa le immagini di un servizio esterno di locandine.</string>
+    <string name="layout_hide_floating_pill">Nascondi l\'indicatore di navigazione</string>
+    <string name="layout_hide_floating_pill_sub">Nascondi l\'indicatore di navigazione fluttuante nella schermata Home.</string>
+    <string name="layout_trailer_play_in_background">Riproduci in secondo piano</string>
+    <string name="layout_trailer_play_in_background_sub">Riproduci il trailer al posto dello sfondo lasciando visibile la pagina.</string>
+    <string name="layout_trailer_pause_on_scroll">Metti in pausa durante lo scorrimento</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Metti in pausa il trailer quando scorri verso il basso e riprendilo quando torni in cima.</string>
+    <string name="layout_trailer_4k">Trailer in 4K</string>
+    <string name="layout_trailer_4k_sub">Riproduci trailer oltre 1080p quando disponibili. Richiedono molta più memoria; l\'opzione è disattivata per impostazione predefinita sui dispositivi con 2 GB di RAM o meno.</string>
+    <string name="layout_detail_group_episodes">Episodi</string>
+    <string name="layout_detail_group_trailers">Trailer</string>
+    <string name="layout_detail_group_metadata">Metadati</string>
+    <string name="layout_custom_poster_title">Sorgente locandine personalizzata</string>
+    <string name="layout_custom_poster_description">Fornisci uno schema URL per le locandine di un servizio esterno. Se un segnaposto non ha un valore per un titolo, viene usata la locandina originale.</string>
+    <string name="layout_custom_poster_clear">Cancella</string>
+    <string name="layout_custom_poster_active">✓ Sorgente locandine personalizzata attiva</string>
+    <string name="layout_custom_poster_qr">Configura dal telefono</string>
+    <string name="custom_poster_qr_instruction">Scansiona il codice QR con il telefono per incollare uno schema URL per le locandine.</string>
+    <string name="layout_custom_poster_screen_home">Home</string>
+    <string name="layout_custom_poster_screen_continue_watching">Continua a guardare</string>
+    <string name="layout_custom_poster_screen_collections">Collezioni</string>
+    <string name="layout_custom_poster_screen_library">Libreria</string>
+    <string name="layout_custom_poster_screen_search">Cerca</string>
+    <string name="layout_custom_poster_screen_details">Schermata dettagli</string>
+    <string name="layout_custom_poster_screen_tv_recommendations">Consigliati TV</string>
+    <string name="layout_always_show_landscape_clearlogo">Mostra sempre lo sfondo con il logo per le locandine orizzontali</string>
+    <string name="layout_always_show_landscape_clearlogo_sub">Ignora la locandina orizzontale dell\'addon e usa invece lo sfondo con il logo trasparente sovrapposto.</string>
+    <string name="web_custom_poster_title">Sorgente locandine personalizzata</string>
+    <string name="web_custom_poster_subtitle">Incolla qui sotto uno schema URL per le locandine e premi Salva.</string>
+    <string name="web_custom_poster_label">Schema URL</string>
+    <string name="web_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
+    <string name="web_custom_poster_save">Salva</string>
+    <string name="web_custom_poster_clear">Cancella</string>
+    <string name="web_custom_poster_saved">Salvato!</string>
+    <string name="web_custom_poster_cleared">Cancellato</string>
+    <string name="web_custom_poster_error_empty">Inserisci uno schema URL.</string>
+    <string name="web_custom_poster_error_save">Salvataggio non riuscito</string>
+    <string name="web_custom_poster_error_clear">Impossibile cancellare</string>
+    <string name="web_custom_poster_error_connection">Errore di connessione</string>
+    <string name="web_custom_poster_current">Attuale:</string>
+    <string name="web_custom_poster_none">Nessuno schema configurato</string>
+    <string name="web_custom_poster_loading">Caricamento\u2026</string>
+    <string name="web_custom_poster_placeholders_info">Segnaposto: {id} include tutti gli ID dei contenuti. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} indicano un singolo tipo di ID: se non disponibile, viene mantenuta la locandina originale. {imdb_id|tmdb_id|kitsu_id} dichiara i tipi di ID supportati: viene usato quello corrispondente, altrimenti viene mantenuta la locandina originale. Aggiungi ? per rendere facoltativo un segnaposto: verrà sostituito con un valore vuoto invece di interrompere la ricerca ({imdb_id?}). Altri segnaposto: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="mdblist_name">MDBList</string>
+    <string name="mdblist_tracking_description">Sincronizza la cronologia di visione e i progressi di riproduzione tra i dispositivi.</string>
+    <string name="mdblist_connected_as">Connesso come %1$s</string>
+    <string name="mdblist_account_fallback">Utente MDBList</string>
+    <string name="mdblist_insufficient_scope">MDBList non ha concesso l\'autorizzazione per aggiornare la cronologia di visione. Ricollega l\'account e consenti l\'accesso in scrittura.</string>
+    <string name="mdblist_awaiting_instruction">Scansiona il codice QR oppure inserisci questo codice all\'indirizzo qui sotto.</string>
+    <string name="mdblist_qr_description">Codice QR per collegare il tuo account MDBList</string>
+    <string name="mdblist_status_enter_code">Approva la connessione dal tuo account MDBList.</string>
+    <string name="mdblist_status_syncing">Sincronizzazione della cronologia di visione e dei progressi di riproduzione…</string>
+    <string name="mdblist_last_synced">Ultima sincronizzazione: %1$s</string>
+    <string name="mdblist_disconnect_title">Scollegare MDBList?</string>
+    <string name="mdblist_disconnect_subtitle">Interrompi l\'invio degli aggiornamenti di visione da questo profilo. La cronologia MDBList verrà conservata.</string>
+    <string name="mdblist_missing_client">La connessione a MDBList non è disponibile in questa versione.</string>
+    <string name="mdblist_invalid_response">MDBList ha restituito una risposta incompleta. Riprova.</string>
+    <string name="mdblist_code_expired">Il codice è scaduto. Riprova per ottenerne uno nuovo.</string>
+    <string name="mdblist_access_denied">Connessione rifiutata. Riprova a collegare l\'account.</string>
+    <string name="mdblist_authorization_revoked">La connessione MDBList è scaduta o è stata revocata. Ricollega l\'account per riprendere la sincronizzazione.</string>
+    <string name="mdblist_unavailable">Impossibile sincronizzare con MDBList. Riprova.</string>
+    <string name="mdblist_rate_limited">È stato raggiunto il limite di richieste di MDBList. La sincronizzazione riprenderà al ripristino del limite.</string>
+    <string name="mdblist_revoke_failed">Disconnesso da questo dispositivo. Rimuovi l\'app dalle impostazioni del tuo account MDBList per revocare l\'accesso.</string>
+    <string name="mdblist_ratings_credentials_subtitle">Usa l\'account MDBList collegato in Tracciamento oppure inserisci una chiave API separata per le valutazioni.</string>
+    <string name="mdblist_ratings_connected_account">Uso dell\'account collegato</string>
+    <string name="mdblist_ratings_key_override_subtitle">Una chiave API sostituisce l\'account collegato per le valutazioni. Cancella la chiave e salva per tornare a usare l\'account collegato.</string>
+    <string name="mdblist_show_on_hero_title">Usa le valutazioni nell’hero</string>
+    <string name="mdblist_show_on_hero_subtitle">Mostra le valutazioni MDBList nell’hero (Modern e Classic/Grid)</string>
+    <string name="mdblist_rating_order_title">Ordine delle valutazioni</string>
+    <string name="mdblist_rating_order_subtitle">Nell’hero Modern vengono mostrate le prime 3 valutazioni abilitate e disponibili. Usa le frecce per cambiarne l’ordine.</string>
+    <string name="mdblist_library_lists">Liste della libreria</string>
+    <string name="mdblist_library_lists_description">Scegli quali liste MDBList mostrare nella Libreria e in Gestisci liste. La watchlist viene sempre visualizzata.</string>
+    <string name="mdblist_library_lists_empty">Nessuna lista trovata nel tuo account MDBList. Sincronizza per caricarle.</string>
+    <string name="mdblist_library_lists_summary">%1$d su %2$d visualizzate</string>
+    <string name="tracking_mdblist_features_title">Funzioni MDBList</string>
+    <string name="tracking_mdblist_features_subtitle">Impostazioni specifiche di MDBList</string>
+    <string name="trakt_more_like_this_source_simkl">Simkl</string>
+    <string name="youtube_resolving_stream">Caricamento del video YouTube</string>
+    <string name="youtube_resolution_failed">Impossibile caricare questo video di YouTube.</string>
+    <string name="settings_p2p_profile_title">Profilo torrent</string>
+    <string name="settings_p2p_profile_soft">Leggero</string>
+    <string name="settings_p2p_profile_balanced">Bilanciato</string>
+    <string name="settings_p2p_profile_fast">Veloce</string>
+    <string name="settings_p2p_profile_soft_description">Usa meno connessioni peer per ridurre il consumo della batteria e della rete.</string>
+    <string name="settings_p2p_profile_balanced_description">Equilibrio consigliato tra velocità di avvio e stabilità della connessione.</string>
+    <string name="settings_p2p_profile_fast_description">Usa più connessioni peer per torrent difficili o con bitrate elevato.</string>
+    <string name="settings_p2p_cache_size_title">Dimensione della cache torrent</string>
+    <string name="settings_p2p_cache_size_description">Dati torrent scaricati e conservati su questo dispositivo per velocizzare le riproduzioni successive.</string>
+    <string name="settings_p2p_cache_none">Nessuna cache permanente</string>
+    <string name="settings_p2p_cache_2_gb">2 GB</string>
+    <string name="settings_p2p_cache_5_gb">5 GB</string>
+    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_clear_cache_title">Svuota cache torrent</string>
+    <string name="settings_p2p_clear_cache_usage">%1$s utilizzato al momento</string>
+    <string name="settings_p2p_clear_cache_usage_pending">L\'utilizzo viene misurato dopo l\'avvio del P2P; seleziona per cancellare i dati torrent memorizzati nella cache.</string>
+    <string name="settings_p2p_clear_cache_clearing">Rimozione dei dati torrent inattivi…</string>
+    <string name="settings_p2p_clear_cache_playback_active">Interrompi la riproduzione P2P prima di svuotare la cache.</string>
+    <string name="settings_p2p_clear_cache_done">Rimossi %1$s di dati torrent inattivi</string>
+    <string name="settings_p2p_clear_cache_failed">Impossibile svuotare la cache torrent.</string>
+    <string name="player_switch_to_mpv">Passa al lettore MPV</string>
+    <string name="cd_remove_recent_search">Rimuovi %1$s dalle ricerche recenti</string>
+    <string name="library_sort_released_desc">Data di uscita ↓</string>
+    <string name="library_sort_released_asc">Data di uscita ↑</string>
+    <string name="library_error_sort_failed">Impossibile caricare l\'ordinamento. Verrà mostrato l\'ordine del provider.</string>
+    <string name="collections_editor_catalog_missing">Catalogo non disponibile</string>
+    <string name="player_torrent_fetching_metadata">Recupero dei metadati del torrent…</string>
+    <string name="player_torrent_preparing_stream">Preparazione del flusso torrent…</string>
+    <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
+    <string name="player_torrent_loading_status">%1$s scaricato · %2$s · %3$s</string>
+    <string name="torrent_error_start_timeout">Il flusso torrent non è stato avviato entro %1$ds</string>
+    <string name="playback_cache_write_warning">Sui dispositivi con memoria interna, le scritture sono continue e possono usurare la memoria nel tempo.</string>
+    <string name="diag_label_last_convert">Ultima conversione</string>
+    <string name="diag_label_disk_cache">Cache su disco</string>
+    <string name="diag_label_disk_cache_usage">Utilizzo della cache su disco</string>
+    <string name="diag_value_disk_cache_on">Attiva · %1$s</string>
+    <string name="diag_value_disk_cache_unavailable">Non disponibile</string>
+    <string name="diag_value_disk_cache_not_used">Disattivata · non usata per questo flusso</string>
+    <string name="diag_value_disk_cache_usage">%1$s letti, %2$s rimossi dalla cache</string>
+    <string name="random_episode_title">Riproduzione casuale</string>
+    <string name="layout_random_episode_sub">Riproduci episodi casuali da qualsiasi serie. Disattivando questa opzione, la riproduzione casuale viene sospesa.</string>
+    <string name="random_episode_unwatched">Episodi non visti</string>
+    <string name="random_episode_include_watched">Tutti gli episodi</string>
+    <string name="random_episode_empty_subtitle">Nessun episodio disponibile per la riproduzione casuale.</string>
+    <string name="random_episode_caught_up">Hai visto tutti gli episodi. Scegli Tutti gli episodi per rivederli.</string>
+    <string name="random_episode_loading">Caricamento episodi…</string>
+    <string name="shuffle_starting">Avvio della riproduzione casuale…</string>
+    <string name="shuffle_choose_episodes">Scegli quali episodi riprodurre in modo casuale.</string>
+    <string name="shuffle_preview_title">Il tuo episodio</string>
+    <string name="shuffle_play_episode">Riproduci episodio</string>
+    <string name="shuffle_again">Riproduci ancora</string>
+    <string name="shuffle_only_episode">Questo è l\'unico episodio nella selezione.</string>
+    <string name="shuffle_artwork_hidden">Immagine nascosta per evitare spoiler</string>
+    <string name="shuffle_stop">Interrompi la riproduzione casuale</string>
+    <string name="shuffle_enabled_all">Riproduzione casuale attiva · Tutti gli episodi</string>
+    <string name="shuffle_enabled_unwatched">Riproduzione casuale attiva · Episodi non visti</string>
+    <string name="shuffle_disabled">Riproduzione casuale disattivata</string>
+    <string name="shuffle_save_failed">Impossibile aggiornare la riproduzione casuale. Riprova.</string>
+    <string name="shuffle_change_selection">Scegli gli episodi</string>
+    <string name="shuffle_badge">Riproduzione casuale degli episodi attiva</string>
+    <string name="autosync_setting_title">Sincronizzazione automatica dei sottotitoli</string>
+    <string name="autosync_setting_description">Abbina la temporizzazione del sottotitolo selezionato da un addon a quella dei sottotitoli incorporati nel video.</string>
+    <string name="autosync_tolerance_title">Tolleranza di sincronizzazione automatica</string>
+    <string name="autosync_tolerance_description">Mantieni la temporizzazione originale quando la correzione necessaria è pari o inferiore a questo valore.</string>
+    <string name="autosync_tolerance_off">Disattivata</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">Ricerca approfondita con sincronizzazione automatica</string>
+    <string name="autosync_thorough_description">Continua a confrontare gli altri sottotitoli e le tracce incorporate per trovare una corrispondenza più precisa prima della sincronizzazione. Se disattivata, viene usata prima la prima corrispondenza affidabile. Vengono applicate solo corrispondenze sicure.</string>
+    <string name="autosync_toast_failed">Sincronizzazione non riuscita: Auto Sync non ha trovato una corrispondenza tra questo sottotitolo e il video.</string>
+    <string name="autosync_toast_failed_no_reference">Sincronizzazione non riuscita: questo video non contiene sottotitoli incorporati da confrontare.</string>
+    <string name="autosync_toast_failed_unsupported">Sincronizzazione non riuscita: Auto Sync non supporta questo formato di sottotitoli.</string>
+    <string name="autosync_label_synced">Sincronizzato automaticamente</string>
 </resources>

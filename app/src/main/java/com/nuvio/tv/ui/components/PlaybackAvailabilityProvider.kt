@@ -12,6 +12,8 @@ import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.streams.PlaybackAvailability
 import com.nuvio.tv.core.usenet.UsenetSourceSettings
 import com.nuvio.tv.data.local.PluginDataStore
+import com.nuvio.tv.data.mediaserver.ServerRepository
+import com.nuvio.tv.data.mediaserver.ServerStreams
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
@@ -33,7 +35,9 @@ internal class PlaybackAvailabilityViewModel @Inject constructor(
     addonRepository: AddonRepository,
     pluginDataStore: PluginDataStore,
     metaRepository: MetaRepository,
-    usenetSettings: UsenetSourceSettings
+    usenetSettings: UsenetSourceSettings,
+    serverRepository: ServerRepository,
+    serverStreams: ServerStreams
 ) : ViewModel() {
     private val enabledScrapers = if (AppFeaturePolicy.pluginsEnabled) {
         combine(pluginDataStore.scrapers, pluginDataStore.pluginsEnabled) { scrapers, enabled ->
@@ -47,9 +51,20 @@ internal class PlaybackAvailabilityViewModel @Inject constructor(
     private val usenetReady = usenetSettings.snapshots.map { (_, result) -> result.getOrNull()?.ready == true }
         .distinctUntilChanged().flowOn(Dispatchers.IO)
 
-    val availability = combine(addonRepository.getInstalledAddons(), enabledScrapers, usenetReady) { addons, scrapers, usenet ->
-        PlaybackAvailability(addons, scrapers, isLoaded = true, usenetReady = usenet,
-            cachedMeta = metaRepository::getCachedMeta)
+    val availability = combine(
+        addonRepository.getInstalledAddons(),
+        enabledScrapers,
+        serverRepository.uiState,
+        usenetReady
+    ) { addons, scrapers, _, usenet ->
+        PlaybackAvailability(
+            addons,
+            scrapers,
+            isLoaded = true,
+            usenetReady = usenet,
+            cachedMeta = metaRepository::getCachedMeta,
+            serverStreams = serverStreams::canServe
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlaybackAvailability())
 }
 

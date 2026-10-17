@@ -63,8 +63,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.tv.material3.Border
-import androidx.tv.material3.Card
-import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Button
@@ -622,7 +620,7 @@ fun ContinueWatchingCard(
     val bgCardColor = NuvioTheme.colors.BackgroundCard
     val backgroundPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
 
-    Card(
+    LightweightCard(
         onClick = {
             if (longPressTriggered) {
                 longPressTriggered = false
@@ -661,23 +659,17 @@ fun ContinueWatchingCard(
                 }
                 false
             },
-        shape = CardDefaults.shape(shape = cwCardShape),
-        colors = CardDefaults.colors(
-            containerColor = Color.Transparent,
-            focusedContainerColor = Color.Transparent
-        ),
+        shape = cwCardShape,
+        containerColor = Color.Transparent,
         // With text under the artwork the card border would ring the text too, so the artwork draws its own.
-        border = if (textBelowArtwork) {
-            CardDefaults.border(focusedBorder = Border.None)
+        focusedBorder = if (textBelowArtwork) {
+            Border.None
         } else {
-            CardDefaults.border(
-                focusedBorder = Border(
-                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                    shape = cwCardShape
-                )
+            Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = cwCardShape
             )
-        },
-        scale = CardDefaults.scale(focusedScale = 1f)
+        }
     ) {
         if (isWideStyle) {
             WideCardContent(
@@ -709,7 +701,7 @@ fun ContinueWatchingCard(
                     }
                 }
             )
-            return@Card
+            return@LightweightCard
         }
         Column(
             modifier = if (textBelowArtwork) {

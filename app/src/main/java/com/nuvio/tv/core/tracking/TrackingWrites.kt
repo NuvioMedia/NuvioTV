@@ -27,7 +27,19 @@ enum class TrackingListStatus(val wireValue: String) {
 data class TrackingHistoryItem(
     val media: TrackingMediaReference,
     val watchedAtEpochMs: Long? = null
-)
+) {
+    /**
+     * Whether this mark describes a whole series rather than something that was watched.
+     *
+     * A mark without episode coordinates turns into a show-level entry, and providers such as Simkl
+     * and MDBList answer it by marking every episode of the show watched, including episodes the user
+     * never opened, which is how a single ill-timed mark wiped a full series. Only films are allowed
+     * through without coordinates. An anime mark is dropped too: without more metadata the app cannot
+     * tell an anime film from an anime series.
+     */
+    val isWholeSeriesMark: Boolean
+        get() = media.episode == null && media.kind != TrackingMediaKind.MOVIE
+}
 
 data class TrackingScrobbleEvent(
     val media: TrackingMediaReference,

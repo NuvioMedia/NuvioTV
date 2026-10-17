@@ -48,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import com.nuvio.tv.R
 import com.nuvio.tv.core.tracking.TrackingListManagementCapabilities
+import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -79,6 +80,7 @@ internal fun ManageListsDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
+        AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
                 .width(620.dp)

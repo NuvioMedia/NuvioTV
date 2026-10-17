@@ -372,6 +372,20 @@
     <string name="appearance_settings_style_subtitle">Ayar ekranlarının nasıl görüneceğini seç</string>
     <string name="appearance_launcher_artwork">Başlatıcı Görseli</string>
     <string name="appearance_launcher_artwork_subtitle">Nuvio\'nun TV ana ekranında nasıl görüneceğini seçin</string>
+    <string name="ambient_mode_title">Ortam Modu</string>
+    <string name="ambient_mode_subtitle">TV boştayken kataloglarınızdan görseller gösterin</string>
+    <string name="ambient_mode_enabled_subtitle">Kumanda girişi olmadan geçen bir sürenin ardından ekranı arka plan görselleriyle doldurun</string>
+    <string name="ambient_mode_timeout">Şu Süreden Sonra Başlat</string>
+    <string name="ambient_mode_timeout_subtitle">Ortam Modu başlamadan önce ne kadar bekleneceği</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d dakika</item>
+        <item quantity="other">%1$d dakika</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">Kataloglar</string>
+    <string name="ambient_mode_catalogs_subtitle">Görsellerin çekileceği en fazla 3 katalog seçin</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">En fazla 3 katalog seçin</string>
+    <string name="ambient_mode_catalogs_default">Hero ile aynı</string>
+    <string name="ambient_mode_catalogs_count">%1$d / %2$d</string>
     <string name="appearance_app_icon_and_banner">Uygulama Simgesi ve Afiş</string>
     <string name="appearance_app_icon_and_banner_subtitle">Uygulama simgesini ve afişi değiştirin</string>
     <string name="appearance_app_icon_picker_title">Uygulama Simgesi ve Afiş Seçin</string>
@@ -1084,6 +1098,15 @@
     <string name="upcoming_section_title">Yaklaşanlar</string>
     <string name="layout_trailer_button">Fragman Düğmesini Göster</string>
     <string name="layout_trailer_button_sub">Ayrıntı sayfasında fragman düğmesi göster (sadece fragman mevcutsa).</string>
+    <string name="layout_trailer_play_in_background">Arka Planda Oynat</string>
+    <string name="layout_trailer_play_in_background_sub">Sayfa görünür kalırken fragmanı arka plan görseli yerine oynatın.</string>
+    <string name="layout_trailer_pause_on_scroll">Kaydırırken Duraklat</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Aşağı kaydırdığınızda fragmanı duraklatın ve en üste döndüğünüzde devam ettirin.</string>
+    <string name="layout_trailer_4k">4K Fragmanlar</string>
+    <string name="layout_trailer_4k_sub">Kullanılabilir olduğunda 1080p üzerindeki fragmanları oynatın. Çok daha fazla bellek kullanır; 2 GB veya daha az RAM\'e sahip cihazlarda varsayılan olarak kapalıdır.</string>
+    <string name="layout_detail_group_episodes">Bölümler</string>
+    <string name="layout_detail_group_trailers">Fragmanlar</string>
+    <string name="layout_detail_group_metadata">Meta Veriler</string>
     <string name="layout_prefer_external_meta">Harici eklentinin meta verisini tercih et</string>
     <string name="layout_prefer_external_meta_sub">Katalog eklentisi yerine harici (ekstra) eklentiden gelen meta verileri kullanın.</string>
     <string name="layout_show_full_release_date">Tam çıkış tarihini göster</string>
@@ -1240,6 +1263,12 @@
     <string name="mdblist_dialog_placeholder">MDBList API Anahtarını Girin</string>
     <string name="mdblist_not_set">Ayarlanmadı</string>
     <string name="mdblist_invalid_api_key">Geçersiz MDBList API anahtarı</string>
+    <string name="mdblist_library_lists">Kütüphane listeleri</string>
+    <string name="mdblist_library_lists_description">Hangi MDBList listelerinin Kütüphane ve Listeleri Yönet bölümlerinde görüneceğini seçin. İzleme Listesi her zaman gösterilir.</string>
+    <string name="mdblist_library_lists_empty">MDBList hesabınızda henüz liste bulunamadı. Yüklemek için senkronize edin.</string>
+    <string name="mdblist_library_lists_summary">%1$d / %2$d gösteriliyor</string>
+    <string name="tracking_mdblist_features_title">MDBList özellikleri</string>
+    <string name="tracking_mdblist_features_subtitle">MDBList\'e özel ayarlar</string>
     <string name="debrid_title">Bağlı Servisler</string>
     <string name="debrid_subtitle">Bağlantılar ve kütüphane erişimi için hesapları bağlayın</string>
     <string name="debrid_experimental_notice">Bu entegrasyonlar deneyseldir; daha sonra tutulabilir, değiştirilebilir veya kaldırılabilir.</string>
@@ -2066,6 +2095,8 @@
     <string name="library_sort_provider_order">Sağlayıcı Sırası</string>
     <string name="library_sort_added_desc">En Son Eklenenler</string>
     <string name="library_sort_added_asc">İlk Eklenenler</string>
+    <string name="library_sort_released_desc">Yayın Tarihi ↓</string>
+    <string name="library_sort_released_asc">Yayın Tarihi ↑</string>
     <string name="library_sort_title_asc">A\'dan Z\'ye İsim</string>
     <string name="library_sort_title_desc">Z\'den A\'ya İsim</string>
     <string name="library_error_sort_failed">Sıralama düzeni yüklenemedi. Sağlayıcı sırası gösteriliyor.</string>
@@ -2552,8 +2583,6 @@
     <string name="playback_reset_to_default">Varsayılana Sıfırla</string>
     <string name="playback_net_custom">Özel Ağ Yapılandırması</string>
     <string name="playback_net_custom_sub">Aşamalı yayınları indirmek için birden çok paralel bağlantı kullanır. Kapalıyken tek bağlantı kullanılır.</string>
-    <string name="playback_net_http2">HTTP/2 Protokolünü Etkinleştir</string>
-    <string name="playback_net_http2_sub">İstek çoğullama (multiplexing) ve daha hızlı el sıkışma süreleri için ağ bağlantılarında HTTP/2 protokolünü etkinleştirir.</string>
     <string name="playback_net_parallel">Paralel Bağlantılar</string>
     <string name="playback_net_parallel_sub">Yayınları çekmek için aynı anda birden fazla bağlantı kullanın. İndirme hızınız kesinlikle yeterli olmasına rağmen takılma yaşıyorsanız etkinleştirin.</string>
     <string name="playback_net_connection_count">Bağlantı Sayısı</string>

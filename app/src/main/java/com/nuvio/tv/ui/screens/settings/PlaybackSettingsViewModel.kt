@@ -392,10 +392,6 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setParallelNetworkEnabled(enabled)
     }
 
-    suspend fun setEnableHttp2(enabled: Boolean) {
-        playerSettingsDataStore.setEnableHttp2(enabled)
-    }
-
     suspend fun setAllowLargeTargetBuffer(enabled: Boolean) {
         playerSettingsDataStore.setAllowLargeTargetBuffer(enabled)
     }

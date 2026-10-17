@@ -23,7 +23,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.party.PartyMedia
 import com.nuvio.tv.domain.model.ExperienceMode
+import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.ui.screens.CatalogSeeAllScreen
 import com.nuvio.tv.ui.screens.ExperienceModeSelectionScreen
 import com.nuvio.tv.ui.screens.LayoutSelectionScreen
@@ -36,6 +38,7 @@ import com.nuvio.tv.ui.screens.player.PlayerExitReason
 import com.nuvio.tv.ui.screens.player.PlayerScreen
 import com.nuvio.tv.ui.screens.player.PostPlayRecommendation
 import com.nuvio.tv.ui.screens.player.playerBackOpensCurrentEpisodeStreams
+import com.nuvio.tv.ui.screens.party.PartyScreen
 import com.nuvio.tv.ui.screens.plugin.PluginScreen
 import com.nuvio.tv.ui.screens.search.DiscoverScreen
 import com.nuvio.tv.ui.screens.search.SearchScreen
@@ -82,6 +85,26 @@ private fun PlaybackNavHost(
 
     fun isPlayerToStream(from: String, to: String): Boolean {
         return from.startsWith("player/") && to.startsWith("stream/")
+    }
+
+    fun openPartyMedia(media: PartyMedia) {
+        if (navController.currentDestination?.route?.startsWith("player/") == true) navController.popBackStack()
+        navController.navigate(
+            Screen.Stream.createRoute(
+                videoId = media.videoId ?: media.metaId,
+                contentType = media.type,
+                title = media.title,
+                poster = media.poster,
+                backdrop = media.background,
+                logo = media.logo,
+                season = media.season,
+                episode = media.episode,
+                episodeName = media.episodeTitle,
+                contentId = media.metaId,
+                contentName = media.title,
+                manualSelection = true
+            )
+        )
     }
 
     NavHost(
@@ -302,6 +325,10 @@ private fun PlaybackNavHost(
             )
         ) { backStackEntry ->
             val detailArgs = backStackEntry.arguments
+            if (ServerCatalog.isCollection(detailArgs?.getString("itemId"), detailArgs?.getString("itemType"))) {
+                ServerCatalogDestination(navController, backStackEntry)
+                return@composable
+            }
             val savedState = backStackEntry.savedStateHandle
             val returnToHomeOnBack = detailArgs
                 ?.getString("returnToHomeOnBack")
@@ -1075,6 +1102,7 @@ private fun PlaybackNavHost(
                         playOnLoad = false
                     )
                 },
+                onOpenPartyMedia = ::openPartyMedia,
                 onPlaybackErrorBack = {
                     val returnedToStream = popBackToStream()
                     if (!returnedToStream) {
@@ -1167,6 +1195,9 @@ private fun PlaybackNavHost(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },
+                onNavigateToCatalogSeeAll = { catalogId, addonId, type ->
+                    navController.navigate(Screen.CatalogSeeAll.createRoute(catalogId, addonId, type))
+                },
                 onCloudPlaybackResolved = { info ->
                     val filename = info.filename ?: info.file.name
                     navController.navigate(
@@ -1194,7 +1225,6 @@ private fun PlaybackNavHost(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
-                onNavigateToTracking = { navController.navigate(Screen.Tracking.route) },
                 onNavigateToAddons = { navController.navigate(Screen.AddonManager.route) },
                 onNavigateToPlugins = { navController.navigate(Screen.Plugins.route) },
                 onNavigateToAuthQrSignIn = { navController.navigate(Screen.AuthQrSignIn.route) },
@@ -1204,7 +1234,24 @@ private fun PlaybackNavHost(
                 },
                 onNavigateToLicensesAttributions = {
                     navController.navigate(Screen.LicensesAttributions.route)
+                },
+                onNavigateToWatchParty = { navController.navigate(Screen.WatchParty.createRoute()) }
+            )
+        }
+
+        composable(
+            route = Screen.WatchParty.route,
+            arguments = listOf(
+                navArgument("code") {
+                    type = NavType.StringType
+                    defaultValue = ""
                 }
+            )
+        ) { backStackEntry ->
+            PartyScreen(
+                initialCode = backStackEntry.arguments?.getString("code").orEmpty(),
+                onBackPress = { navController.popBackStack() },
+                onWatch = ::openPartyMedia
             )
         }
 
@@ -1369,6 +1416,10 @@ private fun PlaybackNavHost(
             val addonId = backStackEntry.arguments?.getString("addonId") ?: ""
             val type = backStackEntry.arguments?.getString("type") ?: ""
             val fromSearch = backStackEntry.arguments?.getBoolean("fromSearch") ?: false
+            if (ServerCatalog.isServerAddonId(addonId) && !fromSearch) {
+                ServerCatalogDestination(navController, backStackEntry)
+                return@composable
+            }
 
             // When coming from search, get the SearchViewModel from the Search back stack entry
             // so we share the same data (existing results + pagination)

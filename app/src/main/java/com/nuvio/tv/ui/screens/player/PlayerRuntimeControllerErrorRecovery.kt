@@ -400,6 +400,35 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
 }
 
 /**
+ * Takes the next step of [PlayerAudioFallbackPolicy] for an audio failure on the current stream.
+ * Returns false once every step is in force, so the caller falls through to the rest of the chain.
+ */
+internal fun PlayerRuntimeController.tryNextAudioFallbackStep(positionMs: Long): Boolean {
+    val step = PlayerAudioFallbackPolicy.nextStep(
+        safeAudioActive = isSafeAudioModeActiveForCurrentPlayback,
+        pcmForced = hasTriedAudioPcmFallback,
+        audioDisabled = isAudioDisabledForCurrentPlayback
+    ) ?: return false
+    when (step) {
+        PlayerAudioFallbackPolicy.Step.SAFE_AUDIO -> {
+            safeAudioForcedStreamUrls.add(currentStreamUrl)
+            retryCurrentStreamWithSafeAudioFallback(positionMs)
+        }
+        PlayerAudioFallbackPolicy.Step.FORCE_PCM -> {
+            hasTriedAudioPcmFallback = true
+            pendingAudioPcmFallbackRebuild = true
+            retryCurrentStreamWithSafeAudioFallback(positionMs)
+        }
+        PlayerAudioFallbackPolicy.Step.DISABLE_AUDIO -> {
+            pendingAudioPcmFallbackRebuild = true
+            audioDisabledForcedStreamUrls.add(currentStreamUrl)
+            retryCurrentStreamWithAudioDisabled(positionMs)
+        }
+    }
+    return true
+}
+
+/**
  * DV7-to-HEVC decoder fallback for ERROR_CODE_DECODER_INIT_FAILED (4003).
  *
  * When decoderPriority == 1 (EXTENSION_RENDERER_MODE_ON) and the decoder
@@ -512,6 +541,9 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
                 return@launch
             }
             if (attemptAutoRetry(error, detailedError)) {
+                return@launch
+            }
+            if (tryServerFallback()) {
                 return@launch
             }
             val userFacingError = error.toDisplayMessage(context)
