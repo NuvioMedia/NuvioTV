@@ -109,7 +109,8 @@ class UnplayableReleases internal constructor(
         // Indexers round sizes differently (one to thousands of bytes): compare by megabyte, either side.
         val megabytes = size?.takeIf { it > 0 }?.let { (it / MB - 1..it / MB + 1).toList() } ?: listOf(null)
         return megabytes.flatMap { keys(nzbUrl, title, it) }.distinct().mapNotNull { entries[it] }
-            .filter { it.providers == providers }.maxByOrNull { it.at }
+            // A blank post is the same with every provider.
+            .filter { it.providers == providers || it.kind == BLANK }.maxByOrNull { it.at }
     }
 
     @Synchronized
@@ -176,7 +177,9 @@ class UnplayableReleases internal constructor(
 
     companion object {
         /** Engine failures that the same release repeats with the same providers. */
-        val KINDS = setOf("missing-article", "hole-limit", "invalid-article")
+        val KINDS = setOf("missing-article", "hole-limit", "invalid-article", BLANK)
+        /** A release whose video holds only zeros: a fake post under a real name. */
+        private const val BLANK = "blank-content"
         /** A release that played; not a failure kind. */
         private const val PLAYED = "played"
         private const val RETENTION_MS = 30L * 24 * 3600 * 1000

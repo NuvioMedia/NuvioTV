@@ -27,6 +27,8 @@ func permanentStreamFailure(err error) string {
 		return "provider-authentication"
 	case errors.Is(err, errProviderQuota):
 		return "provider-quota"
+	case errors.Is(err, errBlankContent):
+		return "blank-content"
 	default:
 		return ""
 	}

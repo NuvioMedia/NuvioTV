@@ -15,6 +15,11 @@ import (
 
 func openSessionStatus(t *testing.T, xml string, articles map[string][]byte) (int, string) {
 	t.Helper()
+	return openSessionStatusWith(t, xml, articles, Config{AllowPrivateNetwork: true})
+}
+
+func openSessionStatusWith(t *testing.T, xml string, articles map[string][]byte, config Config) (int, string) {
+	t.Helper()
 	provider, err := nntpserver.New(nntpserver.Config{Articles: articles})
 	if err != nil {
 		t.Fatal(err)
@@ -29,7 +34,7 @@ func openSessionStatus(t *testing.T, xml string, articles map[string][]byte) (in
 	srv := httptest.NewServer(app)
 	defer srv.Close()
 	b, _ := json.Marshal(OpenRequest{NZBURL: nzb.URL, Servers: []string{"nntp://" + provider.Addr() + "/4"},
-		Config: Config{AllowPrivateNetwork: true}})
+		Config: config})
 	r, _ := http.NewRequest(http.MethodPost, srv.URL+"/sessions", bytes.NewReader(b))
 	r.Header.Set("Authorization", "Bearer secret")
 	resp, err := srv.Client().Do(r)
@@ -61,5 +66,40 @@ func TestOpenDoesNotNameAMissingPassword(t *testing.T) {
 	status, failure := openSessionStatus(t, xml, articles)
 	if status != http.StatusUnprocessableEntity || failure != "" {
 		t.Fatalf("open = %d, X-Usenet-Failure %q; want 422 without a failure kind", status, failure)
+	}
+}
+
+// A fake release of zeros, posted plain or in a RAR set, is named at open: the
+// app remembers it and moves on instead of waiting for the player to give up.
+func TestOpenNamesABlankRelease(t *testing.T) {
+	blank := make([]byte, 300000)
+	for _, files := range [][]inputFile{
+		{{name: "Release.2026.2160p.mkv", data: blank}},
+		{{name: "Release.2026.2160p.part01.rar", data: rar4Volume("Release.2026.2160p.mkv", blank[:150000], len(blank), 2, false)},
+			{name: "Release.2026.2160p.part02.rar", data: rar4Volume("Release.2026.2160p.mkv", blank[150000:], len(blank), 1, false)}},
+	} {
+		xml, articles := fixture(files)
+		status, failure := openSessionStatus(t, xml, articles)
+		if status != http.StatusUnprocessableEntity || failure != "blank-content" {
+			t.Fatalf("%s: open = %d, X-Usenet-Failure %q; want 422 blank-content", files[0].name, status, failure)
+		}
+	}
+}
+
+// Leading zeros followed by data, and zeros only filled in for a missing
+// article, are not a blank release.
+func TestOpenKeepsAReleaseWithSomeZeros(t *testing.T) {
+	data := mkvPayload(300000)
+	clear(data[:60000])
+	xml, articles := fixture([]inputFile{{name: "Release.2026.1080p.mkv", data: data}})
+	if status, failure := openSessionStatus(t, xml, articles); status != http.StatusOK || failure != "" {
+		t.Fatalf("leading zeros: open = %d, X-Usenet-Failure %q; want 200", status, failure)
+	}
+	clear(data[:64<<10])
+	xml, articles = fixture([]inputFile{{name: "Release.2026.1080p.mkv", data: data, sizes: []int{32 << 10, 32 << 10, 300000 - 64<<10}}})
+	delete(articles, "f0-s1@test")
+	config := Config{AllowPrivateNetwork: true, HoleFilling: true}
+	if status, failure := openSessionStatusWith(t, xml, articles, config); status != http.StatusOK || failure != "" {
+		t.Fatalf("filled hole: open = %d, X-Usenet-Failure %q; want 200", status, failure)
 	}
 }
