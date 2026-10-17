@@ -220,6 +220,9 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		trace.mark("selection_started")
 		v.content, err = Select(ctx, files, req.Selection)
 	}
+	if err == nil {
+		err = checkBlankContent(ctx, v.content)
+	}
 	trace.mark("content_selected")
 	if err != nil {
 		// Network errors can contain URLs/message IDs. Only our actionable
