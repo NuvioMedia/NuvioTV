@@ -253,6 +253,19 @@ internal class TrueHdMatPacker {
             0x97.toByte(), 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         )
 
+        /**
+         * A MAT frame with the start, middle and end codes and nothing else, the same frame the packer
+         * emits for a gap in the stream. Written while playback is paused or between seeks it keeps the
+         * HDMI bitstream alive without carrying any sound.
+         */
+        fun paddingOnlyFrame(): ByteArray {
+            val frame = ByteArray(MAT_BUFFER_SIZE)
+            System.arraycopy(MAT_START_CODE, 0, frame, BURST_HEADER_SIZE, MAT_START_CODE.size)
+            System.arraycopy(MAT_MIDDLE_CODE, 0, frame, MAT_POS_MIDDLE, MAT_MIDDLE_CODE.size)
+            System.arraycopy(MAT_END_CODE, 0, frame, MAT_BUFFER_LIMIT, MAT_END_CODE.size)
+            return frame
+        }
+
         fun trueHdAccessUnitSize(data: ByteArray, offset: Int): Int {
             if (offset + 2 > data.size) return 0
             val word = ((data[offset].toInt() and 0xFF) shl 8) or (data[offset + 1].toInt() and 0xFF)
