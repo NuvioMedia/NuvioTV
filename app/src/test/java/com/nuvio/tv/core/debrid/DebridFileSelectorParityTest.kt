@@ -1,9 +1,11 @@
 package com.nuvio.tv.core.debrid
 
+import com.nuvio.tv.data.remote.dto.PremiumizeDirectDownloadFileDto
 import com.nuvio.tv.data.remote.dto.RealDebridTorrentFileDto
 import com.nuvio.tv.data.remote.dto.TorboxTorrentFileDto
 import com.nuvio.tv.domain.model.StreamClientResolve
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class DebridFileSelectorParityTest {
@@ -92,6 +94,20 @@ class DebridFileSelectorParityTest {
         )
 
         assertEquals(1, selected?.id)
+    }
+
+    @Test
+    fun `premiumize requires a playable link for the requested file`() {
+        val files = listOf(
+            PremiumizeDirectDownloadFileDto(path = "Show.S01E01.mkv", link = "https://example.com/1"),
+            PremiumizeDirectDownloadFileDto(path = "Show.S01E02.mkv", link = null),
+        )
+
+        assertNull(
+            PremiumizeDirectDownloadFileSelector().selectFile(
+                files, resolve(filename = "Show.S01E02.mkv", fileIdx = 0), 1, 2,
+            )
+        )
     }
 
     private fun torboxFile(id: Int, name: String, size: Long): TorboxTorrentFileDto =

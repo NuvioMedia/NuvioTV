@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -73,6 +75,8 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import com.nuvio.tv.ui.util.contentTextDirection
+import com.nuvio.tv.ui.util.toAbsoluteAlignment
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -184,7 +188,7 @@ fun StreamScreen(
     }
 
     fun launchInternalPlayer(playbackInfo: StreamPlaybackInfo) {
-        viewModel.onInternalPlayerLaunching()
+        viewModel.onInternalPlayerLaunching(playbackInfo)
         onStreamSelected(playbackInfo)
     }
 
@@ -253,7 +257,7 @@ fun StreamScreen(
                     viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
                 else -> {
-                    viewModel.onInternalPlayerLaunching()
+                    viewModel.onInternalPlayerLaunching(playbackInfo)
                     onAutoPlayResolved(playbackInfo)
                 }
             }
@@ -348,7 +352,7 @@ fun StreamScreen(
                     viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
                 else -> {
-                    viewModel.onInternalPlayerLaunching()
+                    viewModel.onInternalPlayerLaunching(playbackInfo)
                     onAutoPlayResolved(playbackInfo)
                     viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
@@ -376,6 +380,7 @@ fun StreamScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.abandonPendingUsenetPlayback()
         }
     }
 
@@ -475,6 +480,7 @@ fun StreamScreen(
                         }
                     },
                     onRetry = { viewModel.onEvent(StreamScreenEvent.OnRetry) },
+                    onExpandStreams = { viewModel.expandFilteredStreamsIfNeeded() },
                     hazeState = streamHazeState,
                     modifier = Modifier
                         .weight(0.6f)
@@ -501,6 +507,7 @@ fun StreamScreen(
                     pendingPlaybackInfo = null
                 },
                 onDismiss = {
+                    viewModel.abandonPendingUsenetPlayback()
                     showPlayerChoiceDialog = false
                     pendingPlaybackInfo = null
                 }
@@ -733,6 +740,7 @@ private fun RightStreamSection(
     shouldRestoreFocusedStream: Boolean,
     onRestoreFocusedStreamHandled: () -> Unit,
     onRetry: () -> Unit,
+    onExpandStreams: () -> Unit = {},
     hazeState: HazeState?,
     modifier: Modifier = Modifier
 ) {
@@ -919,7 +927,8 @@ private fun RightStreamSection(
                             onUserNavigatedFromFirstResult = {
                                 userMovedFromFirstResult = true
                             },
-                            onFocusChanged = { listHasFocus = it }
+                            onFocusChanged = { listHasFocus = it },
+                            onExpandStreams = onExpandStreams
                         )
                     }
                 }
@@ -1034,7 +1043,8 @@ private fun StreamsList(
     orderedAddonNames: List<String> = emptyList(),
     onRequestChipFocus: (Int) -> Unit = {},
     onUserNavigatedFromFirstResult: () -> Unit = {},
-    onFocusChanged: (Boolean) -> Unit = {}
+    onFocusChanged: (Boolean) -> Unit = {},
+    onExpandStreams: () -> Unit = {}
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
@@ -1056,6 +1066,30 @@ private fun StreamsList(
         streamFocusRequesters.keys.retainAll(validKeys)
     }
     var firstCardHasFocus by remember(firstStreamKey) { mutableStateOf(false) }
+
+    var focusedStreamKey by remember { mutableStateOf<String?>(null) }
+    val prevStreamKeysRef = remember { mutableStateOf(streamKeys) }
+
+    LaunchedEffect(streamKeys) {
+        val prevKeys = prevStreamKeysRef.value
+        prevStreamKeysRef.value = streamKeys
+        val key = focusedStreamKey
+        if (key != null && prevKeys !== streamKeys) {
+            val oldIndex = prevKeys.indexOf(key)
+            val newIndex = streamKeys.indexOf(key)
+            if (oldIndex >= 0 && newIndex >= 0 && oldIndex != newIndex) {
+                val shift = newIndex - oldIndex
+                val correctedFirst = (streamListState.firstVisibleItemIndex + shift)
+                    .coerceIn(0, (streamKeys.size - 1).coerceAtLeast(0))
+                try {
+                    streamListState.scrollToItem(correctedFirst, streamListState.firstVisibleItemScrollOffset)
+                } catch (_: Exception) { }
+                withFrameNanos { }
+                runCatching { streamFocusRequesters[key]?.requestFocus() }
+            }
+        }
+    }
+
     // Reset scroll position to the top when the addon filter changes (#2538).
     LaunchedEffect(selectedAddonFilter) {
         streamListState.scrollToItem(0)
@@ -1087,6 +1121,18 @@ private fun StreamsList(
         } catch (_: Exception) {
         }
         onRestoreFocusedStreamHandled()
+    }
+
+    // Load more streams when scrolling near the bottom of the current page.
+    val lastVisibleIndex = remember(streamListState) {
+        androidx.compose.runtime.derivedStateOf {
+            streamListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+        }
+    }
+    LaunchedEffect(lastVisibleIndex.value, streams.size) {
+        if (lastVisibleIndex.value >= streams.size - 20) {
+            onExpandStreams()
+        }
     }
 
     LazyColumn(
@@ -1149,6 +1195,9 @@ private fun StreamsList(
                         else -> streamFocusRequesters.getOrPut(streamKeys[index]) { FocusRequester() }
                     },
                     onFocusChanged = { focused ->
+                        if (focused) {
+                            focusedStreamKey = streamKeys.getOrNull(index)
+                        }
                         if (index == 0) {
                             firstCardHasFocus = focused
                         }
@@ -1268,7 +1317,10 @@ private fun StreamCard(
 
                 Text(
                     text = streamName,
-                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.align(streamName.contentTextDirection().toAbsoluteAlignment()),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        textDirection = streamName.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextPrimary
                 )
 
@@ -1276,7 +1328,10 @@ private fun StreamCard(
                     if (description.isNotBlank() && description != streamName) {
                         Text(
                             text = description,
-                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.align(description.contentTextDirection().toAbsoluteAlignment()),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = description.contentTextDirection()
+                            ),
                             color = NuvioTheme.extendedColors.textSecondary
                         )
                     }
@@ -1317,7 +1372,9 @@ private fun StreamCard(
 
                     Text(
                         text = stream.addonName,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            textDirection = stream.addonName.contentTextDirection()
+                        ),
                         color = NuvioTheme.extendedColors.textTertiary,
                         maxLines = 1
                     )

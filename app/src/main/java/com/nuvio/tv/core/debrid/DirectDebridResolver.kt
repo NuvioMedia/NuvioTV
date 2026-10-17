@@ -227,7 +227,7 @@ class DirectDebridResolver @Inject constructor(
                 fileIdx = stream.getEffectiveFileIdx(),
                 magnetUri = magnet,
                 sources = stream.sources,
-                torrentName = stream.title ?: stream.name,
+                torrentName = null,
                 filename = stream.behaviorHints?.filename,
                 mediaType = null,
                 mediaId = null,

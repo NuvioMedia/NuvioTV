@@ -25,6 +25,7 @@ import javax.inject.Singleton
 enum class WatchProgressSource {
     TRAKT,
     SIMKL,
+    MDBLIST,
     NUVIO_SYNC;
 
     companion object {
@@ -36,7 +37,8 @@ enum class WatchProgressSource {
 
 enum class MoreLikeThisSourcePreference {
     TRAKT,
-    TMDB
+    TMDB,
+    SIMKL
 }
 
 @Singleton

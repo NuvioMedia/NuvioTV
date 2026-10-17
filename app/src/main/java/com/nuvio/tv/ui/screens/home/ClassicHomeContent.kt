@@ -62,6 +62,8 @@ import androidx.compose.ui.Alignment
 import com.nuvio.tv.ui.components.CatalogRowSection
 import com.nuvio.tv.ui.components.CollectionRowSection
 import com.nuvio.tv.ui.components.ContinueWatchingSection
+import com.nuvio.tv.ui.components.LocalLandscapePosterMode
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.HeroCarouselBackdrop
@@ -104,7 +106,7 @@ fun ClassicHomeContent(
     onRequestTrailerPreview: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
     catalogSeeAllLabel: String? = null,
-    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
+    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
     onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0,
     onRequestLazyCatalogLoad: (String) -> Unit = {}
@@ -123,18 +125,21 @@ fun ClassicHomeContent(
             height = posterCardStyle.height * CLASSIC_SECONDARY_ROW_POSTER_SCALE
         )
     }
-    val classicContinueWatchingCardWidth = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle) {
+    val classicLandscapeCatalogWidth = classicCatalogPosterCardStyle.height
+    val classicLandscapeCatalogHeight = classicLandscapeCatalogWidth / (16f / 9f)
+    val globalLandscape = LocalLandscapePosterMode.current
+    val classicContinueWatchingCardWidth = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle, globalLandscape) {
         when (uiState.continueWatchingCardStyle) {
-            ContinueWatchingCardStyle.POSTER -> classicCatalogPosterCardStyle.width
-            ContinueWatchingCardStyle.WIDE -> classicSecondaryPosterCardStyle.width * 2.5f
-            ContinueWatchingCardStyle.CARD -> classicSecondaryPosterCardStyle.width * (16f / 9f)
+            ContinueWatchingCardStyle.POSTER -> if (globalLandscape) classicLandscapeCatalogWidth else classicCatalogPosterCardStyle.width
+            ContinueWatchingCardStyle.WIDE -> if (globalLandscape) classicLandscapeCatalogWidth else classicSecondaryPosterCardStyle.width * 2.5f
+            ContinueWatchingCardStyle.CARD -> if (globalLandscape) classicLandscapeCatalogWidth else classicSecondaryPosterCardStyle.width * (16f / 9f)
         }
     }
-    val classicContinueWatchingImageHeight = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle) {
+    val classicContinueWatchingImageHeight = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle, globalLandscape) {
         when (uiState.continueWatchingCardStyle) {
-            ContinueWatchingCardStyle.POSTER -> classicCatalogPosterCardStyle.height
-            ContinueWatchingCardStyle.WIDE -> classicSecondaryPosterCardStyle.width * 2.5f * 0.4f
-            ContinueWatchingCardStyle.CARD -> classicSecondaryPosterCardStyle.width
+            ContinueWatchingCardStyle.POSTER -> if (globalLandscape) classicLandscapeCatalogHeight else classicCatalogPosterCardStyle.height
+            ContinueWatchingCardStyle.WIDE -> if (globalLandscape) classicLandscapeCatalogHeight else classicSecondaryPosterCardStyle.width * 2.5f * 0.4f
+            ContinueWatchingCardStyle.CARD -> if (globalLandscape) classicLandscapeCatalogHeight else classicSecondaryPosterCardStyle.width
         }
     }
     // Match catalog poster label style so CW poster titles look the same as catalog ones.
@@ -296,6 +301,7 @@ fun ClassicHomeContent(
                 currentFocusSnapshot.rowKey,
                 emptyMap(), // Classic doesn't use ID-based restoration for inner rows yet
                 focusState.catalogRowScrollStates + rowStates.mapValues { it.value.firstVisibleItemIndex },
+                focusState.catalogRowScrollAnchors,
                 currentFocusSnapshot.rowIndex,
                 currentFocusSnapshot.itemIndex
             )
@@ -374,10 +380,10 @@ fun ClassicHomeContent(
         }
     }
 
-    val handleMetaFocus: (MetaPreview) -> Unit = remember(uiState.classicFocusGradientEnabled, uiState.focusedPosterBackdropExpandEnabled, uiState.focusedPosterBackdropTrailerEnabled) {
+    val handleMetaFocus: (MetaPreview) -> Unit = remember(uiState.classicFocusGradientEnabled, uiState.focusedPosterBackdropExpandEnabled, uiState.focusedPosterBackdropTrailerEnabled, globalLandscape) {
         { item ->
             if (uiState.classicFocusGradientEnabled) {
-                focusedArtwork = item.toClassicFocusArtwork(uiState.focusedPosterBackdropExpandEnabled)
+                focusedArtwork = item.toClassicFocusArtwork(uiState.focusedPosterBackdropExpandEnabled, useLandscape = globalLandscape)
             }
             if (uiState.focusedPosterBackdropTrailerEnabled) {
                 focusedCatalogItem = item
@@ -595,6 +601,8 @@ fun ClassicHomeContent(
                     items = uiState.heroItems.asStable(),
                     focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
                     showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                    mdbListShowOnHero = uiState.mdbListShowOnHero,
+                    mdbListRatingOrder = uiState.mdbListRatingOrder,
                     onActiveItemChanged = { item ->
                         activeHeroItem = item
                         val idx = uiState.heroItems.indexOfFirst { it.id == item.id }
@@ -624,7 +632,9 @@ fun ClassicHomeContent(
                     }
                 }
                 ContinueWatchingSection(
-                    items = uiState.continueWatchingItems,
+                    items = uiState.continueWatchingItems.withCustomPosterUrls(
+                        com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
+                    ),
                     onItemClick = { item ->
                         onContinueWatchingClick(item)
                     },
@@ -702,7 +712,9 @@ fun ClassicHomeContent(
                     }
                 }
                 ContinueWatchingSection(
-                    items = uiState.upcomingItems,
+                    items = uiState.upcomingItems.withCustomPosterUrls(
+                        com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
+                    ),
                     title = stringResource(R.string.upcoming_section_title),
                     onItemClick = { item ->
                         onContinueWatchingClick(item)
@@ -914,9 +926,11 @@ fun ClassicHomeContent(
     } // CompositionLocalProvider
 }
 
-internal fun MetaPreview.toClassicFocusArtwork(useBackdrop: Boolean): ClassicFocusArtwork {
+internal fun MetaPreview.toClassicFocusArtwork(useBackdrop: Boolean, useLandscape: Boolean = false): ClassicFocusArtwork {
     return ClassicFocusArtwork(
-        imageUrl = if (useBackdrop) {
+        imageUrl = if (useLandscape) {
+            landscapePoster ?: background ?: poster
+        } else if (useBackdrop) {
             background ?: landscapePoster ?: poster
         } else {
             poster ?: landscapePoster ?: background

@@ -145,23 +145,33 @@ fun SimklMedia.canonicalContentId(): String? =
  * When the user prefers MAL or Kitsu, anime-specific IDs take priority over IMDB.
  */
 fun SimklMedia.canonicalContentId(preference: SimklAnimeIdPreference): String? {
-    when (preference) {
-        SimklAnimeIdPreference.MAL -> {
-            ids.idValue("mal")?.takeIf(String::isNotBlank)?.let { return "mal:$it" }
-            ids.idValue("kitsu")?.takeIf(String::isNotBlank)?.let { return "kitsu:$it" }
-            ids.idValue("anidb")?.takeIf(String::isNotBlank)?.let { return "anidb:$it" }
+    val hasAnimeIds = !ids.idValue("mal").isNullOrBlank() ||
+        !ids.idValue("kitsu").isNullOrBlank() ||
+        !ids.idValue("anidb").isNullOrBlank()
+
+    if (hasAnimeIds) {
+        when (preference) {
+            SimklAnimeIdPreference.MAL -> {
+                ids.idValue("mal")?.takeIf(String::isNotBlank)?.let { return "mal:$it" }
+                ids.idValue("kitsu")?.takeIf(String::isNotBlank)?.let { return "kitsu:$it" }
+                ids.idValue("anidb")?.takeIf(String::isNotBlank)?.let { return "anidb:$it" }
+            }
+            SimklAnimeIdPreference.KITSU -> {
+                ids.idValue("kitsu")?.takeIf(String::isNotBlank)?.let { return "kitsu:$it" }
+                ids.idValue("mal")?.takeIf(String::isNotBlank)?.let { return "mal:$it" }
+                ids.idValue("anidb")?.takeIf(String::isNotBlank)?.let { return "anidb:$it" }
+            }
+            SimklAnimeIdPreference.TVDB -> {
+                ids.idValue("tvdb")?.takeIf(String::isNotBlank)?.let { return "tvdb:$it" }
+            }
+            SimklAnimeIdPreference.IMDB -> Unit
         }
-        SimklAnimeIdPreference.KITSU -> {
-            ids.idValue("kitsu")?.takeIf(String::isNotBlank)?.let { return "kitsu:$it" }
-            ids.idValue("mal")?.takeIf(String::isNotBlank)?.let { return "mal:$it" }
-            ids.idValue("anidb")?.takeIf(String::isNotBlank)?.let { return "anidb:$it" }
-        }
-        SimklAnimeIdPreference.IMDB -> Unit
     }
     return when {
         !ids.idValue("imdb").isNullOrBlank() -> ids.idValue("imdb")
         !ids.idValue("tmdb").isNullOrBlank() -> "tmdb:${ids.idValue("tmdb")}"
         !ids.idValue("tvdb").isNullOrBlank() -> "tvdb:${ids.idValue("tvdb")}"
+        !ids.idValue("kitsu").isNullOrBlank() -> "kitsu:${ids.idValue("kitsu")}"
         !ids.idValue("mal").isNullOrBlank() -> "mal:${ids.idValue("mal")}"
         !ids.idValue("anidb").isNullOrBlank() -> "anidb:${ids.idValue("anidb")}"
         !ids.idValue("anilist").isNullOrBlank() -> "anilist:${ids.idValue("anilist")}"
@@ -260,7 +270,15 @@ internal fun SimklPlaybackSession.toWatchProgress(
     if (!isMovie && episodeNumber == null) return null
     val videoId = if (isMovie) parentId else "$parentId:${season ?: 0}:$episodeNumber"
     val normalizedProgress = progress.coerceIn(0.0, 100.0)
-    val durationMs = media.runtime?.takeIf { it > 0 }?.toLong()?.times(60_000L) ?: 0L
+    // A series reports the runtime of the show, not of the episode, so scaling the percentage by it
+    // invents a timecode: an episode stopped at 83 % of 47 minutes resumed at 42 minutes, because
+    // 83 % of the show's 52 minutes is 43. Leaving the duration out, with the percentage in place,
+    // makes the player scale it by the duration it really has, which is what a Trakt row already does.
+    val durationMs = if (isMovie) {
+        media.runtime?.takeIf { it > 0 }?.toLong()?.times(60_000L) ?: 0L
+    } else {
+        0L
+    }
     val positionMs = if (durationMs > 0L) (durationMs * normalizedProgress / 100.0).toLong() else 0L
     val updatedAt = parseSimklUtcEpochMs(pausedAt) ?: parseSimklUtcEpochMs(watchedAt) ?: 0L
     return WatchProgress(

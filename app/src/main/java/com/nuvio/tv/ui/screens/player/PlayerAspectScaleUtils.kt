@@ -19,6 +19,13 @@ enum class AspectMode(@StringRes val labelResId: Int) {
     HORIZONTAL_STRETCH(R.string.player_aspect_fit_width)
 }
 
+internal fun aspectModeAppliedToExoSurface(
+    tunnelingEnabled: Boolean,
+    aspectMode: AspectMode
+): AspectMode {
+    return if (tunnelingEnabled) AspectMode.ORIGINAL else aspectMode
+}
+
 internal fun nextAspectMode(current: AspectMode): AspectMode {
     val modes = AspectMode.entries
     val nextIndex = (modes.indexOf(current) + 1) % modes.size

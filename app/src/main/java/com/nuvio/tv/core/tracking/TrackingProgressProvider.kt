@@ -16,6 +16,8 @@ interface TrackingProgressProvider {
     val watchedMovieIds: Flow<Set<String>>
     val ownsCompletedHistoryProjection: Boolean
         get() = false
+    val clearsLocalProgressOnSelection: Boolean
+        get() = false
     val watchedItems: Flow<List<WatchedItem>>
         get() = flowOf(emptyList())
 

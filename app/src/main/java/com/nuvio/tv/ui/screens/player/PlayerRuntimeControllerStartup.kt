@@ -16,6 +16,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
     if (initialPlaybackStarted) return
 
     initialPlaybackStarted = true
+    streamCacheKey?.let { key ->
+        streamFallbackSession = com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, initialStreamUrl)
+            ?: com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, currentStreamUrl)
+    }
 
     // Persist binge group from navigation args so that subsequent plays
     // (from CW, Details, or next-episode) can reuse the same source group.
@@ -56,8 +60,6 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
                 Log.d("PlayerStartup", "Torrent stream ready: $localUrl")
                 currentStreamUrl = localUrl
                 currentHeaders = emptyMap()
-                // Use loadSavedProgress = true — TorrServer handles seeking via
-                // HTTP Range requests, so ExoPlayer's standard resume logic works.
                 preparePlaybackBeforeStart(
                     url = localUrl,
                     headers = emptyMap(),

@@ -17,6 +17,8 @@ import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchedSeriesStateHolder
 import com.nuvio.tv.data.repository.MDBListRepository
 import com.nuvio.tv.data.repository.TraktRelatedService
+import com.nuvio.tv.data.simkl.SimklAuthRepository
+import com.nuvio.tv.data.simkl.SimklRelatedService
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
@@ -51,6 +53,8 @@ internal class PostPlayRecommendationController(
     private val traktRelatedService: TraktRelatedService,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
+    private val simklRelatedService: SimklRelatedService,
+    private val simklAuthRepository: SimklAuthRepository,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val watchProgressRepository: WatchProgressRepository,
     private val watchedSeriesStateHolder: WatchedSeriesStateHolder,
@@ -74,6 +78,8 @@ internal class PostPlayRecommendationController(
         val postPlayMovieThresholdPercent: Int,
         val isNextEpisodeMetadataResolved: Boolean,
         val nextEpisodeHasAired: Boolean?,
+        val nextEpisodeAvailable: Boolean?,
+        val nextEpisodeReleased: String?,
         val hasError: Boolean,
         val hasBlockingInteraction: Boolean,
         val playbackEnded: Boolean,
@@ -131,12 +137,15 @@ internal class PostPlayRecommendationController(
                     postPlayMovieThresholdPercent = playerSettings.postPlayMovieThresholdPercent,
                     isNextEpisodeMetadataResolved = playerState.isNextEpisodeMetadataResolved,
                     nextEpisodeHasAired = playerState.nextEpisode?.hasAired,
+                    nextEpisodeAvailable = playerState.nextEpisode?.available,
+                    nextEpisodeReleased = playerState.nextEpisode?.released,
                     hasError = !playerState.error.isNullOrBlank(),
                     hasBlockingInteraction = playerState.blocksPostPlayRecommendation(),
                     playbackEnded = playerState.playbackEnded,
                     positionMs = timeline.currentPosition,
                     durationMs = timeline.duration,
-                    hasActiveAutoPlay = playerState.postPlayMode is PostPlayMode.AutoPlay
+                    hasActiveAutoPlay = playerState.postPlayMode is PostPlayMode.AutoPlay &&
+                        playerState.nextEpisode?.hasAired == true
                 )
             }
                 .distinctUntilChanged()
@@ -187,7 +196,7 @@ internal class PostPlayRecommendationController(
         _uiState.value = returnedState
         returnToPlayerAnimationJob = scope.launch {
             delay(POST_PLAY_RECOMMENDATION_TRANSITION_MS.toLong())
-            _uiState.value = PostPlayRecommendationUiState(hasReturnedToPlayer = true)
+            _uiState.update { it.copy(isVisible = false, hasReturnedToPlayer = true, countdownSeconds = null, isTrailerPlaying = false) }
             returnToPlayerAnimationJob = null
         }
     }
@@ -246,6 +255,8 @@ internal class PostPlayRecommendationController(
             contentType = snapshot.contentType,
             isNextEpisodeMetadataResolved = snapshot.isNextEpisodeMetadataResolved,
             nextEpisodeHasAired = snapshot.nextEpisodeHasAired,
+            nextEpisodeAvailable = snapshot.nextEpisodeAvailable,
+            nextEpisodeReleased = snapshot.nextEpisodeReleased,
             enabled = snapshot.postPlayRecommendationsEnabled
         )
         if (!shouldUseRecommendation || snapshot.hasError) {
@@ -272,7 +283,12 @@ internal class PostPlayRecommendationController(
                 durationMs = effectiveDuration,
                 progressThreshold = postPlayRecommendationPrefetchProgress(
                     contentType = snapshot.contentType,
-                    movieThresholdPercent = snapshot.postPlayMovieThresholdPercent
+                    movieThresholdPercent = snapshot.postPlayMovieThresholdPercent,
+                    durationMs = effectiveDuration,
+                    skipIntervals = playbackController.skipIntervals,
+                    episodeThresholdMode = playbackController.nextEpisodeThresholdModeSetting,
+                    episodeThresholdPercent = playbackController.nextEpisodeThresholdPercentSetting,
+                    episodeThresholdMinutesBeforeEnd = playbackController.nextEpisodeThresholdMinutesBeforeEndSetting
                 )
             )
         ) {
@@ -359,6 +375,9 @@ internal class PostPlayRecommendationController(
             recommendationCandidates = candidates
             val preferences = loadRatingPreferences()
             ratingPreferences = preferences
+            // Propagate rating order to UI state.
+            val mdbSettings = mdbListSettingsDataStore.settings.first()
+            _uiState.update { it.copy(mdbListRatingOrder = mdbSettings.enabledRatingOrder()) }
             autoPlayTrailerEnabled = postPlayTrailerPlaybackEnabled && runCatching {
                 trailerSettingsDataStore.settings.first().enabled
             }.getOrDefault(true)
@@ -558,7 +577,7 @@ internal class PostPlayRecommendationController(
 
     private suspend fun loadRatingPreferences(): RatingPreferences {
         val settings = mdbListSettingsDataStore.settings.first()
-        val isMdbListActive = settings.enabled && settings.apiKey.isNotBlank()
+        val isMdbListActive = mdbListRepository.isAvailable(settings)
         val visibility = layoutPreferenceDataStore.homeImdbRatingsVisibility.first()
         return RatingPreferences(
             isMdbListActive = isMdbListActive,
@@ -609,7 +628,15 @@ internal class PostPlayRecommendationController(
         val candidates = withTimeoutOrNull(10_000L) {
             val sourcePreference = traktSettingsDataStore.moreLikeThisSource.first()
             val traktAuthenticated = traktAuthDataStore.isAuthenticated.first()
-            if (sourcePreference == MoreLikeThisSourcePreference.TRAKT && traktAuthenticated) {
+            if (sourcePreference == MoreLikeThisSourcePreference.SIMKL && simklAuthRepository.state.value.isAuthenticated) {
+                runCatching {
+                    simklRelatedService.getRelated(
+                        meta = meta,
+                        fallbackItemId = playbackController.contentId,
+                        fallbackItemType = playbackController.contentType
+                    )
+                }.getOrDefault(emptyList())
+            } else if (sourcePreference == MoreLikeThisSourcePreference.TRAKT && traktAuthenticated) {
                 runCatching {
                     traktRelatedService.getRelated(
                         meta = meta,
@@ -621,8 +648,8 @@ internal class PostPlayRecommendationController(
                 val settings = tmdbSettingsDataStore.settings.first()
                 if (!settings.enabled || !settings.useMoreLikeThis) return@withTimeoutOrNull emptyList()
                 val lookupType = tmdbContentType.toApiString(playbackController.contentType)
-                val tmdbId = tmdbService.ensureTmdbId(meta.id, lookupType)
-                    ?: playbackController.contentId?.let { tmdbService.ensureTmdbId(it, lookupType) }
+                val tmdbId = tmdbService.ensureTmdbId(meta.id, lookupType, fallbackImdbId = meta.imdbId)
+                    ?: playbackController.contentId?.let { tmdbService.ensureTmdbId(it, lookupType, fallbackImdbId = meta.imdbId) }
                     ?: return@withTimeoutOrNull emptyList()
                 runCatching {
                     tmdbMetadataService.fetchMoreLikeThis(
@@ -678,12 +705,14 @@ internal class PostPlayRecommendationController(
             apiType = meta?.apiType ?: candidate.apiType,
             fallback = meta?.type ?: candidate.type
         )
+        val candidateImdbId = meta?.imdbId ?: candidate.imdbId
         val tmdbId = try {
             tmdbService.ensureTmdbId(
                 videoId = meta?.id ?: candidate.id,
-                mediaType = meta?.apiType ?: candidate.apiType
+                mediaType = meta?.apiType ?: candidate.apiType,
+                fallbackImdbId = candidateImdbId
             ) ?: if (meta?.id != candidate.id) {
-                tmdbService.ensureTmdbId(candidate.id, candidate.apiType)
+                tmdbService.ensureTmdbId(candidate.id, candidate.apiType, fallbackImdbId = candidateImdbId)
             } else {
                 null
             }
