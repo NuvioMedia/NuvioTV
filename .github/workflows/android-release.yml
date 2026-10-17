@@ -216,9 +216,13 @@ jobs:
             fi
           done
 
-      - name: Test updater and build full release APKs
+      - name: Verify Usenet Android sidecars
         if: inputs.mode != 'dry-run'
-        run: ./gradlew :app:testFullReleaseUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullRelease --stacktrace
+        run: python3 native/usenet/scripts/check_prebuilts.py
+
+      - name: Test updater and Usenet and build full release APKs
+        if: inputs.mode != 'dry-run'
+        run: ./gradlew :app:testFullReleaseUnitTest --tests 'com.nuvio.tv.updater.*' --tests '*Usenet*' --tests 'com.nuvio.tv.core.player.StreamFallbackSessionTest' :app:assembleFullRelease --stacktrace
 
       - name: Upload build artifacts
         if: inputs.mode != 'dry-run'

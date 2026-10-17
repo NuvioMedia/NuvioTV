@@ -106,6 +106,7 @@ import kotlin.math.roundToInt
 private enum class IntegrationSettingsSection {
     Hub,
     Debrid,
+    Usenet,
     Tmdb,
     MdbList,
     AnimeSkip
@@ -243,6 +244,7 @@ fun SettingsScreen(
     val railContainerFocusRequester = remember { FocusRequester() }
     val integrationHubFocusRequester = remember { FocusRequester() }
     val integrationDebridFocusRequester = remember { FocusRequester() }
+    val integrationUsenetFocusRequester = remember { FocusRequester() }
     val integrationTmdbFocusRequester = remember { FocusRequester() }
     val integrationMdbListFocusRequester = remember { FocusRequester() }
     val integrationAnimeSkipFocusRequester = remember { FocusRequester() }
@@ -643,6 +645,7 @@ fun SettingsScreen(
                                 onSelectIntegrationSection = { integrationSection = it },
                                 integrationHubFocusRequester = integrationHubFocusRequester,
                                 integrationDebridFocusRequester = integrationDebridFocusRequester,
+                                integrationUsenetFocusRequester = integrationUsenetFocusRequester,
                                 integrationTmdbFocusRequester = integrationTmdbFocusRequester,
                                 integrationMdbListFocusRequester = integrationMdbListFocusRequester,
                                 integrationAnimeSkipFocusRequester = integrationAnimeSkipFocusRequester,
@@ -797,6 +800,7 @@ fun SettingsScreen(
                         onSelectIntegrationSection = { integrationSection = it },
                         integrationHubFocusRequester = integrationHubFocusRequester,
                         integrationDebridFocusRequester = integrationDebridFocusRequester,
+                        integrationUsenetFocusRequester = integrationUsenetFocusRequester,
                         integrationTmdbFocusRequester = integrationTmdbFocusRequester,
                         integrationMdbListFocusRequester = integrationMdbListFocusRequester,
                         integrationAnimeSkipFocusRequester = integrationAnimeSkipFocusRequester,
@@ -826,6 +830,7 @@ private fun SettingsDetailPane(
     onSelectIntegrationSection: (IntegrationSettingsSection) -> Unit,
     integrationHubFocusRequester: FocusRequester,
     integrationDebridFocusRequester: FocusRequester,
+    integrationUsenetFocusRequester: FocusRequester,
     integrationTmdbFocusRequester: FocusRequester,
     integrationMdbListFocusRequester: FocusRequester,
     integrationAnimeSkipFocusRequester: FocusRequester,
@@ -923,6 +928,7 @@ private fun SettingsDetailPane(
             },
             hubFocusRequester = integrationHubFocusRequester,
             debridFocusRequester = integrationDebridFocusRequester,
+            usenetFocusRequester = integrationUsenetFocusRequester,
             tmdbFocusRequester = integrationTmdbFocusRequester,
             mdbListFocusRequester = integrationMdbListFocusRequester,
             animeSkipFocusRequester = integrationAnimeSkipFocusRequester,
@@ -1043,6 +1049,7 @@ private fun IntegrationSettingsContent(
     initialFocusRequester: FocusRequester?,
     hubFocusRequester: FocusRequester,
     debridFocusRequester: FocusRequester,
+    usenetFocusRequester: FocusRequester,
     tmdbFocusRequester: FocusRequester,
     mdbListFocusRequester: FocusRequester,
     animeSkipFocusRequester: FocusRequester,
@@ -1058,6 +1065,7 @@ private fun IntegrationSettingsContent(
         val requester = when (selectedSection) {
             IntegrationSettingsSection.Hub -> hubEntryFocusRequester
             IntegrationSettingsSection.Debrid -> debridFocusRequester
+            IntegrationSettingsSection.Usenet -> usenetFocusRequester
             IntegrationSettingsSection.Tmdb -> tmdbFocusRequester
             IntegrationSettingsSection.MdbList -> mdbListFocusRequester
             IntegrationSettingsSection.AnimeSkip -> animeSkipFocusRequester
@@ -1096,6 +1104,13 @@ private fun IntegrationSettingsContent(
                                     modifier = Modifier.focusRequester(hubEntryFocusRequester)
                                 )
                             }
+                            item(key = "integration_hub_usenet") {
+                                SettingsActionRow(
+                                    title = stringResource(R.string.usenet_title),
+                                    subtitle = stringResource(R.string.settings_usenet_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.Usenet) }
+                                )
+                            }
                             item(key = "integration_hub_tmdb") {
                                 SettingsActionRow(
                                     title = "TMDB",
@@ -1131,6 +1146,10 @@ private fun IntegrationSettingsContent(
             DebridSettingsContent(
                 initialFocusRequester = debridFocusRequester
             )
+        }
+
+        IntegrationSettingsSection.Usenet -> {
+            UsenetSettingsContent(initialFocusRequester = usenetFocusRequester)
         }
 
         IntegrationSettingsSection.Tmdb -> {

@@ -1,0 +1,32 @@
+name: Usenet tests
+
+on:
+  pull_request:
+    branches: [dev, nntp]
+  push:
+    branches: [nntp]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  usenet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: native/usenet/go.mod
+          cache-dependency-path: native/usenet/go.sum
+      - name: Verify Android sidecars
+        run: python3 native/usenet/scripts/check_prebuilts.py
+      - name: Test upstream 7z compatibility
+        working-directory: native/usenet
+        run: go test github.com/javi11/sevenzip/... -timeout 5m
+      - name: Test engine and NNTP pool with race detection
+        working-directory: native/usenet
+        run: go test -race ./... github.com/javi11/nntppool/v4 -timeout 10m
+      - name: Test 7z resource limits and cancellation with race detection
+        working-directory: native/usenet
+        run: go test -race github.com/javi11/sevenzip/... -run 'TestMetadataAllocationsAreBounded|TestReaderCancellation|TestKeyDerivation|FuzzReaderMetadata' -timeout 2m

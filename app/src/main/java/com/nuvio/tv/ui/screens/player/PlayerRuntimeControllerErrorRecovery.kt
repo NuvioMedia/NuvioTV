@@ -547,6 +547,7 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
                 return@launch
             }
             val userFacingError = error.toDisplayMessage(context)
+            if (tryNextStream(userFacingError)) return@launch
             _uiState.update {
                 it.copy(
                     error = userFacingError,
