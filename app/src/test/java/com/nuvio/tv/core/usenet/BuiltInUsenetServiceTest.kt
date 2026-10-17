@@ -159,7 +159,7 @@ class BuiltInUsenetServiceTest {
             listOf(release(indexer, "Movie.2020.2160p-GRP"), release(indexer, "Movie.2020.720p-GRP"), release(indexer, "Movie.2020-GRP"))
         val names = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
             .search(config, "movie", "tt1", null, null).toList().mapNotNull { it.group }.last().streams.map { it.name }
-        assertEquals(listOf("Usenet • 4K • A", "Usenet • 720p • A", "Usenet • A"), names)
+        assertEquals(listOf("4K • Usenet • A", "720p • Usenet • A", "Usenet • A"), names)
     }
 
     @Test fun `results wait for every indexer, briefly, unless shown progressively`() = runTest {
@@ -257,14 +257,14 @@ class BuiltInUsenetServiceTest {
         coEvery { client.search(backup, any(), any()) } returns listOf(release(backup))
         val service = BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>())
         val streams = service.search(config, "movie", "tt1", null, null).toList().last().group!!.streams
-        assertEquals(listOf("Usenet • 1080p • A"), streams.map { it.name })
+        assertEquals(listOf("1080p • Usenet • A"), streams.map { it.name })
         coVerify { client.search(shared, any(), any()) }
         coVerify(exactly = 0) { client.capabilities(backup) }
 
         // A failed or empty higher priority falls through to the next one.
         coEvery { client.search(first, any(), any()) } throws IllegalStateException("down")
         val fallback = service.search(config, "movie", "tt1", null, null).toList()
-        assertEquals(listOf("Usenet • 1080p • C"), fallback.mapNotNull { it.group }.last().streams.map { it.name })
+        assertEquals(listOf("1080p • Usenet • C"), fallback.mapNotNull { it.group }.last().streams.map { it.name })
     }
 
     @Test fun `failed metadata lookup only fails indexers that need a title search`() = runTest {
@@ -279,7 +279,7 @@ class BuiltInUsenetServiceTest {
         coEvery { tmdb.ensureTmdbId(any(), any()) } throws IllegalStateException("tmdb down")
         val results = BuiltInUsenetService(client, tmdb, mockk<TmdbApi>()).search(config, "movie", "tt1", null, null).toList()
         assertEquals(listOf("Titles: indexer search failed. Check the API URL, key and limits."), results.mapNotNull { it.failure })
-        assertEquals(listOf("Usenet • 1080p • Ids"), results.mapNotNull { it.group }.last().streams.map { it.name })
+        assertEquals(listOf("1080p • Usenet • Ids"), results.mapNotNull { it.group }.last().streams.map { it.name })
     }
 
     @Test fun `tvdb id is looked up for indexers that only search tv by tvdb`() = runTest {
@@ -295,7 +295,7 @@ class BuiltInUsenetServiceTest {
         coEvery { tmdbApi.getTvExternalIds(1399, any()) } returns
             retrofit2.Response.success(com.nuvio.tv.data.remote.api.TmdbExternalIdsResponse(1399, "tt0944947", 121361))
         val results = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt0944947:1:2", null, null).toList()
-        assertEquals(listOf("Usenet • 1080p • Tvdb"), results.mapNotNull { it.group }.last().streams.map { it.name })
+        assertEquals(listOf("1080p • Usenet • Tvdb"), results.mapNotNull { it.group }.last().streams.map { it.name })
         coVerify { client.search(tvdbOnly, match { it.tvdbId == "121361" && it.episode == 2 }, any()) }
     }
 
