@@ -39,6 +39,49 @@ class BuiltInUsenetServiceTest {
         coVerify(exactly = 0) { tmdb.ensureTmdbId(any(), any()) }
     }
 
+    @Test fun `a reused release opens with today's providers`() {
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(
+            UsenetProvider(name = "News", host = "news.test", username = "user", password = "new"),
+            UsenetProvider(name = "Off", host = "off.test", enabled = false)))
+        val stream = BuiltInUsenetService.restoredStream("https://a.test/nzb/1", "4K • Usenet • A",
+            "Show.S01E03.2160p-GRP", 9_000_000_000, 1_600_000_000_000, config)!!
+        assertTrue(stream.isUsenet())
+        assertEquals(BuiltInUsenetService.GROUP_NAME, stream.addonName)
+        assertEquals(listOf("nntps://user:new@news.test:563/20?priority=1"), stream.servers)
+        assertEquals(9_000_000_000, stream.behaviorHints?.videoSize)
+        assertEquals(1_600_000_000_000, stream.publishedAt)
+        // Its next episode keeps to its upload, as a listed result's does.
+        assertEquals(BuiltInUsenetService.bingeGroup("Show.S01E03.2160p-GRP"), stream.behaviorHints?.bingeGroup)
+        // With no provider enabled there is nothing to open it with.
+        assertNull(BuiltInUsenetService.restoredStream("https://a.test/nzb/1", "A", null, null, null,
+            config.copy(providers = config.providers.map { it.copy(enabled = false) })))
+    }
+
+    @Test fun `an upload's episodes share a binge group, so the next episode keeps to it`() {
+        fun group(title: String) = BuiltInUsenetService.bingeGroup(title)
+        val e01 = group("Silo.S01E01.Freedom.Day.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb")
+        assertNotNull(e01)
+        assertEquals(e01, group("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb"))
+        assertNotEquals(e01, group("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-FLUX"))
+        assertNotEquals(e01, group("Silo.S02E01.The.Engineer.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb"))
+        // A season pack plays every episode: it is its own group. Movies have none.
+        assertEquals(group("Silo.S01.2160p.ATVp.WEB-DL-NTb"), group("silo.s01.2160p.atvp.web-dl-ntb"))
+        assertNull(group("Movie.2020.1080p.WEB-DL-GRP"))
+
+        fun stream(title: String) = with(BuiltInUsenetService) {
+            com.nuvio.tv.domain.model.Stream(name = "4K • Usenet • A", title = title, description = null, url = null,
+                ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
+                behaviorHints = com.nuvio.tv.domain.model.StreamBehaviorHints(null, bingeGroup(title), null, null),
+                addonName = GROUP_NAME, addonLogo = null, nzbUrl = "https://a.test/$title", servers = listOf(provider.serverUrl()))
+        }
+        val next = listOf(stream("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-FLUX"),
+            stream("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb"))
+        val picked = com.nuvio.tv.core.player.StreamAutoPlaySelector.selectAutoPlayStream(next,
+            com.nuvio.tv.data.local.StreamAutoPlayMode.MANUAL, "", com.nuvio.tv.data.local.StreamAutoPlaySource.ALL_SOURCES,
+            emptySet(), emptySet(), emptySet(), preferredBingeGroup = e01, preferBingeGroupInSelection = true, bingeGroupOnly = true)
+        assertEquals(next[1], picked)
+    }
+
     private val provider = UsenetProvider(name = "News", host = "news.test")
     private fun release(indexer: UsenetIndexer, title: String = "Movie.2020.1080p") =
         UsenetRelease(title, "${indexer.apiUrl}/nzb/$title", indexerId = indexer.id, indexerName = indexer.name)

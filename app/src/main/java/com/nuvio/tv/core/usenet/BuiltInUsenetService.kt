@@ -476,8 +476,8 @@ class BuiltInUsenetService @Inject constructor(
         return Stream(name = listOfNotNull(resolutionLabel, "Usenet", indexerName).joinToString(" • "), title = title,
             description = if (config.showReleaseNames) "$title\n$details" else details,
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
-            // The size badge, as other sources show it.
-            behaviorHints = (episodeShare ?: size).takeIf { it > 0 }?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
+            // The size badge, as other sources show it, and the upload's binge group.
+            behaviorHints = usenetHints(bingeGroup(title), (episodeShare ?: size).takeIf { it > 0 }),
             addonName = GROUP_NAME, addonLogo = null,
             badges = listOfNotNull(
                 UNAVAILABLE_BADGE.takeIf { failed },
@@ -487,7 +487,7 @@ class BuiltInUsenetService @Inject constructor(
                 blurayLabel?.let {
                     StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
                 }),
-            nzbUrl = nzbUrl, servers = config.providers.filter { it.enabled }.map { it.serverUrl() },
+            nzbUrl = nzbUrl, servers = config.servers(),
             publishedAt = publishedAt.takeIf { it > 0 },
             quality = resolution.takeIf { it > 0 }?.let { "${it}p" }, qualityValue = resolution)
     }
@@ -501,6 +501,22 @@ class BuiltInUsenetService @Inject constructor(
         /** How long a search waits for every indexer before it shows what came. */
         const val COMPLETE_RESULTS_WAIT_MS = 5_000L
         private const val BLURAY_COLOR = "#0B5ED7"
+        /**
+         * One upload's episodes share a binge group, so the next episode plays from the same upload
+         * when binge groups are preferred: its title without the episode's number and name. A
+         * season pack is its own group. Movies have none.
+         */
+        fun bingeGroup(title: String?): String? {
+            val name = title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() } ?: return null
+            val upload = NewznabProtocol.episodeTemplate(name)?.first
+                ?: name.takeIf { NewznabProtocol.packSeasons(it).isNotEmpty() } ?: return null
+            return "$GROUP_NAME|$upload"
+        }
+
+        private fun usenetHints(bingeGroup: String?, size: Long?): StreamBehaviorHints? =
+            if (bingeGroup == null && size == null) null
+            else StreamBehaviorHints(null, bingeGroup, null, null, videoSize = size)
+
         /** On a release whose articles were missing or damaged when it was last tried. */
         const val UNAVAILABLE_LABEL = "UNAVAILABLE"
         private val UNAVAILABLE_BADGE = StreamBadge(name = UNAVAILABLE_LABEL, tagColor = "#6C757D",
@@ -531,6 +547,21 @@ class BuiltInUsenetService @Inject constructor(
         const val SEASON_PACK_LABEL = "SEASON PACK"
         private val SEASON_PACK_BADGE = StreamBadge(name = SEASON_PACK_LABEL, tagColor = "#6F42C1",
             textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /**
+         * A release played before, to open again without a search: reusing the last link keeps
+         * the release, never the engine's session link, which ends with its session. The providers
+         * are today's, so no credential is kept with it, and its binge group its upload's. Null when
+         * no provider is enabled.
+         */
+        fun restoredStream(nzbUrl: String, name: String, title: String?, size: Long?, publishedAt: Long?,
+            config: UsenetSourceConfiguration): Stream? {
+            val servers = config.servers().ifEmpty { return null }
+            return Stream(name = name, title = title, description = null, url = null, ytId = null, infoHash = null,
+                fileIdx = null, externalUrl = null,
+                behaviorHints = usenetHints(bingeGroup(title), size),
+                addonName = GROUP_NAME, addonLogo = null, nzbUrl = nzbUrl, servers = servers, publishedAt = publishedAt)
+        }
 
         /** Available releases first when chosen, unplayable ones last; the sort applies within each. */
         private fun outcomeRank(failed: Boolean, available: Boolean, availableFirst: Boolean) = when {
