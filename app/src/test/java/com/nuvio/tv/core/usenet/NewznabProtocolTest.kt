@@ -10,7 +10,11 @@ class NewznabProtocolTest {
     @Test fun `season packs are told from episodes`() {
         assertEquals(listOf(1), NewznabProtocol.packSeasons("Slow.Horses.S01.1080p.ATVP.WEB-DL-NTb"))
         assertEquals(listOf(2), NewznabProtocol.packSeasons("Show Season 2 Complete 2160p"))
-        assertEquals(listOf(1, 3), NewznabProtocol.packSeasons("Show.S01-S03.1080p"))
+        assertEquals(listOf(1, 2, 3), NewznabProtocol.packSeasons("Show.S01-S03.1080p"))
+        assertEquals(listOf(1, 2, 3), NewznabProtocol.packSeasons("Show.S01-03.1080p"))
+        assertEquals(listOf(1, 2, 3), NewznabProtocol.packSeasons("Show Season 1-3 1080p"))
+        assertEquals(listOf(1, 3), NewznabProtocol.packSeasons("Show.S01.S03.1080p"))
+        assertEquals(listOf(2), NewznabProtocol.packSeasons("Show.S02-720p"))
         assertTrue(NewznabProtocol.packSeasons("Slow.Horses.S01E03.1080p").isEmpty())
         assertTrue(NewznabProtocol.packSeasons("Show.1x03.720p").isEmpty())
         assertTrue(NewznabProtocol.packSeasons("Movie.2020.2160p").isEmpty())
@@ -24,9 +28,18 @@ class NewznabProtocolTest {
         // Without an episode count the pack is its whole size: over the limit.
         assertEquals(listOf(episode), NewznabProtocol.arrange(listOf(pack, episode), config))
         // Nine episodes: 1 GB each, under the limit and smaller than the 2 GB episode.
-        assertEquals(listOf(episode, pack), NewznabProtocol.arrange(listOf(pack, episode), config, episodesPerSeason = 9))
+        assertEquals(listOf(episode, pack), NewznabProtocol.arrange(listOf(pack, episode), config, seasonEpisodes = mapOf(1 to 9)))
         assertEquals(listOf(pack, episode),
-            NewznabProtocol.arrange(listOf(pack, episode), config.copy(sort = UsenetSort.SMALLEST), episodesPerSeason = 9))
+            NewznabProtocol.arrange(listOf(pack, episode), config.copy(sort = UsenetSort.SMALLEST), seasonEpisodes = mapOf(1 to 9)))
+    }
+
+    @Test fun `a pack of several seasons is sized by all their episodes`() {
+        val gb = 1L shl 30
+        val pack = UsenetRelease("Show.S01-S03.1080p-GRP", "https://a/pack", size = 34 * gb, indexerId = "one")
+        assertEquals(gb, pack.episodeSize(mapOf(1 to 10, 2 to 12, 3 to 12)))
+        // A season without a count leaves the whole size.
+        assertEquals(34 * gb, pack.episodeSize(mapOf(1 to 10, 2 to 12)))
+        assertEquals(34 * gb, pack.episodeSize(null))
     }
 
     @Test fun `the result limit never cuts a release ranked first`() {
