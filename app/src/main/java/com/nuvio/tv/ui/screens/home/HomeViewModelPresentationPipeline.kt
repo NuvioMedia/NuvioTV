@@ -6,10 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.poster.CustomPosterScreen
+import com.nuvio.tv.core.poster.patternForScreen
 import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.core.tmdb.TmdbEnrichment
+import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
+import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
@@ -17,8 +21,6 @@ import com.nuvio.tv.domain.model.TmdbSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -28,11 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-
-private const val TMDB_HERO_ENRICHMENT_CONCURRENCY = 4
 
 private data class CoreLayoutPrefs(
     val layout: HomeLayout,
@@ -68,6 +66,7 @@ private data class LayoutUiPrefs(
     val alwaysShowLandscapeClearlogo: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility,
+    val detailImdbRatingsVisibility: DetailImdbRatingsVisibility = DetailImdbRatingsVisibility.SHOW_ALL,
     val focusedBackdropExpandEnabled: Boolean,
     val focusedBackdropExpandDelaySeconds: Int,
     val focusedBackdropTrailerEnabled: Boolean,
@@ -83,6 +82,7 @@ private data class ModernLayoutPrefs(
     val fullScreenBackdrop: Boolean,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility,
     val alwaysShowLandscapeClearlogo: Boolean,
+    val detailImdbRatingsVisibility: DetailImdbRatingsVisibility = DetailImdbRatingsVisibility.SHOW_ALL,
 )
 
 @OptIn(FlowPreview::class)
@@ -140,13 +140,15 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
         layoutPreferenceDataStore.modernLandscapePostersEnabled,
         layoutPreferenceDataStore.modernHeroFullScreenBackdropEnabled,
         layoutPreferenceDataStore.homeImdbRatingsVisibility,
-        layoutPreferenceDataStore.alwaysShowLandscapeClearlogo
-    ) { landscapePosters, fullScreenBackdrop, homeImdbRatingsVisibility, alwaysShowLandscapeClearlogo ->
+        layoutPreferenceDataStore.alwaysShowLandscapeClearlogo,
+        layoutPreferenceDataStore.detailImdbRatingsVisibility
+    ) { landscapePosters, fullScreenBackdrop, homeImdbRatingsVisibility, alwaysShowLandscapeClearlogo, detailImdbRatingsVisibility ->
         ModernLayoutPrefs(
             landscapePosters = landscapePosters,
             fullScreenBackdrop = fullScreenBackdrop,
             homeImdbRatingsVisibility = homeImdbRatingsVisibility,
             alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
+            detailImdbRatingsVisibility = detailImdbRatingsVisibility,
         )
     }
 
@@ -192,6 +194,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                 modernHeroFullScreenBackdropEnabled = modernPrefs.fullScreenBackdrop,
                 homeImdbRatingsVisibility = modernPrefs.homeImdbRatingsVisibility,
                 alwaysShowLandscapeClearlogo = modernPrefs.alwaysShowLandscapeClearlogo,
+                detailImdbRatingsVisibility = modernPrefs.detailImdbRatingsVisibility,
             )
         }
             .distinctUntilChanged()
@@ -238,6 +241,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                         alwaysShowLandscapeClearlogo = prefs.alwaysShowLandscapeClearlogo,
                         modernHeroFullScreenBackdropEnabled = prefs.modernHeroFullScreenBackdropEnabled,
                         homeImdbRatingsVisibility = prefs.homeImdbRatingsVisibility,
+                        detailImdbRatingsVisibility = prefs.detailImdbRatingsVisibility,
                         focusedPosterBackdropExpandEnabled = prefs.focusedBackdropExpandEnabled,
                         focusedPosterBackdropExpandDelaySeconds = prefs.focusedBackdropExpandDelaySeconds,
                         focusedPosterBackdropTrailerEnabled = prefs.focusedBackdropTrailerEnabled,
@@ -267,27 +271,64 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
     }
 }
 
+private data class ContinueWatchingPosterInput(
+    val enabled: Boolean,
+    val pattern: String,
+    val screens: Set<CustomPosterScreen>,
+    val continueWatchingItems: List<ContinueWatchingItem>,
+    val upcomingItems: List<ContinueWatchingItem>,
+)
+
+private data class ContinueWatchingPosterOverlay(
+    val continueWatchingItems: List<ContinueWatchingItem>,
+    val upcomingItems: List<ContinueWatchingItem>,
+)
+
 @OptIn(FlowPreview::class)
 internal fun HomeViewModel.observeModernHomePresentationPipeline() {
     viewModelScope.launch {
-        combine(uiState, _currentLocaleTag) { state, localeTag ->
+        // Poster URLs are resolved only when the list or the pattern changes.
+        // uiState also emits on focus and catalog updates; resolving there
+        // reran placeholder replacement for every row on each scroll step.
+        val posterOverlay = uiState
+            .map { state ->
+                ContinueWatchingPosterInput(
+                    enabled = state.continueWatchingEnabled,
+                    pattern = state.customPosterUrlPattern,
+                    screens = state.customPosterEnabledScreens,
+                    continueWatchingItems = state.continueWatchingItems,
+                    upcomingItems = state.upcomingItems,
+                )
+            }
+            .distinctUntilChanged()
+            .map { input ->
+                if (!input.enabled) {
+                    ContinueWatchingPosterOverlay(emptyList(), emptyList())
+                } else {
+                    val pattern = patternForScreen(
+                        input.pattern,
+                        CustomPosterScreen.CONTINUE_WATCHING,
+                        input.screens,
+                    )
+                    ContinueWatchingPosterOverlay(
+                        continueWatchingItems = input.continueWatchingItems.withCustomPosterUrls(pattern),
+                        upcomingItems = input.upcomingItems.withCustomPosterUrls(pattern),
+                    )
+                }
+            }
+            .distinctUntilChanged()
+
+        combine(uiState, _currentLocaleTag, posterOverlay) { state, localeTag, overlay ->
                 ModernHomePresentationInput(
                     homeRows = state.homeRows,
                     catalogRows = state.catalogRows,
-                    continueWatchingItems = if (state.continueWatchingEnabled)
-                        state.continueWatchingItems.withCustomPosterUrls(
-                            com.nuvio.tv.core.poster.patternForScreen(state.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, state.customPosterEnabledScreens)
-                        )
-                    else emptyList(),
-                    upcomingItems = if (state.continueWatchingEnabled)
-                        state.upcomingItems.withCustomPosterUrls(
-                            com.nuvio.tv.core.poster.patternForScreen(state.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, state.customPosterEnabledScreens)
-                        )
-                    else emptyList(),
+                    continueWatchingItems = overlay.continueWatchingItems,
+                    upcomingItems = overlay.upcomingItems,
                     useLandscapePosters = state.modernLandscapePostersEnabled,
                     showCatalogTypeSuffix = state.catalogTypeSuffixEnabled,
                     showFullReleaseDate = state.showFullReleaseDate,
                     showImdbRatings = state.homeImdbRatingsVisibility.showRatings,
+                    detailImdbRatingsVisibility = state.detailImdbRatingsVisibility,
                     localeTag = localeTag
                 )
             }
@@ -378,6 +419,7 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
 ) {
     if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
     if (startupGracePeriodActive) return
+    if (ServerItemRef.isServerId(itemId)) return
 
     // Resolve fallbackYtId from catalog item if not provided
     val resolvedFallbackYtId = fallbackYtId ?: findCatalogItemById(itemId)?.trailerYtIds?.firstOrNull()
@@ -435,7 +477,11 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
                             trailerPreviewAudioUrlsState[itemId] = fallbackAudio
                         }
                     } else {
-                        trailerPreviewNegativeCache.add(itemId)
+                        // While YouTube is rate limiting, a miss isn't remembered, so the
+                        // trailer comes back on a later focus once the pause is over.
+                        if (!trailerService.isRateLimited()) {
+                            trailerPreviewNegativeCache.add(itemId)
+                        }
                         trailerPreviewUrlsState.remove(itemId)
                         trailerPreviewAudioUrlsState.remove(itemId)
                     }
@@ -1035,104 +1081,7 @@ private fun HomeViewModel.updateCatalogItemArtworkOnly(itemId: String, meta: Met
 internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
     items: List<MetaPreview>,
     settings: TmdbSettings
-): List<MetaPreview> {
-    if (items.isEmpty()) return items
-    val mdbSettings = currentMdbListSettings
-    val mdbEnabled = mdbListRepository.isAvailable(mdbSettings) && mdbSettings.showOnHero
-
-    return coroutineScope {
-        val semaphore = Semaphore(TMDB_HERO_ENRICHMENT_CONCURRENCY)
-
-        items.map { item ->
-            async(Dispatchers.IO) {
-                semaphore.withPermit {
-                    try {
-                        val tmdbDeferred = async {
-                            val tmdbId = tmdbService.ensureTmdbId(item.id, item.apiType) ?: return@async null
-                            tmdbId.toIntOrNull()?.let { numericId ->
-                                runCatching { tmdbService.tmdbToImdb(numericId, item.apiType) }
-                            }
-                            tmdbMetadataService.fetchEnrichment(
-                                tmdbId = tmdbId,
-                                contentType = item.type,
-                                language = settings.language
-                            )
-                        }
-                        // MdbListRatingsLoader auto-batches concurrent calls within a 50ms window,
-                        // so per-item getRatingsForMeta calls are efficiently grouped.
-                        val mdbDeferred = if (mdbEnabled) async {
-                            runCatching {
-                                mdbListRepository.getRatingsForMeta(
-                                    meta = com.nuvio.tv.domain.model.Meta(
-                                        id = item.id, type = item.type, name = item.name,
-                                        poster = item.poster, posterShape = item.posterShape,
-                                        background = item.background, logo = item.logo,
-                                        description = item.description, releaseInfo = item.releaseInfo,
-                                        imdbRating = item.imdbRating, genres = item.genres,
-                                        runtime = item.runtime, director = item.director,
-                                        cast = emptyList(), videos = emptyList(),
-                                        country = item.country, awards = null,
-                                        language = item.language, links = item.links
-                                    ),
-                                    fallbackItemId = item.id,
-                                    fallbackItemType = item.apiType
-                                )
-                            }.getOrNull()
-                        } else null
-
-                        val enrichment = tmdbDeferred.await()
-                        val mdbResult = mdbDeferred?.await()
-
-                        var enriched = item
-
-                        // Attach full MDBList ratings (already filtered by user settings in repository).
-                        if (mdbResult != null) {
-                            enriched = enriched.copy(
-                                mdbListRatings = mdbResult.ratings,
-                                mdbListRatingOrder = mdbSettings.ratingOrder,
-                                imdbRating = mdbResult.ratings.imdb?.toFloat() ?: enriched.imdbRating
-                            )
-                        }
-
-                        if (enrichment == null) return@withPermit enriched
-
-                        if (settings.useArtwork) {
-                            enriched = enriched.copy(
-                                background = enrichment.backdrop ?: enriched.background,
-                                logo = enrichment.logo ?: enriched.logo,
-                                poster = enrichment.poster ?: enriched.poster
-                            )
-                        }
-
-                        if (settings.useBasicInfo) {
-                            enriched = enriched.copy(
-                                name = enrichment.localizedTitle ?: enriched.name,
-                                description = enrichment.description ?: enriched.description,
-                                genres = if (enrichment.genres.isNotEmpty()) enrichment.genres else enriched.genres,
-                                imdbRating = enriched.imdbRating
-                            )
-                        }
-
-                        if (settings.useDetails) {
-                            enriched = enriched.copy(
-                                runtime = enrichment.runtimeMinutes?.toString() ?: enriched.runtime,
-                                status = enrichment.status ?: enriched.status,
-                                ageRating = enrichment.ageRating ?: enriched.ageRating,
-                                country = enrichment.countries?.joinToString(", ") ?: enriched.country,
-                                language = enrichment.language ?: enriched.language
-                            )
-                        }
-
-                        enriched
-                    } catch (e: Exception) {
-                        Log.w(HomeViewModel.TAG, "Hero enrichment failed for ${item.id}: ${e.message}")
-                        item
-                    }
-                }
-            }
-        }.awaitAll()
-    }
-}
+): List<MetaPreview> = metaPreviewEnricher.enrich(items, settings, currentMdbListSettings)
 
 internal fun HomeViewModel.replaceGridHeroItemsPipeline(
     gridItems: List<GridItem>,

@@ -370,6 +370,20 @@
     <string name="appearance_settings_style_subtitle">Chọn cách hiển thị các màn hình Cài đặt</string>
     <string name="appearance_launcher_artwork">Ảnh hiển thị Trình khởi chạy</string>
     <string name="appearance_launcher_artwork_subtitle">Chọn cách Nuvio hiển thị trên màn hình chính TV của bạn</string>
+    <string name="ambient_mode_title">Chế độ môi trường xung quanh</string>
+    <string name="ambient_mode_subtitle">Hiển thị ảnh từ danh mục khi TV ở chế độ chờ</string>
+    <string name="ambient_mode_enabled_subtitle">Lấp đầy màn hình bằng phông nền sau một khoảng thời gian không nhận thao tác từ điều khiển</string>
+    <string name="ambient_mode_timeout">Bắt đầu sau</string>
+    <string name="ambient_mode_timeout_subtitle">Thời gian chờ trước khi Chế độ môi trường xung quanh bắt đầu</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d phút</item>
+        <item quantity="other">%1$d phút</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">Danh mục</string>
+    <string name="ambient_mode_catalogs_subtitle">Chọn tối đa 3 danh mục để lấy ảnh hiển thị</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">Chọn tối đa 3 danh mục</string>
+    <string name="ambient_mode_catalogs_default">Giống khu vực nổi bật</string>
+    <string name="ambient_mode_catalogs_count">%1$d trong số %2$d</string>
     <string name="appearance_app_icon_and_banner">Biểu tượng ứng dụng &amp; Ảnh biểu ngữ</string>
     <string name="appearance_app_icon_and_banner_subtitle">Thay đổi biểu tượng ứng dụng và ảnh biểu ngữ</string>
     <string name="appearance_app_icon_picker_title">Chọn Biểu tượng ứng dụng &amp; Ảnh biểu ngữ</string>
@@ -507,7 +521,7 @@
     <string name="stream_auto_play_smart_match">Ghép thông minh</string>
     <string name="essential_subtitle_language">Ngôn ngữ phụ đề</string>
     <string name="essential_audio_language">Ngôn ngữ âm thanh</string>
-    <string name="audio_lang_media_default">Mặc định phương tiện</string>
+    <string name="audio_lang_media_default">Phương tiện mặc định</string>
     <string name="essential_playback_header_title">Phát lại</string>
     <string name="essential_playback_header_subtitle">Tùy chọn cơ bản về phát lại, phụ đề, âm thanh và P2P.</string>
     <string name="essential_stream_selection_subtitle">Chọn thủ công hoặc tự động phát luồng đầu tiên có sẵn.</string>
@@ -983,7 +997,7 @@
     <string name="layout_section_home">Bố cục Trang chủ</string>
     <string name="layout_section_home_desc">Chọn bố cục và nguồn Khu vực Nổi bật.</string>
     <string name="layout_landscape_posters">Poster ngang</string>
-    <string name="layout_landscape_posters_sub">Chuyển đổi giữa thẻ dọc và ngang cho kiểu hiển thị Hiện đại.</string>
+    <string name="layout_landscape_posters_sub">Sử dụng thẻ ngang ở mọi vị trí.</string>
     <string name="layout_preview_row">Hiển thị hàng xem trước</string>
     <string name="layout_preview_row_sub">Hiển thị một phần bản xem trước của hàng bên dưới trong bố cục Trang chủ Hiện đại.</string>
     <string name="layout_hero_catalogs">Danh mục Khu vực Nổi bật</string>
@@ -1076,6 +1090,8 @@
     <string name="layout_trailer_play_in_background_sub">Phát trailer thay cho phông nền trong khi trang vẫn hiển thị.</string>
     <string name="layout_trailer_pause_on_scroll">Tạm dừng khi cuộn</string>
     <string name="layout_trailer_pause_on_scroll_sub">Tạm dừng trailer khi cuộn xuống và tiếp tục phát khi quay lại đầu trang.</string>
+    <string name="layout_trailer_4k">Trailer 4K</string>
+    <string name="layout_trailer_4k_sub">Phát trailer trên 1080p khi có thể. Tùy chọn này sử dụng nhiều bộ nhớ hơn; mặc định tắt trên các thiết bị có 2 GB RAM trở xuống.</string>
     <string name="layout_detail_group_episodes">Tập phim</string>
     <string name="layout_detail_group_trailers">Trailer</string>
     <string name="layout_detail_group_metadata">Siêu dữ liệu</string>
@@ -1164,6 +1180,7 @@
     <string name="layout_custom_poster_screen_library">Thư viện</string>
     <string name="layout_custom_poster_screen_search">Tìm kiếm</string>
     <string name="layout_custom_poster_screen_details">Màn hình chi tiết</string>
+    <string name="layout_custom_poster_screen_tv_recommendations">Đề xuất TV</string>
 
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Luôn dùng phông nền kèm logo cho poster ngang</string>
@@ -3237,8 +3254,6 @@
     <string name="playback_reset_to_default">Đặt lại</string>
     <string name="playback_net_custom">Mạng tùy chỉnh</string>
     <string name="playback_net_custom_sub">Sử dụng nhiều kết nối đồng thời để tải các luồng tiến dần. Khi tắt, chỉ sử dụng một kết nối.</string>
-    <string name="playback_net_http2">Bật HTTP/2</string>
-    <string name="playback_net_http2_sub">Bật giao thức HTTP/2 cho các kết nối mạng, cho phép dồn nhiều yêu cầu và rút ngắn thời gian bắt tay.</string>
     <string name="playback_net_parallel">Kết nối đồng thời</string>
     <string name="playback_net_parallel_sub">Sử dụng nhiều kết nối đồng thời để tải luồng phát. Bật tùy chọn này khi bạn vẫn gặp tình trạng đệm dù tốc độ tải xuống chắc chắn đủ nhanh.</string>
     <string name="playback_net_connection_count">Số lượng kết nối</string>

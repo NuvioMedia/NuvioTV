@@ -37,6 +37,7 @@ class TrackingSourceController @Inject constructor(
         val profileId = profileManager.activeProfileId.value
         mutationMutex.withLock {
             if (profileManager.activeProfileId.value != profileId) return
+            settingsDataStore.setRememberedWatchProgressSource(null, profileId)
             if (settingsDataStore.getWatchProgressSource(profileId) == source) return
             applyWatchProgressSource(source, profileId)
         }
@@ -46,6 +47,7 @@ class TrackingSourceController @Inject constructor(
         val profileId = profileManager.activeProfileId.value
         mutationMutex.withLock {
             if (profileManager.activeProfileId.value != profileId) return
+            settingsDataStore.setRememberedLibrarySourceMode(null, profileId)
             if (settingsDataStore.getLibrarySourceMode(profileId) == mode) return
             applyLibrarySourceMode(mode, profileId)
         }
@@ -55,16 +57,38 @@ class TrackingSourceController @Inject constructor(
         connectedProviderIds: Set<TrackingProviderId>
     ): TrackingSourceSelection = mutationMutex.withLock {
         val profileId = profileManager.activeProfileId.value
-        val requested = TrackingSourceSelection(
+        val stored = TrackingSourceSelection(
             watchProgressSource = settingsDataStore.getWatchProgressSource(profileId),
             librarySourceMode = settingsDataStore.getLibrarySourceMode(profileId)
         )
+        val rememberedProgress = settingsDataStore.getRememberedWatchProgressSource(profileId)
+        val rememberedLibrary = settingsDataStore.getRememberedLibrarySourceMode(profileId)
+        val requested = TrackingSourceSelection(
+            watchProgressSource = rememberedProgress?.takeIf {
+                stored.watchProgressSource == WatchProgressSource.NUVIO_SYNC && it.providerId in connectedProviderIds
+            } ?: stored.watchProgressSource,
+            librarySourceMode = rememberedLibrary?.takeIf {
+                stored.librarySourceMode == LibrarySourceMode.LOCAL && it.providerId in connectedProviderIds
+            } ?: stored.librarySourceMode
+        )
         val effective = effectiveTrackingSourceSelection(requested, connectedProviderIds)
         if (profileManager.activeProfileId.value != profileId) return@withLock effective
-        if (requested.watchProgressSource != effective.watchProgressSource) {
+        if (stored.watchProgressSource != effective.watchProgressSource) {
+            when {
+                effective.watchProgressSource == rememberedProgress ->
+                    settingsDataStore.setRememberedWatchProgressSource(null, profileId)
+                stored.watchProgressSource.providerId != null ->
+                    settingsDataStore.setRememberedWatchProgressSource(stored.watchProgressSource, profileId)
+            }
             applyWatchProgressSource(effective.watchProgressSource, profileId)
         }
-        if (requested.librarySourceMode != effective.librarySourceMode) {
+        if (stored.librarySourceMode != effective.librarySourceMode) {
+            when {
+                effective.librarySourceMode == rememberedLibrary ->
+                    settingsDataStore.setRememberedLibrarySourceMode(null, profileId)
+                stored.librarySourceMode.providerId != null ->
+                    settingsDataStore.setRememberedLibrarySourceMode(stored.librarySourceMode, profileId)
+            }
             applyLibrarySourceMode(effective.librarySourceMode, profileId)
         }
         effective

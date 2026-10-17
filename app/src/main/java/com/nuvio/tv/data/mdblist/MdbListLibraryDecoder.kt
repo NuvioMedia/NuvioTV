@@ -17,10 +17,8 @@ internal fun decodeMdbListLibraryLists(body: String, accountId: Long): List<MdbL
             row.number("user_id")?.let { it != accountId } == true) return@mapNotNull null
         val mediaType = row.text("mediatype")?.let(::mdbListLibraryType)
         if (row.text("mediatype") != null && mediaType == null) return@mapNotNull null
-        val id = row.number("id") ?: row.arrayValue("ids").singleOrNull()
-            ?.let { (it as? JsonPrimitive)?.contentOrNull?.toLongOrNull() }
         MdbListLibraryList(
-            id = id?.takeIf { it > 0 } ?: throw MdbListDecodingException(),
+            id = mdbListUserListId(row),
             name = row.text("name") ?: throw MdbListDecodingException(),
             private = row.flag("private") ?: throw MdbListDecodingException(),
             description = row.text("description"),
@@ -28,6 +26,51 @@ internal fun decodeMdbListLibraryLists(body: String, accountId: Long): List<MdbL
             updatedAt = row.text("last_updated_at", "updated_at", "updated")
         )
     }.also { lists -> if (lists.map { it.id }.toSet().size != lists.size) throw MdbListDecodingException() }
+}
+
+/** Owned lists filled by MDBList filters, read from the same response as the static lists. */
+internal fun decodeMdbListDynamicLists(body: String, accountId: Long): List<MdbListDynamicList> {
+    val rows = mdbListResponseElement(body) as? JsonArray ?: throw MdbListDecodingException()
+    return rows.mapNotNull { element ->
+        val row = element.objectValue()
+        if (row.flag("dynamic") != true && row.text("type") != "dynamic" ||
+            row.number("user_id")?.let { it != accountId } == true) return@mapNotNull null
+        val mediaType = row.text("mediatype")?.let(::mdbListLibraryType)
+        if (row.text("mediatype") != null && mediaType == null) return@mapNotNull null
+        MdbListDynamicList(
+            id = mdbListUserListId(row),
+            name = row.text("name") ?: throw MdbListDecodingException(),
+            description = row.text("description"),
+            mediaType = mediaType,
+            updatedAt = row.text("last_updated_at", "updated_at", "updated")
+        )
+    }.also { lists -> if (lists.map { it.id }.toSet().size != lists.size) throw MdbListDecodingException() }
+}
+
+private fun mdbListUserListId(row: JsonObject): Long {
+    val id = row.number("id") ?: row.arrayValue("ids").singleOrNull()
+        ?.let { (it as? JsonPrimitive)?.contentOrNull?.toLongOrNull() }
+    return id?.takeIf { it > 0 } ?: throw MdbListDecodingException()
+}
+
+/** Lists of other users the account liked; the account's own lists already come from /lists/user. */
+internal fun decodeMdbListLikedLists(body: String, accountId: Long): MdbListPage<MdbListLikedList> {
+    val value = mdbListResponseElement(body).objectValue()
+    val rows = value["lists"] as? JsonArray ?: throw MdbListDecodingException()
+    val lists = rows.mapNotNull { element ->
+        val row = element.objectValue()
+        if (row.number("user_id") == accountId) return@mapNotNull null
+        val mediaType = row.text("mediatype")?.let(::mdbListLibraryType)
+        if (row.text("mediatype") != null && mediaType == null) return@mapNotNull null
+        MdbListLikedList(
+            id = row.number("id")?.takeIf { it > 0 } ?: throw MdbListDecodingException(),
+            name = row.text("name") ?: throw MdbListDecodingException(),
+            description = row.text("description"),
+            mediaType = mediaType,
+            updatedAt = row.text("last_updated_at", "updated_at", "updated")
+        )
+    }
+    return mdbListPage(value, lists)
 }
 
 internal fun decodeMdbListExternalLists(body: String): List<MdbListExternalList> {

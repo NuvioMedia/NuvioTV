@@ -11,9 +11,14 @@ import com.nuvio.tv.domain.model.StreamDebridCacheState
 object StreamAutoPlaySelector {
     fun orderAddonStreams(
         streams: List<AddonStreams>,
-        installedOrder: List<String>
+        installedOrder: List<String>,
+        preferredNames: Set<String> = emptySet()
     ): List<AddonStreams> {
         if (streams.isEmpty()) return streams
+        if (preferredNames.isNotEmpty()) {
+            val (preferred, rest) = streams.partition { it.addonName in preferredNames }
+            return preferred + orderAddonStreams(rest, installedOrder)
+        }
 
         val addonRankByName = HashMap<String, Int>(installedOrder.size)
         installedOrder.forEachIndexed { index, addonName ->
@@ -34,6 +39,7 @@ object StreamAutoPlaySelector {
     private fun isPlayable(stream: Stream): Boolean {
         // External URL streams (e.g. error pages, web links) are not playable.
         if (stream.isExternal()) return false
+        if (stream.serverTarget != null) return true
         // Streams with a direct URL are always playable regardless of debrid cache status.
         if (stream.getStreamUrl() != null) return true
         when (stream.debridCacheStatus?.state) {
@@ -78,11 +84,13 @@ object StreamAutoPlaySelector {
             stream.addonName in installedAddonNames || stream.addonName == BuiltInUsenetService.GROUP_NAME
         val sourceScopedStreams = when (effectiveSource) {
             StreamAutoPlaySource.ALL_SOURCES -> streams
-            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { isAddonStream(it) }
+            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { it.serverTarget != null || isAddonStream(it) }
             StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { !isAddonStream(it) }
         }
         val candidateStreams = sourceScopedStreams.filter { stream ->
-            if (isAddonStream(stream)) {
+            if (stream.serverTarget != null) {
+                true
+            } else if (isAddonStream(stream)) {
                 selectedAddons.isEmpty() || stream.addonName in selectedAddons
             } else {
                 selectedPlugins.isEmpty() || stream.addonName in selectedPlugins

@@ -34,8 +34,19 @@ fun rememberArtworkBackedCardGlow(
     enabled: Boolean,
     fallbackColor: Color = NuvioTheme.colors.FocusBackground
 ): CardGlow {
-    val noGlow = remember { CardDefaults.glow(focusedGlow = Glow.None) }
-    if (!enabled) return noGlow
+    val focusedGlow = rememberArtworkBackedFocusGlow(imageUrl, fallbackSeed, enabled, fallbackColor)
+    return remember(focusedGlow) { CardDefaults.glow(focusedGlow = focusedGlow) }
+}
+
+/** The focused [Glow] of [rememberArtworkBackedCardGlow], for cards that take a plain [Glow]. */
+@Composable
+fun rememberArtworkBackedFocusGlow(
+    imageUrl: String?,
+    fallbackSeed: String,
+    enabled: Boolean,
+    fallbackColor: Color = NuvioTheme.colors.FocusBackground
+): Glow {
+    if (!enabled) return Glow.None
 
     val context = LocalContext.current
     var glowColor by remember(imageUrl, fallbackSeed, fallbackColor) {
@@ -69,11 +80,9 @@ fun rememberArtworkBackedCardGlow(
     }
 
     return remember(glowColor) {
-        CardDefaults.glow(
-            focusedGlow = Glow(
-                elevationColor = glowColor,
-                elevation = 28.dp
-            )
+        Glow(
+            elevationColor = glowColor,
+            elevation = 28.dp
         )
     }
 }

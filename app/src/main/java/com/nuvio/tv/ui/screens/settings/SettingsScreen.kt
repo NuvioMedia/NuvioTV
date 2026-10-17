@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.screens.party.PartySettingsContent
+import com.nuvio.tv.ui.screens.party.PartyViewModel
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -35,19 +37,18 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
@@ -156,12 +157,13 @@ private sealed interface ExperienceModeLoadState {
 private fun settingsSectionSpec(category: SettingsCategory): SettingsSectionSpec = when (category) {
     SettingsCategory.ACCOUNT -> SettingsSectionSpec(category, stringResource(R.string.settings_account), Icons.Default.Person, destination = SettingsSectionDestination.Inline)
     SettingsCategory.PROFILES -> SettingsSectionSpec(category, stringResource(R.string.settings_profiles), Icons.Default.People, destination = SettingsSectionDestination.Inline)
+    SettingsCategory.WATCH_PARTY -> SettingsSectionSpec(category, stringResource(R.string.party_title), Icons.Rounded.Groups, destination = SettingsSectionDestination.Inline)
     SettingsCategory.APPEARANCE -> SettingsSectionSpec(category, stringResource(R.string.appearance_title), Icons.Default.Palette, destination = SettingsSectionDestination.Inline)
     SettingsCategory.LAYOUT -> SettingsSectionSpec(category, stringResource(R.string.settings_layout), Icons.Default.GridView, destination = SettingsSectionDestination.Inline)
     SettingsCategory.CONTENT_DISCOVERY -> SettingsSectionSpec(category, stringResource(R.string.settings_content_discovery), Icons.Default.Explore, destination = SettingsSectionDestination.Inline)
     SettingsCategory.PLAYBACK -> SettingsSectionSpec(category, stringResource(R.string.settings_playback), Icons.Rounded.PlayArrow, destination = SettingsSectionDestination.Inline)
     SettingsCategory.INTEGRATION -> SettingsSectionSpec(category, stringResource(R.string.settings_integration), Icons.Default.Link, destination = SettingsSectionDestination.Inline)
-    SettingsCategory.TRACKING -> SettingsSectionSpec(category, stringResource(R.string.settings_tracking_title), Icons.Default.Sync, destination = SettingsSectionDestination.External)
+    SettingsCategory.TRACKING -> SettingsSectionSpec(category, stringResource(R.string.settings_tracking_title), Icons.Default.Sync, destination = SettingsSectionDestination.Inline)
     SettingsCategory.ADVANCED -> SettingsSectionSpec(category, stringResource(R.string.settings_advanced), Icons.Default.Build, destination = SettingsSectionDestination.Inline)
     SettingsCategory.ABOUT -> SettingsSectionSpec(category, stringResource(R.string.about_title), Icons.Default.Info, destination = SettingsSectionDestination.Inline)
     SettingsCategory.DEBUG -> SettingsSectionSpec(category, stringResource(R.string.settings_debug), Icons.Default.BugReport, destination = SettingsSectionDestination.Inline)
@@ -171,17 +173,19 @@ private fun settingsSectionSpec(category: SettingsCategory): SettingsSectionSpec
 @Composable
 fun SettingsScreen(
     showBuiltInHeader: Boolean = true,
-    onNavigateToTracking: () -> Unit = {},
     onNavigateToAddons: () -> Unit = {},
     onNavigateToPlugins: () -> Unit = {},
     onNavigateToAuthQrSignIn: () -> Unit = {},
     onNavigateToManageProfiles: () -> Unit = {},
     onNavigateToSupportersContributors: () -> Unit = {},
     onNavigateToLicensesAttributions: () -> Unit = {},
+    onNavigateToWatchParty: () -> Unit = {},
     profileViewModel: ProfileSettingsViewModel = hiltViewModel(),
-    experienceModeViewModel: ExperienceModeSettingsViewModel = hiltViewModel()
+    experienceModeViewModel: ExperienceModeSettingsViewModel = hiltViewModel(),
+    partyViewModel: PartyViewModel = hiltViewModel()
 ) {
     val isPrimaryProfileActive by profileViewModel.isPrimaryProfileActive.collectAsStateWithLifecycle()
+    val isWatchPartyAvailable by partyViewModel.party.available.collectAsStateWithLifecycle()
     val experienceModeState by remember(experienceModeViewModel) {
         experienceModeViewModel.mode.map<ExperienceMode?, ExperienceModeLoadState> {
             ExperienceModeLoadState.Loaded(it)
@@ -201,11 +205,12 @@ fun SettingsScreen(
 
     val isEssentialMode = loadedExperienceMode == ExperienceMode.ESSENTIAL
 
-    val visibleCategories = remember(isPrimaryProfileActive, isEssentialMode) {
+    val visibleCategories = remember(isPrimaryProfileActive, isEssentialMode, isWatchPartyAvailable) {
         visibleSettingsCategories(
             isPrimaryProfile = isPrimaryProfileActive,
             isEssentialMode = isEssentialMode,
-            isDebugBuild = BuildConfig.IS_DEBUG_BUILD
+            isDebugBuild = BuildConfig.IS_DEBUG_BUILD,
+            isWatchPartyAvailable = isWatchPartyAvailable
         )
     }
     val visibleSections = visibleCategories.map { category -> settingsSectionSpec(category) }
@@ -225,9 +230,11 @@ fun SettingsScreen(
             SettingsCategory.APPEARANCE to FocusRequester(),
             SettingsCategory.EXPERIENCE to FocusRequester(),
             SettingsCategory.PROFILES to FocusRequester(),
+            SettingsCategory.WATCH_PARTY to FocusRequester(),
             SettingsCategory.LAYOUT to FocusRequester(),
             SettingsCategory.CONTENT_DISCOVERY to FocusRequester(),
             SettingsCategory.INTEGRATION to FocusRequester(),
+            SettingsCategory.TRACKING to FocusRequester(),
             SettingsCategory.PLAYBACK to FocusRequester(),
             SettingsCategory.ADVANCED to FocusRequester(),
             SettingsCategory.ABOUT to FocusRequester(),
@@ -425,7 +432,6 @@ fun SettingsScreen(
                     allowDetailAutofocus = false
                     when (section.category) {
                         SettingsCategory.ACCOUNT -> onNavigateToAuthQrSignIn()
-                        SettingsCategory.TRACKING -> onNavigateToTracking()
                         else -> Unit
                     }
                 } else {
@@ -439,27 +445,35 @@ fun SettingsScreen(
                 }
             }
 
+            var focusedTabCategory by remember { mutableStateOf<SettingsCategory?>(null) }
+            var lastRailFocusChangeMs by remember { mutableLongStateOf(0L) }
+            val selectFocusedTab: (SettingsCategory) -> Unit = { category ->
+                if (selectedCategory != category) {
+                    if (category == SettingsCategory.INTEGRATION) {
+                        integrationSection = IntegrationSettingsSection.Hub
+                    }
+                    allowDetailAutofocus = false
+                    selectedCategory = category
+                }
+            }
+
+            LaunchedEffect(focusedTabCategory) {
+                val category = focusedTabCategory ?: return@LaunchedEffect
+                val now = android.os.SystemClock.uptimeMillis()
+                val msSinceLast = now - lastRailFocusChangeMs
+                lastRailFocusChangeMs = now
+                if (msSinceLast > SETTINGS_TAB_FOCUS_SELECT_DELAY_MS) {
+                    selectFocusedTab(category)
+                } else {
+                    delay(SETTINGS_TAB_FOCUS_SELECT_DELAY_MS)
+                    selectFocusedTab(category)
+                }
+            }
+
             if (isHorizonStyle) {
                 var topBarCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
                 var focusedTabBounds by remember { mutableStateOf<Rect?>(null) }
                 val density = LocalDensity.current
-
-                var focusedTabCategory by remember { mutableStateOf<SettingsCategory?>(null) }
-                val selectFocusedTab: (SettingsCategory) -> Unit = { category ->
-                    if (selectedCategory != category) {
-                        if (category == SettingsCategory.INTEGRATION) {
-                            integrationSection = IntegrationSettingsSection.Hub
-                        }
-                        allowDetailAutofocus = false
-                        selectedCategory = category
-                    }
-                }
-
-                LaunchedEffect(focusedTabCategory) {
-                    val category = focusedTabCategory ?: return@LaunchedEffect
-                    delay(SETTINGS_TAB_FOCUS_SELECT_DELAY_MS)
-                    selectFocusedTab(category)
-                }
 
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -575,7 +589,10 @@ fun SettingsScreen(
                                             topBarCoordinates?.let { container ->
                                                 focusedTabBounds = container.localBoundingBoxOf(tabCoordinates, clipBounds = false)
                                             }
-                                        }
+                                        },
+                                        suppressSelectedVisual = railHadFocus
+                                            && focusedTabCategory != null
+                                            && focusedTabCategory != section.category
                                     )
                                 }
                             }
@@ -637,7 +654,8 @@ fun SettingsScreen(
                                 onNavigateToPlugins = onNavigateToPlugins,
                                 onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn,
                                 onNavigateToSupportersContributors = onNavigateToSupportersContributors,
-                                onNavigateToLicensesAttributions = onNavigateToLicensesAttributions
+                                onNavigateToLicensesAttributions = onNavigateToLicensesAttributions,
+                                onNavigateToWatchParty = onNavigateToWatchParty
                             )
                         }
                     }
@@ -691,8 +709,16 @@ fun SettingsScreen(
                                 }
                                 val toDetailKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
                                 if (event.type == KeyEventType.KeyDown && event.key == toDetailKey) {
-                                    allowDetailAutofocus = true
-                                    false
+                                    val pendingSection = focusedTabCategory
+                                        ?.takeIf { it != selectedCategory || !allowDetailAutofocus }
+                                        ?.let { category -> visibleSections.firstOrNull { it.category == category } }
+                                    if (pendingSection != null) {
+                                        onSectionClick(pendingSection)
+                                        true
+                                    } else {
+                                        allowDetailAutofocus = true
+                                        false
+                                    }
                                 } else {
                                     false
                                 }
@@ -720,13 +746,19 @@ fun SettingsScreen(
                                         } else if (restoringTo == null) {
                                             railFocusCategoryName = section.category.name
                                         }
+                                        if (section.destination == SettingsSectionDestination.Inline) {
+                                            focusedTabCategory = section.category
+                                        }
                                     },
                                     title = section.title,
                                     icon = section.icon,
                                     rawIconRes = section.rawIconRes,
                                     isSelected = selectedCategory == section.category,
                                     focusRequester = railFocusRequesters[section.category],
-                                    onClick = { onSectionClick(section) }
+                                    onClick = { onSectionClick(section) },
+                                    suppressSelectedVisual = railHadFocus
+                                        && focusedTabCategory != null
+                                        && focusedTabCategory != section.category
                                 )
                             }
                         }
@@ -777,7 +809,8 @@ fun SettingsScreen(
                         onNavigateToPlugins = onNavigateToPlugins,
                         onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn,
                         onNavigateToSupportersContributors = onNavigateToSupportersContributors,
-                        onNavigateToLicensesAttributions = onNavigateToLicensesAttributions
+                        onNavigateToLicensesAttributions = onNavigateToLicensesAttributions,
+                        onNavigateToWatchParty = onNavigateToWatchParty
                     )
                 }
             }
@@ -806,7 +839,8 @@ private fun SettingsDetailPane(
     onNavigateToPlugins: () -> Unit,
     onNavigateToAuthQrSignIn: () -> Unit,
     onNavigateToSupportersContributors: () -> Unit,
-    onNavigateToLicensesAttributions: () -> Unit
+    onNavigateToLicensesAttributions: () -> Unit,
+    onNavigateToWatchParty: () -> Unit
 ) {
     when (selectedCategory) {
         SettingsCategory.EXPERIENCE -> EssentialAdvancedSettingsContent(
@@ -821,6 +855,14 @@ private fun SettingsDetailPane(
             onManageProfiles = onNavigateToManageProfiles,
             initialFocusRequester = if (allowDetailAutofocus) {
                 contentFocusRequesters[SettingsCategory.PROFILES]
+            } else {
+                null
+            }
+        )
+        SettingsCategory.WATCH_PARTY -> PartySettingsContent(
+            onOpen = onNavigateToWatchParty,
+            initialFocusRequester = if (allowDetailAutofocus) {
+                contentFocusRequesters[SettingsCategory.WATCH_PARTY]
             } else {
                 null
             }
@@ -919,47 +961,14 @@ private fun SettingsDetailPane(
                 null
             }
         )
-        SettingsCategory.DEBUG -> DebugSettingsContent()
-        SettingsCategory.TRACKING -> Unit
-    }
-}
-
-@Composable
-private fun ContentDiscoverySettingsContent(
-    onNavigateToAddons: () -> Unit,
-    onNavigateToPlugins: () -> Unit,
-    showPlugins: Boolean,
-    initialFocusRequester: FocusRequester?
-) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
-    ) {
-        SettingsDetailHeader(
-            title = stringResource(R.string.settings_content_discovery),
-            subtitle = stringResource(R.string.settings_content_discovery_subtitle)
-        )
-        SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
-            SettingsActionRow(
-                title = stringResource(R.string.addon_title),
-                subtitle = stringResource(R.string.settings_content_discovery_addons_subtitle),
-                onClick = onNavigateToAddons,
-                leadingIcon = Icons.Default.Extension,
-                modifier = if (initialFocusRequester != null) {
-                    Modifier.focusRequester(initialFocusRequester)
-                } else {
-                    Modifier
-                }
-            )
-            if (showPlugins) {
-                SettingsActionRow(
-                    title = stringResource(R.string.plugin_title),
-                    subtitle = stringResource(R.string.settings_content_discovery_plugins_subtitle),
-                    onClick = onNavigateToPlugins,
-                    leadingIcon = Icons.Default.Power
-                )
+        SettingsCategory.TRACKING -> TrackingSettingsContent(
+            initialFocusRequester = if (allowDetailAutofocus) {
+                contentFocusRequesters[SettingsCategory.TRACKING]
+            } else {
+                null
             }
-        }
+        )
+        SettingsCategory.DEBUG -> DebugSettingsContent()
     }
 }
 

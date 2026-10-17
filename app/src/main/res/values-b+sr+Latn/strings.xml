@@ -3091,8 +3091,6 @@
     <string name="playback_reset_to_default">Vrati na podrazumevano</string>
     <string name="playback_net_custom">Prilagođena mreža</string>
     <string name="playback_net_custom_sub">Koristi više paralelnih veza za preuzimanje progresivnih strimova. Kada je isključeno, koristi se jedna veza.</string>
-    <string name="playback_net_http2">Omogući HTTP/2</string>
-    <string name="playback_net_http2_sub">Omogućite HTTP/2 protokol za mrežne veze, što omogućava multipleksiranje zahteva i brže uspostavljanje veze.</string>
     <string name="playback_net_parallel">Paralelne veze</string>
     <string name="playback_net_parallel_sub">Koristite više veza paralelno za preuzimanje strimova. Aktivirajte ako primećujete baferovanje iako je vaša brzina preuzimanja sigurno više nego dovoljna.</string>
     <string name="playback_net_connection_count">Broj veza</string>

@@ -14,12 +14,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.math.roundToLong
 
 private const val TAG = "NuvioAutoSyncSidecar"
 private const val SIDECAR_WAIT_MS = 15_000L
 private const val SIDECAR_WAIT_POLL_MS = 25L
-private const val BOUNDARY_TOLERANCE_MS = 500L
 private const val DIRECT_INDEX_TOLERANCE_MS = 50L
 
 internal suspend fun applyAutoSyncSidecarTimeline(
@@ -193,11 +191,6 @@ private fun clampIntroducedSidecarOverlaps(
     }
 }
 
-private data class TimingBoundary(
-    val originalMs: Long,
-    val retimedMs: Long,
-)
-
 private fun retimeSidecarTimedCues(
     source: List<CuesWithTiming>,
     timeline: AutoSyncTimelineRetimeResult,
@@ -207,53 +200,7 @@ private fun retimeSidecarTimedCues(
         return direct
     }
 
-    val startBoundaries = ArrayList<TimingBoundary>(timeline.cues.size)
-    val endBoundaries = ArrayList<TimingBoundary>(timeline.cues.size)
-    timeline.cues.forEach { cue ->
-        startBoundaries += TimingBoundary(cue.originalStartTimeMs, cue.startTimeMs)
-        endBoundaries += TimingBoundary(cue.originalEndTimeMs, cue.endTimeMs)
-    }
-    startBoundaries.sortBy { it.originalMs }
-    endBoundaries.sortBy { it.originalMs }
-
-    var boundaryMapped = 0
-    var affineFallback = 0
-
-    fun mapTime(originalMs: Long, boundaries: List<TimingBoundary>): Long {
-        if (boundaries.isNotEmpty()) {
-            var low = 0
-            var high = boundaries.size
-            while (low < high) {
-                val mid = (low + high) ushr 1
-                if (boundaries[mid].originalMs < originalMs) low = mid + 1 else high = mid
-            }
-
-            val first = (low - 2).coerceAtLeast(0)
-            val last = (low + 2).coerceAtMost(boundaries.lastIndex)
-            var best: TimingBoundary? = null
-            var bestError = Long.MAX_VALUE
-            if (first <= last) {
-                for (index in first..last) {
-                    val candidate = boundaries[index]
-                    val error = kotlin.math.abs(candidate.originalMs - originalMs)
-                    if (error < bestError) {
-                        best = candidate
-                        bestError = error
-                    }
-                }
-            }
-            if (best != null && bestError <= BOUNDARY_TOLERANCE_MS) {
-                boundaryMapped++
-                return best.retimedMs.coerceAtLeast(0L)
-            }
-        }
-
-        affineFallback++
-        return (
-            originalMs.toDouble() * timeline.alignmentScale +
-                timeline.alignmentInterceptMs
-            ).roundToLong().coerceAtLeast(0L)
-    }
+    val mapper = AutoSyncTimelineTimeMapper(timeline)
 
     val out = ArrayList<CuesWithTiming>(source.size)
     source.forEach { entry ->
@@ -270,8 +217,8 @@ private fun retimeSidecarTimedCues(
             else -> originalStartMs + 1L
         }.coerceAtLeast(originalStartMs + 1L)
 
-        val startMs = mapTime(originalStartMs, startBoundaries)
-        val endMs = mapTime(originalEndMs, endBoundaries).coerceAtLeast(startMs + 1L)
+        val startMs = mapper.mapStartMs(originalStartMs)
+        val endMs = mapper.mapEndMs(originalEndMs).coerceAtLeast(startMs + 1L)
         out += CuesWithTiming(
             entry.cues,
             startMs * 1_000L,
@@ -284,7 +231,7 @@ private fun retimeSidecarTimedCues(
     Log.d(
         TAG,
         "retime mapped sidecar=${source.size} " +
-            "boundaryMapped=$boundaryMapped affineFallback=$affineFallback",
+            "boundaryMapped=${mapper.boundaryMapped} affineFallback=${mapper.affineFallback}",
     )
     return out
 }

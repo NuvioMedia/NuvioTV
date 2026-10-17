@@ -47,14 +47,6 @@ object NuvioExoPlayerPerformanceHelper {
         java.util.concurrent.TimeUnit.MINUTES
     )
 
-    private val extraLanePools: List<okhttp3.ConnectionPool> = List(HttpLanes.MAX_LANES - 1) {
-        okhttp3.ConnectionPool(NUVIO_LANE_POOL_MAX_IDLE, 3, java.util.concurrent.TimeUnit.MINUTES)
-    }
-
-    /** Pool for HTTP/2 lane [index]; lane 0 is [sharedConnectionPool]. */
-    fun lanePool(index: Int): okhttp3.ConnectionPool =
-        if (index == 0) sharedConnectionPool else extraLanePools[index - 1]
-
     // ─── Constants ────────────────────────────────────────────────────────────
     const val DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE = 64 * 1024        // 64 KB
 
@@ -72,7 +64,6 @@ object NuvioExoPlayerPerformanceHelper {
     // Parallel chunk fetching keeps more sockets alive than the old cap of 8, which was evicting
     // live chunk connections mid playback and forcing cold reopens.
     const val NUVIO_SHARED_POOL_MAX_IDLE = 32
-    const val NUVIO_LANE_POOL_MAX_IDLE = 8
     private const val BACK_BUFFER_TARGET_SHARE_NUM = 1L
     private const val BACK_BUFFER_TARGET_SHARE_DEN = 2L
 
@@ -102,16 +93,12 @@ object NuvioExoPlayerPerformanceHelper {
     @Volatile
     var calculatedMemoryUsageMb: Int = 0
 
-    @Volatile
-    var enableHttp2: Boolean = false
-
     /**
      * Updates the performance helper with customized settings from PlayerSettings.
      */
     fun updateSettings(settings: PlayerSettings, context: Context) {
         val customBuffers = settings.bufferEngineEnabled
         val bufferSettings = settings.bufferSettings
-        enableHttp2 = settings.enableHttp2
         
         minBufferMs = if (customBuffers) bufferSettings.minBufferMs else DEFAULT_NUVIO_MIN_BUFFER_MS
         maxBufferMs = if (customBuffers) bufferSettings.maxBufferMs else DEFAULT_NUVIO_MAX_BUFFER_MS
@@ -308,7 +295,7 @@ object NuvioExoPlayerPerformanceHelper {
                         "native arena chunk $NATIVE_ARENA_CHUNK_SIZE; native pooling is disabled"
                 )
             }
-            val allocator = DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 64, enabled)
+            val allocator = DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 0, enabled)
             liveAllocator = allocator
             android.util.Log.i(
                 "ExoPerformance",
@@ -416,17 +403,12 @@ object NuvioExoPlayerPerformanceHelper {
     // ─── Networking ───────────────────────────────────────────────────────────
 
     /**
-     * Applies HTTP/2 and a connection pool to the given [builder] when
-     * performance mode is enabled. No-op otherwise.
+     * Puts the given [builder] on the shared connection pool. Playback stays on HTTP/1.1: on
+     * HTTP/2 the player made about as much Java garbage as it downloaded, for no speed gain.
      */
-    fun applyNetworkOptimizations(builder: okhttp3.OkHttpClient.Builder): okhttp3.OkHttpClient.Builder {
-        val withPool = builder.connectionPool(sharedConnectionPool)
-        return if (enableHttp2) {
-            withPool.protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
-        } else {
-            withPool.protocols(listOf(okhttp3.Protocol.HTTP_1_1))
-        }
-    }
+    fun applyNetworkOptimizations(builder: okhttp3.OkHttpClient.Builder): okhttp3.OkHttpClient.Builder =
+        builder.connectionPool(sharedConnectionPool)
+            .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
 
     // ─── Audio Renderer ───────────────────────────────────────────────────────
 

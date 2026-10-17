@@ -145,7 +145,7 @@ object SubtitleCharsetDetector {
                 if (hasKoi8Vowels(bytes, offset, length)) CHARSET_KOI8_R else CHARSET_WIN1251
             }
             lang == "por" || lang == "pt" || lang.startsWith("portuguese") ||
-                lang == "spa" || lang == "es" || lang.startsWith("spanish") ||
+                lang == "spa" || lang == "spn" || lang == "esp" || lang == "es" || lang.startsWith("spanish") ||
                 lang == "fra" || lang == "fre" || lang == "fr" || lang.startsWith("french") ||
                 lang == "deu" || lang == "ger" || lang == "de" || lang.startsWith("german") ||
                 lang == "ita" || lang == "it" || lang.startsWith("italian") ||

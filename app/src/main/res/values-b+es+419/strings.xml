@@ -3222,8 +3222,6 @@
     <string name="playback_reset_to_default">Restablecer valores predeterminados</string>
     <string name="playback_net_custom">Red personalizada</string>
     <string name="playback_net_custom_sub">Usa múltiples conexiones paralelas para obtener transmisiones progresivas. Cuando está desactivado, se usa una sola conexión.</string>
-    <string name="playback_net_http2">Habilitar HTTP/2</string>
-    <string name="playback_net_http2_sub">Habilita el protocolo HTTP/2 para las conexiones de red, permitiendo la multiplexación de solicitudes y tiempos de conexión más rápidos.</string>
     <string name="playback_net_parallel">Conexiones paralelas</string>
     <string name="playback_net_parallel_sub">Usa múltiples conexiones en paralelo para obtener transmisiones. Actívalo si experimentas almacenamiento en búfer aunque tu velocidad de descarga sea claramente suficiente.</string>
     <string name="playback_net_connection_count">Cantidad de conexiones</string>
