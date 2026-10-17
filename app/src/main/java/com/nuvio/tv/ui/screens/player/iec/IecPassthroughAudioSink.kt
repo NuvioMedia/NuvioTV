@@ -69,6 +69,8 @@ internal class IecPassthroughAudioSink(
     private var stallHeadFrames: Long = -1L
     private var heldSinceNanos: Long = NOT_HELD
     private var heldTooLong: Boolean = false
+    private var capHeadFrames: Long = -1L
+    private var capHeadMovedNanos: Long = HEAD_NOT_MOVED
     @Volatile
     private var keepAliveThread: Thread? = null
     private var lastHealthNanos: Long = 0L
@@ -228,6 +230,7 @@ internal class IecPassthroughAudioSink(
             val track = iecTrack ?: return
             synchronized(writeLock) {
                 heldSinceNanos = NOT_HELD
+                if (heldTooLong) awaitHeadMove()
                 heldTooLong = false
                 startTrack(track)
             }
@@ -656,8 +659,9 @@ internal class IecPassthroughAudioSink(
                 val written = synchronized(writeLock) {
                     if (keepAlive) {
                         if (!writeFiller(track)) return@synchronized 0
-                        val queued = writtenFrames - track.playbackHeadFrames()
-                        if (queued >= keepAliveCapFrames(track)) {
+                        val head = track.playbackHeadFrames()
+                        val queued = writtenFrames - head
+                        if (queued >= keepAliveCapFrames(track) && headMoving(head)) {
                             capHeld = true
                             return@synchronized 0
                         }
@@ -704,6 +708,7 @@ internal class IecPassthroughAudioSink(
         track.play()
         if (trackStarted || track.isPlayHeld()) return
         trackStarted = true
+        awaitHeadMove()
         if (!keepAliveEnabled || mode != Mode.TRUEHD) return
         val frame = TrueHdMatPacker.paddingOnlyFrame()
         fillerFrame = if (track.payload == HbrPayload.MAT) frame else Iec61937Packer.packTrueHdInPlace(frame)
@@ -798,6 +803,22 @@ internal class IecPassthroughAudioSink(
         return true
     }
 
+    // By default a started AudioTrack only plays once its buffer is full, so the queue cap only holds while the head
+    // has moved within the last KEEP_ALIVE_HEAD_IDLE_NANOS.
+    private fun headMoving(head: Long): Boolean {
+        val now = nanoTime()
+        if (head != capHeadFrames) {
+            if (capHeadFrames >= 0L) capHeadMovedNanos = now
+            capHeadFrames = head
+        }
+        return capHeadMovedNanos != HEAD_NOT_MOVED && now - capHeadMovedNanos < KEEP_ALIVE_HEAD_IDLE_NANOS
+    }
+
+    private fun awaitHeadMove() {
+        capHeadFrames = -1L
+        capHeadMovedNanos = HEAD_NOT_MOVED
+    }
+
     private fun keepAliveState(): String {
         val track = iecTrack ?: return "track=none"
         val queuedMs = (writtenFrames - track.playbackHeadFrames()) * 1000L / track.sampleRate
@@ -814,8 +835,14 @@ internal class IecPassthroughAudioSink(
         val replays = ArrayList(uncommitted)
         val format = configuredFormat
         val endOfStreamRequested = handledEndOfStream
-        android.util.Log.w("IecPassthrough", "IEC write failed; falling back to RAW")
-        onDiagnosticEvent?.invoke("iec_fallback_to_raw reason=$reason mime=${format?.sampleMimeType}")
+        android.util.Log.w(
+            "IecPassthrough",
+            "IEC write failed; falling back to RAW reason=$reason head=${iecTrack?.playbackHeadFrames()} " +
+                "written=$writtenFrames ${keepAliveState()} stalls=$totalWriteStalls"
+        )
+        onDiagnosticEvent?.invoke(
+            "iec_fallback_to_raw reason=$reason mime=${format?.sampleMimeType} replay=${replays.size}"
+        )
         trackFactory.markIecUnusable()
         iecFailedThisSession = true
         resetIecState(keepTrack = false)
@@ -914,6 +941,7 @@ internal class IecPassthroughAudioSink(
                 fillerFramesWritten = 0L
                 heldSinceNanos = NOT_HELD
                 heldTooLong = false
+                awaitHeadMove()
             }
             iecBufferSizeBytes = 0
             iecOutputSampleRate = IEC_SAMPLE_RATE
@@ -963,6 +991,8 @@ internal class IecPassthroughAudioSink(
         internal const val KEEP_ALIVE_LOW_WATER_MS = 80L
         internal const val KEEP_ALIVE_TICK_MS = 10L
         internal const val KEEP_ALIVE_MAX_HOLD_NANOS = 30L * 60L * 1_000_000_000L
+        internal const val KEEP_ALIVE_HEAD_IDLE_NANOS = 200_000_000L
+        private const val HEAD_NOT_MOVED = Long.MIN_VALUE
 
         fun isTrueHd(format: Format): Boolean {
             return format.sampleMimeType == MimeTypes.AUDIO_TRUEHD

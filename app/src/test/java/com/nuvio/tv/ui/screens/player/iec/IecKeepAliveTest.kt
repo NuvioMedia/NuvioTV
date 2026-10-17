@@ -177,19 +177,139 @@ class IecKeepAliveTest {
         var au = 0
         var refused = false
         while (au < 400 && !refused) {
+            track.playHead = au * 16
             refused = !sink.handleBuffer(ByteBuffer.wrap(TrueHdMatPackerTest.trueHdAu(au * 40, au == 0)), pts, 1)
             pts += AU_US
             au++
         }
         assertTrue("sink refuses once the queue is full", refused)
-        assertTrue(track.written <= capBytes + FRAME)
-        assertTrue(track.written >= capBytes - FRAME)
+        val queued = track.written - track.playHead
+        assertTrue(queued <= capBytes + 2 * FRAME)
+        assertTrue(queued >= capBytes - FRAME)
 
         sink.keepAliveTick()
         assertFalse("enough queued, no filler", track.writes.last().filler)
         track.playHead = track.written - FRAME
         sink.keepAliveTick()
         assertTrue("the playback thread is late, filler covers the gap", track.writes.last().filler)
+    }
+
+    @Test
+    fun resumeWithMoreThanTheCapQueued_fillsTheTrackSoItStarts() {
+        val track = FillTrack(capacityBytes = 50 * FRAME)
+        val events = mutableListOf<String>()
+        val sink = sink(track, events)
+        sink.configure(trueHdFormat(), 0, null)
+        var au = 0
+        while (au < 45 * 24) if (offer(sink, au)) au++
+        val preRoll = track.written
+        assertTrue(preRoll > 40 * FRAME && preRoll < 50 * FRAME)
+
+        sink.play()
+        repeat(20) {
+            repeat(24) { if (offer(sink, au)) au++ }
+            clock[0] += 50_000_000L
+            track.advance(FRAME)
+        }
+        assertTrue("track started", track.running)
+        assertTrue(events.none { it.startsWith("iec_fallback_to_raw") })
+        assertTrue(sink.isIecActive)
+        repeat(60) {
+            repeat(24) { if (offer(sink, au)) au++ }
+            clock[0] += 20_000_000L
+            track.advance(FRAME)
+        }
+        assertTrue(sink.isIecActive)
+        assertTrue("queue back at the cap", track.written - track.head <= CAP_BYTES + FRAME)
+    }
+
+    @Test
+    fun openedWhilePlaying_fillsPastTheCapSoTheTrackStarts() {
+        val track = FillTrack(capacityBytes = 50 * FRAME)
+        val events = mutableListOf<String>()
+        val sink = sink(track, events)
+        sink.play()
+        sink.configure(trueHdFormat(), 0, null)
+        var au = 0
+        while (au < 60 * 24 && !track.running) {
+            if (offer(sink, au)) au++
+            clock[0] += 100_000L
+        }
+        assertTrue("track started", track.running)
+        assertTrue(sink.isIecActive)
+        assertTrue(events.none { it.startsWith("iec_fallback_to_raw") })
+    }
+
+    @Test
+    fun aTrackThatNeverStarts_stillFallsBackAfterTheStallBudget() {
+        val track = FillTrack(capacityBytes = 50 * FRAME, startsWhenFull = false)
+        val events = mutableListOf<String>()
+        val sink = sink(track, events)
+        sink.configure(trueHdFormat(), 0, null)
+        var au = 0
+        while (au < 45 * 24) if (offer(sink, au)) au++
+        sink.play()
+        var refusedAt = -1L
+        while (sink.isIecActive && clock[0] < 4 * IecPassthroughAudioSink.WRITE_STALL_BUDGET_NANOS) {
+            if (offer(sink, au)) au++ else if (refusedAt < 0) refusedAt = clock[0]
+            clock[0] += 10_000_000L
+        }
+        assertEquals("buffer filled", 50 * FRAME, track.written)
+        assertFalse(sink.isIecActive)
+        assertTrue(refusedAt >= 0)
+        assertTrue(clock[0] - refusedAt <= IecPassthroughAudioSink.WRITE_STALL_BUDGET_NANOS + 20_000_000L)
+        assertTrue(events.any { it.startsWith("iec_fallback_to_raw reason=write_stall_ms=") })
+    }
+
+    @Test
+    fun aHeadThatStopsMidPlay_liftsTheCapAfterTheIdleTime() {
+        val track = HeadTrack()
+        val sink = sink(track)
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+        var au = 0
+        while (au < 2_000) {
+            track.playHead = au * 16
+            if (!offer(sink, au)) break
+            au++
+        }
+        assertTrue("capped", au < 2_000)
+        val held = track.written
+        assertTrue(held - track.playHead <= CAP_BYTES + 2 * FRAME)
+        clock[0] += IecPassthroughAudioSink.KEEP_ALIVE_HEAD_IDLE_NANOS - 1L
+        assertFalse(offer(sink, au))
+        assertEquals("still capped inside the idle time", held, track.written)
+        clock[0] += 1L
+        offer(sink, au)
+        assertTrue("cap lifted once the head stood still", track.written > held)
+    }
+
+    @Test
+    fun aVeryLongPause_resumeFillsPastTheCapAgain() {
+        val track = FillTrack(capacityBytes = 50 * FRAME)
+        val sink = sink(track)
+        sink.configure(trueHdFormat(), 0, null)
+        var au = 0
+        while (au < 49 * 24) if (offer(sink, au)) au++
+        sink.play()
+        while (!track.running) if (offer(sink, au)) au++
+        repeat(60) {
+            track.advance(FRAME)
+            repeat(24) { if (offer(sink, au)) au++ }
+        }
+        sink.pause()
+        clock[0] += IecPassthroughAudioSink.KEEP_ALIVE_MAX_HOLD_NANOS
+        sink.keepAliveTick()
+        assertFalse("output released", track.running)
+        val queuedAtRelease = track.written - track.head
+        assertTrue(queuedAtRelease < 50 * FRAME)
+        sink.play()
+        var tries = 0
+        while (!track.running && tries < 5_000) {
+            if (offer(sink, au)) au++
+            tries++
+        }
+        assertTrue("output restarted", track.running)
     }
 
     @Test
@@ -248,7 +368,7 @@ class IecKeepAliveTest {
     }
 
     private fun sink(
-        track: HeadTrack,
+        track: IecAudioTrack,
         events: MutableList<String> = mutableListOf(),
         keepAlive: Boolean = true
     ): IecPassthroughAudioSink = IecPassthroughAudioSink(
@@ -276,6 +396,12 @@ class IecKeepAliveTest {
             if (expectAccepted != null) assertEquals("unit $i", expectAccepted, accepted)
             pts += AU_US
         }
+    }
+
+    /** One access unit, offered the way the player does it: a refused unit is offered again later. */
+    private fun offer(sink: IecPassthroughAudioSink, au: Int): Boolean {
+        val unit = TrueHdMatPackerTest.trueHdAu(frameTime = (au * 40) and 0xFFFF, major = au % 24 == 0)
+        return sink.handleBuffer(ByteBuffer.wrap(unit), au * AU_US, 1)
     }
 
     private fun assertRange(data: ByteArray, offset: Int, expected: ByteArray) {
@@ -339,6 +465,52 @@ class IecKeepAliveTest {
         override fun underrunCount(): Int = 0
     }
 
+    /** Like a platform AudioTrack: a fixed buffer, and once play() is called it only starts when that buffer is full. */
+    private class FillTrack(
+        private val capacityBytes: Int,
+        private val startsWhenFull: Boolean = true
+    ) : IecAudioTrack {
+        override val sampleRate: Int = 192_000
+        override val frameSizeBytes: Int = 16
+        override val payload: HbrPayload = HbrPayload.IEC_BURST
+        override val bufferSizeBytes: Int = capacityBytes
+        var written: Int = 0
+        var head: Int = 0
+        var running = false
+        private var playCalled = false
+
+        override fun write(data: ByteArray, offset: Int, size: Int): Int {
+            val count = minOf(size, capacityBytes - (written - head))
+            written += count
+            maybeStart()
+            return count
+        }
+
+        fun advance(bytes: Int) {
+            if (running) head = minOf(written, head + bytes)
+        }
+
+        private fun maybeStart() {
+            if (playCalled && startsWhenFull && written - head >= capacityBytes) running = true
+        }
+
+        override fun play() {
+            playCalled = true
+            maybeStart()
+        }
+
+        override fun pause() {
+            playCalled = false
+            running = false
+        }
+
+        override fun flush() = Unit
+        override fun release() = Unit
+        override fun playbackHeadFrames(): Long = (head / frameSizeBytes).toLong()
+        override fun setVolume(volume: Float) = Unit
+        override fun underrunCount(): Int = 0
+    }
+
     private class RecordingSink : AudioSink {
         override fun setListener(listener: AudioSink.Listener) = Unit
         override fun supportsFormat(format: Format): Boolean = true
@@ -377,5 +549,6 @@ class IecKeepAliveTest {
     private companion object {
         const val FRAME = Iec61937Packer.TRUEHD_IEC_SIZE
         const val AU_US = 833L
+        const val CAP_BYTES = IecPassthroughAudioSink.KEEP_ALIVE_CAP_MS * 192_000L / 1000L * 16L
     }
 }
