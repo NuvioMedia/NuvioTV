@@ -90,6 +90,31 @@ class NewznabProtocolTest {
         assertFalse(NewznabProtocol.matches(obfuscated, episode, idSearch = true, requireNumbering = true))
     }
 
+    @Test fun `episode names that tell the time number no other episode`() {
+        fun names(release: String, episode: Int) = NewznabProtocol.matches(UsenetRelease(release, "url"),
+            UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = episode), idSearch = true)
+        val e02 = "The.Pitt.2025-S01E02-8-00.A.M.WEB-DL-2160p.DV.HDR10.EAC3.Atmos5.1.EN+FR.x265.-FRESH"
+        val e08 = "The.Pitt.2025-S01E08-2-00.P.M.WEB-DL-2160p.DV.HDR10.EAC3.Atmos5.1.EN+FR.x265.-FRESH"
+        assertTrue(names(e02, 2))
+        assertFalse(names(e02, 5)) // Not E02 to E08.
+        assertTrue(names(e08, 8))
+        assertFalse(names(e08, 2)) // Not E08 to E02.
+        val e04 = "The.Pitt.2025-S01E04-10-00.A.M.WEB-DL-2160p.DV.HDR10.EAC3.Atmos5.1.EN+FR.x265.-FRESH"
+        assertTrue(names(e04, 4))
+        assertFalse(names(e04, 5)) // Not E04 to E10: ten o'clock.
+        assertFalse(names(e04, 10))
+        // Ranges and lists still span and list their episodes.
+        assertTrue(names("Show.S01E01-03.1080p", 2))
+        assertTrue(names("Show.S01E01-E03.1080p", 2))
+        assertTrue(names("Show.S01E9-10.1080p", 10))
+        assertTrue(names("Show.S01E01E02.1080p", 2))
+        assertFalse(names("Show.S01E01E03.1080p", 2))
+        // These times are an episode's name: its upload's other episodes still share its key.
+        assertEquals(NewznabProtocol.episodeTemplate(e02.lowercase())?.first,
+            NewznabProtocol.episodeTemplate(e08.lowercase())?.first)
+        assertEquals(8, NewznabProtocol.episodeTemplate(e08)?.second)
+    }
+
     @Test fun `capabilities select tmdb searches and respect disabled search types`() {
         val caps = NewznabProtocol.capabilities("""<caps><limits max="50"/><searching><movie-search available="yes" supportedParams="q,tmdbid,year"/><tv-search available="no"/><search available="yes"/></searching></caps>""")
         val url = NewznabProtocol.searchUrl(indexer, UsenetSearchRequest(imdbId = "tt1", tmdbId = "20"), caps)!!
