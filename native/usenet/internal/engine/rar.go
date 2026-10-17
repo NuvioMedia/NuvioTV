@@ -498,6 +498,9 @@ func (c *rarCursor) resolve(ctx context.Context) (*rarVolume, error) {
 			if h.v.version != 5 {
 				i = len(c.resolved)
 			}
+			if known := c.resolved[i]; known != nil && known.file == h.v.file {
+				continue // Already found out of turn, as a set's last volume is.
+			}
 			if i < 0 || i >= len(c.files) || c.resolved[i] != nil {
 				return nil, errors.New("ambiguous obfuscated RAR volume order")
 			}
@@ -592,6 +595,13 @@ func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 		f := c.volume.file
 		b.version = c.volume.version
 		if b.main && b.volume >= 0 && b.volume != c.index {
+			if !c.unordered && c.volume.version == 5 {
+				// Obfuscated names can number every volume and still not follow
+				// them (<hash>.1 to <hash>.135 in shuffled order): the main
+				// headers order the set from here, a few volumes at a time.
+				c.unordered, c.volume, c.resolved, c.scanned = true, nil, nil, 0
+				continue
+			}
 			return b, nil, errors.New("RAR volume number does not match sequence")
 		}
 		if b.main && c.pos == c.volume.start {
@@ -626,23 +636,52 @@ func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 
 // skipToLastPart moves the cursor past the end of a split file when the
 // set's last volume holds that file's final part, without reading the volumes
-// between. It reports false, leaving the cursor unchanged, when the last
-// volume does not prove it (another file, an unordered set, a read error).
-func (c *rarCursor) skipToLastPart(ctx context.Context, name string, size int64) (bool, error) {
+// between, and returns the file's final part (its start left to the caller).
+// It reports false, leaving the cursor unchanged, when the last volume does
+// not prove it (another file, a read error).
+func (c *rarCursor) skipToLastPart(ctx context.Context, name string, size int64) (extent, bool, error) {
 	last := len(c.files) - 1
-	if c.unordered || c.volume != nil || c.index >= last {
-		return false, nil
+	if c.volume != nil || c.index >= last {
+		return extent{}, false, nil
 	}
-	probe := rarCursor{files: c.files, index: last}
-	b, _, err := probe.next(ctx)
+	files := c.files
+	if c.unordered {
+		// A shuffled RAR5 set's last volume is usually its one short file. Its
+		// main header must number it last; then it is probed like a named set's.
+		shortest := 0
+		for i, f := range files {
+			if f.Size() < files[shortest].Size() {
+				shortest = i
+			}
+		}
+		v, err := openRAR(ctx, files[shortest])
+		if ctx.Err() != nil {
+			return extent{}, false, ctx.Err()
+		}
+		if err != nil || v.version != 5 {
+			return extent{}, false, nil
+		}
+		if main, err := v.first(ctx); err != nil || main.volume != last {
+			return extent{}, false, ctx.Err()
+		}
+		files = append([]*File(nil), files...)
+		files[shortest], files[last] = files[last], files[shortest]
+		// Copies of this cursor share the map: the selected file's reader
+		// finds its end without searching the set for it again.
+		if shared := c.resolved; shared != nil && shared[last] == nil {
+			shared[last] = v
+		}
+	}
+	probe := rarCursor{files: files, index: last}
+	b, f, err := probe.next(ctx)
 	if ctx.Err() != nil {
-		return false, ctx.Err()
+		return extent{}, false, ctx.Err()
 	}
 	if err != nil || !b.before || b.after || b.directory || b.name != name || b.unpacked != size {
-		return false, nil
+		return extent{}, false, nil
 	}
 	*c = probe
-	return true, nil
+	return extent{file: f, offset: b.data, length: b.packed}, true, nil
 }
 
 // skipToPredictedEnd moves the cursor past the end of a split file that ends
@@ -716,6 +755,7 @@ type Content struct {
 	nested       *nestedRAR                  // RAR set inside a 7z: children map onto its volumes.
 	children     []nestedChild
 	clipInfo     *Content // A disc clip's CLPI from the same set, served beside it.
+	tail         *extent  // A shuffled set's final part, mapped before the volumes between.
 	disc         *discFiles
 	layoutNS     atomic.Int64
 	layoutWaitNS atomic.Int64
@@ -956,6 +996,11 @@ func (c *Content) mappedPart(off int64) (extent, bool) {
 func (c *Content) part(ctx context.Context, off int64) (extent, error) {
 	if p, ok := c.mappedPart(off); ok {
 		return p, nil
+	}
+	// A player reads the end first (an MKV's cues): a shuffled set would
+	// otherwise read every volume's header to reach it.
+	if t := c.tail; t != nil && off >= t.start && off < t.start+t.length {
+		return *t, nil
 	}
 	c.mu.Lock()
 	if c.layoutGate == nil {

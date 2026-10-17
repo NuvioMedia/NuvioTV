@@ -320,7 +320,11 @@ func skipEntry(ctx context.Context, cursor *rarCursor, c *Content, b rarBlock) (
 		return false, nil
 	}
 	resume := *cursor
-	skipped, err := cursor.skipToLastPart(ctx, b.name, b.unpacked)
+	last, skipped, err := cursor.skipToLastPart(ctx, b.name, b.unpacked)
+	if err == nil && skipped && resume.unordered && last.length > 0 && last.length < c.payloadSize() {
+		last.start = c.payloadSize() - last.length
+		c.tail = &last
+	}
 	if err == nil && !skipped {
 		skipped, err = cursor.skipToPredictedEnd(ctx, b, c.payloadSize())
 	}
