@@ -304,9 +304,10 @@ class BuiltInUsenetService @Inject constructor(
                 runCatching { android.util.Log.i("UsenetSearch", "season episodes=$count ms=${System.currentTimeMillis() - started}") }
             }
             fun episodesPerSeason(): Int? = seasonEpisodes.get()
-            fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers) == true
-            fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers) == true
-            fun sibling(release: UsenetRelease) = unplayable?.sibling(release.title, servers)
+            fun posted(release: UsenetRelease) = release.publishedAt.takeIf { it > 0 }
+            fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers, posted(release)) == true
+            fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers, posted(release)) == true
+            fun sibling(release: UsenetRelease) = unplayable?.sibling(release.title, servers, posted(release))
             // Releases that already failed for good with these providers go last, still selectable;
             // ones that played recently go first unless turned off.
             fun arranged(): List<UsenetRelease> {
@@ -487,6 +488,7 @@ class BuiltInUsenetService @Inject constructor(
                     StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
                 }),
             nzbUrl = nzbUrl, servers = config.providers.filter { it.enabled }.map { it.serverUrl() },
+            publishedAt = publishedAt.takeIf { it > 0 },
             quality = resolution.takeIf { it > 0 }?.let { "${it}p" }, qualityValue = resolution)
     }
 

@@ -28,7 +28,9 @@ data class Stream(
     val subtitles: List<Subtitle> = emptyList(),
     val nzbUrl: String? = null,
     val servers: List<String>? = null,
-    val fileMustInclude: String? = null
+    val fileMustInclude: String? = null,
+    /** When a built-in Usenet release was posted, in epoch milliseconds, if its indexer said. */
+    val publishedAt: Long? = null
 ) {
     fun isUsenet(): Boolean = !nzbUrl.isNullOrBlank() && url.isNullOrBlank()
     /**
