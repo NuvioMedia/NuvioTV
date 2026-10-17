@@ -592,6 +592,13 @@ func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 		f := c.volume.file
 		b.version = c.volume.version
 		if b.main && b.volume >= 0 && b.volume != c.index {
+			if !c.unordered && c.volume.version == 5 {
+				// Obfuscated names can number every volume and still not follow
+				// them (<hash>.1 to <hash>.135 in shuffled order): the main
+				// headers order the set from here, a few volumes at a time.
+				c.unordered, c.volume, c.resolved, c.scanned = true, nil, nil, 0
+				continue
+			}
 			return b, nil, errors.New("RAR volume number does not match sequence")
 		}
 		if b.main && c.pos == c.volume.start {
