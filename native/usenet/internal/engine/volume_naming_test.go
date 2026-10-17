@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"io"
 	"strings"
 	"testing"
 
@@ -163,8 +164,20 @@ func TestObfuscatedEpisodeVideoSkipsSetWalk(t *testing.T) {
 	if err != nil || c.Name != "R73jek4J1J6GBD.mkv" || c.Size != int64(total) {
 		t.Fatalf("selected %v: %v", c, err)
 	}
-	if bodies := server.Counters().Bodies; bodies >= count {
+	bodies := server.Counters().Bodies
+	if bodies >= count {
 		t.Fatalf("selection read %d articles, one per volume", bodies)
+	}
+	// A player reads the end first: it is in the last volume, already found.
+	r := c.Reader(context.Background(), 0)
+	r.Seek(-1000, io.SeekEnd)
+	tail, err := io.ReadAll(r)
+	r.Close()
+	if err != nil || !bytes.Equal(tail, want[total-1000:]) {
+		t.Fatalf("tail read: %v", err)
+	}
+	if read := server.Counters().Bodies - bodies; read > 1 {
+		t.Fatalf("the tail read %d articles to find the last volume", read)
 	}
 	if got := readAllContent(t, c); !bytes.Equal(got, want) {
 		t.Fatalf("content mismatch (%d bytes)", len(got))

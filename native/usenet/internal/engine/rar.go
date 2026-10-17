@@ -636,12 +636,13 @@ func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 
 // skipToLastPart moves the cursor past the end of a split file when the
 // set's last volume holds that file's final part, without reading the volumes
-// between. It reports false, leaving the cursor unchanged, when the last
-// volume does not prove it (another file, a read error).
-func (c *rarCursor) skipToLastPart(ctx context.Context, name string, size int64) (bool, error) {
+// between, and returns the file's final part (its start left to the caller).
+// It reports false, leaving the cursor unchanged, when the last volume does
+// not prove it (another file, a read error).
+func (c *rarCursor) skipToLastPart(ctx context.Context, name string, size int64) (extent, bool, error) {
 	last := len(c.files) - 1
 	if c.volume != nil || c.index >= last {
-		return false, nil
+		return extent{}, false, nil
 	}
 	files := c.files
 	if c.unordered {
@@ -655,13 +656,13 @@ func (c *rarCursor) skipToLastPart(ctx context.Context, name string, size int64)
 		}
 		v, err := openRAR(ctx, files[shortest])
 		if ctx.Err() != nil {
-			return false, ctx.Err()
+			return extent{}, false, ctx.Err()
 		}
 		if err != nil || v.version != 5 {
-			return false, nil
+			return extent{}, false, nil
 		}
 		if main, err := v.first(ctx); err != nil || main.volume != last {
-			return false, ctx.Err()
+			return extent{}, false, ctx.Err()
 		}
 		files = append([]*File(nil), files...)
 		files[shortest], files[last] = files[last], files[shortest]
@@ -672,15 +673,15 @@ func (c *rarCursor) skipToLastPart(ctx context.Context, name string, size int64)
 		}
 	}
 	probe := rarCursor{files: files, index: last}
-	b, _, err := probe.next(ctx)
+	b, f, err := probe.next(ctx)
 	if ctx.Err() != nil {
-		return false, ctx.Err()
+		return extent{}, false, ctx.Err()
 	}
 	if err != nil || !b.before || b.after || b.directory || b.name != name || b.unpacked != size {
-		return false, nil
+		return extent{}, false, nil
 	}
 	*c = probe
-	return true, nil
+	return extent{file: f, offset: b.data, length: b.packed}, true, nil
 }
 
 // skipToPredictedEnd moves the cursor past the end of a split file that ends
@@ -754,6 +755,7 @@ type Content struct {
 	nested       *nestedRAR                  // RAR set inside a 7z: children map onto its volumes.
 	children     []nestedChild
 	clipInfo     *Content // A disc clip's CLPI from the same set, served beside it.
+	tail         *extent  // A shuffled set's final part, mapped before the volumes between.
 	disc         *discFiles
 	layoutNS     atomic.Int64
 	layoutWaitNS atomic.Int64
@@ -994,6 +996,11 @@ func (c *Content) mappedPart(off int64) (extent, bool) {
 func (c *Content) part(ctx context.Context, off int64) (extent, error) {
 	if p, ok := c.mappedPart(off); ok {
 		return p, nil
+	}
+	// A player reads the end first (an MKV's cues): a shuffled set would
+	// otherwise read every volume's header to reach it.
+	if t := c.tail; t != nil && off >= t.start && off < t.start+t.length {
+		return *t, nil
 	}
 	c.mu.Lock()
 	if c.layoutGate == nil {
