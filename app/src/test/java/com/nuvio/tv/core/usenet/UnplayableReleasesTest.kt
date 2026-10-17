@@ -143,4 +143,78 @@ class UnplayableReleasesTest {
         assertTrue(releases.contains("https://b.test/pack", "Show.S01.1080p-GRP", 1_500_000_000, provider))
         assertFalse(releases.contains("https://b.test/pack", "Show.S02.1080p-GRP", 1_500_000_000, provider))
     }
+
+    private val day = 24L * 3600 * 1000
+    private val posted = 1_600_000_000_000L
+
+    @Test fun `another episode of the same upload tells how it went`() {
+        releases.record("https://a.test/e02", "Show.S01E02.2160p.WEB-DL-GRP", 4_000_000_000, provider, "missing-article", posted)
+        assertEquals(SiblingOutcome(2, failed = true), releases.sibling("Show.S01E03.2160p.WEB-DL-GRP", provider, posted + 7 * day))
+        // The episode that failed says so itself; another upload, season or provider tells nothing.
+        assertEquals(null, releases.sibling("Show.S01E02.2160p.WEB-DL-GRP", provider, posted))
+        assertEquals(null, releases.sibling("Show.S01E03.1080p.WEB-DL-GRP", provider, posted))
+        assertEquals(null, releases.sibling("Show.S02E03.2160p.WEB-DL-GRP", provider, posted))
+        assertEquals(null, releases.sibling("Show.S01E03.2160p.WEB-DL-GRP", listOf("nntps://u:p@backup.example.test:563/8"), posted))
+        // Packs and multi-episode releases are not one episode of an upload.
+        assertEquals(null, releases.sibling("Show.S01.2160p.WEB-DL-GRP", provider, posted))
+        assertEquals(null, releases.sibling("Show.S01E03E04.2160p.WEB-DL-GRP", provider, posted))
+        // The newest outcome among the episodes counts.
+        releases.recordPlayed("https://a.test/e04", "Show.S01E04.2160p.WEB-DL-GRP", 4_000_000_000, provider, posted + 14 * day)
+        assertEquals(SiblingOutcome(4, failed = false), releases.sibling("Show.S01E05.2160p.WEB-DL-GRP", provider, posted + 21 * day))
+        clock += 15 * day
+        assertEquals(null, releases.sibling("Show.S01E05.2160p.WEB-DL-GRP", provider, posted + 21 * day))
+    }
+
+    @Test fun `a repost of the same title is another upload`() {
+        val title = "Slow.Horses.S02E02.Last.Stop.2160p.ATVP.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-FLUX"
+        releases.record("https://a.test/old", title, 10_450_000_000, provider, "missing-article", posted)
+        // Posted 204 days later under the same title and size, from another indexer.
+        assertTrue(releases.contains("https://b.test/old", title, 10_450_000_000, provider, posted + day / 2))
+        assertFalse(releases.contains("https://b.test/new", title, 10_450_000_000, provider, posted + 204 * day))
+        val next = "Slow.Horses.S02E03.Drinking.Games.2160p.ATVP.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-FLUX"
+        assertEquals(SiblingOutcome(2, failed = true), releases.sibling(next, provider, posted + 6 * day))
+        assertEquals(null, releases.sibling(next, provider, posted + 204 * day))
+        // Without a time either side, nothing tells an upload's episodes from a repost's.
+        assertEquals(null, releases.sibling(next, provider, null))
+    }
+
+    @Test fun `episode names in titles do not separate an upload's episodes`() {
+        releases.record("https://a.test/e04", "Slow.Horses.2022.S01E04.Visiting.Hours.2160p.ATV.WEB-DL.MULTi.DDP5.1.Atmos.H.265-FUZEER",
+            12_000_000_000, provider, "missing-article", posted)
+        assertEquals(SiblingOutcome(4, failed = true),
+            releases.sibling("Slow.Horses.2022.S01E06.Follies.2160p.ATV.WEB-DL.MULTi.DDP5.1.Atmos.H.265-FUZEER", provider, posted))
+        releases.recordPlayed("https://a.test/crfw", "Slow Horses S01E04 Visiting Hours 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW",
+            12_000_000_000, provider, posted)
+        assertEquals(SiblingOutcome(4, failed = false),
+            releases.sibling("Slow Horses S01E02 Work Drinks 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW", provider, posted))
+        assertEquals(null, releases.sibling("Slow Horses S01E02 Work Drinks 1080p ATVP WEB-DL DDP5 1 H 264-CRFW", provider, posted))
+        // Played again within a day, an episode still becomes its upload's newest outcome.
+        releases.recordPlayed("https://a.test/crfw2", "Slow Horses S01E02 Work Drinks 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW",
+            12_000_000_000, provider, posted)
+        releases.recordPlayed("https://a.test/crfw", "Slow Horses S01E04 Visiting Hours 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW",
+            12_000_000_000, provider, posted)
+        assertEquals(SiblingOutcome(4, failed = false),
+            releases.sibling("Slow Horses S01E03 Hard Tack 2160p ATVP WEB-DL DDP5 1 Atmos DV HDR10 H 265-CRFW", provider, posted))
+    }
+
+    @Test fun `another blank episode counts with any provider and goes last`() {
+        releases.record("https://a.test/e02", "Show.S01E02.2160p-FAKE", 30_000_000_000, provider, "blank-content", posted)
+        val others = listOf("nntps://u:p@backup.example.test:563/8")
+        assertEquals(SiblingOutcome(2, failed = true, blank = true), releases.sibling("Show.S01E03.2160p-FAKE", others, posted))
+        fun stream(title: String) = com.nuvio.tv.domain.model.Stream(name = "Usenet • A", title = title, description = null,
+            url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null, behaviorHints = null,
+            addonName = BuiltInUsenetService.GROUP_NAME, addonLogo = null, nzbUrl = "https://a.test/$title", servers = provider,
+            publishedAt = posted)
+        val group = com.nuvio.tv.domain.model.AddonStreams(BuiltInUsenetService.GROUP_NAME, null,
+            listOf(stream("Show.S01E03.2160p-FAKE"), stream("Show.S01E03.2160p-GRP")))
+        val arranged = BuiltInUsenetService.arrangeOutcomes(listOf(group), releases::contains, releases::played,
+            sibling = releases::sibling).single().streams
+        assertEquals(listOf("Show.S01E03.2160p-GRP", "Show.S01E03.2160p-FAKE"), arranged.map { it.title })
+        assertEquals(listOf("E02 FAILED"), arranged.last().badges.map { it.name })
+        // Once tried, the release's own outcome replaces the other episode's.
+        releases.record(arranged.last(), "blank-content")
+        val again = BuiltInUsenetService.arrangeOutcomes(listOf(group.copy(streams = arranged)), releases::contains,
+            releases::played, sibling = releases::sibling).single().streams
+        assertEquals(listOf(BuiltInUsenetService.UNAVAILABLE_LABEL), again.last().badges.map { it.name })
+    }
 }

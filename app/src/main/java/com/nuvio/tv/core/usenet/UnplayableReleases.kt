@@ -6,6 +6,7 @@ import com.nuvio.tv.domain.model.Stream
 import java.net.URI
 import java.security.MessageDigest
 import java.util.Locale
+import kotlin.math.abs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,7 +41,11 @@ class SharedPreferencesUnplayableReleaseStorage(context: Context) : UnplayableRe
 }
 
 @Serializable
-internal data class UnplayableRelease(val kind: String, val at: Long, val providers: String)
+internal data class UnplayableRelease(val kind: String, val at: Long, val providers: String,
+    val episode: Int? = null, val posted: Long? = null)
+
+/** How another episode of the same upload last went: [episode] failed, or played. */
+data class SiblingOutcome(val episode: Int, val failed: Boolean, val blank: Boolean = false)
 
 /**
  * How releases last went with the current providers. Mostly releases the engine found unplayable:
@@ -74,28 +79,34 @@ class UnplayableReleases internal constructor(
 
     /** Remembers a release whose open or playback failed with an engine [kind] in [KINDS]; others are ignored. */
     @Synchronized
-    fun record(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, kind: String?) {
+    fun record(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, kind: String?, posted: Long? = null) {
         if (kind !in KINDS) return
-        if (put(nzbUrl, title, size, servers, requireNotNull(kind))) {
+        if (put(nzbUrl, title, size, servers, requireNotNull(kind), posted)) {
             runCatching { android.util.Log.i("UsenetUnplayable", "remembered kind=$kind release=\"${title?.lineSequence()?.firstOrNull()}\" size=${size ?: 0}") }
         }
     }
 
     /**
      * Remembers a release that showed its first frame. A later failure replaces this, and so does
-     * a newer success: a release already marked within a day is not written again.
+     * a newer success: a release already marked within a day is not written again, unless its
+     * upload's newest outcome is another episode's.
      */
     @Synchronized
-    fun recordPlayed(nzbUrl: String?, title: String?, size: Long?, servers: List<String>) {
-        val known = find(nzbUrl, title, size, servers)
-        if (known?.kind == PLAYED && now() - known.at < REPLAYED_MS) return
-        put(nzbUrl, title, size, servers, PLAYED)
+    fun recordPlayed(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, posted: Long? = null) {
+        val known = find(nzbUrl, title, size, servers, posted)
+        val siblingsKnow = siblingKey(title)?.let { (key, episode) ->
+            entries[key]?.let { it.kind == PLAYED && it.episode == episode && it.posted == posted } == true
+        } ?: true
+        if (known?.kind == PLAYED && now() - known.at < REPLAYED_MS && siblingsKnow) return
+        put(nzbUrl, title, size, servers, PLAYED, posted)
     }
 
-    private fun put(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, kind: String): Boolean {
+    private fun put(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, kind: String, posted: Long?): Boolean {
         val keys = keys(nzbUrl, title, size?.let { it / MB }).ifEmpty { return false }
-        val entry = UnplayableRelease(kind, now(), providersKey(servers))
+        val entry = UnplayableRelease(kind, now(), providersKey(servers), posted = posted)
         keys.forEach { entries[it] = entry }
+        // The upload's other episodes are told by the newest outcome among its episodes.
+        siblingKey(title)?.let { (key, episode) -> entries[key] = entry.copy(episode = episode) }
         entries.entries.removeAll { now() - it.value.at > RETENTION_MS }
         while (entries.size > MAX_ENTRIES) entries.remove(entries.minBy { it.value.at }.key)
         storage.save(json.encodeToString(entries.toMap()))
@@ -104,35 +115,67 @@ class UnplayableReleases internal constructor(
     }
 
     /** The newest entry for this release with these providers, if any. */
-    private fun find(nzbUrl: String?, title: String?, size: Long?, servers: List<String>): UnplayableRelease? {
+    private fun find(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, posted: Long?): UnplayableRelease? {
         val providers = providersKey(servers)
         // Indexers round sizes differently (one to thousands of bytes): compare by megabyte, either side.
         val megabytes = size?.takeIf { it > 0 }?.let { (it / MB - 1..it / MB + 1).toList() } ?: listOf(null)
         return megabytes.flatMap { keys(nzbUrl, title, it) }.distinct().mapNotNull { entries[it] }
             // A blank post is the same with every provider.
-            .filter { it.providers == providers || it.kind == BLANK }.maxByOrNull { it.at }
+            .filter { it.providers == providers || it.kind == BLANK }
+            // A repost under the same title and size is another upload; indexers list one upload's
+            // time a little differently.
+            .filter { posted == null || it.posted == null || abs(posted - it.posted) <= POSTING_SLACK_MS }
+            .maxByOrNull { it.at }
     }
 
     @Synchronized
-    fun contains(nzbUrl: String?, title: String?, size: Long?, servers: List<String>): Boolean =
-        find(nzbUrl, title, size, servers)?.let { it.kind in KINDS && now() - it.at <= RETENTION_MS } == true
+    fun contains(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, posted: Long? = null): Boolean =
+        find(nzbUrl, title, size, servers, posted)?.let { it.kind in KINDS && now() - it.at <= RETENTION_MS } == true
 
     /** Whether the release showed its first frame with these providers within [PLAYED_MS]. */
     @Synchronized
-    fun played(nzbUrl: String?, title: String?, size: Long?, servers: List<String>): Boolean =
-        find(nzbUrl, title, size, servers)?.let { it.kind == PLAYED && now() - it.at <= PLAYED_MS } == true
+    fun played(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, posted: Long? = null): Boolean =
+        find(nzbUrl, title, size, servers, posted)?.let { it.kind == PLAYED && now() - it.at <= PLAYED_MS } == true
+
+    /**
+     * How another episode of this upload last went with these providers: episodes posted together
+     * are usually removed, or kept, together. Null for a pack, or when only this episode was tried.
+     * A repost of the same title is another upload: only a release [posted] about when that
+     * episode was, allowing a week per episode between them as a season airs, is told.
+     */
+    @Synchronized
+    fun sibling(title: String?, servers: List<String>, posted: Long?): SiblingOutcome? {
+        val (key, episode) = siblingKey(title) ?: return null
+        val entry = entries[key]?.takeIf { it.episode != null && it.episode != episode } ?: return null
+        if (entry.providers != providersKey(servers) && entry.kind != BLANK) return null
+        val window = abs(episode - entry.episode!!) * EPISODE_INTERVAL_MS + POSTING_SLACK_MS
+        if (posted == null || entry.posted == null || abs(posted - entry.posted) > window) return null
+        val age = now() - entry.at
+        return when {
+            entry.kind in KINDS && age <= RETENTION_MS -> SiblingOutcome(entry.episode, failed = true, blank = entry.kind == BLANK)
+            entry.kind == PLAYED && age <= PLAYED_MS -> SiblingOutcome(entry.episode, failed = false)
+            else -> null
+        }
+    }
+
+    fun sibling(stream: Stream): SiblingOutcome? = sibling(stream.title, stream.servers.orEmpty(), stream.publishedAt)
+
+    private fun siblingKey(title: String?): Pair<String, Int>? {
+        val name = title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() } ?: return null
+        return NewznabProtocol.episodeTemplate(name)?.let { (template, episode) -> "s:" + sha256(template) to episode }
+    }
 
     fun record(stream: Stream, kind: String?) =
-        record(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty(), kind)
+        record(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty(), kind, stream.publishedAt)
 
     fun contains(stream: Stream): Boolean =
-        contains(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty())
+        contains(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty(), stream.publishedAt)
 
     fun recordPlayed(stream: Stream) =
-        recordPlayed(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty())
+        recordPlayed(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty(), stream.publishedAt)
 
     fun played(stream: Stream): Boolean =
-        played(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty())
+        played(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty(), stream.publishedAt)
 
     private fun keys(nzbUrl: String?, title: String?, megabytes: Long?): List<String> {
         val name = title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
@@ -186,6 +229,9 @@ class UnplayableReleases internal constructor(
         /** Articles of a release that played can still be removed later: trust it for two weeks. */
         private const val PLAYED_MS = 14L * 24 * 3600 * 1000
         private const val REPLAYED_MS = 24L * 3600 * 1000
+        /** An airing season's episodes are posted about a week apart; a whole season at once. */
+        private const val EPISODE_INTERVAL_MS = 8L * 24 * 3600 * 1000
+        private const val POSTING_SLACK_MS = 2L * 24 * 3600 * 1000
         private val HEX = "0123456789abcdef".toCharArray()
         private const val MAX_ENTRIES = 2000
         private const val MB = 1_000_000L
