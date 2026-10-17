@@ -39,6 +39,31 @@ class BuiltInUsenetServiceTest {
         coVerify(exactly = 0) { tmdb.ensureTmdbId(any(), any()) }
     }
 
+    @Test fun `an upload's episodes share a binge group, so the next episode keeps to it`() {
+        fun group(title: String) = BuiltInUsenetService.bingeGroup(title)
+        val e01 = group("Silo.S01E01.Freedom.Day.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb")
+        assertNotNull(e01)
+        assertEquals(e01, group("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb"))
+        assertNotEquals(e01, group("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-FLUX"))
+        assertNotEquals(e01, group("Silo.S02E01.The.Engineer.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb"))
+        // A season pack plays every episode: it is its own group. Movies have none.
+        assertEquals(group("Silo.S01.2160p.ATVp.WEB-DL-NTb"), group("silo.s01.2160p.atvp.web-dl-ntb"))
+        assertNull(group("Movie.2020.1080p.WEB-DL-GRP"))
+
+        fun stream(title: String) = with(BuiltInUsenetService) {
+            com.nuvio.tv.domain.model.Stream(name = "4K • Usenet • A", title = title, description = null, url = null,
+                ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
+                behaviorHints = com.nuvio.tv.domain.model.StreamBehaviorHints(null, bingeGroup(title), null, null),
+                addonName = GROUP_NAME, addonLogo = null, nzbUrl = "https://a.test/$title", servers = listOf(provider.serverUrl()))
+        }
+        val next = listOf(stream("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-FLUX"),
+            stream("Silo.S01E02.Holstons.Pick.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb"))
+        val picked = com.nuvio.tv.core.player.StreamAutoPlaySelector.selectAutoPlayStream(next,
+            com.nuvio.tv.data.local.StreamAutoPlayMode.MANUAL, "", com.nuvio.tv.data.local.StreamAutoPlaySource.ALL_SOURCES,
+            emptySet(), emptySet(), emptySet(), preferredBingeGroup = e01, preferBingeGroupInSelection = true, bingeGroupOnly = true)
+        assertEquals(next[1], picked)
+    }
+
     private val provider = UsenetProvider(name = "News", host = "news.test")
     private fun release(indexer: UsenetIndexer, title: String = "Movie.2020.1080p") =
         UsenetRelease(title, "${indexer.apiUrl}/nzb/$title", indexerId = indexer.id, indexerName = indexer.name)

@@ -476,8 +476,8 @@ class BuiltInUsenetService @Inject constructor(
         return Stream(name = listOfNotNull(resolutionLabel, "Usenet", indexerName).joinToString(" • "), title = title,
             description = if (config.showReleaseNames) "$title\n$details" else details,
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
-            // The size badge, as other sources show it.
-            behaviorHints = (episodeShare ?: size).takeIf { it > 0 }?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
+            // The size badge, as other sources show it, and the upload's binge group.
+            behaviorHints = usenetHints(bingeGroup(title), (episodeShare ?: size).takeIf { it > 0 }),
             addonName = GROUP_NAME, addonLogo = null,
             badges = listOfNotNull(
                 UNAVAILABLE_BADGE.takeIf { failed },
@@ -501,6 +501,22 @@ class BuiltInUsenetService @Inject constructor(
         /** How long a search waits for every indexer before it shows what came. */
         const val COMPLETE_RESULTS_WAIT_MS = 5_000L
         private const val BLURAY_COLOR = "#0B5ED7"
+        /**
+         * One upload's episodes share a binge group, so the next episode plays from the same upload
+         * when binge groups are preferred: its title without the episode's number and name. A
+         * season pack is its own group. Movies have none.
+         */
+        fun bingeGroup(title: String?): String? {
+            val name = title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() } ?: return null
+            val upload = NewznabProtocol.episodeTemplate(name)?.first
+                ?: name.takeIf { NewznabProtocol.packSeasons(it).isNotEmpty() } ?: return null
+            return "$GROUP_NAME|$upload"
+        }
+
+        private fun usenetHints(bingeGroup: String?, size: Long?): StreamBehaviorHints? =
+            if (bingeGroup == null && size == null) null
+            else StreamBehaviorHints(null, bingeGroup, null, null, videoSize = size)
+
         /** On a release whose articles were missing or damaged when it was last tried. */
         const val UNAVAILABLE_LABEL = "UNAVAILABLE"
         private val UNAVAILABLE_BADGE = StreamBadge(name = UNAVAILABLE_LABEL, tagColor = "#6C757D",
