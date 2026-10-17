@@ -487,7 +487,7 @@ class BuiltInUsenetService @Inject constructor(
                 blurayLabel?.let {
                     StreamBadge(name = it, tagColor = BLURAY_COLOR, textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
                 }),
-            nzbUrl = nzbUrl, servers = config.providers.filter { it.enabled }.map { it.serverUrl() },
+            nzbUrl = nzbUrl, servers = config.servers(),
             publishedAt = publishedAt.takeIf { it > 0 },
             quality = resolution.takeIf { it > 0 }?.let { "${it}p" }, qualityValue = resolution)
     }
@@ -531,6 +531,20 @@ class BuiltInUsenetService @Inject constructor(
         const val SEASON_PACK_LABEL = "SEASON PACK"
         private val SEASON_PACK_BADGE = StreamBadge(name = SEASON_PACK_LABEL, tagColor = "#6F42C1",
             textColor = "#FFFFFF", tagStyle = StreamBadge.STYLE_LABEL)
+
+        /**
+         * A release played before, to open again without a search: reusing the last link keeps
+         * the release, never the engine's session link, which ends with its session. The providers
+         * are today's, so no credential is kept with it. Null when no provider is enabled.
+         */
+        fun restoredStream(nzbUrl: String, name: String, title: String?, size: Long?, publishedAt: Long?,
+            config: UsenetSourceConfiguration): Stream? {
+            val servers = config.servers().ifEmpty { return null }
+            return Stream(name = name, title = title, description = null, url = null, ytId = null, infoHash = null,
+                fileIdx = null, externalUrl = null,
+                behaviorHints = size?.let { StreamBehaviorHints(null, null, null, null, videoSize = it) },
+                addonName = GROUP_NAME, addonLogo = null, nzbUrl = nzbUrl, servers = servers, publishedAt = publishedAt)
+        }
 
         /** Available releases first when chosen, unplayable ones last; the sort applies within each. */
         private fun outcomeRank(failed: Boolean, available: Boolean, availableFirst: Boolean) = when {
