@@ -51,11 +51,15 @@ data class UsenetRelease(
     val packSeasons: List<Int> = NewznabProtocol.packSeasons(title)
 
     /**
-     * The size of one episode of a single-season pack, given the season's [episodes]; the release
-     * size otherwise. Only filters and sorting use it: the real size is known after the NZB is read.
+     * The size of one episode of a season pack, given each season's episode count; the release size
+     * otherwise, and when a season of the pack has no count. Only filters and sorting use it: the
+     * real size is known after the NZB is read.
      */
-    fun episodeSize(episodes: Int?): Long =
-        if (packSeasons.size == 1 && episodes != null && episodes > 0 && size > 0) size / episodes else size
+    fun episodeSize(seasonEpisodes: Map<Int, Int>?): Long {
+        if (packSeasons.isEmpty() || seasonEpisodes == null || size <= 0) return size
+        val episodes = packSeasons.sumOf { seasonEpisodes[it]?.takeIf { count -> count > 0 } ?: return size }
+        return size / episodes
+    }
     /** A whole Blu-ray or DVD (disc folder or ISO): the feature is one clip among many, not one video. */
     val fullDisc: Boolean = FULL_DISC.containsMatchIn(title) && !NOT_DISC.containsMatchIn(title)
     /** A whole Blu-ray's label on its result; null for anything else, DVDs among them. */
@@ -266,6 +270,9 @@ object NewznabProtocol {
     private val CLOCK_NAME = Regex("(?i)^[ ._-]*\\d{1,2}[ ._:-]\\d{2}[ ._-]*[AP]\\.?M(?![A-Z])")
     // The separator after the number is not consumed, so S01-S03 names both seasons.
     private val SEASON = Regex("(?i)(?:^|[ ._-])(?:S|Season[ ._-]*)(\\d{1,3})(?=$|[ ._-])")
+    /** A hyphen between two seasons spans the ones between, as in S01-S03, S01-03 or Season 1-3. */
+    private val SEASON_RANGE = Regex("(?i)(?:^|[ ._-])(?:S|Season[ ._-]*)(\\d{1,3})[ ._]*-[ ._]*(?:S|Season[ ._-]*)?(\\d{1,3})(?=$|[ ._-])")
+    private const val MAX_SEASON_SPAN = 50
 
     /**
      * A one-episode title with its episode left out, and that episode: an upload's other episodes
@@ -281,9 +288,15 @@ object NewznabProtocol {
     }
 
     /** The seasons a release title names without naming an episode: a season pack. */
-    fun packSeasons(title: String): List<Int> =
-        if (EPISODES.any { it.containsMatchIn(title) }) emptyList()
-        else SEASON.findAll(title).map { it.groupValues[1].toInt() }.distinct().toList()
+    fun packSeasons(title: String): List<Int> {
+        if (EPISODES.any { it.containsMatchIn(title) }) return emptyList()
+        val spanned = SEASON_RANGE.findAll(title).flatMap {
+            val first = it.groupValues[1].toInt()
+            val last = it.groupValues[2].toInt()
+            if (last > first && last - first < MAX_SEASON_SPAN) (first..last).asSequence() else sequenceOf(first, last)
+        }
+        return (spanned + SEASON.findAll(title).map { it.groupValues[1].toInt() }).distinct().toList()
+    }
 
     /**
      * Whether a release numbered by [match] in [title] holds [episode]. E01E02E03 lists three
@@ -401,31 +414,31 @@ object NewznabProtocol {
     }
 
     /**
-     * [episodesPerSeason] lets a single-season pack be filtered and sorted by its size per episode.
+     * [seasonEpisodes] lets a season pack be filtered and sorted by its size per episode.
      * [rank] orders before the sort and before the result limit, so releases known to play are never
      * the ones cut and unplayable ones are cut first.
      */
     fun arrange(releases: List<UsenetRelease>, config: UsenetSourceConfiguration,
-        now: Long = System.currentTimeMillis(), episodesPerSeason: Int? = null,
+        now: Long = System.currentTimeMillis(), seasonEpisodes: Map<Int, Int>? = null,
         rank: (UsenetRelease) -> Int = { 0 }): List<UsenetRelease> {
         val priority = config.indexers.mapIndexed { i, indexer -> indexer.id to i }.toMap()
         val filtered = releases.filter {
             !it.passworded && (!config.excludeLowQuality || !it.lowQuality) && (!config.excludeFullDisc || !it.fullDisc) &&
                 (config.minResolution == 0 || it.resolution >= config.minResolution) &&
-                (config.maxSizeGb == 0 || it.episodeSize(episodesPerSeason) in 1..config.maxSizeGb.toLong() * 1024 * 1024 * 1024) &&
+                (config.maxSizeGb == 0 || it.episodeSize(seasonEpisodes) in 1..config.maxSizeGb.toLong() * 1024 * 1024 * 1024) &&
                 (config.maxAgeDays == 0 || it.publishedAt > 0 && now - it.publishedAt <= config.maxAgeDays.toLong() * 86400000)
         }
         val primary = when (config.sort) {
             UsenetSort.QUALITY -> compareByDescending<UsenetRelease> { it.resolution }
-            UsenetSort.LARGEST -> compareByDescending<UsenetRelease> { it.episodeSize(episodesPerSeason) }
+            UsenetSort.LARGEST -> compareByDescending<UsenetRelease> { it.episodeSize(seasonEpisodes) }
             UsenetSort.SMALLEST -> compareBy<UsenetRelease> {
-                it.episodeSize(episodesPerSeason).takeIf { size -> size > 0 } ?: Long.MAX_VALUE
+                it.episodeSize(seasonEpisodes).takeIf { size -> size > 0 } ?: Long.MAX_VALUE
             }
             UsenetSort.NEWEST -> compareByDescending<UsenetRelease> { it.publishedAt }
             UsenetSort.INDEXER -> compareBy<UsenetRelease> { priority[it.indexerId] ?: Int.MAX_VALUE }
         }
         return filtered.sortedWith(compareBy(rank).then(primary).thenBy { priority[it.indexerId] ?: Int.MAX_VALUE }
-            .thenByDescending { it.resolution }.thenByDescending { it.episodeSize(episodesPerSeason) }.thenBy { it.title }.thenBy { it.nzbUrl })
+            .thenByDescending { it.resolution }.thenByDescending { it.episodeSize(seasonEpisodes) }.thenBy { it.title }.thenBy { it.nzbUrl })
             .distinctBy { it.nzbUrl }.take(config.maxResults)
     }
 
