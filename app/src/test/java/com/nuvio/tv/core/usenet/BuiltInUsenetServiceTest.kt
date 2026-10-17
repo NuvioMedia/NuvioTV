@@ -85,6 +85,8 @@ class BuiltInUsenetServiceTest {
     private val provider = UsenetProvider(name = "News", host = "news.test")
     private fun release(indexer: UsenetIndexer, title: String = "Movie.2020.1080p") =
         UsenetRelease(title, "${indexer.apiUrl}/nzb/$title", indexerId = indexer.id, indexerName = indexer.name)
+    private fun showSeasons(vararg episodes: Pair<Int, Int>) = TmdbDetailsResponse(id = 42,
+        seasons = episodes.map { (season, count) -> com.nuvio.tv.data.remote.api.TmdbSeasonSummary(season, count) })
 
     @Test fun `every indexer is searched by default and repeated releases are kept unless hidden`() = runTest {
         val first = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api", priority = 1)
@@ -182,15 +184,32 @@ class BuiltInUsenetServiceTest {
         coEvery { client.search(indexer, any(), any()) } returns listOf(
             UsenetRelease("Show.S01.1080p-GRP", "https://a.test/nzb/pack", size = 9L shl 30, indexerId = "a", indexerName = "A"))
         coEvery { tmdb.ensureTmdbId(any(), any()) } returns "42"
-        coEvery { tmdbApi.getTvSeasonDetails(42, 1, any(), any()) } returns Response.success(
-            com.nuvio.tv.data.remote.api.TmdbSeasonResponse(1, (1..9).map { com.nuvio.tv.data.remote.api.TmdbEpisode(it) }))
+        coEvery { tmdbApi.getTvDetails(42, any(), any()) } returns Response.success(showSeasons(1 to 9))
         val service = BuiltInUsenetService(client, tmdb, tmdbApi)
         val stream = service.search(config, "series", "tt1:1:2", null, null).toList().mapNotNull { it.group }.last().streams.single()
         assertEquals(listOf(BuiltInUsenetService.SEASON_PACK_LABEL), stream.badges.map { it.name })
         assertEquals("9.00 GB whole season (~1.00 GB per episode) • A", stream.description)
         // The size badge shows an episode's share once the season's episode count is known.
         assertEquals(1L shl 30, stream.behaviorHints?.videoSize)
-        coVerify(exactly = 1) { tmdbApi.getTvSeasonDetails(42, 1, any(), any()) }
+        coVerify(exactly = 1) { tmdbApi.getTvDetails(42, any(), any()) }
+    }
+
+    @Test fun `a pack of several seasons shares its size among all their episodes`() = runTest {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer),
+            showReleaseNames = false)
+        val client = mockk<NewznabClient>()
+        val tmdb = mockk<TmdbService>()
+        val tmdbApi = mockk<TmdbApi>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(indexer, any(), any()) } returns listOf(
+            UsenetRelease("Show.S01-S03.1080p-GRP", "https://a.test/nzb/pack", size = 34L shl 30, indexerId = "a", indexerName = "A"))
+        coEvery { tmdb.ensureTmdbId(any(), any()) } returns "42"
+        coEvery { tmdbApi.getTvDetails(42, any(), any()) } returns Response.success(showSeasons(0 to 4, 1 to 10, 2 to 12, 3 to 12))
+        val stream = BuiltInUsenetService(client, tmdb, tmdbApi)
+            .search(config, "series", "tt1:1:2", null, null).toList().mapNotNull { it.group }.last().streams.single()
+        assertEquals("34.00 GB whole pack (~1.00 GB per episode) • A", stream.description)
+        assertEquals(1L shl 30, stream.behaviorHints?.videoSize)
     }
 
     @Test fun `result names carry the resolution`() = runTest {
@@ -237,8 +256,8 @@ class BuiltInUsenetServiceTest {
             UsenetRelease("Show.S01.1080p-GRP", "https://a.test/nzb/pack", size = 9L shl 30, indexerId = "a", indexerName = "A"),
             UsenetRelease("Show.S01E02.1080p-GRP", "https://a.test/nzb/ep", size = 2L shl 30, indexerId = "a", indexerName = "A"))
         coEvery { tmdb.ensureTmdbId(any(), any()) } returns "42"
-        coEvery { tmdbApi.getTvSeasonDetails(42, 1, any(), any()) } coAnswers {
-            kotlinx.coroutines.delay(60_000); Response.success(com.nuvio.tv.data.remote.api.TmdbSeasonResponse(1, emptyList()))
+        coEvery { tmdbApi.getTvDetails(42, any(), any()) } coAnswers {
+            kotlinx.coroutines.delay(60_000); Response.success(showSeasons())
         }
         val shownAt = mutableListOf<Long>()
         val lists = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt1:1:2", null, null)
@@ -260,9 +279,9 @@ class BuiltInUsenetServiceTest {
             UsenetRelease("Show.S01.1080p-GRP", "https://a.test/nzb/pack", size = 9L shl 30, indexerId = "a", indexerName = "A"),
             UsenetRelease("Show.S01E02.1080p-GRP", "https://a.test/nzb/ep", size = 2L shl 30, indexerId = "a", indexerName = "A"))
         coEvery { tmdb.ensureTmdbId(any(), any()) } returns "42"
-        coEvery { tmdbApi.getTvSeasonDetails(42, 1, any(), any()) } coAnswers {
+        coEvery { tmdbApi.getTvDetails(42, any(), any()) } coAnswers {
             kotlinx.coroutines.delay(1_000)
-            Response.success(com.nuvio.tv.data.remote.api.TmdbSeasonResponse(1, (1..9).map { com.nuvio.tv.data.remote.api.TmdbEpisode(it) }))
+            Response.success(showSeasons(1 to 9))
         }
         val shownAt = mutableListOf<Long>()
         val lists = BuiltInUsenetService(client, tmdb, tmdbApi).search(config, "series", "tt1:1:2", null, null)
