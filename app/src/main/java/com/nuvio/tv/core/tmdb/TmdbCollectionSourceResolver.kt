@@ -4,6 +4,7 @@ import android.content.Context
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.data.remote.api.TmdbCollectionSearchResult
@@ -46,7 +47,7 @@ class TmdbCollectionSourceResolver @Inject constructor(
 
     fun resolve(source: TmdbCollectionSource, page: Int = 1): Flow<NetworkResult<CatalogRow>> = flow {
         emit(NetworkResult.Loading)
-        val result = runCatching {
+        val result = runCatchingCancellable {
             withContext(Dispatchers.IO) {
                 val language = tmdbSettingsDataStore.settings.first().language
                 when (source.sourceType) {

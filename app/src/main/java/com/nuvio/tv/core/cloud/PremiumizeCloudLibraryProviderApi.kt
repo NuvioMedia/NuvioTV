@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.cloud
 
 import com.nuvio.tv.core.debrid.DebridProviders
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.remote.api.PremiumizeApi
 import com.nuvio.tv.data.remote.dto.PremiumizeCloudFileDto
 import javax.inject.Inject
@@ -14,7 +15,7 @@ class PremiumizeCloudLibraryProviderApi @Inject constructor(
     override val provider = DebridProviders.Premiumize
 
     override suspend fun listItems(apiKey: String): Result<List<CloudLibraryItem>> =
-        runCatching {
+        runCatchingCancellable {
             val response = api.listAllItems("Bearer $apiKey")
             if (!response.isSuccessful || response.body()?.status.equals("error", ignoreCase = true)) {
                 throw IllegalStateException(response.body()?.message ?: response.body()?.code ?: response.errorBody()?.string().orEmpty().ifBlank { null })

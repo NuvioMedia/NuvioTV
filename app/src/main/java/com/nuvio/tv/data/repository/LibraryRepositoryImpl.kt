@@ -16,6 +16,7 @@ import com.nuvio.tv.core.tracking.dispatchTrackingMembershipChanges
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tracking.effectiveLibrarySourceMode
 import com.nuvio.tv.core.tracking.providerId
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.mediaserver.ServerItemRef
@@ -374,7 +375,7 @@ class LibraryRepositoryImpl @Inject constructor(
     private suspend fun hydrateLibraryLogos(items: List<LibraryEntry>) {
         items.take(20).forEach { entry ->
             hydratedLogoIds.add(entry.id)
-            runCatching {
+            runCatchingCancellable {
                 val result = metaRepository.getMetaFromPrimaryAddon(entry.type, entry.id)
                     .firstOrNull { it is NetworkResult.Success }
                 val logo = (result as? NetworkResult.Success)?.data?.logo

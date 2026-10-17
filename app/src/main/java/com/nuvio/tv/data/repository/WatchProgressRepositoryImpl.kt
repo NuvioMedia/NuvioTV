@@ -7,6 +7,7 @@ import com.nuvio.tv.core.sync.WatchStateMutationStore
 import com.nuvio.tv.core.sync.WatchedItemsSyncService
 import android.os.SystemClock
 import android.util.Log
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.local.WatchProgressPreferences
@@ -841,7 +842,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
             connectedProgressProviders().map { provider ->
                 async {
                     provider.applyOptimisticRemoval(contentId, season, episode)
-                    runCatching { provider.removeProgress(contentId, season, episode) }
+                    runCatchingCancellable { provider.removeProgress(contentId, season, episode) }
                         .onFailure { error ->
                             Log.w(TAG, "Failed ${provider.providerId.storageId} progress removal", error)
                         }
@@ -1093,7 +1094,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 .filter { writer -> writer.providerId in connectedIds }
                 .map { writer ->
                     async {
-                        runCatching { writer.addToHistory(profileId, items) }
+                        runCatchingCancellable { writer.addToHistory(profileId, items) }
                             .onFailure { error ->
                                 Log.w(TAG, "Failed ${writer.providerId.storageId} history add", error)
                             }
@@ -1115,7 +1116,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 .filter { writer -> writer.providerId in connectedIds }
                 .map { writer ->
                     async {
-                        runCatching { writer.removeFromHistory(profileId, items) }
+                        runCatchingCancellable { writer.removeFromHistory(profileId, items) }
                             .onFailure { error ->
                                 Log.w(TAG, "Failed ${writer.providerId.storageId} history removal", error)
                             }
@@ -1186,12 +1187,12 @@ class WatchProgressRepositoryImpl @Inject constructor(
             synchronized(hydratedProgressKeys) {
                 hydratedProgressKeys.add(key)
             }
-            runCatching {
+            runCatchingCancellable {
                 val metadata = fetchContentMetadata(
                     contentId = progress.contentId,
                     contentType = progress.contentType
-                ) ?: return@runCatching
-                if (profileManager.activeProfileId.value != profileId) return@runCatching
+                ) ?: return@runCatchingCancellable
+                if (profileManager.activeProfileId.value != profileId) return@runCatchingCancellable
                 val episodeRuntimeMs = if (progress.season != null && progress.episode != null)
                     metadata.episodes[progress.season to progress.episode]?.runtimeMs ?: 0L
                 else 0L
@@ -1204,7 +1205,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 var posterToSave = progress.poster ?: metadata.poster
                 if (backdropToSave == null && posterToSave == null) {
                     val tmdbImages = tmdbService.fetchImdbImages(progress.contentId, progress.contentType)
-                    if (profileManager.activeProfileId.value != profileId) return@runCatching
+                    if (profileManager.activeProfileId.value != profileId) return@runCatchingCancellable
                     backdropToSave = tmdbImages?.backdropUrl
                     posterToSave = tmdbImages?.posterUrl
                 }

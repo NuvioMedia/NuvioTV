@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.remote.api.SupportersApi
 import com.nuvio.tv.domain.model.MemberTier
 import javax.inject.Inject
@@ -19,7 +20,7 @@ class SupportersRepository @Inject constructor(
     private val supportersApi: SupportersApi
 ) {
 
-    suspend fun getSupporters(): Result<List<SupporterMember>> = runCatching {
+    suspend fun getSupporters(): Result<List<SupporterMember>> = runCatchingCancellable {
         val response = supportersApi.getSupportersWall()
         if (!response.isSuccessful) {
             error(appContext.getString(com.nuvio.tv.R.string.supporters_error_api_http, response.code()))

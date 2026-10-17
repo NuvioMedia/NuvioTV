@@ -2,6 +2,7 @@ package com.nuvio.tv.core.tmdb
 
 import android.util.Log
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.remote.api.TmdbApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -292,13 +293,13 @@ class TmdbService @Inject constructor(
         withContext(Dispatchers.IO) {
             if (!imdbId.startsWith("tt")) return@withContext null
             val tmdbId = imdbToTmdb(imdbId, mediaType) ?: return@withContext null
-            runCatching {
+            runCatchingCancellable {
                 val isMovie = normalizeMediaType(mediaType) == "movie"
                 val response = if (isMovie)
                     tmdbApi.getMovieDetails(tmdbId, TMDB_API_KEY)
                 else
                     tmdbApi.getTvDetails(tmdbId, TMDB_API_KEY)
-                val body = response.body() ?: return@runCatching null
+                val body = response.body() ?: return@runCatchingCancellable null
                 TmdbImages(
                     backdropUrl = body.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
                     posterUrl = body.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },

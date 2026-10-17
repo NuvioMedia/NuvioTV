@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.cloud
 
 import com.nuvio.tv.core.debrid.DebridProviders
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.remote.api.TorboxApi
 import com.nuvio.tv.data.remote.dto.TorboxCloudFileDto
 import com.nuvio.tv.data.remote.dto.TorboxCloudItemDto
@@ -17,7 +18,7 @@ class TorboxCloudLibraryProviderApi @Inject constructor(
     override val provider = DebridProviders.Torbox
 
     override suspend fun listItems(apiKey: String): Result<List<CloudLibraryItem>> =
-        runCatching {
+        runCatchingCancellable {
             val authorization = "Bearer $apiKey"
             val torrents = api.listCloudTorrents(authorization).itemsOrThrow(CloudLibraryItemType.Torrent)
             val usenet = api.listCloudUsenet(authorization).itemsOrThrow(CloudLibraryItemType.Usenet)

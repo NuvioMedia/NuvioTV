@@ -3,6 +3,7 @@ package com.nuvio.tv.core.tracking
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.core.sync.WatchedItemsSyncService
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressPreferences
@@ -124,7 +125,7 @@ class TrackingSourceController @Inject constructor(
     }
 
     private suspend fun repopulateWatchedItemsFromNuvioSync(profileId: Int) {
-        runCatching {
+        runCatchingCancellable {
             watchedItemsSyncService.syncSnapshotFromRemote(profileId).getOrElse { return }
         }
     }

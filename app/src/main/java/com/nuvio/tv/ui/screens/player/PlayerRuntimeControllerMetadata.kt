@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.AutoSkipSegmentType
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.domain.model.ContentType
@@ -113,12 +114,12 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
     val settings = tmdbSettingsDataStore.settings.first()
     if (!settings.enabled || !settings.useBasicInfo) return
 
-    val tmdbId = runCatching { tmdbService.ensureTmdbId(id, type) }.getOrNull() ?: return
+    val tmdbId = runCatchingCancellable { tmdbService.ensureTmdbId(id, type) }.getOrNull() ?: return
     val contentType = when (type.lowercase()) {
         "series", "tv" -> ContentType.SERIES
         else -> ContentType.MOVIE
     }
-    val enrichment = runCatching {
+    val enrichment = runCatchingCancellable {
         tmdbMetadataService.fetchEnrichment(
             tmdbId = tmdbId,
             contentType = contentType,
@@ -132,7 +133,7 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
 
     // For series, try to get episode-level overview and title from TMDB.
     val episodeEnrichment = if (isSeries && season != null && episode != null) {
-        runCatching {
+        runCatchingCancellable {
             tmdbMetadataService.fetchEpisodeEnrichment(
                 tmdbId = tmdbId,
                 seasonNumbers = listOf(season),

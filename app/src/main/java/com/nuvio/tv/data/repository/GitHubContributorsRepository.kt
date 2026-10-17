@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.remote.api.UniqueContributionsApi
 import com.nuvio.tv.data.remote.dto.UniqueContributorDto
 import javax.inject.Inject
@@ -25,7 +26,7 @@ class GitHubContributorsRepository @Inject constructor(
     @param:Named("uniqueContributionsBaseUrl") private val contributionsBaseUrl: String
 ) {
 
-    suspend fun getContributors(): Result<List<GitHubContributor>> = runCatching {
+    suspend fun getContributors(): Result<List<GitHubContributor>> = runCatchingCancellable {
         if (contributionsBaseUrl.isBlank()) {
             error(appContext.getString(com.nuvio.tv.R.string.contributors_error_api_not_configured))
         }

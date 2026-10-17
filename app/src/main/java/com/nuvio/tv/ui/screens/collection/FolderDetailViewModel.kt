@@ -11,6 +11,7 @@ import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
 import com.nuvio.tv.core.util.hasNoReleaseInfo
 import com.nuvio.tv.core.util.isUnreleased
 import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
@@ -1458,7 +1459,7 @@ class FolderDetailViewModel @Inject constructor(
                 delay(TRAILER_PREVIEW_DEBOUNCE_MS)
                 if (trailerPreviewRequestVersion != requestVersion) return@launch
 
-                val tmdbId = runCatching { tmdbService.ensureTmdbId(itemId, apiType) }.getOrNull()
+                val tmdbId = runCatchingCancellable { tmdbService.ensureTmdbId(itemId, apiType) }.getOrNull()
                 val trailerSource = trailerService.getTrailerPlaybackSource(
                     title = title,
                     year = extractYear(releaseInfo),

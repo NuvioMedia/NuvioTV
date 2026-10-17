@@ -70,6 +70,7 @@ import com.nuvio.tv.core.player.DolbyVisionExtractorsFactory
 import com.nuvio.tv.core.player.DoviBridge
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.Dv7HandlingMode
@@ -1338,7 +1339,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 val endDiagnostics = currentDiagnostics
                                 lastPlaybackDiagnosticsForReport = endDiagnostics
                                 scope.launch {
-                                    runCatching { playerSettingsDataStore.setLastPlaybackDiagnostics(endDiagnostics) }
+                                    runCatchingCancellable { playerSettingsDataStore.setLastPlaybackDiagnostics(endDiagnostics) }
                                 }
                             }
                             // Marks watched + auto-play next only for real episode finishes;
@@ -2783,7 +2784,7 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
     )
     lastPlaybackDiagnosticsForReport = finalDiagnostics
     scope.launch {
-        runCatching {
+        runCatchingCancellable {
             playerSettingsDataStore.setLastPlaybackDiagnostics(finalDiagnostics)
         }
     }

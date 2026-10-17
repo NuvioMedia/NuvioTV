@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.CachedNextUpItem
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import kotlinx.coroutines.Dispatchers
@@ -98,7 +99,7 @@ internal suspend fun HomeViewModel.applyConclusiveOlderNextUpResults(
         if (profileManager.activeProfileId.value != pipelineProfileId) return@withContext
         val snapshot = (_uiState.value.continueWatchingItems + _uiState.value.upcomingItems)
             .toCachedNextUpSnapshot(com.nuvio.tv.ui.components.brokenImageUrls)
-        runCatching {
+        runCatchingCancellable {
             cwEnrichmentCache.saveNextUpSnapshot(snapshot, force = true)
         }
     }

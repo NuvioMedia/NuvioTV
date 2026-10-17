@@ -9,6 +9,7 @@ import com.nuvio.tv.core.sync.CollectionSyncService
 import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
 import com.nuvio.tv.core.trakt.TraktPublicListSearchResult
 import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
+import com.nuvio.tv.core.util.runCatchingCancellable
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.nuvio.tv.data.remote.api.TmdbCollectionSearchResult
 import com.nuvio.tv.data.remote.api.TmdbCompanySearchResult
@@ -555,7 +556,7 @@ class CollectionEditorViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(traktSearchError = null) }
             val results = if (query.isTraktListIdentifierInput()) {
-                runCatching {
+                runCatchingCancellable {
                     val metadata = traktPublicListSourceResolver.listImportMetadata(query)
                     val id = metadata.traktListId ?: error(string(R.string.collections_editor_error_load_trakt_list))
                     listOf(
@@ -568,7 +569,7 @@ class CollectionEditorViewModel @Inject constructor(
                     )
                 }
             } else {
-                runCatching { traktPublicListSourceResolver.searchPublicLists(query) }
+                runCatchingCancellable { traktPublicListSourceResolver.searchPublicLists(query) }
             }
             _uiState.update {
                 val mapped = results.getOrDefault(emptyList())
@@ -583,8 +584,8 @@ class CollectionEditorViewModel @Inject constructor(
 
     private fun loadTraktFeaturedLists() {
         viewModelScope.launch {
-            val trending = runCatching { traktPublicListSourceResolver.trendingPublicLists() }
-            val popular = runCatching { traktPublicListSourceResolver.popularPublicLists() }
+            val trending = runCatchingCancellable { traktPublicListSourceResolver.trendingPublicLists() }
+            val popular = runCatchingCancellable { traktPublicListSourceResolver.popularPublicLists() }
             _uiState.update {
                 it.copy(
                     traktTrendingResults = trending.getOrDefault(it.traktTrendingResults),
@@ -670,7 +671,7 @@ class CollectionEditorViewModel @Inject constructor(
         val query = _uiState.value.tmdbInput.trim()
         if (query.isBlank()) return
         viewModelScope.launch {
-            val results = runCatching { tmdbCollectionSourceResolver.searchCompanies(query) }
+            val results = runCatchingCancellable { tmdbCollectionSourceResolver.searchCompanies(query) }
             _uiState.update {
                 it.copy(
                     tmdbCompanyResults = results.getOrDefault(emptyList()),
@@ -684,7 +685,7 @@ class CollectionEditorViewModel @Inject constructor(
         val query = _uiState.value.tmdbInput.trim()
         if (query.isBlank()) return
         viewModelScope.launch {
-            val results = runCatching { tmdbCollectionSourceResolver.searchCollections(query) }
+            val results = runCatchingCancellable { tmdbCollectionSourceResolver.searchCollections(query) }
             _uiState.update {
                 it.copy(
                     tmdbCollectionResults = results.getOrDefault(emptyList()),
@@ -697,7 +698,7 @@ class CollectionEditorViewModel @Inject constructor(
     fun addTmdbSource(source: TmdbCollectionSource) {
         if (source.tmdbId != null && source.sourceType in coverMetadataSourceTypes) {
             viewModelScope.launch {
-                val metadata = runCatching { importMetadataFor(source.sourceType, source.tmdbId) }
+                val metadata = runCatchingCancellable { importMetadataFor(source.sourceType, source.tmdbId) }
                 val resolved = metadata.getOrNull()
                 addTmdbSourceToFolder(
                     source = if (source.title.isBlank()) source.copy(title = resolved?.title.orEmpty()) else source,
@@ -713,7 +714,7 @@ class CollectionEditorViewModel @Inject constructor(
         val metadataSource = sources.firstOrNull { it.tmdbId != null && it.sourceType in coverMetadataSourceTypes }
         if (metadataSource != null) {
             viewModelScope.launch {
-                val metadata = runCatching { importMetadataFor(metadataSource.sourceType, metadataSource.tmdbId!!) }
+                val metadata = runCatchingCancellable { importMetadataFor(metadataSource.sourceType, metadataSource.tmdbId!!) }
                 val resolved = metadata.getOrNull()
                 addTmdbSourcesToFolder(sources, resolved?.coverImageUrl)
             }
@@ -811,7 +812,7 @@ class CollectionEditorViewModel @Inject constructor(
         val mediaTypes = selectedMediaTypes(state, sourceType)
         if (sourceType == TmdbCollectionSourceType.LIST || sourceType == TmdbCollectionSourceType.COLLECTION) {
             viewModelScope.launch {
-                val metadata = runCatching {
+                val metadata = runCatchingCancellable {
                     if (sourceType == TmdbCollectionSourceType.LIST) {
                         tmdbCollectionSourceResolver.listImportMetadata(id!!)
                     } else {
@@ -880,7 +881,7 @@ class CollectionEditorViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val metadata = runCatching { traktPublicListSourceResolver.listImportMetadata(state.traktInput) }
+            val metadata = runCatchingCancellable { traktPublicListSourceResolver.listImportMetadata(state.traktInput) }
             val resolved = metadata.getOrNull()
             if (metadata.isFailure || resolved?.traktListId == null) {
                 _uiState.update {

@@ -4,6 +4,7 @@ import android.util.Log
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.core.tracking.parseTrackingExternalIds
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.domain.repository.MetaRepository
 import java.time.LocalDate
 import javax.inject.Inject
@@ -157,7 +158,7 @@ class ServerMatcher @Inject constructor(
         if (ids.tmdb != null) return ids
         val imdb = ids.imdb ?: return ids
         val tmdb = withTimeoutOrNull(CONVERSION_TIMEOUT_MS) {
-            runCatching { tmdbService.ensureTmdbId(imdb, request.kind.contentType) }.getOrNull()
+            runCatchingCancellable { tmdbService.ensureTmdbId(imdb, request.kind.contentType) }.getOrNull()
         }?.toLongOrNull() ?: return ids
         return ids.copy(tmdb = tmdb)
     }
@@ -168,7 +169,7 @@ class ServerMatcher @Inject constructor(
         if (ids.imdb != null || tmdb == null) return ids
         synchronized(lock) { convertedImdb[tmdb] }?.let { return ids.copy(imdb = it) }
         val imdb = withTimeoutOrNull(CONVERSION_TIMEOUT_MS) {
-            runCatching { tmdbService.tmdbToImdb(tmdb.toInt(), request.kind.contentType) }.getOrNull()
+            runCatchingCancellable { tmdbService.tmdbToImdb(tmdb.toInt(), request.kind.contentType) }.getOrNull()
         }?.takeIf { it.startsWith("tt") } ?: return ids
         synchronized(lock) { convertedImdb[tmdb] = imdb }
         return ids.copy(imdb = imdb)

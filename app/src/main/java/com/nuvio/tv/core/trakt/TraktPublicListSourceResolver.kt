@@ -3,6 +3,7 @@ package com.nuvio.tv.core.trakt
 import android.content.Context
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.remote.api.TraktApi
 import com.nuvio.tv.data.remote.dto.trakt.TraktListItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktListSummaryDto
@@ -56,7 +57,7 @@ class TraktPublicListSourceResolver @Inject constructor(
 
     fun resolve(source: TraktCollectionSource, page: Int = 1): Flow<NetworkResult<CatalogRow>> = flow {
         emit(NetworkResult.Loading)
-        val result = runCatching {
+        val result = runCatchingCancellable {
             withContext(Dispatchers.IO) {
                 val type = source.mediaType.toTraktType()
                 val sortBy = TraktListSort.normalize(source.sortBy)

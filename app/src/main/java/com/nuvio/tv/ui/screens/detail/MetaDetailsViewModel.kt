@@ -11,6 +11,7 @@ import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbMovieCollection
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.MDBListSettingsDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -1314,7 +1315,7 @@ class MetaDetailsViewModel @Inject constructor(
                         return@launch
                     }
 
-                    runCatching {
+                    runCatchingCancellable {
                         tmdbMetadataService.fetchMoreLikeThis(
                             tmdbId = tmdbId,
                             contentType = tmdbContentType,
@@ -1378,7 +1379,7 @@ class MetaDetailsViewModel @Inject constructor(
                 return@launch
             }
 
-            val collection = runCatching {
+            val collection = runCatchingCancellable {
                 tmdbMetadataService.fetchMovieCollection(
                     collectionId = collectionId,
                     language = settings.language
@@ -1411,7 +1412,7 @@ class MetaDetailsViewModel @Inject constructor(
     private suspend fun loadMDBListRatings(meta: Meta) {
         val settings = mdbListSettingsDataStore.settings.first()
         val isMdbListActive = mdbListRepository.isAvailable(settings)
-        val ratingsResult = runCatching {
+        val ratingsResult = runCatchingCancellable {
             mdbListRepository.getRatingsForMeta(
                 meta = meta,
                 fallbackItemId = itemId,
@@ -2195,7 +2196,7 @@ class MetaDetailsViewModel @Inject constructor(
             val wasInWatchlist = _uiState.value.isInWatchlist
             val wasInLibrary = _uiState.value.isInLibrary
             _uiState.update { it.copy(defaultLibraryTogglePending = true) }
-            runCatching {
+            runCatchingCancellable {
                 libraryRepository.toggleDefault(input)
             }.onSuccess { result ->
                 if (result.requiresRemovalConfirmation) {
@@ -2275,7 +2276,7 @@ class MetaDetailsViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(pickerPending = true, pickerError = null) }
-            runCatching {
+            runCatchingCancellable {
                 libraryRepository.applyMembershipChanges(
                     item = meta.toLibraryEntryInput(),
                     changes = ListMembershipChanges(
@@ -2331,7 +2332,7 @@ class MetaDetailsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _uiState.update { it.copy(pickerPending = true) }
-            runCatching {
+            runCatchingCancellable {
                 libraryRepository.applyMembershipChanges(
                     item = meta.toLibraryEntryInput(),
                     changes = ListMembershipChanges(_uiState.value.pickerMembership),
@@ -2367,7 +2368,7 @@ class MetaDetailsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(defaultLibraryTogglePending = true) }
-            runCatching {
+            runCatchingCancellable {
                 libraryRepository.toggleDefault(
                     item = input,
                     confirmedRemovalProviders = confirmations.mapTo(
@@ -2547,7 +2548,7 @@ class MetaDetailsViewModel @Inject constructor(
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKeys)
             }
 
-            runCatching {
+            runCatchingCancellable {
                 val progressList = unwatched.map { buildCompletedEpisodeProgress(meta, it) }
                 watchProgressRepository.markAsCompletedBatch(progressList)
             }.onFailure { error ->
@@ -2591,7 +2592,7 @@ class MetaDetailsViewModel @Inject constructor(
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKeys)
             }
 
-            runCatching {
+            runCatchingCancellable {
                 val episodeTriples = watched.map { Triple(it.season!!, it.episode!!, it.id) }
                 watchProgressRepository.removeFromHistoryBatch(
                     contentId = _effectiveContentId.value,
@@ -2646,7 +2647,7 @@ class MetaDetailsViewModel @Inject constructor(
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKeys)
             }
 
-            runCatching {
+            runCatchingCancellable {
                 val progressList = unwatched.map { buildCompletedEpisodeProgress(meta, it) }
                 watchProgressRepository.markAsCompletedBatch(progressList)
             }.onFailure { error ->
@@ -2691,7 +2692,7 @@ class MetaDetailsViewModel @Inject constructor(
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKeys)
             }
 
-            runCatching {
+            runCatchingCancellable {
                 val progressList = unwatched.map { buildCompletedEpisodeProgress(meta, it) }
                 watchProgressRepository.markAsCompletedBatch(progressList)
             }.onFailure { error ->

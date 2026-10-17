@@ -6,6 +6,7 @@ import com.nuvio.tv.core.poster.CustomPosterScreen
 import com.nuvio.tv.core.poster.patternForScreen
 import com.nuvio.tv.core.poster.withCustomPosterArt
 import com.nuvio.tv.core.recommendations.TvRecommendationManager
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.CachedInProgressItem
 import com.nuvio.tv.data.local.CachedNextUpItem
 import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
@@ -114,9 +115,9 @@ class AndroidTvChannelSyncService @Inject constructor(
             ChannelSettingsSnapshot(daysCap, dismissed, useEpisodeThumbnails)
         }
 
-        val inProgressItems = runCatching { cwEnrichmentCache.getInProgressSnapshot() }
+        val inProgressItems = runCatchingCancellable { cwEnrichmentCache.getInProgressSnapshot() }
             .getOrDefault(emptyList())
-        val nextUpItems = runCatching { cwEnrichmentCache.getNextUpSnapshot() }
+        val nextUpItems = runCatchingCancellable { cwEnrichmentCache.getNextUpSnapshot() }
             .getOrDefault(emptyList())
 
         val posterPattern = patternForScreen(
@@ -134,7 +135,7 @@ class AndroidTvChannelSyncService @Inject constructor(
         )
         manager.reconcile(channelItems)
 
-        runCatching {
+        runCatchingCancellable {
             tvRecommendationManager.updateWatchNext(channelItems)
         }
     }

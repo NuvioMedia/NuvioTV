@@ -13,6 +13,7 @@ import androidx.tvprovider.media.tv.PreviewProgram
 import androidx.tvprovider.media.tv.TvContractCompat
 import com.nuvio.tv.MainActivity
 import com.nuvio.tv.R
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.domain.model.WatchProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +57,7 @@ class AndroidTvChannelManager @Inject constructor(
      */
     suspend fun ensureChannel(): Long? = withContext(Dispatchers.IO) {
         if (!isSupported()) return@withContext null
-        runCatching {
+        runCatchingCancellable {
             val stored = prefs.getChannelId()
             if (stored != null) {
                 val cursor = context.contentResolver.query(
@@ -64,7 +65,7 @@ class AndroidTvChannelManager @Inject constructor(
                     arrayOf(TvContractCompat.Channels._ID),
                     null, null, null
                 )
-                cursor?.use { if (it.moveToFirst()) return@runCatching stored }
+                cursor?.use { if (it.moveToFirst()) return@runCatchingCancellable stored }
                 Log.d(TAG, "Stored channel $stored gone; recreating")
                 prefs.clearChannelId()
             }
@@ -92,7 +93,7 @@ class AndroidTvChannelManager @Inject constructor(
                 Log.d(TAG, "Reusing orphaned channel $orphan")
                 prefs.setChannelId(orphan)
                 writeChannelLogo(orphan)
-                return@runCatching orphan
+                return@runCatchingCancellable orphan
             }
 
             val appLinkUri = Uri.parse(
@@ -110,7 +111,7 @@ class AndroidTvChannelManager @Inject constructor(
             val inserted = context.contentResolver.insert(
                 TvContractCompat.Channels.CONTENT_URI,
                 channel.toContentValues()
-            ) ?: return@runCatching null
+            ) ?: return@runCatchingCancellable null
 
             val id = ContentUris.parseId(inserted)
             prefs.setChannelId(id)
@@ -127,8 +128,8 @@ class AndroidTvChannelManager @Inject constructor(
      */
     suspend fun reconcile(items: List<WatchProgress>) = withContext(Dispatchers.IO) {
         if (!isSupported()) return@withContext
-        runCatching {
-            val channelId = ensureChannel() ?: return@runCatching
+        runCatchingCancellable {
+            val channelId = ensureChannel() ?: return@runCatchingCancellable
             val existing = queryExistingPrograms(channelId)
             val desiredKeys = items.map { progressKey(it) }.toSet()
 
@@ -216,8 +217,8 @@ class AndroidTvChannelManager @Inject constructor(
     /** Removes all preview programs from our channel (used on sign-out / history clear). */
     suspend fun clearAll() = withContext(Dispatchers.IO) {
         if (!isSupported()) return@withContext
-        runCatching {
-            val channelId = prefs.getChannelId() ?: return@runCatching
+        runCatchingCancellable {
+            val channelId = prefs.getChannelId() ?: return@runCatchingCancellable
             val rows = queryExistingPrograms(channelId)
             var deletedCount = 0
             rows.values.flatten().forEach { rowId ->

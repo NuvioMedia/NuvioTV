@@ -11,6 +11,7 @@ import com.nuvio.tv.core.recommendations.TvRecommendationManager
 import com.nuvio.tv.core.tmdb.MetaPreviewEnricher
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
@@ -650,8 +651,8 @@ class HomeViewModel @Inject constructor(
                         cwLastProcessedNextUpContentIds.clear()
                         // Clear disk cache for current profile.
                         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                            runCatching { cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true) }
-                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true) }
+                            runCatchingCancellable { cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true) }
+                            runCatchingCancellable { cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true) }
                         }
                         // Reload CW from fresh source.
                         loadContinueWatching()
@@ -706,8 +707,8 @@ class HomeViewModel @Inject constructor(
     private fun loadContinueWatching() {
         // Immediately restore last known CW from disk cache for instant display.
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val cachedInProgress = runCatching { cwEnrichmentCache.getInProgressSnapshot() }.getOrDefault(emptyList())
-            val cachedNextUp = runCatching { cwEnrichmentCache.getNextUpSnapshot() }.getOrDefault(emptyList())
+            val cachedInProgress = runCatchingCancellable { cwEnrichmentCache.getInProgressSnapshot() }.getOrDefault(emptyList())
+            val cachedNextUp = runCatchingCancellable { cwEnrichmentCache.getNextUpSnapshot() }.getOrDefault(emptyList())
             if (cachedInProgress.isEmpty() && cachedNextUp.isEmpty()) return@launch
             val dismissedNextUp = traktSettingsDataStore.dismissedNextUpKeys.first()
             // Render cached items immediately — don't wait for Trakt/allProgress.

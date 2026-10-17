@@ -21,6 +21,7 @@ import com.nuvio.tv.core.tracking.TrackingListManagementCapabilities
 import com.nuvio.tv.core.tracking.TrackingLibraryProviderRegistry
 import com.nuvio.tv.core.tracking.providerId
 import com.nuvio.tv.core.poster.withCustomPosterUrls
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.LibraryPreferences
@@ -468,7 +469,7 @@ class LibraryViewModel @Inject constructor(
             year = null,
             profileId = profileManager.activeProfileId.value
         )
-        val launched = runCatching {
+        val launched = runCatchingCancellable {
             externalPlaybackTracker.launchPlayer(
                 metadata = metadata,
                 url = info.url,

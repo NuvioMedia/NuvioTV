@@ -2,6 +2,7 @@ package com.nuvio.tv.core.tmdb
 
 import android.util.Log
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.remote.api.TmdbAggregateCreditsResponse
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.data.remote.api.TmdbCastMember
@@ -129,7 +130,7 @@ class TmdbMetadataService(
                         }
                     }
                     val altTitlesDeferred = async {
-                        runCatching {
+                        runCatchingCancellable {
                             val resp = when (tmdbType) {
                                 "tv" -> tmdbApi.getTvAlternativeTitles(numericId, TMDB_API_KEY).body()
                                 else -> tmdbApi.getMovieAlternativeTitles(numericId, TMDB_API_KEY).body()
@@ -178,7 +179,7 @@ class TmdbMetadataService(
                     )
 
                 val englishFallbackNames = if (needsCastEnglishFallback) {
-                    runCatching {
+                    runCatchingCancellable {
                         val englishCredits = when (tmdbType) {
                             "tv" -> tmdbApi.getTvAggregateCredits(numericId, TMDB_API_KEY, "en-US").body()?.let { mapAggregateCreditsToStandard(it) }
                             else -> tmdbApi.getMovieCredits(numericId, TMDB_API_KEY, "en-US").body()
@@ -253,7 +254,7 @@ class TmdbMetadataService(
                     !isCjkLanguage &&
                     containsCjkOrHangul(localizedTitle ?: originalTitle ?: "")
                 ) {
-                    val englishTitle = runCatching {
+                    val englishTitle = runCatchingCancellable {
                         when (tmdbType) {
                             "tv" -> tmdbApi.getTvDetails(numericId, TMDB_API_KEY, "en").body()
                             else -> tmdbApi.getMovieDetails(numericId, TMDB_API_KEY, "en").body()
@@ -511,14 +512,14 @@ class TmdbMetadataService(
         preferredLanguage: String
     ): List<MetaTrailer> {
         val localizedResults = when (tmdbType) {
-            "tv" -> runCatching {
+            "tv" -> runCatchingCancellable {
                 tmdbApi.getTvVideos(tmdbId, TMDB_API_KEY, preferredLanguage).body()?.results.orEmpty()
             }.getOrElse {
                 Log.w(TAG, "Failed to fetch localized TV trailers for $tmdbId: ${it.message}")
                 emptyList()
             }
 
-            else -> runCatching {
+            else -> runCatchingCancellable {
                 tmdbApi.getMovieVideos(tmdbId, TMDB_API_KEY, preferredLanguage).body()?.results.orEmpty()
             }.getOrElse {
                 Log.w(TAG, "Failed to fetch localized movie trailers for $tmdbId: ${it.message}")
@@ -533,7 +534,7 @@ class TmdbMetadataService(
             localizedResults
         } else {
             val fallbackResults = when (tmdbType) {
-                "tv" -> runCatching {
+                "tv" -> runCatchingCancellable {
                     tmdbApi.getTvVideos(tmdbId, TMDB_API_KEY, TMDB_TRAILER_FALLBACK_LANGUAGE)
                         .body()?.results.orEmpty()
                 }.getOrElse {
@@ -541,7 +542,7 @@ class TmdbMetadataService(
                     emptyList()
                 }
 
-                else -> runCatching {
+                else -> runCatchingCancellable {
                     tmdbApi.getMovieVideos(tmdbId, TMDB_API_KEY, TMDB_TRAILER_FALLBACK_LANGUAGE)
                         .body()?.results.orEmpty()
                 }.getOrElse {
@@ -1315,7 +1316,7 @@ class TmdbMetadataService(
                     coroutineScope {
                         val englishPersonDeferred = async {
                             if (shouldFetchEnglishPerson) {
-                                runCatching {
+                                runCatchingCancellable {
                                     tmdbApi.getPersonDetails(personId, TMDB_API_KEY, "en").body()
                                 }.getOrNull()
                             } else {
@@ -1324,7 +1325,7 @@ class TmdbMetadataService(
                         }
                         val englishCreditsDeferred = async {
                             if (shouldFetchEnglishCredits) {
-                                runCatching {
+                                runCatchingCancellable {
                                     tmdbApi.getPersonCombinedCredits(personId, TMDB_API_KEY, "en").body()
                                 }.getOrNull()
                             } else {

@@ -6,6 +6,7 @@ import com.nuvio.tv.core.player.TrailerPlayerPool
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.util.isUnreleased
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.MDBListSettingsDataStore
 import com.nuvio.tv.data.local.MoreLikeThisSourcePreference
@@ -629,7 +630,7 @@ internal class PostPlayRecommendationController(
             val sourcePreference = traktSettingsDataStore.moreLikeThisSource.first()
             val traktAuthenticated = traktAuthDataStore.isAuthenticated.first()
             if (sourcePreference == MoreLikeThisSourcePreference.SIMKL && simklAuthRepository.state.value.isAuthenticated) {
-                runCatching {
+                runCatchingCancellable {
                     simklRelatedService.getRelated(
                         meta = meta,
                         fallbackItemId = playbackController.contentId,
@@ -637,7 +638,7 @@ internal class PostPlayRecommendationController(
                     )
                 }.getOrDefault(emptyList())
             } else if (sourcePreference == MoreLikeThisSourcePreference.TRAKT && traktAuthenticated) {
-                runCatching {
+                runCatchingCancellable {
                     traktRelatedService.getRelated(
                         meta = meta,
                         fallbackItemId = playbackController.contentId,
@@ -651,7 +652,7 @@ internal class PostPlayRecommendationController(
                 val tmdbId = tmdbService.ensureTmdbId(meta.id, lookupType, fallbackImdbId = meta.imdbId)
                     ?: playbackController.contentId?.let { tmdbService.ensureTmdbId(it, lookupType, fallbackImdbId = meta.imdbId) }
                     ?: return@withTimeoutOrNull emptyList()
-                runCatching {
+                runCatchingCancellable {
                     tmdbMetadataService.fetchMoreLikeThis(
                         tmdbId = tmdbId,
                         contentType = tmdbContentType,

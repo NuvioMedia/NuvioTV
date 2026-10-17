@@ -6,6 +6,7 @@ import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.core.tracking.mergeTrackingMembershipWithTabs
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.WatchedSeriesStateHolder
 import com.nuvio.tv.data.repository.parseContentIds
 import com.nuvio.tv.domain.model.LibraryEntryInput
@@ -174,7 +175,7 @@ class PosterOptionsController @Inject constructor(
             item.apiType.equals("tv", ignoreCase = true) ||
             item.apiType.equals("anime", ignoreCase = true)
         ) "tv" else "movie"
-        val imdb = runCatching { tmdbService.tmdbToImdb(tmdbNumber, mediaType) }.getOrNull()
+        val imdb = runCatchingCancellable { tmdbService.tmdbToImdb(tmdbNumber, mediaType) }.getOrNull()
         return if (!imdb.isNullOrBlank()) item.copy(id = imdb) else item
     }
 
@@ -245,7 +246,7 @@ class PosterOptionsController @Inject constructor(
             val canonical = canonicalize(item)
             val input = canonical.toLibraryEntryInput(state.addonBaseUrl.takeIf { it.isNotBlank() })
             activeListPickerInput = input
-            runCatching {
+            runCatchingCancellable {
                 libraryRepository.getMembershipSnapshot(input)
             }.onSuccess { snapshot ->
                 _state.update { current ->
@@ -294,7 +295,7 @@ class PosterOptionsController @Inject constructor(
 
         _state.update { it.copy(listPickerPending = true, listPickerError = null) }
         scope.launch {
-            runCatching {
+            runCatchingCancellable {
                 libraryRepository.applyMembershipChanges(
                     item = input,
                     changes = ListMembershipChanges(
@@ -349,7 +350,7 @@ class PosterOptionsController @Inject constructor(
         val scope = this.scope ?: return
         _state.update { it.copy(listPickerPending = true) }
         scope.launch {
-            runCatching {
+            runCatchingCancellable {
                 libraryRepository.applyMembershipChanges(
                     item = input,
                     changes = changes,

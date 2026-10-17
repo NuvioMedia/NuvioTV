@@ -4,6 +4,7 @@ import android.net.Uri
 import android.os.Build
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.remote.api.PlaybackIssueReportApi
 import com.nuvio.tv.data.remote.dto.PlaybackIssueAppDto
 import com.nuvio.tv.data.remote.dto.PlaybackIssueContentDto
@@ -191,7 +192,7 @@ data class PlaybackIssuePlaybackSettingsInput(
 class PlaybackIssueReportRepository @Inject constructor(
     private val playbackIssueReportApi: PlaybackIssueReportApi
 ) {
-    suspend fun submit(input: PlaybackIssueReportInput): Result<String> = runCatching {
+    suspend fun submit(input: PlaybackIssueReportInput): Result<String> = runCatchingCancellable {
         if (BuildConfig.PLAYBACK_REPORTS_BASE_URL.isBlank()) {
             error("Playback report endpoint is not configured")
         }

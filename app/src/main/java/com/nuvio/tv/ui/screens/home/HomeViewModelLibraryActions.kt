@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.core.tracking.mergeTrackingMembershipWithTabs
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.repository.parseContentIds
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibrarySourceMode
@@ -100,7 +101,7 @@ fun HomeViewModel.togglePosterLibrary(item: MetaPreview, addonBaseUrl: String?) 
     }
 
     viewModelScope.launch {
-        runCatching {
+        runCatchingCancellable {
             libraryRepository.toggleDefault(item.toLibraryEntryInput(addonBaseUrl))
         }.onFailure { error ->
             Log.w(HomeViewModel.TAG, "Failed to toggle poster library for ${item.id}: ${error.message}")
@@ -143,7 +144,7 @@ fun HomeViewModel.openPosterListPicker(item: MetaPreview, addonBaseUrl: String?)
     }
 
     viewModelScope.launch {
-        runCatching {
+        runCatchingCancellable {
             libraryRepository.getMembershipSnapshot(input)
         }.onSuccess { snapshot ->
             _uiState.update { state ->
@@ -201,7 +202,7 @@ fun HomeViewModel.savePosterListPickerMembership() {
             )
         }
 
-        runCatching {
+        runCatchingCancellable {
             libraryRepository.applyMembershipChanges(
                 item = input,
                 changes = changes
@@ -239,7 +240,7 @@ fun HomeViewModel.confirmPosterListPickerRemoval() {
 
     viewModelScope.launch {
         _uiState.update { it.copy(posterListPickerPending = true) }
-        runCatching {
+        runCatchingCancellable {
             libraryRepository.applyMembershipChanges(
                 item = input,
                 changes = changes,
@@ -327,7 +328,7 @@ fun HomeViewModel.togglePosterMovieWatched(item: MetaPreview) {
 
     viewModelScope.launch {
         val currentlyWatched = _uiState.value.movieWatchedStatus[statusKey] == true
-        runCatching {
+        runCatchingCancellable {
             if (currentlyWatched) {
                 watchProgressRepository.removeFromHistory(item.id, videoId = item.imdbId)
             } else {

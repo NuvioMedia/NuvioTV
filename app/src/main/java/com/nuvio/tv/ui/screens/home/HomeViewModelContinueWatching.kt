@@ -7,6 +7,7 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.player.PlayerSessionTracker
 import com.nuvio.tv.core.util.isEpisodeReleaseAired
 import com.nuvio.tv.core.util.parseEpisodeReleaseInstant
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.core.util.selectEpisodeReleaseValue
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.ContentType
@@ -1175,8 +1176,8 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                         )
                     }
                     if (profileManager.activeProfileId.value == pipelineProfileId) {
-                        runCatching { cwEnrichmentCache.saveNextUpSnapshot(nextUpSnap, force = true) }
-                        runCatching { cwEnrichmentCache.saveInProgressSnapshot(ipSnap, force = true) }
+                        runCatchingCancellable { cwEnrichmentCache.saveNextUpSnapshot(nextUpSnap, force = true) }
+                        runCatchingCancellable { cwEnrichmentCache.saveInProgressSnapshot(ipSnap, force = true) }
                     }
                 }
 
@@ -1329,7 +1330,7 @@ private suspend fun HomeViewModel.resolveCurrentEpisodeDescription(
                 val tmdbId = resolveTmdbIdForNextUp(progress, meta, debug)
                 if (tmdbId != null) {
                     val tmdbStartedAtMs = SystemClock.elapsedRealtime()
-                    val tmdbOverview = runCatching {
+                    val tmdbOverview = runCatchingCancellable {
                         tmdbMetadataService.fetchEpisodeEnrichment(
                             tmdbId = tmdbId,
                             seasonNumbers = listOf(season),
@@ -1931,7 +1932,7 @@ private suspend fun HomeViewModel.enrichInProgressItem(
         async(Dispatchers.IO) {
             val cacheKey = "${item.progress.contentType}:${item.progress.contentId}"
             synchronized(cwTmdbIdCache) { cwTmdbIdCache[cacheKey] }
-                ?: runCatching { tmdbService.ensureTmdbId(item.progress.contentId, item.progress.contentType) }.getOrNull()
+                ?: runCatchingCancellable { tmdbService.ensureTmdbId(item.progress.contentId, item.progress.contentType) }.getOrNull()
         }
     } else null
 
@@ -1967,10 +1968,10 @@ private suspend fun HomeViewModel.enrichInProgressItem(
         val addonRating = resolveVideoForProgress(item.progress, meta)?.rating?.toFloat()
         val externalRating = run {
             val imdbId = extractImdbIdFromContentId(item.progress.contentId)
-            val tmdbIdStr = runCatching { tmdbService.ensureTmdbId(item.progress.contentId, item.progress.contentType) }.getOrNull()
+            val tmdbIdStr = runCatchingCancellable { tmdbService.ensureTmdbId(item.progress.contentId, item.progress.contentType) }.getOrNull()
             val tmdbIdInt = tmdbIdStr?.toIntOrNull()
             if (imdbId != null || tmdbIdInt != null) {
-                runCatching {
+                runCatchingCancellable {
                     imdbEpisodeRatingsRepository.getEpisodeRatings(imdbId, tmdbIdInt)
                 }.getOrNull()?.get(item.progress.season!! to item.progress.episode!!)?.toFloat()
             } else null
@@ -2071,10 +2072,10 @@ private suspend fun HomeViewModel.enrichNextUpItem(
         val addonRating = video?.rating?.toFloat()
         val externalRating = run {
             val imdbId = extractImdbIdFromContentId(item.info.contentId)
-            val tmdbIdStr = runCatching { tmdbService.ensureTmdbId(item.info.contentId, item.info.contentType) }.getOrNull()
+            val tmdbIdStr = runCatchingCancellable { tmdbService.ensureTmdbId(item.info.contentId, item.info.contentType) }.getOrNull()
             val tmdbIdInt = tmdbIdStr?.toIntOrNull()
             if (imdbId != null || tmdbIdInt != null) {
-                runCatching {
+                runCatchingCancellable {
                     imdbEpisodeRatingsRepository.getEpisodeRatings(imdbId, tmdbIdInt)
                 }.getOrNull()?.get(s to e)?.toFloat()
             } else null
@@ -2710,7 +2711,7 @@ private fun HomeViewModel.persistLocalContinueWatchingMetadata(
         }
         val stillVisible = persistable.filter { it.contentId in visibleContentIds }
         if (stillVisible.isEmpty()) return@launch
-        runCatching {
+        runCatchingCancellable {
             watchProgressRepository.saveProgressBatch(stillVisible, syncRemote = false)
         }
     }

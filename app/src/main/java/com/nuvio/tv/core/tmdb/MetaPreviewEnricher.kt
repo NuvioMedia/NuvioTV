@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.tmdb
 
 import android.util.Log
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.repository.MDBListRepository
 import com.nuvio.tv.domain.model.MDBListSettings
 import com.nuvio.tv.domain.model.Meta
@@ -62,7 +63,7 @@ class MetaPreviewEnricher @Inject constructor(
         val tmdbDeferred = async {
             val tmdbId = tmdbService.ensureTmdbId(item.id, item.apiType) ?: return@async null
             tmdbId.toIntOrNull()?.let { numericId ->
-                runCatching { tmdbService.tmdbToImdb(numericId, item.apiType) }
+                runCatchingCancellable { tmdbService.tmdbToImdb(numericId, item.apiType) }
             }
             tmdbMetadataService.fetchEnrichment(
                 tmdbId = tmdbId,

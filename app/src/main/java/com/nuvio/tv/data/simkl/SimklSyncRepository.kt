@@ -3,6 +3,7 @@ package com.nuvio.tv.data.simkl
 import android.util.Log
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
+import com.nuvio.tv.core.util.runCatchingCancellable
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -171,7 +172,7 @@ class SimklSyncRepository @Inject constructor(
             ?.trim()
             ?.takeIf(String::isNotEmpty)
             ?.let { payload ->
-                runCatching { decodeSnapshot(payload) }
+                runCatchingCancellable { decodeSnapshot(payload) }
                     .onFailure { error -> Log.w(TAG, "Unable to decode Simkl snapshot", error) }
                     .getOrNull()
             }

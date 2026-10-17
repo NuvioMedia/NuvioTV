@@ -4,6 +4,7 @@ import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.sync.SyncClientIdentity
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.remote.supabase.AvatarRepository
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.ServerConfiguration
@@ -571,7 +572,7 @@ class PartyRepository @Inject constructor(
         repeat(CLOCK_SAMPLES) {
             delay(CLOCK_SAMPLE_GAP)
             val sentAt = clock.mark()
-            runCatching { api.clock() }.getOrNull()?.let { clock.addSample(it, sentAt) }
+            runCatchingCancellable { api.clock() }.getOrNull()?.let { clock.addSample(it, sentAt) }
         }
     }
 

@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.debrid
 
+import com.nuvio.tv.core.util.runCatchingCancellable
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.remote.api.RealDebridApi
 import com.nuvio.tv.data.remote.dto.RealDebridTorrentInfoDto
@@ -70,7 +71,7 @@ class RealDebridDirectDebridResolver @Inject constructor(
                 )
             } finally {
                 if (!resolved) {
-                    runCatching { api.deleteTorrent(authorization, torrentId) }
+                    runCatchingCancellable { api.deleteTorrent(authorization, torrentId) }
                 }
             }
         } catch (error: Exception) {
