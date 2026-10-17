@@ -498,6 +498,9 @@ func (c *rarCursor) resolve(ctx context.Context) (*rarVolume, error) {
 			if h.v.version != 5 {
 				i = len(c.resolved)
 			}
+			if known := c.resolved[i]; known != nil && known.file == h.v.file {
+				continue // Already found out of turn, as a set's last volume is.
+			}
 			if i < 0 || i >= len(c.files) || c.resolved[i] != nil {
 				return nil, errors.New("ambiguous obfuscated RAR volume order")
 			}
@@ -634,13 +637,41 @@ func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 // skipToLastPart moves the cursor past the end of a split file when the
 // set's last volume holds that file's final part, without reading the volumes
 // between. It reports false, leaving the cursor unchanged, when the last
-// volume does not prove it (another file, an unordered set, a read error).
+// volume does not prove it (another file, a read error).
 func (c *rarCursor) skipToLastPart(ctx context.Context, name string, size int64) (bool, error) {
 	last := len(c.files) - 1
-	if c.unordered || c.volume != nil || c.index >= last {
+	if c.volume != nil || c.index >= last {
 		return false, nil
 	}
-	probe := rarCursor{files: c.files, index: last}
+	files := c.files
+	if c.unordered {
+		// A shuffled RAR5 set's last volume is usually its one short file. Its
+		// main header must number it last; then it is probed like a named set's.
+		shortest := 0
+		for i, f := range files {
+			if f.Size() < files[shortest].Size() {
+				shortest = i
+			}
+		}
+		v, err := openRAR(ctx, files[shortest])
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+		if err != nil || v.version != 5 {
+			return false, nil
+		}
+		if main, err := v.first(ctx); err != nil || main.volume != last {
+			return false, ctx.Err()
+		}
+		files = append([]*File(nil), files...)
+		files[shortest], files[last] = files[last], files[shortest]
+		// Copies of this cursor share the map: the selected file's reader
+		// finds its end without searching the set for it again.
+		if shared := c.resolved; shared != nil && shared[last] == nil {
+			shared[last] = v
+		}
+	}
+	probe := rarCursor{files: files, index: last}
 	b, _, err := probe.next(ctx)
 	if ctx.Err() != nil {
 		return false, ctx.Err()

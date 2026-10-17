@@ -135,6 +135,42 @@ func TestCompletelyNumberedShuffledRAR5NamesUseHeaderOrder(t *testing.T) {
 	}
 }
 
+// The same release also hid the episode's name inside the archive, so the
+// episode is accepted only after the set's other entries are known. Its short
+// last volume holds them: the volumes between are not read for that.
+func TestObfuscatedEpisodeVideoSkipsSetWalk(t *testing.T) {
+	const count = 20
+	total := 60000*(count-1) + 1 + 25000
+	want := payload(total)
+	var in []inputFile
+	order := []int{7, 0, 12, 3, 18, 9, 1, 15, 5, 19, 11, 2, 14, 8, 17, 4, 10, 16, 6, 13}
+	vols := make([][]byte, count)
+	for i, off := 0, 0; i < count; i++ {
+		size := 60000
+		if i == 0 {
+			size++
+		} else if i == count-1 {
+			size = 25000
+		}
+		vols[i] = indexedRAR5("R73jek4J1J6GBD.mkv", want[off:off+size], total, i, i < count-1)
+		off += size
+	}
+	for k, i := range order {
+		in = append(in, inputFile{fmt.Sprintf("a01b92d0b72af2e9.%d", k+1), vols[i], nil})
+	}
+	files, _, server := setup(t, in, 0, 4, 4)
+	c, err := Select(context.Background(), files, Selection{Season: 1, Episode: 1})
+	if err != nil || c.Name != "R73jek4J1J6GBD.mkv" || c.Size != int64(total) {
+		t.Fatalf("selected %v: %v", c, err)
+	}
+	if bodies := server.Counters().Bodies; bodies >= count {
+		t.Fatalf("selection read %d articles, one per volume", bodies)
+	}
+	if got := readAllContent(t, c); !bytes.Equal(got, want) {
+		t.Fatalf("content mismatch (%d bytes)", len(got))
+	}
+}
+
 // Seen on an indexer: an obfuscated RAR set posted as <hash>.10 to <hash>.85
 // whose articles were all removed. Its unreadable headers are missing
 // articles, not a gap in the numbering.
