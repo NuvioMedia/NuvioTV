@@ -473,7 +473,7 @@ class BuiltInUsenetService @Inject constructor(
             resolution > 0 -> "${resolution}p"
             else -> null
         }
-        return Stream(name = listOfNotNull("Usenet", resolutionLabel, indexerName).joinToString(" • "), title = title,
+        return Stream(name = listOfNotNull(resolutionLabel, "Usenet", indexerName).joinToString(" • "), title = title,
             description = if (config.showReleaseNames) "$title\n$details" else details,
             url = null, ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
             // The size badge, as other sources show it.
