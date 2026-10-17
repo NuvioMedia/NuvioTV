@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.mdblist
 
 import com.nuvio.tv.domain.model.LibraryListPrivacy
+import com.nuvio.tv.domain.model.LibraryListTab
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,7 +21,8 @@ class MdbListLibraryDecoderTest {
             """{"id":7,"type":"official","name":"Official"}""",
             """{"id":8,"dynamic":false,"name":"Unknown"}""",
             """{"id":9,"type":"static","mediatype":"episode","name":"Episodes"}""",
-            """{"id":10,"type":"static","dynamic":true,"name":"Inconsistent"}"""
+            """{"id":10,"type":"static","dynamic":true,"name":"Inconsistent"}""",
+            """{"id":11,"user_id":43,"type":"dynamic","dynamic":true,"name":"Another user's rules"}"""
         )
         val lists = decodeMdbListLibraryLists(rows.joinToString(",", "[", "]"), 42)
         assertEquals(listOf(1L, 2L), lists.map { it.id })
@@ -28,6 +30,30 @@ class MdbListLibraryDecoderTest {
         assertEquals(setOf("movie", "series"), lists[1].tab().supportedContentTypes)
         assertEquals(LibraryListPrivacy.PUBLIC, lists[0].tab().privacy)
         assertEquals(LibraryListPrivacy.PRIVATE, lists[1].tab().privacy)
+        assertEquals(listOf(4L, 10L), decodeMdbListDynamicLists(rows.joinToString(",", "[", "]"), 42).map { it.id })
+    }
+
+    @Test
+    fun `owned dynamic lists become read-only tabs`() = runTest {
+        val lists = decodeMdbListDynamicLists("""[
+          {"id":12,"user_id":42,"type":"dynamic","dynamic":true,"private":false,"name":"Top Horror","mediatype":"movie",
+           "description":"Rated above 7","last_updated_at":"2026-10-01T10:00:00Z"},
+          {"ids":[13],"user_id":42,"dynamic":true,"name":"Mixed rules"},
+          {"id":14,"user_id":42,"dynamic":true,"mediatype":"episode","name":"Episodes"}
+        ]""", 42)
+        assertEquals(listOf(
+            MdbListDynamicList(12, "Top Horror", "Rated above 7", MdbListItemType.MOVIE, "2026-10-01T10:00:00Z"),
+            MdbListDynamicList(13, "Mixed rules")
+        ), lists)
+        val tab = lists[0].tab()
+        assertEquals("mdblist:dynamic:12", tab.key)
+        assertEquals(LibraryListTab.Type.EXTERNAL, tab.type)
+        assertEquals(setOf("movie"), tab.supportedContentTypes)
+        assertFalse(tab.isMembershipDestination)
+        assertEquals("/lists/12/items", mdbListLibraryItemsPath(tab.key))
+        expectMdbListFailure<MdbListDecodingException> {
+            decodeMdbListDynamicLists("""[{"type":"dynamic","dynamic":true,"name":"Missing ID"}]""", 42)
+        }
     }
 
     @Test
@@ -72,6 +98,28 @@ class MdbListLibraryDecoderTest {
           {"id":2,"mediatype":"movie","listed_at":"not a date"}
         ]""")
         assertEquals(listOf(mdbListTimestamp("2025-02-02T00:00:00Z"), 0L), page.items.map { it.listedAt })
+    }
+
+    @Test
+    fun `liked lists skip the account's own lists and page by offset`() = runTest {
+        val page = decodeMdbListLikedLists("""{"lists":[
+          {"id":79776,"user_id":41631,"user_name":"dinkysniff","name":"Best New Shows","description":"Rated over 60",
+           "mediatype":"show","type":"static","dynamic":false,"last_updated_at":"2026-10-14T00:00:00Z","liked_at":"2026-10-14T10:00:00Z"},
+          {"id":5,"user_id":42,"name":"Mine"},
+          {"id":6,"user_id":43,"name":"Episodes","mediatype":"episode"}
+        ],"pagination":{"page":1,"limit":3,"offset":0,"total":5,"has_more":true}}""", 42)
+        assertEquals(listOf(MdbListLikedList(79776, "Best New Shows", "Rated over 60", MdbListItemType.SHOW, "2026-10-14T00:00:00Z")),
+            page.items)
+        assertEquals(3, page.nextOffset)
+        val tab = page.items.single().tab()
+        assertEquals("mdblist:liked:79776", tab.key)
+        assertEquals(LibraryListTab.Type.EXTERNAL, tab.type)
+        assertEquals(setOf("series"), tab.supportedContentTypes)
+        assertFalse(tab.isMembershipDestination)
+        assertEquals("/lists/79776/items", mdbListLibraryItemsPath(tab.key))
+        for (body in listOf("[]", """{"pagination":{}}""", """{"lists":[{"user_id":43,"name":"Missing ID"}]}""")) {
+            expectMdbListFailure<MdbListDecodingException> { decodeMdbListLikedLists(body, 42) }
+        }
     }
 
     @Test

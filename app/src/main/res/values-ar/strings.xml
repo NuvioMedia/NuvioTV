@@ -2811,8 +2811,6 @@
     <string name="playback_net_custom">شبكة مخصصة</string>
     <string name="playback_net_custom_sub">استخدام اتصالات متوازية متعددة لجلب البثوث التدريجية. عند الإيقاف، يُستخدم اتصال واحد.</string>
     <string name="playback_net_device_memory_info">ذاكرة الجهاز: %1$s | الحد الآمن الموصى به: %2$d م.ب</string>
-    <string name="playback_net_http2">تفعيل HTTP/2</string>
-    <string name="playback_net_http2_sub">تفعيل بروتوكول HTTP/2 لاتصالات الشبكة، بما يتيح تعدد إرسال الطلبات وأوقات مصافحة أسرع.</string>
     <string name="playback_net_nuvio_performance_mode">ذاكرة ExoPlayer الأصلية</string>
     <string name="playback_net_nuvio_performance_mode_not_supported">هذه الميزة غير مدعومة على جهازك.</string>
     <string name="playback_net_nuvio_performance_mode_sub">تفعيل المخصص الأصلي للذاكرة خارج الكومة وتحسينات التنقل السريع.</string>

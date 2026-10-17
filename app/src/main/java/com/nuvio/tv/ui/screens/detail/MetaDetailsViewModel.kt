@@ -40,6 +40,7 @@ import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
+import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.core.util.withAppLocale
 import com.nuvio.tv.core.util.isUnreleased
@@ -108,6 +109,7 @@ class MetaDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val itemId: String = savedStateHandle["itemId"] ?: ""
+    private val isServerItem = ServerItemRef.isServerId(itemId)
     private val itemType: String = savedStateHandle["itemType"] ?: ""
     private val preferredAddonBaseUrl: String? = savedStateHandle["addonBaseUrl"]
 
@@ -997,9 +999,8 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private suspend fun applyMetaWithEnrichment(meta: Meta) {
-        // Fire all independent async jobs immediately — they run in parallel.
-        loadMoreLikeThisAsync(meta)
-        val enriched = enrichMeta(meta)
+        if (!isServerItem) loadMoreLikeThisAsync(meta)
+        val enriched = if (isServerItem) meta else enrichMeta(meta)
 
         syncEffectiveContentId(enriched)
         val cachedNextToWatch = metaDetailsSessionState.getNextToWatch(
@@ -1036,7 +1037,7 @@ class MetaDetailsViewModel @Inject constructor(
         val precomputedNextToWatch = computeNextToWatch(enriched, progressMap, watchedEpisodes)
         updateNextToWatch(precomputedNextToWatch)
 
-        // Episode ratings and MDBList are independent — launch both without waiting.
+        if (isServerItem) return
         loadEpisodeRatingsAsync(enriched)
         viewModelScope.launch { loadMDBListRatings(enriched) }
     }
@@ -1149,7 +1150,7 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun supportsComments(meta: Meta?): Boolean {
-        if (meta == null) return false
+        if (meta == null || isServerItem) return false
         return when (meta.type) {
             ContentType.MOVIE -> true
             ContentType.SERIES, ContentType.TV -> true
@@ -2820,6 +2821,7 @@ class MetaDetailsViewModel @Inject constructor(
     // --- Trailer ---
 
     private fun fetchTrailerUrl() {
+        if (isServerItem) return
         val meta = _uiState.value.meta ?: return
 
         trailerFetchJob?.cancel()

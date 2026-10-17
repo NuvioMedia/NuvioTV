@@ -369,7 +369,8 @@ internal fun LayoutCustomPosterSection(
             CustomPosterScreen.COLLECTIONS to R.string.layout_custom_poster_screen_collections,
             CustomPosterScreen.LIBRARY to R.string.layout_custom_poster_screen_library,
             CustomPosterScreen.SEARCH to R.string.layout_custom_poster_screen_search,
-            CustomPosterScreen.DETAILS to R.string.layout_custom_poster_screen_details
+            CustomPosterScreen.DETAILS to R.string.layout_custom_poster_screen_details,
+            CustomPosterScreen.TV_RECOMMENDATIONS to R.string.layout_custom_poster_screen_tv_recommendations
         ).forEach { (screen, label) ->
             val enabled = screen in uiState.customPosterEnabledScreens
             SettingsToggleRow(

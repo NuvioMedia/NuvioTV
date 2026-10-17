@@ -5,9 +5,11 @@ import com.nuvio.tv.core.auth.TransientAuthRefreshException
 import com.nuvio.tv.core.auth.shouldRetryAuthRefreshResponse
 import com.nuvio.tv.core.network.BackendRateLimitCoordinator
 import com.nuvio.tv.core.network.BackendRateLimitPlugin
+import com.nuvio.tv.core.network.RealtimeSocketFactory
 import com.nuvio.tv.core.network.backendRetryDelayMillis
 import com.nuvio.tv.core.network.isRetryableBackendResponse
 import com.nuvio.tv.core.network.isSafeBackendRetryRequest
+import com.nuvio.tv.core.network.realtimeUrl
 import com.nuvio.tv.data.local.ServerConfigurationStore
 import com.nuvio.tv.domain.model.ServerConfiguration
 import dagger.Module
@@ -21,16 +23,23 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.realtime.realtime
+import io.github.jan.supabase.realtime.websocket.KtorRealtimeWebsocketFactory
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
+import io.github.jan.supabase.supabaseJson
 import io.ktor.client.plugins.HttpResponseValidator
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.statement.request
 import io.ktor.http.HttpHeaders
+import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.seconds
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -50,7 +59,8 @@ object SupabaseModule {
     ): SupabaseClient = runBlocking(Dispatchers.IO) {
         val userAgent = "NuvioTV/${BuildConfig.VERSION_NAME.ifBlank { "dev" }}"
         val rateLimitCoordinator = BackendRateLimitCoordinator()
-        createSupabaseClient(
+        lateinit var client: SupabaseClient
+        client = createSupabaseClient(
             supabaseUrl = serverConfiguration.backendUrl,
             supabaseKey = serverConfiguration.publishableKey
         ) {
@@ -80,6 +90,9 @@ object SupabaseModule {
                 defaultRequest {
                     headers.append(HttpHeaders.UserAgent, userAgent)
                 }
+                install(WebSockets) {
+                    contentConverter = KotlinxWebsocketSerializationConverter(supabaseJson)
+                }
                 HttpResponseValidator {
                     validateResponse { response ->
                         val requestUrl = response.request.url
@@ -105,7 +118,15 @@ object SupabaseModule {
             }
             install(Postgrest)
             install(Storage)
+            install(Realtime) {
+                customUrl = realtimeUrl(serverConfiguration.backendUrl)
+                reconnectDelay = 3.seconds
+                websocketFactory = RealtimeSocketFactory { url ->
+                    KtorRealtimeWebsocketFactory(client.httpClient.httpClient).create(url)
+                }
+            }
         }
+        client
     }
 
 
@@ -120,4 +141,8 @@ object SupabaseModule {
     @Provides
     @Singleton
     fun provideSupabaseStorage(client: SupabaseClient): Storage = client.storage
+
+    @Provides
+    @Singleton
+    fun provideSupabaseRealtime(client: SupabaseClient): Realtime = client.realtime
 }

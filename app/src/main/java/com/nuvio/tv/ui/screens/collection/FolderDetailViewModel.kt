@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -108,6 +109,8 @@ data class FolderDetailGridFocusState(
     val hasSavedFocus: Boolean = false
 )
 
+private const val TRAILER_PREVIEW_DEBOUNCE_MS = 180L
+
 @HiltViewModel
 class FolderDetailViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
@@ -153,6 +156,7 @@ class FolderDetailViewModel @Inject constructor(
     private val modernCarouselRowBuildCache = ModernCarouselRowBuildCache()
     private var activeTrailerPreviewItemId: String? = null
     private var trailerPreviewRequestVersion: Long = 0L
+    private var trailerPreviewJob: Job? = null
 
     /** Items for which enrichment was attempted but produced no enriched data. */
     private val _failedEnrichmentIds = MutableStateFlow<Set<String>>(emptySet())
@@ -1445,51 +1449,61 @@ class FolderDetailViewModel @Inject constructor(
         if (!trailerPreviewLoadingIds.add(itemId)) return
 
         val requestVersion = trailerPreviewRequestVersion
-        viewModelScope.launch {
-            val tmdbId = runCatching { tmdbService.ensureTmdbId(itemId, apiType) }.getOrNull()
-            val trailerSource = trailerService.getTrailerPlaybackSource(
-                title = title,
-                year = extractYear(releaseInfo),
-                tmdbId = tmdbId,
-                type = apiType
-            )
+        // Only the focused item's lookup is kept. Scrolling through a row used to start a
+        // full YouTube extraction for every poster it passed, all running at once.
+        trailerPreviewJob?.cancel()
+        trailerPreviewJob = viewModelScope.launch {
+            try {
+                // Wait for focus to settle before hitting the network, as the home screen does.
+                delay(TRAILER_PREVIEW_DEBOUNCE_MS)
+                if (trailerPreviewRequestVersion != requestVersion) return@launch
 
-            val isLatestFocusedItem =
-                activeTrailerPreviewItemId == itemId && trailerPreviewRequestVersion == requestVersion
-            if (!isLatestFocusedItem) {
-                trailerPreviewLoadingIds.remove(itemId)
-                return@launch
-            }
-
-            // Prefer the localized YT id provided by the caller (typically TMDB
-            // enrichment trailers in the user locale) when the direct TMDB videos
-            // lookup didn't find anything for this language and we'd otherwise
-            // fall through to TMDB's en-US fallback.
-            val resolvedSource = if (trailerSource?.videoUrl.isNullOrBlank() && !fallbackYtId.isNullOrBlank()) {
-                trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
-                    youtubeUrl = "https://www.youtube.com/watch?v=$fallbackYtId",
+                val tmdbId = runCatching { tmdbService.ensureTmdbId(itemId, apiType) }.getOrNull()
+                val trailerSource = trailerService.getTrailerPlaybackSource(
                     title = title,
-                    year = extractYear(releaseInfo)
+                    year = extractYear(releaseInfo),
+                    tmdbId = tmdbId,
+                    type = apiType
                 )
-            } else {
-                trailerSource
-            }
 
-            if (resolvedSource?.videoUrl.isNullOrBlank()) {
-                trailerPreviewNegativeCache.add(itemId)
-                _trailerPreviewUrls.update { it - itemId }
-                _trailerPreviewAudioUrls.update { it - itemId }
-            } else {
-                _trailerPreviewUrls.update { it + (itemId to resolvedSource.videoUrl) }
-                val audioUrl = resolvedSource.audioUrl
-                if (audioUrl.isNullOrBlank()) {
+                val isLatestFocusedItem =
+                    activeTrailerPreviewItemId == itemId && trailerPreviewRequestVersion == requestVersion
+                if (!isLatestFocusedItem) return@launch
+
+                // Prefer the localized YT id provided by the caller (typically TMDB
+                // enrichment trailers in the user locale) when the direct TMDB videos
+                // lookup didn't find anything for this language and we'd otherwise
+                // fall through to TMDB's en-US fallback.
+                val resolvedSource = if (trailerSource?.videoUrl.isNullOrBlank() && !fallbackYtId.isNullOrBlank()) {
+                    trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
+                        youtubeUrl = "https://www.youtube.com/watch?v=$fallbackYtId",
+                        title = title,
+                        year = extractYear(releaseInfo)
+                    )
+                } else {
+                    trailerSource
+                }
+
+                if (resolvedSource?.videoUrl.isNullOrBlank()) {
+                    // While YouTube is rate limiting, a miss isn't remembered, so the
+                    // trailer comes back on a later focus once the pause is over.
+                    if (!trailerService.isRateLimited()) {
+                        trailerPreviewNegativeCache.add(itemId)
+                    }
+                    _trailerPreviewUrls.update { it - itemId }
                     _trailerPreviewAudioUrls.update { it - itemId }
                 } else {
-                    _trailerPreviewAudioUrls.update { it + (itemId to audioUrl) }
+                    _trailerPreviewUrls.update { it + (itemId to resolvedSource.videoUrl) }
+                    val audioUrl = resolvedSource.audioUrl
+                    if (audioUrl.isNullOrBlank()) {
+                        _trailerPreviewAudioUrls.update { it - itemId }
+                    } else {
+                        _trailerPreviewAudioUrls.update { it + (itemId to audioUrl) }
+                    }
                 }
+            } finally {
+                trailerPreviewLoadingIds.remove(itemId)
             }
-
-            trailerPreviewLoadingIds.remove(itemId)
         }
     }
 

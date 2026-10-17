@@ -5,6 +5,7 @@ import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.data.local.MemberCatalogStorage
 import com.nuvio.tv.domain.model.ServerConfiguration
+import com.nuvio.tv.domain.model.UserProfile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
@@ -25,6 +26,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.days
 
 private const val MemberAvatarBucket = "membership-profile-avatars"
 private const val MemberAvatarTag = "MemberAvatars"
@@ -147,6 +149,24 @@ class AvatarRepository @Inject constructor(
         }
         cachedMemberCatalog = catalog
         return catalog
+    }
+
+    suspend fun shareableImageUrl(profile: UserProfile): String? {
+        val storageUrl = "${serverConfiguration.backendUrl.trimEnd('/')}/storage/v1/object/"
+        profile.avatarUrl?.trim()?.takeIf { it.isNotEmpty() }?.let { url -> return url.takeIf { it.startsWith(storageUrl) } }
+        val avatarId = profile.avatarId ?: return null
+        standardMetadata.firstOrNull { it.id == avatarId }?.let { avatar ->
+            return avatarImageUrl(avatar.storagePath).takeIf { it.startsWith(storageUrl) }
+        }
+        val avatar = memberMetadata.firstOrNull { it.id == avatarId } ?: return null
+        return try {
+            storage[MemberAvatarBucket].createSignedUrl(avatar.storagePath, 1.days)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w(MemberAvatarTag, "Unable to share supporter avatar ${avatar.id}", error)
+            null
+        }
     }
 
     fun getAvatarImageUrl(avatarId: String, catalog: List<AvatarCatalogItem>): String? {

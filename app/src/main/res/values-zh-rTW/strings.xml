@@ -3145,8 +3145,6 @@
     <string name="playback_reset_to_default">重設為預設</string>
     <string name="playback_net_custom">自訂網路</string>
     <string name="playback_net_custom_sub">使用多個並行連線來獲取漸進式串流。關閉時使用單一連線。</string>
-    <string name="playback_net_http2">啟用 HTTP/2</string>
-    <string name="playback_net_http2_sub">為網路連線啟用 HTTP/2 協定，支援請求多工和更快的握手時間。</string>
     <string name="playback_net_parallel">並行連線</string>
     <string name="playback_net_parallel_sub">使用多個並行連線來獲取串流。當您遇到緩衝但下載速度明顯足夠時啟用。</string>
     <string name="playback_net_connection_count">連線數量</string>

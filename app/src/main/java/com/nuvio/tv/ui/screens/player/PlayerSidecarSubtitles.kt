@@ -337,7 +337,7 @@ internal fun parseSidecarTimedCuesRobust(rawText: String, sourceUrl: String): Si
 
 private fun normalizeTimedCuePositions(cues: List<CuesWithTiming>): List<CuesWithTiming> {
     return cues.map { entry ->
-        val normalized = entry.cues.map { normalizeSidecarCuePosition(it) }
+        val normalized = entry.cues.map { PlayerSubtitleUtils.normalizeBottomCuePosition(it) }
         val durationUs = when {
             entry.durationUs != C.TIME_UNSET -> entry.durationUs
             entry.endTimeUs != C.TIME_UNSET && entry.startTimeUs != C.TIME_UNSET ->
@@ -432,16 +432,6 @@ internal fun activeCueSignature(cues: List<Cue>, stripSdh: Boolean): Long {
         hash = 31L * hash + cue.size.toBits().toLong()
     }
     return hash
-}
-
-private fun normalizeSidecarCuePosition(cue: Cue): Cue {
-    if (cue.bitmap != null || cue.verticalType != Cue.TYPE_UNSET || cue.line == Cue.DIMEN_UNSET) {
-        return cue
-    }
-    return cue.buildUpon()
-        .setLine(Cue.DIMEN_UNSET, Cue.TYPE_UNSET)
-        .setLineAnchor(Cue.TYPE_UNSET)
-        .build()
 }
 
 private const val SIDECAR_RENDER_INTERVAL_MS = 100L

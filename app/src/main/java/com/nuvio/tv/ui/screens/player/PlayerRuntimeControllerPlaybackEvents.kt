@@ -15,6 +15,7 @@ import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.tracking.scrobbleDiagnosticIdentity
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.SubtitleStyleSettings
+import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackSettingsInput
 import com.nuvio.tv.data.repository.PlaybackIssueReportInput
@@ -71,8 +72,11 @@ internal fun PlayerRuntimeController.skipInterval(interval: SkipInterval): Boole
     val seekParameters = if (postCredits != null || interval.type == "movie-credits") {
         SeekParameters.EXACT
     } else SeekParameters.NEXT_SYNC
-    seekPlaybackTo(seekMs.coerceAtMost(duration), seekParameters)
+    val requested = seekMs.coerceAtMost(duration)
+    val target = if (isPartyControlLocked) ownSeekTarget(requested) ?: return false else requested
+    seekPlaybackTo(target, seekParameters)
     scheduleProgressSyncAfterSeek()
+    publishPartyPlayback(positionMs = target)
     _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = true) }
     return true
 }
@@ -143,11 +147,10 @@ internal fun PlayerRuntimeController.resetPostPlayStateAfterPlaybackEnded() {
     // If auto-play is enabled and the user dismissed the card earlier,
     // still auto-play the next episode when playback ends naturally.
     val state = _uiState.value
-    if (state.postPlayDismissedForCurrentEpisode &&
-        streamAutoPlayNextEpisodeEnabledSetting &&
+    val autoPlayEligible = streamAutoPlayNextEpisodeEnabledSetting &&
         state.nextEpisode?.hasAired == true &&
         nextEpisodeVideo != null
-    ) {
+    if (autoPlayEligible && (state.postPlayDismissedForCurrentEpisode || state.postPlayMode == null)) {
         playNextEpisode()
         return
     }
@@ -278,7 +281,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                             playbackEnded = naturalEnded
                         )
                     }
-                    updateMpvAvailableTracks()
+                    updateMpvTracksOnTick()
                     updateActiveSkipInterval(pos)
                     if (!_playbackTimeline.value.isLive) {
                         evaluatePostPlayOverlayVisibility(
@@ -292,6 +295,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         handleNaturalPlaybackEnded()
                     }
                 }
+                reportServerPlayback()
                 delay(500)
                 continue
             }
@@ -378,6 +382,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     }
                 }
             }
+            reportServerPlayback()
             delay(500)
         }
     }
@@ -577,7 +582,7 @@ private fun PlayerRuntimeController.buildPlaybackIssuePlaybackSettingsInput(): P
         useParallelConnections = settings.useParallelConnections,
         parallelConnectionCount = settings.parallelConnectionCount,
         parallelChunkSizeKb = settings.parallelChunkSizeKb,
-        enableHttp2 = settings.enableHttp2,
+        enableHttp2 = false,
         nuvioPerformanceModeEnabled = settings.nuvioPerformanceModeEnabled,
         streamAutoPlayMode = settings.streamAutoPlayMode.name,
         streamAutoPlaySource = settings.streamAutoPlaySource.name,
@@ -708,6 +713,28 @@ internal fun PlayerRuntimeController.cancelNextEpisodeAutoPlayOnFatalError() {
     stillWatchingPromptJob = null
 }
 
+internal fun PlayerRuntimeController.currentWatchProgress(
+    parentContentId: String,
+    parentContentType: String,
+    position: Long,
+    duration: Long,
+    lastWatched: Long
+) = WatchProgress(
+    contentId = parentContentId,
+    contentType = parentContentType,
+    name = contentName ?: title,
+    poster = poster,
+    backdrop = backdrop,
+    logo = logo,
+    videoId = currentVideoId ?: parentContentId,
+    season = currentSeason,
+    episode = currentEpisode,
+    episodeTitle = currentEpisodeTitle,
+    position = position,
+    duration = duration,
+    lastWatched = lastWatched
+)
+
 internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, duration: Long, syncRemote: Boolean = true) {
     if (contentType.equals("cloud", ignoreCase = true)) {
         saveCloudLibraryProgress(position, duration, completed = false)
@@ -720,22 +747,8 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
 
     val fallbackPercent = if (duration <= 0L) 5f else null
 
-    val progress = WatchProgress(
-        contentId = parentContentId,
-        contentType = parentContentType,
-        name = contentName ?: title,
-        poster = poster,
-        backdrop = backdrop,
-        logo = logo,
-        videoId = currentVideoId ?: parentContentId,
-        season = currentSeason,
-        episode = currentEpisode,
-        episodeTitle = currentEpisodeTitle,
-        position = position,
-        duration = duration,
-        lastWatched = System.currentTimeMillis(),
-        progressPercent = fallbackPercent
-    )
+    val progress = currentWatchProgress(parentContentId, parentContentType, position, duration, System.currentTimeMillis())
+        .copy(progressPercent = fallbackPercent)
 
     scope.launch(kotlinx.coroutines.NonCancellable) {
         val effectiveContentId = watchProgressRepository.normalizeParentContentId(
@@ -807,10 +820,12 @@ internal fun PlayerRuntimeController.refreshScrobbleItem() {
 
 internal fun PlayerRuntimeController.buildScrobbleItem(): TrackingMediaReference? {
     val rawContentId = contentId ?: return null
+    val isServerItem = ServerItemRef.isServerId(rawContentId)
+    val parentMetaId = if (isServerItem) serverImdbId(rawContentId) ?: return null else rawContentId
     val reference = buildTrackingMediaReference(
         contentType = contentType ?: "movie",
-        parentMetaId = rawContentId,
-        videoId = currentVideoId,
+        parentMetaId = parentMetaId,
+        videoId = currentVideoId.takeUnless { isServerItem },
         title = contentName ?: title,
         releaseInfo = year,
         seasonNumber = currentSeason,
@@ -1036,6 +1051,7 @@ fun PlayerRuntimeController.scheduleHideControls() {
             !_uiState.value.showSubtitleDelayOverlay &&
             !_uiState.value.showSubtitleTimingDialog &&
             !_uiState.value.showEpisodesPanel && !_uiState.value.showSourcesPanel &&
+            !_uiState.value.showPartyPanel &&
             !_uiState.value.showStreamInfoOverlay) {
             _uiState.update { it.copy(showControls = false) }
         }
@@ -1141,7 +1157,7 @@ internal fun PlayerRuntimeController.schedulePauseOverlay() {
         val anyPanelOpen = s.showSubtitleOverlay || s.showSubtitleStylePanel ||
             s.showSpeedDialog || s.showMoreDialog || s.showEpisodesPanel ||
             s.showSourcesPanel || s.showAudioOverlay || s.showStreamInfoOverlay ||
-            s.showSubtitleTimingDialog || s.showSubtitleDelayOverlay
+            s.showSubtitleTimingDialog || s.showSubtitleDelayOverlay || s.showPartyPanel
         if (!s.isPlaying && s.pauseOverlayEnabled && s.error == null && !anyPanelOpen) {
             _uiState.update { it.copy(showPauseOverlay = true, showControls = false) }
         }
@@ -1174,6 +1190,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
     }
     when (event) {
         PlayerEvent.OnPlayPause -> {
+            if (isPartyControlLocked) {
+                toggleOwnPlayback()
+                return
+            }
             if (isUsingMpvEngine()) {
                 val playing = isPlaybackCurrentlyPlaying()
                 if (playing) {
@@ -1192,6 +1212,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     scheduleHideControls()
                     emitScrobbleStart()
                 }
+                publishPartyPlayback(paused = playing)
             } else {
                 _exoPlayer?.let { player ->
                     if (player.isPlaying) {
@@ -1203,6 +1224,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                         cancelPauseOverlay()
                         player.play()
                     }
+                    publishPartyPlayback(paused = !player.playWhenReady)
                 }
             }
             showControlsTemporarily()
@@ -1220,9 +1242,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingPreviewSeekPosition = null
             val current = currentPlaybackPositionMs() ?: 0L
             val maxDuration = currentPlaybackDurationMs().takeIf { it >= 0 } ?: Long.MAX_VALUE
-            val target = (current + event.deltaMs)
+            val requested = (current + event.deltaMs)
                 .coerceAtLeast(0L)
                 .coerceAtMost(maxDuration)
+            val target = if (isPartyControlLocked) ownSeekTarget(requested) ?: return else requested
             val seekParameters = if (event.deltaMs < 0L) {
                 SeekParameters.PREVIOUS_SYNC
             } else {
@@ -1231,6 +1254,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             seekPlaybackTo(target, seekParameters)
             updatePlaybackTimeline(currentPosition = target)
             scheduleProgressSyncAfterSeek()
+            publishPartyPlayback(positionMs = target)
             if (_uiState.value.showControls) {
                 showControlsTemporarily()
             } else {
@@ -1254,12 +1278,19 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnCommitPreviewSeek -> {
             if (_playbackTimeline.value.isLive) return
-            val target = pendingPreviewSeekPosition
-            if (target != null) {
+            val requested = pendingPreviewSeekPosition
+            if (requested != null) {
+                val target = if (isPartyControlLocked) ownSeekTarget(requested) else requested
+                if (target == null) {
+                    pendingPreviewSeekPosition = null
+                    updatePlaybackTimeline(currentPosition = currentPlaybackPositionMs() ?: 0L)
+                    return
+                }
                 seekPlaybackTo(target, SeekParameters.CLOSEST_SYNC)
                 updatePlaybackTimeline(currentPosition = target)
                 pendingPreviewSeekPosition = null
                 scheduleProgressSyncAfterSeek()
+                publishPartyPlayback(positionMs = target)
                 if (_uiState.value.showControls) {
                     showControlsTemporarily()
                 } else {
@@ -1270,9 +1301,11 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         is PlayerEvent.OnSeekTo -> {
             if (_playbackTimeline.value.isLive) return
             pendingPreviewSeekPosition = null
-            seekPlaybackTo(event.position, SeekParameters.CLOSEST_SYNC)
-            updatePlaybackTimeline(currentPosition = event.position)
+            val target = if (isPartyControlLocked) ownSeekTarget(event.position) ?: return else event.position
+            seekPlaybackTo(target, SeekParameters.CLOSEST_SYNC)
+            updatePlaybackTimeline(currentPosition = target)
             scheduleProgressSyncAfterSeek()
+            publishPartyPlayback(positionMs = target)
             if (_uiState.value.showControls) {
                 showControlsTemporarily()
             } else {
@@ -1284,8 +1317,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 stage = "event-select-audio",
                 message = "index=${event.index}"
             )
-            rememberAudioSelection(event.index)
-            selectAudioTrack(event.index)
+            if (_uiState.value.serverAudioTracks.isNotEmpty()) {
+                selectServerAudio(event.index)
+            } else {
+                rememberAudioSelection(event.index)
+                selectAudioTrack(event.index)
+            }
             _uiState.update {
                 it.copy(
                     showAudioOverlay = false,
@@ -1338,8 +1375,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAudioSelectionAfterSubtitleRefresh = null
             resetSubtitleAutoSyncState()
             cancelAutomaticSubtitleSync() // AutoSync hook
-            rememberInternalSubtitleSelection(event.index)
-            selectSubtitleTrack(event.index)
+            if (_uiState.value.serverSubtitleTracks.isNotEmpty()) {
+                selectServerSubtitle(event.index)
+            } else {
+                rememberInternalSubtitleSelection(event.index)
+                selectSubtitleTrack(event.index)
+            }
             _uiState.update {
                 it.copy(
                     showSubtitleOverlay = true,
@@ -1364,6 +1405,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             cancelAutomaticSubtitleSync() // AutoSync hook
             rememberSubtitleDisabled()
             disableSubtitles()
+            if (hasBurnedInServerSubtitle) clearServerSubtitle()
             _uiState.update {
                 it.copy(
                     showSubtitleOverlay = true,
@@ -1384,6 +1426,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             autoSubtitleSelected = true
             rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
+            if (hasBurnedInServerSubtitle) clearServerSubtitle()
             runSelectedAutomaticSubtitleSync(event.subtitle) // AutoSync hook
             _uiState.update {
                 it.copy(
@@ -1396,6 +1439,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         is PlayerEvent.OnSetPlaybackSpeed -> {
+            if (partyBlocksControl()) return
+            partyRateNudge = null
             if (isUsingMpvEngine()) {
                 setPlaybackSpeedInternal(event.speed)
             } else {
@@ -1417,6 +1462,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             contentId?.takeIf { it.isNotBlank() }?.let { id ->
                 scope.launch { trackPreferenceDataStore.savePlaybackSpeed(id, event.speed) }
             }
+            publishPartyPlayback(rate = event.speed)
         }
         PlayerEvent.OnToggleControls -> {
             if (_uiState.value.showSubtitleTimingDialog) {
@@ -1587,6 +1633,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnDismissSourcesPanel -> {
             dismissSourcesPanel()
+        }
+        PlayerEvent.OnShowPartyPanel -> {
+            showPartyPanel()
+        }
+        PlayerEvent.OnDismissPartyPanel -> {
+            dismissPartyPanel()
         }
         PlayerEvent.OnReloadSourceStreams -> {
             loadSourceStreams(forceRefresh = true)
@@ -1884,7 +1936,8 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
             com.nuvio.tv.data.local.InternalPlayerEngine.EXOPLAYER -> context.getString(R.string.playback_engine_exoplayer)
             com.nuvio.tv.data.local.InternalPlayerEngine.MVP_PLAYER -> context.getString(R.string.playback_engine_mvplayer)
             com.nuvio.tv.data.local.InternalPlayerEngine.AUTO -> null
-        }
+        },
+        serverPlayback = serverPlaybackSummary()
     )
 }
 
