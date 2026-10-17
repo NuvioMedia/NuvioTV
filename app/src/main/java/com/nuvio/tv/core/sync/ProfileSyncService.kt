@@ -12,6 +12,8 @@ import com.nuvio.tv.domain.model.UserProfile
 import com.nuvio.tv.domain.model.AuthState
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -143,6 +145,7 @@ class ProfileSyncService @Inject constructor(
                 }
                 Result.success(profiles)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "Failed to pull profiles from remote", e)
                 Result.failure(e)
             }

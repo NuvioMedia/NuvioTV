@@ -7,6 +7,8 @@ import com.nuvio.tv.data.remote.supabase.SupabaseLinkedDevice
 import com.nuvio.tv.data.remote.supabase.SyncCodeResult
 import com.nuvio.tv.domain.repository.SyncRepository
 import io.github.jan.supabase.postgrest.Postgrest
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
@@ -94,6 +96,7 @@ class SyncRepositoryImpl @Inject constructor(
                 .decodeList<SupabaseLinkedDevice>()
             Result.success(result)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to get linked devices", e)
             Result.failure(e)
         }

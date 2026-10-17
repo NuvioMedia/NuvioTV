@@ -15,6 +15,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 private const val TAG = "TvChannelSync"
@@ -65,6 +67,7 @@ class TvChannelRefreshJobService : JobService() {
                 syncService.reconcileFromCache()
                 Log.d(TAG, "Background job: reconciled from CW cache")
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.w(TAG, "Background job reconcile failed", e)
             } finally {
                 jobFinished(params, false)

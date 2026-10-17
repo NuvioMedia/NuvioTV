@@ -13,6 +13,8 @@ import com.nuvio.tv.data.remote.supabase.SupabaseWatchProgressEvent
 import com.nuvio.tv.domain.model.WatchProgress
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -142,6 +144,7 @@ class WatchProgressSyncService @Inject constructor(
             Log.d(TAG, "Deleted ${distinctKeys.size} watch progress entries from remote for profile $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to delete watch progress from remote", e)
             Result.failure(e)
         }
@@ -203,6 +206,7 @@ class WatchProgressSyncService @Inject constructor(
             }
             Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to push watch progress to remote", e)
             Result.failure(e)
         }
@@ -261,6 +265,7 @@ class WatchProgressSyncService @Inject constructor(
             // Only the full push in pushToRemote may move it.
             Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to push single watch progress to remote", e)
             Result.failure(e)
         }
@@ -328,6 +333,7 @@ class WatchProgressSyncService @Inject constructor(
             Log.d(TAG, "pullFromRemote: normalized ${pulled.size} -> ${normalized.size} entries")
             Result.success(normalized)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to pull watch progress from remote", e)
             Result.failure(e)
         }
@@ -353,6 +359,7 @@ class WatchProgressSyncService @Inject constructor(
                 val cursorBeforeSnapshot = try {
                     fetchDeltaCursor(profileId)
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.w(TAG, "syncSnapshotFromRemote: delta cursor unavailable, applying snapshot without initialized cursor for profile $profileId", e)
                     null
                 }
@@ -362,6 +369,7 @@ class WatchProgressSyncService @Inject constructor(
                 }
                 Result.success(result)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "Failed to pull watch progress snapshot from remote", e)
                 Result.failure(e)
             }
@@ -486,6 +494,7 @@ class WatchProgressSyncService @Inject constructor(
                 )
             )
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to pull watch progress delta from remote", e)
             Result.failure(e)
         }

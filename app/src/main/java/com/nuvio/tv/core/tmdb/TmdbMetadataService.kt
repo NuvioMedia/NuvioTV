@@ -35,6 +35,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -771,6 +773,7 @@ class TmdbMetadataService(
             moreLikeThisCache[cacheKey] = items
             items
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Failed to fetch recommendations for $tmdbId: ${e.message}")
             emptyList()
         }
@@ -991,6 +994,7 @@ class TmdbMetadataService(
                 }
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Failed to fetch ${entityKind.routeValue} header for $entityId: ${e.message}")
             null
         } ?: fallbackName?.takeIf { it.isNotBlank() }?.let {
@@ -1402,6 +1406,7 @@ class TmdbMetadataService(
                 personCache[cacheKey] = detail
                 detail
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "Failed to fetch person detail: ${e.message}", e)
                 null
             }

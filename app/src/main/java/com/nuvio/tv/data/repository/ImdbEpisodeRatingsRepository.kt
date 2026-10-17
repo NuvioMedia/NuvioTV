@@ -7,6 +7,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
@@ -103,6 +105,7 @@ class ImdbEpisodeRatingsRepository @Inject constructor(
             }
             toRatingsMap(response.body().orEmpty())
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(tag, "Error fetching primary season ratings for imdbId=$imdbId", e)
             emptyMap()
         }
@@ -117,6 +120,7 @@ class ImdbEpisodeRatingsRepository @Inject constructor(
             }
             toRatingsMap(response.body().orEmpty())
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(tag, "Error fetching fallback season ratings for tmdbId=$tmdbId", e)
             emptyMap()
         }

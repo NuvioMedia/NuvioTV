@@ -14,7 +14,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -113,6 +115,7 @@ class HomeCatalogSettingsSyncService @Inject constructor(
             Log.d(TAG, "Push success profile=$profileId reason=$reason")
             Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Push failed reason=$reason", e)
             Result.failure(e)
         }
@@ -176,6 +179,7 @@ class HomeCatalogSettingsSyncService @Inject constructor(
             Log.d(TAG, "Pull apply success profile=$profileId ${remotePayload.summary()}")
             Result.success(true)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to pull home catalog settings", e)
             Result.failure(e)
         }

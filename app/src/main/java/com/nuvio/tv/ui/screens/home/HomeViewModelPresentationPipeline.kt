@@ -21,7 +21,9 @@ import com.nuvio.tv.domain.model.TmdbSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
@@ -447,6 +449,7 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
             val tmdbId = try {
                 tmdbService.ensureTmdbId(itemId, apiType)
             } catch (_: Exception) {
+                currentCoroutineContext().ensureActive()
                 null
             }
 

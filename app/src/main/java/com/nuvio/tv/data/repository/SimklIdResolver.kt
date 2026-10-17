@@ -2,6 +2,8 @@ package com.nuvio.tv.data.repository
 
 import android.util.Log
 import com.nuvio.tv.data.simkl.SimklApiConfiguration
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -72,6 +74,7 @@ class SimklIdResolver @Inject constructor(
                 tvdbSeason = details.optInt("season", -1).takeIf { it > 0 }
             ).also { idsCache[cacheKey] = it }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d(TAG, "resolveIds $source:$id failed: ${e.message}")
             null
         }
@@ -97,6 +100,7 @@ class SimklIdResolver @Inject constructor(
             }
             mapping.also { episodeCache[simklId] = it }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d(TAG, "getEpisodeMapping $type:$simklId failed: ${e.message}")
             emptyList()
         }
@@ -157,6 +161,7 @@ class SimklIdResolver @Inject constructor(
             animeSeasonCache[cacheKey] = seasons
             seasons.firstOrNull { it.tvdbSeason == tvdbSeason }?.simklId
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d(TAG, "resolveSeasonSimklId anime:$parentSimklId season:$tvdbSeason failed: ${e.message}")
             null
         }
@@ -181,6 +186,7 @@ class SimklIdResolver @Inject constructor(
                 tvdbSeason = details.optInt("season", -1).takeIf { it > 0 }
             ).also { idsCache[cacheKey] = it }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d(TAG, "resolveIdsBySimklId $type:$simklId failed: ${e.message}")
             null
         }

@@ -37,6 +37,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -292,6 +294,7 @@ class TraktProgressService @Inject constructor(
                     refreshRemoteSnapshot()
                     true
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.w(TAG, "Failed to refresh remote snapshot", e)
                     false
                 }
@@ -1877,7 +1880,7 @@ class TraktProgressService @Inject constructor(
                 val imdbFromTmdb = tmdbService.tmdbToImdb(parsed.tmdb, "series")
                     ?: tmdbService.tmdbToImdb(parsed.tmdb, "movie")
                 if (!imdbFromTmdb.isNullOrBlank()) return imdbFromTmdb
-            } catch (_: Exception) { }
+            } catch (_: Exception) { currentCoroutineContext().ensureActive() }
             // 3) Try Trakt search API (network call)
             try {
                 val response = traktAuthService.executeAuthorizedRequest { authHeader ->
@@ -1894,7 +1897,7 @@ class TraktProgressService @Inject constructor(
                 val imdbId = result?.show?.ids?.imdb?.takeIf { it.isNotBlank() }
                 val resolved = imdbId ?: slug ?: traktId?.toString()
                 if (resolved != null) return resolved
-            } catch (_: Exception) { }
+            } catch (_: Exception) { currentCoroutineContext().ensureActive() }
             // Last resort - try tmdb:X anyway
             return "tmdb:${parsed.tmdb}"
         }
@@ -1928,7 +1931,7 @@ class TraktProgressService @Inject constructor(
                 playback.map { item -> async {
                     try {
                         mappingSemaphore.withPermit { mapPlaybackMovie(item) }
-                    } catch (_: Exception) { null }
+                    } catch (_: Exception) { currentCoroutineContext().ensureActive(); null }
                 } }
                     .awaitAll()
                     .filterNotNull()
@@ -1941,13 +1944,13 @@ class TraktProgressService @Inject constructor(
                     async {
                         try {
                             mappingSemaphore.withPermit { mapPlaybackEpisode(item, applyAddonRemap = true) }
-                        } catch (_: Exception) { null }
+                        } catch (_: Exception) { currentCoroutineContext().ensureActive(); null }
                     }
                 }.awaitAll().filterNotNull()
             }
-            val history = try { historyDeferred.await() } catch (_: Exception) { null }
-            val movies = try { moviesDeferred.await() } catch (_: Exception) { null }
-            val episodes = try { episodesDeferred.await() } catch (_: Exception) { null }
+            val history = try { historyDeferred.await() } catch (_: Exception) { currentCoroutineContext().ensureActive(); null }
+            val movies = try { moviesDeferred.await() } catch (_: Exception) { currentCoroutineContext().ensureActive(); null }
+            val episodes = try { episodesDeferred.await() } catch (_: Exception) { currentCoroutineContext().ensureActive(); null }
             Triple(history, movies, episodes)
         }
         // A partial snapshot would drop items from Continue Watching, so fail the whole fetch.
@@ -2063,7 +2066,7 @@ class TraktProgressService @Inject constructor(
                                 mappingSemaphore.withPermit {
                                     mapEpisodeHistoryItem(item, applyAddonRemap = true)
                                 }
-                            } catch (_: Exception) { null }
+                            } catch (_: Exception) { currentCoroutineContext().ensureActive(); null }
                         }
                     }.awaitAll()
                 }
@@ -2372,6 +2375,7 @@ class TraktProgressService @Inject constructor(
                 episodeTitle = episodeTitle
             )
         } catch (error: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(
                 TAG,
                 "resolveAddonEpisodeProgress failed for $contentId s=$season e=$episode",

@@ -30,7 +30,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -233,6 +235,7 @@ class ProfileSettingsSyncService @Inject constructor(
                 Log.d(TAG, "Pushed profile settings blob for profile $profileId")
                 Result.success(Unit)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "Failed to push profile settings blob", e)
                 Result.failure(e)
             }
@@ -264,6 +267,7 @@ class ProfileSettingsSyncService @Inject constructor(
                 Log.d(TAG, "Applied remote profile settings blob for profile $profileId")
                 Result.success(true)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "Failed to pull profile settings blob", e)
                 Result.failure(e)
             }

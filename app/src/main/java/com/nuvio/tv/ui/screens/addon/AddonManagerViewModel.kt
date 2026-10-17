@@ -50,7 +50,9 @@ import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -405,6 +407,7 @@ class AddonManagerViewModel @Inject constructor(
                     else -> null
                 }
             } catch (_: Exception) {
+                currentCoroutineContext().ensureActive()
                 null
             }
         }

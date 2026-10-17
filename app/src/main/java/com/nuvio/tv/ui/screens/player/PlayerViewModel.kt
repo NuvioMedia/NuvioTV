@@ -41,6 +41,8 @@ import com.nuvio.tv.data.repository.TraktRelatedService
 import com.nuvio.tv.data.trailer.TrailerService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -382,6 +384,7 @@ class PlayerViewModel @Inject constructor(
                         subtitleFileCache.cacheSubtitles(inputs)
                     }
                 } catch (_: Exception) {
+                    currentCoroutineContext().ensureActive()
                     // Subtitle forwarding is best-effort; the external launch must still proceed.
                     null
                 }
@@ -406,6 +409,7 @@ class PlayerViewModel @Inject constructor(
                     context = activityContext
                 )
             } catch (_: Exception) {
+                currentCoroutineContext().ensureActive()
                 false
             }
             onResult(launched)

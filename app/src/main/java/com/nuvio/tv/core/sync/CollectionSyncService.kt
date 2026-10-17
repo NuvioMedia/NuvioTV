@@ -10,7 +10,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -74,6 +76,7 @@ class CollectionSyncService @Inject constructor(
             Log.d(TAG, "Pushed collections to remote for profile $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to push collections to remote", e)
             Result.failure(e)
         }
@@ -128,6 +131,7 @@ class CollectionSyncService @Inject constructor(
             Log.d(TAG, "Applied ${remoteCollections.size} remote collections for profile $profileId")
             Result.success(true)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to pull collections from remote", e)
             Result.failure(e)
         }

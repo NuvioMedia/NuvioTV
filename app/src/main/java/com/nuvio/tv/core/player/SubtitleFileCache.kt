@@ -6,6 +6,8 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -51,6 +53,7 @@ class SubtitleFileCache @Inject constructor(
                     null
                 }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.w(TAG, "Error caching subtitle: ${input.name}", e)
                 null
             }

@@ -57,6 +57,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.ensureActive
@@ -1961,6 +1962,7 @@ class StreamScreenViewModel @Inject constructor(
                 subtitleFileCache.cacheSubtitles(inputs)
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Failed to fetch subtitles for external player", e)
             null
         }

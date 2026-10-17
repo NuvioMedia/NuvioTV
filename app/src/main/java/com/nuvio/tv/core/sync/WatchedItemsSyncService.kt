@@ -14,6 +14,8 @@ import com.nuvio.tv.domain.model.WatchedItem
 import com.nuvio.tv.domain.model.WatchedMutationKey
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -124,6 +126,7 @@ class WatchedItemsSyncService @Inject constructor(
             pushItemsToRemoteLocked(items, updateLastSuccessfulPush = true, profileId = profileId).getOrThrow()
             Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to push watched items to remote", e)
             Result.failure(e)
         }
@@ -177,6 +180,7 @@ class WatchedItemsSyncService @Inject constructor(
             }
             Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to push watched item batch to remote", e)
             Result.failure(e)
         }
@@ -225,6 +229,7 @@ class WatchedItemsSyncService @Inject constructor(
             Log.d(TAG, "pullFromRemote: fetched ${allItems.size} total watched items from Supabase for profile $profileId")
             Result.success(allItems)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to pull watched items from remote", e)
             Result.failure(e)
         }
@@ -257,6 +262,7 @@ class WatchedItemsSyncService @Inject constructor(
             val cursorBeforeSnapshot = try {
                 fetchDeltaCursor(profileId)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.w(TAG, "syncSnapshotFromRemote: delta cursor unavailable, applying snapshot without initialized cursor for profile $profileId", e)
                 null
             }
@@ -266,6 +272,7 @@ class WatchedItemsSyncService @Inject constructor(
             }
             Result.success(result)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to pull watched items snapshot from remote", e)
             Result.failure(e)
         }
@@ -369,6 +376,7 @@ class WatchedItemsSyncService @Inject constructor(
                 )
             )
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to pull watched items delta from remote", e)
             Result.failure(e)
         }
@@ -459,6 +467,7 @@ class WatchedItemsSyncService @Inject constructor(
             Log.d(TAG, "Deleted ${distinctKeys.size} watched items from remote for profile $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to delete watched items from remote", e)
             Result.failure(e)
         }

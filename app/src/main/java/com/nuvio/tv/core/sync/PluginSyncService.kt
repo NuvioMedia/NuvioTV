@@ -8,6 +8,8 @@ import com.nuvio.tv.data.remote.supabase.SupabasePlugin
 import com.nuvio.tv.domain.model.RemotePluginInfo
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
@@ -108,6 +110,7 @@ class PluginSyncService @Inject constructor(
                 .map { RemotePluginInfo(url = it.url, repoType = it.repoType) }
             )
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to get remote repo URLs", e)
             Result.failure(e)
         }

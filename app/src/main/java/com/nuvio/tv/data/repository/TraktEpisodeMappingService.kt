@@ -8,6 +8,8 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.repository.MetaRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -72,6 +74,7 @@ class TraktEpisodeMappingService @Inject constructor(
                             getAddonEpisodes(contentId, "series")
                         }
                     } catch (_: Exception) {
+                        currentCoroutineContext().ensureActive()
                         // Individual prefetch failures are non-fatal. The mapping phase
                         // will retry or proceed without cached data for this show.
                     }
@@ -216,7 +219,7 @@ class TraktEpisodeMappingService @Inject constructor(
         // Dedup: if another coroutine is already fetching this show, await its result.
         val existingDeferred = cacheMutex.withLock { addonEpisodesInFlight[cacheKey] }
         if (existingDeferred != null) {
-            return try { existingDeferred.await() } catch (_: Exception) { emptyList() }
+            return try { existingDeferred.await() } catch (_: Exception) { currentCoroutineContext().ensureActive(); emptyList() }
         }
 
         // Register ourselves as the in-flight fetcher.
@@ -233,7 +236,7 @@ class TraktEpisodeMappingService @Inject constructor(
         }
         if (!weOwn) {
             val other = cacheMutex.withLock { addonEpisodesInFlight[cacheKey] }
-            return try { other?.await() ?: emptyList() } catch (_: Exception) { emptyList() }
+            return try { other?.await() ?: emptyList() } catch (_: Exception) { currentCoroutineContext().ensureActive(); emptyList() }
         }
 
         return try {
@@ -259,7 +262,7 @@ class TraktEpisodeMappingService @Inject constructor(
 
         val existingDeferred = cacheMutex.withLock { traktEpisodesInFlight[showLookupId] }
         if (existingDeferred != null) {
-            return try { existingDeferred.await() } catch (_: Exception) { emptyList() }
+            return try { existingDeferred.await() } catch (_: Exception) { currentCoroutineContext().ensureActive(); emptyList() }
         }
 
         val deferred = CompletableDeferred<List<EpisodeMappingEntry>>()
@@ -274,7 +277,7 @@ class TraktEpisodeMappingService @Inject constructor(
         }
         if (!weOwn) {
             val other = cacheMutex.withLock { traktEpisodesInFlight[showLookupId] }
-            return try { other?.await() ?: emptyList() } catch (_: Exception) { emptyList() }
+            return try { other?.await() ?: emptyList() } catch (_: Exception) { currentCoroutineContext().ensureActive(); emptyList() }
         }
 
         val seasonsResponse = traktAuthService.executeAuthorizedRequest { authHeader ->
@@ -405,6 +408,7 @@ class TraktEpisodeMappingService @Inject constructor(
                             .firstOrNull()
                     }
                 } catch (_: Exception) {
+                    currentCoroutineContext().ensureActive()
                     null
                 } ?: continue
                 val meta = (result as? NetworkResult.Success)?.data ?: continue

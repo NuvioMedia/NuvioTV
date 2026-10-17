@@ -26,6 +26,8 @@ import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.ServerResponseException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.Json
@@ -648,6 +650,7 @@ class AuthManager @Inject constructor(
                     Log.d(TAG, "$trace startTvLoginSession legacy retry ok elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} code=${result.code.rawForLog()} url=${result.webUrl.urlForLog()} urlLength=${result.webUrl.length} expiresAt=${result.expiresAt} pollInterval=${result.pollIntervalSeconds}")
                     Result.success(result)
                 } catch (retryError: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.e(TAG, "$trace startTvLoginSession legacy retry failed elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${retryError.diagnosticSummary()}", retryError)
                     Result.failure(retryError)
                 }
@@ -714,6 +717,7 @@ class AuthManager @Inject constructor(
             Log.d(TAG, "$trace pollTvLoginSession ok attempt=${attempt ?: "-"} rows=${results.size} status=${result.status} expiresAt=${result.expiresAt ?: "-"} pollInterval=${result.pollIntervalSeconds ?: "-"} elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs}")
             Result.success(result)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "$trace pollTvLoginSession failed attempt=${attempt ?: "-"} elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${e.diagnosticSummary()}", e)
             Result.failure(e)
         }
@@ -747,6 +751,7 @@ class AuthManager @Inject constructor(
             Log.d(TAG, "$trace exchangeTvLoginSession imported auth token elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs}")
             Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "$trace exchangeTvLoginSession failed elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${e.diagnosticSummary()}", e)
             Result.failure(e)
         }

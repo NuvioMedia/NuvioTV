@@ -16,6 +16,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -215,6 +217,7 @@ class SubtitleRepositoryImpl @Inject constructor(
                 NetworkResult.Loading -> emptyList()
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Exception fetching subtitles from ${addon.name}", e)
             emptyList()
         }

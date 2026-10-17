@@ -19,7 +19,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -183,6 +185,7 @@ class StartupSyncService @Inject constructor(
 
                 Log.d(TAG, "Manual addon sync pulled ${remoteAddonUrls.size} addons for profile $profileId")
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "Manual addon sync failed for profile $profileId", e)
             } finally {
                 addonRepository.isSyncingFromRemote = false
@@ -583,6 +586,7 @@ class StartupSyncService @Inject constructor(
                     )
                     Log.d(TAG, "Pulled ${remotePlugins.size} plugin repos from remote for profile $profileId")
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.e(TAG, "Failed to pull plugins from remote, keeping local cache", e)
                 } finally {
                     pluginManager.isSyncingFromRemote = false
@@ -600,6 +604,7 @@ class StartupSyncService @Inject constructor(
                     )
                     Log.d(TAG, "Pulled ${remoteAddonUrls.size} addons from remote for profile $profileId")
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.e(TAG, "Failed to pull addons from remote, keeping local cache", e)
                 } finally {
                     addonRepository.isSyncingFromRemote = false
@@ -616,6 +621,7 @@ class StartupSyncService @Inject constructor(
                             Log.e(TAG, "Failed to pull collections from remote, keeping local", e)
                         }
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.e(TAG, "Failed to pull collections from remote", e)
                 }
             }
@@ -630,6 +636,7 @@ class StartupSyncService @Inject constructor(
                             Log.e(TAG, "Failed to pull home catalog settings from remote, keeping local", e)
                         }
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.e(TAG, "Failed to pull home catalog settings from remote", e)
                 }
             }
@@ -679,6 +686,7 @@ class StartupSyncService @Inject constructor(
             )
             Log.d(TAG, "Realtime plugins pull reconciled ${remotePlugins.size} repos for profile $profileId")
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Realtime plugins pull failed profile=$profileId", e)
         } finally {
             pluginManager.isSyncingFromRemote = false
@@ -696,6 +704,7 @@ class StartupSyncService @Inject constructor(
             )
             Log.d(TAG, "Realtime addons pull reconciled ${remoteAddonUrls.size} addons for profile $profileId")
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Realtime addons pull failed profile=$profileId", e)
         } finally {
             addonRepository.isSyncingFromRemote = false
@@ -720,6 +729,7 @@ class StartupSyncService @Inject constructor(
             }
             true
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to pull watched items, continuing with other syncs", e)
             false
         }
@@ -739,6 +749,7 @@ class StartupSyncService @Inject constructor(
                 watchedItemsSyncService.pushToRemote(profileId)
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to pull watched items snapshot, continuing with other syncs", e)
         }
     }
@@ -809,6 +820,7 @@ class StartupSyncService @Inject constructor(
             }
             return Result.success(Unit)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, failureMessage, e)
             return Result.failure(e)
         } finally {

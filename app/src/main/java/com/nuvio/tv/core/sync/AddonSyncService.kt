@@ -7,6 +7,8 @@ import com.nuvio.tv.data.local.AddonPreferences
 import com.nuvio.tv.data.remote.supabase.SupabaseAddon
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
@@ -126,6 +128,7 @@ class AddonSyncService @Inject constructor(
                 .map { it.url }
             )
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to get remote addon URLs", e)
             Result.failure(e)
         }

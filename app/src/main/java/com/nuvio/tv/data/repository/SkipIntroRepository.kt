@@ -16,6 +16,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.firstOrNull
 
 data class SkipInterval(
@@ -279,6 +281,7 @@ class SkipIntroRepository @Inject constructor(
                 } ?: emptyList()
             } else emptyList()
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d("SkipIntro", "AniSkip: no data for MAL $malId ep $episode")
             emptyList()
         }
@@ -326,6 +329,7 @@ class SkipIntroRepository @Inject constructor(
             }
             emptyList()
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d("SkipIntro", "AnimeSkip: error for anilist $anilistId ep $episode: ${e.message}")
             emptyList()
         }
@@ -342,7 +346,7 @@ class SkipIntroRepository @Inject constructor(
                     query = "{ findShowsByExternalId(service: ANILIST, serviceId: \"$anilistId\") { id } }"
                 )
             ).body()?.data?.findShowsByExternalId?.map { it.id } ?: emptyList()
-        } catch (e: Exception) { emptyList() }
+        } catch (e: Exception) { currentCoroutineContext().ensureActive(); emptyList() }
         if (showIds.size == 1) animeSkipShowIdCache[anilistId] = showIds[0]
         else if (showIds.isEmpty()) animeSkipShowIdCache[anilistId] = NO_ID
         return showIds

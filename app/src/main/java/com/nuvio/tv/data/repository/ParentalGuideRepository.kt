@@ -6,6 +6,8 @@ import com.nuvio.tv.data.remote.api.ParentalGuideApi
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Resolved parental guide data with a single severity per category,
@@ -41,6 +43,7 @@ class ParentalGuideRepository @Inject constructor(
                 null
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e("ParentalGuide", "Failed to fetch parental guide for $imdbId", e)
             null
         }
