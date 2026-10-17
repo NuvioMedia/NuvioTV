@@ -1,6 +1,9 @@
 package com.nuvio.tv.core.server
 
 import com.nuvio.tv.R
+import com.nuvio.tv.core.streams.StreamRankingPreset
+import com.nuvio.tv.core.streams.StreamRankingPresets
+import com.nuvio.tv.core.streams.StreamRankingSettings
 import com.nuvio.tv.core.usenet.ProviderTestResult
 import com.nuvio.tv.core.usenet.UsenetIndexer
 import com.nuvio.tv.core.usenet.UsenetProvider
@@ -55,6 +58,9 @@ class UsenetSourcesConfigServer(
         }
         return when {
             session.method == Method.GET && session.uri == "/api/sources" -> serveSources()
+            session.method == Method.GET && session.uri == "/api/ranking" -> serveRanking()
+            session.method == Method.POST && session.uri == "/api/ranking" -> saveRanking(body)
+            session.method == Method.POST && session.uri == "/api/ranking/preview" -> previewRanking(body)
             session.method == Method.POST && session.uri == "/api/providers" -> saveProvider(body)
             session.method == Method.POST && session.uri == "/api/indexers" -> saveIndexer(body)
             session.method == Method.POST && session.uri == "/api/providers/test" -> testProvider(body)
@@ -75,6 +81,41 @@ class UsenetSourcesConfigServer(
             indexers = configuration.indexers.map { PhoneIndexer.of(it) }
         )))
     }
+
+    private fun serveRanking(): Response {
+        val configuration = setup.configuration() ?: return error(Response.Status.CONFLICT, R.string.usenet_phone_unavailable)
+        val presets = listOf(
+            Triple(StreamRankingPreset.ORIGINAL, R.string.usenet_ranking_original, R.string.usenet_ranking_original_desc),
+            Triple(StreamRankingPreset.BALANCED, R.string.usenet_ranking_balanced, R.string.usenet_ranking_balanced_desc),
+            Triple(StreamRankingPreset.BEST_QUALITY, R.string.usenet_ranking_best, R.string.usenet_ranking_best_desc),
+            Triple(StreamRankingPreset.SMALLER_FILES, R.string.usenet_ranking_smaller, R.string.usenet_ranking_smaller_desc)
+        ).map { (id, name, description) -> PhoneRankingPreset(id, text(name), text(description),
+            if (id == StreamRankingPreset.ORIGINAL) UsenetRankingPhone.original(configuration.sort) else StreamRankingPresets.profile(id)) }
+        return ok(json.encodeToString(PhoneRanking(configuration.ranking,
+            configuration.ranking.profile() ?: UsenetRankingPhone.original(configuration.sort), presets)))
+    }
+
+    private fun saveRanking(body: String): Response {
+        if (setup.configuration() == null) return error(Response.Status.CONFLICT, R.string.usenet_phone_unavailable)
+        val input = parse<StreamRankingSettings>(body) ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_ranking_invalid)
+        try { input.validate() } catch (e: IllegalArgumentException) { return invalidRanking(e) }
+        val saved = setup.save(text(R.string.usenet_ranking_title)) { it.copy(ranking = input) }
+        return if (saved) ok(json.encodeToString(Saved("ranking", text(R.string.usenet_phone_saved))))
+        else error(Response.Status.CONFLICT, R.string.usenet_phone_unavailable)
+    }
+
+    private fun previewRanking(body: String): Response {
+        val input = parse<RankingPreviewRequest>(body) ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_ranking_invalid)
+        val configuration = setup.configuration() ?: return error(Response.Status.CONFLICT, R.string.usenet_phone_unavailable)
+        return try {
+            ok(json.encodeToString(UsenetRankingPhone.preview(input, UsenetRankingPhone.original(configuration.sort),
+                configuration.indexers.withIndex().groupBy { it.value.name.lowercase(java.util.Locale.ROOT) }
+                    .mapValues { (_, entries) -> entries.minOf { it.index } })))
+        } catch (e: IllegalArgumentException) { invalidRanking(e) }
+    }
+
+    private fun invalidRanking(error: IllegalArgumentException) = newFixedLengthResponse(Response.Status.BAD_REQUEST, JSON,
+        json.encodeToString(Failure(error.message ?: text(R.string.usenet_ranking_invalid))))
 
     private fun saveProvider(body: String): Response {
         val input = parse<PhoneProvider>(body) ?: return error(Response.Status.BAD_REQUEST, R.string.usenet_provider_invalid)
@@ -123,7 +164,7 @@ class UsenetSourcesConfigServer(
     /** Null when the body is too large to read. */
     private fun read(session: IHTTPSession): String? {
         val length = session.headers["content-length"]?.toIntOrNull() ?: return ""
-        if (length !in 0..MAX_BODY) return null
+        if (length !in 0..(if (session.uri.startsWith("/api/ranking")) MAX_RANKING_BODY else MAX_BODY)) return null
         val buffer = ByteArray(length)
         var offset = 0
         while (offset < length) {
@@ -147,6 +188,7 @@ class UsenetSourcesConfigServer(
         const val TOKEN_HEADER = "x-setup-token"
         private const val JSON = "application/json; charset=utf-8"
         private const val MAX_BODY = 16 * 1024
+        private const val MAX_RANKING_BODY = 64 * 1024
 
         fun startOnAvailablePort(
             setup: UsenetPhoneSetup,

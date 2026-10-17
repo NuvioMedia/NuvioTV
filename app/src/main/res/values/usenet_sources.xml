@@ -84,7 +84,7 @@
     <string name="usenet_phone_setup_description">Type server addresses, passwords and API keys on your phone instead of the remote.</string>
     <string name="usenet_phone_qr_instruction">Scan this QR code with a phone on the same network to add or edit Usenet providers and indexers.</string>
     <string name="usenet_phone_saved_on_tv">Saved from phone: %1$s</string>
-    <string name="usenet_phone_intro">Changes are saved on the TV right away. Saved passwords and API keys are never shown here: leave them blank to keep them.</string>
+    <string name="usenet_phone_intro">Choose a source or sorting profile, then Save to apply your changes on the TV. Saved passwords and API keys are never shown here: leave them blank to keep them.</string>
     <string name="usenet_phone_providers">Providers</string>
     <string name="usenet_phone_indexers">Indexers</string>
     <string name="usenet_phone_none">None yet.</string>

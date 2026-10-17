@@ -1,5 +1,9 @@
 package com.nuvio.tv.core.usenet
 
+import com.nuvio.tv.core.streams.StreamRankingCandidate
+import com.nuvio.tv.core.streams.StreamRankingEngines
+import com.nuvio.tv.core.streams.StreamRankingFacts
+import com.nuvio.tv.core.streams.StreamRankingField
 import java.io.StringReader
 import java.text.Normalizer
 import java.time.ZonedDateTime
@@ -46,6 +50,7 @@ data class UsenetRelease(
     // Read from the title once: filtering and sorting read these thousands of times per search.
     val resolution: Int = RESOLUTION.find(title)?.groupValues?.get(1)?.toInt()
         ?: if (FOUR_K.containsMatchIn(title)) 2160 else 0
+    val rankingFacts: StreamRankingFacts by lazy(LazyThreadSafetyMode.PUBLICATION) { StreamRankingFacts.parse(title) }
     val lowQuality: Boolean = LOW_QUALITY.containsMatchIn(title)
     /** The seasons of a whole-season release (S01, Season 2, S01-S03); empty for an episode or a movie. */
     val packSeasons: List<Int> = NewznabProtocol.packSeasons(title)
@@ -402,13 +407,14 @@ object NewznabProtocol {
      * ignoring case and punctuation, since indexers write separators differently.
      */
     fun withoutDuplicates(releases: List<UsenetRelease>, config: UsenetSourceConfiguration,
-        now: Long = System.currentTimeMillis()): List<UsenetRelease> {
+        now: Long = System.currentTimeMillis(), seasonEpisodes: Map<Int, Int>? = null,
+        series: Boolean = false): List<UsenetRelease> {
         val order = config.indexers.mapIndexed { i, indexer -> indexer.id to i }.toMap()
         fun name(release: UsenetRelease) =
             release.title.lowercase(Locale.ROOT).replace(NON_WORD, " ").trim()
         return releases.groupBy(::name).values.map { copies ->
             // A preferred copy hidden by a filter (no size, passworded) must not hide the others.
-            copies.filter { arrange(listOf(it), config, now).isNotEmpty() }.ifEmpty { copies }
+            copies.filter { arrange(listOf(it), config, now, seasonEpisodes, series).isNotEmpty() }.ifEmpty { copies }
                 .minBy { order[it.indexerId] ?: Int.MAX_VALUE }
         }
     }
@@ -419,7 +425,7 @@ object NewznabProtocol {
      * the ones cut and unplayable ones are cut first.
      */
     fun arrange(releases: List<UsenetRelease>, config: UsenetSourceConfiguration,
-        now: Long = System.currentTimeMillis(), seasonEpisodes: Map<Int, Int>? = null,
+        now: Long = System.currentTimeMillis(), seasonEpisodes: Map<Int, Int>? = null, series: Boolean = false,
         rank: (UsenetRelease) -> Int = { 0 }): List<UsenetRelease> {
         val priority = config.indexers.mapIndexed { i, indexer -> indexer.id to i }.toMap()
         val filtered = releases.filter {
@@ -427,6 +433,22 @@ object NewznabProtocol {
                 (config.minResolution == 0 || it.resolution >= config.minResolution) &&
                 (config.maxSizeGb == 0 || it.episodeSize(seasonEpisodes) in 1..config.maxSizeGb.toLong() * 1024 * 1024 * 1024) &&
                 (config.maxAgeDays == 0 || it.publishedAt > 0 && now - it.publishedAt <= config.maxAgeDays.toLong() * 86400000)
+        }
+        config.ranking.profile()?.let { profile ->
+            val useLanguages = profile.preferredLanguages.isNotEmpty() || profile.rules.any { rule ->
+                rule.enabled && rule.conditions.any { it.field == StreamRankingField.LANGUAGE }
+            }
+            val candidates = filtered.distinctBy { it.nzbUrl }.map { release ->
+                val perEpisodeKnown = release.packSeasons.isEmpty() ||
+                    release.packSeasons.all { (seasonEpisodes?.get(it) ?: 0) > 0 }
+                StreamRankingCandidate(release, release.rankingFacts.copy(
+                    knownLanguages = if (useLanguages) release.rankingFacts.languages else null,
+                    sizeBytes = release.episodeSize(seasonEpisodes).takeIf { it > 0 && perEpisodeKnown },
+                    publishedAt = release.publishedAt.takeIf { it > 0 }, indexer = release.indexerName,
+                    mediaType = if (series) "series" else "movie"), release.nzbUrl,
+                    reliability = rank(release), indexerOrder = priority[release.indexerId] ?: Int.MAX_VALUE)
+            }
+            return StreamRankingEngines.get(profile).rank(candidates, now).take(config.maxResults).map { it.candidate.value }
         }
         val primary = when (config.sort) {
             UsenetSort.QUALITY -> compareByDescending<UsenetRelease> { it.resolution }
