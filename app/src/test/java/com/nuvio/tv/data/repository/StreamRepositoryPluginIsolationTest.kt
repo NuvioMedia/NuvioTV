@@ -14,6 +14,7 @@ import com.nuvio.tv.core.usenet.UsenetIndexer
 import com.nuvio.tv.core.usenet.UsenetSort
 import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
 import com.nuvio.tv.core.usenet.UsenetSourceSettings
+import com.nuvio.tv.data.mediaserver.ServerStreamSource
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.data.remote.dto.StreamDto
@@ -133,7 +134,7 @@ class StreamRepositoryPluginIsolationTest {
         coVerify(exactly = 0) { harness.addonRepository.fetchAddon(any()) }
     }
 
-    @Test fun `built in sources work without addons and replace sorted incremental results`() = runTest {
+    @Test fun `built in and server sources complete without addons and replace sorted incremental results`() = runTest {
         val source = MutableStateFlow(UsenetSourceConfiguration(enabled = true,
             providers = listOf(UsenetProvider(name = "News", host = "news.test")),
             indexers = listOf(UsenetIndexer(name = "Indexer", apiUrl = "https://indexer.test/api"))))
@@ -149,10 +150,17 @@ class StreamRepositoryPluginIsolationTest {
             emit(BuiltInUsenetResult(group = AddonStreams(BuiltInUsenetService.GROUP_NAME, null, listOf(low))))
             emit(BuiltInUsenetResult(group = AddonStreams(BuiltInUsenetService.GROUP_NAME, null, listOf(high))))
         }
-        val harness = newHarness(emptyList(), source, results, emptyList())
+        val serverStream = low.copy(addonName = "Server", url = "https://server.test/video", nzbUrl = null)
+        val serverSource = ServerStreamSource("Server", preferred = false) {
+            kotlinx.coroutines.yield()
+            listOf(serverStream)
+        }
+        val harness = newHarness(emptyList(), source, results, emptyList(), listOf(serverSource))
         suspend fun load() = harness.repository.getStreamsFromAllAddons("movie", "tt123", null, null).toList()
         val last = (load().last() as NetworkResult.Success).data
-        assertEquals(listOf(high), last.single().streams)
+        assertEquals(setOf(BuiltInUsenetService.GROUP_NAME, "Server"), last.map { it.addonName }.toSet())
+        assertEquals(listOf(high), last.single { it.addonName == BuiltInUsenetService.GROUP_NAME }.streams)
+        assertEquals(listOf(serverStream), last.single { it.addonName == "Server" }.streams)
         load()
         assertEquals(1, searches)
         source.value = source.value.copy(sort = UsenetSort.NEWEST)
@@ -174,7 +182,8 @@ class StreamRepositoryPluginIsolationTest {
     private fun newHarness(enabledScrapers: List<ScraperInfo>,
         sources: MutableStateFlow<UsenetSourceConfiguration> = MutableStateFlow(UsenetSourceConfiguration()),
         usenetResults: Flow<BuiltInUsenetResult> = emptyFlow(),
-        addons: List<Addon> = listOf(compatibleAddon())
+        addons: List<Addon> = listOf(compatibleAddon()),
+        serverSources: List<ServerStreamSource> = emptyList()
     ): Harness {
         val addon = compatibleAddon()
         val api = mockk<AddonApi>()
@@ -237,7 +246,7 @@ class StreamRepositoryPluginIsolationTest {
                 serverStreams = mockk {
                     every { isNativeRequest(any()) } returns false
                     every { revision } returns 0
-                    every { sources(any(), any(), any(), any(), any()) } returns emptyList()
+                    every { sources(any(), any(), any(), any(), any()) } returns serverSources
                 }
             ),
             api = api,
