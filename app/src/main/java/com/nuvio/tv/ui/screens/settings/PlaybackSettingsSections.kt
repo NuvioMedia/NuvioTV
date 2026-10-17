@@ -97,7 +97,7 @@ private fun PlaybackSectionContent(
         PlaybackSection.STREAM_SELECTION -> PlaybackStreamSelectionSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.UP_NEXT -> PlaybackUpNextSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.SKIP_SEGMENTS -> PlaybackSkipSegmentsSection(playerSettings, onUpdate)
-        PlaybackSection.PLAYER_INTERFACE -> PlaybackPlayerInterfaceSection(playerSettings, onUpdate)
+        PlaybackSection.PLAYER_INTERFACE -> PlaybackPlayerInterfaceSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.AUDIO -> PlaybackAudioSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.SUBTITLES -> PlaybackSubtitlesSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.VIDEO -> PlaybackVideoSection(playerSettings, transparentLetterbox, onUpdate, onOpenDialog)
@@ -137,6 +137,22 @@ internal fun PlaybackSettingsDialogs(
         PlaybackDialog.P2P_CONSENT -> P2pConsentDialog(
             onEnableP2p = {
                 onUpdate { setP2pEnabled(true) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
+        PlaybackDialog.HOLD_TO_SPEED_VALUE -> HoldToSpeedValueDialog(
+            currentValue = settings.holdToSpeedValue,
+            onValueSelected = { speed ->
+                onUpdate { setHoldToSpeedValue(speed) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
+        PlaybackDialog.HOLD_TO_SPEED_KEY -> HoldToSpeedKeyDialog(
+            currentKeyCode = settings.holdToSpeedKeyCode,
+            onKeySelected = { keyCode ->
+                onUpdate { setHoldToSpeedKeyCode(keyCode) }
                 onDismiss()
             },
             onDismiss = onDismiss
