@@ -1173,7 +1173,7 @@ class StreamScreenViewModel @Inject constructor(
         val availableFirst = usenetSourceSettings.read().availableFirst
         updateUiStateIfChanged { state ->
             val groups = com.nuvio.tv.core.usenet.BuiltInUsenetService.arrangeOutcomes(state.addonStreams, unplayable::contains,
-                unplayable::played, availableFirst)
+                unplayable::played, availableFirst, unplayable::sibling)
             if (groups == state.addonStreams) return@updateUiStateIfChanged state
             val allStreams = groups.flatMap { it.streams }
             val fullFiltered = state.selectedAddonFilter?.let { filter -> allStreams.filter { it.addonName == filter } } ?: allStreams
