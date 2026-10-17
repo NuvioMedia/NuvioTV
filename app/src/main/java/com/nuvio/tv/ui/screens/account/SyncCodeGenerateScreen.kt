@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.account
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -23,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -163,7 +163,7 @@ fun SyncCodeGenerateScreen(
                     Text(
                         text = uiState.error ?: "",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFF44336)
+                        color = NuvioPrimitives.red400
                     )
                 }
 

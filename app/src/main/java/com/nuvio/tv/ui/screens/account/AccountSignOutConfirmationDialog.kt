@@ -19,6 +19,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 @Composable
@@ -59,7 +60,7 @@ internal fun AccountSignOutConfirmationDialog(
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.colors(
                     containerColor = Color(0xFFC62828).copy(alpha = 0.25f),
-                    contentColor = Color(0xFFF44336)
+                    contentColor = NuvioPrimitives.red400
                 )
             ) {
                 Text(stringResource(R.string.account_sign_out))

@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.account
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -326,8 +327,8 @@ private fun LinkedDevicesSection(
                         colors = ButtonDefaults.colors(
                             containerColor = Color(0xFFC62828).copy(alpha = 0.2f),
                             focusedContainerColor = Color(0xFFC62828).copy(alpha = 0.4f),
-                            contentColor = Color(0xFFF44336),
-                            focusedContentColor = Color(0xFFF44336)
+                            contentColor = NuvioPrimitives.red400,
+                            focusedContentColor = NuvioPrimitives.red400
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.sm))
                     ) {
@@ -353,8 +354,8 @@ private fun SignOutButton(onClick: () -> Unit) {
         colors = ButtonDefaults.colors(
             containerColor = Color(0xFFC62828).copy(alpha = 0.15f),
             focusedContainerColor = Color(0xFFC62828).copy(alpha = 0.3f),
-            contentColor = Color(0xFFF44336),
-            focusedContentColor = Color(0xFFF44336)
+            contentColor = NuvioPrimitives.red400,
+            focusedContentColor = NuvioPrimitives.red400
         ),
         shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
     ) {

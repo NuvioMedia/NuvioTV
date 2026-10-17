@@ -24,6 +24,7 @@ object NuvioPrimitives {
     val red500 = Color(0xFFE53935)
     val red600 = Color(0xFFC62828)
     val red300 = Color(0xFFFF5252)
+    val red400 = Color(0xFFF44336)
     val blue500 = Color(0xFF1E88E5)
     val blue700 = Color(0xFF1565C0)
     val blue300 = Color(0xFF42A5F5)

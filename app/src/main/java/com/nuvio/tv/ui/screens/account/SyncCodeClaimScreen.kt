@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.account
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -170,7 +171,7 @@ fun SyncCodeClaimScreen(
                     Text(
                         text = uiState.error ?: "",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFF44336)
+                        color = NuvioPrimitives.red400
                     )
                 }
 

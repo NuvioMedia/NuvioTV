@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.account
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.contentTextDirection
 
@@ -472,7 +473,7 @@ private fun SignOutSettingsButton(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, Color(0xFFF44336).copy(alpha = 0.5f)),
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioPrimitives.red400.copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(NuvioTheme.radii.sm)
             )
         ),
@@ -487,13 +488,13 @@ private fun SignOutSettingsButton(
                 imageVector = Icons.AutoMirrored.Filled.Logout,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
-                tint = Color(0xFFF44336)
+                tint = NuvioPrimitives.red400
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = stringResource(R.string.account_sign_out),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFF44336),
+                color = NuvioPrimitives.red400,
                 fontWeight = FontWeight.Medium
             )
         }

@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.background
@@ -435,7 +436,7 @@ internal fun PlaybackMemoryUsageCard(settings: PlayerSettings) {
         (MemoryBudget.budgetMb * 1.25f).toInt()
     }
     val usageColor = when (MemoryBudget.getUsageStatus(totalUsageMb, safeLimitMb, warningLimitMb)) {
-        MemoryUsageStatus.DANGER -> Color(0xFFF44336)
+        MemoryUsageStatus.DANGER -> NuvioPrimitives.red400
         MemoryUsageStatus.WARNING -> Color(0xFFFF9800)
         MemoryUsageStatus.SAFE -> Color(0xFF4CAF50)
     }

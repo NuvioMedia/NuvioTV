@@ -34,6 +34,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Text
 import com.nuvio.tv.core.network.StreamSpeedTester
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -140,7 +141,7 @@ internal fun PlayerDebugStatsOverlay(
                     color = Color(0xFF8A8A8A)
                 )
                 val (color, fontWeight) = when (stat.severity) {
-                    DebugStatSeverity.DANGER -> Color(0xFFF44336) to FontWeight.Bold
+                    DebugStatSeverity.DANGER -> NuvioPrimitives.red400 to FontWeight.Bold
                     DebugStatSeverity.WARNING -> Color(0xFFFFB300) to FontWeight.Bold
                     DebugStatSeverity.NORMAL -> Color(0xFFF0F0F0) to FontWeight.Normal
                 }
