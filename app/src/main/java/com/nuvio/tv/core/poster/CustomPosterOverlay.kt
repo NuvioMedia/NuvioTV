@@ -5,6 +5,7 @@ import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
+import com.nuvio.tv.domain.model.WatchProgress
 
 /**
  * Applies a custom poster URL pattern to a [MetaPreview], replacing the poster URL
@@ -218,4 +219,48 @@ fun List<com.nuvio.tv.ui.screens.home.ContinueWatchingItem>.withCustomPosterUrls
 ): List<com.nuvio.tv.ui.screens.home.ContinueWatchingItem> {
     if (pattern.isBlank()) return this
     return map { it.withCustomPosterUrl(pattern) }
+}
+
+/**
+ * Applies a custom poster URL pattern to [WatchProgress] for Android TV Watch Next / channel art.
+ *
+ * When the pattern includes `{shape}`, the landscape URL is written to [WatchProgress.backdrop]
+ * (Watch Next / Preview Programs prefer 16:9 art via backdrop ?: poster).
+ */
+fun WatchProgress.withCustomPosterArt(pattern: String): WatchProgress {
+    if (pattern.isBlank()) return this
+
+    val ids = CustomPosterUrlResolver.extractIds(contentId)
+    val type = if (contentType.equals("movie", ignoreCase = true)) "movie" else "series"
+    val supportsShape = "{shape}" in pattern
+
+    val resolvedPoster = CustomPosterUrlResolver.resolve(
+        pattern = pattern,
+        ids = ids,
+        type = type,
+        shape = "poster"
+    )
+    val resolvedLandscape = if (supportsShape) {
+        CustomPosterUrlResolver.resolve(
+            pattern = pattern,
+            ids = ids,
+            type = type,
+            shape = "landscape"
+        )
+    } else {
+        null
+    }
+
+    if (resolvedPoster == null && resolvedLandscape == null) return this
+
+    return copy(
+        poster = resolvedPoster ?: poster,
+        backdrop = resolvedLandscape ?: backdrop
+    )
+}
+
+@JvmName("withCustomPosterArtList")
+fun List<WatchProgress>.withCustomPosterArt(pattern: String): List<WatchProgress> {
+    if (pattern.isBlank()) return this
+    return map { it.withCustomPosterArt(pattern) }
 }

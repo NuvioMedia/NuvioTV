@@ -3,6 +3,10 @@ package com.nuvio.tv.core.recommendations
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
+import com.nuvio.tv.core.poster.CustomPosterScreen
+import com.nuvio.tv.core.poster.patternForScreen
+import com.nuvio.tv.core.poster.withCustomPosterArt
+import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -10,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -23,7 +28,8 @@ import kotlin.math.abs
 @Singleton
 class TvRecommendationManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val programBuilder: ProgramBuilder
+    private val programBuilder: ProgramBuilder,
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
 ) {
 
     private val mutex = Mutex()
@@ -86,7 +92,9 @@ class TvRecommendationManager @Inject constructor(
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val currentInternalIds = items.map { programBuilder.watchNextId(it) }.toSet()
+                    val posterPattern = recommendationPosterPattern()
+                    val decorated = items.withCustomPosterArt(posterPattern)
+                    val currentInternalIds = decorated.map { programBuilder.watchNextId(it) }.toSet()
                     val existingInternalIds = programBuilder.getAllWatchNextInternalIds()
 
                     // Remove only stale programs that are no longer in CW
@@ -96,7 +104,7 @@ class TvRecommendationManager @Inject constructor(
                     }
 
                     // Upsert current CW programs only if they actually changed
-                    items.forEach { p ->
+                    decorated.forEach { p ->
                         val id = programBuilder.watchNextId(p)
                         val newFingerprint = ProgramFingerprint(
                             title = p.name,
@@ -159,15 +167,16 @@ class TvRecommendationManager @Inject constructor(
                 return@withContext
             }
             try {
-                val id = programBuilder.watchNextId(progress)
+                val decorated = progress.withCustomPosterArt(recommendationPosterPattern())
+                val id = programBuilder.watchNextId(decorated)
                 val newFingerprint = ProgramFingerprint(
-                    title = progress.name,
-                    position = progress.position,
-                    duration = progress.duration,
-                    poster = progress.poster,
-                    backdrop = progress.backdrop,
-                    season = progress.season,
-                    episode = progress.episode
+                    title = decorated.name,
+                    position = decorated.position,
+                    duration = decorated.duration,
+                    poster = decorated.poster,
+                    backdrop = decorated.backdrop,
+                    season = decorated.season,
+                    episode = decorated.episode
                 )
                 val oldFingerprint = syncedFingerprints[id]
                 if (oldFingerprint != null &&
@@ -182,13 +191,19 @@ class TvRecommendationManager @Inject constructor(
                     return@withContext
                 }
 
-                val program = programBuilder.buildWatchNextProgram(progress)
+                val program = programBuilder.buildWatchNextProgram(decorated)
                 programBuilder.upsertWatchNextProgram(program, id)
                 syncedFingerprints[id] = newFingerprint
             } catch (e: Exception) {
                 Log.w(TAG, "updateSingleWatchNextProgram failed", e)
             }
         }
+    }
+
+    private suspend fun recommendationPosterPattern(): String {
+        val pattern = layoutPreferenceDataStore.customPosterUrlPattern.first()
+        val screens = layoutPreferenceDataStore.customPosterEnabledScreens.first()
+        return patternForScreen(pattern, CustomPosterScreen.TV_RECOMMENDATIONS, screens)
     }
 
     suspend fun onProgressRemoved(contentId: String) {

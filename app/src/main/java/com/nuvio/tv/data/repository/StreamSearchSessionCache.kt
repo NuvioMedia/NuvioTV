@@ -75,6 +75,14 @@ internal class StreamSearchSessionCache(
         )
     }
 
+    /** The streams a search for [key] already holds, without starting one or touching its lifetime. */
+    suspend fun peek(key: StreamSearchRequestKey): List<AddonStreams>? = mutex.withLock {
+        removeExpiredLocked()
+        val session = sessions[key] ?: return@withLock null
+        (session.state.value.result as? NetworkResult.Success)?.data
+            ?: session.lastSuccessfulResult?.data
+    }
+
     private suspend fun acquireSession(
         key: StreamSearchRequestKey,
         forceRefresh: Boolean,

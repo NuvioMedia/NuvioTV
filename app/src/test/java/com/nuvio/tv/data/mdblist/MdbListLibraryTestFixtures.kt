@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 
 internal const val MDBLIST_TEST_LIST_KEY = "mdblist:list:7"
 internal const val MDBLIST_EMPTY_LIBRARY_PAGE = """{"movies":[],"shows":[],"pagination":{"offset":0,"limit":1000,"total":0,"has_more":false}}"""
+internal const val MDBLIST_EMPTY_LIKED_LISTS = """{"lists":[],"pagination":{"page":1,"limit":100,"offset":0,"total":0,"has_more":false}}"""
 internal const val MDBLIST_LIBRARY_MOVIE_PAGE = """{"movies":[{"id":278,"imdb_id":"tt0111161","title":"Shawshank","release_year":1994,"rank":1}],"shows":[]}"""
 
 internal fun mdbListLibraryListsBody(version: String? = "v1", count: Int = 0) = """[

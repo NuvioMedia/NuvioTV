@@ -370,6 +370,20 @@
     <string name="appearance_settings_style_subtitle">Choose how the settings screens are presented</string>
     <string name="appearance_launcher_artwork">Launcher Artwork</string>
     <string name="appearance_launcher_artwork_subtitle">Choose how Nuvio appears on your TV home screen</string>
+    <string name="ambient_mode_title">Ambient Mode</string>
+    <string name="ambient_mode_subtitle">Show artwork from your catalogs while the TV sits idle</string>
+    <string name="ambient_mode_enabled_subtitle">Fill the screen with backdrops after a period with no remote input</string>
+    <string name="ambient_mode_timeout">Start After</string>
+    <string name="ambient_mode_timeout_subtitle">How long to wait before Ambient Mode starts</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">Catalogs</string>
+    <string name="ambient_mode_catalogs_subtitle">Choose up to 3 catalogs to pull artwork from</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">Choose up to 3 catalogs</string>
+    <string name="ambient_mode_catalogs_default">Same as hero</string>
+    <string name="ambient_mode_catalogs_count">%1$d of %2$d</string>
     <string name="appearance_app_icon_and_banner">App Icon &amp; Banner</string>
     <string name="appearance_app_icon_and_banner_subtitle">Change app icon and banner</string>
     <string name="appearance_app_icon_picker_title">Choose App Icon &amp; Banner</string>
@@ -1077,6 +1091,8 @@
     <string name="layout_trailer_play_in_background_sub">Play the trailer in place of the backdrop while the page stays visible.</string>
     <string name="layout_trailer_pause_on_scroll">Pause When Scrolling</string>
     <string name="layout_trailer_pause_on_scroll_sub">Pause the trailer when you scroll down and resume it when you return to the top.</string>
+    <string name="layout_trailer_4k">4K Trailers</string>
+    <string name="layout_trailer_4k_sub">Play trailers above 1080p when available. Uses much more memory; off by default on devices with 2 GB of RAM or less.</string>
     <string name="layout_detail_group_episodes">Episodes</string>
     <string name="layout_detail_group_trailers">Trailers</string>
     <string name="layout_detail_group_metadata">Metadata</string>
@@ -1165,6 +1181,7 @@
     <string name="layout_custom_poster_screen_library">Library</string>
     <string name="layout_custom_poster_screen_search">Search</string>
     <string name="layout_custom_poster_screen_details">Details Screen</string>
+    <string name="layout_custom_poster_screen_tv_recommendations">TV Recommendations</string>
 
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Always Backdrop with Logo for Landscape Posters</string>
@@ -3238,8 +3255,6 @@
     <string name="playback_reset_to_default">Reset to Default</string>
     <string name="playback_net_custom">Custom Network</string>
     <string name="playback_net_custom_sub">Use multiple parallel connections to fetch progressive streams. When off, a single connection is used.</string>
-    <string name="playback_net_http2">Enable HTTP/2</string>
-    <string name="playback_net_http2_sub">Enable HTTP/2 protocol for network connections, allowing request multiplexing and faster handshake times.</string>
     <string name="playback_net_parallel">Parallel Connections</string>
     <string name="playback_net_parallel_sub">Use multiple connections in parallel for fetching streams. Activate when you experience buffering although your download speed is definitely more than sufficient.</string>
     <string name="playback_net_connection_count">Connection Count</string>

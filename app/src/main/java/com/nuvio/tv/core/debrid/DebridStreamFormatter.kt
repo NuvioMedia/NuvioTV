@@ -21,11 +21,12 @@ class DebridStreamFormatter @Inject constructor(
     fun format(
         stream: Stream,
         settings: DebridSettings,
-        compiledBadgeFilters: List<CompiledStreamBadgeFilter> = emptyList()
+        compiledBadgeFilters: List<CompiledStreamBadgeFilter> = emptyList(),
+        facts: DirectDebridStreamFilter.StreamFacts? = null
     ): Stream {
         if (!stream.isManagedDebridForFormatting()) return stream
         val matchedBadges = StreamBadgeMatcher.matchedBadges(stream, compiledBadgeFilters)
-        val values = buildValues(stream, settings, matchedBadges)
+        val values = buildValues(stream, matchedBadges, facts ?: DirectDebridStreamFilter.facts(stream, settings))
         val formattedName = engine.render(settings.streamNameTemplate, values)
             .lineSequence()
             .joinToString(" ") { it.trim() }
@@ -47,13 +48,12 @@ class DebridStreamFormatter @Inject constructor(
 
     private fun buildValues(
         stream: Stream,
-        settings: DebridSettings,
-        matchedBadges: List<StreamBadge>
+        matchedBadges: List<StreamBadge>,
+        facts: DirectDebridStreamFilter.StreamFacts
     ): Map<String, Any?> {
         val resolve = stream.clientResolve
         val raw = resolve?.stream?.raw
         val parsed = raw?.parsed
-        val facts = DirectDebridStreamFilter.facts(stream, settings)
         val season = resolve?.season
         val episode = resolve?.episode
         val seasons = parsed?.seasons.orEmpty()
@@ -193,7 +193,7 @@ class DebridStreamFormatter @Inject constructor(
             "ja", "jpn", "japanese" -> "🇯🇵"
             "ko", "kor", "korean" -> "🇰🇷"
             "fr", "fre", "fra", "french" -> "🇫🇷"
-            "es", "spa", "spanish" -> "🇪🇸"
+            "es", "spa", "spn", "esp", "spanish" -> "🇪🇸"
             "de", "ger", "deu", "german" -> "🇩🇪"
             "it", "ita", "italian" -> "🇮🇹"
             "multi" -> "Multi"

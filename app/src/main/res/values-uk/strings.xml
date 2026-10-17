@@ -2690,8 +2690,6 @@
     <string name="playback_net_nuvio_performance_mode_sub">Увімкнути нативний алокатор пам’яті поза купою та оптимізації перемотування.</string>
     <string name="playback_net_nuvio_performance_mode_not_supported">Ця функція не підтримується вашим пристроєм.</string>
     <string name="playback_buffer_target_danger_warning">Небезпека: вище за ліміт попередження (%1$d МБ). Високий ризик збою.</string>
-    <string name="playback_net_http2">Увімкнути HTTP/2</string>
-    <string name="playback_net_http2_sub">Увімкнути протокол HTTP/2 для мережевих з’єднань, що дозволяє мультиплексування запитів і швидше встановлення з’єднання.</string>
     <string name="diag_last_playback_title">Діагностика останнього відтворення</string>
     <string name="diag_no_data">Даних відтворення ще немає. Запустіть потік і поверніться сюди, щоб переглянути деталі рішення DV для цього відтворення.</string>
     <string name="diag_section_source_hardware">Джерело та апаратне забезпечення</string>

@@ -2821,8 +2821,6 @@
     <string name="playback_reset_to_default">Réinitialiser les valeurs par défaut</string>
     <string name="playback_net_custom">Réseau personnalisé</string>
     <string name="playback_net_custom_sub">Utilise plusieurs connexions parallèles pour récupérer les flux progressifs. Quand c’est désactivé, une seule connexion est utilisée.</string>
-    <string name="playback_net_http2">Activer HTTP/2</string>
-    <string name="playback_net_http2_sub">Active le protocole HTTP/2 pour les connexions réseau, permettant le multiplexage des requêtes et des établissements de connexion plus rapides.</string>
     <string name="playback_net_parallel">Connexions parallèles</string>
     <string name="playback_net_parallel_sub">Utilise plusieurs connexions en parallèle pour récupérer les flux. Activez cette option si vous rencontrez des mises en mémoire tampon alors que votre vitesse de téléchargement est largement suffisante.</string>
     <string name="playback_net_connection_count">Nombre de connexions</string>

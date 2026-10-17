@@ -9,6 +9,7 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.DiscoverSelectionDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.SearchHistoryDataStore
+import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
@@ -57,6 +58,7 @@ class SearchViewModel @Inject constructor(
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+    private val serverCatalog: ServerCatalog,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -364,7 +366,7 @@ class SearchViewModel @Inject constructor(
             kotlinx.coroutines.delay(SUGGESTION_DEBOUNCE_MS)
 
             val addons = try {
-                addonRepository.getInstalledAddons().first().enabledAddons()
+                searchAddons()
             } catch (_: Exception) {
                 return@launch
             }
@@ -564,7 +566,7 @@ class SearchViewModel @Inject constructor(
 
         val job = viewModelScope.launch {
             val addons = try {
-                addonRepository.getInstalledAddons().first().enabledAddons()
+                searchAddons()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -894,11 +896,14 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    private suspend fun searchAddons(): List<Addon> =
+        addonRepository.getInstalledAddons().first().enabledAddons() + serverCatalog.searchAddons.first()
+
     private suspend fun loadDiscoverCatalogs() {
         if (_uiState.value.discoverLocation == DiscoverLocation.OFF) return
         _uiState.update { it.copy(discoverLoading = true) }
         val addons = try {
-            addonRepository.getInstalledAddons().first().enabledAddons()
+            searchAddons()
         } catch (_: Exception) {
             _uiState.update { it.copy(discoverInitialized = true, discoverLoading = false) }
             return

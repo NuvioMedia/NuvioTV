@@ -10,6 +10,7 @@ import com.nuvio.tv.core.debrid.DirectDebridStreamPreparer
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackSessionStore
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackProgressStore
 import com.nuvio.tv.core.cloud.CloudLibraryRepository
+import com.nuvio.tv.core.party.PartyMedia
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
@@ -97,6 +98,9 @@ class PlayerViewModel @Inject constructor(
     private val externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val tvRecommendationManager: com.nuvio.tv.core.recommendations.TvRecommendationManager,
+    private val serverPlayback: com.nuvio.tv.data.mediaserver.ServerPlayback,
+    private val serverStreams: com.nuvio.tv.data.mediaserver.ServerStreams,
+    partyRepository: com.nuvio.tv.core.party.PartyRepository,
     profileManager: com.nuvio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -143,11 +147,38 @@ class PlayerViewModel @Inject constructor(
         streamBadgePresentation = streamBadgePresentation,
         playbackIssueReportRepository = playbackIssueReportRepository,
         tvRecommendationManager = tvRecommendationManager,
+        serverPlayback = serverPlayback,
+        serverStreams = serverStreams,
+        party = partyRepository,
         profileId = savedStateHandle.get<String>("profileId")?.toIntOrNull()
             ?: profileManager.activeProfileId.value,
         savedStateHandle = savedStateHandle,
         scope = viewModelScope
     )
+
+    init {
+        controller.bindParty()
+    }
+
+    val party: com.nuvio.tv.core.party.PartyRepository
+        get() = controller.party
+
+    val canUseParty: Boolean
+        get() = controller.canUseParty
+
+    val partyKey: String
+        get() = controller.partyKey
+
+    fun startParty() = controller.startParty()
+
+    fun catchUpParty() = controller.catchUpParty()
+
+    val partyMedia: PartyMedia
+        get() = controller.currentPartyMedia()
+
+    fun switchParty() = controller.party.publishMedia(controller.currentPartyMedia(), controller.currentPlaybackPositionMs() ?: 0L)
+
+    fun currentPartyStream() = controller.currentPartyStream()
 
     private val postPlayRecommendationController = PostPlayRecommendationController(
         playbackController = controller,

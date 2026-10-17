@@ -2820,8 +2820,6 @@
     <string name="playback_reset_to_default">Rikthe në parazgjedhje</string>
     <string name="playback_net_custom">Rrjet i personalizuar</string>
     <string name="playback_net_custom_sub">Përdor lidhje të shumta paralele për të marrë transmetimet progresive. Kur është joaktiv, përdoret një lidhje e vetme.</string>
-    <string name="playback_net_http2">Aktivizo HTTP/2</string>
-    <string name="playback_net_http2_sub">Aktivizo protokollin HTTP/2 për lidhjet e rrjetit, duke lejuar multiplexing të kërkesave dhe kohë më të shpejta handshake.</string>
     <string name="playback_net_parallel">Lidhjet paralele</string>
     <string name="playback_net_parallel_sub">Përdor disa lidhje paralelisht për të marrë transmetimet. Aktivizoje kur përjeton buffer edhe pse shpejtësia e shkarkimit është padyshim më se e mjaftueshme.</string>
     <string name="playback_net_connection_count">Numri i lidhjeve</string>

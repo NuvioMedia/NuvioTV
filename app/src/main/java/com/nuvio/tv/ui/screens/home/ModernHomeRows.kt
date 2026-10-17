@@ -71,6 +71,16 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.node.LayoutModifierNode
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.constrain
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalContext
@@ -85,8 +95,6 @@ import androidx.compose.ui.zIndex
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.tv.material3.Border
-import androidx.tv.material3.Card
-import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
@@ -117,7 +125,8 @@ import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.components.WatchedMarker
 import com.nuvio.tv.ui.components.placeholderCardShimmer
 import com.nuvio.tv.ui.components.nuvioCardDepth
-import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
+import com.nuvio.tv.ui.components.LightweightCard
+import com.nuvio.tv.ui.components.rememberArtworkBackedFocusGlow
 import com.nuvio.tv.ui.components.rememberPlaceholderShimmerOffsetState
 import com.nuvio.tv.LocalSidebarExpanded
 import kotlin.math.abs
@@ -1105,7 +1114,6 @@ private fun ModernCarouselCard(
     } else {
         rememberUpdatedState(cardWidth)
     }
-    val animatedCardWidth by animatedCardWidthState
     // Freeze the logo URL for row cards - enrichment updates must not cause flickering.
     // The first non-blank value wins and is never replaced.
     // Primary source of truth is the data-layer frozen value (survives navigation);
@@ -1287,27 +1295,26 @@ private fun ModernCarouselCard(
         )
     }
     val effectiveFocusedBorder = if (isFastScrolling) transparentFocusBorder else focusedBorder
-    val noFocusGlow = remember { CardDefaults.glow(focusedGlow = Glow.None) }
-    val cardGlow = when (payload) {
-        is ModernPayload.CollectionFolder -> rememberArtworkBackedCardGlow(
+    val cardFocusGlow = when (payload) {
+        is ModernPayload.CollectionFolder -> rememberArtworkBackedFocusGlow(
             imageUrl = imageUrl,
             fallbackSeed = "${item.title}:${payload.collectionTitle}",
             enabled = payload.focusGlowEnabled
         )
-        else -> noFocusGlow
+        else -> Glow.None
     }
-    val effectiveCardGlow = if (isFastScrolling) noFocusGlow else cardGlow
+    val effectiveFocusGlow = if (isFastScrolling) Glow.None else cardFocusGlow
     val titleStyle = remember(titleMedium) {
         titleMedium.copy(fontWeight = FontWeight.Medium)
     }
 
     Column(
         modifier = modifier
-            .width(animatedCardWidth)
+            .animatedWidth(animatedCardWidthState)
             .recompositionHighlighter(),
         verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
-        Card(
+        LightweightCard(
             onClick = {
                 if (longPressTriggered) {
                     longPressTriggered = false
@@ -1357,14 +1364,10 @@ private fun ModernCarouselCard(
                     }
                     false
                 },
-            shape = CardDefaults.shape(cardShape),
-            colors = CardDefaults.colors(
-                containerColor = backgroundCardColor,
-                focusedContainerColor = backgroundCardColor
-            ),
-            border = CardDefaults.border(focusedBorder = effectiveFocusedBorder),
-            scale = CardDefaults.scale(focusedScale = 1f),
-            glow = effectiveCardGlow
+            shape = cardShape,
+            containerColor = backgroundCardColor,
+            focusedBorder = effectiveFocusedBorder,
+            focusedGlow = effectiveFocusGlow
         ) {
             Box(
                 modifier = Modifier
@@ -1571,4 +1574,39 @@ private fun isSelectKey(keyCode: Int): Boolean {
     return keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
         keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
         keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
+}
+
+/**
+ * Modifier.width(width.value) that reads the width while measuring. The expand-on-focus width
+ * animation then re-lays out the card on each frame instead of recomposing all of it.
+ */
+private fun Modifier.animatedWidth(width: State<Dp>): Modifier = this then AnimatedWidthElement(width)
+
+private data class AnimatedWidthElement(val width: State<Dp>) : ModifierNodeElement<AnimatedWidthNode>() {
+    override fun create() = AnimatedWidthNode(width)
+
+    override fun update(node: AnimatedWidthNode) {
+        node.width = width
+    }
+}
+
+// Measures exactly like the node behind Modifier.width: a fixed width, coerced into the incoming
+// constraints, with the incoming height constraints passed through.
+private class AnimatedWidthNode(var width: State<Dp>) : LayoutModifierNode, Modifier.Node() {
+    private fun Density.widthPx() = width.value.roundToPx().coerceAtLeast(0)
+
+    override fun MeasureScope.measure(measurable: Measurable, constraints: Constraints): MeasureResult {
+        val placeable = measurable.measure(constraints.constrain(Constraints.fixedWidth(widthPx())))
+        return layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+    }
+
+    override fun IntrinsicMeasureScope.minIntrinsicWidth(measurable: IntrinsicMeasurable, height: Int) = widthPx()
+
+    override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurable: IntrinsicMeasurable, height: Int) = widthPx()
+
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurable: IntrinsicMeasurable, width: Int) =
+        measurable.minIntrinsicHeight(width)
+
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurable: IntrinsicMeasurable, width: Int) =
+        measurable.maxIntrinsicHeight(width)
 }

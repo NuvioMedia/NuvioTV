@@ -2785,8 +2785,6 @@
 <string name="playback_reset_to_default">Obnoviť predvolené</string>
 <string name="playback_net_custom">Vlastná sieť</string>
 <string name="playback_net_custom_sub">Použiť viacero paralelných pripojení na sťahovanie progresívnych streamov. Ak je funkcia vypnutá, použije sa jediné pripojenie.</string>
-<string name="playback_net_http2">Povoliť HTTP/2</string>
-<string name="playback_net_http2_sub">Povoliť protokol HTTP/2 pre sieťové pripojenia, čo umožňuje multiplexovanie požiadaviek a rýchlejšie nadviazanie spojenia.</string>
 <string name="playback_net_parallel">Paralelné pripojenia</string>
 <string name="playback_net_parallel_sub">Použiť viacero paralelných pripojení na sťahovanie streamov. Aktivujte, ak dochádza k sekaniu/načítavaniu, hoci je rýchlosť pripojenia dostatočná.</string>
 <string name="playback_net_connection_count">Počet pripojení</string>

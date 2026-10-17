@@ -3145,8 +3145,6 @@
     <string name="playback_reset_to_default">重置为默认</string>
     <string name="playback_net_custom">自定义网络</string>
     <string name="playback_net_custom_sub">使用多个并行连接来获取渐进式流。关闭时使用单一连接。</string>
-    <string name="playback_net_http2">启用 HTTP/2</string>
-    <string name="playback_net_http2_sub">为网络连接启用 HTTP/2 协议，支持请求多路复用和更快的握手时间。</string>
     <string name="playback_net_parallel">并行连接</string>
     <string name="playback_net_parallel_sub">使用多个并行连接来获取流。当您遇到缓冲但下载速度明显足够时启用。</string>
     <string name="playback_net_connection_count">连接数量</string>

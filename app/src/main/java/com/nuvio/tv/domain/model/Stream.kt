@@ -2,6 +2,8 @@ package com.nuvio.tv.domain.model
 
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.core.debrid.DebridProviders
+import com.nuvio.tv.data.mediaserver.ServerPlaybackTarget
+import kotlinx.serialization.Serializable
 
 /**
  * Represents a stream source from a Stremio addon
@@ -28,7 +30,8 @@ data class Stream(
     val subtitles: List<Subtitle> = emptyList(),
     val nzbUrl: String? = null,
     val servers: List<String>? = null,
-    val fileMustInclude: String? = null
+    val fileMustInclude: String? = null,
+    val serverTarget: ServerPlaybackTarget? = null
 ) {
     fun isUsenet(): Boolean = !nzbUrl.isNullOrBlank() && url.isNullOrBlank()
     /**
@@ -148,7 +151,7 @@ data class Stream(
     fun stableKey(occurrence: Int = 0): String = buildString {
         append(addonName)
         append('\u0000')
-        append(url ?: nzbUrl ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: "")
+        append(url ?: nzbUrl ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: serverTarget?.key() ?: "")
         append(fileMustInclude.orEmpty())
         append('\u0000')
         append(getEffectiveFileIdx() ?: "")
@@ -168,6 +171,7 @@ data class Stream(
 }
 
 @Immutable
+@Serializable
 data class StreamBadge(
     val name: String,
     val imageURL: String = "",

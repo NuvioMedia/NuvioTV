@@ -3093,8 +3093,6 @@
     <string name="playback_reset_to_default">Restaurar padrões</string>
     <string name="playback_net_custom">Rede personalizada</string>
     <string name="playback_net_custom_sub">Usa múltiplas conexões paralelas para buscar streams progressivos. Se desativado, usa uma única conexão.</string>
-    <string name="playback_net_http2">Ativar HTTP/2</string>
-    <string name="playback_net_http2_sub">Ativa o protocolo HTTP/2 para conexões de rede, permitindo multiplexação de requisições e conexões mais rápidas.</string>
     <string name="playback_net_parallel">Conexões paralelas</string>
     <string name="playback_net_parallel_sub">Usa múltiplas conexões em paralelo para buscar streams. Ative se estiver sofrendo com buffer, mesmo que sua velocidade de download seja mais que suficiente.</string>
     <string name="playback_net_connection_count">Número de conexões</string>
