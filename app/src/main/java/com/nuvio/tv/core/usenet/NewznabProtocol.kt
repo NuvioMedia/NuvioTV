@@ -217,7 +217,7 @@ object NewznabProtocol {
             val episodes = EPISODES.flatMap { it.findAll(release.title).toList() }
             if (episodes.isNotEmpty()) return episodes.any {
                 it.groupValues[1].toInt() == request.season && request.episode != null &&
-                    names(request.episode, it.groupValues[2].toInt(), it.groupValues[3])
+                    names(request.episode, it, release.title)
             }
             val seasons = SEASON.findAll(release.title).map { it.groupValues[1].toInt() }.toList()
             if (seasons.isNotEmpty()) return request.season in seasons
@@ -262,6 +262,8 @@ object NewznabProtocol {
     private val RELEASE_TAG = Regex("(?i)(?:^|[ ._-])(?:(?:2160|1080|720|576|480)[pi]|4k|uhd|web-?dl|web-?rip|blu-?ray|bdrip|hdtv|remux|" +
         "[xh][ .]?26[45]|hevc|proper|repack)(?=$|[ ._-])")
     private val NEXT_EPISODE = Regex("(?i)([ ._]*-[ ._]*E?|[ ._]*E)(\\d{1,3})")
+    /** An episode named by the time it shows, as in S01E04-10-00.A.M. */
+    private val CLOCK_NAME = Regex("(?i)^[ ._-]*\\d{1,2}[ ._:-]\\d{2}[ ._-]*[AP]\\.?M(?![A-Z])")
     // The separator after the number is not consumed, so S01-S03 names both seasons.
     private val SEASON = Regex("(?i)(?:^|[ ._-])(?:S|Season[ ._-]*)(\\d{1,3})(?=$|[ ._-])")
 
@@ -271,7 +273,7 @@ object NewznabProtocol {
      */
     fun episodeTemplate(title: String): Pair<String, Int>? {
         val matches = EPISODES.flatMap { it.findAll(title).toList() }
-        val match = matches.singleOrNull()?.takeIf { it.groupValues[3].isEmpty() } ?: return null
+        val match = matches.singleOrNull()?.takeIf { moreEpisodes(it, title).isEmpty() } ?: return null
         // The episode's own name, between its number and the first technical tag, differs per episode.
         val rest = title.substring(match.range.last + 1)
         val tags = RELEASE_TAG.find(rest)?.let { rest.substring(it.range.first) } ?: rest
@@ -284,18 +286,39 @@ object NewznabProtocol {
         else SEASON.findAll(title).map { it.groupValues[1].toInt() }.distinct().toList()
 
     /**
-     * Whether a release numbered [first] then [more] holds [episode]. E01E02E03 lists three
+     * Whether a release numbered by [match] in [title] holds [episode]. E01E02E03 lists three
      * episodes; only a hyphen spans the ones between, as in E01-E03, so E01E03 is not E02.
      */
-    private fun names(episode: Int, first: Int, more: String): Boolean {
-        if (episode == first) return true
-        var previous = first
-        for (next in NEXT_EPISODE.findAll(more)) {
-            val number = next.groupValues[2].toInt()
-            if (episode == number || '-' in next.groupValues[1] && episode in previous..number) return true
+    private fun names(episode: Int, match: MatchResult, title: String): Boolean {
+        var previous = match.groupValues[2].toInt()
+        if (episode == previous) return true
+        for ((number, ranged) in moreEpisodes(match, title)) {
+            if (episode == number || ranged && episode in previous..number) return true
             previous = number
         }
         return false
+    }
+
+    /**
+     * The episodes [match] numbers after its first, and whether a hyphen spans to each. Each must
+     * follow the one before, and one without an E has at least the first's digits. Names that tell
+     * the time, as in S01E02-8-00.A.M, S01E08-2-00.P.M or S01E04-10-00.A.M, number no other episode.
+     */
+    private fun moreEpisodes(match: MatchResult, title: String): List<Pair<Int, Boolean>> {
+        val first = match.groupValues[2]
+        val more = match.groupValues[3]
+        if (CLOCK_NAME.containsMatchIn(title.substring(match.groups[2]!!.range.last + 1))) return emptyList()
+        var previous = first.toInt()
+        val episodes = mutableListOf<Pair<Int, Boolean>>()
+        for (next in NEXT_EPISODE.findAll(more)) {
+            val separator = next.groupValues[1]
+            val number = next.groupValues[2].toInt()
+            val marked = separator.contains('E', ignoreCase = true)
+            if (number <= previous || !marked && next.groupValues[2].length < first.length) break
+            episodes += number to ('-' in separator)
+            previous = number
+        }
+        return episodes
     }
 
     private val ARTICLES = setOf("the", "a", "an")
