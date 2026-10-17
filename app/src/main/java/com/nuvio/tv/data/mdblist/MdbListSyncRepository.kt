@@ -132,8 +132,15 @@ class MdbListSyncRepository(
         val current = mutableState.value
         if (current.scope == scope && current.snapshot?.accountId == accountId) return current.snapshot
         val payload = storage.load(scope.profileId)
-        val snapshot = payload?.let { runCatching { json.decodeFromString<MdbListSyncSnapshot>(it) }.getOrNull() }
+        var snapshot = payload?.let { runCatching { json.decodeFromString<MdbListSyncSnapshot>(it) }.getOrNull() }
             ?.takeIf { it.accountId == accountId } ?: MdbListSyncSnapshot(accountId)
+        val playbackPayload = storage.loadPlayback(scope.profileId)
+        if (!playbackPayload.isNullOrBlank()) {
+            val playback = runCatching { json.decodeFromString<List<MdbListPlayback>>(playbackPayload) }.getOrNull()
+            if (playback != null) {
+                snapshot = snapshot.copy(playback = playback)
+            }
+        }
         checkScope(scope)
         val projection = runCatching { MdbListProgressProjection(snapshot) }.getOrNull()
         val usable = if (projection != null) snapshot else MdbListSyncSnapshot(accountId)
@@ -145,12 +152,30 @@ class MdbListSyncRepository(
     private suspend fun commit(scope: MdbListAuthScope, snapshot: MdbListSyncSnapshot) {
         checkScope(scope)
         val previous = mutableState.value.snapshot
+        val currentProjection = mutableProjection.value.projection
+        val onlyPlaybackChanged = previous != null &&
+            previous.watched === snapshot.watched &&
+            previous.dropped === snapshot.dropped &&
+            previous.library === snapshot.library &&
+            previous.invalidatedBuckets === snapshot.invalidatedBuckets &&
+            previous.watermark == snapshot.watermark &&
+            previous.activities === snapshot.activities &&
+            previous.checkedAtEpochMs == snapshot.checkedAtEpochMs &&
+            previous.isInitialized == snapshot.isInitialized &&
+            previous.accountId == snapshot.accountId
         val projection = if (previous != null && previous.watched === snapshot.watched &&
             previous.playback === snapshot.playback && previous.dropped === snapshot.dropped) {
-            mutableProjection.value.projection
+            currentProjection
+        } else if (onlyPlaybackChanged && currentProjection !== MdbListProgressProjection.Empty) {
+            currentProjection.withUpdatedPlayback(snapshot.playback)
         } else MdbListProgressProjection(snapshot)
-        val payload = json.encodeToString(snapshot)
-        storage.save(scope.profileId, payload) { checkScope(scope) }
+        if (onlyPlaybackChanged) {
+            val playbackPayload = json.encodeToString(snapshot.playback)
+            storage.savePlayback(scope.profileId, playbackPayload) { checkScope(scope) }
+        } else {
+            val payload = json.encodeToString(snapshot)
+            storage.save(scope.profileId, payload) { checkScope(scope) }
+        }
         checkScope(scope)
         mutableProjection.value = MdbListProgressState(scope, projection)
         mutableState.value = MdbListSyncState(scope, snapshot)

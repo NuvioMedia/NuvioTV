@@ -169,6 +169,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val hydratedProgressKeys = mutableSetOf<ProfileContentKey>()
+    private var lastHydratedProfileId: Int? = null
     private val syncJobs = mutableMapOf<Int, Job>()
     private val syncJobsLock = Any()
     private val remoteProgressWriteDeduplicator = RemoteProgressWriteDeduplicator()
@@ -234,6 +235,10 @@ class WatchProgressRepositoryImpl @Inject constructor(
             val contentId = progress.contentId
             if (contentId.isBlank()) return@forEach
             val key = ProfileContentKey(profileId, contentId)
+            val shouldHydrate = synchronized(hydratedProgressKeys) {
+                hydratedProgressKeys.add(key)
+            }
+            if (!shouldHydrate) return@forEach
             if (metadataState.value.containsKey(contentId)) return@forEach
 
             syncScope.launch {
@@ -398,9 +403,12 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     override val allProgress: Flow<List<WatchProgress>>
         get() = profileManager.activeProfileId.flatMapLatest { profileId ->
-            metadataState.value = emptyMap()
-            synchronized(hydratedProgressKeys) {
-                hydratedProgressKeys.removeAll { it.profileId == profileId }
+            if (lastHydratedProfileId != profileId) {
+                lastHydratedProfileId = profileId
+                metadataState.value = emptyMap()
+                synchronized(hydratedProgressKeys) {
+                    hydratedProgressKeys.removeAll { it.profileId == profileId }
+                }
             }
             activeProgressProviderFlow().flatMapLatest { provider ->
                 if (provider != null) {

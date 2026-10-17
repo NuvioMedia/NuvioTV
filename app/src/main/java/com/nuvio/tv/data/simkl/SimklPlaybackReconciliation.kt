@@ -1,15 +1,14 @@
 package com.nuvio.tv.data.simkl
 
 import com.nuvio.tv.domain.model.WatchProgress
-import com.nuvio.tv.domain.model.WatchedItem
 
 internal fun SimklSyncSnapshot.reconcileWatchedPlayback(): SimklSyncSnapshot {
     if (playback.isEmpty()) return this
-    val watchedItems = toSimklWatchedProjection().items
     val retainedPlayback = playback.filterNot { session ->
         session.toWatchProgress(entries)?.let { progress ->
-            entries.any { entry -> entry.hidesPlayback(progress) } ||
-                watchedItems.any { watched -> watched.supersedes(progress) }
+            entries.any { entry ->
+                entry.hidesPlayback(progress) || entry.supersedesPlayback(progress)
+            }
         } == true
     }
     return if (retainedPlayback.size == playback.size) this else copy(playback = retainedPlayback)
@@ -24,14 +23,40 @@ internal fun SimklSyncSnapshot.isHiddenFromContinueWatching(contentId: String): 
 internal fun SimklListStatus?.hidesContinueWatching(): Boolean =
     this == SimklListStatus.ON_HOLD || this == SimklListStatus.DROPPED
 
-private fun WatchedItem.supersedes(progress: WatchProgress): Boolean {
-    if (!contentType.equals(progress.contentType, ignoreCase = true)) return false
-    if (season != progress.season || episode != progress.episode) return false
-    val sameProviderItem = trackingProviderItemId
-        ?.takeIf(String::isNotBlank)
-        ?.equals(progress.trackingProviderItemId, ignoreCase = true) == true
-    val sameContent = contentId.equals(progress.contentId, ignoreCase = true)
-    return (sameProviderItem || sameContent) && watchedAt >= progress.lastWatched
+private fun SimklLibraryEntry.supersedesPlayback(progress: WatchProgress): Boolean {
+    if (
+        !matchesContent(
+            contentId = progress.contentId,
+            trackingProviderItemId = progress.trackingProviderItemId
+        )
+    ) {
+        return false
+    }
+    if (isMovieEntry()) {
+        if (!progress.contentType.equals("movie", ignoreCase = true)) return false
+        if (progress.season != null || progress.episode != null) return false
+        if (lastWatchedAt == null && status != SimklListStatus.COMPLETED) return false
+        val watchedAt = parseSimklUtcEpochMs(lastWatchedAt)
+            ?: parseSimklUtcEpochMs(addedToWatchlistAt)
+            ?: 0L
+        return watchedAt >= progress.lastWatched
+    }
+    if (progress.contentType.equals("movie", ignoreCase = true)) return false
+    val targetSeason = progress.season ?: return false
+    val targetEpisode = progress.episode ?: return false
+    seasons.forEach { season ->
+        season.episodes.forEach { episode ->
+            val seasonNumber = episode.tvdb?.season ?: season.number
+            val episodeNumber = episode.tvdb?.episode ?: episode.number
+            if (seasonNumber == targetSeason && episodeNumber == targetEpisode) {
+                val episodeWatchedAt = parseSimklUtcEpochMs(episode.watchedAt) ?: return@forEach
+                if (episodeWatchedAt >= progress.lastWatched) {
+                    return true
+                }
+            }
+        }
+    }
+    return false
 }
 
 private fun SimklLibraryEntry.hidesPlayback(progress: WatchProgress): Boolean {

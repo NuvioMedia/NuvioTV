@@ -11,6 +11,9 @@ interface SimklSyncStorage {
     suspend fun load(profileId: Int): String?
     suspend fun save(profileId: Int, payload: String)
     suspend fun remove(profileId: Int)
+    suspend fun loadPlayback(profileId: Int): String? = null
+    suspend fun savePlayback(profileId: Int, payload: String) {}
+    suspend fun clearPlayback(profileId: Int) {}
 }
 
 @Singleton
@@ -23,17 +26,35 @@ class AndroidSimklSyncStorage @Inject constructor(
     override suspend fun save(profileId: Int, payload: String) {
         factory.get(profileId, FEATURE_NAME).edit { preferences ->
             preferences[SNAPSHOT_KEY] = payload
+            preferences.remove(PLAYBACK_KEY)
         }
     }
 
     override suspend fun remove(profileId: Int) {
         factory.get(profileId, FEATURE_NAME).edit { preferences ->
             preferences.remove(SNAPSHOT_KEY)
+            preferences.remove(PLAYBACK_KEY)
+        }
+    }
+
+    override suspend fun loadPlayback(profileId: Int): String? =
+        factory.get(profileId, FEATURE_NAME).data.first()[PLAYBACK_KEY]
+
+    override suspend fun savePlayback(profileId: Int, payload: String) {
+        factory.get(profileId, FEATURE_NAME).edit { preferences ->
+            preferences[PLAYBACK_KEY] = payload
+        }
+    }
+
+    override suspend fun clearPlayback(profileId: Int) {
+        factory.get(profileId, FEATURE_NAME).edit { preferences ->
+            preferences.remove(PLAYBACK_KEY)
         }
     }
 
     private companion object {
         const val FEATURE_NAME = "simkl_sync"
         val SNAPSHOT_KEY = stringPreferencesKey("snapshot")
+        val PLAYBACK_KEY = stringPreferencesKey("playback")
     }
 }

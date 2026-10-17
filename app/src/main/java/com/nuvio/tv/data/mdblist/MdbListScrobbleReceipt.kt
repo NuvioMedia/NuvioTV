@@ -68,5 +68,44 @@ internal fun MdbListSyncSnapshot.applyScrobble(receipt: MdbListScrobbleReceipt):
         episodeTmdbId = target.episodeTmdbId,
         episodeTvdbId = target.episodeTvdbId
     )
+    if (!receipt.isWatched) {
+        val newSession = MdbListPlayback(
+            id = receipt.playbackId ?: this.playback.firstOrNull(target::matches)?.id,
+            type = target.type,
+            media = resolveMediaForPlayback(target.type, target.media),
+            progress = receipt.progress,
+            updatedAt = receipt.timestamp,
+            season = target.season,
+            episode = target.episode,
+            episodeTitle = target.episodeTitle,
+            episodeTmdbId = target.episodeTmdbId,
+            episodeTvdbId = target.episodeTvdbId
+        )
+        val normalizedPlayback = (remainingPlayback + newSession)
+            .groupBy { it.id?.let { id -> "id:$id" } ?: "${it.type}:${it.media.ids.key}:${it.season}:${it.episode}" }
+            .map { (_, records) -> records.maxBy { mdbListTimestamp(it.updatedAt) } }
+        return copy(watched = this.watched, playback = normalizedPlayback)
+    }
     return copy(watched = watched, playback = playback).normalizeMedia()
+}
+
+private fun MdbListSyncSnapshot.resolveMediaForPlayback(
+    type: MdbListItemType,
+    media: MdbListMedia
+): MdbListMedia {
+    val aliases = media.ids.aliases().toSet()
+    if (aliases.isEmpty()) return media
+    val isMovie = type == MdbListItemType.MOVIE
+    var merged = media
+    watched.forEach { record ->
+        if ((record.type == MdbListItemType.MOVIE) == isMovie && record.media.ids.aliases().any { it in aliases }) {
+            merged = merged.merged(record.media)
+        }
+    }
+    playback.forEach { record ->
+        if ((record.type == MdbListItemType.MOVIE) == isMovie && record.media.ids.aliases().any { it in aliases }) {
+            merged = merged.merged(record.media)
+        }
+    }
+    return merged
 }
