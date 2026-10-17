@@ -285,25 +285,29 @@ class BuiltInUsenetService @Inject constructor(
             }
             val releases = mutableListOf<UsenetRelease>()
             val servers = config.providers.filter { it.enabled }.map { it.serverUrl() }
-            // A season's episode count lets single-season packs be filtered and sorted by their size per
-            // episode. It is asked of TMDB once the first such pack shows up, alongside the indexers, and
-            // the list never waits for it: packs count with their whole size until it comes, and the
-            // list is arranged again then. Without an answer within a few seconds nothing changes.
-            val seasonEpisodes = java.util.concurrent.atomic.AtomicReference<Int?>(null)
-            val seasonLookup = if (!series || resolvedSeason == null) null else launch(start = CoroutineStart.LAZY) {
+            // Each season's episode count lets season packs, of one season or several, be filtered and
+            // sorted by their size per episode. The show's seasons are asked of TMDB once the first pack
+            // shows up, alongside the indexers, and the list never waits for them: packs count with their
+            // whole size until they come, and the list is arranged again then. Without an answer within
+            // a few seconds nothing changes.
+            val seasonEpisodes = java.util.concurrent.atomic.AtomicReference<Map<Int, Int>?>(null)
+            val seasonLookup = if (!series) null else launch(start = CoroutineStart.LAZY) {
                 val started = System.currentTimeMillis()
-                val count = withTimeoutOrNull(SEASON_LOOKUP_TIMEOUT_MS) {
+                val counts = withTimeoutOrNull(SEASON_LOOKUP_TIMEOUT_MS) {
                     try {
-                        (request.tmdbId ?: tmdb.ensureTmdbId(videoId, type))?.toIntOrNull()?.let {
-                            tmdbApi.getTvSeasonDetails(it, resolvedSeason, BuildConfig.TMDB_API_KEY).body()?.episodes?.size
-                        }?.takeIf { it > 0 }
+                        (request.tmdbId ?: tmdb.ensureTmdbId(videoId, type))?.toIntOrNull()?.let { id ->
+                            tmdbApi.getTvDetails(id, BuildConfig.TMDB_API_KEY).body()?.seasons?.mapNotNull {
+                                val number = it.seasonNumber ?: return@mapNotNull null
+                                it.episodeCount?.takeIf { count -> count > 0 }?.let { count -> number to count }
+                            }?.toMap()
+                        }?.takeIf { it.isNotEmpty() }
                     } catch (e: CancellationException) { throw e }
                     catch (_: Exception) { null }
                 }
-                seasonEpisodes.set(count)
-                runCatching { android.util.Log.i("UsenetSearch", "season episodes=$count ms=${System.currentTimeMillis() - started}") }
+                seasonEpisodes.set(counts)
+                runCatching { android.util.Log.i("UsenetSearch", "season episodes=$counts ms=${System.currentTimeMillis() - started}") }
             }
-            fun episodesPerSeason(): Int? = seasonEpisodes.get()
+            fun seasonCounts(): Map<Int, Int>? = seasonEpisodes.get()
             fun posted(release: UsenetRelease) = release.publishedAt.takeIf { it > 0 }
             fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers, posted(release)) == true
             fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers, posted(release)) == true
@@ -317,7 +321,7 @@ class BuiltInUsenetService @Inject constructor(
                 }
                 return NewznabProtocol.arrange(
                     if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config) else releases, config,
-                    episodesPerSeason = episodesPerSeason()) { ranks[it.nzbUrl] ?: 1 }
+                    seasonEpisodes = seasonCounts()) { ranks[it.nzbUrl] ?: 1 }
             }
             val enabled = config.indexers.filter { it.enabled }
             // Every indexer is searched at once unless the user chose priority fallback: then equal
@@ -348,7 +352,7 @@ class BuiltInUsenetService @Inject constructor(
                     log("show ${arranged.size} results")
                     if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
                         arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty(),
-                            episodes = episodesPerSeason(), sibling = sibling(it)) })))
+                            seasonEpisodes = seasonCounts(), sibling = sibling(it)) })))
                 }
                 // Like other sources, the list appears whole once every indexer answered, unless one is
                 // slow: after a short wait it shows what came and fills in from there. Progressive
@@ -387,7 +391,7 @@ class BuiltInUsenetService @Inject constructor(
                         } else "${indexer.name}: indexer search failed. Check the API URL, key and limits."))
                     } else {
                         releases += result.getOrThrow()
-                        if (releases.any { it.packSeasons.size == 1 }) seasonLookup?.start()
+                        if (releases.any { it.packSeasons.isNotEmpty() }) seasonLookup?.start()
                         if (!waiting) show()
                     }
                 }
@@ -455,16 +459,16 @@ class BuiltInUsenetService @Inject constructor(
     }
 
     private fun UsenetRelease.toStream(config: UsenetSourceConfiguration, failed: Boolean = false,
-        played: Boolean = false, pack: Boolean = false, episodes: Int? = null, sibling: SiblingOutcome? = null): Stream {
+        played: Boolean = false, pack: Boolean = false, seasonEpisodes: Map<Int, Int>? = null, sibling: SiblingOutcome? = null): Stream {
         fun gb(bytes: Long) = "%.2f GB".format(Locale.ROOT, bytes / (1024.0 * 1024 * 1024))
-        // A pack's size is the whole season's, not the episode's that plays: with the season's episode
-        // count, the size badge shows an episode's share and the details keep the whole size.
-        val episodeShare = episodeSize(episodes).takeIf { pack && it != size }
+        // A pack's size is its seasons', not the episode's that plays: with their episode counts, the
+        // size badge shows an episode's share and the details keep the whole size.
+        val episodeShare = episodeSize(seasonEpisodes).takeIf { pack && it != size }
+        val whole = if (packSeasons.size == 1) "whole season" else "whole pack"
         val sizeLabel = if (size <= 0) null else when {
             !pack -> gb(size)
-            episodeShare != null -> "${gb(size)} whole season (~${gb(episodeShare)} per episode)"
-            packSeasons.size == 1 -> "${gb(size)} (whole season)"
-            else -> "${gb(size)} (whole pack)"
+            episodeShare != null -> "${gb(size)} $whole (~${gb(episodeShare)} per episode)"
+            else -> "${gb(size)} ($whole)"
         }
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
         val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
