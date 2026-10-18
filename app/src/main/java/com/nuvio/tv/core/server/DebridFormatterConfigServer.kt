@@ -20,6 +20,7 @@ class DebridFormatterConfigServer(
     private val settingsMapType = object : TypeToken<Map<String, Any?>>() {}.type
 
     override fun serve(session: IHTTPSession): Response {
+        if (isRequestBodyTooLarge(session.headers)) return payloadTooLargeResponse()
         return when {
             session.method == Method.GET && session.uri == "/" -> serveWebPage()
             session.method == Method.GET && session.uri == "/logo.png" -> serveLogo()

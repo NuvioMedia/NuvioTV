@@ -13,6 +13,7 @@ class CustomPosterConfigServer(
 ) : NanoHTTPD(port) {
 
     override fun serve(session: IHTTPSession): Response {
+        if (isRequestBodyTooLarge(session.headers)) return payloadTooLargeResponse()
         return when {
             session.method == Method.GET && session.uri == "/" -> serveWebPage()
             session.method == Method.GET && session.uri == "/api/pattern" -> serveCurrentPattern()

@@ -32,6 +32,7 @@ class AddonConfigServer(
     }
 
     override fun serve(session: IHTTPSession): Response {
+        if (isRequestBodyTooLarge(session.headers)) return payloadTooLargeResponse()
         val uri = session.uri
         val method = session.method
 
