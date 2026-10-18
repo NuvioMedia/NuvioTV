@@ -20,6 +20,7 @@ internal class IecPassthroughAudioSink(
     private val onDiagnosticEvent: ((String) -> Unit)? = null,
     private val keepAliveEnabled: Boolean = true,
     private val keepAliveThreadEnabled: Boolean = true,
+    private val audioOutputReady: () -> Boolean = { true },
     private val onIecBecameReady: (() -> Unit)? = null
 ) : ForwardingAudioSink(sink) {
 
@@ -54,6 +55,11 @@ internal class IecPassthroughAudioSink(
     private var iecFailedThisSession: Boolean = false
     private var writeStallStartedNanos: Long = WRITE_STALL_NOT_STARTED
     private var totalWriteStalls: Long = 0L
+    private var reopenedAtNanos: Long = NEVER
+    private var reopensForFormat: Int = 0
+    private var deadOutputSinceNanos: Long = NEVER
+    private var outputCheckedAtNanos: Long = NEVER
+    private var fillerWriteCode: Int = 0
 
     // TrueHD keep-alive: the track is never paused or flushed once it plays. Content is held back
     // while paused, and padding-only MAT frames keep the HDMI bitstream going, so the receiver and
@@ -128,6 +134,8 @@ internal class IecPassthroughAudioSink(
         configuredBufferSize = specifiedBufferSize
         configuredOutputChannels = outputChannels
         releaseIec()
+        reopenedAtNanos = NEVER
+        reopensForFormat = 0
         LiveDirectAudioPlayback.setPassthroughLive(false)
         if (hbrIecEnabled) trackFactory.startProbe()
         val tunnelReady = !tunnelingRequested
@@ -174,25 +182,33 @@ internal class IecPassthroughAudioSink(
             return super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
         }
         maybeReportHealth()
+        notePts(presentationTimeUs)
+        if (!drainPending()) return false
+        if (mode == Mode.FORWARD) {
+            return super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
+        }
+        val accepted = queueForIec(buffer, presentationTimeUs, encodedAccessUnitCount)
+        drainPending()
+        if (mode == Mode.FORWARD) return true
+        return accepted
+    }
+
+    private fun notePts(presentationTimeUs: Long) {
         if (firstBufferPtsUs == C.TIME_UNSET && presentationTimeUs != C.TIME_UNSET) {
             firstBufferPtsUs = presentationTimeUs
         }
         if (mode == Mode.DTS_HD && startPtsUs == C.TIME_UNSET && presentationTimeUs != C.TIME_UNSET) {
             startPtsUs = presentationTimeUs
         }
-        if (!drainPending()) return false
-        if (mode == Mode.FORWARD) {
-            return super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
-        }
+    }
+
+    private fun queueForIec(buffer: ByteBuffer, presentationTimeUs: Long, encodedAccessUnitCount: Int): Boolean {
         rememberSource(buffer, presentationTimeUs, encodedAccessUnitCount)
-        val accepted = when (mode) {
+        return when (mode) {
             Mode.TRUEHD -> handleTrueHd(buffer, presentationTimeUs)
             Mode.DTS_HD -> handleDtsHd(buffer, presentationTimeUs)
             Mode.FORWARD -> super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
         }
-        drainPending()
-        if (mode == Mode.FORWARD) return true
-        return accepted
     }
 
     override fun getCurrentPositionUs(sourceEnded: Boolean): Long {
@@ -249,6 +265,7 @@ internal class IecPassthroughAudioSink(
     override fun pause() {
         playing = false
         writeStallStartedNanos = WRITE_STALL_NOT_STARTED
+        deadOutputSinceNanos = NEVER
         timestampClock.reset()
         if (isIecActive) {
             if (isKeepAliveActive) {
@@ -658,7 +675,9 @@ internal class IecPassthroughAudioSink(
                 var capHeld = false
                 val written = synchronized(writeLock) {
                     if (keepAlive) {
-                        if (!writeFiller(track)) return@synchronized 0
+                        if (!writeFiller(track)) {
+                            return@synchronized if (fillerWriteCode == WRITE_ERROR_DEAD_OBJECT) fillerWriteCode else 0
+                        }
                         val head = track.playbackHeadFrames()
                         val queued = writtenFrames - head
                         if (queued >= keepAliveCapFrames(track) && headMoving(head)) {
@@ -674,6 +693,7 @@ internal class IecPassthroughAudioSink(
                     }
                     count
                 }
+                if (written == WRITE_ERROR_DEAD_OBJECT) return reopenAfterDeadOutput(stallIsFatal)
                 if (written < 0) {
                     return fallbackToWrappedSink("write_error code=$written")
                 }
@@ -751,7 +771,8 @@ internal class IecPassthroughAudioSink(
     internal fun keepAliveTick() {
         val track = iecTrack ?: return
         synchronized(writeLock) {
-            if (!isKeepAliveActive || heldTooLong) return
+            if (track !== iecTrack || !isKeepAliveActive || heldTooLong) return
+            if (fillerWriteCode == WRITE_ERROR_DEAD_OBJECT) return
             if (heldSinceNanos != NOT_HELD && nanoTime() - heldSinceNanos >= KEEP_ALIVE_MAX_HOLD_NANOS) {
                 // A very long pause: let the output rest as it did before. Resuming re-announces once.
                 heldTooLong = true
@@ -792,6 +813,7 @@ internal class IecPassthroughAudioSink(
         if (fillerOffset == 0 && !whole) return true
         while (fillerOffset < fillerFrame.size) {
             val count = track.write(fillerFrame, fillerOffset, fillerFrame.size - fillerOffset)
+            fillerWriteCode = count
             if (count <= 0) return false
             val before = writtenFrames
             fillerOffset += count
@@ -830,6 +852,67 @@ internal class IecPassthroughAudioSink(
 
     private fun keepAliveLowWaterFrames(track: IecAudioTrack): Long =
         KEEP_ALIVE_LOW_WATER_MS * track.sampleRate / 1000L
+
+    /**
+     * The output went away under the track (HDMI hotplug, TV input switch). Opens a new IEC track and carries on
+     * there with the units the old track had not taken; RAW only when that open fails, when the output is not
+     * back within [IEC_REOPEN_OUTPUT_WAIT_NANOS] of playing, or on another loss soon after.
+     */
+    private fun reopenAfterDeadOutput(stallIsFatal: Boolean): Boolean {
+        val reason = "write_error code=$WRITE_ERROR_DEAD_OBJECT"
+        val format = configuredFormat ?: return fallbackToWrappedSink(reason)
+        val now = nanoTime()
+        if (reopensForFormat >= MAX_REOPENS_PER_FORMAT ||
+            (reopenedAtNanos != NEVER && now - reopenedAtNanos < IEC_REOPEN_BACKOFF_NANOS)
+        ) {
+            return fallbackToWrappedSink("$reason reopen=again_too_soon")
+        }
+        // The first check waits one poll, so a link that is still going down is not taken for one that is back.
+        if (outputCheckedAtNanos == NEVER) {
+            outputCheckedAtNanos = now
+            return false
+        }
+        if (now - outputCheckedAtNanos < IEC_REOPEN_POLL_NANOS) return false
+        outputCheckedAtNanos = now
+        if (!audioOutputReady()) {
+            if (!playing) return false
+            if (deadOutputSinceNanos == NEVER) deadOutputSinceNanos = now
+            val waited = now - deadOutputSinceNanos
+            if (waited < IEC_REOPEN_OUTPUT_WAIT_NANOS) return false
+            return fallbackToWrappedSink("$reason reopen=output_not_back_ms=${waited / 1_000_000L}")
+        }
+        val lost = "head=${iecTrack?.playbackHeadFrames()} written=$writtenFrames ${keepAliveState()} " +
+            "stalls=$totalWriteStalls"
+        val queued = ArrayList(uncommitted)
+        val endOfStreamRequested = handledEndOfStream
+        resetIecState(keepTrack = false)
+        reopenedAtNanos = now
+        reopensForFormat++
+        if (!openIec(format)) {
+            uncommitted.addAll(queued)
+            handledEndOfStream = endOfStreamRequested
+            return fallbackToWrappedSink("$reason reopen=failed")
+        }
+        dtsDuration.clockSampleRate = clockSampleRateFor(iecOutputSampleRate)
+        android.util.Log.i(
+            "IecPassthrough",
+            "IEC output lost; reopened reason=$reason payload=${iecTrack?.payload} rate=$iecOutputSampleRate " +
+                "replay=${queued.size} $lost"
+        )
+        onDiagnosticEvent?.invoke(
+            "iec_reopened reason=$reason mime=${format.sampleMimeType} payload=${iecTrack?.payload} replay=${queued.size}"
+        )
+        for (au in queued) {
+            notePts(au.ptsUs)
+            queueForIec(ByteBuffer.wrap(au.bytes), au.ptsUs, au.count)
+        }
+        if (endOfStreamRequested) {
+            leftover = ByteArray(0)
+            handledEndOfStream = true
+        }
+        refreshPassthroughLive()
+        return drainPending(stallIsFatal)
+    }
 
     private fun fallbackToWrappedSink(reason: String): Boolean {
         val replays = ArrayList(uncommitted)
@@ -932,11 +1015,14 @@ internal class IecPassthroughAudioSink(
         writeStallStartedNanos = WRITE_STALL_NOT_STARTED
         timestampClock.reset()
         if (!keepTrack) {
+            deadOutputSinceNanos = NEVER
+            outputCheckedAtNanos = NEVER
             stopKeepAliveThread()
             synchronized(writeLock) {
                 iecTrack?.release()
                 iecTrack = null
                 trackStarted = false
+                fillerWriteCode = 0
                 fillerFrame = ByteArray(0)
                 fillerFramesWritten = 0L
                 heldSinceNanos = NOT_HELD
@@ -982,6 +1068,12 @@ internal class IecPassthroughAudioSink(
         internal const val WRITE_STALL_BUDGET_NANOS = 500_000_000L
         private const val WRITE_STALL_NOT_STARTED = Long.MIN_VALUE
         internal const val WRITE_ERROR_FALLBACK_REFUSED = -1_000
+        internal const val WRITE_ERROR_DEAD_OBJECT = -6
+        internal const val IEC_REOPEN_BACKOFF_NANOS = 30_000_000_000L
+        internal const val IEC_REOPEN_OUTPUT_WAIT_NANOS = 5_000_000_000L
+        internal const val IEC_REOPEN_POLL_NANOS = 500_000_000L
+        internal const val MAX_REOPENS_PER_FORMAT = 5
+        private const val NEVER = Long.MIN_VALUE
         private const val HEALTH_INTERVAL_NANOS = 5_000_000_000L
         private const val FRAME_POOL_LIMIT = 8
         private const val NOT_HELD = Long.MIN_VALUE

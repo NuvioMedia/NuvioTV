@@ -56,6 +56,20 @@ internal object AudioOutputRouteDetector {
         return detect(context)?.isBluetooth == true
     }
 
+    /** Whether an HDMI output is connected, so a bitstream track can be opened on it again. */
+    @SuppressLint("NewApi", "InlinedApi")
+    fun hasHdmiOutput(context: Context): Boolean {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            ?: return true
+        return runCatching {
+            audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
+                it.type == AudioDeviceInfo.TYPE_HDMI ||
+                    it.type == AudioDeviceInfo.TYPE_HDMI_ARC ||
+                    it.type == AudioDeviceInfo.TYPE_HDMI_EARC
+            }
+        }.getOrDefault(true)
+    }
+
     @SuppressLint("NewApi")
     private fun detectMediaRoutedDevice(audioManager: AudioManager): AudioDeviceInfo? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
