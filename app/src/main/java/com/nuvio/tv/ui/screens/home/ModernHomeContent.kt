@@ -74,6 +74,7 @@ import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.core.runtime.TvPerformanceProfile
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.MetaPreview
@@ -144,6 +145,8 @@ fun ModernHomeContent(
     blockLeftOnFirstExpandedItem: Boolean = false,
     onCancelTrailerPreview: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val performanceProfile = remember(context) { TvPerformanceProfile.detect(context) }
     val onRowItemFocusedPassedDown = rememberUpdatedState(onRowItemFocusedCallback)
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val sidebarExpanded = LocalSidebarExpanded.current
@@ -364,7 +367,7 @@ fun ModernHomeContent(
             return@LaunchedEffect
         }
         if (selection.focusKey == lastRequestedTrailerFocusKey) return@LaunchedEffect
-        delay(150)
+        delay(performanceProfile.trailerPreviewFocusDelayMillis)
         if (focusedCatalogSelection.value?.focusKey != selection.focusKey) return@LaunchedEffect
         onRequestTrailerPreview(
             payload.itemId,

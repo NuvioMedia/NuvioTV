@@ -17,6 +17,7 @@ internal data class TvPerformanceProfile(
     val homeNestedPrefetchItemCount: Int,
     val allowsRealtimeBlur: Boolean,
     val reducesDefaultMotion: Boolean,
+    val trailerPreviewFocusDelayMillis: Long,
 ) {
     fun effectiveNavigationMotion(preference: NavigationMotion): NavigationMotion =
         if (reducesDefaultMotion && preference == NavigationMotion.FULL) NavigationMotion.REDUCED else preference
@@ -48,8 +49,8 @@ internal data class TvPerformanceProfile(
             else -> HIGH_CAPACITY
         }
 
-        private val LOW_RAM = TvPerformanceProfile(0.08, 8, 4, 1, 0, 0, 0, false, true)
-        private val BALANCED = TvPerformanceProfile(0.16, 16, 8, 2, 1, 1, 1, true, false)
-        private val HIGH_CAPACITY = TvPerformanceProfile(0.25, 32, 16, 4, 2, 2, 2, true, false)
+        private val LOW_RAM = TvPerformanceProfile(0.08, 8, 4, 1, 0, 0, 0, false, true, 1_500L)
+        private val BALANCED = TvPerformanceProfile(0.16, 16, 8, 2, 1, 1, 1, true, false, 1_200L)
+        private val HIGH_CAPACITY = TvPerformanceProfile(0.25, 32, 16, 4, 2, 2, 2, true, false, 1_200L)
     }
 }

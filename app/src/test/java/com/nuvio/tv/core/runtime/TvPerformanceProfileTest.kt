@@ -23,6 +23,7 @@ class TvPerformanceProfileTest {
         assertEquals(NavigationMotion.OFF, profile.effectiveNavigationMotion(NavigationMotion.OFF))
         assertEquals(AnimationIntensity.SUBTLE, profile.effectiveAnimationIntensity(AnimationIntensity.STANDARD))
         assertEquals(AnimationIntensity.CINEMATIC, profile.effectiveAnimationIntensity(AnimationIntensity.CINEMATIC))
+        assertEquals(1_500L, profile.trailerPreviewFocusDelayMillis)
     }
 
     @Test
@@ -45,6 +46,7 @@ class TvPerformanceProfileTest {
         assertEquals(true, profile.allowsRealtimeBlur)
         assertEquals(NavigationMotion.FULL, profile.effectiveNavigationMotion(NavigationMotion.FULL))
         assertEquals(AnimationIntensity.STANDARD, profile.effectiveAnimationIntensity(AnimationIntensity.STANDARD))
+        assertEquals(1_200L, profile.trailerPreviewFocusDelayMillis)
     }
 
     @Test
@@ -59,6 +61,7 @@ class TvPerformanceProfileTest {
         assertEquals(2, profile.homeCatalogPrefetchAheadRows)
         assertEquals(2, profile.homeNestedPrefetchItemCount)
         assertEquals(true, profile.allowsRealtimeBlur)
+        assertEquals(1_200L, profile.trailerPreviewFocusDelayMillis)
     }
 
     private companion object {

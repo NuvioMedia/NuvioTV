@@ -466,7 +466,7 @@ fun ClassicHomeContent(
         latestOnCancelTrailerPreview()
         if (!uiState.focusedPosterBackdropTrailerEnabled || isVerticalScrollingState.value) return@LaunchedEffect
         val item = focusedCatalogItem ?: return@LaunchedEffect
-        delay(150)
+        delay(performanceProfile.trailerPreviewFocusDelayMillis)
         if (focusedCatalogItem?.id == item.id) latestOnRequestTrailerPreview(item)
     }
     val immersiveFadeDistancePx = remember(density) {
