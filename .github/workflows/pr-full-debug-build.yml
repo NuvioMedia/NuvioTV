@@ -71,6 +71,7 @@ jobs:
           ./gradlew :app:testFullDebugUnitTest
           --tests 'com.nuvio.tv.updater.*'
           --tests 'com.nuvio.tv.core.runtime.TvPerformanceProfileTest'
+          --tests 'com.nuvio.tv.core.livetv.*'
           --tests 'com.nuvio.tv.data.local.PlayerSourceSelectionStoreTest'
           --tests 'com.nuvio.tv.ui.screens.player.EmbeddedChapterMetadataTest'
           :app:compileFullDebugAndroidTestKotlin
