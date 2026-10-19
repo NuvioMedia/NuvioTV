@@ -72,6 +72,7 @@ jobs:
           --tests 'com.nuvio.tv.updater.*'
           --tests 'com.nuvio.tv.core.runtime.TvPerformanceProfileTest'
           --tests 'com.nuvio.tv.data.local.PlayerSourceSelectionStoreTest'
+          --tests 'com.nuvio.tv.ui.screens.player.EmbeddedChapterMetadataTest'
           :app:assembleFullDebug --stacktrace
 
       - name: Upload fullDebug APK

@@ -12,6 +12,7 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     headers: Map<String, String>,
     loadSavedProgress: Boolean
 ) {
+    _uiState.update { it.copy(embeddedChapterMetadata = null) }
     val playbackRequest = PlayerMediaSourceFactory.normalizePlaybackRequest(url, headers)
     val playbackUrl = playbackRequest.url
     val playbackHeaders = playbackRequest.headers

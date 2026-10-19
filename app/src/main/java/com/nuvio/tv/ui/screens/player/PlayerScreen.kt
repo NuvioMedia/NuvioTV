@@ -47,6 +47,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.absoluteOffset
@@ -2204,6 +2205,12 @@ private fun PlayerControlsOverlay(
     reportCodeVisible: Boolean,
     skipButtonVisible: Boolean = false
 ) {
+    var showChapterPicker by remember { mutableStateOf(false) }
+    val embeddedChapters = remember(uiState.embeddedChapterMetadata) {
+        uiState.embeddedChapterMetadata?.events.orEmpty().filter {
+            it.body is com.nuvio.tv.core.player.metadata.TimedMetadataBody.Chapter
+        }
+    }
     val customPlayPainter = rememberRawSvgPainter(R.raw.ic_player_play)
     val customPausePainter = rememberRawSvgPainter(R.raw.ic_player_pause)
     val customSubtitlePainter = rememberRawSvgPainter(R.raw.ic_player_subtitles)
@@ -2468,6 +2475,16 @@ private fun PlayerControlsOverlay(
                             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            if (!isLivePlayback && embeddedChapters.isNotEmpty()) {
+                                ControlButton(
+                                    icon = Icons.AutoMirrored.Filled.List,
+                                    contentDescription = stringResource(R.string.cd_player_chapters),
+                                    onClick = { showChapterPicker = true },
+                                    upFocusRequester = progressUpTarget,
+                                    onDownKey = onHideControls,
+                                    onFocused = onResetHideTimer
+                                )
+                            }
                             if (!isLivePlayback && playbackTimeline.duration > 0) ControlButton(
                                 icon = Icons.Default.Flag,
                                 contentDescription = stringResource(R.string.scene_bookmarks_title),
@@ -2554,6 +2571,81 @@ private fun PlayerControlsOverlay(
             }
         }
     }
+
+    if (showChapterPicker) {
+        ChapterPickerDialog(
+            chapters = embeddedChapters,
+            onSelect = { positionMs ->
+                showChapterPicker = false
+                onToggleMoreActions()
+                onSeekTo(positionMs)
+            },
+            onDismiss = { showChapterPicker = false }
+        )
+    }
+}
+
+@Composable
+private fun ChapterPickerDialog(
+    chapters: List<com.nuvio.tv.core.player.metadata.TimedMetadataEvent>,
+    onSelect: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .width(520.dp)
+                .heightIn(max = 600.dp)
+                .clip(RoundedCornerShape(NuvioTheme.radii.xl))
+                .background(NuvioTheme.colors.BackgroundElevated)
+                .padding(NuvioTheme.spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+        ) {
+            Text(
+                text = stringResource(R.string.player_chapters_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = NuvioTheme.colors.TextPrimary
+            )
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)) {
+                itemsIndexed(chapters, key = { _, event -> event.id }) { index, event ->
+                    val chapter = event.body as? com.nuvio.tv.core.player.metadata.TimedMetadataBody.Chapter
+                        ?: return@itemsIndexed
+                    val fallback = stringResource(R.string.player_chapter_number, index + 1)
+                    Card(
+                        onClick = { onSelect(event.startMs) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.colors(
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground
+                        ),
+                        shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.sm))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.md),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = chapter.title.ifBlank { fallback },
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = NuvioTheme.colors.TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = formatTime(event.startMs),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = NuvioTheme.colors.TextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -2569,6 +2661,7 @@ private fun PlayerControlsProgressBarHost(
     val metadataState by viewModel.uiState.collectAsState()
     val bookmarkState by viewModel.sceneBookmarks.state.collectAsState()
     val markers = rememberPlayerTimedMarkers(metadataState.timedMetadata, playbackTimeline.duration) +
+        rememberPlayerTimedMarkers(metadataState.embeddedChapterMetadata, playbackTimeline.duration) +
         bookmarkState.let { viewModel.sceneBookmarks.markers(playbackTimeline.duration) }
 
     Column(Modifier.fillMaxWidth()) {
@@ -2945,6 +3038,7 @@ private fun SeekOverlayHost(viewModel: PlayerViewModel) {
     SeekOverlay(
         preview = { PlayerTimelinePreviewHost(viewModel) },
         timedMarkers = rememberPlayerTimedMarkers(metadataState.timedMetadata, playbackTimeline.duration) +
+            rememberPlayerTimedMarkers(metadataState.embeddedChapterMetadata, playbackTimeline.duration) +
             bookmarkState.let { viewModel.sceneBookmarks.markers(playbackTimeline.duration) },
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration,

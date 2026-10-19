@@ -7,6 +7,9 @@
     <string name="source_mode_saver_desc">Prefere até 720p e arquivos declarados menores. O consumo real de rede pode variar.</string>
     <string name="source_score_explanation">Pontuação declarada %1$d · resolução %2$d · tamanho %3$d · cache %4$d. Codec, HDR e rede não verificados.</string>
     <string name="scene_bookmarks_title">Momentos salvos</string>
+    <string name="cd_player_chapters">Capítulos</string>
+    <string name="player_chapters_title">Capítulos</string>
+    <string name="player_chapter_number">Capítulo %1$d</string>
     <string name="scene_bookmarks_other_source">Salvo em outra fonte</string>
     <string name="scene_bookmarks_confirm_notice">Este momento foi salvo em outra fonte. Confirme que é o mesmo corte antes de usar seu timestamp.</string>
     <string name="scene_bookmarks_confirm">Usar este timestamp</string>

@@ -15,6 +15,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
@@ -1378,6 +1379,31 @@ internal fun PlayerRuntimeController.initializePlayer(
 
                     override fun onTracksChanged(tracks: Tracks) {
                         updateAvailableTracks(tracks)
+                    }
+
+                    @OptIn(UnstableApi::class)
+                    override fun onMetadata(metadata: Metadata) {
+                        if (isReleasingPlayer) return
+                        val mediaId = contentId?.takeIf { it.isNotBlank() } ?: return
+                        val mediaType = contentType?.takeIf { it.isNotBlank() } ?: return
+                        val videoId = currentVideoId?.takeIf { it.isNotBlank() } ?: mediaId
+                        val scope = com.nuvio.tv.core.player.metadata.TimedMetadataScope(
+                            mediaId = mediaId,
+                            mediaType = mediaType,
+                            videoId = videoId
+                        )
+                        val currentTimeline = _uiState.value.embeddedChapterMetadata
+                        val mergedTimeline = mergeMedia3ChapterMetadata(
+                            current = currentTimeline,
+                            metadata = metadata,
+                            scope = scope,
+                            durationMs = duration.takeIf { it > 0L }
+                        )
+                        if (mergedTimeline != currentTimeline) {
+                            _uiState.update { state ->
+                                state.copy(embeddedChapterMetadata = mergedTimeline)
+                            }
+                        }
                     }
 
                     override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
