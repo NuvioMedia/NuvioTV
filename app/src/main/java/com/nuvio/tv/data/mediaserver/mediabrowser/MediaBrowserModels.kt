@@ -70,11 +70,23 @@ internal data class BaseItem(
     @SerialName("ParentIndexNumber") val parentIndexNumber: Int? = null,
     @SerialName("LocationType") val locationType: String? = null,
     @SerialName("UserData") val userData: UserItemData? = null,
-    @SerialName("MediaSources") val mediaSources: List<MediaSource> = emptyList()
+    @SerialName("MediaSources") val mediaSources: List<MediaSource> = emptyList(),
+    /** Jellyfin 10.9+: mediaSourceId -> thumbnail width -> sheet info. */
+    @SerialName("Trickplay") val trickplay: Map<String, Map<String, TrickplayInfo>>? = null
 ) {
     val isMissing: Boolean
         get() = locationType.equals("Virtual", ignoreCase = true)
 }
+
+@Serializable
+internal data class TrickplayInfo(
+    @SerialName("Width") val width: Int = 0,
+    @SerialName("Height") val height: Int = 0,
+    @SerialName("TileWidth") val tileWidth: Int = 0,
+    @SerialName("TileHeight") val tileHeight: Int = 0,
+    @SerialName("ThumbnailCount") val thumbnailCount: Int = 0,
+    @SerialName("Interval") val interval: Long = 0
+)
 
 @Serializable
 internal data class NamedItem(

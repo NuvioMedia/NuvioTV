@@ -25,6 +25,7 @@ internal fun PlayerRuntimeController.reportServerPlayback() {
     if (url != reportedServerUrl) {
         serverPlayback.stop(reportedServerUrl)
         reportedServerUrl = url.takeIf(serverPlayback::isServerSource)
+        seekPreviewController.load(reportedServerUrl)
         refreshServerTracks()
     }
     val state = _uiState.value
@@ -40,6 +41,7 @@ internal fun PlayerRuntimeController.reportServerPlayback() {
 internal fun PlayerRuntimeController.stopServerPlayback() {
     serverPlayback.stop(reportedServerUrl ?: currentStreamUrl)
     reportedServerUrl = null
+    seekPreviewController.clear()
 }
 
 internal val PlayerRuntimeController.isServerStream: Boolean

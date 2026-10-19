@@ -17,6 +17,8 @@ import com.nuvio.tv.data.mediaserver.ServerPlaybackRequest
 import com.nuvio.tv.data.mediaserver.ServerPlaybackSession
 import com.nuvio.tv.data.mediaserver.ServerPlayerCapabilities
 import com.nuvio.tv.data.mediaserver.ServerProvider
+import com.nuvio.tv.data.mediaserver.SeekPreview
+import com.nuvio.tv.data.mediaserver.SeekPreviewLayout
 import com.nuvio.tv.data.mediaserver.ServerSession
 import com.nuvio.tv.data.mediaserver.ServerSignIn
 import com.nuvio.tv.data.mediaserver.ServerTitle
@@ -48,6 +50,9 @@ internal abstract class MediaBrowserProvider(
     private val client = MediaBrowserClient(authorizationHeader, http, identity)
     private val aioStreamsServers = ConcurrentHashMap<String, Boolean>()
     private val libraryGenres = ConcurrentHashMap<String, String>()
+
+    /** Only Jellyfin (10.9+) has the trickplay API; other MediaBrowser-style servers opt out. */
+    protected open val supportsTrickplay: Boolean get() = false
 
     protected abstract fun viewsEndpoint(userId: String): Endpoint
 
@@ -372,6 +377,35 @@ internal abstract class MediaBrowserProvider(
         )
         val info = client.json.decodeFromString(PlaybackInfoResult.serializer(), response.body)
         return playbackSession(session, request, info, client.deviceId)
+    }
+
+    override suspend fun seekPreview(session: ServerSession, playback: ServerPlaybackSession): SeekPreview? {
+        if (!supportsTrickplay) return null
+        val itemId = playback.target.item.itemId
+        val item = try {
+            item(session, itemId, "Trickplay")
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            return null
+        }
+        val selected = selectTrickplay(itemId, playback.mediaSourceId, item.trickplay.orEmpty()) ?: return null
+        return object : SeekPreview {
+            override val layout: SeekPreviewLayout = selected.layout
+
+            override suspend fun sheet(index: Int): ByteArray? = try {
+                client.getBytes(
+                    baseUrl = session.apiRoot,
+                    path = "/Videos/${pathSegment(itemId)}/Trickplay/${selected.width}/$index.jpg",
+                    token = session.token,
+                    query = mapOf("mediaSourceId" to playback.mediaSourceId)
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 
     internal fun playbackSession(
