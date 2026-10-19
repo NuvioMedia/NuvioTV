@@ -52,8 +52,8 @@ object XmlTvParser {
                 setFeature("http://xml.org/sax/features/external-general-entities", false)
                 setFeature("http://xml.org/sax/features/external-parameter-entities", false)
                 setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-                setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "")
-                setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
+                runCatching { setProperty("http://javax.xml.XMLConstants/property/accessExternalDTD", "") }
+                runCatching { setProperty("http://javax.xml.XMLConstants/property/accessExternalSchema", "") }
                 contentHandler = handler
                 entityResolver = org.xml.sax.EntityResolver { _, _ ->
                     throw SAXException("External XML entities are not supported")
