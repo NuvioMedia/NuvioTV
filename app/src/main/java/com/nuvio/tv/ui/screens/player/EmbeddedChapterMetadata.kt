@@ -23,8 +23,11 @@ internal fun mergeMedia3ChapterMetadata(
 
     for (index in 0 until metadata.length()) {
         val chapter = metadata[index] as? ChapterFrame ?: continue
+        if (chapter.isHidden) continue
         val startMs = chapter.startTimeMs.toLong()
         if (startMs < 0L) continue
+        val rawEndMs = chapter.endTimeMs.toLong()
+        if (rawEndMs >= 0L && rawEndMs <= startMs) continue
 
         val chapterId = chapter.chapterId.trim().take(256)
         val title = (0 until chapter.subFrameCount)
@@ -37,7 +40,7 @@ internal fun mergeMedia3ChapterMetadata(
             ?.takeIf(String::isNotBlank)
             ?: chapterId.takeIf(String::isNotBlank)
             ?: continue
-        val endMs = chapter.endTimeMs.toLong().takeIf { it > startMs }
+        val endMs = rawEndMs.takeIf { it > startMs }
         val id = "id3:${chapterId.ifBlank { startMs.toString() }}:$startMs".take(1024)
         eventsById[id] = TimedMetadataEvent(
             id = id,
