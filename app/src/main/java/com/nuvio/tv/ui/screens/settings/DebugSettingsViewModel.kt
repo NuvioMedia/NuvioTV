@@ -122,12 +122,34 @@ class DebugSettingsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             signInLoading = false,
-                            signInResult = if (result.isSuccess) context.getString(R.string.debug_signin_success) else context.getString(R.string.debug_generate_result_failed, result.exceptionOrNull()?.message ?: "")
+                            // AuthManager.signInWithEmail already returns a sanitized public message;
+                            // never fall back to dumping raw HTTP exception details into the UI.
+                            signInResult = if (result.isSuccess) {
+                                context.getString(R.string.debug_signin_success)
+                            } else {
+                                val safe = result.exceptionOrNull()?.message
+                                    ?.takeIf { it.isNotBlank() && !it.looksLikeRawAuthDebugDump() }
+                                    ?: context.getString(R.string.account_error_unexpected)
+                                context.getString(R.string.debug_generate_result_failed, safe)
+                            }
                         )
                     }
                 }
             }
         }
+    }
+
+    private fun String.looksLikeRawAuthDebugDump(): Boolean {
+        val lower = lowercase()
+        return lower.contains("headers:") ||
+            lower.contains("http method") ||
+            lower.contains("x-client-info") ||
+            lower.contains("x-supabase-client") ||
+            lower.contains("apikey=") ||
+            lower.contains("grant_type=") ||
+            (lower.contains("authorization=") && lower.contains("bearer")) ||
+            (lower.contains("url:") && lower.contains("/auth/v1/")) ||
+            (lower.contains("endpoint=") && lower.contains("body="))
     }
 
     private suspend fun generateRandomLibraryItems(count: Int) {
