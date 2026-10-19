@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.util.Locale
 import com.nuvio.tv.ui.util.languageCodeToName
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -1474,10 +1475,14 @@ class PlayerSettingsDataStore @Inject constructor(
 
     private fun resolveDeviceSubtitleLanguage(): String {
         val locale = if (android.os.Build.VERSION.SDK_INT >= 24) {
-            android.content.res.Resources.getSystem().configuration.locales[0]
+            runCatching {
+                android.content.res.Resources.getSystem()?.configuration?.locales?.get(0)
+            }.getOrNull() ?: Locale.getDefault()
         } else {
             @Suppress("DEPRECATION")
-            android.content.res.Resources.getSystem().configuration.locale
+            runCatching {
+                android.content.res.Resources.getSystem()?.configuration?.locale
+            }.getOrNull() ?: Locale.getDefault()
         }
         
         val rawLanguage = locale?.language.orEmpty()

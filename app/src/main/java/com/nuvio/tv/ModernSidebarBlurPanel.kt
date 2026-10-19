@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +54,7 @@ import coil3.request.ImageRequest
 import com.nuvio.tv.ui.components.AutoResizeText
 import com.nuvio.tv.ui.components.BrandWordmark
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
+import com.nuvio.tv.core.runtime.TvPerformanceProfile
 import com.nuvio.tv.ui.theme.NuvioComponents
 import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioRadii
@@ -93,12 +95,15 @@ internal fun ModernSidebarBlurPanel(
     showProfileSelector: Boolean,
     onSwitchProfile: () -> Unit
 ) {
+    val context = LocalContext.current
+    val performanceProfile = remember(context) { TvPerformanceProfile.detect(context) }
+    val effectiveBlurEnabled = blurEnabled && performanceProfile.allowsRealtimeBlur
     val motionPolicy = com.nuvio.tv.ui.theme.LocalUiMotion.current
     val showSignature = showProfileSelector && activeProfileName.isNotEmpty() &&
         LocalConfiguration.current.screenHeightDp >= 420
     val delayedBlurProgress =
         ((sidebarExpandProgress - 0.34f) / 0.66f).coerceIn(0f, 1f)
-    val showPanelBlur = blurEnabled && motionPolicy.allowsSpatialEffects &&
+    val showPanelBlur = effectiveBlurEnabled && motionPolicy.allowsSpatialEffects &&
         isSidebarExpanded &&
         !sidebarCollapsePending &&
         delayedBlurProgress > 0f
@@ -116,10 +121,10 @@ internal fun ModernSidebarBlurPanel(
     val bgCard = colors.BackgroundCard
     val borderBase = colors.Border
     val isAmoledBlack = bgElevated == Color.Black
-    val panelBackgroundBrush = remember(blurEnabled, isAmoledBlack, bgElevated, bgCard) {
+    val panelBackgroundBrush = remember(effectiveBlurEnabled, isAmoledBlack, bgElevated, bgCard) {
         val baseColor = if (isAmoledBlack) Color.Black else bgElevated
         val alpha = when {
-            blurEnabled -> 0.65f
+            effectiveBlurEnabled -> 0.65f
             isAmoledBlack -> 1f
             else -> 0.97f
         }
@@ -128,8 +133,8 @@ internal fun ModernSidebarBlurPanel(
             baseColor.copy(alpha = alpha)
         ))
     }
-    val panelBorderColor = remember(isAmoledBlack, blurEnabled, borderBase) {
-        if (!blurEnabled && isAmoledBlack) borderBase.copy(alpha = 0.9f) else Color.Transparent
+    val panelBorderColor = remember(isAmoledBlack, effectiveBlurEnabled, borderBase) {
+        if (!effectiveBlurEnabled && isAmoledBlack) borderBase.copy(alpha = 0.9f) else Color.Transparent
     }
 
     Column(

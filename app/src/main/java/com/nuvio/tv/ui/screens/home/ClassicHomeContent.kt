@@ -45,6 +45,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.core.runtime.TvPerformanceProfile
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import com.nuvio.tv.ui.util.asStable
 import androidx.compose.ui.unit.dp
@@ -153,7 +155,13 @@ fun ClassicHomeContent(
     // Nested prefetch: when LazyColumn prefetches a row ahead of scrolling,
     // pre-compose up to 2 ContentCards in its nested LazyRow across multiple frames.
     // This spreads the composition work and prevents frame spikes when a new row scrolls in.
-    val nestedPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
+    val localContext = LocalContext.current
+    val performanceProfile = remember(localContext) {
+        TvPerformanceProfile.detect(localContext)
+    }
+    val nestedPrefetchStrategy = remember(performanceProfile.homeNestedPrefetchItemCount) {
+        LazyListPrefetchStrategy(nestedPrefetchItemCount = performanceProfile.homeNestedPrefetchItemCount)
+    }
 
     val scope = rememberCoroutineScope()
     val columnListState = rememberLazyListState(

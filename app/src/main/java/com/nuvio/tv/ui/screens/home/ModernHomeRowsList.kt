@@ -56,6 +56,7 @@ import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.isPlaceholder
+import com.nuvio.tv.core.runtime.TvPerformanceProfile
 import com.nuvio.tv.ui.util.StableList
 import com.nuvio.tv.ui.util.StableMap
 import com.nuvio.tv.ui.util.StableRef
@@ -161,6 +162,7 @@ internal fun ModernHomeRowsList(
 
     val density = LocalDensity.current
     val context = LocalContext.current
+    val performanceProfile = remember(context) { TvPerformanceProfile.detect(context) }
     val layoutDirection = LocalLayoutDirection.current
     val verticalPrefetchImageLoader = context.imageLoader
     val latestCarouselRowsForImagePrefetch = rememberUpdatedState(carouselRows)
@@ -176,7 +178,7 @@ internal fun ModernHomeRowsList(
         landscapeCatalogCardWidth,
         landscapeCatalogCardHeight
     ) {
-        val prefetchAheadRows = 1
+        val prefetchAheadRows = performanceProfile.homeImagePrefetchAheadRows
         val prefetchItemsPerRow = 1
         snapshotFlow {
             verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
@@ -220,7 +222,7 @@ internal fun ModernHomeRowsList(
     val latestOnRequestLazyCatalogLoad = rememberUpdatedState(onRequestLazyCatalogLoad)
     val latestCarouselRowsForLazy = rememberUpdatedState(carouselRows)
     LaunchedEffect(verticalRowListState) {
-        val prefetchAheadForLazy = 2
+        val prefetchAheadForLazy = performanceProfile.homeCatalogPrefetchAheadRows
         snapshotFlow {
             val info = verticalRowListState.layoutInfo
             val firstVisible = info.visibleItemsInfo.firstOrNull()?.index ?: -1
