@@ -134,6 +134,18 @@ object NetworkModule {
             .build()
     }
 
+    /** Bounded, non-redirecting client for user-configured Live TV sources. */
+    @Provides
+    @Singleton
+    @Named("liveTv")
+    fun provideLiveTvOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .callTimeout(30, TimeUnit.SECONDS)
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
+
     /**
      * Permissive client for addon-provided URLs, including self-hosted servers with self-signed
      * certificates. Uses a separate cache from first-party traffic.
