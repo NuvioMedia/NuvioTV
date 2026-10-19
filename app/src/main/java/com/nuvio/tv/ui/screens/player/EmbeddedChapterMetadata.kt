@@ -23,7 +23,6 @@ internal fun mergeMedia3ChapterMetadata(
 
     for (index in 0 until metadata.length()) {
         val chapter = metadata[index] as? ChapterFrame ?: continue
-        if (chapter.isHidden) continue
         val startMs = chapter.startTimeMs.toLong()
         if (startMs < 0L) continue
         val rawEndMs = chapter.endTimeMs.toLong()
