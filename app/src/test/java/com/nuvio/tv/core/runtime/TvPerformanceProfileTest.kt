@@ -1,6 +1,8 @@
 package com.nuvio.tv.core.runtime
 
 import org.junit.Assert.assertEquals
+import com.nuvio.tv.domain.model.AnimationIntensity
+import com.nuvio.tv.domain.model.NavigationMotion
 import org.junit.Test
 
 class TvPerformanceProfileTest {
@@ -16,6 +18,11 @@ class TvPerformanceProfileTest {
         assertEquals(0, profile.homeCatalogPrefetchAheadRows)
         assertEquals(0, profile.homeNestedPrefetchItemCount)
         assertEquals(false, profile.allowsRealtimeBlur)
+        assertEquals(NavigationMotion.REDUCED, profile.effectiveNavigationMotion(NavigationMotion.FULL))
+        assertEquals(NavigationMotion.REDUCED, profile.effectiveNavigationMotion(NavigationMotion.REDUCED))
+        assertEquals(NavigationMotion.OFF, profile.effectiveNavigationMotion(NavigationMotion.OFF))
+        assertEquals(AnimationIntensity.SUBTLE, profile.effectiveAnimationIntensity(AnimationIntensity.STANDARD))
+        assertEquals(AnimationIntensity.CINEMATIC, profile.effectiveAnimationIntensity(AnimationIntensity.CINEMATIC))
     }
 
     @Test
@@ -36,6 +43,8 @@ class TvPerformanceProfileTest {
         assertEquals(2, profile.parallelImageDecodes)
         assertEquals(1, profile.homeNestedPrefetchItemCount)
         assertEquals(true, profile.allowsRealtimeBlur)
+        assertEquals(NavigationMotion.FULL, profile.effectiveNavigationMotion(NavigationMotion.FULL))
+        assertEquals(AnimationIntensity.STANDARD, profile.effectiveAnimationIntensity(AnimationIntensity.STANDARD))
     }
 
     @Test

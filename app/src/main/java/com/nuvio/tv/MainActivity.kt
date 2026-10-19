@@ -159,6 +159,7 @@ import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.data.local.ThemeDataStore
+import com.nuvio.tv.core.runtime.TvPerformanceProfile
 import com.nuvio.tv.data.repository.MemberAccessRepository
 import com.nuvio.tv.data.remote.supabase.AvatarRepository
 import com.nuvio.tv.domain.model.AppFont
@@ -621,6 +622,7 @@ open class MainActivity : ComponentActivity() {
                 }.collectAsState(initial = null)
             }
             val discoverLocation = mainUiPrefs.discoverLocation
+            val performanceProfile = remember(context) { TvPerformanceProfile.detect(context) }
 
             val navigationMotion by key(activeProfileId, startupSession) {
                 themeDataStore.navigationMotion.collectAsStateWithLifecycle(
@@ -632,7 +634,9 @@ open class MainActivity : ComponentActivity() {
                     initialValue = com.nuvio.tv.domain.model.AnimationIntensity.STANDARD
                 )
             }
-            SideEffect { uiDurationScale.mode = navigationMotion }
+            val effectiveNavigationMotion = performanceProfile.effectiveNavigationMotion(navigationMotion)
+            val effectiveAnimationIntensity = performanceProfile.effectiveAnimationIntensity(animationIntensity)
+            SideEffect { uiDurationScale.mode = effectiveNavigationMotion }
             NuvioTheme(
                 appTheme = mainUiPrefs.theme,
                 customThemeColors = mainUiPrefs.customThemeColors,
@@ -642,8 +646,8 @@ open class MainActivity : ComponentActivity() {
                 settingsUiStyle = mainUiPrefs.settingsUiStyle,
                 navigationMotion = if (uiDurationScale.effectiveSystemScale == 0f) {
                     com.nuvio.tv.domain.model.NavigationMotion.OFF
-                } else navigationMotion,
-                animationIntensity = animationIntensity
+                } else effectiveNavigationMotion,
+                animationIntensity = effectiveAnimationIntensity
             ) {
                 val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
                 val bringIntoViewSpec = if (mainUiPrefs.smoothBringIntoViewEnabled) {
