@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import androidx.media3.common.Metadata
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.metadata.id3.ChapterFrame
+import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import com.nuvio.tv.core.player.metadata.TimedMetadataBody
 import com.nuvio.tv.core.player.metadata.TimedMetadataScope
 import org.junit.Assert.assertEquals
@@ -19,14 +20,14 @@ class EmbeddedChapterMetadataTest {
         val result = mergeMedia3ChapterMetadata(
             current = null,
             metadata = Metadata(
-                ChapterFrame("opening", 0, 45_000, -1, -1, emptyArray()),
-                ChapterFrame("finale", 45_000, 90_000, -1, -1, emptyArray())
+                ChapterFrame("ch1", 0, 45_000, -1, -1, arrayOf(TextInformationFrame("TIT2", null, listOf("Opening")))),
+                ChapterFrame("ch2", 45_000, 90_000, -1, -1, arrayOf(TextInformationFrame("TIT2", null, listOf("Finale"))))
             ),
             scope = scope,
             durationMs = 100_000
         )
 
-        assertEquals(listOf("opening", "finale"), result?.events?.map { (it.body as TimedMetadataBody.Chapter).title })
+        assertEquals(listOf("Opening", "Finale"), result?.events?.map { (it.body as TimedMetadataBody.Chapter).title })
         assertEquals(listOf(0L, 45_000L), result?.events?.map { it.startMs })
         assertEquals(listOf("media3-id3", "media3-id3"), result?.events?.map { it.provenance.providerId })
     }

@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import androidx.media3.common.Metadata
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.metadata.id3.ChapterFrame
+import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import com.nuvio.tv.core.player.metadata.TimedMetadataBody
 import com.nuvio.tv.core.player.metadata.TimedMetadataEvent
 import com.nuvio.tv.core.player.metadata.TimedMetadataProvenance
@@ -20,13 +21,20 @@ internal fun mergeMedia3ChapterMetadata(
     val previousEvents = current?.takeIf { it.scope == scope }?.events.orEmpty()
     val eventsById = previousEvents.associateByTo(linkedMapOf()) { it.id }
 
-    for (index in 0 until metadata.length) {
+    for (index in 0 until metadata.length()) {
         val chapter = metadata[index] as? ChapterFrame ?: continue
         val startMs = chapter.startTimeMs.toLong()
         if (startMs < 0L) continue
 
         val chapterId = chapter.chapterId.trim().take(256)
-        val title = chapter.title?.value?.trim()?.takeIf(String::isNotBlank)
+        val title = (0 until chapter.subFrameCount)
+            .asSequence()
+            .mapNotNull { chapter.getSubFrame(it) as? TextInformationFrame }
+            .firstOrNull { it.id == ID3_TITLE_FRAME }
+            ?.values
+            ?.firstOrNull()
+            ?.trim()
+            ?.takeIf(String::isNotBlank)
             ?: chapterId.takeIf(String::isNotBlank)
             ?: continue
         val endMs = chapter.endTimeMs.toLong().takeIf { it > startMs }
@@ -53,3 +61,4 @@ internal fun mergeMedia3ChapterMetadata(
 }
 
 internal const val MEDIA3_ID3_PROVIDER = "media3-id3"
+private const val ID3_TITLE_FRAME = "TIT2"
