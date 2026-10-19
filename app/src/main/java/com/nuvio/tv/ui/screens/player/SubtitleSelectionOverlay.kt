@@ -142,7 +142,7 @@ internal fun SubtitleSelectionOverlay(
         )
     }
     val languageItems = remember(visible, sessionAddonSubtitles) {
-        (buildSubtitleLanguageRailItems(
+        val (localFileItems, languages) = buildSubtitleLanguageRailItems(
             internalTracks = sessionInternalTracks,
             addonSubtitles = sessionAddonSubtitles,
             preferredLanguage = sessionPreferredLanguage,
@@ -152,7 +152,10 @@ internal fun SubtitleSelectionOverlay(
             noneLabel = noneLabel,
             unknownLabel = unknownLabel,
             localFileLabel = localFileLabel
-        ) + SubtitleLanguageRailItem(key = SubtitleLocalFileKey, label = fromDeviceLabel, count = 0))
+        ).partition { it.key == LOCAL_SUBTITLE_UNKNOWN_LANG }
+        // Device section goes last: picked files, then the "From device" action.
+        languages + localFileItems +
+            SubtitleLanguageRailItem(key = SubtitleLocalFileKey, label = fromDeviceLabel, count = 0)
     }
     val sessionInitialLanguageKey = remember(visible, languageItems, sessionSelectedSubtitleLanguageKey) {
         sessionSelectedSubtitleLanguageKey.takeIf { key -> languageItems.any { it.key == key } }
@@ -698,9 +701,12 @@ private fun SubtitleLanguageRail(
             modifier = Modifier
                 .heightIn(max = 720.dp)
         ) {
+            val firstDeviceSectionKey = items
+                .firstOrNull { it.key == LOCAL_SUBTITLE_UNKNOWN_LANG || it.key == SubtitleLocalFileKey }
+                ?.key
             items(items = items, key = { item -> item.key }) { item ->
-                // "From device" is an action, not a language: set it apart from the list above.
-                if (item.key == SubtitleLocalFileKey) {
+                // Picked files and "From device" are not languages: set them apart from the list above.
+                if (item.key == firstDeviceSectionKey) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
