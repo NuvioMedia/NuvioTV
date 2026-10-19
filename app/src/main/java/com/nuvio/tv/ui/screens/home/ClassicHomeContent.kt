@@ -430,7 +430,7 @@ fun ClassicHomeContent(
     val latestOnRequestLazyCatalogLoad = rememberUpdatedState(onRequestLazyCatalogLoad)
     val latestVisibleHomeRows = rememberUpdatedState(visibleHomeRows)
     LaunchedEffect(columnListState) {
-        val prefetchAhead = 1
+        val prefetchAhead = performanceProfile.homeCatalogPrefetchAheadRows
         snapshotFlow {
             val info = columnListState.layoutInfo
             val firstVisible = info.visibleItemsInfo.firstOrNull()?.index ?: -1
