@@ -83,3 +83,21 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 7
+
+      - name: Upload ARM64 fullDebug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: telumia-tv-arm64-v8a-debug.apk
+          path: app/build/outputs/apk/full/debug/app-full-arm64-v8a-debug.apk
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload ARMv7 fullDebug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: telumia-tv-armeabi-v7a-debug.apk
+          path: app/build/outputs/apk/full/debug/app-full-armeabi-v7a-debug.apk
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
