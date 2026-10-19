@@ -127,13 +127,19 @@ internal class PlayerTimelineFrames(
             hide()
             session = current
             job = scope.launch(Dispatchers.Main.immediate) {
+                var lastExtractionStartedAtMs = 0L
                 for (incoming in requests) {
                     var request = incoming
-                    if (request.session !== session) continue
+                    if (!current(request)) continue
                     // Repeated D-pad events replace waiting work; decoding itself is bounded.
-                    delay(120)
+                    if (lastExtractionStartedAtMs > 0L) {
+                        val elapsed = android.os.SystemClock.elapsedRealtime() - lastExtractionStartedAtMs
+                        val remainingThrottle = performanceProfile.seekFrameThrottleMillis - elapsed
+                        if (remainingThrottle > 0L) delay(remainingThrottle)
+                    }
                     while (true) { request = requests.tryReceive().getOrNull() ?: break }
                     if (!current(request)) continue
+                    lastExtractionStartedAtMs = android.os.SystemClock.elapsedRealtime()
                     try {
                         val center = frame(request, request.position)
                         if (!sameSession(request)) continue
