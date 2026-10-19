@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -698,6 +699,16 @@ private fun SubtitleLanguageRail(
                 .heightIn(max = 720.dp)
         ) {
             items(items = items, key = { item -> item.key }) { item ->
+                // "From device" is an action, not a language: set it apart from the list above.
+                if (item.key == SubtitleLocalFileKey) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = NuvioTheme.spacing.sm)
+                            .height(1.dp)
+                            .background(Color.White.copy(alpha = 0.2f))
+                    )
+                }
                 SubtitleLanguageCard(
                     item = item,
                     isSelected = item.key == selectedLanguageKey,
