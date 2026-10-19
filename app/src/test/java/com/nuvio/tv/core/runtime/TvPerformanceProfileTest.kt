@@ -14,6 +14,7 @@ class TvPerformanceProfileTest {
         assertEquals(8, profile.imageRequests)
         assertEquals(4, profile.imageRequestsPerHost)
         assertEquals(1, profile.parallelImageDecodes)
+        assertEquals(0, profile.homeHorizontalImagePrefetchItems)
         assertEquals(0, profile.homeImagePrefetchAheadRows)
         assertEquals(0, profile.homeCatalogPrefetchAheadRows)
         assertEquals(0, profile.homeNestedPrefetchItemCount)
@@ -34,6 +35,7 @@ class TvPerformanceProfileTest {
         val profile = TvPerformanceProfile.forDevice(2L * GIB, 256, isLowRamDevice = false)
 
         assertEquals(0.08, profile.imageMemoryCachePercent, 0.0)
+        assertEquals(0, profile.homeHorizontalImagePrefetchItems)
         assertEquals(1, profile.parallelImageDecodes)
     }
 
@@ -45,6 +47,7 @@ class TvPerformanceProfileTest {
         assertEquals(16, profile.imageRequests)
         assertEquals(8, profile.imageRequestsPerHost)
         assertEquals(2, profile.parallelImageDecodes)
+        assertEquals(1, profile.homeHorizontalImagePrefetchItems)
         assertEquals(1, profile.homeNestedPrefetchItemCount)
         assertEquals(true, profile.allowsRealtimeBlur)
         assertEquals(1_200L, profile.seekFilmstripDelayMillis)
@@ -63,6 +66,7 @@ class TvPerformanceProfileTest {
         assertEquals(32, profile.imageRequests)
         assertEquals(16, profile.imageRequestsPerHost)
         assertEquals(4, profile.parallelImageDecodes)
+        assertEquals(2, profile.homeHorizontalImagePrefetchItems)
         assertEquals(2, profile.homeImagePrefetchAheadRows)
         assertEquals(2, profile.homeCatalogPrefetchAheadRows)
         assertEquals(2, profile.homeNestedPrefetchItemCount)

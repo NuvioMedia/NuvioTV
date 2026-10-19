@@ -99,6 +99,7 @@ import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.request.transformations
 import com.nuvio.tv.R
+import com.nuvio.tv.core.runtime.TvPerformanceProfile
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.MetaPreview
@@ -134,8 +135,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.debounce
 
 private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
-private const val POSTER_PREFETCH_DISTANCE = 1
-private const val NESTED_PREFETCH_COUNT = 2
 
 internal val LocalVerticalRowsScrolling = compositionLocalOf<State<Boolean>> { mutableStateOf(false) }
 
@@ -518,6 +517,14 @@ internal fun ModernRowSection(
         pinnedItemKey.value = null
         pinSpent.value = true
     }
+    val context = LocalContext.current
+    val performanceProfile = remember(context) { TvPerformanceProfile.detect(context) }
+    val posterPrefetchDistance = performanceProfile.homeHorizontalImagePrefetchItems
+    val nestedPrefetchStrategy = remember(performanceProfile.homeNestedPrefetchItemCount) {
+        LazyListPrefetchStrategy(
+            nestedPrefetchItemCount = performanceProfile.homeNestedPrefetchItemCount
+        )
+    }
     Column(
         modifier = Modifier.then(
             if (blockingFocusExit.value) {
@@ -552,7 +559,7 @@ internal fun ModernRowSection(
                 ?: focusStateCatalogRowScrollIndex
             LazyListState(
                 firstVisibleItemIndex = restoredIndex,
-                prefetchStrategy = LazyListPrefetchStrategy(nestedPrefetchItemCount = NESTED_PREFETCH_COUNT)
+                prefetchStrategy = nestedPrefetchStrategy
             )
         }
 
@@ -642,7 +649,6 @@ internal fun ModernRowSection(
 
         val density = LocalDensity.current
         val rowStartPadding = 52.dp
-        val context = LocalContext.current
         val imageLoader = context.imageLoader
 
         val rowItemCount = row.items.list.size
@@ -658,9 +664,12 @@ internal fun ModernRowSection(
             continueWatchingCardWidth,
             continueWatchingCardHeight,
             useEpisodeThumbnails,
-            blurUnwatchedEpisodes
+            blurUnwatchedEpisodes,
+            posterPrefetchDistance
         ) {
-            if (!isActiveRow() || isVerticalRowsScrollingState.value) return@LaunchedEffect
+            if (posterPrefetchDistance <= 0 || !isActiveRow() || isVerticalRowsScrollingState.value) {
+                return@LaunchedEffect
+            }
             delay(150) // Wait before spamming image requests to survive rapid vertical D-pad scrolls!
             val cwWidthPx = with(density) {
                 continueWatchingArtworkWidth(
@@ -734,7 +743,7 @@ internal fun ModernRowSection(
             // Prefetch initial visible + ahead items immediately when row appears
             val items = currentRowState.value.items.list
             withContext(Dispatchers.IO) {
-                for (i in 0 until minOf(POSTER_PREFETCH_DISTANCE, items.size)) {
+                for (i in 0 until minOf(posterPrefetchDistance, items.size)) {
                     val item = items.getOrNull(i) ?: continue
                     val (wPx, hPx) = when (item.payload) {
                         is ModernPayload.Catalog -> {
@@ -770,7 +779,7 @@ internal fun ModernRowSection(
                 .collect { lastVisibleIndex ->
                     val currentItems = currentRowState.value.items.list
                     withContext(Dispatchers.IO) {
-                        for (i in (lastVisibleIndex + 1)..(lastVisibleIndex + POSTER_PREFETCH_DISTANCE)) {
+                        for (i in (lastVisibleIndex + 1)..(lastVisibleIndex + posterPrefetchDistance)) {
                             val item = currentItems.getOrNull(i) ?: continue
                             val (wPx, hPx) = when (item.payload) {
                                 is ModernPayload.Catalog -> {

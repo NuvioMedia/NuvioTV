@@ -12,6 +12,7 @@ internal data class TvPerformanceProfile(
     val imageRequests: Int,
     val imageRequestsPerHost: Int,
     val parallelImageDecodes: Int,
+    val homeHorizontalImagePrefetchItems: Int,
     val homeImagePrefetchAheadRows: Int,
     val homeCatalogPrefetchAheadRows: Int,
     val homeNestedPrefetchItemCount: Int,
@@ -53,8 +54,8 @@ internal data class TvPerformanceProfile(
             else -> HIGH_CAPACITY
         }
 
-        private val LOW_RAM = TvPerformanceProfile(0.08, 8, 4, 1, 0, 0, 0, false, true, 1_500L, null, 1L * MIB, 300L)
-        private val BALANCED = TvPerformanceProfile(0.16, 16, 8, 2, 1, 1, 1, true, false, 1_200L, 1_200L, 2L * MIB, 180L)
-        private val HIGH_CAPACITY = TvPerformanceProfile(0.25, 32, 16, 4, 2, 2, 2, true, false, 1_200L, 650L, 4L * MIB, 120L)
+        private val LOW_RAM = TvPerformanceProfile(0.08, 8, 4, 1, 0, 0, 0, 0, false, true, 1_500L, null, 1L * MIB, 300L)
+        private val BALANCED = TvPerformanceProfile(0.16, 16, 8, 2, 1, 1, 1, 1, true, false, 1_200L, 1_200L, 2L * MIB, 180L)
+        private val HIGH_CAPACITY = TvPerformanceProfile(0.25, 32, 16, 4, 2, 2, 2, 2, true, false, 1_200L, 650L, 4L * MIB, 120L)
     }
 }
