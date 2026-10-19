@@ -66,13 +66,14 @@ jobs:
             echo "NUVIO_RELEASE_STORE_PASSWORD=android"
           } >> "$GITHUB_ENV"
 
-      - name: Test updater and build fullDebug APK
+      - name: Test resource policies, compile TV instrumentation tests, and build fullDebug APK
         run: >-
           ./gradlew :app:testFullDebugUnitTest
           --tests 'com.nuvio.tv.updater.*'
           --tests 'com.nuvio.tv.core.runtime.TvPerformanceProfileTest'
           --tests 'com.nuvio.tv.data.local.PlayerSourceSelectionStoreTest'
           --tests 'com.nuvio.tv.ui.screens.player.EmbeddedChapterMetadataTest'
+          :app:compileFullDebugAndroidTestKotlin
           :app:assembleFullDebug --stacktrace
 
       - name: Upload fullDebug APK

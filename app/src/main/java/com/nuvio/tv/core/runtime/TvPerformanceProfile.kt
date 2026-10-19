@@ -18,6 +18,8 @@ internal data class TvPerformanceProfile(
     val allowsRealtimeBlur: Boolean,
     val reducesDefaultMotion: Boolean,
     val trailerPreviewFocusDelayMillis: Long,
+    val seekFilmstripDelayMillis: Long?,
+    val seekFrameCacheBytes: Long,
 ) {
     fun effectiveNavigationMotion(preference: NavigationMotion): NavigationMotion =
         if (reducesDefaultMotion && preference == NavigationMotion.FULL) NavigationMotion.REDUCED else preference
@@ -27,6 +29,7 @@ internal data class TvPerformanceProfile(
 
     companion object {
         private const val GIB = 1024L * 1024L * 1024L
+        private const val MIB = 1024L * 1024L
 
         fun detect(context: Context): TvPerformanceProfile {
             val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
@@ -49,8 +52,8 @@ internal data class TvPerformanceProfile(
             else -> HIGH_CAPACITY
         }
 
-        private val LOW_RAM = TvPerformanceProfile(0.08, 8, 4, 1, 0, 0, 0, false, true, 1_500L)
-        private val BALANCED = TvPerformanceProfile(0.16, 16, 8, 2, 1, 1, 1, true, false, 1_200L)
-        private val HIGH_CAPACITY = TvPerformanceProfile(0.25, 32, 16, 4, 2, 2, 2, true, false, 1_200L)
+        private val LOW_RAM = TvPerformanceProfile(0.08, 8, 4, 1, 0, 0, 0, false, true, 1_500L, null, 1L * MIB)
+        private val BALANCED = TvPerformanceProfile(0.16, 16, 8, 2, 1, 1, 1, true, false, 1_200L, 1_200L, 2L * MIB)
+        private val HIGH_CAPACITY = TvPerformanceProfile(0.25, 32, 16, 4, 2, 2, 2, true, false, 1_200L, 650L, 4L * MIB)
     }
 }

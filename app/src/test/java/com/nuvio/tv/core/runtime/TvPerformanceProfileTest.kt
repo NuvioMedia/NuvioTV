@@ -18,6 +18,8 @@ class TvPerformanceProfileTest {
         assertEquals(0, profile.homeCatalogPrefetchAheadRows)
         assertEquals(0, profile.homeNestedPrefetchItemCount)
         assertEquals(false, profile.allowsRealtimeBlur)
+        assertEquals(null, profile.seekFilmstripDelayMillis)
+        assertEquals(1L * MIB, profile.seekFrameCacheBytes)
         assertEquals(NavigationMotion.REDUCED, profile.effectiveNavigationMotion(NavigationMotion.FULL))
         assertEquals(NavigationMotion.REDUCED, profile.effectiveNavigationMotion(NavigationMotion.REDUCED))
         assertEquals(NavigationMotion.OFF, profile.effectiveNavigationMotion(NavigationMotion.OFF))
@@ -44,6 +46,8 @@ class TvPerformanceProfileTest {
         assertEquals(2, profile.parallelImageDecodes)
         assertEquals(1, profile.homeNestedPrefetchItemCount)
         assertEquals(true, profile.allowsRealtimeBlur)
+        assertEquals(1_200L, profile.seekFilmstripDelayMillis)
+        assertEquals(2L * MIB, profile.seekFrameCacheBytes)
         assertEquals(NavigationMotion.FULL, profile.effectiveNavigationMotion(NavigationMotion.FULL))
         assertEquals(AnimationIntensity.STANDARD, profile.effectiveAnimationIntensity(AnimationIntensity.STANDARD))
         assertEquals(1_200L, profile.trailerPreviewFocusDelayMillis)
@@ -61,10 +65,13 @@ class TvPerformanceProfileTest {
         assertEquals(2, profile.homeCatalogPrefetchAheadRows)
         assertEquals(2, profile.homeNestedPrefetchItemCount)
         assertEquals(true, profile.allowsRealtimeBlur)
+        assertEquals(650L, profile.seekFilmstripDelayMillis)
+        assertEquals(4L * MIB, profile.seekFrameCacheBytes)
         assertEquals(1_200L, profile.trailerPreviewFocusDelayMillis)
     }
 
     private companion object {
         const val GIB = 1024L * 1024 * 1024
+        const val MIB = 1024L * 1024
     }
 }

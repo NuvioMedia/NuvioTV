@@ -8,6 +8,7 @@ import androidx.media3.effect.Presentation
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.nuvio.tv.core.runtime.TvPerformanceProfile
 import com.nuvio.tv.core.player.timeline.TelumiaFrameExtractor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @RunWith(AndroidJUnit4::class)
 class TimelineFramesTvTest {
+    private val filmstripProfile get() = TvPerformanceProfile.forDevice(4L * 1024 * 1024 * 1024, 384, isLowRamDevice = false)
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val context get() = instrumentation.targetContext
     private fun main(action: () -> Unit) = instrumentation.runOnMainSync(action)
@@ -302,7 +304,7 @@ class TimelineFramesTvTest {
             val holding = java.util.concurrent.atomic.AtomicBoolean(true)
             val samples = java.util.concurrent.atomic.AtomicInteger()
             main {
-                lane = PlayerTimelineFrames(context,PlayerMediaSourceFactory(context),scope)
+                lane = PlayerTimelineFrames(context,PlayerMediaSourceFactory(context),scope, filmstripProfile)
                 scope.launch { lane!!.state.collect { if (holding.get() && it is TimelineFrameState.Ready) samples.incrementAndGet() } }
                 lane!!.bind(input)
             }
@@ -356,7 +358,7 @@ class TimelineFramesTvTest {
         var lane: PlayerTimelineFrames? = null
         try {
             main {
-                lane = PlayerTimelineFrames(context, PlayerMediaSourceFactory(context), scope)
+                lane = PlayerTimelineFrames(context, PlayerMediaSourceFactory(context), scope, filmstripProfile)
                 lane!!.request(TimelineFrameSession(Any(), Uri.fromFile(clip).toString(), emptyMap(), 6000), 3000, filmstrip = true)
             }
             await { (lane!!.state.value as? TimelineFrameState.Ready)?.neighbors?.size == 3 }

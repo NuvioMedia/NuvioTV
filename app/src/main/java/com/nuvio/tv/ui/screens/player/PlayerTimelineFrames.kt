@@ -6,6 +6,7 @@ import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.effect.Presentation
 import com.google.common.util.concurrent.ListenableFuture
+import com.nuvio.tv.core.runtime.TvPerformanceProfile
 import com.nuvio.tv.core.player.timeline.TelumiaFrameExtractor
 import com.nuvio.tv.core.storage.MediaCacheCategory
 import com.nuvio.tv.core.storage.tvMediaCache
@@ -59,6 +60,7 @@ internal class PlayerTimelineFrames(
     context: Context,
     private val sourceFactory: PlayerMediaSourceFactory,
     private val scope: CoroutineScope,
+    private val performanceProfile: TvPerformanceProfile = TvPerformanceProfile.detect(context),
 ) {
     private val context = context.applicationContext
     private val mutable = MutableStateFlow<TimelineFrameState>(TimelineFrameState.Idle)
@@ -80,7 +82,7 @@ internal class PlayerTimelineFrames(
     // Bitmap RAM, separate from durable user data and bounded by the existing category policy.
     private val quota by lazy { tvMediaCache(context).activeBudget.let {
         (it.quota(MediaCacheCategory.THUMBNAILS) + it.quota(MediaCacheCategory.FILMSTRIP)).coerceAtMost(4L * 1024 * 1024)
-    } }
+    }.coerceAtMost(performanceProfile.seekFrameCacheBytes) }
 
     /** The existing player supplies ownership and pending seek, never a second seek action. */
     fun bind(inputs: Flow<TimelinePreviewInput?>) {
@@ -100,12 +102,14 @@ internal class PlayerTimelineFrames(
                 latestPreviewInput = input
                 if (beginning) {
                     heldSeekJob?.cancel()
-                    heldSeekJob = scope.launch(Dispatchers.Main.immediate) {
-                        // Position repeats do not restart this hold timer.
-                        delay(650)
-                        latestPreviewInput?.takeIf { session === current }?.let { latest ->
-                            filmstrip = true
-                            request(current, latest.positionMs, filmstrip = true)
+                    heldSeekJob = performanceProfile.seekFilmstripDelayMillis?.let { filmstripDelay ->
+                        scope.launch(Dispatchers.Main.immediate) {
+                            // Position repeats do not restart this hold timer. Low-RAM devices keep only the center preview.
+                            delay(filmstripDelay)
+                            latestPreviewInput?.takeIf { session === current }?.let { latest ->
+                                filmstrip = true
+                                request(current, latest.positionMs, filmstrip = true)
+                            }
                         }
                     }
                 }
@@ -179,7 +183,7 @@ internal class PlayerTimelineFrames(
                 ready.copy(provisional = true)
             } else TimelineFrameState.Loading(positionMs)
         }
-        requests.trySend(Request(current, positionMs, filmstrip, token))
+        requests.trySend(Request(current, positionMs, filmstrip && performanceProfile.seekFilmstripDelayMillis != null, token))
     }
 
     private fun current(request: Request) = !closed && session === request.session && revision == request.revision
