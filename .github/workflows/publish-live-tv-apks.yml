@@ -1,0 +1,134 @@
+name: Publish updated Live TV APKs to a release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful PR Full Debug Build workflow run ID
+        required: true
+        type: string
+      release_tag:
+        description: New prerelease tag matching the APK versionName (for example v1.0.1-alpha.1)
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-live-tv-apks-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish tested Android TV APKs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source run and release tag
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-[0-9A-Za-z.-]+$ ]]
+
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
+          [[ "$(jq -r '.conclusion' <<<"${run_json}")" == "success" ]]
+          [[ "$(jq -r '.name' <<<"${run_json}")" == "PR Full Debug Build" ]]
+          [[ "$(jq -r '.event' <<<"${run_json}")" == "workflow_dispatch" ]]
+
+          source_sha="$(jq -r '.head_sha' <<<"${run_json}")"
+          source_branch="$(jq -r '.head_branch' <<<"${run_json}")"
+          [[ "${source_branch}" == codex/* ]]
+          git init source-checkout
+          git -C source-checkout remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -C source-checkout fetch --depth=1 origin "${source_sha}"
+
+          apk_version="$(git -C source-checkout show "${source_sha}:app/build.gradle.kts" \
+            | sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*$/\1/p' \
+            | head -n 1)"
+          [[ "${RELEASE_TAG#v}" == "${apk_version}" ]]
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} already exists." >&2
+            exit 1
+          fi
+
+          echo "sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+          echo "version=${apk_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Download APK artifacts from the validated run
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.source_run_id }}
+          path: release-apks
+
+      - name: Prepare APKs, checksums, and release notes
+        env:
+          RELEASE_VERSION: ${{ steps.source.outputs.version }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          mapfile -t apk_files < <(find release-apks -type f -name '*.apk' -print | sort)
+          if (( ${#apk_files[@]} != 3 )); then
+            printf 'Expected exactly 3 APKs, found %s.\n' "${#apk_files[@]}" >&2
+            find release-apks -maxdepth 3 -type f -print >&2
+            exit 1
+          fi
+
+          for apk in "${apk_files[@]}"; do
+            filename="$(basename "${apk}")"
+            [[ "$(head -c 4 "${apk}" | od -An -tx1 | tr -d ' \n')" == 504b0304 ]]
+            case "${filename}" in
+              *universal*) target="Telumia-TV-${RELEASE_VERSION}-universal-debug.apk" ;;
+              *arm64-v8a*) target="Telumia-TV-${RELEASE_VERSION}-arm64-v8a-debug.apk" ;;
+              *armeabi-v7a*) target="Telumia-TV-${RELEASE_VERSION}-armeabi-v7a-debug.apk" ;;
+              *) echo "Unexpected APK artifact: ${filename}" >&2; exit 1 ;;
+            esac
+            cp "${apk}" "release-assets/${target}"
+          done
+
+          [[ "$(find release-assets -maxdepth 1 -type f -name '*.apk' | wc -l)" -eq 3 ]]
+          (cd release-assets && sha256sum ./*.apk > SHA256SUMS.txt)
+          cat > release-notes.md <<EOF
+          ## Telumia TV ${RELEASE_VERSION}
+
+          Esta versão centraliza a detecção de memória para adaptar os recursos do player e do cache a aparelhos com capacidades diferentes.
+
+          Os três APKs passaram pelos testes focados do workflow [${SOURCE_SHA}](https://github.com/${GITHUB_REPOSITORY}/commit/${SOURCE_SHA}).
+
+          **Estes são APKs de depuração assinados pela chave de CI.** A assinatura pode diferir de uma instalação anterior; nesse caso, desinstale a versão anterior antes de instalar este pré-lançamento.
+
+          Os hashes SHA-256 estão em SHA256SUMS.txt.
+          EOF
+
+      - name: Publish prerelease with APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_VERSION: ${{ steps.source.outputs.version }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh release create "${RELEASE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${SOURCE_SHA}" \
+            --title "Telumia TV ${RELEASE_VERSION} — otimizações para TV Box" \
+            --notes-file release-notes.md \
+            --draft \
+            --prerelease \
+            release-assets/*.apk release-assets/SHA256SUMS.txt
+
+          release_id="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json databaseId --jq .databaseId)"
+          asset_count="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets | length')"
+          [[ "${asset_count}" -eq 4 ]]
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${release_id}" -F draft=false >/dev/null
+
+          release_state="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft,isPrerelease --jq '[.isDraft,.isPrerelease] | @tsv')"
+          [[ "${release_state}" == $'false\ttrue' ]]
