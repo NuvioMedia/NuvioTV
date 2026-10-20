@@ -3,7 +3,7 @@
 Ported from DavidVamaiotu/NuvioTV-Reshaped, branch `subtitle-autosync-tester`,
 commit `05d4562c84acfbfd3af60b0e02ad4eb1611450c1` (tester.21), under the repository's GPL-3.0 license.
 
-The bundled `res/raw/silero_vad_v5_16k.bin` contains float16 weights converted
+The bundled `silero_vad_v5_16k.bin` raw resource contains float16 weights converted
 from Silero VAD v5's official 16 kHz ONNX export. Silero VAD is MIT licensed:
 https://github.com/snakers4/silero-vad
 
@@ -32,9 +32,11 @@ SOFTWARE.
 The optional speech recognizer uses sherpa-onnx v1.13.8, Apache-2.0:
 https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8
 The build pins the upstream AAR's SHA-256. The optional English model is the
-int8 Zipformer GigaSpeech 2023-12-12 model from:
-https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-gigaspeech-2023-12-12
-Model files are downloaded separately into private app storage as in the tester branch.
+int8 Zipformer GigaSpeech 2023-12-12 model (Apache-2.0) from:
+https://huggingface.co/k2-fsa/sherpa-onnx-zipformer-gigaspeech-2023-12-12
+Model files are downloaded on demand into private app storage from that repository,
+pinned to commit f7515a672ffb69232794aaaa44a0a360f7f25cd1, and each file's SHA-256 is
+verified before use.
 
 
                                  Apache License

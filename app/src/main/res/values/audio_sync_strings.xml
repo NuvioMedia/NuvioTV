@@ -9,8 +9,15 @@
     <string name="audio_sync_model_failed">Download failed. Select to retry. Speech detection still works.</string>
     <string name="audio_sync_model_download">Download</string>
     <string name="audio_sync_model_delete">Delete</string>
-    <string name="audio_sync_metered_title">Sample audio on metered networks</string>
-    <string name="audio_sync_metered_description">Read short dialogue samples ahead of playback for faster sync. Uses approximately 150 MB per title, with small read-buffer overhead. Off by default.</string>
+    <string name="audio_sync_sampling_title">Audio sampling</string>
+    <string name="audio_sync_sampling_off">Off</string>
+    <string name="audio_sync_sampling_low">Low</string>
+    <string name="audio_sync_sampling_high">High</string>
+    <string name="audio_sync_sampling_off_description">Listens during playback only. No extra data is used, but sync can take longer.</string>
+    <string name="audio_sync_sampling_low_description">Reads a few short dialogue samples ahead of playback over one connection, up to 75 MB per title. Used on metered networks even when set to High.</string>
+    <string name="audio_sync_sampling_high_description">Reads more dialogue samples over several connections for the fastest sync, usually up to 150 MB per title and up to 400 MB for very high-bitrate files.</string>
+    <string name="licenses_attributions_audio_sync_title">Audio subtitle sync</string>
+    <string name="licenses_attributions_audio_sync_body">Speech detection uses Silero VAD v5 weights (MIT, Silero Team). Optional speech recognition uses sherpa-onnx (Apache-2.0, k2-fsa) and its Zipformer GigaSpeech English model (Apache-2.0). Full notices ship with the app in licenses/audio_sync_NOTICE.md.</string>
     <string name="player_audio_sync_success">Subtitles synced to audio</string>
     <string name="player_audio_sync_failed">Couldn\'t sync subtitles to audio</string>
 </resources>

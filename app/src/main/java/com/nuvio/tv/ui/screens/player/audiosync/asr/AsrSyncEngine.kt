@@ -211,6 +211,16 @@ internal class AsrSyncEngine(
         }
     }
 
+    /** Another audio track: forget what was heard on the previous one, keeping any lock. */
+    fun forgetHeard() {
+        synchronized(lock) {
+            queue.clear()
+            queuedSamples = 0
+            covered.clear()
+            heard.clear()
+        }
+    }
+
     /** New stream: forget everything that was heard. */
     fun clear() {
         synchronized(lock) {
