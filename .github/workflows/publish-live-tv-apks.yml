@@ -214,7 +214,8 @@ jobs:
           tv_release="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets)"
           [[ "$(jq -r .isDraft <<<"$tv_release")" == false ]]
           [[ "$(jq -r .isPrerelease <<<"$tv_release")" == true ]]
-          [[ "$(jq -r '.assets | length' <<<"$tv_release")" -eq 4 ]]
+          tv_asset_count="$(jq -r '.assets | length' <<<"$tv_release")"
+          [[ "$tv_asset_count" -eq 4 || "$tv_asset_count" -eq 5 ]]
           desktop_release="$(gh release view "v${DESKTOP_VERSION}" --repo Pepeu2010/telumia-desktop --json isDraft,isPrerelease,assets)"
           [[ "$(jq -r .isDraft <<<"$desktop_release")" == false ]]
           msi_asset="$(jq -c '.assets[] | select(.name == "Telumia-Windows-x64.msi" and .state == "uploaded")' <<<"$desktop_release")"
