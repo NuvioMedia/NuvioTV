@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.util.lerp
+import com.nuvio.tv.ui.theme.LocalUiMotion
 
 private val LoadingEasing = CubicBezierEasing(0.333f, 0f, 0.667f, 1f)
 
@@ -31,13 +33,18 @@ fun LoadingIndicator(
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified
 ) {
+    val motion = LocalUiMotion.current
     val brush = if (color == Color.Unspecified) NuvioTheme.palette.accentBrush() else SolidColor(color)
-    val frame = rememberInfiniteTransition(label = "loading_indicator").animateFloat(
-        initialValue = 0f,
-        targetValue = 60f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 2000, easing = LinearEasing)),
-        label = "loading_frame"
-    )
+    val frame: State<Float>? = if (motion.allowsSpatialEffects) {
+        rememberInfiniteTransition(label = "loading_indicator").animateFloat(
+            initialValue = 0f,
+            targetValue = 60f,
+            animationSpec = infiniteRepeatable(tween(durationMillis = 2000, easing = LinearEasing)),
+            label = "loading_frame"
+        )
+    } else {
+        null
+    }
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
@@ -53,7 +60,19 @@ fun LoadingIndicator(
                     val arcSize = Size(radius * 2f, radius * 2f)
                     val stroke = Stroke(width = 50f * scale, cap = StrokeCap.Round)
                     onDrawBehind {
-                        val currentFrame = frame.value
+                        val currentFrame = frame?.value
+                        if (currentFrame == null) {
+                            drawArc(
+                                brush = brush,
+                                startAngle = -90f,
+                                sweepAngle = 270f,
+                                useCenter = false,
+                                topLeft = topLeft,
+                                size = arcSize,
+                                style = stroke
+                            )
+                            return@onDrawBehind
+                        }
                         val start = lerp(0f, 99f, LoadingEasing.transform(((currentFrame - 10f) / 50f).coerceIn(0f, 1f)))
                         val end = lerp(1f, 100f, LoadingEasing.transform((currentFrame / 50f).coerceIn(0f, 1f)))
                         drawArc(

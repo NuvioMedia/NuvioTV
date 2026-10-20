@@ -8,11 +8,14 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.nuvio.tv.ui.theme.LocalUiMotion
 
 private const val PLACEHOLDER_SHIMMER_DISTANCE_PX = 1000f
 private const val PLACEHOLDER_SHIMMER_WIDTH_FRACTION = 0.6f
@@ -26,6 +29,9 @@ private val PLACEHOLDER_SHIMMER_COLOR_STOPS = arrayOf(
 
 @Composable
 fun rememberPlaceholderShimmerOffsetState(label: String): State<Float> {
+    if (!LocalUiMotion.current.allowsSpatialEffects) {
+        return remember(label) { mutableFloatStateOf(-1f) }
+    }
     val shimmerTransition = rememberInfiniteTransition(label = label)
     return shimmerTransition.animateFloat(
         initialValue = -1f,
