@@ -1,6 +1,8 @@
 package com.nuvio.tv.core.di
 
+import android.content.Context
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.R
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
 import com.nuvio.tv.data.local.ProfileDataStore
@@ -12,6 +14,7 @@ import com.nuvio.tv.data.wetrakr.OkHttpWeTrakrEngine
 import com.nuvio.tv.data.wetrakr.WeTrakrApiClient
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthRepository
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthStore
+import com.nuvio.tv.data.wetrakr.WeTrakrCatalogService
 import com.nuvio.tv.data.wetrakr.WeTrakrConfiguration
 import com.nuvio.tv.data.wetrakr.WeTrakrHttpClient
 import com.nuvio.tv.data.wetrakr.WeTrakrLocalUploader
@@ -19,6 +22,7 @@ import com.nuvio.tv.data.wetrakr.WeTrakrSyncRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 import java.util.concurrent.TimeUnit
@@ -96,6 +100,14 @@ object WeTrakrModule {
         auth: WeTrakrAuthStore,
         memory: AndroidWeTrakrUploadMemory
     ) = WeTrakrLocalUploader(api, sync, auth, memory, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+
+    @Provides
+    @Singleton
+    fun catalogService(
+        api: WeTrakrApiClient,
+        sync: WeTrakrSyncRepository,
+        @ApplicationContext context: Context
+    ) = WeTrakrCatalogService(api, sync, { context.getString(R.string.wetrakr_account_fallback) })
 
     @Provides
     @Singleton

@@ -77,6 +77,7 @@ fun TrackingSettingsContent(
     val mdbListLibraryLists by mdbListViewModel.libraryLists.collectAsStateWithLifecycle()
     val weTrakrState by weTrakrViewModel.uiState.collectAsStateWithLifecycle()
     val weTrakrLocalUpload by weTrakrViewModel.localUpload.collectAsStateWithLifecycle()
+    val weTrakrShowComments by weTrakrViewModel.showComments.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
@@ -210,6 +211,8 @@ fun TrackingSettingsContent(
         simklState = simklState,
         mdbListState = mdbListState,
         weTrakrState = weTrakrState,
+        weTrakrShowComments = weTrakrShowComments,
+        onWeTrakrCommentsChanged = weTrakrViewModel::onShowCommentsChanged,
         trackingState = trackingState,
         traktFocusRequester = traktFocusRequester,
         simklFocusRequester = simklFocusRequester,
@@ -479,6 +482,10 @@ fun TrackingSettingsContent(
                 SettingsPickerOption(
                     MoreLikeThisSourcePreference.SIMKL,
                     stringResource(R.string.trakt_more_like_this_source_simkl)
+                ),
+                SettingsPickerOption(
+                    MoreLikeThisSourcePreference.WETRAKR,
+                    stringResource(R.string.wetrakr_name)
                 )
             ),
             selectedValue = traktState.moreLikeThisSource,
@@ -570,6 +577,8 @@ internal fun TrackingSettingsOverview(
     onWeTrakrContinueWatchingWindowClick: () -> Unit = {},
     weTrakrLocalUploadFocusRequester: FocusRequester = remember { FocusRequester() },
     onWeTrakrLocalUploadClick: () -> Unit = {},
+    weTrakrShowComments: Boolean = false,
+    onWeTrakrCommentsChanged: (Boolean) -> Unit = {},
     weTrakrLocalUploadStatus: String? = null,
     onCommentsChanged: (Boolean) -> Unit,
     onMoreLikeThisClick: () -> Unit,
@@ -683,7 +692,7 @@ internal fun TrackingSettingsOverview(
                                 .focusRequester(watchProgressFocusRequester)
                                 .testTag(TrackingSettingsTestTags.WATCH_PROGRESS_SOURCE)
                         )
-                        if (traktConnected || simklState.mode == SimklConnectionMode.CONNECTED) {
+                        if (traktConnected || simklState.mode == SimklConnectionMode.CONNECTED || weTrakrState.isConnected) {
                             SettingsActionRow(
                                 title = stringResource(R.string.trakt_more_like_this_source_title),
                                 subtitle = stringResource(R.string.trakt_more_like_this_source_subtitle),
@@ -791,6 +800,14 @@ internal fun TrackingSettingsOverview(
                                 modifier = Modifier
                                     .focusRequester(weTrakrLocalUploadFocusRequester)
                                     .testTag(TrackingSettingsTestTags.WETRAKR_LOCAL_UPLOAD)
+                            )
+                            SettingsToggleRow(
+                                title = stringResource(R.string.trakt_comments_title),
+                                subtitle = stringResource(R.string.wetrakr_comments_subtitle),
+                                checked = weTrakrShowComments,
+                                enabled = true,
+                                onToggle = { onWeTrakrCommentsChanged(!weTrakrShowComments) },
+                                modifier = Modifier.testTag(TrackingSettingsTestTags.WETRAKR_COMMENTS)
                             )
                         }
                     }
@@ -928,6 +945,7 @@ private fun moreLikeThisSourceLabel(source: MoreLikeThisSourcePreference): Strin
     MoreLikeThisSourcePreference.TRAKT -> stringResource(R.string.trakt_name)
     MoreLikeThisSourcePreference.TMDB -> stringResource(R.string.trakt_more_like_this_source_tmdb)
     MoreLikeThisSourcePreference.SIMKL -> stringResource(R.string.trakt_more_like_this_source_simkl)
+    MoreLikeThisSourcePreference.WETRAKR -> stringResource(R.string.wetrakr_name)
 }
 
 @Composable
@@ -967,6 +985,7 @@ internal object TrackingSettingsTestTags {
     const val MDBLIST_PROVIDER = "tracking_provider_mdblist"
     const val WETRAKR_PROVIDER = "tracking_provider_wetrakr"
     const val WETRAKR_LOCAL_UPLOAD = "tracking_wetrakr_local_upload"
+    const val WETRAKR_COMMENTS = "tracking_wetrakr_comments"
     const val MDBLIST_LIBRARY_LISTS = "tracking_mdblist_library_lists"
     const val LIBRARY_SOURCE = "tracking_source_library"
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"
