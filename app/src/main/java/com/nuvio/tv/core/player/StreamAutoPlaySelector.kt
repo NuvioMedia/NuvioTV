@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.player
 
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.runtime.DeviceVideoCodecCapabilities
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
@@ -60,7 +61,8 @@ object StreamAutoPlaySelector {
         selectedPlugins: Set<String>,
         preferredBingeGroup: String? = null,
         preferBingeGroupInSelection: Boolean = false,
-        bingeGroupOnly: Boolean = false
+        bingeGroupOnly: Boolean = false,
+        deviceVideoCodecs: DeviceVideoCodecCapabilities? = null
     ): Stream? {
         if (streams.isEmpty()) return null
 
@@ -107,7 +109,9 @@ object StreamAutoPlaySelector {
             StreamAutoPlayMode.MANUAL -> null
             StreamAutoPlayMode.FIRST_STREAM -> candidateStreams.firstOrNull { isPlayable(it) }
             StreamAutoPlayMode.BEST_QUALITY, StreamAutoPlayMode.BALANCED, StreamAutoPlayMode.DATA_SAVER ->
-                candidateStreams.filter { isPlayable(it) }.maxByOrNull { scoreSource(it, mode).total }
+                candidateStreams.filter { isPlayable(it) }.maxByOrNull {
+                    scoreSource(it, mode, deviceVideoCodecs).total
+                }
             StreamAutoPlayMode.REGEX_MATCH -> {
                 val pattern = regexPattern.trim()
  
@@ -159,13 +163,27 @@ object StreamAutoPlaySelector {
         }
     }
 
-    /** Declarative evidence only: never infers decoder support, bitrate or network health. */
-    data class SourceScore(val resolutionPoints: Int, val sizePoints: Int, val cachedPoints: Int,
-        val declaredHeight: Int?, val declaredBytes: Long?) {
-        val total: Int get() = resolutionPoints + sizePoints + cachedPoints
+    enum class DecoderSupport { SUPPORTED, SOFTWARE_ONLY, UNSUPPORTED, UNKNOWN }
+
+    /** Every ranking component is explicit; codec evidence stays unknown when either side is unknown. */
+    data class SourceScore(
+        val resolutionPoints: Int,
+        val sizePoints: Int,
+        val cachedPoints: Int,
+        val decoderCompatibilityPoints: Int,
+        val decoderSupport: DecoderSupport,
+        val declaredCodecMime: String?,
+        val declaredHeight: Int?,
+        val declaredBytes: Long?
+    ) {
+        val total: Int get() = resolutionPoints + sizePoints + cachedPoints + decoderCompatibilityPoints
     }
 
-    fun scoreSource(stream: Stream, mode: StreamAutoPlayMode): SourceScore {
+    fun scoreSource(
+        stream: Stream,
+        mode: StreamAutoPlayMode,
+        deviceVideoCodecs: DeviceVideoCodecCapabilities? = null
+    ): SourceScore {
         val parsed = stream.clientResolve?.stream?.raw?.parsed
         val declaredResolution = parsed?.resolution?.trim()?.lowercase(java.util.Locale.ROOT)
         val height = (when (declaredResolution) {
@@ -199,6 +217,87 @@ object StreamAutoPlaySelector {
             80 - (bytes / (256L * 1024 * 1024)).coerceAtMost(80).toInt()
         } else 0
         val cachedPoints = if (mode.usesSourceScore && stream.debridCacheStatus?.state == StreamDebridCacheState.CACHED) 10 else 0
-        return SourceScore(resolutionPoints, sizePoints, cachedPoints, height, bytes)
+        val declaredCodecMime = declaredVideoMime(parsed?.codec)
+        val decoderSupport = decoderSupport(
+            declaredCodecMime = declaredCodecMime,
+            declaredHeight = height,
+            deviceVideoCodecs = deviceVideoCodecs
+        )
+        val decoderCompatibilityPoints = when {
+            decoderSupport == DecoderSupport.UNSUPPORTED -> UNSUPPORTED_DECODER_PENALTY
+            decoderSupport == DecoderSupport.SOFTWARE_ONLY && mode != StreamAutoPlayMode.BEST_QUALITY ->
+                SOFTWARE_ONLY_DECODER_PENALTY
+            else -> 0
+        }
+        return SourceScore(
+            resolutionPoints = resolutionPoints,
+            sizePoints = sizePoints,
+            cachedPoints = cachedPoints,
+            decoderCompatibilityPoints = decoderCompatibilityPoints,
+            decoderSupport = decoderSupport,
+            declaredCodecMime = declaredCodecMime,
+            declaredHeight = height,
+            declaredBytes = bytes
+        )
     }
+
+    internal fun decoderSupport(
+        declaredCodecMime: String?,
+        declaredHeight: Int?,
+        deviceVideoCodecs: DeviceVideoCodecCapabilities?
+    ): DecoderSupport {
+        if (declaredCodecMime == null) return DecoderSupport.UNKNOWN
+        val decoders = deviceVideoCodecs?.decoders ?: return DecoderSupport.UNKNOWN
+        val matchingDecoders = decoders.filter { it.mimeType.equals(declaredCodecMime, ignoreCase = true) }
+        if (matchingDecoders.isEmpty()) return DecoderSupport.UNSUPPORTED
+        val capableDecoders = if (declaredHeight == null) {
+            matchingDecoders
+        } else {
+            val expectedWidth = expectedWidthForHeight(declaredHeight)
+            matchingDecoders.filter { decoder ->
+                (decoder.maxHeight == null || decoder.maxHeight >= declaredHeight) &&
+                    (expectedWidth == null || decoder.maxWidth == null || decoder.maxWidth >= expectedWidth)
+            }
+        }
+        if (capableDecoders.isEmpty()) return DecoderSupport.UNSUPPORTED
+        return if (capableDecoders.all { it.hardwareAccelerated == false }) {
+            DecoderSupport.SOFTWARE_ONLY
+        } else {
+            DecoderSupport.SUPPORTED
+        }
+    }
+
+    internal fun declaredVideoMime(codecLabel: String?): String? {
+        val normalized = codecLabel?.lowercase(java.util.Locale.ROOT)
+            ?.replace(Regex("[^a-z0-9]"), "")
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        return when {
+            normalized.contains("dolbyvision") || normalized.contains("dovi") ||
+                normalized.contains("dvhe") || normalized.contains("dvh1") -> "video/dolby-vision"
+            normalized.contains("hevc") || normalized.contains("h265") || normalized.contains("x265") ||
+                normalized.contains("hev1") || normalized.contains("hvc1") -> "video/hevc"
+            normalized.contains("avc") || normalized.contains("h264") || normalized.contains("x264") ||
+                normalized.contains("avc1") || normalized.contains("avc3") -> "video/avc"
+            normalized.contains("av1") || normalized.contains("av01") -> "video/av01"
+            normalized.contains("vp9") || normalized.contains("vp09") -> "video/x-vnd.on2.vp9"
+            normalized.contains("vp8") || normalized.contains("vp08") -> "video/x-vnd.on2.vp8"
+            normalized.contains("mpeg2") -> "video/mpeg2"
+            else -> null
+        }
+    }
+
+    private fun expectedWidthForHeight(height: Int): Int? = when (height) {
+        360 -> 640
+        480 -> 854
+        720, 800 -> 1280
+        1080 -> 1920
+        1440 -> 2560
+        2160 -> 3840
+        4320 -> 7680
+        else -> null
+    }
+
+    private const val UNSUPPORTED_DECODER_PENALTY = -600
+    private const val SOFTWARE_ONLY_DECODER_PENALTY = -160
 }

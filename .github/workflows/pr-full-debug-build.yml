@@ -71,6 +71,7 @@ jobs:
           ./gradlew :app:testFullDebugUnitTest
           --tests 'com.nuvio.tv.updater.*'
           --tests 'com.nuvio.tv.core.runtime.DeviceCapabilitiesTest'
+          --tests 'com.nuvio.tv.core.player.StreamAutoPlaySelectorTest'
           --tests 'com.nuvio.tv.core.player.DolbyVisionBaseLayerPolicyTest'
           --tests 'com.nuvio.tv.core.runtime.TvPerformanceProfileTest'
           --tests 'com.nuvio.tv.core.storage.MediaCachePolicyTest'

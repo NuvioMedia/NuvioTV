@@ -5,7 +5,11 @@
     <string name="source_mode_quality_desc">Prefer higher declared resolution. Decoder, HDR and network suitability are not yet measured.</string>
     <string name="source_mode_balanced_desc">Prefer declared 1080p, then 720p. Uses available declarations, not a hardware guarantee.</string>
     <string name="source_mode_saver_desc">Prefer up to 720p and smaller declared files. Actual network usage may differ.</string>
-    <string name="source_score_explanation">Declared score %1$d · resolution %2$d · size %3$d · cached %4$d. Codec, HDR and network unverified.</string>
+    <string name="source_score_explanation">Score %1$d · resolution %2$d · size %3$d · cached %4$d · device codec %5$d (%6$s). HDR and network unverified.</string>
+    <string name="source_decoder_supported">supported</string>
+    <string name="source_decoder_software_only">software decoder only</string>
+    <string name="source_decoder_unsupported">not advertised</string>
+    <string name="source_decoder_unknown">unknown</string>
     <string name="scene_bookmarks_title">Saved moments</string>
     <string name="cd_player_chapters">Chapters</string>
     <string name="player_chapters_title">Chapters</string>

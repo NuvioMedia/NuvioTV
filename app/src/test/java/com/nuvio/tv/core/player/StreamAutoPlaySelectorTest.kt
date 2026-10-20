@@ -1,6 +1,8 @@
 package com.nuvio.tv.core.player
 
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.runtime.DeviceVideoCodecCapabilities
+import com.nuvio.tv.core.runtime.DeviceVideoDecoderCapability
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
@@ -8,6 +10,10 @@ import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.domain.model.StreamDebridCacheState
 import com.nuvio.tv.domain.model.StreamDebridCacheStatus
+import com.nuvio.tv.domain.model.StreamClientResolve
+import com.nuvio.tv.domain.model.StreamClientResolveParsed
+import com.nuvio.tv.domain.model.StreamClientResolveRaw
+import com.nuvio.tv.domain.model.StreamClientResolveStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -25,6 +31,104 @@ class StreamAutoPlaySelectorTest {
             assertEquals(uhd, choose(sources, StreamAutoPlayMode.BEST_QUALITY))
             assertEquals(hd, choose(sources, StreamAutoPlayMode.BALANCED))
         }
+    }
+
+    @Test fun `best quality avoids a declared codec and resolution absent from device decoders`() {
+        val av1FourK = withParsedVideo("AV1", "2160p")
+        val hevc1080 = withParsedVideo("HEVC", "1080p")
+        val codecs = DeviceVideoCodecCapabilities(
+            decoders = listOf(
+                DeviceVideoDecoderCapability("video/hevc", 3840, 2160, true),
+                DeviceVideoDecoderCapability("video/avc", 1920, 1080, true)
+            )
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(av1FourK, hevc1080),
+            mode = StreamAutoPlayMode.BEST_QUALITY,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("AddonA"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            deviceVideoCodecs = codecs
+        )
+
+        assertEquals(hevc1080, selected)
+        val incompatibleScore = StreamAutoPlaySelector.scoreSource(av1FourK, StreamAutoPlayMode.BEST_QUALITY, codecs)
+        assertEquals(StreamAutoPlaySelector.DecoderSupport.UNSUPPORTED, incompatibleScore.decoderSupport)
+        assertEquals(-600, incompatibleScore.decoderCompatibilityPoints)
+        assertEquals("video/av01", incompatibleScore.declaredCodecMime)
+    }
+
+    @Test fun `known codec without matching decoder gets a soft penalty but remains a fallback`() {
+        val unsupported = withParsedVideo("H.264", "1080p")
+        val onlyCandidate = listOf(unsupported)
+        val codecs = DeviceVideoCodecCapabilities(decoders = emptyList())
+
+        assertEquals(
+            unsupported,
+            StreamAutoPlaySelector.selectAutoPlayStream(
+                streams = onlyCandidate,
+                mode = StreamAutoPlayMode.BALANCED,
+                regexPattern = "",
+                source = StreamAutoPlaySource.ALL_SOURCES,
+                installedAddonNames = setOf("AddonA"),
+                selectedAddons = emptySet(),
+                selectedPlugins = emptySet(),
+                deviceVideoCodecs = codecs
+            )
+        )
+        assertEquals(-600, StreamAutoPlaySelector.scoreSource(unsupported, StreamAutoPlayMode.BALANCED, codecs).decoderCompatibilityPoints)
+    }
+
+    @Test fun `unknown codec or failed device query stays neutral`() {
+        val unknownCodec = withParsedVideo("VVC", "2160p")
+        val unknownInventory = DeviceVideoCodecCapabilities(decoders = null)
+
+        assertEquals(null, StreamAutoPlaySelector.declaredVideoMime("VVC"))
+        assertEquals(
+            StreamAutoPlaySelector.DecoderSupport.UNKNOWN,
+            StreamAutoPlaySelector.scoreSource(unknownCodec, StreamAutoPlayMode.BEST_QUALITY, unknownInventory).decoderSupport
+        )
+        assertEquals(0, StreamAutoPlaySelector.scoreSource(unknownCodec, StreamAutoPlayMode.BEST_QUALITY, unknownInventory).decoderCompatibilityPoints)
+        assertEquals(StreamAutoPlaySelector.DecoderSupport.UNKNOWN, StreamAutoPlaySelector.decoderSupport(null, 2160, unknownInventory))
+    }
+
+    @Test fun `codec MIME with insufficient advertised dimensions is unsupported`() {
+        val tooLarge = DeviceVideoCodecCapabilities(
+            decoders = listOf(DeviceVideoDecoderCapability("video/hevc", 1920, 1080, false))
+        )
+        assertEquals(
+            StreamAutoPlaySelector.DecoderSupport.UNSUPPORTED,
+            StreamAutoPlaySelector.decoderSupport("video/hevc", 2160, tooLarge)
+        )
+        assertEquals(
+            StreamAutoPlaySelector.DecoderSupport.SOFTWARE_ONLY,
+            StreamAutoPlaySelector.decoderSupport("video/hevc", null, tooLarge)
+        )
+    }
+
+    @Test fun `balanced mode explains software-only decoder while best quality keeps resolution priority`() {
+        val hevc4k = withParsedVideo("HEVC", "2160p")
+        val softwareOnly = DeviceVideoCodecCapabilities(
+            decoders = listOf(DeviceVideoDecoderCapability("video/hevc", 3840, 2160, false))
+        )
+
+        val balanced = StreamAutoPlaySelector.scoreSource(hevc4k, StreamAutoPlayMode.BALANCED, softwareOnly)
+        val bestQuality = StreamAutoPlaySelector.scoreSource(hevc4k, StreamAutoPlayMode.BEST_QUALITY, softwareOnly)
+
+        assertEquals(StreamAutoPlaySelector.DecoderSupport.SOFTWARE_ONLY, balanced.decoderSupport)
+        assertEquals(-160, balanced.decoderCompatibilityPoints)
+        assertEquals(0, bestQuality.decoderCompatibilityPoints)
+    }
+
+    @Test fun `codec aliases map to Android video MIME types`() {
+        assertEquals("video/avc", StreamAutoPlaySelector.declaredVideoMime("H.264 / AVC"))
+        assertEquals("video/hevc", StreamAutoPlaySelector.declaredVideoMime("x265 / H.265"))
+        assertEquals("video/av01", StreamAutoPlaySelector.declaredVideoMime("av01"))
+        assertEquals("video/x-vnd.on2.vp9", StreamAutoPlaySelector.declaredVideoMime("VP9"))
+        assertEquals("video/dolby-vision", StreamAutoPlaySelector.declaredVideoMime("Dolby Vision"))
     }
 
     @Test fun `data saver prefers smaller known files without rewarding unknown size`() {
@@ -427,6 +531,31 @@ class StreamAutoPlaySelectorTest {
                 state = it
             )
         }
+    )
+
+    private fun withParsedVideo(codec: String?, resolution: String?): Stream = stream(
+        addonName = "AddonA",
+        url = "https://example.com/${codec.orEmpty()}-${resolution.orEmpty()}"
+    ).copy(
+        clientResolve = StreamClientResolve(
+            type = null, infoHash = null, fileIdx = null, magnetUri = null, sources = null,
+            torrentName = null, filename = null, mediaType = null, mediaId = null, mediaOnlyId = null,
+            title = null, season = null, episode = null, service = null, serviceIndex = null,
+            serviceExtension = null, isCached = null,
+            stream = StreamClientResolveStream(
+                StreamClientResolveRaw(
+                    torrentName = null, filename = null, size = null, folderSize = null,
+                    tracker = null, indexer = null, network = null,
+                    parsed = StreamClientResolveParsed(
+                        rawTitle = null, parsedTitle = null, year = null, resolution = resolution,
+                        seasons = null, episodes = null, quality = null, hdr = null, codec = codec,
+                        audio = null, channels = null, languages = null, group = null, network = null,
+                        edition = null, duration = null, bitDepth = null, extended = null,
+                        theatrical = null, remastered = null, unrated = null
+                    )
+                )
+            )
+        )
     )
 
     private fun addonStreams(

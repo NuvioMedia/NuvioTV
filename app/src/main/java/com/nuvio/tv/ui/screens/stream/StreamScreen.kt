@@ -75,6 +75,8 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.toAbsoluteAlignment
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
@@ -92,6 +94,8 @@ import com.nuvio.tv.core.streams.StreamBadgeSettings
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
+import com.nuvio.tv.core.runtime.DeviceCapabilities
+import com.nuvio.tv.core.runtime.DeviceVideoCodecCapabilities
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
@@ -754,6 +758,7 @@ private fun RightStreamSection(
     var userMovedFromFirstResult by remember { mutableStateOf(shouldRestoreFocusedStream) }
     var firstResultFocusAssigned by remember { mutableStateOf(shouldRestoreFocusedStream) }
     val scope = rememberCoroutineScope()
+    var deviceVideoCodecs by remember { mutableStateOf<DeviceVideoCodecCapabilities?>(null) }
     var focusJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val orderedAddonNames = remember(availableAddons, sourceChips) {
         buildList {
@@ -793,6 +798,11 @@ private fun RightStreamSection(
 
     LaunchedEffect(Unit) {
         enter = true
+    }
+    LaunchedEffect(Unit) {
+        deviceVideoCodecs = withContext(Dispatchers.IO) {
+            runCatching { DeviceCapabilities.videoCodecCapabilities() }.getOrNull()
+        }
     }
     LaunchedEffect(shouldRestoreFocusedStream) {
         if (shouldRestoreFocusedStream) {
@@ -1194,6 +1204,7 @@ private fun StreamsList(
                     showFileSizeBadges = showFileSizeBadges,
                     showAddonLogo = showAddonLogo,
                     badgePlacement = badgePlacement,
+                    deviceVideoCodecs = deviceVideoCodecs,
                     reserveBadgeSpace = hasBadgeRules && stream.badges.isEmpty(),
                     onClick = { onStreamSelected(stream) },
                     focusRequester = when {
@@ -1224,6 +1235,7 @@ private fun StreamsList(
 private fun StreamCard(
     selectionMode: StreamAutoPlayMode,
     stream: Stream,
+    deviceVideoCodecs: DeviceVideoCodecCapabilities?,
     showFileSizeBadges: Boolean,
     showAddonLogo: Boolean,
     badgePlacement: StreamBadgePlacement,
@@ -1345,9 +1357,27 @@ private fun StreamCard(
                 }
 
                 if (selectionMode.usesSourceScore) {
-                    val score = remember(stream, selectionMode) { StreamAutoPlaySelector.scoreSource(stream, selectionMode) }
+                    val score = remember(stream, selectionMode, deviceVideoCodecs) {
+                        StreamAutoPlaySelector.scoreSource(stream, selectionMode, deviceVideoCodecs)
+                    }
+                    val decoderStatus = stringResource(
+                        when (score.decoderSupport) {
+                            StreamAutoPlaySelector.DecoderSupport.SUPPORTED -> R.string.source_decoder_supported
+                            StreamAutoPlaySelector.DecoderSupport.SOFTWARE_ONLY -> R.string.source_decoder_software_only
+                            StreamAutoPlaySelector.DecoderSupport.UNSUPPORTED -> R.string.source_decoder_unsupported
+                            StreamAutoPlaySelector.DecoderSupport.UNKNOWN -> R.string.source_decoder_unknown
+                        }
+                    )
                     Text(
-                        text = stringResource(R.string.source_score_explanation, score.total, score.resolutionPoints, score.sizePoints, score.cachedPoints),
+                        text = stringResource(
+                            R.string.source_score_explanation,
+                            score.total,
+                            score.resolutionPoints,
+                            score.sizePoints,
+                            score.cachedPoints,
+                            score.decoderCompatibilityPoints,
+                            decoderStatus
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioTheme.extendedColors.textSecondary
                     )

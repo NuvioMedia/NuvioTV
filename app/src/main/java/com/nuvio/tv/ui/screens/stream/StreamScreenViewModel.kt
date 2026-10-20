@@ -17,6 +17,7 @@ import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.torrent.TorrentState
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
+import com.nuvio.tv.core.runtime.DeviceCapabilities
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
@@ -51,6 +52,8 @@ import com.nuvio.tv.ui.util.localizedGenreLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -356,6 +359,9 @@ class StreamScreenViewModel @Inject constructor(
         val newScope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + kotlinx.coroutines.SupervisorJob())
         streamLoadScope = newScope
         streamLoadJob = newScope.launch {
+            val deviceVideoCodecs = async(Dispatchers.IO) {
+                runCatching { DeviceCapabilities.videoCodecCapabilities() }.getOrNull()
+            }
             streamLoadCompleted = false
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             if (manualSelection) {
@@ -476,7 +482,7 @@ class StreamScreenViewModel @Inject constructor(
                 contentId?.let { bingeGroupCacheDataStore.get(it) }
             } else null
 
-            fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
+            suspend fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
                 val orderedAddonStreams = StreamAutoPlaySelector.orderAddonStreams(
                     addonStreamGroups,
                     installedAddonOrder
@@ -515,6 +521,11 @@ class StreamScreenViewModel @Inject constructor(
                 val selectedAutoPlayStream = if (!shouldAutoSelect) {
                     null
                 } else {
+                    val codecSnapshot = if (playerSettings.streamAutoPlayMode.usesSourceScore) {
+                        deviceVideoCodecs.await()
+                    } else {
+                        null
+                    }
                     StreamAutoPlaySelector.selectAutoPlayStream(
                         streams = allStreams,
                         mode = playerSettings.streamAutoPlayMode,
@@ -524,7 +535,8 @@ class StreamScreenViewModel @Inject constructor(
                         selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
                         selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins,
                         preferredBingeGroup = persistedBingeGroup,
-                        preferBingeGroupInSelection = persistedBingeGroup != null
+                        preferBingeGroupInSelection = persistedBingeGroup != null,
+                        deviceVideoCodecs = codecSnapshot
                     )
                 }
                 if (selectedAutoPlayStream != null) {
