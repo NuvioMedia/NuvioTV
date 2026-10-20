@@ -1,0 +1,55 @@
+package com.nuvio.tv.ui.screens.settings
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.tv.R
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings
+import com.nuvio.tv.ui.screens.player.audiosync.SubtitleSyncStatus
+import com.nuvio.tv.ui.screens.player.autosync.AutoSyncPreferences
+
+/** Audio fallback settings, beside Auto Sync in Playback → Subtitles. */
+@Composable
+internal fun audioSyncSettingsItems(enabled: Boolean) {
+    AudioSyncFallback.initialize(LocalContext.current)
+    val autoSyncOn by AutoSyncPreferences.enabled.collectAsStateWithLifecycle()
+    val fallbackOn by AudioSyncSettings.fallbackEnabled.collectAsStateWithLifecycle()
+
+    SettingsToggleRow(
+        title = stringResource(R.string.audio_sync_setting_title),
+        subtitle = stringResource(R.string.audio_sync_setting_description),
+        checked = fallbackOn,
+        onToggle = { AudioSyncSettings.setFallbackEnabled(!fallbackOn) },
+        enabled = enabled && autoSyncOn,
+        expandSubtitleOnFocus = true,
+    )
+    if (autoSyncOn && fallbackOn) {
+        val model by SubtitleSyncStatus.speechModel.collectAsStateWithLifecycle()
+        val metered by AudioSyncSettings.samplingOnMobileData.collectAsStateWithLifecycle()
+        SettingsActionRow(
+            title = stringResource(R.string.audio_sync_model_title, model.sizeMb),
+            subtitle = when {
+                model.downloading -> stringResource(R.string.audio_sync_model_downloading, (model.progress * 100).toInt())
+                model.downloaded -> stringResource(R.string.audio_sync_model_ready)
+                model.error != null -> stringResource(R.string.audio_sync_model_failed)
+                else -> stringResource(R.string.audio_sync_model_description)
+            },
+            value = stringResource(if (model.downloaded) R.string.audio_sync_model_delete else R.string.audio_sync_model_download),
+            enabled = enabled && model.supported && !model.downloading,
+            onClick = {
+                if (model.downloaded) SubtitleSyncStatus.modelActions?.delete()
+                else SubtitleSyncStatus.modelActions?.download()
+            },
+        )
+        SettingsToggleRow(
+            title = stringResource(R.string.audio_sync_metered_title),
+            subtitle = stringResource(R.string.audio_sync_metered_description),
+            checked = metered,
+            onToggle = { AudioSyncSettings.setSamplingOnMobileData(!metered) },
+            enabled = enabled,
+        )
+    }
+}
