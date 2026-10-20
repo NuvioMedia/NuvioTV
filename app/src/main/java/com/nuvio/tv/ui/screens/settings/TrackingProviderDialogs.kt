@@ -649,7 +649,7 @@ private fun SimklSyncInfoContent(
 }
 
 @Composable
-private fun TrackingConnectedWordmark(
+internal fun TrackingConnectedWordmark(
     brand: TrackingDialogBrand,
     logo: Painter,
     contentDescription: String
@@ -682,16 +682,17 @@ private fun TrackingConnectedWordmark(
 }
 
 @Composable
-private fun TrackingBrandPrimaryButton(
+internal fun TrackingBrandPrimaryButton(
     label: String,
     loading: Boolean,
     enabled: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(48.dp),
         colors = ButtonDefaults.colors(
@@ -734,7 +735,7 @@ private fun TrackingBrandPrimaryButton(
 }
 
 @Composable
-private fun TrackingBrandFooterButton(
+internal fun TrackingBrandFooterButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -771,7 +772,7 @@ private fun TrackingBrandFooterButton(
 }
 
 @Composable
-private fun TrackingBrandMessage(
+internal fun TrackingBrandMessage(
     text: String,
     isError: Boolean
 ) {

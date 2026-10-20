@@ -66,21 +66,31 @@ internal fun TrackingMediaReference.weTrakrTarget(): WeTrakrTarget? {
     if (isMovie) return WeTrakrTarget(WeTrakrItemType.MOVIE, media)
     val episode = episode ?: return WeTrakrTarget(WeTrakrItemType.SHOW, media)
     if (episode.usesTvdbSeasonMapping) return null
-    val season = episode.season?.takeIf { it >= 0 } ?: return null
+    val season = episode.season?.takeIf { it >= 0 } ?: ANIME_ENTRY_SEASON.takeIf { ids.isAnimeOnly } ?: return null
     val number = episode.number.takeIf { it > 0 } ?: return null
     return WeTrakrTarget(WeTrakrItemType.EPISODE, media, season, number, episode.title)
 }
 
+internal const val ANIME_ENTRY_SEASON = 1
+
 internal fun TrackingExternalIds.toWeTrakrIds(): WeTrakrIds? = WeTrakrIds(
     imdb = imdb?.takeIf { it.matches(Regex("tt[0-9]+")) },
     tmdb = tmdb?.takeIf { it > 0L },
-    tvdb = tvdb?.toLongOrNull()?.takeIf { it > 0L }
+    tvdb = tvdb?.toLongOrNull()?.takeIf { it > 0L },
+    mal = mal?.takeIf { it > 0L },
+    anilist = anilist?.takeIf { it > 0L },
+    kitsu = kitsu?.takeIf { it > 0L },
+    anidb = anidb?.takeIf { it > 0L }
 ).takeUnless { it.isEmpty }
 
 internal fun WeTrakrIds.requestIds(): JsonObject = buildJsonObject {
     imdb?.let { put("imdb", it) }
     tmdb?.let { put("tmdb", it) }
     tvdb?.let { put("tvdb", it) }
+    mal?.let { put("myanimelist", it) }
+    anilist?.let { put("anilist", it) }
+    kitsu?.let { put("kitsu", it) }
+    anidb?.let { put("anidb", it) }
 }
 
 internal data class WeTrakrTrackingChange(val target: WeTrakrTarget, val trackedAt: String?)
@@ -132,6 +142,75 @@ internal fun weTrakrTrackingBody(
 }.toString()
 
 internal fun weTrakrNotFoundCount(body: String): Int = weTrakrResultCount(body, "notFound", "not_found")
+
+internal fun weTrakrAddedCount(body: String, types: Set<String>): Int? =
+    (weTrakrElement(body).weTrakrObject()["added"] as? JsonObject)?.summaryCount(types)
+
+internal fun weTrakrExistingCount(body: String, types: Set<String>): Int =
+    (weTrakrElement(body).weTrakrObject()["existing"] as? JsonObject)?.summaryCount(types) ?: 0
+
+private fun JsonObject.summaryCount(types: Set<String>): Int? {
+    var found = false
+    var sum = 0
+    fun visit(value: JsonObject) {
+        value.forEach { (key, child) ->
+            when {
+                key == "hold" -> Unit
+                key in types && child is JsonPrimitive -> child.contentOrNull?.toIntOrNull()?.let { found = true; sum += it }
+                key in types && child is JsonArray -> { found = true; sum += child.resultItems() }
+                child is JsonObject -> visit(child)
+            }
+        }
+    }
+    visit(this)
+    return if (found) sum else (get("total") as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
+}
+
+internal fun weTrakrNotFoundKeys(body: String): Set<String> {
+    val root = weTrakrElement(body).weTrakrObject()
+    val section = (root["notFound"] ?: root["not_found"]) as? JsonObject ?: return emptySet()
+    val keys = HashSet<String>()
+    fun items(name: String) = (section[name] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+    items("movies").forEach { item ->
+        decodeWeTrakrIds(item.child("ids")).aliases().forEach { keys += weTrakrUploadKey(WeTrakrItemType.MOVIE, it, null, null) }
+    }
+    items("shows").forEach { item ->
+        val aliases = decodeWeTrakrIds(item.child("ids")).aliases()
+        val seasons = (item["seasons"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+        if (seasons.isEmpty()) aliases.forEach { keys += weTrakrUploadKey(WeTrakrItemType.SHOW, it, null, null) }
+        seasons.forEach { season ->
+            val number = season.int("number") ?: return@forEach
+            val episodes = (season["episodes"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+            if (episodes.isEmpty()) aliases.forEach { keys += weTrakrSeasonKey(it, number) }
+            episodes.forEach { episode ->
+                val episodeNumber = episode.int("number") ?: return@forEach
+                aliases.forEach { keys += weTrakrUploadKey(WeTrakrItemType.EPISODE, it, number, episodeNumber) }
+            }
+        }
+    }
+    items("seasons").forEach { item ->
+        val number = item.int("season", "number") ?: return@forEach
+        decodeWeTrakrIds(item.child("show")?.child("ids")).aliases().forEach { keys += weTrakrSeasonKey(it, number) }
+    }
+    items("episodes").forEach { item ->
+        val season = item.int("season") ?: return@forEach
+        val number = item.int("number") ?: return@forEach
+        decodeWeTrakrIds(item.child("show")?.child("ids")).aliases().forEach {
+            keys += weTrakrUploadKey(WeTrakrItemType.EPISODE, it, season, number)
+        }
+    }
+    return keys
+}
+
+internal fun WeTrakrTarget.isIn(notFoundKeys: Set<String>): Boolean = media.ids.aliases().any { alias ->
+    weTrakrUploadKey(type, alias, season, episode) in notFoundKeys ||
+        (type == WeTrakrItemType.EPISODE && season != null && weTrakrSeasonKey(alias, season) in notFoundKeys)
+}
+
+internal fun weTrakrUploadKey(type: WeTrakrItemType, id: String, season: Int?, episode: Int?): String =
+    "${type.name}|$id|${season ?: ""}|${episode ?: ""}"
+
+private fun weTrakrSeasonKey(id: String, season: Int): String = "SEASON|$id|$season|"
 
 internal data class WeTrakrErrored(val alreadyWatched: Int = 0, val other: Int = 0) {
     val total: Int

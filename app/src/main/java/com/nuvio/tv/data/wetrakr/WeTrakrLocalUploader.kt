@@ -45,6 +45,7 @@ class WeTrakrLocalUploader(
     private val api: WeTrakrApiClient,
     private val sync: WeTrakrSyncRepository,
     private val auth: WeTrakrAuthStore,
+    private val memory: WeTrakrUploadMemory,
     private val coroutineScope: CoroutineScope,
     private val now: () -> Long = System::currentTimeMillis,
     private val sleep: suspend (Long) -> Unit = { delay(it) }
@@ -110,15 +111,22 @@ class WeTrakrLocalUploader(
                 pauseUntil(scope, error.retryAtEpochMs ?: (now() + RETRY_MS), error.toWeTrakrSyncError())
                 continue
             }
-            val notFound = weTrakrNotFoundCount(response.body).coerceAtMost(batch.changes.size)
+            val missingKeys = weTrakrNotFoundKeys(response.body)
+            val missing = batch.changes.filter { it.target.isIn(missingKeys) }.map { it.target.uploadKey() }
+            memory.rememberNotFound(scope.profileId, missing, now())
+            val size = batch.changes.size
+            val notFound = missing.size.takeIf { it > 0 } ?: weTrakrNotFoundCount(response.body).coerceAtMost(size)
             val errored = weTrakrErrored(response.body)
-            val already = errored.alreadyWatched.coerceAtMost(batch.changes.size - notFound)
-            val failed = errored.other.coerceAtMost(batch.changes.size - notFound - already)
+            val types = batch.kind.resultTypes()
+            val already = (errored.alreadyWatched + weTrakrExistingCount(response.body, types)).coerceAtMost(size - notFound)
+            val failed = errored.other.coerceAtMost(size - notFound - already)
+            val added = (weTrakrAddedCount(response.body, types) ?: (size - notFound - already - failed))
+                .coerceIn(0, size - notFound - already - failed)
             update(scope) {
                 it.copy(
                     status = WeTrakrUploadStatus.RUNNING,
-                    sent = it.sent + batch.changes.size,
-                    added = it.added + batch.changes.size - notFound - already - failed,
+                    sent = it.sent + size,
+                    added = it.added + added,
                     alreadyOnWeTrakr = it.alreadyOnWeTrakr + already,
                     notFound = it.notFound + notFound,
                     failed = it.failed + failed,
@@ -160,6 +168,11 @@ internal fun weTrakrUploadBatches(preview: WeTrakrUploadPreview, kinds: Set<WeTr
 private fun WeTrakrUploadKind.status(): String = when (this) {
     WeTrakrUploadKind.WATCHED -> "watched"
     WeTrakrUploadKind.LIBRARY -> "planning"
+}
+
+private fun WeTrakrUploadKind.resultTypes(): Set<String> = when (this) {
+    WeTrakrUploadKind.WATCHED -> setOf("movies", "episodes")
+    WeTrakrUploadKind.LIBRARY -> setOf("movies", "shows")
 }
 
 private fun WeTrakrUploadKind.buckets(): Set<WeTrakrSyncBucket> = when (this) {

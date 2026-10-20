@@ -1263,7 +1263,9 @@
     <string name="wetrakr_local_upload_library">Library as planning</string>
     <string name="wetrakr_local_upload_counts">%1$d to add · %2$d already on WeTrakr</string>
     <string name="wetrakr_local_upload_unmatched">Can\'t be matched (%1$d)</string>
-    <string name="wetrakr_local_upload_unmatched_subtitle">No IMDb, TMDB or TVDB ID, so WeTrakr can\'t find these titles.</string>
+    <string name="wetrakr_local_upload_unmatched_subtitle">No IMDb, TMDB, TVDB or anime ID, so they can\'t be sent to WeTrakr.</string>
+    <string name="wetrakr_local_upload_not_found">Not on WeTrakr (%1$d)</string>
+    <string name="wetrakr_local_upload_not_found_subtitle">WeTrakr didn\'t find these in its catalog last time. They\'re tried again after 30 days.</string>
     <string name="wetrakr_local_upload_view">View</string>
     <string name="wetrakr_local_upload_nothing">Nothing new to add. Everything that can be matched is already on WeTrakr.</string>
     <string name="wetrakr_local_upload_not_synced">WeTrakr hasn\'t finished syncing yet. Try again in a moment.</string>
@@ -1276,8 +1278,11 @@
         <item quantity="one">Syncing local data to WeTrakr · %1$d%% · %2$d item left</item>
         <item quantity="other">Syncing local data to WeTrakr · %1$d%% · %2$d items left</item>
     </plurals>
-    <string name="wetrakr_local_upload_done">Sync finished · %1$d added · %2$d already on WeTrakr · %3$d not found</string>
-    <string name="wetrakr_local_upload_done_failed">Sync finished · %1$d added · %2$d already on WeTrakr · %3$d not found · %4$d failed</string>
+    <string name="wetrakr_local_upload_summary">Sync summary</string>
+    <string name="wetrakr_local_upload_done_added">Added to WeTrakr: %1$d</string>
+    <string name="wetrakr_local_upload_done_already">Already on WeTrakr: %1$d</string>
+    <string name="wetrakr_local_upload_done_not_found">Not in WeTrakr\'s catalog: %1$d. These won\'t be offered again for 30 days.</string>
+    <string name="wetrakr_local_upload_done_failed">Failed: %1$d</string>
     <string name="wetrakr_local_upload_cancelled">Sync cancelled · %1$d added</string>
     <string name="wetrakr_local_upload_failed">Sync stopped · %1$d added · %2$s</string>
     <plurals name="wetrakr_local_upload_entries">

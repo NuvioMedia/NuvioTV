@@ -33,6 +33,15 @@ class WeTrakrLocalUploaderTest {
         }
     }
 
+    private class FakeUploadMemory : WeTrakrUploadMemory {
+        val notFound = mutableMapOf<Int, MutableSet<String>>()
+        override suspend fun notFound(profileId: Int, now: Long): Set<String> = notFound[profileId].orEmpty()
+        override suspend fun rememberNotFound(profileId: Int, keys: Collection<String>, now: Long) {
+            notFound.getOrPut(profileId) { mutableSetOf() } += keys
+        }
+    }
+
+    private val memory = FakeUploadMemory()
     private val snapshot = WeTrakrSyncSnapshot(accountId = 42, isInitialized = true)
     private val runsAtSleep = mutableListOf<WeTrakrUploadRun?>()
 
@@ -52,7 +61,7 @@ class WeTrakrLocalUploaderTest {
         )
         lateinit var uploader: WeTrakrLocalUploader
         uploader = WeTrakrLocalUploader(
-            harness.api, sync, harness.store, TestScope(dispatcher),
+            harness.api, sync, harness.store, memory, TestScope(dispatcher),
             now = { harness.now },
             sleep = {
                 runsAtSleep += uploader.run.value
@@ -86,6 +95,30 @@ class WeTrakrLocalUploaderTest {
         assertEquals(2, run.sent)
         assertEquals(1, run.added)
         assertEquals(1, run.alreadyOnWeTrakr)
+    }
+
+    @Test
+    fun `titles WeTrakr can't find are remembered and left out of the next preview`() = runTest {
+        val harness = WeTrakrTestHarness()
+        val uploader = setup(harness)
+        harness.reply(body = """{"added":{"movies":1,"episodes":0},"notFound":{"movies":[{"ids":{"imdb":"tt1000002"},"status":"watched"}]}}""")
+
+        uploader.start(harness.store.scope(), preview(2), setOf(WeTrakrUploadKind.WATCHED))
+        advanceUntilIdle()
+
+        val run = uploader.run.value!!
+        assertEquals(1, run.added)
+        assertEquals(1, run.notFound)
+        val remembered = memory.notFound(harness.store.scope().profileId, 0L)
+        assertEquals(setOf("MOVIE|tt1000002||"), remembered)
+        val next = weTrakrUploadPreview(
+            watched = (1..2).map { WatchedItem("tt${1_000_000 + it}", "movie", "Movie $it", null, null, 0L) },
+            library = emptyList(),
+            snapshot = snapshot,
+            notFound = remembered
+        )
+        assertEquals(listOf("tt1000001"), next.watched.changes.map { it.target.media.ids.contentId })
+        assertEquals(listOf(WeTrakrUnmatchedTitle(WeTrakrUploadKind.WATCHED, "Movie 2", 1)), next.notFound)
     }
 
     @Test

@@ -19,7 +19,9 @@ class WeTrakrSyncEngine(
             WeTrakrSyncBucket.WATCHED_EPISODES in invalid, "episodes"
         )
         val playback = if (before == null || WeTrakrSyncBucket.PLAYBACK in invalid ||
-            activities.changed(before, "movies.all", "episodes.all", "shows.all")) {
+            activities.changed(
+                before, "movies.all", "episodes.all", "shows.all", "movies.last_playback_at", "episodes.last_playback_at"
+            )) {
             remote.playback(WeTrakrItemType.MOVIE) + remote.playback(WeTrakrItemType.EPISODE)
         } else previous.playback
         val watchlist = if (before == null || WeTrakrSyncBucket.WATCHLIST in invalid ||

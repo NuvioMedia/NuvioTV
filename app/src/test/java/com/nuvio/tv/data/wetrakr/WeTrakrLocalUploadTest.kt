@@ -54,22 +54,42 @@ class WeTrakrLocalUploadTest {
     fun `titles without a WeTrakr id are grouped as unmatched`() {
         val preview = weTrakrUploadPreview(
             watched = listOf(
-                watched("kitsu:12", "series", title = "Frieren", season = 1, episode = 1),
-                watched("kitsu:12", "series", title = "Frieren", season = 1, episode = 2)
+                watched("pengu:12", "series", title = "Channel show", season = 1, episode = 1),
+                watched("pengu:12", "series", title = "Channel show", season = 1, episode = 2)
             ),
-            library = listOf(saved("kitsu:12", "anime", "Frieren"), saved("tt0000004", "tv", "News channel")),
+            library = listOf(saved("pengu:12", "series", "Channel show"), saved("tt0000004", "tv", "News channel")),
             snapshot = snapshot
         )
 
-        assertEquals(listOf(WeTrakrUnmatchedTitle(WeTrakrUploadKind.WATCHED, "Frieren", 2)), preview.watched.unmatched)
+        assertEquals(listOf(WeTrakrUnmatchedTitle(WeTrakrUploadKind.WATCHED, "Channel show", 2)), preview.watched.unmatched)
         assertEquals(
             listOf(
-                WeTrakrUnmatchedTitle(WeTrakrUploadKind.LIBRARY, "Frieren", 1),
+                WeTrakrUnmatchedTitle(WeTrakrUploadKind.LIBRARY, "Channel show", 1),
                 WeTrakrUnmatchedTitle(WeTrakrUploadKind.LIBRARY, "News channel", 1)
             ),
             preview.library.unmatched
         )
         assertEquals(0, preview.watched.toUpload + preview.library.toUpload)
+    }
+
+    @Test
+    fun `anime with only anime ids is uploaded, episodes without a season go to the entry's season 1`() {
+        val preview = weTrakrUploadPreview(
+            watched = listOf(
+                watched("kitsu:12", "series", title = "Frieren", season = 1, episode = 1),
+                watched("kitsu:12", "anime", title = "Frieren", episode = 2),
+                watched("mal:5114", "movie", title = "Anime movie")
+            ),
+            library = listOf(saved("anilist:21", "anime", "One Piece")),
+            snapshot = snapshot
+        )
+
+        assertEquals(emptyList<WeTrakrUnmatchedTitle>(), preview.unmatched)
+        assertEquals(
+            listOf("EPISODE kitsu:12 1 1", "EPISODE kitsu:12 1 2", "MOVIE mal:5114 null null"),
+            preview.watched.changes.map { "${it.target.type} ${it.target.media.ids.contentId} ${it.target.season} ${it.target.episode}" }
+        )
+        assertEquals(WeTrakrIds(anilist = 21), preview.library.changes.single().target.media.ids)
     }
 
     @Test
@@ -90,6 +110,24 @@ class WeTrakrLocalUploadTest {
         assertEquals(WeTrakrItemType.MOVIE, change.target.type)
         assertEquals("tt0000003", change.target.media.ids.contentId)
         assertEquals("2023-11-14T22:13:20Z", change.trackedAt)
+    }
+
+    @Test
+    fun `library skips titles with local watched history or progress`() {
+        val preview = weTrakrUploadPreview(
+            watched = listOf(watched("tt0000020", "series", season = 1, episode = 1), watched("tt0000021", "movie")),
+            library = listOf(
+                saved("tt0000020", "series", "Watched show"),
+                saved("tt0000021", "movie", "Watched movie"),
+                saved("tt0000022", "series", "Show in progress"),
+                saved("tt0000023", "movie", "New movie")
+            ),
+            snapshot = snapshot,
+            progress = listOf(progress("tt0000022", "series", season = 1, episode = 1, position = 30))
+        )
+
+        assertEquals(3, preview.library.alreadyOnWeTrakr)
+        assertEquals("tt0000023", preview.library.changes.single().target.media.ids.contentId)
     }
 
     @Test

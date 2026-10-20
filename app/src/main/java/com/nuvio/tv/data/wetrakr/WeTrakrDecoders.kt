@@ -45,7 +45,11 @@ internal fun decodeWeTrakrIds(value: JsonObject?): WeTrakrIds {
     return WeTrakrIds(
         imdb = ids.text("imdb")?.takeIf { it.matches(Regex("tt[0-9]+")) },
         tmdb = ids.long("tmdb")?.takeIf { it > 0L },
-        tvdb = ids.long("tvdb")?.takeIf { it > 0L }
+        tvdb = ids.long("tvdb")?.takeIf { it > 0L },
+        mal = ids.long("myanimelist", "mal")?.takeIf { it > 0L },
+        anilist = ids.long("anilist")?.takeIf { it > 0L },
+        kitsu = ids.long("kitsu")?.takeIf { it > 0L },
+        anidb = ids.long("anidb")?.takeIf { it > 0L }
     )
 }
 
