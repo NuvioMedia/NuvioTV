@@ -49,6 +49,10 @@ fun LiveTvScreen(
     var playlistUrl by remember { mutableStateOf("") }
     var epgUrl by remember { mutableStateOf("") }
     val formatter = remember { DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()) }
+    val programsByChannel = remember(state.programs) {
+        state.programs.groupBy { it.sourceId to it.channelId }
+            .mapValues { (_, programs) -> programs.sortedBy(LiveTvProgram::startEpochMillis) }
+    }
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     LaunchedEffect(Unit) {
@@ -126,10 +130,9 @@ fun LiveTvScreen(
             item { Text(stringResource(R.string.live_tv_empty_channels), color = NuvioTheme.colors.TextSecondary) }
         }
         items(state.channels, key = { "channel:${it.id}" }) { channel ->
-            val programs = state.programs.asSequence()
-                .filter { it.sourceId == channel.sourceId && (channel.tvgId.isNullOrBlank() || it.channelId == channel.tvgId) }
-                .sortedBy(LiveTvProgram::startEpochMillis)
-                .toList()
+            val programs = channel.tvgId?.takeIf(String::isNotBlank)
+                ?.let { programsByChannel[channel.sourceId to it] }
+                .orEmpty()
             val now = nowMillis
             val current = programs.firstOrNull { now >= it.startEpochMillis && now < it.endEpochMillis }
             val next = programs.firstOrNull { it.startEpochMillis > now }
