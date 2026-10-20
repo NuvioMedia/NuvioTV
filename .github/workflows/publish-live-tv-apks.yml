@@ -230,9 +230,11 @@ jobs:
           [[ "$(stat -c %s "release-assets/$target")" == "$expected_size" ]]
           actual_digest="$(sha256sum "release-assets/$target" | awk '{print $1}')"
           [[ "$actual_digest" == "$expected_digest" ]]
-          if jq -e --arg name "$target" '.assets[] | select(.name == $name)' <<<"$tv_release" >/dev/null; then
-            echo "The Windows package is already attached: $target" >&2
-            exit 1
+          already_attached=false
+          attached_digest="$(jq -r --arg name "$target" '.assets[] | select(.name == $name) | .digest // empty' <<<"$tv_release")"
+          if [[ -n "$attached_digest" ]]; then
+            [[ "${attached_digest#sha256:}" == "$actual_digest" ]]
+            already_attached=true
           fi
 
           sums_url="$(jq -r '.assets[] | select(.name == "SHA256SUMS.txt") | .url' <<<"$tv_release")"
@@ -243,7 +245,13 @@ jobs:
             recorded="$(awk -v name="$asset_name" '$2 == "./" name || $2 == name {print $1}' release-assets/SHA256SUMS.txt)"
             [[ "$recorded" == "$expected" ]]
           done < <(jq -r '.assets[] | select(.name | endswith(".apk")) | [.name,.digest] | @tsv' <<<"$tv_release")
-          printf '%s  %s\n' "$actual_digest" "$target" >> release-assets/SHA256SUMS.txt
+          recorded_msi_digest="$(awk -v name="$target" '$2 == name {print $1}' release-assets/SHA256SUMS.txt)"
+          if [[ -n "$recorded_msi_digest" ]]; then
+            [[ "$recorded_msi_digest" == "$actual_digest" ]]
+          else
+            printf '%s  %s\n' "$actual_digest" "$target" >> release-assets/SHA256SUMS.txt
+          fi
+          echo "ALREADY_ATTACHED=${already_attached}" >> "$GITHUB_ENV"
 
       - name: Upload MSI and refreshed checksums
         env:
@@ -251,7 +259,10 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
-          gh release upload "$RELEASE_TAG" release-assets/*.msi release-assets/SHA256SUMS.txt \
+          if [[ "${ALREADY_ATTACHED}" != true ]]; then
+            gh release upload "$RELEASE_TAG" release-assets/*.msi --repo "$GITHUB_REPOSITORY"
+          fi
+          gh release upload "$RELEASE_TAG" release-assets/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --clobber
 
       - name: Document Desktop version on the release
@@ -262,15 +273,15 @@ jobs:
         run: |
           set -euo pipefail
           marker='<!-- telumia-desktop-package -->'
-          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > release-notes.md
-          if ! grep -Fq "$marker" release-notes.md; then
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > release-notes-existing.md
+          if ! grep -Fq "$marker" release-notes-existing.md; then
             {
-              cat release-notes.md
+              cat release-notes-existing.md
               printf '\n\n%s\n\n' "$marker"
               printf '%s\n\n' '### Windows PC'
               printf 'Inclui também o instalador Windows x64 da Telumia Desktop **%s**: `Telumia-Windows-x64-%s.msi`. O Desktop permanece nesta versão estável; os APKs Android TV desta pré-release são da versão indicada no título. O MSI foi copiado byte a byte da [release Desktop %s](https://github.com/Pepeu2010/telumia-desktop/releases/tag/v%s) e seu SHA-256 foi conferido antes do upload.\n\n' "$DESKTOP_VERSION" "$DESKTOP_VERSION" "$DESKTOP_VERSION" "$DESKTOP_VERSION"
               printf '%s\n' 'O manifesto SHA256SUMS.txt cobre os três APKs e o MSI.'
-            } >> release-notes.md
+            } > release-notes.md
             gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file release-notes.md
           fi
 
