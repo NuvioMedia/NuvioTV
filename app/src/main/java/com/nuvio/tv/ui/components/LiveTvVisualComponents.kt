@@ -28,7 +28,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.tv.ui.theme.LocalUiMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 
-/** Real source adapters supply presentation. No channel/EPG data or navigation route is embedded. */
+/** Shared Live TV primitives. Screens supply source data and connect the actions to real flows. */
 internal data class LiveTvProgramPresentation(val key: String, val title: String, val timeLabel: String, val isCurrent: Boolean = false)
 
 @Composable
@@ -75,7 +75,7 @@ internal fun LiveTvProgramCell(program: LiveTvProgramPresentation, onClick: () -
     }
 }
 
-/** Visual row only. Real providers, time zones, guide synchronization and playback are Phase 6. */
+/** Grid row primitive; guide data and playback actions are provided by the Live TV screen. */
 @Composable
 internal fun LiveTvGuideRow(channelName: String, channelNumber: String?, logoUrl: String?, selectedChannel: Boolean,
     programs: List<LiveTvProgramPresentation>, onChannelClick: () -> Unit, onProgramClick: (String) -> Unit,

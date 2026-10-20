@@ -28,29 +28,40 @@ class LiveTvSourceImporter @Inject constructor(
         )
     }
 
-    private suspend fun fetch(url: String, maxChars: Int): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val request = Request.Builder().url(url).header("Accept-Encoding", "identity").get().build()
-        client.newCall(request).execute().use { response ->
-            if (response.code in 300..399) throw LiveTvSourceException("A fonte redirecionou; atualize a URL configurada")
-            if (!response.isSuccessful) throw LiveTvSourceException("A fonte respondeu com erro HTTP ${response.code}")
-            val body = response.body ?: throw LiveTvSourceException("A fonte retornou uma resposta vazia")
-            if (body.contentLength() > maxChars.toLong()) throw LiveTvSourceException("A fonte excede o tamanho permitido")
-            val bytes = body.byteStream().use { input ->
-                val output = java.io.ByteArrayOutputStream(minOf(maxChars, 64 * 1024))
-                val buffer = ByteArray(8 * 1024)
-                var total = 0
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    total += count
-                    if (total > maxChars) throw LiveTvSourceException("A fonte excede o tamanho permitido")
-                    output.write(buffer, 0, count)
+    private suspend fun fetch(url: String, maxChars: Int): String {
+        try {
+            return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val request = Request.Builder().url(url).header("Accept-Encoding", "identity").get().build()
+                client.newCall(request).execute().use { response ->
+                    if (response.code in 300..399) throw LiveTvSourceException("A fonte redirecionou; atualize a URL configurada")
+                    if (!response.isSuccessful) throw LiveTvSourceException("A fonte respondeu com erro HTTP ${response.code}")
+                    val body = response.body ?: throw LiveTvSourceException("A fonte retornou uma resposta vazia")
+                    if (body.contentLength() > maxChars.toLong()) throw LiveTvSourceException("A fonte excede o tamanho permitido")
+                    val bytes = body.byteStream().use { input ->
+                        val output = java.io.ByteArrayOutputStream(minOf(maxChars, 64 * 1024))
+                        val buffer = ByteArray(8 * 1024)
+                        var total = 0
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            total += count
+                            if (total > maxChars) throw LiveTvSourceException("A fonte excede o tamanho permitido")
+                            output.write(buffer, 0, count)
+                        }
+                        output.toByteArray()
+                    }
+                    val text = bytes.toString(Charsets.UTF_8)
+                    if (text.length > maxChars) throw LiveTvSourceException("A fonte excede o tamanho permitido")
+                    text
                 }
-                output.toByteArray()
             }
-            val text = bytes.toString(Charsets.UTF_8)
-            if (text.length > maxChars) throw LiveTvSourceException("A fonte excede o tamanho permitido")
-            text
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (safe: LiveTvSourceException) {
+            throw safe
+        } catch (_: Exception) {
+            // HTTP client exception messages may contain the full URL and credential query values.
+            throw LiveTvSourceException("Não foi possível carregar a fonte configurada")
         }
     }
 

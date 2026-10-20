@@ -2423,6 +2423,7 @@
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Home</string>
+    <string name="nav_live_tv">Live TV</string>
     <string name="nav_discover">Discover</string>
     <string name="nav_search">Search</string>
     <string name="nav_library">Library</string>
@@ -2433,6 +2434,24 @@
     <string name="action_select">Select</string>
     <string name="settings_rounded_ui">Rounded UI</string>
     <string name="cd_expand_sidebar">Expand sidebar</string>
+    <string name="live_tv_title">Live TV</string>
+    <string name="live_tv_description">Add your own M3U playlist and XMLTV guide. Channels are never bundled with the app.</string>
+    <string name="live_tv_add_source">Add a source</string>
+    <string name="live_tv_source_name">Source name</string>
+    <string name="live_tv_playlist_url">M3U playlist URL</string>
+    <string name="live_tv_epg_url">XMLTV guide URL (optional)</string>
+    <string name="live_tv_save_source">Save and import</string>
+    <string name="live_tv_refresh">Refresh sources</string>
+    <string name="live_tv_loading">Loading channels and guide…</string>
+    <string name="live_tv_sources">Your sources</string>
+    <string name="live_tv_disable">Disable</string>
+    <string name="live_tv_enable">Enable</string>
+    <string name="live_tv_remove">Remove</string>
+    <string name="live_tv_channels">Channels (%1$d)</string>
+    <string name="live_tv_empty_channels">Add a source above, then refresh to load its channels.</string>
+    <string name="live_tv_no_current_program">No current programme in the guide</string>
+    <string name="live_tv_next">Next</string>
+    <string name="live_tv_watch">Watch</string>
 
     <string name="update_checking">Checking for updates…</string>
     <string name="update_waiting_for_stable">You’ll receive the next stable release when it becomes available</string>

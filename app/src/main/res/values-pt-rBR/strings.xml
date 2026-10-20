@@ -2286,6 +2286,7 @@
     
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Início</string>
+    <string name="nav_live_tv">TV ao vivo</string>
     <string name="nav_discover">Descobrir</string>
     <string name="nav_search">Busca</string>
     <string name="nav_library">Biblioteca</string>
@@ -2296,6 +2297,24 @@
     <string name="action_select">Selecionar</string>
     <string name="settings_rounded_ui">Interface Arredondada</string>
     <string name="cd_expand_sidebar">Expandir menu lateral</string>
+    <string name="live_tv_title">TV ao vivo</string>
+    <string name="live_tv_description">Adicione sua própria lista M3U e guia XMLTV. O app não distribui canais.</string>
+    <string name="live_tv_add_source">Adicionar fonte</string>
+    <string name="live_tv_source_name">Nome da fonte</string>
+    <string name="live_tv_playlist_url">URL da lista M3U</string>
+    <string name="live_tv_epg_url">URL do guia XMLTV (opcional)</string>
+    <string name="live_tv_save_source">Salvar e importar</string>
+    <string name="live_tv_refresh">Atualizar fontes</string>
+    <string name="live_tv_loading">Carregando canais e guia…</string>
+    <string name="live_tv_sources">Suas fontes</string>
+    <string name="live_tv_disable">Desativar</string>
+    <string name="live_tv_enable">Ativar</string>
+    <string name="live_tv_remove">Remover</string>
+    <string name="live_tv_channels">Canais (%1$d)</string>
+    <string name="live_tv_empty_channels">Adicione uma fonte acima e atualize para carregar os canais.</string>
+    <string name="live_tv_no_current_program">Nenhum programa atual no guia</string>
+    <string name="live_tv_next">A seguir</string>
+    <string name="live_tv_watch">Assistir</string>
 
     <string name="update_checking">Verificando atualizações…</string>
     <string name="update_waiting_for_stable">Você vai receber a próxima versão estável assim que estiver disponível</string>

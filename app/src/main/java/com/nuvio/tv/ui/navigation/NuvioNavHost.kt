@@ -34,6 +34,7 @@ import com.nuvio.tv.ui.screens.home.HomeScreen
 import com.nuvio.tv.ui.screens.addon.AddonManagerScreen
 import com.nuvio.tv.ui.screens.addon.CatalogOrderScreen
 import com.nuvio.tv.ui.screens.library.LibraryScreen
+import com.nuvio.tv.ui.screens.livetv.LiveTvScreen
 import com.nuvio.tv.ui.screens.player.PlayerExitReason
 import com.nuvio.tv.ui.screens.player.PlayerScreen
 import com.nuvio.tv.ui.screens.player.PostPlayRecommendation
@@ -1128,6 +1129,21 @@ private fun PlaybackNavHost(
                     }
                 }
             )
+        }
+
+        composable(Screen.LiveTv.route) {
+            LiveTvScreen(onPlayChannel = { channel ->
+                val streamUrl = channel.streamUrl ?: return@LiveTvScreen
+                navController.navigate(
+                    Screen.Player.createRoute(
+                        streamUrl = streamUrl,
+                        title = channel.displayName,
+                        streamName = "Live TV",
+                        logo = channel.logoUrl,
+                        returnToHomeOnBack = true,
+                    )
+                )
+            })
         }
 
         composable(Screen.Search.route) { backStackEntry ->
