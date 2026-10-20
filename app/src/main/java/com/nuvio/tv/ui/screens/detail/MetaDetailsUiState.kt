@@ -18,7 +18,13 @@ import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
 enum class MoreLikeThisSource {
     TMDB,
     TRAKT,
-    SIMKL
+    SIMKL,
+    WETRAKR
+}
+
+enum class CommentsSource {
+    TRAKT,
+    WETRAKR
 }
 
 enum class CommentsMode {
@@ -91,6 +97,7 @@ data class MetaDetailsUiState(
     val isCommentsLoadingMore: Boolean = false,
     val commentsError: String? = null,
     val shouldShowCommentsSection: Boolean = false,
+    val commentsSource: CommentsSource = CommentsSource.TRAKT,
     val commentsMode: CommentsMode = CommentsMode.TITLE,
     val commentsEpisodeTarget: Video? = null,
     val selectedComment: TraktCommentReview? = null,

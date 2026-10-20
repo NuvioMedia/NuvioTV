@@ -55,6 +55,8 @@ internal class PostPlayRecommendationController(
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val simklRelatedService: SimklRelatedService,
     private val simklAuthRepository: SimklAuthRepository,
+    private val weTrakrCatalogService: com.nuvio.tv.data.wetrakr.WeTrakrCatalogService,
+    private val weTrakrAuthStore: com.nuvio.tv.data.wetrakr.WeTrakrAuthStore,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val watchProgressRepository: WatchProgressRepository,
     private val watchedSeriesStateHolder: WatchedSeriesStateHolder,
@@ -628,7 +630,15 @@ internal class PostPlayRecommendationController(
         val candidates = withTimeoutOrNull(10_000L) {
             val sourcePreference = traktSettingsDataStore.moreLikeThisSource.first()
             val traktAuthenticated = traktAuthDataStore.isAuthenticated.first()
-            if (sourcePreference == MoreLikeThisSourcePreference.SIMKL && simklAuthRepository.state.value.isAuthenticated) {
+            if (sourcePreference == MoreLikeThisSourcePreference.WETRAKR && weTrakrAuthStore.state.value.isAuthenticated) {
+                runCatching {
+                    weTrakrCatalogService.getSimilar(
+                        meta = meta,
+                        fallbackItemId = playbackController.contentId,
+                        fallbackItemType = playbackController.contentType
+                    )
+                }.getOrDefault(emptyList())
+            } else if (sourcePreference == MoreLikeThisSourcePreference.SIMKL && simklAuthRepository.state.value.isAuthenticated) {
                 runCatching {
                     simklRelatedService.getRelated(
                         meta = meta,

@@ -106,6 +106,8 @@ class WeTrakrTrackerViewModel @Inject constructor(
     private var disconnectJob: Job? = null
     private var localUploadJob: Job? = null
     private val mutableLocalUpload = MutableStateFlow(WeTrakrLocalUploadUiState())
+    val showComments: StateFlow<Boolean> = settings.showWeTrakrComments
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val localUpload: StateFlow<WeTrakrLocalUploadUiState> = combine(mutableLocalUpload, uploader.run) { state, run ->
         val current = run?.takeIf { it.scope == authStore.scope() && it.scope.profileId == profiles.activeProfileId.value }
         state.copy(run = current, runMessage = current?.message())
@@ -239,6 +241,10 @@ class WeTrakrTrackerViewModel @Inject constructor(
         viewModelScope.launch { settings.setContinueWatchingDaysCap(days) }
     }
     fun onAccountOpened() = sync.refreshAsync(TrackingRefreshIntent.AUTOMATIC)
+
+    fun onShowCommentsChanged(enabled: Boolean) {
+        viewModelScope.launch { settings.setShowWeTrakrComments(enabled) }
+    }
 
     fun onLocalUploadOpened() {
         val scope = authStore.scope()
