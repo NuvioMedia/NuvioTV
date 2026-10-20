@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Build
 import android.util.Log
 import android.view.Display
+import com.nuvio.tv.core.runtime.DeviceCapabilities
 import kotlin.math.roundToInt
 
 /**
@@ -42,15 +43,16 @@ object DisplayCapabilities {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return Snapshot.Unknown
         }
-        val display = activity.window?.decorView?.display ?: return Snapshot.Unknown
-        val modes = display.supportedModes.toList()
-        val current = display.mode
-        val (afr, res) = deriveSupport(modes, current.modeId)
+        val display = activity.window?.decorView?.display
+        val capabilities = DeviceCapabilities.display(activity, display)
+        if (capabilities.currentModeId < 0) return Snapshot.Unknown
+        val modes = capabilities.supportedModes
+        val (afr, res) = deriveSupport(modes, capabilities.currentModeId)
         return Snapshot(
             supportsFrameRateSwitching = afr,
             supportsResolutionSwitching = res,
             supportedModes = modes,
-            currentModeId = current.modeId,
+            currentModeId = capabilities.currentModeId,
             apiSupported = true,
         )
     }

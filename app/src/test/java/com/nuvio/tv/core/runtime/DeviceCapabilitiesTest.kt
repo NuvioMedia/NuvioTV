@@ -71,6 +71,24 @@ class DeviceCapabilitiesTest {
     }
 
     @Test
+    fun advertisedDolbyVisionProfilesAreMappedByTheCentralCapabilityProvider() {
+        val profiles = listOf(
+            android.media.MediaCodecInfo.CodecProfileLevel.DolbyVisionProfileDvheDtb,
+            android.media.MediaCodecInfo.CodecProfileLevel.DolbyVisionProfileDvheStn,
+            android.media.MediaCodecInfo.CodecProfileLevel.DolbyVisionProfileDvheSt,
+        )
+
+        assertEquals(
+            DolbyVisionDecoderCapabilities(profile7 = true, profile5 = true, profile8 = true),
+            DeviceCapabilities.dolbyVisionDecoderCapabilities(profiles),
+        )
+        assertEquals(
+            DolbyVisionDecoderCapabilities(),
+            DeviceCapabilities.dolbyVisionDecoderCapabilities(emptyList()),
+        )
+    }
+
+    @Test
     fun physicalMemoryFactsAreReadOnceAndSharedAcrossConsumers() {
         val context = mockk<Context>()
         val activityManager = mockk<ActivityManager>()

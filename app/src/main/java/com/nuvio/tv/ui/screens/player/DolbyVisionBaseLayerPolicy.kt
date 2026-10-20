@@ -1,12 +1,9 @@
 package com.nuvio.tv.core.player
 
 import android.content.Context
-import android.hardware.display.DisplayManager
-import android.media.MediaCodecInfo
-import android.media.MediaCodecInfo.CodecProfileLevel
-import android.media.MediaCodecList
 import android.os.Build
 import android.view.Display
+import com.nuvio.tv.core.runtime.DeviceCapabilities
 
 /**
  * Decides what to do with a Dolby Vision stream at the codec selector. It only intervenes
@@ -183,12 +180,13 @@ object DolbyVisionBaseLayerPolicy {
             )
         }
 
-        @Suppress("DEPRECATION")
-        val hdrTypes: IntArray? = runCatching {
-            val dm = context.getSystemService(DisplayManager::class.java)
-            val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
-            display?.hdrCapabilities?.supportedHdrTypes
-        }.getOrNull()
+        val hdrTypes = DeviceCapabilities.display(
+            context = context,
+            display = runCatching {
+                context.getSystemService(android.hardware.display.DisplayManager::class.java)
+                    ?.getDisplay(Display.DEFAULT_DISPLAY)
+            }.getOrNull(),
+        ).supportedHdrTypes
 
         val hdrCapsKnown = hdrTypes != null
         val displayDv = hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION) == true
@@ -197,7 +195,7 @@ object DolbyVisionBaseLayerPolicy {
             hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS) == true
         val displayHlg = hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_HLG) == true
 
-        val decoderProfiles = queryDvDecoderProfileSupport()
+        val decoderProfiles = DeviceCapabilities.dolbyVisionDecoderCapabilities()
 
         return resolveFromCapabilities(
             hdrCapsKnown = hdrCapsKnown,
@@ -205,9 +203,9 @@ object DolbyVisionBaseLayerPolicy {
             displayHdr10 = displayHdr10,
             displayHdr10Plus = displayHdr10Plus,
             displayHlg = displayHlg,
-            codecSupportsDvheDtb = decoderProfiles.dvheDtb,
-            codecSupportsDvheStn = decoderProfiles.dvheStn,
-            codecSupportsDvheSt = decoderProfiles.dvheSt,
+            codecSupportsDvheDtb = decoderProfiles.profile7,
+            codecSupportsDvheStn = decoderProfiles.profile5,
+            codecSupportsDvheSt = decoderProfiles.profile8,
             isAmazonFireTv = isAmazonFireTv,
             isSamsung = isSamsung,
             isXiaomi = isXiaomi,
@@ -216,55 +214,4 @@ object DolbyVisionBaseLayerPolicy {
         )
     }
 
-    private data class DvDecoderProfileSupport(
-        val dvheDtb: Boolean,   // P7
-        val dvheStn: Boolean,   // P5
-        val dvheSt: Boolean     // P8
-    )
-
-    /**
-     * Enumerates the platform's decoders and reports which DV profiles they advertise.
-     * Returns all-false on any error or pre-N devices.
-     */
-    private fun queryDvDecoderProfileSupport(): DvDecoderProfileSupport {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            return DvDecoderProfileSupport(false, false, false)
-        }
-        return runCatching {
-            var dvheDtb = false
-            var dvheStn = false
-            var dvheSt = false
-            val list = MediaCodecList(MediaCodecList.REGULAR_CODECS)
-            for (info in list.codecInfos) {
-                if (info.isEncoder) continue
-                val supportsDvMime = info.supportedTypes.any { type ->
-                    type.equals(DOLBY_VISION_MIME, ignoreCase = true)
-                }
-                if (!supportsDvMime) continue
-                val caps: MediaCodecInfo.CodecCapabilities = runCatching {
-                    info.getCapabilitiesForType(DOLBY_VISION_MIME)
-                }.getOrNull() ?: continue
-                val profileLevels = caps.profileLevels ?: continue
-                for (profileLevel in profileLevels) {
-                    when (profileLevel.profile) {
-                        DvheDtbProfile -> dvheDtb = true
-                        DvheStnProfile -> dvheStn = true
-                        DvheStProfile -> dvheSt = true
-                    }
-                }
-            }
-            DvDecoderProfileSupport(dvheDtb, dvheStn, dvheSt)
-        }.getOrDefault(DvDecoderProfileSupport(false, false, false))
-    }
-
-    private const val DOLBY_VISION_MIME = "video/dolby-vision"
-
-    /** Android constant for DV Profile 7 (dual-layer FEL/MEL). Added in API 24. */
-    private const val DvheDtbProfile = CodecProfileLevel.DolbyVisionProfileDvheDtb
-
-    /** Android constant for DV Profile 5 (single-layer DV-only HEVC). Added in API 24. */
-    private const val DvheStnProfile = CodecProfileLevel.DolbyVisionProfileDvheStn
-
-    /** Android constant for DV Profile 8 (single-layer HDR10-compatible HEVC). Added in API 24. */
-    private const val DvheStProfile = CodecProfileLevel.DolbyVisionProfileDvheSt
 }

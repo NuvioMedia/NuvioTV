@@ -2,6 +2,11 @@ package com.nuvio.tv.core.runtime
 
 import android.app.ActivityManager
 import android.content.Context
+import android.hardware.display.DisplayManager
+import android.media.MediaCodecInfo
+import android.media.MediaCodecList
+import android.os.Build
+import android.view.Display
 
 /** A process-cached view of device memory facts used by playback, cache, and UI policies. */
 data class DeviceMemoryCapabilities(
@@ -12,6 +17,21 @@ data class DeviceMemoryCapabilities(
 )
 
 enum class DeviceResourceTier { LOW_RAM, BALANCED, HIGH_CAPACITY, UNKNOWN }
+
+/** Display facts are read on demand because HDMI capabilities can change while the app runs. */
+data class DeviceDisplayCapabilities(
+    val supportedModes: List<Display.Mode>,
+    val currentModeId: Int,
+    /** Null means the platform could not report HDR capabilities; an empty array means SDR. */
+    val supportedHdrTypes: IntArray?,
+)
+
+/** Dolby Vision decoder profiles advertised by Android's regular codec list. */
+data class DolbyVisionDecoderCapabilities(
+    val profile7: Boolean = false,
+    val profile5: Boolean = false,
+    val profile8: Boolean = false,
+)
 
 object DeviceCapabilities {
     private const val GIB = 1024L * 1024L * 1024L
@@ -27,6 +47,52 @@ object DeviceCapabilities {
         return synchronized(this) {
             cachedMemory ?: readMemory(context.applicationContext ?: context).also { cachedMemory = it }
         }
+    }
+
+    /** Reads display and HDR facts through one shared platform boundary. */
+    fun display(context: Context, display: Display?): DeviceDisplayCapabilities {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || display == null) {
+            return DeviceDisplayCapabilities(emptyList(), -1, null)
+        }
+        val modes = runCatching { display.supportedModes.toList() }.getOrDefault(emptyList())
+        val currentModeId = runCatching { display.mode.modeId }.getOrDefault(-1)
+        val hdrTypes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            @Suppress("DEPRECATION")
+            runCatching {
+                val displayManager = context.getSystemService(DisplayManager::class.java)
+                displayManager?.getDisplay(Display.DEFAULT_DISPLAY)?.hdrCapabilities?.supportedHdrTypes
+            }.getOrNull()
+        } else {
+            null
+        }
+        return DeviceDisplayCapabilities(modes, currentModeId, hdrTypes)
+    }
+
+    /** Enumerates advertised Dolby Vision profiles; failures remain an all-false snapshot. */
+    fun dolbyVisionDecoderCapabilities(): DolbyVisionDecoderCapabilities {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return DolbyVisionDecoderCapabilities()
+        return runCatching {
+            val profiles = mutableSetOf<Int>()
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+                .asSequence()
+                .filterNot { it.isEncoder }
+                .filter { codec -> codec.supportedTypes.any { it.equals(DOLBY_VISION_MIME, true) } }
+                .forEach { codec ->
+                    runCatching { codec.getCapabilitiesForType(DOLBY_VISION_MIME).profileLevels }
+                        .getOrNull()
+                        ?.forEach { profiles += it.profile }
+                }
+            dolbyVisionDecoderCapabilities(profiles)
+        }.getOrDefault(DolbyVisionDecoderCapabilities())
+    }
+
+    internal fun dolbyVisionDecoderCapabilities(profiles: Iterable<Int>): DolbyVisionDecoderCapabilities {
+        val profileSet = profiles.toSet()
+        return DolbyVisionDecoderCapabilities(
+            profile7 = MediaCodecInfo.CodecProfileLevel.DolbyVisionProfileDvheDtb in profileSet,
+            profile5 = MediaCodecInfo.CodecProfileLevel.DolbyVisionProfileDvheStn in profileSet,
+            profile8 = MediaCodecInfo.CodecProfileLevel.DolbyVisionProfileDvheSt in profileSet,
+        )
     }
 
     internal fun readMemory(context: Context): DeviceMemoryCapabilities {
@@ -96,4 +162,5 @@ object DeviceCapabilities {
     }.getOrNull()?.takeIf { it > 0L }
 
     private const val MIB = 1024L * 1024L
+    private const val DOLBY_VISION_MIME = "video/dolby-vision"
 }
