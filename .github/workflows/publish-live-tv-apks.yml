@@ -11,6 +11,11 @@ on:
         description: New prerelease tag matching the APK versionName (for example v1.0.1-alpha.1)
         required: true
         type: string
+      desktop_version:
+        description: Published Telumia Desktop MSI version to include in this release
+        required: true
+        default: "1.0.0"
+        type: string
 
 permissions:
   actions: read
@@ -30,11 +35,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release_tag }}
+          DESKTOP_VERSION: ${{ inputs.desktop_version }}
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
         run: |
           set -euo pipefail
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-[0-9A-Za-z.-]+$ ]]
+          [[ "$DESKTOP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 
           run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
           [[ "$(jq -r '.conclusion' <<<"${run_json}")" == "success" ]]
@@ -56,6 +63,10 @@ jobs:
             echo "Release ${RELEASE_TAG} already exists." >&2
             exit 1
           fi
+          desktop_release="$(gh release view "v${DESKTOP_VERSION}" --repo Pepeu2010/telumia-desktop --json isDraft,assets)"
+          [[ "$(jq -r .isDraft <<<"${desktop_release}")" == false ]]
+          jq -e '.assets[] | select(.name == "Telumia-Windows-x64.msi" and .state == "uploaded")' \
+            <<<"${desktop_release}" >/dev/null
 
           echo "sha=${source_sha}" >> "${GITHUB_OUTPUT}"
           echo "version=${apk_version}" >> "${GITHUB_OUTPUT}"
@@ -87,9 +98,26 @@ jobs:
           download_apk app-full-arm64-v8a-debug.apk app-full-arm64-v8a-debug.apk
           download_apk app-full-armeabi-v7a-debug.apk app-full-armeabi-v7a-debug.apk
 
+      - name: Download and verify the selected Windows PC release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DESKTOP_VERSION: ${{ inputs.desktop_version }}
+        run: |
+          set -euo pipefail
+          desktop_release="$(gh release view "v${DESKTOP_VERSION}" --repo Pepeu2010/telumia-desktop --json assets)"
+          msi_asset="$(jq -c '.assets[] | select(.name == "Telumia-Windows-x64.msi" and .state == "uploaded")' <<<"${desktop_release}")"
+          url="$(jq -r .url <<<"${msi_asset}")"
+          expected_size="$(jq -r .size <<<"${msi_asset}")"
+          expected_sha="$(jq -r .digest <<<"${msi_asset}" | sed 's/^sha256://')"
+          curl --fail --show-error --location --retry 8 --retry-all-errors --retry-delay 3 \
+            --connect-timeout 30 --max-time 900 "$url" --output "release-apks/Telumia-Windows-x64-${DESKTOP_VERSION}.msi"
+          [[ "$(stat -c %s "release-apks/Telumia-Windows-x64-${DESKTOP_VERSION}.msi")" == "$expected_size" ]]
+          [[ "$(sha256sum "release-apks/Telumia-Windows-x64-${DESKTOP_VERSION}.msi" | awk '{print $1}')" == "$expected_sha" ]]
+
       - name: Prepare APKs, checksums, and release notes
         env:
           RELEASE_VERSION: ${{ steps.source.outputs.version }}
+          DESKTOP_VERSION: ${{ inputs.desktop_version }}
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
         run: |
           set -euo pipefail
@@ -113,16 +141,22 @@ jobs:
             cp "${apk}" "release-assets/${target}"
           done
 
+          desktop_msi="release-apks/Telumia-Windows-x64-${DESKTOP_VERSION}.msi"
+          [[ -s "$desktop_msi" ]]
+          cp "$desktop_msi" "release-assets/Telumia-Windows-x64-${DESKTOP_VERSION}.msi"
+
           [[ "$(find release-assets -maxdepth 1 -type f -name '*.apk' | wc -l)" -eq 3 ]]
-          (cd release-assets && sha256sum ./*.apk > SHA256SUMS.txt)
+          (cd release-assets && sha256sum ./*.apk ./*.msi > SHA256SUMS.txt)
           cat > release-notes.md <<EOF
           ## Telumia TV ${RELEASE_VERSION}
 
-          Esta versão centraliza a detecção de memória para adaptar os recursos do player e do cache a aparelhos com capacidades diferentes.
+          Esta versão centraliza a leitura dos modos de tela, capacidades HDR e perfis de decoder Dolby Vision, preservando a política de playback existente.
 
           Os três APKs passaram pelos testes focados do workflow [${SOURCE_SHA}](https://github.com/${GITHUB_REPOSITORY}/commit/${SOURCE_SHA}).
 
           **Estes são APKs de depuração assinados pela chave de CI.** A assinatura pode diferir de uma instalação anterior; nesse caso, desinstale a versão anterior antes de instalar este pré-lançamento.
+
+          Inclui o instalador Windows x64 Telumia Desktop **${DESKTOP_VERSION}** (`Telumia-Windows-x64-${DESKTOP_VERSION}.msi`). A versão de PC permanece explicitada separadamente quando não acompanha o número Android TV.
 
           Os hashes SHA-256 estão em SHA256SUMS.txt.
           EOF
@@ -132,21 +166,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           RELEASE_VERSION: ${{ steps.source.outputs.version }}
+          DESKTOP_VERSION: ${{ inputs.desktop_version }}
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
         run: |
           set -euo pipefail
           gh release create "${RELEASE_TAG}" \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${SOURCE_SHA}" \
-            --title "Telumia TV ${RELEASE_VERSION} — otimizações para TV Box" \
+            --title "Telumia ${RELEASE_VERSION} — Android TV + Windows PC ${DESKTOP_VERSION}" \
             --notes-file release-notes.md \
             --draft \
             --prerelease \
-            release-assets/*.apk release-assets/SHA256SUMS.txt
+            release-assets/*.apk release-assets/*.msi release-assets/SHA256SUMS.txt
 
           release_id="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json databaseId --jq .databaseId)"
           asset_count="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets | length')"
-          [[ "${asset_count}" -eq 4 ]]
+          [[ "${asset_count}" -eq 5 ]]
           gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${release_id}" -F draft=false >/dev/null
 
           release_state="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft,isPrerelease --jq '[.isDraft,.isPrerelease] | @tsv')"
