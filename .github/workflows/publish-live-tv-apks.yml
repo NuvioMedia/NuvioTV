@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Publish a new APK release or attach a PC package to an existing one
+        description: Publish a paired APK and PC release or attach the PC package to an existing release
         required: true
         type: choice
         options:
@@ -198,7 +198,7 @@ jobs:
 
   attach-pc:
     if: inputs.mode == 'attach-pc'
-    name: Attach the Desktop MSI to an existing prerelease
+    name: Attach the Desktop MSI to an existing release
     runs-on: ubuntu-latest
     steps:
       - name: Validate releases and download the published MSI
@@ -213,9 +213,7 @@ jobs:
 
           tv_release="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets)"
           [[ "$(jq -r .isDraft <<<"$tv_release")" == false ]]
-          [[ "$(jq -r .isPrerelease <<<"$tv_release")" == true ]]
-          tv_asset_count="$(jq -r '.assets | length' <<<"$tv_release")"
-          [[ "$tv_asset_count" -eq 4 || "$tv_asset_count" -eq 5 ]]
+          jq -e '[.assets[] | select(.name | endswith(".apk"))] | length > 0' <<<"$tv_release" >/dev/null
           desktop_release="$(gh release view "v${DESKTOP_VERSION}" --repo Pepeu2010/telumia-desktop --json isDraft,isPrerelease,assets)"
           [[ "$(jq -r .isDraft <<<"$desktop_release")" == false ]]
           msi_asset="$(jq -c '.assets[] | select(.name == "Telumia-Windows-x64.msi" and .state == "uploaded")' <<<"$desktop_release")"
@@ -280,7 +278,7 @@ jobs:
               cat release-notes-existing.md
               printf '\n\n%s\n\n' "$marker"
               printf '%s\n\n' '### Windows PC'
-              printf 'Inclui também o instalador Windows x64 da Telumia Desktop **%s**: `Telumia-Windows-x64-%s.msi`. O Desktop permanece nesta versão estável; os APKs Android TV desta pré-release são da versão indicada no título. O MSI foi copiado byte a byte da [release Desktop %s](https://github.com/Pepeu2010/telumia-desktop/releases/tag/v%s) e seu SHA-256 foi conferido antes do upload.\n\n' "$DESKTOP_VERSION" "$DESKTOP_VERSION" "$DESKTOP_VERSION" "$DESKTOP_VERSION"
+              printf 'Inclui também o instalador Windows x64 da Telumia Desktop **%s**: `Telumia-Windows-x64-%s.msi`. O pacote PC foi copiado byte a byte da [release Desktop %s](https://github.com/Pepeu2010/telumia-desktop/releases/tag/v%s) e seu SHA-256 foi conferido antes do upload.\n\n' "$DESKTOP_VERSION" "$DESKTOP_VERSION" "$DESKTOP_VERSION" "$DESKTOP_VERSION"
               printf '%s\n' 'O manifesto SHA256SUMS.txt cobre os três APKs e o MSI.'
             } > release-notes.md
             gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file release-notes.md
@@ -295,7 +293,6 @@ jobs:
           set -euo pipefail
           release="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets)"
           [[ "$(jq -r .isDraft <<<"$release")" == false ]]
-          [[ "$(jq -r .isPrerelease <<<"$release")" == true ]]
-          [[ "$(jq -r '.assets | length' <<<"$release")" -eq 5 ]]
+          jq -e '[.assets[] | select(.name | endswith(".apk"))] | length > 0' <<<"$release" >/dev/null
           jq -e --arg name "Telumia-Windows-x64-${DESKTOP_VERSION}.msi" '.assets[] | select(.name == $name and .state == "uploaded")' <<<"$release" >/dev/null
           jq -e '.assets[] | select(.name == "SHA256SUMS.txt" and .state == "uploaded")' <<<"$release" >/dev/null
