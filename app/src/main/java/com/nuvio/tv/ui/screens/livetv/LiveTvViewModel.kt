@@ -2,9 +2,11 @@ package com.nuvio.tv.ui.screens.livetv
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.livetv.LiveTvSourceImporter
 import com.nuvio.tv.core.livetv.LiveTvGuideCache
 import com.nuvio.tv.data.local.LiveTvSourceStore
+import com.nuvio.tv.data.local.LiveTvChannelStateStore
 import com.nuvio.tv.domain.model.LiveTvChannel
 import com.nuvio.tv.domain.model.LiveTvProgram
 import com.nuvio.tv.domain.model.LiveTvSource
@@ -12,6 +14,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,6 +29,8 @@ data class LiveTvUiState(
     val sourceErrors: Map<String, String> = emptyMap(),
     val lastUpdatedEpochMillis: Map<String, Long> = emptyMap(),
     val lastSavedSourceId: String? = null,
+    val favoriteChannelIds: Set<String> = emptySet(),
+    val recentChannelIds: List<String> = emptyList(),
 )
 
 @HiltViewModel
@@ -32,11 +38,66 @@ class LiveTvViewModel @Inject constructor(
     private val sourceStore: LiveTvSourceStore,
     private val importer: LiveTvSourceImporter,
     private val guideCache: LiveTvGuideCache,
+    private val channelStateStore: LiveTvChannelStateStore,
+    private val profileManager: ProfileManager,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(LiveTvUiState(isLoading = true))
     val state: StateFlow<LiveTvUiState> = mutableState.asStateFlow()
 
-    init { reloadSources() }
+    init {
+        viewModelScope.launch {
+            profileManager.activeProfileId.distinctUntilChanged().collect { _ ->
+                mutableState.update { it.copy(
+                    sources = emptyList(), channels = emptyList(), programs = emptyList(),
+                    favoriteChannelIds = emptySet(), recentChannelIds = emptyList(),
+                    sourceErrors = emptyMap(), lastUpdatedEpochMillis = emptyMap(),
+                    isLoading = true, error = null,
+                ) }
+                reloadSources()
+                try {
+                    val saved = channelStateStore.read()
+                    mutableState.update { it.copy(
+                        favoriteChannelIds = saved.favoriteChannelIds.toSet(),
+                        recentChannelIds = saved.recentChannelIds,
+                    ) }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    // Keep the screen usable if optional local channel preferences are unreadable.
+                }
+            }
+        }
+    }
+
+    fun toggleFavorite(channelId: String) {
+        viewModelScope.launch {
+            try {
+                val saved = channelStateStore.toggleFavorite(channelId)
+                mutableState.update { it.copy(
+                    favoriteChannelIds = saved.favoriteChannelIds.toSet(),
+                    recentChannelIds = saved.recentChannelIds,
+                    error = null,
+                ) }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                mutableState.update { it.copy(error = failure.message ?: "Não foi possível salvar o favorito") }
+            }
+        }
+    }
+
+    fun recordRecent(channelId: String) {
+        viewModelScope.launch {
+            try {
+                val saved = channelStateStore.recordRecent(channelId)
+                mutableState.update { it.copy(recentChannelIds = saved.recentChannelIds, error = null) }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                mutableState.update { it.copy(error = failure.message ?: "Não foi possível atualizar os canais recentes") }
+            }
+        }
+    }
 
     fun reloadSources() {
         viewModelScope.launch {
@@ -91,11 +152,14 @@ class LiveTvViewModel @Inject constructor(
             runCatching {
                 sourceStore.remove(source.id)
                 guideCache.remove(source.id)
+                channelStateStore.removeSource(source.id)
             }
-                .onSuccess {
+                .onSuccess { channelState ->
                     mutableState.update { state -> state.copy(sources = state.sources.filterNot { it.id == source.id },
                         channels = state.channels.filterNot { it.sourceId == source.id },
                         programs = state.programs.filterNot { it.sourceId == source.id },
+                        favoriteChannelIds = channelState.favoriteChannelIds.toSet(),
+                        recentChannelIds = channelState.recentChannelIds,
                         sourceErrors = state.sourceErrors - source.id,
                         lastUpdatedEpochMillis = state.lastUpdatedEpochMillis - source.id) }
                 }

@@ -2453,6 +2453,13 @@
     <string name="live_tv_next">Next</string>
     <string name="live_tv_now_view">Now</string>
     <string name="live_tv_guide_view">Guide</string>
+    <string name="live_tv_channels_view">Channels</string>
+    <string name="live_tv_favorites_view">Favorites</string>
+    <string name="live_tv_recents_view">Recent</string>
+    <string name="live_tv_add_favorite">Add to favorites</string>
+    <string name="live_tv_remove_favorite">Remove from favorites</string>
+    <string name="live_tv_empty_favorites">Your favorite channels will appear here.</string>
+    <string name="live_tv_empty_recents">Channels you start watching will appear here.</string>
     <string name="live_tv_watch">Watch</string>
     <string name="live_tv_updated">Updated %1$s</string>
 

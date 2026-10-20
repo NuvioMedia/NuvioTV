@@ -74,6 +74,7 @@ jobs:
           --tests 'com.nuvio.tv.core.livetv.*'
           --tests 'com.nuvio.tv.ui.screens.livetv.*'
           --tests 'com.nuvio.tv.data.local.PlayerSourceSelectionStoreTest'
+          --tests 'com.nuvio.tv.data.local.LiveTvChannelStateStoreTest'
           --tests 'com.nuvio.tv.ui.screens.player.EmbeddedChapterMetadataTest'
           :app:compileFullDebugAndroidTestKotlin
           :app:assembleFullDebug --stacktrace

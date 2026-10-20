@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
@@ -88,7 +89,9 @@ internal fun LiveTvProgramCell(program: LiveTvProgramPresentation, onClick: (() 
 @Composable
 internal fun LiveTvGuideRow(channelName: String, channelNumber: String?, logoUrl: String?, selectedChannel: Boolean,
     programs: List<LiveTvProgramPresentation>, onChannelClick: (() -> Unit)?, onProgramClick: (String) -> Unit,
-    modifier: Modifier = Modifier, scrollState: LazyListState = rememberLazyListState()) {
+    modifier: Modifier = Modifier, scrollState: LazyListState = rememberLazyListState(),
+    isFavorite: Boolean = false, onFavoriteClick: (() -> Unit)? = null,
+    favoriteLabel: String = "Favoritar", unfavoriteLabel: String = "Remover dos favoritos") {
     val tokens = NuvioTheme.components.liveTv
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(tokens.itemSpacing), verticalAlignment = Alignment.CenterVertically) {
         LiveTvChannelTile(channelName, channelNumber, logoUrl, selectedChannel, onChannelClick)
@@ -97,6 +100,11 @@ internal fun LiveTvGuideRow(channelName: String, channelNumber: String?, logoUrl
                 if (program.gapBeforeMinutes > 0) Spacer(Modifier.width(tokens.programWidth * (program.gapBeforeMinutes / 60f)))
                 LiveTvProgramCell(program, onProgramClick.takeIf { onChannelClick != null }?.let { click -> { click(program.key) } })
             }
+        }
+        onFavoriteClick?.let { click ->
+            Button(onClick = click, modifier = Modifier.semantics {
+                contentDescription = if (isFavorite) unfavoriteLabel else favoriteLabel
+            }) { Text(if (isFavorite) "★" else "☆") }
         }
     }
 }

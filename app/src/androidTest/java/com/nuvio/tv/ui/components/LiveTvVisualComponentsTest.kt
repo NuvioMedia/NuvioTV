@@ -90,4 +90,27 @@ class LiveTvVisualComponentsTest {
         compose.onNodeWithText("Sem stream").assertIsDisplayed()
         compose.onAllNodes(hasClickAction()).assertCountEquals(0)
     }
+
+    @Test fun favoriteActionHasLocalizedAccessibleLabelAndInvokesItsCallback() {
+        var favoriteChanges = 0
+        compose.setContent { NuvioTheme(navigationMotion = NavigationMotion.OFF) {
+            LiveTvGuideRow(
+                "Canal favorito",
+                null,
+                null,
+                false,
+                emptyList(),
+                null,
+                {},
+                Modifier.fillMaxWidth(),
+                isFavorite = true,
+                onFavoriteClick = { favoriteChanges++ },
+                favoriteLabel = "Adicionar aos favoritos",
+                unfavoriteLabel = "Remover dos favoritos",
+            )
+        } }
+
+        compose.onNodeWithContentDescription("Remover dos favoritos").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(1, favoriteChanges) }
+    }
 }

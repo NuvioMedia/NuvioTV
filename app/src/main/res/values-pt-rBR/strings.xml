@@ -2316,6 +2316,13 @@
     <string name="live_tv_next">A seguir</string>
     <string name="live_tv_now_view">Agora</string>
     <string name="live_tv_guide_view">Guia</string>
+    <string name="live_tv_channels_view">Canais</string>
+    <string name="live_tv_favorites_view">Favoritos</string>
+    <string name="live_tv_recents_view">Recentes</string>
+    <string name="live_tv_add_favorite">Adicionar aos favoritos</string>
+    <string name="live_tv_remove_favorite">Remover dos favoritos</string>
+    <string name="live_tv_empty_favorites">Seus canais favoritos aparecerão aqui.</string>
+    <string name="live_tv_empty_recents">Os canais que você começar a assistir aparecerão aqui.</string>
     <string name="live_tv_watch">Assistir</string>
     <string name="live_tv_updated">Atualizado %1$s</string>
 
