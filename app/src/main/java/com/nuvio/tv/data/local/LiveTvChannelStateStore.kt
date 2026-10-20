@@ -15,7 +15,7 @@ import javax.inject.Singleton
 data class LiveTvChannelState(
     val favoriteChannelIds: List<String> = emptyList(),
     val recentChannelIds: List<String> = emptyList(),
-    val timeZoneId: String = DEFAULT_TIME_ZONE_ID,
+    val timeZoneId: String = "system",
 )
 
 /** Keeps small, profile-specific channel preferences; stream URLs and EPG data stay elsewhere. */
