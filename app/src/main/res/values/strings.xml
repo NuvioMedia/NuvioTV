@@ -2451,6 +2451,8 @@
     <string name="live_tv_empty_channels">Add a source above, then refresh to load its channels.</string>
     <string name="live_tv_no_current_program">No current programme in the guide</string>
     <string name="live_tv_next">Next</string>
+    <string name="live_tv_now_view">Now</string>
+    <string name="live_tv_guide_view">Guide</string>
     <string name="live_tv_watch">Watch</string>
     <string name="live_tv_updated">Updated %1$s</string>
 

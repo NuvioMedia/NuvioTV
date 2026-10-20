@@ -29,11 +29,18 @@ import com.nuvio.tv.ui.theme.LocalUiMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 /** Shared Live TV primitives. Screens supply source data and connect the actions to real flows. */
-internal data class LiveTvProgramPresentation(val key: String, val title: String, val timeLabel: String, val isCurrent: Boolean = false)
+internal data class LiveTvProgramPresentation(
+    val key: String,
+    val title: String,
+    val timeLabel: String,
+    val isCurrent: Boolean = false,
+    val gapBeforeMinutes: Int = 0,
+    val durationMinutes: Int = 60,
+)
 
 @Composable
 internal fun LiveTvChannelTile(name: String, number: String?, logoUrl: String?, isSelected: Boolean,
-    onClick: () -> Unit, modifier: Modifier = Modifier) {
+    onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     LiveTvAction(isSelected, onClick, modifier.width(NuvioTheme.components.liveTv.channelWidth)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
             if (!logoUrl.isNullOrBlank()) AsyncImage(model = logoUrl, contentDescription = null,
@@ -66,8 +73,10 @@ internal fun LiveTvNowNext(nowTitle: String, nextTitle: String?, nextLabel: Stri
 }
 
 @Composable
-internal fun LiveTvProgramCell(program: LiveTvProgramPresentation, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    LiveTvAction(program.isCurrent, onClick, modifier.width(NuvioTheme.components.liveTv.programWidth)) {
+internal fun LiveTvProgramCell(program: LiveTvProgramPresentation, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val width = (NuvioTheme.components.liveTv.programWidth * (program.durationMinutes.coerceIn(15, 180) / 60f))
+        .coerceAtLeast(72.dp)
+    LiveTvAction(program.isCurrent, onClick, modifier.width(width)) {
         Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
             Text(program.timeLabel, style = MaterialTheme.typography.labelSmall)
             Text(program.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -78,25 +87,36 @@ internal fun LiveTvProgramCell(program: LiveTvProgramPresentation, onClick: () -
 /** Grid row primitive; guide data and playback actions are provided by the Live TV screen. */
 @Composable
 internal fun LiveTvGuideRow(channelName: String, channelNumber: String?, logoUrl: String?, selectedChannel: Boolean,
-    programs: List<LiveTvProgramPresentation>, onChannelClick: () -> Unit, onProgramClick: (String) -> Unit,
+    programs: List<LiveTvProgramPresentation>, onChannelClick: (() -> Unit)?, onProgramClick: (String) -> Unit,
     modifier: Modifier = Modifier, scrollState: LazyListState = rememberLazyListState()) {
     val tokens = NuvioTheme.components.liveTv
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(tokens.itemSpacing), verticalAlignment = Alignment.CenterVertically) {
         LiveTvChannelTile(channelName, channelNumber, logoUrl, selectedChannel, onChannelClick)
-        LazyRow(Modifier.weight(1f), state = scrollState, contentPadding = PaddingValues(tokens.focusedBorderWidth),
-            horizontalArrangement = Arrangement.spacedBy(tokens.itemSpacing)) {
-            items(programs, key = { it.key }) { program -> LiveTvProgramCell(program, { onProgramClick(program.key) }) }
+        LazyRow(Modifier.weight(1f), state = scrollState, contentPadding = PaddingValues(tokens.focusedBorderWidth)) {
+            items(programs, key = { it.key }) { program ->
+                if (program.gapBeforeMinutes > 0) Spacer(Modifier.width(tokens.programWidth * (program.gapBeforeMinutes / 60f)))
+                LiveTvProgramCell(program, onProgramClick.takeIf { onChannelClick != null }?.let { click -> { click(program.key) } })
+            }
         }
     }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun LiveTvAction(isSelected: Boolean, onClick: () -> Unit, modifier: Modifier, content: @Composable () -> Unit) {
+private fun LiveTvAction(isSelected: Boolean, onClick: (() -> Unit)?, modifier: Modifier, content: @Composable () -> Unit) {
     val tokens = NuvioTheme.components.liveTv
     val shape = RoundedCornerShape(tokens.cornerRadius)
     val motion = LocalUiMotion.current
-    Button(onClick = onClick, modifier = modifier.heightIn(min = tokens.rowHeight).semantics { selected = isSelected },
+    val actionModifier = modifier.heightIn(min = tokens.rowHeight).semantics { selected = isSelected }
+    if (onClick == null) {
+        androidx.tv.material3.Surface(modifier = actionModifier, shape = ButtonDefaults.shape(shape = shape),
+            colors = androidx.tv.material3.SurfaceDefaults.colors(containerColor = NuvioTheme.colors.Surface),
+            border = null) {
+            Box(Modifier.padding(PaddingValues(tokens.contentPadding))) { content() }
+        }
+        return
+    }
+    Button(onClick = onClick, modifier = actionModifier,
         contentPadding = PaddingValues(tokens.contentPadding),
         colors = ButtonDefaults.colors(containerColor = if (isSelected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.Surface,
             contentColor = if (isSelected) NuvioTheme.colors.FocusContent else NuvioTheme.colors.TextPrimary,

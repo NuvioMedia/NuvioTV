@@ -72,4 +72,22 @@ class LiveTvVisualComponentsTest {
         compose.onNodeWithText("Sem programação").assertIsDisplayed()
         compose.onAllNodes(hasClickAction()).assertCountEquals(1)
     }
+
+    @Test fun xmlTvOnlyChannelAndProgramsDoNotExposePlaybackActions() {
+        compose.setContent { NuvioTheme(navigationMotion = NavigationMotion.OFF) {
+            LiveTvGuideRow(
+                "Canal XMLTV",
+                null,
+                null,
+                false,
+                listOf(LiveTvProgramPresentation("guide:1", "Sem stream", "20:00 – 21:00")),
+                null,
+                {},
+                Modifier.fillMaxWidth(),
+            )
+        } }
+        compose.onNodeWithText("Canal XMLTV").assertIsDisplayed()
+        compose.onNodeWithText("Sem stream").assertIsDisplayed()
+        compose.onAllNodes(hasClickAction()).assertCountEquals(0)
+    }
 }

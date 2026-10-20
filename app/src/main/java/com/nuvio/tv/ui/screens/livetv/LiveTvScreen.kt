@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
@@ -34,7 +35,9 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.LiveTvChannel
 import com.nuvio.tv.domain.model.LiveTvProgram
 import com.nuvio.tv.ui.components.LiveTvChannelTile
+import com.nuvio.tv.ui.components.LiveTvGuideRow
 import com.nuvio.tv.ui.components.LiveTvNowNext
+import com.nuvio.tv.ui.components.LiveTvProgramPresentation
 import com.nuvio.tv.ui.theme.NuvioTheme
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -54,9 +57,11 @@ fun LiveTvScreen(
         state.programs.groupBy { it.sourceId to it.channelId }
             .mapValues { (_, programs) -> programs.sortedBy(LiveTvProgram::startEpochMillis) }
     }
+    var guideMode by remember { mutableStateOf(false) }
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(guideMode) {
+        if (guideMode) return@LaunchedEffect
         while (true) {
             delay(30_000L)
             nowMillis = System.currentTimeMillis()
@@ -132,10 +137,64 @@ fun LiveTvScreen(
             }
         }
         item { Text(stringResource(R.string.live_tv_channels, state.channels.size), style = MaterialTheme.typography.titleLarge) }
+        val hasGuide = state.channels.any { channel ->
+            !channel.tvgId.isNullOrBlank() && !programsByChannel[channel.sourceId to channel.tvgId].isNullOrEmpty()
+        }
+        if (hasGuide) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(onClick = { guideMode = false }, enabled = guideMode) { Text(stringResource(R.string.live_tv_now_view)) }
+                    Button(onClick = { nowMillis = System.currentTimeMillis(); guideMode = true }, enabled = !guideMode) {
+                        Text(stringResource(R.string.live_tv_guide_view))
+                    }
+                }
+            }
+        }
         if (!state.isLoading && state.channels.isEmpty()) {
             item { Text(stringResource(R.string.live_tv_empty_channels), color = NuvioTheme.colors.TextSecondary) }
         }
-        items(state.channels, key = { "channel:${it.id}" }) { channel ->
+        if (guideMode && hasGuide) {
+            val windowStart = nowMillis.floorToHour()
+            val windowEnd = windowStart + GUIDE_WINDOW_MILLIS
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    androidx.compose.foundation.layout.Spacer(Modifier.width(NuvioTheme.components.liveTv.channelWidth + 18.dp))
+                    Row(Modifier.weight(1f)) {
+                        (0..2).forEach { hour ->
+                            val instant = java.time.Instant.ofEpochMilli(windowStart + hour * HOUR_MILLIS)
+                            Text(formatter.format(instant), modifier = Modifier.width(NuvioTheme.components.liveTv.programWidth),
+                                style = MaterialTheme.typography.labelMedium, color = NuvioTheme.colors.TextSecondary)
+                        }
+                    }
+                }
+            }
+            items(state.channels, key = { "guide-channel:${it.id}" }) { channel ->
+                val tvgId = channel.tvgId?.takeIf(String::isNotBlank)
+                val sourcePrograms = tvgId?.let { programsByChannel[channel.sourceId to it] }.orEmpty()
+                val segments = tvgId?.let { guideSegments(sourcePrograms, channel.sourceId, it, windowStart, windowEnd) }.orEmpty()
+                val rowPrograms = segments.map { segment ->
+                    LiveTvProgramPresentation(
+                        key = "${channel.id}:${segment.program.startEpochMillis}:${segment.program.title}",
+                        title = segment.program.title,
+                        timeLabel = "${formatter.format(java.time.Instant.ofEpochMilli(segment.startMillis))} – ${formatter.format(java.time.Instant.ofEpochMilli(segment.endMillis))}",
+                        isCurrent = nowMillis >= segment.program.startEpochMillis && nowMillis < segment.program.endEpochMillis,
+                        gapBeforeMinutes = segment.gapBeforeMinutes,
+                        durationMinutes = segment.durationMinutes,
+                    )
+                }
+                LiveTvGuideRow(
+                    channelName = channel.displayName,
+                    channelNumber = null,
+                    logoUrl = channel.logoUrl,
+                    selectedChannel = false,
+                    programs = rowPrograms,
+                    onChannelClick = channel.streamUrl?.let { { onPlayChannel(channel) } },
+                    onProgramClick = { onPlayChannel(channel) },
+                    modifier = Modifier.fillMaxWidth(),
+                    scrollState = rememberLazyListState(),
+                )
+            }
+        } else items(state.channels, key = { "channel:${it.id}" }) { channel ->
             val programs = channel.tvgId?.takeIf(String::isNotBlank)
                 ?.let { programsByChannel[channel.sourceId to it] }
                 .orEmpty()
@@ -168,6 +227,11 @@ fun LiveTvScreen(
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 28.dp)) }
     }
 }
+
+private fun Long.floorToHour(): Long = this - Math.floorMod(this, HOUR_MILLIS)
+
+private const val HOUR_MILLIS = 60L * 60L * 1000L
+private const val GUIDE_WINDOW_MILLIS = 3L * HOUR_MILLIS
 
 private fun String.hostForDisplay(): String = runCatching { java.net.URI(this).host.orEmpty() }
     .getOrDefault("").ifBlank { stringResourceFallback }
