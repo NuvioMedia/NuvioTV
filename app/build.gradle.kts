@@ -458,6 +458,7 @@ dependencies {
 
     // ViewModel
     implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Media3 — remaining stock modules from Maven (not forked)
     implementation(libs.media3.exoplayer.hls)

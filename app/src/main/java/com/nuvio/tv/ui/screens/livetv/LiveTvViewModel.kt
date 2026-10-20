@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.livetv.LiveTvSourceImporter
 import com.nuvio.tv.core.livetv.LiveTvGuideCache
+import com.nuvio.tv.core.livetv.LiveTvRefreshScheduler
 import com.nuvio.tv.data.local.LiveTvSourceStore
 import com.nuvio.tv.data.local.LiveTvChannelStateStore
 import com.nuvio.tv.domain.model.LiveTvChannel
@@ -14,7 +15,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -38,6 +39,7 @@ class LiveTvViewModel @Inject constructor(
     private val importer: LiveTvSourceImporter,
     private val guideCache: LiveTvGuideCache,
     private val channelStateStore: LiveTvChannelStateStore,
+    private val refreshScheduler: LiveTvRefreshScheduler,
     private val profileManager: ProfileManager,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(LiveTvUiState(isLoading = true))
@@ -45,7 +47,7 @@ class LiveTvViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            profileManager.activeProfileId.collect { _ ->
+            profileManager.activeProfileId.collectLatest { _ ->
                 mutableState.update { it.copy(
                     sources = emptyList(), channels = emptyList(), programs = emptyList(),
                     favoriteChannelIds = emptySet(), recentChannelIds = emptyList(),
@@ -64,6 +66,7 @@ class LiveTvViewModel @Inject constructor(
                 } catch (_: Exception) {
                     // Keep the screen usable if optional local channel preferences are unreadable.
                 }
+                updateScheduledRefresh()
             }
         }
     }
@@ -98,22 +101,45 @@ class LiveTvViewModel @Inject constructor(
         }
     }
 
-    fun reloadSources() {
-        viewModelScope.launch {
-            runCatching {
-                sourceStore.list().also { sources ->
-                    val cached = sources.filter { it.enabled }.mapNotNull { guideCache.read(it.id) }
-                    mutableState.update { it.copy(
-                        sources = sources,
-                        channels = cached.flatMap { it.result.channels }.distinctBy { channel -> channel.id },
-                        programs = cached.flatMap { it.result.programs }.distinctBy { program -> "${program.sourceId}|${program.channelId}|${program.startEpochMillis}|${program.title}" },
-                        lastUpdatedEpochMillis = cached.associate { it.sourceId to it.updatedEpochMillis },
-                        isLoading = false,
-                    ) }
+    private fun reconcileRefreshSchedule() {
+        viewModelScope.launch { updateScheduledRefresh() }
+    }
+
+    private suspend fun updateScheduledRefresh() {
+        val hasEnabledSource = try {
+            sourceStore.list().any { it.enabled }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            return
+        }
+        if (hasEnabledSource) refreshScheduler.schedule() else refreshScheduler.cancel()
+    }
+
+    private suspend fun reloadSources() {
+        try {
+            val sources = sourceStore.list()
+            val cached = sources.filter { it.enabled }.mapNotNull { source ->
+                try {
+                    guideCache.read(source.id)
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    null
                 }
             }
-                .onSuccess { }
-                .onFailure { error -> mutableState.update { it.copy(isLoading = false, error = error.message ?: "Falha ao carregar fontes") } }
+            mutableState.update { it.copy(
+                sources = sources,
+                channels = cached.flatMap { it.result.channels }.distinctBy { channel -> channel.id },
+                programs = cached.flatMap { it.result.programs }
+                    .distinctBy { program -> "${program.sourceId}|${program.channelId}|${program.startEpochMillis}|${program.title}" },
+                lastUpdatedEpochMillis = cached.associate { it.sourceId to it.updatedEpochMillis },
+                isLoading = false,
+            ) }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            mutableState.update { it.copy(isLoading = false, error = failure.message ?: "Falha ao carregar fontes") }
         }
     }
 
@@ -123,6 +149,7 @@ class LiveTvViewModel @Inject constructor(
             runCatching { sourceStore.add(name, playlistUrl, epgUrl) }
                 .onSuccess { added ->
                     mutableState.update { it.copy(sources = it.sources + added, isLoading = false, lastSavedSourceId = added.id) }
+                    refreshScheduler.schedule()
                     refresh()
                 }
                 .onFailure { error -> mutableState.update { it.copy(isLoading = false, error = error.message ?: "Não foi possível salvar a fonte") } }
@@ -140,7 +167,12 @@ class LiveTvViewModel @Inject constructor(
                             programs = if (enabled) state.programs else state.programs.filterNot { it.sourceId == source.id },
                         )
                     }
-                    if (enabled) refresh()
+                    if (enabled) {
+                        refreshScheduler.schedule()
+                        refresh()
+                    } else {
+                        reconcileRefreshSchedule()
+                    }
                 }
                 .onFailure { error -> mutableState.update { it.copy(error = error.message ?: "Não foi possível atualizar a fonte") } }
         }
@@ -161,6 +193,7 @@ class LiveTvViewModel @Inject constructor(
                         recentChannelIds = channelState.recentChannelIds,
                         sourceErrors = state.sourceErrors - source.id,
                         lastUpdatedEpochMillis = state.lastUpdatedEpochMillis - source.id) }
+                    reconcileRefreshSchedule()
                 }
                 .onFailure { error -> mutableState.update { it.copy(error = error.message ?: "Não foi possível remover a fonte") } }
         }

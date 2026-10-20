@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.livetv
 
 import com.nuvio.tv.MainDispatcherRule
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.livetv.LiveTvRefreshScheduler
 import com.nuvio.tv.core.livetv.LiveTvSourceImporter
 import com.nuvio.tv.core.livetv.LiveTvGuideCache
 import com.nuvio.tv.core.livetv.CachedLiveTvGuide
@@ -34,6 +35,7 @@ class LiveTvViewModelTest {
         val importer = mockk<LiveTvSourceImporter>()
         val guideCache = mockk<LiveTvGuideCache>()
         val channelState = mockk<LiveTvChannelStateStore>()
+        val refreshScheduler = mockk<LiveTvRefreshScheduler>(relaxed = true)
         val source = LiveTvSource("source-1", "Brasil", "https://example.org/list.m3u")
         val channel = LiveTvChannel("source-1:channel", "source-1", "Canal Brasil", "https://example.org/live.m3u8")
         coEvery { store.list() } returns emptyList()
@@ -42,7 +44,7 @@ class LiveTvViewModelTest {
         coEvery { guideCache.read(source.id) } returns null
         coEvery { guideCache.write(source.id, any()) } returns true
         coEvery { channelState.read() } returns LiveTvChannelState()
-        val viewModel = LiveTvViewModel(store, importer, guideCache, channelState, activeProfiles())
+        val viewModel = LiveTvViewModel(store, importer, guideCache, channelState, refreshScheduler, activeProfiles())
 
         runCurrent()
         viewModel.addSource("Brasil", source.playlistUrl, null)
@@ -54,6 +56,8 @@ class LiveTvViewModelTest {
         coVerify(exactly = 1) { store.add("Brasil", source.playlistUrl, null) }
         coVerify(exactly = 1) { importer.import(source) }
         coVerify(exactly = 1) { guideCache.write(source.id, LiveTvImportResult(listOf(channel)), any()) }
+        coVerify(exactly = 1) { refreshScheduler.schedule() }
+        coVerify(exactly = 1) { refreshScheduler.schedule() }
     }
 
     @Test
@@ -62,10 +66,11 @@ class LiveTvViewModelTest {
         val importer = mockk<LiveTvSourceImporter>()
         val guideCache = mockk<LiveTvGuideCache>()
         val channelState = mockk<LiveTvChannelStateStore>()
+        val refreshScheduler = mockk<LiveTvRefreshScheduler>(relaxed = true)
         val source = LiveTvSource("source-1", "Brasil", "https://example.org/list.m3u", enabled = false)
         coEvery { store.list() } returns listOf(source)
         coEvery { channelState.read() } returns LiveTvChannelState()
-        val viewModel = LiveTvViewModel(store, importer, guideCache, channelState, activeProfiles())
+        val viewModel = LiveTvViewModel(store, importer, guideCache, channelState, refreshScheduler, activeProfiles())
 
         runCurrent()
         viewModel.refresh()
@@ -74,6 +79,10 @@ class LiveTvViewModelTest {
         assertEquals(listOf(source), viewModel.state.value.sources)
         assertEquals(emptyList<LiveTvChannel>(), viewModel.state.value.channels)
         coVerify(exactly = 0) { importer.import(any()) }
+        coVerify(exactly = 0) { refreshScheduler.schedule() }
+        coVerify(exactly = 1) { refreshScheduler.cancel() }
+        coVerify(exactly = 0) { refreshScheduler.schedule() }
+        coVerify(exactly = 1) { refreshScheduler.cancel() }
     }
 
     @Test
@@ -82,6 +91,7 @@ class LiveTvViewModelTest {
         val importer = mockk<LiveTvSourceImporter>()
         val guideCache = mockk<LiveTvGuideCache>()
         val channelState = mockk<LiveTvChannelStateStore>()
+        val refreshScheduler = mockk<LiveTvRefreshScheduler>(relaxed = true)
         val source = LiveTvSource("source-1", "Brasil", "https://example.org/list.m3u")
         val channel = LiveTvChannel("source-1:channel", "source-1", "Canal Brasil", "https://example.org/live.m3u8")
         val cached = LiveTvImportResult(listOf(channel))
@@ -89,7 +99,7 @@ class LiveTvViewModelTest {
         coEvery { guideCache.read(source.id) } returns CachedLiveTvGuide(sourceId = source.id, updatedEpochMillis = 100L, result = cached)
         coEvery { importer.import(source) } throws IllegalStateException("offline")
         coEvery { channelState.read() } returns LiveTvChannelState()
-        val viewModel = LiveTvViewModel(store, importer, guideCache, channelState, activeProfiles())
+        val viewModel = LiveTvViewModel(store, importer, guideCache, channelState, refreshScheduler, activeProfiles())
 
         runCurrent()
         assertEquals(listOf(channel), viewModel.state.value.channels)
@@ -108,11 +118,12 @@ class LiveTvViewModelTest {
         val importer = mockk<LiveTvSourceImporter>()
         val guideCache = mockk<LiveTvGuideCache>()
         val channelState = mockk<LiveTvChannelStateStore>()
+        val refreshScheduler = mockk<LiveTvRefreshScheduler>(relaxed = true)
         val channelId = "source-1:channel"
         coEvery { sourceStore.list() } returns emptyList()
         coEvery { channelState.read() } returns LiveTvChannelState()
         coEvery { channelState.recordRecent(channelId) } returns LiveTvChannelState(recentChannelIds = listOf(channelId))
-        val viewModel = LiveTvViewModel(sourceStore, importer, guideCache, channelState, activeProfiles())
+        val viewModel = LiveTvViewModel(sourceStore, importer, guideCache, channelState, refreshScheduler, activeProfiles())
 
         runCurrent()
         viewModel.recordRecent(channelId)
@@ -128,11 +139,12 @@ class LiveTvViewModelTest {
         val importer = mockk<LiveTvSourceImporter>()
         val guideCache = mockk<LiveTvGuideCache>()
         val channelState = mockk<LiveTvChannelStateStore>()
+        val refreshScheduler = mockk<LiveTvRefreshScheduler>(relaxed = true)
         val channelId = "source-1:channel"
         coEvery { sourceStore.list() } returns emptyList()
         coEvery { channelState.read() } returns LiveTvChannelState()
         coEvery { channelState.toggleFavorite(channelId) } returns LiveTvChannelState(favoriteChannelIds = listOf(channelId))
-        val viewModel = LiveTvViewModel(sourceStore, importer, guideCache, channelState, activeProfiles())
+        val viewModel = LiveTvViewModel(sourceStore, importer, guideCache, channelState, refreshScheduler, activeProfiles())
 
         runCurrent()
         viewModel.toggleFavorite(channelId)

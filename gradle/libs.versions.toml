@@ -22,6 +22,7 @@ coil = "3.3.0"
 navigationCompose = "2.8.8"
 datastore = "1.1.1"
 lifecycleViewModelCompose = "2.8.7"
+workManager = "2.12.0"
 ksp = "2.3.0"
 media3 = "1.8.0"
 quickjsKt = "1.0.5"
@@ -59,6 +60,7 @@ androidx-tv-foundation = { group = "androidx.tv", name = "tv-foundation", versio
 androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tvMaterial" }
 androidx-tvprovider = { group = "androidx.tvprovider", name = "tvprovider", version.ref = "tvprovider" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 
 # Hilt
