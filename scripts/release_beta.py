@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import re
 import shutil
@@ -502,6 +503,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Build all release APKs, commit the version bump, push tag/branch, and create the GitHub release as a draft.",
     )
+    parser.add_argument(
+        "--desktop-msi",
+        type=Path,
+        help="Published Telumia Windows x64 MSI to include with every draft or published APK release.",
+    )
     return parser.parse_args()
 
 
@@ -513,6 +519,10 @@ def main() -> int:
         raise SystemExit("Use only one of --dry-run, --draft, or --publish.")
     if args.custom_notes and args.custom_notes_file:
         raise SystemExit("Use either --custom-notes or --custom-notes-file, not both.")
+    if (args.publish or args.draft) and not args.desktop_msi:
+        raise SystemExit("Every GitHub release must include the Windows PC MSI; pass --desktop-msi <path>.")
+    if args.desktop_msi and (not args.desktop_msi.is_file() or args.desktop_msi.suffix.lower() != ".msi"):
+        raise SystemExit(f"Windows PC MSI does not exist or is not an .msi file: {args.desktop_msi}")
 
     original_contents = read_build_file()
     current_version_name, current_version_code = parse_versions(original_contents)
@@ -616,6 +626,24 @@ def main() -> int:
     assets: list[Path] = []
     try:
         assets = build_release()
+        if args.publish or args.draft:
+            desktop_msi = args.desktop_msi.resolve()
+            assets.append(desktop_msi)
+            checksum_path = RELEASE_OUTPUT_DIR / "SHA256SUMS.txt"
+            checksum_path.parent.mkdir(parents=True, exist_ok=True)
+            checksum_lines = []
+            for asset in assets:
+                digest = hashlib.sha256(asset.read_bytes()).hexdigest()
+                checksum_lines.append(f"{digest}  {asset.name}")
+            checksum_path.write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
+            assets.append(checksum_path)
+            release_title = f"{release_title} — Android TV + Windows PC"
+            notes_path.write_text(
+                notes_path.read_text(encoding="utf-8")
+                + f"\n\n### Windows PC\n\nInclui o instalador Telumia Desktop: `{desktop_msi.name}`. "
+                + "O manifesto SHA256SUMS.txt lista os APKs e o MSI.\n",
+                encoding="utf-8",
+            )
         print("Built release assets:")
         for asset in assets:
             print(f"- {asset.relative_to(ROOT)}")

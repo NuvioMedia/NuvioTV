@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Preview metadata, create a draft, or publish the release
+        description: Preview metadata or create a draft/published release with Android APKs and Windows PC MSI
         required: true
         type: choice
         options:
@@ -15,6 +15,11 @@ on:
       exclude_commits:
         description: Optional comma-separated commit hashes to omit from the notes
         required: false
+        type: string
+      desktop_version:
+        description: Published Windows Desktop MSI version to pair with the APKs
+        required: true
+        default: "1.0.0"
         type: string
 
 permissions:
@@ -228,6 +233,27 @@ jobs:
           path: app/build/outputs/apk/full/release/*.apk
           if-no-files-found: error
 
+      - name: Download and verify the matching Windows PC release
+        if: inputs.mode != 'dry-run'
+        env:
+          DESKTOP_VERSION: ${{ inputs.desktop_version }}
+        run: |
+          set -euo pipefail
+          [[ "$DESKTOP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          desktop_release="$(gh release view "v${DESKTOP_VERSION}" --repo Pepeu2010/telumia-desktop --json isDraft,assets)"
+          [[ "$(jq -r .isDraft <<<"$desktop_release")" == false ]]
+          msi="$(jq -c '.assets[] | select(.name == "Telumia-Windows-x64.msi" and .state == "uploaded")' <<<"$desktop_release")"
+          [[ -n "$msi" ]]
+          url="$(jq -r .url <<<"$msi")"
+          expected_size="$(jq -r .size <<<"$msi")"
+          expected_digest="$(jq -r .digest <<<"$msi" | sed 's/^sha256://')"
+          mkdir -p release-assets
+          target="release-assets/Telumia-Windows-x64-${DESKTOP_VERSION}.msi"
+          curl --fail --show-error --location --retry 8 --retry-all-errors --retry-delay 3 \
+            --connect-timeout 30 --max-time 900 "$url" --output "$target"
+          [[ "$(stat -c %s "$target")" == "$expected_size" ]]
+          [[ "$(sha256sum "$target" | awk '{print $1}')" == "$expected_digest" ]]
+
       - name: Create GitHub release
         if: inputs.mode != 'dry-run'
         env:
@@ -236,17 +262,30 @@ jobs:
           RELEASE_TITLE: ${{ steps.release.outputs.title }}
           RELEASE_TARGET: ${{ steps.release.outputs.current_bump }}
           RELEASE_PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          DESKTOP_VERSION: ${{ inputs.desktop_version }}
         run: |
+          set -euo pipefail
           mapfile -t release_apks < <(find app/build/outputs/apk/full/release -maxdepth 1 -type f -name '*.apk' -print | sort)
           if (( ${#release_apks[@]} == 0 )); then
             echo "No release APKs were produced." >&2
             exit 1
           fi
+          mkdir -p release-assets
+          for apk in "${release_apks[@]}"; do cp "$apk" release-assets/; done
+          [[ -s "release-assets/Telumia-Windows-x64-${DESKTOP_VERSION}.msi" ]]
+          (cd release-assets && sha256sum ./*.apk ./*.msi > SHA256SUMS.txt)
+
+          cat >> release-notes.md <<EOF
+
+          ### Windows PC
+
+          Esta release também inclui o instalador Windows x64 Telumia Desktop **${DESKTOP_VERSION}** (`Telumia-Windows-x64-${DESKTOP_VERSION}.msi`). APKs e MSI estão listados juntos; SHA256SUMS.txt contém os hashes dos pacotes.
+          EOF
 
           release_args=(
             "${RELEASE_TAG}"
             --target "${RELEASE_TARGET}"
-            --title "${RELEASE_TITLE}"
+            --title "Telumia ${RELEASE_TITLE} — Android TV + Windows PC ${DESKTOP_VERSION}"
             --notes-file release-notes.md
           )
           if [[ "${RELEASE_PRERELEASE}" == "true" ]]; then
@@ -257,4 +296,10 @@ jobs:
           if [[ "${RELEASE_MODE}" == "draft" ]]; then
             release_args+=(--draft)
           fi
-          gh release create "${release_args[@]}" "${release_apks[@]}"
+          mapfile -t release_assets < <(find release-assets -maxdepth 1 -type f -print | sort)
+          gh release create "${release_args[@]}" "${release_assets[@]}"
+
+          published_assets="$(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')"
+          grep -Eq '\.apk$' <<<"${published_assets}"
+          grep -Fxq "Telumia-Windows-x64-${DESKTOP_VERSION}.msi" <<<"${published_assets}"
+          grep -Fxq 'SHA256SUMS.txt' <<<"${published_assets}"
