@@ -14,6 +14,8 @@ internal class JellyfinProvider(
     override val displayName: String = "Jellyfin"
     override val minimumVersion: String = "10.9"
 
+    override val supportsTrickplay: Boolean get() = true
+
     override fun viewsEndpoint(userId: String) = Endpoint("/UserViews", mapOf("userId" to userId))
 
     override fun itemsEndpoint(userId: String) = Endpoint("/Items", mapOf("userId" to userId))

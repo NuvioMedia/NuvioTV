@@ -82,6 +82,18 @@ class ServerPlayback internal constructor(
         return current.provider.details(current.session, current.playback.target.item.itemId).userStates.firstOrNull()
     }
 
+    suspend fun seekPreview(url: String?): SeekPreview? {
+        val current = url?.let { synchronized(lock) { active[it] } } ?: return null
+        return try {
+            current.provider.seekPreview(current.session, current.playback)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w(TAG, "Seek preview for ${current.label} unavailable: ${error.serverFailure()}")
+            null
+        }
+    }
+
     fun isServerSource(url: String?): Boolean = url != null && synchronized(lock) { url in active }
 
     fun onPlaybackSnapshot(url: String?, positionMs: Long, isPlaying: Boolean, isLoading: Boolean, isEnded: Boolean) {

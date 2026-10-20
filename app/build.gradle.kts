@@ -162,6 +162,7 @@ android {
             buildConfigField("boolean", "FEATURE_EXTERNAL_TRAILERS_ENABLED", "true")
             buildConfigField("boolean", "FEATURE_EXTERNAL_PLAYBACK_KEEP_ALIVE_ENABLED", "true")
             buildConfigField("boolean", "FEATURE_CUSTOM_SERVER_CONNECTIONS_ENABLED", "true")
+            buildConfigField("boolean", "FEATURE_SEEK_PREVIEW_ENABLED", "true")
         }
         create("playstore") {
             dimension = "distribution"
@@ -172,6 +173,7 @@ android {
             buildConfigField("boolean", "FEATURE_EXTERNAL_TRAILERS_ENABLED", "true")
             buildConfigField("boolean", "FEATURE_EXTERNAL_PLAYBACK_KEEP_ALIVE_ENABLED", "false")
             buildConfigField("boolean", "FEATURE_CUSTOM_SERVER_CONNECTIONS_ENABLED", "false")
+            buildConfigField("boolean", "FEATURE_SEEK_PREVIEW_ENABLED", "false")
         }
     }
 

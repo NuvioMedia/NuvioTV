@@ -35,6 +35,8 @@ interface ServerProvider {
 
     suspend fun report(session: ServerSession, playback: ServerPlaybackSession, event: ServerPlaybackEvent) = Unit
 
+    suspend fun seekPreview(session: ServerSession, playback: ServerPlaybackSession): SeekPreview? = null
+
     suspend fun signOut(session: ServerSession) = Unit
 
     suspend fun collectionPage(

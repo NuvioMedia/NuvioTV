@@ -157,6 +157,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import io.github.peerless2012.ass.media.widget.AssSubtitleView
 import kotlin.math.abs
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 private fun PlayerUiState.returnFocusSeasonEpisode(completed: Boolean): Pair<Int?, Int?> {
     val next = nextEpisode?.takeIf {
@@ -2771,24 +2773,34 @@ private fun PlayerControlsProgressBarHost(
     onClick: (() -> Unit)? = null
 ) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+    val previewPosition by remember(viewModel) {
+        viewModel.uiState.map { it.pendingPreviewSeekPosition }.distinctUntilChanged()
+    }.collectAsState(initial = null)
 
-    ProgressBar(
-        currentPosition = playbackTimeline.currentPosition,
-        duration = playbackTimeline.duration,
-        onSeekPreview = { delta ->
-            viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(delta))
-        },
-        onSeekCommit = {
-            viewModel.onEvent(PlayerEvent.OnCommitPreviewSeek)
-        },
-        focusRequester = focusRequester,
-        upFocusRequester = upFocusRequester,
-        downFocusRequester = downFocusRequester,
-        onUpKey = onUpKey,
-        onFocused = onFocused,
-        onClick = onClick,
-        bufferedPosition = playbackTimeline.bufferedPosition
-    )
+    Box {
+        ProgressBar(
+            currentPosition = playbackTimeline.currentPosition,
+            duration = playbackTimeline.duration,
+            onSeekPreview = { delta ->
+                viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(delta))
+            },
+            onSeekCommit = {
+                viewModel.onEvent(PlayerEvent.OnCommitPreviewSeek)
+            },
+            focusRequester = focusRequester,
+            upFocusRequester = upFocusRequester,
+            downFocusRequester = downFocusRequester,
+            onUpKey = onUpKey,
+            onFocused = onFocused,
+            onClick = onClick,
+            bufferedPosition = playbackTimeline.bufferedPosition
+        )
+        SeekPreviewPopup(
+            controller = viewModel.seekPreview,
+            previewPositionMs = previewPosition,
+            durationMs = playbackTimeline.duration
+        )
+    }
 }
 
 @Composable
@@ -3092,7 +3104,9 @@ private fun ProgressBar(
 private fun SeekOverlay(
     currentPosition: Long,
     duration: Long,
-    bufferedPosition: Long = 0L
+    bufferedPosition: Long = 0L,
+    seekPreview: SeekPreviewController? = null,
+    previewPositionMs: Long? = null
 ) {
     Column(
         modifier = Modifier
@@ -3100,13 +3114,22 @@ private fun SeekOverlay(
             .padding(horizontal = NuvioTheme.spacing.xxl, vertical = NuvioTheme.spacing.xl)
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            ProgressBar(
-                currentPosition = currentPosition,
-                duration = duration,
-                onSeekPreview = {},
-                onSeekCommit = {},
-                bufferedPosition = bufferedPosition
-            )
+            Box {
+                ProgressBar(
+                    currentPosition = currentPosition,
+                    duration = duration,
+                    onSeekPreview = {},
+                    onSeekCommit = {},
+                    bufferedPosition = bufferedPosition
+                )
+                if (seekPreview != null) {
+                    SeekPreviewPopup(
+                        controller = seekPreview,
+                        previewPositionMs = previewPositionMs,
+                        durationMs = duration
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
@@ -3128,11 +3151,16 @@ private fun SeekOverlay(
 @Composable
 private fun SeekOverlayHost(viewModel: PlayerViewModel) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+    val previewPosition by remember(viewModel) {
+        viewModel.uiState.map { it.pendingPreviewSeekPosition }.distinctUntilChanged()
+    }.collectAsState(initial = null)
 
     SeekOverlay(
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration,
-        bufferedPosition = playbackTimeline.bufferedPosition
+        bufferedPosition = playbackTimeline.bufferedPosition,
+        seekPreview = viewModel.seekPreview,
+        previewPositionMs = previewPosition
     )
 }
 

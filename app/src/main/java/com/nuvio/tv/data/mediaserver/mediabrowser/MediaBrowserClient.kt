@@ -88,6 +88,47 @@ internal class MediaBrowserClient(
         return response
     }
 
+    suspend fun getBytes(
+        baseUrl: String,
+        path: String,
+        token: String?,
+        query: Map<String, String?> = emptyMap(),
+        maxBytes: Long = MAX_BINARY_BYTES
+    ): ByteArray {
+        val request = try {
+            Request.Builder()
+                .url(buildUrl(baseUrl, path, query))
+                .header("Accept", "image/jpeg,image/*")
+                .header(authorizationHeader, authorizationValue(token))
+                .get()
+                .build()
+        } catch (_: IllegalArgumentException) {
+            throw ServerException(ServerFailure.NOT_FOUND)
+        }
+        return suspendCancellableCoroutine { continuation ->
+            val call = http.newCall(request)
+            continuation.invokeOnCancellation { call.cancel() }
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    if (continuation.isActive) continuation.resumeWithException(ServerException(ServerFailure.UNREACHABLE))
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    response.use {
+                        try {
+                            throwForStatus(response.code)
+                            val body = response.body ?: throw ServerException(ServerFailure.FAILED)
+                            val bytes = readBoundedBytes(body.source(), body.contentLength(), maxBytes)
+                            if (continuation.isActive) continuation.resume(bytes)
+                        } catch (error: Exception) {
+                            if (continuation.isActive) continuation.resumeWithException(error)
+                        }
+                    }
+                }
+            })
+        }
+    }
+
     fun authorizationValue(token: String?): String = buildString {
         append("MediaBrowser Client=\"Nuvio\", Device=\"")
         append(identity.device.headerValue())
@@ -140,6 +181,7 @@ internal class MediaBrowserClient(
 
     private companion object {
         val JSON_MEDIA_TYPE = "application/json".toMediaType()
+        const val MAX_BINARY_BYTES = 8L * 1024L * 1024L
     }
 }
 
@@ -192,6 +234,16 @@ private fun readBoundedBody(source: BufferedSource, contentLength: Long, maxByte
     while (true) {
         val count = source.read(buffer, minOf(8_192L, maxBytes - buffer.size + 1L))
         if (count == -1L) return buffer.readUtf8()
+        if (buffer.size > maxBytes) throw IOException("Response exceeds size limit")
+    }
+}
+
+private fun readBoundedBytes(source: BufferedSource, contentLength: Long, maxBytes: Long): ByteArray {
+    if (contentLength > maxBytes) throw IOException("Response exceeds size limit")
+    val buffer = Buffer()
+    while (true) {
+        val count = source.read(buffer, minOf(8_192L, maxBytes - buffer.size + 1L))
+        if (count == -1L) return buffer.readByteArray()
         if (buffer.size > maxBytes) throw IOException("Response exceeds size limit")
     }
 }

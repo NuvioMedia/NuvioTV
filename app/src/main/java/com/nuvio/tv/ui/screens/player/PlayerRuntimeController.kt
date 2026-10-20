@@ -230,6 +230,8 @@ class PlayerRuntimeController(
     internal var currentVideoBitrate: Int? = null
     internal var currentStreamUrl: String
     internal var reportedServerUrl: String? = null
+
+    internal val seekPreviewController = SeekPreviewController(scope, serverPlayback)
     internal var serverAudioChosenByUser = false
     internal var currentStreamResponseHeaders: Map<String, String> = emptyMap()
     internal var currentStreamCacheKey: String? = null
@@ -567,8 +569,6 @@ class PlayerRuntimeController(
     internal var mpvHardwareDecodeModeSetting: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
     internal var mpvPreferredAudioLanguages: List<String> = emptyList()
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
-    // Per-device delay + current stream's behaviorHints.audioDelayMs + the user's tweak on that stream.
-    internal var audioDelayParts: AudioDelayParts = AudioDelayParts().withStream(navigationArgs.audioDelayMs ?: 0)
     internal var hasAppliedRememberedAudioSelection: Boolean = false
     internal var hasInitializedAudioAmplificationForSession: Boolean = false
     internal var hasInitializedCenterMixForSession: Boolean = false
@@ -623,6 +623,7 @@ class PlayerRuntimeController(
     internal val pauseOverlayDelayMs = 5000L
     internal val seekProgressSyncDebounceMs = 700L
     internal val audioDelayUs = AtomicLong(0L)
+    internal var audioDelayParts = AudioDelayParts()
     internal val subtitleDelayUs = AtomicLong(0L)
     internal var pendingPreviewSeekPosition: Long?
         get() = _uiState.value.pendingPreviewSeekPosition
