@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -46,7 +45,7 @@ class LiveTvViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            profileManager.activeProfileId.distinctUntilChanged().collect { _ ->
+            profileManager.activeProfileId.collect { _ ->
                 mutableState.update { it.copy(
                     sources = emptyList(), channels = emptyList(), programs = emptyList(),
                     favoriteChannelIds = emptySet(), recentChannelIds = emptyList(),
