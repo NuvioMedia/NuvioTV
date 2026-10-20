@@ -172,6 +172,16 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         currentVideoTrackBitrate = effectiveVideoFormat.bitrate
         currentVideoTrackColorTransfer = effectiveVideoFormat.colorInfo?.colorTransfer
         currentVideoTrackSelected = selectedVideoFormat != null
+        _uiState.update { state ->
+            state.copy(
+                activePlaybackInfo = ActivePlaybackInfo(
+                    width = effectiveVideoFormat.width.takeIf { it > 0 },
+                    height = effectiveVideoFormat.height.takeIf { it > 0 },
+                    mimeType = effectiveVideoFormat.sampleMimeType,
+                    colorTransfer = effectiveVideoFormat.colorInfo?.colorTransfer
+                )
+            )
+        }
         currentVideoTrackBestSupport = if (selectedVideoFormat != null) {
             selectedVideoTrackSupport
         } else {
@@ -241,6 +251,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         currentVideoTrackBestSupport = C.FORMAT_UNSUPPORTED_TYPE
         currentVideoTrackIsLikelyVc1 = false
         lastLoggedVideoTrackSignature = null
+        _uiState.update { it.copy(activePlaybackInfo = null) }
     }
 
     hasScannedTextTracksOnce = true

@@ -747,6 +747,8 @@
     <string name="playback_pause_overlay_sub">Show details overlay after 5 seconds while paused.</string>
     <string name="playback_show_clock_sub">Show current time and end time while controls are visible.</string>
     <string name="playback_osd_clock">OSD Clock</string>
+    <string name="playback_info_badge">Playback Info Badge</string>
+    <string name="playback_info_badge_sub">Show active quality, HDR and audio format beside the title.</string>
     <string name="playback_skip_intro">Skip Intro</string>
     <string name="playback_skip_intro_sub">Use introdb.app to detect intros and recaps.</string>
     <string name="playback_parental_guide">Content Warnings</string>

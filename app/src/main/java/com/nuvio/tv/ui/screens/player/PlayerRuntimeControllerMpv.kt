@@ -172,7 +172,8 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
                 audioTracks = emptyList(),
                 subtitleTracks = emptyList(),
                 selectedAudioTrackIndex = -1,
-                selectedSubtitleTrackIndex = -1
+                selectedSubtitleTrackIndex = -1,
+                activePlaybackInfo = null
             )
         }
         cancelPauseOverlay()
@@ -313,6 +314,15 @@ internal fun PlayerRuntimeController.updateMpvTracksOnTick() {
     if (!isUsingMpvEngine() || mpvTrackRefreshInProgress || mpvView == null) return
     val state = _uiState.value
     markMpvTextTracksScannedIfReady(hasInternalSubtitleTracks = state.subtitleTracks.isNotEmpty())
+    // video-params do not trigger a track-list change on first decode or quality
+    // switch, so the resolution segment is refreshed on the tick instead.
+    mpvView?.readVideoParams()?.let { (width, height) ->
+        if (state.activePlaybackInfo?.width != width || state.activePlaybackInfo?.height != height) {
+            _uiState.update {
+                it.copy(activePlaybackInfo = ActivePlaybackInfo(width = width, height = height))
+            }
+        }
+    }
     maybeRestorePendingAudioSelectionAfterSubtitleRefresh(state.audioTracks)
     applyPersistedTrackPreference(
         audioTracks = state.audioTracks,
@@ -430,13 +440,18 @@ private fun PlayerRuntimeController.applyMpvTrackSnapshot(snapshot: MpvTrackSnap
         } else {
             selectedSubtitleIndex
         }
+        val nextVideoInfo = ActivePlaybackInfo(
+            width = snapshot.videoWidth,
+            height = snapshot.videoHeight
+        ).takeIf { it.width != null || it.height != null }
 
         if (
             state.audioTracks == audioTracks &&
             state.subtitleTracks == internalSubtitleTracks &&
             state.selectedAudioTrackIndex == selectedAudioIndex &&
             state.selectedSubtitleTrackIndex == normalizedSelectedSubtitleIndex &&
-            state.selectedAddonSubtitle == addonSelection
+            state.selectedAddonSubtitle == addonSelection &&
+            state.activePlaybackInfo == nextVideoInfo
         ) {
             state
         } else {
@@ -445,7 +460,8 @@ private fun PlayerRuntimeController.applyMpvTrackSnapshot(snapshot: MpvTrackSnap
                 subtitleTracks = internalSubtitleTracks,
                 selectedAudioTrackIndex = selectedAudioIndex,
                 selectedSubtitleTrackIndex = normalizedSelectedSubtitleIndex,
-                selectedAddonSubtitle = addonSelection
+                selectedAddonSubtitle = addonSelection,
+                activePlaybackInfo = nextVideoInfo
             )
         }
     }

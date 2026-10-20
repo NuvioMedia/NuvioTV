@@ -641,8 +641,17 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
         return MpvTrackSnapshot(
             audioTracks = audioTracks,
-            subtitleTracks = subtitleTracks
+            subtitleTracks = subtitleTracks,
+            videoWidth = runCatching { mpv.getPropertyInt("video-params/w") }.getOrNull()?.takeIf { it > 0 },
+            videoHeight = runCatching { mpv.getPropertyInt("video-params/h") }.getOrNull()?.takeIf { it > 0 }
         )
+    }
+
+    fun readVideoParams(): Pair<Int, Int>? {
+        if (!initialized) return null
+        val width = runCatching { mpv.getPropertyInt("video-params/w") }.getOrNull()?.takeIf { it > 0 } ?: return null
+        val height = runCatching { mpv.getPropertyInt("video-params/h") }.getOrNull()?.takeIf { it > 0 } ?: return null
+        return width to height
     }
 
     fun releasePlayer() {
@@ -811,7 +820,10 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
 data class MpvTrackSnapshot(
     val audioTracks: List<MpvTrack>,
-    val subtitleTracks: List<MpvTrack>
+    val subtitleTracks: List<MpvTrack>,
+    /** Active video dimensions from video-params, when available. */
+    val videoWidth: Int? = null,
+    val videoHeight: Int? = null
 )
 
 data class MpvTrack(

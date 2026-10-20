@@ -174,6 +174,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setOsdClockEnabled(enabled)
     }
 
+    suspend fun setShowPlaybackInfoBadge(enabled: Boolean) {
+        playerSettingsDataStore.setShowPlaybackInfoBadge(enabled)
+    }
+
     suspend fun setTransparentLetterbox(enabled: Boolean) {
         deviceLocalPlayerPreferences.setTransparentLetterbox(enabled)
     }

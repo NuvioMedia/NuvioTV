@@ -220,6 +220,9 @@ data class PlayerUiState(
     // Stream info overlay
     val showStreamInfoOverlay: Boolean = false,
     val streamInfoData: StreamInfoData? = null,
+    // Active playback info badge beside the title
+    val activePlaybackInfo: ActivePlaybackInfo? = null,
+    val showPlaybackInfoBadge: Boolean = true,
     // Torrent streaming state
     val isTorrentStream: Boolean = false,
     val torrentDownloadSpeed: Long = 0L,

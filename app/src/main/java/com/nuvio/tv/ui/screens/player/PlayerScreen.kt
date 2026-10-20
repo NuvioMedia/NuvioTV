@@ -143,6 +143,7 @@ import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.PlaybackInfoBadgeChips
 import android.text.format.DateFormat
 import com.nuvio.tv.ui.util.rememberRawSvgPainter
 import java.util.Date
@@ -2471,13 +2472,29 @@ private fun PlayerControlsOverlay(
                         uiState.title
                     }
 
-                    Text(
-                        text = displayName,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = displayName,
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+
+                        if (uiState.showPlaybackInfoBadge) {
+                            val badgeSegments = remember(uiState.activePlaybackInfo, uiState.audioTracks, uiState.selectedAudioTrackIndex) {
+                                buildPlaybackInfoBadgeSegments(
+                                    video = uiState.activePlaybackInfo,
+                                    selectedAudio = uiState.audioTracks.getOrNull(uiState.selectedAudioTrackIndex)
+                                )
+                            }
+                            if (badgeSegments.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+                                PlaybackInfoBadgeChips(segments = badgeSegments)
+                            }
+                        }
+                    }
 
                     if (uiState.currentSeason != null && uiState.currentEpisode != null) {
                         val seasonEpisodeCode = stringResource(

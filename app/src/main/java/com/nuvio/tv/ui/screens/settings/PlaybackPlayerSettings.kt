@@ -163,6 +163,13 @@ internal fun PlaybackPlayerInterfaceSection(
         enabled = internalPlayer
     )
     SettingsToggleRow(
+        title = stringResource(R.string.playback_info_badge),
+        subtitle = stringResource(R.string.playback_info_badge_sub),
+        checked = settings.showPlaybackInfoBadge,
+        onToggle = { onUpdate { setShowPlaybackInfoBadge(!settings.showPlaybackInfoBadge) } },
+        enabled = internalPlayer
+    )
+    SettingsToggleRow(
         title = stringResource(R.string.playback_parental_guide),
         subtitle = stringResource(R.string.playback_parental_guide_sub),
         checked = settings.parentalGuideEnabled,

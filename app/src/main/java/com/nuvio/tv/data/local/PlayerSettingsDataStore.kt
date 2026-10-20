@@ -241,6 +241,7 @@ data class PlayerSettings(
     val playbackIssueReportsEnabled: Boolean = false,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
+    val showPlaybackInfoBadge: Boolean = true,
     val skipIntroEnabled: Boolean = true,
     val parentalGuideEnabled: Boolean = true,
     val autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet(),
@@ -507,6 +508,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val playbackIssueReportsEnabledKey = booleanPreferencesKey("playback_issue_reports_enabled")
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
     private val osdClockEnabledKey = booleanPreferencesKey("osd_clock_enabled")
+    private val showPlaybackInfoBadgeKey = booleanPreferencesKey("show_playback_info_badge")
     private val skipIntroEnabledKey = booleanPreferencesKey("skip_intro_enabled")
     private val parentalGuideEnabledKey = booleanPreferencesKey("parental_guide_enabled")
     private val autoSkipSegmentTypesKey = stringSetPreferencesKey("auto_skip_segment_types")
@@ -891,6 +893,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 playbackIssueReportsEnabled = prefs[playbackIssueReportsEnabledKey] ?: false,
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,
+                showPlaybackInfoBadge = prefs[showPlaybackInfoBadgeKey] ?: true,
                 skipIntroEnabled = prefs[skipIntroEnabledKey] ?: true,
                 parentalGuideEnabled = prefs[parentalGuideEnabledKey] ?: true,
                 autoSkipSegmentTypes = prefs[autoSkipSegmentTypesKey]
@@ -1194,6 +1197,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setOsdClockEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[osdClockEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setShowPlaybackInfoBadge(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showPlaybackInfoBadgeKey] = enabled
         }
     }
 
