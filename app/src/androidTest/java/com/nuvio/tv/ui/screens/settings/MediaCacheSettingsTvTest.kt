@@ -109,12 +109,13 @@ class MediaCacheSettingsTvTest {
         assertEquals(original, preferences.all)
     }
 
-    @Test fun runtimeMeasurementCountsImageAndBadgeCachesAndExcludesDurableAndLinkedFiles() {
+    @Test fun runtimeMeasurementCountsImageBadgeAndGuideCachesAndExcludesDurableAndLinkedFiles() {
         fun write(name: String, size: Int): File = File(context.cacheDir, name).apply {
             parentFile!!.mkdirs(); writeBytes(ByteArray(size))
         }
         write("image_cache/image", 101)
         write("badge_cache/badge", 23)
+        write("live_tv_guide/guide.json.gz", 17)
         val avatar = write("profile-studio/avatar", 211)
         val download = write("downloads/movie", 307)
         val link = File(context.cacheDir, "image_cache/linked-profile")
@@ -122,10 +123,10 @@ class MediaCacheSettingsTvTest {
         try {
             val cache = TvMediaCache(context)
             assertTrue(cache.occupiedCache.complete)
-            assertEquals(124L, cache.occupiedCache.bytes)
+            assertEquals(141L, cache.occupiedCache.bytes)
             assertEquals(211L, avatar.length())
             assertEquals(307L, download.length())
-            assertEquals(124L, cache.deviceSnapshot.occupiedCacheBytes)
+            assertEquals(141L, cache.deviceSnapshot.occupiedCacheBytes)
             assertEquals(MediaCachePolicy.resolve(MediaCachePlatform.TV, cache.activeSettings, cache.deviceSnapshot), cache.activeBudget)
         } finally { java.nio.file.Files.delete(link.toPath()) }
     }

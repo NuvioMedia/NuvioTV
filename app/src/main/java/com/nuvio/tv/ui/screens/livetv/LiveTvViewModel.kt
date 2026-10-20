@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.livetv
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.livetv.LiveTvSourceImporter
+import com.nuvio.tv.core.livetv.LiveTvGuideCache
 import com.nuvio.tv.data.local.LiveTvSourceStore
 import com.nuvio.tv.domain.model.LiveTvChannel
 import com.nuvio.tv.domain.model.LiveTvProgram
@@ -22,6 +23,7 @@ data class LiveTvUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val sourceErrors: Map<String, String> = emptyMap(),
+    val lastUpdatedEpochMillis: Map<String, Long> = emptyMap(),
     val lastSavedSourceId: String? = null,
 )
 
@@ -29,6 +31,7 @@ data class LiveTvUiState(
 class LiveTvViewModel @Inject constructor(
     private val sourceStore: LiveTvSourceStore,
     private val importer: LiveTvSourceImporter,
+    private val guideCache: LiveTvGuideCache,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(LiveTvUiState(isLoading = true))
     val state: StateFlow<LiveTvUiState> = mutableState.asStateFlow()
@@ -37,8 +40,19 @@ class LiveTvViewModel @Inject constructor(
 
     fun reloadSources() {
         viewModelScope.launch {
-            runCatching { sourceStore.list() }
-                .onSuccess { sources -> mutableState.update { it.copy(sources = sources, isLoading = false) } }
+            runCatching {
+                sourceStore.list().also { sources ->
+                    val cached = sources.filter { it.enabled }.mapNotNull { guideCache.read(it.id) }
+                    mutableState.update { it.copy(
+                        sources = sources,
+                        channels = cached.flatMap { it.result.channels }.distinctBy { channel -> channel.id },
+                        programs = cached.flatMap { it.result.programs }.distinctBy { program -> "${program.sourceId}|${program.channelId}|${program.startEpochMillis}|${program.title}" },
+                        lastUpdatedEpochMillis = cached.associate { it.sourceId to it.updatedEpochMillis },
+                        isLoading = false,
+                    ) }
+                }
+            }
+                .onSuccess { }
                 .onFailure { error -> mutableState.update { it.copy(isLoading = false, error = error.message ?: "Falha ao carregar fontes") } }
         }
     }
@@ -74,12 +88,16 @@ class LiveTvViewModel @Inject constructor(
 
     fun removeSource(source: LiveTvSource) {
         viewModelScope.launch {
-            runCatching { sourceStore.remove(source.id) }
+            runCatching {
+                sourceStore.remove(source.id)
+                guideCache.remove(source.id)
+            }
                 .onSuccess {
                     mutableState.update { state -> state.copy(sources = state.sources.filterNot { it.id == source.id },
                         channels = state.channels.filterNot { it.sourceId == source.id },
                         programs = state.programs.filterNot { it.sourceId == source.id },
-                        sourceErrors = state.sourceErrors - source.id) }
+                        sourceErrors = state.sourceErrors - source.id,
+                        lastUpdatedEpochMillis = state.lastUpdatedEpochMillis - source.id) }
                 }
                 .onFailure { error -> mutableState.update { it.copy(error = error.message ?: "Não foi possível remover a fonte") } }
         }
@@ -89,27 +107,50 @@ class LiveTvViewModel @Inject constructor(
         viewModelScope.launch {
             val sources = mutableState.value.sources.filter { it.enabled }
             if (sources.isEmpty()) {
-                mutableState.update { it.copy(channels = emptyList(), programs = emptyList(), sourceErrors = emptyMap(), error = null) }
+                mutableState.update { it.copy(channels = emptyList(), programs = emptyList(), sourceErrors = emptyMap(), lastUpdatedEpochMillis = emptyMap(), error = null) }
                 return@launch
             }
             mutableState.update { it.copy(isLoading = true, error = null, sourceErrors = emptyMap()) }
-            val channels = mutableListOf<LiveTvChannel>()
-            val programs = mutableListOf<LiveTvProgram>()
+            val resultBySource = linkedMapOf<String, com.nuvio.tv.domain.model.LiveTvImportResult>()
+            val updatedBySource = linkedMapOf<String, Long>()
+            for (source in sources) {
+                val cached = try {
+                    guideCache.read(source.id)
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    null
+                }
+                cached?.let {
+                    resultBySource[source.id] = it.result
+                    updatedBySource[source.id] = it.updatedEpochMillis
+                }
+            }
+            mutableState.update { state ->
+                state.copy(
+                    channels = resultBySource.values.flatMap { it.channels }.distinctBy(LiveTvChannel::id),
+                    programs = resultBySource.values.flatMap { it.programs }.distinctBy { "${it.sourceId}|${it.channelId}|${it.startEpochMillis}|${it.title}" },
+                )
+            }
             val errors = linkedMapOf<String, String>()
             for (source in sources) {
                 try {
                     val result = importer.import(source)
-                    channels += result.channels
-                    programs += result.programs
+                    resultBySource[source.id] = result
+                    guideCache.write(source.id, result)
+                    updatedBySource[source.id] = System.currentTimeMillis()
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
                 } catch (failure: Exception) {
                     errors[source.id] = failure.message ?: "Falha ao importar a fonte"
                 }
             }
+            val channels = resultBySource.values.flatMap { it.channels }
             mutableState.update { it.copy(
                 channels = channels.distinctBy(LiveTvChannel::id),
-                programs = programs.distinctBy { "${it.sourceId}|${it.channelId}|${it.startEpochMillis}|${it.title}" },
+                programs = resultBySource.values.flatMap { it.programs }
+                    .distinctBy { "${it.sourceId}|${it.channelId}|${it.startEpochMillis}|${it.title}" },
+                lastUpdatedEpochMillis = updatedBySource,
                 sourceErrors = errors,
                 isLoading = false,
                 error = if (channels.isEmpty() && errors.isNotEmpty()) "Não foi possível importar canais das fontes ativas" else null,

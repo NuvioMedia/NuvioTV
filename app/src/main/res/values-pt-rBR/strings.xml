@@ -2315,6 +2315,7 @@
     <string name="live_tv_no_current_program">Nenhum programa atual no guia</string>
     <string name="live_tv_next">A seguir</string>
     <string name="live_tv_watch">Assistir</string>
+    <string name="live_tv_updated">Atualizado %1$s</string>
 
     <string name="update_checking">Verificando atualizações…</string>
     <string name="update_waiting_for_stable">Você vai receber a próxima versão estável assim que estiver disponível</string>

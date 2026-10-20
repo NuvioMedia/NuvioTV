@@ -49,6 +49,7 @@ fun LiveTvScreen(
     var playlistUrl by remember { mutableStateOf("") }
     var epgUrl by remember { mutableStateOf("") }
     val formatter = remember { DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()) }
+    val sourceDateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM HH:mm").withZone(ZoneId.systemDefault()) }
     val programsByChannel = remember(state.programs) {
         state.programs.groupBy { it.sourceId to it.channelId }
             .mapValues { (_, programs) -> programs.sortedBy(LiveTvProgram::startEpochMillis) }
@@ -114,7 +115,12 @@ fun LiveTvScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Column(Modifier.weight(1f)) {
                             Text(source.name, style = MaterialTheme.typography.titleMedium)
-                            Text(state.sourceErrors[source.id] ?: source.playlistUrl.hostForDisplay(),
+                            val sourceStatus = state.sourceErrors[source.id]
+                                ?: state.lastUpdatedEpochMillis[source.id]?.let { timestamp ->
+                                    stringResource(R.string.live_tv_updated, sourceDateFormatter.format(java.time.Instant.ofEpochMilli(timestamp)))
+                                }
+                                ?: source.playlistUrl.hostForDisplay()
+                            Text(sourceStatus,
                                 style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary, maxLines = 1)
                         }
                         Button(onClick = { viewModel.setSourceEnabled(source, !source.enabled) }) {

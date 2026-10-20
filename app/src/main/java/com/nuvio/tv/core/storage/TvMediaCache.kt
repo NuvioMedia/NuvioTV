@@ -28,7 +28,10 @@ class TvMediaCache @Inject constructor(@param:ApplicationContext context: Contex
     }
     val activeBudget: MediaCacheBudget by lazy { MediaCachePolicy.resolve(MediaCachePlatform.TV, activeSettings, deviceSnapshot) }
     internal val occupiedCache: MediaCacheOccupancy by lazy {
-        OwnedMediaCacheOccupancy.measure(app.cacheDir.toPath(), listOf(listOf("image_cache"), listOf("badge_cache")))
+        OwnedMediaCacheOccupancy.measure(
+            app.cacheDir.toPath(),
+            listOf(listOf("image_cache"), listOf("badge_cache"), listOf("live_tv_guide")),
+        )
     }
     val writesEnabled: Boolean get() = activeBudget.totalBytes > 0
     val requestPolicy: CachePolicy get() = if (writesEnabled) CachePolicy.ENABLED else CachePolicy.READ_ONLY

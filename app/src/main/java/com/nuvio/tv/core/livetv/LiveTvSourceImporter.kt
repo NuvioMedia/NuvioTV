@@ -17,15 +17,22 @@ class LiveTvSourceImporter @Inject constructor(
 ) {
     suspend fun import(source: LiveTvSource): LiveTvImportResult {
         val playlist = fetch(source.playlistUrl, M3uPlaylistParser.MAX_PLAYLIST_CHARS)
-        val channels = M3uPlaylistParser.parse(playlist, source.id)
-        val epg = source.epgUrl?.let { url ->
-            XmlTvParser.parse(fetch(url, XmlTvParser.MAX_DOCUMENT_CHARS), source.id)
+        val channels = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            M3uPlaylistParser.parse(playlist, source.id)
         }
-        return if (epg == null) channels else channels.copy(
-            channels = mergeEpgOnlyChannels(channels.channels, epg.channels),
-            programs = epg.programs,
-            skippedEntries = channels.skippedEntries + epg.skippedEntries,
-        )
+        val epg = source.epgUrl?.let { url ->
+            val document = fetch(url, XmlTvParser.MAX_DOCUMENT_CHARS)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                XmlTvParser.parse(document, source.id)
+            }
+        }
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            if (epg == null) channels else channels.copy(
+                channels = mergeEpgOnlyChannels(channels.channels, epg.channels),
+                programs = epg.programs,
+                skippedEntries = channels.skippedEntries + epg.skippedEntries,
+            )
+        }
     }
 
     private suspend fun fetch(url: String, maxChars: Int): String {
