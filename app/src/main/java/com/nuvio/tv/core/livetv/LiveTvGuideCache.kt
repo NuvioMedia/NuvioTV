@@ -3,16 +3,15 @@ package com.nuvio.tv.core.livetv
 import android.content.Context
 import com.nuvio.tv.core.storage.MediaCacheCategory
 import com.nuvio.tv.core.storage.TvMediaCache
+import com.nuvio.tv.domain.model.LiveTvChannel
 import com.nuvio.tv.domain.model.LiveTvImportResult
+import com.nuvio.tv.domain.model.LiveTvProgram
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromStream
-import kotlinx.serialization.encodeToStream
-import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.FilterInputStream
 import java.io.FilterOutputStream
 import java.io.InputStream
@@ -24,7 +23,6 @@ import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Serializable
 data class CachedLiveTvGuide(
     val schema: Int = 1,
     val sourceId: String,
@@ -34,7 +32,6 @@ data class CachedLiveTvGuide(
 
 /** Profile source IDs are hashed into app-private filenames; payloads share the central EPG quota. */
 @Singleton
-@OptIn(ExperimentalSerializationApi::class)
 class LiveTvGuideCache private constructor(
     private val directory: File,
     private val quotaBytes: () -> Long,
@@ -55,16 +52,12 @@ class LiveTvGuideCache private constructor(
         { writesEnabled },
     )
 
-    private val json = Json { ignoreUnknownKeys = false; encodeDefaults = true }
-
     suspend fun read(sourceId: String): CachedLiveTvGuide? = withContext(Dispatchers.IO) {
         val file = fileFor(sourceId)
         if (!file.isFile || file.length() <= 0L || file.length() > MAX_COMPRESSED_BYTES) return@withContext null
         try {
-            GZIPInputStream(file.inputStream().buffered()).use { gzip ->
-                LimitedInputStream(gzip, MAX_DECODED_BYTES).use { bounded ->
-                    json.decodeFromStream(CachedLiveTvGuide.serializer(), bounded)
-                }
+            DataInputStream(LimitedInputStream(GZIPInputStream(file.inputStream().buffered()), MAX_DECODED_BYTES).buffered()).use { input ->
+                decode(input)
             }.takeIf { entry ->
                 entry.schema == SCHEMA_VERSION && entry.sourceId == sourceId &&
                     entry.result.channels.size <= MAX_CACHED_CHANNELS &&
@@ -89,12 +82,8 @@ class LiveTvGuideCache private constructor(
             val temporary = File(directory, "${UUID.randomUUID()}.tmp")
             try {
                 try {
-                    GZIPOutputStream(LimitedOutputStream(temporary.outputStream().buffered(), limit)).use { gzip ->
-                        json.encodeToStream(
-                            CachedLiveTvGuide.serializer(),
-                            CachedLiveTvGuide(SCHEMA_VERSION, sourceId, updatedEpochMillis, result),
-                            gzip,
-                        )
+                    DataOutputStream(GZIPOutputStream(LimitedOutputStream(temporary.outputStream().buffered(), limit)).buffered()).use { output ->
+                        encode(output, CachedLiveTvGuide(SCHEMA_VERSION, sourceId, updatedEpochMillis, result))
                     }
                 } catch (_: CacheQuotaExceededException) {
                     return@withContext false
@@ -131,6 +120,91 @@ class LiveTvGuideCache private constructor(
             .take(16).joinToString("") { "%02x".format(it) }
         return File(directory, "$hash.$CACHE_EXTENSION")
     }
+
+    private fun encode(output: DataOutputStream, guide: CachedLiveTvGuide) {
+        output.writeInt(MAGIC)
+        output.writeInt(guide.schema)
+        output.writeString(guide.sourceId)
+        output.writeLong(guide.updatedEpochMillis)
+        output.writeInt(guide.result.channels.size)
+        guide.result.channels.forEach { channel ->
+            output.writeString(channel.id)
+            output.writeString(channel.sourceId)
+            output.writeString(channel.displayName)
+            output.writeNullableString(channel.streamUrl)
+            output.writeNullableString(channel.logoUrl)
+            output.writeNullableString(channel.groupName)
+            output.writeNullableString(channel.tvgId)
+            output.writeNullableString(channel.tvgName)
+        }
+        output.writeInt(guide.result.programs.size)
+        guide.result.programs.forEach { program ->
+            output.writeString(program.sourceId)
+            output.writeString(program.channelId)
+            output.writeString(program.title)
+            output.writeLong(program.startEpochMillis)
+            output.writeLong(program.endEpochMillis)
+            output.writeNullableString(program.description)
+            output.writeNullableString(program.category)
+            output.writeNullableString(program.iconUrl)
+        }
+        output.writeInt(guide.result.skippedEntries)
+    }
+
+    private fun decode(input: DataInputStream): CachedLiveTvGuide {
+        require(input.readInt() == MAGIC) { "Invalid cached guide signature" }
+        val schema = input.readInt()
+        val sourceId = input.readString()
+        val updatedAt = input.readLong()
+        val channelCount = input.readInt().also { require(it in 0..MAX_CACHED_CHANNELS) }
+        val channels = List(channelCount) {
+            LiveTvChannel(
+                id = input.readString(),
+                sourceId = input.readString(),
+                displayName = input.readString(),
+                streamUrl = input.readNullableString(),
+                logoUrl = input.readNullableString(),
+                groupName = input.readNullableString(),
+                tvgId = input.readNullableString(),
+                tvgName = input.readNullableString(),
+            )
+        }
+        val programCount = input.readInt().also { require(it in 0..XmlTvParser.MAX_PROGRAMS) }
+        val programs = List(programCount) {
+            LiveTvProgram(
+                sourceId = input.readString(),
+                channelId = input.readString(),
+                title = input.readString(),
+                startEpochMillis = input.readLong(),
+                endEpochMillis = input.readLong(),
+                description = input.readNullableString(),
+                category = input.readNullableString(),
+                iconUrl = input.readNullableString(),
+            )
+        }
+        val skipped = input.readInt()
+        require(input.read() == -1) { "Trailing cached guide data" }
+        return CachedLiveTvGuide(schema, sourceId, updatedAt, LiveTvImportResult(channels, programs, skipped))
+    }
+
+    private fun DataOutputStream.writeString(value: String) {
+        val bytes = value.toByteArray(Charsets.UTF_8)
+        require(bytes.size <= MAX_FIELD_BYTES)
+        writeInt(bytes.size)
+        write(bytes)
+    }
+
+    private fun DataOutputStream.writeNullableString(value: String?) {
+        writeBoolean(value != null)
+        if (value != null) writeString(value)
+    }
+
+    private fun DataInputStream.readString(): String {
+        val size = readInt().also { require(it in 0..MAX_FIELD_BYTES) }
+        return ByteArray(size).also(::readFully).toString(Charsets.UTF_8)
+    }
+
+    private fun DataInputStream.readNullableString(): String? = if (readBoolean()) readString() else null
 
     private class LimitedInputStream(input: InputStream, private val maximumBytes: Long) : FilterInputStream(input) {
         private var count = 0L
@@ -170,8 +244,10 @@ class LiveTvGuideCache private constructor(
 
     private companion object {
         const val DIRECTORY_NAME = "live_tv_guide"
-        const val CACHE_EXTENSION = "json.gz"
+        const val CACHE_EXTENSION = "bin.gz"
         const val SCHEMA_VERSION = 1
+        const val MAGIC = 0x54455047
+        const val MAX_FIELD_BYTES = 1024 * 1024
         const val MAX_CACHED_CHANNELS = M3uPlaylistParser.MAX_CHANNELS + XmlTvParser.MAX_CHANNELS
         const val MAX_COMPRESSED_BYTES = 64L * 1024L * 1024L
         const val MAX_DECODED_BYTES = 64L * 1024L * 1024L

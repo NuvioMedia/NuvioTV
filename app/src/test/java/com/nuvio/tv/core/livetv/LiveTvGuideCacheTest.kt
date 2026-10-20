@@ -47,7 +47,7 @@ class LiveTvGuideCacheTest {
 
         assertEquals(updated, cache.read("source-a")?.result)
         assertEquals(2L, cache.read("source-a")?.updatedEpochMillis)
-        assertEquals(1, cacheDir.listFiles()?.count { it.name.endsWith(".json.gz") })
+        assertEquals(1, cacheDir.listFiles()?.count { it.name.endsWith(".bin.gz") })
     }
 
     @Test
@@ -72,7 +72,7 @@ class LiveTvGuideCacheTest {
 
         assertNull(singleEntryBudget.read("source-a"))
         assertNotNull(singleEntryBudget.read("source-b"))
-        assertTrue(cacheDir.listFiles().orEmpty().filter { it.name.endsWith(".json.gz") }.sumOf { it.length() } <= entrySize)
+        assertTrue(cacheDir.listFiles().orEmpty().filter { it.name.endsWith(".bin.gz") }.sumOf { it.length() } <= entrySize)
     }
 
     private fun sampleResult() = LiveTvImportResult(
