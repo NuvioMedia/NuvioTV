@@ -28,6 +28,8 @@ internal data class TvPerformanceProfile(
         if (reducesDefaultMotion && preference == AnimationIntensity.STANDARD) AnimationIntensity.SUBTLE else preference
 
     companion object {
+        private const val MIB = 1024L * 1024L
+
         fun detect(context: Context): TvPerformanceProfile {
             return forCapabilities(DeviceCapabilities.memory(context))
         }
