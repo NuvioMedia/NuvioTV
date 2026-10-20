@@ -3296,4 +3296,11 @@
     <string name="timeline_preview_unavailable">Prévia da cena indisponível</string>
     <string name="timeline_preview_filmstrip">Cenas próximas decodificadas</string>
     <string name="timeline_preview_catching_up">Atualizando a cena…</string>
+    <string name="live_tv_timezone">Fuso horário do guia</string>
+    <string name="live_tv_timezone_device">Do aparelho</string>
+    <string name="live_tv_timezone_brasilia">Brasília</string>
+    <string name="live_tv_timezone_manaus">Manaus</string>
+    <string name="live_tv_timezone_rio_branco">Rio Branco</string>
+    <string name="live_tv_timezone_noronha">Fernando de Noronha</string>
+    <string name="live_tv_timezone_utc">UTC</string>
 </resources>

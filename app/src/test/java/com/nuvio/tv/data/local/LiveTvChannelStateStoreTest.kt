@@ -65,4 +65,27 @@ class LiveTvChannelStateStoreTest {
         assertEquals("source:channel-34", state.recentChannelIds.first())
         assertEquals("source:channel-5", state.recentChannelIds.last())
     }
+
+    @Test fun timeZoneSelectionPersistsAndIsIsolatedPerProfile() = runTest {
+        val profile = MutableStateFlow(1)
+        val manager = mockk<ProfileManager> { every { activeProfileId } returns profile }
+        val dataStores = (1..2).associateWith { id ->
+            PreferenceDataStoreFactory.create(scope = backgroundScope) {
+                directory.root.resolve("timezone-live-tv-$id.preferences_pb")
+            }
+        }
+        val factory = mockk<ProfileDataStoreFactory> {
+            every { get(any(), "live_tv_channel_state") } answers { dataStores.getValue(firstArg()) }
+        }
+        val store = LiveTvChannelStateStore(factory, manager)
+
+        store.setTimeZone("America/Manaus")
+        assertEquals("America/Manaus", store.read().timeZoneId)
+        profile.value = 2
+        assertEquals(LiveTvChannelStateStore.DEFAULT_TIME_ZONE_ID, store.read().timeZoneId)
+        store.setTimeZone("UTC")
+        profile.value = 1
+
+        assertEquals("America/Manaus", LiveTvChannelStateStore(factory, manager).read().timeZoneId)
+    }
 }

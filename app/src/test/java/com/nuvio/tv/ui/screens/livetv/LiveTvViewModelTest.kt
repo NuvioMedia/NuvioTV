@@ -154,6 +154,26 @@ class LiveTvViewModelTest {
         coVerify(exactly = 1) { channelState.toggleFavorite(channelId) }
     }
 
+    @Test
+    fun selectedTimeZoneIsPersistedAndPublishedToGuideState() = runTest(mainDispatcher.dispatcher) {
+        val sourceStore = mockk<LiveTvSourceStore>()
+        val importer = mockk<LiveTvSourceImporter>()
+        val guideCache = mockk<LiveTvGuideCache>()
+        val channelState = mockk<LiveTvChannelStateStore>()
+        val refreshScheduler = mockk<LiveTvRefreshScheduler>(relaxed = true)
+        coEvery { sourceStore.list() } returns emptyList()
+        coEvery { channelState.read() } returns LiveTvChannelState()
+        coEvery { channelState.setTimeZone("America/Manaus") } returns LiveTvChannelState(timeZoneId = "America/Manaus")
+        val viewModel = LiveTvViewModel(sourceStore, importer, guideCache, channelState, refreshScheduler, activeProfiles())
+
+        runCurrent()
+        viewModel.setTimeZone("America/Manaus")
+        runCurrent()
+
+        assertEquals("America/Manaus", viewModel.state.value.timeZoneId)
+        coVerify(exactly = 1) { channelState.setTimeZone("America/Manaus") }
+    }
+
     private fun activeProfiles() = mockk<ProfileManager> {
         every { activeProfileId } returns MutableStateFlow(1)
     }

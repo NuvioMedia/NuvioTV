@@ -31,6 +31,7 @@ data class LiveTvUiState(
     val lastSavedSourceId: String? = null,
     val favoriteChannelIds: Set<String> = emptySet(),
     val recentChannelIds: List<String> = emptyList(),
+    val timeZoneId: String = LiveTvChannelStateStore.DEFAULT_TIME_ZONE_ID,
 )
 
 @HiltViewModel
@@ -60,6 +61,7 @@ class LiveTvViewModel @Inject constructor(
                     mutableState.update { it.copy(
                         favoriteChannelIds = saved.favoriteChannelIds.toSet(),
                         recentChannelIds = saved.recentChannelIds,
+                        timeZoneId = saved.timeZoneId,
                     ) }
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
@@ -97,6 +99,19 @@ class LiveTvViewModel @Inject constructor(
                 throw cancelled
             } catch (failure: Exception) {
                 mutableState.update { it.copy(error = failure.message ?: "Não foi possível atualizar os canais recentes") }
+            }
+        }
+    }
+
+    fun setTimeZone(timeZoneId: String) {
+        viewModelScope.launch {
+            try {
+                val saved = channelStateStore.setTimeZone(timeZoneId)
+                mutableState.update { it.copy(timeZoneId = saved.timeZoneId, error = null) }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                mutableState.update { it.copy(error = failure.message ?: "Não foi possível salvar o fuso horário") }
             }
         }
     }

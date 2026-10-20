@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.nuvio.tv.data.local.LiveTvChannelStateStore
 import kotlinx.coroutines.delay
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
@@ -54,8 +56,12 @@ fun LiveTvScreen(
     var name by remember { mutableStateOf("") }
     var playlistUrl by remember { mutableStateOf("") }
     var epgUrl by remember { mutableStateOf("") }
-    val formatter = remember { DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()) }
-    val sourceDateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM HH:mm").withZone(ZoneId.systemDefault()) }
+    val selectedZone = remember(state.timeZoneId) {
+        if (state.timeZoneId == LiveTvChannelStateStore.DEFAULT_TIME_ZONE_ID) ZoneId.systemDefault()
+        else runCatching { ZoneId.of(state.timeZoneId) }.getOrDefault(ZoneId.systemDefault())
+    }
+    val formatter = remember(selectedZone) { DateTimeFormatter.ofPattern("HH:mm").withZone(selectedZone) }
+    val sourceDateFormatter = remember(selectedZone) { DateTimeFormatter.ofPattern("dd/MM HH:mm").withZone(selectedZone) }
     val programsByChannel = remember(state.programs) {
         state.programs.groupBy { it.sourceId to it.channelId }
             .mapValues { (_, programs) -> programs.sortedBy(LiveTvProgram::startEpochMillis) }
@@ -107,6 +113,18 @@ fun LiveTvScreen(
                 Text(stringResource(R.string.live_tv_title), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
                 Text(stringResource(R.string.live_tv_description), style = MaterialTheme.typography.bodyLarge,
                     color = NuvioTheme.colors.TextSecondary)
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.live_tv_timezone), style = MaterialTheme.typography.titleMedium)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(LIVE_TV_TIME_ZONES, key = { it.id }) { option ->
+                        Button(onClick = { viewModel.setTimeZone(option.id) }, enabled = state.timeZoneId != option.id) {
+                            Text(stringResource(option.label))
+                        }
+                    }
+                }
             }
         }
         item {
@@ -271,6 +289,17 @@ fun LiveTvScreen(
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 28.dp)) }
     }
 }
+
+private data class LiveTvTimeZoneOption(val id: String, val label: Int)
+
+private val LIVE_TV_TIME_ZONES = listOf(
+    LiveTvTimeZoneOption(LiveTvChannelStateStore.DEFAULT_TIME_ZONE_ID, R.string.live_tv_timezone_device),
+    LiveTvTimeZoneOption("America/Sao_Paulo", R.string.live_tv_timezone_brasilia),
+    LiveTvTimeZoneOption("America/Manaus", R.string.live_tv_timezone_manaus),
+    LiveTvTimeZoneOption("America/Rio_Branco", R.string.live_tv_timezone_rio_branco),
+    LiveTvTimeZoneOption("America/Noronha", R.string.live_tv_timezone_noronha),
+    LiveTvTimeZoneOption("UTC", R.string.live_tv_timezone_utc),
+)
 
 private enum class LiveTvMode(val label: Int) {
     NOW(R.string.live_tv_now_view),

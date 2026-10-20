@@ -15,6 +15,7 @@ import javax.inject.Singleton
 data class LiveTvChannelState(
     val favoriteChannelIds: List<String> = emptyList(),
     val recentChannelIds: List<String> = emptyList(),
+    val timeZoneId: String = DEFAULT_TIME_ZONE_ID,
 )
 
 /** Keeps small, profile-specific channel preferences; stream URLs and EPG data stay elsewhere. */
@@ -64,6 +65,11 @@ class LiveTvChannelStateStore @Inject constructor(
         )
     }
 
+    suspend fun setTimeZone(timeZoneId: String): LiveTvChannelState {
+        require(timeZoneId in SUPPORTED_TIME_ZONE_IDS) { "Fuso horário não suportado" }
+        return update { it.copy(timeZoneId = timeZoneId) }
+    }
+
     private suspend fun update(transform: (LiveTvChannelState) -> LiveTvChannelState): LiveTvChannelState {
         var result = LiveTvChannelState()
         store().edit { preferences ->
@@ -82,6 +88,7 @@ class LiveTvChannelStateStore @Inject constructor(
     private fun normalize(value: LiveTvChannelState) = LiveTvChannelState(
         favoriteChannelIds = value.favoriteChannelIds.asSequence().filter(::isValidId).distinct().take(MAX_FAVORITES).toList(),
         recentChannelIds = value.recentChannelIds.asSequence().filter(::isValidId).distinct().take(MAX_RECENTS).toList(),
+        timeZoneId = value.timeZoneId.takeIf { it in SUPPORTED_TIME_ZONE_IDS } ?: DEFAULT_TIME_ZONE_ID,
     )
 
     private fun validateId(value: String) {
@@ -90,12 +97,21 @@ class LiveTvChannelStateStore @Inject constructor(
 
     private fun isValidId(value: String) = value.isNotBlank() && value.length <= MAX_ID_CHARS
 
-    private companion object {
+    companion object {
         const val FEATURE = "live_tv_channel_state"
         const val MAX_FAVORITES = 2_000
         const val MAX_RECENTS = 30
         const val MAX_ID_CHARS = 512
         const val MAX_STATE_CHARS = 256 * 1024
+        const val DEFAULT_TIME_ZONE_ID = "system"
+        val SUPPORTED_TIME_ZONE_IDS = setOf(
+            DEFAULT_TIME_ZONE_ID,
+            "America/Sao_Paulo",
+            "America/Manaus",
+            "America/Rio_Branco",
+            "America/Noronha",
+            "UTC",
+        )
         val stateKey = stringPreferencesKey("channel_state_v1")
     }
 }

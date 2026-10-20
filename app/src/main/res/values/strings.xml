@@ -3484,4 +3484,11 @@
     <string name="timeline_preview_unavailable">Scene preview unavailable</string>
     <string name="timeline_preview_filmstrip">Nearby decoded scenes</string>
     <string name="timeline_preview_catching_up">Updating scene…</string>
+    <string name="live_tv_timezone">Guide time zone</string>
+    <string name="live_tv_timezone_device">Device</string>
+    <string name="live_tv_timezone_brasilia">Brasília</string>
+    <string name="live_tv_timezone_manaus">Manaus</string>
+    <string name="live_tv_timezone_rio_branco">Rio Branco</string>
+    <string name="live_tv_timezone_noronha">Fernando de Noronha</string>
+    <string name="live_tv_timezone_utc">UTC</string>
 </resources>
