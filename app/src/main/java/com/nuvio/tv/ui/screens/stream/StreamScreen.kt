@@ -1207,7 +1207,6 @@ private fun StreamsList(
                     showFileSizeBadges = showFileSizeBadges,
                     showAddonLogo = showAddonLogo,
                     badgePlacement = badgePlacement,
-                    deviceVideoCodecs = deviceVideoCodecs,
                     reserveBadgeSpace = hasBadgeRules && stream.badges.isEmpty(),
                     onClick = { onStreamSelected(stream) },
                     focusRequester = when {
