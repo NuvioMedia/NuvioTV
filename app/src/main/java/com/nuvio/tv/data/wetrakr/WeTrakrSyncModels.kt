@@ -6,24 +6,44 @@ import kotlinx.serialization.Serializable
 data class WeTrakrIds(
     val imdb: String? = null,
     val tmdb: Long? = null,
-    val tvdb: Long? = null
+    val tvdb: Long? = null,
+    val mal: Long? = null,
+    val anilist: Long? = null,
+    val kitsu: Long? = null,
+    val anidb: Long? = null
 ) {
     val isEmpty: Boolean
-        get() = imdb == null && tmdb == null && tvdb == null
+        get() = imdb == null && tmdb == null && tvdb == null && !hasAnimeIds
+
+    val hasAnimeIds: Boolean
+        get() = mal != null || anilist != null || kitsu != null || anidb != null
+
+    val isAnimeOnly: Boolean
+        get() = imdb == null && tmdb == null && tvdb == null && hasAnimeIds
 
     val contentId: String?
-        get() = imdb ?: tmdb?.let { "tmdb:$it" } ?: tvdb?.let { "tvdb:$it" }
+        get() = imdb ?: tmdb?.let { "tmdb:$it" } ?: tvdb?.let { "tvdb:$it" } ?: kitsu?.let { "kitsu:$it" }
+            ?: mal?.let { "mal:$it" } ?: anilist?.let { "anilist:$it" } ?: anidb?.let { "anidb:$it" }
 
     fun matches(other: WeTrakrIds): Boolean =
         (imdb != null && imdb == other.imdb) || (tmdb != null && tmdb == other.tmdb) ||
-            (tvdb != null && tvdb == other.tvdb)
+            (tvdb != null && tvdb == other.tvdb) || (mal != null && mal == other.mal) ||
+            (anilist != null && anilist == other.anilist) || (kitsu != null && kitsu == other.kitsu) ||
+            (anidb != null && anidb == other.anidb)
 
-    fun merged(other: WeTrakrIds) = WeTrakrIds(imdb ?: other.imdb, tmdb ?: other.tmdb, tvdb ?: other.tvdb)
+    fun merged(other: WeTrakrIds) = WeTrakrIds(
+        imdb ?: other.imdb, tmdb ?: other.tmdb, tvdb ?: other.tvdb,
+        mal ?: other.mal, anilist ?: other.anilist, kitsu ?: other.kitsu, anidb ?: other.anidb
+    )
 
     fun aliases(): Set<String> = buildSet {
         imdb?.let { add(it); add("imdb:$it") }
         tmdb?.let { add("tmdb:$it") }
         tvdb?.let { add("tvdb:$it") }
+        mal?.let { add("mal:$it") }
+        anilist?.let { add("anilist:$it") }
+        kitsu?.let { add("kitsu:$it") }
+        anidb?.let { add("anidb:$it") }
     }
 }
 

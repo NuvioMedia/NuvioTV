@@ -68,6 +68,51 @@ class WeTrakrMutationsTest {
     }
 
     @Test
+    fun `added and existing counts only use the batch's item types and skip the hold alias`() {
+        val body = """{"added":{"movies":2,"shows":1,"episodes":10,"paused":{"episodes":3},"hold":{"episodes":3}},"existing":{"episodes":4}}"""
+
+        assertEquals(15, weTrakrAddedCount(body, setOf("movies", "episodes")))
+        assertEquals(3, weTrakrAddedCount(body, setOf("movies", "shows")))
+        assertEquals(4, weTrakrExistingCount(body, setOf("movies", "episodes")))
+        assertEquals(7, weTrakrAddedCount("""{"added":{"total":7}}""", setOf("movies")))
+        assertNull(weTrakrAddedCount("{}", setOf("movies")))
+    }
+
+    @Test
+    fun `not found keys cover movies, nested and flat episodes and whole seasons`() {
+        val body = """{"notFound":{""" +
+            """"movies":[{"ids":{"imdb":"tt1"}}],""" +
+            """"shows":[{"ids":{"tmdb":2},"seasons":[{"number":1,"episodes":[{"number":3}]}]},{"ids":{"kitsu":12}}],""" +
+            """"seasons":[{"show":{"ids":{"tvdb":5}},"season":2}],""" +
+            """"episodes":[{"show":{"ids":{"tmdb":9}},"season":4,"number":1}]}}"""
+        val keys = weTrakrNotFoundKeys(body)
+
+        assertTrue(WeTrakrTarget(WeTrakrItemType.MOVIE, weTrakrMovie("tt1")).isIn(keys))
+        assertTrue(WeTrakrTarget(WeTrakrItemType.EPISODE, WeTrakrMedia(WeTrakrIds(tmdb = 2)), 1, 3).isIn(keys))
+        assertFalse(WeTrakrTarget(WeTrakrItemType.EPISODE, WeTrakrMedia(WeTrakrIds(tmdb = 2)), 1, 4).isIn(keys))
+        assertTrue(WeTrakrTarget(WeTrakrItemType.SHOW, WeTrakrMedia(WeTrakrIds(kitsu = 12))).isIn(keys))
+        assertTrue(WeTrakrTarget(WeTrakrItemType.EPISODE, WeTrakrMedia(WeTrakrIds(tvdb = 5)), 2, 7).isIn(keys))
+        assertTrue(WeTrakrTarget(WeTrakrItemType.EPISODE, WeTrakrMedia(WeTrakrIds(imdb = "tt8", tmdb = 9)), 4, 1).isIn(keys))
+    }
+
+    @Test
+    fun `anime ids are sent after the other ids and anime only episodes use the entry's first season`() {
+        val anime = TrackingMediaReference(
+            kind = TrackingMediaKind.ANIME,
+            title = "Frieren",
+            ids = TrackingExternalIds(kitsu = 46474, mal = 52991),
+            episode = TrackingEpisode(season = null, number = 5)
+        )
+        val target = anime.weTrakrTarget()!!
+        val ids = target.media.ids.requestIds()
+
+        assertEquals(listOf("myanimelist", "kitsu"), ids.keys.toList())
+        assertEquals(1, target.season)
+        assertEquals(5, target.episode)
+        assertNull(episode.copy(episode = TrackingEpisode(season = null, number = 5)).weTrakrTarget())
+    }
+
+    @Test
     fun `a play within a day of an existing one is not sent again`() {
         val target = episode.weTrakrTarget()!!
         val records = listOf(target.watched("2026-09-26T08:00:00Z"))

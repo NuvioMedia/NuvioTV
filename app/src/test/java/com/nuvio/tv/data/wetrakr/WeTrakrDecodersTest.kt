@@ -1,5 +1,7 @@
 package com.nuvio.tv.data.wetrakr
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -74,6 +76,19 @@ class WeTrakrDecodersTest {
 
         assertEquals(42L, user.id)
         assertEquals("you", user.username)
+    }
+
+    @Test
+    fun `anime ids are decoded and matched as aliases`() {
+        val ids = decodeWeTrakrIds(
+            Json.parseToJsonElement("""{"tmdb":209867,"myanimelist":52991,"anilist":154587,"kitsu":"46474","anidb":17617}""").jsonObject
+        )
+
+        assertEquals(WeTrakrIds(tmdb = 209867, mal = 52991, anilist = 154587, kitsu = 46474, anidb = 17617), ids)
+        assertTrue("kitsu:46474" in ids.aliases())
+        assertEquals("tmdb:209867", ids.contentId)
+        assertEquals("kitsu:46474", WeTrakrIds(kitsu = 46474, mal = 52991).contentId)
+        assertTrue(WeTrakrIds(mal = 52991).matches(ids))
     }
 
     @Test

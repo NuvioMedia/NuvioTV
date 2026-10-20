@@ -6,6 +6,8 @@ import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
 import com.nuvio.tv.data.local.ProfileDataStore
 import com.nuvio.tv.data.wetrakr.AndroidWeTrakrAuthPersistence
 import com.nuvio.tv.data.wetrakr.AndroidWeTrakrSyncStorage
+import com.nuvio.tv.data.wetrakr.AndroidWeTrakrUploadMemory
+import com.nuvio.tv.data.wetrakr.WeTrakrUploadMemory
 import com.nuvio.tv.data.wetrakr.OkHttpWeTrakrEngine
 import com.nuvio.tv.data.wetrakr.WeTrakrApiClient
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthRepository
@@ -88,6 +90,14 @@ object WeTrakrModule {
 
     @Provides
     @Singleton
-    fun localUploader(api: WeTrakrApiClient, sync: WeTrakrSyncRepository, auth: WeTrakrAuthStore) =
-        WeTrakrLocalUploader(api, sync, auth, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+    fun localUploader(
+        api: WeTrakrApiClient,
+        sync: WeTrakrSyncRepository,
+        auth: WeTrakrAuthStore,
+        memory: AndroidWeTrakrUploadMemory
+    ) = WeTrakrLocalUploader(api, sync, auth, memory, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+
+    @Provides
+    @Singleton
+    fun uploadMemory(memory: AndroidWeTrakrUploadMemory): WeTrakrUploadMemory = memory
 }

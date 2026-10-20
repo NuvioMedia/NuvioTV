@@ -17,6 +17,7 @@ import com.nuvio.tv.data.wetrakr.WeTrakrAuthScope
 import com.nuvio.tv.data.wetrakr.WeTrakrAuthStore
 import com.nuvio.tv.data.wetrakr.WeTrakrDevicePollResult
 import com.nuvio.tv.data.wetrakr.WeTrakrLocalUploader
+import com.nuvio.tv.data.wetrakr.WeTrakrUploadMemory
 import com.nuvio.tv.data.wetrakr.WeTrakrDeviceSession
 import com.nuvio.tv.data.wetrakr.WeTrakrSyncError
 import com.nuvio.tv.data.wetrakr.WeTrakrSyncPause
@@ -97,6 +98,7 @@ class WeTrakrTrackerViewModel @Inject constructor(
     private val library: LibraryPreferences,
     private val watchProgress: WatchProgressPreferences,
     private val uploader: WeTrakrLocalUploader,
+    private val uploadMemory: WeTrakrUploadMemory,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     private val action = MutableStateFlow(WeTrakrTrackerAction())
@@ -264,7 +266,10 @@ class WeTrakrTrackerViewModel @Inject constructor(
                 val watched = watchedItems.getAllItems(scope.profileId)
                 val saved = library.getAllItems(scope.profileId)
                 val progress = watchProgress.getAllRawEntries(scope.profileId).values.toList()
-                val preview = withContext(Dispatchers.Default) { weTrakrUploadPreview(watched, saved, snapshot, progress) }
+                val notFound = uploadMemory.notFound(scope.profileId, System.currentTimeMillis())
+                val preview = withContext(Dispatchers.Default) {
+                    weTrakrUploadPreview(watched, saved, snapshot, progress, notFound)
+                }
                 authStore.checkScope(scope)
                 mutableLocalUpload.value = mutableLocalUpload.value.copy(isScanning = false, preview = preview)
             } catch (error: CancellationException) {
@@ -305,11 +310,12 @@ class WeTrakrTrackerViewModel @Inject constructor(
         WeTrakrUploadStatus.PAUSED -> pause?.message() ?: context.resources.getQuantityString(
             R.plurals.wetrakr_local_upload_progress, left, percent, left
         )
-        WeTrakrUploadStatus.DONE -> if (failed > 0) {
-            context.getString(R.string.wetrakr_local_upload_done_failed, added, alreadyOnWeTrakr, notFound, failed)
-        } else {
-            context.getString(R.string.wetrakr_local_upload_done, added, alreadyOnWeTrakr, notFound)
-        }
+        WeTrakrUploadStatus.DONE -> buildList {
+            add(context.getString(R.string.wetrakr_local_upload_done_added, added))
+            add(context.getString(R.string.wetrakr_local_upload_done_already, alreadyOnWeTrakr))
+            if (notFound > 0) add(context.getString(R.string.wetrakr_local_upload_done_not_found, notFound))
+            if (failed > 0) add(context.getString(R.string.wetrakr_local_upload_done_failed, failed))
+        }.joinToString("\n")
         WeTrakrUploadStatus.CANCELLED -> context.getString(R.string.wetrakr_local_upload_cancelled, added)
         WeTrakrUploadStatus.FAILED -> context.getString(
             R.string.wetrakr_local_upload_failed,

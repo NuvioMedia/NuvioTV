@@ -19,7 +19,8 @@ class WeTrakrUploadGroup internal constructor(
     val kind: WeTrakrUploadKind,
     internal val changes: List<WeTrakrTrackingChange> = emptyList(),
     val alreadyOnWeTrakr: Int = 0,
-    val unmatched: List<WeTrakrUnmatchedTitle> = emptyList()
+    val unmatched: List<WeTrakrUnmatchedTitle> = emptyList(),
+    val notFound: List<WeTrakrUnmatchedTitle> = emptyList()
 ) {
     val toUpload: Int
         get() = changes.size
@@ -38,6 +39,9 @@ data class WeTrakrUploadPreview(
     val unmatched: List<WeTrakrUnmatchedTitle>
         get() = groups.flatMap { it.unmatched }
 
+    val notFound: List<WeTrakrUnmatchedTitle>
+        get() = groups.flatMap { it.notFound }
+
     fun requestCount(kinds: Set<WeTrakrUploadKind>): Int = groups
         .filter { it.kind in kinds }
         .sumOf { (it.toUpload + WETRAKR_UPLOAD_BATCH_SIZE - 1) / WETRAKR_UPLOAD_BATCH_SIZE }
@@ -49,16 +53,19 @@ internal fun weTrakrUploadPreview(
     watched: List<WatchedItem>,
     library: List<SavedLibraryItem>,
     snapshot: WeTrakrSyncSnapshot,
-    progress: List<WatchProgress> = emptyList()
+    progress: List<WatchProgress> = emptyList(),
+    notFound: Set<String> = emptySet()
 ): WeTrakrUploadPreview {
     val remoteWatched = snapshot.watched.flatMapTo(HashSet()) { record ->
-        record.media.ids.aliases().map { uploadKey(record.type, it, record.season, record.episode) }
+        record.media.ids.aliases().map { weTrakrUploadKey(record.type, it, record.season, record.episode) }
     }
     val remoteTitles = buildSet {
         snapshot.watched.forEach { record -> record.media.ids.aliases().forEach { add(titleKey(record.type, it)) } }
         snapshot.playback.forEach { record -> record.media.ids.aliases().forEach { add(titleKey(record.type, it)) } }
         snapshot.watchlist.forEach { item -> item.media.ids.aliases().forEach { add(titleKey(item.type, it)) } }
     }
+    val localWatched = watched + progress.map { it.toWatchedItem() }
+    val localTitles = localWatched.flatMapTo(HashSet()) { it.titleKeys() }
     return WeTrakrUploadPreview(
         watched = (watched + progress.filter { it.isCompleted() }.map { it.toWatchedItem() }).uploadGroup(
             kind = WeTrakrUploadKind.WATCHED,
@@ -66,8 +73,9 @@ internal fun weTrakrUploadPreview(
             trackedAt = { it.watchedAt },
             title = { it.title.ifBlank { it.contentId } },
             groupKey = { it.contentId },
+            notFound = notFound,
             isRemote = { target ->
-                target.media.ids.aliases().any { uploadKey(target.type, it, target.season, target.episode) in remoteWatched }
+                target.media.ids.aliases().any { weTrakrUploadKey(target.type, it, target.season, target.episode) in remoteWatched }
             }
         ),
         library = library.uploadGroup(
@@ -76,7 +84,10 @@ internal fun weTrakrUploadPreview(
             trackedAt = { it.addedAt },
             title = { it.name.ifBlank { it.id } },
             groupKey = { it.id },
-            isRemote = { target -> target.media.ids.aliases().any { titleKey(target.type, it) in remoteTitles } }
+            notFound = notFound,
+            isRemote = { target ->
+                target.media.ids.aliases().any { titleKey(target.type, it).let { key -> key in remoteTitles || key in localTitles } }
+            }
         )
     )
 }
@@ -87,23 +98,27 @@ private inline fun <T> List<T>.uploadGroup(
     trackedAt: (T) -> Long,
     title: (T) -> String,
     groupKey: (T) -> String,
+    notFound: Set<String>,
     isRemote: (WeTrakrTarget) -> Boolean
 ): WeTrakrUploadGroup {
     val seen = HashSet<String>()
     val changes = ArrayList<WeTrakrTrackingChange>()
     val unmatched = LinkedHashMap<String, Pair<String, Int>>()
+    val missing = LinkedHashMap<String, Pair<String, Int>>()
     var already = 0
     for (item in this) {
         val resolved = target(item)
         if (resolved == null) {
-            val key = groupKey(item)
-            val previous = unmatched[key]
-            unmatched[key] = (previous?.first ?: title(item)) to ((previous?.second ?: 0) + 1)
+            unmatched.count(groupKey(item), title(item))
             continue
         }
         if (!seen.add(resolved.uploadKey())) continue
         if (isRemote(resolved)) {
             already++
+            continue
+        }
+        if (resolved.uploadKey() in notFound) {
+            missing.count(groupKey(item), title(item))
             continue
         }
         val at = trackedAt(item).takeIf { it > 0L }?.let { Instant.ofEpochMilli(it).toString() }
@@ -113,8 +128,14 @@ private inline fun <T> List<T>.uploadGroup(
         kind = kind,
         changes = changes,
         alreadyOnWeTrakr = already,
-        unmatched = unmatched.values.map { (name, count) -> WeTrakrUnmatchedTitle(kind, name, count) }
+        unmatched = unmatched.values.map { (name, count) -> WeTrakrUnmatchedTitle(kind, name, count) },
+        notFound = missing.values.map { (name, count) -> WeTrakrUnmatchedTitle(kind, name, count) }
     )
+}
+
+private fun MutableMap<String, Pair<String, Int>>.count(key: String, title: String) {
+    val previous = get(key)
+    put(key, (previous?.first ?: title) to ((previous?.second ?: 0) + 1))
 }
 
 private fun WatchProgress.toWatchedItem() = WatchedItem(
@@ -131,9 +152,19 @@ private fun WatchedItem.weTrakrTarget(): WeTrakrTarget? {
     val media = WeTrakrMedia(ids, title = title.takeIf(String::isNotBlank))
     if (contentType.isMovieType()) return WeTrakrTarget(WeTrakrItemType.MOVIE, media)
     if (!contentType.isShowType()) return null
-    val season = season?.takeIf { it >= 0 } ?: return null
+    val season = season?.takeIf { it >= 0 } ?: ANIME_ENTRY_SEASON.takeIf { ids.isAnimeOnly } ?: return null
     val number = episode?.takeIf { it > 0 } ?: return null
     return WeTrakrTarget(WeTrakrItemType.EPISODE, media, season, number)
+}
+
+private fun WatchedItem.titleKeys(): List<String> {
+    val ids = parseTrackingExternalIds(contentId).toWeTrakrIds() ?: return emptyList()
+    val type = when {
+        contentType.isMovieType() -> WeTrakrItemType.MOVIE
+        contentType.isShowType() -> WeTrakrItemType.SHOW
+        else -> return emptyList()
+    }
+    return ids.aliases().map { titleKey(type, it) }
 }
 
 private fun SavedLibraryItem.weTrakrTarget(): WeTrakrTarget? {
@@ -153,11 +184,8 @@ private fun String.isMovieType(): Boolean = trim().lowercase() in setOf("movie",
 
 private fun String.isShowType(): Boolean = trim().lowercase() in setOf("series", "show", "anime")
 
-private fun WeTrakrTarget.uploadKey(): String =
-    uploadKey(type, media.ids.contentId.orEmpty(), season, episode)
-
-private fun uploadKey(type: WeTrakrItemType, id: String, season: Int?, episode: Int?): String =
-    "${type.name}|$id|${season ?: ""}|${episode ?: ""}"
+internal fun WeTrakrTarget.uploadKey(): String =
+    weTrakrUploadKey(type, media.ids.contentId.orEmpty(), season, episode)
 
 private fun titleKey(type: WeTrakrItemType, id: String): String =
     "${if (type == WeTrakrItemType.MOVIE) "movie" else "show"}|$id"
