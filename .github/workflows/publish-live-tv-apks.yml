@@ -60,13 +60,32 @@ jobs:
           echo "sha=${source_sha}" >> "${GITHUB_OUTPUT}"
           echo "version=${apk_version}" >> "${GITHUB_OUTPUT}"
 
-      - name: Download APK artifacts from the validated run
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: ${{ inputs.source_run_id }}
-          path: release-apks
+      - name: Download APK artifacts without extracting their ZIP payloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-apks
+          artifacts="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/artifacts")"
+          download_apk() {
+            local artifact_name="$1" target="$2" artifact_id
+            artifact_id="$(jq -r --arg name "${artifact_name}" \
+              '.artifacts[] | select(.name == $name and .expired == false) | .id' \
+              <<<"${artifacts}" | head -n 1)"
+            [[ -n "${artifact_id}" && "${artifact_id}" != null ]]
+            curl --fail --show-error --location --retry 8 --retry-all-errors --retry-delay 3 \
+              --connect-timeout 30 --max-time 900 \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+              --output "release-apks/${target}"
+            unzip -t "release-apks/${target}"
+            [[ "$(stat -c %s "release-apks/${target}")" -gt 500000 ]]
+          }
+          download_apk app-full-universal-debug.apk app-full-universal-debug.apk
+          download_apk app-full-arm64-v8a-debug.apk app-full-arm64-v8a-debug.apk
+          download_apk app-full-armeabi-v7a-debug.apk app-full-armeabi-v7a-debug.apk
 
       - name: Prepare APKs, checksums, and release notes
         env:
