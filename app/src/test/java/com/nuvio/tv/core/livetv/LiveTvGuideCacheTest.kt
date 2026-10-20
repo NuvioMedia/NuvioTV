@@ -65,14 +65,19 @@ class LiveTvGuideCacheTest {
         val cacheDir = temporaryFolder.newFolder("bounded-epg")
         val first = LiveTvGuideCache(cacheDir, 1024L * 1024L, writesEnabled = true)
         assertTrue(first.write("source-a", sampleResult(), updatedEpochMillis = 1L))
-        val entrySize = cacheDir.listFiles()?.singleOrNull()?.length() ?: error("cache file missing")
+        val firstEntryBytes = cacheDir.listFiles()?.singleOrNull()?.length() ?: error("cache file missing")
+        val sizingDir = temporaryFolder.newFolder("sizing-epg")
+        val sizingCache = LiveTvGuideCache(sizingDir, 1024L * 1024L, writesEnabled = true)
+        assertTrue(sizingCache.write("source-b", sampleResult(), updatedEpochMillis = 2L))
+        val secondEntryBytes = sizingDir.listFiles()?.singleOrNull()?.length() ?: error("sizing cache file missing")
+        val quota = maxOf(firstEntryBytes, secondEntryBytes)
 
-        val singleEntryBudget = LiveTvGuideCache(cacheDir, entrySize, writesEnabled = true)
+        val singleEntryBudget = LiveTvGuideCache(cacheDir, quota, writesEnabled = true)
         assertTrue(singleEntryBudget.write("source-b", sampleResult(), updatedEpochMillis = 2L))
 
         assertNull(singleEntryBudget.read("source-a"))
         assertNotNull(singleEntryBudget.read("source-b"))
-        assertTrue(cacheDir.listFiles().orEmpty().filter { it.name.endsWith(".bin.gz") }.sumOf { it.length() } <= entrySize)
+        assertTrue(cacheDir.listFiles().orEmpty().filter { it.name.endsWith(".bin.gz") }.sumOf { it.length() } <= quota)
     }
 
     private fun sampleResult() = LiveTvImportResult(

@@ -46,7 +46,7 @@ class LiveTvViewModelTest {
         assertFalse(viewModel.state.value.isLoading)
         coVerify(exactly = 1) { store.add("Brasil", source.playlistUrl, null) }
         coVerify(exactly = 1) { importer.import(source) }
-        coVerify(exactly = 1) { guideCache.write(source.id, LiveTvImportResult(listOf(channel))) }
+        coVerify(exactly = 1) { guideCache.write(source.id, LiveTvImportResult(listOf(channel)), any()) }
     }
 
     @Test
