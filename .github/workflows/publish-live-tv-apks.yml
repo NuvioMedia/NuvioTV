@@ -24,6 +24,11 @@ on:
         required: true
         default: "1.0.0"
         type: string
+      release_notes:
+        description: Short Portuguese description of the Android TV changes in this release
+        required: false
+        default: Melhorias incrementais de reprodução e estabilidade.
+        type: string
 
 permissions:
   actions: read
@@ -128,6 +133,7 @@ jobs:
           RELEASE_VERSION: ${{ steps.source.outputs.version }}
           DESKTOP_VERSION: ${{ inputs.desktop_version }}
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          RELEASE_SUMMARY: ${{ inputs.release_notes }}
         run: |
           set -euo pipefail
           mkdir -p release-assets
@@ -159,7 +165,7 @@ jobs:
           cat > release-notes.md <<EOF
           ## Telumia TV ${RELEASE_VERSION}
 
-          Esta versão centraliza a leitura dos modos de tela, capacidades HDR e perfis de decoder Dolby Vision, preservando a política de playback existente.
+          ${RELEASE_SUMMARY}
 
           Os três APKs passaram pelos testes focados do workflow [${SOURCE_SHA}](https://github.com/${GITHUB_REPOSITORY}/commit/${SOURCE_SHA}).
 

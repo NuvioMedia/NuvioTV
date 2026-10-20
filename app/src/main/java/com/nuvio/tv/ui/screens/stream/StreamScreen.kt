@@ -934,6 +934,7 @@ private fun RightStreamSection(
                             showFileSizeBadges = showFileSizeBadges,
                             showAddonLogo = showAddonLogo,
                             badgePlacement = badgePlacement,
+                            deviceVideoCodecs = deviceVideoCodecs,
                             hasBadgeRules = hasBadgeRules,
                             onAddonFilterSelected = { onAddonFilterSelectedGuarded(it) },
                             orderedAddonNames = orderedAddonNames,
@@ -1043,6 +1044,7 @@ private fun EmptyState() {
 private fun StreamsList(
     selectionMode: StreamAutoPlayMode,
     streams: List<Stream>,
+    deviceVideoCodecs: DeviceVideoCodecCapabilities?,
     onStreamSelected: (Stream) -> Unit,
     focusedStreamIndex: Int = 0,
     shouldRestoreFocusedStream: Boolean = false,
@@ -1201,6 +1203,7 @@ private fun StreamsList(
                 StreamCard(
                     selectionMode = selectionMode,
                     stream = stream,
+                    deviceVideoCodecs = deviceVideoCodecs,
                     showFileSizeBadges = showFileSizeBadges,
                     showAddonLogo = showAddonLogo,
                     badgePlacement = badgePlacement,
