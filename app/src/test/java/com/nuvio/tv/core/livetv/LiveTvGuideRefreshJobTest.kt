@@ -23,7 +23,7 @@ class LiveTvGuideRefreshJobTest {
         coEvery { sourceStore.list() } returns listOf(successful, failed, disabled)
         coEvery { importer.import(successful) } returns result
         coEvery { importer.import(failed) } throws IllegalStateException("Fonte indisponível")
-        coEvery { guideCache.write(successful.id, result) } returns true
+        coEvery { guideCache.write(successful.id, result, any()) } returns true
         val job = LiveTvGuideRefreshJob(sourceStore, importer, guideCache)
 
         val summary = job.run()
