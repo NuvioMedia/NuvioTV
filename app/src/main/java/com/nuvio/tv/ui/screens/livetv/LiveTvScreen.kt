@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.delay
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
@@ -47,6 +49,14 @@ fun LiveTvScreen(
     var playlistUrl by remember { mutableStateOf("") }
     var epgUrl by remember { mutableStateOf("") }
     val formatter = remember { DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()) }
+    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000L)
+            nowMillis = System.currentTimeMillis()
+        }
+    }
 
     LaunchedEffect(state.lastSavedSourceId) {
         if (state.lastSavedSourceId != null) {
@@ -120,7 +130,7 @@ fun LiveTvScreen(
                 .filter { it.sourceId == channel.sourceId && (channel.tvgId.isNullOrBlank() || it.channelId == channel.tvgId) }
                 .sortedBy(LiveTvProgram::startEpochMillis)
                 .toList()
-            val now = System.currentTimeMillis()
+            val now = nowMillis
             val current = programs.firstOrNull { now >= it.startEpochMillis && now < it.endEpochMillis }
             val next = programs.firstOrNull { it.startEpochMillis > now }
             val progress = current?.let {

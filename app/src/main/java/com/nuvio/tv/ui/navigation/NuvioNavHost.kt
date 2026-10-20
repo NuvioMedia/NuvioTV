@@ -1140,7 +1140,6 @@ private fun PlaybackNavHost(
                         title = channel.displayName,
                         streamName = "Live TV",
                         logo = channel.logoUrl,
-                        returnToHomeOnBack = true,
                     )
                 )
             })
