@@ -1,9 +1,9 @@
 package com.nuvio.tv.core.storage
 
-import android.app.ActivityManager
 import android.content.Context
 import android.os.StatFs
 import coil3.request.CachePolicy
+import com.nuvio.tv.core.runtime.DeviceCapabilities
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,11 +18,7 @@ class TvMediaCache @Inject constructor(@param:ApplicationContext context: Contex
     private val preferences = app.getSharedPreferences("telumia_media_cache_v1", Context.MODE_PRIVATE)
     val activeSettings: MediaCacheSettings by lazy { loadSettings() }
     internal val deviceSnapshot: MediaCacheDeviceSnapshot by lazy {
-        val memory = runCatching {
-            val info = ActivityManager.MemoryInfo()
-            (app.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(info)
-            info.totalMem
-        }.getOrNull()
+        val memory = DeviceCapabilities.memory(app).totalMemoryBytes
         val free = runCatching { StatFs(app.cacheDir.absolutePath).availableBytes }.getOrNull()
         MediaCacheDeviceSnapshot(memory, free, occupiedCache.bytes)
     }

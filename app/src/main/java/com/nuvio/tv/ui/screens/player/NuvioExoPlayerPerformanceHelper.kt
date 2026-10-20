@@ -10,6 +10,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.ScrubbingModeParameters
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import com.nuvio.tv.core.runtime.DeviceCapabilities
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
 
@@ -151,60 +152,17 @@ object NuvioExoPlayerPerformanceHelper {
     // ─── LoadControl ──────────────────────────────────────────────────────────
 
     /**
-     * Helper to read system memory directly from /proc/meminfo as a reliable fallback.
-     */
-    private fun getRamFromMemInfo(): Long {
-        return try {
-            val file = java.io.File("/proc/meminfo")
-            if (file.exists()) {
-                file.useLines { lines ->
-                    val firstLine = lines.firstOrNull() ?: ""
-                    val match = java.util.regex.Pattern.compile("\\d+").matcher(firstLine)
-                    if (match.find()) {
-                        match.group().toLong() * 1024L
-                    } else {
-                        0L
-                    }
-                }
-            } else {
-                0L
-            }
-        } catch (e: Exception) {
-            0L
-        }
-    }
-
-    @Volatile
-    private var cachedDevicePhysicalRamBytes: Long = 0L
-
-    /**
      * Clears the cached RAM size. Useful for testing.
      */
     fun clearCache() {
-        cachedDevicePhysicalRamBytes = 0L
+        DeviceCapabilities.clearCachedMemoryForTests()
     }
 
     /**
      * Gets the total physical memory of the device in bytes.
      */
     fun getDevicePhysicalRamBytes(context: Context): Long {
-        if (cachedDevicePhysicalRamBytes > 0L) {
-            return cachedDevicePhysicalRamBytes
-        }
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
-        if (activityManager != null) {
-            val memoryInfo = android.app.ActivityManager.MemoryInfo()
-            activityManager.getMemoryInfo(memoryInfo)
-            if (memoryInfo.totalMem > 0L) {
-                cachedDevicePhysicalRamBytes = memoryInfo.totalMem
-                return memoryInfo.totalMem
-            }
-        }
-        val ram = getRamFromMemInfo()
-        if (ram > 0L) {
-            cachedDevicePhysicalRamBytes = ram
-        }
-        return ram
+        return DeviceCapabilities.memory(context).totalMemoryBytes ?: 0L
     }
 
     /**

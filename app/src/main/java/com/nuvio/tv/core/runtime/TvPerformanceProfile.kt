@@ -1,8 +1,6 @@
 package com.nuvio.tv.core.runtime
 
-import android.app.ActivityManager
 import android.content.Context
-import android.content.Context.ACTIVITY_SERVICE
 import com.nuvio.tv.domain.model.AnimationIntensity
 import com.nuvio.tv.domain.model.NavigationMotion
 
@@ -30,28 +28,24 @@ internal data class TvPerformanceProfile(
         if (reducesDefaultMotion && preference == AnimationIntensity.STANDARD) AnimationIntensity.SUBTLE else preference
 
     companion object {
-        private const val GIB = 1024L * 1024L * 1024L
-        private const val MIB = 1024L * 1024L
-
         fun detect(context: Context): TvPerformanceProfile {
-            val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
-            val memoryInfo = ActivityManager.MemoryInfo()
-            activityManager.getMemoryInfo(memoryInfo)
-            return forDevice(
-                totalMemoryBytes = memoryInfo.totalMem,
-                memoryClassMb = activityManager.memoryClass,
-                isLowRamDevice = activityManager.isLowRamDevice,
-            )
+            return forCapabilities(DeviceCapabilities.memory(context))
         }
 
         fun forDevice(
             totalMemoryBytes: Long,
             memoryClassMb: Int,
             isLowRamDevice: Boolean,
-        ): TvPerformanceProfile = when {
-            isLowRamDevice || totalMemoryBytes <= 2L * GIB || memoryClassMb <= 192 -> LOW_RAM
-            totalMemoryBytes <= 3L * GIB || memoryClassMb <= 256 -> BALANCED
-            else -> HIGH_CAPACITY
+        ): TvPerformanceProfile = forCapabilities(
+            DeviceMemoryCapabilities(totalMemoryBytes, memoryClassMb, isLowRamDevice, Runtime.getRuntime().maxMemory())
+        )
+
+        private fun forCapabilities(memory: DeviceMemoryCapabilities): TvPerformanceProfile = when (
+            DeviceCapabilities.resourceTier(memory)
+        ) {
+            DeviceResourceTier.LOW_RAM, DeviceResourceTier.UNKNOWN -> LOW_RAM
+            DeviceResourceTier.BALANCED -> BALANCED
+            DeviceResourceTier.HIGH_CAPACITY -> HIGH_CAPACITY
         }
 
         private val LOW_RAM = TvPerformanceProfile(0.08, 4, 2, 1, 0, 0, 0, 0, false, true, 1_500L, null, 1L * MIB, 300L)

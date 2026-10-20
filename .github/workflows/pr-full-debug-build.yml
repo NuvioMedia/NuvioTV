@@ -70,12 +70,15 @@ jobs:
         run: >-
           ./gradlew :app:testFullDebugUnitTest
           --tests 'com.nuvio.tv.updater.*'
+          --tests 'com.nuvio.tv.core.runtime.DeviceCapabilitiesTest'
           --tests 'com.nuvio.tv.core.runtime.TvPerformanceProfileTest'
+          --tests 'com.nuvio.tv.core.storage.MediaCachePolicyTest'
           --tests 'com.nuvio.tv.core.livetv.*'
           --tests 'com.nuvio.tv.ui.screens.livetv.*'
           --tests 'com.nuvio.tv.data.local.PlayerSourceSelectionStoreTest'
           --tests 'com.nuvio.tv.data.local.LiveTvChannelStateStoreTest'
           --tests 'com.nuvio.tv.ui.screens.player.EmbeddedChapterMetadataTest'
+          --tests 'com.nuvio.tv.ui.screens.player.NuvioExoPlayerPerformanceHelperTest'
           :app:compileFullDebugAndroidTestKotlin
           :app:assembleFullDebug --stacktrace
 
