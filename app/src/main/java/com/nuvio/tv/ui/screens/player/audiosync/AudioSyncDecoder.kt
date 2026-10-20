@@ -419,8 +419,9 @@ internal class AudioSyncDecoder(
 
     /**
      * Prefers platform software decoders. Otherwise accepts a vendor decoder (Dolby AC3/E-AC3 on many
-     * phones) as long as it is not hardware-backed and supports more than one instance, so opening
-     * a second one next to the player's is safe.
+     * phones) only when the platform reports it is not hardware-backed and it supports more than one
+     * instance, so opening a second one next to the player's is safe. Before Android 10 that cannot
+     * be told, so those devices use FFmpeg instead.
      */
     private fun findDecoder(mime: String): String? {
         val infos = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.filter { info ->
@@ -434,7 +435,7 @@ internal class AudioSyncDecoder(
         infos.firstOrNull { it.isSoftwareOnlyCompat() }?.let { return it.name }
         if (!allowVendorDecoders) return null
         return infos.firstOrNull { info ->
-            info.isHardwareAcceleratedCompat() != true && info.maxInstances(mime) >= 2
+            info.isHardwareAcceleratedCompat() == false && info.maxInstances(mime) >= 2
         }?.name
     }
 

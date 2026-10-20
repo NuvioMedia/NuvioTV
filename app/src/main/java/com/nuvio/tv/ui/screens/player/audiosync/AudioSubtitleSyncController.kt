@@ -186,20 +186,20 @@ internal class AudioSubtitleSyncController(
     private var lockedAtElapsedMs = 0L
 
 
-    /** Whether spots may be sampled on metered (mobile) networks too; the user's setting. */
+    /** How much of the film may be read ahead of playback; the user's setting. */
     @Volatile
-    var samplingOnMobileData: Boolean = false
+    var samplingMode: AudioSamplingMode = AudioSamplingMode.HIGH
         set(value) {
             field = value
-            // Declined on mobile data earlier in this stream: try again now that it is allowed.
-            if (value && spotDeclinedOnMobileData) {
-                spotDeclinedOnMobileData = false
+            // Declined while sampling was off earlier in this stream: try again now that it is allowed.
+            if (value != AudioSamplingMode.OFF && spotDeclined) {
+                spotDeclined = false
                 spotSamplingStarted.set(false)
             }
         }
 
     @Volatile
-    private var spotDeclinedOnMobileData = false
+    private var spotDeclined = false
 
     @Volatile
     var enabled: Boolean = true
@@ -291,7 +291,7 @@ internal class AudioSubtitleSyncController(
         switchedAway.clear()
         handover = null
         spotSamplingStarted.set(false)
-        spotDeclinedOnMobileData = false
+        spotDeclined = false
         model = null
         lockedAtElapsedMs = 0L
         lastAlignVersion = -1L
@@ -327,7 +327,7 @@ internal class AudioSubtitleSyncController(
 
     /**
      * Once playback runs with some buffer, samples a few dialogue spots across the film while the
-     * chosen subtitle is still unsynced. Once per stream, on unmetered networks only.
+     * chosen subtitle is still unsynced. Once per stream, unless sampling is off.
      */
     private fun maybeSampleSpots() {
         if (spotSamplingStarted.get()) return
@@ -337,9 +337,9 @@ internal class AudioSubtitleSyncController(
         if (mediaDurationMs < MIN_SAMPLED_FILM_MS) return
         if (timeline.knownFrameCount() < SAMPLE_AFTER_FRAMES) return
         if (!spotSamplingStarted.compareAndSet(false, true)) return
-        if (!samplingOnMobileData && !AsrModel.isUnmetered(appContext)) {
-            SyncLog.i("not sampling audio across the film on a metered network")
-            spotDeclinedOnMobileData = true
+        if (samplingMode == AudioSamplingMode.OFF) {
+            SyncLog.i("audio sampling across the film is off")
+            spotDeclined = true
             return
         }
         Thread({ sampleSpots(source, current) }, "NuvioAudioSyncSpots").apply {
@@ -372,7 +372,18 @@ internal class AudioSubtitleSyncController(
             synchronized(decoders) { decoders += spotDecoder }
             AudioSyncExtractorsFactory(source.extractorsFactory, SpotSink(spotDecoder))
         }
-        val maxConnections = if (SpotConnections.isLowMemoryTv(appContext)) LOW_MEMORY_SPOT_WORKERS else SPOT_WORKERS
+        // Metered networks get at most the low setting.
+        val high = samplingMode == AudioSamplingMode.HIGH && AsrModel.isUnmetered(appContext)
+        val spotCount = if (high) SPOT_COUNT else LOW_SPOT_COUNT
+        val maxConnections = when {
+            !high -> 1
+            SpotConnections.isLowMemoryTv(appContext) -> LOW_MEMORY_SPOT_WORKERS
+            else -> SPOT_WORKERS
+        }
+        // On high, a high-bitrate file may read past the target so each spot still holds whole
+        // sentences; on low the target is also the cap.
+        val targetBytes = if (high) TARGET_SPOT_BYTES else LOW_SPOT_BYTES
+        val maxBytes = if (high) MAX_SPOT_BYTES else LOW_SPOT_BYTES
         try {
             // Every subtitle at hand shows roughly where people talk, even with its timing off.
             val tracks = listOf(current.track) + englishCandidates()
@@ -382,16 +393,13 @@ internal class AudioSubtitleSyncController(
             val coveredMs = timeline.segments(fromFrame = SpeechTimeline.frameForTimeUs(playbackPositionMs * 1_000L))
                 .firstOrNull()?.let { (it.toFrame * SpeechTimeline.FRAME_DURATION_MS).toLong() } ?: 0L
             val notBeforeMs = if (playbackPositionMs < RESUME_THRESHOLD_MS) coveredMs + SPOT_MS else 0L
-            val spots = DialogueSpotPlanner.plan(tracks, mediaDurationMs, SPOT_COUNT, SPOT_MS, notBeforeMs)
+            val spots = DialogueSpotPlanner.plan(tracks, mediaDurationMs, spotCount, SPOT_MS, notBeforeMs)
             if (spots.isEmpty()) {
                 SyncLog.i("audio sampling skipped: no suitable dialogue spots")
                 return
             }
             SyncLog.i("sampling audio at ${spots.map { it / 1_000 }}s")
-            // On mobile data the target is also the cap; on other networks a high-bitrate file may
-            // use more so each spot still holds whole sentences.
-            val maxBytes = if (AsrModel.isUnmetered(appContext)) MAX_SPOT_BYTES else TARGET_SPOT_BYTES
-            val sampler = AudioSpotSampler(source.uri, source.dataSourceFactory, TARGET_SPOT_BYTES, maxBytes, MIN_SPOT_AUDIO_MS) {
+            val sampler = AudioSpotSampler(source.uri, source.dataSourceFactory, targetBytes, maxBytes, MIN_SPOT_AUDIO_MS) {
                 SyncLog.i("host refused another connection ($it); sampling continues on the open ones")
             }
             val result = sampler.run(
@@ -455,8 +463,15 @@ internal class AudioSubtitleSyncController(
 
     fun onAudioTrackSelected(format: Format?) {
         if (format == null || selectedAudioFormat?.let { matches(it, format) } == true) return
+        val previous = selectedAudioFormat
         selectedAudioFormat = format
         SyncLog.d("audio track selected: ${describe(format)}")
+        if (previous != null) {
+            // Another track (a dub, say): speech heard on the previous one must not mix with this one's.
+            timeline.clear()
+            decoder?.discontinuity()
+            asr?.forgetHeard()
+        }
         updateListening()
         if (session != null && enabled && !audioIsForeign()) ensureRecognizer()
     }
@@ -924,16 +939,32 @@ internal class AudioSubtitleSyncController(
     }
 
     /** Versioned: syncs saved by earlier builds could hold a 0.1% stretch found on too little audio. */
-    private fun rememberKey(subtitleKey: String): String = "v2:${sourceKey.hashCode()}:${subtitleKey.hashCode()}"
+    private fun rememberKey(subtitleKey: String): String = "$REMEMBER_PREFIX${sourceKey.hashCode()}:${subtitleKey.hashCode()}"
 
-    /** Stored as "fromMs,scale,shiftMs" per segment, separated by "|". */
+    /**
+     * Stored as "savedAtMs;" followed by "fromMs,scale,shiftMs" per segment, separated by "|".
+     * Stream URLs often change between sessions, so only the most recently used are kept.
+     */
     private fun remember(subtitleKey: String, synced: SubtitleSyncModel) {
-        val stored = synced.segments.joinToString("|") { "${it.fromMediaMs},${it.scale},${it.shiftMs}" }
-        runCatching { preferences.edit().putString(rememberKey(subtitleKey), stored).apply() }
+        val segments = synced.segments.joinToString("|") { "${it.fromMediaMs},${it.scale},${it.shiftMs}" }
+        runCatching { store(rememberKey(subtitleKey), segments) }
+    }
+
+    private fun store(key: String, segments: String) {
+        val editor = preferences.edit().putString(key, "${System.currentTimeMillis()};$segments")
+        val others = preferences.all.filterKeys { it != key }
+        // Entries of earlier formats, then the least recently used beyond the limit.
+        others.keys.filterNot { it.startsWith(REMEMBER_PREFIX) }.forEach(editor::remove)
+        others.filterKeys { it.startsWith(REMEMBER_PREFIX) }
+            .map { (stored, value) -> stored to ((value as? String)?.substringBefore(';')?.toLongOrNull() ?: 0L) }
+            .sortedByDescending { it.second }
+            .drop(MAX_REMEMBERED - 1)
+            .forEach { (stored, _) -> editor.remove(stored) }
+        editor.apply()
     }
 
     private fun parseRemembered(stored: String): SubtitleSyncModel? {
-        val segments = stored.split('|').map { entry ->
+        val segments = stored.substringAfter(';').split('|').map { entry ->
             val parts = entry.split(',')
             SubtitleSyncSegment(
                 fromMediaMs = parts.getOrNull(0)?.toLongOrNull() ?: return null,
@@ -948,6 +979,8 @@ internal class AudioSubtitleSyncController(
     private fun applyRemembered(current: Session): Boolean {
         val stored = runCatching { preferences.getString(rememberKey(current.key), null) }.getOrNull() ?: return false
         val restored = parseRemembered(stored) ?: return false
+        // Used again: keep it among the most recent.
+        runCatching { store(rememberKey(current.key), stored.substringAfter(';')) }
         val scale = restored.segments.first().scale
         manualDelayAtLockMs = manualDelayMs()
         current.tracker.adopt(restored)
@@ -1144,6 +1177,8 @@ internal class AudioSubtitleSyncController(
         private const val RECOGNIZER_REFRESH_MS = 1_000L
         private const val DIAGNOSTICS_HEARTBEAT_MS = 15_000L
         private const val PREFERENCES = "nuvio_audio_sync"
+        private const val REMEMBER_PREFIX = "v3:"
+        private const val MAX_REMEMBERED = 200
         private const val PREFETCH_REFERENCES = 2
         private const val MAX_REFERENCES = 4
         private const val MAX_FALLBACK_REFERENCES = 6
@@ -1160,6 +1195,10 @@ internal class AudioSubtitleSyncController(
         private const val SPOT_MS = 30_000L
         private const val TARGET_SPOT_BYTES = 150L * 1_000_000L
         private const val MAX_SPOT_BYTES = 400L * 1_000_000L
+
+        /** Low sampling: fewer spots over a single connection, capped well below high. */
+        private const val LOW_SPOT_COUNT = 3
+        private const val LOW_SPOT_BYTES = 75L * 1_000_000L
 
         /** Enough for a few whole sentences, which speech recognition needs. */
         private const val MIN_SPOT_AUDIO_MS = 8_000L

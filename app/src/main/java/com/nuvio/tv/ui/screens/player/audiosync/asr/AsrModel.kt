@@ -9,6 +9,7 @@ import com.nuvio.tv.ui.screens.player.audiosync.SyncLog
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -24,17 +25,20 @@ internal object AsrModel {
     const val DOWNLOAD_MB = 74
 
     private const val VERSION = "gigaspeech-2023-12-12"
-    private const val MIRROR = "https://github.com/DavidVamaiotu/NuvioMobile-AutoSync/releases/download/asr-models/"
-    private const val UPSTREAM = "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-gigaspeech-2023-12-12/resolve/main/"
 
-    /** Local name to (mirror name, upstream name, expected size in bytes). */
+    /** The upstream model repository, pinned to a commit so its files cannot change under us. */
+    private const val UPSTREAM =
+        "https://huggingface.co/k2-fsa/sherpa-onnx-zipformer-gigaspeech-2023-12-12/resolve/f7515a672ffb69232794aaaa44a0a360f7f25cd1/"
+
+    private class ModelFile(val local: String, val upstream: String, val size: Long, val sha256: String)
+
     private val FILES = listOf(
-        Triple(ENCODER, "gigaspeech-encoder.int8.onnx", "encoder-epoch-30-avg-1.int8.onnx") to 72_850_738L,
-        Triple(DECODER, "gigaspeech-decoder.int8.onnx", "decoder-epoch-30-avg-1.int8.onnx") to 540_688L,
-        Triple(JOINER, "gigaspeech-joiner.int8.onnx", "joiner-epoch-30-avg-1.int8.onnx") to 259_417L,
-        Triple(TOKENS, "gigaspeech-tokens.txt", "tokens.txt") to 5_020L,
+        ModelFile(ENCODER, "encoder-epoch-30-avg-1.int8.onnx", 72_850_738L, "d3eff4b1bd747bd781a47966795988539227d05638524b0313f26d3a166962d7"),
+        ModelFile(DECODER, "decoder-epoch-30-avg-1.int8.onnx", 540_688L, "2b0580feb757696fa929922670b7126aaee609630349a1809fd5a2aee926d56e"),
+        ModelFile(JOINER, "joiner-epoch-30-avg-1.int8.onnx", 259_417L, "80160e45cca71dd52f6b0a6d3d12be18126f5308b2d4ba03f001300fea377c64"),
+        ModelFile(TOKENS, "tokens.txt", 5_020L, "0ef7d736bf4de3ef947292e4b119ef13f6808cd5f3aec225a843a7135ac1c2ce"),
     )
-    private val TOTAL_BYTES = FILES.sumOf { it.second }
+    private val TOTAL_BYTES = FILES.sumOf { it.size }
 
     private val downloading = AtomicBoolean(false)
 
@@ -64,7 +68,7 @@ internal object AsrModel {
 
     fun isReady(context: Context): Boolean {
         val dir = directory(context)
-        return FILES.all { (names, size) -> File(dir, names.first).length() == size }
+        return FILES.all { File(dir, it.local).length() == it.size }
     }
 
     fun isUnmetered(context: Context): Boolean {
@@ -100,21 +104,19 @@ internal object AsrModel {
             publish(context)
             val dir = directory(context).apply { mkdirs() }
             var doneBytes = 0L
-            for ((names, size) in FILES) {
-                val (local, mirrorName, upstreamName) = names
-                val file = File(dir, local)
-                if (file.length() != size) {
+            for (model in FILES) {
+                val file = File(dir, model.local)
+                if (file.length() != model.size) {
                     val onBytes: (Long) -> Unit = { bytes ->
                         publish(context, progress = (doneBytes + bytes).toFloat() / TOTAL_BYTES)
                     }
-                    val failure = fetch(MIRROR + mirrorName, file, size, onBytes)
-                        ?.let { first -> fetch(UPSTREAM + upstreamName, file, size, onBytes)?.let { "$first; $it" } }
+                    val failure = fetch(UPSTREAM + model.upstream, file, model, onBytes)
                     if (failure != null) {
                         error = failure
                         return false
                     }
                 }
-                doneBytes += size
+                doneBytes += model.size
             }
             return isReady(context).also { if (!it) error = "downloaded files are incomplete" }
         } finally {
@@ -124,7 +126,7 @@ internal object AsrModel {
     }
 
     /** Returns null on success, otherwise a short reason. */
-    private fun fetch(url: String, target: File, expectedSize: Long, onBytes: (Long) -> Unit): String? {
+    private fun fetch(url: String, target: File, expected: ModelFile, onBytes: (Long) -> Unit): String? {
         val partial = File(target.path + ".part")
         return try {
             var connection = URL(url).openConnection() as HttpURLConnection
@@ -148,6 +150,7 @@ internal object AsrModel {
             }
             var written = 0L
             var lastReport = 0L
+            val digest = MessageDigest.getInstance("SHA-256")
             connection.inputStream.use { input ->
                 partial.outputStream().use { output ->
                     val buffer = ByteArray(64 * 1024)
@@ -155,6 +158,7 @@ internal object AsrModel {
                         val read = input.read(buffer)
                         if (read < 0) break
                         output.write(buffer, 0, read)
+                        digest.update(buffer, 0, read)
                         written += read
                         if (written - lastReport >= 512 * 1024) {
                             lastReport = written
@@ -164,9 +168,16 @@ internal object AsrModel {
                 }
             }
             connection.disconnect()
-            if (partial.length() != expectedSize) {
+            if (partial.length() != expected.size) {
                 partial.delete()
-                return "size ${partial.length()} != $expectedSize"
+                return "size ${partial.length()} != ${expected.size}"
+            }
+            // Verified before the file is moved into place, where the native runtime loads it.
+            val sha256 = digest.digest().joinToString("") { "%02x".format(it) }
+            if (sha256 != expected.sha256) {
+                partial.delete()
+                SyncLog.w("model checksum mismatch for $url")
+                return "checksum mismatch"
             }
             if (!partial.renameTo(target)) return "could not save file"
             null

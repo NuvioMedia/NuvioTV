@@ -79,6 +79,10 @@ internal class AudioSyncFallback private constructor(
     private val resultToasts = AudioSyncResultToasts()
     private var pendingStatus: AudioSyncStatus? = null
 
+    /** Playback time the current takeover has gone without any mapping. */
+    private var unmatchedPlayedMs = 0L
+    private var unmatchedReported = false
+
     private val trackListener = object : Player.Listener {
         override fun onTracksChanged(tracks: Tracks) {
             controller.onAudioTrackSelected(tracks.selectedAudioFormat())
@@ -88,7 +92,7 @@ internal class AudioSyncFallback private constructor(
     init {
         controller.listensBeforeSession = false
         controller.enabled = AudioSyncSettings.fallbackEnabled.value
-        controller.samplingOnMobileData = AudioSyncSettings.samplingOnMobileData.value
+        controller.samplingMode = AudioSyncSettings.samplingMode.value
         controller.onSourceChanged(sourceUrl)
         controller.setSpotSource(
             forSourceKey = sourceUrl,
@@ -118,7 +122,7 @@ internal class AudioSyncFallback private constructor(
         resultToasts.reset()
         if (!AudioSyncSettings.fallbackEnabled.value) return
         controller.enabled = true
-        controller.samplingOnMobileData = AudioSyncSettings.samplingOnMobileData.value
+        controller.samplingMode = AudioSyncSettings.samplingMode.value
         controller.listensBeforeSession = true
         if (!armed) {
             // Defer title lookup until an AutoSync run actually starts, instead of stream setup.
@@ -187,6 +191,8 @@ internal class AudioSyncFallback private constructor(
             }
             target.set(Target(url, cues, generation))
             appliedModel = null
+            unmatchedPlayedMs = 0L
+            unmatchedReported = false
             startTicker()
             SyncLog.i("AutoSync kept the original timing of $url; syncing it to the audio")
             controller.startSession(url, cues)
@@ -265,6 +271,16 @@ internal class AudioSyncFallback private constructor(
                         else -> Unit
                     }
                 }
+                // Still nothing after a while: say so once, and keep searching quietly. A later
+                // match still shows its success.
+                if (current != null && target.get() === current && !unmatchedReported && controller.currentModel() == null) {
+                    if (player.isPlaying) unmatchedPlayedMs += TICK_MS
+                    if (unmatchedPlayedMs >= UNMATCHED_REPORT_MS) {
+                        unmatchedReported = true
+                        SyncLog.i("no audio match after ${unmatchedPlayedMs / 1_000}s of playback; still searching")
+                        reportResult(success = false)
+                    }
+                }
                 delay(TICK_MS)
             }
         }
@@ -337,6 +353,7 @@ internal class AudioSyncFallback private constructor(
         private const val TICK_MS = 250L
         private const val CUES_WAIT_MS = 5_000L
         private const val CUES_POLL_MS = 50L
+        private const val UNMATCHED_REPORT_MS = 5 * 60_000L
         private val initialized = AtomicBoolean(false)
         private val fallbacks = WeakHashMap<PlayerRuntimeController, AudioSyncFallback>()
         private val allSubtitles = WeakHashMap<PlayerRuntimeController, Pair<String?, List<Subtitle>>>()
@@ -357,6 +374,8 @@ internal class AudioSyncFallback private constructor(
             AudioSyncSettings.installPersistence(
                 load = { key -> if (preferences.contains(key)) preferences.getBoolean(key, false) else null },
                 save = { key, value -> preferences.edit().putBoolean(key, value).apply() },
+                loadString = { key -> preferences.getString(key, null) },
+                saveString = { key, value -> preferences.edit().putString(key, value).apply() },
             )
             AsrModel.initialize(appContext)
         }
