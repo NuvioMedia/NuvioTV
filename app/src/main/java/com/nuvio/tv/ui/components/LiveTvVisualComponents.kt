@@ -109,9 +109,8 @@ private fun LiveTvAction(isSelected: Boolean, onClick: (() -> Unit)?, modifier: 
     val motion = LocalUiMotion.current
     val actionModifier = modifier.heightIn(min = tokens.rowHeight).semantics { selected = isSelected }
     if (onClick == null) {
-        androidx.tv.material3.Surface(modifier = actionModifier, shape = ButtonDefaults.shape(shape = shape),
-            colors = androidx.tv.material3.SurfaceDefaults.colors(containerColor = NuvioTheme.colors.Surface),
-            border = null) {
+        androidx.compose.material3.Surface(modifier = actionModifier, shape = shape,
+            color = NuvioTheme.colors.Surface) {
             Box(Modifier.padding(PaddingValues(tokens.contentPadding))) { content() }
         }
         return
