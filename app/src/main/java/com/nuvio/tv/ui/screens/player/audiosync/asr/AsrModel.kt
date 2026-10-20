@@ -9,36 +9,38 @@ import com.nuvio.tv.ui.screens.player.audiosync.SyncLog
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The English recognition model (about 74 MB), kept in app storage. It can be downloaded from
  * Settings, and is fetched automatically on an unmetered connection the first time it is needed.
  * Progress and errors are published to [SubtitleSyncStatus.speechModel].
+ *
+ * The pre-optimized ORT conversion loads faster and is preferred. When it cannot be fetched, the
+ * original ONNX files come from the upstream repository instead. Every file of either source is
+ * pinned by size and SHA-256 in [AsrModelFiles], so neither source has to be trusted.
  */
 internal object AsrModel {
-    const val ENCODER = "encoder.int8.onnx"
-    const val DECODER = "decoder.int8.onnx"
-    const val JOINER = "joiner.int8.onnx"
     const val TOKENS = "tokens.txt"
     const val DOWNLOAD_MB = 74
 
-    private const val VERSION = "gigaspeech-2023-12-12"
+    private const val ONNX_VERSION = "gigaspeech-2023-12-12"
+    private const val ORT_VERSION = "$ONNX_VERSION-ort-v1"
+
+    /** The ORT conversion of the upstream files below; see the release's README and manifest. */
+    private const val ORT_DOWNLOAD = "https://github.com/DavidVamaiotu/NuvioTV-Reshaped/releases/download/asr-models-ort-v1/"
 
     /** The upstream model repository, pinned to a commit so its files cannot change under us. */
-    private const val UPSTREAM =
+    private const val ONNX_DOWNLOAD =
         "https://huggingface.co/k2-fsa/sherpa-onnx-zipformer-gigaspeech-2023-12-12/resolve/f7515a672ffb69232794aaaa44a0a360f7f25cd1/"
 
-    private class ModelFile(val local: String, val upstream: String, val size: Long, val sha256: String)
-
-    private val FILES = listOf(
-        ModelFile(ENCODER, "encoder-epoch-30-avg-1.int8.onnx", 72_850_738L, "d3eff4b1bd747bd781a47966795988539227d05638524b0313f26d3a166962d7"),
-        ModelFile(DECODER, "decoder-epoch-30-avg-1.int8.onnx", 540_688L, "2b0580feb757696fa929922670b7126aaee609630349a1809fd5a2aee926d56e"),
-        ModelFile(JOINER, "joiner-epoch-30-avg-1.int8.onnx", 259_417L, "80160e45cca71dd52f6b0a6d3d12be18126f5308b2d4ba03f001300fea377c64"),
-        ModelFile(TOKENS, "tokens.txt", 5_020L, "0ef7d736bf4de3ef947292e4b119ef13f6808cd5f3aec225a843a7135ac1c2ce"),
+    /** Upstream names of [AsrModelFiles.legacy], by local name. */
+    private val ONNX_UPSTREAM_NAMES = mapOf(
+        "encoder.int8.onnx" to "encoder-epoch-30-avg-1.int8.onnx",
+        "decoder.int8.onnx" to "decoder-epoch-30-avg-1.int8.onnx",
+        "joiner.int8.onnx" to "joiner-epoch-30-avg-1.int8.onnx",
+        TOKENS to TOKENS,
     )
-    private val TOTAL_BYTES = FILES.sumOf { it.size }
 
     private val downloading = AtomicBoolean(false)
 
@@ -57,19 +59,28 @@ internal object AsrModel {
             override fun delete() {
                 val ctx = appContext ?: return
                 if (downloading.get()) return
-                directory(ctx).deleteRecursively()
+                ortDirectory(ctx).deleteRecursively()
+                onnxDirectory(ctx).deleteRecursively()
                 publish(ctx)
             }
         }
         publish(context)
     }
 
-    fun directory(context: Context): File = File(context.filesDir, "audiosync/asr/$VERSION")
+    private fun ortDirectory(context: Context): File = File(context.filesDir, "audiosync/asr/$ORT_VERSION")
 
-    fun isReady(context: Context): Boolean {
-        val dir = directory(context)
-        return FILES.all { File(dir, it.local).length() == it.size }
+    private fun onnxDirectory(context: Context): File = File(context.filesDir, "audiosync/asr/$ONNX_VERSION")
+
+    /** The complete model to load: the ORT one when present, otherwise the ONNX one. */
+    fun directory(context: Context): File {
+        val ort = ortDirectory(context)
+        if (AsrModelFiles.isComplete(ort, AsrModelFiles.optimized)) return ort
+        return onnxDirectory(context).takeIf { AsrModelFiles.isComplete(it, AsrModelFiles.legacy) } ?: ort
     }
+
+    fun isReady(context: Context): Boolean =
+        AsrModelFiles.isComplete(ortDirectory(context), AsrModelFiles.optimized) ||
+            AsrModelFiles.isComplete(onnxDirectory(context), AsrModelFiles.legacy)
 
     fun isUnmetered(context: Context): Boolean {
         val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
@@ -93,6 +104,7 @@ internal object AsrModel {
      * Downloads missing files. Blocking; call from a background thread. Returns true when the model
      * is ready afterwards.
      */
+    @Synchronized
     fun download(context: Context): Boolean {
         if (isReady(context)) {
             publish(context)
@@ -102,89 +114,79 @@ internal object AsrModel {
         var error: String? = null
         try {
             publish(context)
-            val dir = directory(context).apply { mkdirs() }
-            var doneBytes = 0L
-            for (model in FILES) {
-                val file = File(dir, model.local)
-                if (file.length() != model.size) {
-                    val onBytes: (Long) -> Unit = { bytes ->
-                        publish(context, progress = (doneBytes + bytes).toFloat() / TOTAL_BYTES)
-                    }
-                    val failure = fetch(UPSTREAM + model.upstream, file, model, onBytes)
-                    if (failure != null) {
-                        error = failure
-                        return false
-                    }
-                }
-                doneBytes += model.size
-            }
-            return isReady(context).also { if (!it) error = "downloaded files are incomplete" }
+            val ortFailure = downloadAll(context, ortDirectory(context), AsrModelFiles.optimized) { ORT_DOWNLOAD + it }
+                ?: return true
+            SyncLog.w("optimized speech model unavailable ($ortFailure); downloading the upstream ONNX model")
+            val onnxFailure = downloadAll(context, onnxDirectory(context), AsrModelFiles.legacy) {
+                ONNX_DOWNLOAD + ONNX_UPSTREAM_NAMES.getValue(it)
+            } ?: return true
+            error = "$ortFailure; $onnxFailure"
+            return false
         } finally {
             downloading.set(false)
             publish(context, error = error)
         }
     }
 
-    /** Returns null on success, otherwise a short reason. */
-    private fun fetch(url: String, target: File, expected: ModelFile, onBytes: (Long) -> Unit): String? {
-        val partial = File(target.path + ".part")
-        return try {
-            var connection = URL(url).openConnection() as HttpURLConnection
-            connection.connectTimeout = 15_000
-            connection.readTimeout = 30_000
-            var redirects = 0
-            // HttpURLConnection does not follow cross-host redirects (GitHub release -> CDN).
-            while (connection.responseCode in 300..399 && redirects < 5) {
-                val location = connection.getHeaderField("Location") ?: break
-                connection.disconnect()
-                connection = URL(URL(url), location).openConnection() as HttpURLConnection
-                connection.connectTimeout = 15_000
-                connection.readTimeout = 30_000
-                redirects++
+    /** Downloads the missing [assets] into [directory]. Returns null on success, otherwise a short reason. */
+    private fun downloadAll(
+        context: Context,
+        directory: File,
+        assets: List<AsrModelFiles.Asset>,
+        url: (name: String) -> String,
+    ): String? {
+        if (!directory.isDirectory && !directory.mkdirs()) return "could not create model directory"
+        val totalBytes = assets.sumOf { it.size }
+        var doneBytes = 0L
+        for (asset in assets) {
+            val file = File(directory, asset.name)
+            if (!file.isFile || file.length() != asset.size) {
+                val onBytes: (Long) -> Unit = { bytes ->
+                    publish(context, progress = (doneBytes + bytes).toFloat() / totalBytes)
+                }
+                fetch(url(asset.name), directory, asset, onBytes)?.let { return it }
             }
-            if (connection.responseCode != 200) {
-                val code = connection.responseCode
-                connection.disconnect()
+            doneBytes += asset.size
+        }
+        return if (AsrModelFiles.isComplete(directory, assets)) null else "downloaded files are incomplete"
+    }
+
+    /** Returns null on success, otherwise a short reason. */
+    private fun fetch(url: String, directory: File, asset: AsrModelFiles.Asset, onBytes: (Long) -> Unit): String? {
+        var connection: HttpURLConnection? = null
+        return try {
+            var location = URL(url)
+            var redirects = 0
+            // HttpURLConnection does not follow cross-host redirects (GitHub release or Hugging Face -> CDN).
+            while (true) {
+                val current = (location.openConnection() as HttpURLConnection).apply {
+                    instanceFollowRedirects = false
+                    connectTimeout = 15_000
+                    readTimeout = 30_000
+                }
+                connection = current
+                if (current.responseCode !in 300..399) break
+                if (++redirects > 5) return "too many redirects"
+                val next = current.getHeaderField("Location") ?: return "missing redirect location"
+                location = URL(location, next)
+                current.disconnect()
+            }
+            val response = checkNotNull(connection)
+            if (response.responseCode != 200) {
+                val code = response.responseCode
                 SyncLog.w("model download HTTP $code for $url")
                 return "HTTP $code"
             }
-            var written = 0L
-            var lastReport = 0L
-            val digest = MessageDigest.getInstance("SHA-256")
-            connection.inputStream.use { input ->
-                partial.outputStream().use { output ->
-                    val buffer = ByteArray(64 * 1024)
-                    while (true) {
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        output.write(buffer, 0, read)
-                        digest.update(buffer, 0, read)
-                        written += read
-                        if (written - lastReport >= 512 * 1024) {
-                            lastReport = written
-                            onBytes(written)
-                        }
-                    }
-                }
+            // Size and SHA-256 are verified on the .part file before it is moved into place.
+            response.inputStream.use { input ->
+                AsrModelFiles.saveVerified(input, directory, asset, onBytes)
             }
-            connection.disconnect()
-            if (partial.length() != expected.size) {
-                partial.delete()
-                return "size ${partial.length()} != ${expected.size}"
-            }
-            // Verified before the file is moved into place, where the native runtime loads it.
-            val sha256 = digest.digest().joinToString("") { "%02x".format(it) }
-            if (sha256 != expected.sha256) {
-                partial.delete()
-                SyncLog.w("model checksum mismatch for $url")
-                return "checksum mismatch"
-            }
-            if (!partial.renameTo(target)) return "could not save file"
             null
         } catch (failure: Exception) {
             SyncLog.w("model download failed for $url: ${failure.message}")
-            partial.delete()
             failure.message ?: failure.javaClass.simpleName
+        } finally {
+            connection?.disconnect()
         }
     }
 }
