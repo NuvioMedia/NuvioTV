@@ -52,7 +52,6 @@ internal class AudioSubtitleSyncController(
     private val requestSwitch: (url: String) -> Unit,
 ) : AudioSampleSink, PlaybackPcmListener {
     private val appContext = context.applicationContext
-    private val lowMemoryTv by lazy { SpotConnections.isLowMemoryTv(appContext) }
     private val timeline = SpeechTimeline()
     private val aligner: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
         Thread({
@@ -97,6 +96,19 @@ internal class AudioSubtitleSyncController(
         }, "NuvioAudioSyncFetch").apply { isDaemon = true }
     }
 
+    // Model initialization must not queue behind subtitle HTTP requests. Keep its existing
+    // background priority so loading does not take CPU priority over video playback.
+    private val recognizerLoader: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
+        Thread({
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+            runnable.run()
+        }, "NuvioAsrLoad").apply { isDaemon = true }
+    }
+    private val recognizerLock = Any()
+    @Volatile private var recognizerQueueMs = 0L
+    @Volatile private var recognizerAcquireMs = 0L
+    @Volatile private var recognizerAcquireStartedAtMs = 0L
+
     @Volatile
     private var candidates: List<ReferenceCandidate> = emptyList()
 
@@ -110,6 +122,7 @@ internal class AudioSubtitleSyncController(
     @Volatile
     private var recognizer: SpeechToText? = null
     private val recognizerLoading = AtomicBoolean(false)
+    @Volatile private var recognizerPreparationRequested = false
 
     @Volatile
     private var recognizerFailed = false
@@ -473,7 +486,10 @@ internal class AudioSubtitleSyncController(
             asr?.forgetHeard()
         }
         updateListening()
-        if (session != null && enabled && !audioIsForeign()) ensureRecognizer()
+        if (enabled && !audioIsForeign()) {
+            if (session != null) ensureRecognizer()
+            else if (recognizerPreparationRequested) prepareRecognizer()
+        }
     }
 
     /**
@@ -497,6 +513,7 @@ internal class AudioSubtitleSyncController(
      * unless another subtitle was chosen meanwhile.
      */
     fun startSession(key: String, cues: List<CuesWithTiming>) {
+        prepareRecognizer()
         val request = sessionRequest.incrementAndGet()
         session = null
         stopPool()
@@ -553,6 +570,7 @@ internal class AudioSubtitleSyncController(
         }
 
     fun stopSession() {
+        recognizerPreparationRequested = false
         sessionRequest.incrementAndGet()
         stopPool()
         lockedAtElapsedMs = 0L
@@ -578,25 +596,21 @@ internal class AudioSubtitleSyncController(
         asr?.release()
         aligner.shutdownNow()
         fetchPool.shutdownNow()
+        // Do not interrupt native initialization. A late acquisition is returned below by
+        // its worker, and the cache can serve the next player instead of starting over.
+        recognizerLoader.shutdown()
         // Shared with later players and closed only after a while unused, so a worker that is
         // mid-decode finishes safely and the next episode starts with the model loaded.
-        if (recognizer != null) SharedRecognizer.release()
-        recognizer = null
+        synchronized(recognizerLock) {
+            if (recognizer != null) SharedRecognizer.release()
+            recognizer = null
+        }
     }
 
     /** Subtitles the user could pick; English ones become recognition references. */
     fun setReferenceSubtitles(list: List<ReferenceCandidate>) {
         candidates = list
-        // Load the speech model while the viewer is still choosing, so it is ready for the pick,
-        // as the phone does. On 2 GB TVs not while AutoSync is still deciding (listening before a
-        // session): most of those runs never need it, and it would compete with AutoSync for
-        // memory. The session loads it on takeover; speech heard meanwhile waits in the
-        // recognition queue.
-        if (enabled && list.isNotEmpty() && AsrModel.isReady(appContext) && !audioIsForeign() &&
-            (session != null || !listensBeforeSession || !lowMemoryTv)
-        ) {
-            ensureRecognizer()
-        }
+        if (list.isNotEmpty()) prepareRecognizer()
         // Download the likeliest English references now so a later pick is instant.
         englishCandidates().take(PREFETCH_REFERENCES).forEach { fetchReference(it, onReady = null) }
         // Subtitles listed after the pick join the running search.
@@ -859,12 +873,25 @@ internal class AudioSubtitleSyncController(
         }
     }
 
+    /**
+     * Starts an available model before reference HTTP or alignment work, on its own worker.
+     * Speculative preparation never downloads a model. The confirmed session may do that later.
+     */
+    fun prepareRecognizer() {
+        recognizerPreparationRequested = true
+        if (enabled && !released && !audioIsForeign() && AsrModel.isReady(appContext)) ensureRecognizer()
+    }
+
     private fun ensureRecognizer() {
         if (recognizer != null || released || recognizerFailed) return
         if (!recognizerLoading.compareAndSet(false, true)) return
+        recognizerAcquireStartedAtMs = 0L
+        val requestedAt = SystemClock.elapsedRealtime()
         try {
-            fetchPool.execute {
+            recognizerLoader.execute {
                 try {
+                    if (released || !enabled) return@execute
+                    recognizerQueueMs = SystemClock.elapsedRealtime() - requestedAt
                     recognizerUnavailable = false
                     updateListening()
                     if (!AsrModel.isReady(appContext)) {
@@ -882,18 +909,29 @@ internal class AudioSubtitleSyncController(
                             return@execute
                         }
                     }
+                    if (released || !enabled) return@execute
+                    // The optimized ORT model, or the upstream ONNX one when only that could be fetched.
+                    val modelDirectory = AsrModel.directory(appContext)
                     val alreadyLoaded = SharedRecognizer.isLoaded
                     val startedAt = SystemClock.elapsedRealtime()
-                    val loaded = SharedRecognizer.acquire(AsrModel.directory(appContext), RECOGNIZER_THREADS)
-                    if (released) {
-                        SharedRecognizer.release()
-                        return@execute
+                    recognizerAcquireStartedAtMs = startedAt
+                    SyncLog.i("speech model loading queueMs=$recognizerQueueMs cached=$alreadyLoaded")
+                    val loaded = SharedRecognizer.acquire(modelDirectory, RECOGNIZER_THREADS)
+                    recognizerAcquireMs = SystemClock.elapsedRealtime() - startedAt
+                    synchronized(recognizerLock) {
+                        if (released || !enabled) {
+                            SharedRecognizer.release()
+                            return@execute
+                        }
+                        val seconds = recognizerAcquireMs / 100 / 10.0
+                        recognizerReady = if (alreadyLoaded) "ready (${loaded.modelFormat})" else "ready (${loaded.modelFormat}, loaded in ${seconds}s)"
+                        recognizer = loaded
+                        asr?.setRecognizer(loaded)
                     }
-                    val seconds = (SystemClock.elapsedRealtime() - startedAt) / 100 / 10.0
-                    recognizerReady = if (alreadyLoaded) "ready" else "ready (loaded in ${seconds}s)"
-                    recognizer = loaded
-                    asr?.setRecognizer(loaded)
-                    SyncLog.i("speech recognizer $recognizerReady")
+                    SyncLog.i("speech recognizer $recognizerReady queueMs=$recognizerQueueMs acquireMs=$recognizerAcquireMs")
+                    if (recognizerAcquireMs >= 10_000L) {
+                        SyncLog.w("speech model acquisition exceeded 10s: ${recognizerAcquireMs}ms")
+                    }
                 } catch (error: Throwable) {
                     SyncLog.w("speech recognizer unavailable: ${error.message}")
                     recognizerFailed = true
@@ -1057,8 +1095,12 @@ internal class AudioSubtitleSyncController(
             log = { SyncLog.i(it) },
             workerSetup = { Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND) },
         )
-        recognizer?.let(engine::setRecognizer)
-        asr = engine
+        // Publish the engine and attach any model under the same lock as model completion.
+        // Otherwise both threads can see the other's field as null and miss the handoff.
+        synchronized(recognizerLock) {
+            recognizer?.let(engine::setRecognizer)
+            asr = engine
+        }
         analyzer.chunkListener = SpeechSegmenter(engine::offerSegment)
         liveAnalyzer.chunkListener = SpeechSegmenter(engine::offerSegment)
         return AudioSyncDecoder(analyzer, liveAnalyzer) { mime ->

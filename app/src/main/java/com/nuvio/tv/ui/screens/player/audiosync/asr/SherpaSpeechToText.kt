@@ -12,18 +12,20 @@ import java.io.File
  * trained on GigaSpeech (podcasts and YouTube, close to film dialogue). Runs fully on-device.
  */
 internal class SherpaSpeechToText(modelDir: File, threads: Int) : SpeechToText, AutoCloseable {
+    val modelFormat = AsrModelFiles.format(modelDir)
     private val recognizer = OfflineRecognizer(
         config = OfflineRecognizerConfig(
             featConfig = FeatureConfig(sampleRate = SAMPLE_RATE, featureDim = 80),
             modelConfig = OfflineModelConfig(
                 transducer = OfflineTransducerModelConfig(
-                    encoder = File(modelDir, AsrModel.ENCODER).absolutePath,
-                    decoder = File(modelDir, AsrModel.DECODER).absolutePath,
-                    joiner = File(modelDir, AsrModel.JOINER).absolutePath,
+                    encoder = File(modelDir, "encoder.int8.${modelFormat.extension}").absolutePath,
+                    decoder = File(modelDir, "decoder.int8.${modelFormat.extension}").absolutePath,
+                    joiner = File(modelDir, "joiner.int8.${modelFormat.extension}").absolutePath,
                 ),
                 tokens = File(modelDir, AsrModel.TOKENS).absolutePath,
                 numThreads = threads,
                 modelType = "transducer",
+                provider = AsrModelFiles.provider(modelDir, modelFormat),
             ),
             decodingMethod = "greedy_search",
         ),
