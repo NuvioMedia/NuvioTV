@@ -11,8 +11,8 @@ class TvPerformanceProfileTest {
         val profile = TvPerformanceProfile.forDevice(4L * GIB, 256, isLowRamDevice = true)
 
         assertEquals(0.08, profile.imageMemoryCachePercent, 0.0)
-        assertEquals(8, profile.imageRequests)
-        assertEquals(4, profile.imageRequestsPerHost)
+        assertEquals(4, profile.imageRequests)
+        assertEquals(2, profile.imageRequestsPerHost)
         assertEquals(1, profile.parallelImageDecodes)
         assertEquals(0, profile.homeHorizontalImagePrefetchItems)
         assertEquals(0, profile.homeImagePrefetchAheadRows)
