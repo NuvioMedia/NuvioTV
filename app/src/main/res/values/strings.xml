@@ -1696,6 +1696,9 @@
     <string name="profile_pin_overlay_remove_verify_support">Enter the current 4-digit PIN to remove this lock.</string>
     <string name="profile_pin_overlay_delete_verify_heading">Enter current PIN to delete %1$s.</string>
     <string name="profile_pin_overlay_delete_verify_support">Enter the current 4-digit PIN before deleting this profile.</string>
+    <string name="profile_pin_ask_on_app_start">Always ask PIN on app start</string>
+    <string name="profile_pin_overlay_ask_on_app_start_off_verify_heading">Enter current PIN to turn off Always ask PIN on app start for %1$s.</string>
+    <string name="profile_pin_overlay_ask_on_app_start_off_verify_support">When this is off, Remember Last Profile opens this profile without its PIN.</string>
     <string name="profile_pin_overlay_set_support">This PIN will be required before opening this profile.</string>
     <string name="profile_pin_overlay_confirm_support">Re-enter the same 4 digits to finish setup.</string>
     <string name="profile_pin_overlay_mismatch">PINs did not match. Enter a new PIN again.</string>
@@ -3120,6 +3123,7 @@
     <!-- Profile selection: PIN overlay messages -->
     <string name="profile_pin_saved_for_profile">PIN saved for %1$s.</string>
     <string name="profile_pin_lock_removed_for_profile">PIN lock removed for %1$s.</string>
+    <string name="profile_pin_ask_on_app_start_off_for_profile">Always ask PIN on app start turned off for %1$s.</string>
 
     <!-- Trakt: Related / comments / list items error fallbacks -->
     <string name="trakt_related_error_request_failed">Trakt related request failed</string>

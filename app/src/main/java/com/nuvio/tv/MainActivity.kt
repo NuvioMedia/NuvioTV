@@ -154,6 +154,7 @@ import com.nuvio.tv.data.local.AppOnboardingDataStore
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.ProfileLockSettingsDataStore
 import com.nuvio.tv.data.local.ProfileLockStateDataStore
 import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.data.local.ThemeDataStore
@@ -216,6 +217,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -298,6 +300,9 @@ open class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var profileLockStateDataStore: ProfileLockStateDataStore
+
+    @Inject
+    lateinit var profileLockSettingsDataStore: ProfileLockSettingsDataStore
 
     @Inject
     lateinit var profileManager: ProfileManager
@@ -453,9 +458,18 @@ open class MainActivity : ComponentActivity() {
             val cachedPinStates by remember(profileLockStateDataStore) {
                 profileLockStateDataStore.pinEnabled.map<Map<Int, Boolean>, Map<Int, Boolean>?> { it }
             }.collectAsState(initial = null)
+            // The active profile's "Always ask PIN on app start", paired with the profile it was read for.
+            val askPinOnAppStartRead by remember(activeProfileId) {
+                val profileId = activeProfileId
+                profileLockSettingsDataStore.askPinOnAppStart(profileId).map<Boolean, Pair<Int, Boolean>?> { ask ->
+                    profileId to ask
+                }
+            }.collectAsState(initial = null)
+            val activeProfileAsksPinOnAppStart = askPinOnAppStartRead?.takeIf { it.first == activeProfileId }?.second
             // Set when Remember Last Profile skipped the picker, until the server's PIN states arrive.
             var autoSelectPinCheckPending by rememberSaveable { mutableStateOf(false) }
             var profileSwitchedManually by remember { mutableStateOf(false) }
+            var lastProfileAutoOpenBlocked by remember { mutableStateOf(false) }
 
             LaunchedEffect(authState, profiles) {
                 if (authState is AuthState.FullAccount) {
@@ -465,8 +479,11 @@ open class MainActivity : ComponentActivity() {
                         if (autoSelectPinCheckPending) {
                             autoSelectPinCheckPending = false
                             // The cache can miss a PIN set on another device; ask for it now.
-                            if (states[profileManager.activeProfileId.value] == true) {
-                                profileSwitchedManually = true
+                            val profileId = profileManager.activeProfileId.value
+                            if (states[profileId] == true &&
+                                profileLockSettingsDataStore.askPinOnAppStart(profileId).first()
+                            ) {
+                                lastProfileAutoOpenBlocked = true
                                 splashTriggered = false
                                 hasSelectedProfileThisSession = false
                             }
@@ -476,10 +493,19 @@ open class MainActivity : ComponentActivity() {
             }
 
             val activeProfileHasPin = cachedPinStates?.get(activeProfileId) == true
+            // Remember Last Profile opens a locked profile without its PIN only if the profile turned
+            // "Always ask PIN on app start" off.
+            val lastProfileNeedsPin = rememberLastProfileEnabled && hasEverSelectedProfile &&
+                activeProfileHasPin && activeProfileAsksPinOnAppStart != false
+            val lastProfileChoicePending = rememberLastProfileEnabled && hasEverSelectedProfile &&
+                activeProfileHasPin && activeProfileAsksPinOnAppStart == null &&
+                !hasSelectedProfileThisSession && !profileSwitchedManually
+            // The picker opens straight to the PIN of the profile Remember Last Profile would have opened.
+            val startupUnlockProfileId = activeProfileId.takeIf { lastProfileNeedsPin && !profileSwitchedManually }
 
             val shouldAutoSelectProfile = cachedPinStates != null && rememberLastProfileEnabled &&
-                hasEverSelectedProfile && !activeProfileHasPin &&
-                !hasSelectedProfileThisSession && !profileSwitchedManually
+                hasEverSelectedProfile && !lastProfileNeedsPin &&
+                !hasSelectedProfileThisSession && !profileSwitchedManually && !lastProfileAutoOpenBlocked
             if (shouldAutoSelectProfile && !splashTriggered) {
                 splashTriggered = true
                 hasSelectedProfileThisSession = true
@@ -754,7 +780,8 @@ open class MainActivity : ComponentActivity() {
                     var startupDestination = StartupDestination.Loading
                     val surfaceContentReady = hasSeenAuthQrOnFirstLaunch != null &&
                         authState !is AuthState.Loading &&
-                        cachedPinStates != null
+                        cachedPinStates != null &&
+                        !lastProfileChoicePending
 
                     if (!surfaceContentReady) {
                         // Still loading auth state; nothing to show yet.
@@ -810,6 +837,7 @@ open class MainActivity : ComponentActivity() {
                     if (shouldShowProfileSelection) {
                         startupDestination = if (splashTriggered) StartupDestination.Loading else StartupDestination.ProfileSelection
                         ProfileSelectionScreen(
+                            initialUnlockProfileId = startupUnlockProfileId,
                             onProfileClicked = {
                                 splashTriggered = true
                             },
