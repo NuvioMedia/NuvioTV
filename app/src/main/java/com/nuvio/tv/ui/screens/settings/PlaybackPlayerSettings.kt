@@ -6,6 +6,8 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.tv.R
 import com.nuvio.tv.data.local.AutoSkipSegmentType
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.PlaybackInfoBadgeStyle
+import com.nuvio.tv.data.local.PlaybackInfoBadgePosition
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 
@@ -131,7 +133,8 @@ private fun AutoSkipToggle(
 @Composable
 internal fun PlaybackPlayerInterfaceSection(
     settings: PlayerSettings,
-    onUpdate: PlaybackSettingsUpdate
+    onUpdate: PlaybackSettingsUpdate,
+    onOpenDialog: (PlaybackDialog) -> Unit
 ) {
     val internalPlayer = settings.playerPreference != PlayerPreference.EXTERNAL
 
@@ -169,12 +172,102 @@ internal fun PlaybackPlayerInterfaceSection(
         onToggle = { onUpdate { setShowPlaybackInfoBadge(!settings.showPlaybackInfoBadge) } },
         enabled = internalPlayer
     )
+    SettingsActionRow(
+        title = stringResource(R.string.playback_info_badge_style),
+        subtitle = null,
+        value = badgeStyleLabel(settings.playbackInfoBadgeStyle),
+        enabled = internalPlayer && settings.showPlaybackInfoBadge,
+        onClick = { onOpenDialog(PlaybackDialog.PLAYBACK_INFO_BADGE_STYLE) }
+    )
+    SettingsActionRow(
+        title = stringResource(R.string.playback_info_badge_position),
+        subtitle = null,
+        value = badgePositionLabel(settings.playbackInfoBadgePosition),
+        enabled = internalPlayer && settings.showPlaybackInfoBadge,
+        onClick = { onOpenDialog(PlaybackDialog.PLAYBACK_INFO_BADGE_POSITION) }
+    )
     SettingsToggleRow(
         title = stringResource(R.string.playback_parental_guide),
         subtitle = stringResource(R.string.playback_parental_guide_sub),
         checked = settings.parentalGuideEnabled,
         onToggle = { onUpdate { setParentalGuideEnabled(!settings.parentalGuideEnabled) } },
         enabled = internalPlayer
+    )
+}
+
+@Composable
+private fun badgeStyleLabel(style: PlaybackInfoBadgeStyle): String = when (style) {
+    PlaybackInfoBadgeStyle.PILL -> stringResource(R.string.playback_info_badge_style_pill)
+    PlaybackInfoBadgeStyle.ROUNDED -> stringResource(R.string.playback_info_badge_style_rounded)
+    PlaybackInfoBadgeStyle.PLAIN -> stringResource(R.string.playback_info_badge_style_plain)
+}
+
+@Composable
+private fun badgePositionLabel(position: PlaybackInfoBadgePosition): String = when (position) {
+    PlaybackInfoBadgePosition.BESIDE_TITLE -> stringResource(R.string.playback_info_badge_position_beside)
+    PlaybackInfoBadgePosition.BELOW_TITLE -> stringResource(R.string.playback_info_badge_position_below)
+}
+
+@Composable
+internal fun PlaybackInfoBadgePositionDialog(
+    currentPosition: PlaybackInfoBadgePosition,
+    onPositionSelected: (PlaybackInfoBadgePosition) -> Unit,
+    onDismiss: () -> Unit
+) {
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.playback_info_badge_position),
+        subtitle = stringResource(R.string.playback_info_badge_position_sub),
+        options = listOf(
+            SettingsPickerOption(
+                value = PlaybackInfoBadgePosition.BESIDE_TITLE,
+                title = stringResource(R.string.playback_info_badge_position_beside),
+                description = stringResource(R.string.playback_info_badge_position_beside_desc)
+            ),
+            SettingsPickerOption(
+                value = PlaybackInfoBadgePosition.BELOW_TITLE,
+                title = stringResource(R.string.playback_info_badge_position_below),
+                description = stringResource(R.string.playback_info_badge_position_below_desc)
+            )
+        ),
+        selectedValue = currentPosition,
+        onOptionSelected = onPositionSelected,
+        onDismiss = onDismiss,
+        width = 440.dp,
+        maxHeight = 320.dp
+    )
+}
+
+@Composable
+internal fun PlaybackInfoBadgeStyleDialog(
+    currentStyle: PlaybackInfoBadgeStyle,
+    onStyleSelected: (PlaybackInfoBadgeStyle) -> Unit,
+    onDismiss: () -> Unit
+) {
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.playback_info_badge_style),
+        subtitle = stringResource(R.string.playback_info_badge_style_sub),
+        options = listOf(
+            SettingsPickerOption(
+                value = PlaybackInfoBadgeStyle.PILL,
+                title = stringResource(R.string.playback_info_badge_style_pill),
+                description = stringResource(R.string.playback_info_badge_style_pill_desc)
+            ),
+            SettingsPickerOption(
+                value = PlaybackInfoBadgeStyle.ROUNDED,
+                title = stringResource(R.string.playback_info_badge_style_rounded),
+                description = stringResource(R.string.playback_info_badge_style_rounded_desc)
+            ),
+            SettingsPickerOption(
+                value = PlaybackInfoBadgeStyle.PLAIN,
+                title = stringResource(R.string.playback_info_badge_style_plain),
+                description = stringResource(R.string.playback_info_badge_style_plain_desc)
+            )
+        ),
+        selectedValue = currentStyle,
+        onOptionSelected = onStyleSelected,
+        onDismiss = onDismiss,
+        width = 440.dp,
+        maxHeight = 360.dp
     )
 }
 

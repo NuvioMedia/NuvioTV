@@ -172,6 +172,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         currentVideoTrackBitrate = effectiveVideoFormat.bitrate
         currentVideoTrackColorTransfer = effectiveVideoFormat.colorInfo?.colorTransfer
         currentVideoTrackSelected = selectedVideoFormat != null
+        // Playback info badge tracks the effective video format (selected, else first)
         _uiState.update { state ->
             state.copy(
                 activePlaybackInfo = ActivePlaybackInfo(

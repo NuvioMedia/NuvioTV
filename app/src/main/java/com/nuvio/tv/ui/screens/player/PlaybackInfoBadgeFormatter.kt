@@ -16,6 +16,23 @@ data class ActivePlaybackInfo(
     val colorTransfer: Int? = null
 )
 
+/** Video and audio chip groups rendered either side of a divider. */
+data class PlaybackInfoBadge(
+    val videoSegments: List<PlaybackInfoSegment> = emptyList(),
+    val audioSegments: List<PlaybackInfoSegment> = emptyList()
+) {
+    val isEmpty: Boolean get() = videoSegments.isEmpty() && audioSegments.isEmpty()
+}
+
+/** Which leading icon a chip shows; null means text only. */
+enum class PlaybackInfoIcon { HDR, AUDIO_FORMAT, AUDIO_TRACK }
+
+/** One chip in the badge: its label plus an optional leading icon. */
+data class PlaybackInfoSegment(
+    val text: String,
+    val icon: PlaybackInfoIcon? = null
+)
+
 /** Resolution tier label ("4K", "1080p", ...) from the active video dimensions. */
 internal fun formatPlaybackResolutionLabel(width: Int?, height: Int?): String? {
     if (width == null || height == null || width <= 0 || height <= 0) return null
@@ -47,10 +64,26 @@ internal fun formatPlaybackHdrLabel(mimeType: String?, colorTransfer: Int?): Str
     }
 }
 
+/** mpv reports short codec ids; map them to the names used elsewhere in the app. */
+private val SHORT_AUDIO_CODEC_NAMES = mapOf(
+    "eac3" to "E-AC-3",
+    "ac3" to "AC-3",
+    "truehd" to "TrueHD",
+    "dts" to "DTS",
+    "dts-hd" to "DTS-HD",
+    "aac" to "AAC",
+    "flac" to "FLAC",
+    "opus" to "Opus",
+    "vorbis" to "Vorbis",
+    "mp3" to "MP3",
+    "alac" to "ALAC"
+)
+
 /** Audio codec display name; DD+ JOC is how Dolby Atmos is delivered. */
 internal fun formatPlaybackAudioCodecLabel(codec: String?): String? {
     if (codec.isNullOrBlank()) return null
-    return if (codec == "E-AC-3-JOC") "Dolby Atmos" else codec
+    if (codec == "E-AC-3-JOC") return "Dolby Atmos"
+    return SHORT_AUDIO_CODEC_NAMES[codec.lowercase()] ?: codec
 }
 
 /** "English 5.1" style segment from the selected audio track, or null. */
@@ -67,16 +100,23 @@ internal fun formatPlaybackAudioTrackLabel(
     return parts.joinToString(" ")
 }
 
-/** Badge segments (resolution, HDR, audio codec, audio track) for the current state. */
-internal fun buildPlaybackInfoBadgeSegments(
+/** Badge chip groups for the current state; unknown values drop out. */
+internal fun buildPlaybackInfoBadge(
     video: ActivePlaybackInfo?,
     selectedAudio: TrackInfo?
-): List<String> = listOfNotNull(
-    formatPlaybackResolutionLabel(video?.width, video?.height),
-    formatPlaybackHdrLabel(video?.mimeType, video?.colorTransfer),
-    formatPlaybackAudioCodecLabel(selectedAudio?.codec),
-    formatPlaybackAudioTrackLabel(
-        channelCount = selectedAudio?.channelCount,
-        language = selectedAudio?.language
+): PlaybackInfoBadge = PlaybackInfoBadge(
+    videoSegments = listOfNotNull(
+        formatPlaybackResolutionLabel(video?.width, video?.height)
+            ?.let { PlaybackInfoSegment(it) },
+        formatPlaybackHdrLabel(video?.mimeType, video?.colorTransfer)
+            ?.let { PlaybackInfoSegment(it, PlaybackInfoIcon.HDR) }
+    ),
+    audioSegments = listOfNotNull(
+        formatPlaybackAudioCodecLabel(selectedAudio?.codec)
+            ?.let { PlaybackInfoSegment(it, PlaybackInfoIcon.AUDIO_FORMAT) },
+        formatPlaybackAudioTrackLabel(
+            channelCount = selectedAudio?.channelCount,
+            language = selectedAudio?.language
+        )?.let { PlaybackInfoSegment(it, PlaybackInfoIcon.AUDIO_TRACK) }
     )
 )

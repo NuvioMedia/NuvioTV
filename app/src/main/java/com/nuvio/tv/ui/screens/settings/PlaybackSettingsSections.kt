@@ -97,7 +97,7 @@ private fun PlaybackSectionContent(
         PlaybackSection.STREAM_SELECTION -> PlaybackStreamSelectionSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.UP_NEXT -> PlaybackUpNextSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.SKIP_SEGMENTS -> PlaybackSkipSegmentsSection(playerSettings, onUpdate)
-        PlaybackSection.PLAYER_INTERFACE -> PlaybackPlayerInterfaceSection(playerSettings, onUpdate)
+        PlaybackSection.PLAYER_INTERFACE -> PlaybackPlayerInterfaceSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.AUDIO -> PlaybackAudioSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.SUBTITLES -> PlaybackSubtitlesSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.VIDEO -> PlaybackVideoSection(playerSettings, transparentLetterbox, onUpdate, onOpenDialog)
@@ -130,6 +130,22 @@ internal fun PlaybackSettingsDialogs(
             currentEngine = settings.internalPlayerEngine,
             onEngineSelected = { engine ->
                 onUpdate { setInternalPlayerEngine(engine) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
+        PlaybackDialog.PLAYBACK_INFO_BADGE_STYLE -> PlaybackInfoBadgeStyleDialog(
+            currentStyle = settings.playbackInfoBadgeStyle,
+            onStyleSelected = { style ->
+                onUpdate { setPlaybackInfoBadgeStyle(style) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
+        PlaybackDialog.PLAYBACK_INFO_BADGE_POSITION -> PlaybackInfoBadgePositionDialog(
+            currentPosition = settings.playbackInfoBadgePosition,
+            onPositionSelected = { position ->
+                onUpdate { setPlaybackInfoBadgePosition(position) }
                 onDismiss()
             },
             onDismiss = onDismiss

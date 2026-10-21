@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaybackInfoBadgeFormatterTest {
@@ -55,20 +56,37 @@ class PlaybackInfoBadgeFormatterTest {
     }
 
     @Test
-    fun `badge segments drop unknown values`() {
-        val segments = buildPlaybackInfoBadgeSegments(
+    fun `mpv short codec ids map to friendly names`() {
+        assertEquals("E-AC-3", formatPlaybackAudioCodecLabel("eac3"))
+        assertEquals("AC-3", formatPlaybackAudioCodecLabel("ac3"))
+        assertEquals("DTS-HD", formatPlaybackAudioCodecLabel("dts-hd"))
+        assertEquals("TrueHD", formatPlaybackAudioCodecLabel("truehd"))
+    }
+
+    @Test
+    fun `badge groups video and audio chips`() {
+        val badge = buildPlaybackInfoBadge(
             video = ActivePlaybackInfo(width = 3840, height = 2160, mimeType = "video/dolby-vision"),
-            selectedAudio = TrackInfo(index = 0, name = "Audio 1", language = "en", channelCount = 6)
+            selectedAudio = TrackInfo(index = 0, name = "Audio 1", language = "en", codec = "E-AC-3-JOC", channelCount = 6)
         )
-        assertEquals(listOf("4K", "Dolby Vision", "English 5.1"), segments)
+        assertEquals(listOf("4K", "Dolby Vision"), badge.videoSegments.map { it.text })
+        assertEquals(listOf("Dolby Atmos", "English 5.1"), badge.audioSegments.map { it.text })
+        assertEquals(
+            listOf(null, PlaybackInfoIcon.HDR),
+            badge.videoSegments.map { it.icon }
+        )
+        assertEquals(
+            listOf(PlaybackInfoIcon.AUDIO_FORMAT, PlaybackInfoIcon.AUDIO_TRACK),
+            badge.audioSegments.map { it.icon }
+        )
     }
 
     @Test
     fun `badge with nothing known is empty`() {
-        val segments = buildPlaybackInfoBadgeSegments(
+        val badge = buildPlaybackInfoBadge(
             video = null,
             selectedAudio = TrackInfo(index = 0, name = "Audio 1", language = null)
         )
-        assertEquals(emptyList<String>(), segments)
+        assertTrue(badge.isEmpty)
     }
 }

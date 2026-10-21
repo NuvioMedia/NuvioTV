@@ -10,6 +10,8 @@ import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
+import com.nuvio.tv.data.local.PlaybackInfoBadgeStyle
+import com.nuvio.tv.data.local.PlaybackInfoBadgePosition
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
@@ -176,6 +178,14 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setShowPlaybackInfoBadge(enabled: Boolean) {
         playerSettingsDataStore.setShowPlaybackInfoBadge(enabled)
+    }
+
+    suspend fun setPlaybackInfoBadgeStyle(style: PlaybackInfoBadgeStyle) {
+        playerSettingsDataStore.setPlaybackInfoBadgeStyle(style)
+    }
+
+    suspend fun setPlaybackInfoBadgePosition(position: PlaybackInfoBadgePosition) {
+        playerSettingsDataStore.setPlaybackInfoBadgePosition(position)
     }
 
     suspend fun setTransparentLetterbox(enabled: Boolean) {

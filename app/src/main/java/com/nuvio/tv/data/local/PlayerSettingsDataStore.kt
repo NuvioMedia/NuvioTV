@@ -241,7 +241,10 @@ data class PlayerSettings(
     val playbackIssueReportsEnabled: Boolean = false,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
+    // Playback info badge (chips beside the player title)
     val showPlaybackInfoBadge: Boolean = true,
+    val playbackInfoBadgeStyle: PlaybackInfoBadgeStyle = PlaybackInfoBadgeStyle.PILL,
+    val playbackInfoBadgePosition: PlaybackInfoBadgePosition = PlaybackInfoBadgePosition.BESIDE_TITLE,
     val skipIntroEnabled: Boolean = true,
     val parentalGuideEnabled: Boolean = true,
     val autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet(),
@@ -384,6 +387,12 @@ enum class FrameRateMatchingMode {
     OFF, START, START_STOP
 }
 
+/** Visual style of the active playback info chips beside the player title. */
+enum class PlaybackInfoBadgeStyle { PILL, ROUNDED, PLAIN }
+
+/** Where the playback info chips sit relative to the player title. */
+enum class PlaybackInfoBadgePosition { BESIDE_TITLE, BELOW_TITLE }
+
 enum class NextEpisodeThresholdMode {
     PERCENTAGE, MINUTES_BEFORE_END
 }
@@ -509,6 +518,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
     private val osdClockEnabledKey = booleanPreferencesKey("osd_clock_enabled")
     private val showPlaybackInfoBadgeKey = booleanPreferencesKey("show_playback_info_badge")
+    private val playbackInfoBadgeStyleKey = stringPreferencesKey("playback_info_badge_style")
+    private val playbackInfoBadgePositionKey = stringPreferencesKey("playback_info_badge_position")
     private val skipIntroEnabledKey = booleanPreferencesKey("skip_intro_enabled")
     private val parentalGuideEnabledKey = booleanPreferencesKey("parental_guide_enabled")
     private val autoSkipSegmentTypesKey = stringSetPreferencesKey("auto_skip_segment_types")
@@ -894,6 +905,12 @@ class PlayerSettingsDataStore @Inject constructor(
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,
                 showPlaybackInfoBadge = prefs[showPlaybackInfoBadgeKey] ?: true,
+                playbackInfoBadgeStyle = prefs[playbackInfoBadgeStyleKey]?.let {
+                    runCatching { PlaybackInfoBadgeStyle.valueOf(it) }.getOrNull()
+                } ?: PlaybackInfoBadgeStyle.PILL,
+                playbackInfoBadgePosition = prefs[playbackInfoBadgePositionKey]?.let {
+                    runCatching { PlaybackInfoBadgePosition.valueOf(it) }.getOrNull()
+                } ?: PlaybackInfoBadgePosition.BESIDE_TITLE,
                 skipIntroEnabled = prefs[skipIntroEnabledKey] ?: true,
                 parentalGuideEnabled = prefs[parentalGuideEnabledKey] ?: true,
                 autoSkipSegmentTypes = prefs[autoSkipSegmentTypesKey]
@@ -1203,6 +1220,18 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setShowPlaybackInfoBadge(enabled: Boolean) {
         store().edit { prefs ->
             prefs[showPlaybackInfoBadgeKey] = enabled
+        }
+    }
+
+    suspend fun setPlaybackInfoBadgeStyle(style: PlaybackInfoBadgeStyle) {
+        store().edit { prefs ->
+            prefs[playbackInfoBadgeStyleKey] = style.name
+        }
+    }
+
+    suspend fun setPlaybackInfoBadgePosition(position: PlaybackInfoBadgePosition) {
+        store().edit { prefs ->
+            prefs[playbackInfoBadgePositionKey] = position.name
         }
     }
 

@@ -138,6 +138,7 @@ import com.nuvio.tv.core.player.PlayerWindowBackdrop
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.LibassRenderType
+import com.nuvio.tv.data.local.PlaybackInfoBadgePosition
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.domain.model.Subtitle
@@ -2472,6 +2473,20 @@ private fun PlayerControlsOverlay(
                         uiState.title
                     }
 
+                    val showInfoBadge = uiState.showPlaybackInfoBadge
+                    val infoBadge = if (showInfoBadge) {
+                        remember(uiState.activePlaybackInfo, uiState.audioTracks, uiState.selectedAudioTrackIndex) {
+                            buildPlaybackInfoBadge(
+                                video = uiState.activePlaybackInfo,
+                                selectedAudio = uiState.audioTracks.getOrNull(uiState.selectedAudioTrackIndex)
+                            )
+                        }
+                    } else {
+                        null
+                    }
+                    val badgeBesideTitle = uiState.playbackInfoBadgePosition ==
+                        PlaybackInfoBadgePosition.BESIDE_TITLE
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = displayName,
@@ -2482,18 +2497,22 @@ private fun PlayerControlsOverlay(
                             modifier = Modifier.weight(1f, fill = false)
                         )
 
-                        if (uiState.showPlaybackInfoBadge) {
-                            val badgeSegments = remember(uiState.activePlaybackInfo, uiState.audioTracks, uiState.selectedAudioTrackIndex) {
-                                buildPlaybackInfoBadgeSegments(
-                                    video = uiState.activePlaybackInfo,
-                                    selectedAudio = uiState.audioTracks.getOrNull(uiState.selectedAudioTrackIndex)
-                                )
-                            }
-                            if (badgeSegments.isNotEmpty()) {
-                                Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
-                                PlaybackInfoBadgeChips(segments = badgeSegments)
-                            }
+                        if (infoBadge != null && !infoBadge.isEmpty && badgeBesideTitle) {
+                            Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
+                            PlaybackInfoBadgeChips(
+                                badge = infoBadge,
+                                style = uiState.playbackInfoBadgeStyle
+                            )
                         }
+                    }
+
+                    if (infoBadge != null && !infoBadge.isEmpty && !badgeBesideTitle) {
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
+                        PlaybackInfoBadgeChips(
+                            badge = infoBadge,
+                            style = uiState.playbackInfoBadgeStyle
+                        )
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                     }
 
                     if (uiState.currentSeason != null && uiState.currentEpisode != null) {
