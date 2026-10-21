@@ -194,6 +194,15 @@ class StreamScreenViewModel @Inject constructor(
         )
     )
     val uiState: StateFlow<StreamScreenUiState> = _uiState.asStateFlow()
+    val watchProgress = run {
+        val id = contentId ?: videoId.substringBefore(":")
+        if (season != null && episode != null) {
+            watchProgressRepository.getEpisodeProgress(id, season, episode, playbackProfileId)
+        } else {
+            watchProgressRepository.getProgress(id, playbackProfileId)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     val streamBadgeSettings = streamBadgeSettingsDataStore.settings
 
     val playerPreference = playerSettingsDataStore.playerSettings

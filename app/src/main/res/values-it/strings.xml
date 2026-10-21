@@ -3374,4 +3374,6 @@
     <string name="autosync_toast_failed_no_reference">Sincronizzazione non riuscita: questo video non contiene sottotitoli incorporati da confrontare.</string>
     <string name="autosync_toast_failed_unsupported">Sincronizzazione non riuscita: Auto Sync non supporta questo formato di sottotitoli.</string>
     <string name="autosync_label_synced">Sincronizzato automaticamente</string>
+    <string name="stream_resume_from_time">Riprendi da %1$s</string>
+    <string name="stream_resume_from_percent">Riprendi dal %1$d%%</string>
 </resources>

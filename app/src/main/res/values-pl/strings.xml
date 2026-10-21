@@ -3458,4 +3458,37 @@
     <string name="mdblist_library_lists_summary">%1$d z %2$d widocznych</string>
     <string name="tracking_mdblist_features_subtitle">Ustawienia specyficzne dla MDBList</string>
     <string name="tracking_mdblist_features_title">Funkcje MDBList</string>
+
+    <string name="about_update_auto_install_title">Instaluj aktualizacje automatycznie</string>
+    <string name="about_update_auto_install_subtitle">Pobieraj nowe wersje w tle i instaluj je, gdy urządzenie jest bezczynne</string>
+    <string name="about_update_auto_install_notice_title">Powiadom po automatycznej aktualizacji</string>
+    <string name="about_update_auto_install_notice_subtitle">Pokaż baner przy następnym uruchomieniu po automatycznej aktualizacji</string>
+    <string name="update_installed_automatically">Zaktualizowano automatycznie, gdy urządzenie było bezczynne</string>
+
+    <string name="layout_custom_poster_screen_tv_recommendations">Rekomendacje TV</string>
+
+    <string name="playback_chapters_label">Rozdziały</string>
+    <string name="playback_exo_chapters_title">Pokaż rozdziały (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Odczytuj rozdziały z plików MKV, aby oznaczać je na pasku postępu i przeskakiwać między nimi. Wymaga kilku dodatkowych zapytań po rozpoczęciu odtwarzania. mpv zawsze pokazuje rozdziały.</string>
+    <string name="player_chapters">Rozdziały</string>
+    <string name="player_chapters_title">Rozdziały (%1$d)</string>
+    <string name="player_chapter_number">Rozdział %1$d</string>
+    <string name="player_chapter_remaining">Pozostało %1$s</string>
+
+    <string name="player_engine_switch_title">Przełączyć na %1$s?</string>
+    <string name="player_engine_switch_message">Film zostanie wznowiony od obecnego miejsca.</string>
+
+    <string name="settings_stream_badges_in_player_title">Pokaż w odtwarzaczu</string>
+    <string name="settings_stream_badges_in_player_description">Wyświetlaj znaczniki wideo i audio pod tytułem w odtwarzaczu.</string>
+
+    <string name="stream_resume_from_percent">Wznów od %1$d%%</string>
+    <string name="stream_resume_from_time">Wznów od %1$s</string>
+
+    <string name="sub_hdr_style">Osobny styl HDR / Dolby Vision</string>
+    <string name="sub_hdr_style_sub">Użyj innego koloru tekstu i niższej jasności napisów dla wideo HDR i Dolby Vision</string>
+    <string name="sub_hdr_brightness">Jasność napisów HDR</string>
+    <string name="sub_hdr_text_color">Kolor tekstu HDR</string>
+    <string name="subtitle_style_brightness_hdr">Jasność (HDR)</string>
+    <string name="subtitle_style_text_color_hdr">Kolor tekstu (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">Przezroczystość tekstu (HDR)</string>
 </resources>

@@ -550,6 +550,10 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch { streamBadgeSettingsDataStore.setShowAddonLogo(enabled) }
     }
 
+    fun setShowBadgesInPlayer(enabled: Boolean) {
+        viewModelScope.launch { streamBadgeSettingsDataStore.setShowInPlayer(enabled) }
+    }
+
     fun setStreamBadgePlacement(placement: StreamBadgePlacement) {
         viewModelScope.launch { streamBadgeSettingsDataStore.setStreamBadgePlacement(placement) }
     }
@@ -1039,6 +1043,9 @@ data class StreamBadgeSettingsUiState(
 
     val showAddonLogo: Boolean
         get() = settings.showAddonLogo
+
+    val showInPlayer: Boolean
+        get() = settings.showInPlayer
 
     val badgePlacement: StreamBadgePlacement
         get() = settings.badgePlacement

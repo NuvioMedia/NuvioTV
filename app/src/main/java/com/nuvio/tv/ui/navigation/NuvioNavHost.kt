@@ -14,9 +14,11 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -67,7 +69,13 @@ fun NuvioNavHost(
     hideBuiltInHeaders: Boolean = false
 ) {
     PlaybackAvailabilityProvider {
-        PlaybackNavHost(navController, startDestination, hideBuiltInHeaders)
+        // The NavController keeps its back stack ViewModels in the store of the owner it is
+        // composed under, so use the session store when MainActivity provides one.
+        val navViewModelStoreOwner = LocalNavViewModelStoreOwner.current
+            ?: checkNotNull(LocalViewModelStoreOwner.current)
+        CompositionLocalProvider(LocalViewModelStoreOwner provides navViewModelStoreOwner) {
+            PlaybackNavHost(navController, startDestination, hideBuiltInHeaders)
+        }
     }
 }
 

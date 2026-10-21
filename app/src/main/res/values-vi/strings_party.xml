@@ -74,4 +74,5 @@
     <string name="party_invite_scan">Quét bằng điện thoại để tham gia</string>
     <string name="party_invite_share">Hoặc chia sẻ mã này. Bạn bè có thể nhập nó trong Phòng xem chung trên bất kỳ ứng dụng Nuvio nào.</string>
     <string name="party_invite_qr">Mã QR lời mời phòng xem chung</string>
+    <string name="party_phone_chat_note">Mở Xem chung trên điện thoại bằng hồ sơ này để trò chuyện</string>
 </resources>
