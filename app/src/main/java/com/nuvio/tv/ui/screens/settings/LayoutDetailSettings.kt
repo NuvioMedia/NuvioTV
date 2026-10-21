@@ -89,6 +89,12 @@ internal fun LayoutDetailPageSection(
                 }
             )
         }
+        SettingsToggleRow(
+            title = stringResource(R.string.layout_trailer_4k),
+            subtitle = stringResource(R.string.layout_trailer_4k_sub),
+            checked = uiState.trailer4kEnabled,
+            onToggle = { onEvent(LayoutSettingsEvent.SetTrailer4kEnabled(!uiState.trailer4kEnabled)) }
+        )
     }
     SettingsToggleRow(
         title = stringResource(R.string.layout_trailer_button),
@@ -143,7 +149,8 @@ internal fun LayoutStreamsSection(
     onShowFileSizeBadgesChange: (Boolean) -> Unit,
     onShowAddonLogoChange: (Boolean) -> Unit,
     onBadgePlacementSelected: (StreamBadgePlacement) -> Unit,
-    onConfigureBadges: () -> Unit
+    onConfigureBadges: () -> Unit,
+    onShowInPlayerChange: (Boolean) -> Unit
 ) {
     var showPositionDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -164,6 +171,13 @@ internal fun LayoutStreamsSection(
         title = stringResource(R.string.settings_stream_badge_urls_title),
         subtitle = streamBadgeRulesPreview(streamBadgeUiState),
         onClick = onConfigureBadges
+    )
+    SettingsToggleRow(
+        title = stringResource(R.string.settings_stream_badges_in_player_title),
+        subtitle = stringResource(R.string.settings_stream_badges_in_player_description),
+        checked = streamBadgeUiState.showInPlayer,
+        enabled = streamBadgeUiState.rules.hasImport,
+        onToggle = { onShowInPlayerChange(!streamBadgeUiState.showInPlayer) }
     )
 
     SettingsSectionLabel(text = stringResource(R.string.settings_stream_display_section))

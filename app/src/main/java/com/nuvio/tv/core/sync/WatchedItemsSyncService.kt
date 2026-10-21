@@ -7,6 +7,7 @@ import com.nuvio.tv.core.tracking.TrackingProgressProviderRegistry
 import com.nuvio.tv.core.tracking.providerId
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchedItemsPreferences
+import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.remote.supabase.SupabaseWatchedItem
 import com.nuvio.tv.data.remote.supabase.SupabaseWatchedItemEvent
 import com.nuvio.tv.domain.model.WatchedItem
@@ -144,6 +145,7 @@ class WatchedItemsSyncService @Inject constructor(
         profileId: Int
     ): Result<Unit> {
         return try {
+            val items = items.filterNot { ServerItemRef.isServerId(it.contentId) }
             if (items.isEmpty()) return Result.success(Unit)
             Log.d(TAG, "pushItemsToRemote: ${items.size} watched items to push")
             val params = buildJsonObject {
@@ -433,7 +435,7 @@ class WatchedItemsSyncService @Inject constructor(
         profileId: Int
     ): Result<Unit> {
         return try {
-            val distinctKeys = keys.toSet()
+            val distinctKeys = keys.filterNot { ServerItemRef.isServerId(it.contentId) }.toSet()
             if (distinctKeys.isEmpty()) return Result.success(Unit)
 
             val params = buildJsonObject {

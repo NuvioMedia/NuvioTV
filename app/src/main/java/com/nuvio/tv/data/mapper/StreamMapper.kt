@@ -15,6 +15,7 @@ import com.nuvio.tv.domain.model.StreamClientResolve
 import com.nuvio.tv.domain.model.StreamClientResolveParsed
 import com.nuvio.tv.domain.model.StreamClientResolveRaw
 import com.nuvio.tv.domain.model.StreamClientResolveStream
+import com.nuvio.tv.domain.model.toStreamAudioDelayMs
 
 fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream = Stream(
     name = name,
@@ -111,7 +112,8 @@ fun BehaviorHintsDto.toDomain(): StreamBehaviorHints = StreamBehaviorHints(
     proxyHeaders = proxyHeaders?.toDomain(),
     videoHash = videoHash,
     videoSize = videoSize,
-    filename = filename
+    filename = filename,
+    audioDelayMs = audioDelayMs.toStreamAudioDelayMs()
 )
 
 fun ProxyHeadersDto.toDomain(): ProxyHeaders = ProxyHeaders(

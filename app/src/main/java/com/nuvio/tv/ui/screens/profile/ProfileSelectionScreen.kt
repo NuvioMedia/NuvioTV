@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.profile
 
 import androidx.tv.material3.MaterialTheme
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.theme.NuvioMotion
 
@@ -229,7 +230,7 @@ fun ProfileSelectionScreen(
         profileBackgroundCatalog.associateBy { it.id }
     }
     val memberAccess = Membership.access
-    var focusedAvatarColor by remember { mutableStateOf(Color(0xFF1E88E5)) }
+    var focusedAvatarColor by remember { mutableStateOf(NuvioPrimitives.blue500) }
     var focusedProfileId by remember { mutableStateOf<Int?>(null) }
     var showCreateProfile by remember { mutableStateOf(false) }
     var longPressedProfile by remember { mutableStateOf<UserProfile?>(null) }
@@ -822,7 +823,7 @@ private fun ProfileSelectionBackground(
     // Use fixed dark colors so the gradient is consistent.
     // Otherwise, profile selector and splash screen needs to know about user template
     val baseBg = Color(0xFF121212)
-    val baseBgElevated = Color(0xFF1E1E1E)
+    val baseBgElevated = NuvioPrimitives.neutral875
     val gradientTop = lerp(baseBgElevated, animatedAvatarColor, 0.3f)
     val gradientMid = lerp(baseBg, animatedAvatarColor, 0.14f)
     val halfFadeStrong = animatedAvatarColor.copy(alpha = 0.26f)
@@ -1259,7 +1260,7 @@ private fun ProfileCard(
 
 private fun parseProfileColor(colorHex: String): Color {
     return runCatching { Color(android.graphics.Color.parseColor(colorHex)) }
-        .getOrDefault(Color(0xFF1E88E5))
+        .getOrDefault(NuvioPrimitives.blue500)
 }
 
 @Composable

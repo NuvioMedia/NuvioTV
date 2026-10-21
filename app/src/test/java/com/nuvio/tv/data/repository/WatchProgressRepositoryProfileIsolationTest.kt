@@ -126,7 +126,8 @@ class WatchProgressRepositoryProfileIsolationTest {
             profileManager = profileManager,
             trackingProgressProviders = TrackingProgressProviderRegistry(emptySet()),
             trackingHistoryWriters = TrackingHistoryWriterRegistry(emptySet()),
-            mutationStore = mutationStore
+            mutationStore = mutationStore,
+            serverWatched = mockk(relaxed = true)
         )
         return Harness(
             repository = repository,

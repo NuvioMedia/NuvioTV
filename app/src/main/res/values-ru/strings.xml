@@ -3048,8 +3048,6 @@
     <string name="playback_reset_to_default">Сбросить к значениям по умолчанию</string>
     <string name="playback_net_custom">Пользовательская сеть</string>
     <string name="playback_net_custom_sub">Использовать несколько параллельных соединений для загрузки прогрессивных потоков. При отключении используется одно соединение.</string>
-    <string name="playback_net_http2">Включить HTTP/2</string>
-    <string name="playback_net_http2_sub">Включить протокол HTTP/2 для сетевых соединений, что позволяет мультиплексировать запросы и ускоряет установку соединения.</string>
     <string name="playback_net_parallel">Параллельные соединения</string>
     <string name="playback_net_parallel_sub">Использовать несколько параллельных соединений для загрузки потоков. Включайте, если возникает буферизация, хотя скорости загрузки точно достаточно.</string>
     <string name="playback_net_connection_count">Количество соединений</string>

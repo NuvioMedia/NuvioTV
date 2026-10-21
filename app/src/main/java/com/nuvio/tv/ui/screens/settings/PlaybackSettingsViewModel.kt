@@ -238,6 +238,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setStripHdr10PlusSei(enabled)
     }
 
+    suspend fun setExoChaptersEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setExoChaptersEnabled(enabled)
+    }
+
     suspend fun setUseLibass(enabled: Boolean) {
         playerSettingsDataStore.setUseLibass(enabled)
     }
@@ -296,6 +300,18 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSubtitleOutlineWidth(width: Int) {
         playerSettingsDataStore.setSubtitleOutlineWidth(width)
+    }
+
+    suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleHdrStyleEnabled(enabled)
+    }
+
+    suspend fun setSubtitleHdrTextColor(color: Int) {
+        playerSettingsDataStore.setSubtitleHdrTextColor(color)
+    }
+
+    suspend fun setSubtitleHdrBrightness(brightness: Int) {
+        playerSettingsDataStore.setSubtitleHdrBrightness(brightness)
     }
 
     suspend fun setSubtitleOrganizationMode(mode: SubtitleOrganizationMode) {
@@ -386,10 +402,6 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setParallelNetworkEnabled(enabled: Boolean) {
         playerSettingsDataStore.setParallelNetworkEnabled(enabled)
-    }
-
-    suspend fun setEnableHttp2(enabled: Boolean) {
-        playerSettingsDataStore.setEnableHttp2(enabled)
     }
 
     suspend fun setAllowLargeTargetBuffer(enabled: Boolean) {

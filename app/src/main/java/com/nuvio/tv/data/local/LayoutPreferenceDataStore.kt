@@ -15,6 +15,8 @@ import com.nuvio.tv.core.sync.SyncHomeCatalogPayload
 import com.nuvio.tv.core.sync.buildHomeCatalogSyncPayload
 import com.nuvio.tv.core.sync.homeCatalogKey
 import com.nuvio.tv.core.sync.homeCollectionKey
+import com.nuvio.tv.core.sync.withLocalServerKeys
+import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CardDepthStyle
 import com.nuvio.tv.domain.model.CardDepthSurface
@@ -436,12 +438,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val customPosterEnabledScreens: Flow<Set<com.nuvio.tv.core.poster.CustomPosterScreen>> = profileFlow { prefs ->
-        val raw = prefs[customPosterEnabledScreensKey]
-        if (raw.isNullOrBlank()) {
-            com.nuvio.tv.core.poster.CustomPosterScreen.ALL
-        } else {
-            com.nuvio.tv.core.poster.CustomPosterScreen.fromKeys(raw.split(",").toSet())
-        }
+        com.nuvio.tv.core.poster.CustomPosterScreen.fromStorageValue(prefs[customPosterEnabledScreensKey])
     }
 
     suspend fun setMemoryOnlyVerticalScroll(enabled: Boolean) {
@@ -493,11 +490,11 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     suspend fun setCustomPosterEnabledScreens(screens: Set<com.nuvio.tv.core.poster.CustomPosterScreen>) {
         store().edit { prefs ->
-            if (screens == com.nuvio.tv.core.poster.CustomPosterScreen.ALL) {
+            val stored = com.nuvio.tv.core.poster.CustomPosterScreen.toStorageValue(screens)
+            if (stored == null) {
                 prefs.remove(customPosterEnabledScreensKey)
             } else {
-                prefs[customPosterEnabledScreensKey] =
-                    com.nuvio.tv.core.poster.CustomPosterScreen.toKeys(screens).joinToString(",")
+                prefs[customPosterEnabledScreensKey] = stored
             }
         }
     }
@@ -902,21 +899,25 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     suspend fun applyCatalogSettingsFromRemote(payload: SyncHomeCatalogPayload) {
         val sortedItems = payload.items.sortedBy { it.order }
-        val orderKeys = sortedItems.map { item ->
+        val remoteOrderKeys = sortedItems.map { item ->
             if (item.isCollection) homeCollectionKey(item.collectionId)
             else homeCatalogKey(item.addonId, item.type, item.catalogId)
         }
-        val disabledKeys = sortedItems.filter { !it.enabled }.map { item ->
+        val remoteDisabledKeys = sortedItems.filter { !it.enabled }.map { item ->
             if (item.isCollection) homeCollectionKey(item.collectionId)
             else homeCatalogKey(item.addonId, item.type, item.catalogId)
         }
-        val titles = sortedItems.associate { item ->
+        val remoteTitles = sortedItems.associate { item ->
             val key = if (item.isCollection) homeCollectionKey(item.collectionId)
             else homeCatalogKey(item.addonId, item.type, item.catalogId)
             key to item.customTitle
         }.filterValues { it.isNotBlank() }
 
         store().edit { prefs ->
+            val local = readHomeCatalogSettingsState(prefs)
+            val orderKeys = remoteOrderKeys.withLocalServerKeys(local.orderKeys)
+            val disabledKeys = remoteDisabledKeys + local.disabledKeys.filter(ServerCatalog::isServerKey)
+            val titles = remoteTitles + local.customTitles.filterKeys(ServerCatalog::isServerKey)
             prefs[hideUnreleasedContentKey] = payload.hideUnreleasedContent
             if (orderKeys.isNotEmpty()) {
                 prefs[homeCatalogOrderKeysKey] = gson.toJson(orderKeys)

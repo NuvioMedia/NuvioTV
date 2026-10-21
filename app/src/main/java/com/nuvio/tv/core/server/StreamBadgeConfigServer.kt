@@ -84,7 +84,7 @@ class StreamBadgeConfigServer(
             .toStreamBadgePlacement()
             ?: currentSettings.badgePlacement
         onSettingsChanged(
-            StreamBadgeSettings(
+            currentSettings.copy(
                 rules = streamBadgeRules,
                 showFileSizeBadges = showFileSizeBadges,
                 badgePlacement = badgePlacement

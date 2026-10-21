@@ -3007,8 +3007,6 @@
     <string name="playback_reset_to_default">ডিফল্টে রিসেট করুন</string>
     <string name="playback_net_custom">কাস্টম নেটওয়ার্ক</string>
     <string name="playback_net_custom_sub">প্রোগ্রেসিভ স্ট্রীম ফেচ করতে একাধিক প্যারালাল কানেকশন ব্যবহার করুন। অফ থাকলে, একটি সিঙ্গেল কানেকশন ব্যবহৃত হয়।</string>
-    <string name="playback_net_http2">HTTP/2 এনাবল করুন</string>
-    <string name="playback_net_http2_sub">নেটওয়ার্ক কানেকশনের জন্য HTTP/2 প্রোটোকল এনাবল করুন, যা রিকোয়েস্ট মাল্টিপ্লেক্সিং এবং দ্রুত হ্যান্ডশেক টাইম অ্যালাও করে।</string>
     <string name="playback_net_parallel">প্যারালাল কানেকশন</string>
     <string name="playback_net_parallel_sub">স্ট্রীম ফেচ করার জন্য প্যারালালি একাধিক কানেকশন ব্যবহার করুন। আপনার ডাউনলোড স্পিড যথেষ্ট থাকার পরও বাফারিং হলে এটি অ্যাক্টিভেট করুন।</string>
     <string name="playback_net_connection_count">কানেকশন কাউন্ট</string>

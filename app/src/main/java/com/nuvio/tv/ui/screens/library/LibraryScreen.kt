@@ -114,7 +114,8 @@ private const val KEY_REPEAT_THROTTLE_MS = 80L
 
 private enum class LibraryViewMode {
     Saved,
-    Cloud
+    Cloud,
+    Servers
 }
 
 @Composable
@@ -127,8 +128,10 @@ private fun localizedTypeLabel(key: String): String = when (key.lowercase()) {
 @Composable
 fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel(),
+    serversViewModel: LibraryServersViewModel = hiltViewModel(),
     showBuiltInHeader: Boolean = true,
     onNavigateToDetail: (String, String, String?) -> Unit,
+    onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> },
     onCloudPlaybackResolved: (CloudLibraryPlaybackInfo) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -138,7 +141,12 @@ fun LibraryScreen(
     val scope = rememberCoroutineScope()
     var showDeleteConfirm by remember(uiState.showManageDialog) { mutableStateOf(false) }
     var expandedPicker by remember { mutableStateOf<String?>(null) }
-    var viewMode by rememberSaveable { mutableStateOf(LibraryViewMode.Saved) }
+    var selectedViewMode by rememberSaveable { mutableStateOf(LibraryViewMode.Saved) }
+    val servers by serversViewModel.servers.collectAsState()
+    val serverShelves by serversViewModel.shelves.collectAsState()
+    val hasServers = servers.enabledConnections.isNotEmpty()
+    val viewModes = LibraryViewMode.entries.filter { it != LibraryViewMode.Servers || hasServers }
+    val viewMode = selectedViewMode.takeIf { it in viewModes } ?: LibraryViewMode.Saved
     var activeCloudItem by remember { mutableStateOf<CloudLibraryItem?>(null) }
     var pendingCloudPlayback by remember { mutableStateOf<CloudLibraryPlaybackInfo?>(null) }
     var showCloudPlayerChoice by remember { mutableStateOf(false) }
@@ -146,6 +154,9 @@ fun LibraryScreen(
     val selectorFocusRequester = remember { FocusRequester() }
     val gridState = rememberLazyGridState()
     var pendingPrimaryFocus by remember { mutableStateOf(true) }
+    var serverFocusTarget by remember {
+        mutableStateOf(serversViewModel.focusedShelfKey?.let { key -> serversViewModel.focusedIndexes[key]?.let { key to it } })
+    }
     var lastFocusedPosterKey by rememberSaveable { mutableStateOf<String?>(null) }
     val visibleItemKeys = remember(uiState.visibleItems) {
         uiState.visibleItems.map { "${it.type}:${it.id}" }
@@ -192,6 +203,10 @@ fun LibraryScreen(
         }
     }
 
+    LaunchedEffect(viewMode, servers.revision) {
+        if (viewMode == LibraryViewMode.Servers) serversViewModel.load()
+    }
+
     LaunchedEffect(uiState.isLoading) {
         if (uiState.isLoading) {
             pendingPrimaryFocus = true
@@ -199,6 +214,9 @@ fun LibraryScreen(
     }
 
     LaunchedEffect(uiState.isLoading, uiState.sourceMode, uiState.listTabs.size) {
+        if (!uiState.isLoading && pendingPrimaryFocus && viewMode == LibraryViewMode.Servers && serverFocusTarget != null) {
+            pendingPrimaryFocus = false
+        }
         if (!uiState.isLoading && pendingPrimaryFocus) {
             val restoreKey = lastFocusedPosterKey
             val restoreIndex = restoreKey?.let { visibleItemIndexByKey[it] }
@@ -324,6 +342,7 @@ fun LibraryScreen(
                 Text(
                     text = when {
                         viewMode == LibraryViewMode.Cloud -> stringResource(R.string.library_source_cloud).uppercase()
+                        viewMode == LibraryViewMode.Servers -> stringResource(R.string.library_source_servers).uppercase()
                         uiState.sourceMode == LibrarySourceMode.TRAKT -> "TRAKT"
                         uiState.sourceMode == LibrarySourceMode.SIMKL -> "SIMKL"
                         uiState.sourceMode == LibrarySourceMode.MDBLIST -> "MDBLIST"
@@ -340,10 +359,11 @@ fun LibraryScreen(
 
         item(span = { GridItemSpan(maxLineSpan) }) {
             LibraryViewModeRow(
+                modes = viewModes,
                 selectedMode = viewMode,
                 primaryFocusRequester = primaryFocusRequester,
                 onSelected = { mode ->
-                    viewMode = mode
+                    selectedViewMode = mode
                     expandedPicker = null
                 },
                 // Refresh belongs to the cloud view only, pinned right in line with the tabs.
@@ -485,6 +505,28 @@ fun LibraryScreen(
                     }
                 )
             }
+        } else if (viewMode == LibraryViewMode.Servers) {
+            libraryServerContent(
+                shelves = serverShelves,
+                posterCardStyle = posterCardStyle,
+                rowInset = NuvioTheme.spacing.xxxl,
+                focusTarget = serverFocusTarget,
+                focusedIndexes = serversViewModel.focusedIndexes,
+                onItemFocused = { shelfKey, index ->
+                    val target = serverFocusTarget
+                    if (target == null || target == shelfKey to index) {
+                        serverFocusTarget = null
+                        serversViewModel.onItemFocused(shelfKey, index)
+                    }
+                },
+                isWatched = { item ->
+                    val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
+                    if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds
+                },
+                onItemClick = { itemId, itemType, addonBaseUrl -> onNavigateToDetail(itemId, itemType, addonBaseUrl) },
+                onSeeAll = { row -> onNavigateToCatalogSeeAll(row.catalogId, row.addonId, row.apiType) },
+                onItemLongPress = { item, addonBaseUrl -> viewModel.posterOptions.show(item, addonBaseUrl) }
+            )
         } else {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 CloudLibrarySelectorsRow(
@@ -681,6 +723,7 @@ fun LibraryScreen(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun LibraryViewModeRow(
+    modes: List<LibraryViewMode>,
     selectedMode: LibraryViewMode,
     primaryFocusRequester: FocusRequester,
     onSelected: (LibraryViewMode) -> Unit,
@@ -693,7 +736,7 @@ private fun LibraryViewModeRow(
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
-            LibraryViewMode.entries.forEach { mode ->
+            modes.forEach { mode ->
                 val selected = mode == selectedMode
                 Button(
                     onClick = { onSelected(mode) },
@@ -708,6 +751,7 @@ private fun LibraryViewModeRow(
                         text = when (mode) {
                             LibraryViewMode.Saved -> stringResource(R.string.library_source_saved)
                             LibraryViewMode.Cloud -> stringResource(R.string.library_source_cloud)
+                            LibraryViewMode.Servers -> stringResource(R.string.library_source_servers)
                         }
                     )
                 }

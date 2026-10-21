@@ -151,8 +151,49 @@ data class SubtitleStyleSettings(
     val backgroundColor: Int = Color.Transparent.toArgb(),
     val outlineEnabled: Boolean = true,
     val outlineColor: Int = Color.Black.toArgb(),
-    val outlineWidth: Int = 2 // 1-5
-)
+    val outlineWidth: Int = 2, // 1-5
+    val hdrStyleEnabled: Boolean = false,
+    val hdrTextColor: Int = Color.White.toArgb(),
+    val hdrBrightness: Int = HDR_BRIGHTNESS_DEFAULT // 0-100, see hdrBrightnessFactor
+) {
+    /**
+     * The style to render with: on HDR/Dolby Vision video with the override enabled, the HDR text
+     * color replaces the text color and every subtitle color is dimmed by the HDR brightness.
+     */
+    fun forVideo(isHdrVideo: Boolean): SubtitleStyleSettings {
+        if (!isHdrVideo || !hdrStyleEnabled) return this
+        val factor = hdrBrightnessFactor(hdrBrightness)
+        return copy(
+            textColor = scaleColorBrightness(hdrTextColor, factor),
+            backgroundColor = scaleColorBrightness(backgroundColor, factor),
+            outlineColor = scaleColorBrightness(outlineColor, factor)
+        )
+    }
+
+    /** The style the in-player editors show: on HDR video with the override enabled, its text color is the HDR one. */
+    fun editableForVideo(isHdrVideo: Boolean): SubtitleStyleSettings {
+        if (!isHdrVideo || !hdrStyleEnabled) return this
+        return copy(textColor = hdrTextColor)
+    }
+
+    companion object {
+        const val HDR_BRIGHTNESS_MIN = 0
+        const val HDR_BRIGHTNESS_MAX = 100
+        const val HDR_BRIGHTNESS_DEFAULT = 40
+
+        /** Maps the 0-100 setting onto 30%-100% of full brightness, so 0 still leaves readable text. */
+        private fun hdrBrightnessFactor(brightness: Int): Float =
+            (0.7f * brightness.coerceIn(HDR_BRIGHTNESS_MIN, HDR_BRIGHTNESS_MAX) + 30f) / 100f
+
+        private fun scaleColorBrightness(color: Int, factor: Float): Int {
+            val alpha = (color ushr 24) and 0xFF
+            val red = (((color shr 16) and 0xFF) * factor).toInt()
+            val green = (((color shr 8) and 0xFF) * factor).toInt()
+            val blue = ((color and 0xFF) * factor).toInt()
+            return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
+        }
+    }
+}
 
 /**
  * Data class representing buffer settings
@@ -255,6 +296,8 @@ data class PlayerSettings(
     // Only honored when dv7HandlingMode is OFF or DV81_LIBDOVI.
     val dv7LibdoviModeOverride: Int = -1,
     val stripHdr10PlusSei: Boolean = false,
+    /** ExoPlayer reads Matroska chapters itself over HTTP; mpv always lists them. */
+    val exoChaptersEnabled: Boolean = false,
     val mpvHi10pGnextSoftwareFallbackEnabled: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
     // Display settings
@@ -522,6 +565,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val legacyMapDv7ToHevcKey = booleanPreferencesKey("map_dv7_to_hevc")
     private val dv7LibdoviModeOverrideKey = intPreferencesKey("dv7_libdovi_mode_override")
     private val stripHdr10PlusSeiKey = booleanPreferencesKey("strip_hdr10plus_sei")
+    private val exoChaptersEnabledKey = booleanPreferencesKey("exo_chapters_enabled")
     private val mpvHi10pGnextSoftwareFallbackEnabledKey =
         booleanPreferencesKey("mpv_hi10p_gnext_software_fallback_enabled")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
@@ -586,6 +630,9 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleOutlineEnabledKey = booleanPreferencesKey("subtitle_outline_enabled")
     private val subtitleOutlineColorKey = intPreferencesKey("subtitle_outline_color")
     private val subtitleOutlineWidthKey = intPreferencesKey("subtitle_outline_width")
+    private val subtitleHdrStyleEnabledKey = booleanPreferencesKey("subtitle_hdr_style_enabled")
+    private val subtitleHdrTextColorKey = intPreferencesKey("subtitle_hdr_text_color")
+    private val subtitleHdrBrightnessKey = intPreferencesKey("subtitle_hdr_brightness")
 
     // Buffer settings keys
     private val minBufferMsKey = intPreferencesKey("min_buffer_ms")
@@ -907,6 +954,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 },
                 dv7LibdoviModeOverride = (prefs[dv7LibdoviModeOverrideKey] ?: -1).coerceIn(-1, 4),
                 stripHdr10PlusSei = prefs[stripHdr10PlusSeiKey] ?: false,
+                exoChaptersEnabled = prefs[exoChaptersEnabledKey] ?: false,
                 mpvHi10pGnextSoftwareFallbackEnabled =
                     prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
@@ -1021,7 +1069,10 @@ class PlayerSettingsDataStore @Inject constructor(
                         backgroundColor = prefs[subtitleBackgroundColorKey] ?: Color.Transparent.toArgb(),
                         outlineEnabled = prefs[subtitleOutlineEnabledKey] ?: true,
                         outlineColor = prefs[subtitleOutlineColorKey] ?: Color.Black.toArgb(),
-                        outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2
+                        outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2,
+                        hdrStyleEnabled = prefs[subtitleHdrStyleEnabledKey] ?: false,
+                        hdrTextColor = prefs[subtitleHdrTextColorKey] ?: Color.White.toArgb(),
+                        hdrBrightness = prefs[subtitleHdrBrightnessKey] ?: SubtitleStyleSettings.HDR_BRIGHTNESS_DEFAULT
                     )
                 },
                 bufferSettings = BufferSettings(
@@ -1437,6 +1488,7 @@ class PlayerSettingsDataStore @Inject constructor(
             "pt-br", "pt_br", "br", "pob" -> "pt-br"
             "pt-pt", "pt_pt", "por" -> "pt"
             "forced", "force", "forc" -> SUBTITLE_LANGUAGE_FORCED
+            "iw", "heb", "hbo" -> "he"
             "zh-cn", "zh_cn" -> "zh-CN"
             "zh-tw", "zh_tw" -> "zh-TW"
             "en-au", "en_au" -> "en-AU"
@@ -1548,6 +1600,7 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setDv7HandlingMode(mode: Dv7HandlingMode) { store().edit { it[dv7HandlingModeKey] = mode.name } }
     suspend fun setDv7LibdoviModeOverride(mode: Int) { store().edit { it[dv7LibdoviModeOverrideKey] = mode.coerceIn(-1, 4) } }
     suspend fun setStripHdr10PlusSei(enabled: Boolean) { store().edit { it[stripHdr10PlusSeiKey] = enabled } }
+    suspend fun setExoChaptersEnabled(enabled: Boolean) { store().edit { it[exoChaptersEnabledKey] = enabled } }
 
     // Subtitle styles
     suspend fun setSubtitlePreferredLanguage(language: String) { store().edit { it[subtitlePreferredLanguageKey] = normalizeSelectableLanguageCode(language.ifBlank { SubtitleLanguageOption.DEVICE }) } }
@@ -1566,6 +1619,16 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSubtitleOutlineEnabled(enabled: Boolean) { store().edit { it[subtitleOutlineEnabledKey] = enabled } }
     suspend fun setSubtitleOutlineColor(color: Int) { store().edit { it[subtitleOutlineColorKey] = color } }
     suspend fun setSubtitleOutlineWidth(width: Int) { store().edit { it[subtitleOutlineWidthKey] = width.coerceIn(1, 5) } }
+    suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) { store().edit { it[subtitleHdrStyleEnabledKey] = enabled } }
+    suspend fun setSubtitleHdrTextColor(color: Int) { store().edit { it[subtitleHdrTextColorKey] = color } }
+    suspend fun setSubtitleHdrBrightness(brightness: Int) {
+        store().edit {
+            it[subtitleHdrBrightnessKey] = brightness.coerceIn(
+                SubtitleStyleSettings.HDR_BRIGHTNESS_MIN,
+                SubtitleStyleSettings.HDR_BRIGHTNESS_MAX
+            )
+        }
+    }
 
     suspend fun setUseForcedSubtitles(enabled: Boolean) {
         store().edit { prefs ->
@@ -1658,10 +1721,6 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs.remove(parallelChunkSizeMbKey)
             prefs[enableHttp2Key] = PlayerSettings.DEFAULT_ENABLE_HTTP2
         }
-    }
-
-    suspend fun setEnableHttp2(enabled: Boolean) {
-        store().edit { it[enableHttp2Key] = enabled }
     }
 
     suspend fun setVodCacheEnabled(enabled: Boolean) {

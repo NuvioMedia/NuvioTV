@@ -104,7 +104,7 @@ internal fun PlayerRuntimeController.stopSidecarAddonSubtitle(clearView: Boolean
     if (clearView) {
         postToSubtitleView { view ->
             view.setTag(R.id.player_view_sidecar_generation_tag, null)
-            view.setCues(emptyList())
+            showSidecarCues(view, emptyList())
         }
     }
 }
@@ -131,7 +131,7 @@ internal fun PlayerRuntimeController.startSidecarAddonSubtitle(
     sidecarTimedCues = emptyList()
     postToSubtitleView { view ->
         view.setTag(R.id.player_view_sidecar_generation_tag, subtitleKey)
-        view.setCues(emptyList())
+        showSidecarCues(view, emptyList())
     }
     fun isCurrent() =
         activeSidecarSubtitleKey == subtitleKey && activeSidecarGeneration == generation
@@ -161,7 +161,7 @@ internal fun PlayerRuntimeController.startSidecarAddonSubtitle(
                 sidecarTimedCues = emptyList()
                 postToSubtitleView { view ->
                     view.setTag(R.id.player_view_sidecar_generation_tag, null)
-                    view.setCues(emptyList())
+                    showSidecarCues(view, emptyList())
                 }
                 return@launch
             }
@@ -192,7 +192,7 @@ internal fun PlayerRuntimeController.startSidecarAddonSubtitle(
             sidecarTimedCues = emptyList()
             postToSubtitleView { view ->
                 view.setTag(R.id.player_view_sidecar_generation_tag, null)
-                view.setCues(emptyList())
+                showSidecarCues(view, emptyList())
             }
             // Intentionally no attachAddonSubtitleViaMediaReload — keeps A/V buffer intact.
         }
@@ -275,9 +275,14 @@ internal fun PlayerRuntimeController.renderSidecarCuesAtCurrentPosition() {
             activeSidecarGeneration == currentGeneration &&
             view.getTag(R.id.player_view_sidecar_generation_tag) == currentKey
         ) {
-            view.setCues(merged)
+            showSidecarCues(view, merged)
         }
     }
+}
+
+private fun PlayerRuntimeController.showSidecarCues(view: SubtitleView, cues: List<Cue>) {
+    view.setCues(cues)
+    subtitleCueTracker.update(cues)
 }
 
 private fun PlayerRuntimeController.postToSubtitleView(block: (SubtitleView) -> Unit) {
@@ -337,7 +342,7 @@ internal fun parseSidecarTimedCuesRobust(rawText: String, sourceUrl: String): Si
 
 private fun normalizeTimedCuePositions(cues: List<CuesWithTiming>): List<CuesWithTiming> {
     return cues.map { entry ->
-        val normalized = entry.cues.map { normalizeSidecarCuePosition(it) }
+        val normalized = entry.cues.map { PlayerSubtitleUtils.normalizeBottomCuePosition(it) }
         val durationUs = when {
             entry.durationUs != C.TIME_UNSET -> entry.durationUs
             entry.endTimeUs != C.TIME_UNSET && entry.startTimeUs != C.TIME_UNSET ->
@@ -432,16 +437,6 @@ internal fun activeCueSignature(cues: List<Cue>, stripSdh: Boolean): Long {
         hash = 31L * hash + cue.size.toBits().toLong()
     }
     return hash
-}
-
-private fun normalizeSidecarCuePosition(cue: Cue): Cue {
-    if (cue.bitmap != null || cue.verticalType != Cue.TYPE_UNSET || cue.line == Cue.DIMEN_UNSET) {
-        return cue
-    }
-    return cue.buildUpon()
-        .setLine(Cue.DIMEN_UNSET, Cue.TYPE_UNSET)
-        .setLineAnchor(Cue.TYPE_UNSET)
-        .build()
 }
 
 private const val SIDECAR_RENDER_INTERVAL_MS = 100L

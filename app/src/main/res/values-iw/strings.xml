@@ -7,6 +7,7 @@
     <string name="type_series_plural">סדרות</string>
     <string name="type_unknown">לא ידוע</string>
 
+    <!-- NOTE: web_* strings are shown on the web page, which does not support RTL UI yet, so their word order and punctuation (e.g. leading ".", leading "URL") are intentionally in visual order. Do not "fix" them until the web UI supports RTL. -->
     <string name="web_manage_addons_title">ניהול תוספים</string>
     <string name="web_manage_addons_subtitle">ניהול תוספים, קטלוגים ואוספים</string>
     <string name="web_manage_addons_only_subtitle">התקנת או הסרת תוספים</string>
@@ -372,6 +373,21 @@
     <string name="appearance_settings_style_subtitle">בחירת האופן שבו יוצגו מסכי ההגדרות</string>
     <string name="appearance_launcher_artwork">עיצוב מסך הבית</string>
     <string name="appearance_launcher_artwork_subtitle">בחירת האופן שבו Nuvio מופיע במסך הבית של הטלוויזיה</string>
+    <string name="ambient_mode_title">מצב אווירה</string>
+    <string name="ambient_mode_subtitle">הצגת תמונות מהקטלוגים שלך כשהטלוויזיה במצב סרק</string>
+    <string name="ambient_mode_enabled_subtitle">מילוי המסך בתמונות רקע לאחר פרק זמן שלא היה קלט מהשלט</string>
+    <string name="ambient_mode_timeout">התחלה לאחר</string>
+    <string name="ambient_mode_timeout_subtitle">כמה זמן להמתין לפני שמצב אווירה מתחיל</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">דקה אחת</item>
+        <item quantity="two">שתי דקות</item>
+        <item quantity="other">%1$d דקות</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">קטלוגים</string>
+    <string name="ambient_mode_catalogs_subtitle">ניתן לבחור עד 3 קטלוגים שמהם יילקחו התמונות</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">ניתן לבחור עד 3 קטלוגים</string>
+    <string name="ambient_mode_catalogs_default">כמו בתמונה הראשית</string>
+    <string name="ambient_mode_catalogs_count">%1$d מתוך %2$d</string>
     <string name="appearance_app_icon_and_banner">סמל אפליקציה ובאנר</string>
     <string name="appearance_app_icon_and_banner_subtitle">שינוי סמל האפליקציה והבאנר</string>
     <string name="appearance_app_icon_picker_title">בחירת סמל אפליקציה ובאנר</string>
@@ -1078,6 +1094,8 @@
     <string name="layout_trailer_play_in_background_sub">הפעלת הטריילר במקום תמונת הרקע בזמן שהעמוד נשאר גלוי.</string>
     <string name="layout_trailer_pause_on_scroll">השהיה בזמן גלילה</string>
     <string name="layout_trailer_pause_on_scroll_sub">השהיית הטריילר בגלילה למטה והמשכתו מאותה הנקודה בגלילה מעלה.</string>
+    <string name="layout_trailer_4k">טריילרים ב-4K</string>
+    <string name="layout_trailer_4k_sub">הפעלת טריילרים ברזולוציה מעל 1080p כשהם זמינים. צורך הרבה יותר זיכרון; כבוי כברירת מחדל במכשירים עם 2GB RAM או פחות.</string>
     <string name="layout_detail_group_episodes">פרקים</string>
     <string name="layout_detail_group_trailers">טריילרים</string>
     <string name="layout_detail_group_metadata">מטא-דאטה</string>
@@ -1166,6 +1184,7 @@
     <string name="layout_custom_poster_screen_library">ספרייה</string>
     <string name="layout_custom_poster_screen_search">חיפוש</string>
     <string name="layout_custom_poster_screen_details">מסך פרטי הכותרת</string>
+    <string name="layout_custom_poster_screen_tv_recommendations">המלצות הטלוויזיה</string>
 
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">תמיד רקע עם לוגו עבור פוסטרים לרוחב</string>
@@ -2307,7 +2326,7 @@
     <string name="plugin_updated_format">עודכן: %1$s</string>
     <string name="plugin_test_btn">בדיקה</string>
     <string name="plugin_test_results">תוצאות בדיקה (%1$d מקורות)</string>
-    <string name="plugin_and_more">… ועוד %1$d</string>
+    <string name="plugin_and_more">ועוד %1$d…</string>
     <string name="plugin_providers_count">%1$d ספקים</string>
     <string name="plugin_enabled">מופעל</string>
     <string name="plugin_disabled">מושבת</string>
@@ -2604,7 +2623,7 @@
     <string name="collections_editor_cover_none">ללא</string>
     <string name="collections_editor_cover_emoji">אימוג׳י</string>
     <string name="collections_editor_cover_image_url">כתובת URL לתמונה</string>
-    <string name="collections_editor_focus_gif">GIF פוקוס</string>
+    <string name="collections_editor_focus_gif">GIF בפוקוס</string>
     <string name="collections_editor_play_gif">הפעלת GIF בפוקוס</string>
     <string name="collections_editor_tile_shape">צורת אריח</string>
     <string name="collections_editor_hide_title">הסתרת כותרת</string>
@@ -2836,9 +2855,9 @@
     <string name="collections_editor_emoji_category_flags">דגלים</string>
     <string name="collections_editor_emoji_category_symbols">סמלים</string>
     <!-- Collection editor: TMDB picker placeholders + genres -->
-    <string name="collections_editor_tmdb_network_placeholder_example">213 for Netflix, 49 for HBO, 2739 for Disney+</string>
-    <string name="collections_editor_tmdb_collection_placeholder_example">10 for Star Wars Collection</string>
-    <string name="collections_editor_tmdb_company_placeholder_example">Marvel Studios, 420, or company URL</string>
+    <string name="collections_editor_tmdb_network_placeholder_example">213 עבור Netflix, 49 עבור HBO, 2739 עבור Disney+</string>
+    <string name="collections_editor_tmdb_collection_placeholder_example">10 עבור Star Wars Collection</string>
+    <string name="collections_editor_tmdb_company_placeholder_example">Marvel Studios, 420, או כתובת URL של חברה</string>
     <string name="collections_editor_tmdb_genre_action">אקשן</string>
     <string name="collections_editor_tmdb_genre_adventure">הרפתקאות</string>
     <string name="collections_editor_tmdb_genre_animation">אנימציה</string>
@@ -3240,8 +3259,6 @@
     <string name="playback_reset_to_default">איפוס לברירת מחדל</string>
     <string name="playback_net_custom">הורדה מהירה יותר (מתקדם)</string>
     <string name="playback_net_custom_sub">פתיחת כמה חיבורי אינטרנט במקביל כדי להוריד מהר יותר. כשהאפשרות כבויה, נעשה שימוש בחיבור יחיד.</string>
-    <string name="playback_net_http2">הפעלת HTTP/2</string>
-    <string name="playback_net_http2_sub">הפעלת פרוטוקול HTTP/2 עבור חיבורי רשת, המאפשר ריבוב בקשות וזמני handshake מהירים יותר.</string>
     <string name="playback_net_parallel">חיבורים מקבילים</string>
     <string name="playback_net_parallel_sub">שימוש במספר חיבורים במקביל למשיכת תוכן. אפשר להפעיל אם הסרטון נתקע למרות שמהירות האינטרנט מספיקה - זה יכול לעזור.</string>
     <string name="playback_net_connection_count">מספר חיבורים</string>

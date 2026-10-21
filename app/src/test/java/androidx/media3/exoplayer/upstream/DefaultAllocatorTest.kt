@@ -20,7 +20,7 @@ class DefaultAllocatorTest {
     }
 
     @Test
-    fun testLateReleasedAllocationsMemoryLeak() {
+    fun testLateReleasedAllocationsAreFreedOnTrim() {
         val segmentSize = 65536
         // Initialize allocator with trimOnReset = true
         val allocator = DefaultAllocator(true, segmentSize, 0, true)
@@ -41,8 +41,11 @@ class DefaultAllocatorTest {
         allocator.release(a2)
         allocator.release(a3)
 
-        // In the fixed version, memoryFootprint MUST be 0 because trim() was called on release.
-        // In the buggy version, these allocations are leaked into the pool, so memoryFootprint will be 3 * segmentSize.
+        assertEquals(0, allocator.totalBytesAllocated)
+        assertEquals(3 * segmentSize, allocator.availableBytes)
+
+        allocator.trim()
+
         assertEquals(0, allocator.memoryFootprint)
         assertEquals(0, allocator.availableBytes)
     }

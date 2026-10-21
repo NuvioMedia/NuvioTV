@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.detail
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.background
@@ -89,6 +90,7 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
 import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
+import com.nuvio.tv.ui.components.LightweightCard
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.WatchedMarker
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -584,6 +586,9 @@ fun EpisodesRow(
                 }
             } ?: false,
             onDismiss = { optionsEpisode = null },
+            onNavigateEpisode = { step ->
+                adjacentEpisode(dedupedEpisodes, selectedEpisode, step)?.let { optionsEpisode = it }
+            },
             isPlayEnabled = canPlayEpisode(selectedEpisode),
             onPlay = {
                 onEpisodeClick(selectedEpisode)
@@ -726,7 +731,7 @@ private fun EpisodeCard(
     }
     val ratingStyle = remember(typography) {
         typography.labelSmall.copy(
-            color = Color(0xFFF5C518),
+            color = NuvioPrimitives.imdb,
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -806,21 +811,8 @@ private fun EpisodeCard(
     val primaryColor = NuvioTheme.colors.Secondary
     val textPrimary = NuvioTheme.colors.TextPrimary
     val focusRingBorder = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)
-    val cardShape = CardDefaults.shape(shape = shape)
-    val cardColors = CardDefaults.colors(
-        containerColor = Color.Transparent,
-        focusedContainerColor = Color.Transparent
-    )
-    val cardBorder = CardDefaults.border(
-        focusedBorder = Border(
-            border = focusRingBorder,
-            shape = shape
-        )
-    )
-    val cardScale = CardDefaults.scale(focusedScale = 1.0f)
-    val cardGlow = CardDefaults.glow()
 
-    Card(
+    LightweightCard(
         onClick = {
             if (longPressTriggered) {
                 longPressTriggered = false
@@ -873,11 +865,12 @@ private fun EpisodeCard(
                     down = downFocusRequester
                 }
             },
-        shape = cardShape,
-        colors = cardColors,
-        border = cardBorder,
-        scale = cardScale,
-        glow = cardGlow
+        shape = shape,
+        containerColor = Color.Transparent,
+        focusedBorder = Border(
+            border = focusRingBorder,
+            shape = shape
+        )
     ) {
         Box(
             modifier = Modifier

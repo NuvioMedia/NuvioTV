@@ -2756,8 +2756,6 @@
     <string name="playback_reset_to_default">Obnovit výchozí</string>
     <string name="playback_net_custom">Vlastní síť</string>
     <string name="playback_net_custom_sub">Použít více paralelních spojení pro získávání progresivních streamů. Je-li vypnuto, použije se jedno spojení.</string>
-    <string name="playback_net_http2">Zapnout HTTP/2</string>
-    <string name="playback_net_http2_sub">Zapnout protokol HTTP/2 pro síťová spojení, umožňující multiplexování požadavků a rychlejší handshake.</string>
     <string name="playback_net_parallel">Paralelní spojení</string>
     <string name="playback_net_parallel_sub">Použít více spojení paralelně pro získávání streamů. Aktivujte, pokud dochází k bufferování, přestože je rychlost stahování jednoznačně dostatečná.</string>
     <string name="playback_net_connection_count">Počet spojení</string>

@@ -1887,6 +1887,13 @@
     <string name="cd_sources">Fontes</string>
     <string name="cd_switch_player_engine">Alterar motor do leitor</string>
     <string name="cd_episodes">Episódios</string>
+    <string name="player_chapter_number">Capítulo %1$d</string>
+    <string name="player_chapters">Capítulos</string>
+    <string name="player_chapters_title">Capítulos (%1$d)</string>
+    <string name="player_chapter_remaining">faltam %1$s</string>
+    <string name="playback_chapters_label">Capítulos</string>
+    <string name="playback_exo_chapters_title">Mostrar capítulos (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Lê os capítulos dos ficheiros MKV para os marcar na barra de progresso e saltar entre eles. Faz alguns pedidos pequenos extra quando a reprodução começa. O mpv mostra sempre os capítulos.</string>
     <string name="cd_playback_speed">Velocidade de reprodução</string>
     <string name="cd_aspect_ratio">Proporção do ecrã</string>
     <string name="cd_open_external_player">Abrir em leitor externo</string>

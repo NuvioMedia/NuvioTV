@@ -13,6 +13,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.SubtitleLanguageOption
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.local.displayName
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 
 private val subtitleColors = listOf(
     Color.White,
@@ -30,14 +31,14 @@ private val subtitleBackgroundColors = listOf(
     Color.Transparent,
     Color.Black,
     Color(0x80000000),
-    Color(0xFF1A1A1A),
-    Color(0xFF2D2D2D)
+    NuvioPrimitives.neutral900,
+    NuvioPrimitives.neutral800
 )
 
 private val subtitleOutlineColors = listOf(
     Color.Black,
-    Color(0xFF1A1A1A),
-    Color(0xFF333333),
+    NuvioPrimitives.neutral900,
+    NuvioPrimitives.neutral750,
     Color.White
 )
 
@@ -145,6 +146,31 @@ internal fun PlaybackSubtitlesSection(
             title = stringResource(R.string.sub_outline_color),
             currentColor = Color(style.outlineColor),
             onClick = { onOpenDialog(PlaybackDialog.SUBTITLE_OUTLINE_COLOR) },
+            enabled = enabled
+        )
+    }
+    SettingsToggleRow(
+        title = stringResource(R.string.sub_hdr_style),
+        subtitle = stringResource(R.string.sub_hdr_style_sub),
+        checked = style.hdrStyleEnabled,
+        onToggle = { onUpdate { setSubtitleHdrStyleEnabled(!style.hdrStyleEnabled) } },
+        enabled = enabled
+    )
+    if (style.hdrStyleEnabled) {
+        ColorSettingsItem(
+            title = stringResource(R.string.sub_hdr_text_color),
+            currentColor = Color(style.hdrTextColor),
+            onClick = { onOpenDialog(PlaybackDialog.SUBTITLE_HDR_TEXT_COLOR) },
+            enabled = enabled
+        )
+        SliderSettingsItem(
+            title = stringResource(R.string.sub_hdr_brightness),
+            value = style.hdrBrightness,
+            valueText = "${style.hdrBrightness}%",
+            minValue = SubtitleStyleSettings.HDR_BRIGHTNESS_MIN,
+            maxValue = SubtitleStyleSettings.HDR_BRIGHTNESS_MAX,
+            step = 5,
+            onValueChange = { brightness -> onUpdate { setSubtitleHdrBrightness(brightness) } },
             enabled = enabled
         )
     }
@@ -265,6 +291,16 @@ internal fun SubtitleSettingsDialogs(
             selectedColor = Color(style.outlineColor),
             onColorSelected = { color ->
                 onUpdate { setSubtitleOutlineColor(color.toArgb()) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
+        PlaybackDialog.SUBTITLE_HDR_TEXT_COLOR -> ColorSelectionDialog(
+            title = stringResource(R.string.sub_hdr_text_color),
+            colors = subtitleColors,
+            selectedColor = Color(style.hdrTextColor),
+            onColorSelected = { color ->
+                onUpdate { setSubtitleHdrTextColor(color.toArgb()) }
                 onDismiss()
             },
             onDismiss = onDismiss
