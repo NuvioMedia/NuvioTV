@@ -297,7 +297,7 @@
     <string name="series_status_planned">Planned</string>
     <string name="series_status_rumored">Rumored</string>
     <string name="series_status_in_production">In Production</string>
-    <string name="series_status_post_production">Post Production</string>
+    <string name="series_status_post_production">Post-Production</string>
     <!-- Status labels for movies (allows gendered translations in languages that need it) -->
     <string name="movie_status_ended">Ended</string>
     <string name="movie_status_continuing">Ongoing</string>
@@ -307,7 +307,10 @@
     <string name="movie_status_planned">Planned</string>
     <string name="movie_status_rumored">Rumored</string>
     <string name="movie_status_in_production">In Production</string>
-    <string name="movie_status_post_production">Post Production</string>
+    <string name="movie_status_post_production">Post-Production</string>
+    <string name="movie_status_in_theaters">In Theaters</string>
+    <!-- %1$s is a localized date, e.g. "28 Apr 2026" -->
+    <string name="movie_release_digital_date">Digital release %1$s</string>
     <string name="detail_lists_fallback">Lists</string>
     <string name="detail_lists_subtitle">Select which lists should include this title.</string>
     <string name="action_save">Save</string>

@@ -20,6 +20,8 @@ import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.MetaCompany
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.MetaReleaseDate
+import com.nuvio.tv.domain.model.MetaReleaseDateCountry
 import com.nuvio.tv.domain.model.MetaTrailer
 import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.domain.model.PosterShape
@@ -100,7 +102,7 @@ class TmdbMetadataService(
                 }
 
                 // Fetch details, credits, images, alt titles, and trailers in parallel
-                val (details, credits, images, ageRating, altTitles, trailers) = coroutineScope {
+                val (details, credits, images, ageRatingAndReleases, altTitles, trailers) = coroutineScope {
                     val detailsDeferred = async {
                         when (tmdbType) {
                             "tv" -> tmdbApi.getTvDetails(numericId, TMDB_API_KEY, normalizedLanguage)
@@ -126,11 +128,11 @@ class TmdbMetadataService(
                         when (tmdbType) {
                             "tv" -> {
                                 val ratings = tmdbApi.getTvContentRatings(numericId, TMDB_API_KEY).body()?.results.orEmpty()
-                                selectTvAgeRating(ratings, normalizedLanguage)
+                                selectTvAgeRating(ratings, normalizedLanguage) to emptyList()
                             }
                             else -> {
                                 val releases = tmdbApi.getMovieReleaseDates(numericId, TMDB_API_KEY).body()?.results.orEmpty()
-                                selectMovieAgeRating(releases, normalizedLanguage)
+                                selectMovieAgeRating(releases, normalizedLanguage) to mapMovieReleaseDates(releases)
                             }
                         }
                     }
@@ -218,6 +220,7 @@ class TmdbMetadataService(
                     emptyMap()
                 }
 
+                val (ageRating, releaseDates) = ageRatingAndReleases
                 val genres = details?.genres?.mapNotNull { genre ->
                     genre.name.trim().takeIf { name -> name.isNotBlank() }
                 } ?: emptyList()
@@ -491,7 +494,8 @@ class TmdbMetadataService(
                     collectionName = collectionName,
                     originalTitle = originalTitle,
                     alternativeTitles = altTitles,
-                    trailers = trailers
+                    trailers = trailers,
+                    releaseDates = releaseDates
                 )
                 enrichmentCache[cacheKey] = enrichment
                 requestDeferred.complete(enrichment)
@@ -1626,6 +1630,27 @@ private fun selectMovieAgeRating(
         .firstOrNull { it.isNotBlank() }
 }
 
+private fun mapMovieReleaseDates(
+    countries: List<com.nuvio.tv.data.remote.api.TmdbMovieReleaseDateCountry>
+): List<MetaReleaseDateCountry> {
+    return countries.mapNotNull { country ->
+        val countryCode = country.iso31661?.trim()?.uppercase(Locale.US)?.takeIf { it.isNotBlank() }
+            ?: return@mapNotNull null
+        MetaReleaseDateCountry(
+            countryCode = countryCode,
+            releaseDates = country.releaseDates.orEmpty().map {
+                MetaReleaseDate(
+                    certification = it.certification?.takeIf(String::isNotBlank),
+                    languageCode = it.iso6391?.takeIf(String::isNotBlank),
+                    note = it.note?.takeIf(String::isNotBlank),
+                    releaseDate = it.releaseDate?.takeIf(String::isNotBlank),
+                    type = it.type
+                )
+            }
+        )
+    }
+}
+
 private fun selectTvAgeRating(
     ratings: List<com.nuvio.tv.data.remote.api.TmdbTvContentRatingItem>,
     normalizedLanguage: String
@@ -1671,7 +1696,8 @@ data class TmdbEnrichment(
     val collectionName: String?,
     val originalTitle: String? = null,
     val alternativeTitles: List<String> = emptyList(),
-    val trailers: List<MetaTrailer> = emptyList()
+    val trailers: List<MetaTrailer> = emptyList(),
+    val releaseDates: List<MetaReleaseDateCountry> = emptyList()
 )
 
 data class TmdbEpisodeEnrichment(
