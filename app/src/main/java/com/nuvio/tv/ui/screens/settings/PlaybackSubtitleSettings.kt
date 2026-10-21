@@ -149,6 +149,31 @@ internal fun PlaybackSubtitlesSection(
             enabled = enabled
         )
     }
+    SettingsToggleRow(
+        title = stringResource(R.string.sub_hdr_style),
+        subtitle = stringResource(R.string.sub_hdr_style_sub),
+        checked = style.hdrStyleEnabled,
+        onToggle = { onUpdate { setSubtitleHdrStyleEnabled(!style.hdrStyleEnabled) } },
+        enabled = enabled
+    )
+    if (style.hdrStyleEnabled) {
+        ColorSettingsItem(
+            title = stringResource(R.string.sub_hdr_text_color),
+            currentColor = Color(style.hdrTextColor),
+            onClick = { onOpenDialog(PlaybackDialog.SUBTITLE_HDR_TEXT_COLOR) },
+            enabled = enabled
+        )
+        SliderSettingsItem(
+            title = stringResource(R.string.sub_hdr_brightness),
+            value = style.hdrBrightness,
+            valueText = "${style.hdrBrightness}%",
+            minValue = SubtitleStyleSettings.HDR_BRIGHTNESS_MIN,
+            maxValue = SubtitleStyleSettings.HDR_BRIGHTNESS_MAX,
+            step = 5,
+            onValueChange = { brightness -> onUpdate { setSubtitleHdrBrightness(brightness) } },
+            enabled = enabled
+        )
+    }
 
     SettingsSectionLabel(text = stringResource(R.string.sub_advanced_section))
     SettingsToggleRow(
@@ -266,6 +291,16 @@ internal fun SubtitleSettingsDialogs(
             selectedColor = Color(style.outlineColor),
             onColorSelected = { color ->
                 onUpdate { setSubtitleOutlineColor(color.toArgb()) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
+        PlaybackDialog.SUBTITLE_HDR_TEXT_COLOR -> ColorSelectionDialog(
+            title = stringResource(R.string.sub_hdr_text_color),
+            colors = subtitleColors,
+            selectedColor = Color(style.hdrTextColor),
+            onColorSelected = { color ->
+                onUpdate { setSubtitleHdrTextColor(color.toArgb()) }
                 onDismiss()
             },
             onDismiss = onDismiss

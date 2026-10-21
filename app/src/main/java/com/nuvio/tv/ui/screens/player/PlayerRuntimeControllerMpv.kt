@@ -34,7 +34,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.subtitleStyle)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
         view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
@@ -152,7 +152,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.subtitleStyle)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
         view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
@@ -173,7 +173,9 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
                 subtitleTracks = emptyList(),
                 selectedAudioTrackIndex = -1,
                 selectedSubtitleTrackIndex = -1,
-                activePlaybackInfo = null
+                activePlaybackInfo = null,
+                chapters = emptyList(),
+                showChaptersPanel = false
             )
         }
         cancelPauseOverlay()
@@ -307,6 +309,7 @@ internal fun PlayerRuntimeController.markMpvTracksStale() {
  * add-on subtitles arriving one add-on at a time.
  */
 internal fun PlayerRuntimeController.updateMpvTracksOnTick() {
+    updateMpvHdrVideoState()
     if (mpvTrackRefreshGate.isStale) {
         updateMpvAvailableTracks()
         return
@@ -331,6 +334,15 @@ internal fun PlayerRuntimeController.updateMpvTracksOnTick() {
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
 }
 
+/** mpv only reports the video transfer once it has decoded video params, so this is re-read each tick. */
+private fun PlayerRuntimeController.updateMpvHdrVideoState() {
+    if (!isUsingMpvEngine()) return
+    val isHdrVideo = mpvView?.readVideoIsHdr() ?: return
+    if (_uiState.value.isHdrVideo != isHdrVideo) {
+        _uiState.update { it.copy(isHdrVideo = isHdrVideo) }
+    }
+}
+
 /** A file without embedded subtitles only counts as text-scanned once the first frame is up. */
 private fun PlayerRuntimeController.markMpvTextTracksScannedIfReady(hasInternalSubtitleTracks: Boolean) {
     if (hasInternalSubtitleTracks || hasRenderedFirstFrame) {
@@ -350,6 +362,7 @@ internal fun PlayerRuntimeController.updateMpvAvailableTracks() {
             val snapshot = view.readTrackSnapshot()
             if (!isUsingMpvEngine() || mpvView !== view || currentStreamUrl != streamUrlAtRefresh) return@launch
             applyMpvTrackSnapshot(snapshot)
+            refreshMpvChapters(view)
             tryAutoSelectPreferredSubtitleFromAvailableTracks()
         } catch (error: CancellationException) {
             throw error
@@ -592,13 +605,18 @@ internal fun PlayerRuntimeController.hasActivePlayIntent(): Boolean {
     }
 }
 
+/**
+ * [exact] makes the mpv seek exact even when the file was loaded with `hr-seek=no`, where a plain
+ * seek lands on a keyframe; ExoPlayer takes its precision from [seekParameters] alone.
+ */
 internal fun PlayerRuntimeController.seekPlaybackTo(
     positionMs: Long,
-    seekParameters: SeekParameters = SeekParameters.CLOSEST_SYNC
+    seekParameters: SeekParameters = SeekParameters.CLOSEST_SYNC,
+    exact: Boolean = false
 ) {
     if (isUsingMpvEngine()) {
         mpvView?.let { view ->
-            view.seekToMs(positionMs)
+            if (exact) view.seekToMsExact(positionMs) else view.seekToMs(positionMs)
             // Keep subtitle/audio delay sticky during FF/RW seeks.
             view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
             view.setAudioDelayMs(_uiState.value.audioDelayMs)

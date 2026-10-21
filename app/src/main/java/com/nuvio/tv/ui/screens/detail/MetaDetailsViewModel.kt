@@ -1017,6 +1017,13 @@ class MetaDetailsViewModel @Inject constructor(
 
         val contentId = _effectiveContentId.value
 
+        // Ratings don't depend on watch progress, so start them before the remote
+        // progress wait below, which can take long or never finish if the sync keeps failing.
+        if (!isServerItem) {
+            loadEpisodeRatingsAsync(enriched)
+            viewModelScope.launch { loadMDBListRatings(enriched) }
+        }
+
         // Wait for remote progress provider (Simkl/Trakt) to finish initial load.
         watchProgressRepository.observeRemoteProgressLoaded().first { it }
 
@@ -1036,10 +1043,6 @@ class MetaDetailsViewModel @Inject constructor(
         val watchedEpisodes = watchedDeferred.await()
         val precomputedNextToWatch = computeNextToWatch(enriched, progressMap, watchedEpisodes)
         updateNextToWatch(precomputedNextToWatch)
-
-        if (isServerItem) return
-        loadEpisodeRatingsAsync(enriched)
-        viewModelScope.launch { loadMDBListRatings(enriched) }
     }
 
     private fun NextToWatch.resolveForMeta(meta: Meta): NextToWatch? {

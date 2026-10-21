@@ -253,8 +253,11 @@ internal object StreamBadgeMatcher {
 
     fun matchedBadges(stream: Stream, filters: List<CompiledStreamBadgeFilter>): List<StreamBadge> {
         if (filters.isEmpty()) return emptyList()
-        val candidates = badgeMatchCandidates(stream)
-        if (candidates.isEmpty()) return emptyList()
+        return matchedBadges(badgeMatchCandidates(stream), filters)
+    }
+
+    fun matchedBadges(candidates: List<String>, filters: List<CompiledStreamBadgeFilter>): List<StreamBadge> {
+        if (filters.isEmpty() || candidates.isEmpty()) return emptyList()
 
         val matched = linkedMapOf<String, StreamBadge>()
         // Reuse a single Matcher instance per filter across all candidates.

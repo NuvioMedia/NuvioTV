@@ -9,9 +9,38 @@ plugins {
     alias(libs.plugins.sentry.android.gradle)
 }
 
+import com.android.build.gradle.internal.tasks.CompileArtProfileTask
 import com.android.build.gradle.internal.tasks.L8DexDesugarLibTask
 import java.io.File
 import java.util.Properties
+
+// Copies the per-API dex metadata (.dm) files AGP builds next to the binary ART profile into the APK's assets, so the
+// in-app updater can install the next version together with its profile and have it compiled at install time.
+abstract class EmbedUpdateDexMetadataTask : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val dexMetadataDirectory: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun embed() {
+        val target = outputDirectory.get().asFile.resolve("updater_dm")
+        target.deleteRecursively()
+        target.mkdirs()
+        val source = dexMetadataDirectory.files.firstOrNull { it.resolve("dex-metadata-map.properties").exists() } ?: return
+        val apiToFile = Properties().apply { source.resolve("dex-metadata-map.properties").inputStream().use(::load) }
+        // Written by hand instead of Properties.store, which adds a timestamp and would make the APK non-reproducible.
+        val indexLines = apiToFile.stringPropertyNames().sortedBy { it.toInt() }.map { api ->
+            val relativePath = apiToFile.getProperty(api)
+            val fileName = relativePath.substringBefore('/') + ".dm"
+            source.resolve(relativePath).copyTo(target.resolve(fileName), overwrite = true)
+            "$api=$fileName"
+        }
+        target.resolve("index.properties").writeText(indexLines.joinToString("\n", postfix = "\n"))
+    }
+}
 
 fun parseBooleanProperty(value: String?): Boolean {
     val normalized = value?.trim()?.lowercase() ?: return false
@@ -337,6 +366,18 @@ androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         val isPlaystore = variant.productFlavors.any { it.second == "playstore" }
         variant.applicationId.set(if (isPlaystore) "com.nuvio.appdebug" else "com.nuviodebug.com")
+    }
+    // Only the full flavor ships the in-app updater.
+    onVariants(selector().withFlavor("distribution" to "full")) { variant ->
+        val variantName = variant.name.replaceFirstChar { it.uppercase() }
+        val embedTask = tasks.register<EmbedUpdateDexMetadataTask>("embed${variantName}UpdateDexMetadata") {
+            dexMetadataDirectory.from(provider {
+                tasks.withType<CompileArtProfileTask>()
+                    .matching { it.name == "compile${variantName}ArtProfile" }
+                    .map { it.dexMetadataDirectory }
+            })
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(embedTask, EmbedUpdateDexMetadataTask::outputDirectory)
     }
 }
 

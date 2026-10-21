@@ -164,6 +164,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
 
     currentStreamHasVideoTrack = hasVideoTrack
     val effectiveVideoFormat = selectedVideoFormat ?: firstVideoFormat
+    val isHdrVideo = effectiveVideoFormat?.isHdrVideoFormat() == true
     if (effectiveVideoFormat != null) {
         currentVideoTrackMimeType = effectiveVideoFormat.sampleMimeType
         currentVideoTrackCodecs = effectiveVideoFormat.codecs
@@ -309,7 +310,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             audioTracks = audioTracks,
             subtitleTracks = subtitleTracks,
             selectedAudioTrackIndex = selectedAudioIndex,
-            selectedSubtitleTrackIndex = finalSubtitleIndex
+            selectedSubtitleTrackIndex = finalSubtitleIndex,
+            isHdrVideo = isHdrVideo
         )
     }
     updateAudioControlAvailability(audioTracks, selectedAudioIndex)
@@ -457,6 +459,16 @@ private fun Tracks.hasAssSsaTextTrack(): Boolean {
 // Profile 7 only: it's the profile AUTO conversion rewrites. DV5/DV8 don't convert, so they
 // shouldn't trigger a libass-drop reload.
 private val DV_PROFILE_7_CODEC = Regex("^(dvhe|dvh1|dvav|dva1)\\.0?7\\.")
+
+private val DV_CODEC_PREFIX = Regex("^(dvhe|dvh1|dvav|dva1|dav1)\\.")
+
+/** PQ (HDR10/HDR10+), HLG or Dolby Vision video, whose bright output calls for the HDR subtitle style. */
+private fun Format.isHdrVideoFormat(): Boolean {
+    val transfer = colorInfo?.colorTransfer
+    if (transfer == C.COLOR_TRANSFER_ST2084 || transfer == C.COLOR_TRANSFER_HLG) return true
+    if (sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION) return true
+    return DV_CODEC_PREFIX.containsMatchIn(codecs?.lowercase(Locale.US).orEmpty())
+}
 
 private fun Tracks.hasDolbyVisionProfile7VideoTrack(): Boolean {
     groups.forEach { trackGroup ->

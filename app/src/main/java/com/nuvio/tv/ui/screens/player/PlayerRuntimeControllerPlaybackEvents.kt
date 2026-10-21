@@ -251,6 +251,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         durationMs = playerDuration
                     )
                     val playingNow = view.isPlayingNow()
+                    subtitleCueTracker.updateText(view.currentSubtitleText())
                     val cacheBuffering = view.isPausedForCacheNow() || view.isCoreIdleNow()
                     var firstFrameReady = hasRenderedFirstFrame
                         if (!firstFrameReady) {
@@ -1087,6 +1088,7 @@ fun PlayerRuntimeController.scheduleHideControls() {
             !_uiState.value.showSubtitleDelayOverlay &&
             !_uiState.value.showSubtitleTimingDialog &&
             !_uiState.value.showEpisodesPanel && !_uiState.value.showSourcesPanel &&
+            !_uiState.value.showChaptersPanel &&
             !_uiState.value.showPartyPanel &&
             !_uiState.value.showStreamInfoOverlay) {
             _uiState.update { it.copy(showControls = false) }
@@ -1192,7 +1194,7 @@ internal fun PlayerRuntimeController.schedulePauseOverlay() {
         val s = _uiState.value
         val anyPanelOpen = s.showSubtitleOverlay || s.showSubtitleStylePanel ||
             s.showSpeedDialog || s.showMoreDialog || s.showEpisodesPanel ||
-            s.showSourcesPanel || s.showAudioOverlay || s.showStreamInfoOverlay ||
+            s.showSourcesPanel || s.showChaptersPanel || s.showAudioOverlay || s.showStreamInfoOverlay ||
             s.showSubtitleTimingDialog || s.showSubtitleDelayOverlay || s.showPartyPanel
         if (!s.isPlaying && s.pauseOverlayEnabled && s.error == null && !anyPanelOpen) {
             _uiState.update { it.copy(showPauseOverlay = true, showControls = false) }
@@ -1347,6 +1349,24 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             } else {
                 showSeekOverlayTemporarily()
             }
+        }
+        is PlayerEvent.OnSkipChapter -> {
+            val chapters = _uiState.value.chapters
+            if (chapters.isEmpty() || _playbackTimeline.value.isLive) return
+            val position = pendingPreviewSeekPosition ?: currentPlaybackPositionMs() ?: return
+            val target = if (event.forward) {
+                PlayerChapters.nextStartMs(chapters, position)
+            } else {
+                PlayerChapters.previousStartMs(chapters, position)
+            } ?: return
+            seekToChapter(target)
+        }
+        PlayerEvent.OnShowChaptersPanel -> showChaptersPanel()
+        PlayerEvent.OnDismissChaptersPanel -> dismissChaptersPanel()
+        is PlayerEvent.OnSelectChapter -> {
+            val chapter = _uiState.value.chapters.getOrNull(event.index) ?: return
+            _uiState.update { it.copy(showChaptersPanel = false) }
+            seekToChapter(chapter.startMs)
         }
         is PlayerEvent.OnSelectAudioTrack -> {
             logSwitchTrace(
@@ -1794,8 +1814,18 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         is PlayerEvent.OnSetSubtitleSize -> {
             scope.launch { playerSettingsDataStore.setSubtitleSize(event.size) }
         }
+        is PlayerEvent.OnSetSubtitleHdrBrightness -> {
+            scope.launch { playerSettingsDataStore.setSubtitleHdrBrightness(event.brightness) }
+        }
         is PlayerEvent.OnSetSubtitleTextColor -> {
-            scope.launch { playerSettingsDataStore.setSubtitleTextColor(event.color) }
+            val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
+            scope.launch {
+                if (editingHdr) {
+                    playerSettingsDataStore.setSubtitleHdrTextColor(event.color)
+                } else {
+                    playerSettingsDataStore.setSubtitleTextColor(event.color)
+                }
+            }
         }
         is PlayerEvent.OnSetSubtitleBold -> {
             scope.launch { playerSettingsDataStore.setSubtitleBold(event.bold) }
@@ -1810,10 +1840,16 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             scope.launch { playerSettingsDataStore.setSubtitleVerticalOffset(event.offset) }
         }
         PlayerEvent.OnResetSubtitleDefaults -> {
+            val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
             scope.launch {
                 val defaults = SubtitleStyleSettings()
                 playerSettingsDataStore.setSubtitleSize(defaults.size)
-                playerSettingsDataStore.setSubtitleTextColor(defaults.textColor)
+                if (editingHdr) {
+                    playerSettingsDataStore.setSubtitleHdrTextColor(defaults.hdrTextColor)
+                    playerSettingsDataStore.setSubtitleHdrBrightness(defaults.hdrBrightness)
+                } else {
+                    playerSettingsDataStore.setSubtitleTextColor(defaults.textColor)
+                }
                 playerSettingsDataStore.setSubtitleBold(defaults.bold)
                 playerSettingsDataStore.setSubtitleOutlineEnabled(defaults.outlineEnabled)
                 playerSettingsDataStore.setSubtitleOutlineColor(defaults.outlineColor)

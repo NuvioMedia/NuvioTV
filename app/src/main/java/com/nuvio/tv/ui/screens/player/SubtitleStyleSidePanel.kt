@@ -64,7 +64,8 @@ internal fun SubtitleStyleSidePanel(
     subtitleStyle: SubtitleStyleSettings,
     onEvent: (PlayerEvent) -> Unit,
     modifier: Modifier = Modifier,
-    isStyleDisabledByLibass: Boolean = false
+    isStyleDisabledByLibass: Boolean = false,
+    isEditingHdrStyle: Boolean = false
 ) {
     val firstItemFocusRequester = remember { FocusRequester() }
     val dispatchStyleEvent: (PlayerEvent) -> Unit = { event ->
@@ -156,7 +157,11 @@ internal fun SubtitleStyleSidePanel(
 
             Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 SubtitleStyleSection(
-                    title = stringResource(R.string.subtitle_style_text_color),
+                    title = if (isEditingHdrStyle) {
+                        stringResource(R.string.subtitle_style_text_color_hdr)
+                    } else {
+                        stringResource(R.string.subtitle_style_text_color)
+                    },
                     centerContent = false,
                     modifier = Modifier
                         .width(StyleCardWidth)
@@ -196,6 +201,30 @@ internal fun SubtitleStyleSidePanel(
                                 onClick = {
                                     val newAlpha = (currentAlphaPercent + 10).coerceAtMost(100) / 100f
                                     onEvent(PlayerEvent.OnSetSubtitleTextColor(Color(subtitleStyle.textColor).copy(alpha = newAlpha).toArgb()))
+                                }
+                            )
+                        }
+                    }
+                }
+                if (isEditingHdrStyle) {
+                    SubtitleStyleSection(
+                        title = stringResource(R.string.subtitle_style_brightness_hdr),
+                        modifier = Modifier
+                            .width(StyleCardWidth)
+                            .height(StyleCardHeight)
+                    ) {
+                        SubtitleStyleSettingRow {
+                            SubtitleStyleStepperButton(
+                                icon = Icons.Default.Remove,
+                                onClick = {
+                                    onEvent(PlayerEvent.OnSetSubtitleHdrBrightness(subtitleStyle.hdrBrightness - 10))
+                                }
+                            )
+                            SubtitleStyleValueDisplay(text = "${subtitleStyle.hdrBrightness}%")
+                            SubtitleStyleStepperButton(
+                                icon = Icons.Default.Add,
+                                onClick = {
+                                    onEvent(PlayerEvent.OnSetSubtitleHdrBrightness(subtitleStyle.hdrBrightness + 10))
                                 }
                             )
                         }

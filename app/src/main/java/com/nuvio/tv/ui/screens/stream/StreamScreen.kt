@@ -1250,7 +1250,7 @@ private fun StreamsList(
                                       else orderedAddonNames.indexOf(selectedAddonFilter) + 2
                             onRequestChipFocus(idx)
                         },
-                        marked = true
+                        outlined = true
                     )
                 }
             }
@@ -1266,8 +1266,7 @@ private fun StreamsList(
                     showAddonLogo = showAddonLogo,
                     badgePlacement = badgePlacement,
                     reserveBadgeSpace = hasBadgeRules && stream.badges.isEmpty(),
-                    marked = isPartySource,
-                    markedLabel = partySourceLabel.takeIf { isPartySource },
+                    label = partySourceLabel.takeIf { isPartySource },
                     onClick = { onStreamSelected(stream) },
                     focusRequester = when {
                         shouldRestoreFocusedStream && index == focusedStreamIndex.coerceIn(0, (streams.lastIndex).coerceAtLeast(0)) -> restoreFocusRequester
@@ -1305,8 +1304,8 @@ private fun StreamCard(
     focusRequester: FocusRequester? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
     onUpKey: (() -> Unit)? = null,
-    marked: Boolean = false,
-    markedLabel: String? = null
+    outlined: Boolean = false,
+    label: String? = null
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -1361,14 +1360,14 @@ private fun StreamCard(
         shape = CardDefaults.shape(shape = cardShape),
         border = if (hasGradientFocusRing) {
             CardDefaults.border(
-                border = markedBorder(marked, cardShape),
+                border = outlineBorder(outlined, cardShape),
                 focusedBorder = Border(
                     border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                     shape = cardShape
                 )
             )
         } else {
-            CardDefaults.border(border = markedBorder(marked, cardShape))
+            CardDefaults.border(border = outlineBorder(outlined, cardShape))
         },
         scale = CardDefaults.scale(focusedScale = 1f)
     ) {
@@ -1411,19 +1410,13 @@ private fun StreamCard(
                         ),
                         color = NuvioTheme.colors.TextPrimary
                     )
-                    if (markedLabel != null) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(NuvioTheme.colors.Primary.copy(alpha = 0.2f))
-                                .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
-                        ) {
-                            Text(
-                                text = markedLabel,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NuvioTheme.colors.Primary
-                            )
-                        }
+                    if (label != null) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = NuvioTheme.colors.Secondary,
+                            maxLines = 1
+                        )
                     }
                 }
 
@@ -1488,8 +1481,8 @@ private fun StreamCard(
 }
 
 @Composable
-private fun markedBorder(marked: Boolean, shape: RoundedCornerShape): Border =
-    if (marked) {
+private fun outlineBorder(outlined: Boolean, shape: RoundedCornerShape): Border =
+    if (outlined) {
         Border(
             border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Primary.copy(alpha = 0.65f)),
             shape = shape

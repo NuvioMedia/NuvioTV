@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.mdblist
 
+import android.util.Log
 import com.nuvio.tv.core.tracking.TrackingListManager
 import com.nuvio.tv.core.tracking.TrackingLibrarySorter
 import com.nuvio.tv.core.tracking.TrackingRefreshGate
@@ -114,6 +115,10 @@ class MdbListLibraryService(
                 loadState.value = LibraryLoadState(scope)
                 throw error
             } catch (error: Exception) {
+                val cached = sync.currentSnapshot()?.library
+                Log.w(TAG, "Library refresh failed (cached lists ${cached?.lists?.size ?: 0}, dynamic " +
+                    "${cached?.dynamicLists?.size ?: 0}, liked ${cached?.likedLists?.size ?: 0}, external " +
+                    "${cached?.externalLists?.size ?: 0}, hidden ${cached?.hiddenListKeys?.size ?: 0})", error)
                 loadState.value = LibraryLoadState(scope, error = error, attemptedAt = now())
             }
         }
@@ -133,6 +138,10 @@ class MdbListLibraryService(
         if (state?.error != null && time - state.attemptedAt in 0 until MdbListSyncRepository.ERROR_RETRY_MS) return false
         val library = sync.currentSnapshot()?.library ?: return true
         return library.invalidated || library.checkedAtEpochMs?.let { time - it !in 0 until MdbListSyncRepository.AUTOMATIC_INTERVAL_MS } != false
+    }
+
+    private companion object {
+        const val TAG = "MdbListLibrary"
     }
 
     private data class LibraryLoadState(
