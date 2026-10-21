@@ -8,6 +8,8 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
+import com.nuvio.tv.core.tmdb.isWatchedWithAlias
+import com.nuvio.tv.core.tmdb.resolveImdbAliases
 import com.nuvio.tv.core.util.hasNoReleaseInfo
 import com.nuvio.tv.core.util.isUnreleased
 import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
@@ -205,22 +207,37 @@ class FolderDetailViewModel @Inject constructor(
             ) { movieWatchedIds, seriesWatchedIds, allItems ->
                 Triple(movieWatchedIds, seriesWatchedIds, allItems)
             }.collectLatest { (movieWatchedIds, seriesWatchedIds, allItems) ->
-                val newStatus = mutableMapOf<String, Boolean>()
-                allItems.forEach { item ->
-                    val key = com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
-                    val isWatched = when (item.apiType) {
-                        "movie" -> item.id in movieWatchedIds
-                        "series", "tv" -> item.id in seriesWatchedIds
-                        else -> false
-                    }
-                    newStatus[key] = isWatched
+                applyWatchedStatus(movieWatchedIds, seriesWatchedIds, allItems, imdbAliases = emptyMap())
+                // TMDB-sourced items ("tmdb:<id>") only match history through their IMDb id.
+                // Resolved after the first pass so other badges are never delayed by it.
+                val imdbAliases = tmdbService.resolveImdbAliases(allItems.map { it.id to it.apiType })
+                if (imdbAliases.isNotEmpty()) {
+                    applyWatchedStatus(movieWatchedIds, seriesWatchedIds, allItems, imdbAliases)
                 }
-                _uiState.update { s ->
-                    if (s.movieWatchedStatus == newStatus) s else s.copy(movieWatchedStatus = newStatus)
-                }
-                rebuildFollowLayoutState()
             }
         }
+    }
+
+    private fun applyWatchedStatus(
+        movieWatchedIds: Set<String>,
+        seriesWatchedIds: Set<String>,
+        allItems: List<MetaPreview>,
+        imdbAliases: Map<String, String>
+    ) {
+        val newStatus = mutableMapOf<String, Boolean>()
+        allItems.forEach { item ->
+            val key = com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
+            val isWatched = when (item.apiType) {
+                "movie" -> isWatchedWithAlias(item.id, imdbAliases[item.id], movieWatchedIds)
+                "series", "tv" -> isWatchedWithAlias(item.id, imdbAliases[item.id], seriesWatchedIds)
+                else -> false
+            }
+            newStatus[key] = isWatched
+        }
+        _uiState.update { s ->
+            if (s.movieWatchedStatus == newStatus) s else s.copy(movieWatchedStatus = newStatus)
+        }
+        rebuildFollowLayoutState()
     }
 
     private val hasAllTab: Boolean

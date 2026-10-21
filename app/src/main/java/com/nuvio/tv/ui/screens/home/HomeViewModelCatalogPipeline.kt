@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.tmdb.isWatchedWithAlias
+import com.nuvio.tv.core.tmdb.resolveImdbAliases
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
@@ -987,30 +989,40 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
 
         if (desiredMovieKeys.isNotEmpty()) {
             movieWatchedBatchJob = viewModelScope.launch {
-                watchProgressRepository.observeWatchedMovieIds()
-                    .collectLatest { watchedIds ->
-                        _uiState.update { state ->
-                            val movieStatus = buildMap {
-                                allMovieItemsByKey.forEach { (statusKey, contentId) ->
-                                    put(statusKey, contentId in watchedIds)
-                                }
-                            }
-                            // Merge with existing status to preserve series entries.
-                            val merged = state.movieWatchedStatus
-                                .filterKeys { it !in desiredMovieKeys } + movieStatus
-                            if (state.movieWatchedStatus == merged) {
-                                state
-                            } else {
-                                state.copy(movieWatchedStatus = merged)
+                fun applyMovieStatus(watchedIds: Set<String>, imdbAliases: Map<String, String>) {
+                    _uiState.update { state ->
+                        val movieStatus = buildMap {
+                            allMovieItemsByKey.forEach { (statusKey, contentId) ->
+                                put(statusKey, isWatchedWithAlias(contentId, imdbAliases[contentId], watchedIds))
                             }
                         }
+                        // Merge with existing status to preserve series entries.
+                        val merged = state.movieWatchedStatus
+                            .filterKeys { it !in desiredMovieKeys } + movieStatus
+                        if (state.movieWatchedStatus == merged) {
+                            state
+                        } else {
+                            state.copy(movieWatchedStatus = merged)
+                        }
+                    }
+                }
+                watchProgressRepository.observeWatchedMovieIds()
+                    .collectLatest { watchedIds ->
+                        applyMovieStatus(watchedIds, imdbAliases = emptyMap())
+                        // TMDB-sourced items ("tmdb:<id>") only match history through their
+                        // IMDb id; resolved after the first pass so no badge waits on it.
+                        val imdbAliases = tmdbService.resolveImdbAliases(
+                            allMovieItemsByKey.values.map { it to "movie" }
+                        )
+                        if (imdbAliases.isNotEmpty()) applyMovieStatus(watchedIds, imdbAliases)
                     }
             }
         }
     }
 
     // Update series watched status from CW pipeline's fully-watched resolution.
-    // This piggybacks on the meta lookups CW already performs — no extra network calls.
+    // This piggybacks on the meta lookups CW already performs — no extra network calls,
+    // except a cached IMDb id lookup for TMDB-sourced ("tmdb:") items.
     if (allSeriesItemsByKey.isNotEmpty()) {
         seriesWatchedObserverJob?.cancel()
         seriesWatchedObserverJob = viewModelScope.launch {
@@ -1031,17 +1043,25 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
                         seriesContentIds = allSeriesItemsByKey.values
                     )
                 }
-                val seriesStatus = buildMap {
-                    allSeriesItemsByKey.forEach { (statusKey, contentId) ->
-                        put(statusKey, contentId in effectiveFullyWatched)
+                fun applySeriesStatus(imdbAliases: Map<String, String>) {
+                    val seriesStatus = buildMap {
+                        allSeriesItemsByKey.forEach { (statusKey, contentId) ->
+                            put(statusKey, isWatchedWithAlias(contentId, imdbAliases[contentId], effectiveFullyWatched))
+                        }
+                    }
+                    _uiState.update { state ->
+                        val merged = state.movieWatchedStatus
+                            .filterKeys { it !in allSeriesItemsByKey.keys } + seriesStatus
+                        if (state.movieWatchedStatus == merged) state
+                        else state.copy(movieWatchedStatus = merged)
                     }
                 }
-                _uiState.update { state ->
-                    val merged = state.movieWatchedStatus
-                        .filterKeys { it !in allSeriesItemsByKey.keys } + seriesStatus
-                    if (state.movieWatchedStatus == merged) state
-                    else state.copy(movieWatchedStatus = merged)
-                }
+                applySeriesStatus(imdbAliases = emptyMap())
+                // Same IMDb aliasing as the movie pass, for TMDB-sourced series.
+                val imdbAliases = tmdbService.resolveImdbAliases(
+                    allSeriesItemsByKey.values.map { it to "series" }
+                )
+                if (imdbAliases.isNotEmpty()) applySeriesStatus(imdbAliases)
             }
         }
     } else {
