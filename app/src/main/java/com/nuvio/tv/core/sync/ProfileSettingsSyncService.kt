@@ -244,6 +244,46 @@ class ProfileSettingsSyncService @Inject constructor(
         }
     }
 
+    /**
+     * Applies [change] to the settings of [profileId]. The active profile's changes are uploaded by the
+     * observer below. Another profile is refreshed from the cloud first, because this device's copy of it
+     * can be old and an upload replaces the profile's whole settings.
+     */
+    suspend fun updateProfileSettings(profileId: Int, change: suspend () -> Unit) = withContext(Dispatchers.IO) {
+        if (profileId == profileManager.activeProfileId.value || !authManager.isAuthenticated) {
+            change()
+            return@withContext
+        }
+        syncMutex.withLock {
+            val remote = try {
+                Result.success(pullProfileFromRemote(profileId))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pull profile settings blob for profile $profileId", e)
+                Result.failure(e)
+            }
+            remote.getOrNull()?.get("features")?.jsonObject?.let { featuresJson ->
+                val remoteSignature = buildSettingsSignature(featuresJson)
+                if (remoteSignature != buildSettingsSignature(profileId)) {
+                    applySettingsBlob(profileId, featuresJson, remoteSignature)
+                }
+            }
+            change()
+            // Without the cloud copy, uploading could overwrite newer settings; keep the change on this device.
+            if (remote.isSuccess) {
+                try {
+                    pushProfileToRemote(profileId)
+                    Log.d(TAG, "Pushed profile settings blob for profile $profileId")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to push profile settings blob for profile $profileId", e)
+                }
+            }
+        }
+    }
+
     suspend fun pullCurrentProfileFromRemote(): Result<Boolean> = withContext(Dispatchers.IO) {
         syncMutex.withLock {
             try {

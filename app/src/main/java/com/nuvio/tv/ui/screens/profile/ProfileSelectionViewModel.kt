@@ -340,7 +340,9 @@ class ProfileSelectionViewModel @Inject constructor(
 
     fun setAskPinOnAppStart(profileId: Int, enabled: Boolean, onComplete: () -> Unit) {
         viewModelScope.launch {
-            profileLockSettingsDataStore.setAskPinOnAppStart(profileId, enabled)
+            profileSettingsSyncService.updateProfileSettings(profileId) {
+                profileLockSettingsDataStore.setAskPinOnAppStart(profileId, enabled)
+            }
             onComplete()
         }
     }
