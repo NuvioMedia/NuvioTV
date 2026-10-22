@@ -8,6 +8,8 @@ import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.LibassRenderType
+import com.nuvio.tv.data.local.PlaybackInfoBadgeStyle
+import com.nuvio.tv.data.local.PlaybackInfoBadgePosition
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
@@ -227,6 +229,11 @@ data class PlayerUiState(
     // Stream info overlay
     val showStreamInfoOverlay: Boolean = false,
     val streamInfoData: StreamInfoData? = null,
+    // Active playback info badge beside the title
+    val activePlaybackInfo: ActivePlaybackInfo? = null,
+    val showPlaybackInfoBadge: Boolean = true,
+    val playbackInfoBadgeStyle: PlaybackInfoBadgeStyle = PlaybackInfoBadgeStyle.PILL,
+    val playbackInfoBadgePosition: PlaybackInfoBadgePosition = PlaybackInfoBadgePosition.BESIDE_TITLE,
     // Torrent streaming state
     val isTorrentStream: Boolean = false,
     val torrentDownloadSpeed: Long = 0L,

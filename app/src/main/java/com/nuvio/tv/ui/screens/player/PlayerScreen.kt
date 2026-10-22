@@ -145,12 +145,14 @@ import com.nuvio.tv.core.player.PlayerWindowBackdrop
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.LibassRenderType
+import com.nuvio.tv.data.local.PlaybackInfoBadgePosition
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.domain.model.StreamBadge
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.PlaybackInfoBadgeChips
 import android.text.format.DateFormat
 import com.nuvio.tv.ui.util.rememberRawSvgPainter
 import java.util.Date
@@ -2719,14 +2721,49 @@ private fun PlayerControlsOverlay(
                         uiState.title
                     }
 
-                    Text(
-                        text = displayName,
-                        modifier = Modifier.reportRightEdge("name", titleRights),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    val showInfoBadge = uiState.showPlaybackInfoBadge
+                    val infoBadge = if (showInfoBadge) {
+                        remember(uiState.activePlaybackInfo, uiState.audioTracks, uiState.selectedAudioTrackIndex) {
+                            buildPlaybackInfoBadge(
+                                video = uiState.activePlaybackInfo,
+                                selectedAudio = uiState.audioTracks.getOrNull(uiState.selectedAudioTrackIndex)
+                            )
+                        }
+                    } else {
+                        null
+                    }
+                    val badgeBesideTitle = uiState.playbackInfoBadgePosition ==
+                        PlaybackInfoBadgePosition.BESIDE_TITLE
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = displayName,
+                            modifier = Modifier
+                                .reportRightEdge("name", titleRights)
+                                .weight(1f, fill = false),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        if (infoBadge != null && !infoBadge.isEmpty && badgeBesideTitle) {
+                            Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
+                            PlaybackInfoBadgeChips(
+                                badge = infoBadge,
+                                style = uiState.playbackInfoBadgeStyle
+                            )
+                        }
+                    }
+
+                    if (infoBadge != null && !infoBadge.isEmpty && !badgeBesideTitle) {
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
+                        PlaybackInfoBadgeChips(
+                            badge = infoBadge,
+                            style = uiState.playbackInfoBadgeStyle
+                        )
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
+                    }
 
                     if (uiState.currentSeason != null && uiState.currentEpisode != null) {
                         val seasonEpisodeCode = stringResource(

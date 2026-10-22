@@ -657,7 +657,9 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             audioTracks = tracks.filter { it.type == "audio" }
                 .map { it.copy(isSelected = it.id == selectedAudioTrackId) },
             subtitleTracks = tracks.filter { it.type == "sub" }
-                .map { it.copy(isSelected = it.id == selectedSubtitleTrackId) }
+                .map { it.copy(isSelected = it.id == selectedSubtitleTrackId) },
+            videoWidth = runCatching { mpv.getPropertyInt("video-params/w") }.getOrNull()?.takeIf { it > 0 },
+            videoHeight = runCatching { mpv.getPropertyInt("video-params/h") }.getOrNull()?.takeIf { it > 0 }
         )
     }
 
@@ -723,6 +725,13 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
                 title = mpv.getPropertyString("chapter-list/$i/title")?.trim()?.takeIf { it.isNotBlank() }
             )
         }
+    }
+
+    fun readVideoParams(): Pair<Int, Int>? {
+        if (!initialized) return null
+        val width = runCatching { mpv.getPropertyInt("video-params/w") }.getOrNull()?.takeIf { it > 0 } ?: return null
+        val height = runCatching { mpv.getPropertyInt("video-params/h") }.getOrNull()?.takeIf { it > 0 } ?: return null
+        return width to height
     }
 
     fun releasePlayer() {
@@ -907,7 +916,10 @@ private class MpvTrackListCache(
 
 data class MpvTrackSnapshot(
     val audioTracks: List<MpvTrack>,
-    val subtitleTracks: List<MpvTrack>
+    val subtitleTracks: List<MpvTrack>,
+    /** Active video dimensions from video-params, when available. */
+    val videoWidth: Int? = null,
+    val videoHeight: Int? = null
 )
 
 data class MpvTrack(

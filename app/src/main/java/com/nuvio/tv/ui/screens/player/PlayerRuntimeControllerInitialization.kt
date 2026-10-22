@@ -1396,6 +1396,17 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (videoSize.width > 0 && videoSize.height > 0) {
                             currentVideoWidth = videoSize.width
                             currentVideoHeight = videoSize.height
+                            _uiState.update { state ->
+                                state.copy(
+                                    activePlaybackInfo = state.activePlaybackInfo?.copy(
+                                        width = videoSize.width,
+                                        height = videoSize.height
+                                    ) ?: ActivePlaybackInfo(
+                                        width = videoSize.width,
+                                        height = videoSize.height
+                                    )
+                                )
+                            }
                             Log.d(PlayerRuntimeController.TAG, "onVideoSizeChanged: updated resolution to ${videoSize.width}x${videoSize.height}")
                         }
                     }
