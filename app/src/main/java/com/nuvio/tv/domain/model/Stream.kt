@@ -29,7 +29,8 @@ data class Stream(
     val debridCacheStatus: StreamDebridCacheStatus? = null,
     val badges: List<StreamBadge> = emptyList(),
     val subtitles: List<Subtitle> = emptyList(),
-    val serverTarget: ServerPlaybackTarget? = null
+    val serverTarget: ServerPlaybackTarget? = null,
+    val pluginSourceName: String? = null
 ) {
     /**
      * Returns the primary stream source URL

@@ -84,6 +84,9 @@ data class StreamBadgeRules(
         ).normalized()
     }
 
+    fun forPlayer(sourceUrl: String): StreamBadgeRules =
+        if (sourceUrl.isBlank()) normalized() else setActiveSource(sourceUrl)
+
     fun removeSource(sourceUrl: String): StreamBadgeRules =
         copy(imports = imports.filterNot { it.sourceUrl.equals(sourceUrl.trim(), ignoreCase = true) }).normalized()
 

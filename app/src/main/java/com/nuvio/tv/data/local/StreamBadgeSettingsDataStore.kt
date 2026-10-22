@@ -51,6 +51,7 @@ class StreamBadgeSettingsDataStore @Inject constructor(
     private val showAddonLogoKey = booleanPreferencesKey("show_addon_logo")
     private val streamBadgePlacementKey = stringPreferencesKey("stream_badge_placement")
     private val showInPlayerKey = booleanPreferencesKey("show_badges_in_player")
+    private val playerBadgeSourceKey = stringPreferencesKey("player_badge_source")
     private val legacyDebridStreamBadgeRulesKey = stringPreferencesKey("debrid_stream_badge_rules")
 
     val settings: Flow<StreamBadgeSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
@@ -61,7 +62,8 @@ class StreamBadgeSettingsDataStore @Inject constructor(
             showFileSizeBadges = prefs[showFileSizeBadgesKey] ?: true,
             showAddonLogo = prefs[showAddonLogoKey] ?: true,
             badgePlacement = prefs[streamBadgePlacementKey].toStreamBadgePlacement(),
-            showInPlayer = prefs[showInPlayerKey] ?: false
+            showInPlayer = prefs[showInPlayerKey] ?: false,
+            playerBadgeSource = prefs[playerBadgeSourceKey].orEmpty()
         )
     }
 
@@ -92,6 +94,10 @@ class StreamBadgeSettingsDataStore @Inject constructor(
         store().edit { it[showInPlayerKey] = enabled }
     }
 
+    suspend fun setPlayerBadgeSource(source: String) {
+        store().edit { it[playerBadgeSourceKey] = source }
+    }
+
     suspend fun setSettings(settings: StreamBadgeSettings) {
         store().edit {
             val normalized = settings.rules.normalized()
@@ -104,6 +110,7 @@ class StreamBadgeSettingsDataStore @Inject constructor(
             it[showAddonLogoKey] = settings.showAddonLogo
             it[streamBadgePlacementKey] = settings.badgePlacement.name
             it[showInPlayerKey] = settings.showInPlayer
+            it[playerBadgeSourceKey] = settings.playerBadgeSource
         }
     }
 

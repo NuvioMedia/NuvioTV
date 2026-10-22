@@ -1424,7 +1424,10 @@
     <string name="settings_stream_size_badges_title">Size badges</string>
     <string name="settings_stream_size_badges_description">Show file size badges in stream results and player source panels.</string>
     <string name="settings_stream_badges_in_player_title">Show in player</string>
-    <string name="settings_stream_badges_in_player_description">Show badges for the video and audio that is playing under the player title.</string>
+    <string name="settings_stream_badges_in_player_description">Show badges for the video and audio that is playing under the player title. Needs a badge pack that matches plain text, like 2160p or Atmos.</string>
+    <string name="settings_stream_player_badges_title">Player badges</string>
+    <string name="settings_stream_player_badges_description">Choose the badge pack the player uses.</string>
+    <string name="settings_stream_player_badges_same">Same as stream badges</string>
     <string name="settings_stream_addon_logo_title">Addon logo</string>
     <string name="settings_stream_addon_logo_description">Show addon logo and name next to stream sources.</string>
     <string name="settings_stream_display_section">Display</string>
@@ -3421,4 +3424,6 @@
     <string name="autosync_toast_failed_no_reference">Sync failed: this video has no embedded subtitles to compare with.</string>
     <string name="autosync_toast_failed_unsupported">Sync failed: Auto Sync doesn\'t support this subtitle format.</string>
     <string name="autosync_label_synced">Auto synced</string>
+    <string name="stream_resume_from_time">Resume from %1$s</string>
+    <string name="stream_resume_from_percent">Resume from %1$d%%</string>
 </resources>

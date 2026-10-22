@@ -64,6 +64,26 @@ class PlaybackMatchTextTest {
     }
 
     @Test
+    fun `uses the pack chosen for the player`() {
+        val streamPack = StreamBadgeImport(
+            sourceUrl = "https://example.com/stream.json",
+            filters = listOf(filter("Stream4K", "\u2063\u200b\u2063"))
+        )
+        val playerPack = StreamBadgeImport(
+            sourceUrl = "https://example.com/player.json",
+            filters = listOf(filter("Player4K", "(?i)\\b2160p\\b"))
+        )
+        val rules = StreamBadgeRules(imports = listOf(streamPack, playerPack)).normalized()
+        val text = playbackMatchText(PlayerMediaInfo(videoWidth = 3840, videoHeight = 2160), emptyList())
+        fun namesFor(source: String) =
+            StreamBadgeMatcher.matchedBadges(listOf(text), StreamBadgeMatcher.compile(rules.forPlayer(source))).map { it.name }
+
+        assertEquals(emptyList<String>(), namesFor(""))
+        assertEquals(listOf("Player4K"), namesFor("https://example.com/player.json"))
+        assertEquals(emptyList<String>(), namesFor("https://example.com/removed.json"))
+    }
+
+    @Test
     fun `shows nothing before playback info loads`() {
         assertEquals(emptyList<String>(), matchedNames(PlayerMediaInfo()))
     }

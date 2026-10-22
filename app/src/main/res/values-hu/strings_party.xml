@@ -74,4 +74,5 @@
     <string name="party_invite_scan">A csatlakozáshoz olvasd be telefonnal</string>
     <string name="party_invite_share">Vagy oszd meg a kódot. A barátaid bármelyik Nuvio-alkalmazásban megadhatják a Közös nézésnél.</string>
     <string name="party_invite_qr">Közös nézés meghívójának QR-kódja</string>
+    <string name="party_phone_chat_note">A csevegéshez nyisd meg a Közös nézést a telefonodon ezzel a profillal.</string>
 </resources>
