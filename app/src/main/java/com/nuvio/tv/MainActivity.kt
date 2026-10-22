@@ -145,7 +145,9 @@ import com.nuvio.tv.core.deeplink.DeepLinkHandler
 import com.nuvio.tv.core.deeplink.DeepLinkParser
 import com.nuvio.tv.core.player.PlayerWindowBackdrop
 import com.nuvio.tv.core.party.PartyRepository
+import com.nuvio.tv.core.profile.LastProfileStart
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.profile.lastProfileStart
 import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.core.tracking.TrackingProgressRefreshCoordinator
@@ -478,7 +480,8 @@ open class MainActivity : ComponentActivity() {
                         profileLockStateDataStore.replaceAll(states)
                         if (autoSelectPinCheckPending) {
                             autoSelectPinCheckPending = false
-                            // The cache can miss a PIN set on another device; ask for it now.
+                            // The cache missed a PIN set on another device; ask for it now, unless the
+                            // profile turned "Always ask PIN on app start" off.
                             val profileId = profileManager.activeProfileId.value
                             if (states[profileId] == true &&
                                 profileLockSettingsDataStore.askPinOnAppStart(profileId).first()
@@ -493,23 +496,27 @@ open class MainActivity : ComponentActivity() {
             }
 
             val activeProfileHasPin = cachedPinStates?.get(activeProfileId) == true
-            // Remember Last Profile opens a locked profile without its PIN only if the profile turned
-            // "Always ask PIN on app start" off.
-            val lastProfileNeedsPin = rememberLastProfileEnabled && hasEverSelectedProfile &&
-                activeProfileHasPin && activeProfileAsksPinOnAppStart != false
-            val lastProfileChoicePending = rememberLastProfileEnabled && hasEverSelectedProfile &&
-                activeProfileHasPin && activeProfileAsksPinOnAppStart == null &&
+            val lastProfileStart = lastProfileStart(
+                rememberLastProfile = rememberLastProfileEnabled,
+                hasEverSelectedProfile = hasEverSelectedProfile,
+                hasPin = cachedPinStates?.let { it[activeProfileId] == true },
+                asksPinOnAppStart = activeProfileAsksPinOnAppStart
+            )
+            // Nothing is shown until it is known whether the last profile opens or asks for its PIN.
+            val lastProfileChoicePending = lastProfileStart == LastProfileStart.Undecided &&
                 !hasSelectedProfileThisSession && !profileSwitchedManually
             // The picker opens straight to the PIN of the profile Remember Last Profile would have opened.
-            val startupUnlockProfileId = activeProfileId.takeIf { lastProfileNeedsPin && !profileSwitchedManually }
+            val startupUnlockProfileId = activeProfileId.takeIf {
+                lastProfileStart == LastProfileStart.AskPin && !profileSwitchedManually
+            }
 
-            val shouldAutoSelectProfile = cachedPinStates != null && rememberLastProfileEnabled &&
-                hasEverSelectedProfile && !lastProfileNeedsPin &&
+            val shouldAutoSelectProfile = lastProfileStart == LastProfileStart.Open &&
                 !hasSelectedProfileThisSession && !profileSwitchedManually && !lastProfileAutoOpenBlocked
             if (shouldAutoSelectProfile && !splashTriggered) {
                 splashTriggered = true
                 hasSelectedProfileThisSession = true
-                autoSelectPinCheckPending = true
+                // A PIN this device knew about was already handled; only a PIN it missed needs the server.
+                autoSelectPinCheckPending = !activeProfileHasPin
             }
             LaunchedEffect(shouldAutoSelectProfile) {
                 if (shouldAutoSelectProfile) {
