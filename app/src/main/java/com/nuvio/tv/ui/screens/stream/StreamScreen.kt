@@ -1275,7 +1275,7 @@ private fun StreamsList(
                         color = NuvioTheme.colors.TextSecondary,
                         modifier = Modifier.padding(start = NuvioTheme.spacing.xs)
                     )
-                    StreamProviderHeader(shared.stream)
+                    StreamProviderHeader(streamProviderHeader(shared.stream))
                     StreamCard(
                         stream = shared.stream,
                         showFileSizeBadges = showFileSizeBadges,
@@ -1301,7 +1301,7 @@ private fun StreamsList(
                 modifier = Modifier.padding(vertical = NuvioTheme.spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
             ) {
-                StreamProviderHeader(stream)
+                StreamProviderHeader(streamProviderHeader(stream, streams.getOrNull(index - 1)))
                 val isPartySource = partySource?.matches(stream) == true
                 StreamCard(
                     stream = stream,
@@ -1336,8 +1336,8 @@ private fun StreamsList(
 }
 
 @Composable
-private fun StreamProviderHeader(stream: Stream) {
-    stream.pluginSourceName?.takeIf { it.isNotBlank() && it != stream.addonName }?.let { sourceName ->
+private fun StreamProviderHeader(sourceName: String?) {
+    sourceName?.let { sourceName ->
         Text(
             text = sourceName,
             modifier = Modifier.padding(start = NuvioTheme.spacing.lg),
