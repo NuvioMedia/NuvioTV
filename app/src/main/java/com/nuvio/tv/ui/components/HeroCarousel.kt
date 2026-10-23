@@ -91,6 +91,7 @@ fun HeroCarousel(
     initialActiveIndex: Int = 0,
     mdbListShowOnHero: Boolean = false,
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
+    descriptionAutoScrollEnabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (items.isEmpty()) return
@@ -178,7 +179,8 @@ fun HeroCarousel(
                 showImdbRatings = showImdbRatings,
                 showBackdrop = showBackdrop,
                 mdbListShowOnHero = mdbListShowOnHero,
-                mdbListRatingOrder = mdbListRatingOrder
+                mdbListRatingOrder = mdbListRatingOrder,
+                descriptionAutoScrollEnabled = descriptionAutoScrollEnabled
             )
         }
 
@@ -226,7 +228,8 @@ private fun HeroCarouselSlide(
     showImdbRatings: Boolean,
     showBackdrop: Boolean,
     mdbListShowOnHero: Boolean = false,
-    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
+    descriptionAutoScrollEnabled: Boolean = false
 ) {
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
     val context = LocalContext.current
@@ -388,14 +391,14 @@ private fun HeroCarouselSlide(
             }
 
             item.description?.takeIf { it.isNotBlank() }?.let { description ->
-                Text(
+                AutoScrollingText(
                     text = description,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         textDirection = description.contentTextDirection()
                     ),
                     color = NuvioTheme.colors.TextPrimary,
                     maxLines = 4,
-                    overflow = TextOverflow.Ellipsis
+                    autoScrollEnabled = descriptionAutoScrollEnabled
                 )
             }
         }
