@@ -60,6 +60,8 @@ internal object SubtitleLanguageMatching {
         "ell" to "el",
         "gre" to "el",
         "heb" to "he",
+        "hbo" to "he",
+        "iw" to "he",
         "tha" to "th",
         "vie" to "vi",
         "ind" to "id",
@@ -388,4 +390,3 @@ internal object SubtitleLanguageMatching {
         return tags.any { tag -> haystack.contains(tag) }
     }
 }
-

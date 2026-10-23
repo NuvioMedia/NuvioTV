@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
+import com.nuvio.tv.data.local.LibassRenderScale
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.Dv7HandlingMode
@@ -238,12 +239,20 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setStripHdr10PlusSei(enabled)
     }
 
+    suspend fun setExoChaptersEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setExoChaptersEnabled(enabled)
+    }
+
     suspend fun setUseLibass(enabled: Boolean) {
         playerSettingsDataStore.setUseLibass(enabled)
     }
 
     suspend fun setLibassRenderType(renderType: LibassRenderType) {
         playerSettingsDataStore.setLibassRenderType(renderType)
+    }
+
+    suspend fun setLibassRenderScale(scale: LibassRenderScale) {
+        playerSettingsDataStore.setLibassRenderScale(scale)
     }
 
     suspend fun setSubtitlePreferredLanguage(language: String) {
@@ -296,6 +305,18 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSubtitleOutlineWidth(width: Int) {
         playerSettingsDataStore.setSubtitleOutlineWidth(width)
+    }
+
+    suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleHdrStyleEnabled(enabled)
+    }
+
+    suspend fun setSubtitleHdrTextColor(color: Int) {
+        playerSettingsDataStore.setSubtitleHdrTextColor(color)
+    }
+
+    suspend fun setSubtitleHdrBrightness(brightness: Int) {
+        playerSettingsDataStore.setSubtitleHdrBrightness(brightness)
     }
 
     suspend fun setSubtitleOrganizationMode(mode: SubtitleOrganizationMode) {

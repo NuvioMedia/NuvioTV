@@ -863,15 +863,6 @@
     <string name="sub_libass">ASS/SSA সাবটাইটেলের জন্য libass ব্যবহার করুন</string>
     <string name="sub_libass_sub">পরীক্ষামূলক: উন্নত ASS/SSA রেন্ডারিং (স্টাইল, পজিশনিং, অ্যানিমেশন)</string>
     <string name="sub_libass_mode">libass রেন্ডার মোড</string>
-    <string name="sub_mode_overlay_gl">ওভারলে OpenGL (প্রস্তাবিত)</string>
-    <string name="sub_mode_overlay_gl_sub">HDR সাপোর্ট সহ সেরা কোয়ালিটি। একটি আলাদা থ্রেডে সাবটাইটেল রেন্ডার করে।</string>
-    <string name="sub_mode_overlay_canvas">ওভারলে ক্যানভাস</string>
-    <string name="sub_mode_effects_gl">ইফেক্টস OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Media3 ইফেক্ট ব্যবহার করে অ্যানিমেশন সাপোর্ট। Canvas-এর চেয়ে দ্রুত।</string>
-    <string name="sub_mode_effects_canvas">ইফেক্টস ক্যানভাস</string>
-    <string name="sub_mode_effects_canvas_sub">Canvas রেন্ডারিংয়ের সাথে Media3 ইফেক্ট ব্যবহার করে অ্যানিমেশন সাপোর্ট।</string>
-    <string name="sub_mode_standard">স্ট্যান্ডার্ড কিউ</string>
-    <string name="sub_mode_standard_sub">অ্যানিমেশন সাপোর্ট ছাড়াই বেসিক সাবটাইটেল রেন্ডারিং। সবচেয়ে কম্প্যাটিবল।</string>
     <string name="sub_org_none">কোনোটিই নয় (ডিফল্ট ক্রম)</string>
     <string name="sub_org_by_lang">ভাষা অনুযায়ী</string>
     <string name="sub_org_by_addon">অ্যাডন অনুযায়ী</string>
@@ -2340,7 +2331,6 @@
     <string name="home_error_no_addons">কোনো অ্যাডন ইনস্টল করা নেই</string>
     <string name="home_error_no_catalog_addons">কোনো ক্যাটালগ অ্যাডন ইনস্টল করা নেই</string>
     <string name="player_error_failed_start_torrent">টরেন্ট শুরু করতে ব্যর্থ হয়েছে: %1$s</string>
-    <string name="sub_mode_overlay_canvas_sub">ক্যানভাস রেন্ডারিং সহ HDR সাপোর্ট। UI থ্রেড ব্লক করতে পারে।</string>
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
     <string name="cd_play">প্লে</string>

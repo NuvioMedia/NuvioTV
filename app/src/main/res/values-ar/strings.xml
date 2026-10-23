@@ -695,15 +695,6 @@
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
     <string name="sub_libass_sub">Experimental: advanced ASS/SSA rendering (styles, positioning, animations)</string>
     <string name="sub_libass_mode">Libass Render Mode</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (Recommended)</string>
-    <string name="sub_mode_overlay_gl_sub">Best quality with HDR support. Renders subtitles on a separate thread.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Animation support using Media3 effects. Faster than Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Animation support using Media3 effects with Canvas rendering.</string>
-    <string name="sub_mode_standard">Standard Cues</string>
-    <string name="sub_mode_standard_sub">Basic subtitle rendering without animation support. Most compatible.</string>
     <string name="sub_org_none">بدون (الترتيب الافتراضي)</string>
     <string name="sub_org_by_lang">حسب اللغة</string>
     <string name="sub_org_by_addon">حسب الإضافة</string>
@@ -1965,7 +1956,6 @@
     <string name="player_error_failed_start_torrent">تعذر بدء ملف التورنت %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR support with canvas rendering. May block UI thread.</string>
 
     <!-- Episode ratings -->
     <string name="ratings_season_label">S%1$d</string>

@@ -86,7 +86,7 @@ object SubtitleCharsetDetector {
         if (text.isEmpty()) return text
 
         val normalized = languageHint?.trim()?.lowercase()?.substringBefore('-')?.substringBefore('_')
-        val isHebrewHint = normalized == "heb" || normalized == "he" || normalized == "iw" || normalized?.startsWith("hebrew") == true
+        val isHebrewHint = normalized == "heb" || normalized == "hbo" || normalized == "he" || normalized == "iw" || normalized?.startsWith("hebrew") == true
 
         // Double-encoded UTF-8 subtitles (where Windows-1255 Hebrew bytes were decoded as Latin-1 and saved as UTF-8)
         // are an issue specific to Hebrew providers like Ktuvit.
@@ -134,7 +134,7 @@ object SubtitleCharsetDetector {
         val lang = normalized.substringBefore('-').substringBefore('_')
 
         return when {
-            lang == "heb" || lang == "he" || lang == "iw" || lang.startsWith("hebrew") -> CHARSET_WIN1255
+            lang == "heb" || lang == "hbo" || lang == "he" || lang == "iw" || lang.startsWith("hebrew") -> CHARSET_WIN1255
             lang == "ara" || lang == "ar" || lang.startsWith("arabic") -> CHARSET_WIN1256
             lang == "ell" || lang == "el" || lang == "gre" || lang.startsWith("greek") -> CHARSET_WIN1253
             lang == "tur" || lang == "tr" || lang.startsWith("turkish") -> CHARSET_WIN1254

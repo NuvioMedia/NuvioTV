@@ -834,15 +834,6 @@
 <string name="sub_libass">Usa libass per sottotitoli ASS/SSA</string>
 <string name="sub_libass_sub">Sperimentale: rendering ASS/SSA avanzato (stili, posizionamento, animazioni)</string>
 <string name="sub_libass_mode">Modalità rendering Libass</string>
-<string name="sub_mode_overlay_gl">Overlay OpenGL (Consigliato)</string>
-<string name="sub_mode_overlay_gl_sub">Migliore qualità con supporto HDR. Esegue il rendering dei sottotitoli su un thread separato.</string>
-<string name="sub_mode_overlay_canvas">Canvas sovrapposto</string>
-<string name="sub_mode_effects_gl">Effetti OpenGL</string>
-<string name="sub_mode_effects_gl_sub">Supporto animazioni tramite effetti Media3. Più veloce di Canvas.</string>
-<string name="sub_mode_effects_canvas">Effetti Canvas</string>
-<string name="sub_mode_effects_canvas_sub">Supporto animazioni tramite effetti Media3 con rendering Canvas.</string>
-<string name="sub_mode_standard">Cues standard</string>
-<string name="sub_mode_standard_sub">Rendering base dei sottotitoli senza supporto animazioni. Massima compatibilità.</string>
 <string name="sub_org_none">Nessuna (ordine predefinito)</string>
 <string name="sub_org_by_lang">Per lingua</string>
 <string name="sub_org_by_addon">Per addon</string>
@@ -2316,7 +2307,6 @@
 <string name="player_error_failed_start_torrent">Impossibile avviare il torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-<string name="sub_mode_overlay_canvas_sub">Supporto HDR con rendering canvas. Potrebbe bloccare il thread UI.</string>
 
 <string name="ratings_season_label">S%1$d</string>
 <string name="ratings_episode_label">E%1$d</string>
@@ -3195,7 +3185,7 @@
     <string name="playback_section_stream_selection_desc">Come viene scelto un flusso quando premi Riproduci.</string>
     <string name="playback_section_up_next">In arrivo</string>
     <string name="playback_section_up_next_desc">Riproduzione automatica dell\'episodio successivo e suggerimenti al termine della visione.</string>
-    <string name="playback_section_skip">SALTA SEGMENTI</string>
+    <string name="playback_section_skip">Salta segmenti</string>
     <string name="playback_section_skip_desc">Salta sigle iniziali, riepiloghi e titoli di coda.</string>
     <string name="playback_section_interface">Interfaccia del lettore</string>
     <string name="playback_section_interface_desc">Sovrapposizioni, orologio e dettagli mostrati durante la riproduzione.</string>
@@ -3374,4 +3364,6 @@
     <string name="autosync_toast_failed_no_reference">Sincronizzazione non riuscita: questo video non contiene sottotitoli incorporati da confrontare.</string>
     <string name="autosync_toast_failed_unsupported">Sincronizzazione non riuscita: Auto Sync non supporta questo formato di sottotitoli.</string>
     <string name="autosync_label_synced">Sincronizzato automaticamente</string>
+    <string name="stream_resume_from_time">Riprendi da %1$s</string>
+    <string name="stream_resume_from_percent">Riprendi dal %1$d%%</string>
 </resources>

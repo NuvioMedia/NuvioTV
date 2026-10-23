@@ -767,15 +767,6 @@
   <string name="sub_libass">Χρήση libass για υπότιτλους ASS/SSA</string>
   <string name="sub_libass_sub">Πειραματικό: προχωρημένη απόδοση ASS/SSA (στυλ, τοποθέτηση, κινούμενα σχέδια)</string>
   <string name="sub_libass_mode">Λειτουργία απόδοσης Libass</string>
-  <string name="sub_mode_overlay_gl">Overlay OpenGL (Συνιστάται)</string>
-  <string name="sub_mode_overlay_gl_sub">Καλύτερη ποιότητα με υποστήριξη HDR. Απόδοση υπότιτλων σε ξεχωριστό νήμα.</string>
-  <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-  <string name="sub_mode_effects_gl">Εφέ OpenGL</string>
-  <string name="sub_mode_effects_gl_sub">Υποστήριξη κινούμενων σχεδίων με Media3 effects. Ταχύτερο από Canvas.</string>
-  <string name="sub_mode_effects_canvas">Εφέ Canvas</string>
-  <string name="sub_mode_effects_canvas_sub">Υποστήριξη κινούμενων σχεδίων με Media3 effects και απόδοση Canvas.</string>
-  <string name="sub_mode_standard">Τυπικοί Υπότιτλοι</string>
-  <string name="sub_mode_standard_sub">Βασική απόδοση υπότιτλων χωρίς υποστήριξη κινούμενων σχεδίων. Πιο συμβατό.</string>
   <string name="sub_org_none">Κανένα (προεπιλεγμένη σειρά)</string>
   <string name="sub_org_by_lang">Ανά γλώσσα</string>
   <string name="sub_org_by_addon">Ανά πρόσθετο</string>
@@ -2291,7 +2282,6 @@
   <string name="player_error_no_stream_url">Δεν δόθηκε URL ροής</string>
   <string name="player_error_failed_start_torrent">Αποτυχία εκκίνησης torrent: %1$s</string>
   <!-- Playback subtitle settings -->
-  <string name="sub_mode_overlay_canvas_sub">Υποστήριξη HDR με απόδοση καμβά. Ενδέχεται να μπλοκάρει το νήμα UI.</string>
   <string name="subtitle_style_weight">Πάχος</string>
   <!-- Plugin screen -->
   <string name="plugin_version">Έκδοση %1$s</string>

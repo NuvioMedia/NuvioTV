@@ -45,7 +45,7 @@ internal fun PlayerRuntimeController.scheduleSourceBadgeApplication() {
         val allNewStreams = newAddons.flatMap { addonName ->
             _uiState.value.sourceAllStreams.filter { it.addonName == addonName }
         }
-        if (allNewStreams.isEmpty()) {
+        if (allNewStreams.isEmpty() || !streamBadgePresentation.hasActiveFilters()) {
             sourceBadgedAddonNames = sourceBadgedAddonNames + newAddons.toSet()
             return@launch
         }
@@ -655,6 +655,7 @@ private fun PlayerRuntimeController.applySelectedStreamState(
  */
 private fun PlayerRuntimeController.applyStreamMetadata(stream: Stream) {
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
+    applyStreamAudioDelay(stream.behaviorHints?.audioDelayMs, stream.behaviorHints?.audioDelayLanguage)
     currentVideoHash = stream.behaviorHints?.videoHash
     currentVideoSize = stream.behaviorHints?.videoSize
     streamSubtitles = stream.subtitles
@@ -757,7 +758,9 @@ private fun PlayerRuntimeController.persistSelectedStreamForReuse(
             videoSize = currentVideoSize,
             bingeGroup = stream.behaviorHints?.bingeGroup,
             contentLanguage = contentLanguage,
-            year = year
+            year = year,
+            audioDelayMs = stream.behaviorHints?.audioDelayMs,
+            audioDelayLanguage = stream.behaviorHints?.audioDelayLanguage
         )
     }
 }
@@ -784,7 +787,9 @@ private fun PlayerRuntimeController.persistTorrentStreamForReuse(stream: Stream)
             sources = stream.sources,
             bingeGroup = stream.behaviorHints?.bingeGroup,
             contentLanguage = contentLanguage,
-            year = year
+            year = year,
+            audioDelayMs = stream.behaviorHints?.audioDelayMs,
+            audioDelayLanguage = stream.behaviorHints?.audioDelayLanguage
         )
     }
 }
@@ -989,6 +994,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(
             subtitleTracks = emptyList(),
             selectedAudioTrackIndex = -1,
             selectedSubtitleTrackIndex = -1,
+            chapters = emptyList(),
+            showChaptersPanel = false,
             showSourcesPanel = false,
             isLoadingSourceStreams = false,
             sourceStreamsError = null,
@@ -1107,6 +1114,8 @@ private fun PlayerRuntimeController.switchToTorrentSourceStream(
             subtitleTracks = emptyList(),
             selectedAudioTrackIndex = -1,
             selectedSubtitleTrackIndex = -1,
+            chapters = emptyList(),
+            showChaptersPanel = false,
             showSourcesPanel = false,
             isLoadingSourceStreams = false,
             sourceStreamsError = null,
@@ -1604,6 +1613,8 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
             subtitleTracks = emptyList(),
             selectedAudioTrackIndex = -1,
             selectedSubtitleTrackIndex = -1,
+            chapters = emptyList(),
+            showChaptersPanel = false,
             showEpisodesPanel = false,
             showEpisodeStreams = false,
             isLoadingEpisodeStreams = false,
@@ -1716,6 +1727,8 @@ private fun PlayerRuntimeController.switchToEpisodeStreamCommon(
             subtitleTracks = emptyList(),
             selectedAudioTrackIndex = -1,
             selectedSubtitleTrackIndex = -1,
+            chapters = emptyList(),
+            showChaptersPanel = false,
             showEpisodesPanel = false,
             showEpisodeStreams = false,
             isLoadingEpisodeStreams = false,

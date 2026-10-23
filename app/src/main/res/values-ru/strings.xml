@@ -523,15 +523,6 @@
     <string name="sub_libass">Использовать libass для субтитров ASS/SSA</string>
     <string name="sub_libass_sub">Экспериментально: расширенный рендеринг ASS/SSA (стили, позиционирование, анимации)</string>
     <string name="sub_libass_mode">Режим рендеринга Libass</string>
-    <string name="sub_mode_overlay_gl">Наложение OpenGL (Рекомендуется)</string>
-    <string name="sub_mode_overlay_gl_sub">Лучшее качество с поддержкой HDR. Рендерит субтитры в отдельном потоке.</string>
-    <string name="sub_mode_overlay_canvas">Наложение Canvas</string>
-    <string name="sub_mode_effects_gl">Эффекты OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Поддержка анимации с использованием эффектов Media3. Быстрее, чем Canvas.</string>
-    <string name="sub_mode_effects_canvas">Эффекты Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Поддержка анимации с использованием эффектов Media3 через рендеринг Canvas.</string>
-    <string name="sub_mode_standard">Стандартные субтитры (Cues)</string>
-    <string name="sub_mode_standard_sub">Базовый рендеринг субтитров без поддержки анимации. Наиболее совместимый.</string>
     <string name="sub_org_none">Нет (по умолчанию)</string>
     <string name="sub_org_by_lang">По языку</string>
     <string name="sub_org_by_addon">По аддону</string>
@@ -1626,7 +1617,6 @@
     <string name="player_error_no_stream_url">URL потока не предоставлен</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Поддержка HDR через рендеринг Canvas. Может блокировать поток UI.</string>
     <string name="subtitle_style_weight">Вес</string>
 
     <!-- Plugin screen -->

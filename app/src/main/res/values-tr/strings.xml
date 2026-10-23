@@ -920,15 +920,6 @@
     <string name="sub_libass">ASS/SSA altyazıları için libass kullan</string>
     <string name="sub_libass_sub">Bakım nedeniyle geçici olarak devre dışı bırakıldı</string>
     <string name="sub_libass_mode">Libass Görüntüleme Modu</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (Önerilen)</string>
-    <string name="sub_mode_overlay_gl_sub">HDR desteğiyle en iyi kalite. Altyazıları ayrı bir iş parçacığında oluşturur.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Media3 efektlerini kullanan animasyon desteği. Canvas\'tan daha hızlı.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Canvas görüntüleme ile Media3 animasyon desteği.</string>
-    <string name="sub_mode_standard">Standart</string>
-    <string name="sub_mode_standard_sub">Animasyon desteği olmadan temel altyazı oluşturma. En uyumlu seçenek.</string>
     <string name="sub_org_none">Hiçbiri (varsayılan sıra)</string>
     <string name="sub_org_by_lang">Dile göre</string>
     <string name="sub_org_by_addon">Eklentiye göre</string>
@@ -2751,7 +2742,6 @@
     <string name="player_stream_error_missing_content_type">İçerik türü belirtilmemiş</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Canvas ile HDR desteği sunar. Arayüz iş parçacığını bloke edebilir.</string>
     <string name="subtitle_style_weight">Kalınlık</string>
 
     <!-- Plugin screen -->

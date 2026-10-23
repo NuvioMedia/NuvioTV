@@ -59,12 +59,10 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
@@ -91,9 +89,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil3.compose.rememberAsyncImagePainter
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.SettingsUiStyle
 import com.nuvio.tv.ui.components.FocusMarqueeText
@@ -103,6 +98,7 @@ import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioComponents
 import com.nuvio.tv.ui.theme.NuvioRadii
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 
 internal val SettingsContainerRadius = NuvioComponents.tokens.settings.containerRadius
 internal val SettingsPillRadius = NuvioRadii.tokens.full
@@ -1291,22 +1287,4 @@ private fun SettingsTogglePill(
                 .background(knobColor)
         )
     }
-}
-
-@Composable
-internal fun rememberRawSvgPainter(
-    @RawRes rawIconRes: Int,
-    targetSize: Dp = 24.dp
-): Painter {
-    val context = LocalContext.current
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { targetSize.roundToPx() }
-    val request = remember(rawIconRes, context, sizePx) {
-        ImageRequest.Builder(context)
-            .data(rawIconRes)
-            .size(sizePx)
-            .crossfade(false)
-            .build()
-    }
-    return rememberAsyncImagePainter(model = request)
 }

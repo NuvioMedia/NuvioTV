@@ -68,6 +68,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.BlurTransformation
 import com.nuvio.tv.ui.util.contentTextDirection
@@ -170,7 +171,7 @@ internal fun EpisodeOptionsOverlay(
             colors = listOf(
                 Color(0xFF050505),
                 Color(0xFF090909),
-                Color(0xFF111111)
+                NuvioPrimitives.neutral925
             )
         )
     }

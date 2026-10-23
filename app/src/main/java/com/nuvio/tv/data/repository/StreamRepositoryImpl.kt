@@ -566,15 +566,20 @@ class StreamRepositoryImpl @Inject constructor(
             title = displayTitle,
             url = url,
             addonName = addonName,
+            pluginSourceName = scraper.name,
             addonLogo = null,
             description = buildDescription(this),
-            behaviorHints = headers?.let { headers ->
+            behaviorHints = if (headers != null || audioDelayMs != null || audioDelayLanguage != null) {
                 StreamBehaviorHints(
                     notWebReady = null,
                     bingeGroup = null,
                     countryWhitelist = null,
-                    proxyHeaders = ProxyHeaders(request = headers, response = null)
+                    proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
+                    audioDelayMs = audioDelayMs,
+                    audioDelayLanguage = audioDelayLanguage
                 )
+            } else {
+                null
             },
             infoHash = infoHash,
             fileIdx = null,

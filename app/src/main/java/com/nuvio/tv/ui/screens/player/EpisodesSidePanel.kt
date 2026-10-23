@@ -61,6 +61,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.components.FocusScrollingText
 import com.nuvio.tv.ui.components.LoadingIndicator
@@ -717,7 +718,7 @@ private fun EpisodesSeasonTabs(
                     },
                 shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.spacing.xl)),
                 colors = CardDefaults.colors(
-                    containerColor = if (isSelected) Color(0xFFF5F5F5) else NuvioTheme.colors.BackgroundCard,
+                    containerColor = if (isSelected) NuvioPrimitives.neutral100 else NuvioTheme.colors.BackgroundCard,
                     focusedContainerColor = if (isSelected) Color.White else NuvioTheme.colors.Secondary
                 ),
                 border = CardDefaults.border(

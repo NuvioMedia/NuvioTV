@@ -766,15 +766,6 @@
     <string name="sub_libass">Përdor libass për titrat ASS/SSA</string>
     <string name="sub_libass_sub">Eksperimentale: renderim i avancuar ASS/SSA (stile, pozicionim, animacione)</string>
     <string name="sub_libass_mode">Modaliteti i renderimit Libass</string>
-    <string name="sub_mode_overlay_gl">Mbivendosje OpenGL (rekomandohet)</string>
-    <string name="sub_mode_overlay_gl_sub">Cilësia më e mirë me mbështetje HDR. Renderon titrat në një thread të veçantë.</string>
-    <string name="sub_mode_overlay_canvas">Mbivendosje Canvas</string>
-    <string name="sub_mode_effects_gl">Efekte OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Mbështetje animacionesh duke përdorur efektet Media3. Më e shpejtë se Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efekte Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Mbështetje animacionesh duke përdorur efektet Media3 me renderim Canvas.</string>
-    <string name="sub_mode_standard">Titra standarde</string>
-    <string name="sub_mode_standard_sub">Renderim bazë i titrave pa mbështetje animacionesh. Më i përputhshmi.</string>
     <string name="sub_org_none">Asnjë (renditja e parazgjedhur)</string>
     <string name="sub_org_by_lang">Sipas gjuhës</string>
     <string name="sub_org_by_addon">Sipas shtesës</string>
@@ -2118,7 +2109,6 @@
     <!-- Player errors -->
     <string name="player_error_failed_start_torrent">Nisja e torrentit dështoi: %1$s</string>
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Mbështetje HDR me renderim Canvas. Mund të bllokojë thread-in e ndërfaqes.</string>
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
     <string name="cd_play">Luaj</string>

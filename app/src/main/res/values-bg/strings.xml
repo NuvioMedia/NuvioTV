@@ -689,15 +689,6 @@
     <string name="sub_libass">Използвай libass за ASS/SSA субтитри</string>
     <string name="sub_libass_sub">Експериментално: разширено ASS/SSA рендиране (стилове, позициониране, анимации)</string>
     <string name="sub_libass_mode">Режим на Libass рендиране</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (Препоръчително)</string>
-    <string name="sub_mode_overlay_gl_sub">Най-добро качество с HDR поддръжка. Рендира субтитрите на отделна нишка.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Поддръжка на анимации чрез Media3 effects. По-бързо от Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Поддръжка на анимации чрез Media3 effects с Canvas рендиране.</string>
-    <string name="sub_mode_standard">Standard Cues</string>
-    <string name="sub_mode_standard_sub">Основно рендиране на субтитри без поддръжка на анимации. Най-съвместимо.</string>
     <string name="sub_org_none">Няма (по подразбиране ред)</string>
     <string name="sub_org_by_lang">По език</string>
     <string name="sub_org_by_addon">По добавка</string>
@@ -1951,7 +1942,6 @@
     <string name="player_error_failed_start_torrent">Неуспешно стартиране на torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR поддръжка с canvas рендиране. Може да блокира UI нишката.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>

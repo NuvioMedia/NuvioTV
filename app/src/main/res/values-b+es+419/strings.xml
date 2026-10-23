@@ -370,6 +370,20 @@
     <string name="appearance_settings_style_subtitle">Elige cómo se muestran las pantallas de configuración</string>
     <string name="appearance_launcher_artwork">Ilustración del launcher</string>
     <string name="appearance_launcher_artwork_subtitle">Elige cómo aparece Nuvio en la pantalla de inicio de tu TV</string>
+    <string name="ambient_mode_title">Modo ambiente</string>
+    <string name="ambient_mode_subtitle">Muestra imágenes de tus catálogos mientras la TV está inactiva</string>
+    <string name="ambient_mode_enabled_subtitle">Llena la pantalla con imágenes de fondo después de un período sin usar el control remoto</string>
+    <string name="ambient_mode_timeout">Iniciar después de</string>
+    <string name="ambient_mode_timeout_subtitle">Cuánto tiempo esperar antes de iniciar el modo ambiente</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">Catálogos</string>
+    <string name="ambient_mode_catalogs_subtitle">Elige hasta 3 catálogos de los que se obtendrán las imágenes</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">Elige hasta 3 catálogos</string>
+    <string name="ambient_mode_catalogs_default">Los mismos que en la sección destacada</string>
+    <string name="ambient_mode_catalogs_count">%1$d de %2$d</string>
     <string name="appearance_app_icon_and_banner">Icono y banner de la aplicación</string>
     <string name="appearance_app_icon_and_banner_subtitle">Cambia el icono y el banner de la aplicación</string>
     <string name="appearance_app_icon_picker_title">Elegir icono y banner de la aplicación</string>
@@ -893,17 +907,8 @@
     <string name="sub_outline_color">Color del Contorno</string>
     <string name="sub_advanced_section">Renderizado Avanzado de Subtítulos</string>
     <string name="sub_libass">Usar libass para subtítulos ASS/SSA</string>
-    <string name="sub_libass_sub">Deshabilitado temporalmente por mantenimiento</string>
+    <string name="sub_libass_sub">Renderizado avanzado ASS/SSA (estilos, posicionamiento, animaciones)</string>
     <string name="sub_libass_mode">Modo de Renderizado Libass</string>
-    <string name="sub_mode_overlay_gl">Superposición OpenGL (Recomendado)</string>
-    <string name="sub_mode_overlay_gl_sub">Mejor calidad con soporte HDR. Renderiza los subtítulos en un hilo separado.</string>
-    <string name="sub_mode_overlay_canvas">Superposición Canvas</string>
-    <string name="sub_mode_effects_gl">Efectos OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Soporte de animación usando efectos Media3. Más rápido que Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efectos Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Soporte de animación usando efectos Media3 con renderizado Canvas.</string>
-    <string name="sub_mode_standard">Estándar (Standard Cues)</string>
-    <string name="sub_mode_standard_sub">Renderizado básico de subtítulos sin soporte de animación. El más compatible.</string>
     <string name="sub_org_none">Ninguno (orden predeterminado)</string>
     <string name="sub_org_by_lang">Por idioma</string>
     <string name="sub_org_by_addon">Por addon</string>
@@ -1072,6 +1077,15 @@
     <string name="upcoming_section_title">Próximos</string>
     <string name="layout_trailer_button">Mostrar botón de tráiler</string>
     <string name="layout_trailer_button_sub">Mostrar el botón de tráiler en la página de detalles (solo si está disponible).</string>
+    <string name="layout_trailer_play_in_background">Reproducir como fondo</string>
+    <string name="layout_trailer_play_in_background_sub">Reproduce el tráiler en lugar de la imagen de fondo mientras la página permanece visible.</string>
+    <string name="layout_trailer_pause_on_scroll">Pausar al desplazarse</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Pausa el tráiler cuando te desplazas hacia abajo y reanúdalo cuando vuelves a la parte superior.</string>
+    <string name="layout_trailer_4k">Tráileres en 4K</string>
+    <string name="layout_trailer_4k_sub">Reproduce tráileres en resoluciones superiores a 1080p cuando estén disponibles. Usa mucha más memoria; está desactivado de forma predeterminada en dispositivos con 2 GB de RAM o menos.</string>
+    <string name="layout_detail_group_episodes">Episodios</string>
+    <string name="layout_detail_group_trailers">Tráileres</string>
+    <string name="layout_detail_group_metadata">Metadatos</string>
     <string name="layout_prefer_external_meta">Preferir metadatos de addon externo</string>
     <string name="layout_prefer_external_meta_sub">Usar metadatos del addon externo en lugar del addon del catálogo.</string>
     <string name="layout_show_full_release_date">Mostrar fecha de estreno completa</string>
@@ -1159,6 +1173,7 @@
     <string name="layout_custom_poster_screen_details">Pantalla de detalles</string>
 
 <!-- Custom Poster Web Page -->
+    <string name="layout_custom_poster_screen_tv_recommendations">Recomendaciones de TV</string>
     <string name="layout_always_show_landscape_clearlogo">Mostrar siempre fondo con logotipo para pósters horizontales</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Ignorar el póster horizontal del addon y usar el fondo con el logotipo superpuesto en su lugar.</string>
     <string name="web_custom_poster_title">Fuente de póster personalizada</string>
@@ -1234,6 +1249,12 @@
     <string name="mdblist_not_set">No configurado</string>
     <string name="mdblist_invalid_api_key">Clave API de MDBList inválida</string>
 
+    <string name="mdblist_library_lists">Listas de la biblioteca</string>
+    <string name="mdblist_library_lists_description">Elige qué listas de MDBList aparecen en la biblioteca y en Administrar listas. La lista de seguimiento siempre se muestra.</string>
+    <string name="mdblist_library_lists_empty">Aún no se encontraron listas en tu cuenta de MDBList. Sincroniza para cargarlas.</string>
+    <string name="mdblist_library_lists_summary">%1$d de %2$d visibles</string>
+    <string name="tracking_mdblist_features_title">Funciones de MDBList</string>
+    <string name="tracking_mdblist_features_subtitle">Configuración específica de MDBList</string>
     <string name="debrid_title">Servicios conectados</string>
     <string name="debrid_subtitle">Conecta cuentas para enlaces y acceso a la biblioteca</string>
     <string name="debrid_experimental_notice">Estas integraciones son experimentales y pueden mantenerse, modificarse o eliminarse más adelante.</string>
@@ -2061,6 +2082,8 @@
     <string name="library_sort_provider_order">Orden de proveedores</string>
     <string name="library_sort_added_desc">Agregado ↓</string>
     <string name="library_sort_added_asc">Agregado ↑</string>
+    <string name="library_sort_released_desc">Fecha de estreno ↓</string>
+    <string name="library_sort_released_asc">Fecha de estreno ↑</string>
     <string name="library_sort_title_asc">Título A-Z</string>
     <string name="library_sort_title_desc">Título Z-A</string>
     <string name="library_error_sort_failed">No se pudo cargar el orden de clasificación. Se muestra el orden del proveedor.</string>
@@ -2475,7 +2498,6 @@
     <string name="player_error_failed_start_torrent">No se pudo iniciar el torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Soporte HDR con renderizado en canvas. Puede bloquear el hilo de la interfaz.</string>
 
     <string name="ratings_season_label">T%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
