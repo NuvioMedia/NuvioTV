@@ -2421,7 +2421,8 @@ private class SubtitleOffsetRenderersFactory(
                     speedAwareSink?.notifyAudioProcessingRequirementChanged()
                 }
             },
-            onDiagnosticEvent = onAudioDiagnosticEvent
+            onDiagnosticEvent = onAudioDiagnosticEvent,
+            audioOutputReady = { AudioOutputRouteDetector.hasHdmiOutput(context) }
         )
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
             sink = iecAudioSink,

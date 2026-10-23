@@ -735,7 +735,7 @@ class IecPassthroughAudioSinkTest {
             innerSupport = AudioSink.SINK_FORMAT_UNSUPPORTED,
             configureThrows = true
         )
-        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = -6))
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = -2))
         val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
         assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(dtsHdFormat()))
         sink.configure(dtsHdFormat(), 0, null)
