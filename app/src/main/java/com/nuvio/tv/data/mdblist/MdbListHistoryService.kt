@@ -29,8 +29,10 @@ class MdbListHistoryService @Inject constructor(
         failed += items.size - resolvable.size
         for (batch in resolvable.chunked(100)) {
             val result = sync.write(scope, setOf(MdbListSyncBucket.WATCHED)) { snapshot ->
+                val projection = sync.currentProjection().takeIf { it !== MdbListProgressProjection.Empty }
+                val index = projection?.mediaIndex ?: MdbListMediaIndex(snapshot)
                 val mapped = batch.mapNotNull { item ->
-                    snapshot.mutationTarget(item.media)?.let { target ->
+                    snapshot.mutationTarget(item.media, projection, index)?.let { target ->
                         MdbListHistoryChange(target, if (remove) null else Instant.ofEpochMilli(
                             item.watchedAtEpochMs ?: System.currentTimeMillis()
                         ).toString())

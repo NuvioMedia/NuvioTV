@@ -19,8 +19,41 @@ internal class SimklSnapshotProjection private constructor(
     private val playbackByEpisode: Map<SimklProjectionItemKey, WatchProgress>,
     private val hiddenContentIds: Set<String>,
     private val watchedAnimeEpisodes: Map<String, Set<Int>>,
-    private val membershipByContent: Map<SimklProjectionMembershipKey, SimklProjectionMembership>
+    private val membershipByContent: Map<SimklProjectionMembershipKey, SimklProjectionMembership>,
+    private val baseWatchedMovieIds: Set<String> = emptySet(),
+    internal val entryIndex: SimklEntryIndex = SimklEntryIndex(emptyList())
 ) {
+    fun withUpdatedPlayback(newSnapshot: SimklSyncSnapshot): SimklSnapshotProjection {
+        val index = entryIndex.takeIf { it.matchesEntries(newSnapshot.entries) }
+        val newProgress = newSnapshot.toSimklProgressEntries(index)
+        val newPlaybackByEpisode = linkedMapOf<SimklProjectionItemKey, WatchProgress>()
+        newProgress.forEach { item ->
+            newPlaybackByEpisode.putIfAbsent(
+                SimklProjectionItemKey(item.contentId.simklLookupKey(), item.season, item.episode),
+                item
+            )
+        }
+        return SimklSnapshotProjection(
+            library = library,
+            watched = watched,
+            progress = newProgress,
+            watchedMovieIds = baseWatchedMovieIds.filterInProgressMovies(newProgress),
+            watchedShowEpisodes = watchedShowEpisodes,
+            showIdSiblings = showIdSiblings,
+            recentNextUp = recentNextUp,
+            furthestNextUp = furthestNextUp,
+            canonicalIdByAlias = canonicalIdByAlias,
+            watchedItemsByContent = watchedItemsByContent,
+            watchedKeys = watchedKeys,
+            playbackByEpisode = newPlaybackByEpisode,
+            hiddenContentIds = hiddenContentIds,
+            watchedAnimeEpisodes = watchedAnimeEpisodes,
+            membershipByContent = membershipByContent,
+            baseWatchedMovieIds = baseWatchedMovieIds,
+            entryIndex = index ?: SimklEntryIndex(newSnapshot.entries)
+        )
+    }
+
     fun nextUp(preferFurthestEpisode: Boolean): List<WatchProgress> =
         if (preferFurthestEpisode) furthestNextUp else recentNextUp
 
@@ -76,10 +109,16 @@ internal class SimklSnapshotProjection private constructor(
     companion object {
         val Empty = create(SimklSyncSnapshot())
 
-        fun create(snapshot: SimklSyncSnapshot): SimklSnapshotProjection {
+        fun create(
+            snapshot: SimklSyncSnapshot,
+            existingEntryIndex: SimklEntryIndex? = null
+        ): SimklSnapshotProjection {
+            val entryIndex = existingEntryIndex
+                ?.takeIf { it.matchesEntries(snapshot.entries) }
+                ?: SimklEntryIndex(snapshot.entries)
             val library = snapshot.toSimklLibraryProjection()
             val watched = snapshot.toSimklWatchedProjection()
-            val progress = snapshot.toSimklProgressEntries()
+            val progress = snapshot.toSimklProgressEntries(entryIndex)
             val canonicalIdByAlias = linkedMapOf<String, String>()
             val siblings = linkedMapOf<String, MutableSet<String>>()
             val hiddenContentIds = linkedSetOf<String>()
@@ -140,11 +179,12 @@ internal class SimklSnapshotProjection private constructor(
                 .map(WatchedItem::toSimklCompletedProgress)
                 .toList()
 
+            val baseWatchedMovieIds = snapshot.simklBaseWatchedMovieIds()
             return SimklSnapshotProjection(
                 library = library,
                 watched = watched,
                 progress = progress,
-                watchedMovieIds = snapshot.simklWatchedMovieIds(progress),
+                watchedMovieIds = baseWatchedMovieIds.filterInProgressMovies(progress),
                 watchedShowEpisodes = watched.items
                     .filter { item -> item.season != null && item.episode != null }
                     .groupBy(WatchedItem::contentId)
@@ -162,7 +202,9 @@ internal class SimklSnapshotProjection private constructor(
                 playbackByEpisode = playbackByEpisode,
                 hiddenContentIds = hiddenContentIds,
                 watchedAnimeEpisodes = watchedAnimeEpisodes,
-                membershipByContent = membershipByContent
+                membershipByContent = membershipByContent,
+                baseWatchedMovieIds = baseWatchedMovieIds,
+                entryIndex = entryIndex
             )
         }
     }
@@ -172,7 +214,7 @@ internal fun SimklSyncSnapshot.toSimklNextUpSeeds(
     preferFurthestEpisode: Boolean
 ): List<WatchProgress> = SimklSnapshotProjection.create(this).nextUp(preferFurthestEpisode)
 
-private fun SimklSyncSnapshot.simklWatchedMovieIds(progress: List<WatchProgress>): Set<String> {
+private fun SimklSyncSnapshot.simklBaseWatchedMovieIds(): Set<String> {
     val watched = linkedSetOf<String>()
     entries.forEach { entry ->
         if (!entry.isMovieEntry()) return@forEach
@@ -189,10 +231,17 @@ private fun SimklSyncSnapshot.simklWatchedMovieIds(progress: List<WatchProgress>
             media.ids.idValue("kitsu")?.takeIf(String::isNotBlank)?.let { watched.add("kitsu:$it") }
         }
     }
-    progress.filter { item ->
-        item.contentType == "movie" && item.progressPercentage > 0f && !item.isCompleted()
-    }.forEach { item -> watched.remove(item.contentId) }
     return watched
+}
+
+private fun Set<String>.filterInProgressMovies(progress: List<WatchProgress>): Set<String> {
+    val inProgress = progress.filter { item ->
+        item.contentType == "movie" && item.progressPercentage > 0f && !item.isCompleted()
+    }
+    if (inProgress.isEmpty()) return this
+    val result = this.toMutableSet()
+    inProgress.forEach { item -> result.remove(item.contentId) }
+    return result
 }
 
 private fun SimklMedia.simklTrackingContentIds(): Set<String> = buildSet {
