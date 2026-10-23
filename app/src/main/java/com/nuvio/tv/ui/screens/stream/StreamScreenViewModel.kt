@@ -532,8 +532,6 @@ class StreamScreenViewModel @Inject constructor(
                 val orderedAddonStreams = StreamAutoPlaySelector.orderAddonStreams(
                     runtimeFilteredGroups,
                     installedAddonOrder,
-                    addonStreamGroups,
-                    installedAddonOrder,
                     preferredServerNames
                 )
 
