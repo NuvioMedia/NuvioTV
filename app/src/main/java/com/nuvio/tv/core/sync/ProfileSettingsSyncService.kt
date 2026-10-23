@@ -18,6 +18,7 @@ import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
+import com.nuvio.tv.data.local.ProfileLockSettingsDataStore
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseProfileSetupCopyResult
@@ -210,7 +211,8 @@ class ProfileSettingsSyncService @Inject constructor(
         "trakt_settings",
         "debrid_settings",
         "animeskip_settings",
-        "track_preference"
+        "track_preference",
+        ProfileLockSettingsDataStore.FEATURE
     )
 
     init {
@@ -238,6 +240,46 @@ class ProfileSettingsSyncService @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to push profile settings blob", e)
                 Result.failure(e)
+            }
+        }
+    }
+
+    /**
+     * Applies [change] to the settings of [profileId]. The active profile's changes are uploaded by the
+     * observer below. Another profile is refreshed from the cloud first, because this device's copy of it
+     * can be old and an upload replaces the profile's whole settings.
+     */
+    suspend fun updateProfileSettings(profileId: Int, change: suspend () -> Unit) = withContext(Dispatchers.IO) {
+        if (profileId == profileManager.activeProfileId.value || !authManager.isAuthenticated) {
+            change()
+            return@withContext
+        }
+        syncMutex.withLock {
+            val remote = try {
+                Result.success(pullProfileFromRemote(profileId))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pull profile settings blob for profile $profileId", e)
+                Result.failure(e)
+            }
+            remote.getOrNull()?.get("features")?.jsonObject?.let { featuresJson ->
+                val remoteSignature = buildSettingsSignature(featuresJson)
+                if (remoteSignature != buildSettingsSignature(profileId)) {
+                    applySettingsBlob(profileId, featuresJson, remoteSignature)
+                }
+            }
+            change()
+            // Without the cloud copy, uploading could overwrite newer settings; keep the change on this device.
+            if (remote.isSuccess) {
+                try {
+                    pushProfileToRemote(profileId)
+                    Log.d(TAG, "Pushed profile settings blob for profile $profileId")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to push profile settings blob for profile $profileId", e)
+                }
             }
         }
     }
