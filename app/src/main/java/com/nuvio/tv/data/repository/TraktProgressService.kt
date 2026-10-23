@@ -163,7 +163,6 @@ class TraktProgressService @Inject constructor(
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + exceptionHandler)
     private val refreshSignals = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    private val episodeVideoIdCache = mutableMapOf<String, String>()
     private val remoteProgress = MutableStateFlow<List<WatchProgress>>(emptyList())
     private val optimisticProgress = MutableStateFlow<Map<String, OptimisticProgressEntry>>(emptyMap())
     private val metadataState = MutableStateFlow<Map<String, ContentMetadata>>(emptyMap())
@@ -340,7 +339,6 @@ class TraktProgressService @Inject constructor(
         refreshGeneration.incrementAndGet()
 
         cacheMutex.withLock {
-            episodeVideoIdCache.clear()
             cachedMoviesPlayback = null
             cachedEpisodesPlayback = null
             cachedUserStats = null
@@ -2381,31 +2379,11 @@ class TraktProgressService @Inject constructor(
         }
     }
 
-    private suspend fun resolveEpisodeVideoId(
+    private fun resolveEpisodeVideoId(
         contentId: String,
         season: Int,
         episode: Int
-    ): String {
-        val key = "$contentId:$season:$episode"
-        episodeVideoIdCache[key]?.let { return it }
-
-        // Check if metadata is already cached (from a previous hydrateMetadata cycle).
-        // If so, resolve videoId from it without a network call.
-        val existingMeta = metadataState.value[contentId]
-        if (existingMeta != null) {
-            val episodeMeta = existingMeta.episodes.entries.firstOrNull {
-                it.key.first == season && it.key.second == episode
-            }
-            // Use the video ID pattern that matches addon meta structure
-            val videoId = episodeMeta?.let { "$contentId:${it.key.first}:${it.key.second}" }
-            if (videoId != null) {
-                episodeVideoIdCache[key] = videoId
-                return videoId
-            }
-        }
-
-        return "$contentId:$season:$episode"
-    }
+    ): String = "$contentId:$season:$episode"
 
     private fun progressKey(progress: WatchProgress): String {
         return if (progress.season != null && progress.episode != null) {

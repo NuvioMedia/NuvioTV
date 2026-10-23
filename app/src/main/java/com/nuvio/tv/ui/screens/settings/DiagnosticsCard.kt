@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
@@ -209,7 +210,7 @@ internal fun LazyListScope.diagnosticsCardItems(
                 diagnostics.result,
                 valueColor = when {
                     diagnostics.result.startsWith("Error", ignoreCase = true) -> Color(0xFFF44336)
-                    diagnostics.result == "Played" -> Color(0xFF4CAF50)
+                    diagnostics.result == "Played" -> NuvioPrimitives.success
                     else -> NuvioTheme.colors.TextPrimary
                 }
             )

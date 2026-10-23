@@ -742,15 +742,6 @@
     <string name="sub_libass">Použít libass pro titulky ASS/SSA</string>
     <string name="sub_libass_sub">Experimentální: pokročilé vykreslování ASS/SSA (styly, umístění, animace)</string>
     <string name="sub_libass_mode">Režim vykreslování Libass</string>
-    <string name="sub_mode_overlay_gl">Překryv OpenGL (doporučeno)</string>
-    <string name="sub_mode_overlay_gl_sub">Nejlepší kvalita s podporou HDR. Vykresluje titulky na samostatném vlákně.</string>
-    <string name="sub_mode_overlay_canvas">Překryv Canvas</string>
-    <string name="sub_mode_effects_gl">Efekty OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Podpora animací pomocí efektů Media3. Rychlejší než Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efekty Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Podpora animací pomocí efektů Media3 s vykreslováním Canvas.</string>
-    <string name="sub_mode_standard">Standardní cue</string>
-    <string name="sub_mode_standard_sub">Základní vykreslování titulků bez podpory animací. Nejkompatibilnější.</string>
     <string name="sub_org_none">Žádné (výchozí pořadí)</string>
     <string name="sub_org_by_lang">Podle jazyka</string>
     <string name="sub_org_by_addon">Podle doplňku</string>
@@ -2064,7 +2055,6 @@
     <string name="player_error_failed_start_torrent">Nepodařilo se spustit torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Podpora HDR s vykreslováním Canvas. Může blokovat UI vlákno.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>

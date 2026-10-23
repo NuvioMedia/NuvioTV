@@ -320,15 +320,6 @@
     <string name="sub_libass">ASS/SSA सबटाइटल के लिए libass उपयोग करें</string>
     <string name="sub_libass_sub">प्रायोगिक: उन्नत ASS/SSA रेंडरिंग (स्टाइल, पोज़िशनिंग, एनीमेशन)</string>
     <string name="sub_libass_mode">Libass रेंडर मोड</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (अनुशंसित)</string>
-    <string name="sub_mode_overlay_gl_sub">HDR सपोर्ट के साथ सर्वोत्तम गुणवत्ता। अलग थ्रेड पर सबटाइटल रेंडर करता है।</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Media3 effects के साथ एनीमेशन सपोर्ट। Canvas से तेज।</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Media3 effects के साथ Canvas रेंडरिंग द्वारा एनीमेशन सपोर्ट।</string>
-    <string name="sub_mode_standard">Standard Cues</string>
-    <string name="sub_mode_standard_sub">बिना एनीमेशन के बेसिक सबटाइटल रेंडरिंग। सबसे अधिक संगत।</string>
     <string name="sub_org_none">कोई नहीं (डिफ़ॉल्ट क्रम)</string>
     <string name="sub_org_by_lang">भाषा के अनुसार</string>
     <string name="sub_org_by_addon">ऐडऑन के अनुसार</string>

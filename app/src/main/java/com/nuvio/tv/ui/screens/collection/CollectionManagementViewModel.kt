@@ -195,22 +195,24 @@ class CollectionManagementViewModel @Inject constructor(
                     .socketFactory(com.nuvio.tv.core.network.NoDelaySocketFactory)
                     .build()
                 val request = okhttp3.Request.Builder().url(url).build()
-                val response = withContext(Dispatchers.IO) {
-                    client.newCall(request).execute()
+                // Read the body on IO too: execute() only returns the headers.
+                val (code, body) = withContext(Dispatchers.IO) {
+                    client.newCall(request).execute().use { response ->
+                        response.code to if (response.isSuccessful) response.body?.string().orEmpty() else null
+                    }
                 }
-                if (!response.isSuccessful) {
+                if (body == null) {
                     _uiState.update {
                         it.copy(
                             isLoadingImport = false,
                             importError = context.getString(
                                 R.string.collections_import_failed_fetch_http,
-                                response.code
+                                code
                             )
                         )
                     }
                     return@launch
                 }
-                val body = response.body?.string() ?: ""
                 _uiState.update { it.copy(importText = body, isLoadingImport = false) }
                 validateJson(body)
             } catch (e: Exception) {

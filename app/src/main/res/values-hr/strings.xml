@@ -883,15 +883,6 @@
     <string name="sub_libass">Koristi libass za ASS/SSA titlove</string>
     <string name="sub_libass_sub">Eksperimentalno: napredno iscrtavanje ASS/SSA (stilovi, pozicioniranje, animacije)</string>
     <string name="sub_libass_mode">Libass način iscrtavanja</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (preporučeno)</string>
-    <string name="sub_mode_overlay_gl_sub">Najbolja kvaliteta s podrškom za HDR. Iscrtava titlove u zasebnoj niti.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Podrška za animacije pomoću Media3 efekata. Brže od Canvasa.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Podrška za animacije pomoću Media3 efekata s Canvas iscrtavanjem.</string>
-    <string name="sub_mode_standard">Standardni znakovi</string>
-    <string name="sub_mode_standard_sub">Osnovno iscrtavanje titlova bez podrške za animacije. Najkompatibilnije.</string>
     <string name="sub_org_none">Ništa (zadani redoslijed)</string>
     <string name="sub_org_by_lang">Po jeziku</string>
     <string name="sub_org_by_addon">Po dodatku</string>
@@ -2446,7 +2437,6 @@
     <string name="player_error_failed_start_torrent">Pokretanje torrenta nije uspjelo: %1$s</string>
 
     <!-- Postavke titlova za reprodukciju -->
-    <string name="sub_mode_overlay_canvas_sub">Podrška za HDR s canvas iscrtavanjem. Može blokirati UI nit.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>

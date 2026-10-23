@@ -181,8 +181,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
         replay = 1,
         extraBufferCapacity = 16
     )
-    private val optimisticWatchedMovieAdditions = MutableStateFlow<Set<String>>(emptySet())
-    private val optimisticWatchedMovieRemovals = MutableStateFlow<Set<String>>(emptySet())
+    // Optimistic watched-movie toggles, keyed by the profile that made them.
+    private val optimisticWatchedMovieAdditions = MutableStateFlow<Map<Int, Set<String>>>(emptyMap())
+    private val optimisticWatchedMovieRemovals = MutableStateFlow<Map<Int, Set<String>>>(emptyMap())
     private val metadataMutex = Mutex()
     private val inFlightMetadataKeys = mutableSetOf<ProfileContentKey>()
     private val metadataHydrationLimit = 30
@@ -655,29 +656,37 @@ class WatchProgressRepositoryImpl @Inject constructor(
             }
         return combine(
             baseFlow,
+            profileManager.activeProfileId,
             optimisticWatchedMovieAdditions,
             optimisticWatchedMovieRemovals
-        ) { base, additions, removals ->
-            (base + additions) - removals
+        ) { base, profileId, additions, removals ->
+            (base + additions[profileId].orEmpty()) - removals[profileId].orEmpty()
         }.distinctUntilChanged()
     }
 
     override fun applyOptimisticWatchedMovie(ids: Set<String>, add: Boolean) {
+        val profileId = profileManager.activeProfileId.value
         if (add) {
-            optimisticWatchedMovieAdditions.update { it + ids }
-            optimisticWatchedMovieRemovals.update { it - ids }
+            optimisticWatchedMovieAdditions.update { it.plusIds(profileId, ids) }
+            optimisticWatchedMovieRemovals.update { it.minusIds(profileId, ids) }
         } else {
-            optimisticWatchedMovieRemovals.update { it + ids }
-            optimisticWatchedMovieAdditions.update { it - ids }
+            optimisticWatchedMovieRemovals.update { it.plusIds(profileId, ids) }
+            optimisticWatchedMovieAdditions.update { it.minusIds(profileId, ids) }
         }
     }
 
     override fun revertOptimisticWatchedMovie(ids: Set<String>, add: Boolean) {
-        if (add) {
-            optimisticWatchedMovieAdditions.update { it - ids }
-        } else {
-            optimisticWatchedMovieRemovals.update { it - ids }
-        }
+        // The active profile may have changed since the toggle, so revert it wherever it is.
+        val target = if (add) optimisticWatchedMovieAdditions else optimisticWatchedMovieRemovals
+        target.update { byProfile -> byProfile.keys.fold(byProfile) { acc, profileId -> acc.minusIds(profileId, ids) } }
+    }
+
+    private fun Map<Int, Set<String>>.plusIds(profileId: Int, ids: Set<String>): Map<Int, Set<String>> =
+        this + (profileId to (this[profileId].orEmpty() + ids))
+
+    private fun Map<Int, Set<String>>.minusIds(profileId: Int, ids: Set<String>): Map<Int, Set<String>> {
+        val remaining = this[profileId].orEmpty() - ids
+        return if (remaining.isEmpty()) this - profileId else this + (profileId to remaining)
     }
 
     override suspend fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>> {

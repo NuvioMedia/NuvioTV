@@ -60,6 +60,8 @@ internal val LANGUAGE_OVERRIDES = mapOf(
     "ell" to "el",
     "gre" to "el",
     "heb" to "he",
+    "hbo" to "he",
+    "iw" to "he",
     "tha" to "th",
     "vie" to "vi",
     "ind" to "id",

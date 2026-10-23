@@ -869,15 +869,6 @@
     <string name="sub_libass">对 ASS/SSA 字幕使用 libass</string>
     <string name="sub_libass_sub">实验性：高级 ASS/SSA 渲染 (样式、定位、动画)</string>
     <string name="sub_libass_mode">Libass 渲染模式</string>
-    <string name="sub_mode_overlay_gl">覆盖 OpenGL (推荐)</string>
-    <string name="sub_mode_overlay_gl_sub">最佳品质，支持 HDR。在独立线程上渲染字幕。</string>
-    <string name="sub_mode_overlay_canvas">覆盖 Canvas</string>
-    <string name="sub_mode_effects_gl">效果 OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">使用 Media3 效果支持动画。比 Canvas 更快。</string>
-    <string name="sub_mode_effects_canvas">效果 Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">使用 Media3 效果搭配 Canvas 渲染支持动画。</string>
-    <string name="sub_mode_standard">标准提示</string>
-    <string name="sub_mode_standard_sub">不支持动画的基本字幕渲染。兼容性最佳。</string>
     <string name="sub_org_none">无 (默认顺序)</string>
     <string name="sub_org_by_lang">按语言</string>
     <string name="sub_org_by_addon">按扩展</string>
@@ -2404,7 +2395,6 @@
     <string name="player_error_failed_start_torrent">启动 torrent 失败：%1$s</string>
 
     <!-- 播放字幕设置 -->
-    <string name="sub_mode_overlay_canvas_sub">支持 HDR 的 Canvas 渲染。可能阻塞 UI 线程。</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>

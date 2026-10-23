@@ -322,15 +322,6 @@
     <string name="sub_libass">Använd libass för ASS/SSA-undertexter</string>
     <string name="sub_libass_sub">Tillfälligt inaktiverad för underhåll</string>
     <string name="sub_libass_mode">Libass-renderingsläge</string>
-    <string name="sub_mode_overlay_gl">Överlägg OpenGL (rekommenderas)</string>
-    <string name="sub_mode_overlay_gl_sub">Bästa kvalitet med HDR-stöd. Renderar undertexter på en separat tråd.</string>
-    <string name="sub_mode_overlay_canvas">Överlägg Canvas</string>
-    <string name="sub_mode_effects_gl">Effekter OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Animationsstöd med Media3-effekter. Snabbare än Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effekter Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Animationsstöd med Media3-effekter och Canvas-rendering.</string>
-    <string name="sub_mode_standard">Standardtexter</string>
-    <string name="sub_mode_standard_sub">Grundläggande undertextrendering utan animationsstöd. Mest kompatibelt.</string>
     <string name="sub_org_none">Ingen (standardordning)</string>
     <string name="sub_org_by_lang">Efter språk</string>
     <string name="sub_org_by_addon">Efter tillägg</string>
@@ -1322,7 +1313,6 @@
     <string name="audio_mpv_hwdec_disabled_desc">Inaktiverar hårdvaruavkodning och använder endast mjukvaruavkodning.</string>
 
     <!-- PlaybackSubtitleSettings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR-stöd med canvas-rendering. Kan blockera UI-tråden.</string>
 
     <!-- LayoutSettingsScreen -->
     <string name="layout_memory_only_scroll">Vertikal rullning endast minne</string>

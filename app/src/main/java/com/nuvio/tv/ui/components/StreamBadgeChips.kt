@@ -198,7 +198,7 @@ private fun StreamLabelBadgeChip(badge: StreamBadge) {
 }
 
 @Composable
-private fun StreamImportedBadgeChip(badge: StreamBadge, crossfade: Boolean = false) {
+internal fun StreamImportedBadgeChip(badge: StreamBadge, crossfade: Boolean = false) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val backgroundColor = remember(badge.tagColor, badge.tagStyle) {

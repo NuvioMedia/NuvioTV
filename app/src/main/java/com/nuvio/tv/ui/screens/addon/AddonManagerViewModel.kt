@@ -39,7 +39,6 @@ import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.Collection
-import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.TmdbCollectionSource
@@ -883,10 +882,6 @@ class AddonManagerViewModel @Inject constructor(
 
     private fun catalogKey(addonId: String, type: String, catalogId: String): String {
         return homeCatalogKey(addonId, type, catalogId)
-    }
-
-    private fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
-        return extra.any { extra -> extra.name.equals("search", ignoreCase = true) && extra.isRequired }
     }
 
     private data class QrCatalogEntry(

@@ -311,17 +311,10 @@
     <string name="sub_opacity">Krycie</string>
     <string name="sub_advanced_section">Zaawansowane renderowanie napisów</string>
     <string name="sub_libass">Używaj libass dla napisów ASS/SSA</string>
-    <string name="sub_libass_sub">Tymczasowo wyłączone z powodu konserwacji</string>
+    <string name="sub_libass_sub">Zaawansowane renderowanie ASS/SSA (style, pozycjonowanie, animacje)</string>
     <string name="sub_libass_mode">Tryb renderowania libass</string>
-    <string name="sub_mode_overlay_gl">Nakładka OpenGL (Zalecane)</string>
-    <string name="sub_mode_overlay_gl_sub">Najlepsza jakość z obsługą HDR. Renderuje napisy w osobnym wątku.</string>
-    <string name="sub_mode_overlay_canvas">Nakładka Canvas</string>
-    <string name="sub_mode_effects_gl">Efekty OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Obsługa animacji z efektami Media3. Szybsze niż Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efekty Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Obsługa animacji z efektami Media3 i renderowaniem Canvas.</string>
-    <string name="sub_mode_standard">Standardowe wskazówki</string>
-    <string name="sub_mode_standard_sub">Podstawowe renderowanie napisów bez obsługi animacji. Najbardziej kompatybilne.</string>
+    <string name="sub_libass_render_scale">Rozdzielczość renderowania napisów</string>
+    <string name="sub_libass_render_scale_sub">Niższa rozdzielczość poprawia wydajność przy ciężkim typesettingu kosztem ostrości</string>
     <string name="sub_org_none">Brak (domyślna kolejność)</string>
     <string name="sub_org_by_lang">Według języka</string>
     <string name="sub_org_by_addon">Według dodatku</string>
@@ -1513,7 +1506,6 @@
 
     <string name="stream_episode_label">S%1$d E%2$d</string>
 
-    <string name="sub_mode_overlay_canvas_sub">Obsługa HDR z renderowaniem Canvas. Może blokować wątek UI.</string>
     <string name="subtitle_style_weight">Grubość</string>
 
     <string name="sync_claim_linking">Łączenie\u2026</string>
@@ -3458,4 +3450,37 @@
     <string name="mdblist_library_lists_summary">%1$d z %2$d widocznych</string>
     <string name="tracking_mdblist_features_subtitle">Ustawienia specyficzne dla MDBList</string>
     <string name="tracking_mdblist_features_title">Funkcje MDBList</string>
+
+    <string name="about_update_auto_install_title">Instaluj aktualizacje automatycznie</string>
+    <string name="about_update_auto_install_subtitle">Pobieraj nowe wersje w tle i instaluj je, gdy urządzenie jest bezczynne</string>
+    <string name="about_update_auto_install_notice_title">Powiadom po automatycznej aktualizacji</string>
+    <string name="about_update_auto_install_notice_subtitle">Pokaż baner przy następnym uruchomieniu po automatycznej aktualizacji</string>
+    <string name="update_installed_automatically">Zaktualizowano automatycznie, gdy urządzenie było bezczynne</string>
+
+    <string name="layout_custom_poster_screen_tv_recommendations">Rekomendacje TV</string>
+
+    <string name="playback_chapters_label">Rozdziały</string>
+    <string name="playback_exo_chapters_title">Pokaż rozdziały (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Odczytuj rozdziały z plików MKV, aby oznaczać je na pasku postępu i przeskakiwać między nimi. Wymaga kilku dodatkowych zapytań po rozpoczęciu odtwarzania. mpv zawsze pokazuje rozdziały.</string>
+    <string name="player_chapters">Rozdziały</string>
+    <string name="player_chapters_title">Rozdziały (%1$d)</string>
+    <string name="player_chapter_number">Rozdział %1$d</string>
+    <string name="player_chapter_remaining">Pozostało %1$s</string>
+
+    <string name="player_engine_switch_title">Przełączyć na %1$s?</string>
+    <string name="player_engine_switch_message">Film zostanie wznowiony od obecnego miejsca.</string>
+
+    <string name="settings_stream_badges_in_player_title">Pokaż w odtwarzaczu</string>
+    <string name="settings_stream_badges_in_player_description">Wyświetlaj znaczniki wideo i audio pod tytułem w odtwarzaczu.</string>
+
+    <string name="stream_resume_from_percent">Wznów od %1$d%%</string>
+    <string name="stream_resume_from_time">Wznów od %1$s</string>
+
+    <string name="sub_hdr_style">Osobny styl HDR / Dolby Vision</string>
+    <string name="sub_hdr_style_sub">Użyj innego koloru tekstu i niższej jasności napisów dla wideo HDR i Dolby Vision</string>
+    <string name="sub_hdr_brightness">Jasność napisów HDR</string>
+    <string name="sub_hdr_text_color">Kolor tekstu HDR</string>
+    <string name="subtitle_style_brightness_hdr">Jasność (HDR)</string>
+    <string name="subtitle_style_text_color_hdr">Kolor tekstu (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">Przezroczystość tekstu (HDR)</string>
 </resources>
