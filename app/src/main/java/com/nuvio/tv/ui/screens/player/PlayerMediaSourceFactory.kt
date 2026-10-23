@@ -21,13 +21,19 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.source.ConcatenatingMediaSource2
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import androidx.media3.common.util.TimestampAdjuster
 import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import androidx.media3.extractor.text.SubtitleParser
+import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
+import androidx.media3.extractor.ts.TsExtractor
 import com.nuvio.tv.NuvioApplication
 import com.nuvio.tv.R
 import com.nuvio.tv.core.util.findCause
@@ -172,9 +178,28 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         mimeTypeOverride: String? = null,
         audioDelayUsProvider: (() -> Long)? = null,
         mediaMetadata: androidx.media3.common.MediaMetadata? = null,
-        cacheKey: String? = null
+        cacheKey: String? = null,
+        bluray: BlurayPlaylistResolver.RemoteLayout? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
+        // A Blu-ray folder plays its feature playlist, clip by clip.
+        val playlist = (bluray as? BlurayPlaylistResolver.RemoteLayout.Playlist)?.let { it.segmentUrls to it.durationsMs }
+            ?: BlurayPlaylistResolver.resolve(url)?.let { local -> local.segments.map { Uri.fromFile(it).toString() } to local.durationsMs }
+        if (playlist != null) {
+            return wrapAudioDelay(
+                mediaSource = createBlurayPlaylistSource(
+                    segmentUrls = playlist.first,
+                    durationsMs = playlist.second,
+                    dataSourceFactory = DefaultDataSource.Factory(
+                        context,
+                        PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
+                    ),
+                    subtitleConfigurations = subtitleConfigurations
+                ),
+                audioDelayUsProvider = audioDelayUsProvider
+            )
+        }
+
         val resolvedMimeType = mimeTypeOverride ?: inferMimeType(
             url = url,
             filename = filename,
@@ -295,13 +320,18 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 "requestedCap=${vodCacheMaxBytes / (1024L * 1024L)}MB stats=${vodCacheStatsSnapshot()}"
         )
 
-        val extractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
+        // Blu-ray clips (BDAV) put a 4-byte header before every 188-byte TS packet, which
+        // TsExtractor cannot read. Strip it above the cache, which keeps the source's offsets.
+        val bdav = !isHls && !isDash &&
+            (bluray == BlurayPlaylistResolver.RemoteLayout.BdavClip || BlurayPlaylistResolver.isLikelyBdavM2tsUrl(url))
+        val mediaDataFactory = if (bdav) BdavM2tsDataSourceFactory(progressiveFactory) else progressiveFactory
+        val extractorsFactory = if (bdav) createBdavExtractorsFactory(progressiveFactory) else customExtractorsFactory ?: DefaultExtractorsFactory()
         // MediaItem subtitle tracks load through this factory too; route addon subtitles through the
         // subtitle download path so they don't inherit the stream's headers and client.
         val defaultSourceFactory = if (subtitleConfigurations.isNotEmpty()) {
-            SubtitleRoutingDataSourceFactory(progressiveFactory, url, headers, subtitleRoutes)
+            SubtitleRoutingDataSourceFactory(mediaDataFactory, url, headers, subtitleRoutes)
         } else {
-            progressiveFactory
+            mediaDataFactory
         }
         val defaultFactory = DefaultMediaSourceFactory(defaultSourceFactory, extractorsFactory).apply {
             setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
@@ -330,6 +360,55 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             else -> defaultFactory.createMediaSource(mediaItem)
         }
         return wrapAudioDelay(mediaSource = mediaSource, audioDelayUsProvider = audioDelayUsProvider)
+    }
+
+    private fun createBdavExtractorsFactory(clipInfoSource: DataSource.Factory): ExtractorsFactory = object : ExtractorsFactory {
+        override fun createExtractors(): Array<Extractor> = arrayOf(createBdavTsExtractor())
+
+        // Called on the loading thread, once per clip, so the CLPI read stays off the main thread.
+        override fun createExtractors(uri: Uri, responseHeaders: Map<String, List<String>>): Array<Extractor> {
+            val info = BlurayClipInfo.info(uri, clipInfoSource)
+            val extractor = createBdavTsExtractor()
+            return arrayOf(if (info.isEmpty) extractor else BlurayClipInfo.ClipInfoExtractor(extractor, info))
+        }
+    }
+
+    private fun createBdavTsExtractor(): Extractor {
+        // Blu-ray carries DTS and TrueHD on HDMV stream types; splice info sections crash SpliceInfoDecoder.
+        val payloadReaders = BdavTsPayloadReaderFactory.withDefaults(
+            DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS or
+                DefaultTsPayloadReaderFactory.FLAG_IGNORE_SPLICE_INFO_STREAM
+        )
+        // Subtitle samples, the disc's PGS among them, are parsed into cues here, as the text renderer expects.
+        return TsExtractor(
+            TsExtractor.MODE_SINGLE_PMT,
+            /* extractorFlags= */ 0,
+            DefaultSubtitleParserFactory(),
+            TimestampAdjuster(0),
+            payloadReaders,
+            BDAV_TIMESTAMP_SEARCH_BYTES
+        )
+    }
+
+    /** One timeline over the playlist's clips, so the seek bar covers the whole feature. */
+    private fun createBlurayPlaylistSource(
+        segmentUrls: List<String>,
+        durationsMs: List<Long>,
+        dataSourceFactory: DataSource.Factory,
+        subtitleConfigurations: List<MediaItem.SubtitleConfiguration>
+    ): MediaSource {
+        val clipFactory = DefaultMediaSourceFactory(BdavM2tsDataSourceFactory(dataSourceFactory), createBdavExtractorsFactory(dataSourceFactory))
+            .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        val builder = ConcatenatingMediaSource2.Builder()
+        segmentUrls.forEachIndexed { index, segmentUrl ->
+            val clip = MediaItem.Builder().setUri(segmentUrl).setMimeType(MimeTypes.VIDEO_MP2T)
+            // Sidecar subtitles have one timeline; with several clips they would restart at each one.
+            if (segmentUrls.size == 1) clip.setSubtitleConfigurations(subtitleConfigurations)
+            // A progressive clip needs a placeholder duration until it is prepared: the playlist's.
+            val placeholderMs = durationsMs.getOrNull(index)?.takeIf { it > 0 } ?: PLAYLIST_CLIP_PLACEHOLDER_MS
+            builder.add(clipFactory.createMediaSource(clip.build()), placeholderMs)
+        }
+        return builder.build()
     }
 
     fun shutdown() {
@@ -435,6 +514,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         private const val VOD_CACHE_RETAIN_BEHIND_BYTES = 1024L * 1024L * 1024L
         private const val VOD_CACHE_TRIM_STEP_BYTES = 64L * 1024L * 1024L
         private const val LOG_TAG = "PlayerMediaSource"
+        // Blu-ray sends a PCR up to every 100 ms, on its own PID: over 1 MB apart at UHD rates.
+        // A seek probe that sees none gives up and reads on from 5% before the target.
+        private const val BDAV_TIMESTAMP_SEARCH_BYTES = 10_000 * TsExtractor.TS_PACKET_SIZE
+        private const val PLAYLIST_CLIP_PLACEHOLDER_MS = 60_000L
         private const val AUTO_VOD_CACHE_FLOOR_BYTES = 2L * 1024L * 1024L * 1024L
         internal const val DEFAULT_USER_AGENT =
             "Mozilla/5.0 (Linux; Android 13; Android TV) AppleWebKit/537.36 " +
@@ -910,6 +993,31 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 filename = filename,
                 responseHeaders = responseHeaders
             )
+        }
+
+        /** The feature playlist of a Blu-ray clip served over HTTP, when it names more clips than this one. */
+        suspend fun probeBlurayDisc(
+            url: String,
+            headers: Map<String, String> = emptyMap()
+        ): BlurayPlaylistResolver.DiscProbe? = withContext(Dispatchers.IO) {
+            BlurayPlaylistResolver.probeDisc(url, sanitizeHeaders(headers), PlayerPlaybackNetworking.playbackHttpClient)
+        }
+
+        suspend fun probeBlurayTitleLanguages(
+            title: BlurayPlaylistResolver.RemoteLayout.Playlist,
+            headers: Map<String, String> = emptyMap()
+        ): Pair<List<String>, List<String>> = withContext(Dispatchers.IO) {
+            runCatching {
+                BlurayPlaylistResolver.titleLanguages(title, sanitizeHeaders(headers), PlayerPlaybackNetworking.playbackHttpClient)
+            }.getOrDefault(emptyList<String>() to emptyList())
+        }
+
+        /** Looks for a Blu-ray behind an HTTP stream that failed to parse. Never runs before playback. */
+        suspend fun probeBlurayLayout(
+            url: String,
+            headers: Map<String, String> = emptyMap()
+        ): BlurayPlaylistResolver.RemoteLayout? = withContext(Dispatchers.IO) {
+            BlurayPlaylistResolver.probeHttp(url, sanitizeHeaders(headers), PlayerPlaybackNetworking.playbackHttpClient)
         }
 
         suspend fun probeNetworkMimeType(

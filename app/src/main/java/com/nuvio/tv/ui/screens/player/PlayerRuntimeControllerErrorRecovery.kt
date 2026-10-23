@@ -503,6 +503,21 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
     errorRetryJob?.cancel()
     errorRetryJob = scope.launch {
         showRecoveryOverlay()
+        // A Blu-ray clip under another name, or a web listing of a disc folder. Probed only now,
+        // so streams that play never pay for it.
+        if (currentStreamBluray == null && !BlurayPlaylistResolver.isLikelyBdavM2tsUrl(currentStreamUrl)) {
+            val bluray = PlayerMediaSourceFactory.probeBlurayLayout(url = currentStreamUrl, headers = currentHeaders)
+            if (bluray != null) {
+                Log.i(PlayerRuntimeController.TAG, "Stream probe found Blu-ray ${bluray::class.simpleName}. Retrying playback...")
+                currentStreamBluray = bluray
+                releasePlayer(flushPlaybackState = false)
+                if (savedPosition > 0L) {
+                    _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+                }
+                initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+                return@launch
+            }
+        }
         val probedMime = PlayerMediaSourceFactory.probeNetworkMimeType(
             url = currentStreamUrl,
             headers = currentHeaders

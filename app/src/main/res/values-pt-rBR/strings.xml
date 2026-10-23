@@ -3368,4 +3368,12 @@
     <string name="autosync_toast_failed_no_reference">Falha na sincronização: este vídeo não tem legendas internas para comparar.</string>
     <string name="autosync_toast_failed_unsupported">Falha na sincronização: este formato de legenda não é aceito.</string>
     <string name="autosync_label_synced">Sincronizado automaticamente</string>
+    <string name="player_disc_titles">Títulos do disco</string>
+    <string name="player_disc_title_feature">Filme · %1$d min</string>
+    <string name="player_disc_title_extra">Extra · %1$d min</string>
+    <string name="player_disc_title_subtitles">Legendas %1$s</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d clipe</item>
+        <item quantity="other">%d clipes</item>
+    </plurals>
 </resources>
