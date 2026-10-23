@@ -13,8 +13,10 @@ import kotlinx.serialization.Serializable
 @Serializable internal data class PhoneRanking(
     val settings: StreamRankingSettings,
     val profile: StreamRankingProfile,
-    val presets: List<PhoneRankingPreset>
+    val presets: List<PhoneRankingPreset>,
+    val languages: List<PhoneRankingLanguage> = emptyList()
 )
+@Serializable internal data class PhoneRankingLanguage(val code: String, val name: String)
 @Serializable internal data class RankingPreviewSample(
     val title: String,
     val sizeGb: Double? = null,

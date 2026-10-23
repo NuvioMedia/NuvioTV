@@ -14,7 +14,7 @@ class StreamRankingEngineTest {
         StreamRankingCondition(field, op, value)
 
     @Test fun `every preset is valid and survives native JSON roundtrip`() {
-        for (preset in listOf(StreamRankingPreset.BALANCED, StreamRankingPreset.BEST_QUALITY, StreamRankingPreset.SMALLER_FILES)) {
+        for (preset in listOf(StreamRankingPreset.BALANCED, StreamRankingPreset.BEST_QUALITY, StreamRankingPreset.SMALLER_FILES, StreamRankingPreset.HD_SDR)) {
             val profile = StreamRankingPresets.profile(preset)
             profile.validate()
             val settings = StreamRankingSettings(preset, profile)
@@ -199,6 +199,49 @@ class StreamRankingEngineTest {
         val facts = StreamRankingFacts.parse("Film.1080p.WEB-DL-NTb").copy(knownLanguages = setOf("en"))
         assertEquals(setOf("en"), facts.languages)
         assertEquals(setOf("en"), facts.copy(sizeBytes = 123L).languages)
+    }
+
+    @Test fun `1080p SDR preset promotes unlabelled HD and keeps HDR and UHD alternatives`() {
+        val hdr = candidate("Film.1080p.WEB-DL.HDR.HEVC-FLUX", 6.0)
+        val dv = candidate("Film.1080p.WEB-DL.DV.HEVC-NTb", 5.0)
+        val uhd = candidate("Film.2160p.BluRay.REMUX.HDR-FraMeSToR", 60.0)
+        val sdr = candidate("Film.1080p.WEB-DL.x264.AAC-Other", 4.0)
+        val efficient = candidate("Film.1080p.WEB-DL.x265-Other", 4.0)
+        val low = candidate("Film.720p.WEB-DL.x264-Other", 1.0)
+        val unknown = candidate("Unlabelled release")
+        val result = sorted(StreamRankingPreset.HD_SDR, hdr, dv, uhd, efficient, unknown, low, sdr)
+        assertEquals(sdr.value, result.first())
+        assertTrue(result.indexOf(low.value) < result.indexOf(hdr.value))
+        assertTrue(result.containsAll(listOf(hdr.value, dv.value, uhd.value, unknown.value)))
+    }
+
+    @Test fun `quick language preference precedes quality while preserving original and custom sorting`() {
+        val english = candidate("Film.2160p.BluRay.REMUX.English-FraMeSToR", 60.0)
+        val dutch = candidate("Film.1080p.WEB-DL.Dutch-Other", 2.0)
+        val unknown = candidate("Film.1080p.WEB-DL-NTb", 3.0)
+        val settings = StreamRankingSettings(StreamRankingPreset.BEST_QUALITY, preferredLanguage = "nl")
+        settings.validate()
+        assertEquals(settings, Json.decodeFromString<StreamRankingSettings>(Json.encodeToString(settings)))
+        val result = StreamRankingEngine(settings.profile()!!).rank(listOf(english, unknown, dutch))
+        assertEquals(dutch, result.first().candidate)
+        assertEquals(3, result.size)
+        val custom = StreamRankingProfile(preferredLanguages = listOf("ja"))
+        assertEquals(custom, settings.copy(preset = StreamRankingPreset.CUSTOM, custom = custom).profile())
+        assertNull(settings.copy(preset = StreamRankingPreset.ORIGINAL).profile())
+        assertEquals(StreamRankingPresets.profile(StreamRankingPreset.BEST_QUALITY), settings.copy(preferredLanguage = "").profile())
+        assertThrows(IllegalArgumentException::class.java) { settings.copy(preferredLanguage = "invalid").validate() }
+    }
+
+    @Test fun `plain WEB releases have a quality tier without confusing WEBRip or file extensions`() {
+        assertEquals(StreamReleaseQuality.WEB_DL, StreamRankingFacts.parse("Film.1080p.AMZN.WEB.H264-GROUP").quality)
+        assertEquals(StreamReleaseQuality.WEBRIP, StreamRankingFacts.parse("Film.1080p.WEB-Rip-GROUP").quality)
+        assertEquals(StreamReleaseQuality.HDTV, StreamRankingFacts.parse("Web.Of.Lies.1080p.HDTV-GROUP").quality)
+        val transport = StreamRankingFacts.parse("Film.1080p.WEB-DL-GROUP.ts")
+        assertEquals(StreamReleaseQuality.WEB_DL, transport.quality)
+        assertEquals("GROUP", transport.group)
+        assertEquals("Film.1080p.WEB-DL-GROUP.ts", transport.title)
+        assertTrue("NO_HDR_LABEL" in transport.visual)
+        assertFalse("NO_HDR_LABEL" in StreamRankingFacts.parse("Film.1080p.WEB-DL.DV-GROUP").visual)
     }
 
 }

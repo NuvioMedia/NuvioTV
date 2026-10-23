@@ -6,6 +6,7 @@ import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.streams.*
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.usenet.BuiltInUsenetService
 import com.nuvio.tv.core.usenet.BuiltInUsenetResult
@@ -14,6 +15,8 @@ import com.nuvio.tv.core.usenet.UsenetIndexer
 import com.nuvio.tv.core.usenet.UsenetSort
 import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
 import com.nuvio.tv.core.usenet.UsenetSourceSettings
+import com.nuvio.tv.core.usenet.NewznabProtocol
+import com.nuvio.tv.core.usenet.UsenetRelease
 import com.nuvio.tv.data.mediaserver.ServerStreamSource
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.remote.api.AddonApi
@@ -179,6 +182,47 @@ class StreamRepositoryPluginIsolationTest {
         val success = harness.repository.getStreamsFromAllAddons("movie", "tt123", null, null).toList()
             .last() as NetworkResult.Success
         assertEquals(listOf("Fast Addon"), success.data.map { it.addonName })
+    }
+
+    @Test fun `changing native ranking preserves addon NZB and media server stream order`() = runTest {
+        val custom = StreamRankingProfile(preferredLanguages = listOf("nl"), topPerBucket = 0,
+            sort = listOf(StreamRankingSort(StreamRankingKey.LANGUAGE)), rules = listOf(
+                StreamRankingRule("Native results only", action = StreamRankingAction.REQUIRE,
+                    conditions = listOf(StreamRankingCondition(StreamRankingField.TITLE, StreamRankingOperator.CONTAINS, "Native")))))
+        val source = MutableStateFlow(UsenetSourceConfiguration(enabled = true,
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")),
+            indexers = listOf(UsenetIndexer(name = "Indexer", apiUrl = "https://indexer.test/api")),
+            ranking = StreamRankingSettings(StreamRankingPreset.CUSTOM, custom)))
+        val high = UsenetRelease("Native.2160p.BluRay.REMUX.English-FraMeSToR", "https://indexer.test/high")
+        val low = UsenetRelease("Native.1080p.WEB-DL.Dutch-Other", "https://indexer.test/low")
+        fun serverStream(title: String) = Stream(name = title, title = title, description = null,
+            url = "https://server.test/$title", ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
+            behaviorHints = null, addonName = "Server", addonLogo = null)
+        val serverStreams = listOf(serverStream("720p"), serverStream("2160p"))
+        val nativeResults = flow {
+            val streams = NewznabProtocol.arrange(listOf(high, low), source.value).map { release ->
+                serverStream(release.title).copy(addonName = BuiltInUsenetService.GROUP_NAME, url = null, nzbUrl = release.nzbUrl)
+            }
+            emit(BuiltInUsenetResult(group = AddonStreams(BuiltInUsenetService.GROUP_NAME, null, streams)))
+        }
+        val harness = newHarness(emptyList(), source, nativeResults,
+            serverSources = listOf(ServerStreamSource("Server", preferred = false) { serverStreams }))
+        // Even addon-provided NZBs stay in the addon's order; only the native source is ranked.
+        coEvery { harness.api.getStreams(any()) } returns Response.success(StreamResponseDto(streams = listOf(
+            StreamDto(name = "Addon 720p", nzbUrl = "https://addon.test/low"),
+            StreamDto(name = "Addon 2160p", nzbUrl = "https://addon.test/high"))))
+        suspend fun load() = (harness.repository.getStreamsFromAllAddons("movie", "tt123", null, null)
+            .toList().last() as NetworkResult.Success).data
+        val before = load()
+        assertEquals(listOf(low.title, high.title), before.single { it.addonName == BuiltInUsenetService.GROUP_NAME }.streams.map { it.title })
+        source.value = source.value.copy(ranking = StreamRankingSettings(StreamRankingPreset.BEST_QUALITY))
+        val after = load()
+        assertEquals(listOf(high.title, low.title), after.single { it.addonName == BuiltInUsenetService.GROUP_NAME }.streams.map { it.title })
+        for (groups in listOf(before, after)) {
+            assertEquals(serverStreams, groups.single { it.addonName == "Server" }.streams)
+            assertEquals(listOf("Addon 720p", "Addon 2160p"), groups.single { it.addonName == "Fast Addon" }.streams.map { it.name })
+        }
+        assertEquals(before.single { it.addonName == "Fast Addon" }, after.single { it.addonName == "Fast Addon" })
     }
 
     @Test

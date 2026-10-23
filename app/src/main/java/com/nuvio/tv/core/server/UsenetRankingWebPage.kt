@@ -37,6 +37,11 @@ internal object UsenetRankingWebPage {
           <label for="rankingPreset">${s(R.string.usenet_ranking_title)}</label>
           <select id="rankingPreset"></select>
           <p class="ranking-note" id="rankingDescription"></p>
+          <div id="rankingQuickPreferences">
+            <label for="rankingPreferredLanguage">${s(R.string.usenet_ranking_language)}</label>
+            <select id="rankingPreferredLanguage"></select>
+            <p class="ranking-note">${s(R.string.usenet_ranking_language_hint)}</p>
+          </div>
           <div class="ranking-savebar">
             <div id="rankingDirty" role="status" aria-live="polite"></div>
             <button class="btn primary add" type="button" id="saveRanking">${s(R.string.action_save)}</button>
@@ -68,7 +73,7 @@ internal object UsenetRankingWebPage {
               <p class="ranking-note">${s(R.string.usenet_ranking_values_hint)}</p>
             </details>
           </details>
-          <details class="ranking-section" open><summary>${s(R.string.usenet_ranking_preview)}</summary>
+          <details class="ranking-section"><summary>${s(R.string.usenet_ranking_preview)}</summary>
             <p class="ranking-note">${s(R.string.usenet_ranking_preview_hint)}</p>
             <label for="rankingMedia">${s(R.string.usenet_ranking_field_media)}</label>
             <select id="rankingMedia"><option value="movie">${s(R.string.usenet_ranking_movies)}</option><option value="series">${s(R.string.usenet_ranking_episodes)}</option></select>
@@ -194,6 +199,7 @@ function renderRanking() {
  $('rankingEpisodeSize').value = rankingDraft.preferredEpisodeSizeGb;
  $('rankingBucket').value = rankingDraft.topPerBucket;
  const preset = rankingState.presets.find(p => p.id === $('rankingPreset').value);
+ $('rankingQuickPreferences').hidden = !preset || preset.id === 'ORIGINAL';
  $('rankingDescription').textContent = preset ? preset.description : rankingText.customDesc;
  renderRankingLists();
 }
@@ -201,6 +207,8 @@ async function loadRanking() {
  rankingState = await api('/api/ranking');
  rankingDraft = rankingClone(rankingState.profile);
  rankingCustomDraft = rankingState.settings.custom ? rankingClone(rankingState.settings.custom) : null;
+ $('rankingPreferredLanguage').innerHTML = rankingState.languages.map(l => '<option value="' + l.code + '">' + escapeHtml(l.name) + '</option>').join('');
+ $('rankingPreferredLanguage').value = rankingState.settings.preferredLanguage;
  $('rankingPreset').innerHTML = rankingState.presets.map(p => '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>').join('') + '<option value="CUSTOM">' + escapeHtml(rankingText.custom) + '</option>';
  $('rankingPreset').value = rankingState.settings.preset;
  $('rankingDirty').textContent = '';
@@ -208,19 +216,37 @@ async function loadRanking() {
 }
 function markRankingDraft() {
  $('rankingPreset').value = 'CUSTOM';
+ $('rankingQuickPreferences').hidden = true;
  $('rankingDescription').textContent = rankingText.customDesc;
  $('rankingDirty').textContent = rankingText.draft;
  $('rankingResults').replaceChildren();
 }
 function rankingSettings() {
  if (!rankingState) throw new Error(rankingText.invalid);
- return { preset: $('rankingPreset').value, custom: $('rankingPreset').value === 'CUSTOM' ? rankingClone(rankingDraft) : rankingState.settings.custom };
+ return { preset: $('rankingPreset').value, custom: $('rankingPreset').value === 'CUSTOM' ? rankingClone(rankingDraft) : rankingState.settings.custom,
+  preferredLanguage: $('rankingPreferredLanguage').value };
 }
+function rankingPresetDraft(selected) {
+ const profile = rankingClone(rankingState.presets.find(p => p.id === selected).profile);
+ const language = $('rankingPreferredLanguage').value;
+ if (selected !== 'ORIGINAL' && language) {
+  profile.preferredLanguages = [language];
+  profile.sort = [{key:'LANGUAGE', descending:true}, ...profile.sort.filter(s => s.key !== 'LANGUAGE')];
+ }
+ return profile;
+}
+$('rankingPreferredLanguage').onchange = () => {
+ if (!rankingState || ['ORIGINAL', 'CUSTOM'].includes($('rankingPreset').value)) return;
+ rankingDraft = rankingPresetDraft($('rankingPreset').value);
+ $('rankingDirty').textContent = rankingText.draft;
+ $('rankingResults').replaceChildren();
+ renderRanking();
+};
 $('rankingPreset').onchange = () => {
  if (!rankingState) return;
  const selected = $('rankingPreset').value;
  if (selected === 'CUSTOM') rankingDraft = rankingClone(rankingCustomDraft || rankingState.presets.find(p => p.id === 'BALANCED').profile);
- else rankingDraft = rankingClone(rankingState.presets.find(p => p.id === selected).profile);
+ else rankingDraft = rankingPresetDraft(selected);
  $('rankingRules').replaceChildren();
  $('rankingDirty').textContent = rankingText.draft;
  $('rankingResults').replaceChildren();
