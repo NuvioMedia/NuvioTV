@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.addon
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.graphics.Bitmap
@@ -104,7 +105,6 @@ import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.Addon
-import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -595,9 +595,9 @@ internal fun AddonMessageOverlay(
                 onClick = { },
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = if (isError) {
-                        Color(0xFFC62828).copy(alpha = 0.92f)
+                        NuvioPrimitives.red600.copy(alpha = 0.92f)
                     } else {
-                        Color(0xFF2E7D32).copy(alpha = 0.92f)
+                        NuvioPrimitives.green700.copy(alpha = 0.92f)
                     }
                 ),
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
@@ -1494,8 +1494,4 @@ private fun AddonCardContent(
             color = NuvioTheme.colors.TextTertiary
         )
     }
-}
-
-private fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
-    return extra.any { extra -> extra.name.equals("search", ignoreCase = true) && extra.isRequired }
 }

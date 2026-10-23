@@ -104,27 +104,27 @@
     <string name="error_generic">Ha ocurrido un error</string>
 
     <string name="action_retry">Reintentar</string>
-    <string name="error_state_generic_issue">Something went wrong.</string>
+    <string name="error_state_generic_issue">Se ha producido un error.</string>
     <string name="error_state_possible_fix">Posible solución: %1$s</string>
-    <string name="error_state_fix_retry_soon">reintentar en un momento.</string>
+    <string name="error_state_fix_retry_soon">Vuelve a intentarlo en unos instantes.</string>
     <string name="error_state_issue_no_metadata_any_addon">Este ID no pudo cargar detalles porque ninguno de los complementos instalados devolvió metadatos.</string>
-    <string name="error_state_fix_no_metadata_any_addon">intenta otro complemento, desactiva \"Preferir complemento de metadatos externo\" en configuración de Diseño, o confirma que un complemento instalado admite este ID.</string>
+    <string name="error_state_fix_no_metadata_any_addon">prueba con otro complemento, desactiva \"Preferir complemento de metadatos externo\" en los ajustes de Diseño, o confirma que un complemento instalado admita este ID.</string>
     <string name="error_state_prefix_no_supported_metadata">Ningún complemento instalado admite metadatos para </string>
     <string name="error_state_prefix_no_addon_for_id">Ningún complemento instalado pudo proporcionar metadatos para id=</string>
-    <string name="error_state_fix_no_supported_metadata">instala o actualiza un complemento que admita este tipo de contenido, luego reintentar.</string>
+    <string name="error_state_fix_no_supported_metadata">instala o actualiza un complemento compatible con este tipo de contenido y vuelve a intentarlo.</string>
     <string name="error_state_prefix_tried_meta_addons">Complementos de metadatos probados:</string>
-    <string name="error_state_fix_tried_meta_addons">instala un complemento que admita este ID, o reconfigura/actualiza el complemento e intenta de nuevo.</string>
+    <string name="error_state_fix_tried_meta_addons">instala un complemento que admita este ID, o reconfigura/actualiza el complemento e inténtalo de nuevo.</string>
     <string name="error_state_issue_missing_metadata_for_id">no tiene metadatos para este ID</string>
-    <string name="error_state_fix_missing_metadata_for_id">abre este ID de otro complemento, desactiva \"Preferir complemento de metadatos externo\", o comprueba que el complemento admita este ID.</string>
+    <string name="error_state_fix_missing_metadata_for_id">abre este ID desde otro complemento, desactiva \"Preferir complemento de metadatos externo\", o comprueba que el complemento admita este ID.</string>
     <string name="error_state_issue_addon_unreachable">no se pudo acceder</string>
-    <string name="error_state_fix_addon_unreachable">comprueba tu conexión a internet, verifica que la URL del complemento aún funciona, luego reintentar.</string>
+    <string name="error_state_fix_addon_unreachable">comprueba tu conexión a internet, verifica que la URL del complemento sigue funcionando y vuelve a intentarlo.</string>
     <string name="error_state_issue_addon_connection_failed">rechazó la conexión</string>
-    <string name="error_state_fix_addon_connection_failed">asegúrate de que el servidor del complemento esté en línea y accesible, luego reintentar.</string>
+    <string name="error_state_fix_addon_connection_failed">asegúrate de que el servidor del complemento esté en línea y accesible, y vuelve a intentarlo.</string>
     <string name="error_state_issue_addon_timeout">tardó demasiado en responder</string>
-    <string name="error_state_fix_addon_timeout">reintentar en un momento, o intenta un complemento diferente si esto sigue sucediendo.</string>
+    <string name="error_state_fix_addon_timeout">vuelve a intentarlo en unos instantes o prueba con otro complemento si el problema continúa.</string>
     <string name="error_state_issue_addon_cleartext">utiliza una conexión HTTP insegura que Android bloqueó</string>
     <string name="error_state_fix_addon_cleartext">cambia la URL del complemento a HTTPS o actualiza la configuración del complemento.</string>
-    <string name="error_state_fix_addon_generic">reintentar, actualizar o reinstalar el complemento, o intenta otro complemento.</string>
+    <string name="error_state_fix_addon_generic">vuelve a intentarlo, actualiza o reinstala el complemento, o prueba con otro distinto.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
     <string name="error_meta_not_found">Metadatos no encontrados</string>
     <string name="error_meta_no_supported_addon">Ningún complemento instalado admite metadatos para \"%1$s\".</string>
@@ -132,10 +132,10 @@
     <string name="error_meta_tried_none">Complementos de metadatos probados: %1$s. Ninguno de ellos proporcionó metadatos para id=%2$s (tipo=%3$s).</string>
     <string name="error_meta_tried_generic">Complementos de metadatos probados: %1$s. No se pudo cargar metadatos para id=%2$s (tipo=%3$s).</string>
     <string name="error_meta_tried_issues">Complementos de metadatos probados: %1$s. No se pudo cargar metadatos para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Ningún complemento instalado admite transmisiones para \"%1$s\".</string>
-    <string name="error_stream_tried_none">Complementos de transmisión probados: %1$s. Ninguno de ellos devolvió transmisiones para id=%2$s (tipo=%3$s).</string>
-    <string name="error_stream_tried_generic">Complementos de transmisión probados: %1$s. No se pudo cargar transmisiones para id=%2$s (tipo=%3$s).</string>
-    <string name="error_stream_tried_issues">Complementos de transmisión probados: %1$s. No se pudo cargar transmisiones para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Ningún complemento instalado proporciona fuentes para \"%1$s\".</string>
+    <string name="error_stream_tried_none">Complementos de fuentes probados: %1$s. Ninguno de ellos devolvió fuentes para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_generic">Complementos de fuentes probados: %1$s. No se pudieron cargar fuentes para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_issues">Complementos de fuentes probados: %1$s. No se pudieron cargar fuentes para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
 
     <string name="continue_watching">Continuar viendo</string>
     <string name="cw_upcoming">Próximamente</string>
@@ -322,9 +322,9 @@
     <string name="appearance_language_dialog_title">Elige idioma</string>
     <string name="appearance_language_restart_hint">Reinicia la aplicación para aplicar el cambio de idioma.</string>
 
-    <string name="appearance_font">Fuente de la aplicación</string>
-    <string name="appearance_font_subtitle">Elige tu fuente preferida</string>
-    <string name="appearance_font_dialog_title">Elige fuente</string>
+    <string name="appearance_font">Tipografía de la app</string>
+    <string name="appearance_font_subtitle">Elige la tipografía de la interfaz</string>
+    <string name="appearance_font_dialog_title">Elegir tipografía</string>
 
     <string name="appearance_title">Apariencia</string>
     <string name="appearance_subtitle">Elige tu tema de color e idioma</string>
@@ -371,8 +371,22 @@
     <string name="appearance_startup_splash_subtitle">Muestra el logotipo y un indicador de carga después de seleccionar un perfil</string>
     <string name="appearance_settings_style">Estilo de configuración</string>
     <string name="appearance_settings_style_subtitle">Elige cómo se presentan las pantallas de configuración</string>
-    <string name="appearance_launcher_artwork">Ilustración del lanzador</string>
+    <string name="appearance_launcher_artwork">Aspecto en la pantalla de inicio</string>
     <string name="appearance_launcher_artwork_subtitle">Elige cómo aparece Nuvio en la pantalla de inicio de tu TV</string>
+    <string name="ambient_mode_title">Modo ambiente</string>
+    <string name="ambient_mode_subtitle">Muestra imágenes de tus catálogos mientras el televisor está inactivo</string>
+    <string name="ambient_mode_enabled_subtitle">Llena la pantalla con fondos tras un período sin usar el mando a distancia</string>
+    <string name="ambient_mode_timeout">Iniciar después de</string>
+    <string name="ambient_mode_timeout_subtitle">Cuánto tiempo esperar antes de que se inicie el modo ambiente</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">Catálogos</string>
+    <string name="ambient_mode_catalogs_subtitle">Elige hasta 3 catálogos de los que obtener imágenes</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">Elige hasta 3 catálogos</string>
+    <string name="ambient_mode_catalogs_default">Los mismos que en destacados</string>
+    <string name="ambient_mode_catalogs_count">%1$d de %2$d</string>
     <string name="appearance_app_icon_and_banner">Icono &amp; banner de la app</string>
     <string name="appearance_app_icon_and_banner_subtitle">Cambia el icono y el banner de la aplicación</string>
     <string name="appearance_app_icon_picker_title">Elige icono &amp; banner de la app</string>
@@ -392,7 +406,7 @@
     <string name="settings_style_zen_desc">Diseño simple y plano</string>
     <string name="settings_style_horizon">Barra superior</string>
     <string name="settings_style_horizon_desc">Pestañas de navegación en la parte superior</string>
-    <string name="appearance_font_and_language">Fuente e idioma</string>
+    <string name="appearance_font_and_language">Tipografía e idioma</string>
     <string name="appearance_font_and_language_subtitle">Elige la tipografía y la configuración regional usadas en toda la aplicación</string>
     <string name="cd_selected">Seleccionado</string>
 
@@ -402,6 +416,10 @@
     <string name="about_version">Versión %1$s</string>
     <string name="about_update_banner_title">Banner de actualización automática</string>
     <string name="about_update_banner_subtitle">Muestra un banner cuando hay una nueva versión disponible</string>
+    <string name="about_update_auto_install_title">Instalar actualizaciones automáticamente</string>
+    <string name="about_update_auto_install_subtitle">Descarga nuevas versiones en segundo plano y las instala mientras el dispositivo está inactivo</string>
+    <string name="about_update_auto_install_notice_title">Notificar tras actualizaciones automáticas</string>
+    <string name="about_update_auto_install_notice_subtitle">Muestra un aviso en el siguiente inicio después de que la aplicación se actualice</string>
     <string name="about_update_channel_title">Canal de actualización</string>
     <string name="about_update_channel_subtitle">Elige el tipo de actualizaciones de la aplicación que quieres recibir</string>
     <string name="about_check_updates">Buscar actualizaciones</string>
@@ -504,8 +522,8 @@
     <string name="essential_addon_continue_for_now">Continuar por ahora</string>
     <string name="essential_playback_basics">Aspectos básicos de reproducción</string>
     <string name="essential_subtitles_and_audio">Subtítulos y audio</string>
-    <string name="essential_stream_selection">Selección de transmisión</string>
-    <string name="stream_auto_play_first_stream">Primera transmisión</string>
+    <string name="essential_stream_selection">Selección de fuente</string>
+    <string name="stream_auto_play_first_stream">Primera fuente disponible</string>
     <string name="stream_auto_play_manual_short">Manual</string>
     <string name="stream_auto_play_smart_match">Coincidencia inteligente</string>
     <string name="essential_subtitle_language">Idioma de subtítulos</string>
@@ -513,12 +531,12 @@
     <string name="audio_lang_media_default">Predeterminado del medio</string>
     <string name="essential_playback_header_title">Reproducción</string>
     <string name="essential_playback_header_subtitle">Preferencias sencillas de reproducción, subtítulos, audio y P2P.</string>
-    <string name="essential_stream_selection_subtitle">Elige manualmente o reproduce automáticamente la primera transmisión disponible.</string>
+    <string name="essential_stream_selection_subtitle">Elige manualmente o reproduce automáticamente la primera fuente disponible.</string>
     <string name="essential_autoplay_next_episode">Reproducción automática del siguiente episodio</string>
-    <string name="essential_autoplay_next_episode_subtitle">Continúa con el siguiente episodio cuando termine una transmisión.</string>
+    <string name="essential_autoplay_next_episode_subtitle">Continúa con el siguiente episodio cuando termine la reproducción.</string>
     <string name="external_auto_next_loading">Cargando siguiente episodio…</string>
-    <string name="essential_p2p_streams">Transmisiones P2P</string>
-    <string name="essential_p2p_streams_subtitle">Permite fuentes de transmisión peer-to-peer.</string>
+    <string name="essential_p2p_streams">Fuentes P2P</string>
+    <string name="essential_p2p_streams_subtitle">Permite fuentes de vídeo de redes P2P (torrent).</string>
     <string name="essential_subtitle_language_subtitle">Idioma de subtítulos preferido.</string>
     <string name="essential_audio_language_subtitle">Idioma de audio preferido.</string>
     <!-- Account / sign-in error messages -->
@@ -594,6 +612,9 @@
     <string name="sentry_turn_off">Desactivar</string>
     <string name="sentry_turn_on">Activar</string>
     <string name="advanced_section_cache">Caché</string>
+    <string name="advanced_section_startup">Inicio y salida</string>
+    <string name="advanced_section_network_tests">Pruebas de red</string>
+    <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Navegación horizontal rápida</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Aumenta la velocidad de repetición del D-pad en las filas manteniendo activada la limitación de repetición.</string>
     <string name="advanced_nuvio_performance_mode">Memoria nativa de ExoPlayer</string>
@@ -706,6 +727,28 @@
     <string name="contributors_hide_kofi_qr">Ocultar QR de Ko-fi</string>
     <string name="contributors_profile_unavailable">Enlace de perfil de GitHub no disponible.</string>
 
+    <string name="playback_section_player_title">Reproductor</string>
+    <string name="playback_section_player_title_desc">Reproductor predeterminado, motor interno y alternativa en caso de errores.</string>
+    <string name="playback_section_stream_selection">Selección de fuentes</string>
+    <string name="playback_section_stream_selection_desc">Cómo se selecciona una fuente cuando pulsas reproducir.</string>
+    <string name="playback_section_up_next">A continuación</string>
+    <string name="playback_section_up_next_desc">Reproducción automática del siguiente episodio y sugerencias tras la reproducción.</string>
+    <string name="playback_section_skip">Omitir segmentos</string>
+    <string name="playback_section_skip_desc">Omitir intros, resúmenes y créditos.</string>
+    <string name="playback_section_interface">Interfaz del reproductor</string>
+    <string name="playback_section_interface_desc">Superposiciones, reloj y detalles mostrados durante la reproducción.</string>
+    <string name="playback_section_audio_only_desc">Idiomas, descodificación y salida de audio.</string>
+    <string name="playback_section_video_desc">Ajuste de frecuencia de fotogramas, Dolby Vision y HDR.</string>
+    <string name="playback_default_player">Reproductor predeterminado</string>
+    <string name="playback_external_player_label">Reproductor externo</string>
+    <string name="playback_afr_mode">Ajuste de frecuencia de fotogramas</string>
+    <string name="playback_dv_hdr_label">Dolby Vision &amp; HDR</string>
+    <string name="playback_mpv_decoding_label">Descodificación MPV</string>
+    <string name="playback_network_label">Red</string>
+    <string name="sub_languages_label">Idiomas</string>
+    <string name="sub_style_label">Estilo</string>
+    <string name="autoplay_selected_count">%1$d seleccionados</string>
+
     <string name="playback_loading_overlay">Superposición de carga</string>
     <string name="playback_loading_overlay_sub">Muestra pantalla de carga hasta que aparece el primer fotograma de vídeo.</string>
     <string name="playback_pause_overlay">Superposición de pausa</string>
@@ -767,6 +810,11 @@
     <string name="playback_engine_mvplayer_desc">Usa libmpv con los controles OSD de Nuvio. Experimental.</string>
 
     <string name="video_section">Vídeo</string>
+    <string name="playback_true_black_letterbox">Barras negras puras</string>
+    <string name="playback_true_black_letterbox_sub">Deja sin pintar las barras alrededor de la imagen para que el HDR mantenga un negro puro. Mantén esto desactivado si aparece una línea brillante en las barras.</string>
+    <string name="playback_chapters_label">Capítulos</string>
+    <string name="playback_exo_chapters_title">Mostrar capítulos (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Lee los capítulos de los archivos MKV para marcarlos en la barra de progreso y saltar entre ellos. Realiza unas pocas peticiones adicionales una vez iniciada la reproducción. mpv siempre muestra los capítulos.</string>
     <string name="audio_trailer_section">Tráiler</string>
     <string name="audio_autoplay_trailers">Reproducción automática de tráilers</string>
     <string name="audio_autoplay_trailers_sub">Reproduce automáticamente tráilers en la pantalla de detalles después de un período de inactividad</string>
@@ -814,6 +862,20 @@
     <string name="audio_strip_hdr10plus_sub">Elimina los metadatos dinámicos HDR10+ de las transmisiones. Cuando Convertir a DV8.1 también está habilitado, la eliminación se ejecuta después de la conversión.</string>
     <string name="audio_dv7_preserve_mapping_title">Preservar mapeo DV (DV7 a DV8.1)</string>
     <string name="audio_dv7_preserve_mapping_sub">Mantiene el mapeo de tonos original previsto por el creador, a costa de un procesamiento ligeramente mayor por fotograma.</string>
+    <string name="dv7_libdovi_mode_caption" translatable="false">Conversion mode (auto-selected, do not change unless instructed). Pick one to force it; None uses auto. Active only when DV7 Handling is Convert to DV8.1.</string>
+    <string name="dv7_libdovi_mode_row_title" translatable="false">Conversion mode</string>
+    <string name="dv7_libdovi_mode_none_title" translatable="false">None</string>
+    <string name="dv7_libdovi_mode_none_sub" translatable="false">No override. Uses the automatically selected conversion mode.</string>
+    <string name="dv7_libdovi_mode_0_title" translatable="false">Mode 0 — Copy (no convert)</string>
+    <string name="dv7_libdovi_mode_0_sub" translatable="false">Parse the RPU and write it back untouched. No profile conversion.</string>
+    <string name="dv7_libdovi_mode_1_title" translatable="false">Mode 1 — MEL</string>
+    <string name="dv7_libdovi_mode_1_sub" translatable="false">Convert the RPU to be MEL (Minimum Enhancement Layer) compatible.</string>
+    <string name="dv7_libdovi_mode_2_title" translatable="false">Mode 2 — 8.1 (no-op mapping)</string>
+    <string name="dv7_libdovi_mode_2_sub" translatable="false">Convert to profile 8.1 with luma and chroma mapping set to no-op. The standard conversion.</string>
+    <string name="dv7_libdovi_mode_3_title" translatable="false">Mode 3 — Profile 5 to 8.1</string>
+    <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
+    <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
+    <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
     <string name="audio_mpv_hi10p_gnext_sw_title">Alternativa SW G-NEXT para Hi10P (solo MPV)</string>
     <string name="audio_mpv_hi10p_gnext_sw_subtitle">Usa la decodificación por software G-NEXT cuando los detalles de la transmisión identifiquen H.264 Hi10P. Desactivado por defecto; actívalo solo si la reproducción de Hi10P se congela o falla.</string>
     <string name="audio_mpv_hwdec_title">Decodificación por hardware (solo MPV)</string>
@@ -854,25 +916,23 @@
     <string name="sub_outline">Contorno</string>
     <string name="sub_outline_sub">Añade contorno alrededor del texto del subtítulo para mejor visibilidad</string>
     <string name="sub_outline_color">Color del contorno</string>
+    <string name="sub_hdr_style">Estilo independiente para HDR / Dolby Vision</string>
+    <string name="sub_hdr_style_sub">Usa un color de texto diferente y un brillo más tenue para los subtítulos en vídeos con HDR y Dolby Vision</string>
+    <string name="sub_hdr_text_color">Color de texto en HDR</string>
+    <string name="sub_hdr_brightness">Brillo de subtítulos en HDR</string>
     <string name="sub_advanced_section">Renderizado avanzado de subtítulos</string>
     <string name="sub_libass">Usar libass para subtítulos ASS/SSA</string>
-    <string name="sub_libass_sub">Temporalmente deshabilitado para mantenimiento</string>
+    <string name="sub_libass_sub">Renderizado avanzado ASS/SSA (estilos, posicionamiento, animaciones)</string>
     <string name="sub_libass_mode">Modo de renderizado Libass</string>
-    <string name="sub_mode_overlay_gl">Superposición OpenGL (Recomendado)</string>
-    <string name="sub_mode_overlay_gl_sub">Mejor calidad con soporte HDR. Renderiza subtítulos en un hilo separado.</string>
-    <string name="sub_mode_overlay_canvas">Superposición Canvas</string>
-    <string name="sub_mode_effects_gl">Efectos OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Soporte de animación usando efectos Media3. Más rápido que Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efectos Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Soporte de animación usando efectos Media3 con renderizado Canvas.</string>
-    <string name="sub_mode_standard">Pistas estándar</string>
-    <string name="sub_mode_standard_sub">Renderizado de subtítulos básico sin soporte de animación. Más compatible.</string>
     <string name="sub_org_none">Ninguno (orden predeterminado)</string>
     <string name="sub_org_by_lang">Por idioma</string>
     <string name="sub_org_by_addon">Por complemento</string>
     <string name="sub_org_none_desc">Muestra subtítulos en orden de resultado de complemento predeterminado.</string>
     <string name="sub_org_by_lang_desc">Agrupa subtítulos por idioma.</string>
     <string name="sub_org_by_addon_desc">Agrupa subtítulos por fuente de complemento.</string>
+
+    <string name="autoplay_preload_next_episode">Precargar fuentes del siguiente episodio</string>
+    <string name="autoplay_preload_next_episode_sub">Empieza a buscar fuentes en segundo plano antes de que aparezca el botón del siguiente episodio.</string>
 
     <string name="autoplay_reuse_last_link">Reutilizar último enlace</string>
     <string name="autoplay_reuse_last_link_sub">Reproduce automáticamente tu última transmisión válida para esta misma película/episodio cuando la caché aún es válida</string>
@@ -885,19 +945,19 @@
     <string name="autoplay_mode_manual">Manual (elegir transmisión)</string>
     <string name="autoplay_mode_first">Reproducción automática primera fuente</string>
     <string name="autoplay_mode_regex">Reproducción automática coincidencia regex</string>
-    <string name="autoplay_stream_selection">Selección automática de transmisión</string>
+    <string name="autoplay_stream_selection">Selección automática de fuente</string>
     <string name="autoplay_post_play_recommendations">Recomendaciones tras la reproducción</string>
     <string name="autoplay_post_play_recommendations_sub">Muestra recomendaciones cerca del final de películas y series.</string>
     <string name="autoplay_post_play_movie_threshold">Momento de recomendación de películas</string>
     <string name="autoplay_post_play_movie_threshold_sub">Elige cuándo aparecen las recomendaciones de películas. Los episodios siguen el ajuste de umbral del siguiente episodio.</string>
     <string name="autoplay_next_episode">Reproducción automática siguiente episodio</string>
     <string name="autoplay_next_episode_sub">Inicia automáticamente el siguiente episodio cuando aparezca el mensaje.</string>
-    <string name="autoplay_next_episode_fallback">Alternativa cuando falla el grupo de maratón</string>
-    <string name="autoplay_next_episode_fallback_sub">Selecciona automáticamente la primera transmisión disponible si no se encuentra el grupo de maratón. Cuando está desactivado, muestra el selector de transmisiones en su lugar.</string>
-    <string name="autoplay_prefer_binge_group">Preferir grupo de maratón (siguiente episodio)</string>
-    <string name="autoplay_prefer_binge_group_sub">Intenta primero el mismo perfil de fuente (mismo complemento/grupo de calidad) antes de aplicar las reglas normales de reproducción automática.</string>
-    <string name="autoplay_reuse_binge_group">Reutilizar grupo de maratón</string>
-    <string name="autoplay_reuse_binge_group_sub">Recuerda y reutiliza el último grupo de maratón entre sesiones (Continuar viendo, Detalles, etc.).</string>
+    <string name="autoplay_next_episode_fallback">Alternativa si falla la fuente habitual del maratón</string>
+    <string name="autoplay_next_episode_fallback_sub">Selecciona automáticamente la primera fuente disponible si no se encuentra la del maratón. Cuando está desactivado, muestra el selector de fuentes.</string>
+    <string name="autoplay_prefer_binge_group">Mantener la misma fuente en maratones (siguiente episodio)</string>
+    <string name="autoplay_prefer_binge_group_sub">Intenta primero el mismo perfil de fuente (mismo complemento/calidad) antes de aplicar las reglas normales de reproducción automática.</string>
+    <string name="autoplay_reuse_binge_group">Recordar la fuente del maratón</string>
+    <string name="autoplay_reuse_binge_group_sub">Recuerda y reutiliza la última fuente del maratón entre sesiones (Continuar viendo, Detalles, etc.).</string>
     <string name="autoplay_threshold_pct">Porcentaje</string>
     <string name="autoplay_threshold_min">Minutos antes del final</string>
     <string name="autoplay_threshold_mode">Modo de umbral del siguiente episodio</string>
@@ -938,18 +998,22 @@
     <string name="layout_grid">Vista de cuadrícula</string>
     <string name="layout_modern">Vista moderna</string>
     <string name="layout_classic_desc">Desplázate por categorías horizontalmente</string>
-    <string name="layout_grid_desc">Explora todo en una cuadrícula vertical con sección de héroe</string>
-    <string name="layout_modern_desc">Héroe fijo con una sola fila activa para navegación más rápida</string>
+    <string name="layout_grid_desc">Explora todo en una cuadrícula vertical con sección destacada</string>
+    <string name="layout_modern_desc">Cabecera destacada fija con una sola fila activa para navegación más rápida</string>
     <string name="layout_section_home">Diseño del inicio</string>
-    <string name="layout_section_home_desc">Elige estructura y fuente de héroe.</string>
-    <string name="layout_landscape_posters">Pósters de paisaje</string>
-    <string name="layout_landscape_posters_sub">Cambia entre tarjetas de retrato y paisaje para vista moderna.</string>
+    <string name="layout_section_home_desc">Elige la estructura y el contenido destacado.</string>
+    <string name="layout_landscape_posters">Pósteres horizontales</string>
+    <string name="layout_landscape_posters_sub">Alterna entre formato vertical y horizontal en la vista moderna.</string>
     <string name="layout_preview_row">Mostrar fila de vista previa</string>
     <string name="layout_preview_row_sub">Muestra una vista previa parcial de la fila de abajo en diseño moderno del inicio.</string>
-    <string name="layout_hero_catalogs">Catálogos de héroe</string>
-    <string name="layout_hero_catalogs_sub">Selecciona uno o más catálogos para contenido de héroe.</string>
+    <string name="layout_hero_catalogs">Catálogos destacados</string>
+    <string name="layout_hero_catalogs_sub">Elige uno o más catálogos para el carrusel destacado.</string>
     <string name="layout_section_content">Contenido del inicio</string>
     <string name="layout_section_content_desc">Controla qué aparece en inicio y búsqueda.</string>
+    <string name="layout_section_sidebar">Barra lateral y navegación</string>
+    <string name="layout_section_sidebar_desc">Estilo de la barra lateral y dónde aparece Descubrir.</string>
+    <string name="layout_section_card_depth_desc">Luz en los bordes y brillo en las tarjetas de imagen.</string>
+    <string name="layout_section_custom_poster_desc">Usa imágenes de un servicio externo de pósteres.</string>
     <string name="layout_collapse_sidebar">Colapsar barra lateral</string>
     <string name="layout_collapse_sidebar_sub">Oculta barra lateral por defecto; muestra cuando se enfoca.</string>
     <string name="layout_hide_floating_pill">Ocultar píldora flotante</string>
@@ -958,12 +1022,12 @@
     <string name="layout_modern_sidebar_sub">Habilita navegación de barra lateral flotante.</string>
     <string name="layout_modern_sidebar_blur">Desenfoque de barra lateral moderna</string>
     <string name="layout_modern_sidebar_blur_sub">Cambia efecto de desenfoque para superficies de barra lateral moderna.</string>
-    <string name="layout_fullscreen_hero_backdrop">Telón de fondo de héroe a pantalla completa</string>
-    <string name="layout_fullscreen_hero_backdrop_sub">Expande el telón de fondo de héroe para llenar toda la pantalla.</string>
+    <string name="layout_fullscreen_hero_backdrop">Fondo destacado a pantalla completa</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Expande el fondo destacado para llenar toda la pantalla.</string>
     <string name="layout_classic_focus_gradient">Degradado de elemento enfocado</string>
     <string name="layout_classic_focus_gradient_sub">Combina los colores de la ilustración con el lado derecho del inicio Clásico.</string>
-    <string name="layout_show_hero">Mostrar sección de héroe</string>
-    <string name="layout_show_hero_sub">Muestra carrusel de héroe en la parte superior del inicio.</string>
+    <string name="layout_show_hero">Mostrar sección destacada</string>
+    <string name="layout_show_hero_sub">Muestra el carrusel destacado en la parte superior del inicio.</string>
     <string name="layout_show_discover">Mostrar descubrir en búsqueda</string>
     <string name="layout_show_discover_sub">Muestra sección de exploración cuando la búsqueda está vacía.</string>
     <string name="layout_discover_location_action">Ubicación de Descubrir</string>
@@ -990,14 +1054,14 @@
     <string name="layout_ratings_show">Mostrar</string>
     <string name="layout_ratings_hide">Ocultar</string>
     <string name="layout_ratings_hide_unwatched">Ocultar no vistos</string>
-    <string name="layout_section_streams">Transmisiones</string>
-    <string name="layout_section_streams_desc">Ajustes de visualización para resultados de transmisiones y paneles de fuentes del reproductor.</string>
+    <string name="layout_section_streams">Fuentes</string>
+    <string name="layout_section_streams_desc">Ajustes visuales para las fuentes encontradas y los paneles del reproductor.</string>
     <string name="layout_section_continue_watching">Continuar viendo</string>
     <string name="layout_section_continue_watching_desc">Ajustes para la sección Continuar viendo.</string>
     <string name="layout_cw_enabled">Mostrar Continuar viendo</string>
     <string name="layout_cw_enabled_sub">Muestra la fila Continuar viendo en la pantalla de inicio.</string>
     <string name="layout_use_episode_thumbnails_cw">Usar miniaturas de episodio en Continuar viendo</string>
-    <string name="layout_use_episode_thumbnails_cw_sub">Usa las miniaturas de episodio como imagen predeterminada. Cuando está desactivado, usa el telón de fondo.</string>
+    <string name="layout_use_episode_thumbnails_cw_sub">Usa las miniaturas de episodio como imagen predeterminada. Cuando está desactivado, usa la imagen de fondo.</string>
     <string name="layout_blur_unwatched">Desenfocar episodios no vistos</string>
     <string name="layout_blur_unwatched_sub">Desenfoca miniaturas de episodios hasta que se vean para evitar spoilers.</string>
     <string name="layout_episode_options_overlay">Superposición de opciones de episodio</string>
@@ -1028,20 +1092,29 @@
     <string name="upcoming_section_title">Próximamente</string>
     <string name="layout_trailer_button">Mostrar botón de tráiler</string>
     <string name="layout_trailer_button_sub">Muestra botón de tráiler en página de detalles (solo cuando el tráiler está disponible).</string>
+    <string name="layout_trailer_play_in_background">Reproducir en segundo plano</string>
+    <string name="layout_trailer_play_in_background_sub">Reproduce el tráiler en lugar del fondo de pantalla mientras la página permanece visible.</string>
+    <string name="layout_trailer_pause_on_scroll">Pausar al desplazarse</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Pausa el tráiler al desplazarte hacia abajo y lo reanuda al volver a la parte superior.</string>
+    <string name="layout_trailer_4k">Tráileres en 4K</string>
+    <string name="layout_trailer_4k_sub">Reproduce tráileres en resoluciones superiores a 1080p cuando estén disponibles. Consume mucha más memoria; desactivado por defecto en dispositivos con 2 GB de RAM o menos.</string>
+    <string name="layout_detail_group_episodes">Episodios</string>
+    <string name="layout_detail_group_trailers">Tráileres</string>
+    <string name="layout_detail_group_metadata">Metadatos</string>
     <string name="layout_prefer_external_meta">Preferir metadatos de complemento externo</string>
     <string name="layout_prefer_external_meta_sub">Usa metadatos de complemento externo en lugar de complemento de catálogo.</string>
     <string name="layout_show_full_release_date">Mostrar fecha de estreno completa</string>
     <string name="layout_show_full_release_date_sub">Para películas, muestra la fecha de estreno completa en lugar de solo el año.</string>
     <string name="layout_section_focused">Póster enfocado</string>
     <string name="layout_section_focused_desc">Comportamiento avanzado para tarjetas de póster enfocadas.</string>
-    <string name="layout_expand_poster">Expandir póster enfocado a telón de fondo</string>
-    <string name="layout_expand_poster_sub">Expande póster enfocado después de retraso inactivo.</string>
-    <string name="layout_expand_delay">Retraso de expansión de telón de fondo</string>
-    <string name="layout_expand_delay_sub">Cuánto tiempo esperar antes de expandir tarjetas enfocadas.</string>
+    <string name="layout_expand_poster">Expandir el póster enfocado a fondo de pantalla</string>
+    <string name="layout_expand_poster_sub">Expande el póster enfocado tras un tiempo de inactividad.</string>
+    <string name="layout_expand_delay">Tiempo de espera para expandir a fondo</string>
+    <string name="layout_expand_delay_sub">Tiempo a esperar antes de expandir las tarjetas enfocadas.</string>
     <string name="layout_autoplay_trailer">Reproducción automática de tráiler</string>
     <string name="layout_autoplay_trailer_expanded">Reproducción automática de tráiler en tarjeta expandida</string>
     <string name="layout_autoplay_trailer_sub">Reproduce vista previa de tráiler para contenido enfocado cuando esté disponible.</string>
-    <string name="layout_autoplay_trailer_expanded_sub">Reproduce tráiler dentro de telón de fondo expandido cuando esté disponible.</string>
+    <string name="layout_autoplay_trailer_expanded_sub">Reproduce el tráiler dentro del fondo expandido cuando esté disponible.</string>
     <string name="layout_trailer_muted">Reproducir tráiler silenciado</string>
     <string name="layout_trailer_muted_sub_preview">Silencia audio de tráiler durante vista previa de reproducción automática.</string>
     <string name="layout_trailer_muted_sub_expanded">Silencia audio de tráiler en tarjetas expandidas.</string>
@@ -1079,7 +1152,7 @@
     <string name="layout_trailer_location">Ubicación de reproducción de tráiler moderna</string>
     <string name="layout_trailer_location_sub">Elige dónde se reproduce la vista previa de tráiler en inicio moderno.</string>
     <string name="layout_trailer_expanded_card">Tarjeta expandida</string>
-    <string name="layout_trailer_hero_media">Medios de héroe</string>
+    <string name="layout_trailer_hero_media">Cabecera destacada</string>
     <string name="layout_preset_compact">Compacto</string>
     <string name="layout_preset_dense">Denso</string>
     <string name="layout_preset_standard">Estándar</string>
@@ -1113,6 +1186,11 @@
     <string name="layout_custom_poster_screen_library">Biblioteca</string>
     <string name="layout_custom_poster_screen_search">Buscar</string>
     <string name="layout_custom_poster_screen_details">Pantalla de detalles</string>
+    <string name="layout_custom_poster_screen_tv_recommendations">Recomendaciones de TV</string>
+
+    <!-- Custom Poster Web Page -->
+    <string name="layout_always_show_landscape_clearlogo">Usar siempre fondo con logotipo para pósteres horizontales</string>
+    <string name="layout_always_show_landscape_clearlogo_sub">Ignora el póster horizontal del complemento y usa en su lugar el fondo con el logotipo superpuesto.</string>
 
     <!-- Custom Poster Web Page -->
     <string name="web_custom_poster_title">Fuente de póster personalizada</string>
@@ -1178,11 +1256,21 @@
     <string name="mdblist_metacritic_subtitle">Mostrar puntuación de Metacritic</string>
     <string name="mdblist_mal_title">MyAnimeList</string>
     <string name="mdblist_mal_subtitle">Mostrar puntuación de MyAnimeList</string>
+    <string name="mdblist_show_on_hero_title">Usar valoraciones en la cabecera</string>
+    <string name="mdblist_show_on_hero_subtitle">Muestra las valoraciones de MDBList en el carrusel de cabecera (moderno y clásico/cuadrícula)</string>
+    <string name="mdblist_rating_order_title">Orden de valoraciones</string>
+    <string name="mdblist_rating_order_subtitle">Las primeras 3 valoraciones habilitadas y disponibles se muestran en la cabecera moderna. Usa las flechas para reordenar.</string>
     <string name="mdblist_dialog_title">Clave API de MDBList</string>
     <string name="mdblist_dialog_subtitle">Introduce tu clave API para obtener calificaciones externas</string>
     <string name="mdblist_dialog_placeholder">Introduce clave API de MDBList</string>
     <string name="mdblist_not_set">No configurado</string>
     <string name="mdblist_invalid_api_key">Clave API de MDBList inválida</string>
+    <string name="mdblist_library_lists">Listas de la biblioteca</string>
+    <string name="mdblist_library_lists_description">Elige qué listas de MDBList aparecen en la Biblioteca y en Administrar listas. La lista de seguimiento se muestra siempre.</string>
+    <string name="mdblist_library_lists_empty">Aún no se han encontrado listas en tu cuenta de MDBList. Sincroniza para cargarlas.</string>
+    <string name="mdblist_library_lists_summary">%1$d de %2$d mostradas</string>
+    <string name="tracking_mdblist_features_title">Funciones de MDBList</string>
+    <string name="tracking_mdblist_features_subtitle">Ajustes específicos de MDBList</string>
 
     <string name="debrid_title">Servicios conectados</string>
     <string name="debrid_subtitle">Conecta cuentas para acceso a enlaces y biblioteca</string>
@@ -1241,8 +1329,8 @@
     <string name="debrid_prepare_count_many">%1$d enlaces</string>
     <string name="debrid_stream_max_results_title">Resultados máximos</string>
     <string name="debrid_stream_max_results_subtitle">Limita cuántas fuentes de Direct Debrid aparecen.</string>
-    <string name="debrid_stream_max_results_all">Todas las transmisiones</string>
-    <string name="debrid_stream_max_results_count">%1$d transmisiones</string>
+    <string name="debrid_stream_max_results_all">Todas las fuentes</string>
+    <string name="debrid_stream_max_results_count">%1$d fuentes</string>
     <string name="debrid_stream_sort_title">Ordenar resultados</string>
     <string name="debrid_stream_sort_subtitle">Elige cómo se ordenan los resultados.</string>
     <string name="debrid_stream_sort_original">Orden original</string>
@@ -1281,7 +1369,7 @@
     <string name="debrid_stream_per_quality_limit_title">Límite por calidad</string>
     <string name="debrid_stream_per_quality_limit_subtitle">Limita resultados repetidos de BluRay, WEB-DL, REMUX tras ordenar.</string>
     <string name="debrid_stream_size_range_title">Rango de tamaño</string>
-    <string name="debrid_stream_size_range_subtitle">Filtra transmisiones por tamaño de archivo.</string>
+    <string name="debrid_stream_size_range_subtitle">Filtra las fuentes por tamaño de archivo.</string>
     <string name="debrid_stream_resolutions_preferred">Resoluciones preferidas</string>
     <string name="debrid_stream_resolutions_required">Resoluciones requeridas</string>
     <string name="debrid_stream_resolutions_excluded">Resoluciones excluidas</string>
@@ -1314,34 +1402,36 @@
     <string name="debrid_formatter_reset_subtitle">Restaura el formato de fuente predeterminado.</string>
     <string name="debrid_formatter_qr_instruction">Escanea este código QR con tu teléfono para configurar los ajustes de fuentes de Debrid.</string>
     <string name="settings_stream_badges_section">Estilo Fusion</string>
-    <string name="settings_stream_size_badges_title">Insignias de tamaño</string>
-    <string name="settings_stream_size_badges_description">Muestra insignias de tamaño de archivo en los resultados de transmisiones y en los paneles de fuentes del reproductor.</string>
+    <string name="settings_stream_size_badges_title">Etiquetas de tamaño</string>
+    <string name="settings_stream_size_badges_description">Muestra etiquetas de tamaño de archivo en la lista de fuentes y en los paneles del reproductor.</string>
+    <string name="settings_stream_badges_in_player_title">Mostrar en el reproductor</string>
+    <string name="settings_stream_badges_in_player_description">Muestra distintivos para el vídeo y audio en reproducción debajo del título del reproductor.</string>
     <string name="settings_stream_addon_logo_title">Logotipo del complemento</string>
-    <string name="settings_stream_addon_logo_description">Muestra el logotipo y el nombre del complemento junto a las fuentes de transmisión.</string>
+    <string name="settings_stream_addon_logo_description">Muestra el logotipo y el nombre del complemento junto a las fuentes de vídeo.</string>
     <string name="settings_stream_display_section">Visualización</string>
-    <string name="settings_stream_badge_position_title">Posición de la insignia</string>
-    <string name="settings_stream_badge_position_description">Elige si las insignias de Fusion y de tamaño aparecen encima o debajo de las tarjetas de transmisión.</string>
-    <string name="settings_stream_badge_position_dialog_title">Posición de la insignia</string>
-    <string name="settings_stream_badge_position_dialog_description">Selecciona dónde aparecen las insignias en las tarjetas de transmisión.</string>
+    <string name="settings_stream_badge_position_title">Posición de las etiquetas</string>
+    <string name="settings_stream_badge_position_description">Elige si las etiquetas de Fusion y de tamaño aparecen encima o debajo de las tarjetas de las fuentes.</string>
+    <string name="settings_stream_badge_position_dialog_title">Posición de las etiquetas</string>
+    <string name="settings_stream_badge_position_dialog_description">Selecciona dónde aparecen las etiquetas en las tarjetas de las fuentes.</string>
     <string name="settings_stream_badge_position_top">Arriba</string>
     <string name="settings_stream_badge_position_bottom">Abajo</string>
-    <string name="settings_stream_badge_urls_title">URLs de insignias Fusion</string>
-    <string name="settings_stream_badge_urls_description">Importa hasta %1$d URLs JSON de insignias de transmisión estilo Fusion. Cada URL se puede actualizar o eliminar por separado.</string>
-    <string name="settings_stream_badge_urls_search_description">Administra las URLs JSON de insignias de transmisión estilo Fusion importadas.</string>
-    <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d insignias Fusion activas</string>
-    <string name="settings_fusion_badges_empty">No se han importado URLs de insignias Fusion.</string>
-    <string name="settings_fusion_badge_url_label">URL JSON de insignia Fusion</string>
+    <string name="settings_stream_badge_urls_title">URLs de etiquetas Fusion</string>
+    <string name="settings_stream_badge_urls_description">Importa hasta %1$d URLs JSON de etiquetas de fuentes estilo Fusion. Cada URL se puede actualizar o eliminar por separado.</string>
+    <string name="settings_stream_badge_urls_search_description">Administra las URLs JSON de etiquetas de fuentes estilo Fusion importadas.</string>
+    <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d etiquetas Fusion activas</string>
+    <string name="settings_fusion_badges_empty">No se han importado URLs de etiquetas Fusion.</string>
+    <string name="settings_fusion_badge_url_label">URL JSON de etiquetas Fusion</string>
     <string name="settings_fusion_badge_urls_imported">%1$d/%2$d URLs de Fusion importadas</string>
     <string name="settings_fusion_badge_url_active">Activo</string>
     <string name="settings_fusion_badge_url_inactive">Inactivo</string>
-    <string name="settings_fusion_badge_url_status_summary">%1$s, %2$d insignias habilitadas, %3$d grupos</string>
+    <string name="settings_fusion_badge_url_status_summary">%1$s, %2$d etiquetas habilitadas, %3$d grupos</string>
     <string name="settings_fusion_badge_preview_action">Vista previa</string>
-    <string name="settings_fusion_badge_preview_title">Vista previa de insignias Fusion</string>
-    <string name="settings_fusion_badge_preview_count">%1$d insignias estilo Fusion de esta URL</string>
-    <string name="settings_fusion_badge_preview_empty">No hay imágenes de insignias estilo Fusion en esta URL.</string>
+    <string name="settings_fusion_badge_preview_title">Vista previa de etiquetas Fusion</string>
+    <string name="settings_fusion_badge_preview_count">%1$d etiquetas estilo Fusion de esta URL</string>
+    <string name="settings_fusion_badge_preview_empty">No hay imágenes de etiquetas estilo Fusion en esta URL.</string>
     <string name="settings_fusion_badge_group_title">Grupo %1$d</string>
-    <string name="settings_fusion_badge_other_group_title">Otras insignias Fusion</string>
-    <string name="stream_badge_qr_instruction">Escanea este código QR con tu teléfono para administrar las URLs de insignias Fusion.</string>
+    <string name="settings_fusion_badge_other_group_title">Otras etiquetas Fusion</string>
+    <string name="stream_badge_qr_instruction">Escanea este código QR con tu teléfono para administrar las URLs de etiquetas Fusion.</string>
     <string name="streams_size">TAMAÑO %1$s</string>
     <string name="action_import">Importar</string>
     <string name="action_delete">Eliminar</string>
@@ -1370,7 +1460,7 @@
     <string name="tmdb_language_title">Idioma</string>
     <string name="tmdb_language_subtitle">Idioma de metadatos de TMDB para título, logotipo y campos habilitados</string>
     <string name="tmdb_artwork_title">Ilustración</string>
-    <string name="tmdb_artwork_subtitle">Imágenes de logotipo y telón de fondo de TMDB</string>
+    <string name="tmdb_artwork_subtitle">Imágenes de logotipo y fondo de TMDB</string>
     <string name="tmdb_basic_info_title">Información básica</string>
     <string name="tmdb_basic_info_subtitle">Descripción, géneros y calificación de TMDB</string>
     <string name="tmdb_details_title">Detalles</string>
@@ -1386,7 +1476,7 @@
     <string name="tmdb_trailers_title">Tráilers</string>
     <string name="tmdb_trailers_subtitle">Tráilers candidatos de los vídeos de TMDB para la sección de tráiler de detalles</string>
     <string name="tmdb_more_like_this_title">Más parecido a esto</string>
-    <string name="tmdb_more_like_this_subtitle">Telones de fondo recomendados de TMDB en página de detalles</string>
+    <string name="tmdb_more_like_this_subtitle">Fondos de recomendaciones de TMDB en pantallas de detalles y fin de reproducción</string>
     <string name="tmdb_collections_title">Colecciones</string>
     <string name="tmdb_collections_subtitle">Colecciones de películas de TMDB en orden de lanzamiento</string>
 
@@ -1676,24 +1766,54 @@
 
 
     <string name="stream_retry">Reintentar</string>
-    <string name="stream_no_streams">No se encontraron transmisiones</string>
-    <string name="stream_no_streams_hint">Intenta instalar más complementos para encontrar transmisiones</string>
-    <string name="stream_finding_source">Buscando fuente de transmisión</string>
+    <string name="stream_no_streams">No se encontraron fuentes</string>
+    <string name="stream_no_streams_hint">Prueba a instalar más complementos para encontrar fuentes</string>
+    <string name="stream_finding_source">Buscando fuente de vídeo</string>
     <string name="debrid_resolving_stream">Resolviendo transmisión debrid</string>
-    <string name="debrid_stale_stream">Este resultado de Debrid ha caducado. Actualizando transmisiones.</string>
+    <string name="debrid_stale_stream">Este resultado de Debrid ha caducado. Actualizando fuentes.</string>
     <string name="debrid_missing_api_key">Añade una clave API de Debrid en Ajustes.</string>
     <string name="debrid_not_cached">No está en caché en este servicio.</string>
     <string name="debrid_resolution_failed">No se pudo resolver esta transmisión de Debrid.</string>
+    <string name="youtube_resolving_stream">Cargando vídeo de YouTube</string>
+    <string name="youtube_resolution_failed">No se ha podido cargar este vídeo de YouTube.</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
-    <string name="p2p_consent_title">Transmisión P2P</string>
-    <string name="p2p_consent_body">Esta transmisión utiliza tecnología de igual a igual (P2P). Al activar P2P, reconoces y aceptas que:\n\n• Tu dirección IP será visible para otros pares de la red\n• Eres el único responsable del contenido al que accedes\n• Confirmas que tienes el derecho legal de transmitir este contenido en tu jurisdicción\n• Nuvio no aloja, distribuye ni controla ningún contenido P2P\n• Nuvio no asume ninguna responsabilidad por las consecuencias legales derivadas del uso de transmisión P2P\n\nUtilizas esta función bajo tu entera responsabilidad. P2P se puede desactivar en cualquier momento desde Ajustes.</string>
+    <string name="p2p_consent_title">Fuentes P2P</string>
+    <string name="p2p_consent_body">Esta fuente utiliza tecnología de redes P2P (torrent). Al activar P2P, reconoces y aceptas que:
+
+• Tu dirección IP será visible para otros nodos de la red
+• Eres el único responsable del contenido al que accedes
+• Confirmas que tienes el derecho legal de reproducir este contenido en tu jurisdicción
+• Nuvio no aloja, distribuye ni controla ningún contenido P2P
+• Nuvio no asume ninguna responsabilidad por las consecuencias legales derivadas del uso de fuentes P2P
+
+Utilizas esta función bajo tu entera responsabilidad. P2P se puede desactivar en cualquier momento desde Ajustes.</string>
     <string name="p2p_consent_enable">Activar P2P</string>
     <string name="p2p_consent_cancel">Cancelar</string>
-    <string name="settings_p2p_title">Transmisión P2P</string>
-    <string name="settings_p2p_subtitle">Permitir transmisiones de igual a igual (torrent)</string>
+    <string name="settings_p2p_title">Fuentes P2P</string>
+    <string name="settings_p2p_subtitle">Permitir fuentes P2P (red torrent)</string>
     <string name="settings_p2p_hide_stats_title">Ocultar estadísticas de torrent</string>
     <string name="settings_p2p_hide_stats_subtitle">Oculta búfer, semillas, pares y velocidad de descarga durante la carga y la reproducción</string>
+    <string name="settings_p2p_profile_title">Perfil de torrent</string>
+    <string name="settings_p2p_profile_soft">Suave</string>
+    <string name="settings_p2p_profile_balanced">Equilibrado</string>
+    <string name="settings_p2p_profile_fast">Rápido</string>
+    <string name="settings_p2p_profile_soft_description">Usa menos conexiones entre pares para reducir el consumo de batería y la carga de red</string>
+    <string name="settings_p2p_profile_balanced_description">Equilibrio recomendado entre velocidad de inicio y estabilidad de conexión</string>
+    <string name="settings_p2p_profile_fast_description">Usa más conexiones entre pares para torrents difíciles o con alta tasa de bits</string>
+    <string name="settings_p2p_cache_size_title">Tamaño de caché de torrents</string>
+    <string name="settings_p2p_cache_size_description">Datos descargados de torrents guardados en este dispositivo para reanudaciones más rápidas</string>
+    <string name="settings_p2p_cache_none">Sin caché persistente</string>
+    <string name="settings_p2p_cache_2_gb">2 GB</string>
+    <string name="settings_p2p_cache_5_gb">5 GB</string>
+    <string name="settings_p2p_cache_10_gb">10 GB</string>
+    <string name="settings_p2p_clear_cache_title">Borrar caché de torrents</string>
+    <string name="settings_p2p_clear_cache_usage">%1$s en uso actualmente</string>
+    <string name="settings_p2p_clear_cache_usage_pending">El uso se calcula al iniciar P2P; selecciona para borrar los datos en caché de los torrents</string>
+    <string name="settings_p2p_clear_cache_clearing">Borrando datos inactivos de torrents…</string>
+    <string name="settings_p2p_clear_cache_playback_active">Detén la reproducción P2P antes de borrar la caché</string>
+    <string name="settings_p2p_clear_cache_done">Se han borrado %1$s de datos inactivos de torrents</string>
+    <string name="settings_p2p_clear_cache_failed">No se ha podido borrar la caché de torrents</string>
     <string name="p2p_download_title">Descargando motor P2P</string>
     <string name="p2p_download_subtitle">Esta es una descarga única necesaria para la transmisión P2P.</string>
     <string name="stream_type_external">Externo</string>
@@ -1719,6 +1839,8 @@
     <string name="player_engine_switching_title">Cambiando motor de reproducción</string>
     <string name="player_engine_switching_message">Error al iniciar. Cambiando a %1$s…</string>
     <string name="player_engine_switching_manual_message">Cambiando a %1$s...</string>
+    <string name="player_engine_switch_title">¿Cambiar a %1$s?</string>
+    <string name="player_engine_switch_message">El vídeo se recargará desde donde estabas.</string>
     <string name="playback_show_loading_status">Mostrar estado de carga</string>
     <string name="playback_show_loading_status_sub">Muestra el progreso paso a paso mientras el reproductor se está iniciando.</string>
     <string name="player_sync_line">Sincronizar línea</string>
@@ -1796,15 +1918,15 @@
     <string name="sources_reload">Recargar</string>
     <string name="sources_close">Cerrar</string>
     <string name="sources_playing">Reproduciendo</string>
-    <string name="sources_no_streams">No se encontraron transmisiones</string>
+    <string name="sources_no_streams">No se encontraron fuentes</string>
 
     <string name="episodes_panel_close">Cerrar</string>
     <string name="episodes_panel_back">Atrás</string>
     <string name="episodes_panel_reload">Recargar</string>
-    <string name="episodes_panel_no_streams">No se encontraron transmisiones</string>
+    <string name="episodes_panel_no_streams">No se encontraron fuentes</string>
     <string name="episodes_panel_no_episodes">No hay episodios disponibles</string>
     <string name="episodes_panel_title">Episodios</string>
-    <string name="episodes_panel_streams_title">Transmisiones</string>
+    <string name="episodes_panel_streams_title">Fuentes</string>
     <string name="player_speed_normal">Normal</string>
     <string name="player_aspect_fit">Ajustar (Original)</string>
     <string name="player_aspect_stretch">Estirar</string>
@@ -1866,13 +1988,16 @@
     <string name="subtitle_style_bold">Negrita</string>
     <string name="subtitle_style_text_color">Color del texto</string>
     <string name="subtitle_style_text_opacity">Opacidad del texto</string>
+    <string name="subtitle_style_text_color_hdr">Color del texto (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">Opacidad del texto (HDR)</string>
+    <string name="subtitle_style_brightness_hdr">Brillo (HDR)</string>
     <string name="subtitle_style_outline">Contorno</string>
     <string name="subtitle_style_bottom_offset">Desplazamiento inferior</string>
     <string name="subtitle_style_defaults">Predeterminados</string>
     <string name="subtitle_style_on">Activado</string>
     <string name="subtitle_style_off">Desactivado</string>
     <string name="subtitle_style_weight">Grosor</string>
-    <string name="panel_failed_load_streams">Error al cargar transmisiones</string>
+    <string name="panel_failed_load_streams">Error al cargar las fuentes</string>
     <string name="panel_failed_load_episodes">Error al cargar episodios</string>
 
     <string name="pause_you_are_watching">Estás viendo</string>
@@ -1989,6 +2114,8 @@
     <string name="library_sort_provider_order">Orden del proveedor</string>
     <string name="library_sort_added_desc">Añadido ↓</string>
     <string name="library_sort_added_asc">Añadido ↑</string>
+    <string name="library_sort_released_desc">Estreno ↓</string>
+    <string name="library_sort_released_asc">Estreno ↑</string>
     <string name="library_sort_title_asc">Título A-Z</string>
     <string name="library_sort_title_desc">Título Z-A</string>
     <string name="library_error_sort_failed">No se pudo cargar el orden. Se muestra el orden del proveedor.</string>
@@ -2184,15 +2311,15 @@
     <string name="sync_claim_pin_placeholder">Introduce PIN</string>
     <string name="sync_claim_linking">Vinculando\u2026</string>
 
-    <string name="plugin_readonly_notice">Utilizando complementos del perfil principal y no pueden ser cambiados</string>
+    <string name="plugin_readonly_notice">Se están usando los complementos del perfil principal y no se pueden cambiar</string>
     <string name="plugin_repositories_section">Repositorios (%1$d)</string>
     <string name="plugin_providers_section">Proveedores (%1$d)</string>
     <string name="plugin_title">Complementos</string>
-    <string name="plugin_subtitle">Administra raspadores y proveedores locales</string>
+    <string name="plugin_subtitle">Administra scrapers y proveedores locales</string>
     <string name="plugin_enable_plugins_title">Habilitar proveedores de complementos globalmente</string>
-    <string name="plugin_enable_plugins_subtitle">Usar proveedores de complementos durante la búsqueda de transmisiones</string>
+    <string name="plugin_enable_plugins_subtitle">Usar proveedores de complementos durante la búsqueda de fuentes</string>
     <string name="plugin_group_by_repository_title">Agrupar proveedores de complementos por repositorio</string>
-    <string name="plugin_group_by_repository_subtitle">En Transmisiones, mostrar un proveedor por repositorio en lugar de uno por fuente</string>
+    <string name="plugin_group_by_repository_subtitle">En Fuentes, mostrar un proveedor por repositorio en lugar de uno por origen</string>
     <string name="plugin_add_repository">Añadir repositorio</string>
     <string name="plugin_add_btn">Añadir</string>
     <string name="plugin_manage_from_phone_title">Administrar desde teléfono</string>
@@ -2324,6 +2451,7 @@
     <string name="update_checking">Buscando actualizaciones…</string>
     <string name="update_waiting_for_stable">Recibirás la próxima versión estable cuando esté disponible</string>
     <string name="update_download_complete">Descarga completada. Listo para instalar.</string>
+    <string name="update_installed_automatically">Actualizado automáticamente mientras el dispositivo estaba inactivo</string>
     <string name="update_up_to_date">El sistema está actualizado. Últimos cambios:</string>
     <string name="update_close">Cerrar</string>
     <string name="update_open_settings">Abrir configuración</string>
@@ -2403,7 +2531,6 @@
     <string name="player_error_failed_start_torrent">Error al iniciar el torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Soporte HDR con renderizado Canvas. Puede bloquear el hilo de la interfaz.</string>
 
     <string name="ratings_season_label">T%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
@@ -2415,6 +2542,10 @@
     <string name="cd_sources">Fuentes</string>
     <string name="cd_switch_player_engine">Cambiar motor de reproductor</string>
     <string name="cd_episodes">Episodios</string>
+    <string name="player_chapter_number">Capítulo %1$d</string>
+    <string name="player_chapters">Capítulos</string>
+    <string name="player_chapters_title">Capítulos (%1$d)</string>
+    <string name="player_chapter_remaining">%1$s restantes</string>
     <string name="cd_playback_speed">Velocidad de reproducción</string>
     <string name="cd_aspect_ratio">Relación de aspecto</string>
     <string name="cd_open_external_player">Abrir en reproductor externo</string>
@@ -2424,7 +2555,7 @@
     <string name="cd_back">Atrás</string>
     <string name="cd_next_episode_thumbnail">Miniatura del siguiente episodio</string>
     <string name="cd_current">Actual</string>
-    <string name="cd_loading_backdrop">Cargando telón de fondo</string>
+    <string name="cd_loading_backdrop">Cargando imagen de fondo</string>
     <string name="cd_loading_logo">Cargando logotipo</string>
     <string name="cd_move_up">Mover arriba</string>
     <string name="cd_move_down">Mover abajo</string>
@@ -2538,6 +2669,7 @@
     <string name="collections_editor_shape_wide">Ancho</string>
     <string name="collections_editor_shape_square">Cuadrado</string>
     <string name="collections_editor_addon_missing">Complemento no instalado: %1$s</string>
+    <string name="collections_editor_catalog_missing">Catálogo no disponible</string>
     <string name="collections_editor_add_tmdb_source">Añadir fuente de TMDB</string>
     <string name="collections_editor_add_trakt_source">Añadir lista de Trakt</string>
     <string name="collections_editor_edit_tmdb_source">Editar fuente de TMDB</string>
@@ -2781,6 +2913,10 @@
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d pares · %2$d semillas · %3$d%%</string>
     <string name="player_torrent_connecting_peers">Conectando con pares…</string>
+    <string name="player_torrent_fetching_metadata">Obteniendo metadatos del torrent…</string>
+    <string name="player_torrent_preparing_stream">Preparando transmisión del torrent…</string>
+    <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
+    <string name="player_torrent_loading_status">%1$s descargados · %2$s · %3$s</string>
     <string name="player_track_audio_fallback">Audio %1$d</string>
     <string name="player_track_subtitle_fallback">Subtítulo %1$d</string>
 
@@ -2949,6 +3085,8 @@
     <!-- Network settings: fast.com errors -->
     <string name="network_fast_error_script_path_missing">fast.com: no se encontró la ruta del script</string>
     <string name="network_fast_error_token_missing">fast.com: no se encontró el token en el paquete</string>
+    <!-- Torrent service errors -->
+    <string name="torrent_error_start_timeout">La transmisión del torrent no se inició en %1$d s</string>
 
     <!-- Torrent service / TorrServer binary errors -->
 
@@ -2969,13 +3107,13 @@
     <string name="meta_error_detail_addon_request_failed">la solicitud al complemento falló</string>
 
     <!-- Stream repository: addon detail error fragments + fetch -->
-    <string name="stream_error_detail_no_streams_for_id">no devolvió transmisiones para este id</string>
+    <string name="stream_error_detail_no_streams_for_id">no devolvió fuentes para este id</string>
     <string name="stream_error_detail_addon_unreachable">no se pudo acceder al servidor del complemento</string>
     <string name="stream_error_detail_addon_connection_failed">la conexión al complemento falló</string>
     <string name="stream_error_detail_addon_timeout">la solicitud al complemento superó el tiempo de espera</string>
     <string name="stream_error_detail_addon_cleartext_blocked">utiliza una conexión HTTP insegura que Android bloqueó</string>
     <string name="stream_error_detail_addon_request_failed">la solicitud al complemento falló</string>
-    <string name="stream_error_fetch_failed">No se pudieron obtener las transmisiones</string>
+    <string name="stream_error_fetch_failed">No se pudieron obtener las fuentes</string>
 
     <!-- Trakt: paginated fetch + comments -->
     <string name="trakt_library_error_paginated_fetch_failed">Error al obtener datos paginados de Trakt (%1$d)</string>
@@ -3036,9 +3174,9 @@
     <string name="debrid_picker_preferred_languages_title">Idiomas preferidos</string>
     <string name="debrid_picker_preferred_languages_subtitle">Ordena primero los idiomas de audio preferidos.</string>
     <string name="debrid_picker_required_languages_title">Idiomas requeridos</string>
-    <string name="debrid_picker_required_languages_subtitle">Muestra solo transmisiones con los idiomas seleccionados.</string>
+    <string name="debrid_picker_required_languages_subtitle">Muestra solo fuentes con los idiomas seleccionados.</string>
     <string name="debrid_picker_excluded_languages_title">Idiomas excluidos</string>
-    <string name="debrid_picker_excluded_languages_subtitle">Oculta transmisiones donde todos los idiomas estén excluidos.</string>
+    <string name="debrid_picker_excluded_languages_subtitle">Oculta fuentes donde todos los idiomas estén excluidos.</string>
     <string name="debrid_picker_required_release_groups_title">Grupos de lanzamiento requeridos</string>
     <string name="debrid_picker_required_release_groups_subtitle">Muestra solo los grupos de lanzamiento seleccionados.</string>
     <string name="debrid_picker_excluded_release_groups_title">Grupos de lanzamiento excluidos</string>
@@ -3064,7 +3202,7 @@
 
     <!-- Web config page: Direct Debrid formatter -->
     <string name="web_debrid_title">Ajustes de Debrid Directo</string>
-    <string name="web_debrid_intro_title">Personaliza las transmisiones de Debrid</string>
+    <string name="web_debrid_intro_title">Personaliza las fuentes de Debrid</string>
     <string name="web_debrid_intro_copy">Ajusta las etiquetas, los filtros y el orden usados en los resultados de Debrid Directo.</string>
     <string name="web_debrid_tab_formatter">Formateador</string>
     <string name="web_debrid_tab_rules">Filtros &amp; Orden</string>
@@ -3072,7 +3210,7 @@
     <string name="web_debrid_name_template">Plantilla de nombre</string>
     <string name="web_debrid_description_template">Plantilla de descripción</string>
     <string name="web_debrid_error_templates_required">Se requieren ambas plantillas</string>
-    <string name="web_debrid_stream_rules">Reglas de transmisión</string>
+    <string name="web_debrid_stream_rules">Reglas de fuentes</string>
     <string name="web_debrid_per_resolution">Por resolución</string>
     <string name="web_debrid_per_quality">Por calidad</string>
     <string name="web_debrid_min_size_gb">Tamaño mín. GB</string>
@@ -3083,18 +3221,18 @@
 
     <!-- Web config pages: shared save status -->
     <string name="web_status_saving">Guardando…</string>
-    <string name="web_status_saved_streams">Guardado. Las nuevas transmisiones usarán estos ajustes.</string>
+    <string name="web_status_saved_streams">Guardado. Las nuevas fuentes usarán estos ajustes.</string>
     <string name="web_status_could_not_save">No se pudo guardar</string>
 
     <!-- Web config page: stream badge import status -->
     <string name="web_stream_badge_importing">Importando…</string>
-    <string name="web_stream_badge_imported">URL de insignia importada.</string>
-    <string name="web_stream_badge_import_error">Error al importar la insignia.</string>
-    <string name="web_stream_badge_deleted">URL de insignia eliminada.</string>
-    <string name="web_stream_badge_load_error">No se pudieron cargar los ajustes de insignias de transmisión</string>
-    <string name="web_stream_badge_error_url_required">Introduce una URL JSON de insignia.</string>
-    <string name="web_stream_badge_error_url_scheme">La URL de la insignia debe comenzar con http:// o https://.</string>
-    <string name="web_stream_badge_error_import_limit">Puedes importar hasta %1$d URLs de insignias.</string>
+    <string name="web_stream_badge_imported">URL de etiqueta importada.</string>
+    <string name="web_stream_badge_import_error">Error al importar la etiqueta.</string>
+    <string name="web_stream_badge_deleted">URL de etiqueta eliminada.</string>
+    <string name="web_stream_badge_load_error">No se pudieron cargar los ajustes de etiquetas de fuentes</string>
+    <string name="web_stream_badge_error_url_required">Introduce una URL JSON de etiqueta.</string>
+    <string name="web_stream_badge_error_url_scheme">La URL de la etiqueta debe comenzar con http:// o https://.</string>
+    <string name="web_stream_badge_error_import_limit">Puedes importar hasta %1$d URLs de etiquetas.</string>
 
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Búfer &amp; Red</string>
@@ -3198,7 +3336,7 @@
     <string name="diag_value_never_rendered">Nunca renderizado</string>
 
     <!-- Player errors -->
-    <string name="player_error_play_stream_failed">No se pudo reproducir la transmisión seleccionada</string>
+    <string name="player_error_play_stream_failed">No se pudo reproducir la fuente seleccionada</string>
 
     <!-- Size and speed units -->
     <string name="unit_size_b">%1$d B</string>
@@ -3236,5 +3374,41 @@
     <string name="stream_test_error_prefix">Error: %1$s</string>
     <string name="stream_test_video_bitrate">Tasa de bits de vídeo media: %1$s</string>
     <string name="stream_test_error_connection">Error de conexión. Es posible que el enlace de la última transmisión reproducida haya caducado o no sea accesible. Reproduce el vídeo de nuevo e inténtalo otra vez.</string>
+
+    <string name="random_episode_title">Aleatorio</string>
+    <string name="layout_random_episode_sub">Reproduce aleatoriamente episodios de cualquier serie. Si desactivas esta opción, se pausa la reproducción aleatoria.</string>
+    <string name="random_episode_unwatched">Episodios no vistos</string>
+    <string name="random_episode_include_watched">Todos los episodios</string>
+    <string name="random_episode_empty_subtitle">No hay episodios disponibles para reproducir aleatoriamente.</string>
+    <string name="random_episode_caught_up">Has visto todos los episodios. Elige Todos los episodios para verlos de nuevo.</string>
+    <string name="random_episode_loading">Cargando episodios…</string>
+    <string name="shuffle_starting">Iniciando reproducción aleatoria…</string>
+    <string name="shuffle_choose_episodes">Elige qué episodios reproducir aleatoriamente.</string>
+    <string name="shuffle_preview_title">Tu episodio</string>
+    <string name="shuffle_play_episode">Reproducir episodio</string>
+    <string name="shuffle_again">Reproducir otro aleatoriamente</string>
+    <string name="shuffle_only_episode">Este es el único episodio en tu selección.</string>
+    <string name="shuffle_artwork_hidden">Imágenes ocultas para evitar spoilers</string>
+    <string name="shuffle_stop">Detener reproducción aleatoria</string>
+    <string name="shuffle_enabled_all">Aleatorio activado · Todos los episodios</string>
+    <string name="shuffle_enabled_unwatched">Aleatorio activado · Episodios no vistos</string>
+    <string name="shuffle_disabled">Aleatorio desactivado</string>
+    <string name="shuffle_save_failed">No se ha podido actualizar la reproducción aleatoria. Inténtalo de nuevo.</string>
+    <string name="shuffle_change_selection">Elegir episodios</string>
+    <string name="shuffle_badge">Reproducción aleatoria de episodios activada</string>
+
+    <!-- Subtitle AutoSync -->
+    <string name="autosync_setting_title">Sincronización automática de subtítulos</string>
+    <string name="autosync_setting_description">Ajusta el subtítulo del complemento seleccionado a la temporización de los subtítulos integrados en el vídeo.</string>
+    <string name="autosync_tolerance_title">Tolerancia de sincronización automática</string>
+    <string name="autosync_tolerance_description">Mantiene la temporización original cuando la corrección necesaria sea igual o menor a este valor.</string>
+    <string name="autosync_tolerance_off">Desactivada</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">Búsqueda exhaustiva de sincronización automática</string>
+    <string name="autosync_thorough_description">Continúa comparando otros subtítulos y pistas integradas para lograr un ajuste más preciso antes de sincronizar. Si está desactivada, se utiliza antes la primera coincidencia clara. Solo se aplican coincidencias fiables.</string>
+    <string name="autosync_toast_failed">Error de sincronización: la sincronización automática no ha podido hacer coincidir este subtítulo con el vídeo.</string>
+    <string name="autosync_toast_failed_no_reference">Error de sincronización: este vídeo no tiene subtítulos integrados con los que comparar.</string>
+    <string name="autosync_toast_failed_unsupported">Error de sincronización: la sincronización automática no admite este formato de subtítulos.</string>
+    <string name="autosync_label_synced">Sincronizado automáticamente</string>
 
 </resources>

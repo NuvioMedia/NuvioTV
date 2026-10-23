@@ -694,15 +694,6 @@
     <string name="sub_libass">Використовувати libass для субтитрів ASS/SSA</string>
     <string name="sub_libass_sub">Експериментально: розширений рендеринг ASS/SSA (стилі, позиціонування, анімації)</string>
     <string name="sub_libass_mode">Режим рендерингу Libass</string>
-    <string name="sub_mode_overlay_gl">Накладення OpenGL (Рекомендується)</string>
-    <string name="sub_mode_overlay_gl_sub">Найкраща якість з підтримкою HDR. Рендерить субтитри в окремому потоці.</string>
-    <string name="sub_mode_overlay_canvas">Накладення Canvas</string>
-    <string name="sub_mode_effects_gl">Ефекти OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Підтримка анімації з використанням ефектів Media3. Швидше, ніж Canvas.</string>
-    <string name="sub_mode_effects_canvas">Ефекти Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Підтримка анімації з використанням ефектів Media3 через рендеринг Canvas.</string>
-    <string name="sub_mode_standard">Стандартні субтитри (Cues)</string>
-    <string name="sub_mode_standard_sub">Базовий рендеринг субтитрів без підтримки анімації. Найбільш сумісний.</string>
     <string name="sub_org_none">Немає (за замовчуванням)</string>
     <string name="sub_org_by_lang">За мовою</string>
     <string name="sub_org_by_addon">За адоном</string>
@@ -1953,7 +1944,6 @@
     <string name="player_error_failed_start_torrent">Не вдалося запустити торент: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Підтримка HDR через рендеринг Canvas. Може блокувати потік UI.</string>
 
     <string name="ratings_season_label">С%1$d</string>
     <string name="ratings_episode_label">Е%1$d</string>

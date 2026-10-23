@@ -9,6 +9,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.Util
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.container.NalUnitUtil
 import com.nuvio.tv.core.player.FrameRateUtils
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.InternalPlayerEngine
@@ -164,6 +165,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
 
     currentStreamHasVideoTrack = hasVideoTrack
     val effectiveVideoFormat = selectedVideoFormat ?: firstVideoFormat
+    val isHdrVideo = effectiveVideoFormat?.isHdrVideoFormat() == true
     if (effectiveVideoFormat != null) {
         currentVideoTrackMimeType = effectiveVideoFormat.sampleMimeType
         currentVideoTrackCodecs = effectiveVideoFormat.codecs
@@ -297,7 +299,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             audioTracks = audioTracks,
             subtitleTracks = subtitleTracks,
             selectedAudioTrackIndex = selectedAudioIndex,
-            selectedSubtitleTrackIndex = finalSubtitleIndex
+            selectedSubtitleTrackIndex = finalSubtitleIndex,
+            isHdrVideo = isHdrVideo
         )
     }
     updateAudioControlAvailability(audioTracks, selectedAudioIndex)
@@ -445,6 +448,41 @@ private fun Tracks.hasAssSsaTextTrack(): Boolean {
 // Profile 7 only: it's the profile AUTO conversion rewrites. DV5/DV8 don't convert, so they
 // shouldn't trigger a libass-drop reload.
 private val DV_PROFILE_7_CODEC = Regex("^(dvhe|dvh1|dvav|dva1)\\.0?7\\.")
+
+private val DV_CODEC_PREFIX = Regex("^(dvhe|dvh1|dvav|dva1|dav1)\\.")
+
+/** PQ (HDR10/HDR10+), HLG or Dolby Vision video, whose bright output calls for the HDR subtitle style. */
+internal fun Format.isHdrVideoFormat(): Boolean {
+    val transfer = colorInfo?.colorTransfer?.takeIf { it != Format.NO_VALUE } ?: hevcSpsColorTransfer()
+    if (transfer == C.COLOR_TRANSFER_ST2084 || transfer == C.COLOR_TRANSFER_HLG) return true
+    if (sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION) return true
+    return DV_CODEC_PREFIX.containsMatchIn(codecs?.lowercase(Locale.US).orEmpty())
+}
+
+private const val H265_NAL_UNIT_TYPE_SPS = 33
+
+/**
+ * Transfer characteristics from the HEVC SPS in the initialization data. Matroska files without a
+ * Colour element only carry their HDR signalling there, and Dolby Vision streams played on their
+ * HDR10 base layer arrive as plain HEVC, so the container gives no colour info for either.
+ */
+internal fun Format.hevcSpsColorTransfer(): Int? {
+    if (sampleMimeType != MimeTypes.VIDEO_H265) return null
+    for (data in initializationData) {
+        val prefixFlags = BooleanArray(3)
+        var start = NalUnitUtil.findNalUnit(data, 0, data.size, prefixFlags)
+        while (start < data.size) {
+            val next = NalUnitUtil.findNalUnit(data, start + 3, data.size, prefixFlags)
+            if (NalUnitUtil.getH265NalUnitType(data, start) == H265_NAL_UNIT_TYPE_SPS) {
+                return runCatching {
+                    NalUnitUtil.parseH265SpsNalUnit(data, start + 3, next, null).colorTransfer
+                }.getOrNull()?.takeIf { it != Format.NO_VALUE }
+            }
+            start = next
+        }
+    }
+    return null
+}
 
 private fun Tracks.hasDolbyVisionProfile7VideoTrack(): Boolean {
     groups.forEach { trackGroup ->

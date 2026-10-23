@@ -4,6 +4,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
+import com.nuvio.tv.core.util.findCause
 import java.util.Locale
 
 /** VC-1 / WMV detection shared by track selection, playback error handling, and first-frame recovery. */
@@ -100,14 +101,5 @@ internal object Vc1VideoFormatHeuristics {
         }
 
         return false
-    }
-
-    private inline fun <reified T : Throwable> Throwable.findCause(): T? {
-        var current: Throwable? = this
-        while (current != null) {
-            if (current is T) return current
-            current = current.cause
-        }
-        return null
     }
 }

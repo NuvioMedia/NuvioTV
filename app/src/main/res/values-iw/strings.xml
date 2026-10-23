@@ -913,15 +913,6 @@
     <string name="sub_libass">שימוש ב-libass לכתוביות ASS/SSA</string>
     <string name="sub_libass_sub">ניסיוני: תמיכה בכתוביות עם עיצוב מיוחד, כמו אנימציות ומיקום משתנה על המסך</string>
     <string name="sub_libass_mode">אופן הצגת הכתוביות המעוצבות</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (מומלץ)</string>
-    <string name="sub_mode_overlay_gl_sub">האיכות הטובה ביותר עם תמיכה ב-HDR. מציג את הכתוביות בערוץ עיבוד (thread) נפרד לביצועים חלקים יותר.</string>
-    <string name="sub_mode_overlay_canvas">שכבת-על Canvas</string>
-    <string name="sub_mode_effects_gl">אפקטים OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">תומך באנימציות באמצעות אפקטי Media3. מהיר יותר משיטת Canvas.</string>
-    <string name="sub_mode_effects_canvas">אפקטים Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">תומך באנימציות באמצעות אפקטי Media3 עם עיבוד בשיטת Canvas.</string>
-    <string name="sub_mode_standard">כתוביות רגילות</string>
-    <string name="sub_mode_standard_sub">הצגת כתוביות בסיסית ללא תמיכה באנימציות. התואם ביותר.</string>
     <string name="sub_org_none">ללא (סדר ברירת מחדל)</string>
     <string name="sub_org_by_lang">לפי שפה</string>
     <string name="sub_org_by_addon">לפי תוסף</string>
@@ -2512,7 +2503,6 @@
     <string name="player_error_failed_start_torrent">התחלת הטורנט נכשלה: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">תמיכה ב-HDR עם עיבוד Canvas. עלול לחסום את שרשור הממשק.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>

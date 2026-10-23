@@ -82,6 +82,7 @@ import coil3.request.crossfade
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import com.nuvio.tv.ui.util.contentTextDirection
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 import java.util.Locale
 
 private const val MAX_VISIBLE_HERO_GENRES = 6
@@ -139,14 +140,8 @@ fun HeroContentSection(
         !meta.logo.isNullOrBlank() &&
             !logoLoadFailed &&
             !(isTrailerPlaying && hideLogoDuringTrailer)
-    val libraryAddPainter = rememberRawSvgPainter(
-        context = context,
-        rawRes = com.nuvio.tv.R.raw.library_add_plus
-    )
-    val trailerPainter = rememberRawSvgPainter(
-        context = context,
-        rawRes = com.nuvio.tv.R.raw.trailer_play_button
-    )
+    val libraryAddPainter = rememberRawSvgPainter(rawIconRes = com.nuvio.tv.R.raw.library_add_plus)
+    val trailerPainter = rememberRawSvgPainter(rawIconRes = com.nuvio.tv.R.raw.trailer_play_button)
     val strCreator = stringResource(R.string.hero_creator)
     val strDirector = stringResource(R.string.hero_director)
     val strWriter = stringResource(R.string.hero_writer)
@@ -389,11 +384,7 @@ internal fun PlayButton(
             focusRequester.requestFocusAfterFrames()
         }
     }
-    val context = LocalContext.current
-    val playPainter = rememberRawSvgPainter(
-        context = context,
-        rawRes = com.nuvio.tv.R.raw.ic_player_play
-    )
+    val playPainter = rememberRawSvgPainter(rawIconRes = com.nuvio.tv.R.raw.ic_player_play)
 
     Button(
         enabled = enabled,
@@ -945,22 +936,6 @@ private fun formatRuntime(runtime: String): String? {
     } else {
         "${minutes}m"
     }
-}
-
-@Composable
-private fun rememberRawSvgPainter(
-    context: android.content.Context,
-    @androidx.annotation.RawRes rawRes: Int
-): Painter {
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { NuvioTheme.spacing.xl.roundToPx() }
-    val model = remember(rawRes, context, sizePx) {
-        ImageRequest.Builder(context)
-            .data(rawRes)
-            .size(sizePx)
-            .build()
-    }
-    return coil3.compose.rememberAsyncImagePainter(model = model)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

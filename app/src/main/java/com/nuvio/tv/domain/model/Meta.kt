@@ -115,7 +115,7 @@ private val LANGUAGE_NORMALIZATION_MAP = mapOf(
     "ita" to "it", "spa" to "es", "por" to "pt", "rus" to "ru",
     "hin" to "hi", "tur" to "tr", "pol" to "pl", "nld" to "nl",
     "dut" to "nl", "swe" to "sv", "nor" to "no", "dan" to "da",
-    "fin" to "fi", "tha" to "th", "ara" to "ar", "heb" to "he",
+    "fin" to "fi", "tha" to "th", "ara" to "ar", "heb" to "he", "hbo" to "he", "iw" to "he",
     "ces" to "cs", "cze" to "cs", "ron" to "ro", "rum" to "ro",
     "hun" to "hu", "ukr" to "uk", "ell" to "el", "gre" to "el",
     "eng" to "en", "vie" to "vi", "ind" to "id", "msa" to "ms",

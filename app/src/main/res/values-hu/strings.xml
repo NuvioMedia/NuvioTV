@@ -412,6 +412,10 @@
     <string name="about_version">Verzió: %1$s</string>
     <string name="about_update_banner_title">Automatikus frissítési sáv</string>
     <string name="about_update_banner_subtitle">Sáv megjelenítése, ha új verzió elérhető</string>
+    <string name="about_update_auto_install_title">Frissítések automatikus telepítése</string>
+    <string name="about_update_auto_install_subtitle">Az új verziók letöltése a háttérben, majd telepítésük, amikor az eszköz tétlen</string>
+    <string name="about_update_auto_install_notice_title">Értesítés az automatikus frissítés után</string>
+    <string name="about_update_auto_install_notice_subtitle">Értesítési sáv megjelenítése a következő indításkor, miután az alkalmazás automatikusan frissült</string>
     <string name="about_update_channel_title">Frissítési csatorna</string>
     <string name="about_update_channel_subtitle">Válaszd ki, milyen alkalmazásfrissítéseket szeretnél kapni</string>
     <string name="about_check_updates">Frissítések keresése</string>
@@ -803,6 +807,9 @@
     <string name="video_section">Videó</string>
     <string name="playback_true_black_letterbox">Valódi fekete sávok</string>
     <string name="playback_true_black_letterbox_sub">A kép körüli sávok HDR-ben is feketék maradnak. Kapcsold ki, ha világos csík jelenik meg rajtuk.</string>
+    <string name="playback_chapters_label">Fejezetek</string>
+    <string name="playback_exo_chapters_title">Fejezetek megjelenítése (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Az MKV-fájlok fejezeteinek beolvasása, hogy megjelenjenek a folyamatjelzőn, és lehessen köztük lépkedni. A lejátszás indítása után néhány kisebb extra lekérést igényel. Az mpv mindig megjeleníti a fejezeteket.</string>
     <string name="audio_trailer_section">Előzetes</string>
     <string name="audio_autoplay_trailers">Előzetesek automatikus lejátszása</string>
     <string name="audio_autoplay_trailers_sub">Előzetesek automatikus lejátszása a részletek oldalán és a lejátszás utáni képernyőn.</string>
@@ -904,19 +911,14 @@
     <string name="sub_outline">Körvonal</string>
     <string name="sub_outline_sub">Körvonal megjelenítése a jobb olvashatóság érdekében</string>
     <string name="sub_outline_color">Körvonal színe</string>
+    <string name="sub_hdr_style">Külön stílus HDR-hez / Dolby Visionhöz</string>
+    <string name="sub_hdr_style_sub">Eltérő szövegszín és alacsonyabb fényerő használata a HDR- és Dolby Vision-videók feliratainál</string>
+    <string name="sub_hdr_text_color">HDR szövegszíne</string>
+    <string name="sub_hdr_brightness">HDR-felirat fényereje</string>
     <string name="sub_advanced_section">Speciális felirat-megjelenítés</string>
     <string name="sub_libass">Libass használata ASS/SSA feliratokhoz</string>
     <string name="sub_libass_sub">Kísérleti: fejlett ASS/SSA-megjelenítés stílusokkal, pozicionálással és animációkkal</string>
     <string name="sub_libass_mode">Libass megjelenítési mód</string>
-    <string name="sub_mode_overlay_gl">OpenGL réteg (Ajánlott)</string>
-    <string name="sub_mode_overlay_gl_sub">A legjobb minőség HDR támogatással. Külön szálon futó megjelenítés.</string>
-    <string name="sub_mode_overlay_canvas">Canvas réteg</string>
-    <string name="sub_mode_effects_gl">OpenGL effektek</string>
-    <string name="sub_mode_effects_gl_sub">Media3 effektekkel támogatott animáció. Gyorsabb, mint a Canvas.</string>
-    <string name="sub_mode_effects_canvas">Canvas effektek</string>
-    <string name="sub_mode_effects_canvas_sub">Media3 effektek animáció-támogatással, Canvas megjelenítéssel.</string>
-    <string name="sub_mode_standard">Standard megjelenítés</string>
-    <string name="sub_mode_standard_sub">Alapszintű megjelenítés animációk nélkül. Legjobb kompatibilitás.</string>
     <string name="sub_org_none">Nincs (alapértelmezett sorrend)</string>
     <string name="sub_org_by_lang">Nyelv szerint</string>
     <string name="sub_org_by_addon">Bővítmény szerint</string>
@@ -1388,6 +1390,11 @@
     <string name="settings_stream_badges_section">Fusion stílus</string>
     <string name="settings_stream_size_badges_title">Fájlméretjelzők</string>
     <string name="settings_stream_size_badges_description">Fájlméretjelzők megjelenítése a forrástalálatoknál és a lejátszó forráspanelein.</string>
+    <string name="settings_stream_badges_in_player_title">Megjelenítés a lejátszóban</string>
+    <string name="settings_stream_badges_in_player_description">A lejátszott videó és hang jelvényeinek megjelenítése a lejátszó címe alatt. Olyan jelvénycsomag szükséges, amely felismeri az egyszerű szöveget, például a 2160p vagy az Atmos jelölést.</string>
+    <string name="settings_stream_player_badges_title">Lejátszó jelvényei</string>
+    <string name="settings_stream_player_badges_description">A lejátszó által használt jelvénycsomag kiválasztása.</string>
+    <string name="settings_stream_player_badges_same">Megegyezik a stream jelvényeivel</string>
     <string name="settings_stream_addon_logo_title">Bővítmény logója</string>
     <string name="settings_stream_addon_logo_description">A bővítmény logójának és nevének megjelenítése a stream források mellett.</string>
     <string name="settings_stream_display_section">Megjelenítés</string>
@@ -1813,6 +1820,8 @@
     <string name="player_engine_switching_title">Lejátszómotor váltása</string>
     <string name="player_engine_switching_message">Sikertelen indítás. Váltás erre: %1$s…</string>
     <string name="player_engine_switching_manual_message">Váltás erre: %1$s...</string>
+    <string name="player_engine_switch_title">Váltás erre: %1$s?</string>
+    <string name="player_engine_switch_message">A videó az aktuális pozíciótól újratöltődik.</string>
     <string name="playback_show_loading_status">Betöltési állapot megjelenítése</string>
     <string name="playback_show_loading_status_sub">Az aktuális lépés megjelenítése a lejátszó indítása közben.</string>
     <string name="player_sync_line">Feliratsor szinkronizálása</string>
@@ -1960,6 +1969,9 @@
     <string name="subtitle_style_bold">Félkövér</string>
     <string name="subtitle_style_text_color">Szöveg színe</string>
     <string name="subtitle_style_text_opacity">Szöveg átlátszatlansága</string>
+    <string name="subtitle_style_text_color_hdr">Szövegszín (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">Szöveg átlátszatlansága (HDR)</string>
+    <string name="subtitle_style_brightness_hdr">Fényerő (HDR)</string>
     <string name="subtitle_style_outline">Körvonal</string>
     <string name="subtitle_style_bottom_offset">Alsó eltolás</string>
     <string name="subtitle_style_defaults">Alapértelmezett</string>
@@ -2420,6 +2432,7 @@
     <string name="update_checking">Frissítések keresése\u2026</string>
     <string name="update_waiting_for_stable">A következő stabil verziót akkor kapod meg, amikor megjelenik</string>
     <string name="update_download_complete">A letöltés befejeződött. Telepítésre kész.</string>
+    <string name="update_installed_automatically">Automatikusan frissítve, amíg az eszköz tétlen volt</string>
     <string name="update_up_to_date">A rendszer naprakész. Legújabb változások:</string>
     <string name="update_close">Bezárás</string>
     <string name="update_open_settings">Beállítások megnyitása</string>
@@ -2499,7 +2512,6 @@
     <string name="player_error_failed_start_torrent">Nem sikerült elindítani a torrentet: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR támogatás canvas megjelenítéssel. Blokkolhatja a felhasználói felület szálát.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
@@ -2511,6 +2523,10 @@
     <string name="cd_sources">Források</string>
     <string name="cd_switch_player_engine">Lejátszómotor váltása</string>
     <string name="cd_episodes">Epizódok</string>
+    <string name="player_chapter_number">%1$d. fejezet</string>
+    <string name="player_chapters">Fejezetek</string>
+    <string name="player_chapters_title">Fejezetek (%1$d)</string>
+    <string name="player_chapter_remaining">%1$s van hátra</string>
     <string name="cd_playback_speed">Lejátszási sebesség</string>
     <string name="cd_aspect_ratio">Képarány</string>
     <string name="cd_open_external_player">Megnyitás külső lejátszóban</string>
@@ -3353,5 +3369,7 @@
     <string name="autosync_toast_failed_no_reference">Nem sikerült a feliratot időzíteni: a videóban nincs összehasonlítható beágyazott felirat.</string>
     <string name="autosync_toast_failed_unsupported">Nem sikerült a feliratot időzíteni: ez a feliratformátum nem támogatott.</string>
     <string name="autosync_label_synced">Automatikusan időzítve</string>
+    <string name="stream_resume_from_time">Folytatás innen: %1$s</string>
+    <string name="stream_resume_from_percent">Folytatás innen: %1$d%%</string>
 
 </resources>

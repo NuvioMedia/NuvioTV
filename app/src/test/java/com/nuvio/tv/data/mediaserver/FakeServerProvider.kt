@@ -10,9 +10,9 @@ import kotlinx.coroutines.Dispatchers
 
 internal class FakeServerProvider(
     private val movieCount: Int = 120,
-    private val transcodes: Boolean = false
-) : ServerProvider {
+    private val transcodes: Boolean = false,
     override val id: String = "fake"
+) : ServerProvider {
     override val displayName: String = "Fake"
     override val minimumVersion: String = "1.0"
     override val capabilities: Set<ServerCapability> = setOf(
@@ -31,6 +31,9 @@ internal class FakeServerProvider(
     val failingPlayed = mutableSetOf<String>()
     val failingLibraries = mutableSetOf<String>()
     val userStates = mutableMapOf<String, List<ServerUserState>>()
+    var titleLookup: (suspend (ServerLibrary, ServerTitleQuery) -> List<ServerIndexEntry>?)? = null
+    val titleQueries = mutableListOf<ServerTitleQuery>()
+    var indexRequests = 0
 
     override suspend fun libraries(session: ServerSession): List<ServerLibrary> = listOf(MOVIE_LIBRARY, SERIES_LIBRARY)
 
@@ -145,10 +148,21 @@ internal class FakeServerProvider(
         start: Int,
         limit: Int
     ): ServerPage<ServerIndexEntry> {
+        synchronized(this) { indexRequests++ }
         val entries = indexedIds.entries
             .filter { (itemId, _) -> (itemId == SHOW_ID) == (library.kind == ServerMediaKind.SERIES) }
             .map { ServerIndexEntry(it.key, it.value) }
         return ServerPage(entries.drop(start).take(limit), entries.size)
+    }
+
+    override suspend fun lookupTitle(
+        session: ServerSession,
+        library: ServerLibrary,
+        query: ServerTitleQuery
+    ): List<ServerIndexEntry>? {
+        val lookup = titleLookup ?: return null
+        synchronized(titleQueries) { titleQueries += query }
+        return lookup(library, query)
     }
 
     override suspend fun findEpisode(session: ServerSession, seriesItemId: String, season: Int, episode: Int): ServerEpisode? =

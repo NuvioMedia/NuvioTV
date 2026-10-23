@@ -627,17 +627,8 @@
     <string name="sub_outline_color">Barva obrobe</string>
     <string name="sub_advanced_section">Napredno izrisovanje podnapisov</string>
     <string name="sub_libass">Uporabi libass za ASS/SSA podnapise</string>
-    <string name="sub_libass_sub">Začasno onemogočeno zaradi vzdrževanja</string>
+    <string name="sub_libass_sub">Napredno upodabljanje ASS/SSA (slogi, pozicioniranje, animacije)</string>
     <string name="sub_libass_mode">Način izrisovanja Libass</string>
-    <string name="sub_mode_overlay_gl">Prekrivanje OpenGL (Priporočeno)</string>
-    <string name="sub_mode_overlay_gl_sub">Najboljša kakovost s HDR podporo. Podnapise izriše v ločeni niti.</string>
-    <string name="sub_mode_overlay_canvas">Prekrivanje Canvas</string>
-    <string name="sub_mode_effects_gl">Učinki OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Podpora za animacije z uporabo učinkov Media3. Hitreje kot Canvas.</string>
-    <string name="sub_mode_effects_canvas">Učinki Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Podpora za animacije z uporabo učinkov Media3 s Canvas izrisom.</string>
-    <string name="sub_mode_standard">Standardni signali</string>
-    <string name="sub_mode_standard_sub">Osnovno izrisovanje podnapisov brez podpore za animacije. Najbolj združljivo.</string>
     <string name="sub_org_none">Brez (privzeti vrstni red)</string>
     <string name="sub_org_by_lang">Po jeziku</string>
     <string name="sub_org_by_addon">Po dodatku</string>
@@ -1633,7 +1624,6 @@
     <!-- Player errors -->					  
 	<string name="player_error_no_stream_url">Ni podanega URL-ja vira</string>																		 
 	<!-- Playback subtitle settings -->								   
-	<string name="sub_mode_overlay_canvas_sub">Podpora za HDR z izrisovanjem na platno. Lahko blokira nit uporabniškega vmesnika.</string>
     <string name="subtitle_style_weight">Debelina</string>																										   
 	<!-- Plugin screen -->					  
 	<string name="plugin_version">Različica %1$s</string>												   
