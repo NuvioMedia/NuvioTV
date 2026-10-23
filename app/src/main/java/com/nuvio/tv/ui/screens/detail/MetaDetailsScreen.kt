@@ -68,6 +68,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.runtime.State
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -1805,6 +1809,12 @@ private fun MetaDetailsContent(
         }
     }
 
+    val belowHeroAlpha = animateFloatAsState(
+        targetValue = if (isTrailerPlaying) 0f else 1f,
+        animationSpec = tween(NuvioMotion.tokens.durations.overlay),
+        label = "belowHeroFade"
+    )
+
     // Pre-compute cast members to avoid recomputation in lazy scope
     val castMembersToShow = remember(meta.castMembers, meta.cast) {
         if (meta.castMembers.isNotEmpty()) {
@@ -2306,7 +2316,9 @@ private fun MetaDetailsContent(
 
         // Single scrollable column with hero + content
         CompositionLocalProvider(
-            LocalBringIntoViewSpec provides if (suppressRestoreBringIntoView) {
+            // The hero grows to full height during a trailer; keep the list from
+            // scrolling to follow the focused hero while it resizes.
+            LocalBringIntoViewSpec provides if (suppressRestoreBringIntoView || isTrailerPlaying) {
                 restoreNoScrollBringIntoViewSpec
             } else {
                 detailPageBringIntoViewSpec
@@ -2316,6 +2328,7 @@ private fun MetaDetailsContent(
             modifier = Modifier
                 .fillMaxSize()
                 .recompositionHighlighter()
+                .fadeBelowHero(listState, belowHeroAlpha)
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
                     if (native.action == KeyEvent.ACTION_DOWN) {
@@ -3182,6 +3195,36 @@ private fun PlaybackHandoffBackdrop(backdropUrl: String?) {
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.TopEnd
             )
+        }
+    }
+}
+
+/**
+ * Fades the rows below the hero item while a full-screen trailer plays. On screens
+ * taller than the hero (lower-density TV boxes) the next row would otherwise sit over
+ * the trailer.
+ */
+private fun Modifier.fadeBelowHero(
+    listState: LazyListState,
+    alpha: State<Float>
+): Modifier = drawWithCache {
+    val layerPaint = Paint()
+    onDrawWithContent {
+        val belowHeroAlpha = alpha.value
+        if (belowHeroAlpha >= 1f) {
+            drawContent()
+            return@onDrawWithContent
+        }
+        val heroBottom = listState.layoutInfo.visibleItemsInfo
+            .firstOrNull { it.key == "hero" }
+            ?.let { (it.offset + it.size).toFloat() }
+            ?: 0f
+        clipRect(bottom = heroBottom) { this@onDrawWithContent.drawContent() }
+        if (belowHeroAlpha > 0f) {
+            layerPaint.alpha = belowHeroAlpha
+            drawContext.canvas.saveLayer(Rect(0f, heroBottom, size.width, size.height), layerPaint)
+            clipRect(top = heroBottom) { this@onDrawWithContent.drawContent() }
+            drawContext.canvas.restore()
         }
     }
 }

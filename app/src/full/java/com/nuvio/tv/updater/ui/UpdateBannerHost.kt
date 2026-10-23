@@ -61,7 +61,8 @@ fun UpdateBannerHost(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val update = state.update
+    // A newer release takes the banner; otherwise it can report the release that was just installed automatically.
+    val update = state.update ?: state.installedUpdate
     val showBanner = state.showBanner && update != null
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -80,6 +81,8 @@ fun UpdateBannerHost(
                 UpdateBanner(
                     state = state,
                     update = it,
+                    isInstalledUpdate = state.update == null,
+                    autoDismissPaused = showReleaseNotes,
                     onDownload = onDownload,
                     onInstall = onInstall,
                     onShowReleaseNotes = { showReleaseNotes = true },

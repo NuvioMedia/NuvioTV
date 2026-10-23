@@ -647,15 +647,6 @@
     <string name="sub_libass">ஏஎஸ்எஸ்/எஸ்எஸ்ஏ வசனங்களுக்கு லிபாஸ் பயன்படுத்து</string>
     <string name="sub_libass_sub">சோதனை நிலை: மேம்பட்ட ஏஎஸ்எஸ்/எஸ்எஸ்ஏ காட்சி (பாணி, நிலை, அசைவூட்டம்)</string>
     <string name="sub_libass_mode">லிபாஸ் காட்சி முறை</string>
-    <string name="sub_mode_overlay_gl">ஓவர்லே ஓபன்ஜிஎல் (பரிந்துரை)</string>
-    <string name="sub_mode_overlay_gl_sub">எச்டிஆர் ஆதரவுடன் சிறந்த தரம். தனி திரெடில் வசனங்களை காட்சிப்படுத்தும்.</string>
-    <string name="sub_mode_overlay_canvas">ஓவர்லே கேன்வாஸ்</string>
-    <string name="sub_mode_effects_gl">விளைவுகள் ஓபன்ஜிஎல்</string>
-    <string name="sub_mode_effects_gl_sub">மீடியா௩ விளைவுகளைப் பயன்படுத்தி அசைவூட்ட ஆதரவு. கேன்வாஸை விட வேகமானது.</string>
-    <string name="sub_mode_effects_canvas">விளைவுகள் கேன்வாஸ்</string>
-    <string name="sub_mode_effects_canvas_sub">கேன்வாஸ் காட்சியுடன் மீடியா௩ விளைவுகளைப் பயன்படுத்தி அசைவூட்ட ஆதரவு.</string>
-    <string name="sub_mode_standard">சாதாரண குறிகள்</string>
-    <string name="sub_mode_standard_sub">அசைவூட்ட ஆதரவு இல்லாத அடிப்படை வசன காட்சி. மிகவும் பொருந்தக்கூடியது.</string>
     <string name="sub_org_none">எதுவுமில்லை (இயல்புநிலை வரிசை)</string>
     <string name="sub_org_by_lang">மொழிப்படி</string>
     <string name="sub_org_by_addon">ஆட்ஒன்படி</string>
@@ -1716,7 +1707,6 @@
     <string name="player_error_failed_start_torrent">டோரண்டை தொடங்க முடியவில்லை: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">கேன்வாஸ் ரெண்டரிங்குடன் எச்டிஆர் ஆதரவு. யுஐ த்ரெடை தடுக்கக்கூடும்.</string>
     <string name="subtitle_style_weight">எடை</string>
 
     <!-- Plugin screen -->

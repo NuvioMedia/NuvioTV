@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -305,8 +306,15 @@ internal fun HeroTitleBlock(
     trailerPlaying: () -> Boolean = { false },
     modifier: Modifier = Modifier
 ) {
-    val currentPreview = previewProvider()
-    val isEnriching = enrichmentActive()
+    // The providers read hero state that is rewritten on every focus move, often with an equal
+    // value. Deriving the pair recomposes this block only when what it shows actually changes.
+    val latestPreviewProvider = rememberUpdatedState(previewProvider)
+    val latestEnrichmentActive = rememberUpdatedState(enrichmentActive)
+    val displayInputs by remember {
+        derivedStateOf { latestPreviewProvider.value() to latestEnrichmentActive.value() }
+    }
+    val currentPreview = displayInputs.first
+    val isEnriching = displayInputs.second
     
     var stablePreview by remember { mutableStateOf<HeroPreview?>(null) }
 
@@ -373,7 +381,9 @@ private fun HeroTitleContent(
                 .build()
         }
     }
-    val trailerPlayingValue = trailerPlaying()
+    // Same idea as in HeroTitleBlock: only a flip of the result should recompose this content.
+    val latestTrailerPlaying = rememberUpdatedState(trailerPlaying)
+    val trailerPlayingValue by remember { derivedStateOf { latestTrailerPlaying.value() } }
     val metaAlpha by animateFloatAsState(
         targetValue = if (trailerPlayingValue) 0f else 1f,
         animationSpec = tween(durationMillis = 480),

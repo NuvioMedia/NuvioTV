@@ -90,7 +90,7 @@ class StreamAutoPlaySelectorTest {
     }
 
     @Test
-    fun `bingeGroup-first respects source and addon plugin filters`() {
+    fun `bingeGroup-first ignores source and addon plugin filters`() {
         val filteredOutAddonMatch = stream(
             addonName = "AddonFilteredOut",
             url = "https://example.com/addon-match.m3u8",
@@ -114,11 +114,7 @@ class StreamAutoPlaySelectorTest {
             preferBingeGroupInSelection = true
         )
 
-        if (AppFeaturePolicy.pluginsEnabled) {
-            assertEquals(allowedPluginMatch, selected)
-        } else {
-            assertEquals(filteredOutAddonMatch, selected)
-        }
+        assertEquals(filteredOutAddonMatch, selected)
     }
 
     @Test

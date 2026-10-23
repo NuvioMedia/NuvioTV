@@ -9,7 +9,6 @@ import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.domain.model.Addon
-import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -439,10 +438,6 @@ class CatalogOrderViewModel @Inject constructor(
 
     private fun catalogKey(addonId: String, type: String, catalogId: String): String {
         return homeCatalogKey(addonId, type, catalogId)
-    }
-
-    private fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
-        return extra.any { extra -> extra.name.equals("search", ignoreCase = true) && extra.isRequired }
     }
 }
 

@@ -138,6 +138,64 @@ class FrameRateModeSelectionTest {
         assertEquals(10, pick(stick, 24f, 7680, 4320))
     }
 
+    @Test
+    fun `film on a display without 24 or 48 Hz gets a clean multiple instead of 60 Hz`() {
+        assertEquals(120f, pickRate(listOf(60f, 120f), 24f))
+        assertEquals(119.88f, pickRate(listOf(59.94f, 119.88f), film))
+        assertEquals(144f, pickRate(listOf(60f, 144f), 24f))
+    }
+
+    @Test
+    fun `the lowest clean multiple wins`() {
+        assertEquals(120f, pickRate(listOf(60f, 120f, 144f, 165f), 24f))
+        assertEquals(96f, pickRate(listOf(60f, 96f, 120f), 24f))
+    }
+
+    @Test
+    fun `exact and double rates still come before a multiple`() {
+        assertEquals(24f, pickRate(listOf(24f, 60f, 120f), 24f))
+        assertEquals(48f, pickRate(listOf(48f, 60f, 120f), 24f))
+        assertEquals(50f, pickRate(listOf(50f, 60f), 25f))
+        assertEquals(50f, pickRate(listOf(50f, 60f, 100f, 120f), 25f))
+        assertEquals(60f, pickRate(listOf(50f, 60f, 100f, 120f), 30f))
+    }
+
+    @Test
+    fun `an inexact multiple never beats an exact pulldown`() {
+        assertEquals(59.94f, pickRate(listOf(59.94f, 60f, 120f), film))
+        assertEquals(59.94f, pickRate(listOf(59.94f, 60f, 144f), film))
+    }
+
+    @Test
+    fun `an exact multiple is still picked`() {
+        assertEquals(119.88f, pickRate(listOf(59.94f, 60f, 119.88f, 120f), film))
+        assertEquals(119.88013f, pickRate(listOf(59.94006f, 60.000004f, 119.88013f, 120.00001f), film))
+        assertEquals(120f, pickRate(listOf(60f, 120f), 24f))
+        assertEquals(100f, pickRate(listOf(60f, 100f), 25f))
+    }
+
+    @Test
+    fun `a rate that is not a multiple is never picked over pulldown`() {
+        assertEquals(60f, pickRate(listOf(60f, 165f), 24f))
+    }
+
+    @Test
+    fun `resolution matching also prefers a clean multiple to pulldown`() {
+        val modes = listOf(mode(1, 1920, 1080, 60f), mode(2, 1920, 1080, 120f), mode(3, 3840, 2160, 60f))
+        assertEquals(2, pick(modes, 24f, 1920, 1080, activeId = 1))
+    }
+
+    @Test
+    fun `a single mode leaves the display alone`() {
+        assertNull(pickRate(listOf(60f), 24f))
+    }
+
+    private fun pickRate(rates: List<Float>, frameRate: Float): Float? {
+        val modes = rates.mapIndexed { index, rate -> mode(index + 1, 1920, 1080, rate) }
+        val id = pick(modes, frameRate, null, null, resolutionMatching = false, activeId = 1)
+        return modes.firstOrNull { it.modeId == id }?.refreshRate
+    }
+
     private fun mode(id: Int, width: Int, height: Int, refreshRate: Float) =
         DisplayModeSpec(modeId = id, width = width, height = height, refreshRate = refreshRate)
 

@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.di
 
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.core.network.NoDelaySocketFactory
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.ProfileDataStore
@@ -52,6 +53,7 @@ object MdbListModule {
     fun http(configuration: MdbListConfiguration): MdbListHttpClient = MdbListHttpClient(
         OkHttpMdbListEngine(
             OkHttpClient.Builder()
+                .socketFactory(NoDelaySocketFactory)
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .callTimeout(45, TimeUnit.SECONDS)

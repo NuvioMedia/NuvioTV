@@ -435,15 +435,6 @@
     <string name="sub_libass">Koristi libass za ASS/SSA titlove</string>
     <string name="sub_libass_sub">Eksperimentalno: napredni ASS/SSA rendering (stilovi, pozicioniranje, animacije)</string>
     <string name="sub_libass_mode">Libass Render Mode</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (Preporučeno)</string>
-    <string name="sub_mode_overlay_gl_sub">Najbolji kvalitet uz HDR podršku. Iscrtava titlove na zasebnom threadu.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Podrška za animacije koristeći Media3 efekte. Brže od Canvas-a.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Podrška za animacije koristeći Media3 efekte sa Canvas renderingom.</string>
-    <string name="sub_mode_standard">Standard Cues</string>
-    <string name="sub_mode_standard_sub">Osnovni subtitle rendering bez podrške za animacije. Najkompatibilnije.</string>
     <string name="sub_org_none">Bez organizacije (zadani redoslijed)</string>
     <string name="sub_org_by_lang">Po jeziku</string>
     <string name="sub_org_by_addon">Po addonu</string>
@@ -1362,7 +1353,6 @@
     <string name="player_error_no_stream_url">Nije proslijeđen stream URL</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR podrška uz canvas rendering. Može blokirati UI thread.</string>
     <string name="subtitle_style_weight">Debljina</string>
 
     <!-- Plugin screen -->

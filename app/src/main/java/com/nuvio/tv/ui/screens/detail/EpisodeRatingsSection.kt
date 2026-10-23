@@ -282,6 +282,7 @@ fun EpisodeRatingsSection(
 
 private fun ratingColor(value: Double): androidx.compose.ui.graphics.Color {
     return when {
+        value >= 9.7 -> androidx.compose.ui.graphics.Color(0xFF1DA1F3)
         value >= 9.0 -> androidx.compose.ui.graphics.Color(0xFF186A3B)
         value >= 8.0 -> androidx.compose.ui.graphics.Color(0xFF28B463)
         value >= 7.5 -> androidx.compose.ui.graphics.Color(0xFFF4D03F)

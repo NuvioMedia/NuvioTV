@@ -663,15 +663,6 @@
     <string name="sub_libass">libass für ASS/SSA-Untertitel verwenden</string>
     <string name="sub_libass_sub">Experimentell: Erweiterte ASS/SSA-Wiedergabe (Stile, Position, Animation)</string>
     <string name="sub_libass_mode">Libass-Rendering-Modus</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (empfohlen)</string>
-    <string name="sub_mode_overlay_gl_sub">Beste Qualität mit HDR-Unterstützung. Rendert Untertitel in einem separaten Thread.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Animationsunterstützung mit Media3-Effekten. Schneller als Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Animationsunterstützung mit Media3-Effekten und Canvas-Rendering.</string>
-    <string name="sub_mode_standard">Standard Cues</string>
-    <string name="sub_mode_standard_sub">Grundlegende Untertitel-Rendering ohne Animationsunterstützung. Höchste Kompatibilität.</string>
     <string name="sub_org_none">Keine (Standardreihenfolge)</string>
     <string name="sub_org_by_lang">Nach Sprache</string>
     <string name="sub_org_by_addon">Nach Add-on</string>
@@ -1731,7 +1722,6 @@
     <string name="player_error_failed_start_torrent">Failed to start torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR support with canvas rendering. May block UI thread.</string>
     <string name="subtitle_style_weight">Weight</string>
 
     <!-- Plugin screen -->

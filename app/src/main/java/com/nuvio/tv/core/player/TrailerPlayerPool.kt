@@ -20,6 +20,9 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -55,6 +58,8 @@ class TrailerPlayerPool @Inject constructor(
     private val yielded = AtomicBoolean(false)
     private val released = AtomicBoolean(false)
     private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val _isTrailerPlaying = MutableStateFlow(false)
+    val isTrailerPlaying: StateFlow<Boolean> = _isTrailerPlaying.asStateFlow()
 
     @Volatile
     private var cachedForceNative: Boolean = false
@@ -129,6 +134,7 @@ class TrailerPlayerPool @Inject constructor(
                 player.clearMediaItems()
             }
         }
+        _isTrailerPlaying.value = false
     }
 
     /**
@@ -138,6 +144,7 @@ class TrailerPlayerPool @Inject constructor(
     fun yield() {
         if (yielded.compareAndSet(false, true)) {
             Log.d(TAG, "Yielding trailer player for detail playback")
+            _isTrailerPlaying.value = false
             _player?.let { player ->
                 runCatching { player.stop() }
                 runCatching { player.clearMediaItems() }
@@ -163,6 +170,7 @@ class TrailerPlayerPool @Inject constructor(
      */
     fun release() {
         if (released.compareAndSet(false, true)) {
+            _isTrailerPlaying.value = false
             _player?.let { player ->
                 runCatching { player.stop() }
                 runCatching { player.clearMediaItems() }
@@ -222,6 +230,11 @@ class TrailerPlayerPool @Inject constructor(
             .build()
             .apply {
                 repeatMode = Player.REPEAT_MODE_OFF
+                addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        _isTrailerPlaying.value = isPlaying
+                    }
+                })
             }
     }
 

@@ -2,6 +2,7 @@ package com.nuvio.tv.core.di
 
 import android.os.Build
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.core.network.NoDelaySocketFactory
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
 import com.nuvio.tv.core.sync.SyncClientIdentity
 import com.nuvio.tv.data.local.ProfileDataStore
@@ -34,6 +35,7 @@ object MediaServerModule {
         profileDataStore: ProfileDataStore
     ): ServerRepository {
         val http = OkHttpClient.Builder()
+            .socketFactory(NoDelaySocketFactory)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .callTimeout(45, TimeUnit.SECONDS)

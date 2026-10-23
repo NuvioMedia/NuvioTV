@@ -61,12 +61,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -100,6 +103,7 @@ class StreamScreenViewModel @Inject constructor(
     private val torrentService: TorrentService,
     private val serverStreams: ServerStreams,
     private val serverPlayback: ServerPlayback,
+    party: com.nuvio.tv.core.party.PartyRepository,
     profileManager: com.nuvio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -147,6 +151,31 @@ class StreamScreenViewModel @Inject constructor(
         ?.toBooleanStrictOrNull()
         ?: false
     private val streamCacheKey: String = "${contentType.lowercase()}|$videoId"
+    private val partyKey: String = com.nuvio.tv.core.party.partyMediaKey(
+        metaType = contentType,
+        metaId = contentId ?: videoId.substringBefore(":"),
+        season = season,
+        episode = episode
+    )
+
+    val partySource: StateFlow<com.nuvio.tv.core.party.PartySource?> = party.state
+        .map { state -> state.party?.media?.takeIf { it.key == partyKey }?.source }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val sharedStream: StateFlow<SharedStream?> = combine(party.state, party.sharedStream) { state, stream ->
+        val current = state.party
+        if (current == null || current.isHost || stream == null || stream.mediaKey != partyKey) {
+            null
+        } else {
+            SharedStream(
+                hostName = current.member(current.hostMemberId)?.displayName.orEmpty(),
+                stream = stream.toStream()
+            )
+        }
+    }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _uiState = MutableStateFlow(
         StreamScreenUiState(
@@ -165,6 +194,15 @@ class StreamScreenViewModel @Inject constructor(
         )
     )
     val uiState: StateFlow<StreamScreenUiState> = _uiState.asStateFlow()
+    val watchProgress = run {
+        val id = contentId ?: videoId.substringBefore(":")
+        if (season != null && episode != null) {
+            watchProgressRepository.getEpisodeProgress(id, season, episode, playbackProfileId)
+        } else {
+            watchProgressRepository.getProgress(id, playbackProfileId)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     val streamBadgeSettings = streamBadgeSettingsDataStore.settings
 
     val playerPreference = playerSettingsDataStore.playerSettings
@@ -196,6 +234,12 @@ class StreamScreenViewModel @Inject constructor(
         if (streamBadgePresentationJob?.isActive == true) return
 
         streamBadgePresentationJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            // Nothing can match without active filters, so skip rebuilding the
+            // stream lists for every chunk.
+            if (!streamBadgePresentation.hasActiveFilters()) {
+                badgedAddonNames = badgedAddonNames + newGroups.map { it.addonName }.toSet()
+                return@launch
+            }
             var pending = newGroups
             while (pending.isNotEmpty()) {
                 val allNewStreams = pending.flatMap { it.streams }
@@ -455,7 +499,9 @@ class StreamScreenViewModel @Inject constructor(
                                 videoSize = cached.videoSize,
                                 fileIdx = cached.fileIdx,
                                 sources = cached.sources,
-                                contentLanguage = cached.contentLanguage ?: contentLanguage
+                                contentLanguage = cached.contentLanguage ?: contentLanguage,
+                                audioDelayMs = cached.audioDelayMs,
+                                audioDelayLanguage = cached.audioDelayLanguage
                             ),
                             showDirectAutoPlayOverlay = showOverlay || it.showDirectAutoPlayOverlay,
                             isDirectAutoPlayFlow = showOverlay || it.isDirectAutoPlayFlow
@@ -486,6 +532,12 @@ class StreamScreenViewModel @Inject constructor(
             val persistedBingeGroup = if (playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode &&
                 playerSettings.streamAutoPlayReuseBingeGroup) {
                 contentId?.let { bingeGroupCacheDataStore.get(it) }
+            } else null
+            val persistedFilename = if (persistedBingeGroup != null) {
+                contentId?.let { bingeGroupCacheDataStore.getFilename(it) }
+            } else null
+            val persistedInfoHash = if (persistedBingeGroup != null) {
+                contentId?.let { bingeGroupCacheDataStore.getInfoHash(it) }
             } else null
 
             fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
@@ -523,8 +575,43 @@ class StreamScreenViewModel @Inject constructor(
 
                 // Early binge group match: if we have a persisted binge group, try to
                 // match it immediately on every emission without waiting for all addons.
+                // When a persisted filename is available, prefer binge group + filename first.
                 val earlyBingeGroupMatch = if (!autoPlayHandledForSession && !resolvedAutoPlayTarget && persistedBingeGroup != null) {
-                    StreamAutoPlaySelector.selectAutoPlayStream(
+                    val nextFilename = if (persistedFilename != null) {
+                        val extracted = com.nuvio.tv.core.player.FilenameEpisodeMatcher.extractSeasonEpisode(persistedFilename)
+                        if (extracted != null) {
+                            com.nuvio.tv.core.player.FilenameEpisodeMatcher.buildNextFilename(
+                                filename = persistedFilename,
+                                currentSeason = extracted.first,
+                                currentEpisode = extracted.second,
+                                nextSeason = season,
+                                nextEpisode = episode ?: 0
+                            ) ?: persistedFilename
+                        } else {
+                            // No episode pattern (e.g. movie) — match the exact filename.
+                            persistedFilename
+                        }
+                    } else null
+                    // Try binge group + filename first
+                    val bingeAndFilename = if (nextFilename != null) {
+                        allStreams.firstOrNull { stream ->
+                            !stream.isExternal() &&
+                                stream.behaviorHints?.bingeGroup == persistedBingeGroup &&
+                                com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
+                                    stream.behaviorHints?.filename, nextFilename
+                                )
+                        }
+                    } else null
+                    // Try binge group + infoHash when filename match failed or was unavailable
+                    val bingeAndInfoHash = if (bingeAndFilename == null && persistedInfoHash != null) {
+                        allStreams.firstOrNull { stream ->
+                            !stream.isExternal() &&
+                                stream.behaviorHints?.bingeGroup == persistedBingeGroup &&
+                                stream.infoHash?.equals(persistedInfoHash, ignoreCase = true) == true
+                        }
+                    } else null
+                    // Fall back to binge group alone
+                    bingeAndFilename ?: bingeAndInfoHash ?: StreamAutoPlaySelector.selectAutoPlayStream(
                         streams = allStreams,
                         mode = playerSettings.streamAutoPlayMode,
                         regexPattern = playerSettings.streamAutoPlayRegex,
@@ -1205,14 +1292,14 @@ class StreamScreenViewModel @Inject constructor(
         }
     }
 
-    suspend fun resolveStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+    suspend fun resolveStreamForPlayback(stream: Stream, saveLastLink: Boolean = true): StreamPlaybackInfo? {
         stream.serverTarget?.let { target -> return prepareServerStream(stream, target) }
         if (stream.youTubeIdToResolve() != null) {
             return resolveYouTubeStreamForPlayback(stream)
         }
         if (!directDebridResolver.shouldResolveToPlayableStream(stream)) {
             Log.d(TAG, "resolveStreamForPlayback: no debrid resolve needed, using direct URL")
-            return getStreamForPlayback(stream)
+            return getStreamForPlayback(stream, saveLastLink)
         }
 
         Log.d(TAG, "resolveStreamForPlayback: starting debrid resolve for stream=${stream.name} addon=${stream.addonName}")
@@ -1489,7 +1576,9 @@ class StreamScreenViewModel @Inject constructor(
             streamDescription = stream.description,
             fileIdx = stream.getEffectiveFileIdx(),
             sources = stream.sources,
-            contentLanguage = contentLanguage
+            contentLanguage = contentLanguage,
+            audioDelayMs = stream.behaviorHints?.audioDelayMs,
+            audioDelayLanguage = stream.behaviorHints?.audioDelayLanguage
         )
         StreamSidecarSubtitles.set(playbackUrlFor(playbackInfo), stream.subtitles)
 
@@ -1506,7 +1595,9 @@ class StreamScreenViewModel @Inject constructor(
                     videoSize = playbackInfo.videoSize,
                     bingeGroup = playbackInfo.bingeGroup,
                     contentLanguage = contentLanguage,
-                    year = year
+                    year = year,
+                    audioDelayMs = playbackInfo.audioDelayMs,
+                    audioDelayLanguage = playbackInfo.audioDelayLanguage
                 )
             }
         }
@@ -1519,7 +1610,17 @@ class StreamScreenViewModel @Inject constructor(
 
     private suspend fun persistBingeGroupForPlayback(playbackInfo: StreamPlaybackInfo) {
         val cid = playbackInfo.contentId?.takeIf { it.isNotBlank() } ?: return
-        bingeGroupCacheDataStore.replace(cid, playbackInfo.bingeGroup)
+        bingeGroupCacheDataStore.replace(cid, playbackInfo.bingeGroup, playbackInfo.filename, playbackInfo.infoHash)
+    }
+
+    fun persistBingeGroupForStream(stream: Stream) {
+        val cid = contentId?.takeIf { it.isNotBlank() } ?: return
+        val bg = stream.behaviorHints?.bingeGroup
+        val fn = stream.behaviorHints?.filename
+        val ih = stream.infoHash
+        viewModelScope.launch {
+            bingeGroupCacheDataStore.replace(cid, bg, fn, ih)
+        }
     }
 
     override fun onCleared() {
@@ -1663,6 +1764,7 @@ class StreamScreenViewModel @Inject constructor(
 
                 val client = okhttp3.OkHttpClient.Builder()
                     .dns(com.nuvio.tv.core.network.IPv4FirstDns())
+                    .socketFactory(com.nuvio.tv.core.network.NoDelaySocketFactory)
                     .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
                     .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
@@ -2011,6 +2113,8 @@ data class StreamPlaybackInfo(
     val fileIdx: Int? = null,
     val sources: List<String>? = null,
     val contentLanguage: String? = null,
+    val audioDelayMs: Int? = null,
+    val audioDelayLanguage: String? = null,
     val isServerStream: Boolean = false
 )
 

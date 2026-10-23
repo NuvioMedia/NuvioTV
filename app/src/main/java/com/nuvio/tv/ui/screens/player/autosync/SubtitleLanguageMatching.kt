@@ -41,6 +41,9 @@ internal object SubtitleLanguageMatching {
         "rus" to "ru",
         "pol" to "pl",
         "spa" to "es",
+        "spn" to "es",
+        "sp" to "es",
+        "esp" to "es",
         "spl" to "es-419",
         "es-419" to "es-419",
         "es_419" to "es-419",
@@ -57,6 +60,8 @@ internal object SubtitleLanguageMatching {
         "ell" to "el",
         "gre" to "el",
         "heb" to "he",
+        "hbo" to "he",
+        "iw" to "he",
         "tha" to "th",
         "vie" to "vi",
         "ind" to "id",
@@ -385,4 +390,3 @@ internal object SubtitleLanguageMatching {
         return tags.any { tag -> haystack.contains(tag) }
     }
 }
-

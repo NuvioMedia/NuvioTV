@@ -667,15 +667,6 @@
     <string name="sub_libass">Gunakan libass untuk subtitle ASS/SSA</string>
     <string name="sub_libass_sub">Eksperimental: rendering ASS/SSA lanjutan (gaya, posisi, animasi)</string>
     <string name="sub_libass_mode">Mode Render Libass</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (Disarankan)</string>
-    <string name="sub_mode_overlay_gl_sub">Kualitas terbaik dengan dukungan HDR. Render subtitle di thread terpisah.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Dukungan animasi menggunakan efek Media3. Lebih cepat dari Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Dukungan animasi menggunakan efek Media3 dengan rendering Canvas.</string>
-    <string name="sub_mode_standard">Cue Standar</string>
-    <string name="sub_mode_standard_sub">Rendering subtitle dasar tanpa dukungan animasi. Paling kompatibel.</string>
     <string name="sub_org_none">Tidak ada (urutan bawaan)</string>
     <string name="sub_org_by_lang">Per bahasa</string>
     <string name="sub_org_by_addon">Per addon</string>
@@ -1904,7 +1895,6 @@
     <string name="player_error_failed_start_torrent">Gagal memulai torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Dukungan HDR dengan rendering canvas. Mungkin memblokir thread UI.</string>
     <string name="subtitle_style_weight">Bobot</string>
 
     <!-- Plugin screen -->

@@ -438,12 +438,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val customPosterEnabledScreens: Flow<Set<com.nuvio.tv.core.poster.CustomPosterScreen>> = profileFlow { prefs ->
-        val raw = prefs[customPosterEnabledScreensKey]
-        if (raw.isNullOrBlank()) {
-            com.nuvio.tv.core.poster.CustomPosterScreen.ALL
-        } else {
-            com.nuvio.tv.core.poster.CustomPosterScreen.fromKeys(raw.split(",").toSet())
-        }
+        com.nuvio.tv.core.poster.CustomPosterScreen.fromStorageValue(prefs[customPosterEnabledScreensKey])
     }
 
     suspend fun setMemoryOnlyVerticalScroll(enabled: Boolean) {
@@ -495,11 +490,11 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     suspend fun setCustomPosterEnabledScreens(screens: Set<com.nuvio.tv.core.poster.CustomPosterScreen>) {
         store().edit { prefs ->
-            if (screens == com.nuvio.tv.core.poster.CustomPosterScreen.ALL) {
+            val stored = com.nuvio.tv.core.poster.CustomPosterScreen.toStorageValue(screens)
+            if (stored == null) {
                 prefs.remove(customPosterEnabledScreensKey)
             } else {
-                prefs[customPosterEnabledScreensKey] =
-                    com.nuvio.tv.core.poster.CustomPosterScreen.toKeys(screens).joinToString(",")
+                prefs[customPosterEnabledScreensKey] = stored
             }
         }
     }

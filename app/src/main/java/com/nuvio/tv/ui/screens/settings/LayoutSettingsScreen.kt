@@ -171,7 +171,9 @@ private fun LayoutSectionContent(
             onShowFileSizeBadgesChange = viewModel::setShowFileSizeBadges,
             onShowAddonLogoChange = viewModel::setShowAddonLogo,
             onBadgePlacementSelected = viewModel::setStreamBadgePlacement,
-            onConfigureBadges = viewModel::startStreamBadgeQrMode
+            onConfigureBadges = viewModel::startStreamBadgeQrMode,
+            onShowInPlayerChange = viewModel::setShowBadgesInPlayer,
+            onPlayerBadgeSourceSelected = viewModel::setPlayerBadgeSource
         )
     }
 }

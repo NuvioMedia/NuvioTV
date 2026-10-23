@@ -697,15 +697,6 @@
     <string name="sub_libass">Brug libass til ASS/SSA-undertekster</string>
     <string name="sub_libass_sub">Eksperimentel: avanceret ASS/SSA-gengivelse (stilarter, placering, animationer)</string>
     <string name="sub_libass_mode">Libass-gengivelsestilstand</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (Anbefalet)</string>
-    <string name="sub_mode_overlay_gl_sub">Bedste kvalitet med HDR-understøttelse. Gengiver undertekster på en separat tråd.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Animationsunderstøttelse ved hjælp af Media3-effekter. Hurtigere end Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Animationsunderstøttelse ved hjælp af Media3-effekter med Canvas-gengivelse.</string>
-    <string name="sub_mode_standard">Standard Cues</string>
-    <string name="sub_mode_standard_sub">Grundlæggende undertekstgengivelse uden animationsunderstøttelse. Mest kompatibel.</string>
     <string name="sub_org_none">Ingen (standardrækkefølge)</string>
     <string name="sub_org_by_lang">Efter sprog</string>
     <string name="sub_org_by_addon">Efter addon</string>
@@ -1959,7 +1950,6 @@
     <string name="player_error_failed_start_torrent">Kunne ikke starte torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR-understøttelse med canvas-rendering. Kan blokere UI-tråden.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>

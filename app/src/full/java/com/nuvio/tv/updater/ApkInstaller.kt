@@ -2,6 +2,7 @@ package com.nuvio.tv.updater
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -30,7 +31,55 @@ object ApkInstaller {
         }
     }
 
-    fun launchInstall(context: Context, apkFile: File) {
+    /**
+     * Installs [apkFile] as an update of this app through a PackageInstaller session, adding the APK's own dex
+     * metadata so the new version is compiled at install time. A [background] install asks the system to skip the
+     * confirmation screen, which Android 12+ allows for an app updating itself; elsewhere the system still asks.
+     * The outcome arrives in [UpdateInstallResultReceiver].
+     */
+    fun install(
+        context: Context,
+        apkFile: File,
+        background: Boolean,
+        withDexMetadata: Boolean = true
+    ) {
+        val packageInstaller = context.packageManager.packageInstaller
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+            setAppPackageName(context.packageName)
+            if (background && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+            }
+        }
+        val dexMetadata = if (withDexMetadata) {
+            UpdateDexMetadata.extract(apkFile, Build.VERSION.SDK_INT, File(apkFile.parentFile, "update.dm"))
+        } else {
+            null
+        }
+        val sessionId = packageInstaller.createSession(params)
+        try {
+            packageInstaller.openSession(sessionId).use { session ->
+                session.writeFile("base.apk", apkFile)
+                dexMetadata?.let { session.writeFile("base.dm", it) }
+                session.commit(
+                    UpdateInstallResultReceiver.statusReceiver(
+                        context = context,
+                        sessionId = sessionId,
+                        apkFile = apkFile,
+                        background = background,
+                        withDexMetadata = dexMetadata != null
+                    ).intentSender
+                )
+            }
+        } catch (e: Exception) {
+            packageInstaller.abandonSession(sessionId)
+            throw e
+        } finally {
+            dexMetadata?.delete()
+        }
+    }
+
+    /** Hands the APK to the system installer screen, used when the session install cannot be completed. */
+    fun launchSystemInstaller(context: Context, apkFile: File) {
         val authority = "${BuildConfig.APPLICATION_ID}.fileprovider"
         val uri = FileProvider.getUriForFile(context, authority, apkFile)
 
@@ -40,5 +89,14 @@ object ApkInstaller {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         context.startActivity(intent)
+    }
+
+    private fun PackageInstaller.Session.writeFile(name: String, file: File) {
+        file.inputStream().use { input ->
+            openWrite(name, 0, file.length()).use { output ->
+                input.copyTo(output)
+                fsync(output)
+            }
+        }
     }
 }

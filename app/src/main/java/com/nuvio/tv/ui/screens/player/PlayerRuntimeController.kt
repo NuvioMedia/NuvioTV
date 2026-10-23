@@ -32,6 +32,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
+import com.nuvio.tv.core.streams.StreamBadgeMatcher
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.BingeGroupCacheDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
@@ -105,6 +106,7 @@ class PlayerRuntimeController(
     internal val tvRecommendationManager: com.nuvio.tv.core.recommendations.TvRecommendationManager,
     internal val serverPlayback: ServerPlayback,
     internal val serverStreams: ServerStreams,
+    internal val party: com.nuvio.tv.core.party.PartyRepository,
     internal val profileId: Int,
     savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
@@ -192,7 +194,9 @@ class PlayerRuntimeController(
     internal val rememberedAudioLanguage: String? = navigationArgs.rememberedAudioLanguage
     internal val rememberedAudioName: String? = navigationArgs.rememberedAudioName
     internal val cloudSessionToken: String? = navigationArgs.cloudSessionToken
-    internal val mediaSourceFactory = PlayerMediaSourceFactory(context.applicationContext)
+    internal val mediaSourceFactory = PlayerMediaSourceFactory(context.applicationContext).apply {
+        onStreamRedirected = { requestedUrl, resolvedUrl -> handleStreamRedirect(requestedUrl, resolvedUrl) }
+    }
 
     // The file rate is the only one every container reports, so the playhead is placed in the
     // file by how far through it is rather than by any declared bitrate.
@@ -216,8 +220,7 @@ class PlayerRuntimeController(
     internal var currentVideoHash: String? = navigationArgs.videoHash
     internal var currentVideoSize: Long? = navigationArgs.videoSize
     internal var currentFilename: String? = navigationArgs.filename
-        ?: initialStreamUrl.substringBefore('?').substringAfterLast('/', "")
-            .takeIf { it.isNotBlank() && it.contains('.') }
+        ?: streamFilenameFromUrl(initialStreamUrl)
     internal var currentAddonName: String? = navigationArgs.addonName
     internal var currentAddonLogo: String? = navigationArgs.addonLogo
     internal var currentStreamDescription: String? = navigationArgs.streamDescription
@@ -255,6 +258,7 @@ class PlayerRuntimeController(
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
 
     fun stopAndRelease() {
+        leavePartyPlayback()
         // Cache counters only reach the card on a natural finish, so capture them when the user exits too.
         val diagnostics = lastPlaybackDiagnosticsForReport
         if (diagnostics.timestampMs > 0L) {
@@ -425,16 +429,26 @@ class PlayerRuntimeController(
     internal val afrPreflightGate = AfrPreflightGate()
     internal var hideAspectRatioIndicatorJob: Job? = null
     internal var hideStreamSourceIndicatorJob: Job? = null
+    internal var partyRateNudge: Float? = null
+    internal var partyPreviousKey: String? = null
     internal var hidePlayerEngineSwitchInfoJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var subtitleAutoSyncLoadJob: Job? = null
     internal var automaticSubtitleSyncJob: Job? = null // AutoSync hook
+    /** mpv: the add-on subtitle download and sub-add in flight, which AutoSync lets land first. */
+    internal var mpvAddonSubtitleSelectionJob: Job? = null // AutoSync hook
     /** ExoPlayer sidecar path: external addon cues without setMediaSource (preserves buffer). */
     internal var sidecarSubtitleJob: Job? = null
     internal var sidecarGenerationCounter: Long = 0L // AutoSync hook
     internal var activeSidecarGeneration: Long = 0L // AutoSync hook
     internal var activeSidecarSubtitleKey: String? = null
     internal var sidecarTimedCues: List<androidx.media3.extractor.text.CuesWithTiming> = emptyList()
+        set(value) {
+            field = value
+            subtitleCueTracker.setPrescannedTexts(
+                value.flatMap { it.cues }.mapNotNull { it.text?.toString()?.takeIf(String::isNotBlank) }
+            )
+        }
     internal var lastSidecarCueSignature: Long? = null
     internal var exoSubtitleViewRef: WeakReference<androidx.media3.ui.SubtitleView>? = null
     /** Cancels previous TEXT-track bounce jobs when subtitle delay is adjusted repeatedly. */
@@ -560,6 +574,8 @@ class PlayerRuntimeController(
     internal var mpvHardwareDecodeModeSetting: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
     internal var mpvPreferredAudioLanguages: List<String> = emptyList()
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
+    // Per-device delay + current stream's behaviorHints.audioDelayMs + the user's tweak on that stream.
+    internal var audioDelayParts: AudioDelayParts = AudioDelayParts().withStream(navigationArgs.audioDelayMs ?: 0, navigationArgs.audioDelayLanguage)
     internal var hasAppliedRememberedAudioSelection: Boolean = false
     internal var hasInitializedAudioAmplificationForSession: Boolean = false
     internal var hasInitializedCenterMixForSession: Boolean = false
@@ -589,10 +605,15 @@ class PlayerRuntimeController(
     internal var currentMediaSession: MediaSession? = null
     internal var ffmpegAudioRenderer: FfmpegAudioRenderer? = null
     internal var mpvView: NuvioMpvSurfaceView? = null
+    internal val subtitleCueTracker = SubtitleCueTracker()
     internal var mpvInitializationInProgress: Boolean = false
     internal var mpvMediaLoadPrepared: Boolean = false
     internal var mpvTrackRefreshJob: Job? = null
     internal var mpvTrackRefreshInProgress: Boolean = false
+    /** The stream whose chapters [PlayerUiState.chapters] holds. */
+    internal var mpvChaptersStreamUrl: String? = null
+    internal var exoChapterLoadJob: Job? = null
+    internal val mpvTrackRefreshGate = MpvTrackRefreshGate()
     internal var pendingMpvHardRestartOnNextAttach: Boolean = false
     internal var mpvEventRelay: MpvEventRelay? = null
     internal var mpvEventRelayEpoch: Long = 0
@@ -614,6 +635,8 @@ class PlayerRuntimeController(
     internal val seekProgressSyncDebounceMs = 700L
     internal val audioDelayUs = AtomicLong(0L)
     internal val subtitleDelayUs = AtomicLong(0L)
+    // Offset for embedded subtitles from the stream's audio source; never persisted.
+    internal val streamSubtitleDelayUs = AtomicLong(0L)
     internal var pendingPreviewSeekPosition: Long?
         get() = _uiState.value.pendingPreviewSeekPosition
         set(value) {
@@ -743,6 +766,7 @@ class PlayerRuntimeController(
             fetchMetaDetails(contentId, contentType)
         }
         observeBlurUnwatchedEpisodes()
+        observeEpisodeOptionsOverlayStyle()
         observeEpisodeWatchProgress()
         observeTorrentSettings()
         observeStreamBadgeSettings()
@@ -750,6 +774,25 @@ class PlayerRuntimeController(
         observeDeviceLocalTransparentLetterbox()
         observeDeviceLocalTunneledSurfaceFill()
         observePlayerStatsHud()
+        observeStreamDelayTrackSelection()
+    }
+
+    // The stream delay hint can be scoped to a language: re-apply it whenever the selected tracks change.
+    private fun observeStreamDelayTrackSelection() {
+        scope.launch {
+            _uiState
+                .map { state ->
+                    val audio = state.audioTracks.getOrNull(state.selectedAudioTrackIndex)
+                    val subtitle = state.subtitleTracks.getOrNull(state.selectedSubtitleTrackIndex)
+                    listOf(
+                        audio != null, audio?.language,
+                        subtitle != null, subtitle?.language,
+                        state.selectedAddonSubtitle != null
+                    )
+                }
+                .distinctUntilChanged()
+                .collect { syncStreamDelayWithSelectedTracks() }
+        }
     }
 
     private fun observeTorrentSettings() {
@@ -767,7 +810,12 @@ class PlayerRuntimeController(
                     it.copy(
                         showFileSizeBadges = settings.showFileSizeBadges,
                         showAddonLogo = settings.showAddonLogo,
-                        streamBadgePlacement = settings.badgePlacement
+                        streamBadgePlacement = settings.badgePlacement,
+                        playerBadgeFilters = if (settings.showInPlayer) {
+                            StreamBadgeMatcher.compile(settings.rules.forPlayer(settings.playerBadgeSource))
+                        } else {
+                            emptyList()
+                        }
                     )
                 }
             }

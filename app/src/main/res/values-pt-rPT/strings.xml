@@ -674,15 +674,6 @@
     <string name="sub_libass">Utilizar libass para legendas ASS/SSA</string>
     <string name="sub_libass_sub">Experimental: renderização avançada de ASS/SSA (estilos, posicionamento, animações)</string>
     <string name="sub_libass_mode">Modo de renderização Libass</string>
-    <string name="sub_mode_overlay_gl">Sobreposição OpenGL (Recomendado)</string>
-    <string name="sub_mode_overlay_gl_sub">Melhor qualidade com suporte HDR. Renderiza as legendas numa thread separada.</string>
-    <string name="sub_mode_overlay_canvas">Sobreposição Canvas</string>
-    <string name="sub_mode_effects_gl">Efeitos OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Suporte de animação utilizando efeitos Media3. Mais rápido que o Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efeitos Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Suporte de animação utilizando efeitos Media3 com renderização Canvas.</string>
-    <string name="sub_mode_standard">Pistas standard (Standard Cues)</string>
-    <string name="sub_mode_standard_sub">Renderização básica de legendas sem suporte de animação. O mais compatível.</string>
     <string name="sub_org_none">Nenhuma (ordem predefinida)</string>
     <string name="sub_org_by_lang">Por idioma</string>
     <string name="sub_org_by_addon">Por addon</string>
@@ -1877,7 +1868,6 @@
     <!-- Player errors -->
     <string name="player_error_failed_start_torrent">Falha ao iniciar o torrent: %1$s</string>
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Suporte HDR com renderização em canvas. Pode bloquear a thread da interface (UI).</string>
     <string name="ratings_season_label">T%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
     <string name="cd_play">Reproduzir</string>
@@ -1887,6 +1877,13 @@
     <string name="cd_sources">Fontes</string>
     <string name="cd_switch_player_engine">Alterar motor do leitor</string>
     <string name="cd_episodes">Episódios</string>
+    <string name="player_chapter_number">Capítulo %1$d</string>
+    <string name="player_chapters">Capítulos</string>
+    <string name="player_chapters_title">Capítulos (%1$d)</string>
+    <string name="player_chapter_remaining">faltam %1$s</string>
+    <string name="playback_chapters_label">Capítulos</string>
+    <string name="playback_exo_chapters_title">Mostrar capítulos (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Lê os capítulos dos ficheiros MKV para os marcar na barra de progresso e saltar entre eles. Faz alguns pedidos pequenos extra quando a reprodução começa. O mpv mostra sempre os capítulos.</string>
     <string name="cd_playback_speed">Velocidade de reprodução</string>
     <string name="cd_aspect_ratio">Proporção do ecrã</string>
     <string name="cd_open_external_player">Abrir em leitor externo</string>

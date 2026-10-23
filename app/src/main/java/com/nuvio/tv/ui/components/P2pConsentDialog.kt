@@ -50,6 +50,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.ui.util.contentLayoutDirection
 import com.nuvio.tv.ui.util.contentTextDirection
 import kotlinx.coroutines.launch
+import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @Composable
 fun P2pConsentDialog(
@@ -68,6 +69,7 @@ fun P2pConsentDialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        AmbientDialogEffect(onDismiss)
         CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
             Box(
                 modifier = Modifier

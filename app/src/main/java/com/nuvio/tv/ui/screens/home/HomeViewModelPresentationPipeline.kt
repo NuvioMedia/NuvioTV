@@ -13,6 +13,7 @@ import com.nuvio.tv.core.tmdb.TmdbEnrichment
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
+import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
@@ -65,6 +66,7 @@ private data class LayoutUiPrefs(
     val alwaysShowLandscapeClearlogo: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility,
+    val detailImdbRatingsVisibility: DetailImdbRatingsVisibility = DetailImdbRatingsVisibility.SHOW_ALL,
     val focusedBackdropExpandEnabled: Boolean,
     val focusedBackdropExpandDelaySeconds: Int,
     val focusedBackdropTrailerEnabled: Boolean,
@@ -80,6 +82,7 @@ private data class ModernLayoutPrefs(
     val fullScreenBackdrop: Boolean,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility,
     val alwaysShowLandscapeClearlogo: Boolean,
+    val detailImdbRatingsVisibility: DetailImdbRatingsVisibility = DetailImdbRatingsVisibility.SHOW_ALL,
 )
 
 @OptIn(FlowPreview::class)
@@ -137,13 +140,15 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
         layoutPreferenceDataStore.modernLandscapePostersEnabled,
         layoutPreferenceDataStore.modernHeroFullScreenBackdropEnabled,
         layoutPreferenceDataStore.homeImdbRatingsVisibility,
-        layoutPreferenceDataStore.alwaysShowLandscapeClearlogo
-    ) { landscapePosters, fullScreenBackdrop, homeImdbRatingsVisibility, alwaysShowLandscapeClearlogo ->
+        layoutPreferenceDataStore.alwaysShowLandscapeClearlogo,
+        layoutPreferenceDataStore.detailImdbRatingsVisibility
+    ) { landscapePosters, fullScreenBackdrop, homeImdbRatingsVisibility, alwaysShowLandscapeClearlogo, detailImdbRatingsVisibility ->
         ModernLayoutPrefs(
             landscapePosters = landscapePosters,
             fullScreenBackdrop = fullScreenBackdrop,
             homeImdbRatingsVisibility = homeImdbRatingsVisibility,
             alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
+            detailImdbRatingsVisibility = detailImdbRatingsVisibility,
         )
     }
 
@@ -189,6 +194,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                 modernHeroFullScreenBackdropEnabled = modernPrefs.fullScreenBackdrop,
                 homeImdbRatingsVisibility = modernPrefs.homeImdbRatingsVisibility,
                 alwaysShowLandscapeClearlogo = modernPrefs.alwaysShowLandscapeClearlogo,
+                detailImdbRatingsVisibility = modernPrefs.detailImdbRatingsVisibility,
             )
         }
             .distinctUntilChanged()
@@ -235,6 +241,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                         alwaysShowLandscapeClearlogo = prefs.alwaysShowLandscapeClearlogo,
                         modernHeroFullScreenBackdropEnabled = prefs.modernHeroFullScreenBackdropEnabled,
                         homeImdbRatingsVisibility = prefs.homeImdbRatingsVisibility,
+                        detailImdbRatingsVisibility = prefs.detailImdbRatingsVisibility,
                         focusedPosterBackdropExpandEnabled = prefs.focusedBackdropExpandEnabled,
                         focusedPosterBackdropExpandDelaySeconds = prefs.focusedBackdropExpandDelaySeconds,
                         focusedPosterBackdropTrailerEnabled = prefs.focusedBackdropTrailerEnabled,
@@ -321,6 +328,7 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                     showCatalogTypeSuffix = state.catalogTypeSuffixEnabled,
                     showFullReleaseDate = state.showFullReleaseDate,
                     showImdbRatings = state.homeImdbRatingsVisibility.showRatings,
+                    detailImdbRatingsVisibility = state.detailImdbRatingsVisibility,
                     localeTag = localeTag
                 )
             }
@@ -469,7 +477,11 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
                             trailerPreviewAudioUrlsState[itemId] = fallbackAudio
                         }
                     } else {
-                        trailerPreviewNegativeCache.add(itemId)
+                        // While YouTube is rate limiting, a miss isn't remembered, so the
+                        // trailer comes back on a later focus once the pause is over.
+                        if (!trailerService.isRateLimited()) {
+                            trailerPreviewNegativeCache.add(itemId)
+                        }
                         trailerPreviewUrlsState.remove(itemId)
                         trailerPreviewAudioUrlsState.remove(itemId)
                     }
