@@ -10,9 +10,14 @@ import com.nuvio.tv.domain.model.StreamDebridCacheState
 object StreamAutoPlaySelector {
     fun orderAddonStreams(
         streams: List<AddonStreams>,
-        installedOrder: List<String>
+        installedOrder: List<String>,
+        preferredNames: Set<String> = emptySet()
     ): List<AddonStreams> {
         if (streams.isEmpty()) return streams
+        if (preferredNames.isNotEmpty()) {
+            val (preferred, rest) = streams.partition { it.addonName in preferredNames }
+            return preferred + orderAddonStreams(rest, installedOrder)
+        }
 
         val addonRankByName = HashMap<String, Int>(installedOrder.size)
         installedOrder.forEachIndexed { index, addonName ->
@@ -33,6 +38,9 @@ object StreamAutoPlaySelector {
     private fun isPlayable(stream: Stream): Boolean {
         // External URL streams (e.g. error pages, web links) are not playable.
         if (stream.isExternal()) return false
+        if (stream.serverTarget != null) return true
+        // Streams with a direct URL are always playable regardless of debrid cache status.
+        if (stream.getStreamUrl() != null) return true
         when (stream.debridCacheStatus?.state) {
             StreamDebridCacheState.CHECKING,
             StreamDebridCacheState.NOT_CACHED,
@@ -40,7 +48,11 @@ object StreamAutoPlaySelector {
             StreamDebridCacheState.CACHED,
             null -> Unit
         }
-        return stream.getStreamUrl() != null || stream.isTorrent() || stream.isDirectDebrid()
+        return stream.isTorrent() ||
+            stream.isDirectDebrid() ||
+            // A YouTube id is resolved to a playable URL on the device when the stream is played.
+            // Builds without in-app YouTube playback open the watch page instead, an external link.
+            (AppFeaturePolicy.inAppTrailerPlaybackEnabled && stream.youTubeIdToResolve() != null)
     }
 
 
@@ -67,12 +79,14 @@ object StreamAutoPlaySelector {
 
         val sourceScopedStreams = when (effectiveSource) {
             StreamAutoPlaySource.ALL_SOURCES -> streams
-            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { it.addonName in installedAddonNames }
+            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { it.serverTarget != null || it.addonName in installedAddonNames }
             StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { it.addonName !in installedAddonNames }
         }
         val candidateStreams = sourceScopedStreams.filter { stream ->
             val isAddonStream = stream.addonName in installedAddonNames
-            if (isAddonStream) {
+            if (stream.serverTarget != null) {
+                true
+            } else if (isAddonStream) {
                 selectedAddons.isEmpty() || stream.addonName in selectedAddons
             } else {
                 selectedPlugins.isEmpty() || stream.addonName in selectedPlugins
@@ -80,12 +94,16 @@ object StreamAutoPlaySelector {
         }
         if (candidateStreams.isEmpty()) return null
 
-        // Binge group matching takes priority over mode — even in MANUAL mode,
+        // Binge group matching takes priority over mode and source filters — even in MANUAL mode,
         // a persisted binge group should auto-play without showing the picker.
+        // Search ALL streams, not just candidateStreams, since binge group reuse should
+        // not be limited by autoplay source/addon selection filters.
         val targetBingeGroup = preferredBingeGroup?.trim().orEmpty()
         if (preferBingeGroupInSelection && targetBingeGroup.isNotEmpty()) {
-            val bingeGroupMatch = candidateStreams.firstOrNull { stream ->
-                stream.behaviorHints?.bingeGroup == targetBingeGroup && isPlayable(stream)
+            val bingeGroupMatch = streams.firstOrNull { stream ->
+                !stream.isExternal() &&
+                    stream.behaviorHints?.bingeGroup == targetBingeGroup &&
+                    isPlayable(stream)
             }
             if (bingeGroupMatch != null) return bingeGroupMatch
             // When bingeGroupOnly is set (MANUAL mode with only binge-group

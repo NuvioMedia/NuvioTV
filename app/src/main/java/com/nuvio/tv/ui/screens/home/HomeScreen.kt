@@ -105,6 +105,7 @@ fun HomeScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.beginShuffleHomeVisit()
                 viewModel.refreshHomeCatalogsIfStale()
             }
         }
@@ -223,7 +224,7 @@ fun HomeScreen(
         )
     }
 
-    val noAddonsError = stringResource(R.string.home_error_no_addons)
+    val noAddonsError = stringResource(R.string.home_empty_no_sources_title)
     val noCatalogAddonsError = stringResource(R.string.home_error_no_catalog_addons)
     val hasAnyContent = uiState.catalogRows.isNotEmpty() ||
         (uiState.continueWatchingEnabled && uiState.continueWatchingItems.isNotEmpty()) ||

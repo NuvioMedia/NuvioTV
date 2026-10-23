@@ -1,7 +1,11 @@
 package com.nuvio.tv.data.mdblist
 
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatterBuilder
+import java.time.temporal.ChronoField
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -35,8 +39,16 @@ internal fun JsonObject.integer(vararg names: String): Int? = number(*names)
     ?.takeIf { it in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong() }?.toInt()
 internal fun JsonObject.flag(name: String): Boolean? = (get(name) as? JsonPrimitive)?.booleanOrNull
 
+private val mdbListLocalTimestamp = DateTimeFormatterBuilder()
+    .appendPattern("yyyy-MM-dd HH:mm:ss")
+    .optionalStart()
+    .appendFraction(ChronoField.NANO_OF_SECOND, 1, 9, true)
+    .optionalEnd()
+    .toFormatter()
+
 internal fun mdbListTimestamp(value: String): Long = runCatching { Instant.parse(value).toEpochMilli() }
     .recoverCatching { OffsetDateTime.parse(value).toInstant().toEpochMilli() }
+    .recoverCatching { LocalDateTime.parse(value, mdbListLocalTimestamp).toInstant(ZoneOffset.UTC).toEpochMilli() }
     .getOrElse { throw MdbListDecodingException() }
 
 internal fun JsonObject.timestamp(vararg names: String): String? = text(*names)?.also(::mdbListTimestamp)

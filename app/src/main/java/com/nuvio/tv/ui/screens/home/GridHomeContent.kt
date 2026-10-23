@@ -83,6 +83,7 @@ import com.nuvio.tv.domain.model.catalogRowStableKey
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
+import com.nuvio.tv.ui.components.LocalLandscapePosterMode
 import com.nuvio.tv.ui.components.GridContinueWatchingSection
 import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
@@ -189,11 +190,20 @@ fun GridHomeContent(
 
     // Offset for section indices: pre-items + continue watching item (if present)
     val gridItems = uiState.gridItems
-    val continueWatchingItems = if (uiState.continueWatchingEnabled)
-        uiState.continueWatchingItems.withCustomPosterUrls(
-            com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
-        )
-    else emptyList()
+    val continueWatchingItems = remember(
+        uiState.continueWatchingEnabled,
+        uiState.continueWatchingItems,
+        uiState.customPosterUrlPattern,
+        uiState.customPosterEnabledScreens,
+    ) {
+        if (uiState.continueWatchingEnabled) {
+            uiState.continueWatchingItems.withCustomPosterUrls(
+                com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
+            )
+        } else {
+            emptyList()
+        }
+    }
     val continueWatchingOffset = if (continueWatchingItems.isNotEmpty()) 1 else 0
 
     LaunchedEffect(gridItems, gridFocusState.hasSavedFocus, gridFocusState.focusedItemKey) {
@@ -364,8 +374,11 @@ fun GridHomeContent(
         val horizontalPadding = NuvioTheme.spacing.xxxl + NuvioTheme.spacing.xl
         val spacing = NuvioTheme.spacing.md
         val availableWidth = gridWidth - horizontalPadding
-        val actualColumnsPerRow = remember(availableWidth, posterCardStyle.width, spacing) {
-            val cols = ((availableWidth + spacing) / (posterCardStyle.width + spacing)).toInt()
+        val globalLandscape = LocalLandscapePosterMode.current
+        val landscapeGridMinWidth = posterCardStyle.height // portrait height ≈ good landscape card width
+        val gridColumnMinSize = if (globalLandscape) landscapeGridMinWidth else posterCardStyle.width
+        val actualColumnsPerRow = remember(availableWidth, gridColumnMinSize, spacing) {
+            val cols = ((availableWidth + spacing) / (gridColumnMinSize + spacing)).toInt()
             cols.coerceAtLeast(1)
         }
         val gridRowCount = if (posterCardStyle.width.value.toInt() <= 104) 2 else 3
@@ -421,7 +434,7 @@ fun GridHomeContent(
 
         LazyVerticalGrid(
             state = gridState,
-            columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+            columns = GridCells.Adaptive(minSize = gridColumnMinSize),
             modifier = Modifier
                 .fillMaxSize()
                 .onFocusChanged {
@@ -481,6 +494,8 @@ fun GridHomeContent(
                                 items = gridItem.items.asStable(),
                                 focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
                                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                                mdbListShowOnHero = uiState.mdbListShowOnHero,
+                                mdbListRatingOrder = uiState.mdbListRatingOrder,
                                 initialActiveIndex = savedHeroIndex.intValue,
                                 onItemFocus = {
                                     lastFocusedGridItemKey.value = "hero"
@@ -568,7 +583,9 @@ fun GridHomeContent(
                         blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
                         useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
                         cardStyle = uiState.continueWatchingCardStyle,
-                        cornerRadius = posterCardStyle.cornerRadius
+                        cornerRadius = posterCardStyle.cornerRadius,
+                        posterCardWidth = posterCardStyle.width,
+                        posterCardHeight = posterCardStyle.height
                     )
                 }
             }
@@ -590,9 +607,15 @@ fun GridHomeContent(
                     GridContinueWatchingSection(
                         modifier = Modifier.fillMaxWidth(),
                         fullWidth = gridWidth,
-                        items = uiState.upcomingItems.withCustomPosterUrls(
-                            com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
-                        ),
+                        items = remember(
+                            uiState.upcomingItems,
+                            uiState.customPosterUrlPattern,
+                            uiState.customPosterEnabledScreens,
+                        ) {
+                            uiState.upcomingItems.withCustomPosterUrls(
+                                com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
+                            )
+                        },
                         title = stringResource(R.string.upcoming_section_title),
                         lastFocusedIndex = lastFocusedUpcomingIndex,
                         focusRequesters = upcomingFocusRequesters,
@@ -635,7 +658,9 @@ fun GridHomeContent(
                         blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
                         useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
                         cardStyle = uiState.continueWatchingCardStyle,
-                        cornerRadius = posterCardStyle.cornerRadius
+                        cornerRadius = posterCardStyle.cornerRadius,
+                        posterCardWidth = posterCardStyle.width,
+                        posterCardHeight = posterCardStyle.height
                     )
                 }
             }
@@ -664,33 +689,35 @@ fun GridHomeContent(
                     }
                 ) { (gridItem, itemKey) ->
                 when (gridItem) {
-                    is GridItem.Hero -> {
-                        HeroCarousel(
-                            items = gridItem.items.asStable(),
-                            focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
-                            showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
-                            initialActiveIndex = savedHeroIndex.intValue,
-                            onItemFocus = {
-                                lastFocusedGridItemKey.value = "hero"
-                                activeCwRowKey.value = null
-                            },
-                            onActiveItemChanged = { item ->
-                                val idx = gridItem.items.indexOfFirst { it.id == item.id }
-                                if (idx >= 0) savedHeroIndex.intValue = idx
-                            },
-                            onItemClick = remember(onNavigateToDetail) {
-                                { item ->
-                                    onNavigateToDetail(
-                                        item.id,
-                                        item.apiType,
-                                        ""
-                                    )
-                                }
-                            },
-                            fullWidth = gridWidth,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                        is GridItem.Hero -> {
+                            HeroCarousel(
+                                items = gridItem.items.asStable(),
+                                focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
+                                showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                                mdbListShowOnHero = uiState.mdbListShowOnHero,
+                                mdbListRatingOrder = uiState.mdbListRatingOrder,
+                                initialActiveIndex = savedHeroIndex.intValue,
+                                onItemFocus = {
+                                    lastFocusedGridItemKey.value = "hero"
+                                    activeCwRowKey.value = null
+                                },
+                                onActiveItemChanged = { item ->
+                                    val idx = gridItem.items.indexOfFirst { it.id == item.id }
+                                    if (idx >= 0) savedHeroIndex.intValue = idx
+                                },
+                                onItemClick = remember(onNavigateToDetail) {
+                                    { item ->
+                                        onNavigateToDetail(
+                                            item.id,
+                                            item.apiType,
+                                            ""
+                                        )
+                                    }
+                                },
+                                fullWidth = gridWidth,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
 
                     is GridItem.SectionDivider -> {
                         val strTypeMovie = stringResource(R.string.type_movie)
@@ -915,14 +942,22 @@ private fun SeeAllGridCard(
 ) {
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
     val cardDepthStyle = LocalCardDepthStyle.current
+    val globalLandscape = LocalLandscapePosterMode.current
+    val effectiveCardHeight = if (globalLandscape) {
+        posterCardStyle.width / PosterShape.LANDSCAPE.aspectRatio()
+    } else {
+        posterCardStyle.height
+    }
     Column(
-        modifier = modifier.width(posterCardStyle.width)
+        modifier = modifier.then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
     ) {
         Card(
             onClick = onClick,
             modifier = Modifier
-                .width(posterCardStyle.width)
-                .height(posterCardStyle.height)
+                .then(
+                    if (globalLandscape) Modifier.fillMaxWidth().aspectRatio(PosterShape.LANDSCAPE.aspectRatio())
+                    else Modifier.width(posterCardStyle.width).height(effectiveCardHeight)
+                )
                 .onFocusChanged { if (it.isFocused) onFocused() }
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             shape = CardDefaults.shape(
@@ -976,7 +1011,7 @@ private fun SeeAllGridCard(
         // Reserve space for label to match other grid cards
         Spacer(
             modifier = Modifier
-                .width(posterCardStyle.width)
+                .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
                 .padding(top = NuvioTheme.spacing.sm)
                 .height(MaterialTheme.typography.titleMedium.lineHeight.value.dp)
         )

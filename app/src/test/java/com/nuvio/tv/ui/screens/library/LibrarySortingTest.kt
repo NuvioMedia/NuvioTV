@@ -23,10 +23,10 @@ class LibrarySortingTest {
     val mainDispatcher = MainDispatcherRule()
 
     @Test
-    fun `MDBList provider order keeps the zero ranked title first`() = runTest {
+    fun `MDBList provider order follows the order MDBList returns rather than item ranks`() = runTest {
         val f = LibraryViewModelTestFixture()
         val items = decodeMdbListLibraryPage("""[
-            {"id":1,"mediatype":"movie","title":"Zulu","rank":0},
+            {"id":1,"mediatype":"movie","title":"Zulu","rank":5},
             {"id":2,"mediatype":"movie","title":"Alpha","rank":1}
         ]""").items
         f.items.value = MdbListLibraryProjection(MdbListLibrarySnapshot(itemsByList = mapOf(f.tab.key to items))).entries
@@ -61,6 +61,26 @@ class LibrarySortingTest {
     }
 
     @Test
+    fun `release sorts use the provider release order in both directions`() = runTest {
+        val requested = mutableListOf<Boolean>()
+        val sorter = object : TrackingLibrarySorter {
+            override fun observeAddedOrder(listKey: String, descending: Boolean) = flowOf<List<String>?>(null)
+            override fun observeReleaseOrder(listKey: String, descending: Boolean) = flowOf(
+                listOf("series:tmdb:1", "movie:tmdb:1", "movie:tmdb:2").let { if (descending) it.reversed() else it }
+            ).also { requested += descending }
+        }
+        val f = populatedFixture(sorter)
+        runCurrent()
+        f.viewModel.onSelectSortOption(LibrarySortOption.RELEASED_DESC)
+        runCurrent()
+        assertEquals(listOf("Bravo", "Zulu", "Alpha"), f.viewModel.uiState.value.visibleItems.map { it.name })
+        f.viewModel.onSelectSortOption(LibrarySortOption.RELEASED_ASC)
+        runCurrent()
+        assertEquals(listOf("Alpha", "Zulu", "Bravo"), f.viewModel.uiState.value.visibleItems.map { it.name })
+        assertEquals(listOf(true, false), requested)
+    }
+
+    @Test
     fun `late provider order cannot replace a newly selected title sort`() = runTest {
         val order = MutableStateFlow<List<String>?>(null)
         val sorter = object : TrackingLibrarySorter {
@@ -75,7 +95,7 @@ class LibrarySortingTest {
         order.value = listOf("movie:tmdb:1", "movie:tmdb:2", "series:tmdb:1")
         runCurrent()
         assertEquals(listOf("Alpha", "Bravo", "Zulu"), f.viewModel.uiState.value.visibleItems.map { it.name })
-        assertNull(f.viewModel.uiState.value.providerAddedOrder)
+        assertNull(f.viewModel.uiState.value.providerSortOrder)
     }
 
     @Test
@@ -97,7 +117,7 @@ class LibrarySortingTest {
         first.value = listOf("movie:tmdb:1", "movie:tmdb:2", "series:tmdb:1")
         runCurrent()
         assertEquals(listOf("Bravo", "Alpha", "Zulu"), f.viewModel.uiState.value.visibleItems.map { it.name })
-        assertEquals(other.key, f.viewModel.uiState.value.providerAddedOrder!!.listKey)
+        assertEquals(other.key, f.viewModel.uiState.value.providerSortOrder!!.listKey)
     }
 
     @Test
@@ -153,18 +173,20 @@ class LibrarySortingTest {
     fun `all MDBList sort options reorder decoded entries when rank and added dates exist`() = runTest {
         val f = LibraryViewModelTestFixture()
         val items = decodeMdbListLibraryPage("""{"items":[
-            {"id":1,"mediatype":"movie","title":"Zulu","rank":2,"added_at":"2026-09-01T00:00:00Z"},
-            {"id":2,"mediatype":"show","title":"The Alpha","rank":3,"added_at":"2026-09-03T00:00:00Z"},
-            {"id":3,"mediatype":"movie","title":"Bravo","rank":1,"added_at":"2026-09-02T00:00:00Z"}
+            {"id":1,"mediatype":"movie","title":"Zulu","rank":2,"added_at":"2026-09-01T00:00:00Z","release_year":1999},
+            {"id":2,"mediatype":"show","title":"The Alpha","rank":3,"added_at":"2026-09-03T00:00:00Z","release_year":2024},
+            {"id":3,"mediatype":"movie","title":"Bravo","rank":1,"added_at":"2026-09-02T00:00:00Z","release_year":2010}
         ]}""").items
         f.items.value = MdbListLibraryProjection(MdbListLibrarySnapshot(
             itemsByList = mapOf(f.tab.key to items)
         )).entries
         runCurrent()
         val expected = mapOf(
-            LibrarySortOption.DEFAULT to listOf("Bravo", "Zulu", "The Alpha"),
+            LibrarySortOption.DEFAULT to listOf("Zulu", "The Alpha", "Bravo"),
             LibrarySortOption.ADDED_DESC to listOf("The Alpha", "Bravo", "Zulu"),
             LibrarySortOption.ADDED_ASC to listOf("Zulu", "Bravo", "The Alpha"),
+            LibrarySortOption.RELEASED_DESC to listOf("The Alpha", "Bravo", "Zulu"),
+            LibrarySortOption.RELEASED_ASC to listOf("Zulu", "Bravo", "The Alpha"),
             LibrarySortOption.TITLE_ASC to listOf("The Alpha", "Bravo", "Zulu"),
             LibrarySortOption.TITLE_DESC to listOf("Zulu", "Bravo", "The Alpha")
         )

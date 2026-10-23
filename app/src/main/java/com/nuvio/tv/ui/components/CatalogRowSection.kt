@@ -71,6 +71,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.stableItemKey
 import com.nuvio.tv.domain.model.stableItemKeys
 import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
+import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.contentTextDirection
@@ -456,11 +457,14 @@ fun CatalogRowSection(
             if (!showSeeAll && catalogRow.isLoading) {
                 item(key = "${catalogRow.type}_${catalogRow.catalogId}_loading") {
                     val cardDepthStyle = LocalCardDepthStyle.current
+                    val globalLandscape = LocalLandscapePosterMode.current
+                    val loadingCardWidth = if (globalLandscape) posterCardStyle.height else posterCardStyle.width
+                    val loadingCardHeight = if (globalLandscape) posterCardStyle.height / PosterShape.LANDSCAPE.aspectRatio() else posterCardStyle.height
                     Card(
                         onClick = {},
                         modifier = Modifier
-                            .width(posterCardStyle.width)
-                            .height(posterCardStyle.height)
+                            .width(loadingCardWidth)
+                            .height(loadingCardHeight)
                             .focusProperties { canFocus = false },
                         shape = CardDefaults.shape(shape = seeAllCardShape),
                         colors = CardDefaults.colors(
@@ -487,11 +491,14 @@ fun CatalogRowSection(
             if (showSeeAll) {
                 item(key = "${catalogRow.type}_${catalogRow.catalogId}_see_all") {
                     val cardDepthStyle = LocalCardDepthStyle.current
+                    val globalLandscape = LocalLandscapePosterMode.current
+                    val seeAllCardWidth = if (globalLandscape) posterCardStyle.height else posterCardStyle.width
+                    val seeAllCardHeight = if (globalLandscape) posterCardStyle.height / PosterShape.LANDSCAPE.aspectRatio() else posterCardStyle.height
                     Card(
                         onClick = onSeeAll,
                         modifier = Modifier
-                            .width(posterCardStyle.width)
-                            .height(posterCardStyle.height)
+                            .width(seeAllCardWidth)
+                            .height(seeAllCardHeight)
                             .then(directionalFocusModifier),
                         shape = CardDefaults.shape(shape = seeAllCardShape),
                         colors = CardDefaults.colors(

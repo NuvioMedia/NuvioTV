@@ -129,10 +129,11 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
 @OptIn(FlowPreview::class)
 internal fun HomeViewModel.observeInstalledAddonsPipeline() {
     viewModelScope.launch {
-        addonRepository.getInstalledAddons()
+        combine(addonRepository.getInstalledAddons(), serverCatalog.addons) { installed, servers ->
+            installed.enabledAddons() + servers
+        }
             .distinctUntilChanged()
-            .collectLatest { installedAddons ->
-                val addons = installedAddons.enabledAddons()
+            .collectLatest { addons ->
                 addonsCache = addons
                 loadAllCatalogsPipeline(addons)
             }
@@ -197,7 +198,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     try {
         if (addons.isEmpty()) {
             catalogsLoadInProgress = false
-            _uiState.update { it.copy(isLoading = false, error = appContext.getString(R.string.home_error_no_addons)) }
+            _uiState.update { it.copy(isLoading = false, error = appContext.getString(R.string.home_empty_no_sources_title)) }
             return
         }
 
@@ -445,6 +446,8 @@ internal fun HomeViewModel.loadCatalogPipeline(
                         if (!isRefresh || !mergeRefreshedCatalogRow(key, result.data, requestedByUser, forceReplace)) {
                             replaceCatalogRow(key, result.data)
                         }
+                        // Trigger MDBList batch for newly loaded catalog data.
+                        onCatalogRowItemsChanged(key)
                         // Remove placeholder descriptor now that real data is available
                         synchronized(catalogStateLock) {
                             placeholderDescriptors.removeAll { it.catalogKey == key }
@@ -554,6 +557,7 @@ internal fun HomeViewModel.loadMoreCatalogItemsPipeline(catalogId: String, addon
                     }
                     _loadingCatalogs.update { it - key }
                     scheduleUpdateCatalogRows()
+                    onCatalogRowItemsChanged(key)
                 }
                 is NetworkResult.Error -> {
                     updateCatalogRow(key) { it.copy(isLoading = false) }
@@ -1159,6 +1163,7 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
             HomeViewModel.TAG,
             "Home catalog refresh: +${added.size} item(s) catalogId=${fresh.catalogId}"
         )
+        onCatalogRowItemsChanged(key)
         return true
     }
 

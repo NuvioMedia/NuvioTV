@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.mdblist
 
+import android.util.Log
 import com.nuvio.tv.core.tracking.TrackingListManager
 import com.nuvio.tv.core.tracking.TrackingLibrarySorter
 import com.nuvio.tv.core.tracking.TrackingRefreshGate
@@ -31,15 +32,19 @@ class MdbListLibraryService(
     val listSorter: TrackingLibrarySorter = MdbListLibrarySorter(api, sync, auth, activeProfileId)
     private val refreshGate = TrackingRefreshGate()
     private val loadState = MutableStateFlow(LibraryLoadState())
-    private val snapshots = combine(sync.state, auth.state, activeProfileId) { state, authorization, profileId ->
+    private val allSnapshots = combine(sync.state, auth.state, activeProfileId) { state, authorization, profileId ->
         state.snapshot?.library?.takeIf {
             authorization.isAuthenticated && state.scope == authorization.scope && state.scope.profileId == profileId
         }
-    }.distinctUntilChanged().onEach { refreshAsync() }
-    private val projection = snapshots.map { MdbListLibraryProjection(it ?: MdbListLibrarySnapshot()) }
+    }.distinctUntilChanged()
+    private val snapshots = allSnapshots.onEach { refreshAsync() }
+    private val projection = snapshots.map { MdbListLibraryProjection(it?.visible() ?: MdbListLibrarySnapshot()) }
+
+    /** Every list that can be hidden, with whether it is shown in the library, for MDBList settings. */
+    val listOptions = allSnapshots.map { it?.listOptions().orEmpty() }.distinctUntilChanged()
 
     val items = projection.map { it.entries }.onStart { refreshAsync() }.distinctUntilChanged()
-    val tabs = snapshots.map { it?.tabs().orEmpty() }.onStart { refreshAsync() }.distinctUntilChanged()
+    val tabs = snapshots.map { it?.visibleTabs().orEmpty() }.onStart { refreshAsync() }.distinctUntilChanged()
     val isRefreshing = combine(loadState, auth.state, activeProfileId) { state, authorization, profileId ->
         state.refreshing && state.scope == authorization.scope && authorization.isAuthenticated && state.scope.profileId == profileId
     }.distinctUntilChanged()
@@ -52,7 +57,7 @@ class MdbListLibraryService(
         if (sync.currentScope() != scope) throw CancellationException("MDBList account changed")
         val library = sync.currentSnapshot()?.library ?: throw loadState.value.error ?: MdbListDecodingException()
         val target = runCatching { input.mdbListLibraryItem() }.getOrNull()
-        return ListMembershipSnapshot(library.tabs().associate { tab ->
+        return ListMembershipSnapshot(library.visibleTabs().associate { tab ->
             tab.key to library.itemsByList[tab.key].orEmpty().any { item ->
                 target?.matches(item) == true || item.type == mdbListLibraryType(input.itemType) && input.itemId in item.media.ids.aliases()
             }
@@ -63,6 +68,29 @@ class MdbListLibraryService(
         val scope = sync.currentScope()
         refresh(TrackingRefreshIntent.AUTOMATIC)
         writer.applyMembershipChanges(scope, input, changes)
+    }
+
+    suspend fun setListVisible(key: String, visible: Boolean) {
+        val scope = sync.currentScope()
+        sync.mutate(scope) { previous ->
+            val library = previous.library ?: throw MdbListDecodingException()
+            require(library.listOptions().any { it.key == key }) { "This list is no longer available" }
+            if ((key !in library.hiddenListKeys) == visible) return@mutate previous to Unit
+            val updated = if (visible) {
+                // Hidden lists are not synced, so load the items before showing the list again.
+                library.copy(
+                    hiddenListKeys = library.hiddenListKeys - key,
+                    itemsByList = library.itemsByList + (key to MdbListLibraryRemote(api, scope).items(key))
+                )
+            } else {
+                library.copy(
+                    hiddenListKeys = library.hiddenListKeys + key,
+                    itemsByList = library.itemsByList - key,
+                    addedOrders = library.addedOrders - key
+                )
+            }
+            previous.copy(library = updated) to Unit
+        }
     }
 
     suspend fun refresh(intent: TrackingRefreshIntent) {
@@ -78,7 +106,8 @@ class MdbListLibraryService(
                 if (!shouldRefresh(scope, intent)) return@runIfNeeded
                 loadState.value = LibraryLoadState(scope, refreshing = true, attemptedAt = now())
                 sync.mutate(scope) { previous ->
-                    val library = MdbListLibraryRemote(api, scope).synchronize(previous.library, previous.accountId, now())
+                    val library = MdbListLibraryRemote(api, scope).synchronize(previous.library, previous.accountId, now(),
+                        reloadItems = intent == TrackingRefreshIntent.USER_INITIATED)
                     previous.copy(library = library) to Unit
                 }
                 loadState.value = LibraryLoadState(scope)
@@ -86,6 +115,10 @@ class MdbListLibraryService(
                 loadState.value = LibraryLoadState(scope)
                 throw error
             } catch (error: Exception) {
+                val cached = sync.currentSnapshot()?.library
+                Log.w(TAG, "Library refresh failed (cached lists ${cached?.lists?.size ?: 0}, dynamic " +
+                    "${cached?.dynamicLists?.size ?: 0}, liked ${cached?.likedLists?.size ?: 0}, external " +
+                    "${cached?.externalLists?.size ?: 0}, hidden ${cached?.hiddenListKeys?.size ?: 0})", error)
                 loadState.value = LibraryLoadState(scope, error = error, attemptedAt = now())
             }
         }
@@ -105,6 +138,10 @@ class MdbListLibraryService(
         if (state?.error != null && time - state.attemptedAt in 0 until MdbListSyncRepository.ERROR_RETRY_MS) return false
         val library = sync.currentSnapshot()?.library ?: return true
         return library.invalidated || library.checkedAtEpochMs?.let { time - it !in 0 until MdbListSyncRepository.AUTOMATIC_INTERVAL_MS } != false
+    }
+
+    private companion object {
+        const val TAG = "MdbListLibrary"
     }
 
     private data class LibraryLoadState(

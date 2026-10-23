@@ -447,13 +447,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">使用体验</string>
-    <string name="settings_experience_subtitle">基础或高级</string>
     <string name="settings_account">账户</string>
-    <string name="settings_account_subtitle">账户与同步状态</string>
     <string name="settings_profiles">个人资料</string>
-    <string name="settings_profiles_subtitle">管理用户个人资料</string>
     <string name="settings_layout">布局</string>
-    <string name="settings_layout_subtitle">首页结构与海报样式</string>
     <string name="settings_content_discovery">内容与发现</string>
     <string name="settings_content_discovery_subtitle">扩展、插件、目录与发现来源</string>
     <string name="settings_content_discovery_addons_subtitle">管理扩展、目录顺序和收藏</string>
@@ -462,10 +458,8 @@
     <string name="settings_plugins_subtitle">仓库与提供者</string>
     <string name="settings_integration">集成</string>
     <string name="settings_playback">播放</string>
-    <string name="settings_playback_subtitle">播放器、字幕与自动播放</string>
     <string name="settings_trakt_subtitle">打开 Trakt 连接画面</string>
     <string name="settings_tracking_title">追踪</string>
-    <string name="settings_tracking_subtitle">管理您的追踪账户</string>
     <string name="settings_tracking_description">连接追踪提供者，并选择由哪一个为您提供媒体库和继续观看数据。</string>
     <string name="tracking_accounts_title">账户</string>
     <string name="tracking_accounts_subtitle">连接并管理追踪服务</string>
@@ -492,7 +486,6 @@
     <string name="tracking_trakt_progress_required">当 Trakt 为观看进度来源时可用</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
-    <string name="settings_about_subtitle">版本与政策</string>
     <string name="settings_network">网络速度</string>
     <string name="settings_network_subtitle">延迟与下载诊断</string>
     <string name="settings_advanced">高级</string>
@@ -624,7 +617,6 @@
     <string name="advanced_confirm_exit_subtitle">退出时完全终止应用并释放内存。需要按两次返回键以确认。</string>
     <string name="confirm_exit_toast">再按一次返回键退出</string>
     <string name="settings_debug">调试</string>
-    <string name="settings_debug_subtitle">开发者工具与功能开关</string>
     <string name="settings_plugins_section_subtitle">管理仓库、提供者和插件状态</string>
     <string name="settings_account_section_subtitle">账户与同步状态</string>
     <string name="account_stat_addons">扩展</string>
@@ -711,8 +703,6 @@
     <string name="contributors_hide_kofi_qr">隐藏 Ko-fi QR 码</string>
     <string name="contributors_profile_unavailable">GitHub 个人资料链接不可用。</string>
 
-    <string name="playback_section_general">常规</string>
-    <string name="playback_section_general_desc">核心播放行为。</string>
     <string name="playback_loading_overlay">加载覆盖层</string>
     <string name="playback_loading_overlay_sub">在出现第一个视频画面之前显示加载画面。</string>
     <string name="playback_pause_overlay">暂停覆盖层</string>
@@ -736,9 +726,6 @@
     <string name="skip_movie_credits">跳过片尾字幕</string>
     <string name="skip_to_post_credits">跳到片尾彩蛋</string>
     <string name="playback_auto_frame_rate">自动帧率与分辨率</string>
-    <string name="playback_section_player">播放器与流选择</string>
-    <string name="playback_section_player_desc">播放器偏好、自动播放和来源过滤。</string>
-    <string name="playback_player">播放器</string>
     <string name="playback_player_internal">内置</string>
     <string name="playback_player_external">外部</string>
     <string name="playback_player_ask">每次都询问</string>
@@ -751,12 +738,8 @@
     <string name="playback_external_forward_subtitles_sub">从扩展获取您偏好语言的字幕，并传递给外部播放器。</string>
     <string name="playback_external_send_skip_segments">发送片头和片尾时间戳</string>
     <string name="playback_external_send_skip_segments_sub">将解析出的片头/片尾跳过时间戳传递给外部播放器以实现自动跳过。仅适用于支持该功能的播放器；其他播放器会忽略。</string>
-    <string name="playback_section_audio">音频与视频</string>
-    <string name="playback_section_audio_desc">音频控制和视频兼容性。</string>
     <string name="playback_section_subtitles">字幕</string>
     <string name="playback_section_subtitles_desc">语言、样式和渲染模式。</string>
-    <string name="playback_afr_open">开启</string>
-    <string name="playback_afr_closed">关闭</string>
     <string name="playback_afr_off">关闭</string>
     <string name="playback_afr_off_sub">不更改显示器刷新率。</string>
     <string name="playback_afr_on_start">开始时切换</string>
@@ -886,15 +869,6 @@
     <string name="sub_libass">对 ASS/SSA 字幕使用 libass</string>
     <string name="sub_libass_sub">实验性：高级 ASS/SSA 渲染 (样式、定位、动画)</string>
     <string name="sub_libass_mode">Libass 渲染模式</string>
-    <string name="sub_mode_overlay_gl">覆盖 OpenGL (推荐)</string>
-    <string name="sub_mode_overlay_gl_sub">最佳品质，支持 HDR。在独立线程上渲染字幕。</string>
-    <string name="sub_mode_overlay_canvas">覆盖 Canvas</string>
-    <string name="sub_mode_effects_gl">效果 OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">使用 Media3 效果支持动画。比 Canvas 更快。</string>
-    <string name="sub_mode_effects_canvas">效果 Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">使用 Media3 效果搭配 Canvas 渲染支持动画。</string>
-    <string name="sub_mode_standard">标准提示</string>
-    <string name="sub_mode_standard_sub">不支持动画的基本字幕渲染。兼容性最佳。</string>
     <string name="sub_org_none">无 (默认顺序)</string>
     <string name="sub_org_by_lang">按语言</string>
     <string name="sub_org_by_addon">按扩展</string>
@@ -2421,7 +2395,6 @@
     <string name="player_error_failed_start_torrent">启动 torrent 失败：%1$s</string>
 
     <!-- 播放字幕设置 -->
-    <string name="sub_mode_overlay_canvas_sub">支持 HDR 的 Canvas 渲染。可能阻塞 UI 线程。</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
@@ -2969,10 +2942,6 @@
     <string name="network_fast_error_token_missing">fast.com：在 bundle 中找不到令牌</string>
 
     <!-- Torrent 服务 / TorrServer 二进制错误 -->
-    <string name="torrent_error_add_failed">添加 torrent 失败</string>
-    <string name="torrent_error_binary_missing">在 %1$s 找不到 TorrServer 二进制</string>
-    <string name="torrent_error_process_died">TorrServer 进程在启动时终止 (退出代码 %1$d)</string>
-    <string name="torrent_error_start_timeout">TorrServer 在 %1$ds 内无法启动</string>
 
     <!-- 播放器运行时：流 / 外部链接错误 -->
     <string name="player_torrent_starting_engine">正在启动 P2P 引擎…</string>
@@ -3166,8 +3135,6 @@
     <string name="playback_reset_to_default">重置为默认</string>
     <string name="playback_net_custom">自定义网络</string>
     <string name="playback_net_custom_sub">使用多个并行连接来获取渐进式流。关闭时使用单一连接。</string>
-    <string name="playback_net_http2">启用 HTTP/2</string>
-    <string name="playback_net_http2_sub">为网络连接启用 HTTP/2 协议，支持请求多路复用和更快的握手时间。</string>
     <string name="playback_net_parallel">并行连接</string>
     <string name="playback_net_parallel_sub">使用多个并行连接来获取流。当您遇到缓冲但下载速度明显足够时启用。</string>
     <string name="playback_net_connection_count">连接数量</string>

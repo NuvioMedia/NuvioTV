@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.detail
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.background
@@ -89,6 +90,7 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
 import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
+import com.nuvio.tv.ui.components.LightweightCard
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.WatchedMarker
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -110,6 +112,7 @@ private const val EPISODE_SCROLL_REPEAT_THROTTLE_MS = 80L
 private const val EPISODE_RESTORE_FALLBACK_MS = 250L
 private const val EPISODE_RESTORE_FOCUS_ATTEMPTS = 24
 private const val EPISODE_OVERLAY_PREFETCH_DELAY_MS = 120L
+private const val SEASON_EDGE_PIN_COUNT = 4
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -142,7 +145,10 @@ fun SeasonTabs(
     val tabTextStyle = remember(typography) { typography.titleMedium }
     val textSecondary = NuvioTheme.extendedColors.textSecondary
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val lazyListState = rememberLazyListState()
+    val initialSeasonIndex = remember(sortedSeasons, selectedSeason) {
+        (sortedSeasons.indexOf(selectedSeason) - (SEASON_EDGE_PIN_COUNT - 1)).coerceAtLeast(0)
+    }
+    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialSeasonIndex)
 
     var suppressFocusSwitch by remember { mutableStateOf(false) }
     var lastAppliedSeason by remember { mutableStateOf(selectedSeason) }
@@ -168,22 +174,80 @@ fun SeasonTabs(
     LaunchedEffect(sortedSeasons, selectedSeason) {
         val selectedIndex = sortedSeasons.indexOf(selectedSeason)
         if (selectedIndex < 0) return@LaunchedEffect
-        val layoutInfo = snapshotFlow { lazyListState.layoutInfo }
-            .first { it.visibleItemsInfo.isNotEmpty() }
-        val visible = layoutInfo.visibleItemsInfo
-        if (visible.any { it.index == selectedIndex }) return@LaunchedEffect
-        val viewportSize = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
-        val approxItemSize = visible.lastOrNull()?.size
-            ?: visible.firstOrNull()?.size
-            ?: 0
-        val trailingOffset = -(viewportSize - approxItemSize).coerceAtLeast(0)
-        suppressFocusSwitch = true
-        if (selectedIndex > (visible.lastOrNull()?.index ?: -1)) {
-            lazyListState.scrollToItem(selectedIndex, scrollOffset = trailingOffset)
-        } else {
-            lazyListState.scrollToItem(selectedIndex)
+        val lastIndex = sortedSeasons.lastIndex
+        val pinToStart = selectedIndex < SEASON_EDGE_PIN_COUNT
+        val pinToEnd = selectedIndex > lastIndex - SEASON_EDGE_PIN_COUNT
+        var attempts = 0
+        while (attempts < 2) {
+            attempts++
+            val info = snapshotFlow { lazyListState.layoutInfo }
+                .first { it.visibleItemsInfo.isNotEmpty() }
+            val visible = info.visibleItemsInfo
+            val contentEnd = info.viewportEndOffset - info.afterContentPadding
+            if (pinToStart) {
+                if (lazyListState.firstVisibleItemIndex != 0 || lazyListState.firstVisibleItemScrollOffset != 0) {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(0)
+                    suppressFocusSwitch = false
+                }
+                return@LaunchedEffect
+            }
+            if (pinToEnd) {
+                val lastItem = visible.firstOrNull { it.index == lastIndex }
+                if (lastItem == null) {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(
+                        lastIndex,
+                        scrollOffset = -(contentEnd - visible.last().size).coerceAtLeast(0)
+                    )
+                    suppressFocusSwitch = false
+                    snapshotFlow { lazyListState.layoutInfo }
+                        .first { it.visibleItemsInfo.any { it.index == lastIndex } }
+                    continue
+                }
+                if (lastItem.offset + lastItem.size > contentEnd) {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(
+                        lastIndex,
+                        scrollOffset = -(contentEnd - lastItem.size)
+                    )
+                    suppressFocusSwitch = false
+                }
+                return@LaunchedEffect
+            }
+            val item = visible.firstOrNull { it.index == selectedIndex }
+            if (item == null) {
+                suppressFocusSwitch = true
+                if (selectedIndex > visible.last().index) {
+                    lazyListState.scrollToItem(
+                        selectedIndex,
+                        scrollOffset = -(contentEnd - visible.last().size).coerceAtLeast(0)
+                    )
+                } else {
+                    lazyListState.scrollToItem(selectedIndex)
+                }
+                suppressFocusSwitch = false
+                snapshotFlow { lazyListState.layoutInfo }
+                    .first { it.visibleItemsInfo.any { it.index == selectedIndex } }
+                continue
+            }
+            when {
+                item.offset < 0 -> {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(selectedIndex)
+                    suppressFocusSwitch = false
+                }
+                item.offset + item.size > contentEnd -> {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(
+                        selectedIndex,
+                        scrollOffset = -(contentEnd - item.size)
+                    )
+                    suppressFocusSwitch = false
+                }
+            }
+            break
         }
-        suppressFocusSwitch = false
     }
 
     val restorerRequester = remember(lastFocusedSeason, selectedSeason, selectedTabFocusRequester) {
@@ -522,6 +586,9 @@ fun EpisodesRow(
                 }
             } ?: false,
             onDismiss = { optionsEpisode = null },
+            onNavigateEpisode = { step ->
+                adjacentEpisode(dedupedEpisodes, selectedEpisode, step)?.let { optionsEpisode = it }
+            },
             isPlayEnabled = canPlayEpisode(selectedEpisode),
             onPlay = {
                 onEpisodeClick(selectedEpisode)
@@ -664,7 +731,7 @@ private fun EpisodeCard(
     }
     val ratingStyle = remember(typography) {
         typography.labelSmall.copy(
-            color = Color(0xFFF5C518),
+            color = NuvioPrimitives.imdb,
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -741,24 +808,11 @@ private fun EpisodeCard(
         episode.episode?.let { number -> "$prefix $number" } ?: prefix
     }
 
-    val primaryColor = NuvioTheme.colors.Primary
+    val primaryColor = NuvioTheme.colors.Secondary
     val textPrimary = NuvioTheme.colors.TextPrimary
     val focusRingBorder = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)
-    val cardShape = CardDefaults.shape(shape = shape)
-    val cardColors = CardDefaults.colors(
-        containerColor = Color.Transparent,
-        focusedContainerColor = Color.Transparent
-    )
-    val cardBorder = CardDefaults.border(
-        focusedBorder = Border(
-            border = focusRingBorder,
-            shape = shape
-        )
-    )
-    val cardScale = CardDefaults.scale(focusedScale = 1.0f)
-    val cardGlow = CardDefaults.glow()
 
-    Card(
+    LightweightCard(
         onClick = {
             if (longPressTriggered) {
                 longPressTriggered = false
@@ -811,11 +865,12 @@ private fun EpisodeCard(
                     down = downFocusRequester
                 }
             },
-        shape = cardShape,
-        colors = cardColors,
-        border = cardBorder,
-        scale = cardScale,
-        glow = cardGlow
+        shape = shape,
+        containerColor = Color.Transparent,
+        focusedBorder = Border(
+            border = focusRingBorder,
+            shape = shape
+        )
     ) {
         Box(
             modifier = Modifier
@@ -1010,9 +1065,9 @@ private fun EpisodeCard(
             if (showCompletedBadge) {
                 WatchedMarker(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
+                        .align(Alignment.TopEnd)
                         .padding(
-                            start = cardMetrics.statusBadgeInset,
+                            end = cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
                         ),
                     size = cardMetrics.statusBadgeSize,
@@ -1023,9 +1078,10 @@ private fun EpisodeCard(
             if (isUnavailable) {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(if (showCompletedBadge) Alignment.TopStart else Alignment.TopEnd)
                         .padding(
-                            end = cardMetrics.statusBadgeInset,
+                            start = if (showCompletedBadge) cardMetrics.statusBadgeInset else 0.dp,
+                            end = if (showCompletedBadge) 0.dp else cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
                         )
                         .background(
@@ -1047,9 +1103,9 @@ private fun EpisodeCard(
                 val dashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f) }
                 Canvas(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
+                        .align(Alignment.TopEnd)
                         .padding(
-                            start = cardMetrics.statusBadgeInset,
+                            end = cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
                         )
                         .size(cardMetrics.statusBadgeSize)

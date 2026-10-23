@@ -7,6 +7,9 @@ package com.nuvio.tv.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +63,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.exp
+import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @Composable
 fun SynopsisDescription(
@@ -121,6 +125,7 @@ fun SynopsisDescription(
                         indication = null,
                         onClick = onShowFullDescription
                     )
+                    .semantics { role = Role.Button }
                     .padding(horizontal = highlightInset, vertical = 8.dp)
             } else {
                 Modifier
@@ -208,6 +213,7 @@ fun SynopsisOverlay(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
                 .fillMaxSize()

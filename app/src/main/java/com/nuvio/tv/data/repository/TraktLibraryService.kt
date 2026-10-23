@@ -370,7 +370,8 @@ class TraktLibraryService @Inject constructor(
             addonBaseUrl = item.addonBaseUrl,
             imdbId = item.imdbId,
             tmdbId = item.tmdbId,
-            traktId = item.traktId
+            traktId = item.traktId,
+            rawPosterUrl = item.poster
         )).copy(
             listedAt = System.currentTimeMillis(),
             listKeys = existing?.listKeys.orEmpty() + listKey
@@ -705,7 +706,8 @@ class TraktLibraryService @Inject constructor(
             traktRank = item.rank,
             imdbId = ids?.imdb?.takeIf { it.isNotBlank() },
             tmdbId = ids?.tmdb,
-            traktId = ids?.trakt
+            traktId = ids?.trakt,
+            rawPosterUrl = images.traktBestPosterUrl()
         )
     }
 

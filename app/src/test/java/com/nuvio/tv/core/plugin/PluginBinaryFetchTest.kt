@@ -58,6 +58,7 @@ class PluginBinaryFetchTest {
             String::class.java,
             String::class.java,
             String::class.java,
+            Boolean::class.javaPrimitiveType,
             MutableSet::class.java
         ).apply { isAccessible = true }
             .invoke(
@@ -67,6 +68,7 @@ class PluginBinaryFetchTest {
                 """{"Content-Type":"application/octet-stream"}""",
                 bodyKind,
                 body,
+                true,
                 mutableSetOf<Call>()
             )
             .let { JsonParser.parseString(it as String).asJsonObject }

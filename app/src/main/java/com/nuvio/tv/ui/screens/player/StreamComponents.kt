@@ -350,8 +350,8 @@ internal fun AddonFilterChips(
 
     val chipListState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    LaunchedEffect(orderedNames.size, isRtl, chipRowHasFocus) {
-        if (!chipRowHasFocus) {
+    LaunchedEffect(focusedChipIndex) {
+        if (focusedChipIndex >= 0 && !chipRowHasFocus) {
             chipListState.scrollToItem(0)
         }
     }
@@ -359,8 +359,8 @@ internal fun AddonFilterChips(
     // When the selected addon is removed, switch filter to the last available addon
     LaunchedEffect(selectedAddon, orderedNames) {
         if (selectedAddon != null && selectedAddon !in orderedNames) {
-            val lastAddon = orderedNames.lastOrNull()
-            onAddonSelected(lastAddon)
+            val lastIndex = if (hasRefresh) orderedNames.size + 1 else orderedNames.size
+            moveFocusTo(lastIndex.coerceAtLeast(if (hasRefresh) 1 else 0))
         }
     }
 

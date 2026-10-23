@@ -5,6 +5,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import com.nuvio.tv.core.network.IPv4FirstDns
+import com.nuvio.tv.core.network.PlaybackSocketFactory
 import okhttp3.OkHttpClient
 import java.net.HttpURLConnection
 import java.net.URL
@@ -19,6 +20,8 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 internal object PlayerPlaybackNetworking {
+    private const val LOOPBACK_READ_TIMEOUT_SECONDS = 65L
+
     private val trustAllManager = object : X509TrustManager {
         override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
 
@@ -47,9 +50,11 @@ internal object PlayerPlaybackNetworking {
         OkHttpClient.Builder()
             .dispatcher(dispatcher)
             .dns(IPv4FirstDns())
+            .socketFactory(PlaybackSocketFactory)
             .eventListenerFactory(PlaybackConnectionEvents)
             .sslSocketFactory(sslContext.socketFactory, trustAllManager)
             .hostnameVerifier(playbackHostnameVerifier)
+            .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
@@ -72,7 +77,9 @@ internal object PlayerPlaybackNetworking {
         OkHttpClient.Builder()
             .dispatcher(dispatcher)
             .dns(IPv4FirstDns())
+            .socketFactory(PlaybackSocketFactory)
             .eventListenerFactory(PlaybackConnectionEvents)
+            .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
@@ -91,28 +98,25 @@ internal object PlayerPlaybackNetworking {
             .build()
     }
 
-    fun createHttpClient(defaultHeaders: Map<String, String> = emptyMap()): OkHttpClient {
+    fun createHttpClient(
+        defaultHeaders: Map<String, String> = emptyMap(),
+        useLongReadTimeout: Boolean = false
+    ): OkHttpClient {
         val builder = playbackHttpClient.newBuilder()
-        if (defaultHeaders.any { it.key.equals("Authorization", ignoreCase = true) }) {
-            // OkHttp strips the Authorization header on cross-host redirects.
-            // WebDAV servers behind reverse proxies commonly redirect to a
-            // different host/port, causing auth to be lost. A network
-            // interceptor ensures the header is always present on every
-            // outgoing request — same behavior as mpv/curl.
-            val authValue = defaultHeaders.entries
-                .first { it.key.equals("Authorization", ignoreCase = true) }
-                .value
+        if (useLongReadTimeout) {
+            builder.readTimeout(LOOPBACK_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        }
+        val proxyHeaders = defaultHeaders.filterKeys { key ->
+            !key.equals("Range", ignoreCase = true)
+        }
+        if (proxyHeaders.isNotEmpty()) {
             builder.addNetworkInterceptor { chain ->
                 val request = chain.request()
-                if (request.header("Authorization") == null) {
-                    chain.proceed(
-                        request.newBuilder()
-                            .header("Authorization", authValue)
-                            .build()
-                    )
-                } else {
-                    chain.proceed(request)
+                val next = request.newBuilder()
+                for ((key, value) in proxyHeaders) {
+                    next.header(key, value)
                 }
+                chain.proceed(next.build())
             }
         }
         return builder
@@ -121,11 +125,23 @@ internal object PlayerPlaybackNetworking {
     }
 
     @UnstableApi
-    fun createHttpDataSourceFactory(defaultHeaders: Map<String, String> = emptyMap()): DataSource.Factory {
-        val client = createHttpClient(defaultHeaders)
+    fun createHttpDataSourceFactory(
+        defaultHeaders: Map<String, String> = emptyMap(),
+        useLongReadTimeout: Boolean = false
+    ): DataSource.Factory {
+        val requestHeaders = defaultHeaders.mapNotNull { (rawKey, rawValue) ->
+            val key = rawKey.trim()
+            val value = rawValue.trim()
+            if (key.isEmpty() || value.isEmpty() || key.equals("Range", ignoreCase = true)) {
+                null
+            } else {
+                key to value
+            }
+        }.toMap()
+        val client = createHttpClient(requestHeaders, useLongReadTimeout)
         val httpFactory = OkHttpDataSource.Factory(client).apply {
-            setDefaultRequestProperties(defaultHeaders)
-            if (defaultHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
+            setDefaultRequestProperties(requestHeaders)
+            if (requestHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
                 setUserAgent(PlayerMediaSourceFactory.DEFAULT_USER_AGENT)
             }
         }

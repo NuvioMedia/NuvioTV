@@ -55,8 +55,8 @@ class DebridStreamPresentation @Inject constructor(
             val debridStreams = visibleStreams.filter { stream -> stream.isManagedDebridStream() }
             if (debridStreams.isEmpty()) return@map group.copy(streams = visibleStreams)
 
-            val presentedDebridStreams = DirectDebridStreamFilter.applyPreferences(debridStreams, settings)
-                .map { stream -> formatter.format(stream, settings, badgeFilters) }
+            val presentedDebridStreams = DirectDebridStreamFilter.applyPreferencesWithFacts(debridStreams, settings)
+                .map { (stream, facts) -> formatter.format(stream, settings, badgeFilters, facts) }
             val passthroughStreams = visibleStreams.filterNot { stream -> stream.isManagedDebridStream() }
 
             group.copy(streams = presentedDebridStreams + passthroughStreams)

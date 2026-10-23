@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.screens.home.shuffleFocusKey
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.layout.Arrangement
@@ -62,7 +64,9 @@ fun GridContinueWatchingSection(
     blurUnwatchedEpisodes: Boolean = false,
     useEpisodeThumbnails: Boolean = true,
     cardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
-    cornerRadius: Dp = NuvioTheme.radii.md
+    cornerRadius: Dp = NuvioTheme.radii.md,
+    posterCardWidth: Dp? = null,
+    posterCardHeight: Dp? = null
 ) {
     if (items.isEmpty()) return
 
@@ -134,7 +138,7 @@ fun GridContinueWatchingSection(
             itemsIndexed(
                 items = items,
                 key = { _, item ->
-                    when (item) {
+                    item.shuffleFocusKey ?: when (item) {
                         is ContinueWatchingItem.InProgress ->
                             "cw_${item.progress.contentId}_${item.progress.videoId}_${item.progress.season ?: -1}_${item.progress.episode ?: -1}"
                         is ContinueWatchingItem.NextUp ->
@@ -168,12 +172,12 @@ fun GridContinueWatchingSection(
                             }
                         },
                     cardWidth = when (cardStyle) {
-                        ContinueWatchingCardStyle.POSTER -> 120.dp
+                        ContinueWatchingCardStyle.POSTER -> posterCardWidth ?: posterCardHeight?.let { it * (2f / 3f) } ?: 120.dp
                         ContinueWatchingCardStyle.WIDE -> 320.dp
                         ContinueWatchingCardStyle.CARD -> 220.dp
                     },
                     imageHeight = when (cardStyle) {
-                        ContinueWatchingCardStyle.POSTER -> 180.dp
+                        ContinueWatchingCardStyle.POSTER -> posterCardHeight ?: posterCardWidth?.let { it * 1.5f } ?: 180.dp
                         ContinueWatchingCardStyle.WIDE -> 128.dp
                         ContinueWatchingCardStyle.CARD -> 124.dp
                     }

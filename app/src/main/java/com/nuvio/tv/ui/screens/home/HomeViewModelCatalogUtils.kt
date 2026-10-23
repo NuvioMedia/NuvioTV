@@ -116,8 +116,23 @@ internal fun HomeViewModel.readCatalogRow(key: String): CatalogRow? = synchroniz
 
 internal fun HomeViewModel.replaceCatalogRow(key: String, row: CatalogRow) {
     synchronized(catalogStateLock) {
-        val previousRow = catalogsMap.put(key, row)
-        reindexCatalogRow(key, previousRow, row)
+        val previousRow = catalogsMap[key]
+        val previousById = previousRow?.items?.associateBy { it.id }
+        val mergedItems = if (previousById != null) {
+            row.items.map { newItem ->
+                val prev = previousById[newItem.id]
+                if (prev?.mdbListRatings != null && newItem.mdbListRatings == null) {
+                    newItem.copy(
+                        mdbListRatings = prev.mdbListRatings,
+                        mdbListRatingOrder = prev.mdbListRatingOrder,
+                        imdbRating = prev.mdbListRatings.imdb?.toFloat() ?: newItem.imdbRating
+                    )
+                } else newItem
+            }
+        } else row.items
+        val mergedRow = if (mergedItems !== row.items) row.copy(items = mergedItems) else row
+        catalogsMap.put(key, mergedRow)
+        reindexCatalogRow(key, previousRow, mergedRow)
     }
 }
 
@@ -341,10 +356,6 @@ internal fun HomeViewModel.disableCatalogKey(
     catalogName: String
 ): String {
     return "${addonBaseUrl}_${catalogTypeKey(type)}_${catalogId}_${catalogName}"
-}
-
-internal fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
-    return extra.any { extra -> extra.name.equals("search", ignoreCase = true) && extra.isRequired }
 }
 
 internal fun CatalogDescriptor.shouldShowOnHome(): Boolean {

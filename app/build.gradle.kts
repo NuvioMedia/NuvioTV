@@ -9,8 +9,38 @@ plugins {
     alias(libs.plugins.sentry.android.gradle)
 }
 
+import com.android.build.gradle.internal.tasks.CompileArtProfileTask
+import com.android.build.gradle.internal.tasks.L8DexDesugarLibTask
 import java.io.File
 import java.util.Properties
+
+// Copies the per-API dex metadata (.dm) files AGP builds next to the binary ART profile into the APK's assets, so the
+// in-app updater can install the next version together with its profile and have it compiled at install time.
+abstract class EmbedUpdateDexMetadataTask : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val dexMetadataDirectory: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun embed() {
+        val target = outputDirectory.get().asFile.resolve("updater_dm")
+        target.deleteRecursively()
+        target.mkdirs()
+        val source = dexMetadataDirectory.files.firstOrNull { it.resolve("dex-metadata-map.properties").exists() } ?: return
+        val apiToFile = Properties().apply { source.resolve("dex-metadata-map.properties").inputStream().use(::load) }
+        // Written by hand instead of Properties.store, which adds a timestamp and would make the APK non-reproducible.
+        val indexLines = apiToFile.stringPropertyNames().sortedBy { it.toInt() }.map { api ->
+            val relativePath = apiToFile.getProperty(api)
+            val fileName = relativePath.substringBefore('/') + ".dm"
+            source.resolve(relativePath).copyTo(target.resolve(fileName), overwrite = true)
+            "$api=$fileName"
+        }
+        target.resolve("index.properties").writeText(indexLines.joinToString("\n", postfix = "\n"))
+    }
+}
 
 fun parseBooleanProperty(value: String?): Boolean {
     val normalized = value?.trim()?.lowercase() ?: return false
@@ -105,8 +135,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1064
-        versionName = "1.1.0-beta.1"
+        versionCode = 1071
+        versionName = "1.1.0-beta.8"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -194,7 +224,7 @@ android {
     buildTypes {
         debug {
             signingConfig = signingConfigs.getByName("release")
-            isDebuggable = false
+            isDebuggable = parseBooleanProperty(providers.gradleProperty("debuggable").orNull)
             isMinifyEnabled = false
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
@@ -322,8 +352,7 @@ android {
                 "lib/*/libavformat.so",
                 "lib/*/libavutil.so",
                 "lib/*/libswscale.so",
-                "lib/*/libswresample.so",
-                "lib/*/libtorrserver.so"
+                "lib/*/libswresample.so"
             )
         }
     }
@@ -337,6 +366,26 @@ androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         val isPlaystore = variant.productFlavors.any { it.second == "playstore" }
         variant.applicationId.set(if (isPlaystore) "com.nuvio.appdebug" else "com.nuviodebug.com")
+    }
+    // Only the full flavor ships the in-app updater.
+    onVariants(selector().withFlavor("distribution" to "full")) { variant ->
+        val variantName = variant.name.replaceFirstChar { it.uppercase() }
+        val embedTask = tasks.register<EmbedUpdateDexMetadataTask>("embed${variantName}UpdateDexMetadata") {
+            dexMetadataDirectory.from(provider {
+                tasks.withType<CompileArtProfileTask>()
+                    .matching { it.name == "compile${variantName}ArtProfile" }
+                    .map { it.dexMetadataDirectory }
+            })
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(embedTask, EmbedUpdateDexMetadataTask::outputDirectory)
+    }
+}
+
+afterEvaluate {
+    tasks.withType<L8DexDesugarLibTask>().configureEach {
+        if (name.endsWith("AndroidTest")) {
+            keepRulesConfigurations.add("-keep class j\$.** { *; }")
+        }
     }
 }
 
@@ -440,7 +489,6 @@ dependencies {
     implementation(libs.coil.svg)
     implementation(libs.coil.network.okhttp)
     implementation(libs.coil.network.cache.control)
-    implementation(libs.lottie.compose)
 
     // Navigation
     implementation(libs.navigation.compose)
@@ -485,14 +533,15 @@ dependencies {
         "libs/lib-decoder-mpegh-release.aar"
     ))
     add("fullImplementation", files("libs/lib-decoder-iamf-release.aar"))
+    implementation(files("libs/lib-nuvio-engine-android-0.1.5.aar"))
     if (useLocalFfmpegDecoder) {
         implementation(project(":ffmpeg-decoder-downmix"))
     } else {
         implementation(files("libs/lib-decoder-ffmpeg-release.aar"))
     }
 
-    // libass-android for ASS/SSA subtitle support (from Maven Central)
-    implementation("io.github.peerless2012:ass-media:0.4.0")
+    // libass - atlas-based subtitle rendering (from NuvioMedia/nuvio-libass)
+    implementation(files("libs/nuvio-libass-release.aar"))
     // Local nextlib-mediainfo fork (static FFmpeg; no libav*.so in final AAR)
     implementation(files("libs/nextlib-mediainfo-local.aar"))
     implementation("io.github.abdallahmehiz:mpv-android-lib:0.1.12")
@@ -531,6 +580,7 @@ dependencies {
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
     implementation(libs.supabase.storage)
+    implementation(libs.supabase.realtime)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.sentry.android)
 

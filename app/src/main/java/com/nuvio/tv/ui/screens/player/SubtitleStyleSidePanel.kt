@@ -54,22 +54,6 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
-private val PANEL_TEXT_COLORS = listOf(
-    Color.White,
-    Color(0xFFD9D9D9),
-    Color(0xFFFFD700),
-    Color(0xFF00E5FF),
-    Color(0xFFFF5C5C),
-    Color(0xFF00FF88)
-)
-
-private val PANEL_OUTLINE_COLORS = listOf(
-    Color.Black,
-    Color.White,
-    Color(0xFF00E5FF),
-    Color(0xFFFF5C5C)
-)
-
 private val StyleCardWidth = 220.dp
 private val StyleCardHeight = 102.dp
 private val StyleCardGap = NuvioTheme.spacing.md
@@ -80,7 +64,8 @@ internal fun SubtitleStyleSidePanel(
     subtitleStyle: SubtitleStyleSettings,
     onEvent: (PlayerEvent) -> Unit,
     modifier: Modifier = Modifier,
-    isStyleDisabledByLibass: Boolean = false
+    isStyleDisabledByLibass: Boolean = false,
+    isEditingHdrStyle: Boolean = false
 ) {
     val firstItemFocusRequester = remember { FocusRequester() }
     val dispatchStyleEvent: (PlayerEvent) -> Unit = { event ->
@@ -172,7 +157,11 @@ internal fun SubtitleStyleSidePanel(
 
             Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 SubtitleStyleSection(
-                    title = stringResource(R.string.subtitle_style_text_color),
+                    title = if (isEditingHdrStyle) {
+                        stringResource(R.string.subtitle_style_text_color_hdr)
+                    } else {
+                        stringResource(R.string.subtitle_style_text_color)
+                    },
                     centerContent = false,
                     modifier = Modifier
                         .width(StyleCardWidth)
@@ -184,7 +173,7 @@ internal fun SubtitleStyleSidePanel(
                         verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                            PANEL_TEXT_COLORS.forEach { color ->
+                            SubtitleTextColorPresets.forEach { color ->
                                 SubtitleStyleColorChip(
                                     color = color,
                                     isSelected = Color(subtitleStyle.textColor).copy(alpha = 1f).toArgb() == color.copy(alpha = 1f).toArgb(),
@@ -217,6 +206,30 @@ internal fun SubtitleStyleSidePanel(
                         }
                     }
                 }
+                if (isEditingHdrStyle) {
+                    SubtitleStyleSection(
+                        title = stringResource(R.string.subtitle_style_brightness_hdr),
+                        modifier = Modifier
+                            .width(StyleCardWidth)
+                            .height(StyleCardHeight)
+                    ) {
+                        SubtitleStyleSettingRow {
+                            SubtitleStyleStepperButton(
+                                icon = Icons.Default.Remove,
+                                onClick = {
+                                    onEvent(PlayerEvent.OnSetSubtitleHdrBrightness(subtitleStyle.hdrBrightness - 10))
+                                }
+                            )
+                            SubtitleStyleValueDisplay(text = "${subtitleStyle.hdrBrightness}%")
+                            SubtitleStyleStepperButton(
+                                icon = Icons.Default.Add,
+                                onClick = {
+                                    onEvent(PlayerEvent.OnSetSubtitleHdrBrightness(subtitleStyle.hdrBrightness + 10))
+                                }
+                            )
+                        }
+                    }
+                }
                 SubtitleStyleSection(
                     title = stringResource(R.string.subtitle_style_outline),
                     centerContent = false,
@@ -240,7 +253,7 @@ internal fun SubtitleStyleSidePanel(
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                            PANEL_OUTLINE_COLORS.forEach { color ->
+                            SubtitleOutlineColorPresets.forEach { color ->
                                 SubtitleStyleColorChip(
                                     color = color.copy(alpha = if (subtitleStyle.outlineEnabled) 1f else 0.35f),
                                     isSelected = subtitleStyle.outlineColor == color.toArgb(),

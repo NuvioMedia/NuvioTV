@@ -10,6 +10,7 @@ import androidx.media3.common.NuvioEngineConfig
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSink
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
@@ -29,6 +30,7 @@ import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.NuvioApplication
 import com.nuvio.tv.R
+import com.nuvio.tv.core.util.findCause
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -37,7 +39,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import com.nuvio.tv.core.network.IPv4FirstDns
-import com.nuvio.tv.core.torrent.TorrServerBinary
+import com.nuvio.tv.core.network.NoDelaySocketFactory
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.VodCacheSizeMode
 import okhttp3.ConnectionPool
@@ -68,6 +70,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     @Volatile private var currentVodCacheUrl: String? = null
     @Volatile private var currentVodCacheResolvedUrl: String? = null
     @Volatile private var currentVodCacheActive: Boolean = false
+
+    // Called on a loader thread with the url a progressive stream opened at after a redirect.
+    @Volatile var onStreamRedirected: ((requestedUrl: String, resolvedUrl: String) -> Unit)? = null
 
     // Takes the caller's context because this factory only holds the application one, which ignores the in-app language.
     fun vodCacheStateLabel(context: Context): String = when {
@@ -126,11 +131,26 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     var vodCacheSizeMb: Int = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MB
 
     // OkHttp client used only by the opt-in parallel-connections path.
+    // Many piece sockets at once: each keeps the kernel's own window, so they cannot pile up big receive buffers.
     private val playbackHttpClient by lazy {
         PlayerPlaybackNetworking.playbackHttpClient.newBuilder()
+            .socketFactory(NoDelaySocketFactory)
             .cookieJar(NuvioApplication.extensionCookieJar)
             .let { NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(it) }
             .build()
+    }
+
+    private fun computePrefetchDepthChunks(
+        connections: Int,
+        chunkBytes: Long
+    ): Int {
+        if (!nuvioPerformanceModeEnabled) return connections + 1
+        val chunkMb = (chunkBytes / (1024L * 1024L)).toInt().coerceAtLeast(1)
+        val safeNativeMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+        val reserveMb = NuvioExoPlayerPerformanceHelper.targetBufferSizeMb.coerceAtLeast(0)
+        return com.nuvio.tv.ui.screens.settings.MemoryBudget.prefetchDepthChunks(
+            connections, chunkMb, safeNativeMb, reserveMb
+        )
     }
 
     fun configureSubtitleParsing(
@@ -155,8 +175,6 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         cacheKey: String? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
-        val httpDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
-
         val resolvedMimeType = mimeTypeOverride ?: inferMimeType(
             url = url,
             filename = filename,
@@ -164,6 +182,17 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         )
         val isHls = resolvedMimeType == MimeTypes.APPLICATION_M3U8
         val isDash = resolvedMimeType == MimeTypes.APPLICATION_MPD
+        val httpDataSourceFactory = if (isHls || isDash) {
+            DefaultDataSource.Factory(
+                context,
+                PlayerPlaybackNetworking.createHttpDataSourceFactory(
+                    sanitizedHeaders,
+                    useLongReadTimeout = isLoopbackUrl(url),
+                ),
+            )
+        } else {
+            PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
+        }
 
         val mediaItemBuilder = MediaItem.Builder().setUri(url)
         resolvedMimeType?.let(mediaItemBuilder::setMimeType)
@@ -189,21 +218,18 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 "backBufferMs=${NuvioExoPlayerPerformanceHelper.backBufferMs} " +
                 "targetMb=${NuvioExoPlayerPerformanceHelper.targetBufferSizeMb} " +
                 "safeNativeMb=${NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)} " +
-                "parallel=${if (useParallelConnections) parallelConnectionCount else 0} chunkKb=$parallelChunkSizeKb " +
-                PlayerMemoryReporter.snapshot(context)
+                "parallel=${if (useParallelConnections) parallelConnectionCount else 0} chunkKb=$parallelChunkSizeKb"
         )
-        PlayerMemoryReporter.startSampling(context)
         val useChunkSessionSource = useParallelConnections && !isHls && !isDash
         parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
-        val progressiveUpstreamFactory: DataSource.Factory = if (useChunkSessionSource) {
+        val networkProgressiveFactory: DataSource.Factory = if (useChunkSessionSource) {
+            val sessionConnections = parallelConnectionCount
             val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
-                setUserAgent(DEFAULT_USER_AGENT)
+                if (sanitizedHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
+                    setUserAgent(DEFAULT_USER_AGENT)
+                }
             }
-            val sessionConnections = parallelConnectionCount
-            // Runtime enforcement of the tier chunk cap: a value
-            // persisted before the cap existed (or on another device)
-            // must not bypass it.
             val sessionChunkBytes = parallelChunkSizeKb
                 .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
                 .toLong() * 1024L
@@ -214,18 +240,22 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 sessionConnections,
                 sessionChunkBytes,
                 useNativeMemory = effectiveNative,
+                prefetchDepthChunks = computePrefetchDepthChunks(
+                    sessionConnections,
+                    sessionChunkBytes
+                ),
                 shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
             )
-        } else if (isLoopbackNonTorrServerUrl(url)) {
-            // Non-torrent loopback streams (e.g. Usenet, local proxies) must stay on
-            // direct OkHttpDataSource with persistent connection pooling. If routed through
-            // DefaultDataSource, LocalhostZeroCopyDataSource intercepts 127.0.0.1 and drops
-            // the socket on every container seek with Connection: close, aborting streaming contexts.
-            PlayerPlaybackNetworking.createHttpDataSourceFactory(sanitizedHeaders)
+        } else if (isLoopbackUrl(url)) {
+            PlayerPlaybackNetworking.createHttpDataSourceFactory(sanitizedHeaders, useLongReadTimeout = true)
         } else {
             httpDataSourceFactory
         }
+        val progressiveUpstreamFactory: DataSource.Factory =
+            RedirectReportingDataSource.Factory(networkProgressiveFactory, url) { resolvedUrl ->
+                onStreamRedirected?.invoke(url, resolvedUrl)
+            }
 
         // 2. VOD disk cache (opt-in).
         val useVodCache = ENABLE_VOD_CACHE && vodCacheEnabled && !isHls && !isDash && shouldUseVodCache(url)
@@ -544,14 +574,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             )
         }
 
-        internal fun isLoopbackNonTorrServerUrl(url: String): Boolean {
-            val httpUrl = url.toHttpUrlOrNull() ?: return false
-            val host = httpUrl.host
-            val isLoopback = host == "127.0.0.1" || host.equals("localhost", ignoreCase = true)
-            if (!isLoopback) return false
-            val port = httpUrl.port
-            val isTorrServer = port == TorrServerBinary.PORT || port == 8090 || httpUrl.queryParameter("link") != null
-            return !isTorrServer
+        internal fun isLoopbackUrl(url: String): Boolean {
+            val host = url.toHttpUrlOrNull()?.host ?: return false
+            return host == "127.0.0.1" || host == "::1" || host.equals("localhost", ignoreCase = true)
         }
 
         fun parseHeaders(headers: String?): Map<String, String> {
@@ -1137,15 +1162,6 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 URLDecoder.decode(value.replace("+", "%2B"), Charsets.UTF_8.name())
             }.getOrNull()
     }
-}
-
-private inline fun <reified T : Throwable> Throwable.findCause(): T? {
-    var current: Throwable? = this
-    while (current != null) {
-        if (current is T) return current
-        current = current.cause
-    }
-    return null
 }
 
 private class PlayerLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(6) {

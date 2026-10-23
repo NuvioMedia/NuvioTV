@@ -95,7 +95,7 @@ class LibraryListManagementTest {
     }
 
     @Test
-    fun `MDBList never offers list reordering and defaults to each selected list rank`() = runTest {
+    fun `MDBList never offers list reordering and defaults to each selected list order`() = runTest {
         val f = LibraryViewModelTestFixture()
         val second = f.tab.copy(key = "mdblist:list:8", title = "Other")
         f.tabs.value = listOf(f.tab, second)

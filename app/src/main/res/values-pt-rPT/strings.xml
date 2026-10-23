@@ -360,13 +360,9 @@
     <string name="licenses_attributions_libmpv_body">Utilizado como motor de reprodução Android. O wrapper libmpv-android está licenciado sob a licença MIT; o mpv/libmpv e os componentes nativos incluídos mantêm os termos de licença originais.</string>
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Experiência</string>
-    <string name="settings_experience_subtitle">Essencial ou avançado</string>
     <string name="settings_account">Conta</string>
-    <string name="settings_account_subtitle">Estado da conta e sincronização</string>
     <string name="settings_profiles">Perfis</string>
-    <string name="settings_profiles_subtitle">Gerir perfis de utilizador</string>
     <string name="settings_layout">Esquema</string>
-    <string name="settings_layout_subtitle">Estrutura da página inicial e estilos dos cartazes</string>
     <string name="settings_content_discovery">Conteúdo e descoberta</string>
     <string name="settings_content_discovery_subtitle">Addons, plugins, catálogos e fontes de descoberta</string>
     <string name="settings_content_discovery_addons_subtitle">Gerir addons, ordem dos catálogos e coleções</string>
@@ -375,9 +371,7 @@
     <string name="settings_plugins_subtitle">Repositórios e fornecedores</string>
     <string name="settings_integration">Integrações</string>
     <string name="settings_playback">Reprodução</string>
-    <string name="settings_playback_subtitle">Leitor, legendas e reprodução automática</string>
     <string name="settings_trakt_subtitle">Abrir página de ligação ao Trakt</string>
-    <string name="settings_about_subtitle">Versão e políticas</string>
     <string name="settings_network">Velocidade da rede</string>
     <string name="settings_network_subtitle">Diagnóstico de latência e transferências</string>
     <string name="settings_advanced">Avançadas</string>
@@ -478,7 +472,6 @@
     <string name="advanced_remember_last_profile">Lembrar o último perfil</string>
     <string name="advanced_remember_last_profile_subtitle">Lembra o último perfil selecionado ao iniciar</string>
     <string name="settings_debug">Depurar</string>
-    <string name="settings_debug_subtitle">Ferramentas de programador e flags de funcionalidades</string>
     <string name="settings_plugins_section_subtitle">Gerir repositórios, fornecedores e estados dos plugins</string>
     <string name="settings_account_section_subtitle">Estado da conta e sincronização</string>
     <string name="account_stat_addons">addons</string>
@@ -532,8 +525,6 @@
     <string name="contributors_show_kofi_qr">Mostrar QR do Ko-fi</string>
     <string name="contributors_hide_kofi_qr">Ocultar QR do Ko-fi</string>
     <string name="contributors_profile_unavailable">Ligação do perfil do GitHub indisponível.</string>
-    <string name="playback_section_general">Geral</string>
-    <string name="playback_section_general_desc">Comportamento principal da reprodução.</string>
     <string name="playback_loading_overlay">Sobreposição de carregamento</string>
     <string name="playback_loading_overlay_sub">Mostrar ecrã de carregamento até aparecer o primeiro fotograma do vídeo.</string>
     <string name="playback_pause_overlay">Sobreposição ao pausar</string>
@@ -553,9 +544,6 @@
     <string name="auto_skip_outro">Encerramento / Créditos finais</string>
     <string name="auto_skip_outro_sub">Saltar encerramentos e créditos de anime automaticamente.</string>
     <string name="playback_auto_frame_rate">Taxa de atualização e resolução auto</string>
-    <string name="playback_section_player">Leitor e seleção de stream</string>
-    <string name="playback_section_player_desc">Preferência do leitor, reprodução automática e filtragem de fontes.</string>
-    <string name="playback_player">Leitor</string>
     <string name="playback_player_internal">Interno</string>
     <string name="playback_player_external">Externo</string>
     <string name="playback_player_ask">Perguntar sempre</string>
@@ -566,12 +554,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">Se o início do stream falhar, alterna entre o ExoPlayer e a libmpv automaticamente.</string>
     <string name="playback_external_forward_subtitles">Enviar legendas para o leitor externo</string>
     <string name="playback_external_forward_subtitles_sub">Obtém legendas no teu idioma preferido a partir dos addons e envia-as para o leitor externo.</string>
-    <string name="playback_section_audio">Áudio e vídeo</string>
-    <string name="playback_section_audio_desc">Controlos de áudio e compatibilidade de vídeo.</string>
     <string name="playback_section_subtitles">Legendas</string>
     <string name="playback_section_subtitles_desc">Idioma, estilo e modo de renderização.</string>
-    <string name="playback_afr_open">Abrir</string>
-    <string name="playback_afr_closed">Fechar</string>
     <string name="playback_afr_off">Desativado</string>
     <string name="playback_afr_off_sub">Não alterar a taxa de atualização do ecrã.</string>
     <string name="playback_afr_on_start">No início</string>
@@ -690,15 +674,6 @@
     <string name="sub_libass">Utilizar libass para legendas ASS/SSA</string>
     <string name="sub_libass_sub">Experimental: renderização avançada de ASS/SSA (estilos, posicionamento, animações)</string>
     <string name="sub_libass_mode">Modo de renderização Libass</string>
-    <string name="sub_mode_overlay_gl">Sobreposição OpenGL (Recomendado)</string>
-    <string name="sub_mode_overlay_gl_sub">Melhor qualidade com suporte HDR. Renderiza as legendas numa thread separada.</string>
-    <string name="sub_mode_overlay_canvas">Sobreposição Canvas</string>
-    <string name="sub_mode_effects_gl">Efeitos OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Suporte de animação utilizando efeitos Media3. Mais rápido que o Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efeitos Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Suporte de animação utilizando efeitos Media3 com renderização Canvas.</string>
-    <string name="sub_mode_standard">Pistas standard (Standard Cues)</string>
-    <string name="sub_mode_standard_sub">Renderização básica de legendas sem suporte de animação. O mais compatível.</string>
     <string name="sub_org_none">Nenhuma (ordem predefinida)</string>
     <string name="sub_org_by_lang">Por idioma</string>
     <string name="sub_org_by_addon">Por addon</string>
@@ -893,6 +868,12 @@
     <string name="mdblist_dialog_placeholder">Introduzir chave API MDBList</string>
     <string name="mdblist_not_set">Não definido</string>
     <string name="mdblist_invalid_api_key">Chave API MDBList inválida</string>
+    <string name="mdblist_library_lists">Listas da Biblioteca</string>
+    <string name="mdblist_library_lists_description">Escolhe que listas do MDBList aparecem na Biblioteca e em Gerir Listas. A Lista de Interesse aparece sempre.</string>
+    <string name="mdblist_library_lists_empty">Ainda não foram encontradas listas na tua conta MDBList. Sincroniza para as carregar.</string>
+    <string name="mdblist_library_lists_summary">%1$d de %2$d visíveis</string>
+    <string name="tracking_mdblist_features_title">Funcionalidades MDBList</string>
+    <string name="tracking_mdblist_features_subtitle">Definições específicas do MDBList</string>
     <string name="debrid_title">Serviços Ligados</string>
     <string name="debrid_subtitle">Liga contas para aceder a ligações e à biblioteca</string>
     <string name="debrid_experimental_notice">Estas integrações são experimentais e podem ser mantidas, alteradas ou removidas mais tarde.</string>
@@ -1580,6 +1561,8 @@
     <string name="library_sort_trakt_order">Ordem do Trakt</string>
     <string name="library_sort_added_desc">Adicionado ↓</string>
     <string name="library_sort_added_asc">Adicionado ↑</string>
+    <string name="library_sort_released_desc">Lançamento ↓</string>
+    <string name="library_sort_released_asc">Lançamento ↑</string>
     <string name="library_sort_title_asc">Título A-Z</string>
     <string name="library_sort_title_desc">Título Z-A</string>
     <string name="library_manage_lists">Gerir Listas</string>
@@ -1885,7 +1868,6 @@
     <!-- Player errors -->
     <string name="player_error_failed_start_torrent">Falha ao iniciar o torrent: %1$s</string>
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Suporte HDR com renderização em canvas. Pode bloquear a thread da interface (UI).</string>
     <string name="ratings_season_label">T%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
     <string name="cd_play">Reproduzir</string>
@@ -1895,6 +1877,13 @@
     <string name="cd_sources">Fontes</string>
     <string name="cd_switch_player_engine">Alterar motor do leitor</string>
     <string name="cd_episodes">Episódios</string>
+    <string name="player_chapter_number">Capítulo %1$d</string>
+    <string name="player_chapters">Capítulos</string>
+    <string name="player_chapters_title">Capítulos (%1$d)</string>
+    <string name="player_chapter_remaining">faltam %1$s</string>
+    <string name="playback_chapters_label">Capítulos</string>
+    <string name="playback_exo_chapters_title">Mostrar capítulos (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Lê os capítulos dos ficheiros MKV para os marcar na barra de progresso e saltar entre eles. Faz alguns pedidos pequenos extra quando a reprodução começa. O mpv mostra sempre os capítulos.</string>
     <string name="cd_playback_speed">Velocidade de reprodução</string>
     <string name="cd_aspect_ratio">Proporção do ecrã</string>
     <string name="cd_open_external_player">Abrir em leitor externo</string>
@@ -2361,10 +2350,6 @@
     <string name="network_fast_error_script_path_missing">fast.com: caminho do script não encontrado</string>
     <string name="network_fast_error_token_missing">fast.com: token não encontrado no pacote (bundle)</string>
     <!-- Torrent service / TorrServer binary errors -->
-    <string name="torrent_error_add_failed">Falha ao adicionar o torrent</string>
-    <string name="torrent_error_binary_missing">Binário do TorrServer não encontrado em %1$s</string>
-    <string name="torrent_error_process_died">O processo do TorrServer terminou abruptamente ao iniciar (código de saída %1$d)</string>
-    <string name="torrent_error_start_timeout">O TorrServer falhou ao iniciar no período de %1$ds</string>
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">A iniciar o motor P2P…</string>
     <string name="player_torrent_rebuffer_status">%1$s em buffer</string>

@@ -36,17 +36,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
-import coil3.compose.rememberAsyncImagePainter
-import coil3.request.ImageRequest
 import com.nuvio.tv.ui.components.AutoResizeText
 import com.nuvio.tv.ui.components.BrandWordmark
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
@@ -56,9 +58,11 @@ import com.nuvio.tv.ui.theme.NuvioRadii
 import com.nuvio.tv.ui.theme.NuvioStrokes
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.accentBrush
+import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.draw.drawWithCache
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.hazeEffect
@@ -315,6 +319,11 @@ private fun SidebarNavigationItem(
     ) {
         Row(
             modifier = Modifier
+                .semantics {
+                    contentDescription = label
+                    role = Role.Tab
+                    this.selected = selected
+                }
                 .fillMaxWidth()
                 .padding(horizontal = NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs, vertical = NuvioTheme.spacing.sm + NuvioTheme.spacing.xxs),
             verticalAlignment = Alignment.CenterVertically
@@ -365,7 +374,7 @@ private fun SidebarNavigationItem(
                 .weight(1f)
                 .graphicsLayer { alpha = labelAlpha }
         )
-    }
+        }
     }
 }
 
@@ -408,6 +417,10 @@ private fun SidebarProfileItem(
     ) {
         Row(
             modifier = Modifier
+                .semantics {
+                    contentDescription = profileName
+                    role = Role.Button
+                }
                 .fillMaxWidth()
                 .padding(horizontal = NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs, vertical = NuvioTheme.spacing.sm + NuvioTheme.spacing.xxs),
             verticalAlignment = Alignment.CenterVertically
@@ -432,21 +445,10 @@ private fun SidebarProfileItem(
                 .weight(1f)
                 .graphicsLayer { alpha = labelAlpha },
             style = androidx.tv.material3.MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                textDirection = profileName.contentTextDirection()
             )
         )
+        }
     }
-    }
-}
-
-@Composable
-private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { NuvioTheme.spacing.xl.roundToPx() }
-    return rememberAsyncImagePainter(
-        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-            .data(rawIconRes)
-            .size(sizePx)
-            .build()
-    )
 }

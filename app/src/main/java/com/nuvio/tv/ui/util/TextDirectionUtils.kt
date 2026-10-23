@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.util
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.LayoutDirection
 
 /**
  * Detects a string's own reading direction from its first strong-directional character
@@ -90,6 +91,14 @@ fun isRtlLanguageCode(code: String?): Boolean? {
     val normalized = code?.trim()?.lowercase()?.takeIf { it.isNotBlank() } ?: return null
     return normalized in RTL_LANGUAGE_CODES
 }
+
+/**
+ * The [LayoutDirection] matching the string's own content direction (see [contentTextDirection]).
+ * Use this to override `LocalLayoutDirection` for a piece of content whose language differs from
+ * the app's ambient UI direction.
+ */
+fun String.contentLayoutDirection(): LayoutDirection =
+    if (isContentRtl()) LayoutDirection.Rtl else LayoutDirection.Ltr
 
 /**
  * Converts a TextDirection to an absolute horizontal alignment.

@@ -86,6 +86,8 @@ import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -212,8 +214,8 @@ fun FolderEditorContent(
         ) {
             Text(
                 text = stringResource(R.string.collections_editor_edit_folder),
-                style = MaterialTheme.typography.headlineMedium,
-                color = NuvioTheme.colors.TextPrimary
+                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                color = NuvioTheme.colors.TextPrimary,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 NuvioButton(onClick = { viewModel.cancelFolderEdit() }) {
@@ -414,7 +416,7 @@ fun FolderEditorContent(
                         Text(stringResource(R.string.collections_editor_play_gif), style = MaterialTheme.typography.bodyLarge, color = NuvioTheme.colors.TextPrimary)
                         Switch(
                             checked = folder.focusGifEnabled,
-                            onCheckedChange = { viewModel.updateFolderFocusGifEnabled(it) }
+                            onCheckedChange = null
                         )
                     }
                 }
@@ -571,8 +573,8 @@ fun FolderEditorContent(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.collections_editor_hide_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = NuvioTheme.colors.TextPrimary
+                                style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.Content),
+                                color = NuvioTheme.colors.TextPrimary,
                             )
                             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                             Text(
@@ -584,7 +586,7 @@ fun FolderEditorContent(
                         Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                         Switch(
                             checked = folder.hideTitle,
-                            onCheckedChange = { viewModel.updateFolderHideTitle(it) },
+                            onCheckedChange = null,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = NuvioTheme.colors.Secondary,
                                 checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),

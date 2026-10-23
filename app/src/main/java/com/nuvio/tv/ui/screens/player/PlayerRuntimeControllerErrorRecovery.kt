@@ -7,6 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import com.nuvio.tv.R
+import com.nuvio.tv.core.util.findCause
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -89,7 +90,7 @@ internal fun isRetryablePlaybackError(error: PlaybackException): Boolean {
         PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE, -> true
 
         PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
-            val httpCause = error.findCauseOfType<HttpDataSource.InvalidResponseCodeException>()
+            val httpCause = error.findCause<HttpDataSource.InvalidResponseCodeException>()
             if (httpCause != null) {
                 val code = httpCause.responseCode
                 !(code == 400 || code == 401 || code == 403 || code == 404 || code == 410)
@@ -142,6 +143,17 @@ internal fun isAudioTrackFailure(errorCode: Int, combinedMessage: String): Boole
         combinedMessage.contains("audiotrack write failed", ignoreCase = true)
 }
 
+internal fun httpStatusExplanation(context: android.content.Context, code: Int): String {
+    return when (code) {
+        401, 410 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
+        404 -> context.getString(com.nuvio.tv.R.string.player_error_stream_removed)
+        429 -> context.getString(com.nuvio.tv.R.string.player_error_stream_rate_limited)
+        in 500..599 -> context.getString(com.nuvio.tv.R.string.player_error_stream_unavailable)
+        in 400..499 -> context.getString(com.nuvio.tv.R.string.player_error_stream_blocked)
+        else -> ""
+    }
+}
+
 internal fun PlaybackException.findInvalidResponseCodeException(): HttpDataSource.InvalidResponseCodeException? {
     var current: Throwable? = cause
     while (current != null) {
@@ -157,16 +169,7 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
     if (responseException != null) {
         val code = responseException.responseCode
         val statusText = responseException.responseMessage?.takeIf { it.isNotBlank() }
-        val providerHint = when (code) {
-            400 -> context.getString(com.nuvio.tv.R.string.player_error_stream_blocked)
-            401 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
-            403 -> context.getString(com.nuvio.tv.R.string.player_error_stream_blocked)
-            404 -> context.getString(com.nuvio.tv.R.string.player_error_stream_removed)
-            410 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
-            429 -> context.getString(com.nuvio.tv.R.string.player_error_stream_rate_limited)
-            500, 502, 503, 504 -> context.getString(com.nuvio.tv.R.string.player_error_stream_unavailable)
-            else -> ""
-        }
+        val providerHint = httpStatusExplanation(context, code)
         return buildString {
             append("HTTP $code")
             statusText?.let { append(" $it") }
@@ -176,12 +179,12 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
     }
 
     // Check for unrecognized format (provider returned non-video content)
-    val isUnrecognizedFormat = findCauseOfType<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null
+    val isUnrecognizedFormat = findCause<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null
     if (isUnrecognizedFormat) {
         return context.getString(com.nuvio.tv.R.string.player_error_source_invalid_content, errorCodeName)
     }
 
-    val decoderInit = findCauseOfType<MediaCodecRenderer.DecoderInitializationException>()
+    val decoderInit = findCause<MediaCodecRenderer.DecoderInitializationException>()
     if (decoderInit != null) {
         val decoderMessage = decoderInit.message?.trim()?.takeIf { it.isNotBlank() }
             ?: decoderInit.diagnosticInfo?.trim()?.takeIf { it.isNotBlank() }
@@ -198,15 +201,6 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
     } else {
         errorCodeName
     }
-}
-
-private inline fun <reified T : Throwable> Throwable.findCauseOfType(): T? {
-    var current: Throwable? = this
-    while (current != null) {
-        if (current is T) return current
-        current = current.cause
-    }
-    return null
 }
 
 internal fun Throwable.toDisplayMessage(context: android.content.Context, fallback: String? = null): String {
@@ -398,6 +392,35 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
 }
 
 /**
+ * Takes the next step of [PlayerAudioFallbackPolicy] for an audio failure on the current stream.
+ * Returns false once every step is in force, so the caller falls through to the rest of the chain.
+ */
+internal fun PlayerRuntimeController.tryNextAudioFallbackStep(positionMs: Long): Boolean {
+    val step = PlayerAudioFallbackPolicy.nextStep(
+        safeAudioActive = isSafeAudioModeActiveForCurrentPlayback,
+        pcmForced = hasTriedAudioPcmFallback,
+        audioDisabled = isAudioDisabledForCurrentPlayback
+    ) ?: return false
+    when (step) {
+        PlayerAudioFallbackPolicy.Step.SAFE_AUDIO -> {
+            safeAudioForcedStreamUrls.add(currentStreamUrl)
+            retryCurrentStreamWithSafeAudioFallback(positionMs)
+        }
+        PlayerAudioFallbackPolicy.Step.FORCE_PCM -> {
+            hasTriedAudioPcmFallback = true
+            pendingAudioPcmFallbackRebuild = true
+            retryCurrentStreamWithSafeAudioFallback(positionMs)
+        }
+        PlayerAudioFallbackPolicy.Step.DISABLE_AUDIO -> {
+            pendingAudioPcmFallbackRebuild = true
+            audioDisabledForcedStreamUrls.add(currentStreamUrl)
+            retryCurrentStreamWithAudioDisabled(positionMs)
+        }
+    }
+    return true
+}
+
+/**
  * DV7-to-HEVC decoder fallback for ERROR_CODE_DECODER_INIT_FAILED (4003).
  *
  * When decoderPriority == 1 (EXTENSION_RENDERER_MODE_ON) and the decoder
@@ -463,7 +486,7 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
         error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ||
         error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
-        error.findCauseOfType<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null ||
+        error.findCause<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null ||
         error.cause?.toString()?.contains("UnrecognizedInputFormatException") == true
 
     if (!isSourceOrParsingError) return false
@@ -510,6 +533,9 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
                 return@launch
             }
             if (attemptAutoRetry(error, detailedError)) {
+                return@launch
+            }
+            if (tryServerFallback()) {
                 return@launch
             }
             val userFacingError = error.toDisplayMessage(context)

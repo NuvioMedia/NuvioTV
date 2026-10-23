@@ -39,9 +39,9 @@ class MdbListRatingsLoaderTest {
     )
 
     init {
-        coEvery { api.getMedia(any(), any(), any(), any()) } returns Response.success(media)
-        coEvery { api.getMediaBatch(any(), any(), any()) } coAnswers {
-            val body = thirdArg<MDBListMediaRequestDto>()
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(media)
+        coEvery { api.getMediaBatch(any(), any(), any(), any()) } coAnswers {
+            val body = arg<MDBListMediaRequestDto>(3)
             batches += body
             Response.success(body.ids.reversed().map { id -> media.copy(ids = mapOf("imdb" to id)) })
         }
@@ -49,7 +49,7 @@ class MdbListRatingsLoaderTest {
 
     @Test
     fun `nearby requests batch once and match results by id`() = runTest {
-        coEvery { api.getMediaBatch(any(), any(), any()) } returns Response.success(listOf(
+        coEvery { api.getMediaBatch(any(), any(), any(), any()) } returns Response.success(listOf(
             media.copy(ids = mapOf("imdb" to "tt2"), ratings = listOf(MDBListMediaRatingDto("imdb", 6.5))),
             media.copy(imdbId = "tt1")
         ))
@@ -62,8 +62,8 @@ class MdbListRatingsLoaderTest {
         assertEquals(8.1, first.await()?.imdb)
         assertEquals(6.5, second.await()?.imdb)
         assertEquals(3.9, loader.getRatings("movie", "tt1", credential)?.letterboxd)
-        coVerify(exactly = 1) { api.getMediaBatch("movie", "test-key", MDBListMediaRequestDto(listOf("tt1", "tt2"))) }
-        coVerify(exactly = 0) { api.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMediaBatch("imdb", "movie", "test-key", MDBListMediaRequestDto(listOf("tt1", "tt2"))) }
+        coVerify(exactly = 0) { api.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -75,7 +75,7 @@ class MdbListRatingsLoaderTest {
         assertEquals(listOf(200, 200, 5), batches.map { it.ids.size })
         assertEquals((1..405).map { "tt$it" }, batches.flatMap { it.ids })
         assertTrue(batches.all { it.appendToResponse == listOf("keyword") })
-        coVerify(exactly = 0) { api.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -84,8 +84,8 @@ class MdbListRatingsLoaderTest {
         val ratings = (1..10).map { async { loader.getRatings("movie", "tt1", credential) } }.awaitAll()
 
         assertTrue(ratings.all { it?.imdb == 8.1 })
-        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMediaBatch(any(), any(), any(), any()) }
     }
 
     @Test
@@ -96,15 +96,15 @@ class MdbListRatingsLoaderTest {
             listOf("tt1", "tt2").map { id -> async { loader.getRatings(type, id, key) } }
         }.awaitAll()
 
-        coVerify(exactly = 1) { api.getMediaBatch("movie", "test-key", any()) }
-        coVerify(exactly = 1) { api.getMediaBatch("show", "test-key", any()) }
-        coVerify(exactly = 1) { api.getMediaBatch("movie", "other-key", any()) }
+        coVerify(exactly = 1) { api.getMediaBatch("imdb", "movie", "test-key", any()) }
+        coVerify(exactly = 1) { api.getMediaBatch("imdb", "show", "test-key", any()) }
+        coVerify(exactly = 1) { api.getMediaBatch("imdb", "movie", "other-key", any()) }
         assertEquals(listOf(2, 2, 2), batches.map { it.ids.size })
     }
 
     @Test
     fun `omitted items stay empty without individual fallback requests`() = runTest {
-        coEvery { api.getMediaBatch(any(), any(), any()) } returns Response.success(listOf(media.copy(imdbId = "tt1")))
+        coEvery { api.getMediaBatch(any(), any(), any(), any()) } returns Response.success(listOf(media.copy(imdbId = "tt1")))
         val loader = loader()
         val found = async { loader.getRatings("movie", "tt1", credential) }
         val missing = async { loader.getRatings("movie", "tt2", credential) }
@@ -112,35 +112,35 @@ class MdbListRatingsLoaderTest {
         assertEquals(8.1, found.await()?.imdb)
         assertTrue(requireNotNull(missing.await()).isEmpty())
         assertTrue(requireNotNull(loader.getRatings("movie", "tt2", credential)).isEmpty())
-        coVerify(exactly = 1) { api.getMediaBatch(any(), any(), any()) }
-        coVerify(exactly = 0) { api.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMediaBatch(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `expired ratings are refreshed once and reused before expiry`() = runTest {
         val loader = loader()
         assertEquals(8.1, loader.getRatings("movie", "tt1", credential)?.imdb)
-        coEvery { api.getMedia(any(), any(), any(), any()) } returns Response.success(
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(
             media.copy(ratings = listOf(MDBListMediaRatingDto("imdb", 7.2)))
         )
         now = 30L * 60L * 1000L - 1
         assertEquals(8.1, loader.getRatings("movie", "tt1", credential)?.imdb)
         now++
         assertEquals(7.2, loader.getRatings("movie", "tt1", credential)?.imdb)
-        coVerify(exactly = 2) { api.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 2) { api.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `failed and empty HTTP responses can be retried`() = runTest {
         val loader = loader()
-        coEvery { api.getMedia(any(), any(), any(), any()) } throws IOException("Unavailable")
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } throws IOException("Unavailable")
         assertNull(loader.getRatings("movie", "tt1", credential))
-        coEvery { api.getMedia(any(), any(), any(), any()) } returns Response.success(null)
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(null)
         assertNull(loader.getRatings("movie", "tt1", credential))
-        coEvery { api.getMedia(any(), any(), any(), any()) } returns Response.success(media)
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(media)
 
         assertEquals(8.1, loader.getRatings("movie", "tt1", credential)?.imdb)
-        coVerify(exactly = 3) { api.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 3) { api.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -154,18 +154,18 @@ class MdbListRatingsLoaderTest {
 
         assertEquals(8.1, waiting.await()?.imdb)
         assertTrue(cancelled.isCancelled)
-        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { api.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `client cancellation propagates and allows retry`() = runTest {
         val loader = loader()
-        coEvery { api.getMedia(any(), any(), any(), any()) } throws CancellationException("Cancelled")
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } throws CancellationException("Cancelled")
         expectMdbListFailure<CancellationException> { loader.getRatings("movie", "tt1", credential) }
-        coEvery { api.getMedia(any(), any(), any(), any()) } returns Response.success(media)
+        coEvery { api.getMedia(any(), any(), any(), any(), any()) } returns Response.success(media)
 
         assertEquals(8.1, loader.getRatings("movie", "tt1", credential)?.imdb)
-        coVerify(exactly = 2) { api.getMedia(any(), any(), any(), any()) }
+        coVerify(exactly = 2) { api.getMedia(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -197,5 +197,5 @@ class MdbListRatingsLoaderTest {
         assertEquals(2, harness.engine.requests.size)
     }
 
-    private fun TestScope.loader() = MdbListRatingsLoader(client, backgroundScope) { now }
+    private fun TestScope.loader() = MdbListRatingsLoader(client, scope = backgroundScope) { now }
 }

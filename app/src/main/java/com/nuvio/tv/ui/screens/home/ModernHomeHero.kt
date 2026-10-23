@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -300,11 +301,20 @@ internal fun HeroTitleBlock(
     enrichmentActive: () -> Boolean = { false },
     portraitMode: Boolean,
     showImdbRatings: Boolean,
+    mdbListShowOnHero: Boolean = false,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     trailerPlaying: () -> Boolean = { false },
     modifier: Modifier = Modifier
 ) {
-    val currentPreview = previewProvider()
-    val isEnriching = enrichmentActive()
+    // The providers read hero state that is rewritten on every focus move, often with an equal
+    // value. Deriving the pair recomposes this block only when what it shows actually changes.
+    val latestPreviewProvider = rememberUpdatedState(previewProvider)
+    val latestEnrichmentActive = rememberUpdatedState(enrichmentActive)
+    val displayInputs by remember {
+        derivedStateOf { latestPreviewProvider.value() to latestEnrichmentActive.value() }
+    }
+    val currentPreview = displayInputs.first
+    val isEnriching = displayInputs.second
     
     var stablePreview by remember { mutableStateOf<HeroPreview?>(null) }
 
@@ -329,6 +339,8 @@ internal fun HeroTitleBlock(
             previewProvider = { displayPreview },
             portraitMode = portraitMode,
             showImdbRatings = showImdbRatings,
+            mdbListShowOnHero = mdbListShowOnHero,
+            mdbListRatingOrder = mdbListRatingOrder,
             trailerPlaying = trailerPlaying
         )
     }
@@ -339,6 +351,8 @@ private fun HeroTitleContent(
     previewProvider: () -> HeroPreview?,
     portraitMode: Boolean,
     showImdbRatings: Boolean,
+    mdbListShowOnHero: Boolean = false,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     trailerPlaying: () -> Boolean = { false }
 ) {
     val preview = previewProvider() ?: return
@@ -367,7 +381,9 @@ private fun HeroTitleContent(
                 .build()
         }
     }
-    val trailerPlayingValue = trailerPlaying()
+    // Same idea as in HeroTitleBlock: only a flip of the result should recompose this content.
+    val latestTrailerPlaying = rememberUpdatedState(trailerPlaying)
+    val trailerPlayingValue by remember { derivedStateOf { latestTrailerPlaying.value() } }
     val metaAlpha by animateFloatAsState(
         targetValue = if (trailerPlayingValue) 0f else 1f,
         animationSpec = tween(durationMillis = 480),
@@ -456,9 +472,11 @@ private fun HeroTitleContent(
         val secondaryDetails = secondaryMeta.details
         val hasSecondaryBadge = ageRatingBadge != null || statusBadge != null
         val hasImdbRatingForLayout = !preview.imdbText.isNullOrBlank()
-        val reserveImdbInPrimary = !preview.isSeries && !hasSecondaryBadge && hasImdbRatingForLayout
+        val hasMdbListRatings = mdbListShowOnHero && preview.mdbListRatings != null && !preview.mdbListRatings.isEmpty()
+        // When MDBList ratings are shown, don't reserve space for standalone IMDb badge.
+        val reserveImdbInPrimary = !hasMdbListRatings && !preview.isSeries && !hasSecondaryBadge && hasImdbRatingForLayout
         val reserveImdbInPrimaryWithHighlight = reserveImdbInPrimary && secondaryHighlightText == null
-        val reserveImdbInSecondary = hasImdbRatingForLayout &&
+        val reserveImdbInSecondary = !hasMdbListRatings && hasImdbRatingForLayout &&
             (preview.isSeries || hasSecondaryBadge || secondaryHighlightText != null)
         val showImdbInPrimaryWithHighlight = showImdbRatings && reserveImdbInPrimaryWithHighlight
         val showImdbInSecondary = showImdbRatings && reserveImdbInSecondary
@@ -533,7 +551,7 @@ private fun HeroTitleContent(
                             imdbText = preview.imdbText.orEmpty(),
                             textStyle = labelMedium,
                             textColor = NuvioTheme.colors.TextSecondary,
-                            logoSize = 30.dp * metaScale,
+                            logoSize = NuvioTheme.spacing.xl * metaScale,
                             spacing = imdbMetaSpacing,
                             visible = showImdbInPrimaryWithHighlight
                         )
@@ -542,7 +560,7 @@ private fun HeroTitleContent(
             }
         }
 
-        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty()) {
+        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty() || hasMdbListRatings) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -560,10 +578,10 @@ private fun HeroTitleContent(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
                     HeroMetaDivider(
                         scale = metaScale,
-                        visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty()
+                        visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
                     )
                 }
                 if (ageRatingBadge != null && statusBadge != null) {
@@ -589,10 +607,10 @@ private fun HeroTitleContent(
                         )
                     }
                 }
-                if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
                     HeroMetaDivider(
                         scale = metaScale,
-                        visible = showImdbInSecondary || secondaryDetails.isNotEmpty()
+                        visible = showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
                     )
                 }
                 if (reserveImdbInSecondary) {
@@ -600,7 +618,7 @@ private fun HeroTitleContent(
                         imdbText = preview.imdbText.orEmpty(),
                         textStyle = labelMedium,
                         textColor = NuvioTheme.colors.TextSecondary,
-                        logoSize = 30.dp * metaScale,
+                        logoSize = NuvioTheme.spacing.xl * metaScale,
                         spacing = imdbMetaSpacing,
                         visible = showImdbInSecondary
                     )
@@ -622,6 +640,20 @@ private fun HeroTitleContent(
                     if (index < secondaryDetails.lastIndex) {
                         HeroMetaDivider(metaScale)
                     }
+                }
+                // MDBList ratings inline after other secondary meta.
+                if (showImdbRatings && hasMdbListRatings) {
+                    // Divider before MDBList ratings is already handled by the
+                    // badge/IMDb/details divider logic above — only add one
+                    // when IMDb or details were the last visible element.
+                    if (showImdbInSecondary || secondaryDetails.isNotEmpty()) {
+                        HeroMetaDivider(metaScale)
+                    }
+                    com.nuvio.tv.ui.components.MDBListRatingsRow(
+                        ratings = preview.mdbListRatings!!,
+                        maxItems = 3,
+                        order = mdbListRatingOrder
+                    )
                 }
             }
         }

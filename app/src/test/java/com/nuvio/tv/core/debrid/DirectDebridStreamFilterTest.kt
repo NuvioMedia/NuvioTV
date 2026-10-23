@@ -490,6 +490,51 @@ class DirectDebridStreamFilterTest {
         assertEquals(listOf(92_910_562_472L, 87_052_038_851L), latinoFirst.map { it.streamSize() })
     }
 
+    @Test
+    fun `reads languages from release name words when the stream has no parsed languages`() {
+        fun languages(releaseName: String) = DirectDebridStreamFilter.facts(
+            stream(resolve = resolve()).copy(description = releaseName),
+            DebridSettings()
+        ).languages
+
+        assertEquals(
+            listOf(DebridStreamLanguage.EN, DebridStreamLanguage.IT),
+            languages("Movie.2023.1080p.WEB-DL.ITA.ENG.x264-GRP.mkv")
+        )
+        assertEquals(listOf(DebridStreamLanguage.FR), languages("Movie.2023.TRUEFRENCH.1080p.WEB-DL.x265-GRP.mkv"))
+        assertEquals(listOf(DebridStreamLanguage.FR), languages("Movie.2023.FRENCH.1080p.WEB-DL.x265-GRP.mkv"))
+        assertEquals(listOf(DebridStreamLanguage.DE), languages("Movie.2023.German.DL.1080p.BluRay.x264-GRP.mkv"))
+        assertEquals(listOf(DebridStreamLanguage.ES), languages("Movie (2023) [BluRay][Castellano].mkv"))
+        assertEquals(listOf(DebridStreamLanguage.MULTI), languages("Movie.2023.MULTI.1080p.BluRay.x264-GRP.mkv"))
+        assertEquals(emptyList<DebridStreamLanguage>(), languages("Por.Siempre.2023.1080p.WEB-DL.x264-GRP.mkv"))
+        assertEquals(emptyList<DebridStreamLanguage>(), languages("Movie.2023.1080p.WEB-DL.x264-GRP.mkv"))
+    }
+
+    @Test
+    fun `accepts release name words in parsed languages`() {
+        val facts = DirectDebridStreamFilter.facts(
+            stream(resolve = resolve(languages = listOf("ita", "Eng", "klingon"))),
+            DebridSettings()
+        )
+
+        assertEquals(listOf(DebridStreamLanguage.IT, DebridStreamLanguage.EN), facts.languages)
+    }
+
+    @Test
+    fun `required language keeps streams whose release name only has the language word`() {
+        val italian = stream(resolve = resolve(size = 1))
+            .copy(description = "Movie.2023.1080p.WEB-DL.ITA.x264-GRP.mkv")
+        val english = stream(resolve = resolve(size = 2))
+            .copy(description = "Movie.2023.1080p.WEB-DL.ENG.x264-GRP.mkv")
+
+        val result = DirectDebridStreamFilter.filterInstant(
+            listOf(italian, english),
+            DebridSettings(streamPreferences = DebridStreamPreferences(requiredLanguages = listOf(DebridStreamLanguage.IT)))
+        )
+
+        assertEquals(listOf(1L), result.map { it.streamSize() })
+    }
+
     private fun Stream.streamSize(): Long? = clientResolve?.stream?.raw?.size ?: behaviorHints?.videoSize
 
     private fun oppenheimerStreams(): List<Stream> {

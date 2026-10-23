@@ -163,7 +163,8 @@ class SimklRelatedService @Inject constructor(
             ?: meta.imdbId?.takeIf(String::isNotBlank)?.let { "imdb" to it }
             ?: parseSimklRedirectParam(fallbackItemId)
             ?: return null
-        val resolved = simklIdResolver.resolveIds(source, id) ?: return null
+        val contentTypeHint = meta.rawType.takeIf { it.isNotBlank() }
+        val resolved = simklIdResolver.resolveIds(source, id, contentTypeHint) ?: return null
         return ResolvedTarget(resolved.type, resolved.simklId)
     }
 

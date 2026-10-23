@@ -34,12 +34,15 @@ object FrameRateUtils {
     private const val CINEMA_24_FPS = 24f
     private const val MIN_VALID_VIDEO_FPS = 10f
     private const val MAX_VALID_VIDEO_FPS = 120f
+    private const val TIMESTAMP_REORDER_MARGIN = 16
     private val NEXTLIB_HTTP_SCHEMES = setOf("http", "https")
     private val LIVE_STREAM_EXTENSIONS = listOf(".mpd", ".ism/manifest")
     private const val MKV_EXTENSION = ".mkv"
     private const val SWITCH_POLL_INTERVAL_MS = 60L
     private const val SWITCH_REQUIRED_STABLE_POLLS = 2
     private const val RESOLUTION_MATCH_MIN_SHORT_SIDE = 720
+    private val CLEAN_REFRESH_MULTIPLES = listOf(3f, 4f, 5f, 6f)
+    private const val REFRESH_ERROR_SLACK = 0.0001f
 
     data class DisplayModeSwitchResult(
         val appliedMode: Display.Mode
@@ -171,6 +174,8 @@ object FrameRateUtils {
         return if (matchesTargetRefresh(closest.refreshRate, target)) closest else null
     }
 
+    private fun refreshError(refreshRate: Float, target: Float): Float = abs(refreshRate - target) / target
+
     private fun refreshWeight(refresh: Float, fps: Float): Float {
         if (fps <= 0f || refresh <= 0f) return Float.MAX_VALUE
         val div = refresh / fps
@@ -257,8 +262,16 @@ object FrameRateUtils {
         val modeExact = pickBestForTarget(modes, frameRate)
         val modeDouble = pickBestForTarget(modes, frameRate * 2f)
         val modePulldown = pickBestForTarget(modes, frameRate * 2.5f)
+        val pulldownError = modePulldown?.let { refreshError(it.refreshRate, frameRate * 2.5f) } ?: Float.MAX_VALUE
+        // Lowest clean multiple first (24 fps: 72, 96, 120, 144 Hz), before 3:2 pulldown at 60 Hz,
+        // but only when it matches the frame rate at least as closely as the pulldown mode does.
+        val modeMultiple = CLEAN_REFRESH_MULTIPLES.firstNotNullOfOrNull { multiple ->
+            val target = frameRate * multiple
+            pickBestForTarget(modes, target)
+                ?.takeIf { refreshError(it.refreshRate, target) <= pulldownError + REFRESH_ERROR_SLACK }
+        }
         val modeFallback = modes.minByOrNull { refreshWeight(it.refreshRate, frameRate) }
-        return modeExact ?: modeDouble ?: modePulldown ?: modeFallback ?: activeMode
+        return modeExact ?: modeDouble ?: modeMultiple ?: modePulldown ?: modeFallback ?: activeMode
     }
 
     private fun hasValidVideoSize(videoWidth: Int?, videoHeight: Int?): Boolean {
@@ -470,6 +483,18 @@ object FrameRateUtils {
             formatFrameRate in 59.97f..60.1f -> 60f
             else -> formatFrameRate
         }
+    }
+
+    // Samples come in decode order. With B-frames that is not presentation order, and the newest samples
+    // of any read can be ahead of frames that were never read, so sort and leave those out.
+    // skipFirst drops the lowest timestamps after sorting, not the first samples decoded.
+    internal fun averageSampleDurationUs(timestampsUs: List<Long>, skipFirst: Int, skipLast: Int): Float? {
+        val sorted = timestampsUs.sorted()
+        val last = sorted.size - 1 - skipLast
+        val intervals = last - skipFirst
+        if (intervals < 30) return null
+        val average = (sorted[last] - sorted[skipFirst]).toFloat() / intervals
+        return average.takeIf { it > 0f }
     }
 
     private fun snapProbeRateByFrameDuration(measuredFps: Float, averageFrameDurationUs: Float): Float {
@@ -1498,18 +1523,8 @@ object FrameRateUtils {
                 if (!extractor.advance()) break
             }
 
-            if (timestamps.size <= ignoreSamples + 1) return null
-
-            var totalFrameDurationUs = 0L
-            for (i in (ignoreSamples + 1) until timestamps.size) {
-                totalFrameDurationUs += (timestamps[i] - timestamps[i - 1])
-            }
-
-            val sampleCount = (timestamps.size - ignoreSamples - 1).coerceAtLeast(1)
-            if (sampleCount < 30) return null
-
-            val averageFrameDurationUs = totalFrameDurationUs.toFloat() / sampleCount.toFloat()
-            if (averageFrameDurationUs <= 0f) return null
+            val averageFrameDurationUs =
+                averageSampleDurationUs(timestamps, ignoreSamples, TIMESTAMP_REORDER_MARGIN) ?: return null
 
             val measured = 1_000_000f / averageFrameDurationUs
             if (!isValidVideoFrameRate(measured)) return null

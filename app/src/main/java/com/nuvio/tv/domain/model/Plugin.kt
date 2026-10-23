@@ -112,7 +112,9 @@ data class LocalScraperResult(
     val peers: Int? = null,
     val infoHash: String? = null,
     val headers: Map<String, String>? = null,
-    val subtitles: List<Subtitle> = emptyList()
+    val subtitles: List<Subtitle> = emptyList(),
+    val audioDelayMs: Int? = null,
+    val audioDelayLanguage: String? = null
 )
 
 /**
@@ -176,7 +178,9 @@ fun LocalScraperResult.toStream(scraper: ScraperInfo): com.nuvio.tv.domain.model
             notWebReady = null,
             bingeGroup = "local-plugin-${scraper.id}",
             countryWhitelist = null,
-            proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) }
+            proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
+            audioDelayMs = audioDelayMs,
+            audioDelayLanguage = audioDelayLanguage
         ),
         addonName = scraper.name,
         addonLogo = scraper.logo,

@@ -89,6 +89,8 @@ fun HeroCarousel(
     showBackdrop: Boolean = true,
     fullWidth: Dp = Dp.Unspecified,
     initialActiveIndex: Int = 0,
+    mdbListShowOnHero: Boolean = false,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     modifier: Modifier = Modifier
 ) {
     if (items.isEmpty()) return
@@ -174,7 +176,9 @@ fun HeroCarousel(
             HeroCarouselSlide(
                 item = item,
                 showImdbRatings = showImdbRatings,
-                showBackdrop = showBackdrop
+                showBackdrop = showBackdrop,
+                mdbListShowOnHero = mdbListShowOnHero,
+                mdbListRatingOrder = mdbListRatingOrder
             )
         }
 
@@ -220,7 +224,9 @@ fun HeroCarousel(
 private fun HeroCarouselSlide(
     item: MetaPreview,
     showImdbRatings: Boolean,
-    showBackdrop: Boolean
+    showBackdrop: Boolean,
+    mdbListShowOnHero: Boolean = false,
+    mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER
 ) {
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
     val context = LocalContext.current
@@ -346,27 +352,39 @@ private fun HeroCarouselSlide(
                                 )
                             }
                             if (ratingText != null) {
-                                if (trailingMetadata.isNotEmpty()) HeroCarouselMetaDivider()
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
-                                ) {
-                                    ImdbRatingSourceLabel(
-                                        logoModifier = Modifier.size(30.dp),
-                                        textStyle = MaterialTheme.typography.labelMedium,
-                                        textColor = NuvioTheme.colors.TextSecondary
-                                    )
-                                    Text(
-                                        text = ratingText,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = NuvioTheme.colors.TextSecondary,
-                                        maxLines = 1
-                                    )
+                                val mdbRatings = item.mdbListRatings
+                                if (mdbListShowOnHero && mdbRatings != null && !mdbRatings.isEmpty()) {
+                                } else {
+                                    if (trailingMetadata.isNotEmpty()) HeroCarouselMetaDivider()
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
+                                    ) {
+                                        ImdbRatingSourceLabel(
+                                            logoModifier = Modifier.size(NuvioTheme.spacing.xl),
+                                            textStyle = MaterialTheme.typography.labelMedium,
+                                            textColor = NuvioTheme.colors.TextSecondary
+                                        )
+                                        Text(
+                                            text = ratingText,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = NuvioTheme.colors.TextSecondary,
+                                            maxLines = 1
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+
+            if (mdbListShowOnHero && item.mdbListRatings != null && !item.mdbListRatings.isEmpty()) {
+                MDBListRatingsRow(
+                    ratings = item.mdbListRatings,
+                    order = mdbListRatingOrder,
+                    maxItems = 6
+                )
             }
 
             item.description?.takeIf { it.isNotBlank() }?.let { description ->

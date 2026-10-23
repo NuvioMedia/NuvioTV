@@ -51,6 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
@@ -195,7 +197,7 @@ fun DebridSettingsContent(
                     }
 
                     item(key = "debrid_account_section") {
-                        DebridSectionLabel(text = stringResource(R.string.debrid_section_account))
+                        SettingsSectionLabel(text = stringResource(R.string.debrid_section_account))
                     }
 
                     DebridProviders.visible().forEachIndexed { providerIndex, provider ->
@@ -235,7 +237,7 @@ fun DebridSettingsContent(
 
                     if (uiState.canResolvePlayableLinks) {
                         item(key = "debrid_instant_section") {
-                            DebridSectionLabel(text = stringResource(R.string.debrid_section_instant_playback))
+                            SettingsSectionLabel(text = stringResource(R.string.debrid_section_instant_playback))
                         }
 
                         item(key = "debrid_prepare_links") {
@@ -263,7 +265,7 @@ fun DebridSettingsContent(
                     }
 
                     item(key = "debrid_formatting_section") {
-                        DebridSectionLabel(text = stringResource(R.string.debrid_section_formatting))
+                        SettingsSectionLabel(text = stringResource(R.string.debrid_section_formatting))
                     }
 
                     item(key = "debrid_formatter") {
@@ -288,7 +290,7 @@ fun DebridSettingsContent(
 
                     if (uiState.canResolvePlayableLinks) {
                         item(key = "debrid_filters_section") {
-                            DebridSectionLabel(text = stringResource(R.string.debrid_section_filters))
+                            SettingsSectionLabel(text = stringResource(R.string.debrid_section_filters))
                         }
 
                         item(key = "debrid_max_results") {
@@ -730,16 +732,6 @@ private fun DebridInfoText(text: String) {
 }
 
 @Composable
-private fun DebridSectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = NuvioTheme.colors.TextPrimary,
-        modifier = Modifier.padding(start = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.sm)
-    )
-}
-
-@Composable
 private fun prepareCountLabel(limit: Int): String {
     return if (limit == 1) {
         stringResource(R.string.debrid_prepare_count_one)
@@ -950,7 +942,8 @@ private fun DebridTextListDialog(
                         },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { submit() }),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary,
+                                            textDirection = TextDirection.Content),
                     cursorBrush = SolidColor(NuvioTheme.colors.Primary)
                 )
             }
@@ -1555,7 +1548,8 @@ private fun DebridApiKeyDialog(
                     keyboardActions = KeyboardActions(
                         onDone = { submit() }
                     ),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary,
+                                            textDirection = TextDirection.Content),
                     cursorBrush = SolidColor(
                         if (isInputFocused) NuvioTheme.colors.Primary else Color.Transparent
                     ),

@@ -181,20 +181,14 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Paskyra</string>
-    <string name="settings_account_subtitle">Paskyros ir sinchronizavimo būsena</string>
     <string name="settings_profiles">Profiliai</string>
-    <string name="settings_profiles_subtitle">Valdyti naudotojų profilius</string>
     <string name="settings_layout">Išdėstymas</string>
-    <string name="settings_layout_subtitle">Pradinio ekrano struktūra ir plakatų stiliai</string>
     <string name="settings_plugins">Įskiepiai</string>
     <string name="settings_plugins_subtitle">Repozitorijos ir teikėjai</string>
     <string name="settings_integration">Integracijos</string>
     <string name="settings_playback">Atkūrimas</string>
-    <string name="settings_playback_subtitle">Grotuvas, subtitrai ir automatinis paleidimas</string>
     <string name="settings_trakt_subtitle">Atidaryti „Trakt“ ryšio ekraną</string>
-    <string name="settings_about_subtitle">Versija ir politika</string>
     <string name="settings_debug">Derinimas (Debug)</string>
-    <string name="settings_debug_subtitle">Kūrėjo įrankiai ir funkcijų vėliavėlės</string>
     <string name="settings_plugins_section_subtitle">Valdyti repozitorijas, teikėjus ir įskiepių būsenas</string>
     <string name="settings_account_section_subtitle">Paskyros ir sinchronizavimo būsena</string>
     <string name="account_stat_addons">priedai</string>
@@ -244,8 +238,6 @@
     <string name="contributors_profile_unavailable">„GitHub“ profilio nuoroda nepasiekiama.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_section_general">Bendra</string>
-    <string name="playback_section_general_desc">Pagrindinė atkūrimo elgsena.</string>
     <string name="playback_loading_overlay">Įkėlimo perdanga</string>
     <string name="playback_loading_overlay_sub">Rodyti įkėlimo ekraną, kol pasirodys pirmas vaizdo kadras.</string>
     <string name="playback_pause_overlay">Pristabdymo perdanga</string>
@@ -255,18 +247,11 @@
     <string name="playback_skip_intro">Praleisti Intro</string>
     <string name="playback_skip_intro_sub">Naudoti „introdb.app“ įžangų ir santraukų aptikimui.</string>
     <string name="playback_auto_frame_rate">Automatinis kadrų dažnis</string>
-    <string name="playback_section_player">Grotuvas ir srauto pasirinkimas</string>
-    <string name="playback_section_player_desc">Grotuvo nustatymai, automatinis paleidimas ir šaltinių filtravimas.</string>
-    <string name="playback_player">Grotuvas</string>
     <string name="playback_player_internal">Vidinis</string>
     <string name="playback_player_external">Išorinis</string>
     <string name="playback_player_ask">Klausti kiekvieną kartą</string>
-    <string name="playback_section_audio">Garsas ir vaizdo įrašas</string>
-    <string name="playback_section_audio_desc">Garso valdikliai ir vaizdo suderinamumas.</string>
     <string name="playback_section_subtitles">Subtitrai</string>
     <string name="playback_section_subtitles_desc">Kalba, stilius ir atvaizdavimo režimas.</string>
-    <string name="playback_afr_open">Atidaryti</string>
-    <string name="playback_afr_closed">Uždaryti</string>
     <string name="playback_afr_off">Išjungta</string>
     <string name="playback_afr_off_sub">Nekeisti ekrano atnaujinimo dažnio.</string>
     <string name="playback_afr_on_start">Pradžioje</string>
@@ -326,15 +311,6 @@
     <string name="sub_libass">Naudoti „libass“ ASS/SSA subtitrams</string>
     <string name="sub_libass_sub">Eksperimentinis: išplėstinis ASS/SSA atvaizdavimas (stiliai, pozicionavimas, animacijos)</string>
     <string name="sub_libass_mode">„Libass“ atvaizdavimo režimas</string>
-    <string name="sub_mode_overlay_gl">OpenGL perdanga (Rekomenduojama)</string>
-    <string name="sub_mode_overlay_gl_sub">Geriausia kokybė su HDR palaikymu. Atvaizduoja subtitrus atskiroje gijoje.</string>
-    <string name="sub_mode_overlay_canvas">Canvas perdanga</string>
-    <string name="sub_mode_effects_gl">OpenGL efektai</string>
-    <string name="sub_mode_effects_gl_sub">Animacijų palaikymas naudojant „Media3“ efektus. Greičiau nei „Canvas“.</string>
-    <string name="sub_mode_effects_canvas">Canvas efektai</string>
-    <string name="sub_mode_effects_canvas_sub">Animacijų palaikymas naudojant „Media3“ efektus su „Canvas“ atvaizdavimu.</string>
-    <string name="sub_mode_standard">Standartiniai (Standard Cues)</string>
-    <string name="sub_mode_standard_sub">Pagrindinis subtitrų atvaizdavimas be animacijų palaikymo. Labiausiai suderinama.</string>
     <string name="sub_org_none">Nėra (numatytoji tvarka)</string>
     <string name="sub_org_by_lang">Pagal kalbą</string>
     <string name="sub_org_by_addon">Pagal priedą</string>
@@ -869,7 +845,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="auth_qr_title">Prisijungti per telefoną</string>
     <string name="auth_qr_finishing">Užbaigiama…</string>
     <string name="auth_qr_code_label">Skenuokite QR kodą</string>
-    <string name="auth_qr_expires">Kodas baigsis po %1$d s</string>
+    <string name="auth_qr_expires">Kodas baigsis po %1$s</string>
     <string name="auth_qr_scan_instruction">Nukreipkite kamerą į kodą</string>
     <string name="auth_qr_code_display">QR kodo rodymas</string>
     <string name="auth_qr_refresh">Atnaujinti kodą</string>
@@ -903,8 +879,8 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
 
     <!-- PluginScreen -->
     <string name="plugin_readonly_notice">Naudojami pagrindinio profilio įskiepiai</string>
-    <string name="plugin_repositories_section">Repozitorijos</string>
-    <string name="plugin_providers_section">Teikėjai</string>
+    <string name="plugin_repositories_section">Repozitorijos (%1$d)</string>
+    <string name="plugin_providers_section">Teikėjai (%1$d)</string>
     <string name="plugin_title">Įskiepiai</string>
     <string name="plugin_subtitle">Tvarkyti projekto įskiepius ir šaltinius</string>
     <string name="plugin_add_repository">Pridėti repozitoriją</string>
@@ -918,12 +894,12 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="plugin_confirm_added">Pridėta:</string>
     <string name="plugin_confirm_removed">Pašalinta:</string>
     <string name="plugin_confirm_no_changes">Pakeitimų neaptikta</string>
-    <string name="plugin_confirm_total">Iš viso įskiepių</string>
+    <string name="plugin_confirm_total">Iš viso repozitorijų: %1$d</string>
     <string name="plugin_confirm_reject">Atmesti</string>
     <string name="plugin_confirm_confirm">Patvirtinti</string>
     <string name="plugin_updated_format">Atnaujinta: %1$s</string>
     <string name="plugin_test_btn">Testuoti</string>
-    <string name="plugin_test_results">Testo rezultatai</string>
+    <string name="plugin_test_results">Testo rezultatai (%1$d)</string>
 
     <!-- ProfileSelectionScreen -->
     <string name="profile_selection_title">Kas žiūri?</string>
@@ -963,7 +939,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="account_sign_in_description">Prisijunkite, kad sinchronizuotumėte biblioteką, pažangą ir priedus tarp įrenginių. Biblioteka sinchronizuojama per „Nuvio Sync“, kai „Trakt“ neprijungta.</string>
     <string name="account_sync_code_title">Sinchronizavimo kodas</string>
     <string name="account_sync_code_description">Susiekite savo įrenginius naudodami kodą</string>
-    <string name="account_linked_devices">Susieti įrenginiai</string>
+    <string name="account_linked_devices">Susieti įrenginiai (%1$d)</string>
     <string name="account_no_linked_devices">Susietų įrenginių nėra</string>
     <string name="account_unlink">Atsieti</string>
 
@@ -971,7 +947,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="ratings_loading">Įkeliami įvertinimai…</string>
     <string name="ratings_unavailable">Įvertinimai neprieinami</string>
     <string name="ratings_load_error">Nepavyko įkelti įvertinimų</string>
-    <string name="ratings_season_summary">Sezono apžvalga</string>
+    <string name="ratings_season_summary">Sezonas %1$d - epizodų: %2$d</string>
 
     <!-- SearchDiscoverSection -->
     <string name="discover_title">Atrasti</string>
@@ -988,9 +964,9 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="discover_empty_no_content_subtitle">Šioje kategorijoje elementų nėra</string>
 
     <!-- AddonManagerScreen -->
-    <string name="addon_confirm_total_addons">Iš viso priedų</string>
-    <string name="addon_confirm_total_catalogs">Iš viso katalogų</string>
-    <string name="addon_catalogs_types">Katalogų tipai</string>
+    <string name="addon_confirm_total_addons">Iš viso priedų: %1$d</string>
+    <string name="addon_confirm_total_catalogs">Iš viso katalogų: %1$d</string>
+    <string name="addon_catalogs_types">Katalogai: %1$d - Tipai: %2$s</string>
 
     <!-- PluginScreen -->
     <string name="plugin_and_more">ir dar %1$d</string>

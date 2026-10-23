@@ -11,6 +11,9 @@ import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.local.WatchedItemsPreferences
+import com.nuvio.tv.data.mediaserver.ServerItemRef
+import com.nuvio.tv.data.mediaserver.ServerWatchMark
+import com.nuvio.tv.data.mediaserver.ServerWatched
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.WatchedItem
 import com.nuvio.tv.domain.model.WatchedMutationKey
@@ -138,6 +141,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
     private val trackingProgressProviders: TrackingProgressProviderRegistry,
     private val trackingHistoryWriters: TrackingHistoryWriterRegistry,
     private val mutationStore: WatchStateMutationStore,
+    private val serverWatched: ServerWatched,
 ) : WatchProgressRepository {
     companion object {
         private const val TAG = "WatchProgressRepo"
@@ -177,8 +181,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
         replay = 1,
         extraBufferCapacity = 16
     )
-    private val optimisticWatchedMovieAdditions = MutableStateFlow<Set<String>>(emptySet())
-    private val optimisticWatchedMovieRemovals = MutableStateFlow<Set<String>>(emptySet())
+    // Optimistic watched-movie toggles, keyed by the profile that made them.
+    private val optimisticWatchedMovieAdditions = MutableStateFlow<Map<Int, Set<String>>>(emptyMap())
+    private val optimisticWatchedMovieRemovals = MutableStateFlow<Map<Int, Set<String>>>(emptyMap())
     private val metadataMutex = Mutex()
     private val inFlightMetadataKeys = mutableSetOf<ProfileContentKey>()
     private val metadataHydrationLimit = 30
@@ -651,29 +656,37 @@ class WatchProgressRepositoryImpl @Inject constructor(
             }
         return combine(
             baseFlow,
+            profileManager.activeProfileId,
             optimisticWatchedMovieAdditions,
             optimisticWatchedMovieRemovals
-        ) { base, additions, removals ->
-            (base + additions) - removals
+        ) { base, profileId, additions, removals ->
+            (base + additions[profileId].orEmpty()) - removals[profileId].orEmpty()
         }.distinctUntilChanged()
     }
 
     override fun applyOptimisticWatchedMovie(ids: Set<String>, add: Boolean) {
+        val profileId = profileManager.activeProfileId.value
         if (add) {
-            optimisticWatchedMovieAdditions.update { it + ids }
-            optimisticWatchedMovieRemovals.update { it - ids }
+            optimisticWatchedMovieAdditions.update { it.plusIds(profileId, ids) }
+            optimisticWatchedMovieRemovals.update { it.minusIds(profileId, ids) }
         } else {
-            optimisticWatchedMovieRemovals.update { it + ids }
-            optimisticWatchedMovieAdditions.update { it - ids }
+            optimisticWatchedMovieRemovals.update { it.plusIds(profileId, ids) }
+            optimisticWatchedMovieAdditions.update { it.minusIds(profileId, ids) }
         }
     }
 
     override fun revertOptimisticWatchedMovie(ids: Set<String>, add: Boolean) {
-        if (add) {
-            optimisticWatchedMovieAdditions.update { it - ids }
-        } else {
-            optimisticWatchedMovieRemovals.update { it - ids }
-        }
+        // The active profile may have changed since the toggle, so revert it wherever it is.
+        val target = if (add) optimisticWatchedMovieAdditions else optimisticWatchedMovieRemovals
+        target.update { byProfile -> byProfile.keys.fold(byProfile) { acc, profileId -> acc.minusIds(profileId, ids) } }
+    }
+
+    private fun Map<Int, Set<String>>.plusIds(profileId: Int, ids: Set<String>): Map<Int, Set<String>> =
+        this + (profileId to (this[profileId].orEmpty() + ids))
+
+    private fun Map<Int, Set<String>>.minusIds(profileId: Int, ids: Set<String>): Map<Int, Set<String>> {
+        val remaining = this[profileId].orEmpty() - ids
+        return if (remaining.isEmpty()) this - profileId else this + (profileId to remaining)
     }
 
     override suspend fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>> {
@@ -871,6 +884,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
             provider.applyOptimisticRemoval(contentId, season, episode)
         }
         broadcastHistoryRemoval(profileId, listOf(media))
+        syncServerWatched(
+            listOf(ServerWatchMark(contentId, if (season != null || episode != null) "series" else "movie", videoId, season, episode)),
+            played = false,
+            profileId = profileId
+        )
         watchProgressPreferences.removeProgress(contentId, season, episode, profileId)
         watchedItemsPreferences.unmarkAsWatched(contentId, season, episode, profileId = profileId)
         if (authManager.isAuthenticated && remoteDeleteKeys.isNotEmpty()) {
@@ -922,6 +940,13 @@ class WatchProgressRepositoryImpl @Inject constructor(
             )
         }
         broadcastHistoryRemoval(profileId, media)
+        syncServerWatched(
+            episodes.map { (season, episode, epVideoId) ->
+                ServerWatchMark(contentId, "series", epVideoId ?: videoId, season, episode)
+            },
+            played = false,
+            profileId = profileId
+        )
         if (authManager.isAuthenticated) {
             watchProgressSyncService.deleteFromRemote(remoteDeleteKeys.distinct(), profileId)
                 .onFailure { error -> Log.w(TAG, "removeFromHistoryBatch remote delete failed", error) }
@@ -972,6 +997,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         mutationStore.queueWatchedUpserts(listOf(watchedItem), profileId)
         if (broadcastTrackingHistory) {
             broadcastHistoryAdd(profileId, listOf(completed.toTrackingHistoryItem(now)))
+            syncServerWatched(listOf(completed.toServerWatchMark()), played = true, profileId = profileId)
         }
         triggerRemoteSync(profileId = profileId)
         triggerWatchedItemsSync(listOf(watchedItem), profileId = profileId)
@@ -1014,9 +1040,31 @@ class WatchProgressRepositoryImpl @Inject constructor(
         watchedItemsPreferences.markAsWatchedBatch(watchedItems, profileId = profileId)
         mutationStore.queueWatchedUpserts(watchedItems, profileId)
         broadcastHistoryAdd(profileId, completedList.map { it.toTrackingHistoryItem(now) })
+        syncServerWatched(completedList.map { it.toServerWatchMark() }, played = true, profileId = profileId)
         triggerRemoteSync(profileId = profileId)
         triggerWatchedItemsSync(watchedItems, profileId = profileId)
     }
+
+    private fun syncServerWatched(marks: List<ServerWatchMark>, played: Boolean, profileId: Int) {
+        serverWatched.apply(marks, played) { failed -> restoreServerWatched(failed, played, profileId) }
+        serverWatched.mirror(marks, played)
+    }
+
+    private suspend fun restoreServerWatched(failed: List<ServerWatchMark>, played: Boolean, profileId: Int) {
+        if (!played) {
+            watchedItemsPreferences.markAsWatchedBatch(
+                failed.map { WatchedItem(it.contentId, it.contentType, "", it.season, it.episode, System.currentTimeMillis()) },
+                profileId = profileId
+            )
+            return
+        }
+        failed.forEach { mark ->
+            watchedItemsPreferences.unmarkAsWatched(mark.contentId, mark.season, mark.episode, profileId = profileId)
+            watchProgressPreferences.removeProgress(mark.contentId, mark.season, mark.episode, profileId)
+        }
+    }
+
+    private fun WatchProgress.toServerWatchMark() = ServerWatchMark(contentId, contentType, videoId, season, episode)
 
     private fun WatchProgress.toWatchedItem(watchedAt: Long = System.currentTimeMillis()): WatchedItem =
         WatchedItem(
@@ -1046,6 +1094,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         profileId: Int,
         items: Collection<TrackingHistoryItem>
     ) {
+        val items = items.filterNot { ServerItemRef.isServerId(it.media.catalog?.contentId) }
         if (items.isEmpty()) return
         val connectedIds = connectedProgressProviders().mapTo(mutableSetOf()) { it.providerId }
         supervisorScope {
@@ -1067,6 +1116,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         profileId: Int,
         items: Collection<TrackingMediaReference>
     ) {
+        val items = items.filterNot { ServerItemRef.isServerId(it.catalog?.contentId) }
         if (items.isEmpty()) return
         val connectedIds = connectedProgressProviders().mapTo(mutableSetOf()) { it.providerId }
         supervisorScope {
