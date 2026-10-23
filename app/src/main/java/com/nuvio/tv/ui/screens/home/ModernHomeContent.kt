@@ -187,6 +187,7 @@ fun ModernHomeContent(
                 com.nuvio.tv.ui.components.HeroCarousel(
                     items = uiState.heroItems.asStable(),
                     showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                    descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                     onItemClick = { item ->
                         onNavigateToDetail(item.id, item.apiType, "")
                     },
@@ -1142,6 +1143,7 @@ fun ModernHomeContent(
                         state.fullScreenBackdrop && shouldPlayTrailerLambda() && heroTrailerRenderedLambda()
                     }
                 },
+                descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                 modifier = heroMetadataModifier
             )
 
