@@ -4,7 +4,6 @@ import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import fi.iki.elonen.NanoHTTPD
-import java.io.ByteArrayInputStream
 import java.util.concurrent.ConcurrentHashMap
 
 class AddonConfigServer(
@@ -51,27 +50,9 @@ class AddonConfigServer(
         }
     }
 
-    private fun serveWebPage(): Response {
-        return newFixedLengthResponse(
-            Response.Status.OK,
-            "text/html; charset=utf-8",
-            AddonWebPage.getHtml(context, webConfigMode)
-        )
-    }
+    private fun serveWebPage(): Response = htmlResponse(AddonWebPage.getHtml(context, webConfigMode))
 
-    private fun serveLogo(): Response {
-        val bytes = logoProvider?.invoke()
-        return if (bytes != null) {
-            newFixedLengthResponse(
-                Response.Status.OK,
-                "image/png",
-                ByteArrayInputStream(bytes),
-                bytes.size.toLong()
-            )
-        } else {
-            newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
-        }
-    }
+    private fun serveLogo(): Response = pngLogoResponse(logoProvider?.invoke())
 
     private fun serveCollections(): Response {
         val collections = currentPageStateProvider().collections
@@ -231,28 +212,19 @@ class AddonConfigServer(
             logoProvider: (() -> ByteArray?)? = null,
             startPort: Int = 8080,
             maxAttempts: Int = 10
-        ): AddonConfigServer? {
-            for (port in startPort until startPort + maxAttempts) {
-                try {
-                    val server = AddonConfigServer(
-                        context = context,
-                        webConfigMode = webConfigMode,
-                        currentPageStateProvider = currentPageStateProvider,
-                        onChangeProposed = onChangeProposed,
-                        tmdbMetadataProvider = tmdbMetadataProvider,
-                        tmdbSearchProvider = tmdbSearchProvider,
-                        traktMetadataProvider = traktMetadataProvider,
-                        traktSearchProvider = traktSearchProvider,
-                        logoProvider = logoProvider,
-                        port = port
-                    )
-                    server.start(SOCKET_READ_TIMEOUT, false)
-                    return server
-                } catch (e: Exception) {
-                    // Port in use, try next
-                }
-            }
-            return null
+        ): AddonConfigServer? = startServerOnAvailablePort(startPort, maxAttempts) { port ->
+            AddonConfigServer(
+                context = context,
+                webConfigMode = webConfigMode,
+                currentPageStateProvider = currentPageStateProvider,
+                onChangeProposed = onChangeProposed,
+                tmdbMetadataProvider = tmdbMetadataProvider,
+                tmdbSearchProvider = tmdbSearchProvider,
+                traktMetadataProvider = traktMetadataProvider,
+                traktSearchProvider = traktSearchProvider,
+                logoProvider = logoProvider,
+                port = port
+            )
         }
     }
 }
