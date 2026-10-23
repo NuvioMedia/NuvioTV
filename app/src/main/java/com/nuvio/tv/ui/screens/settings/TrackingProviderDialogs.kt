@@ -64,7 +64,9 @@ import com.nuvio.tv.data.simkl.SimklConnectionMode
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioMotion
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
 
@@ -833,7 +835,7 @@ private fun TrackingDialogBrand.cardBrush(): Brush = when (this) {
         colors = listOf(Color(0xFF7D279B), Color(0xFFD61F56), Color(0xFFF22125))
     )
     TrackingDialogBrand.SIMKL -> Brush.linearGradient(
-        colors = listOf(Color(0xFF050505), Color(0xFF292929), Color(0xFF111111))
+        colors = listOf(Color(0xFF050505), Color(0xFF292929), NuvioPrimitives.neutral925)
     )
     TrackingDialogBrand.MDBLIST -> Brush.linearGradient(
         colors = listOf(Color(0xFF173D69), Color(0xFF225C97), Color(0xFF16385D))

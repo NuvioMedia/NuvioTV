@@ -136,6 +136,15 @@ internal fun PlaybackVideoSection(
             onToggle = { onUpdate { setTransparentLetterbox(!transparentLetterbox) } },
             enabled = enabled
         )
+
+        SettingsSectionLabel(text = stringResource(R.string.playback_chapters_label))
+        SettingsToggleRow(
+            title = stringResource(R.string.playback_exo_chapters_title),
+            subtitle = stringResource(R.string.playback_exo_chapters_sub),
+            checked = settings.exoChaptersEnabled,
+            onToggle = { onUpdate { setExoChaptersEnabled(!settings.exoChaptersEnabled) } },
+            enabled = enabled
+        )
     }
 
     if (settings.usesMpvEngine) {

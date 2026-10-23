@@ -363,15 +363,6 @@
     <string name="sub_libass">Bruk libass for ASS/SSA-undertekster</string>
     <string name="sub_libass_sub">Eksperimentell: avansert ASS/SSA-gjengivelse (stiler, plassering, animasjoner)</string>
     <string name="sub_libass_mode">Libass gjengivelsmodus</string>
-    <string name="sub_mode_overlay_gl">Overlegg OpenGL (anbefalt)</string>
-    <string name="sub_mode_overlay_gl_sub">Best kvalitet med HDR-støtte. Gjengiver undertekster på en separat tråd.</string>
-    <string name="sub_mode_overlay_canvas">Overlegg lerret</string>
-    <string name="sub_mode_effects_gl">Effekter OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Animasjonsstøtte ved bruk av Media3-effekter. Raskere enn lerret.</string>
-    <string name="sub_mode_effects_canvas">Effekter lerret</string>
-    <string name="sub_mode_effects_canvas_sub">Animasjonsstøtte ved bruk av Media3-effekter med lerretgjengivelse.</string>
-    <string name="sub_mode_standard">Standardtips</string>
-    <string name="sub_mode_standard_sub">Grunnleggende undertekstgjengivelse uten animasjonsstøtte. Mest kompatibel.</string>
     <string name="sub_org_none">Ingen (standardrekkefølge)</string>
     <string name="sub_org_by_lang">Etter språk</string>
     <string name="sub_org_by_addon">Etter tillegg</string>

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,6 +45,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -345,19 +347,32 @@ internal fun HostSettings(
 
 @Composable
 internal fun HostOnlyNote(modifier: Modifier = Modifier) {
+    PartyHint(
+        icon = Icons.Rounded.Lock,
+        text = stringResource(R.string.party_host_only_note),
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun PartyHint(
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier.padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Rounded.Lock,
+            imageVector = icon,
             contentDescription = null,
             tint = NuvioTheme.colors.TextSecondary,
             modifier = Modifier.size(16.dp),
         )
         Text(
-            text = stringResource(R.string.party_host_only_note),
+            text = text,
             style = MaterialTheme.typography.bodyMedium,
             color = NuvioTheme.colors.TextSecondary,
         )
@@ -386,6 +401,10 @@ internal fun PartyActions(
                 leadingIcon = Icons.Rounded.StopCircle,
             )
         }
+        PartyHint(
+            icon = Icons.Rounded.Smartphone,
+            text = stringResource(R.string.party_phone_chat_note),
+        )
     }
     if (confirmEnd) {
         ConfirmDialog(

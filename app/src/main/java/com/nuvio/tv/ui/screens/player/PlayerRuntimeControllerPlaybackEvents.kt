@@ -30,8 +30,8 @@ internal const val AUDIO_AMPLIFICATION_MIN_DB = 0
 internal const val AUDIO_AMPLIFICATION_MAX_DB = 10
 internal const val CENTER_MIX_LEVEL_MIN_DB = -10
 internal const val CENTER_MIX_LEVEL_MAX_DB = 30
-internal const val AUDIO_DELAY_MIN_MS = -60000
-internal const val AUDIO_DELAY_MAX_MS = 60000
+internal const val AUDIO_DELAY_MIN_MS = com.nuvio.tv.domain.model.AUDIO_DELAY_MIN_MS
+internal const val AUDIO_DELAY_MAX_MS = com.nuvio.tv.domain.model.AUDIO_DELAY_MAX_MS
 internal const val AUDIO_DELAY_STEP_MS = 25
 internal const val AUDIO_DELAY_HOLD_STEP_MS = 50
 internal const val AUDIO_DELAY_HOLD_FAST_STEP_MS = 100
@@ -40,20 +40,158 @@ internal const val AUDIO_DELAY_HOLD_FAST_THRESHOLD_MS = 2000L
 internal const val AUDIO_DELAY_HOLD_REPEAT_INTERVAL_MS = 100L
 internal const val WATCH_PROGRESS_SAVE_INTERVAL_MS = 90_000L
 
-internal fun PlayerRuntimeController.applyAudioDelay(
-    delayMs: Int,
-    persistForCurrentRoute: Boolean = true
+/**
+ * Audio delay split into its sources, so the stream hint and the user's tweak on that stream
+ * never end up in the per-device delay. The player always gets [totalMs].
+ */
+internal data class AudioDelayParts(
+    /** Per-device delay (stored per route when "remember per device" is on). */
+    val deviceMs: Int = 0,
+    /** `behaviorHints.audioDelayMs` of the current stream. */
+    val streamMs: Int = 0,
+    /** User adjustment made while a stream delay is active; never persisted, dropped on stream change. */
+    val sessionAdjustMs: Int = 0,
+    /**
+     * `behaviorHints.audioDelayLanguage` of the current stream: when set, the stream delay only
+     * applies to the tracks in this language (the ones coming from the addon's audio source).
+     */
+    val streamLanguage: String? = null,
+    /** False while the selected audio track is not in [streamLanguage] (e.g. the video's original audio). */
+    val streamAudioActive: Boolean = true
 ) {
-    val clampedDelayMs = delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
-    audioDelayUs.set(clampedDelayMs.toLong() * 1000L)
-    _uiState.update { it.copy(audioDelayMs = clampedDelayMs) }
-    if (isUsingMpvEngine()) {
-        mpvView?.setAudioDelayMs(clampedDelayMs)
+    private val hasActiveStreamDelay: Boolean
+        get() = streamMs != 0 && streamAudioActive
+
+    val totalMs: Int
+        get() {
+            val streamPartMs = if (streamAudioActive) streamMs.toLong() + sessionAdjustMs else 0L
+            return (deviceMs.toLong() + streamPartMs)
+                .coerceIn(AUDIO_DELAY_MIN_MS.toLong(), AUDIO_DELAY_MAX_MS.toLong())
+                .toInt()
+        }
+
+    /** Content offset of the stream's audio source (hint + user's tweak), without the device delay. */
+    val streamSourceOffsetMs: Int
+        get() = (streamMs.toLong() + sessionAdjustMs)
+            .coerceIn(AUDIO_DELAY_MIN_MS.toLong(), AUDIO_DELAY_MAX_MS.toLong())
+            .toInt()
+
+    /** Value to save for the current route, or null while a stream delay is active. */
+    val persistableDeviceMs: Int?
+        get() = deviceMs.takeIf { !hasActiveStreamDelay }
+
+    /** The user picked [totalMs] in the Audio panel. */
+    fun withManualTotal(totalMs: Int): AudioDelayParts {
+        val clampedTotalMs = totalMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
+        return when {
+            streamMs == 0 -> copy(deviceMs = clampedTotalMs, sessionAdjustMs = 0)
+            // Original audio selected: the stream delay is not in play, so this is a device tweak.
+            !streamAudioActive -> copy(deviceMs = clampedTotalMs)
+            else -> copy(sessionAdjustMs = clampedTotalMs - deviceMs - streamMs)
+        }
     }
-    if (persistForCurrentRoute) {
-        persistAudioDelayForCurrentRoute(clampedDelayMs)
+
+    fun withStream(streamMs: Int, streamLanguage: String? = null): AudioDelayParts =
+        copy(
+            streamMs = streamMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS),
+            sessionAdjustMs = 0,
+            streamLanguage = streamLanguage?.takeIf { it.isNotBlank() },
+            streamAudioActive = true
+        )
+
+    fun withStreamAudioActive(active: Boolean): AudioDelayParts =
+        copy(streamAudioActive = active || streamLanguage == null)
+
+    fun withDevice(deviceMs: Int): AudioDelayParts =
+        copy(deviceMs = deviceMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS))
+}
+
+/** Decides which selected tracks belong to the stream's audio source (`behaviorHints.audioDelayLanguage`). */
+internal object StreamDelayScope {
+    /** Without a language every audio track gets the stream delay; unknown selection keeps it until tracks load. */
+    fun appliesToAudio(streamLanguage: String?, selectedAudioLanguage: String?, hasSelectedAudio: Boolean): Boolean =
+        streamLanguage == null ||
+            !hasSelectedAudio ||
+            PlayerSubtitleUtils.matchesLanguageCode(selectedAudioLanguage, streamLanguage)
+
+    /** Only embedded tracks in the stream language are shifted; addon subtitles follow the video. */
+    fun appliesToSubtitle(
+        streamLanguage: String?,
+        selectedInternalSubtitleLanguage: String?,
+        hasSelectedInternalSubtitle: Boolean,
+        addonSubtitleActive: Boolean
+    ): Boolean =
+        streamLanguage != null &&
+            hasSelectedInternalSubtitle &&
+            !addonSubtitleActive &&
+            PlayerSubtitleUtils.matchesLanguageCode(selectedInternalSubtitleLanguage, streamLanguage)
+}
+
+/** Audio panel change: [delayMs] is the new total delay shown to the user. */
+internal fun PlayerRuntimeController.applyAudioDelay(delayMs: Int) {
+    audioDelayParts = audioDelayParts.withManualTotal(delayMs)
+    applyEffectiveAudioDelay()
+    audioDelayParts.persistableDeviceMs?.let { persistAudioDelayForCurrentRoute(it) }
+}
+
+/** Pushes the current total delay to the UI state and the active engine. */
+internal fun PlayerRuntimeController.applyEffectiveAudioDelay() {
+    val totalMs = audioDelayParts.totalMs
+    audioDelayUs.set(totalMs.toLong() * 1000L)
+    _uiState.update { it.copy(audioDelayMs = totalMs) }
+    if (isUsingMpvEngine()) {
+        mpvView?.setAudioDelayMs(totalMs)
+    }
+    applyStreamSubtitleOffset()
+}
+
+/** A new stream was selected: swap in its delay hint and drop the tweak made on the previous one. */
+internal fun PlayerRuntimeController.applyStreamAudioDelay(streamDelayMs: Int?, streamLanguage: String? = null) {
+    audioDelayParts = audioDelayParts.withStream(streamDelayMs ?: 0, streamLanguage)
+    syncStreamDelayWithSelectedTracks(forceApply = true)
+}
+
+/** Re-evaluates which selected tracks come from the stream's audio source and applies the delays. */
+internal fun PlayerRuntimeController.syncStreamDelayWithSelectedTracks(forceApply: Boolean = false) {
+    val state = _uiState.value
+    val selectedAudio = state.audioTracks.getOrNull(state.selectedAudioTrackIndex)
+    val audioActive = StreamDelayScope.appliesToAudio(
+        streamLanguage = audioDelayParts.streamLanguage,
+        selectedAudioLanguage = selectedAudio?.language,
+        hasSelectedAudio = selectedAudio != null
+    )
+    val updatedParts = audioDelayParts.withStreamAudioActive(audioActive)
+    if (forceApply || updatedParts != audioDelayParts) {
+        audioDelayParts = updatedParts
+        applyEffectiveAudioDelay()
+    } else {
+        applyStreamSubtitleOffset()
     }
 }
+
+/**
+ * Embedded subtitles from the stream's audio source share its timeline, so they get the same
+ * content offset. Kept apart from the user's subtitle delay, which is persisted per video.
+ */
+internal fun PlayerRuntimeController.applyStreamSubtitleOffset() {
+    val state = _uiState.value
+    val selectedSubtitle = state.subtitleTracks.getOrNull(state.selectedSubtitleTrackIndex)
+    val applies = StreamDelayScope.appliesToSubtitle(
+        streamLanguage = audioDelayParts.streamLanguage,
+        selectedInternalSubtitleLanguage = selectedSubtitle?.language,
+        hasSelectedInternalSubtitle = selectedSubtitle != null,
+        addonSubtitleActive = state.selectedAddonSubtitle != null
+    )
+    val offsetUs = if (applies) audioDelayParts.streamSourceOffsetMs.toLong() * 1000L else 0L
+    if (streamSubtitleDelayUs.getAndSet(offsetUs) == offsetUs) return
+    if (isUsingMpvEngine()) {
+        mpvView?.setSubtitleDelayMs(mpvSubtitleDelayMs(state.subtitleDelayMs))
+    }
+}
+
+/** mpv has a single `sub-delay`: the user's subtitle delay plus the stream source offset. */
+internal fun PlayerRuntimeController.mpvSubtitleDelayMs(userDelayMs: Int): Int =
+    userDelayMs + (streamSubtitleDelayUs.get() / 1000L).toInt()
 
 internal fun PlayerRuntimeController.skipActiveInterval(): Boolean {
     return skipInterval(_uiState.value.activeSkipInterval ?: return false)
@@ -215,6 +353,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         durationMs = playerDuration
                     )
                     val playingNow = view.isPlayingNow()
+                    subtitleCueTracker.updateText(view.currentSubtitleText())
                     val cacheBuffering = view.isPausedForCacheNow() || view.isCoreIdleNow()
                     var firstFrameReady = hasRenderedFirstFrame
                         if (!firstFrameReady) {
@@ -1052,6 +1191,7 @@ fun PlayerRuntimeController.scheduleHideControls() {
             !_uiState.value.showSubtitleDelayOverlay &&
             !_uiState.value.showSubtitleTimingDialog &&
             !_uiState.value.showEpisodesPanel && !_uiState.value.showSourcesPanel &&
+            !_uiState.value.showChaptersPanel &&
             !_uiState.value.showPartyPanel &&
             !_uiState.value.showStreamInfoOverlay) {
             _uiState.update { it.copy(showControls = false) }
@@ -1103,7 +1243,7 @@ internal fun PlayerRuntimeController.setSubtitleDelayMs(targetMs: Int, showOverl
 
     subtitleDelayUs.set(newDelayMs.toLong() * 1000L)
     if (isUsingMpvEngine()) {
-        mpvView?.setSubtitleDelayMs(newDelayMs)
+        mpvView?.setSubtitleDelayMs(mpvSubtitleDelayMs(newDelayMs))
     }
     if (showOverlay) {
         _uiState.update {
@@ -1157,7 +1297,7 @@ internal fun PlayerRuntimeController.schedulePauseOverlay() {
         val s = _uiState.value
         val anyPanelOpen = s.showSubtitleOverlay || s.showSubtitleStylePanel ||
             s.showSpeedDialog || s.showMoreDialog || s.showEpisodesPanel ||
-            s.showSourcesPanel || s.showAudioOverlay || s.showStreamInfoOverlay ||
+            s.showSourcesPanel || s.showChaptersPanel || s.showAudioOverlay || s.showStreamInfoOverlay ||
             s.showSubtitleTimingDialog || s.showSubtitleDelayOverlay || s.showPartyPanel
         if (!s.isPlaying && s.pauseOverlayEnabled && s.error == null && !anyPanelOpen) {
             _uiState.update { it.copy(showPauseOverlay = true, showControls = false) }
@@ -1312,6 +1452,24 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             } else {
                 showSeekOverlayTemporarily()
             }
+        }
+        is PlayerEvent.OnSkipChapter -> {
+            val chapters = _uiState.value.chapters
+            if (chapters.isEmpty() || _playbackTimeline.value.isLive) return
+            val position = pendingPreviewSeekPosition ?: currentPlaybackPositionMs() ?: return
+            val target = if (event.forward) {
+                PlayerChapters.nextStartMs(chapters, position)
+            } else {
+                PlayerChapters.previousStartMs(chapters, position)
+            } ?: return
+            seekToChapter(target)
+        }
+        PlayerEvent.OnShowChaptersPanel -> showChaptersPanel()
+        PlayerEvent.OnDismissChaptersPanel -> dismissChaptersPanel()
+        is PlayerEvent.OnSelectChapter -> {
+            val chapter = _uiState.value.chapters.getOrNull(event.index) ?: return
+            _uiState.update { it.copy(showChaptersPanel = false) }
+            seekToChapter(chapter.startMs)
         }
         is PlayerEvent.OnSelectAudioTrack -> {
             logSwitchTrace(
@@ -1761,8 +1919,18 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         is PlayerEvent.OnSetSubtitleSize -> {
             scope.launch { playerSettingsDataStore.setSubtitleSize(event.size) }
         }
+        is PlayerEvent.OnSetSubtitleHdrBrightness -> {
+            scope.launch { playerSettingsDataStore.setSubtitleHdrBrightness(event.brightness) }
+        }
         is PlayerEvent.OnSetSubtitleTextColor -> {
-            scope.launch { playerSettingsDataStore.setSubtitleTextColor(event.color) }
+            val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
+            scope.launch {
+                if (editingHdr) {
+                    playerSettingsDataStore.setSubtitleHdrTextColor(event.color)
+                } else {
+                    playerSettingsDataStore.setSubtitleTextColor(event.color)
+                }
+            }
         }
         is PlayerEvent.OnSetSubtitleBold -> {
             scope.launch { playerSettingsDataStore.setSubtitleBold(event.bold) }
@@ -1777,10 +1945,16 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             scope.launch { playerSettingsDataStore.setSubtitleVerticalOffset(event.offset) }
         }
         PlayerEvent.OnResetSubtitleDefaults -> {
+            val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
             scope.launch {
                 val defaults = SubtitleStyleSettings()
                 playerSettingsDataStore.setSubtitleSize(defaults.size)
-                playerSettingsDataStore.setSubtitleTextColor(defaults.textColor)
+                if (editingHdr) {
+                    playerSettingsDataStore.setSubtitleHdrTextColor(defaults.hdrTextColor)
+                    playerSettingsDataStore.setSubtitleHdrBrightness(defaults.hdrBrightness)
+                } else {
+                    playerSettingsDataStore.setSubtitleTextColor(defaults.textColor)
+                }
                 playerSettingsDataStore.setSubtitleBold(defaults.bold)
                 playerSettingsDataStore.setSubtitleOutlineEnabled(defaults.outlineEnabled)
                 playerSettingsDataStore.setSubtitleOutlineColor(defaults.outlineColor)

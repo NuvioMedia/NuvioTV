@@ -83,7 +83,6 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -139,8 +138,6 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.contentColorFor
 import androidx.tv.material3.rememberDrawerState
-import coil3.compose.rememberAsyncImagePainter
-import coil3.request.ImageRequest
 import com.nuvio.tv.R
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.auth.DeviceSessionRegistration
@@ -183,8 +180,10 @@ import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.LocalLandscapePosterMode
 import com.nuvio.tv.ui.components.LocalAlwaysBackdropWithLogo
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
+import com.nuvio.tv.ui.navigation.LocalNavViewModelStoreOwner
 import com.nuvio.tv.ui.navigation.NuvioNavHost
 import com.nuvio.tv.ui.navigation.Screen
+import com.nuvio.tv.ui.navigation.rememberNavSessionViewModelStoreOwner
 import com.nuvio.tv.ui.screens.party.PartyEffects
 import com.nuvio.tv.ui.membership.LocalMemberAccess
 import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
@@ -203,6 +202,7 @@ import com.nuvio.tv.ui.theme.brandWordmarkResource
 import com.nuvio.tv.ui.util.LocalFastHorizontalNavigationEnabled
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
 import com.nuvio.tv.ui.util.rememberDrawerItemFocusRequesters
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 import com.nuvio.tv.updater.UpdateViewModel
 import com.nuvio.tv.updater.ui.UpdateBannerHost
 import dagger.hilt.android.AndroidEntryPoint
@@ -866,6 +866,7 @@ open class MainActivity : ComponentActivity() {
                         else -> Screen.LayoutSelection.route
                     }
                     val navController = rememberNavController()
+                    val navViewModelStoreOwner = rememberNavSessionViewModelStoreOwner(navController)
                     var optimisticRoute by remember { mutableStateOf<String?>(null) }
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val actualRoute = navBackStackEntry?.destination?.route
@@ -1162,46 +1163,48 @@ open class MainActivity : ComponentActivity() {
                             hasSelectedProfileThisSession = false
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
-                            if (modernSidebarEnabled) {
-                                ModernSidebarScaffold(
-                                    longPressBackHeld = longPressBackHeld,
-                                    navController = navController,
-                                    startDestination = startDestination,
-                                    currentRoute = currentRoute,
-                                    rootRoutes = rootRoutes,
-                                    drawerItems = drawerItems,
-                                    selectedDrawerRoute = selectedDrawerRoute,
-                                    selectedDrawerItem = selectedDrawerItem,
-                                    sidebarCollapsed = sidebarCollapsed,
-                                    modernSidebarBlurEnabled = modernSidebarBlurEnabled,
-                                    hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill,
-                                    activeProfileName = activeProfile?.name ?: "",
-                                    activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
-                                    activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
-                                    showProfileSelector = profiles.size > 1,
-                                    onSwitchProfile = handleSwitchProfile,
-                                    onNavigate = { optimisticRoute = it },
-                                    onExitApp = handleExitApp
-                                )
-                            } else {
-                                LegacySidebarScaffold(
-                                    longPressBackHeld = longPressBackHeld,
-                                    navController = navController,
-                                    startDestination = startDestination,
-                                    currentRoute = currentRoute,
-                                    rootRoutes = rootRoutes,
-                                    drawerItems = drawerItems,
-                                    selectedDrawerRoute = selectedDrawerRoute,
-                                    sidebarCollapsed = sidebarCollapsed,
-                                    hideBuiltInHeaders = false,
-                                    activeProfileName = activeProfile?.name ?: "",
-                                    activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
-                                    activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
-                                    showProfileSelector = profiles.size > 1,
-                                    onSwitchProfile = handleSwitchProfile,
-                                    onNavigate = { optimisticRoute = it },
-                                    onExitApp = handleExitApp
-                                )
+                            CompositionLocalProvider(LocalNavViewModelStoreOwner provides navViewModelStoreOwner) {
+                                if (modernSidebarEnabled) {
+                                    ModernSidebarScaffold(
+                                        longPressBackHeld = longPressBackHeld,
+                                        navController = navController,
+                                        startDestination = startDestination,
+                                        currentRoute = currentRoute,
+                                        rootRoutes = rootRoutes,
+                                        drawerItems = drawerItems,
+                                        selectedDrawerRoute = selectedDrawerRoute,
+                                        selectedDrawerItem = selectedDrawerItem,
+                                        sidebarCollapsed = sidebarCollapsed,
+                                        modernSidebarBlurEnabled = modernSidebarBlurEnabled,
+                                        hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill,
+                                        activeProfileName = activeProfile?.name ?: "",
+                                        activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                                        activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
+                                        showProfileSelector = profiles.size > 1,
+                                        onSwitchProfile = handleSwitchProfile,
+                                        onNavigate = { optimisticRoute = it },
+                                        onExitApp = handleExitApp
+                                    )
+                                } else {
+                                    LegacySidebarScaffold(
+                                        longPressBackHeld = longPressBackHeld,
+                                        navController = navController,
+                                        startDestination = startDestination,
+                                        currentRoute = currentRoute,
+                                        rootRoutes = rootRoutes,
+                                        drawerItems = drawerItems,
+                                        selectedDrawerRoute = selectedDrawerRoute,
+                                        sidebarCollapsed = sidebarCollapsed,
+                                        hideBuiltInHeaders = false,
+                                        activeProfileName = activeProfile?.name ?: "",
+                                        activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                                        activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
+                                        showProfileSelector = profiles.size > 1,
+                                        onSwitchProfile = handleSwitchProfile,
+                                        onNavigate = { optimisticRoute = it },
+                                        onExitApp = handleExitApp
+                                    )
+                                }
                             }
 
                             val autoNextOverlay by externalPlaybackTracker.autoNextOverlay.collectAsState()
@@ -2431,18 +2434,6 @@ private fun DrawerItemIcon(
             modifier = iconModifier
         )
     }
-}
-
-@Composable
-private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { NuvioTheme.spacing.xl.roundToPx() }
-    return rememberAsyncImagePainter(
-        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-            .data(rawIconRes)
-            .size(sizePx)
-            .build()
-    )
 }
 
 object LocaleCache {

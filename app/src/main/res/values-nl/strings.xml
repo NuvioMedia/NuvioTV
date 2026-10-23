@@ -838,15 +838,6 @@
     <string name="sub_libass">Gebruik libass voor ASS/SSA-ondertitels</string>
     <string name="sub_libass_sub">Experimenteel: geavanceerde ASS/SSA-rendering (stijlen, positionering, animaties)</string>
     <string name="sub_libass_mode">Libass-weergavemodus</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (aanbevolen)</string>
-    <string name="sub_mode_overlay_gl_sub">Beste kwaliteit met HDR-ondersteuning. Rendert ondertitels in een aparte thread.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effecten OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Ondersteuning voor animaties via Media3-effecten. Sneller dan Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effecten Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Ondersteuning voor animaties via Media3-effecten met Canvas-rendering.</string>
-    <string name="sub_mode_standard">Standaard cues</string>
-    <string name="sub_mode_standard_sub">Basisweergave zonder animatie-ondersteuning. Meest compatibel.</string>
     <string name="sub_org_none">Geen (standaardvolgorde)</string>
     <string name="sub_org_by_lang">Op taal</string>
     <string name="sub_org_by_addon">Op add-on</string>
@@ -2323,7 +2314,6 @@
     <string name="player_error_failed_start_torrent">Kon de torrent niet starten: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR-ondersteuning met canvas-rendering. Kan de UI-thread blokkeren.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">A%1$d</string>

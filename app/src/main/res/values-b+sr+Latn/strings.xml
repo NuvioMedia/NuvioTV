@@ -863,15 +863,6 @@
     <string name="sub_libass">Koristi libass za ASS/SSA titlove</string>
     <string name="sub_libass_sub">Eksperimentalno: napredno ASS/SSA rendersanje (stilovi, pozicioniranje, animacije)</string>
     <string name="sub_libass_mode">Libass režim rendersanja</string>
-    <string name="sub_mode_overlay_gl">Preklop OpenGL (Preporučeno)</string>
-    <string name="sub_mode_overlay_gl_sub">Najbolji kvalitet sa HDR podrškom. Rendersuje titlove u posebnoj niti (thread).</string>
-    <string name="sub_mode_overlay_canvas">Preklop Canvas</string>
-    <string name="sub_mode_effects_gl">Efekti OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Podrška za animacije koristeći Media3 efekte. Brže od Canvas-a.</string>
-    <string name="sub_mode_effects_canvas">Efekti Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Podrška za animacije koristeći Media3 efekte sa Canvas rendersanjem.</string>
-    <string name="sub_mode_standard">Standardni redovi</string>
-    <string name="sub_mode_standard_sub">Osnovno rendersanje titlova bez podrške za animacije. Najkompatibilnije.</string>
     <string name="sub_org_none">Ništa (podrazumevani redosled)</string>
     <string name="sub_org_by_lang">Po jeziku</string>
     <string name="sub_org_by_addon">Po dodatku</string>
@@ -2350,7 +2341,6 @@
     <string name="player_error_failed_start_torrent">Pokretanje torenta nije uspelo: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR podrška sa iscrtavanjem na platnu (canvas). Može blokirati interfejs.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>

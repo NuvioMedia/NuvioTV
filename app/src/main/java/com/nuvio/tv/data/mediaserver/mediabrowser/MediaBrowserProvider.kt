@@ -20,7 +20,9 @@ import com.nuvio.tv.data.mediaserver.ServerProvider
 import com.nuvio.tv.data.mediaserver.ServerSession
 import com.nuvio.tv.data.mediaserver.ServerSignIn
 import com.nuvio.tv.data.mediaserver.ServerTitle
+import com.nuvio.tv.data.mediaserver.ServerTitleQuery
 import com.nuvio.tv.data.mediaserver.ServerTrack
+import com.nuvio.tv.data.mediaserver.verifiedTitleMatches
 import com.nuvio.tv.domain.model.Subtitle
 import java.net.URLDecoder
 import java.util.concurrent.ConcurrentHashMap
@@ -315,6 +317,46 @@ internal abstract class MediaBrowserProvider(
         )
     }
 
+    /** Query that narrows a library to [query]'s title; null when this server cannot filter for it. */
+    protected abstract fun titleLookupQuery(query: ServerTitleQuery): Map<String, String>?
+
+    /** A second query to try once when the first one found nothing with [query]'s ids; null when there is none. */
+    protected open fun titleRetryQuery(query: ServerTitleQuery): Map<String, String>? = null
+
+    override suspend fun lookupTitle(
+        session: ServerSession,
+        library: ServerLibrary,
+        query: ServerTitleQuery
+    ): List<ServerIndexEntry>? {
+        val filter = titleLookupQuery(query) ?: return null
+        val found = titleEntries(session, library, filter)
+        if (verifiedTitleMatches(found, query).isNotEmpty()) return found
+        val retry = titleRetryQuery(query) ?: return found
+        return found + titleEntries(session, library, retry)
+    }
+
+    private suspend fun titleEntries(
+        session: ServerSession,
+        library: ServerLibrary,
+        filter: Map<String, String>
+    ): List<ServerIndexEntry> {
+        val result = get(
+            session,
+            itemsEndpoint(session.userId),
+            ItemsResult.serializer(),
+            mapOf(
+                "parentId" to library.id,
+                "recursive" to "true",
+                "includeItemTypes" to library.kind.itemType(),
+                "fields" to "ProviderIds,ProductionYear",
+                "enableImages" to "false",
+                "enableUserData" to "false",
+                "limit" to TITLE_LOOKUP_LIMIT.toString()
+            ) + filter
+        )
+        return result.items.map { ServerIndexEntry(itemId = it.id, ids = it.externalIds(), year = it.productionYear) }
+    }
+
     override suspend fun findEpisode(
         session: ServerSession,
         seriesItemId: String,
@@ -592,6 +634,7 @@ internal abstract class MediaBrowserProvider(
     private companion object {
         const val API_KEY = "api_key"
         const val MAX_STREAMING_BITRATE = 1_000_000_000L
+        const val TITLE_LOOKUP_LIMIT = 20
         const val LIST_FIELDS = "Overview,Genres,ProviderIds,PremiereDate"
         const val DETAIL_FIELDS = "Overview,Genres,ProviderIds,People,Studios,PremiereDate,EndDate"
         val TEXT_SUBTITLES = listOf("srt", "subrip", "ass", "ssa", "vtt", "webvtt")

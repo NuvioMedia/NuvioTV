@@ -701,16 +701,6 @@
     <string name="sub_libass">ASS/SSA字幕にlibassを使用</string>
     <string name="sub_libass_sub">実験的: 高度なASS/SSAレンダリング（スタイル・位置・アニメーション）</string>
     <string name="sub_libass_mode">Libassレンダリングモード</string>
-    <string name="sub_mode_overlay_gl">オーバーレイ OpenGL（推奨）</string>
-    <string name="sub_mode_overlay_gl_sub">最高品質でHDRをサポート。別スレッドで字幕をレンダリング</string>
-    <string name="sub_mode_overlay_canvas">オーバーレイ Canvas</string>
-    <string name="sub_mode_overlay_canvas_sub">HDRサポートとCanvasレンダリング。UIスレッドをブロックする可能性があります。</string>
-    <string name="sub_mode_effects_gl">エフェクト OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Media3エフェクトを使用したアニメーションサポート。Canvasより高速</string>
-    <string name="sub_mode_effects_canvas">エフェクト Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Canvasレンダリングを使用したMedia3エフェクトによるアニメーションサポート</string>
-    <string name="sub_mode_standard">標準キュー</string>
-    <string name="sub_mode_standard_sub">アニメーションサポートなしの基本的な字幕レンダリング。最も互換性が高い</string>
     <string name="sub_org_none">なし（デフォルト順）</string>
     <string name="sub_org_by_lang">言語別</string>
     <string name="sub_org_by_addon">アドオン別</string>
