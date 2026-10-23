@@ -151,8 +151,10 @@ class UsenetSourcesConfigServerTest {
         assertFalse(body.contains("news.example.com"))
         val ranking = Json.decodeFromString<PhoneRanking>(body)
         assertEquals(StreamRankingPreset.ORIGINAL, ranking.settings.preset)
-        assertEquals(4, ranking.presets.size)
+        assertEquals(5, ranking.presets.size)
         assertTrue(ranking.presets.any { it.id == StreamRankingPreset.BALANCED })
+        assertTrue(ranking.presets.any { it.id == StreamRankingPreset.HD_SDR })
+        assertTrue(ranking.languages.any { it.code == "nl" })
     }
 
     @Test fun `saving and previewing a profile preserve all sources and preview does not save`() {
@@ -205,6 +207,25 @@ class UsenetSourcesConfigServerTest {
         val preview = Json.decodeFromString<RankingPreview>(response.second)
         assertEquals("Last alphabetically", preview.results.first().title)
         assertFalse(response.second.contains("api-secret"))
+    }
+
+    @Test fun `phone language preference is shared by live settings and preview without replacing custom rules`() {
+        val custom = StreamRankingProfile(name = "My rules", preferredLanguages = listOf("ja"))
+        val settings = StreamRankingSettings(StreamRankingPreset.HD_SDR, custom, preferredLanguage = "nl")
+        val original = setup.configuration
+        val (code, body) = call("/api/ranking/preview", Json.encodeToString(RankingPreviewRequest(settings, listOf(
+            RankingPreviewSample("Film.1080p.WEB-DL.English-FLUX", 3.0),
+            RankingPreviewSample("Film.1080p.WEB-DL.Dutch-Other", 2.0)))))
+        assertEquals(200, code)
+        assertTrue(Json.decodeFromString<RankingPreview>(body).results.first().title.contains("Dutch"))
+        assertEquals(original, setup.configuration)
+        assertEquals(200, call("/api/ranking", Json.encodeToString(settings)).first)
+        val saved = Json.decodeFromString<PhoneRanking>(call("/api/ranking").second)
+        assertEquals(settings, saved.settings)
+        assertEquals(settings.profile(), saved.profile)
+        assertEquals(custom, saved.settings.custom)
+        assertEquals(original.providers, setup.configuration.providers)
+        assertEquals(original.indexers, setup.configuration.indexers)
     }
 
 }

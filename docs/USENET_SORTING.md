@@ -4,11 +4,22 @@ Choose **Settings → Usenet → Search results → Sorting profile**. Existing 
 on **Current sorting**, preserving their previous sort order. Selecting a profile does not replace
 providers, indexers, search limits or the saved custom profile.
 
+These profiles apply only to results from Nuvio's **built-in NNTP providers and Newznab indexers**.
+Addon results (including addon-supplied NZBs), debrid sources, plugins and media-server streams keep
+their existing order. There is no global stream sorting hook.
+
 | Profile | Quality order and preferences |
 | --- | --- |
 | Balanced | 4K remux, 4K Blu-ray encode, 1080p remux, 4K WEB-DL, 4K WEBRip, 1080p Blu-ray, 1080p WEB-DL, 1080p WEBRip, then other results. Movies up to 30 GiB and episodes up to 5 GiB are preferred before the quality tiers. Three results per resolution/source-quality category lead; extras follow. |
 | Best Quality | The same quality tiers, without a preferred size ceiling. Source-specific release-group scores break ties before language and descending size. Four results per category lead. |
 | Smaller Files | Prefer 1080p WEB-DL, WEBRip and Blu-ray encodes, then 4K WEB releases and 720p, with remux alternatives below. Movies up to 12 GiB and episodes up to 2 GiB are preferred. HEVC/AV1 get a small score boost within a quality tier. Two results per category lead. |
+| 1080p / SDR | Prefer 720p–1080p releases without HDR/Dolby Vision labels. AVC and AAC/DDP receive small boosts. These preferences precede quality tiers, with the same size preferences as Smaller Files. HDR, 4K and unknown formats remain as alternatives. Absence of an HDR label is not proof of SDR or playback compatibility. |
+
+The TV and phone both offer an optional **Preferred language** picker for these four presets.
+Tagged matches lead before quality and size; other languages and unlabelled releases remain eligible.
+The preference survives preset changes. **No language preference** restores the preset's standard order.
+**Current sorting** ignores this preference and **Custom profile** uses its own languages and sorting
+priorities. Choosing either preserves the quick preference for the next time a built-in preset is used.
 
 These sizes are preferences: larger releases remain selectable. Existing minimum-resolution,
 maximum-size, maximum-age, password and low-quality search filters remain authoritative. A season
@@ -30,7 +41,8 @@ Select **Edit sorting from phone**, scan the QR code and open **Sorting**. The l
 the TV profile that opened it. Closing the overlay stops the server; changing TV profile makes the
 old session unable to read or save settings.
 
-- Pick a preset and **Save**, or open **Customize** to create a custom profile.
+- Pick a preset, optionally choose a language and **Save**, or open **Customize** to create a custom profile.
+  Preview, custom rules and import/export start collapsed to keep the initial view short.
 - Set language preferences with lowercase codes, for example `en, ja`. These are preferences,
   not required languages. Results without language tags remain eligible.
 - Reorder quality tiers; their first match wins. Empty resolution/quality lists match any value.

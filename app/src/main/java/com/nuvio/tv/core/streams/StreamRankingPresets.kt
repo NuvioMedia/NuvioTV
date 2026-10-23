@@ -2,20 +2,28 @@ package com.nuvio.tv.core.streams
 
 import kotlinx.serialization.Serializable
 
-@Serializable enum class StreamRankingPreset { ORIGINAL, BALANCED, BEST_QUALITY, SMALLER_FILES, CUSTOM }
+@Serializable enum class StreamRankingPreset { ORIGINAL, BALANCED, BEST_QUALITY, SMALLER_FILES, HD_SDR, CUSTOM }
 
 @Serializable data class StreamRankingSettings(
     val preset: StreamRankingPreset = StreamRankingPreset.ORIGINAL,
-    val custom: StreamRankingProfile? = null
+    val custom: StreamRankingProfile? = null,
+    /** A quick preference for built-in presets; custom profiles keep their own language priorities. */
+    val preferredLanguage: String = ""
 ) {
     fun validate() {
         custom?.validate()
+        require(preferredLanguage.isEmpty() || preferredLanguage in StreamRankingPresets.languages) { "Choose a supported language" }
         require(preset != StreamRankingPreset.CUSTOM || custom != null) { "Save a custom profile before selecting it" }
     }
     fun profile(): StreamRankingProfile? = when (preset) {
         StreamRankingPreset.ORIGINAL -> null
         StreamRankingPreset.CUSTOM -> custom
-        else -> StreamRankingPresets.profile(preset)
+        else -> StreamRankingPresets.profile(preset).let { profile ->
+            if (preferredLanguage.isEmpty()) profile else profile.copy(
+                preferredLanguages = listOf(preferredLanguage),
+                sort = listOf(StreamRankingSort(StreamRankingKey.LANGUAGE)) + profile.sort.filter { it.key != StreamRankingKey.LANGUAGE }
+            )
+        }
     }
 }
 
@@ -26,6 +34,7 @@ import kotlinx.serialization.Serializable
  * See docs/USENET_SORTING.md for sources and the profile's exact behaviour.
  */
 object StreamRankingPresets {
+    val languages = listOf("en", "ja", "de", "fr", "nl", "es", "it", "pt", "ko", "zh", "hi", "ru", "uk", "ar", "pl", "tr", "multi", "dual")
     private fun condition(field: StreamRankingField, value: String) = StreamRankingCondition(field, StreamRankingOperator.IS, value)
     private fun groups(name: String, qualities: String, names: String, score: Int) = StreamRankingRule(
         name = name, score = score, conditions = listOf(condition(StreamRankingField.QUALITY, qualities), condition(StreamRankingField.GROUP, names))
@@ -95,9 +104,28 @@ object StreamRankingPresets {
         rules = baseRules + StreamRankingRule("Efficient video codec", score = 30,
             conditions = listOf(condition(StreamRankingField.CODEC, "HEVC,AV1")))
     )
+    private val hdSdr = smaller.copy(name = "1080p / SDR", tiers = listOf(
+        tier("1080p WEB-DL", 1080, StreamReleaseQuality.WEB_DL),
+        tier("1080p Blu-ray encode", 1080, StreamReleaseQuality.BLURAY),
+        tier("1080p WEBRip", 1080, StreamReleaseQuality.WEBRIP),
+        tier("720p and HD", 720, StreamReleaseQuality.WEB_DL, StreamReleaseQuality.BLURAY,
+            StreamReleaseQuality.WEBRIP, StreamReleaseQuality.HDTV)
+    ) + qualityTiers,
+        // Preferences rather than filters: keep alternatives when a release has no SDR label.
+        sort = listOf(StreamRankingSort(StreamRankingKey.SCORE)) + smaller.sort.filter { it.key != StreamRankingKey.SCORE },
+        rules = baseRules + listOf(
+            StreamRankingRule("Prefer HD without HDR or Dolby Vision labels", score = 3000, conditions = listOf(
+                StreamRankingCondition(StreamRankingField.RESOLUTION, StreamRankingOperator.AT_LEAST, "720"),
+                StreamRankingCondition(StreamRankingField.RESOLUTION, StreamRankingOperator.AT_MOST, "1080"),
+                condition(StreamRankingField.VISUAL, "NO_HDR_LABEL"))),
+            StreamRankingRule("Prefer AVC video", score = 30, conditions = listOf(condition(StreamRankingField.CODEC, "AVC"))),
+            StreamRankingRule("Prefer AAC or Dolby Digital Plus audio", score = 20,
+                conditions = listOf(condition(StreamRankingField.AUDIO, "AAC,DDP")))
+        ))
     fun profile(preset: StreamRankingPreset): StreamRankingProfile = when (preset) {
         StreamRankingPreset.BEST_QUALITY -> best
         StreamRankingPreset.SMALLER_FILES -> smaller
+        StreamRankingPreset.HD_SDR -> hdSdr
         else -> balanced
     }
 }

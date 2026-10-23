@@ -133,7 +133,7 @@ independently of addon/plugin searches; if an indexer is slow, it shows what cam
 after 5 seconds and fills in from there. **Show results as each indexer answers**
 (off by default, under Search results) updates the list as each indexer finishes
 instead. Each result is named after its resolution and indexer, such as
-`Usenet • 4K • geek`. Sort by resolution, size, age or indexer priority. Native Balanced, Best Quality and Smaller Files profiles add quality tiers, release-group scores and conditional rules. Choose a preset on the TV or edit and preview a custom profile from the phone setup page. See [Native sorting profiles](docs/USENET_SORTING.md).
+`Usenet • 4K • geek`. Sort by resolution, size, age or indexer priority. Native Balanced, Best Quality, Smaller Files and 1080p / SDR profiles add quality tiers, release-group scores and conditional rules. Choose a preset and an optional preferred language on the TV, or edit and preview a custom profile from the phone setup page. Sorting applies only to this built-in Usenet group; addon-supplied NZBs and other sources keep their existing order. See [Native sorting profiles](docs/USENET_SORTING.md).
 Filters cover minimum resolution, maximum size, maximum age, CAM/screener
 releases, full Blu-ray/DVD discs (off by default: a Blu-ray disc plays from its feature clip; remuxes always show) and result count. Passworded NZBs are always excluded. Unknown sizes
 or dates are excluded when their corresponding maximum filter is enabled.

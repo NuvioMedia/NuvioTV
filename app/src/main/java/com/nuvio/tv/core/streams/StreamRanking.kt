@@ -136,6 +136,7 @@ private object StreamReleaseParser {
     private val remux = token("remux")
     private val bluray = token("blu[ ._-]?ray|b[dr]rip|bdremux|b[dr]mv")
     private val webDl = token("web[ ._-]?dl|webdl")
+    private val web = token("web")
     private val webRip = token("web[ ._-]?rip")
     private val hdtv = token("hdtv")
     private val dvd = token("dvd|dvdrip|dvdremux")
@@ -168,17 +169,18 @@ private object StreamReleaseParser {
     fun languages(title: String): Set<String> = languagePatterns.filterValues { it.has(title) }.keys.toSet()
     fun parse(title: String): StreamRankingFacts {
         // Bound custom/indexer input before applying even linear-time matchers.
-        val text = title.take(2048)
+        val text = extension.matcher(title.take(2048)).replaceFirst("")
         val match = resolution.matcher(text)
         val pixels = if (match.find()) match.group(1).toInt() else if (uhd.has(text)) 2160 else 0
         val quality = when {
             cam.has(text) -> StreamReleaseQuality.CAM
             remux.has(text) -> StreamReleaseQuality.REMUX
             bluray.has(text) -> StreamReleaseQuality.BLURAY
-            webDl.has(text) -> StreamReleaseQuality.WEB_DL
             webRip.has(text) -> StreamReleaseQuality.WEBRIP
+            webDl.has(text) -> StreamReleaseQuality.WEB_DL
             hdtv.has(text) -> StreamReleaseQuality.HDTV
             dvd.has(text) -> StreamReleaseQuality.DVD
+            web.has(text) -> StreamReleaseQuality.WEB_DL
             else -> StreamReleaseQuality.UNKNOWN
         }
         val hasDv = dv.has(text)
@@ -189,6 +191,7 @@ private object StreamReleaseParser {
             if (hasHdr) add("HDR")
             if (hdrPlus.has(text)) add("HDR10_PLUS")
             if (sdr.has(text)) add("SDR")
+            if (!hasDv && !hasHdr) add("NO_HDR_LABEL")
         }
         val audio = buildSet {
             if (atmos.has(text)) add("ATMOS")
@@ -197,15 +200,14 @@ private object StreamReleaseParser {
             if (ddp.has(text)) add("DDP")
             if (aac.has(text)) add("AAC")
         }
-        val cleaned = extension.matcher(text).replaceFirst("")
-        val suffix = group.matcher(cleaned)
-        val prefix = animeGroup.matcher(cleaned)
+        val suffix = group.matcher(text)
+        val prefix = animeGroup.matcher(text)
         val releaseGroup = when {
             suffix.find() -> suffix.group(1)
             prefix.find() -> prefix.group(1)
             else -> ""
         }
-        return StreamRankingFacts(title = text, resolution = pixels, quality = quality,
+        return StreamRankingFacts(title = title.take(2048), resolution = pixels, quality = quality,
             codec = when { hevc.has(text) -> "HEVC"; av1.has(text) -> "AV1"; avc.has(text) -> "AVC"; else -> "UNKNOWN" },
             visual = visual, audio = audio, group = releaseGroup)
     }

@@ -88,11 +88,18 @@ class UsenetSourcesConfigServer(
             Triple(StreamRankingPreset.ORIGINAL, R.string.usenet_ranking_original, R.string.usenet_ranking_original_desc),
             Triple(StreamRankingPreset.BALANCED, R.string.usenet_ranking_balanced, R.string.usenet_ranking_balanced_desc),
             Triple(StreamRankingPreset.BEST_QUALITY, R.string.usenet_ranking_best, R.string.usenet_ranking_best_desc),
-            Triple(StreamRankingPreset.SMALLER_FILES, R.string.usenet_ranking_smaller, R.string.usenet_ranking_smaller_desc)
+            Triple(StreamRankingPreset.SMALLER_FILES, R.string.usenet_ranking_smaller, R.string.usenet_ranking_smaller_desc),
+            Triple(StreamRankingPreset.HD_SDR, R.string.usenet_ranking_hd_sdr, R.string.usenet_ranking_hd_sdr_desc)
         ).map { (id, name, description) -> PhoneRankingPreset(id, text(name), text(description),
             if (id == StreamRankingPreset.ORIGINAL) UsenetRankingPhone.original(configuration.sort) else StreamRankingPresets.profile(id)) }
+        val languages = listOf(PhoneRankingLanguage("", text(R.string.usenet_ranking_any_language))) +
+            StreamRankingPresets.languages.map { code -> PhoneRankingLanguage(code, when (code) {
+                "multi" -> text(R.string.usenet_ranking_multi_audio)
+                "dual" -> text(R.string.usenet_ranking_dual_audio)
+                else -> java.util.Locale.forLanguageTag(code).getDisplayLanguage(java.util.Locale.getDefault())
+            }) }
         return ok(json.encodeToString(PhoneRanking(configuration.ranking,
-            configuration.ranking.profile() ?: UsenetRankingPhone.original(configuration.sort), presets)))
+            configuration.ranking.profile() ?: UsenetRankingPhone.original(configuration.sort), presets, languages)))
     }
 
     private fun saveRanking(body: String): Response {

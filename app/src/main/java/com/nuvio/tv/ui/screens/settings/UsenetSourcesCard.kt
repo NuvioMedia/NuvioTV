@@ -39,9 +39,11 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.core.streams.StreamRankingPreset
+import com.nuvio.tv.core.streams.StreamRankingPresets
 import com.nuvio.tv.core.usenet.*
 import java.text.DateFormat
 import java.util.Date
+import java.util.Locale
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
 import kotlinx.coroutines.delay
@@ -94,7 +96,8 @@ internal fun UsenetSourcesCard(
         SettingsPickerOption(StreamRankingPreset.ORIGINAL, stringResource(R.string.usenet_ranking_original)),
         SettingsPickerOption(StreamRankingPreset.BALANCED, stringResource(R.string.usenet_ranking_balanced)),
         SettingsPickerOption(StreamRankingPreset.BEST_QUALITY, stringResource(R.string.usenet_ranking_best)),
-        SettingsPickerOption(StreamRankingPreset.SMALLER_FILES, stringResource(R.string.usenet_ranking_smaller))
+        SettingsPickerOption(StreamRankingPreset.SMALLER_FILES, stringResource(R.string.usenet_ranking_smaller)),
+        SettingsPickerOption(StreamRankingPreset.HD_SDR, stringResource(R.string.usenet_ranking_hd_sdr))
     ) + if (configuration.ranking.custom != null) listOf(SettingsPickerOption(StreamRankingPreset.CUSTOM,
         configuration.ranking.custom.name)) else emptyList()
     val rankingDescription = when (configuration.ranking.preset) {
@@ -102,8 +105,17 @@ internal fun UsenetSourcesCard(
         StreamRankingPreset.BALANCED -> R.string.usenet_ranking_balanced_desc
         StreamRankingPreset.BEST_QUALITY -> R.string.usenet_ranking_best_desc
         StreamRankingPreset.SMALLER_FILES -> R.string.usenet_ranking_smaller_desc
+        StreamRankingPreset.HD_SDR -> R.string.usenet_ranking_hd_sdr_desc
         StreamRankingPreset.CUSTOM -> R.string.usenet_ranking_custom_desc
     }
+    val languageOptions = listOf(SettingsPickerOption("", stringResource(R.string.usenet_ranking_any_language))) +
+        StreamRankingPresets.languages.map { code ->
+            SettingsPickerOption(code, when (code) {
+                "multi" -> stringResource(R.string.usenet_ranking_multi_audio)
+                "dual" -> stringResource(R.string.usenet_ranking_dual_audio)
+                else -> Locale.forLanguageTag(code).getDisplayLanguage(Locale.getDefault())
+            })
+        }
     val unlimited = stringResource(R.string.usenet_no_limit)
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SettingsGroupCard(title = stringResource(R.string.usenet_sources_title)) {
@@ -152,6 +164,12 @@ internal fun UsenetSourcesCard(
         UsenetSettingsSection(UsenetSettingsSection.SEARCH, expanded, onToggleSection) {
             SettingsActionRow(title = stringResource(R.string.usenet_ranking_title), subtitle = stringResource(rankingDescription),
                 value = rankingOptions.first { it.value == configuration.ranking.preset }.title, onClick = { picker = "ranking" })
+            if (configuration.ranking.preset !in listOf(StreamRankingPreset.ORIGINAL, StreamRankingPreset.CUSTOM)) {
+                SettingsActionRow(title = stringResource(R.string.usenet_ranking_language),
+                    subtitle = stringResource(R.string.usenet_ranking_language_hint),
+                    value = languageOptions.firstOrNull { it.value == configuration.ranking.preferredLanguage }?.title,
+                    onClick = { picker = "rankingLanguage" })
+            }
             if (setUpFromPhone != null) SettingsActionRow(title = stringResource(R.string.usenet_ranking_phone),
                 subtitle = stringResource(R.string.usenet_ranking_phone_desc),
                 onClick = { phoneEntry = rankingPhoneRow; setUpFromPhone() }, modifier = Modifier.focusRequester(rankingPhoneRow))
@@ -186,6 +204,10 @@ internal fun UsenetSourcesCard(
         }
     }
     when (picker) {
+        "rankingLanguage" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_ranking_language), options = languageOptions,
+            selectedValue = configuration.ranking.preferredLanguage,
+            onOptionSelected = { update(configuration.copy(ranking = configuration.ranking.copy(preferredLanguage = it))); picker = null },
+            onDismiss = { picker = null })
         "ranking" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_ranking_title), options = rankingOptions,
             selectedValue = configuration.ranking.preset,
             onOptionSelected = { update(configuration.copy(ranking = configuration.ranking.copy(preset = it))); picker = null },
