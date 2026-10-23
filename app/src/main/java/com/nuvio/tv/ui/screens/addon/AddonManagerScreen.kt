@@ -356,47 +356,47 @@ fun AddonManagerScreen(
                                 ) {
                                     Box(modifier = Modifier.padding(NuvioTheme.spacing.md)) {
                                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                                        BasicTextField(
-                                            value = uiState.installUrl,
-                                            onValueChange = viewModel::onInstallUrlChange,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .focusRequester(textFieldFocusRequester)
-                                                .onFocusChanged {
-                                                    if (!it.isFocused && isEditing) {
+                                            BasicTextField(
+                                                value = uiState.installUrl,
+                                                onValueChange = viewModel::onInstallUrlChange,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .focusRequester(textFieldFocusRequester)
+                                                    .onFocusChanged {
+                                                        if (!it.isFocused && isEditing) {
+                                                            isEditing = false
+                                                            keyboardController?.hide()
+                                                        }
+                                                    },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(
+                                                    keyboardType = KeyboardType.Uri,
+                                                    imeAction = ImeAction.Done
+                                                ),
+                                                keyboardActions = KeyboardActions(
+                                                    onDone = {
+                                                        viewModel.installAddon()
                                                         isEditing = false
                                                         keyboardController?.hide()
+                                                        installButtonFocusRequester.requestFocus()
                                                     }
-                                                },
-                                            singleLine = true,
-                                            keyboardOptions = KeyboardOptions(
-                                                keyboardType = KeyboardType.Uri,
-                                                imeAction = ImeAction.Done
-                                            ),
-                                            keyboardActions = KeyboardActions(
-                                                onDone = {
-                                                    viewModel.installAddon()
-                                                    isEditing = false
-                                                    keyboardController?.hide()
-                                                    installButtonFocusRequester.requestFocus()
+                                                ),
+                                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                                    color = NuvioTheme.colors.TextPrimary,
+                                                textDirection = TextDirection.Content
+                                                ),
+                                                cursorBrush = SolidColor(if (isEditing) NuvioTheme.colors.Primary else Color.Transparent),
+                                                decorationBox = { innerTextField ->
+                                                    if (uiState.installUrl.isEmpty()) {
+                                                        Text(
+                                                            text = stringResource(R.string.addon_install_placeholder),
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = NuvioTheme.colors.TextTertiary
+                                                        )
+                                                    }
+                                                    innerTextField()
                                                 }
-                                            ),
-                                            textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                                color = NuvioTheme.colors.TextPrimary,
-                                            textDirection = TextDirection.Content
-                                            ),
-                                            cursorBrush = SolidColor(if (isEditing) NuvioTheme.colors.Primary else Color.Transparent),
-                                            decorationBox = { innerTextField ->
-                                                if (uiState.installUrl.isEmpty()) {
-                                                    Text(
-                                                        text = stringResource(R.string.addon_install_placeholder),
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        color = NuvioTheme.colors.TextTertiary
-                                                    )
-                                                }
-                                                innerTextField()
-                                            }
-                                        )
+                                            )
                                         }
                                     }
                                 }
