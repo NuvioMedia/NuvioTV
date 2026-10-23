@@ -347,6 +347,8 @@ fun PlayerScreen(
             returnToDetailsFromEndPrompt()
         } else if (uiState.error != null) {
             exitPlayerFromError()
+        } else if (uiState.showLocalSubtitleBrowser) {
+            viewModel.onEvent(PlayerEvent.OnDismissLocalSubtitleBrowser)
         } else if (uiState.showAudioOverlay || uiState.showSubtitleOverlay) {
             viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay)
         } else if (uiState.showStreamInfoOverlay) {
@@ -1999,14 +2001,15 @@ fun PlayerScreen(
         )
 
         SubtitleSelectionOverlay(
-            visible = uiState.showSubtitleOverlay,
+            // Hidden while the file browser is open; reopening rebuilds it around the new selection.
+            visible = uiState.showSubtitleOverlay && !uiState.showLocalSubtitleBrowser,
             internalTracks = uiState.serverSubtitleTracks.ifEmpty { uiState.subtitleTracks },
             selectedInternalIndex = if (uiState.serverSubtitleTracks.isEmpty()) {
                 uiState.selectedSubtitleTrackIndex
             } else {
                 uiState.serverSubtitleTracks.firstOrNull { it.isSelected }?.index ?: -1
             },
-            addonSubtitles = uiState.addonSubtitles,
+            addonSubtitles = uiState.selectableAddonSubtitles,
             selectedAddonSubtitle = uiState.selectedAddonSubtitle,
             subtitleStyle = uiState.editableSubtitleStyle,
             isEditingHdrStyle = uiState.isEditingHdrSubtitleStyle,
@@ -2018,11 +2021,21 @@ fun PlayerScreen(
             onInternalTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectSubtitleTrack(it)) },
             onAddonSubtitleSelected = { viewModel.onEvent(PlayerEvent.OnSelectAddonSubtitle(it)) },
             onDisableSubtitles = { viewModel.onEvent(PlayerEvent.OnDisableSubtitles) },
+            onBrowseLocalSubtitle = { viewModel.onEvent(PlayerEvent.OnOpenLocalSubtitleBrowser) },
             onEvent = { viewModel.onEvent(it) },
             onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay) },
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2.6f)
+        )
+
+        LocalSubtitleBrowser(
+            visible = uiState.showLocalSubtitleBrowser,
+            onFileChosen = { viewModel.onEvent(PlayerEvent.OnLocalSubtitleFileChosen(it)) },
+            onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissLocalSubtitleBrowser) },
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(2.7f)
         )
 
         PlayerOverlayScaffold(

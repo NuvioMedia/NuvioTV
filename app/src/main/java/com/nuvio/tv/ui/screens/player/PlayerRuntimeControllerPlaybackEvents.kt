@@ -22,6 +22,7 @@ import com.nuvio.tv.data.repository.PlaybackIssueReportInput
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.domain.model.WatchProgress
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -1797,9 +1798,31 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         is PlayerEvent.OnSourceStreamSelected -> {
             switchToSourceStream(event.stream)
         }
+        PlayerEvent.OnOpenLocalSubtitleBrowser -> {
+            _uiState.update { it.copy(showLocalSubtitleBrowser = true) }
+        }
+        PlayerEvent.OnDismissLocalSubtitleBrowser -> {
+            _uiState.update { it.copy(showLocalSubtitleBrowser = false) }
+        }
+        is PlayerEvent.OnLocalSubtitleFileChosen -> {
+            val subtitle = buildLocalSubtitle(event.path)
+            _uiState.update { state ->
+                state.copy(localSubtitles = state.localSubtitles.filterNot { it.url == subtitle.url } + subtitle)
+            }
+            onEvent(PlayerEvent.OnSelectAddonSubtitle(subtitle))
+            // Keep the browser up until the engine confirms the selection (mpv applies it
+            // asynchronously), so the subtitle overlay reopens already showing it.
+            scope.launch {
+                kotlinx.coroutines.withTimeoutOrNull(3_000L) {
+                    _uiState.first { it.selectedAddonSubtitle?.url == subtitle.url }
+                }
+                _uiState.update { it.copy(showLocalSubtitleBrowser = false) }
+            }
+        }
         PlayerEvent.OnDismissTransientOverlay -> {
             _uiState.update {
                 it.copy(
+                    showLocalSubtitleBrowser = false,
                     showAudioOverlay = false,
                     showSubtitleOverlay = false,
                     showSubtitleStylePanel = false,

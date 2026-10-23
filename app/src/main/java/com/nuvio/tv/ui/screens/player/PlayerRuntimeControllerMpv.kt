@@ -427,7 +427,7 @@ private fun PlayerRuntimeController.applyMpvTrackSnapshot(snapshot: MpvTrackSnap
 
     _uiState.update { state ->
         val selectedAddonFromMpvTrack = selectedExternalSubtitleTrack?.let { track ->
-            state.addonSubtitles.firstOrNull { subtitle ->
+            state.selectableAddonSubtitles.firstOrNull { subtitle ->
                 buildAddonSubtitleTrackId(subtitle).equals(track.name, ignoreCase = true)
             }
         }

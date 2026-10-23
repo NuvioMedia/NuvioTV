@@ -2025,6 +2025,8 @@ internal fun PlayerRuntimeController.resetAddonSubtitleStateForNewStream() {
     _uiState.update {
         it.copy(
             addonSubtitles = emptyList(),
+            localSubtitles = emptyList(),
+            showLocalSubtitleBrowser = false,
             selectedAddonSubtitle = null,
             selectedSubtitleTrackIndex = -1,
             isLoadingAddonSubtitles = false,

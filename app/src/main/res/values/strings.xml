@@ -1961,6 +1961,14 @@
     <string name="subtitle_tab_delay">Delay</string>
     <string name="subtitle_delay_reset">Reset</string>
     <string name="subtitle_none">None</string>
+    <string name="subtitle_local_source">Device</string>
+    <string name="subtitle_local_file">Local file</string>
+    <string name="subtitle_from_device">From device</string>
+    <string name="subtitle_browser_title">Select subtitle file</string>
+    <string name="subtitle_browser_empty">No subtitle files in this folder</string>
+    <string name="subtitle_browser_up">.. (up)</string>
+    <string name="subtitle_browser_permission_needed">Allow access to all files to browse subtitles on this device</string>
+    <string name="subtitle_browser_grant_access">Grant access</string>
     <string name="subtitle_built_in">Built in</string>
     <string name="subtitle_all">All</string>
     <string name="subtitle_section_core">Core</string>

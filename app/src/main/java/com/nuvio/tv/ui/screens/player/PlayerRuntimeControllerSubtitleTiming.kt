@@ -412,6 +412,7 @@ private fun PlayerRuntimeController.executeSubtitleDownload(
     languageHint: String? = null,
     customHeaders: Map<String, String>? = null
 ): String {
+    if (url.startsWith("file://")) return readLocalSubtitleBody(url, languageHint)
     val explicitHeaders = customHeaders
         ?: streamSubtitles.firstOrNull { it.url == url }?.headers
         ?: _uiState.value.addonSubtitles.firstOrNull { it.url == url }?.headers
