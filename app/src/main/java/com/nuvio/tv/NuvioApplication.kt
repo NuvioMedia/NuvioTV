@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.StrictMode
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import coil3.annotation.ExperimentalCoilApi
 import com.nuvio.tv.core.image.CustomPosterFallbackInterceptor
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
@@ -21,6 +22,7 @@ import coil3.bitmapFactoryMaxParallelism
 import okio.Path.Companion.toOkioPath
 import com.nuvio.tv.core.diagnostics.SentryInitializer
 import com.nuvio.tv.core.image.StaleWhileRevalidateCacheStrategy
+import com.nuvio.tv.core.image.legacyVpnConnectivityChecker
 import com.nuvio.tv.core.runtime.PluginRuntimeHooks
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.core.sync.androidtv.AndroidTvChannelSyncService
@@ -92,6 +94,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         LocaleCache.localeTag = tag ?: ""
     }
 
+    @OptIn(ExperimentalCoilApi::class)
     override fun newImageLoader(context: android.content.Context): ImageLoader {
         val imageOkHttpClient by lazy {
             val imageDispatcher = okhttp3.Dispatcher().apply {
@@ -133,6 +136,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                 add(
                     coil3.network.okhttp.OkHttpNetworkFetcherFactory(
                         callFactory = { imageOkHttpClient },
+                        connectivityChecker = ::legacyVpnConnectivityChecker,
                         cacheStrategy = {
                             StaleWhileRevalidateCacheStrategy(
                                 revalidationClient = { imageOkHttpClient },
