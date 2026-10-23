@@ -1209,6 +1209,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Always Backdrop with Logo for Landscape Posters</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Ignore landscape poster from addon and use backdrop with clearlogo overlay instead.</string>
+    <string name="layout_hero_description_auto_scroll">Auto-scroll Descriptions</string>
+    <string name="layout_hero_description_auto_scroll_sub">Slowly scroll long descriptions on the Home screen instead of cutting them off.</string>
     <string name="web_custom_poster_title">Custom Poster Source</string>
     <string name="web_custom_poster_subtitle">Paste a poster URL pattern below and press Save.</string>
     <string name="web_custom_poster_label">URL Pattern</string>

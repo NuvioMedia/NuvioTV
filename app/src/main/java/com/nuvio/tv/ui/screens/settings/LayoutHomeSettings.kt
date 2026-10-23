@@ -190,6 +190,14 @@ internal fun LayoutHomeContentSection(
             onEvent(LayoutSettingsEvent.SetHomeImdbRatingsVisibility(visibility))
         }
     )
+    SettingsToggleRow(
+        title = stringResource(R.string.layout_hero_description_auto_scroll),
+        subtitle = stringResource(R.string.layout_hero_description_auto_scroll_sub),
+        checked = uiState.heroDescriptionAutoScrollEnabled,
+        onToggle = {
+            onEvent(LayoutSettingsEvent.SetHeroDescriptionAutoScrollEnabled(!uiState.heroDescriptionAutoScrollEnabled))
+        }
+    )
 }
 
 @Composable
