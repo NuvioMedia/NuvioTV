@@ -161,9 +161,16 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                     totalRamMb <= 3072 -> 0.20
                     else -> 0.25
                 }
-                MemoryCache.Builder()
-                    .maxSizePercent(context, cachePercent)
-                    .build()
+                // maxSizePercent takes the share of largeMemoryClass under largeHeap (512 MB on
+                // 1 GB TVs, ~77 MB of bitmaps), so a device the platform marks low-RAM takes it of
+                // the standard memory class instead.
+                val builder = MemoryCache.Builder()
+                if (activityManager.isLowRamDevice) {
+                    builder.maxSizeBytes((activityManager.memoryClass * 1024L * 1024L * cachePercent).toLong())
+                } else {
+                    builder.maxSizePercent(context, cachePercent)
+                }
+                builder.build()
             }
             .diskCache {
                 DiskCache.Builder()
