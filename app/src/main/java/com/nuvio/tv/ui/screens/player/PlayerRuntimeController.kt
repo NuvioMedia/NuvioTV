@@ -581,6 +581,8 @@ class PlayerRuntimeController(
     internal var hasInitializedCenterMixForSession: Boolean = false
     internal var rememberAudioDelayPerDeviceEnabled: Boolean = false
     internal var currentAudioOutputRoute: AudioOutputRoute? = null
+    /** USB audio has no hardware A/V sync output, so tunneled playback is skipped while it plays. */
+    internal var tunnelingBlockedByUsbAudio: Boolean = false
     internal var audioOutputRouteCallback: AudioDeviceCallback? = null
     internal var audioRouteChangeJob: Job? = null
 

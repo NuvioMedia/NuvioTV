@@ -207,6 +207,15 @@ internal fun PlayerRuntimeController.initializePlayer(
             // PCM/passthrough policy in place (Media3 1.8.0 BT semantics; do not rebuild).
             registerAudioDelayRouteCallback()
             currentAudioOutputRoute = AudioOutputRouteDetector.detect(context)
+            tunnelingBlockedByUsbAudio = playerSettings.effectiveTunnelingEnabled &&
+                AudioOutputRouteDetector.isUsbMediaOutput(context, currentAudioOutputRoute)
+            if (tunnelingBlockedByUsbAudio) {
+                Log.i(
+                    PlayerRuntimeController.TAG,
+                    "Tunneled playback skipped: media audio goes to USB (route=${currentAudioOutputRoute?.key})"
+                )
+            }
+            val tunnelingActive = playerSettings.effectiveTunnelingEnabled && !tunnelingBlockedByUsbAudio
             if (rememberAudioDelayPerDeviceEnabled) {
                 applyStoredAudioDelayForCurrentRouteIfEnabled()
             }
@@ -254,7 +263,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     aspectMode = deviceAspectMode,
                     tunneledSurfaceFill = tunneledSurfaceFill,
                     playbackIssueReportsEnabled = playerSettings.playbackIssueReportsEnabled,
-                    tunnelingEnabled = playerSettings.effectiveTunnelingEnabled &&
+                    tunnelingEnabled = tunnelingActive &&
                             effectiveInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER
                 )
             }
@@ -759,7 +768,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 }
             }.apply {
                 setParameters(buildUponParameters().setAllowInvalidateSelectionsOnRendererCapabilitiesChange(true))
-                if (playerSettings.effectiveTunnelingEnabled && !safeAudioModeEnabled) {
+                if (tunnelingActive && !safeAudioModeEnabled) {
                     setParameters(buildUponParameters().setTunnelingEnabled(true))
                 } else if (safeAudioModeEnabled) {
                     setParameters(buildUponParameters().setTunnelingEnabled(false).setConstrainAudioChannelCountToDeviceCapabilities(true))
@@ -1073,7 +1082,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         "playbackSpeed=${_uiState.value.playbackSpeed} " +
                         "resumePositionMs=$initialResumePosition mime=${currentStreamMimeType ?: "unknown"} " +
                         "bufferEngine=${playerSettings.bufferEngineEnabled} parallel=${mediaSourceFactory.useParallelConnections} " +
-                        "vodCache=${mediaSourceFactory.vodCacheEnabled} tunneling=${playerSettings.effectiveTunnelingEnabled}"
+                        "vodCache=${mediaSourceFactory.vodCacheEnabled} tunneling=$tunnelingActive"
                 )
                 val initialMediaSource = mediaSourceFactory.createMediaSource(
                     context = context,
@@ -1101,7 +1110,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     phase = "starting_stream",
                     message = context.getString(R.string.player_loading_starting)
                 )
-                val isTunneledPlayback = playerSettings.effectiveTunnelingEnabled
+                val isTunneledPlayback = tunnelingActive
                 // Hold playWhenReady=false through prepare() so audio does not race ahead
                 // while the video decoder is still opening. The first STATE_READY primes the
                 // pipeline (ColdStartPrime); synchronized play() begins in onRenderedFirstFrame().
