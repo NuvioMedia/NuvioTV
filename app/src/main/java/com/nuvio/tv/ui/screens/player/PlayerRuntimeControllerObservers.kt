@@ -425,6 +425,8 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             if (isUsingMpvEngine() && previousMpvHardwareDecodeMode != mpvHardwareDecodeModeSetting) {
                 mpvView?.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
             }
+            // Only read when mpv starts, so a change applies from the next playback.
+            mpvUserConfigSetting = settings.mpvUserConfig
 
             val resolvedAudioLanguages = resolvePreferredAudioLanguages(
                 preferredAudioLanguage = settings.preferredAudioLanguage,

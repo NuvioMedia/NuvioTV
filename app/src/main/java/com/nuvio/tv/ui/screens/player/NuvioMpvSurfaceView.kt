@@ -9,6 +9,7 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import `is`.xyz.mpv.BaseMPVView
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.Utils
+import java.io.File
 import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.roundToLong
@@ -29,6 +30,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     private var requestedMediaUrl: String? = null
     private var pathAtMediaRequest: String? = null
     private var hardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
+    private var userConfig: String = ""
     private var hi10pGnextSoftwareFallbackActive = false
     private var appliedHi10pGnextSoftwareFallback: Boolean? = null
     private var cachedTrackList: MpvTrackListCache? = null
@@ -307,6 +309,11 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         }.onFailure {
             Log.w(TAG, "Failed to apply mpv hardware decode mode ($mode): ${it.message}")
         }
+    }
+
+    /** mpv.conf-style options; read once when mpv initializes, so later calls apply to the next init. */
+    fun applyUserConfig(config: String) {
+        userConfig = config
     }
 
     fun applyHi10pGnextSoftwareFallback(active: Boolean) {
@@ -745,9 +752,6 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     override fun initOptions() {
         mpv.setOptionString("profile", "fast")
         mpv.setOptionString("msg-level", "ffmpeg=warn,vd=warn,ad=warn,vo=warn,ao=warn,demux=warn,lavf=warn,cplayer=warn,autoconvert=warn,hwupload=warn")
-        setVo(if (hi10pGnextSoftwareFallbackActive) MPV_VIDEO_OUTPUT_GPU_NEXT else MPV_VIDEO_OUTPUT_GPU)
-        mpv.setOptionString("gpu-context", "android")
-        mpv.setOptionString("opengl-es", "yes")
         mpv.setOptionString("user-agent", PlayerMediaSourceFactory.DEFAULT_USER_AGENT)
         // Preserve native ASS/SSA styling behavior on MPV.
         mpv.setOptionString("sub-ass-override", "no")
@@ -755,22 +759,49 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.setOptionString("sub-font", "Roboto")
         mpv.setOptionString("sub-use-margins", "yes")
         mpv.setOptionString("sub-ass-force-margins", "yes")
+        mpv.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
+        mpv.setOptionString("ao", "audiotrack,opensles")
+        mpv.setOptionString("audio-set-media-role", "yes")
+        mpv.setOptionString("input-default-bindings", "yes")
+        mpv.setOptionString("demuxer-max-bytes", "${64 * 1024 * 1024}")
+        mpv.setOptionString("demuxer-max-back-bytes", "${64 * 1024 * 1024}")
+        mpv.setOptionString("softvol", "yes")
+        mpv.setOptionString("volume-max", MPV_MAX_VOLUME_PERCENT.toInt().toString())
+
+        includeUserConfig()
+
+        // Set after the user config: rendering, the hardware decoding setting (and its Hi10P
+        // fallback), TLS and end-of-file detection depend on these values.
+        setVo(if (hi10pGnextSoftwareFallbackActive) MPV_VIDEO_OUTPUT_GPU_NEXT else MPV_VIDEO_OUTPUT_GPU)
+        mpv.setOptionString("gpu-context", "android")
+        mpv.setOptionString("opengl-es", "yes")
         mpv.setOptionString(
             "hwdec",
             if (hi10pGnextSoftwareFallbackActive) MPV_HWDEC_DISABLED else hardwareDecodeMode.toMpvHwdecValue()
         )
         appliedHi10pGnextSoftwareFallback = hi10pGnextSoftwareFallbackActive
-        mpv.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
-        mpv.setOptionString("ao", "audiotrack,opensles")
-        mpv.setOptionString("audio-set-media-role", "yes")
         mpv.setOptionString("tls-verify", "yes")
         mpv.setOptionString("tls-ca-file", "${context.filesDir.path}/cacert.pem")
-        mpv.setOptionString("input-default-bindings", "yes")
-        mpv.setOptionString("demuxer-max-bytes", "${64 * 1024 * 1024}")
-        mpv.setOptionString("demuxer-max-back-bytes", "${64 * 1024 * 1024}")
         mpv.setOptionString("keep-open", "yes")
-        mpv.setOptionString("softvol", "yes")
-        mpv.setOptionString("volume-max", MPV_MAX_VOLUME_PERCENT.toInt().toString())
+    }
+
+    /**
+     * Parses the user's mpv.conf text through mpv's `include` option, so it overrides the
+     * defaults set before it and supports the full config syntax, including profiles.
+     */
+    private fun includeUserConfig() {
+        val file = File(context.filesDir, MPV_USER_CONFIG_FILE_NAME)
+        if (userConfig.isBlank()) {
+            file.delete()
+            return
+        }
+        runCatching {
+            file.writeText(userConfig + "\n")
+            val result = mpv.setOptionString("include", file.path)
+            if (result < 0) Log.w(TAG, "mpv user config was applied with errors ($result)")
+        }.onFailure {
+            Log.w(TAG, "Failed to apply mpv user config: ${it.message}")
+        }
     }
 
     override fun postInitOptions() {
@@ -878,6 +909,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         private const val MPV_VIDEO_OUTPUT_GPU = "gpu"
         private const val MPV_VIDEO_OUTPUT_GPU_NEXT = "gpu-next"
         private const val MPV_HWDEC_DISABLED = "no"
+        /** Not `mpv.conf`, which mpv would load from the config dir after every option set here. */
+        private const val MPV_USER_CONFIG_FILE_NAME = "user-mpv.conf"
         /** `loadfile` insertion index; only meaningful for insert-at flags, -1 is mpv's default. */
         private const val LOADFILE_DEFAULT_INDEX = "-1"
         private const val MPV_COVER_FALLBACK_SCALE = 1.15f

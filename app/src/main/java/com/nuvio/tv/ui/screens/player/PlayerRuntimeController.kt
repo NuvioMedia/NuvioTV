@@ -574,6 +574,7 @@ class PlayerRuntimeController(
         PlayerSettings.DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD
     internal var mpvHi10pGnextSoftwareFallbackEnabledSetting: Boolean = false
     internal var mpvHardwareDecodeModeSetting: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
+    internal var mpvUserConfigSetting: String = ""
     internal var mpvPreferredAudioLanguages: List<String> = emptyList()
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
     // Per-device delay + current stream's behaviorHints.audioDelayMs + the user's tweak on that stream.
