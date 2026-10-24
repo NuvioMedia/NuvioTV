@@ -3203,7 +3203,7 @@
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">אגירת נתונים ורשת</string>
     <string name="playback_section_buffer_network_desc">כמה תוכן לשמור בזיכרון וכיצד למשוך מקורות.</string>
-    <string name="playback_net_device_memory_info">זיכרון המכשיר: %1$s | מגבלת בטיחות מומלצת: %2$d MB</string>
+    <string name="playback_net_device_memory_info">זיכרון המכשיר: ‎%1$s | מגבלת בטיחות מומלצת: ‎%2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">זיכרון מקורי של ExoPlayer</string>
     <string name="playback_net_nuvio_performance_mode_sub">הפעלת הקצאת זיכרון מקורית מחוץ לערימה ואופטימיזציות גלילה.</string>
     <string name="playback_net_nuvio_performance_mode_not_supported">תכונה זו אינה נתמכת במכשיר.</string>
@@ -3314,7 +3314,7 @@
     <string name="unit_speed_mb_s">%1$s MB/s</string>
 
     <!-- Misc fallbacks -->
-    <string name="playback_estimated_memory_usage">שימוש משוער בזיכרון: %1$d / %2$d MB</string>
+    <string name="playback_estimated_memory_usage">שימוש משוער בזיכרון: ‎%1$d / %2$d MB</string>
     <string name="profile_default_name">פרופיל %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">אוסף TMDB %1$d</string>
