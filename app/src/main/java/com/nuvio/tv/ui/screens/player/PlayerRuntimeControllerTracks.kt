@@ -1043,12 +1043,26 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
                 } else {
                     findMatchingTrackIndex(subtitleTracks, subtitleSelection.track)
                 }
+                val useForcedSubtitles = _uiState.value.subtitleStyle.useForcedSubtitles
+                val matchedTrackIsForced = index >= 0 &&
+                    subtitleTracks.getOrNull(index)?.isForced == true
                 logSwitchTrace(
                     stage = "restore-subtitle-internal",
                     message = "mode=${if (usingSwitchPending && switchSourceEngine != null) "switch-hint-aware" else "regular"} " +
                             "sourceEngine=$switchSourceEngine resultIndex=$index target=${describeRememberedTrackForSwitchTrace(subtitleSelection.track)}"
                 )
-                if (index >= 0) {
+                if (useForcedSubtitles && !matchedTrackIsForced) {
+                    logSwitchTrace(
+                        stage = "restore-subtitle-internal",
+                        message = "result=skip reason=forced-only matchedForced=$matchedTrackIsForced"
+                    )
+                    updatedPending = updatedPending.copy(subtitle = null)
+                    autoSubtitleSelected = false
+                    isUserExplicitSubtitleSelection = false
+                    subtitleDisabledByPersistedPreference = false
+                    subtitleAddonRestoredByPersistedPreference = false
+                    pendingRestoredAddonSubtitle = null
+                } else if (index >= 0) {
                     val alreadySelected = subtitleTracks.getOrNull(index)?.isSelected == true
                     logSwitchTrace(
                         stage = "restore-subtitle-internal-match",
@@ -1132,7 +1146,9 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
             val addonMatch = state.addonSubtitles.firstOrNull { subtitle ->
                 subtitle.addonName == subtitleSelection.addonName && subtitle.id == subtitleSelection.id
             }
-            if (addonMatch != null) {
+            if (addonMatch != null &&
+                (!state.subtitleStyle.useForcedSubtitles || addonSubtitleIsForced(addonMatch))
+            ) {
                 logSwitchTrace(
                     stage = "restore-subtitle-addon",
                     message = "result=match addonId=${addonMatch.id} addonLang=${addonMatch.lang} addon=${addonMatch.addonName}"
@@ -1162,6 +1178,15 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
                                 "addonId=${addonMatch.id} addonLang=${addonMatch.lang}"
                     )
                 }
+            } else if (addonMatch != null) {
+                logSwitchTrace(
+                    stage = "restore-subtitle-addon",
+                    message = "result=skip reason=forced-only addonId=${addonMatch.id} addonLang=${addonMatch.lang}"
+                )
+                updatedPending = updatedPending.copy(subtitle = null)
+                autoSubtitleSelected = false
+                isUserExplicitSubtitleSelection = false
+                subtitleAddonRestoredByPersistedPreference = false
             } else {
                 val addonSubtitlesStillLoading = state.isLoadingAddonSubtitles || state.addonSubtitles.isEmpty()
                 if (addonSubtitlesStillLoading) {
@@ -1683,6 +1708,19 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
             "addonCount=${state.addonSubtitles.size}, selectedAddon=${state.selectedAddonSubtitle?.lang}"
     )
     if (useForcedSubtitles && selectedAudioTrack == null) {
+        val selectedInternalSubtitle = state.subtitleTracks.getOrNull(state.selectedSubtitleTrackIndex)
+        val selectedAddonIsNonForced = state.selectedAddonSubtitle?.let {
+            !addonSubtitleIsForced(it)
+        } == true
+        if ((selectedInternalSubtitle != null && !selectedInternalSubtitle.isForced) ||
+            selectedAddonIsNonForced
+        ) {
+            Log.d(PlayerRuntimeController.TAG, "AUTO_SUB forced: disabling non-forced subtitle while audio track is unknown")
+            disableSubtitles()
+            _uiState.update {
+                it.copy(selectedSubtitleTrackIndex = -1, selectedAddonSubtitle = null)
+            }
+        }
         Log.d(PlayerRuntimeController.TAG, "AUTO_SUB defer: selected audio track unknown")
         return
     }

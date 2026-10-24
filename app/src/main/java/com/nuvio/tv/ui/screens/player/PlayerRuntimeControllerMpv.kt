@@ -26,7 +26,11 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         view.applyHi10pGnextSoftwareFallback(shouldUseMpvHi10pGnextSoftwareFallback())
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         registerMpvEventRelay(view)
-        view.setMedia(currentStreamUrl, currentHeaders)
+        view.setMedia(
+            currentStreamUrl,
+            currentHeaders,
+            useForcedSubtitles = _uiState.value.subtitleStyle.useForcedSubtitles
+        )
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
         view.applyAudioAmplificationDb(_uiState.value.audioAmplificationDb)
         view.applyAudioLanguagePreferences(mpvPreferredAudioLanguages)
@@ -135,7 +139,12 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             .takeIf { it > 0L }
             ?: (_uiState.value.pendingSeekPosition?.coerceAtLeast(0L) ?: 0L)
         playbackAnalyticsDiagnostics.setStartupStartPosition(initialResumePosition)
-        view.setMedia(url, headers, initialResumePosition)
+        view.setMedia(
+            url,
+            headers,
+            initialResumePosition,
+            useForcedSubtitles = _uiState.value.subtitleStyle.useForcedSubtitles
+        )
         playbackAnalyticsDiagnostics.recordRawEventLine(
             "PLAYER_INIT: engine=MPV host=${url.safeMpvTraceHost()} " +
                 "playbackSpeed=${_uiState.value.playbackSpeed} resumePositionMs=$initialResumePosition"
