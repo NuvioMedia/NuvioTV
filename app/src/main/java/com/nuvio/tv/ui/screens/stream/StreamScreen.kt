@@ -1275,6 +1275,7 @@ private fun StreamsList(
                         color = NuvioTheme.colors.TextSecondary,
                         modifier = Modifier.padding(start = NuvioTheme.spacing.xs)
                     )
+                    StreamProviderHeader(streamProviderHeader(shared.stream))
                     StreamCard(
                         stream = shared.stream,
                         showFileSizeBadges = showFileSizeBadges,
@@ -1296,7 +1297,11 @@ private fun StreamsList(
         itemsIndexed(streams, key = { index, _ ->
             streamKeys[index]
         }) { index, stream ->
-            Box(modifier = Modifier.padding(vertical = NuvioTheme.spacing.xs)) {
+            Column(
+                modifier = Modifier.padding(vertical = NuvioTheme.spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+            ) {
+                StreamProviderHeader(streamProviderHeader(stream, streams.getOrNull(index - 1)))
                 val isPartySource = partySource?.matches(stream) == true
                 StreamCard(
                     stream = stream,
@@ -1327,6 +1332,20 @@ private fun StreamsList(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun StreamProviderHeader(sourceName: String?) {
+    sourceName?.let { sourceName ->
+        Text(
+            text = sourceName,
+            modifier = Modifier.padding(start = NuvioTheme.spacing.lg),
+            style = MaterialTheme.typography.labelSmall.copy(
+                textDirection = sourceName.contentTextDirection()
+            ),
+            color = NuvioTheme.extendedColors.textSecondary
+        )
     }
 }
 
@@ -1456,16 +1475,6 @@ private fun StreamCard(
                             maxLines = 1
                         )
                     }
-                }
-
-                stream.pluginSourceName?.takeIf { it.isNotBlank() && it != stream.addonName }?.let { sourceName ->
-                    Text(
-                        text = sourceName,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            textDirection = sourceName.contentTextDirection()
-                        ),
-                        color = NuvioTheme.extendedColors.textSecondary
-                    )
                 }
 
                 streamDescription?.let { description ->
