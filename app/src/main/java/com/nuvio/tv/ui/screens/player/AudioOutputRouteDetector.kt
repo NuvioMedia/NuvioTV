@@ -56,8 +56,22 @@ internal object AudioOutputRouteDetector {
         return detect(context)?.isBluetooth == true
     }
 
+    /** Whether an HDMI output is connected, so a bitstream track can be opened on it again. */
+    @SuppressLint("NewApi", "InlinedApi")
+    fun hasHdmiOutput(context: Context): Boolean {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            ?: return true
+        return runCatching {
+            audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
+                it.type == AudioDeviceInfo.TYPE_HDMI ||
+                    it.type == AudioDeviceInfo.TYPE_HDMI_ARC ||
+                    it.type == AudioDeviceInfo.TYPE_HDMI_EARC
+            }
+        }.getOrDefault(true)
+    }
+
     @SuppressLint("NewApi")
-    private fun detectMediaRoutedDevice(audioManager: AudioManager): AudioDeviceInfo? {
+    internal fun detectMediaRoutedDevice(audioManager: AudioManager): AudioDeviceInfo? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
         return runCatching {
             val attrs = android.media.AudioAttributes.Builder()
@@ -93,15 +107,15 @@ internal object AudioOutputRouteDetector {
      * (API 33+ attribute routing handles the "remote vs HDMI" case).
      */
     @SuppressLint("NewApi")
-    private fun routeRank(type: Int): Int = when (type) {
+    internal fun routeRank(type: Int): Int = when (type) {
         AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> 0
         AudioDeviceInfo.TYPE_BLE_HEADSET -> 1
         AudioDeviceInfo.TYPE_BLE_SPEAKER -> 2
         AudioDeviceInfo.TYPE_BLE_BROADCAST -> 3
         AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> 4
-        AudioDeviceInfo.TYPE_HDMI,
-        AudioDeviceInfo.TYPE_HDMI_ARC,
-        AudioDeviceInfo.TYPE_HDMI_EARC -> 10
+        AudioDeviceInfo.TYPE_HDMI -> 10
+        AudioDeviceInfo.TYPE_HDMI_EARC -> 11
+        AudioDeviceInfo.TYPE_HDMI_ARC -> 12
         AudioDeviceInfo.TYPE_USB_HEADSET,
         AudioDeviceInfo.TYPE_USB_DEVICE,
         AudioDeviceInfo.TYPE_USB_ACCESSORY -> 20

@@ -404,6 +404,7 @@ configurations.all {
     exclude(group = "androidx.media3", module = "media3-datasource-okhttp")
     exclude(group = "androidx.media3", module = "media3-exoplayer-hls")
     exclude(group = "androidx.media3", module = "media3-extractor")
+    exclude(group = "androidx.media3", module = "media3-ui")
 }
 
 baselineProfile {
@@ -516,16 +517,16 @@ dependencies {
     implementation("androidx.media3:media3-database:1.8.0")
     implementation("androidx.annotation:annotation-experimental:1.3.1")
 
-    // Nuvio Engine local AARs (replaces lib-exoplayer, lib-common, lib-datasource, lib-datasource-okhttp, lib-exoplayer-hls, lib-extractor)
+    // Nuvio Engine local AARs (replaces lib-exoplayer, lib-common, lib-datasource, lib-datasource-okhttp, lib-exoplayer-hls, lib-extractor, lib-ui)
     implementation(files(
         "libs/lib-common-release.aar",
         "libs/lib-datasource-release.aar",
         "libs/lib-datasource-okhttp-release.aar",
         "libs/lib-exoplayer-release.aar",
         "libs/lib-exoplayer-hls-release.aar",
-        "libs/lib-extractor-release.aar"
+        "libs/lib-extractor-release.aar",
+        "libs/lib-ui-release.aar"
     ))
-    implementation(libs.media3.ui)
 
     // Local decoder AARs (AV1, IAMF, MPEG-H)
     implementation(files(

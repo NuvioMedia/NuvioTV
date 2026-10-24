@@ -40,6 +40,9 @@ import androidx.media3.exoplayer.audio.AudioRendererEventListener;
 import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.exoplayer.audio.DecoderAudioRenderer;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /** Decodes and renders audio using FFmpeg. */
 @UnstableApi
@@ -61,6 +64,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
   private volatile boolean rendererEnabled;
   private volatile boolean downmixActive;
   private volatile boolean forceOpticalPassthrough;
+  private volatile Set<String> deniedTranscodeMimes = Collections.emptySet();
 
   public FfmpegAudioRenderer() {
     this(/* eventHandler= */ null, /* eventListener= */ null);
@@ -134,12 +138,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     if (forceOpticalPassthrough && MimeTypes.AUDIO_AC3.equals(mimeType)) {
       return C.FORMAT_UNSUPPORTED_SUBTYPE;
     }
-    boolean isDtsOrTrueHd = MimeTypes.AUDIO_DTS.equals(mimeType)
-        || MimeTypes.AUDIO_DTS_HD.equals(mimeType)
-        || MimeTypes.AUDIO_TRUEHD.equals(mimeType);
-    boolean transcodeToAc3 = forceOpticalPassthrough &&
-        !MimeTypes.AUDIO_AC3.equals(mimeType) &&
-        (format.channelCount > 2 || format.channelCount <= 0 || isDtsOrTrueHd);
+    boolean transcodeToAc3 = shouldTranscodeToAc3(format, mimeType);
 
     if (!transcodeToAc3 && (format.channelCount <= 0 || format.sampleRate <= 0)) {
       return format.cryptoType == C.CRYPTO_TYPE_NONE
@@ -148,13 +147,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     }
     boolean supportsConfiguredOutput;
     if (transcodeToAc3) {
-      int sampleRate = format.sampleRate > 0 ? format.sampleRate : 48000;
-      supportsConfiguredOutput = sinkSupportsFormat(
-          new Format.Builder()
-              .setSampleMimeType(MimeTypes.AUDIO_AC3)
-              .setChannelCount(6)
-              .setSampleRate(sampleRate)
-              .build());
+      supportsConfiguredOutput = sinkSupportsFormat(ac3OutputFormat(format));
     } else {
       int outputChannelCount = resolveOutputChannelCount(format.channelCount);
       boolean shouldRequestDownmix = shouldRequestDownmix(format.channelCount, outputChannelCount);
@@ -181,12 +174,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
       throws FfmpegDecoderException {
     TraceUtil.beginSection("createFfmpegAudioDecoder");
     String mimeType = checkNotNull(format.sampleMimeType);
-    boolean isDtsOrTrueHd = MimeTypes.AUDIO_DTS.equals(mimeType)
-        || MimeTypes.AUDIO_DTS_HD.equals(mimeType)
-        || MimeTypes.AUDIO_TRUEHD.equals(mimeType);
-    boolean transcodeToAc3 = forceOpticalPassthrough &&
-        !MimeTypes.AUDIO_AC3.equals(mimeType) &&
-        (format.channelCount > 2 || format.channelCount <= 0 || isDtsOrTrueHd);
+    boolean transcodeToAc3 = shouldTranscodeToAc3(format, mimeType);
     int initialInputBufferSize =
         format.maxInputSize != Format.NO_VALUE ? format.maxInputSize : DEFAULT_INPUT_BUFFER_SIZE;
     @C.PcmEncoding int outputEncoding;
@@ -268,6 +256,13 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     this.forceOpticalPassthrough = enabled;
   }
 
+  public void setDeniedTranscodeMimes(@Nullable Set<String> mimeTypes) {
+    deniedTranscodeMimes =
+        mimeTypes == null || mimeTypes.isEmpty()
+            ? Collections.<String>emptySet()
+            : Collections.unmodifiableSet(new HashSet<>(mimeTypes));
+  }
+
   /** Returns whether this renderer is the active playback path for FFmpeg downmix + center mix. */
   public boolean isCenterMixActive() {
     return rendererEnabled && activeDecoder != null && downmixActive;
@@ -276,6 +271,10 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
   /** Returns whether this renderer is the active playback path for FFmpeg audio decoding. */
   public boolean isAudioPathActive() {
     return rendererEnabled && activeDecoder != null;
+  }
+
+  public boolean isTranscodingToAc3() {
+    return rendererEnabled && activeDecoder != null && activeDecoder.getEncoding() == C.ENCODING_AC3;
   }
 
   /**
@@ -288,6 +287,56 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
       return false;
     }
     return sinkSupportsFormat(Util.getPcmFormat(pcmEncoding, channelCount, inputFormat.sampleRate));
+  }
+
+  private boolean shouldTranscodeToAc3(Format format, String mimeType) {
+    if (MimeTypes.AUDIO_AC3.equals(mimeType)) {
+      return false;
+    }
+    boolean isDtsOrTrueHd = MimeTypes.AUDIO_DTS.equals(mimeType)
+        || MimeTypes.AUDIO_DTS_HD.equals(mimeType)
+        || MimeTypes.AUDIO_TRUEHD.equals(mimeType);
+    boolean eligible = format.channelCount > 2 || format.channelCount <= 0 || isDtsOrTrueHd;
+    if (!eligible) {
+      return false;
+    }
+    if (forceOpticalPassthrough) {
+      return true;
+    }
+    return deniedTranscodeMimes.contains(mimeType) && sinkSupportsFormat(ac3OutputFormat(format));
+  }
+
+  public static int ac3SampleRate(int inputSampleRate) {
+    if (inputSampleRate == 32000 || inputSampleRate == 44100 || inputSampleRate == 48000) {
+      return inputSampleRate;
+    }
+    return 48000;
+  }
+
+  public static int ac3TrailingSilenceSamples(int queuedSamples, int frameSize) {
+    if (frameSize <= 0 || queuedSamples <= 0) {
+      return 0;
+    }
+    int remainder = queuedSamples % frameSize;
+    if (remainder == 0) {
+      return 0;
+    }
+    return frameSize - remainder;
+  }
+
+  public static long ac3FrameDurationUs(int frameSamples, int sampleRate) {
+    if (frameSamples <= 0 || sampleRate <= 0) {
+      return 0L;
+    }
+    return frameSamples * 1_000_000L / sampleRate;
+  }
+
+  private static Format ac3OutputFormat(Format inputFormat) {
+    return new Format.Builder()
+        .setSampleMimeType(MimeTypes.AUDIO_AC3)
+        .setChannelCount(6)
+        .setSampleRate(ac3SampleRate(inputFormat.sampleRate))
+        .build();
   }
 
   private int resolveOutputChannelCount(int inputChannelCount) {

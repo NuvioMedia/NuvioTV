@@ -83,6 +83,25 @@ fun PlaybackSettingsContent(
         { block -> coroutineScope.launch { viewModel.block() } }
     }
 
+    val iecProbeContext = androidx.compose.ui.platform.LocalContext.current
+    val iecProbeChecking = stringResource(R.string.audio_surround_iec_probe_checking)
+    val iecProbeAvailable = stringResource(R.string.audio_surround_iec_probe_available)
+    val iecProbeUnavailable = stringResource(R.string.audio_surround_iec_probe_unavailable)
+    LaunchedEffect(Unit) {
+        viewModel.iecProbeFeedback.collect { feedback ->
+            val message = when (feedback) {
+                IecProbeFeedback.STARTED -> iecProbeChecking
+                IecProbeFeedback.AVAILABLE -> iecProbeAvailable
+                IecProbeFeedback.UNAVAILABLE -> iecProbeUnavailable
+            }
+            android.widget.Toast.makeText(
+                iecProbeContext,
+                message,
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     LaunchedEffect(memoryUsageTrigger) {
         if (memoryUsageTrigger == 0) return@LaunchedEffect
         showMemoryUsage = true

@@ -107,6 +107,9 @@ internal class PlaybackSpeedAwareAudioRenderer(
         format: Format,
         requiresSecureDecoder: Boolean
     ): List<MediaCodecInfo> {
+        if (playbackSpeedAwareAudioSink.isPolicyDeniedPassthrough(format)) {
+            return emptyList()
+        }
         val decoderInfos = if (!playbackSpeedAwareAudioSink.shouldForcePcmForFormat(format) && playbackSpeedAwareAudioSink.supportsFormat(format)) {
             MediaCodecUtil.getDecryptOnlyDecoderInfo()?.let(::listOf)
                 ?: MediaCodecUtil.getDecoderInfosSoftMatch(

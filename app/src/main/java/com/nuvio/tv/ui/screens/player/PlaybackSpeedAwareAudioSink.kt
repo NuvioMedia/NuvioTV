@@ -1,11 +1,18 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.os.SystemClock
+import android.util.Log
+import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import androidx.media3.extractor.Ac3Util
+import com.nuvio.tv.core.player.AudioPassthroughPolicy
+import com.nuvio.tv.ui.screens.player.iec.IecPassthroughAudioSink
+import java.nio.ByteBuffer
 
 /**
  * Audio sink wrapper that forces a decode-to-PCM path when:
@@ -18,7 +25,9 @@ import androidx.media3.exoplayer.audio.ForwardingAudioSink
 internal class PlaybackSpeedAwareAudioSink(
     sink: AudioSink,
     initialForcePcm: Boolean = false,
-    forcePcmForBluetooth: Boolean = false
+    forcePcmForBluetooth: Boolean = false,
+    passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL,
+    private val onDiagnosticEvent: ((String) -> Unit)? = null
 ) : ForwardingAudioSink(sink) {
 
     // Set when the sink is built with forcePcm (error recovery). Don't clear on speed reset.
@@ -34,10 +43,30 @@ internal class PlaybackSpeedAwareAudioSink(
     private var bluetoothForcePcm: Boolean = forcePcmForBluetooth
 
     @Volatile
+    private var passthroughPolicy: AudioPassthroughPolicy = passthroughPolicy
+
+    @Volatile
     private var currentInputFormat: Format? = null
+
+    val activeInputFormat: Format?
+        get() = currentInputFormat
+
+    @Volatile
+    var currentTunnelAudioClass: String? = null
+        private set
 
     @Volatile
     private var listener: AudioSink.Listener? = null
+
+    private val passthroughPacer = PassthroughWaterLevelPacer(onDiagnosticEvent)
+    private val iecSink: IecPassthroughAudioSink? = sink as? IecPassthroughAudioSink
+
+    private var forwardAnchorPending: Boolean = false
+    private var forwardUnsyncedChunks: Int = 0
+    private var forwardFirstPtsUs: Long = C.TIME_UNSET
+    private var forwardLastEvaluatedPtsUs: Long = C.TIME_UNSET
+    private var forwardForceResync: Boolean = false
+    private var forwardArmedBy: String = "configure"
 
     fun setInitialPlaybackSpeed(speed: Float) {
         playbackSpeed = normalizeSpeed(speed)
@@ -66,6 +95,29 @@ internal class PlaybackSpeedAwareAudioSink(
 
     fun isBluetoothForcePcm(): Boolean = bluetoothForcePcm
 
+    fun setPassthroughPolicy(policy: AudioPassthroughPolicy): Boolean {
+        if (policy == passthroughPolicy) return false
+        passthroughPolicy = policy
+        return true
+    }
+
+    fun isIecHbrActive(): Boolean = iecSink?.isIecActive == true
+
+    fun demandsNonTunnelledVideo(format: Format): Boolean = iecSink?.claimsHbr(format) == true
+
+    fun hbrDemandsNonTunnelledVideo(format: Format): Boolean =
+        IecPassthroughAudioSink.isHbrPassthrough(format)
+
+    fun tunnelAudioClass(format: Format): String {
+        val mime = format.sampleMimeType ?: return TUNNEL_AUDIO_CLASS_PCM
+        if (mime == MimeTypes.AUDIO_RAW) return TUNNEL_AUDIO_CLASS_PCM
+        return if (getFormatSupport(format) == AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY) {
+            mime
+        } else {
+            TUNNEL_AUDIO_CLASS_PCM
+        }
+    }
+
     override fun setListener(listener: AudioSink.Listener) {
         this.listener = listener
         super.setListener(listener)
@@ -73,8 +125,84 @@ internal class PlaybackSpeedAwareAudioSink(
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
         currentInputFormat = inputFormat
+        passthroughPacer.onFormat(inputFormat, nowMs())
         markPcmFallbackIfNeeded(inputFormat, playbackSpeed)
+        currentTunnelAudioClass = tunnelAudioClass(inputFormat)
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
+        passthroughPacer.setIecPacked(iecSink?.isIecActive == true)
+        armForwardAnchor(armedBy = "configure")
+    }
+
+    override fun play() {
+        passthroughPacer.onPlay(nowMs())
+        super.play()
+    }
+
+    override fun pause() {
+        passthroughPacer.onPause(nowMs())
+        super.pause()
+    }
+
+    override fun flush() {
+        passthroughPacer.onTimelineReset(nowMs())
+        super.flush()
+        armForwardAnchor(armedBy = "flush")
+    }
+
+    override fun reset() {
+        passthroughPacer.onReset()
+        super.reset()
+    }
+
+    override fun playToEndOfStream() {
+        val iecWasActive = iecSink?.isIecActive == true
+        super.playToEndOfStream()
+        noteIecFallbackIfFlipped(iecWasActive)
+    }
+
+    override fun handleDiscontinuity() {
+        passthroughPacer.onTimelineReset(nowMs())
+        super.handleDiscontinuity()
+    }
+
+    override fun handleBuffer(
+        buffer: ByteBuffer,
+        presentationTimeUs: Long,
+        encodedAccessUnitCount: Int
+    ): Boolean {
+        if (forwardAnchorPending && presentationTimeUs != forwardLastEvaluatedPtsUs) {
+            forwardLastEvaluatedPtsUs = presentationTimeUs
+            evaluateForwardAnchor(buffer, presentationTimeUs)
+        }
+        val passthrough = passthroughPacer.appliesTo(currentInputFormat)
+        if (passthrough &&
+            !passthroughPacer.shouldAcceptBuffer(presentationTimeUs, nowMs(), playbackSpeed)
+        ) {
+            return false
+        }
+        val encodedBytes = if (currentInputFormat?.sampleMimeType != MimeTypes.AUDIO_RAW) {
+            buffer.remaining()
+        } else {
+            0
+        }
+        val iecWasActive = iecSink?.isIecActive == true
+        val handled = super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
+        noteIecFallbackIfFlipped(iecWasActive)
+        if (handled && passthrough) {
+            passthroughPacer.onBufferAccepted(presentationTimeUs)
+        }
+        if (handled && encodedBytes > 0) {
+            PlayerAudioBitrateMeter.record(encodedBytes, presentationTimeUs)
+        }
+        return handled
+    }
+
+    override fun getCurrentPositionUs(sourceEnded: Boolean): Long {
+        val sinkPositionUs = super.getCurrentPositionUs(sourceEnded)
+        if (!passthroughPacer.appliesTo(currentInputFormat)) {
+            return sinkPositionUs
+        }
+        return passthroughPacer.clampPositionUs(sinkPositionUs, nowMs(), playbackSpeed)
     }
 
     override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
@@ -86,6 +214,7 @@ internal class PlaybackSpeedAwareAudioSink(
             forcePcmForCurrentSession = false
             shouldNotify = true
         }
+        currentInputFormat?.let { currentTunnelAudioClass = tunnelAudioClass(it) }
         super.setPlaybackParameters(playbackParameters)
         if (shouldNotify) {
             listener?.onAudioCapabilitiesChanged()
@@ -123,7 +252,14 @@ internal class PlaybackSpeedAwareAudioSink(
             return true
         }
         // Non-1x speed cannot be applied to bitstream passthrough tracks.
-        return playbackSpeed != 1f
+        if (playbackSpeed != 1f) {
+            return true
+        }
+        return isPolicyDeniedPassthrough(format)
+    }
+
+    fun isPolicyDeniedPassthrough(format: Format): Boolean {
+        return passthroughPolicy.deniesPassthrough(format.sampleMimeType)
     }
 
     private fun markPcmFallbackIfNeeded(format: Format?, speed: Float): Boolean {
@@ -147,26 +283,14 @@ internal class PlaybackSpeedAwareAudioSink(
         return speed.takeIf { it > 0f } ?: 1f
     }
 
+    private fun nowMs(): Long = SystemClock.elapsedRealtime()
+
     /**
      * Formats that devices may try to play via passthrough/offload and that Bluetooth cannot carry.
      * Matches Media3 surround encodings that need decode-to-PCM on A2DP/LE Audio.
      */
     private fun isEncodedPassthroughCandidate(format: Format): Boolean {
-        val mimeType = format.sampleMimeType
-        if (mimeType != null && (
-                mimeType == MimeTypes.AUDIO_E_AC3 ||
-                    mimeType == MimeTypes.AUDIO_E_AC3_JOC ||
-                    mimeType == MimeTypes.AUDIO_AC3 ||
-                    mimeType == MimeTypes.AUDIO_AC4 ||
-                    mimeType == MimeTypes.AUDIO_TRUEHD ||
-                    mimeType == MimeTypes.AUDIO_DTS ||
-                    mimeType == MimeTypes.AUDIO_DTS_HD ||
-                    mimeType == MimeTypes.AUDIO_DTS_EXPRESS ||
-                    mimeType.startsWith("audio/vnd.dts")
-                )
-        ) {
-            return true
-        }
+        if (PassthroughWaterLevelPacer.isPassthroughMime(format.sampleMimeType)) return true
         val codecs = format.codecs
         if (codecs != null) {
             return codecs.contains("ac-3", ignoreCase = true) ||
@@ -177,5 +301,48 @@ internal class PlaybackSpeedAwareAudioSink(
                 codecs.contains("dtshd", ignoreCase = true)
         }
         return false
+    }
+
+    private fun noteIecFallbackIfFlipped(iecWasActive: Boolean) {
+        if (iecWasActive && iecSink?.isIecActive == false) {
+            passthroughPacer.setIecPacked(false)
+            armForwardAnchor(armedBy = "fallback", forceResync = true)
+        }
+    }
+
+    private fun armForwardAnchor(armedBy: String, forceResync: Boolean = false) {
+        forwardAnchorPending =
+            currentInputFormat?.sampleMimeType == MimeTypes.AUDIO_TRUEHD &&
+                iecSink?.isIecActive != true
+        forwardUnsyncedChunks = 0
+        forwardFirstPtsUs = C.TIME_UNSET
+        forwardLastEvaluatedPtsUs = C.TIME_UNSET
+        forwardForceResync = forwardAnchorPending && forceResync
+        forwardArmedBy = armedBy
+    }
+
+    private fun evaluateForwardAnchor(buffer: ByteBuffer, presentationTimeUs: Long) {
+        if (presentationTimeUs == C.TIME_UNSET) return
+        if (forwardFirstPtsUs == C.TIME_UNSET) forwardFirstPtsUs = presentationTimeUs
+        if (Ac3Util.findTrueHdSyncframeOffset(buffer) == C.INDEX_UNSET) {
+            forwardUnsyncedChunks++
+            return
+        }
+        val deltaUs = presentationTimeUs - forwardFirstPtsUs
+        val resynced = forwardUnsyncedChunks > 0 || forwardForceResync
+        if (resynced) {
+            handleDiscontinuity()
+        }
+        val line = "forward_anchor mime=true-hd droppedChunks=$forwardUnsyncedChunks " +
+            "deltaUs=$deltaUs resynced=$resynced armedBy=$forwardArmedBy"
+        onDiagnosticEvent?.invoke(line)
+        Log.i(TAG, line)
+        forwardAnchorPending = false
+        forwardForceResync = false
+    }
+
+    companion object {
+        const val TUNNEL_AUDIO_CLASS_PCM = "pcm"
+        private const val TAG = "PassthroughSink"
     }
 }
