@@ -145,8 +145,8 @@
     <string name="cw_new_season">Nouvelle saison</string>
     <string name="cw_resume">Reprendre</string>
     <string name="cw_percent_watched">Regardé à %1$d&#160;%%</string>
-    <string name="cw_hours_min_left">%1$d h %2$d min restantes</string>
-    <string name="cw_min_left">%1$d min restantes</string>
+    <string name="cw_hours_min_left">Il reste %1$d h %2$d min</string>
+    <string name="cw_min_left">Il reste %1$d min</string>
     <string name="cw_almost_done">Presque terminé</string>
     <string name="cw_airs_date">Diffusion le %1$s</string>
     <string name="cw_airs_today">Diffusion aujourd’hui</string>
@@ -413,6 +413,10 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_update_banner_title">Bannière de mise à jour automatique</string>
     <string name="about_update_banner_subtitle">Afficher une bannière lorsqu’une nouvelle version est disponible</string>
+    <string name="about_update_auto_install_title">Installer les mises à jour automatiquement</string>
+    <string name="about_update_auto_install_subtitle">Télécharger les nouvelles versions en arrière-plan et les installer lorsque l’appareil est inactif</string>
+    <string name="about_update_auto_install_notice_title">Notifier après les mises à jour automatiques</string>
+    <string name="about_update_auto_install_notice_subtitle">Afficher une bannière au prochain lancement, une fois que l’application s’est mise à jour d’elle-même</string>
     <string name="about_update_channel_title">Canal de mise à jour</string>
     <string name="about_update_channel_subtitle">Choisissez le type de mises à jour à recevoir</string>
     <string name="about_check_updates">Rechercher des mises à jour</string>
@@ -485,8 +489,8 @@
     <string name="tracking_simkl_features_title">Fonctionnalités Simkl</string>
     <string name="tracking_simkl_features_subtitle">Paramètres propres à Simkl</string>
     <string name="tracking_simkl_anime_id_title">Préférence d’ID pour les animés</string>
-    <string name="tracking_simkl_anime_id_subtitle">Détermine la façon dont les séries d’animés sont identifiées. Choisir MAL ou Kitsu attribue à chaque saison sa propre entrée, au lieu de les regrouper sous un seul ID IMDB.</string>
-    <string name="tracking_simkl_anime_id_imdb">Préférer IMDB</string>
+    <string name="tracking_simkl_anime_id_subtitle">Détermine la façon dont les séries d’animés sont identifiées. Choisir MAL ou Kitsu attribue à chaque saison sa propre entrée, au lieu de les regrouper sous un seul ID IMDb.</string>
+    <string name="tracking_simkl_anime_id_imdb">Préférer IMDb</string>
     <string name="tracking_simkl_anime_id_mal">Préférer MyAnimeList</string>
     <string name="tracking_simkl_anime_id_kitsu">Préférer Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">Préférer TVDB</string>
@@ -607,7 +611,7 @@
     <string name="advanced_section_cache">Cache</string>
     <string name="advanced_section_startup">Démarrage et sortie</string>
     <string name="advanced_section_network_tests">Tests réseau</string>
-    <!-- <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string> -->
+    <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Navigation horizontale rapide</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Augmenter la vitesse de répétition du pavé directionnel dans les rangées tout en conservant la limitation de la répétition.</string>
     <string name="advanced_nuvio_performance_mode">Mémoire native ExoPlayer</string>
@@ -804,6 +808,9 @@
     <string name="video_section">Vidéo</string>
     <string name="playback_true_black_letterbox">Bandes noires pures</string>
     <string name="playback_true_black_letterbox_sub">Laisse les bandes autour de l’image non peintes afin que le HDR conserve un noir pur. Gardez cette option désactivée si une ligne lumineuse apparaît sur les bandes.</string>
+    <string name="playback_chapters_label">Chapitres</string>
+    <string name="playback_exo_chapters_title">Afficher les chapitres (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Lire les chapitres des fichiers MKV pour les repérer sur la barre de progression et passer de l’un à l’autre. Effectue quelques petites requêtes supplémentaires une fois la lecture démarrée. mpv affiche toujours les chapitres.</string>
     <string name="audio_trailer_section">Bande-annonce</string>
     <string name="audio_autoplay_trailers">Lecture automatique des bandes-annonces</string>
     <string name="audio_autoplay_trailers_sub">Lire automatiquement les bandes-annonces sur les écrans de détail et de fin de lecture</string>
@@ -851,20 +858,20 @@
     <string name="audio_strip_hdr10plus_sub">Supprime les métadonnées dynamiques HDR10+ des flux. Si «&#160;Convertir en DV8.1&#160;» est aussi activé, la suppression a lieu après la conversion.</string>
     <string name="audio_dv7_preserve_mapping_title">Préserver le mappage DV (DV7 vers DV8.1)</string>
     <string name="audio_dv7_preserve_mapping_sub">Conserve le tone mapping voulu par les créateurs, au prix d’un traitement légèrement plus lourd par image.</string>
-    <!-- <string name="dv7_libdovi_mode_caption" translatable="false">Conversion mode (auto-selected, do not change unless instructed). Pick one to force it; None uses auto. Active only when DV7 Handling is Convert to DV8.1.</string> -->
-    <!-- <string name="dv7_libdovi_mode_row_title" translatable="false">Conversion mode</string> -->
-    <!-- <string name="dv7_libdovi_mode_none_title" translatable="false">None</string> -->
-    <!-- <string name="dv7_libdovi_mode_none_sub" translatable="false">No override. Uses the automatically selected conversion mode.</string> -->
-    <!-- <string name="dv7_libdovi_mode_0_title" translatable="false">Mode 0 — Copy (no convert)</string> -->
-    <!-- <string name="dv7_libdovi_mode_0_sub" translatable="false">Parse the RPU and write it back untouched. No profile conversion.</string> -->
-    <!-- <string name="dv7_libdovi_mode_1_title" translatable="false">Mode 1 — MEL</string> -->
-    <!-- <string name="dv7_libdovi_mode_1_sub" translatable="false">Convert the RPU to be MEL (Minimum Enhancement Layer) compatible.</string> -->
-    <!-- <string name="dv7_libdovi_mode_2_title" translatable="false">Mode 2 — 8.1 (no-op mapping)</string> -->
-    <!-- <string name="dv7_libdovi_mode_2_sub" translatable="false">Convert to profile 8.1 with luma and chroma mapping set to no-op. The standard conversion.</string> -->
-    <!-- <string name="dv7_libdovi_mode_3_title" translatable="false">Mode 3 — Profile 5 to 8.1</string> -->
-    <!-- <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string> -->
-    <!-- <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string> -->
-    <!-- <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string> -->
+    <string name="dv7_libdovi_mode_caption" translatable="false">Conversion mode (auto-selected, do not change unless instructed). Pick one to force it; None uses auto. Active only when DV7 Handling is Convert to DV8.1.</string>
+    <string name="dv7_libdovi_mode_row_title" translatable="false">Conversion mode</string>
+    <string name="dv7_libdovi_mode_none_title" translatable="false">None</string>
+    <string name="dv7_libdovi_mode_none_sub" translatable="false">No override. Uses the automatically selected conversion mode.</string>
+    <string name="dv7_libdovi_mode_0_title" translatable="false">Mode 0 — Copy (no convert)</string>
+    <string name="dv7_libdovi_mode_0_sub" translatable="false">Parse the RPU and write it back untouched. No profile conversion.</string>
+    <string name="dv7_libdovi_mode_1_title" translatable="false">Mode 1 — MEL</string>
+    <string name="dv7_libdovi_mode_1_sub" translatable="false">Convert the RPU to be MEL (Minimum Enhancement Layer) compatible.</string>
+    <string name="dv7_libdovi_mode_2_title" translatable="false">Mode 2 — 8.1 (no-op mapping)</string>
+    <string name="dv7_libdovi_mode_2_sub" translatable="false">Convert to profile 8.1 with luma and chroma mapping set to no-op. The standard conversion.</string>
+    <string name="dv7_libdovi_mode_3_title" translatable="false">Mode 3 — Profile 5 to 8.1</string>
+    <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
+    <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
+    <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
     <string name="audio_mpv_hi10p_gnext_sw_title">Repli logiciel G-NEXT pour Hi10P (MPV uniquement)</string>
     <string name="audio_mpv_hi10p_gnext_sw_subtitle">Utilise le décodage logiciel G-NEXT lorsque les détails du flux identifient du H.264 Hi10P. Désactivé par défaut&#160;; à activer uniquement si la lecture Hi10P se fige ou échoue.</string>
     <string name="audio_mpv_hwdec_title">Décodage matériel (MPV uniquement)</string>
@@ -905,10 +912,16 @@
     <string name="sub_outline">Contour</string>
     <string name="sub_outline_sub">Ajouter un contour autour du texte des sous-titres pour une meilleure lisibilité</string>
     <string name="sub_outline_color">Couleur du contour</string>
+    <string name="sub_hdr_style">Style HDR / Dolby Vision distinct</string>
+    <string name="sub_hdr_style_sub">Utiliser une autre couleur de texte et une luminosité plus faible pour les sous-titres des vidéos HDR et Dolby Vision</string>
+    <string name="sub_hdr_text_color">Couleur du texte HDR</string>
+    <string name="sub_hdr_brightness">Luminosité des sous-titres HDR</string>
     <string name="sub_advanced_section">Rendu avancé des sous-titres</string>
     <string name="sub_libass">Utiliser libass pour les sous-titres ASS/SSA</string>
-    <string name="sub_libass_sub">Expérimental&#160;: rendu ASS/SSA avancé (styles, positionnement, animations)</string>
+    <string name="sub_libass_sub">Rendu ASS/SSA avancé (styles, positionnement, animations)</string>
     <string name="sub_libass_mode">Mode de rendu libass</string>
+    <string name="sub_libass_render_scale">Résolution de rendu des sous-titres</string>
+    <string name="sub_libass_render_scale_sub">Une résolution plus basse améliore les performances avec les mises en forme complexes, au prix d’une moindre netteté</string>
     <string name="sub_org_none">Aucune (ordre par défaut)</string>
     <string name="sub_org_by_lang">Par langue</string>
     <string name="sub_org_by_addon">Par addon</string>
@@ -1387,6 +1400,11 @@
     <string name="settings_stream_badges_section">Style Fusion</string>
     <string name="settings_stream_size_badges_title">Badges de taille</string>
     <string name="settings_stream_size_badges_description">Afficher les badges de taille de fichier dans les résultats de flux et les panneaux de sources du lecteur.</string>
+    <string name="settings_stream_badges_in_player_title">Afficher dans le lecteur</string>
+    <string name="settings_stream_badges_in_player_description">Afficher, sous le titre du lecteur, les badges de la vidéo et de l’audio en cours de lecture. Nécessite un pack de badges correspondant à du texte brut, comme 2160p ou Atmos.</string>
+    <string name="settings_stream_player_badges_title">Badges du lecteur</string>
+    <string name="settings_stream_player_badges_description">Choisir le pack de badges utilisé par le lecteur.</string>
+    <string name="settings_stream_player_badges_same">Identiques aux badges de flux</string>
     <string name="settings_stream_addon_logo_title">Logo de l’addon</string>
     <string name="settings_stream_addon_logo_description">Afficher le logo et le nom de l’addon à côté des sources de flux.</string>
     <string name="settings_stream_display_section">Affichage</string>
@@ -1480,7 +1498,7 @@
     <string name="qr_login_exchange_failed">Impossible de finaliser la connexion par code QR</string>
     <string name="trakt_code_expires">Le code expire dans %1$s</string>
     <string name="trakt_token_refreshes">Le jeton d’accès Trakt sera actualisé dans %1$s</string>
-    <string name="trakt_login_instruction">Appuyez sur «&#160;Connexion&#160;» pour démarrer l’authentification de l’appareil auprès de Trakt. Un code QR s’affichera ici.</string>
+    <string name="trakt_login_instruction">Appuyez sur «&#160;Se connecter&#160;» pour démarrer l’authentification de l’appareil auprès de Trakt. Un code QR s’affichera ici.</string>
     <string name="trakt_missing_credentials">TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET manquants dans local.properties.</string>
     <string name="trakt_watch_progress_title">Progression de visionnage</string>
     <string name="trakt_watch_progress_subtitle">Choisir la source de progression qui alimente la reprise et Continuer à regarder</string>
@@ -1529,7 +1547,7 @@
     <string name="trakt_disconnect">Déconnecter</string>
     <string name="trakt_disconnect_title">Déconnecter Trakt&#160;?</string>
     <string name="trakt_disconnect_subtitle">Cela déconnectera votre compte Trakt de Nuvio.</string>
-    <string name="trakt_login">Connexion</string>
+    <string name="trakt_login">Se connecter</string>
     <string name="trakt_retry">Réessayer</string>
     <string name="trakt_back">Retour</string>
     <string name="trakt_cw_window_title">Période de Continuer à regarder</string>
@@ -1785,7 +1803,7 @@
     <string name="settings_p2p_clear_cache_usage_pending">L’utilisation est mesurée après le démarrage du P2P&#160;; sélectionnez pour vider les données de torrent en cache</string>
     <string name="settings_p2p_clear_cache_clearing">Suppression des données de torrent inactives…</string>
     <string name="settings_p2p_clear_cache_playback_active">Arrêtez la lecture P2P avant de vider le cache</string>
-    <string name="settings_p2p_clear_cache_done">%1$s de données de torrent inactives supprimés</string>
+    <string name="settings_p2p_clear_cache_done">%1$s de données de torrent inactives supprimées</string>
     <string name="settings_p2p_clear_cache_failed">Impossible de vider le cache du torrent</string>
     <string name="p2p_download_title">Téléchargement du moteur P2P</string>
     <string name="p2p_download_subtitle">Ce téléchargement unique est nécessaire pour le streaming P2P.</string>
@@ -1812,6 +1830,8 @@
     <string name="player_engine_switching_title">Changement du moteur de lecture</string>
     <string name="player_engine_switching_message">Échec du démarrage. Passage à %1$s…</string>
     <string name="player_engine_switching_manual_message">Passage à %1$s…</string>
+    <string name="player_engine_switch_title">Passer à %1$s&#160;?</string>
+    <string name="player_engine_switch_message">La vidéo sera rechargée à l’endroit où vous en êtes.</string>
     <string name="playback_show_loading_status">Afficher l’état du chargement</string>
     <string name="playback_show_loading_status_sub">Afficher la progression étape par étape pendant l’initialisation du lecteur.</string>
     <string name="player_sync_line">Synchroniser la ligne</string>
@@ -1958,6 +1978,9 @@
     <string name="subtitle_style_bold">Gras</string>
     <string name="subtitle_style_text_color">Couleur du texte</string>
     <string name="subtitle_style_text_opacity">Opacité du texte</string>
+    <string name="subtitle_style_text_color_hdr">Couleur du texte (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">Opacité du texte (HDR)</string>
+    <string name="subtitle_style_brightness_hdr">Luminosité (HDR)</string>
     <string name="subtitle_style_outline">Contour</string>
     <string name="subtitle_style_bottom_offset">Décalage inférieur</string>
     <string name="subtitle_style_defaults">Valeurs par défaut</string>
@@ -2116,13 +2139,13 @@
     <string name="library_syncing_library">Synchronisation de la bibliothèque…</string>
     <string name="library_type_all">Tout</string>
     <string name="library_type_items">éléments</string>
-    <string name="library_empty_local_title">Aucun %1$s pour le moment</string>
-    <string name="library_empty_trakt_title">Aucun %1$s dans cette liste</string>
+    <string name="library_empty_local_title">%1$s&#160;: aucun élément pour le moment</string>
+    <string name="library_empty_trakt_title">%1$s&#160;: aucun élément dans cette liste</string>
     <string name="library_empty_local_subtitle">Commencez à enregistrer vos favoris pour les voir ici</string>
     <string name="library_empty_trakt_subtitle">Utilisez + dans les détails pour ajouter des éléments à la liste de suivi ou à des listes</string>
     <string name="library_empty_trakt_not_auth_title">Trakt non connecté</string>
     <string name="library_empty_trakt_not_auth_subtitle">Connectez votre compte Trakt dans les paramètres pour afficher votre bibliothèque Trakt</string>
-    <string name="library_empty_simkl_title">Aucun %1$s avec ce statut</string>
+    <string name="library_empty_simkl_title">%1$s&#160;: aucun élément avec ce statut</string>
     <string name="library_empty_simkl_subtitle">Utilisez + dans les détails pour ajouter des éléments à un statut Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl non connecté</string>
     <string name="library_empty_simkl_not_auth_subtitle">Connectez votre compte Simkl dans les paramètres pour afficher votre bibliothèque Simkl</string>
@@ -2321,7 +2344,7 @@
     <string name="plugin_error_refresh">Échec de l’actualisation&#160;: %1$s</string>
     <string name="plugin_error_test">Échec du test&#160;: %1$s</string>
     <string name="plugin_test_no_results">Aucun résultat trouvé</string>
-    <string name="plugin_test_found_streams">%1$d flux trouvés</string>
+    <string name="plugin_test_found_streams">Flux trouvés&#160;: %1$d</string>
     <string name="plugin_version">Version %1$s</string>
 
     <string name="profile_selection_title">Qui regarde&#160;?</string>
@@ -2418,6 +2441,7 @@
     <string name="update_checking">Recherche de mises à jour…</string>
     <string name="update_waiting_for_stable">Vous recevrez la prochaine version stable dès qu’elle sera disponible</string>
     <string name="update_download_complete">Téléchargement terminé. Prêt à installer.</string>
+    <string name="update_installed_automatically">Mise à jour automatique effectuée pendant que l’appareil était inactif</string>
     <string name="update_up_to_date">Le système est à jour. Dernières modifications&#160;:</string>
     <string name="update_close">Fermer</string>
     <string name="update_open_settings">Ouvrir les paramètres</string>
@@ -2508,6 +2532,10 @@
     <string name="cd_sources">Sources</string>
     <string name="cd_switch_player_engine">Changer de moteur de lecture</string>
     <string name="cd_episodes">Épisodes</string>
+    <string name="player_chapter_number">Chapitre %1$d</string>
+    <string name="player_chapters">Chapitres</string>
+    <string name="player_chapters_title">Chapitres (%1$d)</string>
+    <string name="player_chapter_remaining">Il reste %1$s</string>
     <string name="cd_playback_speed">Vitesse de lecture</string>
     <string name="cd_aspect_ratio">Format d’image</string>
     <string name="cd_open_external_player">Ouvrir dans un lecteur externe</string>
@@ -2545,9 +2573,9 @@
     <string name="cd_nuvio">Nuvio</string>
 
     <string name="debug_signin_success">Connexion réussie</string>
-    <string name="debug_generate_description">Élément %1$s n° %2$d généré en mode débogage</string>
+    <string name="debug_generate_description">Élément %1$s n°&#160;%2$d généré en mode débogage</string>
     <string name="debug_generate_result_failed">Échec&#160;: %1$s</string>
-    <string name="debug_generate_library_result_added">%1$d éléments ajoutés à la bibliothèque</string>
+    <string name="debug_generate_library_result_added">Éléments ajoutés à la bibliothèque&#160;: %1$d</string>
 
     <!-- Collection Management -->
     <string name="collections_header">Collections</string>
@@ -2972,7 +3000,7 @@
     <string name="simkl_visit">Visiter Simkl</string>
     <string name="simkl_sync_info_action">Comment fonctionne la synchronisation</string>
     <string name="simkl_sync_info_title">Comment fonctionne la synchronisation Simkl</string>
-    <string name="simkl_sync_info_description">Nuvio vérifie automatiquement Simkl au maximum une fois toutes les %1$d minutes. Les modifications effectuées depuis une autre application ou depuis le site de Simkl peuvent mettre ce délai à apparaître.</string>
+    <string name="simkl_sync_info_description">Nuvio vérifie automatiquement Simkl au maximum une fois toutes les %1$d minutes. Les modifications effectuées depuis une autre application ou depuis le site de Simkl peuvent mettre autant de temps à apparaître.</string>
     <string name="simkl_sync_info_activity">Chaque actualisation commence par vérifier si Simkl signale des modifications, puis ne télécharge que les mises à jour. Cela respecte les règles de l’API de Simkl, limite la consommation de données inutile et contribue à la stabilité du service.</string>
     <string name="simkl_sync_info_manual">Les modifications effectuées dans Nuvio sont envoyées immédiatement à Simkl. Utilisez «&#160;Synchroniser maintenant&#160;» chaque fois que vous souhaitez que Nuvio recherche plus tôt les modifications distantes.</string>
     <string name="simkl_sync_info_library_statuses">Les séries placées dans les listes «&#160;En pause&#160;» ou «&#160;Abandonnés&#160;» de Simkl sont masquées de Continuer à regarder. Elles restent masquées tant qu’elles figurent dans l’une de ces listes.</string>
@@ -3200,7 +3228,7 @@
     <string name="playback_section_buffer_network_desc">Quelle quantité de contenu garder en mémoire et comment récupérer les flux.</string>
     <string name="playback_net_device_memory_info">Mémoire de l’appareil&#160;: %1$s | Limite de sécurité recommandée&#160;: %2$d Mo</string>
     <string name="playback_net_nuvio_performance_mode">Mémoire native ExoPlayer</string>
-    <string name="playback_net_nuvio_performance_mode_sub">Active l’allocateur natif hors tas et les optimisations de défilement.</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Active l’allocateur natif hors tas et les optimisations du déplacement.</string>
     <string name="playback_net_nuvio_performance_mode_not_supported">Cette fonctionnalité n’est pas prise en charge par votre appareil.</string>
     <string name="playback_buffer_custom">Mémoires tampons de lecture personnalisées</string>
     <string name="playback_buffer_custom_sub">Remplace la mise en mémoire tampon par défaut de Media3 par les valeurs ci-dessous. Lorsque cette option est désactivée, le lecteur utilise les durées et la taille cible de mémoire tampon d’origine de Media3.</string>
@@ -3221,7 +3249,7 @@
     <string name="playback_buffer_managed">Budget mémoire géré</string>
     <string name="playback_buffer_managed_sub">Limite la mémoire tampon à une part sûre de la mémoire de cet appareil. Désactivez cette option pour définir vous-même la taille de mémoire tampon cible (avancé&#160;: des valeurs élevées peuvent faire planter les appareils à faible mémoire).</string>
     <string name="playback_buffer_target">Taille de mémoire tampon cible</string>
-    <string name="playback_buffer_target_sub">RAM maximale utilisée pour la mise en mémoire tampon anticipée. Le maximum est calculé d’après la mémoire disponible de votre appareil (la limite de tas par application d’Android) ; les appareils dotés de plus de RAM débloquent donc automatiquement des plafonds plus élevés.</string>
+    <string name="playback_buffer_target_sub">RAM maximale utilisée pour la mise en mémoire tampon anticipée. Le maximum est calculé d’après la mémoire disponible de votre appareil (la limite de tas par application d’Android)&#160;; les appareils dotés de plus de RAM débloquent donc automatiquement des plafonds plus élevés.</string>
     <string name="playback_buffer_target_managed_hint">Géré par le budget mémoire de l’appareil. Désactivez «&#160;Budget mémoire géré&#160;» pour définir cette valeur.</string>
     <string name="playback_buffer_target_warning">Attention&#160;: au-dessus de la limite de sécurité de l’appareil (%1$d Mo). L’application peut planter pendant la lecture.</string>
     <string name="playback_buffer_target_danger_warning">Danger&#160;: au-dessus de la limite d’avertissement (%1$d Mo). Risque élevé de plantage.</string>
@@ -3371,4 +3399,6 @@
     <string name="autosync_toast_failed_no_reference">Échec de la synchronisation&#160;: cette vidéo ne contient aucun sous-titre intégré à comparer.</string>
     <string name="autosync_toast_failed_unsupported">Échec de la synchronisation&#160;: la synchronisation automatique ne prend pas en charge ce format de sous-titres.</string>
     <string name="autosync_label_synced">Synchronisé automatiquement</string>
+    <string name="stream_resume_from_time">Reprendre à %1$s</string>
+    <string name="stream_resume_from_percent">Reprendre à %1$d&#160;%%</string>
 </resources>
