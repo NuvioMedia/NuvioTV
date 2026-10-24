@@ -3,6 +3,9 @@
 package com.nuvio.tv.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -65,14 +68,16 @@ internal fun ServerSignInDialog(
         width = 640.dp
     ) {
         SignInField(label = stringResource(R.string.servers_address)) {
-            InputField(
-                value = address,
-                onValueChange = { address = it },
-                placeholder = stringResource(R.string.servers_address_hint),
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Next,
-                modifier = Modifier.fillMaxWidth()
-            )
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                InputField(
+                    value = address,
+                    onValueChange = { address = it },
+                    placeholder = stringResource(R.string.servers_address_hint),
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Next,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
         SignInField(label = stringResource(R.string.servers_username)) {
             InputField(
