@@ -909,15 +909,6 @@
     <string name="sub_libass">Utiliser libass pour les sous-titres ASS/SSA</string>
     <string name="sub_libass_sub">Expérimental&#160;: rendu ASS/SSA avancé (styles, positionnement, animations)</string>
     <string name="sub_libass_mode">Mode de rendu libass</string>
-    <string name="sub_mode_overlay_gl">Superposition OpenGL (recommandé)</string>
-    <string name="sub_mode_overlay_gl_sub">Meilleure qualité avec prise en charge du HDR. Affiche les sous-titres sur un thread distinct.</string>
-    <string name="sub_mode_overlay_canvas">Superposition Canvas</string>
-    <string name="sub_mode_effects_gl">Effets OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Prise en charge des animations via les effets Media3. Plus rapide que Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effets Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Prise en charge des animations via les effets Media3 avec rendu Canvas.</string>
-    <string name="sub_mode_standard">Sous-titres standard</string>
-    <string name="sub_mode_standard_sub">Rendu de base sans prise en charge des animations. Le plus compatible.</string>
     <string name="sub_org_none">Aucune (ordre par défaut)</string>
     <string name="sub_org_by_lang">Par langue</string>
     <string name="sub_org_by_addon">Par addon</string>
@@ -1846,7 +1837,6 @@
     <string name="parental_severity_mild">Léger</string>
     <string name="player_ends_at">Fin à %1$s</string>
     <string name="player_live_watched">EN DIRECT  %1$s</string>
-    <string name="player_via">via %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Délai des sous-titres</string>
@@ -2507,7 +2497,6 @@
     <string name="player_error_failed_start_torrent">Impossible de démarrer le torrent&#160;: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Prise en charge du HDR avec rendu Canvas. Peut bloquer le thread de l’interface.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>

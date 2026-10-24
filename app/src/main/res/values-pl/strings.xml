@@ -311,17 +311,10 @@
     <string name="sub_opacity">Krycie</string>
     <string name="sub_advanced_section">Zaawansowane renderowanie napisów</string>
     <string name="sub_libass">Używaj libass dla napisów ASS/SSA</string>
-    <string name="sub_libass_sub">Tymczasowo wyłączone z powodu konserwacji</string>
+    <string name="sub_libass_sub">Zaawansowane renderowanie ASS/SSA (style, pozycjonowanie, animacje)</string>
     <string name="sub_libass_mode">Tryb renderowania libass</string>
-    <string name="sub_mode_overlay_gl">Nakładka OpenGL (Zalecane)</string>
-    <string name="sub_mode_overlay_gl_sub">Najlepsza jakość z obsługą HDR. Renderuje napisy w osobnym wątku.</string>
-    <string name="sub_mode_overlay_canvas">Nakładka Canvas</string>
-    <string name="sub_mode_effects_gl">Efekty OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Obsługa animacji z efektami Media3. Szybsze niż Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efekty Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Obsługa animacji z efektami Media3 i renderowaniem Canvas.</string>
-    <string name="sub_mode_standard">Standardowe wskazówki</string>
-    <string name="sub_mode_standard_sub">Podstawowe renderowanie napisów bez obsługi animacji. Najbardziej kompatybilne.</string>
+    <string name="sub_libass_render_scale">Rozdzielczość renderowania napisów</string>
+    <string name="sub_libass_render_scale_sub">Niższa rozdzielczość poprawia wydajność przy ciężkim typesettingu kosztem ostrości</string>
     <string name="sub_org_none">Brak (domyślna kolejność)</string>
     <string name="sub_org_by_lang">Według języka</string>
     <string name="sub_org_by_addon">Według dodatku</string>
@@ -800,7 +793,6 @@
     <string name="parental_severity_severe">Silne</string>
     <string name="parental_severity_moderate">Umiarkowane</string>
     <string name="parental_severity_mild">Łagodne</string>
-    <string name="player_via">przez %1$s</string>
     <string name="player_subtitle_delay">Opóźnienie napisów</string>
     <string name="player_loading_preparing">Przygotowywanie strumienia…</string>
     <string name="player_loading_detecting_format">Wykrywanie formatu strumienia…</string>
@@ -1513,7 +1505,6 @@
 
     <string name="stream_episode_label">S%1$d E%2$d</string>
 
-    <string name="sub_mode_overlay_canvas_sub">Obsługa HDR z renderowaniem Canvas. Może blokować wątek UI.</string>
     <string name="subtitle_style_weight">Grubość</string>
 
     <string name="sync_claim_linking">Łączenie\u2026</string>

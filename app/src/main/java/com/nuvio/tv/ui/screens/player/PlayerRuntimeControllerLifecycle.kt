@@ -80,6 +80,7 @@ internal fun PlayerRuntimeController.releasePlayer(
         runCatching { player.stop() }
         runCatching { player.clearMediaItems() }
         runCatching { player.clearVideoSurface() }
+        runCatching { player.releaseAssHandlerCompat() }
         runCatching { player.release() }
     }
     _exoPlayer = null

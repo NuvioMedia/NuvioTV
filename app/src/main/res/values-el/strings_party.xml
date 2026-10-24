@@ -66,7 +66,7 @@
     <string name="party_joined_title">Είστε μέσα</string>
     <string name="party_hosted_by">Διοργανώνεται από %1$s</string>
     <string name="party_open_seat">Προσκαλέστε έναν φίλο</string>
-    <string name="party_host_hint">Για να διοργανώσετε, ξεκινήστε ένα πάρτι από τον player.</string>
+    <string name="party_host_hint">Για να διοργανώσετε, ξεκινήστε ένα πάρτι από το πρόγραμμα αναπαραγωγής.</string>
     <string name="party_share_title">Κοινοποίηση της ροής μου</string>
     <string name="party_share_description">Οι φίλοι μπορούν να αναπαράγουν τον σύνδεσμό σας αντί να επιλέξουν τον δικό τους. Μπορεί να περιλαμβάνει το κλειδί debrid σας.</string>
     <string name="party_share_unavailable">Αυτή η ροή δεν μπορεί να κοινοποιηθεί.</string>
@@ -74,4 +74,5 @@
     <string name="party_invite_scan">Σαρώστε με ένα τηλέφωνο για συμμετοχή</string>
     <string name="party_invite_share">Ή μοιραστείτε τον κωδικό. Οι φίλοι μπορούν να τον εισάγουν στο Πάρτι προβολής σε οποιαδήποτε εφαρμογή Nuvio.</string>
     <string name="party_invite_qr">Κωδικός QR πρόσκλησης πάρτι προβολής</string>
+    <string name="party_phone_chat_note">Ανοίξτε το Πάρτι προβολής στο τηλέφωνό σας με αυτό το προφίλ για συνομιλία.</string>
 </resources>

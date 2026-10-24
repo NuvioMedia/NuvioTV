@@ -17,6 +17,8 @@ class StreamBadgePresentation @Inject constructor(
 ) {
     private val badgeFilterCache = AtomicReference<Pair<StreamBadgeRules, List<CompiledStreamBadgeFilter>>?>()
 
+    private val lastRulesFilters = AtomicReference<Pair<StreamBadgeRules, List<CompiledStreamBadgeFilter>>?>()
+
     private val badgeInstancePool = AtomicReference<HashMap<String, StreamBadge>>(HashMap(64))
 
     suspend fun apply(groups: List<AddonStreams>): List<AddonStreams> {
@@ -24,6 +26,11 @@ class StreamBadgePresentation @Inject constructor(
             apply(groups, dataStore.settings.first().rules)
         }
     }
+
+    suspend fun hasActiveFilters(): Boolean =
+        withContext(Dispatchers.Default) {
+            getBadgeFilters(dataStore.settings.first().rules).isNotEmpty()
+        }
 
     fun apply(groups: List<AddonStreams>, rules: StreamBadgeRules): List<AddonStreams> {
         val filters = getBadgeFilters(rules)
@@ -44,9 +51,17 @@ class StreamBadgePresentation @Inject constructor(
     }
 
     private fun getBadgeFilters(rules: StreamBadgeRules): List<CompiledStreamBadgeFilter> {
+        // The settings flow hands out one rules instance per change, so the same
+        // instance arrives for every batch: skip normalizing and deep-comparing it.
+        lastRulesFilters.get()?.let { (source, compiled) ->
+            if (source === rules) return compiled
+        }
         val normalized = rules.normalized()
         val cached = badgeFilterCache.get()
-        if (cached?.first == normalized) return cached.second
+        if (cached?.first == normalized) {
+            lastRulesFilters.set(rules to cached.second)
+            return cached.second
+        }
         val compiled = StreamBadgeMatcher.compile(normalized)
         // Rebuild the badge instance pool from compiled filters so all
         // matching operations reuse these canonical instances.
@@ -57,6 +72,7 @@ class StreamBadgePresentation @Inject constructor(
         }
         badgeInstancePool.set(newPool)
         badgeFilterCache.set(normalized to compiled)
+        lastRulesFilters.set(rules to compiled)
         return compiled
     }
 

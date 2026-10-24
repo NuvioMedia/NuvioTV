@@ -261,6 +261,7 @@ data class PlayerSettings(
     val autoSwitchInternalPlayerOnError: Boolean = false,
     val useLibass: Boolean = true,
     val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
+    val libassRenderScale: LibassRenderScale = LibassRenderScale.FULL,
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
     val bufferSettings: BufferSettings = BufferSettings(),
     // Audio settings
@@ -470,7 +471,27 @@ enum class InternalPlayerEngine {
 }
 
 enum class LibassRenderType {
-    CUES, EFFECTS_CANVAS, EFFECTS_OPEN_GL, OVERLAY_CANVAS, OVERLAY_OPEN_GL
+    // Legacy values kept for backward compatibility with persisted preferences.
+    // The new libass module always uses the SurfaceView atlas pipeline.
+    CUES, EFFECTS_CANVAS, EFFECTS_OPEN_GL, OVERLAY_CANVAS, OVERLAY_OPEN_GL;
+
+    companion object {
+        val DEFAULT = OVERLAY_OPEN_GL
+    }
+}
+
+/**
+ * Subtitle render resolution for the libass atlas pipeline. Lowering the scale
+ * reduces rasterization cost (proportional to pixel area) at the expense of
+ * sharpness - GL upscales the result to the full surface. Useful on weak TV
+ * hardware where heavy typesetting exceeds the frame budget at full resolution.
+ */
+enum class LibassRenderScale(val scale: Float, val label: String) {
+    FULL(1.0f, "1:1"),
+    THREE_QUARTER(0.75f, "\u00BE"),
+    HALF(0.5f, "\u00BD"),
+    THIRD(0.33f, "\u2153"),
+    QUARTER(0.25f, "\u00BC")
 }
 /**
  * How DV7 streams should be handled at playback time.
@@ -529,6 +550,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val autoSwitchInternalPlayerOnErrorKey = booleanPreferencesKey("auto_switch_internal_player_on_error")
     private val useLibassKey = booleanPreferencesKey("use_libass")
     private val libassRenderTypeKey = stringPreferencesKey("libass_render_type")
+    private val libassRenderScaleKey = stringPreferencesKey("libass_render_scale")
     private val decoderPriorityKey = intPreferencesKey("decoder_priority")
     private val downmixEnabledKey = booleanPreferencesKey("downmix_enabled")
     private val audioOutputChannelsKey = stringPreferencesKey("audio_output_channels")
@@ -897,10 +919,13 @@ class PlayerSettingsDataStore @Inject constructor(
                     runCatching { InternalPlayerEngine.valueOf(it) }.getOrDefault(InternalPlayerEngine.EXOPLAYER)
                 } ?: InternalPlayerEngine.EXOPLAYER,
                 autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false,
-                useLibass = prefs[useLibassKey] ?: false,
+                useLibass = prefs[useLibassKey] ?: true,
                 libassRenderType = prefs[libassRenderTypeKey]?.let {
                     try { LibassRenderType.valueOf(it) } catch (e: Exception) { LibassRenderType.OVERLAY_OPEN_GL }
                 } ?: LibassRenderType.OVERLAY_OPEN_GL,
+                libassRenderScale = prefs[libassRenderScaleKey]?.let {
+                    try { LibassRenderScale.valueOf(it) } catch (e: Exception) { LibassRenderScale.FULL }
+                } ?: LibassRenderScale.FULL,
                 decoderPriority = prefs[decoderPriorityKey] ?: 1,
                 downmixEnabled =
                     prefs[downmixEnabledKey]
@@ -1094,7 +1119,7 @@ class PlayerSettingsDataStore @Inject constructor(
     val useLibass: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.onStart { migrateProfile(pid) }
     }.map { prefs ->
-        prefs[useLibassKey] ?: false
+        prefs[useLibassKey] ?: true
     }
 
     val libassRenderType: Flow<LibassRenderType> = profileManager.activeProfileId.flatMapLatest { pid ->
@@ -1591,6 +1616,15 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setLibassRenderType(renderType: LibassRenderType) {
         store().edit { prefs ->
             prefs[libassRenderTypeKey] = renderType.name
+        }
+    }
+
+    /**
+     * Set the libass subtitle render scale (resolution reduction for performance).
+     */
+    suspend fun setLibassRenderScale(scale: LibassRenderScale) {
+        store().edit { prefs ->
+            prefs[libassRenderScaleKey] = scale.name
         }
     }
 

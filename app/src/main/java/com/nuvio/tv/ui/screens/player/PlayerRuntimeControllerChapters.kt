@@ -56,7 +56,8 @@ internal fun PlayerRuntimeController.dismissChaptersPanel() {
 
 /**
  * ExoPlayer does not read Matroska chapters, so they are read from the file once its first frame
- * is shown, when the extra requests no longer compete with starting playback.
+ * is shown (on the first READY when tunneled, which never reports a rendered frame), when the
+ * extra requests no longer compete with starting playback.
  */
 internal fun PlayerRuntimeController.loadExoChapters() {
     exoChapterLoadJob?.cancel()

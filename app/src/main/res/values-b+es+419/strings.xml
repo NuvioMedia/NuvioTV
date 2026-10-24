@@ -907,17 +907,8 @@
     <string name="sub_outline_color">Color del Contorno</string>
     <string name="sub_advanced_section">Renderizado Avanzado de Subtítulos</string>
     <string name="sub_libass">Usar libass para subtítulos ASS/SSA</string>
-    <string name="sub_libass_sub">Deshabilitado temporalmente por mantenimiento</string>
+    <string name="sub_libass_sub">Renderizado avanzado ASS/SSA (estilos, posicionamiento, animaciones)</string>
     <string name="sub_libass_mode">Modo de Renderizado Libass</string>
-    <string name="sub_mode_overlay_gl">Superposición OpenGL (Recomendado)</string>
-    <string name="sub_mode_overlay_gl_sub">Mejor calidad con soporte HDR. Renderiza los subtítulos en un hilo separado.</string>
-    <string name="sub_mode_overlay_canvas">Superposición Canvas</string>
-    <string name="sub_mode_effects_gl">Efectos OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Soporte de animación usando efectos Media3. Más rápido que Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efectos Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Soporte de animación usando efectos Media3 con renderizado Canvas.</string>
-    <string name="sub_mode_standard">Estándar (Standard Cues)</string>
-    <string name="sub_mode_standard_sub">Renderizado básico de subtítulos sin soporte de animación. El más compatible.</string>
     <string name="sub_org_none">Ninguno (orden predeterminado)</string>
     <string name="sub_org_by_lang">Por idioma</string>
     <string name="sub_org_by_addon">Por addon</string>
@@ -1846,7 +1837,6 @@
     <string name="parental_severity_mild">Leve</string>
     <string name="player_ends_at">Termina a las %1$s</string>
     <string name="player_live_watched">EN VIVO  %1$s</string>
-    <string name="player_via">vía %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">T%1$d E%2$d</string>
     <string name="player_subtitle_delay">Retraso de Subtítulos</string>
@@ -2507,7 +2497,6 @@
     <string name="player_error_failed_start_torrent">No se pudo iniciar el torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Soporte HDR con renderizado en canvas. Puede bloquear el hilo de la interfaz.</string>
 
     <string name="ratings_season_label">T%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>

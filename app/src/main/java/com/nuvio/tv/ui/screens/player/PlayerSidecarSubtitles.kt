@@ -45,7 +45,7 @@ private val mainHandler = Handler(Looper.getMainLooper())
  * Whether [subtitle] can be hot-attached without [androidx.media3.exoplayer.ExoPlayer.setMediaSource].
  *
  * ASS/SSA are excluded when libass is requested/active: those must stay on the media-source path so
- * [io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory] / AssSubtitleView keep full
+ * [com.nuvio.tv.libass.media.parser.AssSubtitleParserFactory] / AssSubtitleSurfaceView keep full
  * styling. SRT/VTT/TTML still use the buffer-preserving sidecar.
  */
 internal fun PlayerRuntimeController.canAttachAddonSubtitleViaSidecar(subtitle: Subtitle): Boolean {

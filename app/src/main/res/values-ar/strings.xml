@@ -695,15 +695,6 @@
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
     <string name="sub_libass_sub">Experimental: advanced ASS/SSA rendering (styles, positioning, animations)</string>
     <string name="sub_libass_mode">Libass Render Mode</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (Recommended)</string>
-    <string name="sub_mode_overlay_gl_sub">Best quality with HDR support. Renders subtitles on a separate thread.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Animation support using Media3 effects. Faster than Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Animation support using Media3 effects with Canvas rendering.</string>
-    <string name="sub_mode_standard">Standard Cues</string>
-    <string name="sub_mode_standard_sub">Basic subtitle rendering without animation support. Most compatible.</string>
     <string name="sub_org_none">بدون (الترتيب الافتراضي)</string>
     <string name="sub_org_by_lang">حسب اللغة</string>
     <string name="sub_org_by_addon">حسب الإضافة</string>
@@ -1419,7 +1410,6 @@
     <string name="parental_severity_moderate">متوسط</string>
     <string name="parental_severity_mild">خفيف</string>
     <string name="player_ends_at">ينتهي في: %1$s</string>
-    <string name="player_via">بواسطة %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">تأخير الترجمة</string>
@@ -1965,7 +1955,6 @@
     <string name="player_error_failed_start_torrent">تعذر بدء ملف التورنت %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR support with canvas rendering. May block UI thread.</string>
 
     <!-- Episode ratings -->
     <string name="ratings_season_label">S%1$d</string>

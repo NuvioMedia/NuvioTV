@@ -25,7 +25,8 @@ data class CachedStreamLink(
     val bingeGroup: String? = null,
     val contentLanguage: String? = null,
     val year: String? = null,
-    val audioDelayMs: Int? = null
+    val audioDelayMs: Int? = null,
+    val audioDelayLanguage: String? = null
 )
 
 @Singleton
@@ -54,7 +55,8 @@ class StreamLinkCacheDataStore @Inject constructor(
         bingeGroup: String? = null,
         contentLanguage: String? = null,
         year: String? = null,
-        audioDelayMs: Int? = null
+        audioDelayMs: Int? = null,
+        audioDelayLanguage: String? = null
     ) {
         val payload = JSONObject().apply {
             put("url", url)
@@ -71,6 +73,7 @@ class StreamLinkCacheDataStore @Inject constructor(
             contentLanguage?.let { put("contentLanguage", it) }
             year?.let { put("year", it) }
             audioDelayMs?.let { put("audioDelayMs", it) }
+            audioDelayLanguage?.let { put("audioDelayLanguage", it) }
         }.toString()
 
         store().edit { prefs ->
@@ -125,7 +128,8 @@ class StreamLinkCacheDataStore @Inject constructor(
                 bingeGroup = json.optString("bingeGroup", "").ifBlank { null },
                 contentLanguage = json.optString("contentLanguage", "").ifBlank { null },
                 year = json.optString("year", "").ifBlank { null },
-                audioDelayMs = if (json.has("audioDelayMs")) json.optInt("audioDelayMs") else null
+                audioDelayMs = if (json.has("audioDelayMs")) json.optInt("audioDelayMs") else null,
+                audioDelayLanguage = json.optString("audioDelayLanguage", "").ifBlank { null }
             )
         }.getOrNull()
 

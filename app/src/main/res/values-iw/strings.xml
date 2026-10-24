@@ -414,7 +414,7 @@
     <string name="about_title">אודות</string>
     <string name="about_subtitle">מידע על האפליקציה, עדכונים וקישורים משפטיים</string>
     <string name="about_made_with_love">נוצר באהבה ❤️ על ידי Tapframe וחברים</string>
-    <string name="about_version">גרסה %1$s</string>
+    <string name="about_version">גרסה ‎%1$s</string>
     <string name="about_update_banner_title">באנר עדכון אוטומטי</string>
     <string name="about_update_banner_subtitle">הצגת באנר כאשר גרסה חדשה זמינה</string>
     <string name="about_update_channel_title">ערוץ עדכון</string>
@@ -913,15 +913,6 @@
     <string name="sub_libass">שימוש ב-libass לכתוביות ASS/SSA</string>
     <string name="sub_libass_sub">ניסיוני: תמיכה בכתוביות עם עיצוב מיוחד, כמו אנימציות ומיקום משתנה על המסך</string>
     <string name="sub_libass_mode">אופן הצגת הכתוביות המעוצבות</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (מומלץ)</string>
-    <string name="sub_mode_overlay_gl_sub">האיכות הטובה ביותר עם תמיכה ב-HDR. מציג את הכתוביות בערוץ עיבוד (thread) נפרד לביצועים חלקים יותר.</string>
-    <string name="sub_mode_overlay_canvas">שכבת-על Canvas</string>
-    <string name="sub_mode_effects_gl">אפקטים OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">תומך באנימציות באמצעות אפקטי Media3. מהיר יותר משיטת Canvas.</string>
-    <string name="sub_mode_effects_canvas">אפקטים Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">תומך באנימציות באמצעות אפקטי Media3 עם עיבוד בשיטת Canvas.</string>
-    <string name="sub_mode_standard">כתוביות רגילות</string>
-    <string name="sub_mode_standard_sub">הצגת כתוביות בסיסית ללא תמיכה באנימציות. התואם ביותר.</string>
     <string name="sub_org_none">ללא (סדר ברירת מחדל)</string>
     <string name="sub_org_by_lang">לפי שפה</string>
     <string name="sub_org_by_addon">לפי תוסף</string>
@@ -1850,7 +1841,6 @@
     <string name="parental_severity_mild">קל</string>
     <string name="player_ends_at">מסתיים ב-%1$s</string>
     <string name="player_live_watched">LIVE  %1$s</string>
-    <string name="player_via">דרך %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">עיכוב כתוביות</string>
@@ -1926,13 +1916,13 @@
     <string name="audio_dialog_tab_tracks">שמע</string>
     <string name="audio_dialog_tab_mix">מיקס</string>
     <string name="audio_delay_label">השהיית שמע</string>
-    <string name="audio_delay_range">טווח: %1$.2f שנ׳ עד %2$.2f שנ׳</string>
+    <string name="audio_delay_range">טווח: ‎%1$.2f שנ׳ עד ‎%2$.2f שנ׳</string>
     <string name="audio_mix_label">הגברה (PCM)</string>
     <string name="audio_mix_value_db">%1$d dB</string>
     <string name="audio_mix_persist_on">שמירה בין הפעלות: פועל</string>
     <string name="audio_mix_persist_off">שמירה בין הפעלות: כבוי</string>
-    <string name="audio_mix_range">טווח: %1$d dB עד %2$d dB</string>
-    <string name="audio_mix_range_saved">טווח: %1$d dB עד %2$d dB (שמור)</string>
+    <string name="audio_mix_range">טווח: ‎%1$d dB עד ‎%2$d dB</string>
+    <string name="audio_mix_range_saved">טווח: ‎%1$d dB עד ‎%2$d dB (שמור)</string>
     <string name="audio_mix_unavailable">הגברה אינה זמינה במכשיר זה</string>
     <string name="audio_center_mix_label">Downmix: רמת מיקס מרכזי</string>
     <string name="audio_center_mix_value_db">%1$d dB</string>
@@ -2512,7 +2502,6 @@
     <string name="player_error_failed_start_torrent">התחלת הטורנט נכשלה: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">תמיכה ב-HDR עם עיבוד Canvas. עלול לחסום את שרשור הממשק.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
@@ -3344,12 +3333,12 @@
     <string name="stream_test_btn_run_again">הרצה חוזרת</string>
     <string name="stream_test_btn_running">פועל…</string>
     <string name="stream_test_label_baseline">חיבור בודד סטנדרטי (קו בסיס)</string>
-    <string name="stream_test_label_parallel1">חיבור מקבילי (מקטעי 1 MB)</string>
-    <string name="stream_test_label_parallel4">חיבור מקבילי (מקטעי 4 MB)</string>
-    <string name="stream_test_label_parallel8">חיבור מקבילי (מקטעי 8 MB)</string>
-    <string name="stream_test_label_parallel16">חיבור מקבילי (מקטעי 16MB)</string>
+    <string name="stream_test_label_parallel1">חיבור מקבילי (מקטעי ‎1 MB)</string>
+    <string name="stream_test_label_parallel4">חיבור מקבילי (מקטעי ‎4 MB)</string>
+    <string name="stream_test_label_parallel8">חיבור מקבילי (מקטעי ‎8 MB)</string>
+    <string name="stream_test_label_parallel16">חיבור מקבילי (מקטעי ‎16 MB)</string>
     <string name="stream_test_error_prefix">שגיאה: %1$s</string>
-    <string name="stream_test_video_bitrate">קצב סיביות וידאו ממוצע: %1$s</string>
+    <string name="stream_test_video_bitrate">קצב סיביות וידאו ממוצע: ‎%1$s</string>
     <string name="stream_test_error_connection">החיבור נכשל. ייתכן שקישור הסטרים האחרון שהופעל פג תוקף או שאינו נגיש. כדאי להפעיל את הווידאו שוב ולנסות שוב.</string>
 
     <string name="random_episode_title">ערבוב</string>

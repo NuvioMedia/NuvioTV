@@ -135,8 +135,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1070
-        versionName = "1.1.0-beta.7"
+        versionCode = 1071
+        versionName = "1.1.0-beta.8"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -533,17 +533,15 @@ dependencies {
         "libs/lib-decoder-mpegh-release.aar"
     ))
     add("fullImplementation", files("libs/lib-decoder-iamf-release.aar"))
-    implementation(files("libs/lib-nuvio-engine-android-0.1.5.aar"))
+    implementation(files("libs/lib-nuvio-engine-android-0.1.6.aar"))
     if (useLocalFfmpegDecoder) {
         implementation(project(":ffmpeg-decoder-downmix"))
     } else {
         implementation(files("libs/lib-decoder-ffmpeg-release.aar"))
     }
 
-    // libass-android for ASS/SSA subtitle support (from Maven Central)
-    implementation("io.github.peerless2012:ass-media:0.4.0")
-    // ass-media exposes AssTrack through AssHandler, but publishes ass-kt only at runtime.
-    compileOnly("io.github.peerless2012:ass-kt:0.4.0")
+    // libass - atlas-based subtitle rendering (from NuvioMedia/nuvio-libass)
+    implementation(files("libs/nuvio-libass-release.aar"))
     // Local nextlib-mediainfo fork (static FFmpeg; no libav*.so in final AAR)
     implementation(files("libs/nextlib-mediainfo-local.aar"))
     implementation("io.github.abdallahmehiz:mpv-android-lib:0.1.12")

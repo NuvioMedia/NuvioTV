@@ -673,15 +673,6 @@
     <string name="sub_libass">Použiť libass pre ASS/SSA titulky</string>
     <string name="sub_libass_sub">Experimentálne: pokročilé ASS/SSA renderovanie (štýly, pozícia, animácie)</string>
     <string name="sub_libass_mode">Režim renderovania Libass</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (odporúčané)</string>
-    <string name="sub_mode_overlay_gl_sub">Najlepšia kvalita s podporou HDR. Renderuje titulky v samostatnom vlákne.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Efekty OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Podpora animácií pomocou Media3 efektov. Rýchlejšie ako Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efekty Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Podpora animácií pomocou Media3 efektov s Canvas renderovaním.</string>
-    <string name="sub_mode_standard">Štandardné titulky</string>
-    <string name="sub_mode_standard_sub">Základné renderovanie titulkov bez podpory animácií. Najkompatibilnejšie.</string>
     <string name="sub_org_none">Žiadne (predvolené poradie)</string>
     <string name="sub_org_by_lang">Podľa jazyka</string>
     <string name="sub_org_by_addon">Podľa doplnku</string>
@@ -1358,7 +1349,6 @@
     <string name="parental_severity_moderate">Stredné</string>
     <string name="parental_severity_mild">Mierne</string>
     <string name="player_ends_at">Končí o %1$s</string>
-    <string name="player_via">cez %1$s</string>
     
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Oneskorenie titulkov</string>
@@ -1910,7 +1900,6 @@
     <string name="player_error_failed_start_torrent">Nepodarilo sa spustiť torrent: %1$s</string>
 
     
-    <string name="sub_mode_overlay_canvas_sub">Podpora HDR s Canvas renderovaním. Môže blokovať UI vlákno.</string>
     <string name="subtitle_style_weight">Hrúbka</string>
 
     

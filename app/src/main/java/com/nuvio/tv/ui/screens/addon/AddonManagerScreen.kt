@@ -160,11 +160,13 @@ fun AddonManagerScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     val surfaceFocusRequester = remember { FocusRequester() }
+    val manageFromPhoneFocusRequester = remember { FocusRequester() }
     val installButtonFocusRequester = remember { FocusRequester() }
     val textFieldFocusRequester = remember { FocusRequester() }
     val deleteDialogFocusRequester = remember { FocusRequester() }
     var isEditing by remember { mutableStateOf(false) }
     var addonUrlPendingDeletion by remember { mutableStateOf<String?>(null) }
+    var restoreManageFromPhoneFocus by remember { mutableStateOf(false) }
     val hasHomeVisibleCatalogs = remember(uiState.installedAddons) {
         uiState.installedAddons.any { addon ->
             addon.enabled && addon.catalogs.any { catalog -> !catalog.isSearchOnlyCatalog() }
@@ -211,9 +213,23 @@ fun AddonManagerScreen(
         }
     }
 
+    val requestManageFromPhoneFocus = {
+        coroutineScope.launch {
+            repeat(2) { withFrameNanos { } }
+            runCatching { manageFromPhoneFocusRequester.requestFocus() }
+        }
+    }
+
     LaunchedEffect(uiState.isQrModeActive, uiState.pendingChange, addonUrlPendingDeletion) {
+        if (uiState.isQrModeActive) {
+            restoreManageFromPhoneFocus = true
+        }
         if (!uiState.isQrModeActive && uiState.pendingChange == null && !isEditing && addonUrlPendingDeletion == null) {
-            requestInputBarFocus()
+            if (restoreManageFromPhoneFocus) {
+                requestManageFromPhoneFocus()
+            } else {
+                requestInputBarFocus()
+            }
         }
     }
 
@@ -233,13 +249,19 @@ fun AddonManagerScreen(
 
     DisposableEffect(lifecycleOwner, uiState.isQrModeActive, uiState.pendingChange, addonUrlPendingDeletion) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME &&
-                !uiState.isQrModeActive &&
-                uiState.pendingChange == null &&
-                !isEditing &&
-                addonUrlPendingDeletion == null
-            ) {
-                requestInputBarFocus()
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (
+                    !uiState.isQrModeActive &&
+                    uiState.pendingChange == null &&
+                    !isEditing &&
+                    addonUrlPendingDeletion == null
+                ) {
+                    if (restoreManageFromPhoneFocus) {
+                        requestManageFromPhoneFocus()
+                    } else {
+                        requestInputBarFocus()
+                    }
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -419,7 +441,17 @@ fun AddonManagerScreen(
             item {
                 ManageFromPhoneCard(
                     subtitle = manageFromPhoneSubtitle,
-                    onClick = { viewModel.startQrMode(webConfigMode) }
+                    onClick = { viewModel.startQrMode(webConfigMode) },
+                    focusRequester = manageFromPhoneFocusRequester,
+                    onFocusChanged = { isFocused ->
+                        if (
+                            !isFocused &&
+                            !uiState.isQrModeActive &&
+                            uiState.pendingChange == null
+                        ) {
+                            restoreManageFromPhoneFocus = false
+                        }
+                    }
                 )
             }
 
@@ -627,7 +659,9 @@ internal fun AddonMessageOverlay(
 @Composable
 private fun ManageFromPhoneCard(
     subtitle: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    focusRequester: FocusRequester,
+    onFocusChanged: (Boolean) -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -635,7 +669,11 @@ private fun ManageFromPhoneCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .onFocusChanged { isFocused = it.isFocused }
+            .focusRequester(focusRequester)
+            .onFocusChanged {
+                isFocused = it.isFocused
+                onFocusChanged(it.isFocused)
+            }
             .semantics { role = Role.Button },
         colors = ClickableSurfaceDefaults.colors(
             containerColor = NuvioTheme.colors.BackgroundCard,

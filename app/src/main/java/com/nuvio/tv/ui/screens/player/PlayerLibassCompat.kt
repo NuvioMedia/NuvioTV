@@ -15,10 +15,9 @@ import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.mkv.MatroskaExtractor as StockMatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor as DvMatroskaExtractor
-import io.github.peerless2012.ass.media.AssHandler
-import io.github.peerless2012.ass.media.kt.withAssSupport
-import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
-import io.github.peerless2012.ass.media.type.AssRenderType
+import com.nuvio.tv.libass.media.AssHandler
+import com.nuvio.tv.libass.media.parser.AssSubtitleParserFactory
+import com.nuvio.tv.libass.media.render.AssRenderersFactory
 import java.util.Collections
 import java.util.WeakHashMap
 
@@ -27,13 +26,12 @@ private val assHandlersByPlayer = Collections.synchronizedMap(WeakHashMap<ExoPla
 @OptIn(UnstableApi::class)
 internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
     context: Context,
-    renderType: AssRenderType = AssRenderType.CUES,
     playerMediaSourceFactory: PlayerMediaSourceFactory? = null,
     dataSourceFactory: DataSource.Factory = PlayerPlaybackNetworking.createDataSourceFactory(context),
     extractorsFactory: ExtractorsFactory = DefaultExtractorsFactory(),
     renderersFactory: RenderersFactory = DefaultRenderersFactory(context)
 ): ExoPlayer {
-    val assHandler = AssHandler(renderType)
+    val assHandler = AssHandler()
     val assSubtitleParserFactory = CompatAssSubtitleParserFactory(assHandler)
     val assExtractorsFactory = extractorsFactory.withAssMkvSupportCompat(
         subtitleParserFactory = assSubtitleParserFactory,
@@ -50,9 +48,12 @@ internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
     )
     mediaSourceFactory.setSubtitleParserFactory(assSubtitleParserFactory)
 
+    // Wrap the renderers factory with AssRenderersFactory to add a
+    // NoSampleRenderer-based position fallback for tunneled playback.
+    val assRenderersFactory = AssRenderersFactory(assHandler, renderersFactory)
     val player = this
         .setMediaSourceFactory(mediaSourceFactory)
-        .setRenderersFactory(renderersFactory.withAssSupport(assHandler))
+        .setRenderersFactory(assRenderersFactory)
         .build()
 
     assHandlersByPlayer[player] = assHandler
@@ -61,6 +62,16 @@ internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
 }
 
 internal fun ExoPlayer.getAssHandlerCompat(): AssHandler? = assHandlersByPlayer[this]
+
+/**
+ * Releases the AssHandler associated with this player and removes it from the map.
+ * Must be called when the player is being disposed to free native libass resources
+ * (renderer, tracks, embedded MKV fonts).
+ */
+internal fun ExoPlayer.releaseAssHandlerCompat() {
+    val handler = assHandlersByPlayer.remove(this)
+    handler?.release()
+}
 
 @OptIn(UnstableApi::class)
 private class CompatAssSubtitleParserFactory(
