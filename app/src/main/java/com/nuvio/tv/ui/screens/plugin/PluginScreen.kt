@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.plugin
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.graphics.Bitmap
@@ -56,7 +57,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -565,7 +568,9 @@ private fun AddRepositoryInline(
                         focusManager.clearFocus(force = true)
                     },
                     enabled = !isLoading && url.isNotBlank(),
-                    modifier = Modifier.semantics { role = Role.Button },
+                    modifier = Modifier
+                        .focusProperties { right = FocusRequester.Cancel }
+                        .semantics { role = Role.Button },
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioTheme.colors.Secondary,
                         focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
@@ -1325,6 +1330,7 @@ private fun ScraperCard(
                         onClick = onTest,
                         enabled = !isTesting && scraper.enabled,
                         modifier = Modifier
+                            .focusProperties { left = FocusRequester.Cancel }
                             .onFocusChanged { isTestFocused = it.isFocused }
                             .semantics { role = Role.Button },
                         colors = ButtonDefaults.colors(
@@ -1521,7 +1527,7 @@ private fun TestResultItem(result: LocalScraperResult) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
-                tint = Color(0xFF4CAF50),
+                tint = NuvioPrimitives.success,
                 modifier = Modifier.size(NuvioTheme.spacing.lg)
             )
         }
@@ -1570,9 +1576,9 @@ private fun MessageOverlay(
                 onClick = { },
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = if (isSuccess)
-                        Color(0xFF2E7D32).copy(alpha = 0.9f)
+                        NuvioPrimitives.green700.copy(alpha = 0.9f)
                     else
-                        Color(0xFFC62828).copy(alpha = 0.9f)
+                        NuvioPrimitives.red600.copy(alpha = 0.9f)
                 ),
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
             ) {

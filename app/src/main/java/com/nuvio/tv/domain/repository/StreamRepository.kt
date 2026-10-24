@@ -27,6 +27,17 @@ interface StreamRepository {
     ): Flow<NetworkResult<List<AddonStreams>>>
 
     /**
+     * Returns the streams a recent [getStreamsFromAllAddons] search already holds for this video,
+     * or null when none is cached. Never starts a search.
+     */
+    suspend fun getCachedStreamsFromAllAddons(
+        type: String,
+        videoId: String,
+        season: Int? = null,
+        episode: Int? = null
+    ): List<AddonStreams>?
+
+    /**
      * Fetches streams from a specific addon.
      *
      * Takes the installed [Addon] rather than a bare base URL so the display name and logo

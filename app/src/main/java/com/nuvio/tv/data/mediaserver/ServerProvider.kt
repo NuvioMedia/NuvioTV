@@ -63,6 +63,13 @@ interface ServerProvider {
         limit: Int
     ): ServerPage<ServerIndexEntry> = unsupported()
 
+    /** Items of [library] that may be [query]; null when the server cannot look up a single title this way. */
+    suspend fun lookupTitle(
+        session: ServerSession,
+        library: ServerLibrary,
+        query: ServerTitleQuery
+    ): List<ServerIndexEntry>? = null
+
     suspend fun findEpisode(
         session: ServerSession,
         seriesItemId: String,
@@ -73,7 +80,15 @@ interface ServerProvider {
 
 data class ServerIndexEntry(
     val itemId: String,
-    val ids: TrackingExternalIds
+    val ids: TrackingExternalIds,
+    val year: Int? = null
+)
+
+data class ServerTitleQuery(
+    val ids: TrackingExternalIds,
+    val name: String?,
+    val year: Int?,
+    val originalName: String? = null
 )
 
 data class ServerEpisode(

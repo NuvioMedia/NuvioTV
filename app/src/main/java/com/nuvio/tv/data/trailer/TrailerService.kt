@@ -15,7 +15,10 @@ import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
@@ -23,6 +26,7 @@ private const val TAG = "TrailerService"
 private const val TMDB_TRAILER_FALLBACK_LANGUAGE = "en-US"
 private val YOUTUBE_SOURCE_CACHE_TTL: Duration = Duration.ofHours(3)
 private val YOUTUBE_VIDEO_ID_REGEX = Regex("^[a-zA-Z0-9_-]{11}$")
+private const val MAX_YOUTUBE_CANDIDATES = 3
 
 // Top level so the lambda doesn't capture the TrailerService instance from its constructor call.
 private fun trailerHeightCap(trailerSettingsDataStore: TrailerSettingsDataStore): suspend () -> Int = {
@@ -64,6 +68,14 @@ class TrailerService(
     private val NEGATIVE_CACHE = TrailerPlaybackSource(videoUrl = "")
     // Time-bound cache: youtubeVideoId -> resolved playback source (success-only)
     private val youtubeSourceCache = ConcurrentHashMap<String, CachedTrailerPlaybackSource>()
+    // Extractions running right now, by the same key as youtubeSourceCache
+    private val inFlightYoutubeSources = ConcurrentHashMap<String, CompletableDeferred<TrailerPlaybackSource?>>()
+
+    /**
+     * True while YouTube is refusing requests. A missing trailer then says nothing about the
+     * title, so callers should not remember it as "no trailer".
+     */
+    fun isRateLimited(): Boolean = inAppYouTubeExtractor.isRateLimited()
 
     /**
      * Search for a trailer by title, year, tmdbId, and type.
@@ -117,8 +129,9 @@ class TrailerService(
             }
             Log.w(TAG, "TMDB path exhausted; no YouTube trailer key resolved for backend /trailer fallback")
             // Only cache negative result if tmdbId was available — if null, enrichment
-            // may not have completed yet and a retry with tmdbId could succeed.
-            if (tmdbId != null) {
+            // may not have completed yet and a retry with tmdbId could succeed. A miss while
+            // YouTube is rate limiting says nothing about the title, so it isn't cached either.
+            if (tmdbId != null && !inAppYouTubeExtractor.isRateLimited()) {
                 cache[cacheKey] = NEGATIVE_CACHE
             }
             null
@@ -207,7 +220,13 @@ class TrailerService(
         val candidates = rankTmdbVideoCandidates(tmdbResults, preferredLanguageCode = tmdbLanguage)
         Log.d(TAG, "TMDB candidate count: ${candidates.size}")
 
-        for (candidate in candidates) {
+        // Big titles list a dozen trailers and teasers. When the best few all fail, the rest
+        // almost always fail the same way, and trying them only adds YouTube requests.
+        for (candidate in candidates.take(MAX_YOUTUBE_CANDIDATES)) {
+            if (inAppYouTubeExtractor.isRateLimited()) {
+                Log.w(TAG, "YouTube is rate limiting, not trying the remaining TMDB candidates")
+                break
+            }
             val key = candidate.key?.trim().orEmpty()
             if (key.isBlank()) continue
             Log.d(
@@ -248,58 +267,104 @@ class TrailerService(
             val youtubeKey = extractYouTubeVideoId(youtubeUrl)
             // Same video, different source per height cap, so the cap is part of the cache key.
             val sourceCacheKey = youtubeKey?.takeIf { it.isNotBlank() }?.let { "$it|$maxHeight" }
-            if (sourceCacheKey != null) {
-                getValidCachedYoutubeSource(sourceCacheKey)?.let { cached ->
-                    Log.d(TAG, "YouTube cache hit for key=${obfuscateYoutubeKey(youtubeKey)}")
-                    return@withContext cached
-                }
+                ?: return@withContext resolveYouTubeSource(youtubeUrl, null, maxHeight, title, year)
+
+            getValidCachedYoutubeSource(sourceCacheKey)?.let { cached ->
+                Log.d(TAG, "YouTube cache hit for key=${obfuscateYoutubeKey(youtubeKey.orEmpty())}")
+                return@withContext cached
             }
 
-            Log.d(TAG, "Attempting in-app YouTube extraction for ${summarizeUrl(youtubeUrl)}")
-            val localSource = inAppYouTubeExtractor.extractPlaybackSource(youtubeUrl, maxHeight)
-            if (localSource != null) {
-                if (sourceCacheKey != null) {
-                    youtubeSourceCache[sourceCacheKey] = CachedTrailerPlaybackSource(
-                        playbackSource = localSource,
-                        cachedAt = Instant.now(clock),
-                        expiresAt = extractUrlExpireInstant(localSource)
-                    )
-                }
-                Log.d(
-                    TAG,
-                    "Using in-app YouTube source for ${summarizeUrl(youtubeUrl)} " +
-                        "(audioPresent=${!localSource.audioUrl.isNullOrBlank()})"
-                )
-                return@withContext localSource
+            resolveYouTubeSourceOnce(sourceCacheKey) {
+                // Re-check: another caller may have just finished this video.
+                getValidCachedYoutubeSource(sourceCacheKey)
+                    ?: resolveYouTubeSource(youtubeUrl, sourceCacheKey, maxHeight, title, year)
             }
-
-            // Fallback to remote trailer resolver if in-app extraction fails.
-            Log.w(TAG, "In-app extraction failed, falling back to backend resolver for ${summarizeUrl(youtubeUrl)}")
-            val response = trailerApi.getTrailer(youtubeUrl = youtubeUrl, title = title, year = year)
-            if (!response.isSuccessful) {
-                Log.w(TAG, "Backend trailer fallback failed (${response.code()}) for ${summarizeUrl(youtubeUrl)}")
-                return@withContext null
-            }
-
-            val fallbackUrl = response.body()?.url ?: return@withContext null
-            if (!isValidUrl(fallbackUrl)) return@withContext null
-
-            if (sourceCacheKey != null) {
-                val fallbackSource = TrailerPlaybackSource(videoUrl = fallbackUrl)
-                youtubeSourceCache[sourceCacheKey] = CachedTrailerPlaybackSource(
-                    playbackSource = fallbackSource,
-                    cachedAt = Instant.now(clock),
-                    expiresAt = extractUrlExpireInstant(fallbackSource)
-                )
-            }
-            Log.d(TAG, "Using backend fallback source for ${summarizeUrl(youtubeUrl)}")
-            TrailerPlaybackSource(videoUrl = fallbackUrl)
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error getting trailer from YouTube: ${e.message}", e)
             null
         }
+    }
+
+    /**
+     * The home hero, the focused card and the detail screen can all ask for the same video at
+     * once. Only one of them runs [resolve]; the others wait for its result. The work stays in
+     * the first caller's coroutine, so cancelling it still stops the requests; a waiting caller
+     * then takes the work over.
+     */
+    private suspend fun resolveYouTubeSourceOnce(
+        sourceCacheKey: String,
+        resolve: suspend () -> TrailerPlaybackSource?
+    ): TrailerPlaybackSource? {
+        while (true) {
+            val pending = CompletableDeferred<TrailerPlaybackSource?>()
+            val inFlight = inFlightYoutubeSources.putIfAbsent(sourceCacheKey, pending)
+            if (inFlight == null) {
+                try {
+                    return resolve().also { pending.complete(it) }
+                } catch (e: Throwable) {
+                    pending.completeExceptionally(e)
+                    throw e
+                } finally {
+                    inFlightYoutubeSources.remove(sourceCacheKey, pending)
+                }
+            }
+            try {
+                return inFlight.await()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Rethrows if this caller was cancelled; otherwise the one doing the work was.
+                currentCoroutineContext().ensureActive()
+            }
+        }
+    }
+
+    private suspend fun resolveYouTubeSource(
+        youtubeUrl: String,
+        sourceCacheKey: String?,
+        maxHeight: Int,
+        title: String?,
+        year: String?
+    ): TrailerPlaybackSource? {
+        Log.d(TAG, "Attempting in-app YouTube extraction for ${summarizeUrl(youtubeUrl)}")
+        val localSource = inAppYouTubeExtractor.extractPlaybackSource(youtubeUrl, maxHeight)
+        if (localSource != null) {
+            if (sourceCacheKey != null) {
+                youtubeSourceCache[sourceCacheKey] = CachedTrailerPlaybackSource(
+                    playbackSource = localSource,
+                    cachedAt = Instant.now(clock),
+                    expiresAt = extractUrlExpireInstant(localSource)
+                )
+            }
+            Log.d(
+                TAG,
+                "Using in-app YouTube source for ${summarizeUrl(youtubeUrl)} " +
+                    "(audioPresent=${!localSource.audioUrl.isNullOrBlank()})"
+            )
+            return localSource
+        }
+
+        // Fallback to remote trailer resolver if in-app extraction fails.
+        Log.w(TAG, "In-app extraction failed, falling back to backend resolver for ${summarizeUrl(youtubeUrl)}")
+        val response = trailerApi.getTrailer(youtubeUrl = youtubeUrl, title = title, year = year)
+        if (!response.isSuccessful) {
+            Log.w(TAG, "Backend trailer fallback failed (${response.code()}) for ${summarizeUrl(youtubeUrl)}")
+            return null
+        }
+
+        val fallbackUrl = response.body()?.url ?: return null
+        if (!isValidUrl(fallbackUrl)) return null
+
+        val fallbackSource = TrailerPlaybackSource(videoUrl = fallbackUrl)
+        if (sourceCacheKey != null) {
+            youtubeSourceCache[sourceCacheKey] = CachedTrailerPlaybackSource(
+                playbackSource = fallbackSource,
+                cachedAt = Instant.now(clock),
+                expiresAt = extractUrlExpireInstant(fallbackSource)
+            )
+        }
+        Log.d(TAG, "Using backend fallback source for ${summarizeUrl(youtubeUrl)}")
+        return fallbackSource
     }
 
     /**

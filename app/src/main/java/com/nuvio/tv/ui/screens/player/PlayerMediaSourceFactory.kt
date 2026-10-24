@@ -10,6 +10,7 @@ import androidx.media3.common.NuvioEngineConfig
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSink
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
@@ -29,6 +30,7 @@ import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.NuvioApplication
 import com.nuvio.tv.R
+import com.nuvio.tv.core.util.findCause
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -37,6 +39,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import com.nuvio.tv.core.network.IPv4FirstDns
+import com.nuvio.tv.core.network.NoDelaySocketFactory
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.VodCacheSizeMode
 import okhttp3.ConnectionPool
@@ -67,6 +70,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     @Volatile private var currentVodCacheUrl: String? = null
     @Volatile private var currentVodCacheResolvedUrl: String? = null
     @Volatile private var currentVodCacheActive: Boolean = false
+
+    // Called on a loader thread with the url a progressive stream opened at after a redirect.
+    @Volatile var onStreamRedirected: ((requestedUrl: String, resolvedUrl: String) -> Unit)? = null
 
     // Takes the caller's context because this factory only holds the application one, which ignores the in-app language.
     fun vodCacheStateLabel(context: Context): String = when {
@@ -125,31 +131,13 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     var vodCacheSizeMb: Int = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MB
 
     // OkHttp client used only by the opt-in parallel-connections path.
+    // Many piece sockets at once: each keeps the kernel's own window, so they cannot pile up big receive buffers.
     private val playbackHttpClient by lazy {
         PlayerPlaybackNetworking.playbackHttpClient.newBuilder()
+            .socketFactory(NoDelaySocketFactory)
             .cookieJar(NuvioApplication.extensionCookieJar)
             .let { NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(it) }
             .build()
-    }
-
-    private val chunkSessionLanes = java.util.concurrent.ConcurrentHashMap<Int, okhttp3.Call.Factory>()
-
-    private fun chunkSessionCallFactory(connections: Int, url: String): okhttp3.Call.Factory {
-        // Plain http:// never negotiates HTTP/2, so lanes would only split the idle sockets.
-        if (url.startsWith("http://", ignoreCase = true)) return playbackHttpClient
-        val factory = chunkSessionLanes.getOrPut(connections) {
-            HttpLanes.callFactory(
-                playbackHttpClient,
-                connections,
-                NuvioExoPlayerPerformanceHelper::lanePool
-            ).also { factory ->
-                if (factory is LaneCallFactory) {
-                    Log.i("PlayerMediaSourceFactory", "HTTP2_LANES lanes=${factory.lanes.size}")
-                }
-            }
-        }
-        (factory as? LaneCallFactory)?.restart()
-        return factory
     }
 
     private fun computePrefetchDepthChunks(
@@ -187,8 +175,6 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         cacheKey: String? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
-        val httpDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
-
         val resolvedMimeType = mimeTypeOverride ?: inferMimeType(
             url = url,
             filename = filename,
@@ -196,6 +182,17 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         )
         val isHls = resolvedMimeType == MimeTypes.APPLICATION_M3U8
         val isDash = resolvedMimeType == MimeTypes.APPLICATION_MPD
+        val httpDataSourceFactory = if (isHls || isDash) {
+            DefaultDataSource.Factory(
+                context,
+                PlayerPlaybackNetworking.createHttpDataSourceFactory(
+                    sanitizedHeaders,
+                    useLongReadTimeout = isLoopbackUrl(url),
+                ),
+            )
+        } else {
+            PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
+        }
 
         val mediaItemBuilder = MediaItem.Builder().setUri(url)
         resolvedMimeType?.let(mediaItemBuilder::setMimeType)
@@ -225,9 +222,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         )
         val useChunkSessionSource = useParallelConnections && !isHls && !isDash
         parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
-        val progressiveUpstreamFactory: DataSource.Factory = if (useChunkSessionSource) {
+        val networkProgressiveFactory: DataSource.Factory = if (useChunkSessionSource) {
             val sessionConnections = parallelConnectionCount
-            val okHttpFactory = OkHttpDataSource.Factory(chunkSessionCallFactory(sessionConnections, url)).apply {
+            val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
                 if (sanitizedHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
                     setUserAgent(DEFAULT_USER_AGENT)
@@ -255,6 +252,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         } else {
             httpDataSourceFactory
         }
+        val progressiveUpstreamFactory: DataSource.Factory =
+            RedirectReportingDataSource.Factory(networkProgressiveFactory, url) { resolvedUrl ->
+                onStreamRedirected?.invoke(url, resolvedUrl)
+            }
 
         // 2. VOD disk cache (opt-in).
         val useVodCache = ENABLE_VOD_CACHE && vodCacheEnabled && !isHls && !isDash && shouldUseVodCache(url)
@@ -1161,15 +1162,6 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 URLDecoder.decode(value.replace("+", "%2B"), Charsets.UTF_8.name())
             }.getOrNull()
     }
-}
-
-private inline fun <reified T : Throwable> Throwable.findCause(): T? {
-    var current: Throwable? = this
-    while (current != null) {
-        if (current is T) return current
-        current = current.cause
-    }
-    return null
 }
 
 private class PlayerLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(6) {

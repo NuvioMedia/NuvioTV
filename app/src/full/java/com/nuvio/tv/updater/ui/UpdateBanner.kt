@@ -3,9 +3,13 @@
 package com.nuvio.tv.updater.ui
 
 import android.text.format.Formatter
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,16 +22,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -51,10 +65,14 @@ import com.nuvio.tv.ui.theme.accentBrush
 import com.nuvio.tv.updater.UpdateUiState
 import com.nuvio.tv.updater.model.AppUpdate
 
+private const val AUTO_DISMISS_MS = 20_000
+
 @Composable
 internal fun UpdateBanner(
     state: UpdateUiState,
     update: AppUpdate,
+    isInstalledUpdate: Boolean,
+    autoDismissPaused: Boolean,
     onDownload: () -> Unit,
     onInstall: () -> Unit,
     onShowReleaseNotes: () -> Unit,
@@ -73,7 +91,9 @@ internal fun UpdateBanner(
     val progressBrush = ThemeColors.getColorPalette(NuvioTheme.currentTheme).accentBrush()
     val progressAlpha = if (isWhiteTheme) 0.18f else 1f
     val dividerColor = NuvioTheme.colors.Border
+    var bannerHasFocus by remember { mutableStateOf(false) }
     val subtitle = when {
+        isInstalledUpdate -> stringResource(R.string.update_installed_automatically)
         state.errorMessage != null -> state.errorMessage
         state.isDownloading && state.downloadProgress != null -> stringResource(
             R.string.update_downloading_progress,
@@ -85,7 +105,7 @@ internal fun UpdateBanner(
     }
     val updateLabel = listOfNotNull(
         update.tag,
-        update.assetSizeBytes?.let { Formatter.formatShortFileSize(context, it) }
+        update.assetSizeBytes?.takeUnless { isInstalledUpdate }?.let { Formatter.formatShortFileSize(context, it) }
     ).joinToString(separator = " • ")
 
     Box(
@@ -110,17 +130,35 @@ internal fun UpdateBanner(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .onFocusChanged { bannerHasFocus = it.hasFocus }
                 .heightIn(min = 76.dp)
                 .padding(horizontal = 32.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.CloudDownload,
-                contentDescription = null,
-                tint = NuvioTheme.colors.TextPrimary,
-                modifier = Modifier.size(28.dp)
-            )
+            if (isInstalledUpdate) {
+                // Same success green in every theme, with a white check on top.
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(NuvioTheme.colors.Success, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Default.CloudDownload,
+                    contentDescription = null,
+                    tint = NuvioTheme.colors.TextPrimary,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
 
             Column(
                 modifier = Modifier.weight(1f),
@@ -157,44 +195,102 @@ internal fun UpdateBanner(
                 enabled = update.notes.isNotBlank()
             )
 
-            Button(
-                onClick = {
-                    when {
-                        state.isDownloading -> Unit
-                        state.downloadedApkPath != null -> onInstall()
-                        else -> onDownload()
-                    }
-                },
-                enabled = state.isDownloading ||
-                    state.downloadedApkPath != null ||
-                    state.isUpdateAvailable,
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.Secondary,
-                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
-                    contentColor = NuvioTheme.colors.OnSecondary,
-                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
-                ),
-                shape = ButtonDefaults.shape(RoundedCornerShape(50)),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)
-            ) {
-                Text(
-                    text = when {
-                        state.isDownloading -> stringResource(R.string.update_downloading_ellipsis)
-                        state.downloadedApkPath != null -> stringResource(R.string.update_install)
-                        state.errorMessage != null -> stringResource(R.string.action_retry)
-                        else -> stringResource(R.string.update_download)
+            // An update installed automatically has nothing left to download or install.
+            if (!isInstalledUpdate) {
+                Button(
+                    onClick = {
+                        when {
+                            state.isDownloading -> Unit
+                            state.downloadedApkPath != null -> onInstall()
+                            else -> onDownload()
+                        }
                     },
-                    fontWeight = FontWeight.SemiBold
-                )
+                    enabled = state.isDownloading ||
+                        state.downloadedApkPath != null ||
+                        state.isUpdateAvailable,
+                    colors = ButtonDefaults.colors(
+                        containerColor = NuvioTheme.colors.Secondary,
+                        focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                        contentColor = NuvioTheme.colors.OnSecondary,
+                        focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
+                    ),
+                    shape = ButtonDefaults.shape(RoundedCornerShape(50)),
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = when {
+                            state.isDownloading -> stringResource(R.string.update_downloading_ellipsis)
+                            state.downloadedApkPath != null -> stringResource(R.string.update_install)
+                            state.errorMessage != null -> stringResource(R.string.action_retry)
+                            else -> stringResource(R.string.update_download)
+                        },
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             if (!state.isDownloading) {
-                UpdateBannerIconButton(
-                    icon = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.update_close),
-                    onClick = onDismiss
-                )
+                if (isInstalledUpdate) {
+                    AutoDismissCloseButton(
+                        paused = autoDismissPaused || bannerHasFocus,
+                        onDismiss = onDismiss
+                    )
+                } else {
+                    UpdateBannerIconButton(
+                        icon = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.update_close),
+                        onClick = onDismiss
+                    )
+                }
             }
+        }
+    }
+}
+
+// Closes the "updated" banner by itself. A ring around the X empties over the time left; it pauses while the banner has
+// focus or the release notes are open, so the banner never closes under the user.
+@Composable
+private fun AutoDismissCloseButton(paused: Boolean, onDismiss: () -> Unit) {
+    val remaining = remember { Animatable(1f) }
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
+    var closeFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(paused) {
+        // Once the time ran out the banner is already leaving, so a late focus change must not dismiss it again.
+        if (!paused && remaining.value > 0f) {
+            remaining.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(
+                    durationMillis = (remaining.value * AUTO_DISMISS_MS).toInt(),
+                    easing = LinearEasing
+                )
+            )
+            currentOnDismiss()
+        }
+    }
+    val ringColor = NuvioTheme.colors.TextSecondary
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .onFocusChanged { closeFocused = it.hasFocus },
+        contentAlignment = Alignment.Center
+    ) {
+        UpdateBannerIconButton(
+            icon = Icons.Default.Close,
+            contentDescription = stringResource(R.string.update_close),
+            onClick = onDismiss
+        )
+        // The focused button grows and changes colour, and the timer is paused then, so the ring steps aside.
+        if (!closeFocused) Canvas(modifier = Modifier.matchParentSize()) {
+            val stroke = 3.dp.toPx()
+            drawArc(
+                color = ringColor,
+                startAngle = -90f,
+                sweepAngle = 360f * remaining.value,
+                useCenter = false,
+                topLeft = Offset(stroke / 2, stroke / 2),
+                size = Size(this.size.width - stroke, this.size.height - stroke),
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
+            )
         }
     }
 }

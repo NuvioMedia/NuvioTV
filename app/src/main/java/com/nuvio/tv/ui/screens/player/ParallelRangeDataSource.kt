@@ -1516,14 +1516,12 @@ internal class ParallelRangeDataSource(
             idle.byteBuffer.clear()
             return PooledBuffer(idle.allocation, idle.byteBuffer)
         }
-        return if (useNativeMemory) {
-            val allocation = allocateChunk(chunkSize.toInt())
-            val allocBuffer = allocation?.buffer
-            if (allocation != null && allocBuffer != null) {
-                PooledBuffer(allocation, allocBuffer)
-            } else {
-                PooledBuffer(null, ByteBuffer.allocateDirect(chunkSize.toInt()))
-            }
+        // Native memory in every engine mode. Chunks on the Java heap fill small heaps and stall
+        // playback on blocking GC; Android's allocateDirect is heap memory too.
+        val allocation = allocateChunk(chunkSize.toInt())
+        val allocBuffer = allocation?.buffer
+        return if (allocation != null && allocBuffer != null) {
+            PooledBuffer(allocation, allocBuffer)
         } else {
             PooledBuffer(null, ByteBuffer.allocate(chunkSize.toInt()))
         }
@@ -1574,8 +1572,8 @@ internal class ParallelRangeDataSource(
 
     override fun read(buffer: ByteBuffer, length: Int): Int {
         fallbackSource?.let { source ->
-            val temp = ByteArray(minOf(length, READ_BUFFER_SIZE))
-            val read = source.read(temp, 0, temp.size)
+            val temp = readBufferLocal.get()!!
+            val read = source.read(temp, 0, minOf(length, READ_BUFFER_SIZE))
             if (read > 0) {
                 buffer.put(temp, 0, read)
                 position += read
@@ -1614,8 +1612,8 @@ internal class ParallelRangeDataSource(
                 bytesRemaining > 0L &&
                 (bootstrap == null || position >= bootstrapStartPosition + bootstrap.size)
             ) {
-                val temp = ByteArray(minOf(toRead, READ_BUFFER_SIZE))
-                val read = source.read(temp, 0, temp.size)
+                val temp = readBufferLocal.get()!!
+                val read = source.read(temp, 0, minOf(toRead, READ_BUFFER_SIZE))
                 if (read > 0) {
                     buffer.put(temp, 0, read)
                     position += read

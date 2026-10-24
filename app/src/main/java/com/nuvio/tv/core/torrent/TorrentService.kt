@@ -379,7 +379,6 @@ class TorrentService @Inject constructor(
                     NuvioEventType.TorrentError -> synchronized(lifecycleLock) {
                         if (engine !== activeEngine) return@synchronized
                         val error = unexpectedTorrentError(
-                            requestId = event.requestId,
                             eventTorrentId = event.torrentId,
                             currentTorrentId = currentTorrentId,
                             message = event.message,

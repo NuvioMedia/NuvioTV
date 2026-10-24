@@ -49,6 +49,7 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.TrailerPlayer
 import kotlinx.coroutines.delay
 import android.view.KeyEvent
+import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @Stable
 class TrailerSeekOverlayState {
@@ -95,6 +96,7 @@ fun SharedTrailerOverlay(
             decorFitsSystemWindows = false
         )
     ) {
+        AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
                 .fillMaxSize()

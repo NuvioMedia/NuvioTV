@@ -98,24 +98,7 @@ class StreamRepositoryImpl @Inject constructor(
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         val sourceConfiguration = captureSourceConfiguration()
         val isNativeServerRequest = serverStreams.isNativeRequest(videoId)
-        val requestKey = StreamSearchRequestKey(
-            profileId = sourceConfiguration.profileId,
-            type = type.lowercase(),
-            videoId = videoId,
-            season = season,
-            episode = episode,
-            sourceConfiguration = buildSourceConfigurationKey(
-                addons = sourceConfiguration.addons,
-                pluginsEnabled = sourceConfiguration.pluginsEnabled,
-                enabledScrapers = sourceConfiguration.enabledScrapers,
-                groupPluginsByRepository = sourceConfiguration.groupPluginsByRepository,
-                pluginRepositories = sourceConfiguration.pluginRepositories,
-                debridPresentationConfiguration = sourceConfiguration.debridSettings
-                    .withoutRawCredentials()
-                    .toString(),
-                serverRevision = serverStreams.revision
-            )
-        )
+        val requestKey = buildStreamSearchRequestKey(sourceConfiguration, type, videoId, season, episode)
 
         emitAll(
             streamSearchSessions.observe(
@@ -137,6 +120,40 @@ class StreamRepositoryImpl @Inject constructor(
             }
         )
     }
+
+    override suspend fun getCachedStreamsFromAllAddons(
+        type: String,
+        videoId: String,
+        season: Int?,
+        episode: Int?
+    ): List<AddonStreams>? = streamSearchSessions.peek(
+        buildStreamSearchRequestKey(captureSourceConfiguration(), type, videoId, season, episode)
+    )
+
+    private fun buildStreamSearchRequestKey(
+        sourceConfiguration: StreamSourceConfigurationSnapshot,
+        type: String,
+        videoId: String,
+        season: Int?,
+        episode: Int?
+    ): StreamSearchRequestKey = StreamSearchRequestKey(
+        profileId = sourceConfiguration.profileId,
+        type = type.lowercase(),
+        videoId = videoId,
+        season = season,
+        episode = episode,
+        sourceConfiguration = buildSourceConfigurationKey(
+            addons = sourceConfiguration.addons,
+            pluginsEnabled = sourceConfiguration.pluginsEnabled,
+            enabledScrapers = sourceConfiguration.enabledScrapers,
+            groupPluginsByRepository = sourceConfiguration.groupPluginsByRepository,
+            pluginRepositories = sourceConfiguration.pluginRepositories,
+            debridPresentationConfiguration = sourceConfiguration.debridSettings
+                .withoutRawCredentials()
+                .toString(),
+            serverRevision = serverStreams.revision
+        )
+    )
 
     private suspend fun captureSourceConfiguration(): StreamSourceConfigurationSnapshot {
         while (true) {
@@ -549,15 +566,20 @@ class StreamRepositoryImpl @Inject constructor(
             title = displayTitle,
             url = url,
             addonName = addonName,
+            pluginSourceName = scraper.name,
             addonLogo = null,
             description = buildDescription(this),
-            behaviorHints = headers?.let { headers ->
+            behaviorHints = if (headers != null || audioDelayMs != null || audioDelayLanguage != null) {
                 StreamBehaviorHints(
                     notWebReady = null,
                     bingeGroup = null,
                     countryWhitelist = null,
-                    proxyHeaders = ProxyHeaders(request = headers, response = null)
+                    proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
+                    audioDelayMs = audioDelayMs,
+                    audioDelayLanguage = audioDelayLanguage
                 )
+            } else {
+                null
             },
             infoHash = infoHash,
             fileIdx = null,
