@@ -2346,6 +2346,13 @@
     <string name="plugin_test_no_results">No results found</string>
     <string name="plugin_test_found_streams">Found %1$d streams</string>
     <string name="plugin_version">Version %1$s</string>
+    <string name="plugin_configure">Configure</string>
+    <string name="plugin_settings_title">%1$s settings</string>
+    <string name="plugin_settings_cancel">Cancel</string>
+    <string name="plugin_settings_save">Save</string>
+    <string name="plugin_settings_reset_action">Reset</string>
+    <string name="plugin_settings_saved">Provider settings saved</string>
+    <string name="plugin_settings_load_failed">Could not load provider settings.</string>
 
     <string name="profile_selection_title">Who\'s watching?</string>
     <string name="profile_selection_subtitle">Select a profile to continue</string>

@@ -100,12 +100,19 @@ import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.input.NuvioSelectInput
+import com.nuvio.tv.ui.components.input.NuvioSelectOption
+import com.nuvio.tv.ui.components.input.NuvioButtonInput
+import com.nuvio.tv.ui.components.input.NuvioTextInput
+import com.nuvio.tv.ui.components.input.NuvioToggleInput
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import org.json.JSONArray
 
 @Composable
 fun PluginScreen(
@@ -270,6 +277,7 @@ fun PluginScreenContent(
                             viewModel.onEvent(PluginUiEvent.ToggleScraper(scraper.id, enabled))
                         },
                         onTest = { viewModel.onEvent(PluginUiEvent.TestScraper(scraper.id)) },
+                        onEditSettings = { viewModel.onEvent(PluginUiEvent.EditScraperSettings(scraper.id)) },
                         isTesting = uiState.isTesting && uiState.testScraperId == scraper.id,
                         testResults = if (uiState.testScraperId == scraper.id) uiState.testResults else null,
                         testDiagnostics = if (uiState.testScraperId == scraper.id) uiState.testDiagnostics else null,
@@ -284,6 +292,17 @@ fun PluginScreenContent(
         successMessage = uiState.successMessage,
         errorMessage = uiState.errorMessage
     )
+
+    uiState.editingSettingsFor?.let { scraperId ->
+        val scraper = uiState.scrapers.firstOrNull { it.id == scraperId }
+        if (scraper != null && uiState.settingsLayoutJson != null) ScraperSettingsDialog(
+            scraperName = scraper.name,
+            layoutJson = uiState.settingsLayoutJson,
+            initialSettings = uiState.scraperSettings[scraperId].orEmpty(),
+            onDismiss = { viewModel.onEvent(PluginUiEvent.DismissScraperSettings) },
+            onSave = { viewModel.onEvent(PluginUiEvent.SaveScraperSettings(scraperId, it)) }
+        )
+    }
 
     // QR Code overlay — Popup renders above the entire screen
     if (uiState.isQrModeActive) {
@@ -1245,6 +1264,7 @@ private fun ScraperCard(
     scraper: ScraperInfo,
     onToggle: (Boolean) -> Unit,
     onTest: () -> Unit,
+    onEditSettings: () -> Unit,
     isTesting: Boolean,
     testResults: List<LocalScraperResult>?,
     testDiagnostics: com.nuvio.tv.core.plugin.TestDiagnostics? = null,
@@ -1325,21 +1345,22 @@ private fun ScraperCard(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (scraper.hasSettings && !isReadOnly) {
+                        NuvioButtonInput(
+                            onClick = onEditSettings,
+                            enabled = scraper.enabled
+                        ) {
+                            Text(stringResource(R.string.plugin_configure))
+                        }
+                    }
                     // Test button
-                    Button(
+                    NuvioButtonInput(
                         onClick = onTest,
                         enabled = !isTesting && scraper.enabled,
                         modifier = Modifier
                             .focusProperties { left = FocusRequester.Cancel }
                             .onFocusChanged { isTestFocused = it.isFocused }
-                            .semantics { role = Role.Button },
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioTheme.colors.Surface,
-                            contentColor = NuvioTheme.colors.TextPrimary,
-                            focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                            focusedContentColor = NuvioTheme.colors.Primary
-                        ),
-                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                            .semantics { role = Role.Button }
                     ) {
                         if (isTesting) {
                             LoadingIndicator(modifier = Modifier.size(NuvioTheme.spacing.lg))
@@ -1462,6 +1483,121 @@ private fun ScraperCard(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun ScraperSettingsDialog(
+    scraperName: String,
+    layoutJson: String,
+    initialSettings: Map<String, Any>,
+    onDismiss: () -> Unit,
+    onSave: (Map<String, Any>) -> Unit
+) {
+    val layout = remember(layoutJson) { runCatching { JSONArray(layoutJson) }.getOrElse { JSONArray() } }
+    val values = remember(layoutJson, initialSettings) {
+        androidx.compose.runtime.mutableStateMapOf<String, Any>().apply {
+            putAll(initialSettings)
+            for (index in 0 until layout.length()) {
+                val field = layout.optJSONObject(index) ?: continue
+                val key = field.optString("key")
+                if (key.isNotBlank() && !containsKey(key) && field.has("defaultValue")) {
+                    put(key, field.opt("defaultValue"))
+                }
+            }
+        }
+    }
+    var expandedSelectKey by remember { mutableStateOf<String?>(null) }
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.plugin_settings_title, scraperName),
+        width = 760.dp,
+        contentSpacing = NuvioTheme.spacing.lg
+    ) {
+        Column(
+            Modifier
+                .weight(1f, fill = false)
+                .heightIn(max = 420.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
+        ) {
+            for (index in 0 until layout.length()) {
+                val field = layout.optJSONObject(index) ?: continue
+                val type = field.optString("type", "info")
+                val key = field.optString("key")
+                val label = field.optString("label")
+                val description = field.optString("description").takeIf { it.isNotBlank() }
+                when (type) {
+                    "header" -> Text(label, style = MaterialTheme.typography.titleMedium, color = NuvioTheme.colors.Secondary)
+                    "info" -> Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)) {
+                        Text(label, style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary)
+                        description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary) }
+                    }
+                    "text" -> Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)) {
+                        Text(label, style = MaterialTheme.typography.labelLarge)
+                        val value = values[key]?.toString().orEmpty()
+                        NuvioTextInput(
+                            value = value,
+                            onValueChange = { values[key] = it },
+                            placeholder = field.optString("placeholder"),
+                            isPassword = field.optBoolean("isPassword"),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary) }
+                    }
+                    "select" -> {
+                        val options = field.optJSONArray("options") ?: JSONArray()
+                        val defaultValue = values[key]?.toString() ?: field.optString("defaultValue")
+                        var selectedValue = ""
+                        val choices = (0 until options.length()).mapNotNull { optionIndex ->
+                            options.optJSONObject(optionIndex)?.let {
+                                val label = it.optString("label")
+                                val value = it.optString("value")
+                                if (value == defaultValue) {
+                                    selectedValue = defaultValue
+                                }
+                                NuvioSelectOption(label, value)
+                            }
+                        }
+                        NuvioSelectInput(
+                            title = label,
+                            value = choices.firstOrNull { it.value == selectedValue }?.label ?: "",
+                            selectedValue = selectedValue,
+                            expanded = expandedSelectKey == key,
+                            options = choices,
+                            onExpandedChange = { expanded -> expandedSelectKey = if (expanded) key else null },
+                            onSelect = { values[key] = it.value }
+                        )
+                        description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary) }
+                    }
+                    "toggle" -> NuvioToggleInput(
+                        checked = (values[key] as? Boolean) ?: field.optBoolean("defaultValue"),
+                        onCheckedChange = { values[key] = it },
+                        label = label,
+                        description = description
+                    )
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+            NuvioButtonInput(
+                onClick = {
+                    values.clear()
+                    for (index in 0 until layout.length()) {
+                        val field = layout.optJSONObject(index) ?: continue
+                        val key = field.optString("key")
+                        if (key.isNotBlank() && field.has("defaultValue")) {
+                            values[key] = field.opt("defaultValue")
+                        }
+                    }
+                }
+            ) { Text(stringResource(R.string.plugin_settings_reset_action)) }
+            Spacer(Modifier.weight(1f))
+            NuvioButtonInput(onClick = onDismiss) { Text(stringResource(R.string.plugin_settings_cancel)) }
+            NuvioButtonInput(onClick = { onSave(values.toMap()) }) {
+                Text(stringResource(R.string.plugin_settings_save))
             }
         }
     }

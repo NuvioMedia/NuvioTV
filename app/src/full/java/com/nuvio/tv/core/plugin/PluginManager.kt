@@ -44,6 +44,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val TAG = "PluginManager"
 // Scrapers are network-bound, not CPU-bound. Running more concurrently lets slow
@@ -74,6 +75,7 @@ class PluginManager @Inject constructor(
         .build()
     
     private val manifestAdapter = moshi.adapter(PluginManifest::class.java)
+    private val scraperStorageMutexes = ConcurrentHashMap<String, Mutex>()
     
     private val httpClient = OkHttpClient.Builder()
         .dns(com.nuvio.tv.core.network.IPv4FirstDns())
@@ -236,6 +238,21 @@ class PluginManager @Inject constructor(
     val pluginsEnabled: Flow<Boolean> = dataStore.pluginsEnabled
 
     val groupStreamsByRepository: Flow<Boolean> = dataStore.groupStreamsByRepository
+
+    suspend fun getScraperSettings(scraperId: String): Map<String, Any> =
+        dataStore.getScraperSettings(scraperId)
+
+    suspend fun setScraperSettings(scraperId: String, settings: Map<String, Any>) =
+        dataStore.setScraperSettings(scraperId, settings)
+
+    suspend fun getScraperSettingsLayout(scraperId: String): String? {
+        val code = dataStore.getScraperCode(scraperId) ?: return null
+        val scraperSettings = dataStore.getScraperSettings(scraperId)
+        scraperStorageMutexes.computeIfAbsent(scraperId) { Mutex() }.withLock {
+            val localStorage = dataStore.getScraperLocalStorage(scraperId)
+            return withContext(pluginDispatcher) { runtime.getSettingsLayout(scraperId, code, scraperSettings, localStorage) }
+        }
+    }
     
     private val syncScope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + Dispatchers.IO
@@ -453,19 +470,23 @@ class PluginManager @Inject constructor(
     suspend fun removeRepository(repoId: String) {
         val scraperList = dataStore.scrapers.first()
         val repo = dataStore.repositories.first().find { it.id == repoId }
+        val removedScrapers = scraperList.filter { it.repositoryId == repoId }
 
-        // Remove all scrapers from this repo
-        scraperList.filter { it.repositoryId == repoId }.forEach { scraper ->
-            if (scraper.type == RepositoryType.EXTERNAL_DEX || repo?.type == RepositoryType.EXTERNAL_DEX) {
-                externalExtensionLoader.deleteExtension(scraper.id)
-            } else {
-                dataStore.deleteScraperCode(scraper.id)
-            }
-        }
-
-        // Remove scrapers from list
+        // Remove scrapers from the active list before deleting their associated data.
         val updatedScrapers = scraperList.filter { it.repositoryId != repoId }
         dataStore.saveScrapers(updatedScrapers)
+
+        // Delete each scraper's files and persisted localStorage under its execution lock.
+        removedScrapers.forEach { scraper ->
+            scraperStorageMutexes.computeIfAbsent(scraper.id) { Mutex() }.withLock {
+                if (scraper.type == RepositoryType.EXTERNAL_DEX || repo?.type == RepositoryType.EXTERNAL_DEX) {
+                    externalExtensionLoader.deleteExtension(scraper.id)
+                } else {
+                    dataStore.deleteScraperCode(scraper.id)
+                }
+                dataStore.deleteScraperLocalStorage(scraper.id)
+            }
+        }
 
         // Remove repository
         dataStore.removeRepository(repoId)
@@ -828,29 +849,47 @@ class PluginManager @Inject constructor(
             val settings = dataStore.getScraperSettings(scraper.id)
             
             Log.d(TAG, "Executing scraper: ${scraper.name}")
-            val results = withTimeoutOrNull(SCRAPER_TIMEOUT_MS) {
-                // Run plugin JS on the dedicated low-priority pool so a buggy
-                // scraper can't burn cores at the expense of ExoPlayer / UI.
-                withContext(pluginDispatcher) {
-                    runtime.executePlugin(
-                        code = code,
-                        tmdbId = tmdbId,
-                        mediaType = jsPluginMediaType(mediaType, scraper.supportedTypes, season, episode),
-                        season = season,
-                        episode = episode,
-                        scraperId = scraper.id,
-                        scraperSettings = settings
-                    )
+            scraperStorageMutexes.computeIfAbsent(scraper.id) { Mutex() }.withLock {
+                val localStorage = dataStore.getScraperLocalStorage(scraper.id)
+                val originalLocalStorage = localStorage.toMap()
+                try {
+                    val results = withTimeoutOrNull(SCRAPER_TIMEOUT_MS.milliseconds) {
+                        // Run plugin JS on the dedicated low-priority pool so a buggy
+                        // scraper can't burn cores at the expense of ExoPlayer / UI.
+                        withContext(pluginDispatcher) {
+                            runtime.executePlugin(
+                                code = code,
+                                tmdbId = tmdbId,
+                                mediaType = jsPluginMediaType(mediaType, scraper.supportedTypes, season, episode),
+                                season = season,
+                                episode = episode,
+                                scraperId = scraper.id,
+                                scraperSettings = settings,
+                                localStorage = localStorage
+                            )
+                        }
+                    }
+
+                    if (results == null) {
+                        Log.w(TAG, "Scraper ${scraper.name} timed out after ${SCRAPER_TIMEOUT_MS}ms")
+                        return emptyList()
+                    }
+
+                    Log.d(TAG, "Scraper ${scraper.name} returned ${results.size} results")
+                    results.map { it.copy(provider = scraper.name) }
+                } finally {
+                    if (localStorage != originalLocalStorage) {
+                        try {
+                            Log.v(TAG, "Persisting localStorage changes for ${scraper.name}")
+                            dataStore.saveScraperLocalStorage(scraper.id, localStorage)
+                        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                            throw cancelled
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to persist localStorage for ${scraper.name}: ${e.message}")
+                        }
+                    }
                 }
             }
-
-            if (results == null) {
-                Log.w(TAG, "Scraper ${scraper.name} timed out after ${SCRAPER_TIMEOUT_MS}ms")
-                return emptyList()
-            }
-
-            Log.d(TAG, "Scraper ${scraper.name} returned ${results.size} results")
-            results.map { it.copy(provider = scraper.name) }
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to execute scraper ${scraper.name}: ${e.message}", e)
@@ -1040,7 +1079,8 @@ class PluginManager @Inject constructor(
                     manifestEnabled = info.enabled,
                     logo = info.logo,
                     contentLanguage = info.contentLanguage ?: emptyList(),
-                    formats = info.formats
+                    formats = info.formats,
+                    hasSettings = info.hasSettings
                 )
                 
                 // Save code

@@ -2,7 +2,6 @@ package com.nuvio.tv.ui.screens.library
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,8 +22,6 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -32,11 +29,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.focusable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
@@ -57,8 +49,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -92,7 +82,6 @@ import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.GridContentCard
-import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.screens.home.HeroBackdropState
 import com.nuvio.tv.ui.screens.stream.PlayerChoiceDialog
 import kotlinx.coroutines.delay
@@ -101,6 +90,8 @@ import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.domain.model.localizedTitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.input.NuvioSelectInput
+import com.nuvio.tv.ui.components.input.NuvioSelectOption
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.localizedGenreLabel
@@ -1305,7 +1296,7 @@ private fun LibrarySelectorsRow(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun LibraryDropdownPicker(
     modifier: Modifier = Modifier,
@@ -1318,173 +1309,17 @@ private fun LibraryDropdownPicker(
     onExpandedChange: (Boolean) -> Unit,
     onSelect: (LibraryOption) -> Unit
 ) {
-    var isFocused by remember { mutableStateOf(false) }
-    var anchorSize by remember { mutableStateOf(IntSize.Zero) }
-    // Seed focused option with the current selection so reopen highlights the right row
-    // even before focus lands (fixes #2848 / incomplete #2507 race on TV).
-    var focusedOptionValue by remember(expanded) {
-        mutableStateOf(if (expanded) selectedValue else null)
-    }
-    val selectedItemFocusRequester = remember { FocusRequester() }
-    val selectedBringIntoViewRequester = remember { BringIntoViewRequester() }
-
-    // Popup content attaches focus targets a few frames after expand. A fixed 50ms
-    // delay was flaky on TV and left focus on the first item for non-top selections.
-    LaunchedEffect(expanded, selectedValue) {
-        if (!expanded || selectedValue == null) return@LaunchedEffect
-        var focused = selectedItemFocusRequester.requestFocusAfterFrames(frames = 3)
-        var attempt = 0
-        while (!focused && attempt < 6) {
-            delay(32)
-            focused = runCatching { selectedItemFocusRequester.requestFocus() }.getOrDefault(false)
-            attempt++
-        }
-        if (!focused) return@LaunchedEffect
-        runCatching { selectedBringIntoViewRequester.bringIntoView() }
-        // Material DropdownMenu may still move initial focus to the first item after
-        // the popup settles; re-assert once so long lists keep the real selection.
-        delay(48)
-        if (runCatching { selectedItemFocusRequester.requestFocus() }.getOrDefault(false)) {
-            runCatching { selectedBringIntoViewRequester.bringIntoView() }
-        }
-    }
-
-    Box(modifier = modifier) {
-        Card(
-            onClick = { onExpandedChange(!expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(
-                    if (upFocusRequester != null) {
-                        Modifier.focusProperties { up = upFocusRequester }
-                    } else {
-                        Modifier
-                    }
-                )
-                .onSizeChanged { anchorSize = it }
-                .onFocusChanged { isFocused = it.isFocused },
-            shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
-            colors = CardDefaults.colors(
-                containerColor = NuvioTheme.colors.BackgroundCard,
-                focusedContainerColor = NuvioTheme.colors.FocusBackground
-            ),
-            border = CardDefaults.border(
-                border = androidx.tv.material3.Border(
-                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
-                    shape = RoundedCornerShape(14.dp)
-                ),
-                focusedBorder = androidx.tv.material3.Border(
-                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                    shape = RoundedCornerShape(14.dp)
-                )
-            ),
-            scale = CardDefaults.scale(
-                focusedScale = 1.0f,
-                pressedScale = 1.0f
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NuvioTheme.colors.TextTertiary
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = value,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = NuvioTheme.colors.TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Icon(
-                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (expanded) stringResource(R.string.cd_collapse, title) else stringResource(R.string.cd_expand, title),
-                        tint = if (isFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.TextSecondary
-                    )
-                }
-            }
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = {
-                focusedOptionValue = null
-                onExpandedChange(false)
-            },
-            modifier = Modifier
-                .width(with(LocalDensity.current) { anchorSize.width.toDp() })
-                .heightIn(max = 320.dp),
-            shape = RoundedCornerShape(14.dp),
-            containerColor = NuvioTheme.colors.BackgroundCard,
-            tonalElevation = NuvioTheme.spacing.none,
-            shadowElevation = NuvioTheme.spacing.sm,
-            border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border)
-        ) {
-            options.forEach { option ->
-                val isSelected = option.value == selectedValue
-                val isOptionFocused = option.value == focusedOptionValue
-                val itemTextColor = when {
-                    isOptionFocused -> NuvioTheme.colors.OnSecondary
-                    isSelected -> NuvioTheme.colors.TextPrimary
-                    else -> NuvioTheme.colors.TextPrimary
-                }
-                val itemBackgroundColor = when {
-                    isOptionFocused -> NuvioTheme.colors.Secondary
-                    isSelected -> NuvioTheme.colors.FocusBackground
-                    else -> Color.Transparent
-                }
-
-                DropdownMenuItem(
-                    modifier = Modifier
-                        .then(
-                            if (isSelected) {
-                                Modifier
-                                    .focusRequester(selectedItemFocusRequester)
-                                    .bringIntoViewRequester(selectedBringIntoViewRequester)
-                            } else {
-                                Modifier
-                            }
-                        )
-                        .padding(horizontal = 6.dp, vertical = NuvioTheme.spacing.xxs)
-                        .background(
-                            color = itemBackgroundColor,
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .onFocusChanged { state ->
-                            val hasFocus = state.isFocused || state.hasFocus
-                            focusedOptionValue = when {
-                                hasFocus -> option.value
-                                focusedOptionValue == option.value -> null
-                                else -> focusedOptionValue
-                            }
-                        },
-                    text = {
-                        Text(
-                            text = option.label,
-                            color = itemTextColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    onClick = { onSelect(option) },
-                    colors = MenuDefaults.itemColors(
-                        textColor = itemTextColor,
-                        disabledTextColor = NuvioTheme.colors.TextDisabled
-                    )
-                )
-            }
-        }
-    }
+    NuvioSelectInput(
+        modifier = modifier,
+        upFocusRequester = upFocusRequester,
+        title = title,
+        value = value,
+        selectedValue = selectedValue,
+        expanded = expanded,
+        options = options.map { NuvioSelectOption(it.label, it.value) },
+        onExpandedChange = onExpandedChange,
+        onSelect = { option -> onSelect(LibraryOption(option.label, option.value)) }
+    )
 }
 
 private data class LibraryOption(
