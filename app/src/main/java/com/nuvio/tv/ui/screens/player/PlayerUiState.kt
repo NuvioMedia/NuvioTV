@@ -254,6 +254,10 @@ data class PlayerUiState(
 
     val editableSubtitleStyle: SubtitleStyleSettings
         get() = subtitleStyle.editableForVideo(isHdrVideo)
+
+    /** Brightness factor for the player controls and menus drawn over the video (1 = undimmed). */
+    val playerControlsBrightness: Float
+        get() = subtitleStyle.playerControlsBrightness(isHdrVideo)
 }
 
 internal fun PlayerUiState.clearFrameRateDetection(): PlayerUiState = copy(

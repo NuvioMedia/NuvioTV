@@ -915,7 +915,9 @@
     <string name="sub_hdr_style">Separate HDR / Dolby Vision style</string>
     <string name="sub_hdr_style_sub">Use a different text color and a dimmer brightness for subtitles on HDR and Dolby Vision video</string>
     <string name="sub_hdr_text_color">HDR Text Color</string>
-    <string name="sub_hdr_brightness">HDR Subtitle Brightness</string>
+    <string name="sub_hdr_brightness">HDR Brightness</string>
+    <string name="sub_hdr_dim_player_controls">Dim player controls on HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">Apply the HDR brightness to the player controls and menus shown over HDR and Dolby Vision video</string>
     <string name="sub_advanced_section">Advanced Subtitle Rendering</string>
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
     <string name="sub_libass_sub">Advanced ASS/SSA rendering (styles, positioning, animations)</string>

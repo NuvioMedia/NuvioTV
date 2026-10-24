@@ -625,6 +625,10 @@ fun PlayerScreen(
         onDispose { PlayerWindowBackdrop.releaseTransparent() }
     }
 
+    // Controls and menus drawn over HDR video get the HDR brightness when the user enables it;
+    // the video surface and its subtitles are never inside this layer.
+    val playerControlsDim = Modifier.playerControlsBrightness(uiState.playerControlsBrightness)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1319,6 +1323,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2.5f)
+                .then(playerControlsDim)
         )
 
         StreamInfoOverlay(
@@ -1332,6 +1337,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2.6f)
+                .then(playerControlsDim)
         )
 
         if (uiState.playerStatsHudEnabled && uiState.playerStatsHudButtonAvailable && uiState.error == null) {
@@ -1341,6 +1347,7 @@ fun PlayerScreen(
                     .align(Alignment.TopStart)
                     .padding(start = NuvioTheme.spacing.xl, top = NuvioTheme.spacing.xl)
                     .zIndex(2.75f)
+                    .then(playerControlsDim)
             )
         }
 
@@ -1357,6 +1364,7 @@ fun PlayerScreen(
                 .align(Alignment.TopEnd)
                 .padding(top = NuvioTheme.spacing.lg, end = NuvioTheme.spacing.lg)
                 .zIndex(2.7f)
+                .then(playerControlsDim)
         )
 
         // Buffering indicator — isolated in its own composable scope so that
@@ -1367,7 +1375,8 @@ fun PlayerScreen(
             showLoadingOverlay = uiState.showLoadingOverlay,
             isTorrentStream = uiState.isTorrentStream,
             torrentBufferingMessage = uiState.torrentBufferingMessage,
-            torrentBufferingProgress = uiState.torrentBufferingProgress
+            torrentBufferingProgress = uiState.torrentBufferingProgress,
+            modifier = playerControlsDim
         )
 
         // Error state
@@ -1391,7 +1400,8 @@ fun PlayerScreen(
             NextEpisodeEndPromptOverlay(
                 nextEpisode = endPromptEpisode,
                 onContinue = continueToNextEpisodeFromEndPrompt,
-                onReturnToDetails = returnToDetailsFromEndPrompt
+                onReturnToDetails = returnToDetailsFromEndPrompt,
+                modifier = playerControlsDim
             )
         }
 
@@ -1447,6 +1457,7 @@ fun PlayerScreen(
                 .align(Alignment.BottomStart)
                 .padding(start = NuvioTheme.spacing.xxl, bottom = skipButtonBottomPadding)
                 .zIndex(2.1f)
+                .then(playerControlsDim)
                 .reportSubtitleClearance(subtitleClearanceGapPx) { skipClearancePx = it }
         )
         PostPlayOverlay(
@@ -1463,6 +1474,7 @@ fun PlayerScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = 26.dp, bottom = if (uiState.showControls) 122.dp else 30.dp)
                 .zIndex(2.1f)
+                .then(playerControlsDim)
                 .reportSubtitleClearance(subtitleClearanceGapPx) { postPlayClearancePx = it },
         )
 
@@ -1473,7 +1485,9 @@ fun PlayerScreen(
             onAnimationComplete = {
                 viewModel.onEvent(PlayerEvent.OnParentalGuideHide)
             },
-            modifier = Modifier.align(Alignment.TopStart)
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .then(playerControlsDim)
         )
 
         DisplayModeOverlay(
@@ -1485,6 +1499,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .zIndex(2.2f)
+                .then(playerControlsDim)
         )
 
         val showClockOverlay = uiState.showControls &&
@@ -1511,6 +1526,7 @@ fun PlayerScreen(
                 .align(Alignment.TopEnd)
                 .padding(end = 28.dp, top = NuvioTheme.spacing.xl)
                 .zIndex(2.15f)
+                .then(playerControlsDim)
         ) {
             PlayerClockOverlayHost(
                 viewModel = viewModel,
@@ -1522,7 +1538,8 @@ fun PlayerScreen(
         AnimatedVisibility(
             visible = playerControlsVisible,
             enter = fadeIn(animationSpec = tween(200)),
-            exit = fadeOut(animationSpec = tween(200))
+            exit = fadeOut(animationSpec = tween(200)),
+            modifier = playerControlsDim
         ) {
             val context = LocalContext.current
             PlayerControlsOverlay(
@@ -1623,6 +1640,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 80.dp)
+                .then(playerControlsDim)
         ) {
             AspectRatioIndicator(text = uiState.aspectRatioIndicatorText)
         }
@@ -1634,6 +1652,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 128.dp)
+                .then(playerControlsDim)
         ) {
             StreamSourceIndicator(text = uiState.streamSourceIndicatorText)
         }
@@ -1664,6 +1683,7 @@ fun PlayerScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 28.dp)
+                    .then(playerControlsDim)
             )
         }
 
@@ -1674,6 +1694,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .align(Alignment.Center)
                 .zIndex(2.35f)
+                .then(playerControlsDim)
         ) {
             PlayerEngineSwitchIndicator(
                 title = stringResource(R.string.player_engine_switching_title),
@@ -1702,6 +1723,7 @@ fun PlayerScreen(
                 .align(Alignment.TopCenter)
                 .padding(top = 44.dp)
                 .zIndex(2.3f)
+                .then(playerControlsDim)
         ) {
             SubtitleDelayOverlay(
                 subtitleDelayMs = uiState.subtitleDelayMs,
@@ -1732,6 +1754,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .reportSubtitleClearance(subtitleClearanceGapPx) { seekClearancePx = it }
+                .then(playerControlsDim)
         ) {
             SeekOverlayHost(viewModel = viewModel, chapters = uiState.chapters)
         }
@@ -1751,7 +1774,8 @@ fun PlayerScreen(
         AnimatedVisibility(
             visible = uiState.showChaptersPanel && uiState.chapters.isNotEmpty() && uiState.error == null,
             enter = slideInHorizontally(animationSpec = tween(220), initialOffsetX = { it }),
-            exit = slideOutHorizontally(animationSpec = tween(220), targetOffsetX = { it })
+            exit = slideOutHorizontally(animationSpec = tween(220), targetOffsetX = { it }),
+            modifier = playerControlsDim
         ) {
             val chaptersTimeline by viewModel.playbackTimeline.collectAsState()
             Box(modifier = Modifier.fillMaxSize()) {
@@ -1791,7 +1815,8 @@ fun PlayerScreen(
             exit = slideOutHorizontally(
                 animationSpec = tween(220),
                 targetOffsetX = { it }
-            )
+            ),
+            modifier = playerControlsDim
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 EpisodesSidePanel(
@@ -1833,7 +1858,8 @@ fun PlayerScreen(
             exit = slideOutHorizontally(
                 animationSpec = tween(220),
                 targetOffsetX = { it }
-            )
+            ),
+            modifier = playerControlsDim
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 StreamSourcesSidePanel(
@@ -1876,7 +1902,8 @@ fun PlayerScreen(
             exit = slideOutHorizontally(
                 animationSpec = tween(220),
                 targetOffsetX = { it }
-            )
+            ),
+            modifier = playerControlsDim
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 PartyPanel(
@@ -1940,7 +1967,8 @@ fun PlayerScreen(
             exit = slideOutVertically(
                 animationSpec = tween(220),
                 targetOffsetY = { -it }
-            )
+            ),
+            modifier = playerControlsDim
         ) {
             Box(
                 modifier = Modifier.fillMaxSize()
@@ -1996,6 +2024,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2.6f)
+                .then(playerControlsDim)
         )
 
         SubtitleSelectionOverlay(
@@ -2023,6 +2052,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2.6f)
+                .then(playerControlsDim)
         )
 
         PlayerOverlayScaffold(
@@ -2042,7 +2072,8 @@ fun PlayerScreen(
             onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissSubtitleTimingDialog) },
             modifier = Modifier
                 .fillMaxSize()
-                .zIndex(2.35f),
+                .zIndex(2.35f)
+                .then(playerControlsDim),
             captureKeys = false,
             contentPadding = PaddingValues(top = 44.dp)
         ) {
@@ -2067,7 +2098,8 @@ fun PlayerScreen(
             SpeedSelectionDialog(
                 currentSpeed = uiState.playbackSpeed,
                 onSpeedSelected = { viewModel.onEvent(PlayerEvent.OnSetPlaybackSpeed(it)) },
-                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay) }
+                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay) },
+                brightness = uiState.playerControlsBrightness
             )
         }
     }
@@ -4089,7 +4121,8 @@ internal fun PlayerOverlayButton(
 private fun SpeedSelectionDialog(
     currentSpeed: Float,
     onSpeedSelected: (Float) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    brightness: Float = 1f
 ) {
     val selectedIndex = remember(currentSpeed) {
         PLAYBACK_SPEEDS.indices.minByOrNull { index ->
@@ -4106,8 +4139,10 @@ private fun SpeedSelectionDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
+        // The dialog is its own window, so the player's controls dim does not reach it.
         Box(
             modifier = Modifier
+                .playerControlsBrightness(brightness)
                 .width(300.dp)
                 .clip(RoundedCornerShape(NuvioTheme.radii.xl))
                 .background(NuvioTheme.colors.BackgroundElevated)
@@ -4335,12 +4370,13 @@ private fun PlayerBufferingIndicator(
     showLoadingOverlay: Boolean,
     isTorrentStream: Boolean,
     torrentBufferingMessage: String?,
-    torrentBufferingProgress: Float
+    torrentBufferingProgress: Float,
+    modifier: Modifier = Modifier
 ) {
     if (!isBuffering || showLoadingOverlay) return
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         if (isTorrentStream && torrentBufferingMessage != null) {
