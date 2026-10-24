@@ -2399,7 +2399,7 @@ private fun PlayerView.syncLibassOverlayGeometry() {
 }
 
 private fun PlayerView.logLibassOverlayGeometry(message: String) {
-    if (!BuildConfig.DEBUG) return
+    if (!BuildConfig.IS_DEBUG_BUILD) return
     if (getTag(R.id.player_view_libass_geometry_snapshot_tag) == message) return
     setTag(R.id.player_view_libass_geometry_snapshot_tag, message)
     Log.d(LIBASS_OVERLAY_GEOMETRY_TAG, message)
