@@ -14,7 +14,11 @@ internal fun SimklSyncSnapshot.applyMutationReceipt(
             mutation.items,
             committedAtEpochMs
         )
-        is SimklCommittedMutation.RemoveFromHistory -> withoutHistory(mutation.items)
+        is SimklCommittedMutation.RemoveFromHistory -> if (mutation.rewatchId != null) {
+            withRewatchRemoval(mutation.items, mutation.rewatchId)
+        } else {
+            withoutHistory(mutation.items)
+        }
     }.reconcileWatchedPlayback()
 }
 
@@ -99,6 +103,40 @@ private fun SimklSyncSnapshot.withResolvedHistoryStatus(
         movie = media.takeIf { mediaType == SimklMediaType.MOVIES }
     )
     return copy(entries = entries.toMutableList().apply { this[index] = updated })
+}
+
+/**
+ * Drops one episode from the rewatch session that was named, and leaves the canonical watch alone.
+ *
+ * A canonical removal clears the watched episode from the library entries. A rewatch removal must
+ * not: the original watch is what the detail screen shows as a faded marker while the run is open,
+ * and clearing the entry would make the episode look unwatched.
+ */
+private fun SimklSyncSnapshot.withRewatchRemoval(
+    mutations: List<TrackingMediaReference>,
+    rewatchId: Long
+): SimklSyncSnapshot {
+    if (mutations.isEmpty()) return this
+    var updatedSessions = rewatchSessions
+    mutations.forEach { mutation ->
+        val target = mutation.toSimklMedia()
+        val season = mutation.episode?.season
+        val number = mutation.episode?.number ?: return@forEach
+        updatedSessions = updatedSessions.map { entry ->
+            if (entry.rewatchId == rewatchId && entry.media?.matchesTarget(target) == true) {
+                entry.withoutWatchedEpisode(season, number)
+            } else {
+                entry
+            }
+        }
+    }
+    return copy(
+        rewatchSessions = updatedSessions,
+        rewatchRuns = deriveSimklRewatchRuns(
+            entries = updatedSessions,
+            offerRuns = rewatchRuns.isNotEmpty()
+        )
+    )
 }
 
 private fun SimklSyncSnapshot.withoutHistory(

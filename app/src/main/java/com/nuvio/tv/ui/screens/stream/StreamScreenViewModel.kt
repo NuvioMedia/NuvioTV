@@ -2031,13 +2031,19 @@ class StreamScreenViewModel @Inject constructor(
             if (progressPercent > 0f) {
                 val scrobbleItem = buildScrobbleItem(playbackInfo)
                 if (scrobbleItem != null) {
+                    // The external player is reported from its start here, so its stop is the end
+                    // of a session and may record a repeat viewing.
                     trackingScrobbleCoordinator.scrobble(
                         TrackingScrobbleAction.START,
-                        TrackingScrobbleEvent(scrobbleItem, 0.0)
+                        TrackingScrobbleEvent(scrobbleItem, 0.0, hasPlaybackSession = true)
                     )
                     trackingScrobbleCoordinator.scrobble(
                         TrackingScrobbleAction.STOP,
-                        TrackingScrobbleEvent(scrobbleItem, progressPercent.toDouble())
+                        TrackingScrobbleEvent(
+                            scrobbleItem,
+                            progressPercent.toDouble(),
+                            hasPlaybackSession = true
+                        )
                     )
                 }
             }

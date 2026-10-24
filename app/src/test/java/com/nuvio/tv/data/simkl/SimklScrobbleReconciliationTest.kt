@@ -2,6 +2,7 @@ package com.nuvio.tv.data.simkl
 
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -172,6 +173,212 @@ class SimklScrobbleReconciliationTest {
         assertEquals("2023-11-14T21:00:00Z", updated.entries.single().lastWatchedAt)
         assertEquals("tt1375666", updated.toSimklWatchedProjection().items.single().contentId)
     }
+
+    @Test
+    fun `a watched movie reports the date the account holds`() {
+        val media = movieMedia()
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.MOVIES,
+                    status = SimklListStatus.COMPLETED,
+                    movie = media,
+                    lastWatchedAt = "2023-11-14T22:13:20Z"
+                )
+            )
+        )
+
+        val prior = snapshot.priorWatchForScrobble(
+            scrobbleResult(SimklMediaType.MOVIES, media, episode = null)
+        )
+
+        assertTrue(prior.wasWatched)
+        assertEquals(1_700_000_000_000L, prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `a movie the account only plans to watch is not a prior watch`() {
+        val media = movieMedia()
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.MOVIES,
+                    status = SimklListStatus.PLAN_TO_WATCH,
+                    movie = media,
+                    lastWatchedAt = "2023-11-14T22:13:20Z"
+                )
+            )
+        )
+
+        val prior = snapshot.priorWatchForScrobble(
+            scrobbleResult(SimklMediaType.MOVIES, media, episode = null)
+        )
+
+        assertFalse(prior.wasWatched)
+        assertNull(prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `an anime movie the account only plans to watch is not a prior watch`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val planned = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.PLAN_TO_WATCH,
+                    animeType = "movie",
+                    show = media,
+                    lastWatchedAt = "2023-11-14T22:13:20Z"
+                )
+            )
+        )
+        val completed = planned.copy(
+            entries = planned.entries.map { entry -> entry.copy(status = SimklListStatus.COMPLETED) }
+        )
+        val result = scrobbleResult(SimklMediaType.ANIME, media, episode = null)
+
+        assertFalse(planned.priorWatchForScrobble(result).wasWatched)
+        val prior = completed.priorWatchForScrobble(result)
+        assertTrue(prior.wasWatched)
+        assertEquals(1_700_000_000_000L, prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `the scrobbled episode decides, not another episode of the same show`() {
+        val media = showMedia(simklId = 2090L, imdb = "tt1520211")
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.SHOWS,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 1,
+                            episodes = listOf(
+                                SimklEpisode(number = 2, watchedAt = "2023-11-14T22:13:20Z"),
+                                SimklEpisode(number = 3)
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val watched = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.SHOWS,
+                media,
+                episode = SimklPlaybackEpisode(season = 1, number = 2)
+            )
+        )
+        val unwatched = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.SHOWS,
+                media,
+                episode = SimklPlaybackEpisode(season = 1, number = 3)
+            )
+        )
+
+        assertTrue(watched.wasWatched)
+        assertEquals(1_700_000_000_000L, watched.watchedAtEpochMs)
+        assertFalse(unwatched.wasWatched)
+        assertNull(unwatched.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `a watched episode is found through its tvdb coordinates`() {
+        val media = showMedia(simklId = 2090L, imdb = "tt1520211")
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.SHOWS,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 2,
+                            episodes = listOf(
+                                SimklEpisode(
+                                    number = 7,
+                                    watchedAt = "2023-11-14T22:13:20Z",
+                                    tvdb = SimklEpisodeMapping(season = 2, episode = 3)
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val mapped = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.SHOWS,
+                media,
+                episode = SimklPlaybackEpisode(
+                    season = 1,
+                    number = 2,
+                    tvdbSeason = 2,
+                    tvdbNumber = 3
+                )
+            )
+        )
+        val unmapped = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.SHOWS,
+                media,
+                episode = SimklPlaybackEpisode(season = 1, number = 2)
+            )
+        )
+
+        assertTrue(mapped.wasWatched)
+        assertEquals(1_700_000_000_000L, mapped.watchedAtEpochMs)
+        assertFalse(unmapped.wasWatched)
+    }
+
+    @Test
+    fun `an item the account does not hold has no prior watch`() {
+        val media = showMedia(simklId = 2090L, imdb = "tt1520211")
+
+        assertFalse(
+            SimklSyncSnapshot()
+                .priorWatchForScrobble(scrobbleResult(SimklMediaType.SHOWS, media, episode = null))
+                .wasWatched
+        )
+        assertFalse(
+            SimklSyncSnapshot()
+                .priorWatchForScrobble(
+                    scrobbleResult(
+                        SimklMediaType.SHOWS,
+                        media,
+                        episode = SimklPlaybackEpisode(season = 1, number = 2)
+                    )
+                )
+                .wasWatched
+        )
+    }
+
+    private fun movieMedia() = SimklMedia(
+        title = "Inception",
+        year = 2010,
+        ids = mapOf(
+            "simkl" to JsonPrimitive(472214L),
+            "imdb" to JsonPrimitive("tt1375666")
+        )
+    )
+
+    private fun scrobbleResult(
+        mediaType: SimklMediaType,
+        media: SimklMedia,
+        episode: SimklPlaybackEpisode?
+    ) = SimklScrobbleResult(
+        outcome = SimklScrobbleOutcome.SCROBBLE,
+        playbackId = 9L,
+        progress = 95.0,
+        mediaType = mediaType,
+        media = media,
+        episode = episode
+    )
 
     private fun showMedia(simklId: Long, imdb: String) = SimklMedia(
         title = "The Walking Dead",

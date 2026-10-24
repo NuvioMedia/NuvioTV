@@ -84,18 +84,30 @@ suspend fun dispatchTrackingScrobble(
     action: TrackingScrobbleAction,
     event: TrackingScrobbleEvent
 ): List<TrackingScrobbleFailure> = supervisorScope {
-    scrobblers.map { scrobbler ->
-        async {
-            try {
-                scrobbler.scrobble(action, event)
-                null
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Throwable) {
-                TrackingScrobbleFailure(scrobbler.providerId, error)
+    scrobblers
+        .filter { scrobbler ->
+            val accepts = !event.sessionless || scrobbler.acceptsSessionlessScrobbles
+            if (!accepts) {
+                Log.d(
+                    TRACKING_SCROBBLE_DIAGNOSTIC_TAG,
+                    "coordinator skipped action=${action.wireValue} " +
+                        "provider=${scrobbler.providerId.storageId} reason=sessionless"
+                )
             }
+            accepts
         }
-    }.awaitAll().filterNotNull()
+        .map { scrobbler ->
+            async {
+                try {
+                    scrobbler.scrobble(action, event)
+                    null
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Throwable) {
+                    TrackingScrobbleFailure(scrobbler.providerId, error)
+                }
+            }
+        }.awaitAll().filterNotNull()
 }
 
 suspend fun dispatchTrackingSeekScrobble(

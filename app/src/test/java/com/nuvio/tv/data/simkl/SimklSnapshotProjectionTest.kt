@@ -48,6 +48,28 @@ class SimklSnapshotProjectionTest {
     }
 
     @Test
+    fun `a watched movie stays watched while a provider playback row sits on it`() {
+        val movie = entry(
+            type = SimklMediaType.MOVIES,
+            status = SimklListStatus.COMPLETED,
+            media = media(2, "tt0000002"),
+            lastWatchedAt = WATCHED_AT
+        )
+        val playback = SimklPlaybackSession(
+            id = 9,
+            progress = 92.0,
+            pausedAt = WATCHED_AT,
+            movie = movie.media
+        )
+        val projection = SimklSnapshotProjection.create(
+            SimklSyncSnapshot(entries = listOf(movie), playback = listOf(playback))
+        )
+
+        // The row is where the user paused a repeat viewing, not a reason to call the film unwatched.
+        assertTrue(projection.isWatched("tt0000002", null, null, null))
+    }
+
+    @Test
     fun `indexed lookups preserve aliases partial progress and membership`() {
         val show = entry(
             type = SimklMediaType.SHOWS,
@@ -78,7 +100,9 @@ class SimklSnapshotProjectionTest {
         assertTrue(progress.getValue(1 to 1).isCompleted())
         assertEquals(0.25f, progress.getValue(1 to 2).progressPercentage)
         assertTrue(projection.isWatched("tmdb:101", null, 1, 1))
-        assertFalse(projection.isWatched("tt0000001", null, 1, 2))
+        // The episode is in the account's history; the paused 25 percent row is a repeat viewing,
+        // not a reason to read the episode as unwatched.
+        assertTrue(projection.isWatched("tt0000001", null, 1, 2))
         assertEquals("simkl:status:watching", projection.membershipKey("tmdb:101", "series"))
         assertTrue("tmdb:101" in projection.showIdSiblings.getValue("tt0000001"))
     }
@@ -156,6 +180,43 @@ class SimklSnapshotProjectionTest {
         repeat(10_000) { index ->
             assertTrue(projection.isWatched(imdbId(index % seriesCount + 1), null, 1, 1))
         }
+    }
+
+    @Test
+    fun `a watch history recorded completes while a playback row stays a position`() {
+        val show = entry(
+            type = SimklMediaType.SHOWS,
+            status = SimklListStatus.WATCHING,
+            media = media(1, "tt0000001", tmdb = 101),
+            episodes = listOf(SimklEpisode(1, WATCHED_AT))
+        )
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(show),
+            playback = listOf(
+                SimklPlaybackSession(
+                    id = 9,
+                    progress = 90.0,
+                    pausedAt = WATCHED_AT,
+                    episode = SimklPlaybackEpisode(season = 1, number = 2),
+                    show = show.media
+                )
+            )
+        )
+
+        val progress = SimklSnapshotProjection.create(snapshot).episodeProgress("tmdb:101")
+
+        // Episode 1 was recorded into history, so it completes. Episode 2 is only the position Simkl
+        // keeps open: a playback row does not carry the credits marker where it ends, so its ninety
+        // percent is not a finished watch and the episode stays resumable.
+        val fromHistory = progress.getValue(1 to 1)
+        assertFalse(fromHistory.isProviderPlaybackPosition)
+        assertTrue(fromHistory.isCompleted())
+
+        val fromPlayback = progress.getValue(1 to 2)
+        assertEquals(0.90f, fromPlayback.progressPercentage, 0.0005f)
+        assertTrue(fromPlayback.isProviderPlaybackPosition)
+        assertFalse(fromPlayback.isCompleted())
+        assertTrue(fromPlayback.isInProgress())
     }
 
     private fun entry(

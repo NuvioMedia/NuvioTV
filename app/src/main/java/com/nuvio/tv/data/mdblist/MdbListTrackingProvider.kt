@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.mdblist
 
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.tracking.TRACKING_COMPLETION_BAR_PERCENT
 import com.nuvio.tv.core.tracking.TrackingCapability
 import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingHistoryWriter
@@ -49,8 +50,29 @@ class MdbListTrackingScrobbler @Inject constructor(
 ) : TrackingScrobbler {
     override val providerId = TrackingProviderId.MDBLIST
 
+    /*
+     * MDBList records a watch on a stop at or above the bar. One playback can report more than one
+     * stop when it is interrupted and resumed; the player's run id lets the repeat be dropped
+     * without touching a later, separate viewing.
+     */
+    @Volatile
+    private var lastCompletedPlaybackId: Long = 0L
+
     override suspend fun scrobble(action: TrackingScrobbleAction, event: TrackingScrobbleEvent) {
-        service.scrobble(sync.currentScope(), action, event)
+        val completesPlayback = action == TrackingScrobbleAction.STOP &&
+            event.progressPercent >= TRACKING_COMPLETION_BAR_PERCENT
+        if (completesPlayback &&
+            event.playbackId != 0L &&
+            event.playbackId == lastCompletedPlaybackId
+        ) {
+            return
+        }
+        val written = service.scrobble(sync.currentScope(), action, event)
+        // The id is latched only after the tracker accepted the write, so a failed stop cannot
+        // suppress the later stop that really ends the playback.
+        if (completesPlayback && written && event.playbackId != 0L) {
+            lastCompletedPlaybackId = event.playbackId
+        }
     }
 }
 
