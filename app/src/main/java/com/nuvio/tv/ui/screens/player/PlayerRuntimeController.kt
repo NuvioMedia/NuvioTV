@@ -345,6 +345,7 @@ class PlayerRuntimeController(
 
     internal val liveWatchClock = LivePlaybackWatchClock()
     internal var livePlaybackLatched: Boolean = false
+    internal var mpvDurationGrowth = LivePlaybackUiPolicy.DurationGrowth()
 
     internal fun updatePlaybackTimeline(
         currentPosition: Long = _playbackTimeline.value.currentPosition,
@@ -399,6 +400,7 @@ class PlayerRuntimeController(
 
     internal fun resetPlaybackTimeline() {
         livePlaybackLatched = false
+        mpvDurationGrowth = LivePlaybackUiPolicy.DurationGrowth()
         liveWatchClock.reset()
         pendingPreviewSeekPosition = null
         if (_uiState.value.isLive) {

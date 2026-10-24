@@ -377,12 +377,18 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     }
                     val displayPosition = pendingPreviewSeekPosition ?: pos
                     val playingForWatchClock = playingNow && !cacheBuffering
+                    mpvDurationGrowth = LivePlaybackUiPolicy.nextDurationGrowth(
+                        previous = mpvDurationGrowth,
+                        mediaKey = currentStreamUrl,
+                        durationMs = playerDuration,
+                        fromRequestedMedia = view.isPositionFromRequestedMedia()
+                    )
                     publishPlaybackTimeline(
                         currentPosition = displayPosition,
                         duration = playerDuration,
                         bufferedPosition = (pos + (view.demuxerCacheDurationSec() * 1000.0).toLong())
                             .coerceAtLeast(displayPosition),
-                        playerReportsLive = view.isLiveStreamNow(),
+                        playerReportsLive = view.isLiveStreamNow() || mpvDurationGrowth.grew,
                         isPlaying = playingForWatchClock
                     )
                     // Prefer the largest known duration; MPV can report a shorter one transiently.
@@ -753,6 +759,9 @@ private fun String.reportSafeHost(): String {
 
 internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
     if (!hasRenderedFirstFrame) return
+    // A live stream's position is no point to come back to: resuming there seeks past what the
+    // stream holds and nothing plays
+    if (_playbackTimeline.value.isLive) return
     val currentPosition = currentPlaybackPositionMs() ?: return
     val duration = getEffectiveDuration(currentPosition)
     // Don't save progress for very short streams (< 2:01) — these are
@@ -768,6 +777,7 @@ internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
 
 internal fun PlayerRuntimeController.saveWatchProgress() {
     if (!hasRenderedFirstFrame) return
+    if (_playbackTimeline.value.isLive) return
     val currentPosition = currentPlaybackPositionMs() ?: return
     val duration = getEffectiveDuration(currentPosition)
     if (isShortPlaceholderDuration(duration)) return
