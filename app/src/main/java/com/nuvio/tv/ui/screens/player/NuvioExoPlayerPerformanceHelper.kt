@@ -53,13 +53,12 @@ object NuvioExoPlayerPerformanceHelper {
     // Mirrors ARENA_CHUNK_SIZE in the forked DefaultAllocatorNative, whose pool covers 512 of them.
     const val NATIVE_ARENA_CHUNK_SIZE = 64 * 1024
     const val NATIVE_ARENA_POOL_BYTES = 512 * NATIVE_ARENA_CHUNK_SIZE
-    const val DEFAULT_NUVIO_TARGET_BUFFER_MB = 175
+    const val DEFAULT_NUVIO_TARGET_BUFFER_MB = 200
     const val DEFAULT_NUVIO_TARGET_BUFFER_BYTES = DEFAULT_NUVIO_TARGET_BUFFER_MB * 1024 * 1024
-    const val DEFAULT_NUVIO_MIN_BUFFER_MS = 15_000
-    const val DEFAULT_NUVIO_MAX_BUFFER_MS = 45_000
-    // Native holds its buffers in the arena rather than the java heap, so it can afford a back
-    // buffer that keeps a short seek back off the network.
-    const val DEFAULT_NUVIO_BACK_BUFFER_MS = 15_000
+    const val DEFAULT_NUVIO_MIN_BUFFER_MS = 30_000
+    const val DEFAULT_NUVIO_MAX_BUFFER_MS = 120_000
+    // Back buffer kept reasonable (5s) so it preserves short seeks without starving memory
+    const val DEFAULT_NUVIO_BACK_BUFFER_MS = 5_000
     const val DEFAULT_NUVIO_INITIAL_BITRATE_ESTIMATE = 50_000_000L     // 50 Mbps
     // Parallel chunk fetching keeps more sockets alive than the old cap of 8, which was evicting
     // live chunk connections mid playback and forcing cold reopens.
@@ -310,9 +309,9 @@ object NuvioExoPlayerPerformanceHelper {
                     bufferForPlaybackMs,
                     bufferForPlaybackAfterRebufferMs
                 )
-                // The byte target has to gate everything the allocator holds, or the back buffer
-                // is charged on top of it and the configured size is not a limit at all.
-                .setPrioritizeTimeOverSizeThresholds(false)
+                // Prioritize time over size thresholds so the forward buffer can always load
+                // minBufferMs without being choked by the byte budget (critical for smooth 2x speed playback).
+                .setPrioritizeTimeOverSizeThresholds(true)
                 // Forward buffer protects playback and the back buffer only protects a seek back,
                 // so the back buffer is the side that gives way when both cannot fit the target.
                 .setBackBuffer(effectiveBackBufferMs(), true)

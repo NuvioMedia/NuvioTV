@@ -12,6 +12,7 @@ import com.nuvio.tv.ui.theme.NuvioMotion
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.accentBrush
+import com.nuvio.tv.ui.screens.player.components.HoldSpeedIndicator
 
 import android.util.Log
 import android.view.KeyEvent
@@ -24,6 +25,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -80,6 +83,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -245,6 +249,32 @@ fun PlayerScreen(
         streamAutoPlayMode = uiState.streamAutoPlayMode,
         preferBingeGroupForNextEpisode = uiState.streamAutoPlayPreferBingeGroupForNextEpisode
     )
+
+    val coroutineScope = rememberCoroutineScope()
+    val holdForSpeedHandler = remember(coroutineScope) {
+        HoldForSpeedHandler(scope = coroutineScope)
+    }
+
+    DisposableEffect(holdForSpeedHandler) {
+        onDispose {
+            holdForSpeedHandler.cancel { speed ->
+                viewModel.onEvent(PlayerEvent.OnSetPlaybackSpeed(speed, persist = false))
+            }
+        }
+    }
+
+    // Sync hold-to-speed settings into the handler whenever they change
+    LaunchedEffect(
+        uiState.holdToSpeedEnabled,
+        uiState.holdToSpeedValue,
+        uiState.holdToSpeedKeyCode,
+    ) {
+        holdForSpeedHandler.updateSettings(
+            enabled = uiState.holdToSpeedEnabled,
+            speed = uiState.holdToSpeedValue,
+            keyCode = uiState.holdToSpeedKeyCode,
+        )
+    }
 
     val exitPlayer: () -> Unit = exitPlayer@{
         if (exitDispatched) return@exitPlayer
@@ -810,6 +840,45 @@ fun PlayerScreen(
                         uiState.error != null
                 if (panelOrDialogOpen) return@onKeyEvent false
 
+                if (
+                    holdForSpeedHandler.handle(
+                        event = keyEvent.nativeKeyEvent,
+                        currentSpeed = { uiState.playbackSpeed },
+                        onTap = {
+                            if (!uiState.showControls) {
+                                viewModel.onEvent(PlayerEvent.OnToggleControls)
+                            } else {
+                                try {
+                                    progressBarFocusRequester.requestFocus()
+                                } catch (_: Exception) {
+                                    val skipVisible = skipButtonActuallyVisible
+
+                                    if (skipVisible) {
+                                        try {
+                                            skipIntroFocusRequester.requestFocus()
+                                        } catch (_: Exception) {
+                                        }
+                                    } else if (uiState.postPlayMode is PostPlayMode.AutoPlay) {
+                                        try {
+                                            nextEpisodeFocusRequester.requestFocus()
+                                        } catch (_: Exception) {
+                                        }
+                                    } else {
+                                        viewModel.hideControls()
+                                    }
+                                }
+                            }
+                        },
+                        onSpeedChange = { speed ->
+                            viewModel.onEvent(
+                                PlayerEvent.OnSetPlaybackSpeed(speed, persist = false)
+                            )
+                        },
+                    )
+                ) {
+                    return@onKeyEvent true
+                }
+
                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP) {
                     when (keyEvent.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_DPAD_LEFT,
@@ -872,31 +941,6 @@ fun PlayerScreen(
                                 false
                             }
                         }
-                        KeyEvent.KEYCODE_DPAD_UP -> {
-                                if (!uiState.showControls) {
-                                    viewModel.onEvent(PlayerEvent.OnToggleControls)
-                                } else {
-                                    try {
-                                        progressBarFocusRequester.requestFocus()
-                                    } catch (_: Exception) {
-                                        val skipVisible = skipButtonActuallyVisible
-                                        if (skipVisible) {
-                                            try {
-                                                skipIntroFocusRequester.requestFocus()
-                                            } catch (_: Exception) {
-                                            }
-                                        } else if (uiState.postPlayMode is PostPlayMode.AutoPlay) {
-                                            try {
-                                                nextEpisodeFocusRequester.requestFocus()
-                                            } catch (_: Exception) {
-                                            }
-                                        } else {
-                                            viewModel.hideControls()
-                                        }
-                                    }
-                                }
-                                true
-                            }
                         KeyEvent.KEYCODE_DPAD_DOWN -> {
                             if (!uiState.showControls) {
                                 viewModel.onEvent(PlayerEvent.OnToggleControls)
@@ -1678,6 +1722,20 @@ fun PlayerScreen(
             PlayerEngineSwitchIndicator(
                 title = stringResource(R.string.player_engine_switching_title),
                 message = uiState.playerEngineSwitchInfoText
+            )
+        }
+                AnimatedVisibility(
+            visible = holdForSpeedHandler.isHoldingSpeed,
+            enter = fadeIn(animationSpec = tween(150)) +
+                scaleIn(initialScale = 0.9f),
+            exit = fadeOut(animationSpec = tween(120)) +
+                scaleOut(targetScale = 0.9f),
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(2.36f)
+        ) {
+            HoldSpeedIndicator(
+                text = holdForSpeedHandler.speedLabel
             )
         }
 

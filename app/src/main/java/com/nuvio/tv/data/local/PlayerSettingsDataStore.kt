@@ -346,7 +346,11 @@ data class PlayerSettings(
     val enableBufferLogs: Boolean = false,
     val resizeMode: Int = 0,
     // Nuvio ExoPlayer Performance Mode
-    val nuvioPerformanceModeEnabled: Boolean = DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED
+    val nuvioPerformanceModeEnabled: Boolean = DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED,
+    // Hold-to-Speed shortcut
+    val holdToSpeedEnabled: Boolean = DEFAULT_HOLD_TO_SPEED_ENABLED,
+    val holdToSpeedValue: Float = DEFAULT_HOLD_TO_SPEED_VALUE,
+    val holdToSpeedKeyCode: Int = DEFAULT_HOLD_TO_SPEED_KEY_CODE
 ) {
     /** Prefer FFmpeg/extension audio decoder (EXTENSION_RENDERER_MODE_PREFER). */
     val isPreferAppDecoder: Boolean
@@ -408,6 +412,24 @@ data class PlayerSettings(
         const val MAX_PARALLEL_CHUNK_SIZE_KB = 128 * 1024
         const val DEFAULT_ENABLE_HTTP2 = false
         const val DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED = false
+        // Hold-to-Speed
+        const val DEFAULT_HOLD_TO_SPEED_ENABLED = false
+        const val DEFAULT_HOLD_TO_SPEED_VALUE = 2f
+        const val DEFAULT_HOLD_TO_SPEED_KEY_CODE = android.view.KeyEvent.KEYCODE_DPAD_UP
+        val HOLD_TO_SPEED_VALUES: List<Float> = listOf(1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 4f, 5f)
+        /** Key codes the user can bind. keyCode -> label pairs. */
+        val HOLD_TO_SPEED_BINDABLE_KEYS: List<Pair<Int, String>> = listOf(
+            android.view.KeyEvent.KEYCODE_DPAD_UP to "D-Pad Up",
+            android.view.KeyEvent.KEYCODE_DPAD_DOWN to "D-Pad Down",
+            android.view.KeyEvent.KEYCODE_DPAD_LEFT to "D-Pad Left",
+            android.view.KeyEvent.KEYCODE_DPAD_RIGHT to "D-Pad Right",
+            android.view.KeyEvent.KEYCODE_BUTTON_L1 to "L1 / LB",
+            android.view.KeyEvent.KEYCODE_BUTTON_R1 to "R1 / RB",
+            android.view.KeyEvent.KEYCODE_BUTTON_L2 to "L2 / LT",
+            android.view.KeyEvent.KEYCODE_BUTTON_R2 to "R2 / RT",
+            android.view.KeyEvent.KEYCODE_BUTTON_Y to "Y / Triangle",
+            android.view.KeyEvent.KEYCODE_BUTTON_X to "X / Square",
+        )
     }
 }
 
@@ -561,6 +583,9 @@ class PlayerSettingsDataStore @Inject constructor(
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val forceOpticalPassthroughKey = booleanPreferencesKey("force_optical_passthrough")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
+    private val holdToSpeedEnabledKey = booleanPreferencesKey("hold_to_speed_enabled")
+    private val holdToSpeedValueKey = floatPreferencesKey("hold_to_speed_value")
+    private val holdToSpeedKeyCodeKey = intPreferencesKey("hold_to_speed_key_code")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val centerMixLevelDbKey = intPreferencesKey("center_mix_level_db")
     private val persistAudioAmplificationKey = booleanPreferencesKey("persist_audio_amplification")
@@ -1071,6 +1096,14 @@ class PlayerSettingsDataStore @Inject constructor(
                 enableHttp2 = prefs[enableHttp2Key] ?: PlayerSettings.DEFAULT_ENABLE_HTTP2,
                 nuvioPerformanceModeEnabled = (prefs[nuvioPerformanceModeEnabledKey] ?: PlayerSettings.DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED) &&
                         android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O,
+                holdToSpeedEnabled = prefs[holdToSpeedEnabledKey] ?: PlayerSettings.DEFAULT_HOLD_TO_SPEED_ENABLED,
+                holdToSpeedValue = (prefs[holdToSpeedValueKey] ?: PlayerSettings.DEFAULT_HOLD_TO_SPEED_VALUE)
+                    .coerceIn(1.25f, 5f),
+                holdToSpeedKeyCode = (prefs[holdToSpeedKeyCodeKey] ?: PlayerSettings.DEFAULT_HOLD_TO_SPEED_KEY_CODE)
+                    .let { code ->
+                        if (PlayerSettings.HOLD_TO_SPEED_BINDABLE_KEYS.any { it.first == code }) code
+                        else PlayerSettings.DEFAULT_HOLD_TO_SPEED_KEY_CODE
+                    },
                 subtitleStyle = run {
                     val resolvedPreferredLanguage = resolveSubtitlePreferredLanguage(
                         prefs[subtitlePreferredLanguageKey],
@@ -1201,6 +1234,18 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             prefs[skipSilenceKey] = enabled
         }
+    }
+
+    suspend fun setHoldToSpeedEnabled(enabled: Boolean) {
+        store().edit { prefs -> prefs[holdToSpeedEnabledKey] = enabled }
+    }
+
+    suspend fun setHoldToSpeedValue(speed: Float) {
+        store().edit { prefs -> prefs[holdToSpeedValueKey] = speed.coerceIn(1.25f, 5f) }
+    }
+
+    suspend fun setHoldToSpeedKeyCode(keyCode: Int) {
+        store().edit { prefs -> prefs[holdToSpeedKeyCodeKey] = keyCode }
     }
 
     suspend fun setAudioAmplificationDb(db: Int) {

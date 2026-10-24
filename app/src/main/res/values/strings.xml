@@ -755,6 +755,12 @@
     <string name="playback_skip_intro_sub">Use introdb.app to detect intros and recaps.</string>
     <string name="playback_parental_guide">Content Warnings</string>
     <string name="playback_parental_guide_sub">Show parental guidance overlay when playback starts.</string>
+    <string name="hold_to_speed">Hold to Speed</string>
+    <string name="hold_to_speed_sub">Boost playback speed while holding a button.</string>
+    <string name="hold_to_speed_boost_speed">Boost Speed</string>
+    <string name="hold_to_speed_boost_speed_sub">Speed to jump to while the button is held.</string>
+    <string name="hold_to_speed_trigger_button">Trigger Button</string>
+    <string name="hold_to_speed_trigger_button_sub">Remote button that triggers the speed boost.</string>
     <string name="playback_auto_skip_segments">Automatic Skipping</string>
     <string name="playback_auto_skip_segments_sub">Choose which segments skip automatically.</string>
     <string name="auto_skip_intro">Intro / Opening</string>
