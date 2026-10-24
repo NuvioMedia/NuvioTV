@@ -713,7 +713,8 @@ public final class AviExtractor implements Extractor {
       trackOutput.format(builder.build());
       trackOutput.durationUs(durationUs);
       this.durationUs = max(this.durationUs, durationUs);
-      return new ChunkReader(streamId, aviStreamHeaderChunk, trackOutput);
+      return new ChunkReader(
+          streamId, aviStreamHeaderChunk, trackOutput, streamFormat.sampleMimeType);
     } else {
       // We don't currently support tracks other than video and audio.
       return null;

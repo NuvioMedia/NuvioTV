@@ -21,12 +21,16 @@ import static androidx.media3.common.util.Assertions.checkArgument;
 import static java.lang.annotation.ElementType.TYPE_USE;
 
 import androidx.annotation.IntDef;
+import androidx.annotation.Nullable;
 import androidx.media3.common.C;
+import androidx.media3.common.MimeTypes;
+import androidx.media3.common.util.ParsableByteArray;
 import androidx.media3.common.util.Util;
 import androidx.media3.extractor.ExtractorInput;
 import androidx.media3.extractor.SeekMap;
 import androidx.media3.extractor.SeekPoint;
 import androidx.media3.extractor.TrackOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
@@ -49,6 +53,7 @@ import java.util.Arrays;
   private @interface ChunkType {}
 
   private static final int INITIAL_INDEX_SIZE = 512;
+  private static final int MAX_WHOLE_CHUNK_SIZE = 32 * 1024 * 1024;
   private static final int CHUNK_TYPE_VIDEO_COMPRESSED = ('d' << 16) | ('c' << 24);
   private static final int CHUNK_TYPE_VIDEO_UNCOMPRESSED = ('d' << 16) | ('b' << 24);
   private static final int CHUNK_TYPE_AUDIO = ('w' << 16) | ('b' << 24);
@@ -77,8 +82,26 @@ import java.util.Arrays;
   private long[] keyFrameOffsets;
   private int[] keyFrameIndices;
 
+  /** Set for MPEG-4 Part 2 video, whose chunks are read whole so packed B-frames can be split. */
+  @Nullable private final PackedBFrameUnpacker unpacker;
+
+  private final ParsableByteArray sampleData;
+  private byte[] chunkData;
+  private boolean readingWholeChunk;
+
   public ChunkReader(int id, AviStreamHeaderChunk streamHeaderChunk, TrackOutput trackOutput) {
+    this(id, streamHeaderChunk, trackOutput, /* sampleMimeType= */ null);
+  }
+
+  public ChunkReader(
+      int id,
+      AviStreamHeaderChunk streamHeaderChunk,
+      TrackOutput trackOutput,
+      @Nullable String sampleMimeType) {
     this.streamHeaderChunk = streamHeaderChunk;
+    unpacker = MimeTypes.VIDEO_MP4V.equals(sampleMimeType) ? new PackedBFrameUnpacker() : null;
+    sampleData = new ParsableByteArray();
+    chunkData = Util.EMPTY_BYTE_ARRAY;
     @C.TrackType int trackType = streamHeaderChunk.getTrackType();
     checkArgument(trackType == TRACK_TYPE_AUDIO || trackType == TRACK_TYPE_VIDEO);
     @ChunkType
@@ -154,6 +177,10 @@ import java.util.Arrays;
   public void onChunkStart(int size) {
     currentChunkSize = size;
     bytesRemainingInCurrentChunk = size;
+    readingWholeChunk = unpacker != null && size <= MAX_WHOLE_CHUNK_SIZE;
+    if (readingWholeChunk && chunkData.length < size) {
+      chunkData = new byte[size];
+    }
   }
 
   /**
@@ -161,6 +188,9 @@ import java.util.Arrays;
    * parsed.
    */
   public boolean onChunkData(ExtractorInput input) throws IOException {
+    if (unpacker != null && readingWholeChunk) {
+      return onWholeChunkData(input, unpacker);
+    }
     bytesRemainingInCurrentChunk -=
         trackOutput.sampleData(input, bytesRemainingInCurrentChunk, false);
     boolean done = bytesRemainingInCurrentChunk == 0;
@@ -178,7 +208,40 @@ import java.util.Arrays;
     return done;
   }
 
+  private boolean onWholeChunkData(ExtractorInput input, PackedBFrameUnpacker unpacker)
+      throws IOException {
+    int offset = currentChunkSize - bytesRemainingInCurrentChunk;
+    int read = input.read(chunkData, offset, bytesRemainingInCurrentChunk);
+    if (read == C.RESULT_END_OF_INPUT) {
+      throw new EOFException();
+    }
+    bytesRemainingInCurrentChunk -= read;
+    if (bytesRemainingInCurrentChunk != 0) {
+      return false;
+    }
+    if (currentChunkSize > 0) {
+      unpacker.onChunk(
+          chunkData,
+          currentChunkSize,
+          getCurrentChunkTimestampUs(),
+          isCurrentFrameAKeyFrame(),
+          this::outputSample);
+    }
+    advanceCurrentChunk();
+    return true;
+  }
+
+  private void outputSample(byte[] data, int offset, int size, long timeUs, int flags) {
+    sampleData.reset(data, offset + size);
+    sampleData.setPosition(offset);
+    trackOutput.sampleData(sampleData, size);
+    trackOutput.sampleMetadata(timeUs, flags, size, /* offset= */ 0, /* cryptoData= */ null);
+  }
+
   public void seekToPosition(long position) {
+    if (unpacker != null) {
+      unpacker.reset();
+    }
     if (indexSize == 0) {
       currentChunkIndex = 0;
     } else {

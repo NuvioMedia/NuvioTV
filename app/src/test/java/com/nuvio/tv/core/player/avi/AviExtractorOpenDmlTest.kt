@@ -146,7 +146,12 @@ internal object TestAvi {
         return last
     }
 
-    fun build(openDml: Boolean, junk: Boolean = true, recLists: Boolean = false): ByteArray {
+    fun build(
+        openDml: Boolean,
+        junk: Boolean = true,
+        recLists: Boolean = false,
+        videoChunk: (Int) -> ByteArray = { frame -> ByteArray(VIDEO_CHUNK).also { it[0] = frame.toByte() } },
+    ): ByteArray {
         val segments = if (openDml) SEGMENTS else intArrayOf(FRAMES)
         // The header has a fixed size, so build it once to learn where the segments start.
         var ixPositions = Array(2) { LongArray(if (openDml) segments.size else 0) }
@@ -174,9 +179,11 @@ internal object TestAvi {
                     if (recLists) {
                         out.tag("LIST"); out.u32(0); out.tag("rec ")
                     }
-                    out.tag("00dc"); out.u32(VIDEO_CHUNK.toLong())
-                    segmentEntries += Entry(0, out.size().toLong(), VIDEO_CHUNK, frame % KEY_INTERVAL == 0)
-                    out.write(ByteArray(VIDEO_CHUNK).also { it[0] = frame.toByte() })
+                    val video = videoChunk(frame)
+                    out.tag("00dc"); out.u32(video.size.toLong())
+                    segmentEntries += Entry(0, out.size().toLong(), video.size, frame % KEY_INTERVAL == 0)
+                    out.write(video)
+                    if (video.size % 2 == 1) out.write(0)
                     out.tag("01wb"); out.u32(AUDIO_CHUNK.toLong())
                     segmentEntries += Entry(1, out.size().toLong(), AUDIO_CHUNK, true)
                     out.write(ByteArray(AUDIO_CHUNK))
