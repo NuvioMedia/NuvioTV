@@ -42,6 +42,7 @@ class SubtitleFileCache @Inject constructor(
         clearCache()
 
         val cached = subtitles.mapNotNull { input ->
+            if (com.nuvio.tv.core.usenet.UsenetSidecar.isSubtitleUrl(input.url)) return@mapNotNull input
             try {
                 val localUri = downloadToCache(input)
                 if (localUri != null) {

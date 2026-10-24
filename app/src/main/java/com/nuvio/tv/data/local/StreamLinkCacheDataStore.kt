@@ -58,6 +58,8 @@ class StreamLinkCacheDataStore @Inject constructor(
         audioDelayMs: Int? = null,
         audioDelayLanguage: String? = null
     ) {
+        // Loopback Usenet capabilities expire with the playback process.
+        if (com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)) return
         val payload = JSONObject().apply {
             put("url", url)
             put("streamName", streamName)
