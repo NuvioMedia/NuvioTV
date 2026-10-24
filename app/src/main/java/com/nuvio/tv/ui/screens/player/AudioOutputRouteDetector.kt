@@ -71,7 +71,7 @@ internal object AudioOutputRouteDetector {
     }
 
     @SuppressLint("NewApi")
-    private fun detectMediaRoutedDevice(audioManager: AudioManager): AudioDeviceInfo? {
+    internal fun detectMediaRoutedDevice(audioManager: AudioManager): AudioDeviceInfo? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
         return runCatching {
             val attrs = android.media.AudioAttributes.Builder()
