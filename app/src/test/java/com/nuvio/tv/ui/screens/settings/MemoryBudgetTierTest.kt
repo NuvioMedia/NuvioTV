@@ -35,4 +35,40 @@ class MemoryBudgetTierTest {
         assertTrue(MemoryBudget.lowRamTierFor(heapMb = 256L, deviceIsLowRam = false))
         assertFalse(MemoryBudget.lowRamTierFor(heapMb = 512L, deviceIsLowRam = false))
     }
+
+    @Test
+    fun `1 GB low-RAM TV snapshot budgets from the 192 MB standard heap`() {
+        val snapshot = MemoryBudget.snapshotFor(maxHeapMb = 512L, standardHeapMb = 192L, deviceIsLowRam = true)
+        assertEquals(192L, snapshot.heapMb)
+        assertTrue(snapshot.isLowRamTier)
+        assertEquals(96, snapshot.budgetMb)
+        assertEquals(91, snapshot.conversionBudgetMb)
+        assertEquals(16, snapshot.tierMaxChunkMb)
+    }
+
+    @Test
+    fun `low-RAM device already in the low tier also budgets from the standard heap`() {
+        // largeHeap 384 MB, memory class 192 MB: 174 MB from the large heap before, 96 MB now.
+        assertEquals(174, MemoryBudget.snapshotFor(384L, standardHeapMb = 0L, deviceIsLowRam = true).budgetMb)
+        assertEquals(96, MemoryBudget.snapshotFor(384L, standardHeapMb = 192L, deviceIsLowRam = true).budgetMb)
+    }
+
+    @Test
+    fun `device not marked low-RAM keeps its large-heap snapshot`() {
+        val snapshot = MemoryBudget.snapshotFor(maxHeapMb = 512L, standardHeapMb = 256L, deviceIsLowRam = false)
+        assertEquals(512L, snapshot.heapMb)
+        assertFalse(snapshot.isLowRamTier)
+        assertEquals(435, snapshot.budgetMb)
+        assertEquals(128, snapshot.tierMaxChunkMb)
+    }
+
+    @Test
+    fun `stored target buffer above the slider limit is capped unless large buffers are allowed`() {
+        val overheadMb = 64
+        val limitMb = MemoryBudget.maxBufferMb(overheadMb)
+        val stored = limitMb + 500
+        assertEquals(limitMb, MemoryBudget.playerTargetBufferMb(stored, overheadMb, allowLargeTargetBuffer = false))
+        assertEquals(stored, MemoryBudget.playerTargetBufferMb(stored, overheadMb, allowLargeTargetBuffer = true))
+        assertEquals(limitMb, MemoryBudget.playerTargetBufferMb(limitMb, overheadMb, allowLargeTargetBuffer = false))
+    }
 }

@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.settings
 
 import android.app.ActivityManager
 import android.content.Context
+import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.data.local.BufferSettings
 import com.nuvio.tv.data.local.PlayerSettings
@@ -57,54 +58,87 @@ object MemoryBudget {
         DEFAULT_EFFECTIVE_BUFFER_MB
     }
 
-    // Set by [init] from ActivityManager before any budget below is first read.
-    @Volatile
-    private var deviceIsLowRam: Boolean = false
+    /** Everything derived from the device's memory, fixed for the life of the process. */
+    internal data class Snapshot(
+        /** Heap the budgets are taken from; below maxMemory() on a low-RAM device under largeHeap. */
+        val heapMb: Long,
+        val isLowRamTier: Boolean,
+        val budgetMb: Int,
+        val conversionBudgetMb: Int,
+        val tierMaxChunkMb: Int,
+    )
 
     @Volatile
-    private var standardHeapMb: Long = 0L
+    private var snapshot: Snapshot? = null
+
+    @Volatile
+    private var loggedReadBeforeInit = false
 
     /**
-     * Records what the platform reports about the device. Must run before the budget is first read
-     * (Application.onCreate); the values below are computed once, on first use.
+     * Takes the device's memory snapshot once. Must run before the budget is first read
+     * (Application.onCreate, before super.onCreate()).
      */
     fun init(context: Context) {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return
-        deviceIsLowRam = activityManager.isLowRamDevice
-        standardHeapMb = activityManager.memoryClass.toLong()
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        snapshot = snapshotFor(
+            maxHeapMb = runtimeMaxHeapMb(),
+            standardHeapMb = activityManager?.memoryClass?.toLong() ?: 0L,
+            deviceIsLowRam = activityManager?.isLowRamDevice ?: false,
+        )
+        Log.i(TAG, "Memory budget: $snapshot")
+    }
+
+    // A read before init() gets the max-heap budget for this read only, so a later init() still applies.
+    private val current: Snapshot
+        get() = snapshot ?: run {
+            if (!loggedReadBeforeInit) {
+                loggedReadBeforeInit = true
+                Log.w(TAG, "Memory budget read before init(); using maxMemory() without the low-RAM check")
+            }
+            snapshotFor(runtimeMaxHeapMb(), standardHeapMb = 0L, deviceIsLowRam = false)
+        }
+
+    /** Heap the budgets and the image cache are sized from. */
+    val heapMb: Long get() = current.heapMb
+
+    /** True on a device the platform marks low-RAM, or when the app heap is below the high-RAM threshold. */
+    val isLowRamTier: Boolean get() = current.isLowRamTier
+
+    val budgetMb: Int get() = current.budgetMb
+
+    val conversionBudgetMb: Int get() = current.conversionBudgetMb
+
+    /** Hard chunk-size ceiling for this device tier; binds everywhere, including performance mode. */
+    val tierMaxChunkMb: Int get() = current.tierMaxChunkMb
+
+    private fun runtimeMaxHeapMb(): Long = Runtime.getRuntime().maxMemory() / (1024L * 1024L)
+
+    internal fun snapshotFor(maxHeapMb: Long, standardHeapMb: Long, deviceIsLowRam: Boolean): Snapshot {
+        val heapMb = budgetHeapMb(maxHeapMb, standardHeapMb, deviceIsLowRam)
+        val lowRamTier = lowRamTierFor(heapMb, deviceIsLowRam)
+        // Pre-cap ratio budget, before the low-RAM reserve trims it below.
+        val rawBudgetMb = (heapMb * (if (lowRamTier) LOW_HEAP_RATIO else HIGH_HEAP_RATIO)).toInt()
+        // The flat reserve collapses the budget on small heaps, so hold a floor that still leaves
+        // the smallest devices half their heap.
+        val minPlaybackBudgetMb = MIN_PLAYBACK_BUDGET_MB.coerceAtMost((heapMb / 2).toInt()).coerceAtLeast(MIN_BUFFER_MB)
+        val budgetMb = if (lowRamTier) {
+            rawBudgetMb.coerceAtMost((heapMb - LOW_HEAP_RESERVE_MB).toInt()).coerceAtLeast(minPlaybackBudgetMb)
+        } else {
+            rawBudgetMb
+        }
+        val conversionBudgetMb = (budgetMb * (if (lowRamTier) LOW_RAM_CONVERSION_RATIO else HIGH_RAM_CONVERSION_RATIO)).toInt()
+            .coerceAtMost(budgetMb).coerceAtLeast(MIN_BUFFER_MB)
+        return Snapshot(
+            heapMb = heapMb,
+            isLowRamTier = lowRamTier,
+            budgetMb = budgetMb,
+            conversionBudgetMb = conversionBudgetMb,
+            tierMaxChunkMb = if (lowRamTier) LOW_RAM_MAX_CHUNK_MB else MAX_CHUNK_MB,
+        )
     }
 
     // largeHeap lifts maxMemory to dalvik.vm.heapsize (512 MB on 1 GB TVs), so on a device the
     // platform marks low-RAM the standard heap is the realistic ceiling.
-    private val maxHeapMb: Long by lazy {
-        budgetHeapMb(Runtime.getRuntime().maxMemory() / (1024L * 1024L), standardHeapMb, deviceIsLowRam)
-    }
-
-    /** True on a device the platform marks low-RAM, or when the app heap is below the high-RAM threshold. */
-    val isLowRamTier: Boolean by lazy { lowRamTierFor(maxHeapMb, deviceIsLowRam) }
-
-    // Pre-cap ratio budget, before the low-RAM reserve trims it below.
-    private val rawBudgetMb: Int by lazy {
-        (maxHeapMb * (if (isLowRamTier) LOW_HEAP_RATIO else HIGH_HEAP_RATIO)).toInt()
-    }
-
-    // The flat reserve above collapses the budget on small heaps, so hold a floor that still leaves
-    // the smallest devices half their heap.
-    private val minPlaybackBudgetMb: Int by lazy {
-        MIN_PLAYBACK_BUDGET_MB.coerceAtMost((maxHeapMb / 2).toInt()).coerceAtLeast(MIN_BUFFER_MB)
-    }
-
-    val budgetMb: Int by lazy {
-        if (isLowRamTier)
-            rawBudgetMb.coerceAtMost((maxHeapMb - LOW_HEAP_RESERVE_MB).toInt()).coerceAtLeast(minPlaybackBudgetMb)
-        else rawBudgetMb
-    }
-
-    val conversionBudgetMb: Int by lazy {
-        (budgetMb * (if (isLowRamTier) LOW_RAM_CONVERSION_RATIO else HIGH_RAM_CONVERSION_RATIO)).toInt()
-            .coerceAtMost(budgetMb).coerceAtLeast(MIN_BUFFER_MB)
-    }
-
     internal fun budgetHeapMb(maxHeapMb: Long, standardHeapMb: Long, deviceIsLowRam: Boolean): Long =
         if (deviceIsLowRam && standardHeapMb > 0L) minOf(maxHeapMb, standardHeapMb) else maxHeapMb
 
@@ -113,6 +147,16 @@ object MemoryBudget {
 
     fun effectiveBufferMb(stored: Int): Int =
         if (stored > 0) stored else defaultBufferSizeMb
+
+    /**
+     * Target Buffer the player uses with the budget unmanaged. A value stored under a larger budget
+     * (an older version or another device) is capped like the slider caps it, unless the user
+     * allowed large target buffers.
+     */
+    fun playerTargetBufferMb(stored: Int, parallelOverheadMb: Int, allowLargeTargetBuffer: Boolean): Int {
+        val target = effectiveBufferMb(stored)
+        return if (allowLargeTargetBuffer) target else target.coerceAtMost(maxBufferMb(parallelOverheadMb))
+    }
 
     fun bufferCount(connectionCount: Int): Int =
         connectionCount + BUFFER_OVERHEAD
@@ -138,9 +182,6 @@ object MemoryBudget {
             connections * PREFETCH_DEPTH_UPPER_MULTIPLE
         )
     }
-
-    /** Hard chunk-size ceiling for this device tier; binds everywhere, including performance mode. */
-    val tierMaxChunkMb: Int by lazy { if (isLowRamTier) LOW_RAM_MAX_CHUNK_MB else MAX_CHUNK_MB }
 
     /** Max chunk size that fits budget given current buffer size */
     fun maxChunkMb(bufferMb: Int, connectionCount: Int): Int =
