@@ -350,7 +350,7 @@
     <string name="about_title">حول</string>
     <string name="about_subtitle">معلومات التطبيق، التحديثات، والروابط القانونية</string>
     <string name="about_made_with_love">صنع بكل ❤️ بواسطة Tapframe والأصدقاء</string>
-    <string name="about_version">الإصدار %1$s</string>
+    <string name="about_version">الإصدار ‎%1$s</string>
     <string name="about_check_updates">التحقق من التحديثات</string>
     <string name="about_check_updates_subtitle">تحميل أحدث إصدار</string>
     <string name="about_privacy_policy">سياسة الخصوصية</string>
@@ -710,7 +710,7 @@
     <string name="cache_duration_hour_other">%1$d ساعات</string>
     <string name="cache_duration_day_one">%1$d يوم</string>
     <string name="cache_duration_day_other">%1$d أيام</string>
-    <string name="cache_duration_days_hours">%1$dd %2$dh</string>
+    <string name="cache_duration_days_hours">‎%1$dd %2$dh</string>
     <string name="autoplay_mode_manual">يدوي (اختيار المصدر)</string>
     <string name="autoplay_mode_first">تشغيل أول مصدر تلقائياً</string>
     <string name="autoplay_mode_regex">تشغيل تلقائي عند مطابقة Regex</string>
@@ -1473,7 +1473,7 @@
     <string name="audio_dialog_tab_tracks">الصوت</string>
     <string name="audio_dialog_tab_mix">المزج</string>
     <string name="audio_delay_label">تأخير الصوت</string>
-    <string name="audio_delay_range">المدى: %1$.2fs to %2$.2fs</string>
+    <string name="audio_delay_range">المدى: ‎%1$.2fs to ‎%2$.2fs</string>
     <string name="audio_mix_label">تضخيم (PCM)</string>
     <string name="audio_mix_value_db">%1$d ديسيبل</string>
     <string name="audio_mix_persist_on">الحفظ بين الجلسات: مفعل</string>
@@ -1482,7 +1482,7 @@
     <string name="audio_mix_range_saved">النطاق: %1$d ديسيبل إلى %2$d ديسيبل (محفوظ)</string>
     <string name="audio_mix_unavailable">التضخيم غير متاح على هذا الجهاز</string>
     <string name="audio_center_mix_label">دمج القنوات (Downmix): مستوى خلط الصوت المركزي</string>
-    <string name="audio_center_mix_value_db">%1$d dB</string>
+    <string name="audio_center_mix_value_db">‎%1$d dB</string>
     <string name="audio_center_mix_help">مستوى خلط القناة المركزية بالديسيبل (dB) نسبةً إلى البيانات الحيوية (Metadata) أو القيمة الافتراضية (-3 ديسيبل)</string>
     <string name="audio_center_mix_unavailable">تعديل الصوت المركزي لا يعمل إلا عند تفعيل ميزة تقليص القنوات عبر FFmpeg.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">حفظ الصوت الأصلي عند دمج القنوات</string>
@@ -2940,7 +2940,7 @@
     <string name="stream_test_no_stream">لا يوجد تشغيل مسجل. شغّل فيديو لتشغيل الاختبارات التشخيصية على مضيفه.</string>
     <string name="stream_test_section_header">تشخيصات معدل نقل البث</string>
     <string name="stream_test_server_label">الخادم: %1$s</string>
-    <string name="stream_test_video_bitrate">متوسط معدل بت الفيديو: %1$s</string>
+    <string name="stream_test_video_bitrate">متوسط معدل بت الفيديو: ‎%1$s</string>
     <string name="sub_strip_sdh">إزالة ترجمات SDH</string>
     <string name="sub_strip_sdh_desc">إخفاء أوصاف الأصوات وأسماء المتحدثين من الترجمات النصية</string>
     <string name="subtitle_delay_reset">تصفير</string>

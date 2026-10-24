@@ -617,10 +617,10 @@
     <string name="advanced_nuvio_performance_mode">זיכרון נייטיבי של ExoPlayer</string>
     <string name="advanced_nuvio_performance_mode_subtitle">מפעיל הקצאת זיכרון נייטיבית בביצועים גבוהים, זיכרון מחוץ לערימה ואופטימיזציות רשת להפעלה חלקה יותר</string>
     <string name="buffer_device_ram_info">זיכרון RAM של המכשיר: %s</string>
-    <string name="buffer_safe_limit_info">מגבלה בטוחה מומלצת: %d MB</string>
+    <string name="buffer_safe_limit_info">מגבלה בטוחה מומלצת: ‎%d MB</string>
     <string name="buffer_safe_status">בטוח: בתוך המגבלה המומלצת עבור המכשיר שלך.</string>
-    <string name="buffer_unsafe_warning">אזהרה: חורג מהמגבלה הבטוחה המומלצת (%1$d MB) עבור מכשיר %2$s שלך. עלול לגרום לקריסות באפליקציה.</string>
-    <string name="buffer_auto_limit_active">מגבלה בטוחה בקנה מידה אוטומטי: %d MB</string>
+    <string name="buffer_unsafe_warning">אזהרה: חורג מהמגבלה הבטוחה המומלצת (‎%1$d MB) עבור מכשיר %2$s שלך. עלול לגרום לקריסות באפליקציה.</string>
+    <string name="buffer_auto_limit_active">מגבלה בטוחה בקנה מידה אוטומטי: ‎%d MB</string>
     <string name="advanced_nuvio_focus_scroll">גלילת מיקוד של Nuvio</string>
     <string name="advanced_nuvio_focus_scroll_subtitle">שימוש באנימציית גלילת המיקוד הגלובלית המותאמת אישית של Nuvio ובמיקום שלה.</string>
     <string name="advanced_rgb565">פענוח תמונות RGB565</string>
@@ -1918,14 +1918,14 @@
     <string name="audio_delay_label">השהיית שמע</string>
     <string name="audio_delay_range">טווח: ‎%1$.2f שנ׳ עד ‎%2$.2f שנ׳</string>
     <string name="audio_mix_label">הגברה (PCM)</string>
-    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_value_db">‎%1$d dB</string>
     <string name="audio_mix_persist_on">שמירה בין הפעלות: פועל</string>
     <string name="audio_mix_persist_off">שמירה בין הפעלות: כבוי</string>
     <string name="audio_mix_range">טווח: ‎%1$d dB עד ‎%2$d dB</string>
     <string name="audio_mix_range_saved">טווח: ‎%1$d dB עד ‎%2$d dB (שמור)</string>
     <string name="audio_mix_unavailable">הגברה אינה זמינה במכשיר זה</string>
     <string name="audio_center_mix_label">Downmix: רמת מיקס מרכזי</string>
-    <string name="audio_center_mix_value_db">%1$d dB</string>
+    <string name="audio_center_mix_value_db">‎%1$d dB</string>
     <string name="audio_center_mix_help">רמת מיקס מרכזי ב-dB, יחסית למטא-דאטה או לברירת המחדל (-3 dB)</string>
     <string name="audio_center_mix_unavailable">מיקס מרכזי זמין רק כאשר downmix של FFmpeg פעיל.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">שמירה על שמע מקורי ב-downmix</string>
@@ -3156,7 +3156,7 @@
     </plurals>
     <string name="debrid_size_range_any">הכול</string>
     <string name="debrid_size_range_up_to">עד %1$dGB</string>
-    <string name="debrid_size_range_min_plus">%1$dGB+</string>
+    <string name="debrid_size_range_min_plus">‎%1$dGB+‎</string>
     <string name="debrid_size_range_min_max">%1$d-%2$dGB</string>
 
     <!-- Subtitle selection: unknown language fallback -->
@@ -3203,7 +3203,7 @@
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">אגירת נתונים ורשת</string>
     <string name="playback_section_buffer_network_desc">כמה תוכן לשמור בזיכרון וכיצד למשוך מקורות.</string>
-    <string name="playback_net_device_memory_info">זיכרון המכשיר: %1$s | מגבלת בטיחות מומלצת: %2$d MB</string>
+    <string name="playback_net_device_memory_info">זיכרון המכשיר: ‎%1$s | מגבלת בטיחות מומלצת: ‎%2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">זיכרון מקורי של ExoPlayer</string>
     <string name="playback_net_nuvio_performance_mode_sub">הפעלת הקצאת זיכרון מקורית מחוץ לערימה ואופטימיזציות גלילה.</string>
     <string name="playback_net_nuvio_performance_mode_not_supported">תכונה זו אינה נתמכת במכשיר.</string>
@@ -3228,8 +3228,8 @@
     <string name="playback_buffer_target">כמות זיכרון לטעינה מראש</string>
     <string name="playback_buffer_target_sub">כמה זיכרון מותר לאפליקציה להשתמש כדי לטעון תוכן מראש.</string>
     <string name="playback_buffer_target_managed_hint">מנוהל על ידי תקציב הזיכרון של המכשיר. יש לכבות את תקציב הזיכרון המנוהל כדי להגדיר זאת.</string>
-    <string name="playback_buffer_target_warning">אזהרה: מעל למגבלת הבטיחות של המכשיר (%1$d MB). האפליקציה עלולה לקרוס במהלך ההפעלה.</string>
-    <string name="playback_buffer_target_danger_warning">סכנה: מעל למגבלת האזהרה (%1$d MB). סיכון גבוה לקריסה.</string>
+    <string name="playback_buffer_target_warning">אזהרה: מעל למגבלת הבטיחות של המכשיר (‎%1$d MB). האפליקציה עלולה לקרוס במהלך ההפעלה.</string>
+    <string name="playback_buffer_target_danger_warning">סכנה: מעל למגבלת האזהרה (‎%1$d MB). סיכון גבוה לקריסה.</string>
     <string name="playback_buffer_allow_large">אפשור זיכרון גדול יותר</string>
     <string name="playback_buffer_allow_large_sub">הסרת ההגבלה הרגילה. עלול לגרום לקריסת האפליקציה במכשירים עם מעט זיכרון.</string>
     <string name="playback_cache_header">מטמון דיסק</string>
@@ -3239,7 +3239,7 @@
     <string name="playback_cache_auto_size_sub">כשמופעל, גודל המטמון נקבע לפי שטח דיסק פנוי. יש לכבות כדי לבחור גודל באופן ידני.</string>
     <string name="playback_cache_vod_size">גודל מטמון VOD</string>
     <string name="playback_cache_vod_size_sub">שימוש מקסימלי בדיסק עבור מטמון VOD פרוגרסיבי (מפונה לפי LRU).</string>
-    <string name="playback_cache_info_range">טווח: %1$d-%2$d MB.</string>
+    <string name="playback_cache_info_range">טווח: ‎%1$d-%2$d MB.‎</string>
     <string name="playback_cache_info_auto">מצב אוטומטי מכוון לכ-10% משטח פנוי.</string>
     <string name="playback_cache_info_manual_headroom">מצב ידני שומר כ-%1$dMB שטח אחסון.</string>
     <string name="playback_cache_info_free_disk">שטח דיסק פנוי זמין: %1$s.</string>
@@ -3305,16 +3305,16 @@
     <string name="player_error_play_stream_failed">הפעלת הסטרים שנבחר נכשלה</string>
 
     <!-- Size and speed units -->
-    <string name="unit_size_b">%1$d B</string>
-    <string name="unit_size_kb">%1$s KB</string>
-    <string name="unit_size_mb">%1$s MB</string>
-    <string name="unit_size_gb">%1$s GB</string>
-    <string name="unit_speed_b_s">%1$d B/s</string>
-    <string name="unit_speed_kb_s">%1$s KB/s</string>
-    <string name="unit_speed_mb_s">%1$s MB/s</string>
+    <string name="unit_size_b">‎%1$d B</string>
+    <string name="unit_size_kb">‎%1$s KB</string>
+    <string name="unit_size_mb">‎%1$s MB</string>
+    <string name="unit_size_gb">‎%1$s GB</string>
+    <string name="unit_speed_b_s">‎%1$d B/s</string>
+    <string name="unit_speed_kb_s">‎%1$s KB/s</string>
+    <string name="unit_speed_mb_s">‎%1$s MB/s</string>
 
     <!-- Misc fallbacks -->
-    <string name="playback_estimated_memory_usage">שימוש משוער בזיכרון: %1$d / %2$d MB</string>
+    <string name="playback_estimated_memory_usage">שימוש משוער בזיכרון: ‎%1$d / %2$d MB</string>
     <string name="profile_default_name">פרופיל %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">אוסף TMDB %1$d</string>
@@ -3369,7 +3369,7 @@
     <string name="autosync_tolerance_title">סטייה מותרת בסנכרון אוטומטי</string>
     <string name="autosync_tolerance_description">התזמון המקורי נשמר כשהתיקון הנדרש קטן מהערך הזה או שווה לו.</string>
     <string name="autosync_tolerance_off">כבוי</string>
-    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_tolerance_value">‎%1$d ms</string>
     <string name="autosync_thorough_title">חיפוש יסודי בסנכרון אוטומטי</string>
     <string name="autosync_thorough_description">השוואה מתמשכת מול כתוביות ורצועות מוטמעות נוספות לקבלת התאמה קרובה יותר לפני הסנכרון. כשהאפשרות כבויה, נעשה שימוש בהתאמה החזקה הראשונה שנמצאה, מוקדם יותר. מוחלות רק התאמות ודאיות.</string>
     <string name="autosync_toast_failed">הסנכרון נכשל: הסנכרון האוטומטי לא הצליח להתאים את הכתוביות לסרטון.</string>
