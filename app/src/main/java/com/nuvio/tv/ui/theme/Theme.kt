@@ -43,6 +43,8 @@ val LocalNuvioTextStyles = staticCompositionLocalOf { NuvioTextStyles }
 
 val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 
+val LocalAppFont = staticCompositionLocalOf { AppFont.INTER }
+
 val LocalThemePalette = staticCompositionLocalOf { ThemeColors.White }
 
 val LocalSettingsUiStyle = staticCompositionLocalOf { SettingsUiStyle.CLASSIC }
@@ -103,6 +105,7 @@ fun NuvioTheme(
         LocalNuvioExtendedColors provides extendedColors,
         LocalNuvioTextStyles provides textStyles,
         LocalAppTheme provides appTheme,
+        LocalAppFont provides appFont,
         LocalThemePalette provides palette,
         LocalSettingsUiStyle provides settingsUiStyle,
         LocalNuvioFocusRingStyle provides focusRingStyle
@@ -181,6 +184,11 @@ object NuvioTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalAppTheme.current
+
+    val currentFont: AppFont
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalAppFont.current
 
     val settingsUiStyle: SettingsUiStyle
         @Composable
