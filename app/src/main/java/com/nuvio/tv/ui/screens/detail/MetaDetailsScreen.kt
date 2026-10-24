@@ -895,6 +895,7 @@ fun MetaDetailsScreen(
                     commentsError = uiState.commentsError,
                     shouldShowCommentsSection = uiState.shouldShowCommentsSection,
                     commentsMode = uiState.commentsMode,
+                    commentsSource = uiState.commentsSource,
                     commentsEpisodeTarget = uiState.commentsEpisodeTarget,
                     selectedComment = uiState.selectedComment,
                     onSeasonSelected = { viewModel.onEvent(MetaDetailsEvent.OnSeasonSelected(it)) },
@@ -1234,6 +1235,7 @@ private fun MetaDetailsContent(
     commentsError: String?,
     shouldShowCommentsSection: Boolean,
     commentsMode: CommentsMode,
+    commentsSource: CommentsSource,
     commentsEpisodeTarget: Video?,
     selectedComment: TraktCommentReview?,
     onSeasonSelected: (Int) -> Unit,
@@ -1892,6 +1894,7 @@ private fun MetaDetailsContent(
         MoreLikeThisSource.TMDB -> stringResource(R.string.detail_more_like_this_powered_by_tmdb)
         MoreLikeThisSource.TRAKT -> stringResource(R.string.detail_more_like_this_powered_by_trakt)
         MoreLikeThisSource.SIMKL -> stringResource(R.string.detail_more_like_this_powered_by_simkl)
+        MoreLikeThisSource.WETRAKR -> stringResource(R.string.detail_more_like_this_powered_by_wetrakr)
         null -> null
     }
     val peopleTabItems = remember(
@@ -2885,6 +2888,7 @@ private fun MetaDetailsContent(
                     CommentsSection(
                         comments = comments,
                         commentsMode = commentsMode,
+                        source = commentsSource,
                         canToggleEpisodeComments = canToggleEpisodeComments,
                         titleModeFocusRequester = commentsTitleModeFocusRequester,
                         episodeModeFocusRequester = commentsEpisodeModeFocusRequester,

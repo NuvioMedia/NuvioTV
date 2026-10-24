@@ -102,6 +102,7 @@ import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 fun CommentsSection(
     comments: List<TraktCommentReview>,
     commentsMode: CommentsMode,
+    source: CommentsSource = CommentsSource.TRAKT,
     canToggleEpisodeComments: Boolean,
     titleModeFocusRequester: FocusRequester? = null,
     episodeModeFocusRequester: FocusRequester? = null,
@@ -189,12 +190,12 @@ fun CommentsSection(
     }
     val subtitleText = if (commentsMode == CommentsMode.EPISODE && selectedEpisode != null) {
         stringResource(
-            R.string.detail_comments_subtitle_episode,
+            if (source == CommentsSource.WETRAKR) R.string.detail_comments_subtitle_episode_wetrakr else R.string.detail_comments_subtitle_episode,
             selectedEpisode.season ?: 0,
             selectedEpisode.episode ?: 0
         )
     } else {
-        stringResource(R.string.detail_comments_subtitle)
+        stringResource(if (source == CommentsSource.WETRAKR) R.string.detail_comments_subtitle_wetrakr else R.string.detail_comments_subtitle)
     }
 
     LaunchedEffect(listState, comments.size, canLoadMore, isLoadingMore, isLoading, error) {
@@ -384,7 +385,9 @@ fun CommentsSection(
 
             comments.isEmpty() -> {
                 Text(
-                    text = stringResource(R.string.detail_comments_empty),
+                    text = stringResource(
+                        if (source == CommentsSource.WETRAKR) R.string.detail_comments_empty_wetrakr else R.string.detail_comments_empty
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioTheme.colors.TextSecondary,
                     modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xxxl)
@@ -458,6 +461,7 @@ fun CommentsSection(
 
     if (showEpisodePicker && pickerEpisodes.isNotEmpty()) {
         EpisodeCommentPickerDialog(
+            source = source,
             seasons = availableSeasons,
             episodes = pickerEpisodes,
             season = pickerSeason ?: pickerDefaultSeason,
@@ -621,6 +625,7 @@ private fun CommentChip(text: String) {
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun EpisodeCommentPickerDialog(
+    source: CommentsSource,
     seasons: List<Int>,
     episodes: List<Video>,
     season: Int?,
@@ -662,7 +667,9 @@ private fun EpisodeCommentPickerDialog(
     NuvioDialog(
         onDismiss = onDismiss,
         title = stringResource(R.string.detail_comments_episode_picker_title),
-        subtitle = stringResource(R.string.detail_comments_episode_picker_subtitle),
+        subtitle = stringResource(
+            if (source == CommentsSource.WETRAKR) R.string.detail_comments_episode_picker_subtitle_wetrakr else R.string.detail_comments_episode_picker_subtitle
+        ),
         width = 560.dp,
         suppressFirstKeyUp = false
     ) {

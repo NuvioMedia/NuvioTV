@@ -67,6 +67,7 @@ fun TrackingSettingsContent(
     traktViewModel: TraktViewModel = hiltViewModel(),
     simklViewModel: SimklSettingsViewModel = hiltViewModel(),
     mdbListViewModel: MdbListTrackerViewModel = hiltViewModel(),
+    weTrakrViewModel: WeTrakrTrackerViewModel = hiltViewModel(),
     trackingViewModel: TrackingSettingsViewModel = hiltViewModel(),
     initialFocusRequester: FocusRequester? = null
 ) {
@@ -74,14 +75,20 @@ fun TrackingSettingsContent(
     val simklState by simklViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListState by mdbListViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListLibraryLists by mdbListViewModel.libraryLists.collectAsStateWithLifecycle()
+    val weTrakrState by weTrakrViewModel.uiState.collectAsStateWithLifecycle()
+    val weTrakrLocalUpload by weTrakrViewModel.localUpload.collectAsStateWithLifecycle()
+    val weTrakrShowComments by weTrakrViewModel.showComments.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
     val simklFocusRequester = remember { FocusRequester() }
     val mdbListFocusRequester = remember { FocusRequester() }
+    val weTrakrFocusRequester = remember { FocusRequester() }
     val libraryFocusRequester = remember { FocusRequester() }
     val watchProgressFocusRequester = remember { FocusRequester() }
     val continueWatchingFocusRequester = remember { FocusRequester() }
+    val weTrakrContinueWatchingFocusRequester = remember { FocusRequester() }
+    val weTrakrLocalUploadFocusRequester = remember { FocusRequester() }
     val moreLikeThisFocusRequester = remember { FocusRequester() }
 
     var activeProvider by remember { mutableStateOf<TrackingProviderId?>(null) }
@@ -91,6 +98,7 @@ fun TrackingSettingsContent(
     var showLibrarySourceDialog by remember { mutableStateOf(false) }
     var showWatchProgressDialog by remember { mutableStateOf(false) }
     var showDaysCapDialog by remember { mutableStateOf(false) }
+    var daysCapForWeTrakr by remember { mutableStateOf(false) }
     var showMoreLikeThisSourceDialog by remember { mutableStateOf(false) }
     var showAnimeIdDialog by remember { mutableStateOf(false) }
     var showMdbListLibraryListsDialog by remember { mutableStateOf(false) }
@@ -102,19 +110,22 @@ fun TrackingSettingsContent(
         showDaysCapDialog ||
         showMoreLikeThisSourceDialog ||
         showAnimeIdDialog ||
-        showMdbListLibraryListsDialog
+        showMdbListLibraryListsDialog ||
+        weTrakrLocalUpload.isOpen
 
     LaunchedEffect(
         activeProvider,
         dismissOnConnected,
         traktState.mode,
         simklState.mode,
-        mdbListState.isConnected
+        mdbListState.isConnected,
+        weTrakrState.isConnected
     ) {
         val connected = when (dismissOnConnected) {
             TrackingProviderId.TRAKT -> traktState.mode == TraktConnectionMode.CONNECTED
             TrackingProviderId.SIMKL -> simklState.mode == SimklConnectionMode.CONNECTED
             TrackingProviderId.MDBLIST -> mdbListState.isConnected
+            TrackingProviderId.WETRAKR -> weTrakrState.isConnected
             null -> false
         }
         if (activeProvider == dismissOnConnected && connected) {
@@ -132,9 +143,12 @@ fun TrackingSettingsContent(
                 TrackingFocusTarget.TRAKT -> traktFocusRequester.requestFocus()
                 TrackingFocusTarget.SIMKL -> simklFocusRequester.requestFocus()
                 TrackingFocusTarget.MDBLIST -> mdbListFocusRequester.requestFocus()
+                TrackingFocusTarget.WETRAKR -> weTrakrFocusRequester.requestFocus()
                 TrackingFocusTarget.LIBRARY -> libraryFocusRequester.requestFocus()
                 TrackingFocusTarget.WATCH_PROGRESS -> watchProgressFocusRequester.requestFocus()
                 TrackingFocusTarget.CONTINUE_WATCHING -> continueWatchingFocusRequester.requestFocus()
+                TrackingFocusTarget.WETRAKR_CONTINUE_WATCHING -> weTrakrContinueWatchingFocusRequester.requestFocus()
+                TrackingFocusTarget.WETRAKR_LOCAL_UPLOAD -> weTrakrLocalUploadFocusRequester.requestFocus()
                 TrackingFocusTarget.MORE_LIKE_THIS -> moreLikeThisFocusRequester.requestFocus()
             }
         }
@@ -146,6 +160,7 @@ fun TrackingSettingsContent(
             TrackingProviderId.TRAKT -> TrackingFocusTarget.TRAKT
             TrackingProviderId.SIMKL -> TrackingFocusTarget.SIMKL
             TrackingProviderId.MDBLIST -> TrackingFocusTarget.MDBLIST
+            TrackingProviderId.WETRAKR -> TrackingFocusTarget.WETRAKR
         }
         activeProvider = provider
         disconnectProvider = null
@@ -179,6 +194,15 @@ fun TrackingSettingsContent(
                     mdbListViewModel.onConnect()
                 }
             }
+            TrackingProviderId.WETRAKR -> {
+                if (weTrakrState.isConnected) {
+                    dismissOnConnected = null
+                    weTrakrViewModel.onAccountOpened()
+                } else {
+                    dismissOnConnected = provider
+                    weTrakrViewModel.onConnect()
+                }
+            }
         }
     }
 
@@ -186,17 +210,23 @@ fun TrackingSettingsContent(
         traktState = traktState,
         simklState = simklState,
         mdbListState = mdbListState,
+        weTrakrState = weTrakrState,
+        weTrakrShowComments = weTrakrShowComments,
+        onWeTrakrCommentsChanged = weTrakrViewModel::onShowCommentsChanged,
         trackingState = trackingState,
         traktFocusRequester = traktFocusRequester,
         simklFocusRequester = simklFocusRequester,
         mdbListFocusRequester = mdbListFocusRequester,
+        weTrakrFocusRequester = weTrakrFocusRequester,
         libraryFocusRequester = libraryFocusRequester,
         watchProgressFocusRequester = watchProgressFocusRequester,
         continueWatchingFocusRequester = continueWatchingFocusRequester,
+        weTrakrContinueWatchingFocusRequester = weTrakrContinueWatchingFocusRequester,
         moreLikeThisFocusRequester = moreLikeThisFocusRequester,
         onTraktClick = { openProvider(TrackingProviderId.TRAKT) },
         onSimklClick = { openProvider(TrackingProviderId.SIMKL) },
         onMdbListClick = { openProvider(TrackingProviderId.MDBLIST) },
+        onWeTrakrClick = { openProvider(TrackingProviderId.WETRAKR) },
         onLibrarySourceClick = {
             restoreFocusTarget = TrackingFocusTarget.LIBRARY
             showLibrarySourceDialog = true
@@ -207,8 +237,20 @@ fun TrackingSettingsContent(
         },
         onContinueWatchingWindowClick = {
             restoreFocusTarget = TrackingFocusTarget.CONTINUE_WATCHING
+            daysCapForWeTrakr = false
             showDaysCapDialog = true
         },
+        onWeTrakrContinueWatchingWindowClick = {
+            restoreFocusTarget = TrackingFocusTarget.WETRAKR_CONTINUE_WATCHING
+            daysCapForWeTrakr = true
+            showDaysCapDialog = true
+        },
+        weTrakrLocalUploadFocusRequester = weTrakrLocalUploadFocusRequester,
+        onWeTrakrLocalUploadClick = {
+            restoreFocusTarget = TrackingFocusTarget.WETRAKR_LOCAL_UPLOAD
+            weTrakrViewModel.onLocalUploadOpened()
+        },
+        weTrakrLocalUploadStatus = weTrakrLocalUpload.runMessage?.takeIf { weTrakrLocalUpload.run?.isActive == true },
         onCommentsChanged = traktViewModel::onShowMetaCommentsChanged,
         onMoreLikeThisClick = {
             restoreFocusTarget = TrackingFocusTarget.MORE_LIKE_THIS
@@ -282,6 +324,24 @@ fun TrackingSettingsContent(
                 }
             )
         }
+        TrackingProviderId.WETRAKR -> {
+            WeTrakrAccountDialog(
+                state = weTrakrState,
+                onStartConnection = weTrakrViewModel::onConnect,
+                onRetryPolling = weTrakrViewModel::onRetryPolling,
+                onSync = weTrakrViewModel::onSyncNow,
+                onDisconnect = {
+                    activeProvider = null
+                    dismissOnConnected = null
+                    disconnectProvider = TrackingProviderId.WETRAKR
+                },
+                onDismiss = {
+                    if (!weTrakrState.isConnected) weTrakrViewModel.onCancel()
+                    activeProvider = null
+                    dismissOnConnected = null
+                }
+            )
+        }
         null -> Unit
     }
 
@@ -296,6 +356,7 @@ fun TrackingSettingsContent(
                     TrackingProviderId.TRAKT -> R.string.trakt_disconnect_title
                     TrackingProviderId.SIMKL -> R.string.simkl_disconnect_title
                     TrackingProviderId.MDBLIST -> R.string.mdblist_disconnect_title
+                    TrackingProviderId.WETRAKR -> R.string.wetrakr_disconnect_title
                 }
             ),
             subtitle = stringResource(
@@ -303,6 +364,7 @@ fun TrackingSettingsContent(
                     TrackingProviderId.TRAKT -> R.string.trakt_disconnect_subtitle
                     TrackingProviderId.SIMKL -> R.string.simkl_disconnect_subtitle
                     TrackingProviderId.MDBLIST -> R.string.mdblist_disconnect_subtitle
+                    TrackingProviderId.WETRAKR -> R.string.wetrakr_disconnect_subtitle
                 }
             ),
             width = 520.dp,
@@ -324,6 +386,7 @@ fun TrackingSettingsContent(
                             TrackingProviderId.TRAKT -> traktViewModel.onDisconnectClick()
                             TrackingProviderId.SIMKL -> simklViewModel.onDisconnect()
                             TrackingProviderId.MDBLIST -> mdbListViewModel.onDisconnect()
+                            TrackingProviderId.WETRAKR -> weTrakrViewModel.onDisconnect()
                         }
                     },
                     primary = true
@@ -382,13 +445,19 @@ fun TrackingSettingsContent(
         }
         SettingsSingleChoiceDialog(
             title = stringResource(R.string.trakt_cw_window_title),
-            subtitle = stringResource(R.string.trakt_cw_window_subtitle),
+            subtitle = stringResource(
+                if (daysCapForWeTrakr) R.string.wetrakr_cw_window_subtitle else R.string.trakt_cw_window_subtitle
+            ),
             options = options.map { days ->
                 SettingsPickerOption(days, continueWatchingWindowLabel(days))
             },
-            selectedValue = traktState.continueWatchingDaysCap,
+            selectedValue = if (daysCapForWeTrakr) weTrakrState.continueWatchingDaysCap else traktState.continueWatchingDaysCap,
             onOptionSelected = { days ->
-                traktViewModel.onContinueWatchingDaysCapSelected(days)
+                if (daysCapForWeTrakr) {
+                    weTrakrViewModel.onContinueWatchingDaysCapSelected(days)
+                } else {
+                    traktViewModel.onContinueWatchingDaysCapSelected(days)
+                }
                 showDaysCapDialog = false
             },
             onDismiss = { showDaysCapDialog = false },
@@ -413,6 +482,10 @@ fun TrackingSettingsContent(
                 SettingsPickerOption(
                     MoreLikeThisSourcePreference.SIMKL,
                     stringResource(R.string.trakt_more_like_this_source_simkl)
+                ),
+                SettingsPickerOption(
+                    MoreLikeThisSourcePreference.WETRAKR,
+                    stringResource(R.string.wetrakr_name)
                 )
             ),
             selectedValue = traktState.moreLikeThisSource,
@@ -423,6 +496,16 @@ fun TrackingSettingsContent(
             onDismiss = { showMoreLikeThisSourceDialog = false },
             width = 620.dp,
             maxHeight = 320.dp
+        )
+    }
+
+    if (weTrakrLocalUpload.isOpen) {
+        WeTrakrLocalUploadDialog(
+            state = weTrakrLocalUpload,
+            onToggle = weTrakrViewModel::onLocalUploadKindToggled,
+            onSync = weTrakrViewModel::onLocalUploadStarted,
+            onCancel = weTrakrViewModel::onLocalUploadCancelled,
+            onDismiss = weTrakrViewModel::onLocalUploadClosed
         )
     }
 
@@ -473,20 +556,30 @@ internal fun TrackingSettingsOverview(
     traktState: TraktUiState,
     simklState: SimklSettingsUiState,
     mdbListState: MdbListTrackerUiState,
+    weTrakrState: WeTrakrTrackerUiState = WeTrakrTrackerUiState(),
     trackingState: TrackingSettingsUiState,
     traktFocusRequester: FocusRequester,
     simklFocusRequester: FocusRequester,
     mdbListFocusRequester: FocusRequester,
+    weTrakrFocusRequester: FocusRequester = remember { FocusRequester() },
     libraryFocusRequester: FocusRequester,
     watchProgressFocusRequester: FocusRequester,
     continueWatchingFocusRequester: FocusRequester,
+    weTrakrContinueWatchingFocusRequester: FocusRequester = remember { FocusRequester() },
     moreLikeThisFocusRequester: FocusRequester,
     onTraktClick: () -> Unit,
     onSimklClick: () -> Unit,
     onMdbListClick: () -> Unit,
+    onWeTrakrClick: () -> Unit = {},
     onLibrarySourceClick: () -> Unit,
     onWatchProgressClick: () -> Unit,
     onContinueWatchingWindowClick: () -> Unit,
+    onWeTrakrContinueWatchingWindowClick: () -> Unit = {},
+    weTrakrLocalUploadFocusRequester: FocusRequester = remember { FocusRequester() },
+    onWeTrakrLocalUploadClick: () -> Unit = {},
+    weTrakrShowComments: Boolean = false,
+    onWeTrakrCommentsChanged: (Boolean) -> Unit = {},
+    weTrakrLocalUploadStatus: String? = null,
     onCommentsChanged: (Boolean) -> Unit,
     onMoreLikeThisClick: () -> Unit,
     onAnimeIdClick: () -> Unit,
@@ -497,8 +590,10 @@ internal fun TrackingSettingsOverview(
     val traktPresentation = traktConnectionPresentation(traktState)
     val simklPresentation = simklConnectionPresentation(simklState)
     val mdbListPresentation = mdbListConnectionPresentation(mdbListState)
+    val weTrakrPresentation = weTrakrConnectionPresentation(weTrakrState)
     val traktConnected = traktState.mode == TraktConnectionMode.CONNECTED
     val traktProgressActive = trackingState.watchProgressSource == WatchProgressSource.TRAKT
+    val weTrakrProgressActive = trackingState.watchProgressSource == WatchProgressSource.WETRAKR
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -558,6 +653,18 @@ internal fun TrackingSettingsOverview(
                                 .focusRequester(mdbListFocusRequester)
                                 .testTag(TrackingSettingsTestTags.MDBLIST_PROVIDER)
                         )
+                        SettingsActionRow(
+                            title = stringResource(R.string.wetrakr_name),
+                            subtitle = weTrakrPresentation.subtitle,
+                            value = weTrakrPresentation.value,
+                            valueColor = weTrakrPresentation.color,
+                            leadingRawIconRes = R.raw.wetrakr_icon,
+                            leadingArtworkSize = 40.dp,
+                            onClick = onWeTrakrClick,
+                            modifier = Modifier
+                                .focusRequester(weTrakrFocusRequester)
+                                .testTag(TrackingSettingsTestTags.WETRAKR_PROVIDER)
+                        )
                     }
                 }
                 item(key = "tracking_sources") {
@@ -585,7 +692,7 @@ internal fun TrackingSettingsOverview(
                                 .focusRequester(watchProgressFocusRequester)
                                 .testTag(TrackingSettingsTestTags.WATCH_PROGRESS_SOURCE)
                         )
-                        if (traktConnected || simklState.mode == SimklConnectionMode.CONNECTED) {
+                        if (traktConnected || simklState.mode == SimklConnectionMode.CONNECTED || weTrakrState.isConnected) {
                             SettingsActionRow(
                                 title = stringResource(R.string.trakt_more_like_this_source_title),
                                 subtitle = stringResource(R.string.trakt_more_like_this_source_subtitle),
@@ -662,6 +769,45 @@ internal fun TrackingSettingsOverview(
                                 },
                                 onClick = onMdbListLibraryListsClick,
                                 modifier = Modifier.testTag(TrackingSettingsTestTags.MDBLIST_LIBRARY_LISTS)
+                            )
+                        }
+                    }
+                }
+                if (weTrakrState.isConnected) {
+                    item(key = "tracking_wetrakr_features") {
+                        SettingsGroupCard(
+                            title = stringResource(R.string.tracking_wetrakr_features_title),
+                            subtitle = stringResource(R.string.tracking_wetrakr_features_subtitle)
+                        ) {
+                            SettingsActionRow(
+                                title = stringResource(R.string.trakt_continue_watching_window),
+                                subtitle = if (!weTrakrProgressActive) {
+                                    stringResource(R.string.tracking_wetrakr_progress_required)
+                                } else {
+                                    stringResource(R.string.wetrakr_continue_watching_subtitle)
+                                },
+                                value = continueWatchingWindowLabel(weTrakrState.continueWatchingDaysCap),
+                                enabled = weTrakrProgressActive,
+                                onClick = onWeTrakrContinueWatchingWindowClick,
+                                modifier = Modifier
+                                    .focusRequester(weTrakrContinueWatchingFocusRequester)
+                                    .testTag(TrackingSettingsTestTags.WETRAKR_CONTINUE_WATCHING)
+                            )
+                            SettingsActionRow(
+                                title = stringResource(R.string.wetrakr_local_upload_title),
+                                subtitle = weTrakrLocalUploadStatus ?: stringResource(R.string.wetrakr_local_upload_row_subtitle),
+                                onClick = onWeTrakrLocalUploadClick,
+                                modifier = Modifier
+                                    .focusRequester(weTrakrLocalUploadFocusRequester)
+                                    .testTag(TrackingSettingsTestTags.WETRAKR_LOCAL_UPLOAD)
+                            )
+                            SettingsToggleRow(
+                                title = stringResource(R.string.trakt_comments_title),
+                                subtitle = stringResource(R.string.wetrakr_comments_subtitle),
+                                checked = weTrakrShowComments,
+                                enabled = true,
+                                onToggle = { onWeTrakrCommentsChanged(!weTrakrShowComments) },
+                                modifier = Modifier.testTag(TrackingSettingsTestTags.WETRAKR_COMMENTS)
                             )
                         }
                     }
@@ -757,10 +903,31 @@ private fun mdbListConnectionPresentation(state: MdbListTrackerUiState): Trackin
 }
 
 @Composable
+private fun weTrakrConnectionPresentation(state: WeTrakrTrackerUiState): TrackingConnectionPresentation = when {
+    state.isLoading && !state.isConnected -> TrackingConnectionPresentation(
+        stringResource(R.string.tracking_connecting_provider, stringResource(R.string.wetrakr_name)),
+        stringResource(R.string.tracking_status_connecting), NuvioTheme.colors.Info
+    )
+    state.isConnected -> TrackingConnectionPresentation(
+        stringResource(R.string.wetrakr_connected_as, state.username ?: stringResource(R.string.wetrakr_account_fallback)),
+        stringResource(R.string.tracking_status_connected), NuvioTheme.colors.Success
+    )
+    state.session != null -> TrackingConnectionPresentation(
+        state.errorMessage ?: stringResource(R.string.tracking_finish_connection),
+        stringResource(R.string.tracking_status_waiting), NuvioTheme.colors.Warning
+    )
+    else -> TrackingConnectionPresentation(
+        state.errorMessage ?: stringResource(R.string.wetrakr_tracking_description),
+        stringResource(R.string.tracking_status_disconnected), NuvioTheme.colors.TextSecondary
+    )
+}
+
+@Composable
 private fun watchProgressSourceLabel(source: WatchProgressSource): String = when (source) {
     WatchProgressSource.TRAKT -> stringResource(R.string.trakt_name)
     WatchProgressSource.SIMKL -> stringResource(R.string.simkl_name)
     WatchProgressSource.MDBLIST -> stringResource(R.string.mdblist_name)
+    WatchProgressSource.WETRAKR -> stringResource(R.string.wetrakr_name)
     WatchProgressSource.NUVIO_SYNC -> stringResource(R.string.trakt_watch_progress_source_nuvio)
 }
 
@@ -769,6 +936,7 @@ private fun librarySourceLabel(mode: LibrarySourceMode): String = when (mode) {
     LibrarySourceMode.TRAKT -> stringResource(R.string.trakt_name)
     LibrarySourceMode.SIMKL -> stringResource(R.string.simkl_name)
     LibrarySourceMode.MDBLIST -> stringResource(R.string.mdblist_name)
+    LibrarySourceMode.WETRAKR -> stringResource(R.string.wetrakr_name)
     LibrarySourceMode.LOCAL -> stringResource(R.string.trakt_library_source_nuvio)
 }
 
@@ -777,6 +945,7 @@ private fun moreLikeThisSourceLabel(source: MoreLikeThisSourcePreference): Strin
     MoreLikeThisSourcePreference.TRAKT -> stringResource(R.string.trakt_name)
     MoreLikeThisSourcePreference.TMDB -> stringResource(R.string.trakt_more_like_this_source_tmdb)
     MoreLikeThisSourcePreference.SIMKL -> stringResource(R.string.trakt_more_like_this_source_simkl)
+    MoreLikeThisSourcePreference.WETRAKR -> stringResource(R.string.wetrakr_name)
 }
 
 @Composable
@@ -800,9 +969,12 @@ private enum class TrackingFocusTarget {
     TRAKT,
     SIMKL,
     MDBLIST,
+    WETRAKR,
     LIBRARY,
     WATCH_PROGRESS,
     CONTINUE_WATCHING,
+    WETRAKR_CONTINUE_WATCHING,
+    WETRAKR_LOCAL_UPLOAD,
     MORE_LIKE_THIS
 }
 
@@ -811,10 +983,14 @@ internal object TrackingSettingsTestTags {
     const val TRAKT_PROVIDER = "tracking_provider_trakt"
     const val SIMKL_PROVIDER = "tracking_provider_simkl"
     const val MDBLIST_PROVIDER = "tracking_provider_mdblist"
+    const val WETRAKR_PROVIDER = "tracking_provider_wetrakr"
+    const val WETRAKR_LOCAL_UPLOAD = "tracking_wetrakr_local_upload"
+    const val WETRAKR_COMMENTS = "tracking_wetrakr_comments"
     const val MDBLIST_LIBRARY_LISTS = "tracking_mdblist_library_lists"
     const val LIBRARY_SOURCE = "tracking_source_library"
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"
     const val CONTINUE_WATCHING = "tracking_trakt_continue_watching"
+    const val WETRAKR_CONTINUE_WATCHING = "tracking_wetrakr_continue_watching"
     const val COMMENTS = "tracking_trakt_comments"
     const val MORE_LIKE_THIS = "tracking_trakt_more_like_this"
 }
