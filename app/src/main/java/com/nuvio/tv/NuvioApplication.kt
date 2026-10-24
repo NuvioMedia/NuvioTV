@@ -30,6 +30,7 @@ import com.nuvio.tv.data.local.ImagePerformancePreferences
 import com.nuvio.tv.data.local.SentrySettingsDataStore
 import com.nuvio.tv.data.mediaserver.ServerUserStateProjection
 import com.nuvio.tv.data.simkl.SimklAnimeIdPreferenceHolder
+import com.nuvio.tv.ui.screens.settings.MemoryBudget
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -79,7 +80,10 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         }
     }
 
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onCreate() {
+        // Before super.onCreate(): Hilt creates injected services there, and the budget is read once.
+        MemoryBudget.init(this)
         super.onCreate()
         SentryInitializer.start(this, sentrySettingsDataStore)
         PluginRuntimeHooks.onApplicationCreate(this)
