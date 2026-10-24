@@ -45,7 +45,12 @@ object AudioChainProbe {
     }
 
     fun probeDirectSupport(context: Context): DirectSupport? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return readHdmiPlugReport(context)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            // The plug report only describes the HDMI sink. With a USB output connected, media
+            // goes there instead, so the report says nothing about the active chain.
+            if (connectedOutputTypes(context).any { it in USB_OUTPUT_TYPES }) return null
+            return readHdmiPlugReport(context)
+        }
         return runCatching {
             val attributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -106,6 +111,34 @@ object AudioChainProbe {
         AudioDeviceInfo.TYPE_HDMI_EARC
     )
 
+    private val USB_OUTPUT_TYPES = setOf(
+        AudioDeviceInfo.TYPE_USB_DEVICE,
+        AudioDeviceInfo.TYPE_USB_HEADSET,
+        AudioDeviceInfo.TYPE_USB_ACCESSORY
+    )
+
+    /**
+     * Output types whose PCM profiles describe the active media sink. [routedType] is the
+     * device media is routed to, when the platform reports it (API 33+). Without it, a
+     * connected USB output wins over HDMI, as in Android's media routing. Any other routed
+     * type has no profile worth reading.
+     */
+    internal fun pcmSinkTypes(routedType: Int?, connectedTypes: Collection<Int>): Set<Int>? = when {
+        routedType != null && routedType in HDMI_OUTPUT_TYPES -> HDMI_OUTPUT_TYPES
+        routedType != null && routedType in USB_OUTPUT_TYPES -> USB_OUTPUT_TYPES
+        routedType != null -> null
+        connectedTypes.any { it in USB_OUTPUT_TYPES } -> USB_OUTPUT_TYPES
+        else -> HDMI_OUTPUT_TYPES
+    }
+
+    private fun connectedOutputTypes(context: Context): List<Int> {
+        val audioManager =
+            context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return emptyList()
+        return runCatching {
+            audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { it.type }
+        }.getOrDefault(emptyList())
+    }
+
     @SuppressLint("NewApi", "InlinedApi")
     fun readMaxPcmChannelCount(context: Context): Int? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
@@ -119,8 +152,13 @@ object AudioChainProbe {
             AudioFormat.ENCODING_PCM_FLOAT
         )
         return runCatching {
-            audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-                .filter { it.type in HDMI_OUTPUT_TYPES }
+            val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            val sinkTypes = pcmSinkTypes(
+                routedType = AudioOutputRouteDetector.detectMediaRoutedDevice(audioManager)?.type,
+                connectedTypes = outputs.map { it.type }
+            ) ?: return null
+            outputs
+                .filter { it.type in sinkTypes }
                 .flatMap { it.audioProfiles }
                 .filter { it.format in pcmEncodings }
                 .flatMap { profile ->
