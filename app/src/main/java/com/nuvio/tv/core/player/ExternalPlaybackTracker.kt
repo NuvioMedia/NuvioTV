@@ -7,6 +7,7 @@ import com.nuvio.tv.core.cloud.CloudLibraryPlaybackProgressStore
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackSessionStore
 import com.nuvio.tv.core.cloud.CloudLibraryRepository
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
@@ -192,7 +193,8 @@ class ExternalPlaybackTracker @Inject constructor(
     private val cloudLibraryRepository: CloudLibraryRepository,
     private val cloudPlaybackProgressStore: CloudLibraryPlaybackProgressStore,
     private val cloudPlaybackSessionStore: CloudLibraryPlaybackSessionStore,
-    private val profileManager: com.nuvio.tv.core.profile.ProfileManager
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager,
+    private val torrentService: TorrentService
 ) {
     companion object {
         private const val TAG = "ExtPlaybackTracker"
@@ -255,6 +257,10 @@ class ExternalPlaybackTracker @Inject constructor(
     private var nextEpisodeSnapshot: ExternalNextEpisodeSnapshot = ExternalNextEpisodeSnapshot.Unknown
     private var autoNextEnabledForPendingLaunch: Boolean? = null
     private var pendingCloudSessionToken: String? = null
+    @Volatile
+    private var ownsTorrentStream = false
+    val isOwningTorrentStream: Boolean get() = ownsTorrentStream
+    private var pendingOwnsTorrentStream = false
 
     private val autoPlayNextNavigationEvents = ExternalAutoNextNavigationEvents(
         maxAgeMs = AUTO_NEXT_OVERLAY_TIMEOUT_MS
@@ -386,8 +392,11 @@ class ExternalPlaybackTracker @Inject constructor(
         autoLaunch: Boolean = false,
         nextEpisodeSnapshot: ExternalNextEpisodeSnapshot? = null,
         cloudSessionToken: String? = null,
+        ownsTorrentStream: Boolean = false,
         context: Context
     ): Boolean {
+        this.ownsTorrentStream = false
+        this.pendingOwnsTorrentStream = ownsTorrentStream
         if (shouldCancelPendingAutoLaunch(autoLaunch)) {
             Log.d(AUTO_NEXT_TAG, "auto launch cancelled before tracker setup")
             return false
@@ -428,7 +437,7 @@ class ExternalPlaybackTracker @Inject constructor(
                 false
             } else {
                 withContext(Dispatchers.Main.immediate) {
-                    doLaunch(
+                    val intentSent = doLaunch(
                         url = url,
                         title = title,
                         headers = headers,
@@ -438,6 +447,9 @@ class ExternalPlaybackTracker @Inject constructor(
                         skipSegmentsJson = skipSegmentsJson,
                         context = context
                     )
+                    if (intentSent) this@ExternalPlaybackTracker.ownsTorrentStream =
+                        pendingOwnsTorrentStream
+                    intentSent
                 }
             }
         }
@@ -1338,6 +1350,10 @@ class ExternalPlaybackTracker @Inject constructor(
     fun stopTracking() {
         zidooMonitorJob?.cancel()
         zidooMonitorJob = null
+        if (ownsTorrentStream) {
+            ownsTorrentStream = false
+            torrentService.stopStream()
+        }
         awaitingExternalPlayerResult = false
         pendingMetadata = null
         pendingCloudSessionToken = null
