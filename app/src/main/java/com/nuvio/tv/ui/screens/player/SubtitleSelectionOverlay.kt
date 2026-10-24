@@ -51,6 +51,14 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -1114,6 +1122,10 @@ private fun SubtitleLanguageCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .semantics {
+                role = Role.RadioButton
+                this.selected = isSelected
+            }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
@@ -1195,6 +1207,10 @@ private fun SubtitleOptionCard(
         onLongClick = onLongClick,
         modifier = Modifier
             .fillMaxWidth()
+            .semantics {
+                role = Role.RadioButton
+                this.selected = item.isSelected
+            }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
@@ -1418,6 +1434,7 @@ private fun StepperRow(
     ) {
         StepperButton(
             icon = Icons.Default.Remove,
+            contentDescription = stringResource(R.string.cd_decrease),
             onClick = onDecrease,
             onMoveLeft = onMoveLeft,
             focusRequester = decrementFocusRequester,
@@ -1439,6 +1456,7 @@ private fun StepperRow(
         }
         StepperButton(
             icon = Icons.Default.Add,
+            contentDescription = stringResource(R.string.cd_increase),
             onClick = onIncrease,
             focusRequester = incrementFocusRequester,
             focusKey = incrementFocusKey,
@@ -1450,6 +1468,7 @@ private fun StepperRow(
 @Composable
 private fun StepperButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
     onClick: () -> Unit,
     onMoveLeft: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
@@ -1508,7 +1527,7 @@ private fun StepperButton(
         shape = IconButtonDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md)),
         scale = IconButtonDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
-        Icon(imageVector = icon, contentDescription = null)
+        Icon(imageVector = icon, contentDescription = contentDescription)
     }
 }
 
@@ -1524,6 +1543,10 @@ private fun ToggleChip(
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
+    val switchSemantics = Modifier.semantics {
+        role = Role.Switch
+        toggleableState = if (isEnabled) ToggleableState.On else ToggleableState.Off
+    }
     Card(
         onClick = onClick,
         modifier = if (focusRequester != null) {
@@ -1550,6 +1573,7 @@ private fun ToggleChip(
                 .onFocusChanged {
                     if (it.isFocused && focusKey != null) onFocused?.invoke(focusKey)
                 }
+                .then(switchSemantics)
         } else {
             Modifier
                 .onPreviewKeyEvent { event ->
@@ -1573,6 +1597,7 @@ private fun ToggleChip(
                 .onFocusChanged {
                     if (it.isFocused && focusKey != null) onFocused?.invoke(focusKey)
                 }
+                .then(switchSemantics)
         },
         colors = overlayCardColors(selected = isEnabled),
         shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
@@ -1630,6 +1655,7 @@ private fun ColorChip(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
 
+    val swatchLabel = stringResource(R.string.cd_color_swatch, overlaySwatchColorLabel(color))
     Card(
         onClick = { if (enabled) onClick() },
         colors = CardDefaults.colors(
@@ -1638,6 +1664,11 @@ private fun ColorChip(
         ),
         modifier = Modifier
             .size(NuvioTheme.spacing.xxl)
+            .clearAndSetSemantics {
+                contentDescription = swatchLabel
+                role = Role.RadioButton
+                this.selected = isSelected
+            }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
@@ -1693,6 +1724,13 @@ private fun overlayCardBorder() = CardDefaults.border(
         shape = RoundedCornerShape(NuvioTheme.radii.md)
     )
 )
+
+/** Accessible name for a colour swatch: its own RGB value, as that is the only colour
+ *  description available on this screen (there are no per-colour name resources). */
+private fun overlaySwatchColorLabel(color: Color): String {
+    val rgb = color.toArgb() and 0xFFFFFF
+    return "#" + rgb.toString(16).padStart(6, '0').uppercase()
+}
 
 private object StyleFocusKey {
     const val FontSizeDecrease = "font_size_decrease"

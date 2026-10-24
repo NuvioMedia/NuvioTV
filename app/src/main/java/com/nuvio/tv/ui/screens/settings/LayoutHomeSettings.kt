@@ -30,6 +30,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -241,12 +245,17 @@ private fun LayoutCard(
 
     Card(
         onClick = onClick,
-        modifier = modifier.onFocusChanged { state ->
-            val nowFocused = state.isFocused
-            if (isFocused != nowFocused) {
-                isFocused = nowFocused
+        modifier = modifier
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                }
             }
-        },
+            .semantics {
+                role = Role.RadioButton
+                this.selected = isSelected
+            },
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.Background,
             focusedContainerColor = NuvioTheme.colors.Background
@@ -300,7 +309,7 @@ private fun LayoutCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = stringResource(R.string.cd_selected),
+                        contentDescription = null,
                         tint = NuvioTheme.colors.FocusRing,
                         modifier = Modifier
                             .size(NuvioTheme.spacing.lg)
@@ -332,7 +341,8 @@ private fun CatalogChip(
         modifier = modifier,
         label = catalogInfo.name,
         selected = isSelected,
-        onClick = onClick
+        onClick = onClick,
+        multiSelect = true
     )
 }
 

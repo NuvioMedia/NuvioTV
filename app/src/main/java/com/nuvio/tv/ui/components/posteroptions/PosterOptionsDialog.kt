@@ -18,6 +18,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
@@ -159,16 +164,18 @@ fun PosterListPickerDialog(
         ) {
             items(tabs, key = { it.key }) { tab ->
                 val selected = membership[tab.key] == true
-                val titleText = if (selected) "✓ ${tab.localizedMembershipTitle()}" else tab.localizedMembershipTitle()
                 Button(
                     onClick = { onToggle(tab.key) },
                     enabled = !isPending,
-                    modifier = if (tab.key == tabs.firstOrNull()?.key) {
+                    modifier = (if (tab.key == tabs.firstOrNull()?.key) {
                         Modifier
                             .fillMaxWidth()
                             .focusRequester(primaryFocusRequester)
                     } else {
                         Modifier.fillMaxWidth()
+                    }).semantics {
+                        role = Role.Checkbox
+                        toggleableState = if (selected) ToggleableState.On else ToggleableState.Off
                     },
                     colors = ButtonDefaults.colors(
                         containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
@@ -176,7 +183,7 @@ fun PosterListPickerDialog(
                     )
                 ) {
                     Text(
-                        text = titleText,
+                        text = tab.localizedMembershipTitle(),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

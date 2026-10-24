@@ -11,6 +11,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -685,9 +690,11 @@ private fun AuthTermsAcknowledgement() {
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = stringResource(R.string.auth_qr_terms_link),
-            modifier = Modifier.clickable {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://nuvio.tv/terms")))
-            },
+            modifier = Modifier
+                .clickable {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://nuvio.tv/terms")))
+                }
+                .semantics { role = Role.Button },
             style = MaterialTheme.typography.bodyMedium.copy(
                 color = AuthTextPrimary,
                 fontSize = 13.sp,
@@ -709,7 +716,8 @@ private fun StatusPill(
             .fillMaxWidth()
             .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border.copy(alpha = 0.35f), RoundedCornerShape(NuvioTheme.radii.md))
             .background(containerColor, RoundedCornerShape(NuvioTheme.radii.md))
-            .padding(horizontal = NuvioTheme.spacing.md, vertical = 10.dp),
+            .padding(horizontal = NuvioTheme.spacing.md, vertical = 10.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
         contentAlignment = Alignment.Center
     ) {
         Text(
