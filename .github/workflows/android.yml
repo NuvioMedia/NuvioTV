@@ -14,11 +14,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code with Submodules
+    - name: Checkout Code
       uses: actions/checkout@v4
       with:
         persist-credentials: false
-        submodules: recursive # <-- This forces GitHub to grab 'libmpv-android' automatically
+
+    - name: Manually Clone Missing Submodule
+      run: |
+        git clone https://github.com libmpv-android
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
