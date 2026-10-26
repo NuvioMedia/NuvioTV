@@ -1,29 +1,32 @@
-0s
-Run git init .
-hint: Using 'master' as the name for the initial branch. This default branch name
-Initialized empty Git repository in /home/runner/work/sparkTV/sparkTV/.git/
-hint: will change to "main" in Git 3.0. To configure the initial branch name
-hint: to use in all of your new repositories, which will suppress this warning,
-hint: call:
-hint:
-hint: 	git config --global init.defaultBranch <name>
-hint:
-hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
-hint: 'development'. The just-created branch can be renamed via this command:
-hint:
-hint: 	git branch -m <name>
-hint:
-hint: Disable this message with "git config set advice.defaultBranchName false"
-usage: git remote add [<options>] <name> <url>
+name: Build Android TV APK
 
-    -f, --[no-]fetch      fetch the remote branches
-    --[no-]tags           import all tags and associated objects when fetching
-                          or do not fetch any tag at all (--no-tags)
-    -t, --[no-]track <branch>
-                          branch(es) to track
-    -m, --[no-]master <branch>
-                          master branch
-    --[no-]mirror[=(push|fetch)]
-                          set up remote as a mirror to push to or fetch from
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
 
-Error: Process completed with exit code 129.
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Make Gradle Executable
+        run: chmod +x ./gradlew
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease || ./gradlew :app:assembleRelease || ./gradlew :app:assembleFullRelease
+
+      - name: Upload Finished APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rebranded-TV-APK
+          path: "**/build/outputs/apk/**/*.apk"
