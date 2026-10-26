@@ -32,6 +32,13 @@ jobs:
             sed -i '/_graphite/d' app/src/main/AndroidManifest.xml
           fi
 
+      - name: Disabling Enforced Production Keystore
+        run: |
+          if [ -f app/build.gradle.kts ]; then
+            sed -i 's/signingConfigs.getByName("release")/signingConfigs.getByName("debug")/g' app/build.gradle.kts
+            sed -i 's/signingConfig = signingConfigs.getByName("release")/signingConfig = signingConfigs.getByName("debug")/g' app/build.gradle.kts
+          fi
+
       - name: Build Debug Unsigned APK
         run: ./gradlew assembleDebug || ./gradlew :app:assembleDebug
 
