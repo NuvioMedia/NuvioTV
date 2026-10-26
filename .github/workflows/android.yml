@@ -12,16 +12,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Switching to v3 bypasses the old submodule cache lookup completely
-    - name: Checkout Code
-      uses: actions/checkout@v3
-      with:
-        persist-credentials: false
+    # 1. Download your code as a flat ZIP payload to completely bypass Git layout checks
+    - name: Download Repository Source Code
+      run: |
+        curl -L -o repo.zip "https://github.com{{ github.repository }}/archive/${{ github.sha }}.zip"
+        unzip repo.zip
+        mv sparkTV-${{ github.sha }}/* .
+        rm -rf repo.zip
 
+    # 2. Inject the missing external library
     - name: Manually Inject Library Folder
       run: |
         git clone --depth 1 https://github.com libmpv-android
 
+    # 3. Setup Environment
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -29,12 +33,14 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    # 4. Compile the App
     - name: Grant Execute Permission for Gradlew
       run: chmod +x ./gradlew
 
     - name: Build APK
       run: ./gradlew assembleDebug
 
+    # 5. Save the Output
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
