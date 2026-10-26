@@ -40,10 +40,10 @@ jobs:
           fi
 
       - name: Build Debug Unsigned APK
-        run: ./gradlew assembleDebug || ./gradlew :app:assembleDebug
+        run: ./gradlew :app:assembleFullDebug
 
       - name: Upload Finished APK
         uses: actions/upload-artifact@v4
         with:
           name: Rebranded-TV-APK
-          path: "**/build/outputs/apk/**/*.apk"
+          path: "app/build/outputs/apk/full/debug/*.apk"
