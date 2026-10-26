@@ -22,8 +22,18 @@ jobs:
       - name: Make Gradle Executable
         run: chmod +x ./gradlew
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease || ./gradlew :app:assembleRelease || ./gradlew :app:assembleFullRelease
+      - name: Stripping Brand Flavour Variants from Manifest
+        run: |
+          if [ -f app/src/main/AndroidManifest.xml ]; then
+            sed -i '/_arctic_blue/d' app/src/main/AndroidManifest.xml
+            sed -i '/_emerald/d' app/src/main/AndroidManifest.xml
+            sed -i '/_rose_gold/d' app/src/main/AndroidManifest.xml
+            sed -i '/_copper/d' app/src/main/AndroidManifest.xml
+            sed -i '/_graphite/d' app/src/main/AndroidManifest.xml
+          fi
+
+      - name: Build Debug Unsigned APK
+        run: ./gradlew assembleDebug || ./gradlew :app:assembleDebug
 
       - name: Upload Finished APK
         uses: actions/upload-artifact@v4
