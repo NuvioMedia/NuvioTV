@@ -18,10 +18,11 @@ jobs:
       uses: actions/checkout@v4
       with:
         persist-credentials: false
+        submodules: false # <-- Forces GitHub to ignore the broken tracking map entirely
 
-    - name: Manually Clone Missing Submodule
+    - name: Manually Inject Missing Library Folder
       run: |
-        git clone https://github.com libmpv-android
+        git clone --depth 1 https://github.com libmpv-android
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
