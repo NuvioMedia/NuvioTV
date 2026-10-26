@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">sparkTV</string>
     <string name="tv_channel_continue_watching">Continue Watching</string>
     <string name="type_movie">Movie</string>
     <string name="type_movies">Movies</string>
@@ -98,7 +98,7 @@
 
     <string name="home_no_addons">No addons installed. Add one to get started.</string>
     <string name="home_no_catalog_addons">No catalog addons installed. Install a catalog addon to see content.</string>
-    <string name="auth_notice_nuvio_logged_out">You have been signed out of Nuvio. Please sign in again.</string>
+    <string name="auth_notice_sparkTV_logged_out">You have been signed out of sparkTV. Please sign in again.</string>
     <string name="auth_notice_trakt_logged_out">You have been signed out of Trakt. Please reconnect.</string>
     <string name="error_generic">An error occurred</string>
 
@@ -369,7 +369,7 @@
     <string name="appearance_settings_style">Settings Style</string>
     <string name="appearance_settings_style_subtitle">Choose how the settings screens are presented</string>
     <string name="appearance_launcher_artwork">Launcher Artwork</string>
-    <string name="appearance_launcher_artwork_subtitle">Choose how Nuvio appears on your TV home screen</string>
+    <string name="appearance_launcher_artwork_subtitle">Choose how sparkTV appears on your TV home screen</string>
     <string name="ambient_mode_title">Ambient Mode</string>
     <string name="ambient_mode_subtitle">Show artwork from your catalogs while the TV sits idle</string>
     <string name="ambient_mode_enabled_subtitle">Fill the screen with backdrops after a period with no remote input</string>
@@ -389,7 +389,7 @@
     <string name="appearance_app_icon_picker_title">Choose App Icon &amp; Banner</string>
     <string name="appearance_app_icon_picker_subtitle">Each style includes a matching square icon and TV banner</string>
     <string name="appearance_app_icon_confirmation_title">Change App Icon?</string>
-    <string name="appearance_app_icon_confirmation_message">Changing to %1$s will close Nuvio. The TV banner may require a device restart before it updates. Select OK to continue.</string>
+    <string name="appearance_app_icon_confirmation_message">Changing to %1$s will close sparkTV. The TV banner may require a device restart before it updates. Select OK to continue.</string>
     <string name="appearance_app_icon_change_failed">The icon and banner could not be changed. Please try again.</string>
     <string name="appearance_app_icon_original">Original</string>
     <string name="appearance_app_icon_arctic_blue">Arctic Blue</string>
@@ -428,37 +428,37 @@
     <string name="update_channel_beta_description">Early updates that may contain bugs, break features, or behave unexpectedly.</string>
     <string name="about_privacy_policy">Privacy Policy</string>
     <string name="about_privacy_policy_subtitle">View our privacy policy</string>
-    <string name="support_nuvio_name">Support Nuvio</string>
-    <string name="about_supporters_contributors">Support Nuvio</string>
+    <string name="support_sparkTV_name">Support sparkTV</string>
+    <string name="about_supporters_contributors">Support sparkTV</string>
     <string name="about_supporters_contributors_subtitle">Support the project and view community credits</string>
     <string name="about_licenses_attributions">Licenses &amp; Attribution</string>
     <string name="about_licenses_attributions_subtitle">Data sources, acknowledgements, and Android licenses</string>
     <string name="licenses_attributions_title">Licenses &amp; Attribution</string>
-    <string name="licenses_attributions_subtitle">Data providers, service credits, and Android playback licenses used by Nuvio TV.</string>
+    <string name="licenses_attributions_subtitle">Data providers, service credits, and Android playback licenses used by sparkTV TV.</string>
     <string name="licenses_attributions_section_app">APP LICENSE</string>
     <string name="licenses_attributions_section_data">DATA &amp; SERVICES</string>
     <string name="licenses_attributions_section_playback">ANDROID PLAYBACK LICENSES</string>
     <string name="licenses_attributions_section_ui">UI LIBRARIES</string>
     <string name="licenses_attributions_haze_title">Haze 1.7.2</string>
     <string name="licenses_attributions_haze_body">Used for background blur effects. Created by Chris Banes. Licensed under the Apache License, Version 2.0.</string>
-    <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
-    <string name="licenses_attributions_nuvio_body">Source code and license terms are available in the project repository. Licensed under the GNU General Public License v3.0.</string>
+    <string name="licenses_attributions_sparkTV_title">sparkTV TV</string>
+    <string name="licenses_attributions_sparkTV_body">Source code and license terms are available in the project repository. Licensed under the GNU General Public License v3.0.</string>
     <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
-    <string name="licenses_attributions_tmdb_body">Nuvio uses the TMDB API for movie and TV metadata, artwork, trailers, cast, production details, collections, and recommendations. This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
+    <string name="licenses_attributions_tmdb_body">sparkTV uses the TMDB API for movie and TV metadata, artwork, trailers, cast, production details, collections, and recommendations. This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
     <string name="licenses_attributions_trakt_title">Trakt</string>
-    <string name="licenses_attributions_trakt_body">Nuvio connects to Trakt for account authentication, watched history, progress sync, library data, ratings, lists, and comments. Nuvio is not affiliated with or endorsed by Trakt.</string>
+    <string name="licenses_attributions_trakt_body">sparkTV connects to Trakt for account authentication, watched history, progress sync, library data, ratings, lists, and comments. sparkTV is not affiliated with or endorsed by Trakt.</string>
     <string name="licenses_attributions_simkl_title">Simkl</string>
-    <string name="licenses_attributions_simkl_body">Nuvio connects to Simkl for account authentication, watchlists, watched history, playback progress, and scrobbling. Movie, TV, and anime tracking data is provided by Simkl. Nuvio is not affiliated with or endorsed by Simkl.</string>
+    <string name="licenses_attributions_simkl_body">sparkTV connects to Simkl for account authentication, watchlists, watched history, playback progress, and scrobbling. Movie, TV, and anime tracking data is provided by Simkl. sparkTV is not affiliated with or endorsed by Simkl.</string>
     <string name="licenses_attributions_premiumize_title">Premiumize</string>
-    <string name="licenses_attributions_premiumize_body">Nuvio connects to Premiumize for account authentication, cloud library access, cache checks, and cloud playback features. Nuvio is not affiliated with or endorsed by Premiumize.</string>
+    <string name="licenses_attributions_premiumize_body">sparkTV connects to Premiumize for account authentication, cloud library access, cache checks, and cloud playback features. sparkTV is not affiliated with or endorsed by Premiumize.</string>
     <string name="licenses_attributions_torbox_title">TorBox</string>
-    <string name="licenses_attributions_torbox_body">Nuvio connects to TorBox for account authentication, cloud library access, cache checks, and cloud playback features. Nuvio is not affiliated with or endorsed by TorBox.</string>
+    <string name="licenses_attributions_torbox_body">sparkTV connects to TorBox for account authentication, cloud library access, cache checks, and cloud playback features. sparkTV is not affiliated with or endorsed by TorBox.</string>
     <string name="licenses_attributions_mdblist_title">MDBList</string>
-    <string name="licenses_attributions_mdblist_body">Nuvio uses MDBList for ratings, watched history and playback tracking. Nuvio is not affiliated with or endorsed by MDBList.</string>
+    <string name="licenses_attributions_mdblist_body">sparkTV uses MDBList for ratings, watched history and playback tracking. sparkTV is not affiliated with or endorsed by MDBList.</string>
     <string name="licenses_attributions_introdb_title">IntroDB</string>
-    <string name="licenses_attributions_introdb_body">Nuvio uses the IntroDB API for community-provided intro, recap, credits, and preview timestamps used by skip controls. Nuvio is not affiliated with or endorsed by IntroDB.</string>
+    <string name="licenses_attributions_introdb_body">sparkTV uses the IntroDB API for community-provided intro, recap, credits, and preview timestamps used by skip controls. sparkTV is not affiliated with or endorsed by IntroDB.</string>
     <string name="licenses_attributions_imdb_title">IMDb Non-Commercial Datasets</string>
-    <string name="licenses_attributions_imdb_body">Nuvio uses IMDb Non-Commercial Datasets, including title.ratings.tsv.gz, for IMDb ratings and vote counts. Information courtesy of IMDb (https://www.imdb.com). Used with permission. IMDb data is for personal and non-commercial use under IMDb terms.</string>
+    <string name="licenses_attributions_imdb_body">sparkTV uses IMDb Non-Commercial Datasets, including title.ratings.tsv.gz, for IMDb ratings and vote counts. Information courtesy of IMDb (https://www.imdb.com). Used with permission. IMDb data is for personal and non-commercial use under IMDb terms.</string>
     <string name="licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
     <string name="licenses_attributions_exoplayer_body">Used as an Android playback engine. Licensed under the Apache License, Version 2.0.</string>
     <string name="licenses_attributions_libmpv_title">libmpv / libmpv-android</string>
@@ -483,7 +483,7 @@
     <string name="tracking_accounts_title">Accounts</string>
     <string name="tracking_accounts_subtitle">Connect and manage tracking services</string>
     <string name="tracking_sources_title">Sources</string>
-    <string name="tracking_sources_subtitle">Choose where Nuvio reads your library and watch progress. Playback scrobbles to every connected service.</string>
+    <string name="tracking_sources_subtitle">Choose where sparkTV reads your library and watch progress. Playback scrobbles to every connected service.</string>
     <string name="tracking_trakt_features_title">Trakt features</string>
     <string name="tracking_trakt_features_subtitle">Trakt-specific history, reviews, and recommendations</string>
     <string name="tracking_simkl_features_title">Simkl features</string>
@@ -500,8 +500,8 @@
     <string name="tracking_status_connecting">Connecting</string>
     <string name="tracking_finish_connection">Finish connection approval</string>
     <string name="tracking_connecting_provider">Starting %1$s connection…</string>
-    <string name="tracking_watch_progress_dialog_subtitle">Choose the service Nuvio reads for resume and Continue Watching. Scrobbling remains active for every connected service.</string>
-    <string name="tracking_library_source_dialog_subtitle">Choose the service Nuvio reads for your Library. Playback scrobbles to every connected service.</string>
+    <string name="tracking_watch_progress_dialog_subtitle">Choose the service sparkTV reads for resume and Continue Watching. Scrobbling remains active for every connected service.</string>
+    <string name="tracking_library_source_dialog_subtitle">Choose the service sparkTV reads for your Library. Playback scrobbles to every connected service.</string>
     <string name="tracking_trakt_progress_required">Available when Trakt is the Watch Progress source</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
@@ -511,7 +511,7 @@
     <string name="settings_advanced_subtitle">Performance, navigation, cache, and diagnostics</string>
     <string name="experience_mode_essential">Essential</string>
     <string name="experience_mode_advanced">Advanced</string>
-    <string name="experience_mode_choose_title">Choose your Nuvio experience</string>
+    <string name="experience_mode_choose_title">Choose your sparkTV experience</string>
     <string name="experience_mode_choose_subtitle">Start simple or unlock every customization. You can switch anytime.</string>
     <string name="experience_mode_essential_card_subtitle">Focused setup, add-ons, playback basics, Trakt, and account settings.</string>
     <string name="experience_mode_advanced_card_subtitle">Full settings, layout controls, catalog order, collections, plug-ins, and diagnostics.</string>
@@ -614,15 +614,15 @@
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Fast Horizontal Navigation</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Increase D-pad repeat speed in rows while keeping repeat throttling enabled.</string>
-    <string name="advanced_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="advanced_nuvio_performance_mode_subtitle">Enables high-performance native allocator, off-heap memory, and network optimizations for smoother playback</string>
+    <string name="advanced_sparkTV_performance_mode">ExoPlayer Native Memory</string>
+    <string name="advanced_sparkTV_performance_mode_subtitle">Enables high-performance native allocator, off-heap memory, and network optimizations for smoother playback</string>
     <string name="buffer_device_ram_info">Device RAM: %s</string>
     <string name="buffer_safe_limit_info">Recommended Safe Limit: %d MB</string>
     <string name="buffer_safe_status">Safe: Within recommended limit for your device.</string>
     <string name="buffer_unsafe_warning">Warning: Exceeds the recommended safe limit (%1$d MB) for your %2$s device. May cause app crashes.</string>
     <string name="buffer_auto_limit_active">Auto-scaled Safe Limit: %d MB</string>
-    <string name="advanced_nuvio_focus_scroll">Nuvio Focus Scrolling</string>
-    <string name="advanced_nuvio_focus_scroll_subtitle">Use Nuvio\'s custom global focus scroll animation and positioning.</string>
+    <string name="advanced_sparkTV_focus_scroll">sparkTV Focus Scrolling</string>
+    <string name="advanced_sparkTV_focus_scroll_subtitle">Use sparkTV\'s custom global focus scroll animation and positioning.</string>
     <string name="advanced_rgb565">RGB565 image decoding</string>
     <string name="advanced_rgb565_subtitle">Use lower-memory 16-bit color for eligible opaque images. Changing this restarts the app.</string>
     <string name="advanced_memory_only_vertical_scroll">Memory-only Vertical Scrolling</string>
@@ -664,21 +664,21 @@
     <string name="action_back">Back</string>
     <string name="action_close">Close</string>
 
-    <string name="supporters_contributors_title">Support Nuvio</string>
-    <string name="supporters_contributors_subtitle">The people backing Nuvio and the contributors building it across TV and mobile.</string>
+    <string name="supporters_contributors_title">Support sparkTV</string>
+    <string name="supporters_contributors_subtitle">The people backing sparkTV and the contributors building it across TV and mobile.</string>
     <string name="supporters_contributors_supporters_copy">Supporters and donators help keep the project moving, fund infrastructure, and make room for ambitious features.</string>
-    <string name="supporters_contributors_donate_copy">Nuvio will stay free and open source. If you want to support the project, you can help cover the time and infrastructure behind it.</string>
+    <string name="supporters_contributors_donate_copy">sparkTV will stay free and open source. If you want to support the project, you can help cover the time and infrastructure behind it.</string>
     <string name="supporters_contributors_donation_progress_title">This month’s server &amp; maintenance</string>
     <string name="supporters_contributors_donation_progress_complete">Covered. Additional support now goes to development.</string>
     <string name="supporters_contributors_donation_progress_remaining">After 100%, additional support goes to development.</string>
     <string name="supporters_contributors_loading_donation_progress">Loading funding progress...</string>
-    <string name="supporters_contributors_donate_button">Support Nuvio</string>
+    <string name="supporters_contributors_donate_button">Support sparkTV</string>
     <string name="supporters_contributors_qr_title">Scan to support</string>
-    <string name="supporters_contributors_qr_subtitle">Open the link on your phone to support Nuvio.</string>
+    <string name="supporters_contributors_qr_subtitle">Open the link on your phone to support sparkTV.</string>
     <string name="supporters_contributors_qr_hint">Point your camera at the QR code or use the button below.</string>
     <string name="supporters_contributors_back_button">Back to details</string>
-    <string name="supporter_membership_title">Nuvio Supporter Membership</string>
-    <string name="supporter_membership_description">Supporting Nuvio helps cover infrastructure and ongoing development while keeping the core experience free for everyone.</string>
+    <string name="supporter_membership_title">sparkTV Supporter Membership</string>
+    <string name="supporter_membership_description">Supporting sparkTV helps cover infrastructure and ongoing development while keeping the core experience free for everyone.</string>
     <string name="supporter_membership_view">View Membership</string>
     <string name="supporter_membership_manage">Manage membership</string>
     <string name="supporter_membership_refresh">Refresh</string>
@@ -691,7 +691,7 @@
     <string name="supporter_membership_tier_supporter">Supporter</string>
     <string name="supporter_membership_tier_supporter_plus">Supporter Plus</string>
     <string name="supporter_membership_connected_title">Patreon is connected</string>
-    <string name="supporter_membership_connected_description">No active Nuvio tier was found on this Patreon account. View the available options or refresh after changing your Patreon membership.</string>
+    <string name="supporter_membership_connected_description">No active sparkTV tier was found on this Patreon account. View the available options or refresh after changing your Patreon membership.</string>
     <string name="supporter_membership_scan_support">Scan to view membership</string>
     <string name="supporter_membership_scan_support_description">Open the Supporter Membership page on your phone.</string>
     <string name="supporter_membership_scan_manage">Scan to manage membership</string>
@@ -706,13 +706,13 @@
     <string name="supporters_no_message">No message shared.</string>
     <string name="supporters_level_supporter">Supporter</string>
     <string name="supporters_level_supporter_plus">Supporter+</string>
-    <string name="supporters_since">Supporting Nuvio since %1$s</string>
-    <string name="supporters_since_unknown">Proudly supporting Nuvio</string>
+    <string name="supporters_since">Supporting sparkTV since %1$s</string>
+    <string name="supporters_since_unknown">Proudly supporting sparkTV</string>
     <string name="supporters_open_donations">Open support page</string>
     <string name="sponsors_loading">Loading sponsors…</string>
     <string name="sponsors_empty">No sponsors found yet.</string>
     <string name="sponsors_error_title">Couldn’t load sponsors</string>
-    <string name="sponsors_detail_copy">Sponsors help move Nuvio forward through support across the different parts of development.</string>
+    <string name="sponsors_detail_copy">Sponsors help move sparkTV forward through support across the different parts of development.</string>
     <string name="sponsors_channel_unavailable">Sponsor channel unavailable.</string>
     <string name="sponsors_open_channel">Open sponsor channel</string>
     <string name="contributors_loading">Loading GitHub contributors…</string>
@@ -802,8 +802,8 @@
     <string name="playback_player_ask_desc">Choose the player each time</string>
     <string name="playback_player_auto">Auto (Best for Content)</string>
     <string name="playback_player_auto_desc">ExoPlayer for Movies &amp; TV Shows · MPV for Anime</string>
-    <string name="playback_engine_exoplayer_desc">Best compatibility with current Nuvio features.</string>
-    <string name="playback_engine_mvplayer_desc">Uses libmpv with Nuvio OSD controls. Experimental.</string>
+    <string name="playback_engine_exoplayer_desc">Best compatibility with current sparkTV features.</string>
+    <string name="playback_engine_mvplayer_desc">Uses libmpv with sparkTV OSD controls. Experimental.</string>
 
     <string name="video_section">Video</string>
     <string name="playback_true_black_letterbox">True black bars</string>
@@ -1308,7 +1308,7 @@
     <string name="debrid_disconnect">Disconnect</string>
     <string name="debrid_device_auth_connected">%1$s is connected on this device.</string>
     <string name="debrid_device_auth_starting">Starting secure sign-in...</string>
-    <string name="debrid_device_auth_instructions">Scan the QR and enter this code to approve Nuvio.</string>
+    <string name="debrid_device_auth_instructions">Scan the QR and enter this code to approve sparkTV.</string>
     <string name="debrid_device_auth_code_copied">Code copied.</string>
     <string name="debrid_device_auth_waiting">Waiting for approval...</string>
     <string name="debrid_device_auth_failed">Could not start sign-in.</string>
@@ -1503,21 +1503,21 @@
     <string name="trakt_watch_progress_title">Watch Progress</string>
     <string name="trakt_watch_progress_subtitle">Choose which progress source powers resume and continue watching</string>
     <string name="trakt_watch_progress_dialog_title">Watch Progress</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Choose whether resume and continue watching should use Trakt or Nuvio Sync while Trakt scrobbling stays active.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Choose whether resume and continue watching should use Trakt or sparkTV Sync while Trakt scrobbling stays active.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_sparkTV">sparkTV Sync</string>
     <string name="trakt_library_source_title">Library Source</string>
-    <string name="trakt_library_source_subtitle">Choose which source Nuvio reads for your Library</string>
+    <string name="trakt_library_source_subtitle">Choose which source sparkTV reads for your Library</string>
     <string name="trakt_library_source_dialog_title">Library Source</string>
     <string name="trakt_library_source_dialog_subtitle">Choose where to save and manage your library items</string>
     <string name="trakt_library_source_trakt">Trakt</string>
-    <string name="trakt_library_source_nuvio">Nuvio Library</string>
+    <string name="trakt_library_source_sparkTV">sparkTV Library</string>
     <string name="trakt_library_source_trakt_selected">Trakt library selected</string>
-    <string name="trakt_library_source_nuvio_selected">Nuvio library selected</string>
+    <string name="trakt_library_source_sparkTV_selected">sparkTV library selected</string>
     <string name="trakt_setting_on">On</string>
     <string name="trakt_setting_off">Off</string>
     <string name="trakt_watch_progress_trakt_selected">Watch progress source set to Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Watch progress source set to Nuvio Sync</string>
+    <string name="trakt_watch_progress_sparkTV_selected">Watch progress source set to sparkTV Sync</string>
     <string name="trakt_continue_watching_window">Continue Watching Window</string>
     <string name="trakt_continue_watching_subtitle">Trakt history considered for continue watching</string>
     <string name="trakt_unaired_next_up">Unaired Next Up Episodes</string>
@@ -1546,7 +1546,7 @@
     <string name="trakt_stat_watched_hours">Watched Hours</string>
     <string name="trakt_disconnect">Disconnect</string>
     <string name="trakt_disconnect_title">Disconnect Trakt?</string>
-    <string name="trakt_disconnect_subtitle">This will disconnect your Trakt account from Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">This will disconnect your Trakt account from sparkTV.</string>
     <string name="trakt_login">Login</string>
     <string name="trakt_retry">Retry</string>
     <string name="trakt_back">Back</string>
@@ -1623,11 +1623,11 @@
     <string name="profile_addons">addons</string>
     <string name="profile_plugins">plugins</string>
     <string name="profile_choose_avatar">Choose Avatar</string>
-    <string name="profile_custom_avatar_web_panel_note">Custom avatar URLs can be configured from the Nuvio web panel.</string>
+    <string name="profile_custom_avatar_web_panel_note">Custom avatar URLs can be configured from the sparkTV web panel.</string>
     <string name="profile_editor_tab_avatar">Avatar</string>
     <string name="profile_editor_tab_background">Background</string>
     <string name="profile_choose_background">Choose Profile Background</string>
-    <string name="profile_background_member_note">Custom background URLs can be configured from the Nuvio web panel.</string>
+    <string name="profile_background_member_note">Custom background URLs can be configured from the sparkTV web panel.</string>
     <string name="profile_background_normal">Normal</string>
     <string name="profile_background_custom">Custom</string>
     <string name="profile_avatar_none_selected">No avatar selected</string>
@@ -1695,7 +1695,7 @@
     <string name="profile_pin_overlay_set_support">This PIN will be required before opening this profile.</string>
     <string name="profile_pin_overlay_confirm_support">Re-enter the same 4 digits to finish setup.</string>
     <string name="profile_pin_overlay_mismatch">PINs did not match. Enter a new PIN again.</string>
-    <string name="profile_pin_overlay_forgot_hint">Forgot PIN? Reset it from your Nuvio account on nuvio website.</string>
+    <string name="profile_pin_overlay_forgot_hint">Forgot PIN? Reset it from your sparkTV account on sparkTV website.</string>
     <string name="profile_pin_overlay_back_hint">Press back to cancel</string>
 
 
@@ -1778,7 +1778,7 @@
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
     <string name="p2p_consent_title">P2P Streaming</string>
-    <string name="p2p_consent_body">This stream uses peer-to-peer (P2P) technology. By enabling P2P, you acknowledge and agree that:\n\n\u2022 Your IP address will be visible to other peers in the network\n\u2022 You are solely responsible for the content you access\n\u2022 You confirm you have the legal right to stream this content in your jurisdiction\n\u2022 Nuvio does not host, distribute, or control any P2P content\n\u2022 Nuvio bears no liability for any legal consequences arising from your use of P2P streaming\n\nYou use this feature entirely at your own risk. P2P can be disabled anytime in Settings.</string>
+    <string name="p2p_consent_body">This stream uses peer-to-peer (P2P) technology. By enabling P2P, you acknowledge and agree that:\n\n\u2022 Your IP address will be visible to other peers in the network\n\u2022 You are solely responsible for the content you access\n\u2022 You confirm you have the legal right to stream this content in your jurisdiction\n\u2022 sparkTV does not host, distribute, or control any P2P content\n\u2022 sparkTV bears no liability for any legal consequences arising from your use of P2P streaming\n\nYou use this feature entirely at your own risk. P2P can be disabled anytime in Settings.</string>
     <string name="p2p_consent_enable">Enable P2P</string>
     <string name="p2p_consent_cancel">Cancel</string>
     <string name="settings_p2p_title">P2P Streaming</string>
@@ -2126,7 +2126,7 @@
     <string name="library_delete_subtitle">This removes the list and all list items from Trakt.</string>
     <string name="library_delete_confirm">Delete</string>
     <string name="library_source_local">LOCAL</string>
-    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_sparkTV">sparkTV</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_source_saved">Saved</string>
     <string name="library_source_cloud">Cloud</string>
@@ -2246,8 +2246,8 @@
     <string name="official_server_description">You will be signed out of the custom server and the app will restart with the official service.</string>
     <string name="official_server_action">Use official server</string>
     <string name="custom_server_error_invalid_url">Enter a valid HTTP or HTTPS Backend URL.</string>
-    <string name="custom_server_error_official_active">api.nuvio.tv is the official server and is already selected.</string>
-    <string name="custom_server_error_official_available">api.nuvio.tv is the official server. Close this dialog and choose Use official server to switch back.</string>
+    <string name="custom_server_error_official_active">api.sparkTV.tv is the official server and is already selected.</string>
+    <string name="custom_server_error_official_available">api.sparkTV.tv is the official server. Close this dialog and choose Use official server to switch back.</string>
     <string name="custom_server_error_connection">Could not reach the discovery endpoint. Check the URL and server availability.</string>
     <string name="custom_server_error_http">The discovery endpoint returned HTTP %1$d.</string>
     <string name="custom_server_error_response_too_large">The discovery document is larger than allowed.</string>
@@ -2369,7 +2369,7 @@
     <string name="catalog_see_all_empty_title">No items available</string>
     <string name="catalog_see_all_empty_subtitle">Try a different catalog or check back later</string>
 
-    <string name="layout_selection_welcome">Welcome to Nuvio</string>
+    <string name="layout_selection_welcome">Welcome to sparkTV</string>
     <string name="layout_selection_subtitle">Choose your home screen layout</string>
     <string name="layout_selection_continue">Continue</string>
 
@@ -2386,7 +2386,7 @@
     <string name="update_unknown_sources">Allow installs from unknown sources to continue.</string>
     <!-- AccountScreen -->
     <string name="account_title">Account</string>
-    <string name="account_sign_in_description">Sign in to sync your library, watch progress, addons, and plugins across devices. Library sync uses Nuvio Sync when Trakt is not connected, and watch progress can use either Trakt or Nuvio Sync.</string>
+    <string name="account_sign_in_description">Sign in to sync your library, watch progress, addons, and plugins across devices. Library sync uses sparkTV Sync when Trakt is not connected, and watch progress can use either Trakt or sparkTV Sync.</string>
     <string name="account_sync_code_title">Sync Code</string>
     <string name="account_sync_code_description">Sync across devices without creating an account.</string>
     <string name="account_linked_devices">Linked Devices (%1$d)</string>
@@ -2558,7 +2558,7 @@
     <string name="cd_preview">Preview</string>
     <string name="cd_test">Test</string>
     <string name="cd_unlink">Unlink</string>
-    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_sparkTV_logo">sparkTVTV</string>
     <string name="cd_trakt_logo">Trakt Logo</string>
     <string name="cd_trakt_qr">Trakt activation QR</string>
     <string name="cd_imdb">IMDb</string>
@@ -2570,7 +2570,7 @@
     <string name="cd_expand">Expand %1$s</string>
     <string name="cd_collapse">Collapse %1$s</string>
     <string name="cd_qr_login">QR login code</string>
-    <string name="cd_nuvio">Nuvio</string>
+    <string name="cd_sparkTV">sparkTV</string>
 
     <string name="debug_signin_success">Signed in successfully</string>
     <string name="debug_generate_description">Debug-generated %1$s item #%2$d</string>
@@ -2605,7 +2605,7 @@
     <string name="collections_paste_clipboard">Paste from Clipboard</string>
     <string name="collections_validate">Validate</string>
     <string name="collections_paste_hint">Paste collections JSON here…</string>
-    <string name="collections_file_description">Reads nuvio-collections.json from the Downloads folder.</string>
+    <string name="collections_file_description">Reads sparkTV-collections.json from the Downloads folder.</string>
     <string name="collections_load_file">Load File</string>
     <string name="collections_file_loaded">File loaded (%1$d characters)</string>
     <string name="collections_fetch_url">Fetch URL</string>
@@ -2713,7 +2713,7 @@
     <string name="collections_editor_tmdb_list_helper">Example: https://www.themoviedb.org/list/8504994 or 8504994.</string>
     <string name="collections_editor_tmdb_person_id">Person ID</string>
     <string name="collections_editor_tmdb_person_helper">Example: https://www.themoviedb.org/person/31-tom-hanks or 31.</string>
-    <string name="collections_editor_tmdb_title_helper">Shown as the row/tab name. If blank, Nuvio creates one from the source.</string>
+    <string name="collections_editor_tmdb_title_helper">Shown as the row/tab name. If blank, sparkTV creates one from the source.</string>
     <string name="collections_editor_tmdb_quick_genres">Quick genres</string>
     <string name="collections_editor_tmdb_quick_languages">Quick languages</string>
     <string name="collections_editor_tmdb_quick_countries">Quick countries</string>
@@ -2895,7 +2895,7 @@
     <string name="autoplay_regex_preset_no_remux_hdr">No REMUX/HDR</string>
 
     <!-- Playback settings sections -->
-    <string name="playback_player_internal_desc">Use NuvioTV\'s built-in player</string>
+    <string name="playback_player_internal_desc">Use sparkTVTV\'s built-in player</string>
 
     <!-- Player runtime: torrent overlay + tracks -->
     <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
@@ -3000,9 +3000,9 @@
     <string name="simkl_visit">Visit Simkl</string>
     <string name="simkl_sync_info_action">How syncing works</string>
     <string name="simkl_sync_info_title">How Simkl syncing works</string>
-    <string name="simkl_sync_info_description">Nuvio automatically checks Simkl at most once every %1$d minutes. Changes made through another app or the Simkl website may take that long to appear.</string>
+    <string name="simkl_sync_info_description">sparkTV automatically checks Simkl at most once every %1$d minutes. Changes made through another app or the Simkl website may take that long to appear.</string>
     <string name="simkl_sync_info_activity">Each refresh first checks whether Simkl reports any changes and downloads only the updates. This follows Simkl’s API rules, reduces unnecessary data use, and helps keep the service stable.</string>
-    <string name="simkl_sync_info_manual">Changes made in Nuvio are sent to Simkl immediately. Use Sync now whenever you want Nuvio to check for remote changes sooner.</string>
+    <string name="simkl_sync_info_manual">Changes made in sparkTV are sent to Simkl immediately. Use Sync now whenever you want sparkTV to check for remote changes sooner.</string>
     <string name="simkl_sync_info_library_statuses">Shows placed in Simkl’s On Hold or Dropped lists are hidden from Continue Watching. They remain hidden for as long as they stay in either list.</string>
     <string name="simkl_sync_info_docs">Read the Simkl sync guide</string>
     <string name="error_open_browser_failed">Failed to open browser</string>
@@ -3227,9 +3227,9 @@
     <string name="playback_section_buffer_network">Buffer &amp; Network</string>
     <string name="playback_section_buffer_network_desc">How much content to keep in memory and how to fetch streams.</string>
     <string name="playback_net_device_memory_info">Device Memory: %1$s | Recommended Safety Limit: %2$d MB</string>
-    <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="playback_net_nuvio_performance_mode_sub">Enable native off-heap allocator and scrubbing optimizations.</string>
-    <string name="playback_net_nuvio_performance_mode_not_supported">This feature is not supported by your device.</string>
+    <string name="playback_net_sparkTV_performance_mode">ExoPlayer Native Memory</string>
+    <string name="playback_net_sparkTV_performance_mode_sub">Enable native off-heap allocator and scrubbing optimizations.</string>
+    <string name="playback_net_sparkTV_performance_mode_not_supported">This feature is not supported by your device.</string>
     <string name="playback_buffer_custom">Custom Playback Buffers</string>
     <string name="playback_buffer_custom_sub">Override Media3\'s default buffering with the values below. When off, the player uses Media3\'s stock buffer durations and target size.</string>
     <string name="playback_buffer_header">Buffer</string>
