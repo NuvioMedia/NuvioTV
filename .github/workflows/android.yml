@@ -9,23 +9,25 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Pinning to 24.04 removes the system warning completely
 
     steps:
-    # 1. Download your code as a flat ZIP payload to completely bypass Git layout checks
+    # 1. Download flat source payload via fallback mechanism
     - name: Download Repository Source Code
       run: |
         curl -L -o repo.zip "https://github.com{{ github.repository }}/archive/${{ github.sha }}.zip"
         unzip repo.zip
-        mv sparkTV-${{ github.sha }}/* .
-        rm -rf repo.zip
+        cd sparkTV-* || cd *
+        mv * ../
+        cd ..
+        rm -rf repo.zip sparkTV-*
 
-    # 2. Inject the missing external library
+    # 2. Inject missing library module
     - name: Manually Inject Library Folder
       run: |
         git clone --depth 1 https://github.com libmpv-android
 
-    # 3. Setup Environment
+    # 3. Setup Compiler Environment
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -40,7 +42,7 @@ jobs:
     - name: Build APK
       run: ./gradlew assembleDebug
 
-    # 5. Save the Output
+    # 5. Output Payload
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
