@@ -12,11 +12,15 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-    # 1. Fetch clean codebase cache layout
-    - name: Checkout Code Base
-      uses: actions/checkout@v2
+    # 1. Manually streams and unpacks your code files as a flat structure, bypassing the checkout tool entirely
+    - name: Fetch Clean Repository Files
+      run: |
+        git init .
+        git remote add origin https://github.com{{ github.repository }}.git
+        git fetch --depth 1 origin ${{ github.sha }}
+        git checkout FETCH_HEAD
 
-    # 2. Inject missing library module with the FIXED URL link
+    # 2. Inject missing library module
     - name: Manually Inject Library Folder
       run: |
         git clone --depth 1 https://github.com libmpv-android
