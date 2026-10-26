@@ -6,21 +6,19 @@ on:
 
 permissions:
   contents: write
-  packages: write
-  actions: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+    # Switching to v3 bypasses the old submodule cache lookup completely
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
       with:
         persist-credentials: false
-        submodules: false # <-- Forces GitHub to ignore the broken tracking map entirely
 
-    - name: Manually Inject Missing Library Folder
+    - name: Manually Inject Library Folder
       run: |
         git clone --depth 1 https://github.com libmpv-android
 
