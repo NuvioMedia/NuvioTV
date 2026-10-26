@@ -9,18 +9,12 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04 # Pinning to 24.04 removes the system warning completely
+    runs-on: ubuntu-24.04
 
     steps:
-    # 1. Download flat source payload via fallback mechanism
-    - name: Download Repository Source Code
-      run: |
-        curl -L -o repo.zip "https://github.com{{ github.repository }}/archive/${{ github.sha }}.zip"
-        unzip repo.zip
-        cd sparkTV-* || cd *
-        mv * ../
-        cd ..
-        rm -rf repo.zip sparkTV-*
+    # 1. Bypasses your commit cache history blocks entirely by using the v2 engine layout
+    - name: Checkout Code Base
+      uses: actions/checkout@v2
 
     # 2. Inject missing library module
     - name: Manually Inject Library Folder
