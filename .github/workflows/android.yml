@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "**" ]
 
-# This block grants the exact permissions required to download and build your fork
 permissions:
   contents: write
   packages: write
@@ -15,10 +14,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
+    - name: Checkout Code with Submodules
       uses: actions/checkout@v4
       with:
-        persist-credentials: false # Bypasses Git authorization blocks
+        persist-credentials: false
+        submodules: recursive # <-- This forces GitHub to grab 'libmpv-android' automatically
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
