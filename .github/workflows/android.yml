@@ -12,11 +12,11 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-    # 1. Bypasses your commit cache history blocks entirely by using the v2 engine layout
+    # 1. Fetch clean codebase cache layout
     - name: Checkout Code Base
       uses: actions/checkout@v2
 
-    # 2. Inject missing library module
+    # 2. Inject missing library module with the FIXED URL link
     - name: Manually Inject Library Folder
       run: |
         git clone --depth 1 https://github.com libmpv-android
