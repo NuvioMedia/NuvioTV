@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** Delay before re-validating the forced-subtitle invariant after the audio preference changed. */
+private const val AUDIO_PREFERENCE_RECHECK_DELAY_MS = 300L
+
 internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?) {
     if (id.isNullOrBlank() || type.isNullOrBlank()) return
 
@@ -204,6 +207,13 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
                         if (isUsingMpvEngine()) {
                             mpvPreferredAudioLanguages = resolved
                             mpvView?.applyAudioLanguagePreferences(resolved)
+                        }
+                        // The player applies the new audio track asynchronously, so the
+                        // forced-subtitle invariant has to be re-validated once the new
+                        // audio track is active (a forced subtitle may no longer match it).
+                        scope.launch {
+                            delay(AUDIO_PREFERENCE_RECHECK_DELAY_MS)
+                            tryAutoSelectPreferredSubtitleFromAvailableTracks()
                         }
                     }
                 }
