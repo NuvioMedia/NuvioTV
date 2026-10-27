@@ -1,11 +1,11 @@
 package com.nuvio.tv.ui.screens.settings
 
-import android.app.ActivityManager
 import android.content.Context
 import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.data.local.BufferSettings
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.ui.screens.player.NuvioExoPlayerPerformanceHelper
 
 /**
  * Shared memory budget constants and helpers for buffer + parallel connection settings.
@@ -20,6 +20,7 @@ object MemoryBudget {
     private const val LOW_HEAP_RATIO = 0.65
     private const val HIGH_HEAP_RATIO = 0.85
     private const val HIGH_HEAP_THRESHOLD_MB = 512L
+    private const val ONE_GB_CLASS_MAX_BYTES = (1.15 * 1024 * 1024 * 1024).toLong()
     // The buffer allocator is on the Java heap; on low-RAM reserve a slice for the UI/decoder/caches
     // and give the rest to the buffer (a flat % of max heap overcommits and starves them).
     private const val LOW_HEAP_RESERVE_MB = 210L
@@ -60,7 +61,7 @@ object MemoryBudget {
 
     /** Everything derived from the device's memory, fixed for the life of the process. */
     internal data class Snapshot(
-        /** Heap the budgets are taken from; below maxMemory() on a low-RAM device under largeHeap. */
+        /** Heap the budgets are taken from; half of maxMemory() on a 1 GB device with a 512 MB+ largeHeap. */
         val heapMb: Long,
         val isLowRamTier: Boolean,
         val budgetMb: Int,
@@ -79,11 +80,9 @@ object MemoryBudget {
      * (Application.onCreate, before super.onCreate()).
      */
     fun init(context: Context) {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         snapshot = snapshotFor(
             maxHeapMb = runtimeMaxHeapMb(),
-            standardHeapMb = activityManager?.memoryClass?.toLong() ?: 0L,
-            deviceIsLowRam = activityManager?.isLowRamDevice ?: false,
+            physicalRamBytes = NuvioExoPlayerPerformanceHelper.getDevicePhysicalRamBytes(context),
         )
         Log.i(TAG, "Memory budget: $snapshot")
     }
@@ -93,15 +92,15 @@ object MemoryBudget {
         get() = snapshot ?: run {
             if (!loggedReadBeforeInit) {
                 loggedReadBeforeInit = true
-                Log.w(TAG, "Memory budget read before init(); using maxMemory() without the low-RAM check")
+                Log.w(TAG, "Memory budget read before init(); using maxMemory() without the RAM check")
             }
-            snapshotFor(runtimeMaxHeapMb(), standardHeapMb = 0L, deviceIsLowRam = false)
+            snapshotFor(runtimeMaxHeapMb(), physicalRamBytes = 0L)
         }
 
     /** Heap the budgets and the image cache are sized from. */
     val heapMb: Long get() = current.heapMb
 
-    /** True on a device the platform marks low-RAM, or when the app heap is below the high-RAM threshold. */
+    /** True when the budget heap is below the high-RAM threshold. */
     val isLowRamTier: Boolean get() = current.isLowRamTier
 
     val budgetMb: Int get() = current.budgetMb
@@ -113,9 +112,9 @@ object MemoryBudget {
 
     private fun runtimeMaxHeapMb(): Long = Runtime.getRuntime().maxMemory() / (1024L * 1024L)
 
-    internal fun snapshotFor(maxHeapMb: Long, standardHeapMb: Long, deviceIsLowRam: Boolean): Snapshot {
-        val heapMb = budgetHeapMb(maxHeapMb, standardHeapMb, deviceIsLowRam)
-        val lowRamTier = lowRamTierFor(heapMb, deviceIsLowRam)
+    internal fun snapshotFor(maxHeapMb: Long, physicalRamBytes: Long): Snapshot {
+        val heapMb = budgetHeapMb(maxHeapMb, physicalRamBytes)
+        val lowRamTier = heapMb < HIGH_HEAP_THRESHOLD_MB
         // Pre-cap ratio budget, before the low-RAM reserve trims it below.
         val rawBudgetMb = (heapMb * (if (lowRamTier) LOW_HEAP_RATIO else HIGH_HEAP_RATIO)).toInt()
         // The flat reserve collapses the budget on small heaps, so hold a floor that still leaves
@@ -137,13 +136,15 @@ object MemoryBudget {
         )
     }
 
-    // largeHeap lifts maxMemory to dalvik.vm.heapsize (512 MB on 1 GB TVs), so on a device the
-    // platform marks low-RAM the standard heap is the realistic ceiling.
-    internal fun budgetHeapMb(maxHeapMb: Long, standardHeapMb: Long, deviceIsLowRam: Boolean): Long =
-        if (deviceIsLowRam && standardHeapMb > 0L) minOf(maxHeapMb, standardHeapMb) else maxHeapMb
-
-    internal fun lowRamTierFor(heapMb: Long, deviceIsLowRam: Boolean): Boolean =
-        deviceIsLowRam || heapMb < HIGH_HEAP_THRESHOLD_MB
+    // Some 1 GB TVs ship dalvik.vm.heapsize=512m, so largeHeap reports a high-RAM heap on a device
+    // that can't back it. Only that case is resized: half the heap, the same 1 GB class as
+    // NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb().
+    internal fun budgetHeapMb(maxHeapMb: Long, physicalRamBytes: Long): Long =
+        if (maxHeapMb >= HIGH_HEAP_THRESHOLD_MB && physicalRamBytes in 1 until ONE_GB_CLASS_MAX_BYTES) {
+            maxHeapMb / 2
+        } else {
+            maxHeapMb
+        }
 
     fun effectiveBufferMb(stored: Int): Int =
         if (stored > 0) stored else defaultBufferSizeMb

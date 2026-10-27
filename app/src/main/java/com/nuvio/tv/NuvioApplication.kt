@@ -163,8 +163,8 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                     else -> 0.25
                 }
                 // maxSizePercent takes the share of largeMemoryClass under largeHeap (512 MB on
-                // 1 GB TVs, ~77 MB of bitmaps), so when MemoryBudget sizes from a smaller heap on a
-                // low-RAM device the cache takes its share from that heap too.
+                // 1 GB TVs, ~77 MB of bitmaps), so when MemoryBudget sizes from a smaller heap on
+                // such a TV the cache takes its share from that heap too.
                 val budgetHeapBytes = MemoryBudget.heapMb * 1024L * 1024L
                 val builder = MemoryCache.Builder()
                 if (budgetHeapBytes < Runtime.getRuntime().maxMemory()) {
