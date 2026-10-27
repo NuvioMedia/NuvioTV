@@ -73,6 +73,11 @@ data class PlayerUiState(
     val currentStreamInfoHash: String? = null, // InfoHash of the currently playing stream (for debrid matching)
     val currentStreamFileIdx: Int? = null, // FileIdx of the currently playing stream (for debrid matching)
     val currentStreamAddonName: String? = null, // Addon name of the currently playing stream
+    val activeVideoQualityBadge: String? = null,
+    val activeHdrFormatBadge: String? = null,
+    val activeAudioFormatBadge: String? = null,
+    val activeAudioIsDolbyBadge: Boolean = false,
+    val activeAudioLanguageBadge: String? = null,
     val backdrop: String? = null,
     val logo: String? = null,
     val description: String? = null,

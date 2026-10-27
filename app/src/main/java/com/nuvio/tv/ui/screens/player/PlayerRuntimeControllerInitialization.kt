@@ -178,7 +178,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                 it.copy(
                     playbackIssueReportStatus = PlaybackIssueReportStatus.Idle,
                     playbackIssueReportId = null,
-                    playbackIssueReportError = null
+                    playbackIssueReportError = null,
+                    activeVideoQualityBadge = null,
+                    activeHdrFormatBadge = null,
+                    activeAudioFormatBadge = null,
+                    activeAudioIsDolbyBadge = false,
+                    activeAudioLanguageBadge = null
                 )
             }
             resetLoadingOverlayForNewStream()
@@ -1419,6 +1424,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (videoSize.width > 0 && videoSize.height > 0) {
                             currentVideoWidth = videoSize.width
                             currentVideoHeight = videoSize.height
+                            refreshExoActivePlaybackBadges()
                             Log.d(PlayerRuntimeController.TAG, "onVideoSizeChanged: updated resolution to ${videoSize.width}x${videoSize.height}")
                         }
                     }
@@ -1758,6 +1764,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             format = format,
                             reuseEvaluation = decoderReuseEvaluation
                         )
+                        refreshExoActivePlaybackBadges()
                     }
 
                     override fun onVideoSizeChanged(eventTime: AnalyticsListener.EventTime, videoSize: androidx.media3.common.VideoSize) {
@@ -1815,6 +1822,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             format = format,
                             reuseEvaluation = decoderReuseEvaluation
                         )
+                        refreshExoActivePlaybackBadges()
                     }
 
                     override fun onAudioUnderrun(

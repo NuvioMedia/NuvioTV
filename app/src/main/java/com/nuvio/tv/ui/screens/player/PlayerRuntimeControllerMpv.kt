@@ -355,9 +355,34 @@ internal fun PlayerRuntimeController.updateMpvTracksOnTick() {
 /** mpv only reports the video transfer once it has decoded video params, so this is re-read each tick. */
 private fun PlayerRuntimeController.updateMpvHdrVideoState() {
     if (!isUsingMpvEngine()) return
-    val isHdrVideo = mpvView?.readVideoIsHdr() ?: return
-    if (_uiState.value.isHdrVideo != isHdrVideo) {
-        _uiState.update { it.copy(isHdrVideo = isHdrVideo) }
+    val view = mpvView ?: return
+    val isHdrVideo = view.readVideoIsHdr()
+    val dimensions = view.readVideoDimensions()
+    val qualityBadge = dimensions?.let { (w, h) -> ActivePlaybackBadgeUtils.formatVideoQuality(w, h) }
+    val hdrBadge = view.readVideoHdrBadge(
+        streamHints = listOf(currentFilename, streamName, currentStreamDescription, _uiState.value.currentStreamName)
+    )
+    if (dimensions != null) {
+        currentVideoWidth = dimensions.first
+        currentVideoHeight = dimensions.second
+    }
+    _uiState.update { state ->
+        val nextHdr = isHdrVideo ?: state.isHdrVideo
+        val nextQuality = qualityBadge ?: state.activeVideoQualityBadge
+        val nextHdrBadge = hdrBadge ?: if (isHdrVideo == false) null else state.activeHdrFormatBadge
+        if (
+            state.isHdrVideo == nextHdr &&
+            state.activeVideoQualityBadge == nextQuality &&
+            state.activeHdrFormatBadge == nextHdrBadge
+        ) {
+            state
+        } else {
+            state.copy(
+                isHdrVideo = nextHdr,
+                activeVideoQualityBadge = nextQuality,
+                activeHdrFormatBadge = nextHdrBadge
+            )
+        }
     }
 }
 
@@ -471,13 +496,30 @@ private fun PlayerRuntimeController.applyMpvTrackSnapshot(snapshot: MpvTrackSnap
         } else {
             selectedSubtitleIndex
         }
+        val selectedMpvAudio = snapshot.audioTracks.firstOrNull { it.isSelected }
+            ?: snapshot.audioTracks.firstOrNull()
+        val detectedAudioBadge = ActivePlaybackBadgeUtils.detectAudioFormat(
+            mimeType = null,
+            codecs = selectedMpvAudio?.codec,
+            label = selectedMpvAudio?.name,
+            channelCount = selectedMpvAudio?.channelCount
+        )
+        val activeAudioLanguageBadge = ActivePlaybackBadgeUtils.formatAudioLanguageAndChannels(
+            languageCode = selectedMpvAudio?.language,
+            label = selectedMpvAudio?.name,
+            channelCount = selectedMpvAudio?.channelCount,
+            contentLanguageFallback = contentLanguage
+        )
 
         if (
             state.audioTracks == audioTracks &&
             state.subtitleTracks == internalSubtitleTracks &&
             state.selectedAudioTrackIndex == selectedAudioIndex &&
             state.selectedSubtitleTrackIndex == normalizedSelectedSubtitleIndex &&
-            state.selectedAddonSubtitle == addonSelection
+            state.selectedAddonSubtitle == addonSelection &&
+            state.activeAudioFormatBadge == detectedAudioBadge?.label &&
+            state.activeAudioIsDolbyBadge == (detectedAudioBadge?.isDolby == true) &&
+            state.activeAudioLanguageBadge == activeAudioLanguageBadge
         ) {
             state
         } else {
@@ -486,7 +528,10 @@ private fun PlayerRuntimeController.applyMpvTrackSnapshot(snapshot: MpvTrackSnap
                 subtitleTracks = internalSubtitleTracks,
                 selectedAudioTrackIndex = selectedAudioIndex,
                 selectedSubtitleTrackIndex = normalizedSelectedSubtitleIndex,
-                selectedAddonSubtitle = addonSelection
+                selectedAddonSubtitle = addonSelection,
+                activeAudioFormatBadge = detectedAudioBadge?.label,
+                activeAudioIsDolbyBadge = detectedAudioBadge?.isDolby == true,
+                activeAudioLanguageBadge = activeAudioLanguageBadge
             )
         }
     }

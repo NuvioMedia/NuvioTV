@@ -489,8 +489,50 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             ?.trim()
             ?.lowercase(Locale.ROOT)
             ?.takeIf { it.isNotBlank() }
-            ?: return null
-        return gamma == "pq" || gamma == "hlg"
+        val colormatrix = runCatching { mpv.getPropertyString("video-params/colormatrix") }.getOrNull()
+            ?.trim()
+            ?.lowercase(Locale.ROOT)
+            ?.takeIf { it.isNotBlank() }
+        val dvProfile = runCatching { mpv.getPropertyString("current-tracks/video/dolby-vision-profile") }.getOrNull()
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+        if (gamma == null && colormatrix == null && dvProfile == null) return null
+        return gamma == "pq" || gamma == "hlg" || colormatrix == "dolbyvision" || dvProfile != null
+    }
+
+    fun readVideoDimensions(): Pair<Int, Int>? {
+        if (!initialized) return null
+        val w = runCatching {
+            mpv.getPropertyInt("video-out-params/dw")
+                ?: mpv.getPropertyInt("video-params/w")
+        }.getOrNull() ?: return null
+        val h = runCatching {
+            mpv.getPropertyInt("video-out-params/dh")
+                ?: mpv.getPropertyInt("video-params/h")
+        }.getOrNull() ?: return null
+        if (w <= 0 || h <= 0) return null
+        return w to h
+    }
+
+    fun readVideoHdrBadge(streamHints: List<String?> = emptyList()): String? {
+        if (!initialized) return null
+        val gamma = runCatching { mpv.getPropertyString("video-params/gamma") }.getOrNull()
+        val colormatrix = runCatching { mpv.getPropertyString("video-params/colormatrix") }.getOrNull()
+        val dvProfile = runCatching { mpv.getPropertyString("current-tracks/video/dolby-vision-profile") }.getOrNull()
+        val videoCodec = runCatching {
+            mpv.getPropertyString("current-tracks/video/codec") ?: mpv.getPropertyString("video-codec")
+        }.getOrNull()
+        val videoDesc = runCatching { mpv.getPropertyString("current-tracks/video/decoder-desc") }.getOrNull()
+        return ActivePlaybackBadgeUtils.detectHdrFormat(
+            mimeType = null,
+            codecs = videoCodec,
+            colorTransfer = null,
+            label = videoDesc,
+            colormatrix = colormatrix,
+            gamma = gamma,
+            dolbyVisionProfile = dvProfile,
+            streamHints = streamHints
+        )
     }
 
     internal fun subtitleTextMetrics(style: SubtitleStyleSettings): SubtitleTextMetrics? {

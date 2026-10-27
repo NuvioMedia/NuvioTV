@@ -64,6 +64,9 @@ internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
     // Fill in content language from meta if not provided via navigation args.
     if (contentLanguage == null) {
         contentLanguage = meta.resolveContentLanguage()
+        if (contentLanguage != null) {
+            refreshExoActivePlaybackBadges()
+        }
     }
     val description = resolveDescription(meta)
 
@@ -184,6 +187,7 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
         val tmdbLang = normalizeLanguageCode(enrichment.language)
         if (tmdbLang != null) {
             contentLanguage = tmdbLang
+            refreshExoActivePlaybackBadges()
             val hasUserAudioSelection = persistedTrackPreference?.audio != null
             if (!hasUserAudioSelection) {
                 val playerSettings = playerSettingsDataStore.playerSettings.first()

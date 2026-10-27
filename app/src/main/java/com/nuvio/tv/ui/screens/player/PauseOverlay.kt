@@ -70,6 +70,11 @@ fun PauseOverlay(
     type: String?,
     description: String?,
     cast: List<MetaCastMember>,
+    activeVideoQualityBadge: String? = null,
+    activeHdrFormatBadge: String? = null,
+    activeAudioFormatBadge: String? = null,
+    activeAudioIsDolbyBadge: Boolean = false,
+    activeAudioLanguageBadge: String? = null,
     modifier: Modifier = Modifier,
     showClock: Boolean = true
 ) {
@@ -113,6 +118,11 @@ fun PauseOverlay(
                     type = type,
                     description = description,
                     cast = cast,
+                    activeVideoQualityBadge = activeVideoQualityBadge,
+                    activeHdrFormatBadge = activeHdrFormatBadge,
+                    activeAudioFormatBadge = activeAudioFormatBadge,
+                    activeAudioIsDolbyBadge = activeAudioIsDolbyBadge,
+                    activeAudioLanguageBadge = activeAudioLanguageBadge,
                     onCastSelected = { selectedCastMember = it }
                 )
             }
@@ -157,6 +167,11 @@ private fun PauseMetadataView(
     type: String?,
     description: String?,
     cast: List<MetaCastMember>,
+    activeVideoQualityBadge: String? = null,
+    activeHdrFormatBadge: String? = null,
+    activeAudioFormatBadge: String? = null,
+    activeAudioIsDolbyBadge: Boolean = false,
+    activeAudioLanguageBadge: String? = null,
     onCastSelected: (MetaCastMember) -> Unit
 ) {
     Column(
@@ -234,6 +249,15 @@ private fun PauseMetadataView(
                     modifier = Modifier.padding(top = NuvioTheme.spacing.md)
                 )
             }
+
+            ActivePlaybackBadgesRow(
+                videoQuality = activeVideoQualityBadge,
+                hdrFormat = activeHdrFormatBadge,
+                audioFormat = activeAudioFormatBadge,
+                isDolbyAudio = activeAudioIsDolbyBadge,
+                audioLanguageLabel = activeAudioLanguageBadge,
+                modifier = Modifier.padding(top = NuvioTheme.spacing.md)
+            )
 
             if (!description.isNullOrBlank()) {
                 Text(

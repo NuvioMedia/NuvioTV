@@ -303,6 +303,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             isHdrVideo = isHdrVideo
         )
     }
+    refreshExoActivePlaybackBadges()
     updateAudioControlAvailability(audioTracks, selectedAudioIndex)
     logSwitchTrace(
         stage = "exo-tracks-update-end",
@@ -333,6 +334,111 @@ private fun formatSupportRank(@C.FormatSupport formatSupport: Int): Int {
         C.FORMAT_UNSUPPORTED_DRM -> 2
         C.FORMAT_UNSUPPORTED_SUBTYPE -> 1
         else -> 0
+    }
+}
+
+internal fun PlayerRuntimeController.refreshExoActivePlaybackBadges() {
+    if (isUsingMpvEngine()) return
+    val player = _exoPlayer
+    val tracks = player?.currentTracks
+    var selectedVideoFormat: Format? = null
+    var firstVideoFormat: Format? = null
+    var selectedAudioFormat: Format? = null
+    var firstAudioFormat: Format? = null
+
+    tracks?.groups?.forEach { trackGroup ->
+        when (trackGroup.type) {
+            C.TRACK_TYPE_VIDEO -> {
+                if (trackGroup.length > 0 && firstVideoFormat == null) {
+                    firstVideoFormat = trackGroup.getTrackFormat(0)
+                }
+                for (i in 0 until trackGroup.length) {
+                    if (trackGroup.isTrackSelected(i)) {
+                        val format = trackGroup.getTrackFormat(i)
+                        val cur = selectedVideoFormat
+                        if (cur == null || format.width > cur.width || (format.width == cur.width && format.bitrate > cur.bitrate)) {
+                            selectedVideoFormat = format
+                        }
+                    }
+                }
+            }
+            C.TRACK_TYPE_AUDIO -> {
+                if (trackGroup.length > 0 && firstAudioFormat == null) {
+                    firstAudioFormat = trackGroup.getTrackFormat(0)
+                }
+                for (i in 0 until trackGroup.length) {
+                    if (trackGroup.isTrackSelected(i)) {
+                        selectedAudioFormat = trackGroup.getTrackFormat(i)
+                    }
+                }
+            }
+        }
+    }
+
+    val decodedVideo = player?.videoFormat
+    val decodedAudio = player?.audioFormat
+    val effectiveVideo = selectedVideoFormat ?: decodedVideo ?: firstVideoFormat
+    val effectiveAudio = selectedAudioFormat ?: decodedAudio ?: firstAudioFormat
+
+    val resolvedWidth = effectiveVideo?.width?.takeIf { it > 0 }
+        ?: decodedVideo?.width?.takeIf { it > 0 }
+        ?: currentVideoWidth?.takeIf { it > 0 }
+    val resolvedHeight = effectiveVideo?.height?.takeIf { it > 0 }
+        ?: decodedVideo?.height?.takeIf { it > 0 }
+        ?: currentVideoHeight?.takeIf { it > 0 }
+
+    val activeVideoQualityBadge = ActivePlaybackBadgeUtils.formatVideoQuality(
+        width = resolvedWidth,
+        height = resolvedHeight
+    )
+    val activeHdrFormatBadge = ActivePlaybackBadgeUtils.detectHdrFormat(
+        mimeType = effectiveVideo?.sampleMimeType ?: decodedVideo?.sampleMimeType,
+        codecs = effectiveVideo?.codecs ?: decodedVideo?.codecs,
+        colorTransfer = effectiveVideo?.colorInfo?.colorTransfer ?: decodedVideo?.colorInfo?.colorTransfer,
+        label = effectiveVideo?.label ?: decodedVideo?.label,
+        streamHints = listOf(currentFilename, streamName, currentStreamDescription, _uiState.value.currentStreamName)
+    )
+
+    val audioChannelCount = effectiveAudio?.channelCount?.takeIf { it > 0 }
+        ?: decodedAudio?.channelCount?.takeIf { it > 0 }
+    val audioMimeType = effectiveAudio?.sampleMimeType ?: decodedAudio?.sampleMimeType
+    val audioCodecs = effectiveAudio?.codecs ?: decodedAudio?.codecs
+    val audioLabel = effectiveAudio?.label ?: decodedAudio?.label
+    val audioLanguage = effectiveAudio?.language?.takeIf { it != "und" }
+        ?: decodedAudio?.language?.takeIf { it != "und" }
+        ?: effectiveAudio?.language
+
+    val detectedAudioBadge = ActivePlaybackBadgeUtils.detectAudioFormat(
+        mimeType = audioMimeType,
+        codecs = audioCodecs,
+        label = audioLabel,
+        channelCount = audioChannelCount
+    )
+    val activeAudioLanguageBadge = ActivePlaybackBadgeUtils.formatAudioLanguageAndChannels(
+        languageCode = audioLanguage,
+        label = audioLabel,
+        channelCount = audioChannelCount,
+        contentLanguageFallback = contentLanguage
+    )
+
+    _uiState.update { state ->
+        if (
+            state.activeVideoQualityBadge == activeVideoQualityBadge &&
+            state.activeHdrFormatBadge == activeHdrFormatBadge &&
+            state.activeAudioFormatBadge == detectedAudioBadge?.label &&
+            state.activeAudioIsDolbyBadge == (detectedAudioBadge?.isDolby == true) &&
+            state.activeAudioLanguageBadge == activeAudioLanguageBadge
+        ) {
+            state
+        } else {
+            state.copy(
+                activeVideoQualityBadge = activeVideoQualityBadge,
+                activeHdrFormatBadge = activeHdrFormatBadge,
+                activeAudioFormatBadge = detectedAudioBadge?.label,
+                activeAudioIsDolbyBadge = detectedAudioBadge?.isDolby == true,
+                activeAudioLanguageBadge = activeAudioLanguageBadge
+            )
+        }
     }
 }
 
