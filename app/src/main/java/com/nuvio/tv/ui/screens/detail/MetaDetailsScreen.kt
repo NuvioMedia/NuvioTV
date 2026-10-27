@@ -687,6 +687,10 @@ fun MetaDetailsScreen(
             uiState.meta != null -> {
                 val meta = uiState.meta!!
                 val context = LocalContext.current
+                // The TMDB original language is authoritative for the "Original" audio
+                // track, so it takes precedence over the addon provided language.
+                val effectiveContentLanguage = uiState.tmdbContentLanguage
+                    ?: meta.resolveContentLanguage()
                 val genresString = remember(meta.genres) {
                     meta.genres.takeIf { it.isNotEmpty() }
                         ?.joinToString(" • ") { localizedGenreLabel(context, it) }
@@ -713,7 +717,7 @@ fun MetaDetailsScreen(
                         null,
                         null,
                         video.runtime,
-                        meta.resolveContentLanguage()
+                        effectiveContentLanguage
                     )
                 }
                 val playEpisodeManually: (Video) -> Unit = playEpisodeManually@{ video ->
@@ -735,7 +739,7 @@ fun MetaDetailsScreen(
                         null,
                         null,
                         video.runtime,
-                        meta.resolveContentLanguage()
+                        effectiveContentLanguage
                     )
                 }
                 val playTitle: (String) -> Unit = playTitle@{ videoId ->
@@ -757,7 +761,7 @@ fun MetaDetailsScreen(
                         genresString,
                         yearString,
                         null,
-                        meta.resolveContentLanguage()
+                        effectiveContentLanguage
                     )
                 }
                 val playTitleManually: (String) -> Unit = playTitleManually@{ videoId ->
@@ -779,7 +783,7 @@ fun MetaDetailsScreen(
                         genresString,
                         yearString,
                         null,
-                        meta.resolveContentLanguage()
+                        effectiveContentLanguage
                     )
                 }
                 val isSeries = remember(meta.type, meta.videos) {
@@ -917,7 +921,7 @@ fun MetaDetailsScreen(
                             null,
                             null,
                             video.runtime,
-                            meta.resolveContentLanguage()
+                            effectiveContentLanguage
                         )
                     },
                     onPlayStartFromBeginningClick = onPlayStartFromBeginningClick@{ videoId ->
@@ -939,7 +943,7 @@ fun MetaDetailsScreen(
                             genresString,
                             yearString,
                             null,
-                            meta.resolveContentLanguage()
+                            effectiveContentLanguage
                         )
                     },
                     showManualPlayOption = effectiveAutoplayEnabled,

@@ -15,9 +15,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Delay before re-validating the forced-subtitle invariant after the audio preference changed. */
-private const val AUDIO_PREFERENCE_RECHECK_DELAY_MS = 300L
-
 internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?) {
     if (id.isNullOrBlank() || type.isNullOrBlank()) return
 
@@ -60,7 +57,7 @@ internal fun PlayerRuntimeController.initializeCloudPlaybackSequence() {
     recomputeNextEpisode(resetVisibility = false)
 }
 
-internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
+internal suspend fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
     metaVideos = meta.videos
     metaGenres = meta.genres
     metaCountry = meta.country
@@ -68,6 +65,9 @@ internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
     if (contentLanguage == null) {
         contentLanguage = meta.resolveContentLanguage()
     }
+    // The addon meta may arrive after the player started: re-resolve the preferred
+    // audio languages now that the content language is known.
+    maybeResolveAndApplyOriginalAudioLanguage(contentLanguage)
     val description = resolveDescription(meta)
 
     recomputeNextEpisode(resetVisibility = false)
@@ -181,48 +181,98 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
         }
     }
 
-    // Fill in content language from TMDB if still unknown, so "original
-    // audio" can resolve correctly even when the addon meta lacks it.
-    if (contentLanguage == null) {
-        val tmdbLang = normalizeLanguageCode(enrichment.language)
-        if (tmdbLang != null) {
-            contentLanguage = tmdbLang
-            val hasUserAudioSelection = persistedTrackPreference?.audio != null
-            if (!hasUserAudioSelection) {
-                val playerSettings = playerSettingsDataStore.playerSettings.first()
-                if (playerSettings.preferredAudioLanguage == AudioLanguageOption.ORIGINAL) {
-                    val resolved = resolvePreferredAudioLanguages(
-                        preferredAudioLanguage = playerSettings.preferredAudioLanguage,
-                        secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
-                        deviceLanguages = resolveDeviceAudioLanguages(),
-                        contentOriginalLanguage = tmdbLang
-                    )
-                    if (resolved.isNotEmpty()) {
-                        _exoPlayer?.let { player ->
-                            player.trackSelectionParameters = player.trackSelectionParameters
-                                .buildUpon()
-                                .setPreferredAudioLanguages(*resolved.toTypedArray())
-                                .build()
-                        }
-                        if (isUsingMpvEngine()) {
-                            mpvPreferredAudioLanguages = resolved
-                            mpvView?.applyAudioLanguagePreferences(resolved)
-                        }
-                        // The player applies the new audio track asynchronously, so the
-                        // forced-subtitle invariant has to be re-validated once the new
-                        // audio track is active (a forced subtitle may no longer match it).
-                        scope.launch {
-                            delay(AUDIO_PREFERENCE_RECHECK_DELAY_MS)
-                            tryAutoSelectPreferredSubtitleFromAvailableTracks()
-                        }
-                    }
-                }
-            }
-        }
+    // TMDB's original language is authoritative for the "original audio" preference.
+    // It can arrive after the addon meta (or even after playback started), so it always
+    // wins over the addon provided language and re-resolves the preferred audio list.
+    val tmdbLang = normalizeLanguageCode(enrichment.language)
+    if (tmdbLang != null) {
+        contentLanguage = tmdbLang
+        maybeResolveAndApplyOriginalAudioLanguage(tmdbLang)
     }
 
     // Refresh MediaSession metadata with TMDB-enriched title / artwork.
     updateMediaSessionMetadata()
+}
+
+/**
+ * Whether the "original audio" preference may be resolved automatically.
+ *
+ * Only the "original" preference is auto-resolved and a persisted user audio selection
+ * always wins over the automatic resolution.
+ *
+ * Pure function (no player access) so it can be unit tested in isolation.
+ */
+internal fun isOriginalAudioResolutionEnabled(
+    preferredAudioLanguage: String,
+    hasUserAudioSelection: Boolean
+): Boolean {
+    if (hasUserAudioSelection) return false
+    return preferredAudioLanguage.trim().equals(AudioLanguageOption.ORIGINAL, ignoreCase = true)
+}
+
+/**
+ * Decides whether the re-resolved "original audio" languages have to be applied to the
+ * active engine.
+ *
+ * Pure function (no player access) so it can be unit tested in isolation.
+ */
+internal fun shouldApplyResolvedAudioLanguages(
+    resolved: List<String>,
+    currentlyApplied: List<String>
+): Boolean {
+    if (resolved.isEmpty()) return false
+    // Avoid useless re-applies (and the audio track churn they cause).
+    return resolved != currentlyApplied
+}
+
+/**
+ * Re-resolves the preferred audio languages for the "original audio" preference and
+ * applies them to the active engine.
+ *
+ * Called whenever the original content language becomes known (navigation args, addon
+ * meta or TMDB enrichment) so the correct audio track is selected - also when the
+ * language only arrives after playback has already started.
+ *
+ * @return true when a new language list was applied to the engine.
+ */
+private suspend fun PlayerRuntimeController.maybeResolveAndApplyOriginalAudioLanguage(
+    language: String?
+): Boolean {
+    val normalizedLanguage = normalizeLanguageCode(language) ?: return false
+    val playerSettings = playerSettingsDataStore.playerSettings.first()
+    if (!isOriginalAudioResolutionEnabled(
+            preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+            hasUserAudioSelection = persistedTrackPreference?.audio != null
+        )
+    ) {
+        return false
+    }
+    val resolved = resolvePreferredAudioLanguages(
+        preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+        secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
+        deviceLanguages = resolveDeviceAudioLanguages(),
+        contentOriginalLanguage = normalizedLanguage
+    )
+    if (!shouldApplyResolvedAudioLanguages(
+            resolved = resolved,
+            currentlyApplied = mpvPreferredAudioLanguages
+        )
+    ) {
+        return false
+    }
+    _exoPlayer?.let { player ->
+        player.trackSelectionParameters = player.trackSelectionParameters
+            .buildUpon()
+            .setPreferredAudioLanguages(*resolved.toTypedArray())
+            .build()
+    }
+    // Keep the cached resolved list in sync - it is also used to match subtitles
+    // against the selected audio language.
+    mpvPreferredAudioLanguages = resolved
+    if (isUsingMpvEngine()) {
+        mpvView?.applyAudioLanguagePreferences(resolved)
+    }
+    return true
 }
 
 internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boolean) {

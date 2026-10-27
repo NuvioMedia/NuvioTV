@@ -35,6 +35,7 @@ import com.nuvio.tv.domain.model.TmdbSettings
 import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.domain.model.normalizeLanguageCode
 import com.nuvio.tv.domain.repository.LibraryRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
@@ -739,6 +740,7 @@ class MetaDetailsViewModel @Inject constructor(
                     mdbListRatings = null,
                     isMdbListRatingsActive = isMdbListActive,
                     tmdbRating = null,
+                    tmdbContentLanguage = null,
                     moreLikeThis = emptyList(),
                     moreLikeThisSource = null,
                     collection = emptyList(),
@@ -886,6 +888,11 @@ class MetaDetailsViewModel @Inject constructor(
             // path would smuggle TMDB trailers in unconditionally.
             trailers = if (settings.useTrailers) enrichment.trailers else emptyList()
         )
+        // The fallback meta already carries the TMDB original language; expose it in the
+        // UI state as well so the player receives it through the navigation arguments.
+        normalizeLanguageCode(enrichment.language)?.let { tmdbLanguage ->
+            _uiState.update { it.copy(tmdbContentLanguage = tmdbLanguage) }
+        }
         applyMetaWithEnrichment(meta)
         return true
     }
@@ -1573,6 +1580,16 @@ class MetaDetailsViewModel @Inject constructor(
         }
 
         var updated = meta
+
+        // Expose the TMDB original language independently of the "use details" toggle:
+        // it is the authoritative original language and drives the "Original" audio
+        // track selection in the player, so it must not depend on any display toggle.
+        if (enrichment != null) {
+            val tmdbLanguage = normalizeLanguageCode(enrichment.language)
+            if (tmdbLanguage != null) {
+                _uiState.update { it.copy(tmdbContentLanguage = tmdbLanguage) }
+            }
+        }
 
         if (enrichment != null && settings.useArtwork) {
             updated = updated.copy(
