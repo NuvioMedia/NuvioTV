@@ -112,10 +112,16 @@ func nzbRedirect(req *http.Request, via []*http.Request) error {
 	}
 	// Go forwards custom headers, and even Authorization to subdomains. Keep
 	// addon headers only while the entire chain remains on the original origin.
+	// The User-Agent holds no secret: indexers that hand downloads to another
+	// host still see the app, not Go's default client name.
 	for _, previous := range via {
 		if !sameOrigin(req.URL, previous.URL) {
+			agent := req.Header.Get("User-Agent")
 			req.Header = make(http.Header)
 			req.Header.Set("Accept-Encoding", "gzip")
+			if agent != "" {
+				req.Header.Set("User-Agent", agent)
+			}
 			break
 		}
 	}

@@ -1,11 +1,13 @@
 package engine
 
 import (
+	"cmp"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"net"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -60,23 +62,35 @@ func (c Config) Tuning() (Tuning, error) {
 }
 
 func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.Provider, error) {
+	providers, _, err := ProvidersWithPriorities(servers, cfg, roots)
+	return providers, err
+}
+
+// ProvidersWithPriorities is Providers plus each provider's priority. Both come
+// from one parse of servers, so priorities[i] always belongs to providers[i].
+func ProvidersWithPriorities(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.Provider, []int, error) {
 	t, err := cfg.Tuning()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if len(servers) == 0 {
-		return nil, fmt.Errorf("the addon did not supply any Usenet servers")
+		return nil, nil, fmt.Errorf("the addon did not supply any Usenet servers")
 	}
 	if len(servers) > 64 {
-		return nil, fmt.Errorf("too many Usenet servers")
+		return nil, nil, fmt.Errorf("too many Usenet servers")
 	}
-	ps := make([]nntppool.Provider, 0, len(servers))
-	remaining := cfg.MaxConnections
-	total := 0
+	priorities, err := ProviderPriorities(servers)
+	if err != nil {
+		return nil, nil, err
+	}
+	preferred := slices.Min(priorities)
+	urls := make([]*url.URL, len(servers))
+	ports := make([]string, len(servers))
+	allowances := make([]int, len(servers))
 	for i, raw := range servers {
 		u, e := url.Parse(raw)
 		if e != nil || (u.Scheme != "nntp" && u.Scheme != "nntps") || u.Hostname() == "" {
-			return nil, fmt.Errorf("invalid Usenet server %d", i+1)
+			return nil, nil, fmt.Errorf("invalid Usenet server %d", i+1)
 		}
 		port := u.Port()
 		if port == "" {
@@ -88,24 +102,26 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 		}
 		pn, e := strconv.Atoi(port)
 		if e != nil || pn < 1 || pn > 65535 {
-			return nil, fmt.Errorf("invalid NNTP port")
+			return nil, nil, fmt.Errorf("invalid NNTP port")
 		}
 		connections := t.DefaultConnections
 		if s := strings.Trim(u.Path, "/"); s != "" {
 			connections, e = strconv.Atoi(s)
 			if e != nil || connections < 1 || connections > 4096 {
-				return nil, fmt.Errorf("invalid NNTP connection allowance")
+				return nil, nil, fmt.Errorf("invalid NNTP connection allowance")
 			}
 		}
-		if cfg.MaxConnections > 0 {
-			// Retain each provider for missing-article failover. Divide the global
-			// allowance across providers instead of silently removing backups.
-			if cfg.MaxConnections < len(servers) {
-				return nil, fmt.Errorf("Max Connections must allow at least one per server")
-			}
-			connections = min(connections, max(1, remaining/(len(servers)-i)))
-			remaining -= connections
-		}
+		urls[i], ports[i], allowances[i] = u, port, connections
+	}
+	if cfg.MaxConnections > 0 && cfg.MaxConnections < len(servers) {
+		// Retain each provider for missing-article failover instead of silently removing backups.
+		return nil, nil, fmt.Errorf("Max Connections must allow at least one per server")
+	}
+	shares := shareConnections(allowances, priorities, cfg.MaxConnections)
+	ps := make([]nntppool.Provider, 0, len(servers))
+	total := 0
+	for i, u := range urls {
+		port, connections := ports[i], shares[i]
 		// Bound abandoned downloads on shared links: draining an entire old
 		// read-ahead window can delay seeks even when it preserves the sockets.
 		p := nntppool.Provider{
@@ -115,12 +131,16 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 			SkipPing:       true, IdleTimeout: 45 * time.Second, StallTimeout: 12 * time.Second,
 			AbortDrainBytes: 64 << 10,
 		}
+		if priorities[i] > preferred {
+			// Lower-priority providers only serve failover; do not hold idle sockets.
+			p.MinConnections = 0
+		}
 		if u.User != nil {
 			p.Auth.Username = u.User.Username()
 			p.Auth.Password, _ = u.User.Password()
 		}
 		if strings.ContainsAny(p.Auth.Username+p.Auth.Password, "\r\n\x00") {
-			return nil, fmt.Errorf("invalid NNTP credentials")
+			return nil, nil, fmt.Errorf("invalid NNTP credentials")
 		}
 		if u.Scheme == "nntps" {
 			p.TLSConfig = &tls.Config{ServerName: u.Hostname(), RootCAs: roots, MinVersion: tls.VersionTLS12, ClientSessionCache: tls.NewLRUClientSessionCache(connections)}
@@ -129,8 +149,61 @@ func Providers(servers []string, cfg Config, roots *x509.CertPool) ([]nntppool.P
 		ps = append(ps, p)
 		total += connections
 		if total > 4096 {
-			return nil, fmt.Errorf("total NNTP connection allowance exceeds 4096")
+			return nil, nil, fmt.Errorf("total NNTP connection allowance exceeds 4096")
 		}
 	}
-	return ps, nil
+	return ps, priorities, nil
+}
+
+// shareConnections fits per-provider allowances into the global limit (0 means
+// none). The preferred tier takes it first, in list order. Every lower-priority
+// provider keeps one connection for failover, plus whatever the preferred tier
+// cannot use, in failover order. With a single tier this is an even split in
+// list order. The caller guarantees limit >= len(allowances) when it is set.
+func shareConnections(allowances, priorities []int, limit int) []int {
+	shares := slices.Clone(allowances)
+	if limit <= 0 {
+		return shares
+	}
+	preferred := slices.Min(priorities)
+	var front, backups []int
+	for i, p := range priorities {
+		if p == preferred {
+			front = append(front, i)
+		} else {
+			backups = append(backups, i)
+		}
+	}
+	slices.SortStableFunc(backups, func(a, b int) int { return cmp.Compare(priorities[a], priorities[b]) })
+	budget := limit - len(backups)
+	for n, i := range front {
+		shares[i] = min(allowances[i], max(1, budget/(len(front)-n)))
+		budget -= shares[i]
+	}
+	budget += len(backups)
+	for n, i := range backups {
+		shares[i] = min(allowances[i], max(1, budget/(len(backups)-n)))
+		budget -= shares[i]
+	}
+	return shares
+}
+
+// ProviderPriorities reads each server's optional ?priority=N (0 when absent).
+// Lower values are preferred; servers with equal values share article traffic.
+func ProviderPriorities(servers []string) ([]int, error) {
+	priorities := make([]int, len(servers))
+	for i, raw := range servers {
+		u, err := url.Parse(raw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Usenet server %d", i+1)
+		}
+		if s := u.Query().Get("priority"); s != "" {
+			n, err := strconv.Atoi(s)
+			if err != nil || n < 0 || n > 99 {
+				return nil, fmt.Errorf("invalid Usenet server priority")
+			}
+			priorities[i] = n
+		}
+	}
+	return priorities, nil
 }

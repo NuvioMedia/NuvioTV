@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.streams
 
+import com.nuvio.tv.core.usenet.builtInUsenetCanSearch
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.ScraperInfo
@@ -23,6 +24,8 @@ internal data class PlaybackAvailability(
     val addons: List<Addon> = emptyList(),
     val scrapers: List<ScraperInfo> = emptyList(),
     val isLoaded: Boolean = false,
+    /** True when the built-in Usenet sources are enabled and have a provider and an indexer. */
+    val usenetReady: Boolean = false,
     private val cachedMeta: (String, String) -> Meta? = { _, _ -> null },
     private val serverStreams: (String, String) -> Boolean = { _, _ -> false }
 ) {
@@ -35,5 +38,7 @@ internal data class PlaybackAvailability(
         cachedMeta(type, contentId)?.videos?.any { it.id == videoId && it.streams.isNotEmpty() } == true ||
         addons.any { it.enabled && it.supportsStreamResource(type, videoId) } ||
         scrapers.any { it.enabled && it.supportsType(type) } ||
+        // Built-in sources are searched on play, so a title can play even with no addon installed.
+        (usenetReady && builtInUsenetCanSearch(type, videoId)) ||
         serverStreams(type, videoId)
 }

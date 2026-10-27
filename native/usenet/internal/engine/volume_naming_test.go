@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/crc32"
+	"io"
 	"strings"
 	"testing"
 
@@ -119,6 +121,100 @@ func TestShuffledNumericRAR5NamesUseHeaderOrder(t *testing.T) {
 	}
 	files = append(files, inputFile{"8c442a49b1caa6c8.15", []byte("release notes"), nil})
 	selectAndRead(t, damagedSetup(t, files), "movie.mkv", want)
+}
+
+// Seen on an indexer: <hash>.1 to <hash>.135, every volume numbered but in
+// shuffled order. The names look complete; the main headers order the set.
+func TestCompletelyNumberedShuffledRAR5NamesUseHeaderOrder(t *testing.T) {
+	in, want, _ := regularRARSet(5, 5, 60000, 25000)
+	for _, names := range [][]int{{2, 5, 1, 4, 3}, {1, 4, 2, 5, 3}} { // .1 a middle volume, then the first.
+		var files []inputFile
+		for k, f := range in {
+			files = append(files, inputFile{fmt.Sprintf("a01b92d0b72af2e9.%d", names[k]), f.data, nil})
+		}
+		selectAndRead(t, damagedSetup(t, files), "movie.mkv", want)
+	}
+}
+
+// The same release also hid the episode's name inside the archive, so the
+// episode is accepted only after the set's other entries are known. Its short
+// last volume holds them: the volumes between are not read for that.
+func TestObfuscatedEpisodeVideoSkipsSetWalk(t *testing.T) {
+	const count = 20
+	total := 60000*(count-1) + 1 + 25000
+	want := payload(total)
+	var in []inputFile
+	order := []int{7, 0, 12, 3, 18, 9, 1, 15, 5, 19, 11, 2, 14, 8, 17, 4, 10, 16, 6, 13}
+	vols := make([][]byte, count)
+	for i, off := 0, 0; i < count; i++ {
+		size := 60000
+		if i == 0 {
+			size++
+		} else if i == count-1 {
+			size = 25000
+		}
+		vols[i] = indexedRAR5("R73jek4J1J6GBD.mkv", want[off:off+size], total, i, i < count-1)
+		off += size
+	}
+	for k, i := range order {
+		in = append(in, inputFile{fmt.Sprintf("a01b92d0b72af2e9.%d", k+1), vols[i], nil})
+	}
+	files, _, server := setup(t, in, 0, 4, 4)
+	c, err := Select(context.Background(), files, Selection{Season: 1, Episode: 1})
+	if err != nil || c.Name != "R73jek4J1J6GBD.mkv" || c.Size != int64(total) {
+		t.Fatalf("selected %v: %v", c, err)
+	}
+	bodies := server.Counters().Bodies
+	if bodies >= count {
+		t.Fatalf("selection read %d articles, one per volume", bodies)
+	}
+	// A player reads the end first: it is in the last volume, already found.
+	r := c.Reader(context.Background(), 0)
+	r.Seek(-1000, io.SeekEnd)
+	tail, err := io.ReadAll(r)
+	r.Close()
+	if err != nil || !bytes.Equal(tail, want[total-1000:]) {
+		t.Fatalf("tail read: %v", err)
+	}
+	if read := server.Counters().Bodies - bodies; read > 1 {
+		t.Fatalf("the tail read %d articles to find the last volume", read)
+	}
+	if got := readAllContent(t, c); !bytes.Equal(got, want) {
+		t.Fatalf("content mismatch (%d bytes)", len(got))
+	}
+}
+
+// Seen on an indexer: an obfuscated RAR set posted as <hash>.10 to <hash>.85
+// whose articles were all removed. Its unreadable headers are missing
+// articles, not a gap in the numbering.
+func TestRemovedNumericVolumesReportMissingArticles(t *testing.T) {
+	in, _, _ := regularRARSet(4, 5, 60000, 25000)
+	var files []inputFile
+	for k, f := range in {
+		files = append(files, inputFile{fmt.Sprintf("0f0299bba078dae8.%d", 10+k), f.data, nil})
+	}
+	xml, articles := fixture(files)
+	for id := range articles {
+		delete(articles, id)
+	}
+	s, err := nntpserver.New(nntpserver.Config{Articles: articles})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, err := nntppool.NewClient(context.Background(), []nntppool.Provider{{Host: s.Addr(), Connections: 4, Inflight: 4, StreamInflight: 4, SkipPing: true}}, nntppool.WithStatProbe(false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := NewStore(context.Background(), pool, 32<<20)
+	t.Cleanup(func() { store.Close(); pool.Close(); s.Close() })
+	nzb, err := ParseNZB(strings.NewReader(xml), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = Select(context.Background(), nzb, Selection{})
+	if !errors.Is(err, nntppool.ErrArticleNotFound) || permanentStreamFailure(err) != "missing-article" {
+		t.Fatalf("Select error = %v, want missing articles", err)
+	}
 }
 
 func TestNumericNameAmongObfuscatedFilesIsNotASet(t *testing.T) {

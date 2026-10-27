@@ -259,3 +259,67 @@ func TestAddonSelectorRejectsExcessiveBacktracking(t *testing.T) {
 		t.Fatal("unbounded selector accepted")
 	}
 }
+
+// rar4Entries stores each entry, in order, in one RAR4 volume.
+func rar4Entries(names []string, sizes []int) []byte {
+	var out []byte
+	for i, name := range names {
+		v := rar4Volume(name, payload(sizes[i]), sizes[i], 0, false)
+		if i > 0 {
+			v = v[20:] // Marker and main header belong to the first entry.
+		}
+		if i < len(names)-1 {
+			v = v[:len(v)-7] // Only the last entry ends the archive.
+		}
+		out = append(out, v...)
+	}
+	return out
+}
+
+func TestWholeReleaseServesLargestArchiveVideo(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		names []string
+		sizes []int
+		want  string
+	}{
+		// A Blu-ray folder lists menu clips before the feature.
+		{"disc", []string{"BDMV/index.bdmv", "BDMV/STREAM/00277.m2ts", "BDMV/STREAM/00800.m2ts", "BDMV/STREAM/00801.m2ts"},
+			[]int{100, 1024, 8192, 2048}, "BDMV/STREAM/00800.m2ts"},
+		// No entry fills half the set: every entry is compared.
+		{"no-dominant-entry", []string{"a.mkv", "b.mkv", "c.mkv"}, []int{1000, 3000, 2500}, "b.mkv"},
+		{"sample-ignored", []string{"Sample/sample.mkv", "Movie.mkv"}, []int{4096, 1024}, "Movie.mkv"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			files, _, _ := setup(t, []inputFile{{"release.rar", rar4Entries(tc.names, tc.sizes), nil}}, 0, 1, 1)
+			c, err := Select(context.Background(), files, Selection{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c.Name != tc.want {
+				t.Fatalf("selected %q, want %q", c.Name, tc.want)
+			}
+			size := 0
+			for i, name := range tc.names {
+				if name == tc.want {
+					size = tc.sizes[i]
+				}
+			}
+			r := c.Reader(context.Background(), 0)
+			defer r.Close()
+			got, err := io.ReadAll(r)
+			if err != nil || !bytes.Equal(got, payload(size)) {
+				t.Fatalf("read %d bytes of %d, %v", len(got), size, err)
+			}
+		})
+	}
+}
+
+func TestSelectorsStillTakeTheFirstMatchingArchiveEntry(t *testing.T) {
+	data := rar4Entries([]string{"Show.S01E02.mkv", "Show.S01E02.Extended.mkv"}, []int{1024, 4096})
+	files, _, _ := setup(t, []inputFile{{"pack.rar", data, nil}}, 0, 1, 1)
+	c, err := Select(context.Background(), files, Selection{Season: 1, Episode: 2})
+	if err != nil || c.Name != "Show.S01E02.mkv" {
+		t.Fatalf("episode selection = %v, %v", c, err)
+	}
+}

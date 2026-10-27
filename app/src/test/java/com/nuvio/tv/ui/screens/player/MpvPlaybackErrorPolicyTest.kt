@@ -111,6 +111,24 @@ class MpvPlaybackErrorPolicyTest {
     }
 
     @Test
+    fun watchdog_usenetTransportStreamsGetTimeToProbe() {
+        val slow = MpvStartupWatchdogPolicy.slowProbeLimits
+        assertEquals(slow, MpvStartupWatchdogPolicy.limitsFor("http://127.0.0.1:34383/stream/e84d/00065.m2ts", true))
+        assertEquals(slow, MpvStartupWatchdogPolicy.limitsFor("http://127.0.0.1:1/stream/a/Movie.TS?t=1", true))
+        val default = MpvStartupWatchdogPolicy.defaultLimits
+        assertEquals(default, MpvStartupWatchdogPolicy.limitsFor("http://127.0.0.1:1/stream/a/Movie.mkv", true))
+        assertEquals(default, MpvStartupWatchdogPolicy.limitsFor("https://cdn.example/live/channel.ts", false))
+        assertEquals(default, MpvStartupWatchdogPolicy.limitsFor("http://127.0.0.1:1/stream/a/Movie.ts.mkv", true))
+
+        // The default stall limit, reached while lavf is still probing, no longer fails.
+        val probing = advance(MpvStartupWatchdogPolicy.stallTicksLimit, limits = slow)
+        assertEquals(MpvStartupWatchdogPolicy.Action.Continue, probing.action)
+        assertEquals(MpvStartupWatchdogPolicy.Action.StallTimeout, advance(slow.stallTicks, limits = slow).action)
+        assertEquals(MpvStartupWatchdogPolicy.Action.AbsoluteTimeout,
+            advance(slow.absoluteTicks, cacheProgressing = true, limits = slow).action)
+    }
+
+    @Test
     fun watchdog_idleBlipsDoNotResetTheAbsoluteClock() {
         var counters = MpvStartupWatchdogPolicy.Counters()
         var action = MpvStartupWatchdogPolicy.Action.Continue
@@ -387,6 +405,7 @@ class MpvPlaybackErrorPolicyTest {
         waitingForSurface: Boolean = false,
         idleActive: Boolean = false,
         cacheProgressing: Boolean = false,
+        limits: MpvStartupWatchdogPolicy.Limits = MpvStartupWatchdogPolicy.defaultLimits,
     ): MpvStartupWatchdogPolicy.Step {
         var counters = MpvStartupWatchdogPolicy.Counters()
         var step = MpvStartupWatchdogPolicy.Step(MpvStartupWatchdogPolicy.Action.Continue, counters)
@@ -397,7 +416,8 @@ class MpvPlaybackErrorPolicyTest {
                     waitingForSurface = waitingForSurface,
                     idleActive = idleActive,
                     cacheProgressing = cacheProgressing,
-                    counters = counters
+                    counters = counters,
+                    limits = limits
                 )
             )
             counters = step.counters

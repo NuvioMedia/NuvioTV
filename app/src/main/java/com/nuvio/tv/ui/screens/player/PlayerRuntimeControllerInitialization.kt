@@ -1258,6 +1258,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 readyTransition.nextState.shouldEnforceAutoplayOnFirstReady
                             val firstFrameAlreadyRendered = hasRenderedFirstFrame
                             if (readyTransition.nextState.hasRenderedFirstFrame && isTunneledPlayback) {
+                                if (!hasRenderedFirstFrame) recordPlayedRelease()
                                 hasRenderedFirstFrame = true
                             }
                             when (val action = readyTransition.action) {
@@ -1413,6 +1414,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     override fun onRenderedFirstFrame() {
                         val isFirstFrame = !hasRenderedFirstFrame  // capture BEFORE flipping
                         hasRenderedFirstFrame = true
+                        if (isFirstFrame) recordPlayedRelease()
                         mediaSourceFactory.unlockStartupPrefetch()
                         if (isFirstFrame && _uiState.value.postPlayDismissedForCurrentEpisode) {
                             _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
@@ -1457,6 +1459,13 @@ internal fun PlayerRuntimeController.initializePlayer(
                             usenetResponse?.headerFields.orEmpty()
                         )
                         cancelStableProgressReset()
+                        if (permanentUsenetFailure) {
+                            val kind = usenetResponse?.headerFields.orEmpty().entries
+                                .firstOrNull { it.key.equals("X-Usenet-Failure", ignoreCase = true) }?.value?.firstOrNull()
+                            streamFallbackSession?.current?.let {
+                                com.nuvio.tv.core.usenet.UnplayableReleases.get(context).record(it, kind)
+                            }
+                        }
                         if (permanentUsenetFailure && tryNextStream(detailedError)) return
 
                         if (Vc1VideoFormatHeuristics.isVc1PlaybackFailure(

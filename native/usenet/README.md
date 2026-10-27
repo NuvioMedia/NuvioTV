@@ -65,7 +65,9 @@ The parser separately limits
 both downloaded and decompressed NZB bytes to 64 MiB, with an explicit size-limit
 error, and retains its 10,000-file and 500,000-segment bounds.
 Entries are keyed by a digest of the
-request URL, headers and profile scope; each hit creates fresh session metadata.
+request URL, headers and client scope; each hit creates fresh session metadata.
+An entry still under the former per-profile scope is renamed to its new key once.
+A 429 refusal is remembered until its `Retry-After`, so the NZB is not asked for again early.
 Expired/corrupt entries refetch normally, incomplete writes are discarded, and
 disk errors do not fail playback. Record corruption during a lazy read triggers
 one shared source recovery per session, with a metadata digest check before
@@ -189,6 +191,40 @@ its continuation volumes. Near a volume boundary it resolves and primes the
 next extent using the current reader's read-ahead window; seeks cancel that work.
 Mapped reads continue while another reader discovers later headers.
 
+Without a file or episode selector an archive serves its largest video. An entry
+filling at least half the set is returned at once, so a single-video release keeps
+the lazy path. Otherwise every entry header is read first: a Blu-ray folder lists
+menu clips (`BDMV/STREAM/00277.m2ts`) before the feature. 7z sets list every entry
+in their header and choose the same way.
+
+A clip's stream languages live in its `BDMV/CLIPINF/<clip>.clpi`, which rar lists
+before the clips. Selection keeps the location of each small stored CLPI it passes,
+and a selected disc clip is served as `/stream/<id>/BDMV/STREAM/<clip>.m2ts` with its
+CLPI beside it at `BDMV/CLIPINF/<clip>.clpi`. Other files keep their base name.
+
+The disc's other files are served beside the clip too, so a player can play a
+feature split over several clips from its playlist: `BDMV/PLAYLIST/` is a
+directory listing of the `.mpls` files, and `BDMV/PLAYLIST/<n>.mpls`,
+`BDMV/STREAM/<clip>.m2ts` and `BDMV/CLIPINF/<clip>.clpi` serve each file. A
+playlist or CLPI is read once and kept in memory; a clip streams like the
+feature. Selection records the files it passes, and the clips after the feature
+are found by a walk of the rest of the set that starts when the session opens,
+two headers per clip; a request for a clip it has not reached yet waits for it.
+Any other `BDMV/` path is 404, never the feature. Unordered sets serve only the
+feature and its CLPI.
+
+A Blu-ray disc image (`.iso`, posted on its own or as a stored RAR entry) is read
+as its UDF 2.50 file system: the volume descriptors, the metadata partition and
+the `BDMV/STREAM` directory, all in the image's first megabytes. Its largest clip
+is served as byte ranges of the image, like a RAR set inside a 7z, and plays
+like the same clip from a disc folder, with the image's playlists, other clips
+and CLPI beside it. Selection reads only the directories; each of those files
+is mapped when first asked for, through 1 MiB chunks of the image kept in a
+small cache. The image is read through its own RAR cursor, so selection still
+walks the set past it. DVD images, images without
+`BDMV/STREAM`, and sparable or virtual partitions fail with a message that says
+so. Images are not expanded when a file or episode selector is given.
+
 Numeric part names, `.rar/.r00/...`, `.001/...`, width-mismatched names, season
 selection, yEnc name recovery and anonymous RAR5 volume numbers are supported.
 Anonymous RAR5 headers are inspected only until the next required volume is found,
@@ -228,13 +264,20 @@ interpreted as season/episode markers. A file that reaches the set's last volume
 fills every volume between, so when the last volume's first block ends that same
 file the inventory resumes there instead of walking the middle volumes; an
 episode with an obfuscated inner name is then established from three headers.
+An entry that ends earlier, like a disc's clip, is skipped the same way to the
+volume its second volume's continuation template predicts, once that volume's
+header proves the end; otherwise the volumes are walked as before.
 The skipped entry keeps its own cursor and maps its continuations on demand.
 
-For ordered, uniform stored sets, the second volume supplies a continuation
-template and a direct final-volume probe checks the remaining byte count. The
+For ordered, uniform stored sets, the file's second volume supplies a continuation
+template and a direct probe of the volume that should hold its end checks the
+remaining byte count. The file need not start in the first volume or end in the
+last: a disc's clips are stored back to back, so a feature starts and ends among
+other clips. The
 engine predicts intermediate extents in memory, accounting for RAR5 volume-index
 width changes (first at part129). This assumes equal decoded volume sizes and
 repeated continuation headers; NZB wire sizes never supply payload offsets.
+A prediction cut short by a cancelled reader is tried again by the next one.
 Each predicted intermediate volume is header-checked when first accessed. A
 layout mismatch discards the prediction and resumes serial discovery. RAR5 Quick
 Open locators and padded integer widths are retained in the template. Unordered
@@ -306,7 +349,9 @@ are preserved. The latest timings appear directly in Usenet Settings.
 Advanced Settings contains Performance Profile, Read-Ahead Segments and Max
 Connections. Zero overrides mean automatic. Provider URLs can specify their own
 connection allowance; Automatic respects that allowance. An explicit global cap
-is divided across providers while preserving failover. Remaining connection
+goes to the preferred priority tier first, split evenly in list order. Every
+lower-priority provider keeps one connection for failover, plus whatever the
+preferred tier cannot use. Remaining connection
 slots open lazily; the useful initial read-ahead window is pre-warmed in parallel
 with the NZB download.
 

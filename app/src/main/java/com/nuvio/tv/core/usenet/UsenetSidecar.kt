@@ -4,10 +4,12 @@ import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Base64
+import android.util.Log
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Subtitle
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.util.concurrent.Executors
@@ -77,10 +79,21 @@ class UsenetSidecar private constructor(private val context: Context) {
         val configuration: UsenetConfiguration, val profileId: Int?
     )
 
-    private fun preparationKey(stream: Stream, season: Int?, episode: Int?, profileId: Int?) =
-        PreparationKey(stream.nzbUrl, stream.servers?.toList(),
-            stream.behaviorHints?.proxyHeaders?.request.orEmpty().toMap(), stream.fileIdx,
-            stream.fileMustInclude, season, episode, UsenetSettings.read(context), profileId)
+    private fun preparationKey(stream: Stream, season: Int?, episode: Int?, profileId: Int?): PreparationKey {
+        val configuration = UsenetSettings.read(context)
+        return PreparationKey(stream.nzbUrl, stream.servers?.toList(), nzbHeaders(stream, configuration), stream.fileIdx,
+            stream.fileMustInclude, season, episode, configuration, profileId)
+    }
+
+    /**
+     * The engine downloads the NZB with these. Without a User-Agent from the addon it sends the one
+     * indexer searches send, so a grab names the same client, never Go's default.
+     */
+    private fun nzbHeaders(stream: Stream, configuration: UsenetConfiguration): Map<String, String> {
+        val headers = stream.behaviorHints?.proxyHeaders?.request.orEmpty().toMap()
+        return if (headers.keys.any { it.equals(USER_AGENT, ignoreCase = true) }) headers
+        else headers + (USER_AGENT to configuration.agent)
+    }
 
     /** Start immediately. Only one candidate may own a prepared session. */
     fun prefetch(owner: Any, stream: Stream, season: Int?, episode: Int?, profileId: Int?): Job {
@@ -229,14 +242,20 @@ class UsenetSidecar private constructor(private val context: Context) {
             trace.mark("engine_ready")
             val request = JSONObject().apply {
                 put("keepSessionId", previousId ?: "")
-                put("cacheScope", profileId?.toString() ?: "unscoped")
+                // The NZB URL carries the indexer key, so profiles of one account share its cache
+                // entry and a profile switch does not download it again (nzb.life refuses a repeat
+                // download for 24 h). Profiles with their own keys still get their own entries.
+                put("cacheScope", "unscoped")
+                // Entries cached before that were scoped by profile; the engine adopts them instead
+                // of downloading them again.
+                put("legacyCacheScope", profileId?.toString() ?: "unscoped")
                 put("nzbUrl", stream.nzbUrl)
                 put("servers", JSONArray(stream.servers.orEmpty()))
                 stream.fileIdx?.let { put("fileIdx", it) }
                 stream.fileMustInclude?.let { put("fileMustInclude", it) }
                 season?.let { put("season", it) }
                 episode?.let { put("episode", it) }
-                put("headers", JSONObject(stream.behaviorHints?.proxyHeaders?.request.orEmpty()))
+                put("headers", JSONObject(nzbHeaders(stream, configuration)))
                 put("config", JSONObject().apply {
                     put("profile", configuration.profile)
                     put("readAhead", configuration.readAhead)
@@ -259,7 +278,7 @@ class UsenetSidecar private constructor(private val context: Context) {
             openedId = newId
             // The engine reconciled abandoned sessions before this open.
             retiredSessions.clear()
-            val url = "$endpoint/stream/$newId/${Uri.encode(result.getString("filename").substringAfterLast('/'))}"
+            val url = UsenetEngineUrls.stream(requireNotNull(endpoint), newId, newPath)
             val nativeSubtitles = result.optJSONArray("subtitles")?.let { items ->
                 (0 until items.length()).map { index ->
                     val item = items.getJSONObject(index)
@@ -287,6 +306,13 @@ class UsenetSidecar private constructor(private val context: Context) {
             previousId?.let(::retireSessionLocked)
             resolved
         } catch (e: Exception) {
+            // Prefetches open here too, so a release found unplayable before it was chosen counts.
+            (e as? UsenetPreparationException)?.failure?.let { UnplayableReleases.get(context).record(stream, it) }
+            if (e !is CancellationException) runCatching {
+                Log.i("UsenetPrepare", "open failed source=\"${stream.name}\" release=\"${stream.title?.lineSequence()?.firstOrNull()}\" " +
+                    "kind=${(e as? UsenetPreparationException)?.failure ?: "-"} error=${e.javaClass.simpleName}: " +
+                    com.nuvio.tv.core.player.redacted(e.message.orEmpty()))
+            }
             if (previousId != null && sessionId == previousId && process?.let(::isRunning) == true) {
                 openedId?.let(::retireSessionLocked)
             } else {
@@ -409,7 +435,7 @@ class UsenetSidecar private constructor(private val context: Context) {
         trace?.mark("sidecar_spawned")
         process = child
         processProfile = cfg.profile
-        startupReader.execute { child.errorStream.use { input -> val bytes = ByteArray(4096); while (input.read(bytes) >= 0) { /* no credentials in Android logs */ } } }
+        startupReader.execute { drainQuietly(child.errorStream) }
         val bootstrap = JSONObject().apply {
             put("token", secret)
             put("nzbCacheDir", File(context.cacheDir, "usenet-nzb").absolutePath)
@@ -453,14 +479,15 @@ class UsenetSidecar private constructor(private val context: Context) {
                         if (!continuation.isActive) return
                         if (it.isSuccessful) continuation.resume(text)
                         else {
-                            val scope = when (it.header("X-Usenet-Failure")) {
+                            val failure = it.header("X-Usenet-Failure")
+                            val scope = when (failure) {
                                 "configuration" -> UsenetPreparationException.Scope.ENGINE
                                 "provider" -> UsenetPreparationException.Scope.PROVIDER
                                 // Busy can be the previous cancelled open still
                                 // unwinding; it is not a permanent engine failure.
                                 else -> UsenetPreparationException.Scope.SOURCE
                             }
-                            continuation.resumeWithException(UsenetPreparationException(text.take(240).ifBlank { "Usenet engine returned HTTP ${it.code}" }, scope))
+                            continuation.resumeWithException(UsenetPreparationException(text.take(240).ifBlank { "Usenet engine returned HTTP ${it.code}" }, scope, failure))
                         }
                     } } catch (e: IOException) {
                         if (continuation.isActive) continuation.resumeWithException(IOException("Usenet engine response was interrupted"))
@@ -502,5 +529,17 @@ class UsenetSidecar private constructor(private val context: Context) {
         fun stopIdleOnBackground() { appForeground = false; instance?.onAppBackgrounded() }
         fun isSessionUrl(url: String): Boolean = UsenetEngineUrls.isSession(url)
         fun isSubtitleUrl(url: String): Boolean = UsenetEngineUrls.isSubtitle(url)
+
+        /**
+         * Reads the engine's stderr until it ends, keeping none of it: no credentials in Android logs.
+         * Stopping the engine closes the stream under this read, which then throws; on an executor
+         * thread an uncaught exception would kill the app.
+         */
+        internal fun drainQuietly(input: InputStream) {
+            try {
+                input.use { val bytes = ByteArray(4096); while (it.read(bytes) >= 0) Unit }
+            } catch (_: IOException) {
+            }
+        }
     }
 }
