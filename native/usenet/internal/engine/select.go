@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"regexp"
 	"sort"
 	"strconv"
@@ -35,6 +36,9 @@ var multiEpisodeREs = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)(?:^|\D)0*(\d{1,4})x0*(\d{1,4})`),
 }
 
+// clockNameRE is an episode named by the time it shows, as in S01E04-10-00.A.M.
+var clockNameRE = regexp.MustCompile(`(?i)^[ ._-]*\d{1,2}[ ._:-]\d{2}[ ._-]*[ap]\.?m(?:[^a-z]|$)`)
+
 func multiEpisodeMatch(name string, season, episode int) bool {
 	digit := func(b byte) bool { return b >= '0' && b <= '9' }
 	letter := func(b byte) bool { return b|0x20 >= 'a' && b|0x20 <= 'z' && b|0x20 != 'e' && b|0x20 != 'v' }
@@ -45,10 +49,14 @@ func multiEpisodeMatch(name string, season, episode int) bool {
 				continue
 			}
 			rest := name[m[5]:]
-			if rest != "" && digit(rest[0]) {
+			if rest != "" && digit(rest[0]) || clockNameRE.MatchString(rest) {
 				continue
 			}
 			previous, _ := strconv.Atoi(name[m[4]:m[5]])
+			width := 0 // The first episode's digits, zero padding included.
+			for p := m[5] - 1; p >= 0 && digit(name[p]); p-- {
+				width++
+			}
 			for {
 				i := 0
 				for i < len(rest) && strings.IndexByte(" ._-", rest[i]) >= 0 {
@@ -71,6 +79,12 @@ func multiEpisodeMatch(name string, season, episode int) bool {
 					break
 				}
 				next, _ := strconv.Atoi(rest[j:k])
+				// Each episode follows the one before, and one without an E has at
+				// least the first's digits: names that tell the time, as in
+				// S01E08-2-00.P.M, number no other episode.
+				if next <= previous || !marked && k-j < width {
+					break
+				}
 				if next == episode || ranged && previous < episode && episode < next && next-previous <= 30 {
 					return true
 				}
@@ -83,6 +97,20 @@ func multiEpisodeMatch(name string, season, episode int) bool {
 
 func (s Selection) episodeOnly() bool {
 	return s.Episode > 0 && s.FileIdx == nil && s.FileMustInclude == ""
+}
+
+// whole reports a request for the release's main video, with no file or episode selector.
+func (s Selection) whole() bool {
+	return s.FileIdx == nil && s.FileMustInclude == "" && s.Episode == 0
+}
+
+// setSize is the NZB size of an archive set, an upper bound for any entry in it.
+func setSize(vols []*File) int64 {
+	var n int64
+	for _, v := range vols {
+		n += v.Size()
+	}
+	return n
 }
 
 func selectionVideo(name string) bool {
@@ -203,6 +231,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 		return nil, errors.New("invalid file index")
 	}
 	var fallback *Content
+	var isoErr error // Why a disc image gave no clip, when nothing else plays.
 	videoCount := 0
 	consider := func(c *Content, index int, originalName string) (bool, error) {
 		if !s.episodeOnly() {
@@ -247,7 +276,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 				order = append(order, key)
 			}
 			groups[key] = append(groups[key], f)
-		} else if isVideo(f.Name) {
+		} else if isVideo(f.Name) || isISO(f.Name) {
 			direct = append(direct, f)
 		} else {
 			l := strings.ToLower(f.Name)
@@ -275,7 +304,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 	}
 	// Largest direct candidate first when the addon supplies no file selector.
 	// This uses NZB metadata and does not probe other candidates for sizing.
-	if s.FileIdx == nil && s.FileMustInclude == "" && s.Episode == 0 {
+	if s.whole() {
 		sort.SliceStable(direct, func(i, j int) bool { return direct[i].Size() > direct[j].Size() })
 	}
 	if s.episodeOnly() {
@@ -322,6 +351,28 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 			f.mu.RUnlock()
 		}
 		c := &Content{Name: name, Size: f.Size(), direct: f}
+		if isISO(name) {
+			if !s.whole() {
+				continue // A selector names a file; an image is not one.
+			}
+			// A disc image serves its feature clip. Its decoded size bounds the reads.
+			if _, err := sniff(ctx, f); err != nil {
+				return nil, err
+			}
+			c.Size = f.Size()
+			clip, err := isoClip(ctx, c)
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			if err != nil {
+				isoErr = err
+				continue
+			}
+			if matched, err := consider(clip, f.Index, f.Name); err != nil || matched {
+				return clip, err
+			}
+			continue
+		}
 		matched, err := consider(c, f.Index, f.Name)
 		if err != nil {
 			return nil, err
@@ -358,9 +409,25 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 		}
 	}
 	skipBroken := s.FileIdx == nil && (s.FileMustInclude != "" || s.Episode > 0)
+	// Without a selector an archive serves its largest video. Disc folders
+	// (BDMV/STREAM) hold menus and extras before the feature.
+	var largest *Content
+	var largestVols []*File
 	var brokenErr error
+	clipInfo := map[string]*Content{}
+	seen := map[string]*Content{} // Disc files selection passed, by lowercase name.
+	selected := func(c *Content) (*Content, error) {
+		c, err := c.usable(ctx)
+		// A disc image's clip brings its own CLPI from the image.
+		if c != nil {
+			if info := clipInfo[clipInfoName(c.Name)]; info != nil {
+				c.clipInfo = info
+			}
+		}
+		return c, err
+	}
 	broken := func(err error) error {
-		if !skipBroken || ctx.Err() != nil {
+		if (!skipBroken && largest == nil) || ctx.Err() != nil {
 			return err
 		}
 		if brokenErr == nil {
@@ -454,6 +521,9 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 	}
 groups:
 	for _, key := range order {
+		if largest != nil {
+			break
+		}
 		vols := groups[key]
 		unordered := key == anonymousRARKey
 		if !unordered {
@@ -462,8 +532,13 @@ groups:
 				// Names that do not number the volumes (shuffled obfuscated
 				// numbering) leave the order to RAR5 main headers. RAR4 has no
 				// volume numbers, so a gap there stays a broken set.
-				if rarSetVersion(ctx, vols) != 5 {
-					if err := broken(errors.New("RAR volume sequence is incomplete")); err != nil {
+				if version, err := rarSetVersion(ctx, vols); version != 5 {
+					// Unreadable volumes are the real failure, such as removed
+					// articles; they are not a gap in the numbering.
+					if err == nil || permanentStreamFailure(err) == "" {
+						err = errors.New("RAR volume sequence is incomplete")
+					}
+					if err := broken(err); err != nil {
 						return nil, err
 					}
 					continue groups
@@ -531,31 +606,63 @@ groups:
 				}
 				continue groups
 			}
-			matched, err := consider(c, index, "")
+			if c.complete && b.crypt == nil && c.Size <= maxClipInfoBytes && isClipInfo(c.Name) {
+				// Listed before the clips, so selection passes it on the way.
+				clipInfo[strings.ToLower(c.Name)] = &Content{Name: c.Name, Size: c.Size, parts: c.parts, complete: true}
+			}
+			candidate := c
+			if s.whole() && isISO(c.Name) && b.crypt == nil {
+				// Read the image through its own cursor: selection's must stay
+				// where this entry ends, to reach the next one.
+				resume := *cursor
+				iso := &Content{Name: c.Name, Size: c.Size, cursor: &resume, complete: c.complete, parts: append([]extent(nil), c.parts...)}
+				clip, err := isoClip(ctx, iso)
+				if ctx.Err() != nil {
+					return nil, ctx.Err()
+				}
+				if err != nil {
+					isoErr = err
+				} else {
+					candidate = clip
+				}
+			}
+			matched, err := consider(candidate, index, "")
 			if err != nil {
 				return nil, err
 			}
-			if matched {
+			if matched && (!s.whole() || candidate.Size >= setSize(vols)/2) {
+				// No other entry can be larger than one filling half the set.
 				for _, v := range vols {
 					if v.damaged != nil {
 						return nil, v.damaged
 					}
 				}
-				return c.usable(ctx)
+				if candidate == c && !cursor.unordered {
+					// The rest of the set is walked once the session opens.
+					if d := discFor(c, seen); d != nil {
+						d.rest = walkRest(*cursor, c, b)
+						c.disc = d
+					}
+				}
+				return selected(candidate)
+			}
+			if matched && (largest == nil || candidate.Size > largest.Size) {
+				largest, largestVols = candidate, vols
 			}
 			index++
 			// A file that reaches the last volume fills every volume between,
 			// so the next entry can only follow it there: skip the middle
-			// volumes. The unselected entry keeps its own cursor and maps its
-			// continuations lazily if it is chosen as the fallback.
-			if b.after {
-				resume := *cursor
-				if skipped, err := cursor.skipToLastPart(ctx, b.name, b.unpacked); err != nil {
-					return nil, err
-				} else if skipped {
-					c.cursor = &resume
-					continue
+			// volumes. One that ends earlier, like a disc's clip, is skipped
+			// to the volume its continuation template predicts. The unselected
+			// entry keeps its own cursor and maps its continuations lazily if
+			// it is chosen as the fallback.
+			if skipped, err := skipEntry(ctx, cursor, c, b); err != nil {
+				return nil, err
+			} else if skipped {
+				if !cursor.unordered {
+					keepDiscFile(seen, c, b)
 				}
+				continue
 			}
 			// Reach the next entry using headers only. Selected content returns
 			// above, before resolving ANY continuation volume.
@@ -565,7 +672,21 @@ groups:
 				}
 				continue groups
 			}
+			if !cursor.unordered {
+				keepDiscFile(seen, c, b)
+			}
 		}
+	}
+	if largest != nil {
+		if largest.disc == nil && largest.nested == nil {
+			largest.disc = discFor(largest, seen) // The whole set was walked.
+		}
+		for _, v := range largestVols {
+			if v.damaged != nil {
+				return nil, v.damaged
+			}
+		}
+		return selected(largest)
 	}
 	if brokenErr != nil {
 		return nil, brokenErr
@@ -575,6 +696,9 @@ groups:
 			return nil, fallback.direct.damaged
 		}
 		return fallback.usable(ctx)
+	}
+	if isoErr != nil {
+		return nil, isoErr
 	}
 	return nil, errNoMatchingVideo
 }
@@ -667,12 +791,53 @@ func rarSequence(ctx context.Context, vols []*File) ([]*File, bool) {
 	return vols, false
 }
 
-// rarSetVersion is the format of the first RAR volume in vols, or 0.
-func rarSetVersion(ctx context.Context, vols []*File) int {
+// rarSetVersion is the format of the first readable RAR volume in vols, or 0
+// with the last read error.
+func rarSetVersion(ctx context.Context, vols []*File) (int, error) {
+	var err error
 	for _, f := range vols[:min(len(vols), 3)] {
-		if v, err := openRAR(ctx, f); err == nil {
-			return v.version
+		var v *rarVolume
+		if v, err = openRAR(ctx, f); err == nil {
+			return v.version, nil
 		}
 	}
-	return 0
+	return 0, err
+}
+
+// A Blu-ray clip's stream languages live in its CLPI, BDMV/CLIPINF/<clip>.clpi,
+// not in the .m2ts. Players fetch it beside the clip.
+const maxClipInfoBytes = 1 << 20
+
+var discClipRE = regexp.MustCompile(`(?i)^(.*/)?BDMV/STREAM/([^/]+)\.m2ts$`)
+
+func isClipInfo(name string) bool {
+	name = strings.ToLower(name)
+	return strings.HasSuffix(name, ".clpi") && (strings.HasPrefix(name, "bdmv/clipinf/") || strings.Contains(name, "/bdmv/clipinf/"))
+}
+
+// clipInfoName is the lowercase name of a disc clip's CLPI, or "" for any other file.
+func clipInfoName(name string) string {
+	m := discClipRE.FindStringSubmatch(name)
+	if m == nil {
+		return ""
+	}
+	return strings.ToLower(m[1] + "BDMV/CLIPINF/" + m[2] + ".clpi")
+}
+
+// streamPath names a disc clip by its BDMV/STREAM path, so its CLPI resolves
+// beside it as ../CLIPINF/<clip>.clpi. Other files keep their base name.
+func streamPath(name string) string {
+	if m := discClipRE.FindStringSubmatch(name); m != nil {
+		return "BDMV/STREAM/" + m[2] + ".m2ts"
+	}
+	return path.Base(name)
+}
+
+// clipInfoPath is where a disc clip's CLPI is served, beside its streamPath.
+func clipInfoPath(name string) string {
+	m := discClipRE.FindStringSubmatch(name)
+	if m == nil {
+		return ""
+	}
+	return "BDMV/CLIPINF/" + m[2] + ".clpi"
 }

@@ -67,6 +67,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -101,6 +102,7 @@ class StreamScreenViewModel @Inject constructor(
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val torrentService: TorrentService,
+    private val usenetSourceSettings: com.nuvio.tv.core.usenet.UsenetSourceSettings,
     private val serverStreams: ServerStreams,
     private val serverPlayback: ServerPlayback,
     party: com.nuvio.tv.core.party.PartyRepository,
@@ -291,6 +293,11 @@ class StreamScreenViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // A release tried while this list is shown is labelled: moved to the end when it failed for good.
+            val unplayable = com.nuvio.tv.core.usenet.UnplayableReleases.get(context)
+            unplayable.revision.drop(1).collect { arrangeUsenetOutcomes(unplayable) }
+        }
+        viewModelScope.launch {
             _uiState
                 .map { state -> state.directAutoPlayMessage to state.directAutoPlayProgress }
                 .distinctUntilChanged()
@@ -473,7 +480,22 @@ class StreamScreenViewModel @Inject constructor(
                     contentKey = streamCacheKey,
                     maxAgeMs = playerSettings.streamReuseLastLinkCacheHours * 60L * 60L * 1000L
                 )
-                if (cached != null) {
+                // A Usenet release opens again like a chosen result, with today's providers, unless
+                // it has failed since or no provider is enabled; the list then shows as usual.
+                val cachedUsenet = cached?.nzbUrl?.let { nzbUrl ->
+                    val sources = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching { usenetSourceSettings.read() }.getOrNull()
+                    }
+                    sources?.let {
+                        com.nuvio.tv.core.usenet.BuiltInUsenetService.restoredStream(nzbUrl, cached.streamName,
+                            cached.releaseTitle, cached.videoSize, cached.publishedAt, it)
+                    }?.takeUnless { com.nuvio.tv.core.usenet.UnplayableReleases.get(context).contains(it) }
+                }
+                if (cachedUsenet != null) {
+                    autoPlayHandledForSession = true
+                    resolvedAutoPlayTarget = true
+                    updateUiStateIfChanged { it.copy(autoPlayStream = cachedUsenet, showDirectAutoPlayOverlay = true) }
+                } else if (cached != null && cached.nzbUrl == null) {
                     autoPlayHandledForSession = true
                     resolvedAutoPlayTarget = true
                     val isCachedTorrent = cached.infoHash != null && cached.url.isNullOrBlank()
@@ -694,7 +716,10 @@ class StreamScreenViewModel @Inject constructor(
                         // Compose observes it.
                         autoPlayStream = selectedAutoPlayStream ?: it.autoPlayStream,
                         error = null,
-                        showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession || it.autoPlayPlaybackInfo != null) {
+                        // A Usenet release (a reused one) still opening behind the overlay: the
+                        // list must not show, or a press on it would open another source over it.
+                        showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession || it.autoPlayPlaybackInfo != null ||
+                            streamResolutionJob?.isActive == true) {
                             true
                         } else {
                             false
@@ -1268,6 +1293,22 @@ class StreamScreenViewModel @Inject constructor(
         return parseRuntimeMinutes(meta.runtime)
     }
 
+    private fun arrangeUsenetOutcomes(unplayable: com.nuvio.tv.core.usenet.UnplayableReleases) {
+        val availableFirst = usenetSourceSettings.read().availableFirst
+        updateUiStateIfChanged { state ->
+            val groups = com.nuvio.tv.core.usenet.BuiltInUsenetService.arrangeOutcomes(state.addonStreams, unplayable::contains,
+                unplayable::played, availableFirst, unplayable::sibling)
+            if (groups == state.addonStreams) return@updateUiStateIfChanged state
+            val allStreams = groups.flatMap { it.streams }
+            val fullFiltered = state.selectedAddonFilter?.let { filter -> allStreams.filter { it.addonName == filter } } ?: allStreams
+            streamFilterFullList = fullFiltered
+            val pageEnd = state.filteredStreams.size.coerceAtLeast(STREAM_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
+                .coerceAtMost(fullFiltered.size)
+            state.copy(addonStreams = groups, allStreams = allStreams,
+                filteredStreams = if (pageEnd >= fullFiltered.size) fullFiltered else fullFiltered.subList(0, pageEnd))
+        }
+    }
+
     private fun filterByAddon(addonName: String?) {
         streamFilterExpandJob?.cancel()
         updateUiStateIfChanged { state ->
@@ -1329,7 +1370,8 @@ class StreamScreenViewModel @Inject constructor(
         val session = com.nuvio.tv.core.player.StreamFallbackSession(
             stream, _uiState.value.filteredStreams.ifEmpty { _uiState.value.allStreams },
             maxAttempts = com.nuvio.tv.core.usenet.UsenetSettings.read(context).fallbackMaxAttempts,
-            isEnabled = { com.nuvio.tv.core.usenet.UsenetSettings.read(context).fallbackEnabled }
+            isEnabled = { com.nuvio.tv.core.usenet.UsenetSettings.read(context).fallbackEnabled },
+            isUnplayable = { com.nuvio.tv.core.usenet.UnplayableReleases.get(context).contains(it) }
         )
         var candidate: Stream? = stream
         var pendingResolutionError: String? = null
@@ -1394,7 +1436,8 @@ class StreamScreenViewModel @Inject constructor(
                 val resolved = com.nuvio.tv.core.usenet.UsenetSidecar.get(context).resolve(stream, season, episode, playbackProfileId)
                 pendingUsenetPlayback.replace(requireNotNull(resolved.url))
                 updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null) }
-                getStreamForPlayback(resolved, saveLastLink)
+                // The session link ends with its session: the release itself is kept for reuse.
+                getStreamForPlayback(resolved, saveLastLink = false).also { if (saveLastLink) saveUsenetLastLink(stream) }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Exception) {
                 usenetSelectionStarted = false
@@ -1631,6 +1674,8 @@ class StreamScreenViewModel @Inject constructor(
             torrentService.stopStream()
             isTorrentStreamStarted = false
         }
+        // Like the torrent above: otherwise the engine keeps the session's memory and connections.
+        pendingUsenetPlayback.externalPlayerReturned()
         if (com.nuvio.tv.core.player.ZidooPlayerMonitor.isZidooDevice()) {
             externalPlaybackTracker.dismissOverlayOnly()
         } else {
@@ -1735,6 +1780,26 @@ class StreamScreenViewModel @Inject constructor(
         return playbackInfo
     }
 
+    /** Only built-in releases: their providers are rebuilt from today's settings when reused. */
+    private fun saveUsenetLastLink(stream: Stream) {
+        val nzbUrl = stream.nzbUrl ?: return
+        if (stream.addonName != com.nuvio.tv.core.usenet.BuiltInUsenetService.GROUP_NAME) return
+        pendingCacheSaveJob = viewModelScope.launch {
+            streamLinkCacheDataStore.save(
+                contentKey = streamCacheKey,
+                url = "",
+                streamName = stream.name ?: stream.addonName,
+                headers = null,
+                videoSize = stream.behaviorHints?.videoSize,
+                contentLanguage = contentLanguage,
+                year = year,
+                nzbUrl = nzbUrl,
+                releaseTitle = stream.title,
+                publishedAt = stream.publishedAt
+            )
+        }
+    }
+
     suspend fun awaitStreamLinkCacheSave() {
         pendingCacheSaveJob?.join()
     }
@@ -1757,6 +1822,7 @@ class StreamScreenViewModel @Inject constructor(
     override fun onCleared() {
         usenetPlayerLaunchJob?.cancel()
         abandonPendingUsenetPlayback()
+        pendingUsenetPlayback.externalPlayerReturned()
         streamResolutionJob?.cancel()
         com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
         super.onCleared()
@@ -2056,7 +2122,8 @@ class StreamScreenViewModel @Inject constructor(
                 )
             }
         } else {
-            pendingUsenetPlayback.handoff(playbackInfo.url)
+            // The external player cannot close the Usenet session; stopExternalPlayerTracking does.
+            pendingUsenetPlayback.handoffExternal(playbackInfo.url)
         }
     }
 

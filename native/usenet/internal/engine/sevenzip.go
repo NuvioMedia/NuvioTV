@@ -503,7 +503,7 @@ func select7z(ctx context.Context, vols []*File, s Selection, index *int, consid
 	if err != nil {
 		return nil, err
 	}
-	var largest *Content
+	var largest, video *Content
 	entries := make([]*Content, len(set.entries))
 	for i, e := range set.entries {
 		c, err := set.content(ctx, e, e.name)
@@ -519,13 +519,23 @@ func select7z(ctx context.Context, vols []*File, s Selection, index *int, consid
 		if err != nil {
 			return nil, err
 		}
-		if matched {
+		if matched && !s.whole() {
 			return c.usable(ctx)
+		}
+		// The header lists every entry: serve the largest video, as for RAR.
+		if matched {
+			if video == nil || c.Size > video.Size {
+				video = c
+			}
+			continue
 		}
 		if _, volume := rarname.SetKey(e.name); c.unusable == nil && !volume && !archiveName(e.name) &&
 			(largest == nil || c.Size > largest.Size) {
 			largest = c
 		}
+	}
+	if video != nil {
+		return video.usable(ctx)
 	}
 	// Scene releases are re-wrapped whole: a stored RAR set inside the 7z.
 	var nestedErr error
@@ -542,7 +552,7 @@ func select7z(ctx context.Context, vols []*File, s Selection, index *int, consid
 			nestedErr = groupErr
 			continue
 		}
-		c, err := selectNestedRAR(ctx, vols, index, consider)
+		c, err := selectNestedRAR(ctx, vols, index, consider, s.whole())
 		if err != nil {
 			nestedErr = err
 			continue
@@ -553,7 +563,7 @@ func select7z(ctx context.Context, vols []*File, s Selection, index *int, consid
 	}
 	// Obfuscated uploads can hide the inner name too. Without any selector the
 	// largest stream is the video, as for an extensionless direct file.
-	if s.FileIdx == nil && s.FileMustInclude == "" && s.Episode == 0 && largest != nil &&
+	if s.whole() && largest != nil &&
 		!isVideo(largest.Name) && !isSubtitle(strings.ToLower(largest.Name)) && largest.Size >= 64<<20 {
 		largest.Name += ".mkv"
 		return largest.usable(ctx)

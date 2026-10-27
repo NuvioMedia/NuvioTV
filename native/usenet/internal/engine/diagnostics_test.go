@@ -31,7 +31,7 @@ func BenchmarkNZBColdStartupStages(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				store := NewStore(context.Background(), stalledBody{}, 32<<20)
 				trace := newStartupTrace()
-				_, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, store, true, cache, "", trace)
+				_, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, store, true, cache, nil, "", "", trace)
 				if err != nil || trace.nzbCache.Lookup != "miss" {
 					b.Fatal("expected cold miss", err)
 				}
@@ -63,7 +63,7 @@ func TestNZBStartupStagesColdAndHit(t *testing.T) {
 	cache := newNZBCache(t.TempDir())
 	for _, hit := range []bool{false, true} {
 		trace := newStartupTrace()
-		_, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, true, cache, "", trace)
+		_, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, true, cache, nil, "", "", trace)
 		if err != nil {
 			t.Fatal(err)
 		}

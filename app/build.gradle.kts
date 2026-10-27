@@ -478,6 +478,8 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.moshi)
     implementation(libs.okhttp)
+    // Bounded-time matching for native stream profile rules.
+    implementation("com.google.re2j:re2j:1.8")
     implementation(libs.okhttp.logging)
     implementation(libs.moshi)
     ksp(libs.moshi.codegen)
@@ -600,6 +602,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.espresso.core)
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("io.mockk:mockk:1.13.12")

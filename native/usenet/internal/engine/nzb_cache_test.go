@@ -13,6 +13,25 @@ import (
 	"time"
 )
 
+func TestNZBCacheKeyIgnoresUserAgent(t *testing.T) {
+	request := func(agent string) *http.Request {
+		r, _ := http.NewRequest("GET", "https://indexer.example/getnzb?id=1", nil)
+		r.Header.Set("Accept-Encoding", "gzip")
+		if agent != "" {
+			r.Header.Set("User-Agent", agent)
+		}
+		return r
+	}
+	// An app update changes the version in the User-Agent; cached NZBs must stay valid.
+	key := nzbCacheKey(request(""), "1")
+	if nzbCacheKey(request("Nuvio/1.0"), "1") != key || nzbCacheKey(request("Nuvio/2.0"), "1") != key {
+		t.Fatal("the User-Agent changed the cache key")
+	}
+	if nzbCacheKey(request("Nuvio/1.0"), "2") == key {
+		t.Fatal("ignoring the User-Agent must not merge profiles")
+	}
+}
+
 func TestNZBCachePersistsAndSeparatesHeadersAndProfiles(t *testing.T) {
 	xml, _ := fixture([]inputFile{{"movie.mkv", payload(1024), nil}})
 	var requests atomic.Int32
@@ -27,7 +46,7 @@ func TestNZBCachePersistsAndSeparatesHeadersAndProfiles(t *testing.T) {
 		t.Helper()
 		store := NewStore(context.Background(), stalledBody{}, 32<<20)
 		t.Cleanup(store.Close)
-		files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, map[string]string{"Authorization": auth}, store, false, c, scope, nil)
+		files, err := fetchNZB(context.Background(), srv.Client(), srv.URL, map[string]string{"Authorization": auth}, store, false, c, nil, scope, "", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -67,7 +86,7 @@ func TestNZBCacheExpiryAndCorruptionFallBack(t *testing.T) {
 	cache := newNZBCache(t.TempDir())
 	read := func() {
 		t.Helper()
-		if _, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, cache, "1", nil); err != nil {
+		if _, err := fetchNZB(context.Background(), srv.Client(), srv.URL, nil, nil, false, cache, nil, "1", "", nil); err != nil {
 			t.Fatal(err)
 		}
 	}

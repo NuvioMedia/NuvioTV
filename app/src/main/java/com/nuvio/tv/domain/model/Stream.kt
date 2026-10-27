@@ -32,6 +32,8 @@ data class Stream(
     val nzbUrl: String? = null,
     val servers: List<String>? = null,
     val fileMustInclude: String? = null,
+    /** When a built-in Usenet release was posted, in epoch milliseconds, if its indexer said. */
+    val publishedAt: Long? = null,
     val serverTarget: ServerPlaybackTarget? = null,
     val pluginSourceName: String? = null
 ) {
@@ -181,7 +183,12 @@ data class StreamBadge(
     val tagStyle: String = "",
     val textColor: String = "",
     val borderColor: String = ""
-)
+) {
+    companion object {
+        /** A badge a source draws as its name, in its colours, rather than as an image. */
+        const val STYLE_LABEL = "label"
+    }
+}
 
 @Immutable
 data class StreamDebridCacheStatus(

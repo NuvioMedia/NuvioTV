@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "sourceSha256": "da1afabcb7aeea000e94c403cc4983c89efb0b83e2c5230d412a7adaa5b0dce0",
+  "sourceSha256": "e3f98dd46cf8935871e25fe4b7f82ca11360337de1b933f58374bd619be6c734",
   "binarySha256": {
-    "arm64-v8a": "126283a69fbc2888a1e1c709a85dbfce7c275dc572a5b0e4b0d35911b37c8c1c",
-    "armeabi-v7a": "17c9ccfe87b765ebd3bf70cde3dc6100fb3d831ccd35e93b34cbfb3c56e6dca5",
-    "x86_64": "4d298b10b208e5408d2008e69b5b6dc8296f5de308cd0e09649fff1de2e55672",
-    "x86": "735e5b470cb45fa0090b1678090864660d41c6eaad5cc236cb7af0d23987d55d"
+    "arm64-v8a": "b0bc6e4397029d77ed2189543f35a07c7ec26a9cb6febe59b9ebdb66f31955dc",
+    "armeabi-v7a": "1e4393033bc7e70033ada227abefaedc9e00ebdc340d0475139327af69f6a758",
+    "x86_64": "ece87baa920b2e388da5fe552aeac6b5243be3804ee9d856406b02dafc56c838",
+    "x86": "007fabb3239cafdfa037b2bf1b15bece5844c6396307d5540aa72b7920c06f3f"
   },
   "toolchain": {
-    "go": "go version go1.27.0 windows/amd64",
+    "go": "go version go1.27.2 windows/amd64",
     "ndk": "29.0.14206865"
   }
 }

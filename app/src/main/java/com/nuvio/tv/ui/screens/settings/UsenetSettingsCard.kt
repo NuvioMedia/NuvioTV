@@ -3,16 +3,22 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.core.usenet.UsenetConfiguration
+import com.nuvio.tv.core.usenet.isValidUserAgent
+import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.theme.NuvioTheme
 
 @Composable
 internal fun UsenetSettingsCard(
     configuration: UsenetConfiguration,
     update: (UsenetConfiguration) -> Unit,
-    initialFocusRequester: FocusRequester? = null
+    expanded: Boolean = true,
+    onToggle: () -> Unit = {},
+    initialFocusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier
 ) {
     var picker by remember { mutableStateOf<String?>(null) }
     val automatic = stringResource(R.string.usenet_automatic)
@@ -21,16 +27,22 @@ internal fun UsenetSettingsCard(
         SettingsPickerOption("balanced", stringResource(R.string.usenet_balanced)),
         SettingsPickerOption("throughput", stringResource(R.string.usenet_throughput))
     )
-    SettingsGroupCard(title = stringResource(R.string.usenet_title)) {
+    val section = UsenetSettingsSection.PLAYBACK
+    SettingsCollapsibleSection(title = stringResource(section.title), description = stringResource(section.description),
+        icon = section.icon, expanded = expanded, onToggle = onToggle, modifier = modifier, focusRequester = initialFocusRequester) {
         SettingsToggleRow(title = stringResource(R.string.usenet_self_hosted),
             subtitle = stringResource(R.string.usenet_self_hosted_description),
             checked = configuration.allowPrivateNetwork,
             onToggle = { update(configuration.copy(allowPrivateNetwork = !configuration.allowPrivateNetwork)) })
+        SettingsActionRow(title = stringResource(R.string.usenet_user_agent),
+            subtitle = stringResource(R.string.usenet_user_agent_description),
+            value = if (configuration.userAgent.isBlank()) stringResource(R.string.usenet_user_agent_default, configuration.agent)
+                else configuration.agent,
+            onClick = { picker = "userAgent" })
         SettingsToggleRow(title = stringResource(R.string.usenet_fallback),
             subtitle = stringResource(R.string.usenet_fallback_description),
             checked = configuration.fallbackEnabled,
-            onToggle = { update(configuration.copy(fallbackEnabled = !configuration.fallbackEnabled)) },
-            modifier = initialFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+            onToggle = { update(configuration.copy(fallbackEnabled = !configuration.fallbackEnabled)) })
         SettingsActionRow(title = stringResource(R.string.usenet_fallback_max_attempts),
             subtitle = stringResource(R.string.usenet_fallback_max_attempts_description),
             value = configuration.fallbackMaxAttempts.toString(), onClick = { picker = "fallbackAttempts" })
@@ -99,5 +111,27 @@ internal fun UsenetSettingsCard(
         "connections" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_connections),
             options = listOf(0, 4, 8, 12, 16, 20, 24, 32, 40, 50, 60, 80, 100, 150, 200, 300, 500).map { SettingsPickerOption(it, if (it == 0) automatic else it.toString()) },
             selectedValue = configuration.maxConnections, onOptionSelected = { update(configuration.copy(maxConnections = it)); picker = null }, onDismiss = { picker = null })
+        "userAgent" -> UserAgentEditor(configuration, update, onDismiss = { picker = null })
+    }
+}
+
+@Composable
+private fun UserAgentEditor(configuration: UsenetConfiguration, update: (UsenetConfiguration) -> Unit, onDismiss: () -> Unit) {
+    // Opens with the User-Agent being sent, so Nuvio's default can be read and edited.
+    var value by remember { mutableStateOf(configuration.agent) }
+    var error by remember { mutableStateOf(false) }
+    // Blank, or Nuvio's own unchanged, keeps the automatic one that follows app updates.
+    fun save(agent: String) { update(configuration.copy(userAgent = agent.trim())); onDismiss() }
+    NuvioDialog(title = stringResource(R.string.usenet_user_agent),
+        subtitle = stringResource(R.string.usenet_user_agent_description), onDismiss = onDismiss) {
+        SourceField(stringResource(R.string.usenet_user_agent), value, { value = it; error = false })
+        if (error) Text(stringResource(R.string.usenet_user_agent_invalid), color = NuvioTheme.colors.TextSecondary)
+        SettingsDialogActionRow {
+            SettingsDialogActionButton(text = stringResource(R.string.usenet_user_agent_reset), onClick = { save("") })
+            SettingsDialogActionButton(text = stringResource(R.string.action_cancel), onClick = onDismiss)
+            SettingsDialogActionButton(text = stringResource(R.string.action_save), primary = true, onClick = {
+                if (isValidUserAgent(value.trim())) save(value) else error = true
+            })
+        }
     }
 }

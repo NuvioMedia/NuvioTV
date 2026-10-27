@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"iter"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -39,18 +40,30 @@ type poolLease struct {
 	owner        *providerPools
 	keys         []providerKey
 	clients      []*nntppool.Client
-	next         atomic.Uint64
+	tiers        []int           // Ascending priority of each client; equal tiers share load.
+	next         []atomic.Uint64 // One rotation counter per tier start, so tiers never skew each other.
 	once         sync.Once
+	// Clients that broke off an article after it started, by message-id (bit i is clients[i]).
+	// The store retries such an article; without this a lone preferred provider would take
+	// every retry and a complete copy on a backup would never be read.
+	brokeMu    sync.Mutex
+	broke      map[string]uint64
+	brokeCount atomic.Int32
 }
+
+// maxBrokenArticles bounds what a lease remembers; past it, retries simply follow order.
+const maxBrokenArticles = 4096
 
 func (p *providerPools) acquire(ctx context.Context, providers []nntppool.Provider, allowPrivate ...bool) (*poolLease, error) {
-	return p.acquireForRequest(ctx, ctx, providers, len(allowPrivate) > 0 && allowPrivate[0])
+	return p.acquireForRequest(ctx, ctx, providers, nil, len(allowPrivate) > 0 && allowPrivate[0])
 }
 
-func (p *providerPools) acquireForRequest(lifetime, wait context.Context, providers []nntppool.Provider, allowPrivate bool) (*poolLease, error) {
+// priorities parallels providers (missing entries are 0). The first listing of
+// a duplicate account decides its tier.
+func (p *providerPools) acquireForRequest(lifetime, wait context.Context, providers []nntppool.Provider, priorities []int, allowPrivate bool) (*poolLease, error) {
 	l := &poolLease{owner: p}
 	seen := make(map[providerKey]bool)
-	for _, provider := range providers {
+	for i, provider := range providers {
 		key := providerKey{provider.Host, provider.Auth.Username, provider.Auth.Password, provider.TLSConfig != nil, allowPrivate}
 		if seen[key] {
 			continue
@@ -63,7 +76,24 @@ func (p *providerPools) acquireForRequest(lifetime, wait context.Context, provid
 		}
 		l.keys = append(l.keys, key)
 		l.clients = append(l.clients, entry.client)
+		tier := 0
+		if i < len(priorities) {
+			tier = priorities[i]
+		}
+		l.tiers = append(l.tiers, tier)
 	}
+	// Stable: list order remains the failover order within a tier.
+	order := make([]int, len(l.clients))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(a, b int) bool { return l.tiers[order[a]] < l.tiers[order[b]] })
+	clients, tiers := make([]*nntppool.Client, len(order)), make([]int, len(order))
+	for i, j := range order {
+		clients[i], tiers[i] = l.clients[j], l.tiers[j]
+	}
+	l.clients, l.tiers = clients, tiers
+	l.next = make([]atomic.Uint64, len(l.clients))
 	return l, nil
 }
 
@@ -165,13 +195,26 @@ func (w *providerWriter) metadata(m nntppool.YEncMeta) {
 		f(m)
 	}
 }
-func (l *poolLease) firstClient() int {
-	if len(l.clients) == 1 {
-		return 0
+func (l *poolLease) firstClient() int { return l.pick(0, l.tierEnd(0)) }
+
+// tierEnd returns the end of the priority tier that starts at from.
+func (l *poolLease) tierEnd(from int) int {
+	end := from + 1
+	for end < len(l.clients) && l.tiers[end] == l.tiers[from] {
+		end++
 	}
-	cumulative := make([]int, len(l.clients))
+	return end
+}
+
+// pick chooses where traffic starts within clients[from:to], weighted by each
+// provider's available connection capacity.
+func (l *poolLease) pick(from, to int) int {
+	if to-from <= 1 {
+		return from
+	}
+	cumulative := make([]int, to-from)
 	total := 0
-	for i, client := range l.clients {
+	for i, client := range l.clients[from:to] {
 		for _, provider := range client.Stats().Providers {
 			if !provider.QuotaExceeded {
 				total += max(1, provider.AvailableSlots)
@@ -180,23 +223,100 @@ func (l *poolLease) firstClient() int {
 		cumulative[i] = total
 	}
 	if total == 0 {
+		return from
+	}
+	slot := int(l.next[from].Add(1) % uint64(total))
+	return from + sort.SearchInts(cumulative, slot+1)
+}
+
+// order yields the clients to try for one article: each tier in priority order,
+// starting inside a tier at a capacity-weighted pick. A tier is weighed only when
+// the iteration reaches it, so backup tiers cost nothing while a preferred one serves.
+func (l *poolLease) order() iter.Seq[int] {
+	return func(yield func(int) bool) {
+		for from := 0; from < len(l.clients); {
+			to := l.tierEnd(from)
+			start := l.pick(from, to)
+			for i := range to - from {
+				if !yield(from + (start-from+i)%(to-from)) {
+					return
+				}
+			}
+			from = to
+		}
+	}
+}
+
+// attempts is order for article id, with the clients that broke it off before
+// moved to the end: a retry goes to another copy first, and still to them last.
+func (l *poolLease) attempts(id string) iter.Seq[int] {
+	broke := l.brokenBy(id)
+	if broke == 0 {
+		return l.order()
+	}
+	return func(yield func(int) bool) {
+		for index := range l.order() {
+			if broke&(1<<index) == 0 && !yield(index) {
+				return
+			}
+		}
+		for index := range l.clients {
+			if broke&(1<<index) != 0 && !yield(index) {
+				return
+			}
+		}
+	}
+}
+
+func (l *poolLease) brokenBy(id string) uint64 {
+	if l.brokeCount.Load() == 0 {
 		return 0
 	}
-	slot := int(l.next.Add(1) % uint64(total))
-	return sort.SearchInts(cumulative, slot+1)
+	l.brokeMu.Lock()
+	defer l.brokeMu.Unlock()
+	return l.broke[id]
+}
+
+func (l *poolLease) markBroken(id string, index int) {
+	if index >= 64 {
+		return
+	}
+	l.brokeMu.Lock()
+	defer l.brokeMu.Unlock()
+	if _, known := l.broke[id]; !known {
+		if len(l.broke) >= maxBrokenArticles {
+			return
+		}
+		if l.broke == nil {
+			l.broke = make(map[string]uint64)
+		}
+		l.brokeCount.Add(1)
+	}
+	l.broke[id] |= 1 << index
+}
+
+func (l *poolLease) forgetBroken(id string) {
+	if l.brokeCount.Load() == 0 {
+		return
+	}
+	l.brokeMu.Lock()
+	defer l.brokeMu.Unlock()
+	if _, known := l.broke[id]; known {
+		delete(l.broke, id)
+		l.brokeCount.Add(-1)
+	}
 }
 
 func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority bool, meta ...func(nntppool.YEncMeta)) (*nntppool.ArticleBody, error) {
-	start := l.firstClient()
 	var failures []error
 	allMissing := true
 	allAuth, allQuota := true, true
 	allPrivate := true
-	for i := range l.clients {
+	for index := range l.attempts(id) {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		client := l.clients[(start+i)%len(l.clients)]
+		client := l.clients[index]
 		l.requestOnce.Do(func() { l.trace.mark("first_nntp_request") })
 		observedMeta := func(m nntppool.YEncMeta) {
 			l.metadataOnce.Do(func() { l.trace.mark("first_nntp_metadata") })
@@ -217,6 +337,13 @@ func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority
 		committed := writer.committed
 		writer.mu.Unlock()
 		if err == nil || committed {
+			// Bytes already reached out, so no other client can continue this attempt; the
+			// store's retry can, starting elsewhere. A cancelled read is no client's fault.
+			if err == nil {
+				l.forgetBroken(id)
+			} else if ctx.Err() == nil {
+				l.markBroken(id, index)
+			}
 			return body, err
 		}
 		allMissing = allMissing && errors.Is(err, nntppool.ErrArticleNotFound)
