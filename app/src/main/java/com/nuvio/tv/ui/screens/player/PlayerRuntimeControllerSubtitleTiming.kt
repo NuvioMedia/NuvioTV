@@ -96,6 +96,7 @@ internal fun PlayerRuntimeController.applySubtitleAutoSyncCue(cueStartTimeMs: Lo
     _exoPlayer?.getAssHandlerCompat()?.let {
         it.subtitleDelayUs = newDelayMs.toLong() * 1000L + streamSubtitleDelayUs.get()
     }
+    mpvAssRenderer?.redraw()
     _uiState.update {
         it.copy(
             subtitleDelayMs = newDelayMs,
