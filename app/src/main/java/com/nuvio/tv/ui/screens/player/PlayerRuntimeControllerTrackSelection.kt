@@ -605,6 +605,7 @@ internal fun PlayerRuntimeController.attachAddonSubtitleViaMediaReload(subtitle:
     val currentPosition = player.currentPosition
     val playWhenReady = player.playWhenReady
 
+    mpvAssRenderer?.reset()
     player.setMediaSource(
         mediaSourceFactory.createMediaSource(
             context = context,
