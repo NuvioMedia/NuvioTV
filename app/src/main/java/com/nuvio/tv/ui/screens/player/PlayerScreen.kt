@@ -8,6 +8,7 @@ package com.nuvio.tv.ui.screens.player
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.layout.boundsInWindow
 import android.graphics.RectF
+import com.nuvio.tv.ui.screens.player.mpvass.MpvAssRenderer
 import com.nuvio.tv.ui.screens.detail.formatPlaybackTime
 import com.nuvio.tv.ui.theme.NuvioMotion
 import kotlinx.coroutines.delay
@@ -176,6 +177,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.media3.exoplayer.ExoPlayer
 import com.nuvio.tv.libass.media.widget.AssSubtitleSurfaceView
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 
@@ -1247,6 +1249,7 @@ fun PlayerScreen(
                             tunneledSurfaceFill = uiState.tunneledSurfaceFill,
                             useLibass = uiState.useLibass,
                             libassRenderMode = uiState.libassRenderMode,
+                            useMpvAss = uiState.useMpvAss,
                             subtitleStyle = uiState.effectiveSubtitleStyle,
                             subtitleLiftPx = subtitleLiftPx,
                             onBindSubtitleView = viewModel::bindExoSubtitleView,
@@ -2002,7 +2005,7 @@ fun PlayerScreen(
                     false
                 }
                 val isUsingMpv = uiState.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER
-                val isAssDisabled = isCurrentSubtitleAss && (isUsingMpv || uiState.useLibass)
+                val isAssDisabled = isCurrentSubtitleAss && (isUsingMpv || uiState.useLibass || uiState.useMpvAss)
 
                 SubtitleStyleSidePanel(
                     subtitleStyle = uiState.editableSubtitleStyle,
@@ -2056,7 +2059,7 @@ fun PlayerScreen(
             subtitleDelayMs = uiState.subtitleDelayMs,
             installedSubtitleAddonOrder = uiState.installedSubtitleAddonOrder,
             isLoadingAddons = uiState.isLoadingAddonSubtitles,
-            useLibass = uiState.useLibass,
+            useLibass = uiState.useLibass || uiState.useMpvAss,
             isUsingMpv = uiState.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER,
             onInternalTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectSubtitleTrack(it)) },
             onAddonSubtitleSelected = { viewModel.onEvent(PlayerEvent.OnSelectAddonSubtitle(it)) },
@@ -2199,6 +2202,7 @@ private fun ExoPlayerSurface(
     tunneledSurfaceFill: Boolean,
     useLibass: Boolean,
     libassRenderMode: LibassRenderMode,
+    useMpvAss: Boolean,
     subtitleStyle: SubtitleStyleSettings,
     subtitleLiftPx: Float,
     onBindSubtitleView: (androidx.media3.ui.SubtitleView?) -> Unit = {},
@@ -2236,6 +2240,7 @@ private fun ExoPlayerSurface(
                 enabled = useLibass,
                 renderMode = libassRenderMode
             )
+            it.syncMpvAssOverlay(controller.mpvAssRenderer, useMpvAss)
             latestBindSubtitleView(it.subtitleView)
         }
     )
@@ -2349,6 +2354,10 @@ private fun ExoPlayerSurface(
         )
     }
 
+    LaunchedEffect(playerView, player, useMpvAss) {
+        playerView.syncMpvAssOverlay(controller.mpvAssRenderer, useMpvAss)
+    }
+
     DisposableEffect(playerView) {
         val callback: (SubtitleTextMetrics?) -> Unit = { latestMetricsCallback(it) }
         playerView.setTag(R.id.player_view_subtitle_metrics_callback_tag, callback)
@@ -2399,6 +2408,7 @@ private fun PlayerView.syncExoSurfaceLayout(
         )
     )
     syncLibassOverlayGeometry()
+    syncMpvAssOverlayGeometry()
     reportSubtitleTextMetrics()
 }
 
@@ -2667,6 +2677,43 @@ private fun PlayerView.syncLibassOverlay(
     post { syncLibassOverlayGeometry() }
 }
 
+private fun PlayerView.syncMpvAssOverlay(renderer: MpvAssRenderer?, enabled: Boolean) {
+    val overlayContainer = findViewById<android.widget.FrameLayout>(R.id.libass_overlay_container_gl) ?: return
+    val bound = getTag(R.id.mpv_ass_overlay_renderer) as? MpvAssRenderer
+    val target = renderer?.takeIf { enabled }
+    if (bound === target && (target == null || target.view.parent === overlayContainer)) return
+    bound?.view?.let { (it.parent as? ViewGroup)?.removeView(it) }
+    setTag(R.id.mpv_ass_overlay_renderer, target)
+    if (target == null) return
+    (target.view.parent as? ViewGroup)?.removeView(target.view)
+    overlayContainer.addView(
+        target.view,
+        android.widget.FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+    )
+    post { syncMpvAssOverlayGeometry() }
+}
+
+private fun PlayerView.syncMpvAssOverlayGeometry() {
+    val renderer = getTag(R.id.mpv_ass_overlay_renderer) as? MpvAssRenderer ?: return
+    val overlay = findViewById<android.widget.FrameLayout>(R.id.libass_overlay_container_gl) ?: return
+    val contentFrame = findViewById<AspectRatioFrameLayout>(androidx.media3.ui.R.id.exo_content_frame) ?: return
+    if (overlay.width <= 0 || overlay.height <= 0) return
+    val videoBounds = transformedChildBoundsInParent(contentFrame) ?: return
+    renderer.setStage(
+        overlay.width,
+        overlay.height,
+        android.graphics.Rect(
+            videoBounds.left.roundToInt(),
+            videoBounds.top.roundToInt(),
+            videoBounds.right.roundToInt(),
+            videoBounds.bottom.roundToInt()
+        )
+    )
+}
+
 private fun android.widget.FrameLayout.hasAssOverlayChild(): Boolean {
     for (index in 0 until childCount) {
         val child = getChildAt(index)
@@ -2706,9 +2753,12 @@ private fun PlayerView.setAssOverlayVisibility(visibility: Int) {
             val container = findViewById<android.widget.FrameLayout>(containerId) ?: continue
             container.removeAssOverlayChildren()
         }
+        (getTag(R.id.mpv_ass_overlay_renderer) as? MpvAssRenderer)?.view?.visibility = android.view.View.GONE
         setTag(R.id.libass_overlay_bound_player, null)
         val player = player as? ExoPlayer ?: return
         player.getAssHandlerCompat()?.videoFrameCallback = null
+    } else {
+        (getTag(R.id.mpv_ass_overlay_renderer) as? MpvAssRenderer)?.view?.visibility = android.view.View.VISIBLE
     }
 }
 
