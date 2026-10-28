@@ -103,7 +103,7 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
     }
 
     val player = _exoPlayer ?: return
-    val useLibass = requestedUseLibassByUser || activePlayerUsesLibass
+    val useLibass = requestedUseLibassByUser || activePlayerUsesLibass || requestedUseMpvAssByUser
 
     if (!canAttachAddonSubtitleViaSidecar(selectedSubtitle)) {
         showAutoSyncToast(context.getString(R.string.autosync_toast_failed_unsupported))
