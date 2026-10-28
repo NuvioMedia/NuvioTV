@@ -190,6 +190,7 @@ internal fun PlayerRuntimeController.applyStreamSubtitleOffset() {
     _exoPlayer?.getAssHandlerCompat()?.let {
         it.subtitleDelayUs = subtitleDelayUs.get() + offsetUs
     }
+    mpvAssRenderer?.redraw()
     if (isUsingMpvEngine()) {
         mpvView?.setSubtitleDelayMs(mpvSubtitleDelayMs(state.subtitleDelayMs))
     }
@@ -1255,6 +1256,7 @@ internal fun PlayerRuntimeController.setSubtitleDelayMs(targetMs: Int, showOverl
     _exoPlayer?.getAssHandlerCompat()?.let {
         it.subtitleDelayUs = newDelayMs.toLong() * 1000L + streamSubtitleDelayUs.get()
     }
+    mpvAssRenderer?.redraw()
     if (isUsingMpvEngine()) {
         mpvView?.setSubtitleDelayMs(mpvSubtitleDelayMs(newDelayMs))
     }
