@@ -205,6 +205,13 @@ internal fun PlaybackSubtitlesSection(
             onClick = { onOpenDialog(PlaybackDialog.LIBASS_RENDER_SCALE) }
         )
     }
+    SettingsToggleRow(
+        title = stringResource(R.string.sub_mpv_libass),
+        subtitle = stringResource(R.string.sub_mpv_libass_sub),
+        checked = settings.useMpvLibass,
+        onToggle = { onUpdate { setUseMpvLibass(!settings.useMpvLibass) } },
+        enabled = enabled
+    )
 }
 
 @Composable
