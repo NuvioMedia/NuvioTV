@@ -919,6 +919,8 @@
     <string name="sub_advanced_section">Advanced Subtitle Rendering</string>
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
     <string name="sub_libass_sub">Advanced ASS/SSA rendering (styles, positioning, animations)</string>
+    <string name="sub_mpv_libass">Use libmpv libass for ASS/SSA subtitles</string>
+    <string name="sub_mpv_libass_sub">ExoPlayer draws ASS/SSA with the libass bundled in libmpv instead of its own ASS rendering</string>
     <string name="sub_libass_mode">Libass Render Mode</string>
     <string name="sub_libass_render_scale">Subtitle Render Resolution</string>
     <string name="sub_libass_render_scale_sub">Lower resolution improves performance on heavy typesetting at the cost of sharpness</string>
