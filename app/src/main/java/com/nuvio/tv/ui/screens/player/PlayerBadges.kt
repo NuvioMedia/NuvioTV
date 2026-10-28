@@ -19,6 +19,7 @@ import com.nuvio.tv.ui.util.languageCodeToName
 internal fun rememberPlayerBadges(viewModel: PlayerViewModel, uiState: PlayerUiState): List<StreamBadge> {
     val filters = uiState.playerBadgeFilters
     var mediaInfo by remember { mutableStateOf(PlayerMediaInfo()) }
+    var streamFilename by remember { mutableStateOf<String?>(null) }
     val selectedAudio = uiState.audioTracks.firstOrNull { it.isSelected }
     LaunchedEffect(
         filters,
@@ -30,13 +31,20 @@ internal fun rememberPlayerBadges(viewModel: PlayerViewModel, uiState: PlayerUiS
     ) {
         if (filters.isNotEmpty() && uiState.showControls && !uiState.isBuffering) {
             mediaInfo = viewModel.playerMediaInfo()
+            streamFilename = viewModel.playerStreamFilename()
         }
     }
     if (filters.isEmpty()) return emptyList()
     val language = selectedAudio?.language
     val text = playbackMatchText(mediaInfo, listOfNotNull(language, language?.let(::languageCodeToName)))
-    return remember(text, filters) {
-        StreamBadgeMatcher.matchedBadges(listOfNotNull(text.takeIf { it.isNotBlank() }), filters)
+    val candidates = buildList {
+        if (text.isNotBlank()) add(text)
+        streamFilename?.takeIf { it.isNotBlank() }?.let(::add)
+        uiState.currentStreamName?.takeIf { it.isNotBlank() }?.let(::add)
+    }
+    val mergedCandidate = candidates.joinToString(" ")
+    return remember(mergedCandidate, filters) {
+        StreamBadgeMatcher.matchedBadges(listOfNotNull(mergedCandidate.takeIf { it.isNotBlank() }), filters)
             .filter { it.imageURL.isNotBlank() }
     }
 }

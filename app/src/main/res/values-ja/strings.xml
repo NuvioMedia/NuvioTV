@@ -1412,7 +1412,6 @@
     <string name="parental_severity_moderate">中程度</string>
     <string name="parental_severity_mild">軽度</string>
     <string name="player_ends_at">%1$sに終了</string>
-    <string name="player_via">%1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02) -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">字幕の遅延</string>

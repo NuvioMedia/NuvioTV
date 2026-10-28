@@ -7,6 +7,7 @@ import com.nuvio.tv.core.cloud.CloudLibraryPlaybackProgressStore
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackSessionStore
 import com.nuvio.tv.core.cloud.CloudLibraryRepository
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
@@ -24,6 +25,7 @@ import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.ui.screens.player.PlayerNextEpisodeRules
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -191,7 +193,8 @@ class ExternalPlaybackTracker @Inject constructor(
     private val cloudLibraryRepository: CloudLibraryRepository,
     private val cloudPlaybackProgressStore: CloudLibraryPlaybackProgressStore,
     private val cloudPlaybackSessionStore: CloudLibraryPlaybackSessionStore,
-    private val profileManager: com.nuvio.tv.core.profile.ProfileManager
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager,
+    private val torrentService: TorrentService
 ) {
     companion object {
         private const val TAG = "ExtPlaybackTracker"
@@ -254,6 +257,10 @@ class ExternalPlaybackTracker @Inject constructor(
     private var nextEpisodeSnapshot: ExternalNextEpisodeSnapshot = ExternalNextEpisodeSnapshot.Unknown
     private var autoNextEnabledForPendingLaunch: Boolean? = null
     private var pendingCloudSessionToken: String? = null
+    @Volatile
+    private var ownsTorrentStream = false
+    val isOwningTorrentStream: Boolean get() = ownsTorrentStream
+    private var pendingOwnsTorrentStream = false
 
     private val autoPlayNextNavigationEvents = ExternalAutoNextNavigationEvents(
         maxAgeMs = AUTO_NEXT_OVERLAY_TIMEOUT_MS
@@ -385,8 +392,11 @@ class ExternalPlaybackTracker @Inject constructor(
         autoLaunch: Boolean = false,
         nextEpisodeSnapshot: ExternalNextEpisodeSnapshot? = null,
         cloudSessionToken: String? = null,
+        ownsTorrentStream: Boolean = false,
         context: Context
     ): Boolean {
+        this.ownsTorrentStream = false
+        this.pendingOwnsTorrentStream = ownsTorrentStream
         if (shouldCancelPendingAutoLaunch(autoLaunch)) {
             Log.d(AUTO_NEXT_TAG, "auto launch cancelled before tracker setup")
             return false
@@ -427,7 +437,7 @@ class ExternalPlaybackTracker @Inject constructor(
                 false
             } else {
                 withContext(Dispatchers.Main.immediate) {
-                    doLaunch(
+                    val intentSent = doLaunch(
                         url = url,
                         title = title,
                         headers = headers,
@@ -437,6 +447,9 @@ class ExternalPlaybackTracker @Inject constructor(
                         skipSegmentsJson = skipSegmentsJson,
                         context = context
                     )
+                    if (intentSent) this@ExternalPlaybackTracker.ownsTorrentStream =
+                        pendingOwnsTorrentStream
+                    intentSent
                 }
             }
         }
@@ -1337,6 +1350,10 @@ class ExternalPlaybackTracker @Inject constructor(
     fun stopTracking() {
         zidooMonitorJob?.cancel()
         zidooMonitorJob = null
+        if (ownsTorrentStream) {
+            ownsTorrentStream = false
+            torrentService.stopStream()
+        }
         awaitingExternalPlayerResult = false
         pendingMetadata = null
         pendingCloudSessionToken = null
@@ -1441,7 +1458,11 @@ class ExternalPlaybackTracker @Inject constructor(
             Log.d(TAG, "Saving progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +
                 "content=${metadata.contentId}, video=${metadata.videoId}, " +
                 "progressPct=${progress.progressPercentage}, isInProgress=${progress.isInProgress()}")
-            watchProgressRepository.saveProgress(progress, metadata.profileId)
+            try {
+                watchProgressRepository.saveProgress(progress, metadata.profileId)
+            } catch (error: IOException) {
+                Log.w(TAG, "Watch progress could not be saved", error)
+            }
 
             val progressPercent = if (effectiveDuration > 0L) {
                 (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)

@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -40,6 +42,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -241,7 +244,7 @@ private fun FolderHeader(folder: com.nuvio.tv.domain.model.CollectionFolder) {
             }
             AsyncImage(
                 model = folder.coverImageUrl,
-                contentDescription = folder.title,
+                contentDescription = null,
                 modifier = Modifier
                     .width(iconWidth)
                     .height(iconHeight)
@@ -305,7 +308,7 @@ private fun TabbedGridContent(
             }
             AsyncImage(
                 model = folder.coverImageUrl,
-                contentDescription = folder.title,
+                contentDescription = null,
                 modifier = Modifier
                     .width(iconWidth)
                     .height(iconHeight)
@@ -537,7 +540,8 @@ private fun TabbedGridContent(
                                 modifier = Modifier
                                     .width(posterCardStyle.width)
                                     .height(loadingCardHeight)
-                                    .focusProperties { canFocus = false },
+                              .clearAndSetSemantics {}
+                              .focusProperties { canFocus = false },
                                 shape = CardDefaults.shape(shape = cardShape),
                                 colors = CardDefaults.colors(
                                     containerColor = NuvioTheme.colors.BackgroundCard,

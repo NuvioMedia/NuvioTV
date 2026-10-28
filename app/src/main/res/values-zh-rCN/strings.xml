@@ -1737,7 +1737,6 @@
     <string name="parental_severity_mild">轻微</string>
     <string name="player_ends_at">结束于 %1$s</string>
     <string name="player_live_watched">直播  %1$s</string>
-    <string name="player_via">通过 %1$s</string>
     <!-- 播放器 UI 中显示的季/集代码 -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">字幕延迟</string>

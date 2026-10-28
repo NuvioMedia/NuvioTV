@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -51,6 +52,7 @@ fun TrailerPlayer(
     isPlaying: Boolean,
     isPaused: Boolean = false,
     onEnded: () -> Unit,
+    onError: () -> Unit = {},
     onFirstFrameRendered: () -> Unit = {},
     muted: Boolean = false,
     seekRequestToken: Int = 0,
@@ -72,6 +74,7 @@ fun TrailerPlayer(
     val currentTrailerUrl by rememberUpdatedState(trailerUrl)
     val currentTrailerAudioUrl by rememberUpdatedState(trailerAudioUrl)
     val currentOnEnded by rememberUpdatedState(onEnded)
+    val currentOnError by rememberUpdatedState(onError)
     val currentOnFirstFrameRendered by rememberUpdatedState(onFirstFrameRendered)
     val currentOnProgressChanged by rememberUpdatedState(onProgressChanged)
     val currentOnRemoteKey by rememberUpdatedState(onRemoteKey)
@@ -213,6 +216,14 @@ fun TrailerPlayer(
             override fun onRenderedFirstFrame() {
                 hasRenderedFirstFrame = true
                 currentOnFirstFrameRendered()
+            }
+
+            // A trailer that fails to load or decode never renders a frame, so without this the
+            // caller stays in its trailer layout over a transparent player.
+            override fun onPlayerError(error: PlaybackException) {
+                if (currentIsPlaying) {
+                    currentOnError()
+                }
             }
         }
         val observer = LifecycleEventObserver { _, event ->

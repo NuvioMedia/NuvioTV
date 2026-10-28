@@ -1857,7 +1857,6 @@
     <string name="parental_severity_mild">Nhẹ</string>
     <string name="player_ends_at">Kết thúc lúc %1$s</string>
     <string name="player_live_watched">TRỰC TIẾP  %1$s</string>
-    <string name="player_via">qua %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">M%1$d T%2$d</string>
     <string name="player_subtitle_delay">Độ trễ phụ đề</string>
@@ -2558,6 +2557,12 @@
     <string name="cd_remove">Xóa</string>
     <string name="cd_preview">Xem trước</string>
     <string name="cd_test">Kiểm tra</string>
+    <string name="cd_enable_scraper">Bật %1$s</string>
+    <string name="cd_enable_addon">Bật %1$s</string>
+    <string name="cd_color_swatch">Màu %1$s</string>
+    <string name="cd_emoji_option">Biểu tượng cảm xúc %1$s</string>
+    <string name="cd_trailer_controls">Nút điều khiển trailer</string>
+    <string name="cd_seek_bar">Thanh tua</string>
     <string name="cd_unlink">Hủy liên kết</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Logo Trakt</string>

@@ -24,7 +24,7 @@ fun MetaPreview.withCustomPosterUrl(
 
     val ids = CustomPosterUrlResolver.extractIds(id, explicitImdbId = imdbId)
     val type = this.type.toApiString(rawType)
-    val supportsShape = "{shape}" in pattern
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
 
     // If the pattern doesn't support shape, only override portrait posters
     if (!supportsShape && posterShape != PosterShape.POSTER) return this
@@ -81,7 +81,7 @@ fun Meta.withCustomPosterUrl(
 
     val ids = CustomPosterUrlResolver.extractIds(id, explicitImdbId = imdbId)
     val type = this.type.toApiString(rawType)
-    val supportsShape = "{shape}" in pattern
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
 
     val resolvedPoster = CustomPosterUrlResolver.resolve(
         pattern = pattern,
@@ -118,7 +118,7 @@ fun LibraryEntry.withCustomPosterUrl(
 
     val ids = CustomPosterUrlResolver.extractIds(id, explicitImdbId = imdbId)
     val type = this.type.let { if (it.equals("tv", ignoreCase = true)) "series" else it }
-    val supportsShape = "{shape}" in pattern
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
 
     val resolvedPoster = CustomPosterUrlResolver.resolve(
         pattern = pattern,
@@ -177,7 +177,7 @@ fun com.nuvio.tv.ui.screens.home.ContinueWatchingItem.withCustomPosterUrl(
     pattern: String
 ): com.nuvio.tv.ui.screens.home.ContinueWatchingItem {
     if (pattern.isBlank()) return this
-    val supportsShape = "{shape}" in pattern
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
     return when (this) {
         is com.nuvio.tv.ui.screens.home.ContinueWatchingItem.InProgress -> {
             val ids = CustomPosterUrlResolver.extractIds(progress.contentId)
@@ -232,7 +232,7 @@ fun WatchProgress.withCustomPosterArt(pattern: String): WatchProgress {
 
     val ids = CustomPosterUrlResolver.extractIds(contentId)
     val type = if (contentType.equals("movie", ignoreCase = true)) "movie" else "series"
-    val supportsShape = "{shape}" in pattern
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
 
     val resolvedPoster = CustomPosterUrlResolver.resolve(
         pattern = pattern,

@@ -269,6 +269,34 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
     }
 }
 
+/**
+ * Frees the hardware decoder once the app is no longer visible, so the next foreground app gets
+ * it without a forced reclaim. Uses the same release and paused rebuild on resume as a decoder
+ * that was reclaimed while in the background.
+ */
+internal fun PlayerRuntimeController.releaseForBackground() {
+    if (isUsingMpvEngine() || pendingBackgroundCrashRecovery) return
+    val player = _exoPlayer ?: return
+    if (currentStreamUrl.isEmpty()) return
+    backgroundCrashSavedPositionMs = if (_uiState.value.isLive) 0L else player.currentPosition.coerceAtLeast(0L)
+    // Pausing while buffering fires no isPlaying change, so neither the pause save nor the pause
+    // scrobble ran; do both while the player still reports a position.
+    saveWatchProgress()
+    emitPauseScrobbleForCurrentProgress()
+    pendingBackgroundCrashRecovery = true
+    errorRetryJob?.cancel()
+    releasePlayer(flushPlaybackState = false)
+}
+
+/** True when a player ON_STOP means the app left the foreground, not an in-app navigation or exit. */
+internal fun isAppBackgroundStop(
+    isFinishing: Boolean,
+    isChangingConfigurations: Boolean,
+    hostState: androidx.lifecycle.Lifecycle.State
+): Boolean = !isFinishing &&
+    !isChangingConfigurations &&
+    !hostState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+
 internal fun PlayerRuntimeController.resumeForLifecycle() {
     isInBackground = false
 

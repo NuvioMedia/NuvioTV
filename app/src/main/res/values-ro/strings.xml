@@ -537,7 +537,6 @@
 
     <!-- PlayerScreen -->
     <string name="player_ends_at">Se termină la %1$s</string>
-    <string name="player_via">prin %1$s</string>
     <string name="player_subtitle_delay">Întârziere subtitrări</string>
     <string name="player_error_title">Eroare de redare</string>
     <string name="player_go_back">Înapoi</string>

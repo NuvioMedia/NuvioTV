@@ -345,6 +345,7 @@ class PlayerRuntimeController(
 
     internal val liveWatchClock = LivePlaybackWatchClock()
     internal var livePlaybackLatched: Boolean = false
+    internal var mpvDurationGrowth = LivePlaybackUiPolicy.DurationGrowth()
 
     internal fun updatePlaybackTimeline(
         currentPosition: Long = _playbackTimeline.value.currentPosition,
@@ -399,6 +400,7 @@ class PlayerRuntimeController(
 
     internal fun resetPlaybackTimeline() {
         livePlaybackLatched = false
+        mpvDurationGrowth = LivePlaybackUiPolicy.DurationGrowth()
         liveWatchClock.reset()
         pendingPreviewSeekPosition = null
         if (_uiState.value.isLive) {
@@ -586,6 +588,8 @@ class PlayerRuntimeController(
     internal var hasInitializedCenterMixForSession: Boolean = false
     internal var rememberAudioDelayPerDeviceEnabled: Boolean = false
     internal var currentAudioOutputRoute: AudioOutputRoute? = null
+    /** USB audio has no hardware A/V sync output, so tunneled playback is skipped while it plays. */
+    internal var tunnelingBlockedByUsbAudio: Boolean = false
     internal var audioOutputRouteCallback: AudioDeviceCallback? = null
     internal var audioRouteChangeJob: Job? = null
 
@@ -710,6 +714,7 @@ class PlayerRuntimeController(
     internal var requestedUseLibassByUser: Boolean = false
     internal var libassPipelineOverrideForCurrentStream: Boolean? = null
     internal var activePlayerUsesLibass: Boolean = false
+    internal var activeAssVideoEffect: com.nuvio.tv.libass.media.effect.AssVideoEffectAsync? = null
     internal var libassPipelineSwitchInFlight: Boolean = false
     internal var hasDetectedAssSsaTrackForCurrentStream: Boolean = false
     internal var libassPipelineDecisionStreamUrl: String? = null

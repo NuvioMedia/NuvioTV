@@ -897,7 +897,6 @@
     <string name="parental_severity_moderate">Umjereno</string>
     <string name="parental_severity_mild">Blago</string>
     <string name="player_ends_at">Završava u %1$s</string>
-    <string name="player_via">preko %1$s</string>
     <string name="player_subtitle_delay">Odgoda Titlova</string>
     <string name="player_error_title">Greška Reprodukcije</string>
     <string name="player_go_back">Nazad</string>

@@ -385,6 +385,10 @@
   <string name="about_check_updates_subtitle">Λήψη τελευταίας έκδοσης</string>
   <string name="about_update_banner_title">Αυτόματο banner ενημέρωσης</string>
   <string name="about_update_banner_subtitle">Εμφάνιση banner όταν είναι διαθέσιμη νέα έκδοση</string>
+  <string name="about_update_auto_install_title">Αυτόματη εγκατάσταση ενημερώσεων</string>
+  <string name="about_update_auto_install_subtitle">Λήψη νέων εκδόσεων στο παρασκήνιο και εγκατάστασή τους όταν η συσκευή είναι σε αδράνεια</string>
+  <string name="about_update_auto_install_notice_title">Ειδοποίηση μετά από αυτόματες ενημερώσεις</string>
+  <string name="about_update_auto_install_notice_subtitle">Εμφάνιση banner στην επόμενη εκκίνηση αφού η εφαρμογή ενημερωθεί αυτόματα</string>
   <string name="about_update_channel_title">Κανάλι ενημερώσεων</string>
   <string name="about_update_channel_subtitle">Επιλέξτε τον τύπο ενημερώσεων εφαρμογής που θέλετε να λαμβάνετε</string>
   <string name="update_channel_stable">Σταθερό</string>
@@ -620,20 +624,20 @@
   <string name="supporters_since">Υποστηρίζει το Nuvio από %1$s</string>
   <string name="supporters_since_unknown">Υποστηρίζει με υπερηφάνεια το Nuvio</string>
   <!-- PlaybackSettingsSections -->
-  <string name="playback_section_player_title">Player</string>
-  <string name="playback_section_player_title_desc">Προεπιλεγμένος player, εσωτερική μηχανή και εφεδρική εναλλαγή σε περίπτωση σφάλματος.</string>
+  <string name="playback_section_player_title">Πρόγραμμα αναπαραγωγής</string>
+  <string name="playback_section_player_title_desc">Προεπιλεγμένο πρόγραμμα αναπαραγωγής, εσωτερική μηχανή και εφεδρική εναλλαγή σε περίπτωση σφάλματος.</string>
   <string name="playback_section_stream_selection">Επιλογή ροής</string>
   <string name="playback_section_stream_selection_desc">Πώς επιλέγεται μια ροή όταν πατάτε αναπαραγωγή.</string>
   <string name="playback_section_up_next">Επόμενο</string>
   <string name="playback_section_up_next_desc">Αυτόματη αναπαραγωγή επόμενου επεισοδίου και προτάσεις μετά την αναπαραγωγή.</string>
   <string name="playback_section_skip">Παράλειψη τμημάτων</string>
   <string name="playback_section_skip_desc">Παράλειψη εισαγωγών, ανασκοπήσεων και τίτλων.</string>
-  <string name="playback_section_interface">Διεπαφή player</string>
+  <string name="playback_section_interface">Διεπαφή προγράμματος αναπαραγωγής</string>
   <string name="playback_section_interface_desc">Επικαλύψεις, ρολόι και λεπτομέρειες που εμφανίζονται κατά την αναπαραγωγή.</string>
   <string name="playback_section_audio_only_desc">Γλώσσες, αποκωδικοποίηση και έξοδος ήχου.</string>
   <string name="playback_section_video_desc">Ταίριασμα ρυθμού καρέ, Dolby Vision και HDR.</string>
-  <string name="playback_default_player">Προεπιλεγμένος player</string>
-  <string name="playback_external_player_label">Εξωτερικός player</string>
+  <string name="playback_default_player">Προεπιλεγμένο πρόγραμμα αναπαραγωγής</string>
+  <string name="playback_external_player_label">Εξωτερικό πρόγραμμα αναπαραγωγής</string>
   <string name="playback_afr_mode">Ταίριασμα ρυθμού καρέ</string>
   <string name="playback_dv_hdr_label">Dolby Vision &amp; HDR</string>
   <string name="playback_mpv_decoding_label">Αποκωδικοποίηση MPV</string>
@@ -699,6 +703,9 @@
   <!-- PlaybackAudioSettings -->
   <string name="playback_true_black_letterbox">Πραγματικά μαύρες μπάρες</string>
   <string name="playback_true_black_letterbox_sub">Αφήστε τις μπάρες γύρω από την εικόνα άβαφες ώστε το HDR να παραμένει πραγματικά μαύρο. Κρατήστε το ανενεργό αν εμφανίζεται φωτεινή γραμμή στις μπάρες.</string>
+  <string name="playback_chapters_label">Κεφάλαια</string>
+  <string name="playback_exo_chapters_title">Εμφάνιση κεφαλαίων (ExoPlayer)</string>
+  <string name="playback_exo_chapters_sub">Ανάγνωση των κεφαλαίων των αρχείων MKV για σήμανσή τους στη γραμμή προόδου και μετάβαση μεταξύ τους. Πραγματοποιεί μερικά μικρά επιπλέον αιτήματα μόλις ξεκινήσει η αναπαραγωγή. Το mpv εμφανίζει πάντα κεφάλαια.</string>
   <string name="audio_trailer_section">Τρέιλερ</string>
   <string name="audio_autoplay_trailers">Αυτόματη αναπαραγωγή τρέιλερ</string>
   <string name="audio_autoplay_trailers_sub">Αυτόματη αναπαραγωγή τρέιλερ στην οθόνη λεπτομερειών μετά από περίοδο αδράνειας</string>
@@ -712,7 +719,7 @@
   <string name="audio_skip_silence">Παράλειψη σιγής</string>
   <string name="audio_skip_silence_sub">Παράλειψη σιωπηλών τμημάτων ήχου κατά την αναπαραγωγή</string>
   <string name="audio_remember_delay_per_device">Απομνημόνευση καθυστέρησης ήχου ανά συσκευή</string>
-  <string name="audio_remember_delay_per_device_sub">Αποθήκευση και επαναφορά της καθυστέρησης ήχου του player για την τρέχουσα έξοδο ήχου</string>
+  <string name="audio_remember_delay_per_device_sub">Αποθήκευση και επαναφορά της καθυστέρησης ήχου του προγράμματος αναπαραγωγής για την τρέχουσα έξοδο ήχου</string>
   <string name="audio_advanced_section">Για προχωρημένους ήχος</string>
   <string name="audio_advanced_warning">Αυτές οι ρυθμίσεις μπορεί να προκαλέσουν προβλήματα σε ορισμένες συσκευές. Αλλάξτε μόνο αν ξέρετε τι κάνετε.</string>
   <string name="audio_number_of_channels">Αριθμός καναλιών</string>
@@ -763,10 +770,16 @@
   <string name="sub_outline">Περίγραμμα</string>
   <string name="sub_outline_sub">Προσθήκη περιγράμματος γύρω από το κείμενο υπότιτλων για καλύτερη ορατότητα</string>
   <string name="sub_outline_color">Χρώμα περιγράμματος</string>
+  <string name="sub_hdr_style">Ξεχωριστό στυλ HDR / Dolby Vision</string>
+  <string name="sub_hdr_style_sub">Διαφορετικό χρώμα κειμένου και χαμηλότερη φωτεινότητα για τους υπότιτλους σε βίντεο HDR και Dolby Vision</string>
+  <string name="sub_hdr_text_color">Χρώμα κειμένου HDR</string>
+  <string name="sub_hdr_brightness">Φωτεινότητα υπότιτλων HDR</string>
   <string name="sub_advanced_section">Για προχωρημένους απόδοση υπότιτλων</string>
   <string name="sub_libass">Χρήση libass για υπότιτλους ASS/SSA</string>
-  <string name="sub_libass_sub">Πειραματικό: προχωρημένη απόδοση ASS/SSA (στυλ, τοποθέτηση, κινούμενα σχέδια)</string>
+  <string name="sub_libass_sub">Προχωρημένη απόδοση ASS/SSA (στυλ, τοποθέτηση, κινούμενα σχέδια)</string>
   <string name="sub_libass_mode">Λειτουργία απόδοσης Libass</string>
+  <string name="sub_libass_render_scale">Ανάλυση απόδοσης υποτίτλων</string>
+  <string name="sub_libass_render_scale_sub">Η χαμηλότερη ανάλυση βελτιώνει την απόδοση σε βαριά στοιχειοθεσία με κόστος την ευκρίνεια</string>
   <string name="sub_org_none">Κανένα (προεπιλεγμένη σειρά)</string>
   <string name="sub_org_by_lang">Ανά γλώσσα</string>
   <string name="sub_org_by_addon">Ανά πρόσθετο</string>
@@ -1647,6 +1660,8 @@
   <string name="player_engine_switching_title">Αλλαγή μηχανής αναπαραγωγής</string>
   <string name="player_engine_switching_message">Η εκκίνηση απέτυχε. Εναλλαγή σε %1$s…</string>
   <string name="player_engine_switching_manual_message">Εναλλαγή σε %1$s...</string>
+  <string name="player_engine_switch_title">Εναλλαγή σε %1$s;</string>
+  <string name="player_engine_switch_message">Το βίντεο θα φορτωθεί ξανά από το σημείο όπου βρίσκεστε.</string>
   <string name="playback_show_loading_status">Εμφάνιση κατάστασης φόρτωσης</string>
   <string name="playback_show_loading_status_sub">Εμφάνιση προόδου βήμα προς βήμα ενώ γίνεται αρχικοποίηση του προγράμματος αναπαραγωγής.</string>
   <string name="player_sync_line">Συγχρονισμός γραμμής</string>
@@ -1671,7 +1686,6 @@
   <string name="parental_severity_mild">Ήπιο</string>
   <string name="player_ends_at">Τελειώνει στις %1$s</string>
   <string name="player_live_watched">ΖΩΝΤΑΝΑ  %1$s</string>
-  <string name="player_via">μέσω %1$s</string>
   <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
   <string name="season_episode_format">S%1$d E%2$d</string>
   <string name="player_subtitle_delay">Καθυστέρηση υπότιτλων</string>
@@ -1780,6 +1794,9 @@
   <string name="subtitle_style_bold">Έντονα</string>
   <string name="subtitle_style_text_color">Χρώμα κειμένου</string>
   <string name="subtitle_style_text_opacity">Αδιαφάνεια κειμένου</string>
+  <string name="subtitle_style_text_color_hdr">Χρώμα κειμένου (HDR)</string>
+  <string name="subtitle_style_text_opacity_hdr">Αδιαφάνεια κειμένου (HDR)</string>
+  <string name="subtitle_style_brightness_hdr">Φωτεινότητα (HDR)</string>
   <string name="subtitle_style_outline">Περίγραμμα</string>
   <string name="subtitle_style_bottom_offset">Μετατόπιση κάτω</string>
   <string name="subtitle_style_defaults">Προεπιλογές</string>
@@ -2196,6 +2213,7 @@
   <string name="update_checking">Έλεγχος ενημερώσεων…</string>
   <string name="update_waiting_for_stable">Θα λάβετε την επόμενη σταθερή έκδοση όταν γίνει διαθέσιμη</string>
   <string name="update_download_complete">Η λήψη ολοκληρώθηκε. Έτοιμο για εγκατάσταση.</string>
+  <string name="update_installed_automatically">Ενημερώθηκε αυτόματα όταν η συσκευή ήταν σε αδράνεια</string>
   <string name="update_up_to_date">Το σύστημα είναι ενημερωμένο. Τελευταίες αλλαγές:</string>
   <string name="update_close">Κλείσιμο</string>
   <string name="update_open_settings">Άνοιγμα Ρυθμίσεων</string>
@@ -2298,6 +2316,10 @@
   <string name="cd_sources">Πηγές</string>
   <string name="cd_switch_player_engine">Εναλλαγή μηχανής αναπαραγωγής</string>
   <string name="cd_episodes">Επεισόδια</string>
+  <string name="player_chapter_number">Κεφάλαιο %1$d</string>
+  <string name="player_chapters">Κεφάλαια</string>
+  <string name="player_chapters_title">Κεφάλαια (%1$d)</string>
+  <string name="player_chapter_remaining">Απομένουν %1$s</string>
   <string name="cd_playback_speed">Ταχύτητα αναπαραγωγής</string>
   <string name="cd_aspect_ratio">Αναλογία εικόνας</string>
   <string name="cd_open_external_player">Άνοιγμα σε εξωτερικό πρόγραμμα αναπαραγωγής</string>
@@ -2807,8 +2829,8 @@
   <string name="trakt_comments_error_request_failed">Αποτυχία αιτήματος σχολίων Trakt</string>
   <string name="trakt_library_error_fetch_list_items">Αποτυχία ανάκτησης στοιχείων λίστας</string>
   <!-- Missing Greek locale parity -->
-  <string name="playback_external_forward_subtitles">Προώθηση υποτίτλων σε εξωτερικό player</string>
-  <string name="playback_external_forward_subtitles_sub">Ανάκτηση υποτίτλων στην προτιμώμενη γλώσσα σας από πρόσθετα και αποστολή τους στον εξωτερικό player.</string>
+  <string name="playback_external_forward_subtitles">Προώθηση υποτίτλων στο εξωτερικό πρόγραμμα αναπαραγωγής</string>
+  <string name="playback_external_forward_subtitles_sub">Ανάκτηση υποτίτλων στην προτιμώμενη γλώσσα σας από πρόσθετα και αποστολή τους στο εξωτερικό πρόγραμμα αναπαραγωγής.</string>
   <string name="video_section">Βίντεο</string>
   <string name="dv7_handling_title">Χειρισμός Dolby Vision Profile 7</string>
   <string name="dv7_handling_dialog_subtitle">Επιλέξτε πώς θα γίνεται επεξεργασία των ροών DV Profile 7 κατά την αναπαραγωγή.</string>
@@ -2825,7 +2847,7 @@
   <string name="audio_dv7_preserve_mapping_title">Διατήρηση χαρτογράφησης DV (DV7 σε DV8.1)</string>
   <string name="audio_dv7_preserve_mapping_sub">Διατηρεί το αρχικό tone-mapping του δημιουργού με κόστος ελαφρώς μεγαλύτερη επεξεργασία ανά καρέ.</string>
   <string name="layout_section_streams">Ροές</string>
-  <string name="layout_section_streams_desc">Ρυθμίσεις εμφάνισης για αποτελέσματα ροών και πάνελ πηγών του player.</string>
+  <string name="layout_section_streams_desc">Ρυθμίσεις εμφάνισης για αποτελέσματα ροών και πάνελ πηγών του προγράμματος αναπαραγωγής.</string>
   <string name="debrid_stream_sort_original">Αρχική σειρά</string>
   <string name="debrid_stream_sort_best_quality">Καλύτερη ποιότητα πρώτα</string>
   <string name="debrid_stream_sort_largest">Μεγαλύτερα πρώτα</string>
@@ -2863,30 +2885,30 @@
   <string name="debrid_stream_release_groups_excluded">Εξαιρούμενα release groups</string>
   <string name="debrid_stream_release_groups_input_subtitle">Εισαγάγετε ένα group ανά γραμμή.</string>
   <string name="settings_stream_badges_section">Στυλ Fusion</string>
-  <string name="settings_stream_size_badges_title">Badges μεγέθους</string>
-  <string name="settings_stream_size_badges_description">Εμφάνιση badges μεγέθους αρχείου στα αποτελέσματα ροών και στα πάνελ πηγών του player.</string>
-  <string name="settings_stream_badge_urls_title">URL διακριτικών Fusion</string>
-  <string name="settings_stream_badge_urls_description">Εισαγάγετε έως %1$d Fusion-style stream badge JSON URLs. Κάθε URL μπορεί να ενημερωθεί ή να διαγραφεί ξεχωριστά.</string>
-  <string name="settings_stream_badge_urls_search_description">Διαχείριση των εισαγμένων Fusion-style stream badge JSON URLs.</string>
-  <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d ενεργά Fusion badges</string>
-  <string name="settings_fusion_badges_empty">Δεν έχουν εισαχθεί Fusion badge URLs.</string>
-  <string name="settings_fusion_badge_url_label">URL JSON διακριτικού Fusion</string>
+  <string name="settings_stream_size_badges_title">Σήματα μεγέθους</string>
+  <string name="settings_stream_size_badges_description">Εμφάνιση σημάτων μεγέθους αρχείου στα αποτελέσματα ροών και στα πάνελ πηγών του προγράμματος αναπαραγωγής.</string>
+  <string name="settings_stream_badge_urls_title">URL σημάτων Fusion</string>
+  <string name="settings_stream_badge_urls_description">Εισαγάγετε έως %1$d URL JSON σημάτων ροών τύπου Fusion. Κάθε URL μπορεί να ενημερωθεί ή να διαγραφεί ξεχωριστά.</string>
+  <string name="settings_stream_badge_urls_search_description">Διαχείριση των εισηγμένων URL JSON σημάτων ροών τύπου Fusion.</string>
+  <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d ενεργά σήματα Fusion</string>
+  <string name="settings_fusion_badges_empty">Δεν έχουν εισαχθεί URL σημάτων Fusion.</string>
+  <string name="settings_fusion_badge_url_label">URL JSON σημάτων Fusion</string>
   <string name="settings_fusion_badge_urls_imported">Εισήχθησαν %1$d/%2$d Fusion URLs</string>
   <string name="settings_fusion_badge_url_active">Ενεργό</string>
   <string name="settings_fusion_badge_url_inactive">Ανενεργό</string>
-  <string name="settings_fusion_badge_url_status_summary">%1$s, %2$d ενεργά badges, %3$d ομάδες</string>
+  <string name="settings_fusion_badge_url_status_summary">%1$s, %2$d ενεργά σήματα, %3$d ομάδες</string>
   <string name="settings_fusion_badge_preview_action">Προεπισκόπηση</string>
-  <string name="settings_fusion_badge_preview_title">Προεπισκόπηση Fusion badge</string>
-  <string name="settings_fusion_badge_preview_count">%1$d Fusion-style badges από αυτό το URL</string>
-  <string name="settings_fusion_badge_preview_empty">Δεν υπάρχουν εικόνες Fusion-style badge σε αυτό το URL.</string>
+  <string name="settings_fusion_badge_preview_title">Προεπισκόπηση σημάτων Fusion</string>
+  <string name="settings_fusion_badge_preview_count">%1$d σήματα στυλ Fusion από αυτό το URL</string>
+  <string name="settings_fusion_badge_preview_empty">Δεν υπάρχουν εικόνες σημάτων τύπου Fusion σε αυτό το URL.</string>
   <string name="settings_fusion_badge_group_title">Ομάδα %1$d</string>
-  <string name="settings_fusion_badge_other_group_title">Άλλα Fusion badges</string>
-  <string name="stream_badge_qr_instruction">Σαρώστε αυτό το QR code από το κινητό σας για διαχείριση Fusion badge URLs.</string>
+  <string name="settings_fusion_badge_other_group_title">Άλλα σήματα Fusion</string>
+  <string name="stream_badge_qr_instruction">Σαρώστε αυτό το QR code από το κινητό σας για διαχείριση URL σημάτων Fusion.</string>
   <string name="streams_size">ΜΕΓΕΘΟΣ %1$s</string>
   <string name="action_import">Εισαγωγή</string>
   <string name="action_delete">Διαγραφή</string>
   <string name="debug_buffer_logs_title">Ενεργοποίηση BUFFER Logs</string>
-  <string name="debug_buffer_logs_subtitle">Αποστολή περιοδικών διαγνωστικών buffer του player στο logcat (απενεργοποιημένο από προεπιλογή)</string>
+  <string name="debug_buffer_logs_subtitle">Αποστολή περιοδικών διαγνωστικών buffer του προγράμματος αναπαραγωγής στο logcat (απενεργοποιημένο από προεπιλογή)</string>
   <string name="cloud_library_error_provider_unavailable">Η cloud βιβλιοθήκη δεν είναι διαθέσιμη για %1$s.</string>
   <string name="cloud_library_error_disabled">Η cloud βιβλιοθήκη είναι απενεργοποιημένη.</string>
   <string name="audio_dv_sub">Χαρτογράφηση Dolby Vision Profile 7 σε standard HEVC για συσκευές χωρίς hardware υποστήριξη DV</string>
@@ -2950,17 +2972,17 @@
     <item quantity="other">%d επιλεγμένα</item>
   </plurals>
   <!-- External playback keep-alive notification -->
-  <string name="external_playback_channel_description">Διατηρεί την εφαρμογή ενεργή κατά την αναπαραγωγή σε εξωτερικό player</string>
-  <string name="external_playback_notification_text">Αναπαραγωγή σε εξωτερικό player</string>
+  <string name="external_playback_channel_description">Διατηρεί την εφαρμογή ενεργή κατά την αναπαραγωγή σε εξωτερικό πρόγραμμα αναπαραγωγής</string>
+  <string name="external_playback_notification_text">Αναπαραγωγή σε εξωτερικό πρόγραμμα αναπαραγωγής</string>
   <!-- Playback — Buffer & Network settings -->
   <string name="playback_section_buffer_network">Buffer &amp; Δίκτυο</string>
   <string name="playback_section_buffer_network_desc">Πόσο περιεχόμενο να διατηρείται στη μνήμη και πώς να γίνεται η ανάκτηση ροών.</string>
   <string name="playback_buffer_custom">Προσαρμοσμένα Playback Buffers</string>
-  <string name="playback_buffer_custom_sub">Παράκαμψη των προεπιλεγμένων ρυθμίσεων buffering του Media3 με τις παρακάτω τιμές. Όταν είναι απενεργοποιημένο, ο player χρησιμοποιεί τις προεπιλεγμένες διάρκειες και το προεπιλεγμένο μέγεθος buffer του Media3.</string>
+  <string name="playback_buffer_custom_sub">Παράκαμψη των προεπιλεγμένων ρυθμίσεων buffering του Media3 με τις παρακάτω τιμές. Όταν είναι απενεργοποιημένο, το πρόγραμμα αναπαραγωγής χρησιμοποιεί τις προεπιλεγμένες διάρκειες και το προεπιλεγμένο μέγεθος buffer του Media3.</string>
   <string name="playback_buffer_header">Προσωρινή μνήμη</string>
   <string name="playback_buffer_warning">Αυτές οι ρυθμίσεις επηρεάζουν τη συμπεριφορά buffering. Λανθασμένες τιμές μπορεί να προκαλέσουν προβλήματα αναπαραγωγής.</string>
   <string name="playback_buffer_min">Ελάχιστη διάρκεια buffer</string>
-  <string name="playback_buffer_min_sub">Ελάχιστο περιεχόμενο προς αποθήκευση στο buffer. Ο player προσπαθεί να διατηρεί τουλάχιστον αυτό το περιεχόμενο μπροστά από την τρέχουσα θέση αναπαραγωγής.</string>
+  <string name="playback_buffer_min_sub">Ελάχιστο περιεχόμενο προς αποθήκευση στο buffer. Το πρόγραμμα αναπαραγωγής προσπαθεί να διατηρεί τουλάχιστον αυτό το περιεχόμενο μπροστά από την τρέχουσα θέση αναπαραγωγής.</string>
   <string name="playback_buffer_max">Μέγιστη διάρκεια buffer</string>
   <string name="playback_buffer_max_sub">Μέγιστο περιεχόμενο προς αποθήκευση στο buffer. Πρέπει να είναι τουλάχιστον ίσο με την ελάχιστη διάρκεια. Μεγαλύτερες τιμές χρησιμοποιούν περισσότερη μνήμη αλλά προσφέρουν ομαλότερη αναπαραγωγή σε ασταθείς συνδέσεις.</string>
   <string name="playback_buffer_value_same_as_min">%1$ds (ίδιο με το ελάχιστο)</string>
@@ -3015,15 +3037,20 @@
   <string name="dv7_libdovi_mode_3_sub">Μετατρέπει τις ροές Προφίλ 5 (DV5) σε Προφίλ 8.1. Ίδια μετατροπή με αυτή που χρησιμοποιεί η εναλλαγή «Μετατροπή DV5 σε DV8.1».</string>
   <string name="web_debrid_title">Ρυθμίσεις άμεσου Debrid</string>
   <string name="buffer_unsafe_warning">Προειδοποίηση: Υπερβαίνει το προτεινόμενο ασφαλές όριο (%1$d MB) για τη συσκευή σας %2$s. Ενδέχεται να προκαλέσει κολλήματα της εφαρμογής.</string>
-  <string name="web_stream_badge_error_url_scheme">Το URL διακριτικού πρέπει να ξεκινά με http:// ή https://.</string>
+  <string name="web_stream_badge_error_url_scheme">Το URL σημάτων πρέπει να ξεκινά με http:// ή https://.</string>
   <string name="web_debrid_template_fields">Πεδία προτύπου</string>
   <string name="diag_label_first_frame">Πρώτο καρέ</string>
   <string name="audio_force_optical_passthrough_sub">Μετακωδικοποιεί πολυκάναλες μορφές (TrueHD, DTS, AAC κ.λπ.) σε Dolby Digital 5.1 σε πραγματικό χρόνο για συνδέσεις Οπτικής/SPDIF.</string>
   <string name="player_report_issue_sending_button">Αποστολή...</string>
   <string name="settings_stream_badge_position_bottom">Κάτω</string>
-  <string name="web_stream_badge_deleted">Το URL διακριτικού διαγράφηκε.</string>
+  <string name="web_stream_badge_deleted">Το URL σημάτων διαγράφηκε.</string>
   <string name="dv7_libdovi_mode_none_sub">Καμία παράκαμψη. Χρησιμοποιεί την αυτόματα επιλεγμένη λειτουργία μετατροπής.</string>
   <string name="diag_label_bridge_version">Έκδοση γέφυρας</string>
+  <string name="settings_stream_badges_in_player_title">Εμφάνιση στο πρόγραμμα αναπαραγωγής</string>
+  <string name="settings_stream_badges_in_player_description">Εμφάνιση σημάτων για το βίντεο και τον ήχο που αναπαράγεται κάτω από τον τίτλο του προγράμματος αναπαραγωγής. Απαιτείται πακέτο σημάτων που αντιστοιχεί σε απλό κείμενο, όπως 2160p ή Atmos.</string>
+  <string name="settings_stream_player_badges_title">Σήματα προγράμματος αναπαραγωγής</string>
+  <string name="settings_stream_player_badges_description">Επιλέξτε το πακέτο σημάτων που χρησιμοποιεί το πρόγραμμα αναπαραγωγής.</string>
+  <string name="settings_stream_player_badges_same">Ίδια με τα σήματα ροών</string>
   <string name="settings_stream_addon_logo_title">Λογότυπο πρόσθετου</string>
   <string name="diag_value_not_available">Μη διαθέσιμο</string>
   <string name="player_report_loading_issue">Αναφορά προβλήματος φόρτωσης</string>
@@ -3037,7 +3064,7 @@
   <string name="settings_stream_badge_position_top">Πάνω</string>
   <string name="stream_test_btn_measuring_parallel8">Μέτρηση παράλληλης (8MB)...</string>
   <string name="diag_value_not_ready">Μη έτοιμο</string>
-  <string name="web_stream_badge_error_import_limit">Μπορείτε να εισαγάγετε έως %1$d URL διακριτικών.</string>
+  <string name="web_stream_badge_error_import_limit">Μπορείτε να εισαγάγετε έως %1$d URL σημάτων.</string>
   <string name="dv7_libdovi_mode_4_sub">Μετατροπή σε στατικό προφίλ 8.4.</string>
   <string name="advanced_nuvio_performance_mode_subtitle">Ενεργοποιεί εγγενή εκχωρητή υψηλής απόδοσης, μνήμη εκτός σωρού και βελτιστοποιήσεις δικτύου για πιο ομαλή αναπαραγωγή</string>
   <string name="diag_value_decoder_hidden">%1$s (κρυφό)</string>
@@ -3063,9 +3090,9 @@
   <string name="stream_test_section_header">Διαγνωστικά ταχύτητας ροής</string>
   <string name="stream_test_error_connection">Η σύνδεση απέτυχε. Ο σύνδεσμος της τελευταίας αναπαραγωγής μπορεί να έχει λήξει ή να μην είναι προσβάσιμος. Αναπαράγετε ξανά το βίντεο και δοκιμάστε πάλι.</string>
   <string name="unit_size_kb">%1$s KB</string>
-  <string name="settings_stream_badge_position_title">Θέση διακριτικού</string>
+  <string name="settings_stream_badge_position_title">Θέση σημάτων</string>
   <string name="stream_test_label_parallel4">Παράλληλη σύνδεση (τμήματα 4 MB)</string>
-  <string name="web_stream_badge_import_error">Η εισαγωγή διακριτικού απέτυχε.</string>
+  <string name="web_stream_badge_import_error">Η εισαγωγή σημάτων απέτυχε.</string>
   <string name="diag_label_signal_rewrites">Επανεγγραφές σήματος</string>
   <string name="unit_size_mb">%1$s MB</string>
   <string name="stream_test_no_stream">Δεν έχει καταγραφεί αναπαραγωγή. Αναπαράγετε ένα βίντεο για να εκτελέσετε διαγνωστικές δοκιμές στον διακομιστή του.</string>
@@ -3105,7 +3132,7 @@
   <string name="playback_estimated_memory_usage">Εκτιμώμενη χρήση μνήμης: %1$d / %2$d MB</string>
   <string name="dv7_libdovi_mode_0_title">Λειτουργία 0 — Αντιγραφή (χωρίς μετατροπή)</string>
   <string name="web_status_saving">Αποθήκευση…</string>
-  <string name="settings_stream_badge_position_dialog_title">Θέση διακριτικού</string>
+  <string name="settings_stream_badge_position_dialog_title">Θέση σημάτων</string>
   <string name="diag_no_data">Δεν υπάρχουν ακόμα δεδομένα αναπαραγωγής. Αναπαράγετε μια ροή και επιστρέψτε εδώ για να δείτε τις λεπτομέρειες απόφασης DV για αυτήν την αναπαραγωγή.</string>
   <string name="playback_external_send_skip_segments_sub">Μεταβίβαση των επιλυμένων χρονικών σημάνσεων παράλειψης intro/outro στην εξωτερική εφαρμογή αναπαραγωγής για αυτόματη παράλειψη. Λειτουργεί μόνο σε αναπαραγωγείς που το υποστηρίζουν· οι υπόλοιποι το αγνοούν.</string>
   <string name="web_debrid_description_template">Πρότυπο περιγραφής</string>
@@ -3150,10 +3177,10 @@
   <string name="dv7_libdovi_mode_row_title">Λειτουργία μετατροπής</string>
   <string name="external_auto_next_loading">Φόρτωση επόμενου επεισοδίου…</string>
   <string name="licenses_attributions_torbox_body">Το Nuvio συνδέεται με το TorBox για έλεγχο ταυτότητας λογαριασμού, πρόσβαση στη βιβλιοθήκη cloud, ελέγχους προσωρινής μνήμης cache και λειτουργίες αναπαραγωγής στο cloud. Το Nuvio δεν συνδέεται ούτε υποστηρίζεται επίσημα από το TorBox.</string>
-  <string name="web_stream_badge_load_error">Δεν ήταν δυνατή η φόρτωση των ρυθμίσεων διακριτικών ροής</string>
+  <string name="web_stream_badge_load_error">Δεν ήταν δυνατή η φόρτωση των ρυθμίσεων σημάτων ροής</string>
   <string name="web_debrid_save_settings">Αποθήκευση ρυθμίσεων</string>
   <string name="diag_label_dv_bridge">Γέφυρα DV</string>
-  <string name="settings_stream_badge_position_dialog_description">Επιλέξτε πού εμφανίζονται τα διακριτικά ροών στις κάρτες ροών.</string>
+  <string name="settings_stream_badge_position_dialog_description">Επιλέξτε πού εμφανίζονται τα σήματα των ροών στις κάρτες ροών.</string>
   <string name="buffer_safe_status">Ασφαλές: Εντός του προτεινόμενου ορίου για τη συσκευή σας.</string>
   <string name="diag_label_custom_network_cache">Προσαρμοσμένο δίκτυο/προσωρινή μνήμη</string>
   <string name="advanced_section_startup">Εκκίνηση &amp; έξοδος</string>
@@ -3172,12 +3199,12 @@
   <string name="web_debrid_error_templates_required">Απαιτούνται και τα δύο πρότυπα</string>
   <string name="dv7_mode_strip_dv">Πάντα αφαίρεση DV</string>
   <string name="dv7_libdovi_mode_none_title">Κανένα</string>
-  <string name="settings_stream_badge_position_description">Επιλέξτε αν τα διακριτικά Fusion και μεγέθους εμφανίζονται πάνω ή κάτω από τις κάρτες ροών.</string>
+  <string name="settings_stream_badge_position_description">Επιλέξτε αν τα σήματα Fusion και μεγέθους εμφανίζονται πάνω ή κάτω από τις κάρτες ροών.</string>
   <string name="playback_external_send_skip_segments">Αποστολή χρονικών σημάνσεων intro και outro</string>
   <string name="diag_label_dv_decoder">Αποκωδικοποιητής DV</string>
   <string name="stream_test_video_bitrate">Μέσος ρυθμός bit βίντεο: %1$s</string>
   <string name="stream_test_card_title">Εκτέλεση δοκιμής ταχύτητας τελευταίας ροής</string>
-  <string name="web_stream_badge_error_url_required">Εισαγάγετε ένα URL JSON διακριτικού.</string>
+  <string name="web_stream_badge_error_url_required">Εισαγάγετε ένα URL JSON σημάτων.</string>
   <string name="audio_strip_hdr10plus_sub">Αφαίρεση δυναμικών μεταδεδομένων HDR10+ από τις ροές. Όταν είναι ενεργή και η μετατροπή σε DV8.1, η αφαίρεση εκτελείται μετά τη μετατροπή.</string>
   <string name="diag_label_result">Αποτέλεσμα</string>
   <string name="playback_net_nuvio_performance_mode_not_supported">Αυτή η λειτουργία δεν υποστηρίζεται από τη συσκευή σας.</string>
@@ -3185,7 +3212,7 @@
   <string name="stream_test_btn_run_again">Εκτέλεση ξανά</string>
   <string name="dv7_libdovi_mode_caption">Λειτουργία μετατροπής (αυτόματα επιλεγμένη, μην την αλλάξετε εκτός αν σας υποδειχθεί). Επιλέξτε μία για να την επιβάλετε· το Κανένα χρησιμοποιεί την αυτόματη. Ενεργή μόνο όταν ο Χειρισμός DV7 είναι «Μετατροπή σε DV8.1».</string>
   <string name="diag_label_host">Κεντρικός υπολογιστής</string>
-  <string name="web_stream_badge_imported">Το URL διακριτικού εισήχθη.</string>
+  <string name="web_stream_badge_imported">Το URL σημάτων εισήχθη.</string>
   <string name="account_sign_out_confirm_title">Αποσύνδεση;</string>
   <string name="account_sign_out_confirm_subtitle">Θα χρειαστεί να συνδεθείτε ξανά για να συγχρονίσετε τη βιβλιοθήκη, την πρόοδο παρακολούθησης, τα πρόσθετα και τα plugins σε αυτήν τη συσκευή.</string>
   <string name="appearance_settings_style">Στυλ ρυθμίσεων</string>
@@ -3279,4 +3306,6 @@
   <string name="autosync_toast_failed_no_reference">Ο συγχρονισμός απέτυχε: αυτό το βίντεο δεν έχει ενσωματωμένους υπότιτλους για σύγκριση.</string>
   <string name="autosync_toast_failed_unsupported">Ο συγχρονισμός απέτυχε: ο αυτόματος συγχρονισμός δεν υποστηρίζει αυτή τη μορφή υποτίτλων.</string>
   <string name="autosync_label_synced">Αυτόματα συγχρονισμένος</string>
+  <string name="stream_resume_from_time">Συνέχεια από %1$s</string>
+  <string name="stream_resume_from_percent">Συνέχεια από %1$d%%</string>
 </resources>

@@ -1750,7 +1750,6 @@
     <string name="parental_severity_mild">হালকা</string>
     <string name="player_ends_at">%1$s-এ শেষ হবে</string>
     <string name="player_live_watched">লাইভ  %1$s</string>
-    <string name="player_via">%1$s দিয়ে</string>
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">সাবটাইটেল ডিলে</string>
     <string name="player_error_title">প্লেব্যাক এরর</string>
