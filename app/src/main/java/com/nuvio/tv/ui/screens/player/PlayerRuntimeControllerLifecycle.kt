@@ -106,6 +106,8 @@ internal fun PlayerRuntimeController.releasePlayer(
     mpvStableProgressResetJob?.cancel()
     mpvStableProgressResetJob = null
     releaseMpvPlayer()
+    runCatching { mpvAssRenderer?.release() }
+    mpvAssRenderer = null
     _exoPlayer?.let { player ->
         runCatching { player.playWhenReady = false }
         runCatching { player.pause() }
