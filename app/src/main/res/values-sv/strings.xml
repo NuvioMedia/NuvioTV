@@ -695,7 +695,6 @@
     <string name="parental_severity_moderate">Måttligt</string>
     <string name="parental_severity_mild">Milt</string>
     <string name="player_ends_at">Slutar kl %1$s</string>
-    <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Undertextfördröjning</string>
     <string name="player_error_title">Uppspelningsfel</string>
     <string name="player_go_back">Gå tillbaka</string>

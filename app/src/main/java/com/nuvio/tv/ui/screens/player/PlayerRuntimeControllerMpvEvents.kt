@@ -275,7 +275,8 @@ internal fun PlayerRuntimeController.handleMpvPlaybackError(
         } else {
             mpvView?.currentPositionMs()?.coerceAtLeast(0L) ?: 0L
         }
-        if (attemptMpvAutoRetry(detailedError = detailedError, savedPosition = savedPosition)) return
+        val retryCanHelp = httpCode == null || !isPermanentHttpStatus(httpCode)
+        if (retryCanHelp && attemptMpvAutoRetry(detailedError = detailedError, savedPosition = savedPosition)) return
         if (tryNextStream(detailedError)) return
 
         finishLoadingDiagnostics("mpv_error")

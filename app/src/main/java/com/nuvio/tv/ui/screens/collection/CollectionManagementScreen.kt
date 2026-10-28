@@ -1,5 +1,10 @@
 package com.nuvio.tv.ui.screens.collection
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
@@ -385,6 +390,10 @@ private fun ImportContent(
                         if (mode == importMode) {
                             Button(
                                 onClick = { onModeChange(mode) },
+                                modifier = Modifier.semantics {
+                                    role = Role.Tab
+                                    this.selected = true
+                                },
                                 colors = ButtonDefaults.colors(
                                     containerColor = NuvioTheme.colors.Primary,
                                     contentColor = NuvioTheme.colors.Background,
@@ -402,7 +411,13 @@ private fun ImportContent(
                                 Text(label)
                             }
                         } else {
-                            NuvioButton(onClick = { onModeChange(mode) }) {
+                            NuvioButton(
+                                onClick = { onModeChange(mode) },
+                                modifier = Modifier.semantics {
+                                    role = Role.Tab
+                                    this.selected = false
+                                }
+                            ) {
                                 Text(label)
                             }
                         }

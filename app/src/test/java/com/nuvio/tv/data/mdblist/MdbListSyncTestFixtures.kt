@@ -12,23 +12,44 @@ internal const val MDBLIST_TEST_TIME = "2026-09-06T00:00:00Z"
 
 internal class MdbListTestSyncStorage : MdbListSyncStorage {
     val profiles = mutableMapOf<Int, String>()
+    val playbacks = mutableMapOf<Int, String>()
     var failSave = false
     var failLoad = false
     var beforeSave: suspend () -> Unit = {}
+    var saveCalls = 0
+    var savePlaybackCalls = 0
 
     override suspend fun load(profileId: Int): String? {
         if (failLoad) throw IOException("Disk unavailable")
         return profiles[profileId]
     }
     override suspend fun save(profileId: Int, payload: String, checkScope: () -> Unit) {
+        saveCalls++
         beforeSave()
         checkScope()
         if (failSave) throw IOException("Disk unavailable")
         profiles[profileId] = payload
+        playbacks.remove(profileId)
     }
     override suspend fun remove(profileId: Int, checkScope: () -> Unit) {
         checkScope()
         profiles.remove(profileId)
+        playbacks.remove(profileId)
+    }
+    override suspend fun loadPlayback(profileId: Int): String? {
+        if (failLoad) throw IOException("Disk unavailable")
+        return playbacks[profileId]
+    }
+    override suspend fun savePlayback(profileId: Int, payload: String, checkScope: () -> Unit) {
+        savePlaybackCalls++
+        beforeSave()
+        checkScope()
+        if (failSave) throw IOException("Disk unavailable")
+        playbacks[profileId] = payload
+    }
+    override suspend fun clearPlayback(profileId: Int, checkScope: () -> Unit) {
+        checkScope()
+        playbacks.remove(profileId)
     }
 }
 

@@ -685,7 +685,6 @@
     <string name="parental_severity_moderate">मध्यम</string>
     <string name="parental_severity_mild">हल्का</string>
     <string name="player_ends_at">%1$s पर समाप्त होगा</string>
-    <string name="player_via">%1$s के माध्यम से</string>
     <string name="player_subtitle_delay">सबटाइटल देरी</string>
     <string name="player_error_title">प्लेबैक त्रुटि</string>
     <string name="player_go_back">वापस जाएँ</string>

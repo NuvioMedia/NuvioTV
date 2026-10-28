@@ -83,3 +83,9 @@ fun String.contentLayoutDirection(): LayoutDirection =
  */
 fun TextDirection.toAbsoluteAlignment(): Alignment.Horizontal =
     if (this == TextDirection.Rtl) AbsoluteAlignment.Right else AbsoluteAlignment.Left
+
+/**
+ * Keeps a left-to-right string (e.g. "2 GB") from being reordered to "GB 2" when it is shown in an
+ * RTL layout, by wrapping it in LRM marks. Strings whose own content is RTL are returned unchanged.
+ */
+fun String.keepLtr(): String = if (isContentRtl()) this else "\u200E$this\u200E"

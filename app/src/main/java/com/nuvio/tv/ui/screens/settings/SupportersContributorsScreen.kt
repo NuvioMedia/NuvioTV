@@ -2,6 +2,11 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.content.Intent
@@ -946,6 +951,10 @@ private fun RowScope.SupportersTabButton(
             .weight(1f)
             .heightIn(min = 54.dp)
             .focusRequester(focusRequester)
+            .semantics {
+                role = Role.Tab
+                this.selected = selected
+            }
             .then(
                 if (leftFocusRequester != null) {
                     Modifier.focusProperties { left = leftFocusRequester }

@@ -34,6 +34,7 @@ internal fun ContentDiscoverySettingsContent(
     initialFocusRequester: FocusRequester?
 ) {
     var serverPage by rememberSaveable { mutableStateOf<String?>(null) }
+    var focusPluginsOnReturn by rememberSaveable { mutableStateOf(false) }
     val hubServersRequester = remember { FocusRequester() }
     val serversRequester = remember { FocusRequester() }
     val serverRequester = remember { FocusRequester() }
@@ -56,11 +57,18 @@ internal fun ContentDiscoverySettingsContent(
 
     when (val page = serverPage) {
         null -> ContentDiscoveryHub(
-            onNavigateToAddons = onNavigateToAddons,
-            onNavigateToPlugins = onNavigateToPlugins,
+            onNavigateToAddons = {
+                focusPluginsOnReturn = false
+                onNavigateToAddons()
+            },
+            onNavigateToPlugins = {
+                focusPluginsOnReturn = true
+                onNavigateToPlugins()
+            },
             onNavigateToServers = { serverPage = SERVERS_PAGE },
             showPlugins = showPlugins,
             initialFocusRequester = initialFocusRequester,
+            focusPluginsOnReturn = focusPluginsOnReturn && showPlugins,
             serversFocusRequester = hubServersRequester
         )
         SERVERS_PAGE -> MediaServersSettingsContent(
@@ -83,6 +91,7 @@ private fun ContentDiscoveryHub(
     onNavigateToServers: () -> Unit,
     showPlugins: Boolean,
     initialFocusRequester: FocusRequester?,
+    focusPluginsOnReturn: Boolean,
     serversFocusRequester: FocusRequester
 ) {
     Column(
@@ -99,7 +108,7 @@ private fun ContentDiscoveryHub(
                 subtitle = stringResource(R.string.settings_content_discovery_addons_subtitle),
                 onClick = onNavigateToAddons,
                 leadingIcon = Icons.Default.Extension,
-                modifier = if (initialFocusRequester != null) {
+                modifier = if (initialFocusRequester != null && !focusPluginsOnReturn) {
                     Modifier.focusRequester(initialFocusRequester)
                 } else {
                     Modifier
@@ -117,7 +126,12 @@ private fun ContentDiscoveryHub(
                     title = stringResource(R.string.plugin_title),
                     subtitle = stringResource(R.string.settings_content_discovery_plugins_subtitle),
                     onClick = onNavigateToPlugins,
-                    leadingIcon = Icons.Default.Power
+                    leadingIcon = Icons.Default.Power,
+                    modifier = if (initialFocusRequester != null && focusPluginsOnReturn) {
+                        Modifier.focusRequester(initialFocusRequester)
+                    } else {
+                        Modifier
+                    }
                 )
             }
         }

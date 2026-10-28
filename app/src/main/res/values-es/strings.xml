@@ -1866,7 +1866,6 @@ Utilizas esta función bajo tu entera responsabilidad. P2P se puede desactivar e
     <string name="parental_severity_mild">Leve</string>
     <string name="player_ends_at">Termina a: %1$s</string>
     <string name="player_live_watched">EN DIRECTO  %1$s</string>
-    <string name="player_via">vía %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Retraso de subtítulos</string>

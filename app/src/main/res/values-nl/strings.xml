@@ -1657,7 +1657,6 @@
     <string name="parental_severity_mild">Licht</string>
     <string name="player_ends_at">Eindigt om %1$s</string>
     <string name="player_live_watched">LIVE  %1$s</string>
-    <string name="player_via">via %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d A%2$d</string>
     <string name="player_subtitle_delay">Ondertitelvertraging</string>

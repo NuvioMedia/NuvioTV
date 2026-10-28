@@ -2,6 +2,7 @@ package com.nuvio.tv.updater
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.BuildConfig
@@ -20,6 +21,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private const val TAG = "UpdateInstall"
 
 data class UpdateUiState(
     val isChecking: Boolean = false,
@@ -314,7 +317,10 @@ class UpdateViewModel @Inject constructor(
         _uiState.update { it.copy(showUnknownSourcesDialog = false) }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { ApkInstaller.install(context, apkFile, background = false) }
-                .onFailure { ApkInstaller.launchSystemInstaller(context, apkFile) }
+                .onFailure {
+                    Log.w(TAG, "Session install failed, falling back to the system installer", it)
+                    ApkInstaller.launchSystemInstaller(context, apkFile)
+                }
         }
     }
 

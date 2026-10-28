@@ -38,6 +38,7 @@ private fun audioTokens(codec: String?, profile: String?): List<String> {
         when {
             label.startsWith("E-AC-3") -> addAll(listOf("DD+", "DDP", "EAC3"))
             label == "AC-3" -> addAll(listOf("DD", "AC3"))
+            label == "AC-4" -> addAll(listOf("AC-4", "AC4"))
             label.startsWith("DTS") -> {
                 add("DTS")
                 if (label.contains("HD") || profileLabel.contains("DTS-HD")) add("DTS-HD")

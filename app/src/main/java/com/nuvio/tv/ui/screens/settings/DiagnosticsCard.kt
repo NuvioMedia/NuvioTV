@@ -4,6 +4,7 @@ package com.nuvio.tv.ui.screens.settings
 
 import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.keepLtr
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -24,11 +25,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Border
-import androidx.tv.material3.Card
-import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.DolbyVisionCodecFallback
@@ -38,10 +38,10 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Emits the diagnostics card content as 3 dense focusable Cards.
+ * Emits the diagnostics content as 3 dense read-only sections.
  *
- * Goal: minimize scrolling by packing related fields tightly per Card.
- * Each Card is one D-pad stop containing 6-10 rows of related info.
+ * Goal: minimize scrolling by packing related fields tightly per section.
+ * Each section groups 6-10 rows of related info and is not a D-pad stop.
  */
 internal fun LazyListScope.diagnosticsCardItems(
     diagnostics: LastPlaybackDiagnostics,
@@ -222,21 +222,16 @@ internal fun LazyListScope.diagnosticsCardItems(
 internal fun DiagnosticsSectionCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(
-        onClick = { /* read-only */ },
+    // Read-only: it carries no action, so it is a plain Surface rather than a clickable Card,
+    // which would be a dead focus stop announced as a button. The text stays in the tree, and
+    // the (unreachable) focus border drops away with the click.
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.colors(
+        shape = RoundedCornerShape(10.dp),
+        colors = SurfaceDefaults.colors(
             containerColor = NuvioTheme.colors.BackgroundCard,
-            focusedContainerColor = NuvioTheme.colors.FocusBackground
-        ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs, alpha = 0.5f),
-                shape = RoundedCornerShape(10.dp)
-            )
-        ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
-        scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
+            contentColor = NuvioTheme.colors.TextPrimary
+        )
     ) {
         Column(
             modifier = Modifier
@@ -285,7 +280,7 @@ internal fun DiagnosticRow(
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            text = value,
+            text = value.keepLtr(),
             style = MaterialTheme.typography.bodySmall,
             color = valueColor,
             modifier = Modifier.fillMaxWidth()

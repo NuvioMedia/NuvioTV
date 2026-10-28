@@ -1,5 +1,10 @@
 package com.nuvio.tv.ui.screens.collection
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
@@ -154,6 +159,10 @@ fun TmdbSourcePickerContent(
                     onClick = { onModeChange(mode) },
                     modifier = Modifier
                         .focusRequester(modeFocusRequesters[mode]!!)
+                        .semantics {
+                            role = Role.Tab
+                            this.selected = selected
+                        }
                         .onFocusChanged {
                             if (it.isFocused) lastFocusedMode = mode
                         },
@@ -933,6 +942,10 @@ fun TmdbChoiceButton(
     Button(
         onClick = onClick,
         enabled = enabled,
+        modifier = Modifier.semantics {
+            role = Role.RadioButton
+            this.selected = selected
+        },
         colors = ButtonDefaults.colors(
             containerColor = if (selected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
             contentColor = if (selected) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,

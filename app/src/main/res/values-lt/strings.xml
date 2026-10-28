@@ -686,7 +686,6 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="parental_severity_moderate">Vidutinis</string>
     <string name="parental_severity_mild">Lengvas</string>
     <string name="player_ends_at">Baigiasi %1$s</string>
-    <string name="player_via">per %1$s</string>
     <string name="player_subtitle_delay">Subtitrų delsa</string>
     <string name="player_error_title">Atkūrimo klaida</string>
     <string name="player_go_back">Grįžti atgal</string>

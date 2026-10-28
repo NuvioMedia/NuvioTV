@@ -6,6 +6,7 @@ import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
 import com.nuvio.tv.data.local.LibassRenderScale
 import com.nuvio.tv.data.local.LibassRenderType
+import com.nuvio.tv.data.local.LibassRenderMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.PlayerSettings
@@ -257,6 +258,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setLibassRenderScale(scale: LibassRenderScale) {
         playerSettingsDataStore.setLibassRenderScale(scale)
+    }
+
+    suspend fun setLibassRenderMode(mode: LibassRenderMode) {
+        playerSettingsDataStore.setLibassRenderMode(mode)
     }
 
     suspend fun setSubtitlePreferredLanguage(language: String) {

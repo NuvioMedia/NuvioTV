@@ -1349,7 +1349,6 @@
     <string name="parental_severity_moderate">Stredné</string>
     <string name="parental_severity_mild">Mierne</string>
     <string name="player_ends_at">Končí o %1$s</string>
-    <string name="player_via">cez %1$s</string>
     
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Oneskorenie titulkov</string>

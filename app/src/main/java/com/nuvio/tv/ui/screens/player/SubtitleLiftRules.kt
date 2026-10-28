@@ -33,6 +33,12 @@ internal fun computeSubtitleLiftPx(
 
 internal const val SUBTITLE_LIFT_DROP_TIMEOUT_MS = 3_000L
 
+internal fun shouldApplySubtitleLiftImmediately(
+    isPlaying: Boolean,
+    previewConfiguredPosition: Boolean,
+    controlsVisible: Boolean
+): Boolean = !isPlaying || previewConfiguredPosition || !controlsVisible
+
 internal data class SubtitleLiftDecision(
     val appliedLiftPx: Float,
     val pendingDropCueVersion: Long?
