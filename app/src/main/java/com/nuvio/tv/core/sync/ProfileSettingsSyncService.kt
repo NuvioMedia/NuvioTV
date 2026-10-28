@@ -82,6 +82,7 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "internal_player_engine",
     "auto_switch_internal_player_on_error",
     "use_libass",
+    "use_mpv_libass",
     "libass_render_type",
     "decoder_priority",
     "downmix_enabled",
