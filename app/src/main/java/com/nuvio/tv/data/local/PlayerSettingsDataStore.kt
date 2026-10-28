@@ -260,6 +260,7 @@ data class PlayerSettings(
     val internalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER,
     val autoSwitchInternalPlayerOnError: Boolean = false,
     val useLibass: Boolean = true,
+    val useMpvLibass: Boolean = false,
     val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
     val libassRenderScale: LibassRenderScale = LibassRenderScale.FULL,
     val libassRenderMode: LibassRenderMode = LibassRenderMode.DEFAULT,
@@ -584,6 +585,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val internalPlayerEngineKey = stringPreferencesKey("internal_player_engine")
     private val autoSwitchInternalPlayerOnErrorKey = booleanPreferencesKey("auto_switch_internal_player_on_error")
     private val useLibassKey = booleanPreferencesKey("use_libass")
+    private val useMpvLibassKey = booleanPreferencesKey("use_mpv_libass")
     private val libassRenderTypeKey = stringPreferencesKey("libass_render_type")
     private val libassRenderScaleKey = stringPreferencesKey("libass_render_scale")
     private val libassRenderModeKey = stringPreferencesKey("libass_render_mode")
@@ -956,6 +958,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 } ?: InternalPlayerEngine.EXOPLAYER,
                 autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false,
                 useLibass = prefs[useLibassKey] ?: true,
+                useMpvLibass = prefs[useMpvLibassKey] ?: false,
                 libassRenderType = prefs[libassRenderTypeKey]?.let {
                     try { LibassRenderType.valueOf(it) } catch (e: Exception) { LibassRenderType.OVERLAY_OPEN_GL }
                 } ?: LibassRenderType.OVERLAY_OPEN_GL,
@@ -1644,6 +1647,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setUseLibass(enabled: Boolean) {
         store().edit { prefs ->
             prefs[useLibassKey] = enabled
+        }
+    }
+
+    suspend fun setUseMpvLibass(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[useMpvLibassKey] = enabled
         }
     }
 
