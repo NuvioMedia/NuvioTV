@@ -75,7 +75,7 @@ internal fun PlayerRuntimeController.canAttachAddonSubtitleViaSidecar(
  */
 private fun PlayerRuntimeController.shouldKeepAssOnLibassMediaPath(): Boolean {
     if (isUsingMpvEngine()) return false
-    return requestedUseLibassByUser || activePlayerUsesLibass
+    return requestedUseLibassByUser || activePlayerUsesLibass || requestedUseMpvAssByUser
 }
 
 internal fun PlayerRuntimeController.isSidecarAddonSubtitleActive(): Boolean {
