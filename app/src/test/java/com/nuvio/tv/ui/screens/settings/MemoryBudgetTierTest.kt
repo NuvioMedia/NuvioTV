@@ -43,14 +43,4 @@ class MemoryBudgetTierTest {
     fun `unknown physical RAM keeps the heap`() {
         assertEquals(512L, MemoryBudget.budgetHeapMb(maxHeapMb = 512L, physicalRamBytes = 0L))
     }
-
-    @Test
-    fun `stored target buffer above the slider limit is capped unless large buffers are allowed`() {
-        val overheadMb = 64
-        val limitMb = MemoryBudget.maxBufferMb(overheadMb)
-        val stored = limitMb + 500
-        assertEquals(limitMb, MemoryBudget.playerTargetBufferMb(stored, overheadMb, allowLargeTargetBuffer = false))
-        assertEquals(stored, MemoryBudget.playerTargetBufferMb(stored, overheadMb, allowLargeTargetBuffer = true))
-        assertEquals(limitMb, MemoryBudget.playerTargetBufferMb(limitMb, overheadMb, allowLargeTargetBuffer = false))
-    }
 }

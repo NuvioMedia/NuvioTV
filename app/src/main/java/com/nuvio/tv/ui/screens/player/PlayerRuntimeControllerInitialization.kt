@@ -518,11 +518,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                 val budgetMbEffective = if (budgetManaged) {
                     (MemoryBudget.budgetMb - parallelOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
                 } else {
-                    (MemoryBudget.playerTargetBufferMb(
-                        bufferSettings.targetBufferSizeMb,
-                        parallelOverheadMb,
-                        playerSettings.allowLargeTargetBuffer
-                    ) - parallelOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
+                    (MemoryBudget.effectiveBufferMb(bufferSettings.targetBufferSizeMb) - parallelOverheadMb)
+                        .coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
                 }
                 val budgetBytes = budgetMbEffective.toLong() * 1024L * 1024L
                 // Build with the user's back buffer so seek-back works immediately, except on a heap
@@ -2754,11 +2751,7 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
                     "budgetMb=${when {
                         shrinkBudgetForDv7 -> (MemoryBudget.conversionBudgetMb - currentParallelChunkOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
                         budgetManaged -> (MemoryBudget.budgetMb - currentParallelChunkOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
-                        else -> (MemoryBudget.playerTargetBufferMb(
-                            playerSettings.bufferSettings.targetBufferSizeMb,
-                            currentParallelChunkOverheadMb,
-                            playerSettings.allowLargeTargetBuffer
-                        ) - currentParallelChunkOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
+                        else -> (MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb) - currentParallelChunkOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
                     }} " +
                     "host=${currentStreamUrl.safeHost()}"
         )

@@ -149,15 +149,6 @@ object MemoryBudget {
     fun effectiveBufferMb(stored: Int): Int =
         if (stored > 0) stored else defaultBufferSizeMb
 
-    /**
-     * Target Buffer the player uses with the budget unmanaged. A value stored under a larger budget
-     * (an older version or another device) is capped like the slider caps it, unless the user
-     * allowed large target buffers.
-     */
-    fun playerTargetBufferMb(stored: Int, parallelOverheadMb: Int, allowLargeTargetBuffer: Boolean): Int {
-        val target = effectiveBufferMb(stored)
-        return if (allowLargeTargetBuffer) target else target.coerceAtMost(maxBufferMb(parallelOverheadMb))
-    }
 
     fun bufferCount(connectionCount: Int): Int =
         connectionCount + BUFFER_OVERHEAD
