@@ -1014,6 +1014,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                     resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled,
                     mimeType = currentStreamMimeType
                 )
+                mpvAssRenderer?.reset()
                 player.setMediaSource(
                     mediaSourceFactory.createMediaSource(
                         context = context,
