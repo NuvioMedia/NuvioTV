@@ -135,6 +135,8 @@ private fun PlayerRuntimeController.disposeExoPlayerBeforeRebuild() {
         currentMediaSession = null
     } catch (_: Exception) {
     }
+    runCatching { mpvAssRenderer?.release() }
+    mpvAssRenderer = null
     _exoPlayer?.let { player ->
         runCatching { player.playWhenReady = false }
         runCatching { player.pause() }
@@ -648,7 +650,8 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (!afrPreflightGate.isCurrent(afrPreflightToken)) return@launch
 
             // ── Libass Setup (From 0.5.7-beta/Left) ──
-            requestedUseLibassByUser = playerSettings.useLibass
+            requestedUseMpvAssByUser = playerSettings.useMpvLibass && com.nuvio.tv.ui.screens.player.mpvass.MpvAss.available
+            requestedUseLibassByUser = playerSettings.useLibass && !requestedUseMpvAssByUser
             val useLibass = when {
                 !requestedUseLibassByUser -> false
                 libassPipelineOverrideForCurrentStream != null -> libassPipelineOverrideForCurrentStream == true
@@ -659,6 +662,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             _uiState.update {
                 it.copy(
                     useLibass = useLibass,
+                    useMpvAss = requestedUseMpvAssByUser,
                     libassRenderType = playerSettings.libassRenderType,
                     libassRenderMode = playerSettings.effectiveLibassRenderMode
                 )
@@ -993,16 +997,17 @@ internal fun PlayerRuntimeController.initializePlayer(
                 // So the DV7 app-level factory must be wired in here, otherwise
                 // createMediaSource falls back to a plain DefaultExtractorsFactory and the
                 // conversion never runs. (The libass path wires it via buildWithAssSupportCompat.)
+                val playerExtractorsFactory = mpvAssRenderer?.extractors(effectiveExtractorsFactory) ?: effectiveExtractorsFactory
                 mediaSourceFactory.configureSubtitleParsing(
                     // Always wire the Matroska factory — DTS-HD sniff must not depend on DV.
-                    extractorsFactory = effectiveExtractorsFactory,
-                    subtitleParserFactory = null
+                    extractorsFactory = playerExtractorsFactory,
+                    subtitleParserFactory = mpvAssRenderer?.subtitleParsers()
                 )
                 val playerDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, headers)
                 ExoPlayer.Builder(context)
                     .setBandwidthMeter(bandwidthMeter)
                     .setTrackSelector(trackSelector!!)
-                    .setMediaSourceFactory(DefaultMediaSourceFactory(playerDataSourceFactory, effectiveExtractorsFactory))
+                    .setMediaSourceFactory(DefaultMediaSourceFactory(playerDataSourceFactory, playerExtractorsFactory))
                     .setRenderersFactory(renderersFactory)
                     .setLoadControl(loadControl)
                     .setReleaseTimeoutMs(PLAYER_RELEASE_TIMEOUT_MS)
@@ -1020,6 +1025,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                 return@launch
             }
 
+            if (requestedUseMpvAssByUser && !useLibass) {
+                mpvAssRenderer = com.nuvio.tv.ui.screens.player.mpvass.MpvAssRenderer(
+                    context = context,
+                    fontSource = PlayerPlaybackNetworking.createDataSourceFactory(context, headers),
+                    delayUs = { subtitleDelayUs.get() + streamSubtitleDelayUs.get() },
+                    subtitlesOn = playerSettings.subtitleStyle.preferredLanguage != "none"
+                )
+            }
             _exoPlayer = if (useLibass) {
                 // Set libass render scale before building the player - this controls
                 // the rasterization resolution of the atlas pipeline.
@@ -1047,6 +1060,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             _loadControl = loadControl
             activePlayerUsesLibass = useLibass
             libassPipelineSwitchInFlight = false
+            _exoPlayer?.let { player -> mpvAssRenderer?.attach(player, tunnelingActive && !safeAudioModeEnabled) }
 
             if (useLibass) {
                 _exoPlayer?.getAssHandlerCompat()?.let { handler ->
@@ -2075,7 +2089,8 @@ internal fun PlayerRuntimeController.resetAddonSubtitleStateForNewStream() {
 internal suspend fun PlayerRuntimeController.prepareStreamStartSubtitles(
     playerSettings: PlayerSettings
 ): StartupSubtitlePreparation {
-    requestedUseLibassByUser = playerSettings.useLibass
+    requestedUseMpvAssByUser = playerSettings.useMpvLibass && com.nuvio.tv.ui.screens.player.mpvass.MpvAss.available
+    requestedUseLibassByUser = playerSettings.useLibass && !requestedUseMpvAssByUser
     if (libassPipelineDecisionStreamUrl != currentStreamUrl) {
         libassPipelineDecisionStreamUrl = currentStreamUrl
         libassPipelineOverrideForCurrentStream = null
