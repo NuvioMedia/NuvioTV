@@ -248,6 +248,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setUseLibass(enabled)
     }
 
+    suspend fun setUseMpvLibass(enabled: Boolean) {
+        playerSettingsDataStore.setUseMpvLibass(enabled)
+    }
+
     suspend fun setLibassRenderType(renderType: LibassRenderType) {
         playerSettingsDataStore.setLibassRenderType(renderType)
     }
