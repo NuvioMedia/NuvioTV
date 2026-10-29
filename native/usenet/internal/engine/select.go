@@ -606,6 +606,27 @@ groups:
 				}
 				continue groups
 			}
+			// The set wraps another RAR set. Its volumes, in any order, are found
+			// by listing this one rather than walking it. A file index counts
+			// the entries in walk order, which the inner files' do not follow.
+			if s.FileIdx == nil && wrapsRARVolume(ctx, f, b) {
+				inner, err := selectRARInRAR(ctx, cursor, b, f, s, &index, consider)
+				// A larger video the walk passed before still wins.
+				if err == nil && inner != nil && (!s.whole() || largest == nil || inner.Size >= largest.Size) {
+					for _, v := range vols {
+						if v.damaged != nil {
+							return nil, v.damaged
+						}
+					}
+					return inner, nil
+				}
+				if err != nil {
+					if err := broken(err); err != nil {
+						return nil, err
+					}
+				}
+				continue groups
+			}
 			if c.complete && b.crypt == nil && c.Size <= maxClipInfoBytes && isClipInfo(c.Name) {
 				// Listed before the clips, so selection passes it on the way.
 				clipInfo[strings.ToLower(c.Name)] = &Content{Name: c.Name, Size: c.Size, parts: c.parts, complete: true}
