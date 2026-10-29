@@ -16,7 +16,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,6 +72,8 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -366,10 +367,43 @@ fun GridHomeContent(
         return
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(NuvioTheme.colors.Background)) {
+    // Hot fields of the ui state, read once here instead of inside the item lambdas. An
+    // item lambda that reads the state is never skippable, so every change of the state
+    // re-composed every item of the grid - and the grid itself is re-composed whenever
+    // this composable is.
+    val homeImdbRatingsVisible = uiState.homeImdbRatingsVisibility.showRatings
+    val mdbListShowOnHero = uiState.mdbListShowOnHero
+    val mdbListRatingOrder = uiState.mdbListRatingOrder
+    val blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes
+    val useEpisodeThumbnailsInCw = uiState.useEpisodeThumbnailsInCw
+    val continueWatchingCardStyle = uiState.continueWatchingCardStyle
+    val catalogTypeSuffixEnabled = uiState.catalogTypeSuffixEnabled
+    val posterLabelsEnabled = uiState.posterLabelsEnabled
+    val showUpcomingSection = uiState.continueWatchingEnabled && uiState.upcomingItems.isNotEmpty()
+    val upcomingItems = uiState.upcomingItems
+    val customPosterUrlPattern = uiState.customPosterUrlPattern
+    val customPosterEnabledScreens = uiState.customPosterEnabledScreens
+
+    // The grid fills this box, so the box also measures the width the grid has to lay out
+    // in. The width used to come from a BoxWithConstraints that wrapped the whole grid:
+    // that put the grid into a subcomposition, and every recomposition of this composable
+    // re-composed that subcomposition together with all of its items. The width is now
+    // measured once by the box and the grid is composed in this scope.
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    var measuredGridWidth by remember { mutableStateOf(screenWidth) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NuvioTheme.colors.Background)
+            .onSizeChanged { size ->
+                val width = size.width.toFloat().dp
+                if (width != measuredGridWidth) measuredGridWidth = width
+            }
+    ) {
         val contentFocusRequester = LocalContentFocusRequester.current
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val gridWidth = maxWidth
+        Box(modifier = Modifier.fillMaxSize()) {
+        val gridWidth = measuredGridWidth
         // Calculate actual columns from available width (matching GridCells.Adaptive logic)
         val horizontalPadding = NuvioTheme.spacing.xxxl + NuvioTheme.spacing.xl
         val spacing = NuvioTheme.spacing.md
@@ -432,6 +466,16 @@ fun GridHomeContent(
             result
         }
 
+        // The item that owns the initial focus of the grid. It used to be decided by a flag
+        // that the item lambdas flipped while they composed, which is a side effect in the
+        // composition: the flag was reset on every recomposition of the grid and two items
+        // could claim the same focus requester. The owner is now derived from the item list.
+        val firstFocusableGridItemKey = remember(trimmedPostItems) {
+            trimmedPostItems.firstOrNull { (item, _) ->
+                item is GridItem.Content || item is GridItem.SeeAll
+            }?.second
+        }
+
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(minSize = gridColumnMinSize),
@@ -463,7 +507,6 @@ fun GridHomeContent(
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
             verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
-            var firstGridFocusableAssigned = false
 
             // Emit pre-section items (Hero)
             if (preItems.isNotEmpty()) {
@@ -493,9 +536,9 @@ fun GridHomeContent(
                             HeroCarousel(
                                 items = gridItem.items.asStable(),
                                 focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
-                                showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
-                                mdbListShowOnHero = uiState.mdbListShowOnHero,
-                                mdbListRatingOrder = uiState.mdbListRatingOrder,
+                                showImdbRatings = homeImdbRatingsVisible,
+                                mdbListShowOnHero = mdbListShowOnHero,
+                                mdbListRatingOrder = mdbListRatingOrder,
                                 initialActiveIndex = savedHeroIndex.intValue,
                                 onItemFocus = {
                                     lastFocusedGridItemKey.value = "hero"
@@ -580,9 +623,9 @@ fun GridHomeContent(
                             val isNextUp = item is ContinueWatchingItem.NextUp
                             onRemoveContinueWatching(contentId, season, episode, isNextUp)
                         },
-                        blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
-                        cardStyle = uiState.continueWatchingCardStyle,
+                        blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                        useEpisodeThumbnails = useEpisodeThumbnailsInCw,
+                        cardStyle = continueWatchingCardStyle,
                         cornerRadius = posterCardStyle.cornerRadius,
                         posterCardWidth = posterCardStyle.width,
                         posterCardHeight = posterCardStyle.height
@@ -591,7 +634,7 @@ fun GridHomeContent(
             }
 
             // Emit Upcoming section if SPLIT_UPCOMING mode has upcoming items
-            if (uiState.continueWatchingEnabled && uiState.upcomingItems.isNotEmpty()) {
+            if (showUpcomingSection) {
                 item(
                     key = "upcoming_section",
                     span = { GridItemSpan(maxLineSpan) },
@@ -608,12 +651,12 @@ fun GridHomeContent(
                         modifier = Modifier.fillMaxWidth(),
                         fullWidth = gridWidth,
                         items = remember(
-                            uiState.upcomingItems,
-                            uiState.customPosterUrlPattern,
-                            uiState.customPosterEnabledScreens,
+                            upcomingItems,
+                            customPosterUrlPattern,
+                            customPosterEnabledScreens,
                         ) {
-                            uiState.upcomingItems.withCustomPosterUrls(
-                                com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
+                            upcomingItems.withCustomPosterUrls(
+                                com.nuvio.tv.core.poster.patternForScreen(customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, customPosterEnabledScreens)
                             )
                         },
                         title = stringResource(R.string.upcoming_section_title),
@@ -655,9 +698,9 @@ fun GridHomeContent(
                             val isNextUp = item is ContinueWatchingItem.NextUp
                             onRemoveContinueWatching(contentId, season, episode, isNextUp)
                         },
-                        blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
-                        cardStyle = uiState.continueWatchingCardStyle,
+                        blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                        useEpisodeThumbnails = useEpisodeThumbnailsInCw,
+                        cardStyle = continueWatchingCardStyle,
                         cornerRadius = posterCardStyle.cornerRadius,
                         posterCardWidth = posterCardStyle.width,
                         posterCardHeight = posterCardStyle.height
@@ -693,9 +736,9 @@ fun GridHomeContent(
                             HeroCarousel(
                                 items = gridItem.items.asStable(),
                                 focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
-                                showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
-                                mdbListShowOnHero = uiState.mdbListShowOnHero,
-                                mdbListRatingOrder = uiState.mdbListRatingOrder,
+                                showImdbRatings = homeImdbRatingsVisible,
+                                mdbListShowOnHero = mdbListShowOnHero,
+                                mdbListRatingOrder = mdbListRatingOrder,
                                 initialActiveIndex = savedHeroIndex.intValue,
                                 onItemFocus = {
                                     lastFocusedGridItemKey.value = "hero"
@@ -727,7 +770,7 @@ fun GridHomeContent(
                             "series" -> strTypeSeries
                             else -> gridItem.type.replaceFirstChar { it.uppercase() }
                         }
-                        val displayName = if (uiState.catalogTypeSuffixEnabled && typeLabel.isNotBlank()) {
+                        val displayName = if (catalogTypeSuffixEnabled && typeLabel.isNotBlank()) {
                             "${gridItem.catalogName.replaceFirstChar { it.uppercase() }} - $typeLabel"
                         } else {
                             gridItem.catalogName.replaceFirstChar { it.uppercase() }
@@ -742,9 +785,8 @@ fun GridHomeContent(
                             shouldRequestInitialFocus &&
                             !hasHero &&
                             !hasContinueWatching &&
-                            !firstGridFocusableAssigned
+                            itemKey == firstFocusableGridItemKey
                         ) {
-                            firstGridFocusableAssigned = true
                             firstGridItemFocusRequester
                         } else {
                             null
@@ -753,7 +795,7 @@ fun GridHomeContent(
                             item = gridItem.item,
                             focusRequester = focusRequester ?: focusRequesters.getOrPut(itemKey) { FocusRequester() },
                             posterCardStyle = posterCardStyle,
-                            showLabel = uiState.posterLabelsEnabled,
+                            showLabel = posterLabelsEnabled,
                             isWatched = isCatalogItemWatched(gridItem.item),
                             onFocused = remember(itemKey, gridItem.item) {
                                 {
@@ -793,9 +835,8 @@ fun GridHomeContent(
                             shouldRequestInitialFocus &&
                             !hasHero &&
                             !hasContinueWatching &&
-                            !firstGridFocusableAssigned
+                            itemKey == firstFocusableGridItemKey
                         ) {
-                            firstGridFocusableAssigned = true
                             firstGridItemFocusRequester
                         } else {
                             null
@@ -844,7 +885,7 @@ fun GridHomeContent(
             }
 
         } // end LazyVerticalGrid
-        } // end BoxWithConstraints
+        } // end grid box
 
         // Sticky header overlay
         GridStickyHeader(
