@@ -280,7 +280,8 @@ repeated continuation headers; NZB wire sizes never supply payload offsets.
 A prediction cut short by a cancelled reader is tried again by the next one.
 Each predicted intermediate volume is header-checked when first accessed. A
 layout mismatch discards the prediction and resumes serial discovery. RAR5 Quick
-Open locators and padded integer widths are retained in the template. Unordered
+Open locators, padded integer widths and the locked-archive flag are retained in
+the template. Unordered
 sets, other main-header extras and incompatible final remainders use serial
 discovery. The final header is always parsed, since its packed-size
 width and metadata may differ. Selection of unrequested entries stays serial so
@@ -299,8 +300,8 @@ that prefix and the block padding, including continuation prediction past the
 RAR5 volume-index width change. Keys are derived once per salt (PBKDF2-HMAC-SHA256
 for RAR5, 2^18 SHA-1 rounds for RAR4). A wrong password is detected from the RAR5
 check value, from undecryptable `-hp` headers, or from the decrypted container
-signature. RAR 2.x encryption and encrypted RAR sets nested inside a 7z are
-rejected.
+signature. RAR 2.x encryption and encrypted RAR sets nested inside a 7z or
+another RAR set are rejected.
 
 ### 7z archives
 
@@ -326,6 +327,34 @@ A stored RAR set inside the 7z (scene releases re-posted this way) is selected
 like an NZB-level RAR set: the first, second and last inner volume headers are
 read, middle volumes are predicted from the second one and verified when a
 reader reaches them, and irregular sets fall back to serial header discovery.
+Without a selector the first video filling half the inner set plays, otherwise
+the largest one.
+
+### RAR sets inside a RAR set
+
+Uploaders also wrap a scene release, its `.rar/.rNN` volumes with the `.sfv`,
+`.nfo` and sample, in an obfuscated stored RAR set of their own, often with the
+inner volumes in shuffled order. When the selection walk meets an entry named
+as a RAR volume whose own main header marks a volume (a subtitle pack stored
+as one archive is not one), it lists the rest of the outer set instead, groups
+the inner volumes by name and selects from the inner set as from one inside a
+7z, disc images included; files stored beside the inner sets are offered after
+them, and a larger video the walk passed before still wins. A file index keeps
+the walk: it counts entries in walk order, which the inner files do not follow.
+
+Since only the names order the inner volumes, every outer entry must be found.
+The listing reads one header per entry rather than a volume's: an entry's
+header gives its first part, the volumes it fills follow the continuation
+template of a volume one entry fills, and the next entry's header must parse
+where that arithmetic puts it. Entries whose header differs in size from the
+template's (a longer name, other fields) read each volume they continue into
+instead. Stretches of at least 16 volumes are listed at once, up to 8, each
+from the first entry header in its volumes, and each stretch must end exactly
+on the next one's first header. The parts between headers are predicted and
+checked when a reader first reaches them. A header missing where the
+arithmetic puts it, shuffled outer volumes and encrypted outer headers fall
+back to reading every header. A 96-entry wrap of a UHD disc image over 171
+volumes is listed from 97 articles instead of 261.
 
 Standalone NZB `.srt`, `.ass`, `.ssa`, `.vtt` and `.sub` entries are exposed as
 stream-provided subtitles. Their article data is fetched only when selected.
