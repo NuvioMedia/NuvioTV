@@ -1,0 +1,13 @@
+{
+  "streams": [
+    {
+      "name": "AnimeSub+",
+      "url": "https://addon.example/resolve/REDACTED/0/4f63ab726f514584597ee07b3fb794915838f48b/1/S01E01-My%20Code%20Name%20-%20To%20Make%20Everyone%20Happy%20With%20My%20Singing%20%5B89B93EDF%5D.mkv?season=1&absolute=1&local=1&movie=0&cached=1&title=redacted&fileIndex=10",
+      "behaviorHints": {
+        "filename": "S01E01-My Code Name - To Make Everyone Happy With My Singing [89B93EDF].mkv",
+        "videoSize": 541740986,
+        "notWebReady": true
+      }
+    }
+  ]
+}
