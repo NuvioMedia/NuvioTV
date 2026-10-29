@@ -252,6 +252,19 @@ enum class AudioOutputChannels(
     }
 }
 
+enum class NightMode(val settingValue: String) {
+    OFF("off"),
+    LIGHT("light"),
+    MEDIUM("medium"),
+    STRONG("strong");
+
+    companion object {
+        fun fromSettingValue(value: String?): NightMode {
+            return entries.firstOrNull { it.settingValue == value } ?: OFF
+        }
+    }
+}
+
 /**
  * Data class representing player settings
  */
@@ -273,6 +286,7 @@ data class PlayerSettings(
     val tunnelingEnabled: Boolean = false,
     val forceOpticalPassthrough: Boolean = false,
     val skipSilence: Boolean = false,
+    val nightMode: NightMode = NightMode.OFF,
     val audioAmplificationDb: Int = 0,
     val centerMixLevelDb: Int = 0,
     val persistAudioAmplification: Boolean = false,
@@ -597,6 +611,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val forceOpticalPassthroughKey = booleanPreferencesKey("force_optical_passthrough")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
+    private val nightModeKey = stringPreferencesKey("night_mode")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val centerMixLevelDbKey = intPreferencesKey("center_mix_level_db")
     private val persistAudioAmplificationKey = booleanPreferencesKey("persist_audio_amplification")
@@ -980,6 +995,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 tunnelingEnabled = prefs[tunnelingEnabledKey] ?: false,
                 forceOpticalPassthrough = prefs[forceOpticalPassthroughKey] ?: false,
                 skipSilence = prefs[skipSilenceKey] ?: false,
+                nightMode = NightMode.fromSettingValue(prefs[nightModeKey]),
                 audioAmplificationDb = (prefs[audioAmplificationDbKey] ?: 0).coerceIn(
                     AUDIO_AMPLIFICATION_DB_MIN,
                     AUDIO_AMPLIFICATION_DB_MAX
@@ -1237,6 +1253,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSkipSilence(enabled: Boolean) {
         store().edit { prefs ->
             prefs[skipSilenceKey] = enabled
+        }
+    }
+
+    suspend fun setNightMode(mode: NightMode) {
+        store().edit { prefs ->
+            prefs[nightModeKey] = mode.settingValue
         }
     }
 
