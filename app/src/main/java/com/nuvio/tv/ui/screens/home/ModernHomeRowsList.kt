@@ -252,6 +252,19 @@ internal fun ModernHomeRowsList(
         }
     }
 
+    // The forward halt guard is evaluated once per frame while a vertical drag is running.
+    // Reading the layout info on every frame made the drag loop pay for a layout read per
+    // frame; as a derived state it is only recomputed when the layout actually changed.
+    val haltForwardState = remember(verticalRowListState, carouselRows) {
+        derivedStateOf {
+            val info = verticalRowListState.layoutInfo
+            val lastIdx = carouselRows.list.size - 1
+            val lastVisible = info.visibleItemsInfo.lastOrNull { it.index == lastIdx }
+            lastIdx >= 0 && lastVisible != null &&
+                lastVisible.offset + lastVisible.size <= info.viewportEndOffset
+        }
+    }
+
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
 
     // Only run the shared shimmer while a row on screen actually draws it: rememberInfiniteTransition
@@ -320,13 +333,7 @@ internal fun ModernHomeRowsList(
                 .dpadVerticalFastScroll(
                     scrollableState = verticalRowListState,
                     onFastScrollingChanged = onFastScrollingChanged,
-                    shouldHaltForward = {
-                        val info = verticalRowListState.layoutInfo
-                        val lastIdx = carouselRows.list.size - 1
-                        val lastVisible = info.visibleItemsInfo.lastOrNull { it.index == lastIdx }
-                        lastIdx >= 0 && lastVisible != null &&
-                            lastVisible.offset + lastVisible.size <= info.viewportEndOffset
-                    },
+                    shouldHaltForward = { haltForwardState.value },
                     resolveVerticalLanding = { sign ->
                         val layoutInfo = verticalRowListState.layoutInfo
                         val visibleItems = layoutInfo.visibleItemsInfo
@@ -368,7 +375,10 @@ internal fun ModernHomeRowsList(
         ) {
             itemsIndexed(
                 items = carouselRows.list,
-                key = { index, row -> "${row.key}_$index" },
+                // The row key already identifies the row. Mixing the index into it made every
+                // reordering of the row list a new key, so Compose threw the row node away and
+                // rebuilt it (and every card in it) instead of moving it.
+                key = { _, row -> row.key },
                 contentType = { _, row -> row.apiType ?: "modern_home_row" }
             ) { _, row ->
                 val stableOnContinueWatchingOptions = remember(onContinueWatchingOptions) {
