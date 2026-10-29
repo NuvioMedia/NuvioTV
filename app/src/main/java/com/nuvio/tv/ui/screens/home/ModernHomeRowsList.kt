@@ -79,7 +79,7 @@ internal fun ModernHomeRowsList(
     isVerticalRowsScrollingState: State<Boolean>,
     carouselRows: StableList<HeroCarouselRow>,
     verticalRowListState: LazyListState,
-    focusedItemByRow: StableRef<MutableMap<String, Int>>,
+    focusedItemByRow: StableRef<FocusedItemByRowStore>,
     rowListStates: StableRef<MutableMap<String, LazyListState>>,
     loadMoreRequestedTotals: StableRef<MutableMap<String, Int>>,
     focusState: HomeScreenFocusState,
@@ -149,7 +149,7 @@ internal fun ModernHomeRowsList(
     modifier: Modifier = Modifier
 ) {
     // Unwrap StableRef wrappers for internal use (not passed to child composables)
-    val focusedItemByRowMap = focusedItemByRow.value
+    val focusedItemByRowStore = focusedItemByRow.value
     val rowListStatesMap = rowListStates.value
     val loadMoreRequestedTotalsMap = loadMoreRequestedTotals.value
 
@@ -157,7 +157,7 @@ internal fun ModernHomeRowsList(
     val latestOnActiveItemIndexChange = rememberUpdatedState(onActiveItemIndexChange)
 
     val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    val stableItemFocusRequestersByRow = remember { mutableMapOf<String, StableRef<MutableMap<Int, FocusRequester>>>() }
+    val stableItemFocusRequestersByRow = remember { mutableMapOf<String, StableRef<MutableMap<String, FocusRequester>>>() }
 
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -165,6 +165,16 @@ internal fun ModernHomeRowsList(
     val verticalPrefetchImageLoader = context.imageLoader
     val latestCarouselRowsForImagePrefetch = rememberUpdatedState(carouselRows)
 
+    val latestOnRequestLazyCatalogLoad = rememberUpdatedState(onRequestLazyCatalogLoad)
+    val latestCarouselRowsForLazy = rememberUpdatedState(carouselRows)
+
+    // One owner for the vertical prefetch of the home rows.
+    //
+    // The image prefetch of the next row and the lazy catalog load of the visible rows were
+    // two independent timers that both watched the same visible range of the same list and
+    // both waited 240 ms for the scroll to settle. They are merged here into a single
+    // observation with a single debounce, so a vertical scroll costs one timer instead of
+    // two and the two prefetches cannot drift apart.
     LaunchedEffect(
         verticalPrefetchImageLoader,
         verticalRowListState,
@@ -178,16 +188,35 @@ internal fun ModernHomeRowsList(
     ) {
         val prefetchAheadRows = 1
         val prefetchItemsPerRow = 1
+        val prefetchAheadForLazy = 2
         snapshotFlow {
-            verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            val info = verticalRowListState.layoutInfo
+            val firstVisible = info.visibleItemsInfo.firstOrNull()?.index ?: -1
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+            firstVisible to lastVisible
         }
             .distinctUntilChanged()
             .debounce(240L) // VERTICAL_PREFETCH_DEBOUNCE_MS
-            .collect { lastVisibleRowIndex ->
+            .collect { (firstVisible, lastVisible) ->
+                if (lastVisible < 0) return@collect
+                // Lazy catalog load of the visible rows (and the two rows behind them).
+                val rows = latestCarouselRowsForLazy.value
+                for (idx in firstVisible.coerceAtLeast(0)..(lastVisible + prefetchAheadForLazy)) {
+                    val row = rows.list.getOrNull(idx) ?: continue
+                    if (row.isLoading && row.items.list.firstOrNull()?.imageUrl.isPlaceholder()) {
+                        val legacyKey = catalogRowLegacyKey(
+                            row.addonId ?: continue,
+                            row.apiType ?: continue,
+                            row.catalogId ?: continue
+                        )
+                        latestOnRequestLazyCatalogLoad.value(legacyKey)
+                    }
+                }
+                // Image prefetch of the first item of the next row.
                 withContext(Dispatchers.IO) {
                     for (rowOffset in 1..prefetchAheadRows) {
                         val row = latestCarouselRowsForImagePrefetch.value.list
-                            .getOrNull(lastVisibleRowIndex + rowOffset) ?: continue
+                            .getOrNull(lastVisible + rowOffset) ?: continue
                         for (i in 0 until minOf(prefetchItemsPerRow, row.items.list.size)) {
                             val item = row.items.list[i]
                             val url = item.imageUrl ?: continue
@@ -215,35 +244,6 @@ internal fun ModernHomeRowsList(
                     }
                 }
             }
-    }
-
-    val latestOnRequestLazyCatalogLoad = rememberUpdatedState(onRequestLazyCatalogLoad)
-    val latestCarouselRowsForLazy = rememberUpdatedState(carouselRows)
-    LaunchedEffect(verticalRowListState) {
-        val prefetchAheadForLazy = 2
-        snapshotFlow {
-            val info = verticalRowListState.layoutInfo
-            val firstVisible = info.visibleItemsInfo.firstOrNull()?.index ?: -1
-            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-            firstVisible to lastVisible
-        }.collectLatest { (firstVisible, lastVisible) ->
-            if (lastVisible < 0) return@collectLatest
-            // Debounce: restarts on every new emission during rapid scroll.
-            // Only fires when visible indices stabilize for 240ms.
-            delay(240)
-            val rows = latestCarouselRowsForLazy.value
-            for (idx in firstVisible.coerceAtLeast(0)..(lastVisible + prefetchAheadForLazy)) {
-                val row = rows.list.getOrNull(idx) ?: continue
-                if (row.isLoading && row.items.list.firstOrNull()?.imageUrl.isPlaceholder()) {
-                    val legacyKey = catalogRowLegacyKey(
-                        row.addonId ?: continue,
-                        row.apiType ?: continue,
-                        row.catalogId ?: continue
-                    )
-                    latestOnRequestLazyCatalogLoad.value(legacyKey)
-                }
-            }
-        }
     }
 
     val focusRestorerRequester = remember(activeRowKey) {
@@ -359,7 +359,7 @@ internal fun ModernHomeRowsList(
                         val targetRow = carouselRows.list.getOrNull(targetRowIndex)
                         if (targetRow == null) null
                         else {
-                            val savedIdx = (focusedItemByRowMap[targetRow.key] ?: 0)
+                            val savedIdx = focusedItemByRowStore[targetRow.key]
                                 .coerceIn(0, (targetRow.items.list.size - 1).coerceAtLeast(0))
                             latestOnActiveRowKeyChange.value(targetRow.key)
                             latestOnActiveItemIndexChange.value(savedIdx)
@@ -404,8 +404,8 @@ internal fun ModernHomeRowsList(
                         }
 
                         // Always keep the focusedItemByRow map in sync for ALL rows
-                        if (focusedItemByRowMap[rowKey] != index) {
-                            focusedItemByRowMap[rowKey] = index
+                        if (focusedItemByRowStore[rowKey] != index) {
+                            focusedItemByRowStore[rowKey] = index
                         }
 
                         if (isContinueWatchingRow) {
