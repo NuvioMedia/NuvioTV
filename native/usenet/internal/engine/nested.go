@@ -109,6 +109,13 @@ func (n *nestedRAR) fileBlock(ctx context.Context, k int, name string, size int6
 // the selected one. A nil Content without error means nothing matched.
 func selectNestedRAR(ctx context.Context, vols []*Content, index *int, consider func(*Content, int, string) (bool, error), whole bool) (*Content, error) {
 	n := &nestedRAR{vols: vols}
+	var total int64
+	for _, v := range vols {
+		total += v.Size
+	}
+	// Without a selector the largest video plays, as from an outer set: a disc
+	// folder lists menus and extras before its feature.
+	var largest *Content
 	for k := 0; k < len(vols); k++ {
 		var selected *Content
 		var considerErr error
@@ -133,9 +140,13 @@ func selectNestedRAR(ctx context.Context, vols []*Content, index *int, consider 
 			c.prepare = func(ctx context.Context) error { return c.mapNested(ctx, start, header) }
 			matched, err := consider(c, *index, "")
 			*index++
-			if err != nil || matched {
+			// No other file can be larger than one filling half the set.
+			if err != nil || matched && (!whole || c.Size >= total/2) {
 				selected, considerErr = c, err
 				return false
+			}
+			if matched && (largest == nil || c.Size > largest.Size) {
+				largest = c
 			}
 			return true
 		})
@@ -159,6 +170,9 @@ func selectNestedRAR(ctx context.Context, vols []*Content, index *int, consider 
 			// Later volumes only continue files that started here.
 			break
 		}
+	}
+	if largest != nil {
+		return largest.usable(ctx)
 	}
 	return nil, nil
 }
@@ -359,12 +373,13 @@ func (r *ContentReader) readNested(p []byte) (int, error) {
 	return n, err
 }
 
-// nestedRARGroups returns the 7z entries that form RAR sets, in volume order.
-func nestedRARGroups(entries []sevenZipEntry) [][]int {
+// nestedRARGroups returns the archive entries, by name, that form RAR sets, in
+// volume order.
+func nestedRARGroups(names []string) [][]int {
 	groups := map[string][]int{}
 	var order []string
-	for i, e := range entries {
-		if key, ok := rarname.SetKey(e.name); ok {
+	for i, name := range names {
+		if key, ok := rarname.SetKey(name); ok {
 			if _, seen := groups[key]; !seen {
 				order = append(order, key)
 			}
@@ -375,8 +390,8 @@ func nestedRARGroups(entries []sevenZipEntry) [][]int {
 	for _, key := range order {
 		set := groups[key]
 		sort.SliceStable(set, func(a, b int) bool {
-			_, x, _ := rarname.VolumeNumber(entries[set[a]].name)
-			_, y, _ := rarname.VolumeNumber(entries[set[b]].name)
+			_, x, _ := rarname.VolumeNumber(names[set[a]])
+			_, y, _ := rarname.VolumeNumber(names[set[b]])
 			return x < y
 		})
 		out = append(out, set)
