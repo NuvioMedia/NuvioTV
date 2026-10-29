@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -104,14 +103,21 @@ fun StreamBadgeChips(
     val sizeBytes = fileSizeBytes.takeIf { showFileSizeBadge }
     if (imageBadges.isEmpty() && sizeBytes == null) return
 
-    val chipAlpha = if (animate) {
-        val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
-        androidx.compose.runtime.LaunchedEffect(Unit) {
-            alpha.animateTo(1f, animationSpec = androidx.compose.animation.core.tween(200))
-        }
-        alpha.value
+    // The fade is driven by an Animatable. Reading its value during the composition made the
+    // whole chip row recompose on every frame of the 200 ms fade. Reading it inside the
+    // graphics layer keeps the fade on the draw path, so only the layer is invalidated.
+    val chipAlphaAnimation = if (animate) {
+        remember { androidx.compose.animation.core.Animatable(0f) }
     } else {
-        1f
+        null
+    }
+    if (chipAlphaAnimation != null) {
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            chipAlphaAnimation.animateTo(
+                1f,
+                animationSpec = androidx.compose.animation.core.tween(200)
+            )
+        }
     }
 
     Box(
@@ -119,7 +125,9 @@ fun StreamBadgeChips(
             .fillMaxWidth()
             .clipToBounds()
             .then(if (focused) Modifier.basicMarquee(iterations = Int.MAX_VALUE, velocity = MarqueeVelocity, spacing = MarqueeSpacing(36.dp)) else Modifier)
-            .then(if (chipAlpha < 1f) Modifier.alpha(chipAlpha) else Modifier),
+            .graphicsLayer {
+                alpha = chipAlphaAnimation?.value ?: 1f
+            },
         contentAlignment = Alignment.CenterStart
     ) {
         Row(

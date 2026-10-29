@@ -147,7 +147,9 @@ fun ModernHomeContent(
     val onRowItemFocusedPassedDown = rememberUpdatedState(onRowItemFocusedCallback)
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val sidebarExpanded = LocalSidebarExpanded.current
-    val isSidebarExpanded = remember(sidebarExpanded) { derivedStateOf { sidebarExpanded } }
+    // Plain value: the derived state only wrapped a composition local read, it never derived
+    // anything and it created a new state object on every sidebar change.
+    val isSidebarExpanded = sidebarExpanded
     val lifecycleOwner = LocalLifecycleOwner.current
     val useLandscapePosters = uiState.modernLandscapePostersEnabled
     val alwaysShowLandscapeClearlogo = uiState.alwaysShowLandscapeClearlogo
@@ -328,12 +330,12 @@ fun ModernHomeContent(
             verticalRowListState.isScrollInProgress,
             // Re-run when the sidebar takes/returns focus so a pending expand cannot
             // complete while the user is on the Home button (#2815).
-            isSidebarExpanded.value
+            isSidebarExpanded
         ) {
             // Always clear first so sidebar open / selection change collapses immediately.
             expandedCatalogFocusKey.value = null
             if (!shouldActivateFocusedPosterFlow) return@LaunchedEffect
-            if (isSidebarExpanded.value) return@LaunchedEffect
+            if (isSidebarExpanded) return@LaunchedEffect
             if (verticalRowListState.isScrollInProgress) return@LaunchedEffect
             val selection = focusedCatalogSelection.value ?: return@LaunchedEffect
             if (selection.payload !is ModernPayload.Catalog) return@LaunchedEffect
@@ -341,7 +343,7 @@ fun ModernHomeContent(
             delay(expansionDelayMs)
             if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
             if (shouldActivateFocusedPosterFlow &&
-                !isSidebarExpanded.value &&
+                !isSidebarExpanded &&
                 !verticalRowListState.isScrollInProgress &&
                 focusedCatalogSelection.value?.focusKey == selection.focusKey
             ) {
@@ -832,7 +834,7 @@ fun ModernHomeContent(
                 derivedStateOf {
                     isScrollStoppedState.value &&
                         effectiveAutoplayEnabled &&
-                        !isSidebarExpanded.value &&
+                        !isSidebarExpanded &&
                         !isRapidHorizontalNav.value &&
                         trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA &&
                         !heroTrailerUrlsState.value.first.isNullOrBlank()
@@ -847,7 +849,7 @@ fun ModernHomeContent(
             ) {
                 derivedStateOf {
                     isScrollStoppedState.value &&
-                        !isSidebarExpanded.value &&
+                        !isSidebarExpanded &&
                         !collectionHeroVideoUrl.isNullOrBlank() &&
                         collectionHeroVideoPlaybackKey != null &&
                         endedCollectionHeroVideoPlaybackKey != collectionHeroVideoPlaybackKey
@@ -866,9 +868,8 @@ fun ModernHomeContent(
             val shouldPlayHeroTrailerState = remember(shouldPlayCatalogHeroTrailerState, shouldPlayCollectionHeroVideoState) {
                 derivedStateOf { shouldPlayCatalogHeroTrailerState.value || shouldPlayCollectionHeroVideoState.value }
             }
-            val heroMediaMutedState = remember(uiState.focusedPosterBackdropTrailerMuted) {
-                derivedStateOf { uiState.focusedPosterBackdropTrailerMuted }
-            }
+            // Plain value: the derived state only wrapped a plain boolean read.
+            val heroMediaMuted = uiState.focusedPosterBackdropTrailerMuted
             var heroTrailerFirstFrameRendered by remember { mutableStateOf(false) }
             LaunchedEffect(heroMediaDataState.value.third) {
                 heroTrailerFirstFrameRendered = false
@@ -889,8 +890,13 @@ fun ModernHomeContent(
                 }
             }
             // Keep the top-level flag in sync so the row-scroll BackHandler
-            // stays disabled while a fullscreen trailer is visible.
-            fullscreenTrailerPlaying.value = isTrailerPlayingFullscreenState.value
+            // stays disabled while a fullscreen trailer is visible. The write happens in an
+            // effect: writing a state while the composition is running is a side effect and it
+            // can schedule a recomposition of the whole home content.
+            val isTrailerPlayingFullscreen = isTrailerPlayingFullscreenState.value
+            LaunchedEffect(isTrailerPlayingFullscreen) {
+                fullscreenTrailerPlaying.value = isTrailerPlayingFullscreen
+            }
             fullscreenTrailerDismiss.value = remember(focusedCatalogSelection, expandedCatalogFocusKey) {
                 {
                     focusedCatalogSelection.value = null
@@ -901,7 +907,7 @@ fun ModernHomeContent(
                 resolvedHeroState,
                 shouldPlayHeroTrailerState,
                 heroMediaDataState,
-                heroMediaMutedState,
+                heroMediaMuted,
                 fullScreenBackdrop
             ) {
                 derivedStateOf {
@@ -917,7 +923,7 @@ fun ModernHomeContent(
                         trailerUrl = heroMediaUrl,
                         trailerAudioUrl = heroMediaAudioUrl,
                         trailerPlaybackKey = heroMediaPlaybackKey,
-                        trailerMuted = heroMediaMutedState.value,
+                        trailerMuted = heroMediaMuted,
                         fullScreenBackdrop = fullScreenBackdrop
                     )
                 }
