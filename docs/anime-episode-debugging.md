@@ -1,6 +1,6 @@
 # Anime season-pack episode investigation
 
-Status: **the reported E01 to E11/E12 mismatch is not reproduced on the tested `dev` checkout; its root cause is not established. No playback behavior fix has been made.**
+Status: **the original Vivy EMBER E01 to E11/E12 report has not been reproduced. Follow-up sampling found two other E01 responses that resolve to different episodes before reaching the player. No playback behavior fix has been made.**
 
 ## Report and reproduction
 
@@ -23,6 +23,29 @@ Temporary debug logging recorded only SHA-256 fingerprints and non-secret flags.
 The E01 resolver returned HTTP 302 and a ranged media response with an E01 Content-Disposition filename for both tested Nuvio and Stremio user agents. `ffprobe` reported Matroska title `S01E01-EMBER`, duration 1572.096 seconds. In the Android TV emulator Media3 received this URL but rejected the 10-bit HEVC video with `ERROR_CODE_DECODING_FAILED`. Nuvio's MPV fallback rendered the stream; its on-screen duration was 26:12, consistent with the independently inspected E01 file. This is evidence for the current test case, not a reproduction of the reported mismatch on the original device or a visual comparison against Stremio.
 
 The same pack produced Matroska metadata `S01E02-EMBER`, `S01E11-EMBER`, and `S01E12-EMBER` in independent `ffprobe` checks. In the emulator the corresponding selected URLs matched the addon responses at the handoff, and MPV rendered each after the Media3 decoder failure. The on-screen durations matched the inspected files: E02 22:45, E11 and E12 23:41. Selecting E01 again after E12 still handed off the independently captured E01 URL. These checks do not prove playback in both clients or both debrid services.
+
+
+## Follow-up: other packs and sources
+
+On 2026-10-29, using the same authorized AnimeSub+ configuration and TorBox-labeled results, E01 requests were sampled across five series. The HTTP response filename and, where present, Matroska title were checked; URLs and credentials were not recorded here.
+
+| E01 result | Observed resolved file | Assessment |
+| --- | --- | --- |
+| Frieren, EMBER season 1 | `S01E16-Long-Lived Friends` and Matroska title S01E16 | Mismatch |
+| Vivy, Salieri 01-labelled source | `[Salieri] ... - 08 ... .mkv` | Mismatch; the displayed result looks like a single episode, so its underlying pack structure is unconfirmed |
+| Vivy, ItachiUchiha season 1 | EP01 filename and EP01 Matroska title | Consistent with E01 |
+| Vivy, Erai-raws 01–13 | 01 filename | Consistent with E01 |
+| Vivy, TTGA season 1 + specials | S01E01 filename and title | Consistent with E01 |
+| Attack on Titan, Anime Time complete collection | 01 filename and title | Consistent with E01 |
+| Jujutsu Kaisen, Vodes season 1 | S01E01 filename and title | Consistent with E01 |
+| Jujutsu Kaisen, Judas weekly E01 | S01E01 filename | Consistent with E01; this is a single release, not a season pack |
+| Demon Slayer, LostYears season 1 | S01E01 filename | Consistent with E01 |
+| Demon Slayer, EMBER season 1 | S01E01 filename and title | Consistent with E01 |
+| Frieren, Erai-raws batch; Attack on Titan, Anime Time complete series | No conclusive filename or title returned | Inconclusive |
+
+For the Frieren EMBER result, the addon response was a direct resolver URL without top-level `infoHash`, `fileIdx`, `clientResolve` or filename hint. Its URL query carried `local=1`, `absolute=1`, and `fileIndex=15`. Both HEAD and ranged GET returned the E16 filename and Matroska title. The same URL returned the same result with Nuvio and Stremio user-agent strings; this is not a test of the Stremio application itself. In Nuvio on the TV emulator, selecting that EMBER result for E01 showed a Media3 HEVC decoder error; MPV fallback rendered a 24:07 file. A frame at 00:13 matched a frame extracted independently from the resolver's E16 file. Thus this specific mismatch is already present when the direct resolver supplies media; whether it originates in the addon, provider or their configuration has not been established.
+
+The Vivy Salieri result likewise advertised E01 while the resolver returned an E08 filename under both user-agent strings. Its query carried `fileIndex=7`; no top-level torrent metadata or filename hint was supplied. These cases establish distinct reproducible mismatches, not that either caused the original E01 → E11/E12 report. Real-Debrid and a real Stremio client were not compared. Native debrid resolution was disabled in the debug app.
 
 ## Tests and limitations
 
