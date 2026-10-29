@@ -217,9 +217,9 @@ fun ModernHomeContent(
     val rowListStates = remember { mutableStateMapOf<String, LazyListState>() }
     val loadMoreRequestedTotals = remember { mutableStateMapOf<String, Int>() }
 
-    val focusedItemByRow = remember { mutableStateMapOf<String, Int>() }
+    val focusedItemByRow = remember { FocusedItemByRowStore() }
     val itemIdentitySnapshot = remember { ItemIdentitySnapshot() }
-    val stableFocusedItemByRow = remember { StableRef<MutableMap<String, Int>>(focusedItemByRow) }
+    val stableFocusedItemByRow = remember { StableRef<FocusedItemByRowStore>(focusedItemByRow) }
     val stableRowListStates = remember { StableRef<MutableMap<String, LazyListState>>(rowListStates) }
     val stableLoadMoreRequestedTotals = remember { StableRef<MutableMap<String, Int>>(loadMoreRequestedTotals) }
     // Every focus move writes focusedItemByRow, so reading it observably here recomposed this
@@ -278,7 +278,7 @@ fun ModernHomeContent(
             if (!contentHasFocus.value) return@derivedStateOf false
             if (fullscreenTrailerPlaying.value) return@derivedStateOf true
             val rowKey = activeRowKey.value ?: return@derivedStateOf false
-            val itemIndex = focusedItemByRow[rowKey] ?: 0
+            val itemIndex = focusedItemByRow[rowKey]
             itemIndex > 0
         }
     }
@@ -495,8 +495,7 @@ fun ModernHomeContent(
 
         if (resolvedActive != null) {
             val resolvedIndex = focusedItemByRow[resolvedActive.key]
-                ?.coerceIn(0, (resolvedActive.items.size - 1).coerceAtLeast(0))
-                ?: 0
+                .coerceIn(0, (resolvedActive.items.size - 1).coerceAtLeast(0))
             focusHolder.activeRowKey = resolvedActive.key
             focusHolder.activeItemIndex = resolvedIndex
             activeRowKey.value = resolvedActive.key
@@ -568,7 +567,7 @@ fun ModernHomeContent(
 
         LaunchedEffect(activeRow?.key, activeRow?.items?.size) {
             val row = activeRow ?: return@LaunchedEffect
-            val savedIdx = focusedItemByRow[row.key] ?: 0
+            val savedIdx = focusedItemByRow[row.key]
             val clampedIndex = savedIdx.coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
             if (focusHolder.activeItemIndex != clampedIndex) {
                 focusHolder.activeItemIndex = clampedIndex
@@ -632,7 +631,7 @@ fun ModernHomeContent(
             
             val focusedItemKeyByRow = latestCarouselRows
                 .associate { rowState ->
-                    val focusedIdx = focusedItemByRow[rowState.key] ?: 0
+                    val focusedIdx = focusedItemByRow[rowState.key]
                     val itemKey = rowState.items.list.getOrNull(focusedIdx)?.key ?: ""
                     rowState.key to itemKey
                 }
@@ -640,7 +639,7 @@ fun ModernHomeContent(
             val catalogRowScrollStates = latestCarouselRows
                 .associate { rowState ->
                     val scrollIndex = rowListStates[rowState.key]?.firstVisibleItemIndex
-                        ?: (focusedItemByRow[rowState.key] ?: 0)
+                        ?: focusedItemByRow[rowState.key]
                     rowState.key to scrollIndex
                 }
 
