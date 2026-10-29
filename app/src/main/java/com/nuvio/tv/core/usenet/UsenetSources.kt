@@ -118,9 +118,14 @@ data class UsenetSourceConfiguration(
     /** On: releases that played recently are listed first, whatever the sort; fallback reaches them first too. */
     val availableFirst: Boolean = false,
     /** On: results show as each indexer answers. Off: the list shows once all answered, or after a short wait. */
-    val progressiveResults: Boolean = false
+    val progressiveResults: Boolean = false,
+    /** Null: after every addon. Otherwise the URLs of the addons placed above it; see [BuiltInUsenetOrder]. */
+    val addonsAbove: List<String>? = null
 ) {
     val ready: Boolean get() = enabled && providers.any { it.enabled } && indexers.any { it.enabled }
+
+    /** Has a provider and an indexer, so it can be listed among the addons even while switched off. */
+    val configured: Boolean get() = providers.isNotEmpty() && indexers.isNotEmpty()
 
     /** The enabled providers, as the engine is given them. */
     fun servers(): List<String> = providers.filter { it.enabled }.map { it.serverUrl() }
@@ -138,6 +143,7 @@ data class UsenetSourceConfiguration(
         require(providers.filter { it.enabled }.sumOf { it.connections } <= 4096) { "Total connections exceed 4096" }
         require(minResolution in listOf(0, 480, 720, 1080, 2160))
         require(maxSizeGb in 0..1000 && maxAgeDays in 0..10000 && maxResults in 1..200)
+        require((addonsAbove?.size ?: 0) <= 500) { "Too many addons above built-in Usenet" }
     }
 }
 
