@@ -7,6 +7,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.AudioOutputChannels
+import com.nuvio.tv.data.local.DownmixLfeLevel
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.displayName
@@ -89,6 +90,13 @@ internal fun PlaybackAudioSection(
             onToggle = { onUpdate { setMaintainOriginalAudioOnDownmix(!settings.maintainOriginalAudioOnDownmix) } },
             enabled = enabled
         )
+        SettingsActionRow(
+            title = stringResource(R.string.audio_downmix_lfe_level),
+            subtitle = stringResource(R.string.audio_downmix_lfe_level_sub),
+            value = downmixLfeLevelLabel(settings.downmixLfeLevel),
+            enabled = enabled && !settings.audioOutputChannels.hasLfe,
+            onClick = { onOpenDialog(PlaybackDialog.DOWNMIX_LFE_LEVEL) }
+        )
     }
     SettingsToggleRow(
         title = stringResource(R.string.audio_tunneled),
@@ -129,6 +137,13 @@ internal fun decoderPriorityLabel(priority: Int): String = when (priority) {
 }
 
 @Composable
+private fun downmixLfeLevelLabel(level: DownmixLfeLevel): String = when (level) {
+    DownmixLfeLevel.OFF -> stringResource(R.string.audio_downmix_lfe_level_off)
+    DownmixLfeLevel.HALF -> stringResource(R.string.audio_downmix_lfe_level_half)
+    DownmixLfeLevel.FULL -> stringResource(R.string.audio_downmix_lfe_level_full)
+}
+
+@Composable
 internal fun AudioSettingsDialogs(
     dialog: PlaybackDialog?,
     settings: PlayerSettings,
@@ -164,6 +179,19 @@ internal fun AudioSettingsDialogs(
                 onDismiss()
             },
             onDismiss = onDismiss
+        )
+        PlaybackDialog.DOWNMIX_LFE_LEVEL -> SettingsSingleChoiceDialog(
+            title = stringResource(R.string.audio_downmix_lfe_level),
+            subtitle = stringResource(R.string.audio_downmix_lfe_level_desc),
+            options = DownmixLfeLevel.entries.map { SettingsPickerOption(it, downmixLfeLevelLabel(it)) },
+            selectedValue = settings.downmixLfeLevel,
+            onOptionSelected = { level ->
+                onUpdate { setDownmixLfeLevel(level) }
+                onDismiss()
+            },
+            onDismiss = onDismiss,
+            width = 420.dp,
+            maxHeight = 320.dp
         )
         PlaybackDialog.DECODER_PRIORITY -> DecoderPriorityDialog(
             selectedPriority = settings.decoderPriority,

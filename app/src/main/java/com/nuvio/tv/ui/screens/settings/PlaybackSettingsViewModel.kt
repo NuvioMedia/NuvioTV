@@ -8,6 +8,7 @@ import com.nuvio.tv.data.local.LibassRenderScale
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.LibassRenderMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.DownmixLfeLevel
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -134,6 +135,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setMaintainOriginalAudioOnDownmix(enabled: Boolean) {
         playerSettingsDataStore.setMaintainOriginalAudioOnDownmix(enabled)
+    }
+
+    suspend fun setDownmixLfeLevel(level: DownmixLfeLevel) {
+        playerSettingsDataStore.setDownmixLfeLevel(level)
     }
 
     suspend fun setTunnelingEnabled(enabled: Boolean) {
