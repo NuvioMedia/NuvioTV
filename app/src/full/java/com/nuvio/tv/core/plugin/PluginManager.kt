@@ -15,9 +15,13 @@ import com.nuvio.tv.domain.model.RemotePluginInfo
 import com.nuvio.tv.domain.model.RepositoryType
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.domain.model.ScraperManifestInfo
+import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.scraperIdFromPluginBingeGroup
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -639,7 +643,33 @@ class PluginManager @Inject constructor(
     suspend fun setGroupStreamsByRepository(enabled: Boolean) {
         dataStore.setGroupStreamsByRepository(enabled)
     }
-    
+
+    /**
+     * Remember a plugin provider the user actually played.
+     * The most-played provider then starts before the others, and its binge group
+     * lets autoplay continue that same provider on the next episode.
+     */
+    fun recordPluginProviderPlay(stream: Stream) {
+        val scraperId = scraperIdFromPluginBingeGroup(stream.behaviorHints?.bingeGroup) ?: return
+        syncScope.launch {
+            runCatching { dataStore.recordPluginProviderPlay(scraperId) }
+                .onFailure { error -> Log.w(TAG, "Failed to record plugin provider play", error) }
+        }
+    }
+
+    private suspend fun scrapersInRunOrder(
+        scrapers: List<ScraperInfo>,
+        priorityBingeGroup: String?
+    ): List<ScraperInfo> {
+        if (scrapers.size < 2) return scrapers
+        val stats = runCatching { dataStore.pluginProviderPlayStats() }.getOrElse { emptyMap() }
+        return scrapers.orderForPluginPlayback(
+            id = { it.id },
+            priorityBingeGroup = priorityBingeGroup,
+            stats = stats
+        )
+    }
+
     /**
      * Execute all enabled scrapers for a given media
      */
@@ -647,14 +677,17 @@ class PluginManager @Inject constructor(
         tmdbId: String,
         mediaType: String,
         season: Int? = null,
-        episode: Int? = null
+        episode: Int? = null,
+        priorityBingeGroup: String? = null
     ): List<LocalScraperResult> = coroutineScope {
         if (!dataStore.pluginsEnabled.first()) {
             return@coroutineScope emptyList()
         }
         
-        val enabledScraperList = enabledScrapers.first()
-            .filter { it.supportsType(mediaType) }
+        val enabledScraperList = scrapersInRunOrder(
+            enabledScrapers.first().filter { it.supportsType(mediaType) },
+            priorityBingeGroup
+        )
         
         if (enabledScraperList.isEmpty()) {
             return@coroutineScope emptyList()
@@ -699,38 +732,86 @@ class PluginManager @Inject constructor(
         tmdbId: String,
         mediaType: String,
         season: Int? = null,
-        episode: Int? = null
+        episode: Int? = null,
+        priorityBingeGroup: String? = null,
+        preferredPluginOnly: Boolean = false
     ): Flow<Pair<ScraperInfo, List<LocalScraperResult>>> = channelFlow {
-        val enabledList = enabledScrapers.first()
-            .filter { it.supportsType(mediaType) }
+        val enabledList = enabledScrapers.first().filter { it.supportsType(mediaType) }
         
         if (enabledList.isEmpty() || !dataStore.pluginsEnabled.first()) {
             return@channelFlow
         }
-        
-        Log.d(TAG, "Streaming execution of ${enabledList.size} scrapers for $mediaType:$tmdbId")
- 
-        // Preload all extractors from EXTERNAL_DEX repos before any scraper runs
-        val dexScraperIds = enabledList.filter { it.type == RepositoryType.EXTERNAL_DEX }.map { it.id }
-        if (dexScraperIds.isNotEmpty()) {
-            val allDexIds = dataStore.scrapers.first()
-                .filter { it.type == RepositoryType.EXTERNAL_DEX }
-                .map { it.id }
-            withContext(Dispatchers.IO) {
-                externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
+
+        val stats = runCatching { dataStore.pluginProviderPlayStats() }.getOrElse { emptyMap() }
+        val plan = enabledList.planPluginRun(
+            id = { it.id },
+            priorityBingeGroup = priorityBingeGroup,
+            stats = stats,
+            preferredOnly = preferredPluginOnly
+        )
+        val preferred = plan.preferred
+        if (preferred != null) {
+            Log.d(TAG, "Trying preferred plugin first: ${preferred.name}")
+            preloadDexExtractors(listOf(preferred))
+            val results = try {
+                executeScraperWithSingleFlight(preferred, tmdbId, mediaType, season, episode)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.e(TAG, "Preferred plugin ${preferred.name} failed: ${error.message}")
+                emptyList()
             }
+            if (results.isNotEmpty()) {
+                Log.d(TAG, "Preferred plugin ${preferred.name} returned ${results.size}; skipping ${plan.others.size} scrapers")
+                send(preferred to results)
+                return@channelFlow
+            }
+            Log.d(TAG, "Preferred plugin ${preferred.name} returned nothing; running ${plan.others.size} other scrapers")
+        } else {
+            Log.d(TAG, "Streaming execution of ${plan.others.size} scrapers for $mediaType:$tmdbId")
         }
- 
-        enabledList.forEachIndexed { index, scraper ->
+
+        preloadDexExtractors(plan.others)
+        launchPluginScrapers(
+            scrapers = plan.others,
+            tmdbId = tmdbId,
+            mediaType = mediaType,
+            season = season,
+            episode = episode
+        ) { scraper, results ->
+            send(scraper to results)
+        }
+    }
+
+    private suspend fun preloadDexExtractors(scrapers: List<ScraperInfo>) {
+        if (scrapers.none { it.type == RepositoryType.EXTERNAL_DEX }) return
+        val allDexIds = dataStore.scrapers.first()
+            .filter { it.type == RepositoryType.EXTERNAL_DEX }
+            .map { it.id }
+        if (allDexIds.isEmpty()) return
+        withContext(Dispatchers.IO) {
+            externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
+        }
+    }
+
+    private fun CoroutineScope.launchPluginScrapers(
+        scrapers: List<ScraperInfo>,
+        tmdbId: String,
+        mediaType: String,
+        season: Int?,
+        episode: Int?,
+        onResult: suspend (ScraperInfo, List<LocalScraperResult>) -> Unit
+    ) {
+        scrapers.forEachIndexed { index, scraper ->
             launch(scraperOrchestrationDispatcher) {
                 if (index > 0) {
                     kotlinx.coroutines.delay(index * 60L)
                 }
                 try {
                     val results = executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode)
-                    if (results.isNotEmpty()) {
-                        send(scraper to results)
-                    }
+                    if (results.isNotEmpty()) onResult(scraper, results)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "Scraper ${scraper.name} failed in streaming: ${e.message}")
                 }

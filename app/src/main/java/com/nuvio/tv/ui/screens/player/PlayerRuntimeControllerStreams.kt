@@ -239,7 +239,8 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
             videoId = vid,
             season = seasonArg,
             episode = episodeArg,
-            forceRefresh = forceRefresh
+            forceRefresh = forceRefresh,
+            priorityBingeGroup = currentStreamBingeGroup
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
@@ -662,6 +663,7 @@ private fun PlayerRuntimeController.applyStreamMetadata(stream: Stream) {
     currentAddonName = stream.addonName
     currentAddonLogo = stream.addonLogo
     currentStreamDescription = stream.description
+    pluginManager.recordPluginProviderPlay(stream)
     currentVideoCodec = null
     currentVideoWidth = null
     currentVideoHeight = null
@@ -1273,7 +1275,8 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
             videoId = video.id,
             season = video.season,
             episode = video.episode,
-            forceRefresh = forceRefresh
+            forceRefresh = forceRefresh,
+            priorityBingeGroup = currentStreamBingeGroup
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
@@ -1835,7 +1838,9 @@ internal fun PlayerRuntimeController.preloadNextEpisodeSources() {
             type = type,
             videoId = nextVideo.id,
             season = nextVideo.season,
-            episode = nextVideo.episode
+            episode = nextVideo.episode,
+            priorityBingeGroup = currentStreamBingeGroup,
+            preferredPluginOnly = true
         ).collect { /* results cached by StreamSearchSessionCache */ }
     }
 }
@@ -2036,7 +2041,9 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     type = type,
                     videoId = nextVideo.id,
                     season = nextVideo.season,
-                    episode = nextVideo.episode
+                    episode = nextVideo.episode,
+                    priorityBingeGroup = currentStreamBingeGroup,
+                    preferredPluginOnly = true
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {

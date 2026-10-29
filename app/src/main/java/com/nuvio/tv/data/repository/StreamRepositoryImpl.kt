@@ -8,6 +8,7 @@ import com.nuvio.tv.core.network.safeApiCall
 import com.nuvio.tv.core.debrid.DebridStreamPresentation
 import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.domain.model.pluginBingeGroup
 import com.nuvio.tv.core.plugin.resolvePluginSeasonEpisode
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbService
@@ -94,11 +95,20 @@ class StreamRepositoryImpl @Inject constructor(
         videoId: String,
         season: Int?,
         episode: Int?,
-        forceRefresh: Boolean
+        forceRefresh: Boolean,
+        priorityBingeGroup: String?,
+        preferredPluginOnly: Boolean
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         val sourceConfiguration = captureSourceConfiguration()
         val isNativeServerRequest = serverStreams.isNativeRequest(videoId)
-        val requestKey = buildStreamSearchRequestKey(sourceConfiguration, type, videoId, season, episode)
+        val requestKey = buildStreamSearchRequestKey(
+            sourceConfiguration,
+            type,
+            videoId,
+            season,
+            episode,
+            preferredPluginOnly
+        )
 
         emitAll(
             streamSearchSessions.observe(
@@ -115,7 +125,9 @@ class StreamRepositoryImpl @Inject constructor(
                     hasCompatiblePlugins = !isNativeServerRequest &&
                         sourceConfiguration.pluginsEnabled &&
                         sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) },
-                    serverSources = serverStreams.sources(type, videoId, season, episode, forceRefresh)
+                    serverSources = serverStreams.sources(type, videoId, season, episode, forceRefresh),
+                    priorityBingeGroup = priorityBingeGroup,
+                    preferredPluginOnly = preferredPluginOnly
                 )
             }
         )
@@ -135,7 +147,8 @@ class StreamRepositoryImpl @Inject constructor(
         type: String,
         videoId: String,
         season: Int?,
-        episode: Int?
+        episode: Int?,
+        preferredPluginOnly: Boolean = false
     ): StreamSearchRequestKey = StreamSearchRequestKey(
         profileId = sourceConfiguration.profileId,
         type = type.lowercase(),
@@ -151,7 +164,8 @@ class StreamRepositoryImpl @Inject constructor(
             debridPresentationConfiguration = sourceConfiguration.debridSettings
                 .withoutRawCredentials()
                 .toString(),
-            serverRevision = serverStreams.revision
+            serverRevision = serverStreams.revision,
+            preferredPluginOnly = preferredPluginOnly
         )
     )
 
@@ -188,7 +202,9 @@ class StreamRepositoryImpl @Inject constructor(
         addons: List<Addon>,
         debridSettings: DebridSettings,
         hasCompatiblePlugins: Boolean,
-        serverSources: List<ServerStreamSource>
+        serverSources: List<ServerStreamSource>,
+        priorityBingeGroup: String?,
+        preferredPluginOnly: Boolean
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         emit(NetworkResult.Loading)
 
@@ -322,6 +338,8 @@ class StreamRepositoryImpl @Inject constructor(
                                         pluginSource = pluginRequest.source,
                                         season = pluginSeason,
                                         episode = pluginEpisode,
+                                        priorityBingeGroup = priorityBingeGroup,
+                                        preferredPluginOnly = preferredPluginOnly,
                                         resultChannel = resultChannel
                                     )
                                     emit(Unit)
@@ -376,7 +394,8 @@ class StreamRepositoryImpl @Inject constructor(
         groupPluginsByRepository: Boolean,
         pluginRepositories: List<PluginRepository>,
         debridPresentationConfiguration: String,
-        serverRevision: Int
+        serverRevision: Int,
+        preferredPluginOnly: Boolean = false
     ): String = buildString {
         append("addons:")
         addons.forEach { addon ->
@@ -394,6 +413,7 @@ class StreamRepositoryImpl @Inject constructor(
         }
         append("|debrid:").append(debridPresentationConfiguration)
         append("|servers:").append(serverRevision)
+        if (preferredPluginOnly) append("|preferredPluginOnly")
     }.sha256()
 
     private fun DebridSettings.withoutRawCredentials(): DebridSettings = copy(
@@ -498,6 +518,8 @@ class StreamRepositoryImpl @Inject constructor(
         pluginSource: String,
         season: Int?,
         episode: Int?,
+        priorityBingeGroup: String?,
+        preferredPluginOnly: Boolean,
         resultChannel: Channel<AddonStreams>
     ) {
         // Check if plugins are enabled
@@ -521,7 +543,9 @@ class StreamRepositoryImpl @Inject constructor(
                 tmdbId = pluginId,
                 mediaType = mediaType,
                 season = season,
-                episode = episode
+                episode = episode,
+                priorityBingeGroup = priorityBingeGroup,
+                preferredPluginOnly = preferredPluginOnly
             ).collect { (scraper, results) ->
                 if (results.isNotEmpty()) {
                     val addonName = scraper.pluginAddonName(groupByRepository, repositoriesById)
@@ -569,18 +593,14 @@ class StreamRepositoryImpl @Inject constructor(
             pluginSourceName = scraper.name,
             addonLogo = null,
             description = buildDescription(this),
-            behaviorHints = if (headers != null || audioDelayMs != null || audioDelayLanguage != null) {
-                StreamBehaviorHints(
-                    notWebReady = null,
-                    bingeGroup = null,
-                    countryWhitelist = null,
-                    proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
-                    audioDelayMs = audioDelayMs,
-                    audioDelayLanguage = audioDelayLanguage
-                )
-            } else {
-                null
-            },
+            behaviorHints = StreamBehaviorHints(
+                notWebReady = null,
+                bingeGroup = pluginBingeGroup(scraper.id),
+                countryWhitelist = null,
+                proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
+                audioDelayMs = audioDelayMs,
+                audioDelayLanguage = audioDelayLanguage
+            ),
             infoHash = infoHash,
             fileIdx = null,
             ytId = null,

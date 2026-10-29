@@ -147,6 +147,17 @@ data class ExternalPluginEntry(
     val repositoryUrl: String? = null
 )
 
+const val PLUGIN_BINGE_GROUP_PREFIX = "local-plugin-"
+
+/** Stable binge group for one plugin provider, so autoplay can reuse that provider. */
+fun pluginBingeGroup(scraperId: String): String = "$PLUGIN_BINGE_GROUP_PREFIX$scraperId"
+
+fun scraperIdFromPluginBingeGroup(bingeGroup: String?): String? {
+    val value = bingeGroup?.trim().orEmpty()
+    if (!value.startsWith(PLUGIN_BINGE_GROUP_PREFIX)) return null
+    return value.removePrefix(PLUGIN_BINGE_GROUP_PREFIX).takeIf { it.isNotBlank() }
+}
+
 /**
  * Convert LocalScraperResult to Stream
  */
@@ -176,7 +187,7 @@ fun LocalScraperResult.toStream(scraper: ScraperInfo): com.nuvio.tv.domain.model
         externalUrl = null,
         behaviorHints = StreamBehaviorHints(
             notWebReady = null,
-            bingeGroup = "local-plugin-${scraper.id}",
+            bingeGroup = pluginBingeGroup(scraper.id),
             countryWhitelist = null,
             proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
             audioDelayMs = audioDelayMs,

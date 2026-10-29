@@ -788,7 +788,8 @@ class StreamScreenViewModel @Inject constructor(
                     videoId = videoId,
                     season = season,
                     episode = episode,
-                    forceRefresh = forceRefresh
+                    forceRefresh = forceRefresh,
+                    priorityBingeGroup = persistedBingeGroup
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {
@@ -1546,6 +1547,7 @@ class StreamScreenViewModel @Inject constructor(
      */
     fun getStreamForPlayback(stream: Stream, saveLastLink: Boolean = true): StreamPlaybackInfo {
         cancelStreamsLoad()
+        pluginManager.recordPluginProviderPlay(stream)
         val playbackInfo = StreamPlaybackInfo(
             url = stream.getStreamUrl(),
             title = _uiState.value.title,

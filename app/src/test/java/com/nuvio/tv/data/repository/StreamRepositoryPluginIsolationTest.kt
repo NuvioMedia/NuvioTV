@@ -16,6 +16,7 @@ import com.nuvio.tv.domain.model.AddonResource
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.domain.model.LocalScraperResult
+import com.nuvio.tv.domain.model.pluginBingeGroup
 import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.RepositoryType
 import com.nuvio.tv.domain.model.ScraperInfo
@@ -145,7 +146,9 @@ class StreamRepositoryPluginIsolationTest {
             listOf(PluginRepository(id = "repo", name = "Repository", url = "https://repo.example"))
         )
         coEvery { harness.tmdbService.ensureTmdbId("tt1341338", "movie") } returns "123"
-        every { harness.pluginManager.executeScrapersStreaming("123", "movie", null, null) } returns
+        every {
+            harness.pluginManager.executeScrapersStreaming("123", "movie", null, null, null, false)
+        } returns
             flowOf(*scrapers.map { scraper ->
                 scraper to listOf(LocalScraperResult(
                     title = "Shared title",
@@ -164,6 +167,7 @@ class StreamRepositoryPluginIsolationTest {
         )
         val streams = pluginGroups.flatMap { it.streams }
         assertEquals(scrapers.map { it.name }, streams.map { it.pluginSourceName })
+        assertEquals(scrapers.map { pluginBingeGroup(it.id) }, streams.map { it.behaviorHints?.bingeGroup })
         assertEquals(listOf("Shared title", "Shared title"), streams.map { it.title })
         assertTrue(streams.all { stream ->
             stream.addonName == if (groupByRepository) "Repository" else stream.pluginSourceName
