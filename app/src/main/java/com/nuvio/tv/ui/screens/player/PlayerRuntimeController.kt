@@ -106,6 +106,7 @@ class PlayerRuntimeController(
     internal val tvRecommendationManager: com.nuvio.tv.core.recommendations.TvRecommendationManager,
     internal val serverPlayback: ServerPlayback,
     internal val serverStreams: ServerStreams,
+    internal val usenetSourceSettings: com.nuvio.tv.core.usenet.UsenetSourceSettings,
     internal val party: com.nuvio.tv.core.party.PartyRepository,
     internal val profileId: Int,
     savedStateHandle: SavedStateHandle,

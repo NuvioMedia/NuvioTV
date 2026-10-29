@@ -34,6 +34,9 @@ import com.nuvio.tv.core.server.TraktSourceSearchResultInfo
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
 import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
+import com.nuvio.tv.core.usenet.BuiltInUsenetOrder
+import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
+import com.nuvio.tv.core.usenet.UsenetSourceSettings
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
@@ -54,6 +57,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,6 +78,7 @@ class AddonManagerViewModel @Inject constructor(
     private val profileManager: ProfileManager,
     private val tmdbCollectionSourceResolver: TmdbCollectionSourceResolver,
     private val traktPublicListSourceResolver: TraktPublicListSourceResolver,
+    private val usenetSourceSettings: UsenetSourceSettings,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -101,6 +107,7 @@ class AddonManagerViewModel @Inject constructor(
 
     init {
         observeInstalledAddons()
+        observeBuiltInUsenet()
         observeCatalogPreferences()
         observeCollections()
         loadLogoBytes()
@@ -221,11 +228,40 @@ class AddonManagerViewModel @Inject constructor(
     }
 
     fun moveAddonUp(baseUrl: String) {
-        reorderAddon(baseUrl, -1)
+        if (_uiState.value.builtInUsenet != null) moveWithBuiltInUsenet(baseUrl, -1) else reorderAddon(baseUrl, -1)
     }
 
     fun moveAddonDown(baseUrl: String) {
-        reorderAddon(baseUrl, 1)
+        if (_uiState.value.builtInUsenet != null) moveWithBuiltInUsenet(baseUrl, 1) else reorderAddon(baseUrl, 1)
+    }
+
+    fun moveBuiltInUsenetUp() = moveWithBuiltInUsenet(null, -1)
+
+    fun moveBuiltInUsenetDown() = moveWithBuiltInUsenet(null, 1)
+
+    fun setBuiltInUsenetEnabled(enabled: Boolean) = updateBuiltInUsenet { it.copy(enabled = enabled) }
+
+    /** Moves an addon, or built-in Usenet when [baseUrl] is null, in the list that shows both. */
+    private fun moveWithBuiltInUsenet(baseUrl: String?, direction: Int) {
+        val state = _uiState.value
+        val usenetIndex = state.builtInUsenetIndex ?: return
+        val urls = state.installedAddons.map { it.baseUrl }
+        val move = BuiltInUsenetOrder.move(urls, usenetIndex, baseUrl, direction) ?: return
+        if (move.addonUrls != urls) {
+            viewModelScope.launch { addonRepository.setAddonOrder(move.addonUrls) }
+        } else {
+            updateBuiltInUsenet { it.copy(addonsAbove = move.addonsAbove) }
+        }
+    }
+
+    /** Synchronous so that quick successive moves never build on a stale configuration. */
+    private fun updateBuiltInUsenet(change: (UsenetSourceConfiguration) -> UsenetSourceConfiguration) {
+        if (isReadOnly) return
+        runCatching {
+            val updated = change(usenetSourceSettings.read())
+            usenetSourceSettings.update(updated)
+            _uiState.update { it.copy(builtInUsenet = BuiltInUsenetRow(updated.enabled, updated.addonsAbove)) }
+        }
     }
 
     private fun reorderAddon(baseUrl: String, direction: Int) {
@@ -808,6 +844,15 @@ class AddonManagerViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    private fun observeBuiltInUsenet() {
+        viewModelScope.launch {
+            usenetSourceSettings.snapshots.flowOn(Dispatchers.IO).collectLatest { (_, result) ->
+                val row = result.getOrNull()?.takeIf { it.configured }?.let { BuiltInUsenetRow(it.enabled, it.addonsAbove) }
+                _uiState.update { it.copy(builtInUsenet = row) }
+            }
         }
     }
 
