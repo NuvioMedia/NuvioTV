@@ -337,12 +337,15 @@ android {
     sourceSets {
         getByName("main") {
             jniLibs.srcDirs("src/main/jniLibs")
+            jniLibs.srcDir(layout.buildDirectory.dir("generated/usenet/jniLibs"))
+            assets.srcDir(rootProject.file("native/usenet/licenses"))
         }
     }
 
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            keepDebugSymbols += "**/libnuvio_usenet.so"
             // Keep one consistent native set across dependencies.
             pickFirsts += listOf(
                 "lib/*/libc++_shared.so",
@@ -477,6 +480,8 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.moshi)
     implementation(libs.okhttp)
+    // Bounded-time matching for native stream profile rules.
+    implementation("com.google.re2j:re2j:1.8")
     implementation(libs.okhttp.logging)
     implementation(libs.moshi)
     ksp(libs.moshi.codegen)
@@ -600,6 +605,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.espresso.core)
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("io.mockk:mockk:1.13.12")
@@ -607,3 +613,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
+extra["usenetSdkDirectory"] = android.sdkDirectory.absolutePath
+extra["usenetNdkVersion"] = android.ndkVersion
+apply(from = rootProject.file("native/usenet/android.gradle.kts"))

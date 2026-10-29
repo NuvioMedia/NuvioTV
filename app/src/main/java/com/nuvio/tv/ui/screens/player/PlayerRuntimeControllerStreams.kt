@@ -225,6 +225,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
 
         val installedAddons = streamAddonsFor(vid)
         val installedAddonOrder = installedAddons.map { it.displayName }
+        val sourceOrder = streamSourceOrder(installedAddons)
         val installedAddonNames = installedAddonOrder.toSet()
         val preferredServerNames = serverStreams.preferredSourceNames(type, vid)
         var debridPreparationLaunched = false
@@ -243,7 +244,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
-                    val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, installedAddonOrder, preferredServerNames)
+                    val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, sourceOrder, preferredServerNames)
                     val allStreams = addonStreams.flatMap { it.streams }
                     val availableAddons = addonStreams.map { it.addonName }
                     _uiState.update {
@@ -852,6 +853,7 @@ private fun PlayerRuntimeController.openExternalStreamInBrowser(
 internal fun PlayerRuntimeController.switchToSourceStream(
     stream: Stream
 ) {
+    if (resolveUsenetForSwitch(stream, fromEpisodePanel = false)) return
     sourceStreamsScope?.cancel()
     sourceStreamsScope = null
     sourceStreamsJob = null
@@ -943,6 +945,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
         return
     }
 
+    com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.releaseIfDifferent(url)
     // Stop any active torrent before switching to HTTP stream
     stopTorrentStream()
 
@@ -1027,16 +1030,22 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                     )
                 )
                 player.playWhenReady = true
+                com.nuvio.tv.core.usenet.UsenetStartupDiagnostics.mark(playbackUrl, "prepare")
                 player.prepare()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_play_stream_failed)) }
             }
         }
     } ?: run {
-        initializePlayer(playbackUrl, playbackHeaders)
+        val fallbackPosition = streamFallbackResumePosition
+        if (fallbackPosition != null) {
+            pendingResumeProgress = null
+            _uiState.update { it.copy(pendingSeekPosition = fallbackPosition) }
+        }
+        initializePlayer(playbackUrl, playbackHeaders, startPaused = fallbackPosition != null && streamFallbackStartPaused)
     }
 
-    loadSavedProgressFor(currentSeason, currentEpisode)
+    if (streamFallbackResumePosition == null) loadSavedProgressFor(currentSeason, currentEpisode)
 }
 
 internal fun PlayerRuntimeController.dismissEpisodesPanel() {
@@ -1261,6 +1270,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
 
         val installedAddons = streamAddonsFor(video.id)
         val installedAddonOrder = installedAddons.map { it.displayName }
+        val sourceOrder = streamSourceOrder(installedAddons)
         val installedAddonNames = installedAddonOrder.toSet()
         val preferredServerNames = serverStreams.preferredSourceNames(type, video.id)
         var debridPreparationLaunched = false
@@ -1277,7 +1287,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
-                    val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, installedAddonOrder, preferredServerNames)
+                    val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, sourceOrder, preferredServerNames)
                     val allStreams = addonStreams.flatMap { it.streams }
                     val availableAddons = addonStreams.map { it.addonName }
                     val currentFilter = _uiState.value.episodeSelectedAddonFilter
@@ -1423,8 +1433,14 @@ internal fun PlayerRuntimeController.reloadEpisodeStreams() {
 internal fun PlayerRuntimeController.switchToEpisodeStream(
     stream: Stream,
     forcedTargetVideo: Video? = null,
-    isAutoPlay: Boolean = false
+    isAutoPlay: Boolean = false,
+    continuingSelection: Boolean = false,
+    fallbackStreams: List<Stream>? = null
 ) {
+    if (!continuingSelection) {
+        beginStreamFallbackSession(stream, fallbackStreams ?: _uiState.value.episodeFilteredStreams.ifEmpty { _uiState.value.episodeAllStreams })
+    }
+    if (resolveUsenetForSwitch(stream, fromEpisodePanel = true, forcedTargetVideo, isAutoPlay)) return
     if (openExternalStreamInBrowser(stream = stream, fromEpisodePanel = true)) {
         return
     }
@@ -1473,7 +1489,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
             val resolved = resolveDirectDebridStreamIfNeeded(stream, resolveSeason, resolveEpisode)
             debridResolveJob = null
             if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
-                switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay)
+                switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay, continuingSelection = true)
             } else if (resolved != null) {
                 switchToTorrentEpisodeStream(resolved, forcedTargetVideo, isAutoPlay)
             } else {
@@ -1499,7 +1515,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
                 val resolved = resolveDirectDebridStreamIfNeeded(stream, resolveSeason, resolveEpisode)
                 if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
                     debridResolveJob = null
-                    switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay)
+                    switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay, continuingSelection = true)
                 } else {
                     debridResolveJob = null
                     _uiState.update {
@@ -1521,6 +1537,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
         isAutoPlay = isAutoPlay,
     )
 
+    com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.releaseIfDifferent(url)
     // Stop any active torrent before switching to HTTP stream
     stopTorrentStream()
 
@@ -1912,6 +1929,7 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
 
             val installedAddons = streamAddonsFor(nextVideo.id)
             val installedAddonOrder = installedAddons.map { it.displayName }
+            val sourceOrder = streamSourceOrder(installedAddons)
             val preferredServerNames = serverStreams.preferredSourceNames(type, nextVideo.id)
             val effectiveMode = if (shouldAutoSelectInManualMode) {
                 StreamAutoPlayMode.FIRST_STREAM
@@ -1948,7 +1966,7 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
             val searchSettled = CompletableDeferred<Unit>()
 
             fun trySelectStream(data: List<AddonStreams>): Stream? {
-                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder, preferredServerNames)
+                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, sourceOrder, preferredServerNames)
                 val allStreams = orderedStreams.flatMap { it.streams }
                 return StreamAutoPlaySelector.selectAutoPlayStream(
                     streams = allStreams,
@@ -1970,7 +1988,7 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
 
             fun tryBingeGroupOnly(data: List<AddonStreams>): Stream? {
                 if (currentStreamBingeGroup == null || !playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode) return null
-                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder, preferredServerNames)
+                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, sourceOrder, preferredServerNames)
                 val allStreams = orderedStreams.flatMap { it.streams }
                 // Early: binge group + filename match (most precise)
                 val nextFilename = com.nuvio.tv.core.player.FilenameEpisodeMatcher.buildNextFilename(
@@ -2014,7 +2032,7 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     nextEpisode = nextVideo.episode ?: 0
                 ) ?: currentFilename?.takeIf { it.isNotBlank() }
                     ?: return null
-                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder, preferredServerNames)
+                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, sourceOrder, preferredServerNames)
                 return orderedStreams.flatMap { it.streams }.firstOrNull { stream ->
                     !stream.isExternal() &&
                         com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
@@ -2109,7 +2127,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
             }
 
             val streamToPlay = selectedStream?.let {
-                resolveDirectDebridStreamIfNeeded(it, nextVideo.season, nextVideo.episode)
+                if (it.isUsenet()) it
+                else resolveDirectDebridStreamIfNeeded(it, nextVideo.season, nextVideo.episode)
             }
             if (streamToPlay != null) {
                 val sourceName = (streamToPlay.name?.takeIf { it.isNotBlank() } ?: streamToPlay.addonName).trim()
@@ -2137,7 +2156,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                 switchToEpisodeStream(
                     stream = streamToPlay,
                     forcedTargetVideo = nextVideo,
-                    isAutoPlay = !userInitiated
+                    isAutoPlay = !userInitiated,
+                    fallbackStreams = StreamAutoPlaySelector.orderAddonStreams(lastSuccessData.orEmpty(), sourceOrder).flatMap { it.streams }
                 )
             } else {
                 _uiState.update {

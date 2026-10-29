@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.player
 
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.usenet.BuiltInUsenetService
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
@@ -50,6 +51,7 @@ object StreamAutoPlaySelector {
         }
         return stream.isTorrent() ||
             stream.isDirectDebrid() ||
+            stream.isUsenet() ||
             // A YouTube id is resolved to a playable URL on the device when the stream is played.
             // Builds without in-app YouTube playback open the watch page instead, an external link.
             (AppFeaturePolicy.inAppTrailerPlaybackEnabled && stream.youTubeIdToResolve() != null)
@@ -77,16 +79,18 @@ object StreamAutoPlaySelector {
             source
         }
 
+        // Built-in Usenet is a source the user set up like an addon, not a plugin.
+        fun isAddonStream(stream: Stream) =
+            stream.addonName in installedAddonNames || stream.addonName == BuiltInUsenetService.GROUP_NAME
         val sourceScopedStreams = when (effectiveSource) {
             StreamAutoPlaySource.ALL_SOURCES -> streams
-            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { it.serverTarget != null || it.addonName in installedAddonNames }
-            StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { it.addonName !in installedAddonNames }
+            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { it.serverTarget != null || isAddonStream(it) }
+            StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { !isAddonStream(it) }
         }
         val candidateStreams = sourceScopedStreams.filter { stream ->
-            val isAddonStream = stream.addonName in installedAddonNames
             if (stream.serverTarget != null) {
                 true
-            } else if (isAddonStream) {
+            } else if (isAddonStream(stream)) {
                 selectedAddons.isEmpty() || stream.addonName in selectedAddons
             } else {
                 selectedPlugins.isEmpty() || stream.addonName in selectedPlugins
