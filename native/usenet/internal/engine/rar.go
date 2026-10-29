@@ -31,11 +31,13 @@ type rarBlock struct {
 	version                             int
 	main, template                      bool
 	firstVolume                         bool // Main header of a set's first volume.
+	multiVolume                         bool // Main header of a volume, not a single archive.
 	mainLayout                          rarMainLayout
 	packedWidth                         int
 	crypt                               *rarCrypt // Encrypted file data.
 	headerCrypt                         *rarCrypt // Following headers are encrypted (-hp).
 	headerPrefix                        int64     // On-disk IV/salt before an encrypted header.
+	header                              int64     // Plain header length: data starts this far after it.
 }
 
 type rarMainLayout struct {
@@ -173,8 +175,9 @@ func rar4Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 	kind := h[2]
 	b.main = kind == 0x73
 	b.firstVolume = b.main && flags&0x0100 != 0
+	b.multiVolume = b.main && flags&0x0001 != 0
 	b.template = (b.main && n == 13 && flags&0x40 == 0) || kind == 0x74
-	b.data = pos + int64(n)
+	b.data, b.header = pos+int64(n), int64(n)
 	b.next = b.data
 	if flags&0x8000 != 0 {
 		if len(h) < 11 {
@@ -305,7 +308,8 @@ func rar5Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 		b.packedWidth = x.pos - start
 		b.template = true
 	}
-	b.data = pos + 4 + int64(len(h))
+	b.header = 4 + int64(len(h))
+	b.data = pos + b.header
 	b.next = b.data + b.packed
 	if b.packed < 0 || b.packed > volumeSize-b.data {
 		return b, errors.New("RAR5 data exceeds volume")
@@ -337,8 +341,10 @@ func rar5Block(r io.ReaderAt, volumeSize, pos int64) (rarBlock, error) {
 			b.volume = 0
 		}
 		b.firstVolume = b.volume == 0
+		b.multiVolume = af&1 != 0
 		b.mainLayout = rarMainLayout{int64(size), nvar, x.pos - start}
-		b.template = flags&^uint64(5) == 0 && af == 3 &&
+		// A locked archive (0x10) keeps the layout of an unlocked one.
+		b.template = flags&^uint64(5) == 0 && af&^0x10 == 3 &&
 			extra == uint64(len(x.b)-x.pos) && rarStableMainExtra(x.b[x.pos:])
 	}
 	if kind == 2 {
@@ -882,6 +888,7 @@ type rarPrediction struct {
 	volumeSize int64
 	version    int
 	verified   []bool
+	known      int // Leading parts read from real headers; the cursor sits after them.
 }
 
 // predictRAR reports false only when ctx ended it before an answer; any other
@@ -937,7 +944,7 @@ func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) bool {
 		return true
 	}
 	parts = append(parts, extent{file, last.data, last.packed, start})
-	prediction := &rarPrediction{base: base, volumeSize: volumeSize, version: b.version, verified: make([]bool, len(parts))}
+	prediction := &rarPrediction{base: base, volumeSize: volumeSize, version: b.version, verified: make([]bool, len(parts)), known: 2}
 	prediction.verified[0], prediction.verified[1], prediction.verified[len(parts)-1] = true, true, true
 	c.mu.Lock()
 	c.parts, c.predicted, c.complete = parts, prediction, true
@@ -945,8 +952,10 @@ func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) bool {
 	return true
 }
 
-// Called with layoutGate held. Keep the original cursor at part3 so a failed
-// prediction can be discarded without losing the authoritative prefix.
+// Called with layoutGate held. Keep the original cursor after the known parts
+// so a failed prediction can be discarded without losing the authoritative
+// prefix. Only a listed entry's last part is predicted (rar_in_rar.go): it
+// ends the file, and its volume may be the set's short last one.
 func (c *Content) verifyRARPart(ctx context.Context, off int64) error {
 	c.mu.RLock()
 	prediction := c.predicted
@@ -956,6 +965,7 @@ func (c *Content) verifyRARPart(ctx context.Context, off int64) error {
 		return nil
 	}
 	part := c.parts[i]
+	last := i == len(c.parts)-1
 	c.mu.RUnlock()
 	layoutStart := time.Now()
 	cur := rarCursor{files: c.cursor.files, index: prediction.base + i}
@@ -964,16 +974,16 @@ func (c *Content) verifyRARPart(ctx context.Context, off int64) error {
 	if err != nil {
 		return fmt.Errorf("checking RAR continuation: %w", err)
 	}
-	if f == part.file && b.version == prediction.version && b.before && b.after &&
+	if f == part.file && b.version == prediction.version && b.before && b.after != last &&
 		!b.directory && b.name == c.Name && b.unpacked == c.Size &&
-		b.data == part.offset && b.packed == part.length && f.Size() == prediction.volumeSize {
+		b.data == part.offset && b.packed == part.length && (last || f.Size() == prediction.volumeSize) {
 		c.mu.Lock()
 		prediction.verified[i] = true
 		c.mu.Unlock()
 		return nil
 	}
 	c.mu.Lock()
-	c.parts, c.predicted, c.complete = c.parts[:2], nil, false
+	c.parts, c.predicted, c.complete = c.parts[:prediction.known], nil, false
 	c.mu.Unlock()
 	return c.extend(ctx, off)
 }
