@@ -20,9 +20,10 @@ class AnimeSubStreamMappingTest {
         val dto = checkNotNull(adapter.fromJson(json)).streams!!.single()
         val stream = dto.toDomain("AnimeSub+", null)
         val url = checkNotNull(dto.url)
+        val filename = checkNotNull(dto.behaviorHints?.filename)
 
         assertEquals(url, stream.getStreamUrl())
-        assertEquals(dto.behaviorHints?.filename, stream.behaviorHints?.filename)
+        assertEquals(filename, stream.behaviorHints?.filename)
         assertNull(stream.getEffectiveFileIdx())
         assertFalse(stream.isTorrent())
         assertFalse(stream.isDirectDebrid())
