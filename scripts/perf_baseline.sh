@@ -26,7 +26,7 @@ PROFILE_COLLECT_TASK="${MODULE}:collectNonMinifiedReleaseBaselineProfile"
 # Where the module keeps the additional test output (the json files written by androidx.benchmark).
 ADDITIONAL_OUTPUT_DIR="baselineprofile/build/outputs/connected_android_test_additional_output"
 # The human readable summary of the last run.
-METRICS_FILE="baselineprofile/baseline-metrics.lane-output.md"
+METRICS_FILE="baselineprofile/README.md"
 
 if [ "${OS:-}" = "Windows_NT" ]; then
   GRADLEW="./gradlew.bat"

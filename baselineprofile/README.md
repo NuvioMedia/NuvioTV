@@ -1,4 +1,4 @@
-# Baseline metrics - lane 1 (guard rails)
+# Baseline profiles & frame-metric guard-rails
 
 CURRENT (d14832e1c)
 
