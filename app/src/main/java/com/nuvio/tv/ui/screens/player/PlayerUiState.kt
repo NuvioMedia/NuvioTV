@@ -114,6 +114,8 @@ data class PlayerUiState(
     val isCenterMixAvailable: Boolean = false,
     val showAudioOverlay: Boolean = false,
     val showSubtitleOverlay: Boolean = false,
+    val showLocalSubtitleBrowser: Boolean = false,
+    val localSubtitles: List<Subtitle> = emptyList(),
     val showSubtitleStylePanel: Boolean = false,
     val showSubtitleTimingDialog: Boolean = false,
     val showSubtitleDelayOverlay: Boolean = false,
@@ -246,6 +248,10 @@ data class PlayerUiState(
     val hideTorrentStats: Boolean = true,
     val isLive: Boolean = false
 ) {
+    /** Addon subtitles plus subtitles picked from device storage. */
+    val selectableAddonSubtitles: List<Subtitle>
+        get() = addonSubtitles + localSubtitles
+
     /** Subtitle style to render with, after applying the HDR override for the current video. */
     val effectiveSubtitleStyle: SubtitleStyleSettings
         get() = subtitleStyle.forVideo(isHdrVideo)
@@ -331,6 +337,9 @@ sealed class PlayerEvent {
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
     data object OnDisableSubtitles : PlayerEvent()
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()
+    data object OnOpenLocalSubtitleBrowser : PlayerEvent()
+    data object OnDismissLocalSubtitleBrowser : PlayerEvent()
+    data class OnLocalSubtitleFileChosen(val path: String) : PlayerEvent()
     data class OnSetPlaybackSpeed(val speed: Float) : PlayerEvent()
     data object OnToggleControls : PlayerEvent()
     data object OnShowAudioOverlay : PlayerEvent()
