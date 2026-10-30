@@ -18,6 +18,11 @@ import org.junit.runner.RunWith
  *
  * The metrics are written by androidx.benchmark into the additional test output directory of
  * the module; see `scripts/perf_baseline.sh metrics` for the extraction step.
+ *
+ * A journey that reports a degraded outcome (no title to open, no playable surface, an
+ * unreachable drawer entry) fails the test, because the numbers of a degraded journey do not
+ * describe the guard rail. The `degradedAllowed` runner argument opts a journey out of that
+ * assertion, see `degradedAllowed(journey)`.
  */
 @RunWith(AndroidJUnit4::class)
 class NuvioFrameMetricsBenchmark {
@@ -58,6 +63,10 @@ class NuvioFrameMetricsBenchmark {
     private fun measure(journey: Journey, compilationMode: CompilationMode) {
         val device = uiDevice()
         val packageName = resolveTargetPackage(device)
+        // The journey outcome is collected from inside the measured block: a degraded journey
+        // is still measured, but the test fails afterwards so the numbers are never taken from
+        // a journey that did not reach its target.
+        var degraded: JourneyResult? = null
         benchmarkRule.measureRepeated(
             packageName = packageName,
             metrics = listOf(FrameTimingMetric()),
@@ -69,10 +78,36 @@ class NuvioFrameMetricsBenchmark {
                 device.prepareForJourney(packageName)
             },
             measureBlock = {
-                device.performJourney(journey)
+                val result = device.performJourney(journey)
+                if (result.degraded && degraded == null) {
+                    degraded = result
+                }
             }
         )
+        val outcome = degraded
+        if (outcome != null && !degradedAllowed(journey)) {
+            throw IllegalStateException(
+                "Journey '${outcome.journey.key}' was degraded during the benchmark: " +
+                    (outcome.note.ifBlank { "no detail" })
+            )
+        }
     }
+
+    /**
+     * True when the `degradedAllowed` runner argument opts this journey out of the
+     * degraded-journey assertion.
+     *
+     * The argument holds a comma separated list of journey keys, for example
+     * `-Pandroid.testInstrumentationRunnerArguments.degradedAllowed=player`. The player
+     * journey is the usual one on an emulator without stream sources: the detail screen
+     * trailer is not reachable there, so the journey degrades by design.
+     */
+    private fun degradedAllowed(journey: Journey): Boolean =
+        instrumentationArg("degradedAllowed")
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.contains(journey.key) == true
 
     private companion object {
         /** Minimum number of iterations that still yields a usable median. */
