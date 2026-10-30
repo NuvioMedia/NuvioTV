@@ -74,6 +74,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -390,6 +391,10 @@ fun GridHomeContent(
     // re-composed that subcomposition together with all of its items. The width is now
     // measured once by the box and the grid is composed in this scope.
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    // The box measures in pixels, so the measured width has to be converted with the density
+    // of the screen. Wrapping the raw pixel count in .dp would pretend the grid is as wide as
+    // the screen in pixels, which is far wider than the screen in dp.
+    val density = LocalDensity.current
     var measuredGridWidth by remember { mutableStateOf(screenWidth) }
 
     Box(
@@ -397,7 +402,7 @@ fun GridHomeContent(
             .fillMaxSize()
             .background(NuvioTheme.colors.Background)
             .onSizeChanged { size ->
-                val width = size.width.toFloat().dp
+                val width = with(density) { size.width.toDp() }
                 if (width != measuredGridWidth) measuredGridWidth = width
             }
     ) {

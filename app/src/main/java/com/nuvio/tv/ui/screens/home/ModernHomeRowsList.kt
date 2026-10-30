@@ -255,10 +255,15 @@ internal fun ModernHomeRowsList(
     // The forward halt guard is evaluated once per frame while a vertical drag is running.
     // Reading the layout info on every frame made the drag loop pay for a layout read per
     // frame; as a derived state it is only recomputed when the layout actually changed.
-    val haltForwardState = remember(verticalRowListState, carouselRows) {
+    // The derived state is keyed on the list state only: keying it on the row list as well
+    // meant a deep comparison of every row and every item of the list on each recomposition,
+    // and the row list changes far more often than the list state. The row count is read
+    // from the updated-state holder inside the calculation, so a change of the rows still
+    // invalidates the derived state.
+    val haltForwardState = remember(verticalRowListState) {
         derivedStateOf {
             val info = verticalRowListState.layoutInfo
-            val lastIdx = carouselRows.list.size - 1
+            val lastIdx = latestCarouselRowsForLazy.value.list.size - 1
             val lastVisible = info.visibleItemsInfo.lastOrNull { it.index == lastIdx }
             lastIdx >= 0 && lastVisible != null &&
                 lastVisible.offset + lastVisible.size <= info.viewportEndOffset

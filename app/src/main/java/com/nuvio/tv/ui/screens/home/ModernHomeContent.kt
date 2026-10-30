@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -889,11 +890,14 @@ fun ModernHomeContent(
                 }
             }
             // Keep the top-level flag in sync so the row-scroll BackHandler
-            // stays disabled while a fullscreen trailer is visible. The write happens in an
-            // effect: writing a state while the composition is running is a side effect and it
-            // can schedule a recomposition of the whole home content.
+            // stays disabled while a fullscreen trailer is visible. The write happens in a
+            // side effect: writing a state while the composition is running is a side effect
+            // and it can schedule a recomposition of the whole home content. A SideEffect
+            // runs after every successful composition, and writing the same value again is
+            // a no-op for the state, so the flag stays in sync without the extra frame a
+            // LaunchedEffect would add.
             val isTrailerPlayingFullscreen = isTrailerPlayingFullscreenState.value
-            LaunchedEffect(isTrailerPlayingFullscreen) {
+            SideEffect {
                 fullscreenTrailerPlaying.value = isTrailerPlayingFullscreen
             }
             fullscreenTrailerDismiss.value = remember(focusedCatalogSelection, expandedCatalogFocusKey) {

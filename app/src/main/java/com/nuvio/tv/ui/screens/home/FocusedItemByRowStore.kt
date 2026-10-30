@@ -23,12 +23,22 @@ internal class FocusedItemByRowStore {
      *
      * Rows call this while they are composed so their derived state always has a state object
      * to observe. Creating it is a plain map write, it does not trigger any recomposition.
+     * A state that is created during composition is only observed by the readers that read
+     * it afterwards, so a write that happens before that first read is not seen by that
+     * reader - the reader picks up the current value when it reads the state.
      */
     fun stateFor(rowKey: String): MutableIntState =
         states.getOrPut(rowKey) { mutableIntStateOf(0) }
 
-    /** The focused index of [rowKey], `0` when the row has no focus yet. */
-    operator fun get(rowKey: String): Int = states[rowKey]?.intValue ?: 0
+    /**
+     * The focused index of [rowKey], `0` when the row has no focus yet.
+     *
+     * The state object is created on demand through [stateFor], so every reader observes the
+     * row state and a focus change of that row invalidates it. Creating the state is a plain
+     * map write, so a reader that hits a row for the first time does not schedule any
+     * recomposition; the first write to that row is the one that is observed.
+     */
+    operator fun get(rowKey: String): Int = stateFor(rowKey).intValue
 
     /** Moves the focus of [rowKey] to [index]. Only that row is invalidated. */
     operator fun set(rowKey: String, index: Int) {
