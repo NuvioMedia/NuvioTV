@@ -8,6 +8,9 @@ import android.widget.Toast
 import androidx.media3.common.C
 import androidx.media3.extractor.ExtractorsFactory
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncTaps
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.screens.player.autosync.AutoSyncAnalysisOutcome
 import com.nuvio.tv.ui.screens.player.autosync.AutoSyncCandidateScope
@@ -52,7 +55,13 @@ internal fun PlayerRuntimeController.autoSyncExtractorsFactory(
 ): ExtractorsFactory {
     AutoSyncPreferences.ensureLoaded(context)
     if (!AutoSyncPreferences.isEnabled(context)) return delegate
-    val factory = AutoSyncExtractorsFactory(delegate = delegate, sourceKey = url)
+    AudioSyncFallback.initialize(context)
+    val audioDelegate = if (AudioSyncSettings.fallbackEnabled.value) {
+        AudioSyncTaps.wrapExtractors(delegate, url)
+    } else {
+        delegate
+    }
+    val factory = AutoSyncExtractorsFactory(delegate = audioDelegate, sourceKey = url)
     prefetchAutoSyncIndex(url, headers)
     return factory
 }
@@ -77,6 +86,7 @@ internal fun PlayerRuntimeController.runSelectedAutomaticSubtitleSync(subtitle: 
 internal fun PlayerRuntimeController.cancelAutomaticSubtitleSync() {
     automaticSubtitleSyncJob?.cancel()
     automaticSubtitleSyncJob = null
+    AudioSyncFallback.stop(this)
 }
 
 internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
@@ -111,6 +121,7 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
     }
 
     automaticSubtitleSyncJob?.cancel()
+    AudioSyncFallback.stop(this)
 
     val sourceUrlAtStart = currentStreamUrl
     val sourceHeadersAtStart = currentHeaders.toMap()
@@ -138,6 +149,9 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
         .buildUpon()
         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
         .build()
+
+    val audioFallback = AudioSyncFallback.of(this)
+    audioFallback?.arm()
 
     automaticSubtitleSyncJob = scope.launch {
         launch {
@@ -196,10 +210,16 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
                 if (activeSidecarSubtitleKey == null) {
                     startSidecarAddonSubtitle(selectedSubtitle)
                 }
-                showAutoSyncToast(context.buildAutoSyncFailureToast(analysisOutcome))
+                val audioTakesOver = analysisOutcome != AutoSyncAnalysisOutcome.SUBTITLE_UNAVAILABLE &&
+                    audioFallback?.takeOver(selectedUrl) == true
+                if (!audioTakesOver) {
+                    audioFallback?.disarm()
+                    showAutoSyncToast(context.buildAutoSyncFailureToast(analysisOutcome))
+                }
                 return@launch
             }
 
+            audioFallback?.disarm()
             if (currentStreamUrl != sourceUrlAtStart) return@launch
             val activeSubtitleUrl = _uiState.value.selectedAddonSubtitle?.url
             if (activeSubtitleUrl != selectedUrl && activeSubtitleUrl != resolved.subtitleUrl) {
@@ -277,6 +297,7 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
         } catch (cancel: CancellationException) {
             throw cancel
         } catch (error: Throwable) {
+            audioFallback?.disarm()
             Log.w(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 failed", error)
             if (!stillRelevant()) return@launch
             if (activeSidecarSubtitleKey == null) {

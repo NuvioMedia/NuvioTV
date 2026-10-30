@@ -83,6 +83,7 @@ internal fun PlayerRuntimeController.releasePlayer(
     hideSubtitleDelayOverlayJob?.cancel()
     subtitleAutoSyncLoadJob?.cancel()
     cancelAutomaticSubtitleSync() // AutoSync hook
+    com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback.release(this)
     stopSidecarAddonSubtitle(clearView = true)
     subtitleTimingRefreshJob?.cancel()
     subtitleTimingRefreshJob = null
