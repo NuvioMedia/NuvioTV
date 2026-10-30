@@ -23,6 +23,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -64,6 +65,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -105,6 +107,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -122,6 +125,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
+import com.nuvio.tv.ui.theme.getBoldFontFamily
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
 import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
@@ -3460,18 +3465,56 @@ private fun PeopleSectionTabButton(
                 shape = RoundedCornerShape(NuvioTheme.radii.xl)
             )
         ),
-        scale = CardDefaults.scale(focusedScale = 1.03f)
+        scale = CardDefaults.scale(focusedScale = 1f)
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleLarge,
-            color = when {
-                isFocused -> NuvioTheme.colors.TextPrimary
-                selected -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
-                else -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.55f)
-            },
-            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xxs, vertical = NuvioTheme.spacing.xxs)
+        val textColor = when {
+            isFocused -> NuvioTheme.colors.TextPrimary
+            selected -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
+            else -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.55f)
+        }
+        val regularTextStyle = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.Normal
         )
+        val boldTextStyle = regularTextStyle.copy(
+            fontFamily = getBoldFontFamily(NuvioTheme.currentFont),
+            fontWeight = FontWeight.Bold
+        )
+        val focusScale by animateFloatAsState(
+            targetValue = if (isFocused) 1.04f else 1f,
+            animationSpec = tween(durationMillis = 220),
+            label = "tabFocusScale"
+        )
+
+        Box(
+            modifier = Modifier
+                .width(IntrinsicSize.Max)
+                .padding(horizontal = NuvioTheme.spacing.xxs, vertical = NuvioTheme.spacing.xxs),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                style = regularTextStyle,
+                modifier = Modifier
+                    .alpha(0f)
+                    .clearAndSetSemantics {}
+            )
+            Text(
+                text = label,
+                style = boldTextStyle,
+                modifier = Modifier
+                    .alpha(0f)
+                    .clearAndSetSemantics {}
+            )
+            Text(
+                text = label,
+                style = if (isFocused) boldTextStyle else regularTextStyle,
+                color = textColor,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = focusScale
+                    scaleY = focusScale
+                }
+            )
+        }
     }
 }
 

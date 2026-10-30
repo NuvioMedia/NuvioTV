@@ -1,9 +1,11 @@
 package com.nuvio.tv.ui.theme
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -32,10 +34,29 @@ val OpenSansFamily = FontFamily(
     Font(R.font.opensans_variable, FontWeight.Bold)
 )
 
+@OptIn(ExperimentalTextApi::class)
+private fun variableFont(resourceId: Int, weight: FontWeight) = Font(
+    resId = resourceId,
+    weight = weight,
+    variationSettings = FontVariation.Settings(
+        FontVariation.weight(weight.weight)
+    )
+)
+
 fun getFontFamily(appFont: AppFont): FontFamily = when (appFont) {
     AppFont.INTER -> InterFamily
     AppFont.DM_SANS -> DMSansFamily
     AppFont.OPEN_SANS -> OpenSansFamily
+}
+
+@OptIn(ExperimentalTextApi::class)
+fun getBoldFontFamily(appFont: AppFont): FontFamily {
+    val resourceId = when (appFont) {
+        AppFont.INTER -> R.font.inter_variable
+        AppFont.DM_SANS -> R.font.dm_sans_variable
+        AppFont.OPEN_SANS -> R.font.opensans_variable
+    }
+    return FontFamily(variableFont(resourceId, FontWeight.Bold))
 }
 
 @Immutable
