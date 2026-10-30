@@ -595,7 +595,7 @@ class StreamRepositoryImpl @Inject constructor(
             description = buildDescription(this),
             behaviorHints = StreamBehaviorHints(
                 notWebReady = null,
-                bingeGroup = pluginBingeGroup(scraper.id),
+                bingeGroup = pluginBingeGroup(scraperId = scraper.id, url = url, name = name, title = title, language = language, quality = quality),
                 countryWhitelist = null,
                 proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) },
                 audioDelayMs = audioDelayMs,

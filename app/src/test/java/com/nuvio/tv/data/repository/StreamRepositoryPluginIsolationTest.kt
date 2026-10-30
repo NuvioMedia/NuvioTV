@@ -167,7 +167,7 @@ class StreamRepositoryPluginIsolationTest {
         )
         val streams = pluginGroups.flatMap { it.streams }
         assertEquals(scrapers.map { it.name }, streams.map { it.pluginSourceName })
-        assertEquals(scrapers.map { pluginBingeGroup(it.id) }, streams.map { it.behaviorHints?.bingeGroup })
+        assertEquals(scrapers.map { pluginBingeGroup(scraperId = it.id, url = "https://stream.example/" + it.id + ".m3u8", title = "Shared title") }, streams.map { it.behaviorHints?.bingeGroup })
         assertEquals(listOf("Shared title", "Shared title"), streams.map { it.title })
         assertTrue(streams.all { stream ->
             stream.addonName == if (groupByRepository) "Repository" else stream.pluginSourceName

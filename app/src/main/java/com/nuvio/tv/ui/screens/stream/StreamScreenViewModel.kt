@@ -594,21 +594,25 @@ class StreamScreenViewModel @Inject constructor(
                     } else null
                     // Try binge group + filename first
                     val bingeAndFilename = if (nextFilename != null) {
-                        allStreams.firstOrNull { stream ->
-                            !stream.isExternal() &&
-                                stream.behaviorHints?.bingeGroup == persistedBingeGroup &&
-                                com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
-                                    stream.behaviorHints?.filename, nextFilename
-                                )
-                        }
+                        StreamAutoPlaySelector.selectBingeGroupMatch(
+                            allStreams.filter { stream ->
+                                !stream.isExternal() &&
+                                    com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
+                                        stream.behaviorHints?.filename, nextFilename
+                                    )
+                            },
+                            persistedBingeGroup
+                        )
                     } else null
                     // Try binge group + infoHash when filename match failed or was unavailable
                     val bingeAndInfoHash = if (bingeAndFilename == null && persistedInfoHash != null) {
-                        allStreams.firstOrNull { stream ->
-                            !stream.isExternal() &&
-                                stream.behaviorHints?.bingeGroup == persistedBingeGroup &&
-                                stream.infoHash?.equals(persistedInfoHash, ignoreCase = true) == true
-                        }
+                        StreamAutoPlaySelector.selectBingeGroupMatch(
+                            allStreams.filter { stream ->
+                                !stream.isExternal() &&
+                                    stream.infoHash?.equals(persistedInfoHash, ignoreCase = true) == true
+                            },
+                            persistedBingeGroup
+                        )
                     } else null
                     // Fall back to binge group alone
                     bingeAndFilename ?: bingeAndInfoHash ?: StreamAutoPlaySelector.selectAutoPlayStream(

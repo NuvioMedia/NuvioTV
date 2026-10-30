@@ -6,6 +6,8 @@ import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamDebridCacheState
+import com.nuvio.tv.domain.model.indexOfPluginBingeMatch
+import com.nuvio.tv.domain.model.scraperIdFromPluginBingeGroup
 
 object StreamAutoPlaySelector {
     fun orderAddonStreams(
@@ -55,7 +57,25 @@ object StreamAutoPlaySelector {
             (AppFeaturePolicy.inAppTrailerPlaybackEnabled && stream.youTubeIdToResolve() != null)
     }
 
+    /**
+     * Exact binge group for addons. For a local plugin, the stream whose identity tokens
+     * still match after the next episode's own shared words are removed.
+     */
+    fun selectBingeGroupMatch(streams: List<Stream>, targetBingeGroup: String): Stream? {
+        if (targetBingeGroup.isBlank()) return null
+        val playableStreams = streams.filter { !it.isExternal() && isPlayable(it) }
+        if (playableStreams.isEmpty()) return null
 
+        val exact = playableStreams.firstOrNull { it.behaviorHints?.bingeGroup == targetBingeGroup }
+        if (exact != null) return exact
+        if (scraperIdFromPluginBingeGroup(targetBingeGroup) == null) return null
+
+        val index = indexOfPluginBingeMatch(
+            targetBingeGroup,
+            playableStreams.map { it.behaviorHints?.bingeGroup }
+        )
+        return index?.let { playableStreams[it] }
+    }
 
     fun selectAutoPlayStream(
         streams: List<Stream>,
@@ -100,11 +120,7 @@ object StreamAutoPlaySelector {
         // not be limited by autoplay source/addon selection filters.
         val targetBingeGroup = preferredBingeGroup?.trim().orEmpty()
         if (preferBingeGroupInSelection && targetBingeGroup.isNotEmpty()) {
-            val bingeGroupMatch = streams.firstOrNull { stream ->
-                !stream.isExternal() &&
-                    stream.behaviorHints?.bingeGroup == targetBingeGroup &&
-                    isPlayable(stream)
-            }
+            val bingeGroupMatch = selectBingeGroupMatch(streams, targetBingeGroup)
             if (bingeGroupMatch != null) return bingeGroupMatch
             // When bingeGroupOnly is set (MANUAL mode with only binge-group
             // preference enabled), don't fall back to a non-matching stream —
@@ -121,7 +137,7 @@ object StreamAutoPlaySelector {
             StreamAutoPlayMode.FIRST_STREAM -> candidateStreams.firstOrNull { isPlayable(it) }
             StreamAutoPlayMode.REGEX_MATCH -> {
                 val pattern = regexPattern.trim()
- 
+
                 // Try to compile the user regex
                 val userRegex = runCatching { Regex(pattern, RegexOption.IGNORE_CASE) }.getOrNull()
                 if (userRegex == null) return null

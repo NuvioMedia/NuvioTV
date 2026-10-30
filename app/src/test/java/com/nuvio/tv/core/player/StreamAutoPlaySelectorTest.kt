@@ -5,6 +5,7 @@ import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.pluginBingeGroup
 import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.domain.model.StreamDebridCacheState
 import com.nuvio.tv.domain.model.StreamDebridCacheStatus
@@ -196,6 +197,136 @@ class StreamAutoPlaySelectorTest {
         )
 
         assertEquals(matched, selected)
+    }
+
+    @Test
+    fun `plugin binge group selects the played quality instead of the first stream`() {
+        val fullHd = stream(
+            addonName = "Example",
+            url = "https://example.com/1080.m3u8",
+            name = "1080p",
+            bingeGroup = "local-plugin-example|1080p"
+        )
+        val hd = stream(
+            addonName = "Example",
+            url = "https://example.com/720.m3u8",
+            name = "720p",
+            bingeGroup = "local-plugin-example|720p"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(fullHd, hd),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = emptySet(),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "local-plugin-example|720p",
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(hd, selected)
+    }
+
+    @Test
+    fun `plugin binge group keeps the source and label when the episode title and host change`() {
+        val saved = pluginBingeGroup(
+            scraperId = "src",
+            url = "https://cdn-a.example.net/ep1.m3u8",
+            name = "Filemoon",
+            title = "Episode 1 Dual Audio",
+            quality = "720p"
+        )
+        val otherLabel = pluginBingeGroup(
+            scraperId = "src",
+            url = "https://cdn-b.example.net/ep2.m3u8",
+            name = "Filemoon",
+            title = "Episode 2 Original",
+            quality = "720p"
+        )
+        val sameLabel = pluginBingeGroup(
+            scraperId = "src",
+            url = "https://cdn-c.example.net/ep2.m3u8",
+            name = "Filemoon",
+            title = "Episode 2 Dual Audio",
+            quality = "720p"
+        )
+        val original = stream(
+            addonName = "Example",
+            url = "https://example.com/original.m3u8",
+            bingeGroup = otherLabel
+        )
+        val dual = stream(
+            addonName = "Example",
+            url = "https://example.com/dual.m3u8",
+            bingeGroup = sameLabel
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(original, dual),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = emptySet(),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = saved,
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(dual, selected)
+    }
+
+    @Test
+    fun `a different plugin quality falls back when that variant is missing`() {
+        val fullHd = stream(
+            addonName = "Example",
+            url = "https://example.com/1080.m3u8",
+            bingeGroup = "local-plugin-example|1080p"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(fullHd),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = emptySet(),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "local-plugin-example|720p",
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(fullHd, selected)
+    }
+
+    @Test
+    fun `legacy plugin binge group still matches the same provider`() {
+        val other = stream(
+            addonName = "Other",
+            url = "https://example.com/other.m3u8",
+            bingeGroup = "local-plugin-other|1080p"
+        )
+        val provider = stream(
+            addonName = "Example",
+            url = "https://example.com/1080.m3u8",
+            bingeGroup = "local-plugin-example|1080p"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(other, provider),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = emptySet(),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "local-plugin-example",
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(provider, selected)
     }
 
     @Test

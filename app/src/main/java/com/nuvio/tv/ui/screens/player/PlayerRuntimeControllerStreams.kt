@@ -1986,13 +1986,15 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     nextEpisode = nextVideo.episode ?: 0
                 ) ?: currentFilename?.takeIf { it.isNotBlank() }
                 if (nextFilename != null) {
-                    val bingeAndFilename = allStreams.firstOrNull { stream ->
-                        !stream.isExternal() &&
-                            stream.behaviorHints?.bingeGroup == currentStreamBingeGroup &&
-                            com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
-                                stream.behaviorHints?.filename, nextFilename
-                            )
-                    }
+                    val bingeAndFilename = StreamAutoPlaySelector.selectBingeGroupMatch(
+                        allStreams.filter { stream ->
+                            !stream.isExternal() &&
+                                com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
+                                    stream.behaviorHints?.filename, nextFilename
+                                )
+                        },
+                        currentStreamBingeGroup.orEmpty()
+                    )
                     if (bingeAndFilename != null) return bingeAndFilename
                 }
                 // Early fallback: binge group alone
