@@ -26,7 +26,8 @@ internal data class StreamSearchRequestKey(
     val videoId: String,
     val season: Int?,
     val episode: Int?,
-    val sourceConfiguration: String
+    val sourceConfiguration: String,
+    val searchMode: String = ""
 )
 
 /**
@@ -184,6 +185,9 @@ internal class StreamSearchSessionCache(
         while (iterator.hasNext()) {
             val (existingKey, session) = iterator.next()
             val belongsToAnotherProfile = existingKey.profileId != requestedKey.profileId
+            // Search mode is a different session for the same episode, not a new addon setup.
+            // Replacing a plugin continuation with a full search must not abort the scraper
+            // that is already resolving the next episode.
             val sourceConfigurationChanged = existingKey.matchesMediaRequest(requestedKey) &&
                 existingKey.sourceConfiguration != requestedKey.sourceConfiguration
             if (belongsToAnotherProfile || sourceConfigurationChanged) {

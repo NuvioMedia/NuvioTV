@@ -60,6 +60,7 @@ object StreamAutoPlaySelector {
     /**
      * Exact binge group for addons. For a local plugin, the stream whose identity tokens
      * still match after the next episode's own shared words are removed.
+     * Only playable streams are considered, matching the autoplay selector.
      */
     fun selectBingeGroupMatch(streams: List<Stream>, targetBingeGroup: String): Stream? {
         if (targetBingeGroup.isBlank()) return null
@@ -75,6 +76,21 @@ object StreamAutoPlaySelector {
             playableStreams.map { it.behaviorHints?.bingeGroup }
         )
         return index?.let { playableStreams[it] }
+    }
+
+    /**
+     * Filename and info-hash binge matches run as soon as a stream arrives, before a
+     * torrent's debrid check finishes. Addon groups stay an exact string and are not
+     * required to be playable yet. Plugin groups fall back to identity tokens, and
+     * that fallback only considers streams that are already playable.
+     */
+    fun selectEarlyBingeGroupMatch(streams: List<Stream>, targetBingeGroup: String): Stream? {
+        if (targetBingeGroup.isBlank()) return null
+        val visible = streams.filter { !it.isExternal() }
+        val exact = visible.firstOrNull { it.behaviorHints?.bingeGroup == targetBingeGroup }
+        if (exact != null) return exact
+        if (scraperIdFromPluginBingeGroup(targetBingeGroup) == null) return null
+        return selectBingeGroupMatch(visible, targetBingeGroup)
     }
 
     fun selectAutoPlayStream(
@@ -112,12 +128,11 @@ object StreamAutoPlaySelector {
                 selectedPlugins.isEmpty() || stream.addonName in selectedPlugins
             }
         }
-        if (candidateStreams.isEmpty()) return null
-
         // Binge group matching takes priority over mode and source filters — even in MANUAL mode,
         // a persisted binge group should auto-play without showing the picker.
         // Search ALL streams, not just candidateStreams, since binge group reuse should
-        // not be limited by autoplay source/addon selection filters.
+        // not be limited by autoplay source/addon selection filters. An installed-addons-only
+        // filter would otherwise drop a plugin result set and open the sidebar.
         val targetBingeGroup = preferredBingeGroup?.trim().orEmpty()
         if (preferBingeGroupInSelection && targetBingeGroup.isNotEmpty()) {
             val bingeGroupMatch = selectBingeGroupMatch(streams, targetBingeGroup)
@@ -129,6 +144,8 @@ object StreamAutoPlaySelector {
         }
 
         if (bingeGroupOnly) return null
+
+        if (candidateStreams.isEmpty()) return null
 
         if (mode == StreamAutoPlayMode.MANUAL) return null
 

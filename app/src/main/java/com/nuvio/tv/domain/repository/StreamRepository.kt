@@ -25,7 +25,8 @@ interface StreamRepository {
         episode: Int? = null,
         forceRefresh: Boolean = false,
         priorityBingeGroup: String? = null,
-        preferredPluginOnly: Boolean = false
+        preferredPluginOnly: Boolean = false,
+        continuePluginOnly: Boolean = false
     ): Flow<NetworkResult<List<AddonStreams>>>
 
     /**

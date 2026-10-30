@@ -594,7 +594,7 @@ class StreamScreenViewModel @Inject constructor(
                     } else null
                     // Try binge group + filename first
                     val bingeAndFilename = if (nextFilename != null) {
-                        StreamAutoPlaySelector.selectBingeGroupMatch(
+                        StreamAutoPlaySelector.selectEarlyBingeGroupMatch(
                             allStreams.filter { stream ->
                                 !stream.isExternal() &&
                                     com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
@@ -606,7 +606,7 @@ class StreamScreenViewModel @Inject constructor(
                     } else null
                     // Try binge group + infoHash when filename match failed or was unavailable
                     val bingeAndInfoHash = if (bingeAndFilename == null && persistedInfoHash != null) {
-                        StreamAutoPlaySelector.selectBingeGroupMatch(
+                        StreamAutoPlaySelector.selectEarlyBingeGroupMatch(
                             allStreams.filter { stream ->
                                 !stream.isExternal() &&
                                     stream.infoHash?.equals(persistedInfoHash, ignoreCase = true) == true

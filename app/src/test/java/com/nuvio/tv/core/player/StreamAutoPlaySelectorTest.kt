@@ -200,6 +200,30 @@ class StreamAutoPlaySelectorTest {
     }
 
     @Test
+    fun `plugin binge group is selected when the autoplay source only allows addons`() {
+        val plugin = stream(
+            addonName = "ExamplePlugin",
+            url = "https://example.com/e6.mkv",
+            name = "480p",
+            bingeGroup = "local-plugin-example-plugin|480"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(plugin),
+            mode = StreamAutoPlayMode.MANUAL,
+            regexPattern = "",
+            source = StreamAutoPlaySource.INSTALLED_ADDONS_ONLY,
+            installedAddonNames = setOf("ExampleAddon"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "local-plugin-example-plugin|480",
+            preferBingeGroupInSelection = true
+        )
+
+        assertEquals(plugin, selected)
+    }
+
+    @Test
     fun `plugin binge group selects the played quality instead of the first stream`() {
         val fullHd = stream(
             addonName = "Example",
@@ -234,21 +258,21 @@ class StreamAutoPlaySelectorTest {
         val saved = pluginBingeGroup(
             scraperId = "src",
             url = "https://cdn-a.example.net/ep1.m3u8",
-            name = "Filemoon",
+            name = "ExampleHost",
             title = "Episode 1 Dual Audio",
             quality = "720p"
         )
         val otherLabel = pluginBingeGroup(
             scraperId = "src",
             url = "https://cdn-b.example.net/ep2.m3u8",
-            name = "Filemoon",
+            name = "ExampleHost",
             title = "Episode 2 Original",
             quality = "720p"
         )
         val sameLabel = pluginBingeGroup(
             scraperId = "src",
             url = "https://cdn-c.example.net/ep2.m3u8",
-            name = "Filemoon",
+            name = "ExampleHost",
             title = "Episode 2 Dual Audio",
             quality = "720p"
         )
@@ -327,6 +351,43 @@ class StreamAutoPlaySelectorTest {
         )
 
         assertEquals(provider, selected)
+    }
+
+    @Test
+    fun `addon binge group still matches a torrent while its debrid check is running`() {
+        val nextFilename = "Show.S01E02.1080p.mkv"
+        val checking = stream(
+            addonName = "ExampleAddon",
+            name = "1080p",
+            infoHash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            bingeGroup = "example-addon|1080p",
+            cacheState = StreamDebridCacheState.CHECKING,
+            filename = nextFilename
+        )
+        val otherQuality = stream(
+            addonName = "ExampleAddon",
+            name = "720p",
+            infoHash = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            bingeGroup = "example-addon|720p",
+            cacheState = StreamDebridCacheState.CACHED,
+            filename = "Show.S01E02.720p.mkv"
+        )
+
+        val filenameMatches = listOf(otherQuality, checking).filter { candidate ->
+            FilenameEpisodeMatcher.matches(candidate.behaviorHints?.filename, nextFilename)
+        }
+        val selected = StreamAutoPlaySelector.selectEarlyBingeGroupMatch(
+            filenameMatches,
+            "example-addon|1080p"
+        )
+
+        assertEquals(checking, selected)
+        assertNull(
+            StreamAutoPlaySelector.selectEarlyBingeGroupMatch(
+                filenameMatches,
+                "example-addon|720p"
+            )
+        )
     }
 
     @Test
@@ -472,7 +533,8 @@ class StreamAutoPlaySelectorTest {
         infoHash: String? = null,
         cacheState: StreamDebridCacheState? = null,
         ytId: String? = null,
-        externalUrl: String? = null
+        externalUrl: String? = null,
+        filename: String? = null
     ): Stream = Stream(
         name = name,
         title = null,
@@ -486,7 +548,8 @@ class StreamAutoPlaySelectorTest {
             notWebReady = null,
             bingeGroup = bingeGroup,
             countryWhitelist = null,
-            proxyHeaders = null
+            proxyHeaders = null,
+            filename = filename
         ),
         addonName = addonName,
         addonLogo = null,

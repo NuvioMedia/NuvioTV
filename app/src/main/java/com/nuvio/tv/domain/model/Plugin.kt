@@ -203,24 +203,35 @@ fun indexOfPluginBingeMatch(targetGroup: String?, candidateGroups: List<String?>
     if (indexed.isEmpty()) return null
     val saved = tokensOfPluginBingeGroup(targetGroup)
     if (saved.isEmpty()) return indexed.first().first
+    if (indexed.size == 1) {
+        val only = indexed.first()
+        val required = saved.filter { token -> token.none(Char::isDigit) || isResolutionToken(token) }
+        return if (required.all(only.second::contains)) only.first else null
+    }
 
     val sets = indexed.map { it.second }
     val union = sets.reduce(Set<String>::plus)
     val shared = sets.reduce(Set<String>::intersect)
     val distinctive = saved.intersect(union) - shared
-    val letterTokens = saved.filter { token -> token.none(Char::isDigit) }
-    val required = when {
-        distinctive.isNotEmpty() -> distinctive
-        indexed.size == 1 -> letterTokens + saved.filter(::isResolutionToken)
-        else -> letterTokens.intersect(union)
+    val savedResolution = saved.filter(::isResolutionToken).toSet()
+    val availableResolution = savedResolution.intersect(union)
+    // The quality that was playing has to be in the candidate. A higher quality listed
+    // first is a different variant, not a match.
+    if (savedResolution.isNotEmpty() && availableResolution.isEmpty()) return null
+
+    val resolutionEligible = indexed.filter { (_, tokens) ->
+        availableResolution.all(tokens::contains)
     }
-    if (required.isNotEmpty()) {
-        indexed.firstOrNull { (_, tokens) -> required.all(tokens::contains) }?.first?.let { return it }
+    if (resolutionEligible.isEmpty()) return null
+    val labelDistinctive = distinctive - savedResolution
+    val fullLabel = resolutionEligible.filter { (_, tokens) ->
+        labelDistinctive.all(tokens::contains)
     }
-    if (distinctive.isEmpty()) return null
-    return indexed
+    if (fullLabel.isNotEmpty()) return closestPluginVariant(fullLabel, shared)
+
+    return resolutionEligible
         .map { (index, tokens) ->
-            val matched = distinctive.intersect(tokens)
+            val matched = labelDistinctive.intersect(tokens)
             val wordHits = matched.count { it.any(Char::isLetter) }
             Triple(index, wordHits, matched.size)
         }
@@ -228,6 +239,14 @@ fun indexOfPluginBingeMatch(targetGroup: String?, candidateGroups: List<String?>
         .maxWithOrNull(compareBy({ it.second }, { it.third }))
         ?.first
 }
+
+private fun closestPluginVariant(
+    candidates: List<Pair<Int, Set<String>>>,
+    shared: Set<String>
+): Int? = candidates.minWithOrNull(
+    compareBy<Pair<Int, Set<String>>> { (_, tokens) -> (tokens - shared).size }
+        .thenBy { it.first }
+)?.first
 
 fun pluginBingeGroupMatches(candidate: String?, target: String?): Boolean {
     val left = candidate?.trim().orEmpty()

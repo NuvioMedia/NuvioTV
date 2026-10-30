@@ -48,7 +48,7 @@ class PluginProviderPriorityTest {
         val stats = emptyMap<String, PluginProviderPlayStat>()
         val ordered = listOf("added-first", "added-second").orderForPluginPlayback(
             id = { it },
-            priorityBingeGroup = "torrentio|720p",
+            priorityBingeGroup = "example-addon|720p",
             stats = stats
         )
         assertEquals(listOf("added-first", "added-second"), ordered)
@@ -99,7 +99,7 @@ class PluginProviderPriorityTest {
         assertEquals("example", scraperIdFromPluginBingeGroup("local-plugin-example|1080"))
         assertNull(scraperIdFromPluginBingeGroup("addon-group"))
         assertNull(scraperIdFromPluginBingeGroup("local-plugin-"))
-        assertNull(scraperIdFromPluginBingeGroup("torrentio|1080p"))
+        assertNull(scraperIdFromPluginBingeGroup("example-addon|1080p"))
     }
 
     @Test
@@ -117,19 +117,19 @@ class PluginProviderPriorityTest {
     fun `next episode keeps the plugin variant and drops the episode-only tokens`() {
         val saved = pluginBingeGroup(
             scraperId = "example-scraper",
-            name = "Filemoon",
+            name = "ExampleHost",
             title = "Episode 1 Dual Audio",
             quality = "720p"
         )
         val original = pluginBingeGroup(
             scraperId = "example-scraper",
-            name = "Filemoon",
+            name = "ExampleHost",
             title = "Episode 2 Original",
             quality = "720p"
         )
         val dual = pluginBingeGroup(
             scraperId = "example-scraper",
-            name = "Filemoon",
+            name = "ExampleHost",
             title = "Épisode 2 Dual Audio",
             quality = "720P"
         )
@@ -171,13 +171,13 @@ class PluginProviderPriorityTest {
         )
         assertEquals(
             false,
-            pluginBingeGroupMatches("torrentio|1080p", "torrentio|720p")
+            pluginBingeGroupMatches("example-addon|1080p", "example-addon|720p")
         )
         assertEquals(
             false,
             pluginBingeGroupMatches(
-                "local-plugin-example|1080 filemoon",
-                "local-plugin-example|720 filemoon"
+                "local-plugin-example|1080 examplehost",
+                "local-plugin-example|720 examplehost"
             )
         )
     }
@@ -187,25 +187,56 @@ class PluginProviderPriorityTest {
         val saved = pluginBingeGroup(
             scraperId = "example-scraper",
             name = "Server 1",
-            title = "Türkçe Altyazı"
+            title = "Example Note"
         )
         val sameServerOtherAudio = pluginBingeGroup(
             scraperId = "example-scraper",
             name = "Server 1",
-            title = "Türkçe Dublaj"
+            title = "Example Voice"
         )
         val otherServerSameAudio = pluginBingeGroup(
             scraperId = "example-scraper",
             name = "Server 2",
-            title = "Türkçe Altyazı"
+            title = "Example Note"
         )
         val exact = pluginBingeGroup(
             scraperId = "example-scraper",
             name = "Server 1",
-            title = "Türkçe Altyazı"
+            title = "Example Note"
         )
 
         assertEquals(1, indexOfPluginBingeMatch(saved, listOf(sameServerOtherAudio, otherServerSameAudio)))
         assertEquals(0, indexOfPluginBingeMatch(saved, listOf(exact, otherServerSameAudio)))
+    }
+
+    @Test
+    fun `saved quality matches that variant when higher qualities are listed first`() {
+        val saved = pluginBingeGroup(
+            scraperId = "example-plugin",
+            name = "ExamplePlugin",
+            title = "Example S01E05 480p",
+            quality = "480p"
+        )
+        val ultra = pluginBingeGroup(
+            scraperId = "example-plugin",
+            name = "ExamplePlugin",
+            title = "Example S01E06 2160p",
+            quality = "2160p"
+        )
+        val fullHd = pluginBingeGroup(
+            scraperId = "example-plugin",
+            name = "ExamplePlugin",
+            title = "Example S01E06 1080p",
+            quality = "1080p"
+        )
+        val sd = pluginBingeGroup(
+            scraperId = "example-plugin",
+            name = "ExamplePlugin",
+            title = "Example S01E06 480p",
+            quality = "480p"
+        )
+
+        assertEquals(2, indexOfPluginBingeMatch(saved, listOf(ultra, fullHd, sd)))
+        assertNull(indexOfPluginBingeMatch(saved, listOf(ultra, fullHd)))
     }
 }
