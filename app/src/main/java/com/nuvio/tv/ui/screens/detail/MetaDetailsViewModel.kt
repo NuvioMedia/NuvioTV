@@ -889,6 +889,7 @@ class MetaDetailsViewModel @Inject constructor(
             productionCompanies = enrichment.productionCompanies,
             networks = enrichment.networks,
             ageRating = enrichment.ageRating,
+            releaseDates = enrichment.releaseDates,
             country = enrichment.countries?.joinToString(", "),
             awards = null,
             language = enrichment.language,
@@ -1617,6 +1618,7 @@ class MetaDetailsViewModel @Inject constructor(
                 runtime = enrichment.runtimeMinutes?.toString() ?: updated.runtime,
                 status = enrichment.status ?: updated.status,
                 ageRating = enrichment.ageRating ?: updated.ageRating,
+                releaseDates = enrichment.releaseDates.ifEmpty { updated.releaseDates },
                 country = enrichment.countries?.joinToString(", ") ?: updated.country,
                 language = enrichment.language ?: updated.language
             )
