@@ -918,6 +918,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 downmixEnabled = effectiveDownmixEnabled,
                 audioOutputChannels = effectiveAudioOutputChannels,
                 downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
+                downmixLfeLevel = playerSettings.downmixLfeLevel.level,
                 forceOpticalPassthrough = isForcePassthroughActive,
                 bluetoothForcePcm = isBluetoothAudioOutput,
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
@@ -931,6 +932,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         downmixEnabled = effectiveDownmixEnabled,
                         audioOutputChannels = effectiveAudioOutputChannels,
                         downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
+                        lfeMixLevel = playerSettings.downmixLfeLevel.level,
                         forceOpticalPassthrough = isForcePassthroughActive
                     )
                     applyCenterMixLevel(_uiState.value.centerMixLevelDb)
@@ -2159,6 +2161,7 @@ private class SubtitleOffsetRenderersFactory(
     private val downmixEnabled: Boolean,
     private val audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
     private val downmixNormalizationEnabled: Boolean,
+    private val downmixLfeLevel: Float,
     private val forceOpticalPassthrough: Boolean,
     private val bluetoothForcePcm: Boolean = false,
     private val playbackSpeedProvider: () -> Float,
@@ -2324,6 +2327,7 @@ private class SubtitleOffsetRenderersFactory(
                 downmixEnabled = downmixEnabled,
                 audioOutputChannels = audioOutputChannels,
                 downmixNormalizationEnabled = downmixNormalizationEnabled,
+                lfeMixLevel = downmixLfeLevel,
                 forceOpticalPassthrough = forceOpticalPassthrough
             )
         }
@@ -2334,6 +2338,7 @@ private fun FfmpegAudioRenderer.applyDownmixSettings(
     downmixEnabled: Boolean,
     audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
     downmixNormalizationEnabled: Boolean,
+    lfeMixLevel: Float,
     forceOpticalPassthrough: Boolean
 ) {
     setForceOpticalPassthrough(forceOpticalPassthrough)
@@ -2343,9 +2348,11 @@ private fun FfmpegAudioRenderer.applyDownmixSettings(
             audioOutputChannels.channelCount
         )
         setDownmixNormalizationEnabled(downmixNormalizationEnabled)
+        setLfeMixLevel(lfeMixLevel)
     } else {
         setAudioOutputChannels(null, 0)
         setDownmixNormalizationEnabled(false)
+        setLfeMixLevel(0f)
     }
 }
 
