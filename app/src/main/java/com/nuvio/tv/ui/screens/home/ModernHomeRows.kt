@@ -443,7 +443,7 @@ internal fun ModernRowSection(
     defaultBringIntoViewSpec: BringIntoViewSpec,
     focusStateCatalogRowScrollIndex: Int,
     focusStateCatalogRowScrollAnchor: String?,
-    focusedItemByRow: StableRef<MutableMap<String, Int>>,
+    focusedItemByRow: StableRef<FocusedItemByRowStore>,
     rowListStates: StableRef<MutableMap<String, LazyListState>>,
     loadMoreRequestedTotals: StableRef<MutableMap<String, Int>>,
     pendingRowFocusKey: State<String?>,
@@ -486,7 +486,7 @@ internal fun ModernRowSection(
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit,
     sharedPlaceholderShimmerOffsetState: State<Float>?,
-    itemFocusRequesters: StableRef<MutableMap<Int, FocusRequester>> = StableRef(mutableMapOf())
+    itemFocusRequesters: StableRef<MutableMap<String, FocusRequester>> = StableRef(mutableMapOf())
 ) {
     // Unwrap StableRef wrappers
     @Suppress("NAME_SHADOWING") val focusedItemByRow = focusedItemByRow.value
@@ -496,9 +496,19 @@ internal fun ModernRowSection(
     val rowKey = row.key
 
     // Per-row derived state: only invalidates when THIS row's focused index
-    // changes, not when any other row's index changes in the shared map.
+    // changes, not when any other row's index changes in the shared store.
+    // The row owns its own focus state, so the derived state observes that single state.
+    val rowFocusState = remember(rowKey) { focusedItemByRow.stateFor(rowKey) }
     val rowFocusedIndex = remember(rowKey) {
-        derivedStateOf { focusedItemByRow[rowKey] ?: 0 }
+        derivedStateOf { rowFocusState.intValue }
+    }
+
+    // The item focus requesters grew with every item the row ever loaded and were never
+    // pruned, so a row that kept paging kept every requester of every page alive. Drop the
+    // ones whose item left the row.
+    LaunchedEffect(row.key, row.items.list) {
+        val validItemKeys = row.items.list.mapTo(mutableSetOf()) { it.key }
+        itemFocusRequesters.keys.retainAll(validItemKeys)
     }
 
     // Blocks vertical focus exit during placeholder→data transition.
@@ -911,8 +921,10 @@ internal fun ModernRowSection(
                     .focusRequester(rowFocusRequester)
                     .focusRestorer {
                         val savedIdx = rowFocusedIndex.value
-                        itemFocusRequesters[savedIdx]
-                            ?: itemFocusRequesters[0]
+                        val savedKey = row.items.list.getOrNull(savedIdx)?.key
+                        val firstKey = row.items.list.firstOrNull()?.key
+                        (savedKey?.let { itemFocusRequesters[it] })
+                            ?: (firstKey?.let { itemFocusRequesters[it] })
                             ?: FocusRequester.Default
                     }
                     .focusGroup(),
@@ -938,7 +950,10 @@ internal fun ModernRowSection(
                         }
                     }
                 ) { index, item ->
-                    val requester = itemFocusRequesters.getOrPut(index) { FocusRequester() }
+                    // Keyed by the item key, not by its position: the position changes when the
+                    // row is refreshed or re-ordered, and a requester bound to a position then
+                    // pointed at a different card.
+                    val requester = itemFocusRequesters.getOrPut(item.key) { FocusRequester() }
                     val isContinueWatchingRow = row.key == MODERN_CONTINUE_WATCHING_ROW_KEY || row.key == MODERN_UPCOMING_ROW_KEY
                     val onFocused = remember(row.key, index, isContinueWatchingRow) {
                         {
@@ -1286,8 +1301,12 @@ private fun ModernCarouselCard(
     // card the drag passes over would break that illusion. The chrome reappears the
     // moment the user releases the key, when requestFocus lands focus on whichever
     // card is visible at the leading edge.
-    val isFastScrollingState = LocalFastScrollActive.current
-    val isFastScrolling = isFastScrollingState.value
+    //
+    // Only the focused card can show that chrome, so only the focused card reads the
+    // flag. Reading it unconditionally made every visible card of every row recompose
+    // (and rebuild its border and glow) twice per fast scroll, while the border of an
+    // unfocused card is not drawn at all.
+    val isFastScrolling = if (isFocused) LocalFastScrollActive.current.value else false
     val transparentFocusBorder = remember(cardShape) {
         Border(
             border = BorderStroke(NuvioTheme.spacing.none, Color.Transparent),

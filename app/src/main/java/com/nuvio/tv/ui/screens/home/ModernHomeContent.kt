@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -147,7 +148,9 @@ fun ModernHomeContent(
     val onRowItemFocusedPassedDown = rememberUpdatedState(onRowItemFocusedCallback)
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val sidebarExpanded = LocalSidebarExpanded.current
-    val isSidebarExpanded = remember(sidebarExpanded) { derivedStateOf { sidebarExpanded } }
+    // Plain value: the derived state only wrapped a composition local read, it never derived
+    // anything and it created a new state object on every sidebar change.
+    val isSidebarExpanded = sidebarExpanded
     val lifecycleOwner = LocalLifecycleOwner.current
     val useLandscapePosters = uiState.modernLandscapePostersEnabled
     val alwaysShowLandscapeClearlogo = uiState.alwaysShowLandscapeClearlogo
@@ -215,9 +218,9 @@ fun ModernHomeContent(
     val rowListStates = remember { mutableStateMapOf<String, LazyListState>() }
     val loadMoreRequestedTotals = remember { mutableStateMapOf<String, Int>() }
 
-    val focusedItemByRow = remember { mutableStateMapOf<String, Int>() }
+    val focusedItemByRow = remember { FocusedItemByRowStore() }
     val itemIdentitySnapshot = remember { ItemIdentitySnapshot() }
-    val stableFocusedItemByRow = remember { StableRef<MutableMap<String, Int>>(focusedItemByRow) }
+    val stableFocusedItemByRow = remember { StableRef<FocusedItemByRowStore>(focusedItemByRow) }
     val stableRowListStates = remember { StableRef<MutableMap<String, LazyListState>>(rowListStates) }
     val stableLoadMoreRequestedTotals = remember { StableRef<MutableMap<String, Int>>(loadMoreRequestedTotals) }
     // Every focus move writes focusedItemByRow, so reading it observably here recomposed this
@@ -276,7 +279,7 @@ fun ModernHomeContent(
             if (!contentHasFocus.value) return@derivedStateOf false
             if (fullscreenTrailerPlaying.value) return@derivedStateOf true
             val rowKey = activeRowKey.value ?: return@derivedStateOf false
-            val itemIndex = focusedItemByRow[rowKey] ?: 0
+            val itemIndex = focusedItemByRow[rowKey]
             itemIndex > 0
         }
     }
@@ -328,12 +331,12 @@ fun ModernHomeContent(
             verticalRowListState.isScrollInProgress,
             // Re-run when the sidebar takes/returns focus so a pending expand cannot
             // complete while the user is on the Home button (#2815).
-            isSidebarExpanded.value
+            isSidebarExpanded
         ) {
             // Always clear first so sidebar open / selection change collapses immediately.
             expandedCatalogFocusKey.value = null
             if (!shouldActivateFocusedPosterFlow) return@LaunchedEffect
-            if (isSidebarExpanded.value) return@LaunchedEffect
+            if (isSidebarExpanded) return@LaunchedEffect
             if (verticalRowListState.isScrollInProgress) return@LaunchedEffect
             val selection = focusedCatalogSelection.value ?: return@LaunchedEffect
             if (selection.payload !is ModernPayload.Catalog) return@LaunchedEffect
@@ -341,7 +344,7 @@ fun ModernHomeContent(
             delay(expansionDelayMs)
             if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
             if (shouldActivateFocusedPosterFlow &&
-                !isSidebarExpanded.value &&
+                !isSidebarExpanded &&
                 !verticalRowListState.isScrollInProgress &&
                 focusedCatalogSelection.value?.focusKey == selection.focusKey
             ) {
@@ -493,8 +496,7 @@ fun ModernHomeContent(
 
         if (resolvedActive != null) {
             val resolvedIndex = focusedItemByRow[resolvedActive.key]
-                ?.coerceIn(0, (resolvedActive.items.size - 1).coerceAtLeast(0))
-                ?: 0
+                .coerceIn(0, (resolvedActive.items.size - 1).coerceAtLeast(0))
             focusHolder.activeRowKey = resolvedActive.key
             focusHolder.activeItemIndex = resolvedIndex
             activeRowKey.value = resolvedActive.key
@@ -566,7 +568,7 @@ fun ModernHomeContent(
 
         LaunchedEffect(activeRow?.key, activeRow?.items?.size) {
             val row = activeRow ?: return@LaunchedEffect
-            val savedIdx = focusedItemByRow[row.key] ?: 0
+            val savedIdx = focusedItemByRow[row.key]
             val clampedIndex = savedIdx.coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
             if (focusHolder.activeItemIndex != clampedIndex) {
                 focusHolder.activeItemIndex = clampedIndex
@@ -630,7 +632,7 @@ fun ModernHomeContent(
             
             val focusedItemKeyByRow = latestCarouselRows
                 .associate { rowState ->
-                    val focusedIdx = focusedItemByRow[rowState.key] ?: 0
+                    val focusedIdx = focusedItemByRow[rowState.key]
                     val itemKey = rowState.items.list.getOrNull(focusedIdx)?.key ?: ""
                     rowState.key to itemKey
                 }
@@ -638,7 +640,7 @@ fun ModernHomeContent(
             val catalogRowScrollStates = latestCarouselRows
                 .associate { rowState ->
                     val scrollIndex = rowListStates[rowState.key]?.firstVisibleItemIndex
-                        ?: (focusedItemByRow[rowState.key] ?: 0)
+                        ?: focusedItemByRow[rowState.key]
                     rowState.key to scrollIndex
                 }
 
@@ -832,7 +834,7 @@ fun ModernHomeContent(
                 derivedStateOf {
                     isScrollStoppedState.value &&
                         effectiveAutoplayEnabled &&
-                        !isSidebarExpanded.value &&
+                        !isSidebarExpanded &&
                         !isRapidHorizontalNav.value &&
                         trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA &&
                         !heroTrailerUrlsState.value.first.isNullOrBlank()
@@ -847,7 +849,7 @@ fun ModernHomeContent(
             ) {
                 derivedStateOf {
                     isScrollStoppedState.value &&
-                        !isSidebarExpanded.value &&
+                        !isSidebarExpanded &&
                         !collectionHeroVideoUrl.isNullOrBlank() &&
                         collectionHeroVideoPlaybackKey != null &&
                         endedCollectionHeroVideoPlaybackKey != collectionHeroVideoPlaybackKey
@@ -866,9 +868,8 @@ fun ModernHomeContent(
             val shouldPlayHeroTrailerState = remember(shouldPlayCatalogHeroTrailerState, shouldPlayCollectionHeroVideoState) {
                 derivedStateOf { shouldPlayCatalogHeroTrailerState.value || shouldPlayCollectionHeroVideoState.value }
             }
-            val heroMediaMutedState = remember(uiState.focusedPosterBackdropTrailerMuted) {
-                derivedStateOf { uiState.focusedPosterBackdropTrailerMuted }
-            }
+            // Plain value: the derived state only wrapped a plain boolean read.
+            val heroMediaMuted = uiState.focusedPosterBackdropTrailerMuted
             var heroTrailerFirstFrameRendered by remember { mutableStateOf(false) }
             LaunchedEffect(heroMediaDataState.value.third) {
                 heroTrailerFirstFrameRendered = false
@@ -889,8 +890,16 @@ fun ModernHomeContent(
                 }
             }
             // Keep the top-level flag in sync so the row-scroll BackHandler
-            // stays disabled while a fullscreen trailer is visible.
-            fullscreenTrailerPlaying.value = isTrailerPlayingFullscreenState.value
+            // stays disabled while a fullscreen trailer is visible. The write happens in a
+            // side effect: writing a state while the composition is running is a side effect
+            // and it can schedule a recomposition of the whole home content. A SideEffect
+            // runs after every successful composition, and writing the same value again is
+            // a no-op for the state, so the flag stays in sync without the extra frame a
+            // LaunchedEffect would add.
+            val isTrailerPlayingFullscreen = isTrailerPlayingFullscreenState.value
+            SideEffect {
+                fullscreenTrailerPlaying.value = isTrailerPlayingFullscreen
+            }
             fullscreenTrailerDismiss.value = remember(focusedCatalogSelection, expandedCatalogFocusKey) {
                 {
                     focusedCatalogSelection.value = null
@@ -901,7 +910,7 @@ fun ModernHomeContent(
                 resolvedHeroState,
                 shouldPlayHeroTrailerState,
                 heroMediaDataState,
-                heroMediaMutedState,
+                heroMediaMuted,
                 fullScreenBackdrop
             ) {
                 derivedStateOf {
@@ -917,7 +926,7 @@ fun ModernHomeContent(
                         trailerUrl = heroMediaUrl,
                         trailerAudioUrl = heroMediaAudioUrl,
                         trailerPlaybackKey = heroMediaPlaybackKey,
-                        trailerMuted = heroMediaMutedState.value,
+                        trailerMuted = heroMediaMuted,
                         fullScreenBackdrop = fullScreenBackdrop
                     )
                 }
