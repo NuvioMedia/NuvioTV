@@ -727,7 +727,10 @@ fun GridHomeContent(
                             "series" -> strTypeSeries
                             else -> gridItem.type.replaceFirstChar { it.uppercase() }
                         }
-                        val displayName = if (uiState.catalogTypeSuffixEnabled && typeLabel.isNotBlank()) {
+                        val showTypeSuffix = uiState.catalogTypeSuffixEnabled &&
+                            typeLabel.isNotBlank() &&
+                            gridItem.addonId != HOME_WATCHLIST_ADDON_ID
+                        val displayName = if (showTypeSuffix) {
                             "${gridItem.catalogName.replaceFirstChar { it.uppercase() }} - $typeLabel"
                         } else {
                             gridItem.catalogName.replaceFirstChar { it.uppercase() }
