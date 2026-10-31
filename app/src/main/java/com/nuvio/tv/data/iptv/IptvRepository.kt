@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.util.Xml
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,6 +25,7 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import javax.inject.Inject
@@ -38,13 +40,29 @@ class IptvRepository @Inject constructor(
 ) {
     companion object {
         private const val TAG = "IptvRepository"
-        private const val PLAYLIST_MAX_AGE_MS = 24L * 60 * 60 * 1000
-        private const val EPG_MAX_AGE_MS = 12L * 60 * 60 * 1000
-        private const val EPG_PAST_WINDOW_MS = 6L * 60 * 60 * 1000
-        private const val EPG_FUTURE_WINDOW_MS = 3L * 24 * 60 * 60 * 1000
+        private const val HOUR_MS = 60L * 60 * 1000
+        private const val DAY_MS = 24 * HOUR_MS
+        private const val RETRY_BACKOFF_MS = HOUR_MS
+        private const val EPG_PAST_WINDOW_MS = 6 * HOUR_MS
+        private const val MIN_EPG_FUTURE_DAYS = 3
+        private const val MAX_EPG_FUTURE_DAYS = 8
+        private const val EPG_CACHE_FILE = "epg.bin"
     }
 
     private class UserAgentTag(val value: String)
+
+    private class PlaylistState(
+        val playlist: IptvPlaylist,
+        var channels: List<IptvChannel>,
+        var epg: Map<String, List<IptvProgramme>>,
+        var meta: IptvCacheMeta
+    )
+
+    private class ChannelsFetch(
+        val channels: List<IptvChannel>,
+        val headerEpgUrls: List<String>,
+        val fresh: Boolean
+    )
 
     private val client: OkHttpClient = baseClient.newBuilder()
         .cache(null)
@@ -65,6 +83,8 @@ class IptvRepository @Inject constructor(
     private var loadJob: Job? = null
     private var loadingSignature: String? = null
     private var loadedSignature: String? = null
+    private var lastPlaylists: List<IptvPlaylist> = emptyList()
+    private val metas = ConcurrentHashMap<String, IptvCacheMeta>()
 
     private val _content = MutableStateFlow(IptvContent())
     val content: StateFlow<IptvContent> = _content.asStateFlow()
@@ -73,30 +93,70 @@ class IptvRepository @Inject constructor(
     val status: StateFlow<IptvLoadStatus> = _status.asStateFlow()
 
     private fun signatureOf(playlists: List<IptvPlaylist>): String =
-        playlists.filter { it.enabled }.joinToString(";") {
+        playlists.joinToString(";") {
             listOf(it.id, it.type.name, it.url, it.username, it.password, it.epgUrl, it.userAgent).joinToString("|")
         }
 
-    @Synchronized
     fun ensureLoaded(playlists: List<IptvPlaylist>, force: Boolean = false) {
-        val signature = signatureOf(playlists)
-        if (!force && (signature == loadedSignature || (signature == loadingSignature && loadJob?.isActive == true))) {
-            return
+        request(playlists, if (force) playlists.mapTo(HashSet()) { it.id } else emptySet())
+    }
+
+    fun refreshPlaylist(playlists: List<IptvPlaylist>, playlistId: String) {
+        request(playlists, setOf(playlistId))
+    }
+
+    fun refreshIfDue() {
+        request(lastPlaylists, emptySet())
+    }
+
+    @Synchronized
+    private fun request(playlists: List<IptvPlaylist>, forced: Set<String>) {
+        lastPlaylists = playlists
+        val enabled = playlists.filter { it.enabled }
+        val signature = signatureOf(enabled)
+        val running = loadJob?.isActive == true
+        if (forced.isEmpty()) {
+            if (running && signature == loadingSignature) return
+            if (!running && signature == loadedSignature) {
+                val now = System.currentTimeMillis()
+                if (enabled.none { isRefreshDue(it, now) }) return
+            }
         }
+        val reuseMemory = !running && signature == loadedSignature
         loadJob?.cancel()
         loadingSignature = signature
         loadJob = scope.launch {
-            runLoad(playlists.filter { it.enabled }, force, signature)
+            runLoad(enabled, forced, signature, reuseMemory)
         }
     }
 
     suspend fun deleteCache(playlistId: String) {
         withContext(Dispatchers.IO) {
+            metas.remove(playlistId)
             runCatching { playlistDir(playlistId).deleteRecursively() }
         }
     }
 
-    private suspend fun runLoad(playlists: List<IptvPlaylist>, force: Boolean, signature: String) {
+    private fun isRefreshDue(playlist: IptvPlaylist, now: Long): Boolean {
+        val meta = metas[playlist.id] ?: return true
+        return intervalDue(meta.playlistFetchedAt, meta.playlistAttemptAt, playlist.playlistRefreshDays, now) ||
+            (epgUrlsFor(playlist, meta).isNotEmpty() &&
+                intervalDue(meta.epgFetchedAt, meta.epgAttemptAt, playlist.epgRefreshDays, now))
+    }
+
+    private fun intervalDue(fetchedAt: Long, attemptAt: Long, days: Int, now: Long): Boolean {
+        if (attemptAt > fetchedAt && now - attemptAt < RETRY_BACKOFF_MS) return false
+        if (fetchedAt <= 0L) return true
+        if (days <= 0) return false
+        return now - fetchedAt >= days * DAY_MS
+    }
+
+    private suspend fun runLoad(
+        playlists: List<IptvPlaylist>,
+        forced: Set<String>,
+        signature: String,
+        reuseMemory: Boolean
+    ) {
         if (playlists.isEmpty()) {
             _content.value = IptvContent(loadedAt = System.currentTimeMillis())
             _status.value = IptvLoadStatus.Idle
@@ -104,75 +164,158 @@ class IptvRepository @Inject constructor(
             return
         }
 
-        val channels = ArrayList<IptvChannel>()
-        val epgSources = ArrayList<Pair<IptvPlaylist, List<String>>>()
-        val errors = ArrayList<String>()
-
-        for (playlist in playlists) {
-            coroutineContext.ensureActive()
-            _status.value = IptvLoadStatus.Loading(IptvLoadStage.PLAYLIST, playlist.name)
-            try {
-                val (playlistChannels, headerEpgUrls) = loadChannels(playlist, force)
-                channels.addAll(playlistChannels)
-                val epgUrls = playlist.epgUrl.split(',', '\n')
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    .ifEmpty { headerEpgUrls }
-                epgSources.add(playlist to epgUrls)
-            } catch (error: Exception) {
-                coroutineContext.ensureActive()
-                Log.w(TAG, "Failed to load playlist ${playlist.name}", error)
-                errors.add("${playlist.name}: ${error.message ?: error.javaClass.simpleName}")
+        val startedAt = System.currentTimeMillis()
+        val states = playlists.map { playlist ->
+            val dir = playlistDir(playlist.id)
+            cleanupTempFiles(dir, startedAt)
+            if (reuseMemory) {
+                val current = _content.value
+                val channels = current.channels.filter { it.playlistId == playlist.id }
+                val keys = channels.mapTo(HashSet()) { it.key }
+                PlaylistState(
+                    playlist = playlist,
+                    channels = channels,
+                    epg = current.epg.filterKeys { it in keys },
+                    meta = metas[playlist.id] ?: IptvCache.readMeta(dir)
+                )
+            } else {
+                val channels = IptvCache.readChannels(dir).orEmpty()
+                PlaylistState(
+                    playlist = playlist,
+                    channels = channels,
+                    epg = if (channels.isEmpty()) emptyMap() else IptvCache.readEpg(dir, startedAt - EPG_PAST_WINDOW_MS).orEmpty(),
+                    meta = IptvCache.readMeta(dir)
+                )
             }
         }
-
-        val groups = buildGroups(channels, playlists)
-        val previousEpg = _content.value.epg
-        _content.value = IptvContent(
-            channels = channels,
-            groups = groups,
-            epg = channels.mapTo(HashSet()) { it.key }.let { keys -> previousEpg.filterKeys { it in keys } },
-            loadedAt = System.currentTimeMillis()
-        )
-
-        if (channels.isEmpty()) {
-            _status.value = IptvLoadStatus.Error(errors.joinToString("\n").ifBlank { "No channels found" })
-            markLoaded(signature)
-            return
+        states.forEach { metas[it.playlist.id] = it.meta }
+        if (!reuseMemory && states.any { it.channels.isNotEmpty() }) {
+            publish(states, playlists)
         }
 
-        val now = System.currentTimeMillis()
-        val windowStart = now - EPG_PAST_WINDOW_MS
-        val windowEnd = now + EPG_FUTURE_WINDOW_MS
-        val collected = HashMap<String, MutableList<IptvProgramme>>()
-        for ((playlist, urls) in epgSources) {
-            if (urls.isEmpty()) continue
-            val playlistChannels = channels.filter { it.playlistId == playlist.id }
-            urls.forEachIndexed { index, url ->
-                coroutineContext.ensureActive()
-                _status.value = IptvLoadStatus.Loading(IptvLoadStage.EPG, playlist.name)
+        val errors = ArrayList<String>()
+        for (state in states) {
+            coroutineContext.ensureActive()
+            val playlist = state.playlist
+            val dir = playlistDir(playlist.id)
+            val force = playlist.id in forced
+            val now = System.currentTimeMillis()
+            var meta = state.meta
+
+            val playlistDue = force || state.channels.isEmpty() ||
+                intervalDue(meta.playlistFetchedAt, meta.playlistAttemptAt, playlist.playlistRefreshDays, now)
+            var channelsChanged = false
+            if (playlistDue) {
+                _status.value = IptvLoadStatus.Loading(IptvLoadStage.PLAYLIST, playlist.name)
+                meta = meta.copy(playlistAttemptAt = now)
                 try {
-                    val file = File(playlistDir(playlist.id), "epg_$index.xml")
-                    fetchOrUseCache(url, file, playlist.userAgent, force, EPG_MAX_AGE_MS)
+                    val fetch = fetchChannels(playlist, dir)
+                    state.channels = fetch.channels
+                    channelsChanged = true
+                    meta = meta.copy(
+                        headerEpgUrls = fetch.headerEpgUrls,
+                        playlistFetchedAt = if (fetch.fresh) now else meta.playlistFetchedAt
+                    )
+                    IptvCache.writeChannels(dir, fetch.channels)
+                } catch (error: Exception) {
+                    coroutineContext.ensureActive()
+                    Log.w(TAG, "Failed to load playlist ${playlist.name}", error)
+                    if (state.channels.isEmpty()) {
+                        errors.add("${playlist.name}: ${error.message ?: error.javaClass.simpleName}")
+                    }
+                }
+                saveMeta(state, dir, meta)
+                publish(states, playlists)
+            }
+
+            if (state.channels.isEmpty()) continue
+            val epgUrls = epgUrlsFor(playlist, meta)
+            if (epgUrls.isEmpty()) continue
+
+            val epgDue = force || intervalDue(meta.epgFetchedAt, meta.epgAttemptAt, playlist.epgRefreshDays, now)
+            val needsParse = epgDue || channelsChanged || !File(dir, EPG_CACHE_FILE).exists()
+            if (!needsParse) continue
+
+            _status.value = IptvLoadStatus.Loading(IptvLoadStage.EPG, playlist.name)
+            if (epgDue) meta = meta.copy(epgAttemptAt = now)
+            val futureDays = (playlist.epgRefreshDays + 1).coerceIn(MIN_EPG_FUTURE_DAYS, MAX_EPG_FUTURE_DAYS)
+            val windowStart = now - EPG_PAST_WINDOW_MS
+            val windowEnd = now + futureDays * DAY_MS
+            val collected = HashMap<String, MutableList<IptvProgramme>>()
+            var anyFresh = false
+            var anyParsed = false
+            epgUrls.forEachIndexed { index, url ->
+                coroutineContext.ensureActive()
+                val file = File(dir, "epg_$index.xml")
+                try {
+                    if (epgDue || !file.exists() || file.length() == 0L) {
+                        if (downloadOrKeep(url, file, playlist.userAgent)) anyFresh = true
+                    }
                     openMaybeGzip(file).use { input ->
                         val parser = Xml.newPullParser()
                         runCatching { parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false) }
                         runCatching { parser.setFeature("http://xmlpull.org/v1/doc/features.html#relaxed", true) }
                         parser.setInput(input, null)
-                        XmltvParser.parse(parser, playlistChannels, windowStart, windowEnd, collected)
+                        XmltvParser.parse(parser, state.channels, windowStart, windowEnd, collected)
                     }
+                    anyParsed = true
                 } catch (error: Exception) {
                     coroutineContext.ensureActive()
                     Log.w(TAG, "Failed to load EPG $url", error)
                 }
             }
+            dir.listFiles { file -> file.name.matches(Regex("epg_\\d+\\.xml")) }?.forEach { file ->
+                val index = file.name.removePrefix("epg_").removeSuffix(".xml").toIntOrNull()
+                if (index != null && index >= epgUrls.size) file.delete()
+            }
+
+            if (anyParsed) {
+                val epg = HashMap<String, List<IptvProgramme>>(collected.size)
+                collected.forEach { (key, list) -> epg[key] = XmltvParser.normalizeProgrammes(list) }
+                state.epg = epg
+                IptvCache.writeEpg(dir, epg)
+            }
+            if (anyFresh) meta = meta.copy(epgFetchedAt = now)
+            saveMeta(state, dir, meta)
+            publish(states, playlists)
         }
 
-        val epg = HashMap<String, List<IptvProgramme>>(collected.size)
-        collected.forEach { (key, list) -> epg[key] = XmltvParser.normalizeProgrammes(list) }
-        _content.value = _content.value.copy(epg = epg, loadedAt = System.currentTimeMillis())
-        _status.value = if (errors.isEmpty()) IptvLoadStatus.Idle else IptvLoadStatus.Error(errors.joinToString("\n"))
+        publish(states, playlists)
+        _status.value = when {
+            states.all { it.channels.isEmpty() } ->
+                IptvLoadStatus.Error(errors.joinToString("\n").ifBlank { "No channels found" })
+            errors.isNotEmpty() -> IptvLoadStatus.Error(errors.joinToString("\n"))
+            else -> IptvLoadStatus.Idle
+        }
         markLoaded(signature)
+    }
+
+    private fun saveMeta(state: PlaylistState, dir: File, meta: IptvCacheMeta) {
+        state.meta = meta
+        metas[state.playlist.id] = meta
+        runCatching { IptvCache.writeMeta(dir, meta) }
+            .onFailure { Log.w(TAG, "Failed to write IPTV cache metadata", it) }
+    }
+
+    private fun publish(states: List<PlaylistState>, playlists: List<IptvPlaylist>) {
+        val channels = ArrayList<IptvChannel>()
+        val epg = HashMap<String, List<IptvProgramme>>()
+        val updates = HashMap<String, IptvPlaylistUpdate>()
+        states.forEach { state ->
+            channels.addAll(state.channels)
+            epg.putAll(state.epg)
+            updates[state.playlist.id] = IptvPlaylistUpdate(
+                channelsUpdatedAt = state.meta.playlistFetchedAt,
+                guideUpdatedAt = state.meta.epgFetchedAt
+            )
+        }
+        _content.value = IptvContent(
+            channels = channels,
+            groups = buildGroups(channels, playlists),
+            epg = epg,
+            loadedAt = System.currentTimeMillis(),
+            updates = updates
+        )
     }
 
     @Synchronized
@@ -182,12 +325,22 @@ class IptvRepository @Inject constructor(
         }
     }
 
-    private fun loadChannels(playlist: IptvPlaylist, force: Boolean): Pair<List<IptvChannel>, List<String>> {
-        val dir = playlistDir(playlist.id)
+    private fun epgUrlsFor(playlist: IptvPlaylist, meta: IptvCacheMeta): List<String> {
+        val custom = playlist.epgUrl.split(',', '\n')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        if (custom.isNotEmpty()) return custom
+        return when (playlist.type) {
+            IptvSourceType.M3U -> meta.headerEpgUrls
+            IptvSourceType.XTREAM -> listOf(XtreamCodes.epgUrl(playlist))
+        }
+    }
+
+    private suspend fun fetchChannels(playlist: IptvPlaylist, dir: File): ChannelsFetch {
         return when (playlist.type) {
             IptvSourceType.M3U -> {
                 val file = File(dir, "playlist.m3u")
-                fetchOrUseCache(playlist.url.trim(), file, playlist.userAgent, force, PLAYLIST_MAX_AGE_MS)
+                val fresh = downloadOrKeep(playlist.url.trim(), file, playlist.userAgent)
                 val result = BufferedReader(InputStreamReader(openMaybeGzip(file), Charsets.UTF_8), 64 * 1024).use { reader ->
                     M3uParser.parse(
                         reader = reader,
@@ -195,14 +348,13 @@ class IptvRepository @Inject constructor(
                         defaultUserAgent = playlist.userAgent.takeIf { it.isNotBlank() }
                     )
                 }
-                result.channels to result.epgUrls
+                ChannelsFetch(result.channels, result.epgUrls, fresh)
             }
             IptvSourceType.XTREAM -> {
                 val categoriesFile = File(dir, "xt_categories.json")
                 val streamsFile = File(dir, "xt_streams.json")
-                val refresh = force || isStale(streamsFile, PLAYLIST_MAX_AGE_MS) || !categoriesFile.exists()
-                fetchOrUseCache(XtreamCodes.playerApiUrl(playlist, "get_live_categories"), categoriesFile, playlist.userAgent, refresh, PLAYLIST_MAX_AGE_MS)
-                fetchOrUseCache(XtreamCodes.playerApiUrl(playlist, "get_live_streams"), streamsFile, playlist.userAgent, refresh, PLAYLIST_MAX_AGE_MS)
+                downloadOrKeep(XtreamCodes.playerApiUrl(playlist, "get_live_categories"), categoriesFile, playlist.userAgent)
+                val fresh = downloadOrKeep(XtreamCodes.playerApiUrl(playlist, "get_live_streams"), streamsFile, playlist.userAgent)
                 val categories = runCatching { XtreamCodes.parseCategories(categoriesFile.readText()) }.getOrDefault(emptyList())
                 val channels = try {
                     XtreamCodes.parseLiveStreams(streamsFile.readText(), playlist, categories)
@@ -210,13 +362,13 @@ class IptvRepository @Inject constructor(
                     streamsFile.delete()
                     throw error
                 }
-                channels to listOf(XtreamCodes.epgUrl(playlist))
+                ChannelsFetch(channels, emptyList(), fresh)
             }
         }
     }
 
     private fun buildGroups(channels: List<IptvChannel>, playlists: List<IptvPlaylist>): List<IptvGroup> {
-        val multiple = playlists.size > 1
+        val multiple = playlists.count { it.enabled } > 1
         val names = playlists.associate { it.id to it.name }
         val counts = LinkedHashMap<String, Int>()
         val labels = HashMap<String, String>()
@@ -236,39 +388,56 @@ class IptvRepository @Inject constructor(
         return File(File(context.filesDir, "iptv"), safe).apply { mkdirs() }
     }
 
-    private fun isStale(file: File, maxAgeMs: Long): Boolean =
-        !file.exists() || file.length() == 0L || System.currentTimeMillis() - file.lastModified() > maxAgeMs
-
-    private fun fetchOrUseCache(url: String, target: File, userAgent: String, force: Boolean, maxAgeMs: Long) {
-        if (!force && !isStale(target, maxAgeMs)) return
-        try {
+    private suspend fun downloadOrKeep(url: String, target: File, userAgent: String): Boolean {
+        return try {
             download(url, target, userAgent)
-        } catch (error: IOException) {
+            true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
             if (!target.exists() || target.length() == 0L) throw error
             Log.w(TAG, "Using cached copy after download failure", error)
+            false
         }
     }
 
-    private fun download(url: String, target: File, userAgent: String) {
+    private suspend fun download(url: String, target: File, userAgent: String) {
         val builder = Request.Builder().url(url)
         if (userAgent.isNotBlank()) builder.tag(UserAgentTag::class.java, UserAgentTag(userAgent.trim()))
-        client.newCall(builder.build()).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            val body = response.body ?: throw IOException("Empty response")
-            target.parentFile?.mkdirs()
-            val temp = File(target.parentFile, target.name + ".tmp")
-            body.byteStream().use { input ->
-                temp.outputStream().use { output -> input.copyTo(output, 64 * 1024) }
+        val call = client.newCall(builder.build())
+        val job = coroutineContext[Job]
+        val handle = job?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
+        target.parentFile?.mkdirs()
+        val temp = File(target.parentFile, "${target.name}.${System.nanoTime()}.tmp")
+        try {
+            call.execute().use { response ->
+                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                val body = response.body ?: throw IOException("Empty response")
+                body.byteStream().use { input ->
+                    temp.outputStream().use { output ->
+                        val buffer = ByteArray(64 * 1024)
+                        while (true) {
+                            coroutineContext.ensureActive()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                        }
+                    }
+                }
             }
-            if (temp.length() == 0L) {
-                temp.delete()
-                throw IOException("Empty response")
-            }
+            if (temp.length() == 0L) throw IOException("Empty response")
             if (!temp.renameTo(target)) {
                 temp.copyTo(target, overwrite = true)
-                temp.delete()
             }
+        } finally {
+            handle?.dispose()
+            if (temp.exists()) temp.delete()
         }
+    }
+
+    private fun cleanupTempFiles(dir: File, now: Long) {
+        dir.listFiles { file -> file.name.endsWith(".tmp") && now - file.lastModified() > HOUR_MS }
+            ?.forEach { it.delete() }
     }
 
     private fun openMaybeGzip(file: File): InputStream {
