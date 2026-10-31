@@ -10,10 +10,12 @@ import com.nuvio.tv.data.iptv.IptvGroup
 import com.nuvio.tv.data.iptv.IptvGroupIds
 import com.nuvio.tv.data.iptv.IptvLoadStatus
 import com.nuvio.tv.data.iptv.IptvPlaylist
+import com.nuvio.tv.data.iptv.IptvPlaylistUpdate
 import com.nuvio.tv.data.iptv.IptvProgramme
 import com.nuvio.tv.data.iptv.IptvRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +40,8 @@ data class IptvUiState(
     val epg: Map<String, List<IptvProgramme>> = emptyMap(),
     val favorites: Set<String> = emptySet(),
     val previewChannel: IptvChannel? = null,
-    val focusChannelKey: String? = null
+    val focusChannelKey: String? = null,
+    val updates: Map<String, IptvPlaylistUpdate> = emptyMap()
 )
 
 @HiltViewModel
@@ -46,6 +49,10 @@ class IptvViewModel @Inject constructor(
     private val repository: IptvRepository,
     private val dataStore: IptvDataStore
 ) : ViewModel() {
+
+    private companion object {
+        const val REFRESH_CHECK_INTERVAL_MS = 30L * 60 * 1000
+    }
 
     private data class Selection(
         val groupId: String?,
@@ -75,6 +82,12 @@ class IptvViewModel @Inject constructor(
             dataStore.playlists.distinctUntilChanged().collect { playlists ->
                 playlistsState.value = playlists
                 repository.ensureLoaded(playlists)
+            }
+        }
+        viewModelScope.launch {
+            while (true) {
+                delay(REFRESH_CHECK_INTERVAL_MS)
+                repository.refreshIfDue()
             }
         }
     }
@@ -142,7 +155,8 @@ class IptvViewModel @Inject constructor(
             epg = content.epg,
             favorites = stored.favorites,
             previewChannel = previewChannel,
-            focusChannelKey = selection.previewKey ?: stored.lastChannel
+            focusChannelKey = selection.previewKey ?: stored.lastChannel,
+            updates = content.updates
         )
     }
 
@@ -176,11 +190,18 @@ class IptvViewModel @Inject constructor(
         }
     }
 
+    fun refreshPlaylist(playlistId: String) {
+        viewModelScope.launch {
+            val playlists = playlistsState.value ?: dataStore.playlists.first()
+            repository.refreshPlaylist(playlists, playlistId)
+        }
+    }
+
     fun savePlaylist(playlist: IptvPlaylist) {
         val resolved = if (playlist.id.isBlank()) playlist.copy(id = UUID.randomUUID().toString()) else playlist
         viewModelScope.launch {
             val existing = playlistsState.value.orEmpty().firstOrNull { it.id == resolved.id }
-            if (existing != null && existing != resolved) {
+            if (existing != null && !existing.hasSameSource(resolved)) {
                 repository.deleteCache(resolved.id)
             }
             dataStore.upsertPlaylist(resolved)
