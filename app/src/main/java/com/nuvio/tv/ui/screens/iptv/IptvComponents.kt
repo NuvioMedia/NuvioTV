@@ -225,3 +225,35 @@ internal fun IptvChannelLogo(
         }
     }
 }
+
+@Composable
+internal fun IptvChoiceChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(50)
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) NuvioTheme.colors.Secondary else NuvioTheme.colors.SurfaceVariant,
+            contentColor = if (selected) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextPrimary,
+            focusedContainerColor = if (selected) NuvioTheme.colors.Secondary else NuvioTheme.colors.FocusBackground,
+            focusedContentColor = if (selected) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextPrimary
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(border = NuvioTheme.focusRing.border(2.dp), shape = shape)
+        ),
+        shape = ClickableSurfaceDefaults.shape(shape),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
+}
