@@ -44,79 +44,97 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
     onSubtitlesEmitted: ((List<Subtitle>) -> Unit)? = null
 ): List<Subtitle> {
     val request = buildSubtitleFetchRequest() ?: return withStreamSidecarSubtitles(emptyList())
-    val installedAddonOrder = addonRepository.getInstalledAddons().firstOrNull()
-        ?.enabledAddons()
-        ?.map { it.displayName }
-        .orEmpty()
-    _uiState.update { it.copy(installedSubtitleAddonOrder = installedAddonOrder) }
-
-    // Compute hash lazily for providers that support OpenSubtitles-style matching.
-    if (currentVideoHash == null && currentStreamUrl.isNotBlank()) {
-        val result = OpenSubtitlesHasher.compute(currentStreamUrl, currentHeaders)
-        if (result != null) {
-            currentVideoHash = result.hash
-            if (currentVideoSize == null) currentVideoSize = result.fileSize
-            val key = streamCacheKey
-            if (key != null) {
-                val state = _uiState.value
-                val torrentInfoHash = currentInfoHash
-                if (isTorrentStream && torrentInfoHash != null) {
-                    streamLinkCacheDataStore.save(
-                        contentKey = key,
-                        url = "",
-                        streamName = state.currentStreamName ?: title,
-                        headers = emptyMap(),
-                        filename = currentFilename,
-                        videoHash = currentVideoHash,
-                        videoSize = currentVideoSize,
-                        infoHash = torrentInfoHash,
-                        fileIdx = currentFileIdx,
-                        sources = currentTorrentSources,
-                        bingeGroup = currentStreamBingeGroup,
-                        contentLanguage = contentLanguage,
-                        year = year
-                    )
-                } else if (currentStreamUrl.isNotBlank() && !isServerStream) {
-                    streamLinkCacheDataStore.save(
-                        contentKey = key,
-                        url = currentStreamUrl,
-                        streamName = state.currentStreamName ?: title,
-                        headers = currentHeaders,
-                        filename = currentFilename,
-                        videoHash = currentVideoHash,
-                        videoSize = currentVideoSize,
-                        bingeGroup = currentStreamBingeGroup,
-                        contentLanguage = contentLanguage,
-                        year = year
-                    )
-                }
-            }
+    val streamUrl = currentStreamUrl
+    val headers = currentHeaders.toMap()
+    val filename = currentFilename
+    fun ensureCurrentRequest() {
+        if (request != buildSubtitleFetchRequest() || streamUrl != currentStreamUrl || headers != currentHeaders) {
+            throw kotlinx.coroutines.CancellationException("Subtitle stream changed")
         }
     }
-
-    return withStreamSidecarSubtitles(
-        subtitleRepository.getSubtitles(
-            type = request.type,
-            id = request.id,
-            videoId = request.videoId,
-            videoHash = currentVideoHash,
-            videoSize = currentVideoSize,
-            filename = currentFilename,
-            onProgress = onProgress,
-            onSubtitlesEmitted = { currentList ->
-                onSubtitlesEmitted?.invoke(withStreamSidecarSubtitles(currentList))
+    val installedAddonOrder = addonRepository.getInstalledAddons().firstOrNull()
+        ?.enabledAddons()?.map { it.displayName }.orEmpty()
+    ensureCurrentRequest()
+    _uiState.update { it.copy(installedSubtitleAddonOrder = installedAddonOrder) }
+    return fetchProgressiveSubtitles(
+        knownHash = currentVideoHash,
+        probeHash = {
+            // Compute hash lazily for providers that support OpenSubtitles-style matching.
+            if (currentVideoHash == null && currentStreamUrl.isNotBlank()) {
+                val result = OpenSubtitlesHasher.compute(streamUrl, headers, timeoutMs = 1500L)
+                ensureCurrentRequest()
+                if (result != null) {
+                    currentVideoHash = result.hash
+                    if (currentVideoSize == null) currentVideoSize = result.fileSize
+                    val key = streamCacheKey
+                    if (key != null) {
+                        val state = _uiState.value
+                        val torrentInfoHash = currentInfoHash
+                        if (isTorrentStream && torrentInfoHash != null) {
+                            streamLinkCacheDataStore.save(
+                                contentKey = key,
+                                url = "",
+                                streamName = state.currentStreamName ?: title,
+                                headers = emptyMap(),
+                                filename = currentFilename,
+                                videoHash = currentVideoHash,
+                                videoSize = currentVideoSize,
+                                infoHash = torrentInfoHash,
+                                fileIdx = currentFileIdx,
+                                sources = currentTorrentSources,
+                                bingeGroup = currentStreamBingeGroup,
+                                contentLanguage = contentLanguage,
+                                year = year
+                            )
+                        } else if (currentStreamUrl.isNotBlank() && !isServerStream) {
+                            streamLinkCacheDataStore.save(
+                                contentKey = key,
+                                url = currentStreamUrl,
+                                streamName = state.currentStreamName ?: title,
+                                headers = currentHeaders,
+                                filename = currentFilename,
+                                videoHash = currentVideoHash,
+                                videoSize = currentVideoSize,
+                                bingeGroup = currentStreamBingeGroup,
+                                contentLanguage = contentLanguage,
+                                year = year
+                            )
+                        }
+                    }
+                }
             }
-        )
+
+            currentVideoHash
+        },
+        fetch = { hash, emit ->
+            ensureCurrentRequest()
+            subtitleRepository.getSubtitles(
+                type = request.type,
+                id = request.id,
+                videoId = request.videoId,
+                videoHash = hash,
+                videoSize = currentVideoSize,
+                filename = filename,
+                onProgress = onProgress,
+                onSubtitlesEmitted = { items ->
+                    ensureCurrentRequest()
+                    emit(withStreamSidecarSubtitles(items))
+                }
+            ).also { ensureCurrentRequest() }.let { withStreamSidecarSubtitles(it) }
+        },
+        key = { addonSubtitleKey(it) },
+        emit = { ensureCurrentRequest(); onSubtitlesEmitted?.invoke(it) }
     )
 }
 
 internal fun PlayerRuntimeController.fetchAddonSubtitles() {
+    addonSubtitleFetchJob?.cancel()
     if (buildSubtitleFetchRequest() == null) {
         publishStreamSidecarSubtitlesWithoutAddonFetch()
         return
     }
 
-    scope.launch {
+    addonSubtitleFetchJob = scope.launch {
         _uiState.update {
             it.copy(
                 isLoadingAddonSubtitles = true,
@@ -159,6 +177,8 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                 subtitleTracks = _uiState.value.subtitleTracks
             )
             tryAutoSelectPreferredSubtitleFromAvailableTracks()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             _uiState.update {
                 it.copy(
