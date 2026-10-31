@@ -51,6 +51,14 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -71,26 +79,11 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
+import com.nuvio.tv.ui.screens.player.autosync.AutoSyncedChip
 
 private const val SubtitleOffLanguageKey = "__off__"
 private const val SubtitleUnknownLanguageKey = "__unknown__"
 private const val SubtitleFocusTag = "SubtitleFocus"
-
-private val OverlayTextColors = listOf(
-    Color.White,
-    Color(0xFFD9D9D9),
-    Color(0xFFFFD700),
-    Color(0xFF00E5FF),
-    Color(0xFFFF5C5C),
-    Color(0xFF00FF88)
-)
-
-private val OverlayOutlineColors = listOf(
-    Color.Black,
-    Color.White,
-    Color(0xFF00E5FF),
-    Color(0xFFFF5C5C)
-)
 
 private const val RailFadeDurationMs = 120
 
@@ -102,6 +95,7 @@ internal fun SubtitleSelectionOverlay(
     addonSubtitles: List<Subtitle>,
     selectedAddonSubtitle: Subtitle?,
     subtitleStyle: SubtitleStyleSettings,
+    isEditingHdrStyle: Boolean = false,
     subtitleDelayMs: Int,
     installedSubtitleAddonOrder: List<String>,
     isLoadingAddons: Boolean,
@@ -346,6 +340,7 @@ internal fun SubtitleSelectionOverlay(
             requestedKey.startsWith("${StyleFocusKey.OutlineColorPrefix}:") && !subtitleStyle.outlineEnabled -> {
                 StyleFocusKey.OutlineToggle
             }
+            requestedKey.isHdrBrightnessFocusKey() && !isEditingHdrStyle -> StyleFocusKey.OpacityDecrease
             else -> requestedKey
         }.takeIf { key -> styleRequesters.containsKey(key) } ?: StyleFocusKey.DelaySet
         if (
@@ -450,7 +445,7 @@ internal fun SubtitleSelectionOverlay(
                 pendingStyleFocusKey = null
                 return@LaunchedEffect
             }
-            val targetIndex = styleListIndexForFocusKey(targetKey)
+            val targetIndex = styleListIndexForFocusKey(targetKey, hasHdrBrightnessItem = isEditingHdrStyle)
             repeat(8) { attempt ->
                 styleListState.scrollItemIntoView(targetIndex)
                 Log.d(
@@ -593,6 +588,7 @@ internal fun SubtitleSelectionOverlay(
                 RailFadeIn(visible = styleRailVisible) {
                     SubtitleStyleRail(
                         subtitleStyle = subtitleStyle,
+                        isEditingHdrStyle = isEditingHdrStyle,
                         subtitleDelayMs = subtitleDelayMs,
                         listState = styleListState,
                         onMoveLeft = ::moveFocusBackToOptionRail,
@@ -809,6 +805,7 @@ private fun SubtitleOptionsRail(
 @Composable
 private fun SubtitleStyleRail(
     subtitleStyle: SubtitleStyleSettings,
+    isEditingHdrStyle: Boolean,
     subtitleDelayMs: Int,
     listState: LazyListState,
     onMoveLeft: () -> Unit,
@@ -925,11 +922,15 @@ private fun SubtitleStyleRail(
             }
             item {
                 OverlaySectionCard(
-                    title = stringResource(R.string.subtitle_style_text_color),
+                    title = if (isEditingHdrStyle) {
+                        stringResource(R.string.subtitle_style_text_color_hdr)
+                    } else {
+                        stringResource(R.string.subtitle_style_text_color)
+                    },
                     modifier = styleCardModifier
                 ) {
                     ColorChipRow(
-                        colors = OverlayTextColors,
+                        colors = SubtitleTextColorPresets,
                         selectedColor = subtitleStyle.textColor,
                         onMoveLeft = onMoveLeft,
                         focusRequesters = focusRequesters,
@@ -941,7 +942,11 @@ private fun SubtitleStyleRail(
             }
             item {
                 OverlaySectionCard(
-                    title = stringResource(R.string.subtitle_style_text_opacity),
+                    title = if (isEditingHdrStyle) {
+                        stringResource(R.string.subtitle_style_text_opacity_hdr)
+                    } else {
+                        stringResource(R.string.subtitle_style_text_opacity)
+                    },
                     modifier = styleCardModifier
                 ) {
                     val currentColor = Color(subtitleStyle.textColor)
@@ -965,6 +970,30 @@ private fun SubtitleStyleRail(
                     )
                 }
             }
+            if (isEditingHdrStyle) {
+                item {
+                    OverlaySectionCard(
+                        title = stringResource(R.string.subtitle_style_brightness_hdr),
+                        modifier = styleCardModifier
+                    ) {
+                        StepperRow(
+                            value = "${subtitleStyle.hdrBrightness}%",
+                            onDecrease = {
+                                dispatchStyleEvent(PlayerEvent.OnSetSubtitleHdrBrightness(subtitleStyle.hdrBrightness - 10))
+                            },
+                            onIncrease = {
+                                dispatchStyleEvent(PlayerEvent.OnSetSubtitleHdrBrightness(subtitleStyle.hdrBrightness + 10))
+                            },
+                            onMoveLeft = onMoveLeft,
+                            decrementFocusRequester = focusRequesters[StyleFocusKey.HdrBrightnessDecrease],
+                            incrementFocusRequester = focusRequesters[StyleFocusKey.HdrBrightnessIncrease],
+                            decrementFocusKey = StyleFocusKey.HdrBrightnessDecrease,
+                            incrementFocusKey = StyleFocusKey.HdrBrightnessIncrease,
+                            onFocusChanged = onStyleFocused
+                        )
+                    }
+                }
+            }
             item {
                 OverlaySectionCard(
                     title = stringResource(R.string.subtitle_style_outline),
@@ -981,7 +1010,7 @@ private fun SubtitleStyleRail(
                             onClick = { dispatchStyleEvent(PlayerEvent.OnSetSubtitleOutlineEnabled(!subtitleStyle.outlineEnabled)) }
                         )
                         ColorChipRow(
-                            colors = OverlayOutlineColors,
+                            colors = SubtitleOutlineColorPresets,
                             selectedColor = subtitleStyle.outlineColor,
                             enabled = subtitleStyle.outlineEnabled,
                             onMoveLeft = onMoveLeft,
@@ -1093,6 +1122,10 @@ private fun SubtitleLanguageCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .semantics {
+                role = Role.RadioButton
+                this.selected = isSelected
+            }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
@@ -1174,6 +1207,10 @@ private fun SubtitleOptionCard(
         onLongClick = onLongClick,
         modifier = Modifier
             .fillMaxWidth()
+            .semantics {
+                role = Role.RadioButton
+                this.selected = item.isSelected
+            }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
@@ -1229,7 +1266,13 @@ private fun SubtitleOptionCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                SourceChip(label = item.sourceLabel, selected = item.isSelected)
+                Row( // AutoSync hook: room for the "Auto synced" chip beside the source
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SourceChip(label = item.sourceLabel, selected = item.isSelected)
+                    item.addonSubtitle?.let { AutoSyncedChip(it.url, item.isSelected) } // AutoSync hook
+                }
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.bodyLarge,
@@ -1391,6 +1434,7 @@ private fun StepperRow(
     ) {
         StepperButton(
             icon = Icons.Default.Remove,
+            contentDescription = stringResource(R.string.cd_decrease),
             onClick = onDecrease,
             onMoveLeft = onMoveLeft,
             focusRequester = decrementFocusRequester,
@@ -1412,6 +1456,7 @@ private fun StepperRow(
         }
         StepperButton(
             icon = Icons.Default.Add,
+            contentDescription = stringResource(R.string.cd_increase),
             onClick = onIncrease,
             focusRequester = incrementFocusRequester,
             focusKey = incrementFocusKey,
@@ -1423,6 +1468,7 @@ private fun StepperRow(
 @Composable
 private fun StepperButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
     onClick: () -> Unit,
     onMoveLeft: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
@@ -1481,7 +1527,7 @@ private fun StepperButton(
         shape = IconButtonDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md)),
         scale = IconButtonDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
-        Icon(imageVector = icon, contentDescription = null)
+        Icon(imageVector = icon, contentDescription = contentDescription)
     }
 }
 
@@ -1497,6 +1543,10 @@ private fun ToggleChip(
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
+    val switchSemantics = Modifier.semantics {
+        role = Role.Switch
+        toggleableState = if (isEnabled) ToggleableState.On else ToggleableState.Off
+    }
     Card(
         onClick = onClick,
         modifier = if (focusRequester != null) {
@@ -1523,6 +1573,7 @@ private fun ToggleChip(
                 .onFocusChanged {
                     if (it.isFocused && focusKey != null) onFocused?.invoke(focusKey)
                 }
+                .then(switchSemantics)
         } else {
             Modifier
                 .onPreviewKeyEvent { event ->
@@ -1546,6 +1597,7 @@ private fun ToggleChip(
                 .onFocusChanged {
                     if (it.isFocused && focusKey != null) onFocused?.invoke(focusKey)
                 }
+                .then(switchSemantics)
         },
         colors = overlayCardColors(selected = isEnabled),
         shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
@@ -1603,6 +1655,7 @@ private fun ColorChip(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
 
+    val swatchLabel = stringResource(R.string.cd_color_swatch, overlaySwatchColorLabel(color))
     Card(
         onClick = { if (enabled) onClick() },
         colors = CardDefaults.colors(
@@ -1611,6 +1664,11 @@ private fun ColorChip(
         ),
         modifier = Modifier
             .size(NuvioTheme.spacing.xxl)
+            .clearAndSetSemantics {
+                contentDescription = swatchLabel
+                role = Role.RadioButton
+                this.selected = isSelected
+            }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
@@ -1667,6 +1725,13 @@ private fun overlayCardBorder() = CardDefaults.border(
     )
 )
 
+/** Accessible name for a colour swatch: its own RGB value, as that is the only colour
+ *  description available on this screen (there are no per-colour name resources). */
+private fun overlaySwatchColorLabel(color: Color): String {
+    val rgb = color.toArgb() and 0xFFFFFF
+    return "#" + rgb.toString(16).padStart(6, '0').uppercase()
+}
+
 private object StyleFocusKey {
     const val FontSizeDecrease = "font_size_decrease"
     const val FontSizeIncrease = "font_size_increase"
@@ -1679,6 +1744,8 @@ private object StyleFocusKey {
     const val TextColorPrefix = "text_color"
     const val OpacityDecrease = "opacity_decrease"
     const val OpacityIncrease = "opacity_increase"
+    const val HdrBrightnessDecrease = "hdr_brightness_decrease"
+    const val HdrBrightnessIncrease = "hdr_brightness_increase"
     const val OutlineColorPrefix = "outline_color"
 }
 
@@ -1686,6 +1753,16 @@ private enum class OverlayFocusRail {
     LANGUAGE,
     OPTION,
     STYLE
+}
+
+private fun String.isHdrBrightnessFocusKey(): Boolean =
+    this == StyleFocusKey.HdrBrightnessDecrease || this == StyleFocusKey.HdrBrightnessIncrease
+
+/** The HDR brightness item sits right after opacity, shifting every later item down by one. */
+private fun styleListIndexForFocusKey(focusKey: String, hasHdrBrightnessItem: Boolean): Int {
+    if (focusKey.isHdrBrightnessFocusKey()) return 5
+    val index = styleListIndexForFocusKey(focusKey)
+    return if (hasHdrBrightnessItem && index >= 5) index + 1 else index
 }
 
 private fun styleListIndexForFocusKey(focusKey: String): Int {
@@ -1716,16 +1793,18 @@ private fun rememberStyleFocusRequesters(): Map<String, FocusRequester> {
             StyleFocusKey.Bold,
             StyleFocusKey.OpacityDecrease,
             StyleFocusKey.OpacityIncrease,
+            StyleFocusKey.HdrBrightnessDecrease,
+            StyleFocusKey.HdrBrightnessIncrease,
             StyleFocusKey.OutlineToggle,
             StyleFocusKey.OffsetDecrease,
             StyleFocusKey.OffsetIncrease,
             StyleFocusKey.DelaySet,
             StyleFocusKey.Reset
         ).associateWith { FocusRequester() } +
-            OverlayTextColors.associate { color ->
+            SubtitleTextColorPresets.associate { color ->
                 "${StyleFocusKey.TextColorPrefix}:${color.toArgb()}" to FocusRequester()
             } +
-            OverlayOutlineColors.associate { color ->
+            SubtitleOutlineColorPresets.associate { color ->
                 "${StyleFocusKey.OutlineColorPrefix}:${color.toArgb()}" to FocusRequester()
             }
     }
@@ -1971,7 +2050,7 @@ private fun normalizeOverlayLanguageKey(language: String?): String {
     if (language.isNullOrBlank()) return SubtitleUnknownLanguageKey
     val normalized = PlayerSubtitleUtils.normalizeLanguageCode(language)
     return when (normalized) {
-        "pt-br", "es-419" -> normalized
+        "pt-br", "es-419", "sr-me" -> normalized
         else -> normalized
             .substringBefore('-')
             .substringBefore('_')
@@ -1991,7 +2070,7 @@ private fun normalizeOverlayLanguageKeyForTrack(track: TrackInfo): String {
         trackId = track.trackId
     )
     return when (variant) {
-        "pt-br", "es-419" -> variant
+        "pt-br", "es-419", "sr-me" -> variant
         else -> variant
             .substringBefore('-')
             .substringBefore('_')

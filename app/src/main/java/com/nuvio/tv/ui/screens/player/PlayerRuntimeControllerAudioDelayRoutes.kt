@@ -67,10 +67,12 @@ internal suspend fun PlayerRuntimeController.applyStoredAudioDelayForCurrentRout
     currentAudioOutputRoute = route
 
     val storedDelayMs = audioDelayRouteDataStore.loadDelayMs(route.key) ?: 0
-    applyAudioDelay(storedDelayMs, persistForCurrentRoute = false)
+    audioDelayParts = audioDelayParts.withDevice(storedDelayMs)
+    applyEffectiveAudioDelay()
     Log.d(
         PlayerRuntimeController.TAG,
-        "Applied audio delay ${storedDelayMs}ms for route=${route.key}"
+        "Applied audio delay ${storedDelayMs}ms (+${audioDelayParts.streamMs}ms from stream, " +
+            "${audioDelayParts.sessionAdjustMs}ms manual on stream) for route=${route.key}"
     )
 }
 

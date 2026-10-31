@@ -5,6 +5,7 @@ import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
+import com.nuvio.tv.domain.model.WatchProgress
 
 /**
  * Applies a custom poster URL pattern to a [MetaPreview], replacing the poster URL
@@ -23,7 +24,7 @@ fun MetaPreview.withCustomPosterUrl(
 
     val ids = CustomPosterUrlResolver.extractIds(id, explicitImdbId = imdbId)
     val type = this.type.toApiString(rawType)
-    val supportsShape = "{shape}" in pattern
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
 
     // If the pattern doesn't support shape, only override portrait posters
     if (!supportsShape && posterShape != PosterShape.POSTER) return this
@@ -80,7 +81,7 @@ fun Meta.withCustomPosterUrl(
 
     val ids = CustomPosterUrlResolver.extractIds(id, explicitImdbId = imdbId)
     val type = this.type.toApiString(rawType)
-    val supportsShape = "{shape}" in pattern
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
 
     val resolvedPoster = CustomPosterUrlResolver.resolve(
         pattern = pattern,
@@ -117,17 +118,30 @@ fun LibraryEntry.withCustomPosterUrl(
 
     val ids = CustomPosterUrlResolver.extractIds(id, explicitImdbId = imdbId)
     val type = this.type.let { if (it.equals("tv", ignoreCase = true)) "series" else it }
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
 
     val resolvedPoster = CustomPosterUrlResolver.resolve(
         pattern = pattern,
         ids = ids,
         type = type,
         shape = "poster"
-    ) ?: return this
+    )
+
+    val resolvedLandscape = if (supportsShape) {
+        CustomPosterUrlResolver.resolve(
+            pattern = pattern,
+            ids = ids,
+            type = type,
+            shape = "landscape"
+        )
+    } else null
+
+    if (resolvedPoster == null && resolvedLandscape == null) return this
 
     return copy(
-        poster = resolvedPoster,
-        rawPosterUrl = rawPosterUrl ?: poster
+        poster = resolvedPoster ?: poster,
+        rawPosterUrl = rawPosterUrl ?: poster,
+        landscapePoster = resolvedLandscape ?: landscapePoster
     )
 }
 
@@ -163,7 +177,7 @@ fun com.nuvio.tv.ui.screens.home.ContinueWatchingItem.withCustomPosterUrl(
     pattern: String
 ): com.nuvio.tv.ui.screens.home.ContinueWatchingItem {
     if (pattern.isBlank()) return this
-    val supportsShape = "{shape}" in pattern
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
     return when (this) {
         is com.nuvio.tv.ui.screens.home.ContinueWatchingItem.InProgress -> {
             val ids = CustomPosterUrlResolver.extractIds(progress.contentId)
@@ -205,4 +219,48 @@ fun List<com.nuvio.tv.ui.screens.home.ContinueWatchingItem>.withCustomPosterUrls
 ): List<com.nuvio.tv.ui.screens.home.ContinueWatchingItem> {
     if (pattern.isBlank()) return this
     return map { it.withCustomPosterUrl(pattern) }
+}
+
+/**
+ * Applies a custom poster URL pattern to [WatchProgress] for Android TV Watch Next / channel art.
+ *
+ * When the pattern includes `{shape}`, the landscape URL is written to [WatchProgress.backdrop]
+ * (Watch Next / Preview Programs prefer 16:9 art via backdrop ?: poster).
+ */
+fun WatchProgress.withCustomPosterArt(pattern: String): WatchProgress {
+    if (pattern.isBlank()) return this
+
+    val ids = CustomPosterUrlResolver.extractIds(contentId)
+    val type = if (contentType.equals("movie", ignoreCase = true)) "movie" else "series"
+    val supportsShape = CustomPosterUrlResolver.supportsShape(pattern)
+
+    val resolvedPoster = CustomPosterUrlResolver.resolve(
+        pattern = pattern,
+        ids = ids,
+        type = type,
+        shape = "poster"
+    )
+    val resolvedLandscape = if (supportsShape) {
+        CustomPosterUrlResolver.resolve(
+            pattern = pattern,
+            ids = ids,
+            type = type,
+            shape = "landscape"
+        )
+    } else {
+        null
+    }
+
+    if (resolvedPoster == null && resolvedLandscape == null) return this
+
+    return copy(
+        poster = resolvedPoster ?: poster,
+        backdrop = resolvedLandscape ?: backdrop
+    )
+}
+
+@JvmName("withCustomPosterArtList")
+fun List<WatchProgress>.withCustomPosterArt(pattern: String): List<WatchProgress> {
+    if (pattern.isBlank()) return this
+    return map { it.withCustomPosterArt(pattern) }
 }

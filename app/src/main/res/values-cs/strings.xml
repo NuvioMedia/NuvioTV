@@ -742,15 +742,6 @@
     <string name="sub_libass">Použít libass pro titulky ASS/SSA</string>
     <string name="sub_libass_sub">Experimentální: pokročilé vykreslování ASS/SSA (styly, umístění, animace)</string>
     <string name="sub_libass_mode">Režim vykreslování Libass</string>
-    <string name="sub_mode_overlay_gl">Překryv OpenGL (doporučeno)</string>
-    <string name="sub_mode_overlay_gl_sub">Nejlepší kvalita s podporou HDR. Vykresluje titulky na samostatném vlákně.</string>
-    <string name="sub_mode_overlay_canvas">Překryv Canvas</string>
-    <string name="sub_mode_effects_gl">Efekty OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Podpora animací pomocí efektů Media3. Rychlejší než Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efekty Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Podpora animací pomocí efektů Media3 s vykreslováním Canvas.</string>
-    <string name="sub_mode_standard">Standardní cue</string>
-    <string name="sub_mode_standard_sub">Základní vykreslování titulků bez podpory animací. Nejkompatibilnější.</string>
     <string name="sub_org_none">Žádné (výchozí pořadí)</string>
     <string name="sub_org_by_lang">Podle jazyka</string>
     <string name="sub_org_by_addon">Podle doplňku</string>
@@ -1497,7 +1488,6 @@
     <string name="parental_severity_moderate">Střední</string>
     <string name="parental_severity_mild">Mírné</string>
     <string name="player_ends_at">Končí v %1$s</string>
-    <string name="player_via">přes %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Zpoždění titulků</string>
@@ -2064,7 +2054,6 @@
     <string name="player_error_failed_start_torrent">Nepodařilo se spustit torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">Podpora HDR s vykreslováním Canvas. Může blokovat UI vlákno.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
@@ -2756,8 +2745,6 @@
     <string name="playback_reset_to_default">Obnovit výchozí</string>
     <string name="playback_net_custom">Vlastní síť</string>
     <string name="playback_net_custom_sub">Použít více paralelních spojení pro získávání progresivních streamů. Je-li vypnuto, použije se jedno spojení.</string>
-    <string name="playback_net_http2">Zapnout HTTP/2</string>
-    <string name="playback_net_http2_sub">Zapnout protokol HTTP/2 pro síťová spojení, umožňující multiplexování požadavků a rychlejší handshake.</string>
     <string name="playback_net_parallel">Paralelní spojení</string>
     <string name="playback_net_parallel_sub">Použít více spojení paralelně pro získávání streamů. Aktivujte, pokud dochází k bufferování, přestože je rychlost stahování jednoznačně dostatečná.</string>
     <string name="playback_net_connection_count">Počet spojení</string>

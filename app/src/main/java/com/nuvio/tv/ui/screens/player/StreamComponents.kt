@@ -223,7 +223,9 @@ internal fun StreamItem(
                     if (addonLogoModel != null) {
                         AsyncImage(
                             model = addonLogoModel,
-                            contentDescription = stream.addonName,
+                            // Decorative: the addon name is announced by the sibling Text below,
+                            // so naming the logo too would duplicate it in the merged card.
+                            contentDescription = null,
                             modifier = Modifier
                                 .size(NuvioTheme.spacing.xxl)
                                 .clip(RoundedCornerShape(NuvioTheme.radii.xs)),
@@ -260,6 +262,7 @@ internal fun AddonFilterChips(
     externalFocusRequesters: List<FocusRequester>? = null,
     externalOrderedNames: List<String>? = null,
     onUpKey: (() -> Unit)? = null,
+    onFocusIndexChanged: (Int) -> Unit = {},
     debugTag: String = "AddonFilterChips"
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -350,8 +353,8 @@ internal fun AddonFilterChips(
 
     val chipListState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    LaunchedEffect(orderedNames.size, isRtl, chipRowHasFocus) {
-        if (!chipRowHasFocus) {
+    LaunchedEffect(focusedChipIndex) {
+        if (focusedChipIndex >= 0 && !chipRowHasFocus) {
             chipListState.scrollToItem(0)
         }
     }
@@ -359,8 +362,8 @@ internal fun AddonFilterChips(
     // When the selected addon is removed, switch filter to the last available addon
     LaunchedEffect(selectedAddon, orderedNames) {
         if (selectedAddon != null && selectedAddon !in orderedNames) {
-            val lastAddon = orderedNames.lastOrNull()
-            onAddonSelected(lastAddon)
+            val lastIndex = if (hasRefresh) orderedNames.size + 1 else orderedNames.size
+            moveFocusTo(lastIndex.coerceAtLeast(if (hasRefresh) 1 else 0))
         }
     }
 
@@ -422,7 +425,10 @@ internal fun AddonFilterChips(
                     isLoading = isStillFetching,
                     onFocusChanged = { isFocused ->
                         refreshHasFocus = isFocused
-                        if (isFocused) focusedChipIndex = 0
+                        if (isFocused) {
+                            focusedChipIndex = 0
+                            onFocusIndexChanged(0)
+                        }
                     },
                     modifier = Modifier
                         .focusRequester(focusRequesters[0])
@@ -446,6 +452,7 @@ internal fun AddonFilterChips(
                         if (it.isFocused) {
                             focusedChipIndex = allChipIndex
                             refreshHasFocus = false
+                            onFocusIndexChanged(allChipIndex)
                         }
                     }
             )
@@ -468,6 +475,7 @@ internal fun AddonFilterChips(
                         if (it.isFocused) {
                             focusedChipIndex = requesterIdx
                             refreshHasFocus = false
+                            onFocusIndexChanged(requesterIdx)
                         }
                     }
             )

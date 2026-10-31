@@ -41,6 +41,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -173,7 +177,8 @@ internal fun LayoutFocusedPosterSection(
     onEvent: (LayoutSettingsEvent) -> Unit
 ) {
     val isModern = uiState.selectedLayout == HomeLayout.MODERN
-    val isModernLandscape = isModern && uiState.modernLandscapePostersEnabled
+    val isLandscapeActive = uiState.modernLandscapePostersEnabled
+    val isModernLandscape = isModern && isLandscapeActive
     val showAutoplayRow = AppFeaturePolicy.inAppTrailerPlaybackEnabled &&
         (uiState.focusedPosterBackdropExpandEnabled || isModernLandscape)
 
@@ -272,6 +277,14 @@ internal fun LayoutPosterCardSection(
         onSelected = { radius -> onEvent(LayoutSettingsEvent.SetPosterCardCornerRadius(radius)) }
     )
     SettingsToggleRow(
+        title = stringResource(R.string.layout_landscape_posters),
+        subtitle = stringResource(R.string.layout_landscape_posters_sub),
+        checked = uiState.modernLandscapePostersEnabled,
+        onToggle = {
+            onEvent(LayoutSettingsEvent.SetModernLandscapePostersEnabled(!uiState.modernLandscapePostersEnabled))
+        }
+    )
+    SettingsToggleRow(
         title = stringResource(R.string.layout_always_show_landscape_clearlogo),
         subtitle = stringResource(R.string.layout_always_show_landscape_clearlogo_sub),
         checked = uiState.alwaysShowLandscapeClearlogo,
@@ -323,7 +336,8 @@ internal fun LayoutCardDepthSection(
 internal fun LayoutCustomPosterSection(
     uiState: LayoutSettingsUiState,
     onEvent: (LayoutSettingsEvent) -> Unit,
-    onConfigureViaPhone: () -> Unit
+    onConfigureViaPhone: () -> Unit,
+    focusRequester: FocusRequester
 ) {
     val pattern = uiState.customPosterUrlPattern
     val isActive = pattern.isNotBlank()
@@ -345,7 +359,8 @@ internal fun LayoutCustomPosterSection(
     SettingsActionRow(
         title = stringResource(R.string.layout_custom_poster_qr),
         subtitle = if (isActive) stringResource(R.string.layout_custom_poster_active) else null,
-        onClick = onConfigureViaPhone
+        onClick = onConfigureViaPhone,
+        modifier = Modifier.focusRequester(focusRequester)
     )
     if (isActive) {
         SettingsActionRow(
@@ -360,7 +375,8 @@ internal fun LayoutCustomPosterSection(
             CustomPosterScreen.COLLECTIONS to R.string.layout_custom_poster_screen_collections,
             CustomPosterScreen.LIBRARY to R.string.layout_custom_poster_screen_library,
             CustomPosterScreen.SEARCH to R.string.layout_custom_poster_screen_search,
-            CustomPosterScreen.DETAILS to R.string.layout_custom_poster_screen_details
+            CustomPosterScreen.DETAILS to R.string.layout_custom_poster_screen_details,
+            CustomPosterScreen.TV_RECOMMENDATIONS to R.string.layout_custom_poster_screen_tv_recommendations
         ).forEach { (screen, label) ->
             val enabled = screen in uiState.customPosterEnabledScreens
             SettingsToggleRow(
@@ -384,12 +400,17 @@ private fun CwStyleCard(
 
     Card(
         onClick = onClick,
-        modifier = modifier.onFocusChanged { state ->
-            val nowFocused = state.isFocused
-            if (isFocused != nowFocused) {
-                isFocused = nowFocused
+        modifier = modifier
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                }
             }
-        },
+            .semantics {
+                role = Role.RadioButton
+                this.selected = isSelected
+            },
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.Background,
             focusedContainerColor = NuvioTheme.colors.Background
@@ -434,7 +455,7 @@ private fun CwStyleCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = stringResource(R.string.cd_selected),
+                        contentDescription = null,
                         tint = NuvioTheme.colors.FocusRing,
                         modifier = Modifier
                             .size(NuvioTheme.spacing.lg)

@@ -19,6 +19,8 @@ import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.sync.AddonSyncService
 import com.nuvio.tv.core.sync.LibrarySyncService
 import com.nuvio.tv.core.sync.PluginSyncService
+import com.nuvio.tv.data.local.PluginSyncProfile
+import com.nuvio.tv.data.local.effectivePluginProfileId
 import com.nuvio.tv.core.sync.WatchProgressSyncService
 import com.nuvio.tv.core.sync.WatchedItemsSyncService
 import com.nuvio.tv.core.sync.ProfileSettingsSyncService
@@ -43,10 +45,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.security.SecureRandom
 import java.time.OffsetDateTime
 import java.util.Base64
@@ -333,11 +337,15 @@ class AccountViewModel @Inject constructor(
                         Log.w(TAG, "QR_LOGIN[$traceId] start_device_login_session returned incomplete data deviceCodeBlank=${result.deviceCode.isBlank()} userCodeBlank=${result.userCode.isBlank()} urlBlank=${result.verificationUriComplete.isBlank()}")
                     }
                     val qrStartedAtMs = SystemClock.elapsedRealtime()
-                    val qrBitmap = runCatching { QrCodeGenerator.generate(result.verificationUriComplete, 420, margin = 1) }
+                    val qrBitmap = withContext(Dispatchers.Default) {
+                        runCatching { QrCodeGenerator.generate(result.verificationUriComplete, 420, margin = 1) }
+                    }
                         .onFailure { e ->
                             Log.e(TAG, "QR_LOGIN[$traceId] QR bitmap generation failed url=${result.verificationUriComplete.urlForLog()} urlLength=${result.verificationUriComplete.length} error=${e.diagnosticSummary()}", e)
                         }
                         .getOrNull()
+                    // The session can be cleared or replaced while the bitmap is built off the main thread.
+                    if (activeQrLoginTraceId != traceId) return@launch
                     Log.d(
                         TAG,
                         "QR_LOGIN[$traceId] start_device_login_session ok totalElapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} deviceCode=${result.deviceCode.rawForLog()} userCode=${result.userCode.rawForLog()} url=${result.verificationUriComplete.urlForLog()} urlLength=${result.verificationUriComplete.length} legacy=${result.legacy} expiresAt=${result.expiresAt} expiresAtMs=${expiresAtMillis ?: "-"} pollInterval=${result.pollIntervalSeconds} qrBitmap=${qrBitmap != null} qrElapsedMs=${SystemClock.elapsedRealtime() - qrStartedAtMs}"
@@ -726,16 +734,12 @@ class AccountViewModel @Inject constructor(
             // Capture profile ID once to prevent cross-profile data leaks
             // if the user switches profiles during this long-running operation.
             val profileId = profileManager.activeProfileId.value
+            val pluginProfileId = effectivePluginProfileId(
+                usesPrimaryPlugins = profileManager.activeProfile?.usesPrimaryPlugins == true,
+                activeProfileId = profileId
+            )
             profileSettingsSyncService.pullCurrentProfileFromRemote()
             providerCredentialSyncService.syncFromRemote(profileId).getOrElse { throw it }
-            pluginManager.isSyncingFromRemote = true
-            val remotePlugins = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
-            pluginManager.reconcileWithRemoteRepoUrls(
-                remotePlugins = remotePlugins,
-                removeMissingLocal = true
-            )
-            pluginManager.isSyncingFromRemote = false
-            pluginManager.flushPendingSync()
 
             addonRepository.isSyncingFromRemote = true
             val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
@@ -799,6 +803,16 @@ class AccountViewModel @Inject constructor(
                     Log.d("AccountViewModel", "pullRemoteData: detected unsynced watched items in Trakt mode, pushing")
                     watchedItemsSyncService.pushToRemote(profileId)
                 }
+            }
+            withContext(PluginSyncProfile(pluginProfileId)) {
+                pluginManager.isSyncingFromRemote = true
+                val remotePlugins = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
+                pluginManager.reconcileWithRemoteRepoUrls(
+                    remotePlugins = remotePlugins,
+                    removeMissingLocal = true
+                )
+                pluginManager.isSyncingFromRemote = false
+                pluginManager.flushPendingSync()
             }
             return Result.success(Unit)
         } catch (e: Exception) {

@@ -54,6 +54,7 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.PlayManualOverrideDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @Composable
 internal fun EpisodeShufflePreview(
@@ -83,6 +84,7 @@ internal fun EpisodeShufflePreview(
         onDismissRequest = { if (!starting) onBack() },
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
+        AmbientDialogEffect { if (!starting) onBack() }
         LaunchedEffect(canShuffleAgain) { playFocus.requestFocusAfterFrames() }
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
         SideEffect {

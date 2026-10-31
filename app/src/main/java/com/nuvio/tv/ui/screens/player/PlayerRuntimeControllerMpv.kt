@@ -25,6 +25,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         performPendingMpvHardRestartIfNeeded(view)
         view.applyHi10pGnextSoftwareFallback(shouldUseMpvHi10pGnextSoftwareFallback())
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
+        registerMpvEventRelay(view)
         view.setMedia(currentStreamUrl, currentHeaders)
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
         view.applyAudioAmplificationDb(_uiState.value.audioAmplificationDb)
@@ -33,13 +34,14 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.subtitleStyle)
-        view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
+        view.setSubtitleDelayMs(mpvSubtitleDelayMs(_uiState.value.subtitleDelayMs))
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
         view.setPaused(false)
         applyPendingMpvSeekIfNeeded(view)
+        installMpvMediaSession()
         hasRenderedFirstFrame = false
         endDetectionArmed = false
         mpvEofSeenClear = false
@@ -58,7 +60,13 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         scheduleHideControls()
         emitScrobbleStart()
     }.onFailure {
-        val detailedError = it.message ?: context.getString(com.nuvio.tv.R.string.player_error_mpv_surface_failed)
+        val technical = it.message?.trim()?.takeIf { message -> message.isNotEmpty() }
+        val explanation = context.getString(com.nuvio.tv.R.string.player_error_mpv_surface_failed)
+        val detailedError = if (technical == null || technical.equals(explanation, ignoreCase = true)) {
+            explanation
+        } else {
+            "$explanation\n\n$technical"
+        }
         if (
             maybeAutoSwitchInternalPlayerOnStartupError(
                 detailedError = detailedError,
@@ -85,14 +93,11 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
     allowEngineFailover: Boolean = true
 ) {
     mpvMediaLoadPrepared = true
+    prefetchAutoSyncIndex(url, headers) // AutoSync hook
     _exoPlayer?.release()
     _exoPlayer = null
     trackSelector = null
-    try {
-        currentMediaSession?.release()
-    } catch (_: Exception) {
-    }
-    currentMediaSession = null
+    releaseMediaSession()
     notifyAudioSessionUpdate(false)
 
     val view = mpvView
@@ -122,6 +127,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         performPendingMpvHardRestartIfNeeded(view)
         view.applyHi10pGnextSoftwareFallback(shouldUseMpvHi10pGnextSoftwareFallback())
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
+        registerMpvEventRelay(view)
         val initialResumePosition = resolvePendingInitialResumePosition()
             .takeIf { it > 0L }
             ?: (_uiState.value.pendingSeekPosition?.coerceAtLeast(0L) ?: 0L)
@@ -143,13 +149,14 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
-        view.applySubtitleStyle(_uiState.value.subtitleStyle)
-        view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
+        view.applySubtitleStyle(_uiState.value.effectiveSubtitleStyle)
+        view.setSubtitleDelayMs(mpvSubtitleDelayMs(_uiState.value.subtitleDelayMs))
         view.applyBluetoothAudioRoute(currentAudioOutputRoute?.isBluetooth == true)
         view.setAudioDelayMs(_uiState.value.audioDelayMs)
         view.applyAspectMode(_uiState.value.aspectMode)
         view.setPaused(false)
         applyPendingMpvSeekIfNeeded(view)
+        installMpvMediaSession()
 
         hasRenderedFirstFrame = false
         endDetectionArmed = false
@@ -163,9 +170,13 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
                 audioTracks = emptyList(),
                 subtitleTracks = emptyList(),
                 selectedAudioTrackIndex = -1,
-                selectedSubtitleTrackIndex = -1
+                selectedSubtitleTrackIndex = -1,
+                chapters = emptyList(),
+                showChaptersPanel = false
             )
         }
+        clearChapterSkipState()
+        recomputeMergedSkipIntervals()
         cancelPauseOverlay()
         startProgressUpdates()
         startWatchProgressSaving()
@@ -174,7 +185,13 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         emitScrobbleStart()
     }.onFailure { error ->
         Log.e(PlayerRuntimeController.TAG, "libmpv initialize failed: ${error.message}", error)
-        val detailedError = error.message ?: context.getString(com.nuvio.tv.R.string.player_error_mpv_playback_failed)
+        val technical = error.message?.trim()?.takeIf { it.isNotEmpty() }
+        val explanation = context.getString(com.nuvio.tv.R.string.player_error_mpv_playback_failed)
+        val detailedError = if (technical == null || technical.equals(explanation, ignoreCase = true)) {
+            explanation
+        } else {
+            "$explanation\n\n$technical"
+        }
         if (
             maybeAutoSwitchInternalPlayerOnStartupError(
                 detailedError = detailedError,
@@ -197,6 +214,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
 }
 
 internal fun PlayerRuntimeController.releaseMpvPlayer() {
+    unregisterMpvEventRelay()
     runCatching { mpvView?.releasePlayer() }
 }
 
@@ -210,14 +228,8 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
     // Mark we're in background so onPlayerError can defer recovery to onResume.
     isInBackground = true
 
-    // Release the MediaSession so the system doesn't route media commands
-    // (play/pause, audio focus) to this player while the app is in the background.
-    try {
-        currentMediaSession?.release()
-        currentMediaSession = null
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
+    // Release the session while backgrounded so Bluetooth controls cannot resume playback.
+    releaseMediaSession()
 
     // Mark as user-paused so autoplay logic doesn't resume playback.
     userPausedManually = true
@@ -241,6 +253,34 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
     }
 }
 
+/**
+ * Frees the hardware decoder once the app is no longer visible, so the next foreground app gets
+ * it without a forced reclaim. Uses the same release and paused rebuild on resume as a decoder
+ * that was reclaimed while in the background.
+ */
+internal fun PlayerRuntimeController.releaseForBackground() {
+    if (isUsingMpvEngine() || pendingBackgroundCrashRecovery) return
+    val player = _exoPlayer ?: return
+    if (currentStreamUrl.isEmpty()) return
+    backgroundCrashSavedPositionMs = if (_uiState.value.isLive) 0L else player.currentPosition.coerceAtLeast(0L)
+    // Pausing while buffering fires no isPlaying change, so neither the pause save nor the pause
+    // scrobble ran; do both while the player still reports a position.
+    saveWatchProgress()
+    emitPauseScrobbleForCurrentProgress()
+    pendingBackgroundCrashRecovery = true
+    errorRetryJob?.cancel()
+    releasePlayer(flushPlaybackState = false)
+}
+
+/** True when a player ON_STOP means the app left the foreground, not an in-app navigation or exit. */
+internal fun isAppBackgroundStop(
+    isFinishing: Boolean,
+    isChangingConfigurations: Boolean,
+    hostState: androidx.lifecycle.Lifecycle.State
+): Boolean = !isFinishing &&
+    !isChangingConfigurations &&
+    !hostState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+
 internal fun PlayerRuntimeController.resumeForLifecycle() {
     isInBackground = false
 
@@ -260,20 +300,64 @@ internal fun PlayerRuntimeController.resumeForLifecycle() {
         return
     }
 
+    if (isUsingMpvEngine()) {
+        installMpvMediaSession()
+        return
+    }
+
     val player = _exoPlayer
-    if (player != null && !isUsingMpvEngine()) {
+    if (player != null) {
         // Restore automatic audio focus handling that was disabled in pauseForLifecycle().
         player.setAudioAttributes(player.audioAttributes, true)
 
         // Re-create the MediaSession so media controls work in the foreground.
-        if (currentMediaSession == null) {
-            try {
-                currentMediaSession = androidx.media3.session.MediaSession.Builder(context, SafeMediaSessionPlayer(player)).build()
-                updateMediaSessionMetadata()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        if (currentMediaSession == null) runCatching { installExoMediaSession(player) }
+            .onFailure { it.printStackTrace() }
+    }
+}
+
+/** Makes the next progress tick re-read the mpv track list. Safe to call from any thread. */
+internal fun PlayerRuntimeController.markMpvTracksStale() {
+    mpvTrackRefreshGate.markStale()
+}
+
+/**
+ * Progress-tick entry point. Reading the track list costs about a dozen synchronous mpv property
+ * reads per track on the main thread, so the tick only re-reads it after mpv reports a
+ * track-list change. The track decisions still run on every tick, on the tracks already known:
+ * some of them wait on things that are not track-list changes, such as the first frame or
+ * add-on subtitles arriving one add-on at a time.
+ */
+internal fun PlayerRuntimeController.updateMpvTracksOnTick() {
+    updateMpvHdrVideoState()
+    if (mpvTrackRefreshGate.isStale) {
+        updateMpvAvailableTracks()
+        return
+    }
+    if (!isUsingMpvEngine() || mpvTrackRefreshInProgress || mpvView == null) return
+    val state = _uiState.value
+    markMpvTextTracksScannedIfReady(hasInternalSubtitleTracks = state.subtitleTracks.isNotEmpty())
+    maybeRestorePendingAudioSelectionAfterSubtitleRefresh(state.audioTracks)
+    applyPersistedTrackPreference(
+        audioTracks = state.audioTracks,
+        subtitleTracks = state.subtitleTracks
+    )
+    tryAutoSelectPreferredSubtitleFromAvailableTracks()
+}
+
+/** mpv only reports the video transfer once it has decoded video params, so this is re-read each tick. */
+private fun PlayerRuntimeController.updateMpvHdrVideoState() {
+    if (!isUsingMpvEngine()) return
+    val isHdrVideo = mpvView?.readVideoIsHdr() ?: return
+    if (_uiState.value.isHdrVideo != isHdrVideo) {
+        _uiState.update { it.copy(isHdrVideo = isHdrVideo) }
+    }
+}
+
+/** A file without embedded subtitles only counts as text-scanned once the first frame is up. */
+private fun PlayerRuntimeController.markMpvTextTracksScannedIfReady(hasInternalSubtitleTracks: Boolean) {
+    if (hasInternalSubtitleTracks || hasRenderedFirstFrame) {
+        hasScannedTextTracksOnce = true
     }
 }
 
@@ -282,12 +366,14 @@ internal fun PlayerRuntimeController.updateMpvAvailableTracks() {
     if (mpvTrackRefreshInProgress) return
     val view = mpvView ?: return
     val streamUrlAtRefresh = currentStreamUrl
+    mpvTrackRefreshGate.onRefreshStarted()
     mpvTrackRefreshInProgress = true
     mpvTrackRefreshJob = scope.launch {
         try {
             val snapshot = view.readTrackSnapshot()
             if (!isUsingMpvEngine() || mpvView !== view || currentStreamUrl != streamUrlAtRefresh) return@launch
             applyMpvTrackSnapshot(snapshot)
+            refreshMpvChapters(view)
             tryAutoSelectPreferredSubtitleFromAvailableTracks()
         } catch (error: CancellationException) {
             throw error
@@ -357,9 +443,7 @@ private fun PlayerRuntimeController.applyMpvTrackSnapshot(snapshot: MpvTrackSnap
             "mappedInternalSubtitleCount=${internalSubtitleTracks.size}"
     )
 
-    if (internalSubtitleTracks.isNotEmpty() || hasRenderedFirstFrame) {
-        hasScannedTextTracksOnce = true
-    }
+    markMpvTextTracksScannedIfReady(hasInternalSubtitleTracks = internalSubtitleTracks.isNotEmpty())
     maybeRestorePendingAudioSelectionAfterSubtitleRefresh(audioTracks)
 
     _uiState.update { state ->
@@ -479,7 +563,7 @@ internal fun PlayerRuntimeController.applyPendingMpvSeekIfNeeded(
     if (!canSeekNow) return
 
     view.seekToMs(target)
-    view.setSubtitleDelayMs(state.subtitleDelayMs)
+    view.setSubtitleDelayMs(mpvSubtitleDelayMs(state.subtitleDelayMs))
     view.setAudioDelayMs(state.audioDelayMs)
     if (state.pendingSeekPosition != target) {
         _uiState.update { it.copy(pendingSeekPosition = target) }
@@ -526,17 +610,23 @@ internal fun PlayerRuntimeController.hasActivePlayIntent(): Boolean {
     }
 }
 
+/**
+ * [exact] makes the mpv seek exact even when the file was loaded with `hr-seek=no`, where a plain
+ * seek lands on a keyframe; ExoPlayer takes its precision from [seekParameters] alone.
+ */
 internal fun PlayerRuntimeController.seekPlaybackTo(
     positionMs: Long,
-    seekParameters: SeekParameters = SeekParameters.CLOSEST_SYNC
+    seekParameters: SeekParameters = SeekParameters.CLOSEST_SYNC,
+    exact: Boolean = false
 ) {
     if (isUsingMpvEngine()) {
         mpvView?.let { view ->
-            view.seekToMs(positionMs)
+            if (exact) view.seekToMsExact(positionMs) else view.seekToMs(positionMs)
             // Keep subtitle/audio delay sticky during FF/RW seeks.
-            view.setSubtitleDelayMs(_uiState.value.subtitleDelayMs)
+            view.setSubtitleDelayMs(mpvSubtitleDelayMs(_uiState.value.subtitleDelayMs))
             view.setAudioDelayMs(_uiState.value.audioDelayMs)
         }
+        refreshMpvMediaSession()
     } else {
         _exoPlayer?.let { player ->
             if (NuvioExoPlayerPerformanceHelper.enabled) {
@@ -576,6 +666,7 @@ internal fun PlayerRuntimeController.setPlaybackPaused(paused: Boolean) {
     if (isUsingMpvEngine()) {
         mpvView?.setPaused(paused)
         _uiState.update { it.copy(isPlaying = !paused) }
+        refreshMpvMediaSession()
     } else {
         _exoPlayer?.let { player ->
             if (paused) player.pause() else player.play()

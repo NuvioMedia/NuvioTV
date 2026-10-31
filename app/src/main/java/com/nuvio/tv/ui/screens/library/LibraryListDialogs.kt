@@ -29,6 +29,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -45,8 +49,10 @@ import com.nuvio.tv.domain.model.localizedTitle
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
 import com.nuvio.tv.R
 import com.nuvio.tv.core.tracking.TrackingListManagementCapabilities
+import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -78,6 +84,7 @@ internal fun ManageListsDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
+        AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
                 .width(620.dp)
@@ -117,12 +124,15 @@ internal fun ManageListsDialog(
                             Button(
                                 onClick = { onSelect(tab.key) },
                                 enabled = !pending,
-                                modifier = if (tab.key == personalTabs.firstOrNull()?.key) {
+                                modifier = (if (tab.key == personalTabs.firstOrNull()?.key) {
                                     Modifier
                                         .fillMaxWidth()
                                         .focusRequester(firstFocusRequester)
                                 } else {
                                     Modifier.fillMaxWidth()
+                                }).semantics {
+                                    role = Role.Tab
+                                    this.selected = selected
                                 },
                                 colors = ButtonDefaults.colors(
                                     containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
@@ -265,6 +275,9 @@ internal fun ListEditorDialog(
                 }
             ),
             label = { androidx.compose.material3.Text(stringResource(R.string.library_list_name_label)) },
+            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                textDirection = TextDirection.Content
+            ),
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                 focusedTextColor = NuvioTheme.colors.TextPrimary,
                 unfocusedTextColor = NuvioTheme.colors.TextPrimary,
@@ -274,7 +287,7 @@ internal fun ListEditorDialog(
                 unfocusedBorderColor = NuvioTheme.colors.Border,
                 focusedLabelColor = NuvioTheme.colors.TextSecondary,
                 unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
-                cursorColor = NuvioTheme.colors.FocusRing
+                cursorColor = NuvioTheme.colors.FocusRing,
             )
         )
 
@@ -304,6 +317,9 @@ internal fun ListEditorDialog(
                 minLines = 3,
                 maxLines = 5,
                 label = { androidx.compose.material3.Text(stringResource(R.string.library_list_description_label)) },
+                textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                    textDirection = TextDirection.Content
+                ),
                 colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                     focusedTextColor = NuvioTheme.colors.TextPrimary,
                     unfocusedTextColor = NuvioTheme.colors.TextPrimary,
@@ -313,7 +329,7 @@ internal fun ListEditorDialog(
                     unfocusedBorderColor = NuvioTheme.colors.Border,
                     focusedLabelColor = NuvioTheme.colors.TextSecondary,
                     unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
-                    cursorColor = NuvioTheme.colors.FocusRing
+                    cursorColor = NuvioTheme.colors.FocusRing,
                 )
             )
         }
@@ -330,6 +346,12 @@ internal fun ListEditorDialog(
                 Button(
                     onClick = { onPrivacyChanged(privacy) },
                     enabled = !pending,
+                    modifier = Modifier.semantics {
+                        role = Role.RadioButton
+                        // `selected` is also a local val here, so compare explicitly
+                        // instead of reading the write-only semantics property.
+                        this.selected = privacy == state.privacy
+                    },
                     colors = ButtonDefaults.colors(
                         containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
                         contentColor = NuvioTheme.colors.TextPrimary

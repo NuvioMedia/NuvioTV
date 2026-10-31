@@ -311,17 +311,17 @@
     <string name="sub_opacity">Krycie</string>
     <string name="sub_advanced_section">Zaawansowane renderowanie napisów</string>
     <string name="sub_libass">Używaj libass dla napisów ASS/SSA</string>
-    <string name="sub_libass_sub">Tymczasowo wyłączone z powodu konserwacji</string>
+    <string name="sub_libass_sub">Zaawansowane renderowanie ASS/SSA (style, pozycjonowanie, animacje)</string>
     <string name="sub_libass_mode">Tryb renderowania libass</string>
-    <string name="sub_mode_overlay_gl">Nakładka OpenGL (Zalecane)</string>
-    <string name="sub_mode_overlay_gl_sub">Najlepsza jakość z obsługą HDR. Renderuje napisy w osobnym wątku.</string>
-    <string name="sub_mode_overlay_canvas">Nakładka Canvas</string>
-    <string name="sub_mode_effects_gl">Efekty OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Obsługa animacji z efektami Media3. Szybsze niż Canvas.</string>
-    <string name="sub_mode_effects_canvas">Efekty Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Obsługa animacji z efektami Media3 i renderowaniem Canvas.</string>
-    <string name="sub_mode_standard">Standardowe wskazówki</string>
-    <string name="sub_mode_standard_sub">Podstawowe renderowanie napisów bez obsługi animacji. Najbardziej kompatybilne.</string>
+    <string name="sub_libass_render_scale">Rozdzielczość renderowania napisów</string>
+    <string name="sub_libass_render_scale_sub">Niższa rozdzielczość poprawia wydajność przy ciężkim typesettingu kosztem ostrości</string>
+    <string name="sub_libass_render_mode">Tryb renderowania ASS</string>
+    <string name="sub_libass_render_mode_sub">Sposób rysowania napisów ASS/SSA na wideo</string>
+    <string name="sub_libass_render_mode_tunneled_sub">Tunelowane odtwarzanie omija pipeline efektów wideo. Nakładka jest używana automatycznie.</string>
+    <string name="sub_libass_render_mode_video_effect">Efekt wideo</string>
+    <string name="sub_libass_render_mode_video_effect_sub">Rysuje napisy bezpośrednio na każdej klatce wideo. Idealnie dokładny timing na każdym sprzęcie. Treści HDR są konwertowane do SDR.</string>
+    <string name="sub_libass_render_mode_overlay">Nakładka</string>
+    <string name="sub_libass_render_mode_overlay_sub">Renderuje napisy na osobnej warstwie. Zachowuje wyjście HDR. Timing napisów może nie być idealnie dokładny na niektórych urządzeniach.</string>
     <string name="sub_org_none">Brak (domyślna kolejność)</string>
     <string name="sub_org_by_lang">Według języka</string>
     <string name="sub_org_by_addon">Według dodatku</string>
@@ -332,6 +332,8 @@
     <string name="sub_style_label">Styl</string>
 
     <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_preload_next_episode">Wstępne ładowanie źródeł następnego odcinka</string>
+    <string name="autoplay_preload_next_episode_sub">Rozpocznij wyszukiwanie źródeł w tle zanim pojawi się przycisk następnego odcinka.</string>
     <string name="autoplay_reuse_last_link">Ponownie użyj ostatniego linku</string>
     <string name="autoplay_reuse_last_link_sub">Auto-odtwarzaj ostatni działający strumień dla tego samego filmu/odcinka gdy cache jest aktualny</string>
     <string name="autoplay_last_link_cache">Czas ważności cache linku</string>
@@ -398,8 +400,8 @@
     <string name="layout_modern_desc">Stały hero z jednym aktywnym rzędem dla szybszego przeglądania</string>
     <string name="layout_section_home">Układ strony głównej</string>
     <string name="layout_section_home_desc">Wybierz strukturę i źródło hero.</string>
-    <string name="layout_landscape_posters">Poziome plakaty</string>
-    <string name="layout_landscape_posters_sub">Przełączaj między pionowymi i poziomymi kartami w widoku Modern.</string>
+    <string name="layout_landscape_posters">Tryb poziomy dla plakatów</string>
+    <string name="layout_landscape_posters_sub">Używaj poziomych kart wszędzie.</string>
     <string name="layout_preview_row">Pokaż wiersz podglądu</string>
     <string name="layout_preview_row_sub">Pokaż częściowy podgląd wiersza poniżej w układzie Modern Home.</string>
     <string name="layout_hero_catalogs">Katalogi hero</string>
@@ -798,7 +800,6 @@
     <string name="parental_severity_severe">Silne</string>
     <string name="parental_severity_moderate">Umiarkowane</string>
     <string name="parental_severity_mild">Łagodne</string>
-    <string name="player_via">przez %1$s</string>
     <string name="player_subtitle_delay">Opóźnienie napisów</string>
     <string name="player_loading_preparing">Przygotowywanie strumienia…</string>
     <string name="player_loading_detecting_format">Wykrywanie formatu strumienia…</string>
@@ -1511,7 +1512,6 @@
 
     <string name="stream_episode_label">S%1$d E%2$d</string>
 
-    <string name="sub_mode_overlay_canvas_sub">Obsługa HDR z renderowaniem Canvas. Może blokować wątek UI.</string>
     <string name="subtitle_style_weight">Grubość</string>
 
     <string name="sync_claim_linking">Łączenie\u2026</string>
@@ -1793,6 +1793,22 @@
     <string name="appearance_app_icon_rose_gold">Rose Gold</string>
     <string name="appearance_launcher_artwork">Grafika launchera</string>
     <string name="appearance_launcher_artwork_subtitle">Wybierz jak Nuvio wygląda na ekranie głównym TV</string>
+    <string name="ambient_mode_title">Tryb Ambient</string>
+    <string name="ambient_mode_subtitle">Wyświetlaj grafiki z katalogów gdy TV jest nieaktywny</string>
+    <string name="ambient_mode_enabled_subtitle">Wypełnij ekran tłami po okresie bez użycia pilota</string>
+    <string name="ambient_mode_timeout">Uruchom po</string>
+    <string name="ambient_mode_timeout_subtitle">Czas oczekiwania przed uruchomieniem trybu Ambient</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="few">%1$d minuty</item>
+        <item quantity="many">%1$d minut</item>
+        <item quantity="other">%1$d minut</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">Katalogi</string>
+    <string name="ambient_mode_catalogs_subtitle">Wybierz do 3 katalogów jako źródło grafik</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">Wybierz do 3 katalogów</string>
+    <string name="ambient_mode_catalogs_default">Takie same jak hero</string>
+    <string name="ambient_mode_catalogs_count">%1$d z %2$d</string>
     <string name="theme_color_crimson">Karmazyn</string>
     <string name="theme_color_ocean">Ocean</string>
     <string name="theme_color_violet">Fiolet</string>
@@ -3034,8 +3050,6 @@
 
     <!-- Playback network -->
     <string name="playback_net_device_memory_info">Pamięć urządzenia: %1$s | Zalecany bezpieczny limit: %2$d MB</string>
-    <string name="playback_net_http2">Włącz HTTP/2</string>
-    <string name="playback_net_http2_sub">Włącz protokół HTTP/2 dla połączeń sieciowych, umożliwiając multipleksowanie żądań i szybsze uzgadnianie.</string>
     <string name="playback_net_nuvio_performance_mode">Pamięć natywna ExoPlayer</string>
     <string name="playback_net_nuvio_performance_mode_not_supported">Ta funkcja nie jest obsługiwana przez Twoje urządzenie.</string>
     <string name="playback_net_nuvio_performance_mode_sub">Włącz natywny alokator pamięci poza stertą i optymalizacje przewijania.</string>
@@ -3384,4 +3398,95 @@
     <string name="custom_theme_remote_hint">← → Reguluj   ·   ↑ ↓ Przesuń   ·   Przytrzymaj, aby szybciej</string>
     <string name="custom_theme_preview">PODGLĄD</string>
     <string name="custom_theme_preview_ring">Wybrany element</string>
+
+    <string name="youtube_resolving_stream">Ładowanie wideo z YouTube</string>
+    <string name="youtube_resolution_failed">Nie udało się załadować tego wideo z YouTube.</string>
+
+    <string name="random_episode_title">Losowanie</string>
+    <string name="layout_random_episode_sub">Losuj odcinki z dowolnego serialu. Wyłączenie wstrzymuje losowanie.</string>
+    <string name="random_episode_unwatched">Nieobejrzane odcinki</string>
+    <string name="random_episode_include_watched">Wszystkie odcinki</string>
+    <string name="random_episode_empty_subtitle">Brak odcinków do wylosowania.</string>
+    <string name="random_episode_caught_up">Obejrzałeś wszystkie odcinki. Wybierz Wszystkie odcinki, aby obejrzeć ponownie.</string>
+    <string name="random_episode_loading">Ładowanie odcinków…</string>
+    <string name="shuffle_starting">Rozpoczynanie losowania…</string>
+    <string name="shuffle_choose_episodes">Wybierz, które odcinki losować.</string>
+    <string name="shuffle_preview_title">Twój odcinek</string>
+    <string name="shuffle_play_episode">Odtwórz odcinek</string>
+    <string name="shuffle_again">Losuj ponownie</string>
+    <string name="shuffle_only_episode">To jedyny odcinek w Twoim wyborze.</string>
+    <string name="shuffle_artwork_hidden">Grafika ukryta, aby uniknąć spoilerów</string>
+    <string name="shuffle_stop">Zatrzymaj losowanie</string>
+    <string name="shuffle_enabled_all">Losowanie wł. · Wszystkie odcinki</string>
+    <string name="shuffle_enabled_unwatched">Losowanie wł. · Nieobejrzane odcinki</string>
+    <string name="shuffle_disabled">Losowanie wył.</string>
+    <string name="shuffle_save_failed">Nie udało się zaktualizować losowania. Spróbuj ponownie.</string>
+    <string name="shuffle_change_selection">Wybierz odcinki</string>
+    <string name="shuffle_badge">Losowanie odcinków włączone</string>
+
+    <!-- Subtitle AutoSync -->
+    <string name="autosync_setting_title">Automatyczna synchronizacja napisów</string>
+    <string name="autosync_setting_description">Dopasuj napisy z dodatku do napisów osadzonych w wideo.</string>
+    <string name="autosync_tolerance_title">Tolerancja synchronizacji</string>
+    <string name="autosync_tolerance_description">Zachowaj oryginalny czas, gdy wymagana korekta jest równa lub mniejsza od tej wartości.</string>
+    <string name="autosync_tolerance_off">Wył.</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">Dokładne wyszukiwanie synchronizacji</string>
+    <string name="autosync_thorough_description">Porównuj kolejne ścieżki napisów w poszukiwaniu lepszego dopasowania przed synchronizacją. Po wyłączeniu pierwsze silne dopasowanie jest używane szybciej. Tylko pewne dopasowania są stosowane.</string>
+    <string name="autosync_toast_failed">Synchronizacja nie powiodła się: nie udało się dopasować napisów do wideo.</string>
+    <string name="autosync_toast_failed_no_reference">Synchronizacja nie powiodła się: wideo nie zawiera osadzonych napisów do porównania.</string>
+    <string name="autosync_toast_failed_unsupported">Synchronizacja nie powiodła się: ten format napisów nie jest obsługiwany.</string>
+    <string name="autosync_label_synced">Zsynchronizowane automatycznie</string>
+
+    <string name="layout_trailer_4k">Zwiastuny 4K</string>
+    <string name="layout_trailer_4k_sub">Odtwarzaj zwiastuny w rozdzielczości powyżej 1080p, gdy są dostępne. Zużywa znacznie więcej pamięci; domyślnie wyłączone na urządzeniach z 2 GB RAM lub mniej.</string>
+
+    <string name="layout_detail_group_episodes">Odcinki</string>
+    <string name="layout_detail_group_metadata">Metadane</string>
+    <string name="layout_detail_group_trailers">Zwiastuny</string>
+    <string name="layout_trailer_pause_on_scroll">Pauza przy przewijaniu</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Wstrzymaj zwiastun podczas przewijania i wznów po powrocie na górę.</string>
+    <string name="layout_trailer_play_in_background">Odtwarzaj w tle</string>
+    <string name="layout_trailer_play_in_background_sub">Odtwarzaj zwiastun w miejscu tła, gdy strona jest widoczna.</string>
+    <string name="library_sort_released_asc">Premiera ↑</string>
+    <string name="library_sort_released_desc">Premiera ↓</string>
+    <string name="mdblist_library_lists">Listy biblioteki</string>
+    <string name="mdblist_library_lists_description">Wybierz, które listy MDBList mają się pojawiać w Bibliotece i w Zarządzaj listami. Lista \"Do obejrzenia\" jest zawsze widoczna.</string>
+    <string name="mdblist_library_lists_empty">Nie znaleziono jeszcze list na Twoim koncie MDBList. Zsynchronizuj, aby je załadować.</string>
+    <string name="mdblist_library_lists_summary">%1$d z %2$d widocznych</string>
+    <string name="tracking_mdblist_features_subtitle">Ustawienia specyficzne dla MDBList</string>
+    <string name="tracking_mdblist_features_title">Funkcje MDBList</string>
+
+    <string name="about_update_auto_install_title">Instaluj aktualizacje automatycznie</string>
+    <string name="about_update_auto_install_subtitle">Pobieraj nowe wersje w tle i instaluj je, gdy urządzenie jest bezczynne</string>
+    <string name="about_update_auto_install_notice_title">Powiadom po automatycznej aktualizacji</string>
+    <string name="about_update_auto_install_notice_subtitle">Pokaż baner przy następnym uruchomieniu po automatycznej aktualizacji</string>
+    <string name="update_installed_automatically">Zaktualizowano automatycznie, gdy urządzenie było bezczynne</string>
+
+    <string name="layout_custom_poster_screen_tv_recommendations">Rekomendacje TV</string>
+
+    <string name="playback_chapters_label">Rozdziały</string>
+    <string name="playback_exo_chapters_title">Pokaż rozdziały (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Odczytuj rozdziały z plików MKV, aby oznaczać je na pasku postępu i przeskakiwać między nimi. Wymaga kilku dodatkowych zapytań po rozpoczęciu odtwarzania. mpv zawsze pokazuje rozdziały.</string>
+    <string name="player_chapters">Rozdziały</string>
+    <string name="player_chapters_title">Rozdziały (%1$d)</string>
+    <string name="player_chapter_number">Rozdział %1$d</string>
+    <string name="player_chapter_remaining">Pozostało %1$s</string>
+
+    <string name="player_engine_switch_title">Przełączyć na %1$s?</string>
+    <string name="player_engine_switch_message">Film zostanie wznowiony od obecnego miejsca.</string>
+
+    <string name="settings_stream_badges_in_player_title">Pokaż w odtwarzaczu</string>
+    <string name="settings_stream_badges_in_player_description">Wyświetlaj znaczniki wideo i audio pod tytułem w odtwarzaczu.</string>
+
+    <string name="stream_resume_from_percent">Wznów od %1$d%%</string>
+    <string name="stream_resume_from_time">Wznów od %1$s</string>
+
+    <string name="sub_hdr_style">Osobny styl HDR / Dolby Vision</string>
+    <string name="sub_hdr_style_sub">Użyj innego koloru tekstu i niższej jasności napisów dla wideo HDR i Dolby Vision</string>
+    <string name="sub_hdr_brightness">Jasność napisów HDR</string>
+    <string name="sub_hdr_text_color">Kolor tekstu HDR</string>
+    <string name="subtitle_style_brightness_hdr">Jasność (HDR)</string>
+    <string name="subtitle_style_text_color_hdr">Kolor tekstu (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">Przezroczystość tekstu (HDR)</string>
 </resources>

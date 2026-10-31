@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.remote.supabase
 
+import com.nuvio.tv.data.mediaserver.SyncedServer
 import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
@@ -237,6 +238,12 @@ data class SupabaseCollectionBlob(
 data class SupabaseHomeCatalogSettingsBlob(
     @SerialName("profile_id") val profileId: Int = 1,
     @SerialName("settings_json") val settingsJson: JsonObject = buildJsonObject { },
+    @SerialName("updated_at") val updatedAt: String? = null
+)
+
+@Serializable
+data class SupabaseMediaServers(
+    @SerialName("servers_json") val servers: List<SyncedServer> = emptyList(),
     @SerialName("updated_at") val updatedAt: String? = null
 )
 

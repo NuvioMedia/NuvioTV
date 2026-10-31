@@ -370,6 +370,20 @@
     <string name="appearance_settings_style_subtitle">Choose how the settings screens are presented</string>
     <string name="appearance_launcher_artwork">Launcher Artwork</string>
     <string name="appearance_launcher_artwork_subtitle">Choose how Nuvio appears on your TV home screen</string>
+    <string name="ambient_mode_title">Ambient Mode</string>
+    <string name="ambient_mode_subtitle">Show artwork from your catalogs while the TV sits idle</string>
+    <string name="ambient_mode_enabled_subtitle">Fill the screen with backdrops after a period with no remote input</string>
+    <string name="ambient_mode_timeout">Start After</string>
+    <string name="ambient_mode_timeout_subtitle">How long to wait before Ambient Mode starts</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <string name="ambient_mode_catalogs">Catalogs</string>
+    <string name="ambient_mode_catalogs_subtitle">Choose up to 3 catalogs to pull artwork from</string>
+    <string name="ambient_mode_catalogs_dialog_subtitle">Choose up to 3 catalogs</string>
+    <string name="ambient_mode_catalogs_default">Same as hero</string>
+    <string name="ambient_mode_catalogs_count">%1$d of %2$d</string>
     <string name="appearance_app_icon_and_banner">App Icon &amp; Banner</string>
     <string name="appearance_app_icon_and_banner_subtitle">Change app icon and banner</string>
     <string name="appearance_app_icon_picker_title">Choose App Icon &amp; Banner</string>
@@ -399,6 +413,10 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_update_banner_title">Automatic update banner</string>
     <string name="about_update_banner_subtitle">Show a banner when a new version is available</string>
+    <string name="about_update_auto_install_title">Install updates automatically</string>
+    <string name="about_update_auto_install_subtitle">Download new versions in the background and install them while the device is idle</string>
+    <string name="about_update_auto_install_notice_title">Notify after automatic updates</string>
+    <string name="about_update_auto_install_notice_subtitle">Show a banner on the next launch after the app updates itself</string>
     <string name="about_update_channel_title">Update channel</string>
     <string name="about_update_channel_subtitle">Choose the type of app updates to receive</string>
     <string name="about_check_updates">Check for updates</string>
@@ -790,6 +808,9 @@
     <string name="video_section">Video</string>
     <string name="playback_true_black_letterbox">True black bars</string>
     <string name="playback_true_black_letterbox_sub">Leave the bars around the picture unpainted so HDR stays true black. Keep this off if a bright line appears on the bars.</string>
+    <string name="playback_chapters_label">Chapters</string>
+    <string name="playback_exo_chapters_title">Show Chapters (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">Read the chapters of MKV files to mark them on the progress bar and skip between them. Makes a few small extra requests once playback starts. mpv always shows chapters.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Auto-play Trailers</string>
     <string name="audio_autoplay_trailers_sub">Automatically play trailers on detail and post-play screens</string>
@@ -891,25 +912,34 @@
     <string name="sub_outline">Outline</string>
     <string name="sub_outline_sub">Add outline around subtitle text for better visibility</string>
     <string name="sub_outline_color">Outline Color</string>
+    <string name="sub_hdr_style">Separate HDR / Dolby Vision style</string>
+    <string name="sub_hdr_style_sub">Use a different text color and a dimmer brightness for subtitles on HDR and Dolby Vision video</string>
+    <string name="sub_hdr_text_color">HDR Text Color</string>
+    <string name="sub_hdr_brightness">HDR Brightness</string>
+    <string name="sub_hdr_dim_player_controls">Dim player controls on HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">Apply the HDR brightness to the player controls and menus shown over HDR and Dolby Vision video</string>
     <string name="sub_advanced_section">Advanced Subtitle Rendering</string>
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
-    <string name="sub_libass_sub">Experimental: advanced ASS/SSA rendering (styles, positioning, animations)</string>
+    <string name="sub_libass_sub">Advanced ASS/SSA rendering (styles, positioning, animations)</string>
     <string name="sub_libass_mode">Libass Render Mode</string>
-    <string name="sub_mode_overlay_gl">Overlay OpenGL (Recommended)</string>
-    <string name="sub_mode_overlay_gl_sub">Best quality with HDR support. Renders subtitles on a separate thread.</string>
-    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effects OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Animation support using Media3 effects. Faster than Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effects Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Animation support using Media3 effects with Canvas rendering.</string>
-    <string name="sub_mode_standard">Standard Cues</string>
-    <string name="sub_mode_standard_sub">Basic subtitle rendering without animation support. Most compatible.</string>
+    <string name="sub_libass_render_scale">Subtitle Render Resolution</string>
+    <string name="sub_libass_render_scale_sub">Lower resolution improves performance on heavy typesetting at the cost of sharpness</string>
+    <string name="sub_libass_render_mode">ASS Render Mode</string>
+    <string name="sub_libass_render_mode_sub">How ASS/SSA subtitles are drawn onto the video</string>
+    <string name="sub_libass_render_mode_tunneled_sub">Tunneled playback bypasses the video effects pipeline. Overlay is used automatically.</string>
+    <string name="sub_libass_render_mode_video_effect">Video Effect</string>
+    <string name="sub_libass_render_mode_video_effect_sub">Draws subtitles directly onto each video frame. Frame-accurate timing on all hardware. HDR content is tone-mapped to SDR.</string>
+    <string name="sub_libass_render_mode_overlay">Overlay</string>
+    <string name="sub_libass_render_mode_overlay_sub">Renders subtitles on a separate surface layer. Preserves HDR output. Subtitle timing may not be perfectly accurate on some devices.</string>
     <string name="sub_org_none">None (default order)</string>
     <string name="sub_org_by_lang">By language</string>
     <string name="sub_org_by_addon">By addon</string>
     <string name="sub_org_none_desc">Show subtitles in default addon result order.</string>
     <string name="sub_org_by_lang_desc">Group subtitles by language.</string>
     <string name="sub_org_by_addon_desc">Group subtitles by addon source.</string>
+
+    <string name="autoplay_preload_next_episode">Preload Next Episode Sources</string>
+    <string name="autoplay_preload_next_episode_sub">Start searching for sources in the background before the next episode button appears.</string>
 
     <string name="autoplay_reuse_last_link">Reuse Last Link</string>
     <string name="autoplay_reuse_last_link_sub">Auto-play your last working stream for this same movie/episode when cache is still valid</string>
@@ -979,8 +1009,8 @@
     <string name="layout_modern_desc">Fixed hero with a single active row for faster browsing</string>
     <string name="layout_section_home">Home Layout</string>
     <string name="layout_section_home_desc">Choose structure and hero source.</string>
-    <string name="layout_landscape_posters">Landscape Posters</string>
-    <string name="layout_landscape_posters_sub">Switch between portrait and landscape cards for Modern view.</string>
+    <string name="layout_landscape_posters">Landscape Poster Mode</string>
+    <string name="layout_landscape_posters_sub">Use landscape cards everywhere.</string>
     <string name="layout_preview_row">Show Preview Row</string>
     <string name="layout_preview_row_sub">Show a partial preview of the row below in Modern Home layout.</string>
     <string name="layout_hero_catalogs">Hero Catalogs</string>
@@ -1069,6 +1099,15 @@
     <string name="upcoming_section_title">Upcoming</string>
     <string name="layout_trailer_button">Show Trailer Button</string>
     <string name="layout_trailer_button_sub">Show trailer button on detail page (only when trailer is available).</string>
+    <string name="layout_trailer_play_in_background">Play in Background</string>
+    <string name="layout_trailer_play_in_background_sub">Play the trailer in place of the backdrop while the page stays visible.</string>
+    <string name="layout_trailer_pause_on_scroll">Pause When Scrolling</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Pause the trailer when you scroll down and resume it when you return to the top.</string>
+    <string name="layout_trailer_4k">4K Trailers</string>
+    <string name="layout_trailer_4k_sub">Play trailers above 1080p when available. Uses much more memory; off by default on devices with 2 GB of RAM or less.</string>
+    <string name="layout_detail_group_episodes">Episodes</string>
+    <string name="layout_detail_group_trailers">Trailers</string>
+    <string name="layout_detail_group_metadata">Metadata</string>
     <string name="layout_prefer_external_meta">Prefer meta from external addon</string>
     <string name="layout_prefer_external_meta_sub">Use metadata from external addon instead of catalog addon.</string>
     <string name="layout_show_full_release_date">Show full release date</string>
@@ -1154,6 +1193,7 @@
     <string name="layout_custom_poster_screen_library">Library</string>
     <string name="layout_custom_poster_screen_search">Search</string>
     <string name="layout_custom_poster_screen_details">Details Screen</string>
+    <string name="layout_custom_poster_screen_tv_recommendations">TV Recommendations</string>
 
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Always Backdrop with Logo for Landscape Posters</string>
@@ -1230,6 +1270,12 @@
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
     <string name="mdblist_not_set">Not set</string>
     <string name="mdblist_invalid_api_key">Invalid MDBList API key</string>
+    <string name="mdblist_library_lists">Library lists</string>
+    <string name="mdblist_library_lists_description">Choose which MDBList lists appear in the Library and in Manage Lists. The Watchlist is always shown.</string>
+    <string name="mdblist_library_lists_empty">No lists found in your MDBList account yet. Sync to load them.</string>
+    <string name="mdblist_library_lists_summary">%1$d of %2$d shown</string>
+    <string name="tracking_mdblist_features_title">MDBList features</string>
+    <string name="tracking_mdblist_features_subtitle">MDBList-specific settings</string>
 
     <string name="debrid_title">Connected Services</string>
     <string name="debrid_subtitle">Connect accounts for links and library access</string>
@@ -1363,6 +1409,11 @@
     <string name="settings_stream_badges_section">Fusion Style</string>
     <string name="settings_stream_size_badges_title">Size badges</string>
     <string name="settings_stream_size_badges_description">Show file size badges in stream results and player source panels.</string>
+    <string name="settings_stream_badges_in_player_title">Show in player</string>
+    <string name="settings_stream_badges_in_player_description">Show badges for the video and audio that is playing under the player title. Needs a badge pack that matches plain text, like 2160p or Atmos.</string>
+    <string name="settings_stream_player_badges_title">Player badges</string>
+    <string name="settings_stream_player_badges_description">Choose the badge pack the player uses.</string>
+    <string name="settings_stream_player_badges_same">Same as stream badges</string>
     <string name="settings_stream_addon_logo_title">Addon logo</string>
     <string name="settings_stream_addon_logo_description">Show addon logo and name next to stream sources.</string>
     <string name="settings_stream_display_section">Display</string>
@@ -1788,6 +1839,8 @@
     <string name="player_engine_switching_title">Switching Player Engine</string>
     <string name="player_engine_switching_message">Startup failed. Switching to %1$s…</string>
     <string name="player_engine_switching_manual_message">Switching to %1$s...</string>
+    <string name="player_engine_switch_title">Switch to %1$s?</string>
+    <string name="player_engine_switch_message">The video will reload from where you are.</string>
     <string name="playback_show_loading_status">Show loading status</string>
     <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
     <string name="player_sync_line">Sync Line</string>
@@ -1813,7 +1866,6 @@
     <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_live_watched">LIVE  %1$s</string>
-    <string name="player_via">via %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Subtitles Delay</string>
@@ -1935,6 +1987,9 @@
     <string name="subtitle_style_bold">Bold</string>
     <string name="subtitle_style_text_color">Text Color</string>
     <string name="subtitle_style_text_opacity">Text Opacity</string>
+    <string name="subtitle_style_text_color_hdr">Text Color (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">Text Opacity (HDR)</string>
+    <string name="subtitle_style_brightness_hdr">Brightness (HDR)</string>
     <string name="subtitle_style_outline">Outline</string>
     <string name="subtitle_style_bottom_offset">Bottom Offset</string>
     <string name="subtitle_style_defaults">Defaults</string>
@@ -2058,6 +2113,8 @@
     <string name="library_sort_provider_order">Provider Order</string>
     <string name="library_sort_added_desc">Added ↓</string>
     <string name="library_sort_added_asc">Added ↑</string>
+    <string name="library_sort_released_desc">Released ↓</string>
+    <string name="library_sort_released_asc">Released ↑</string>
     <string name="library_sort_title_asc">Title A-Z</string>
     <string name="library_sort_title_desc">Title Z-A</string>
     <string name="library_error_sort_failed">Couldn\'t load sort order. Showing provider order.</string>
@@ -2397,6 +2454,7 @@
     <string name="update_checking">Checking for updates…</string>
     <string name="update_waiting_for_stable">You’ll receive the next stable release when it becomes available</string>
     <string name="update_download_complete">Download complete. Ready to install.</string>
+    <string name="update_installed_automatically">Updated automatically while the device was idle</string>
     <string name="update_up_to_date">System is up to date. Latest changes:</string>
     <string name="update_close">Close</string>
     <string name="update_open_settings">Open Settings</string>
@@ -2476,7 +2534,6 @@
     <string name="player_error_failed_start_torrent">Failed to start torrent: %1$s</string>
 
     <!-- Playback subtitle settings -->
-    <string name="sub_mode_overlay_canvas_sub">HDR support with canvas rendering. May block UI thread.</string>
 
     <string name="ratings_season_label">S%1$d</string>
     <string name="ratings_episode_label">E%1$d</string>
@@ -2488,6 +2545,10 @@
     <string name="cd_sources">Sources</string>
     <string name="cd_switch_player_engine">Switch player engine</string>
     <string name="cd_episodes">Episodes</string>
+    <string name="player_chapter_number">Chapter %1$d</string>
+    <string name="player_chapters">Chapters</string>
+    <string name="player_chapters_title">Chapters (%1$d)</string>
+    <string name="player_chapter_remaining">%1$s left</string>
     <string name="cd_playback_speed">Playback speed</string>
     <string name="cd_aspect_ratio">Aspect ratio</string>
     <string name="cd_open_external_player">Open in external player</string>
@@ -2509,6 +2570,12 @@
     <string name="cd_remove">Remove</string>
     <string name="cd_preview">Preview</string>
     <string name="cd_test">Test</string>
+    <string name="cd_enable_scraper">Enable %1$s</string>
+    <string name="cd_enable_addon">Enable %1$s</string>
+    <string name="cd_color_swatch">Colour %1$s</string>
+    <string name="cd_emoji_option">Emoji %1$s</string>
+    <string name="cd_trailer_controls">Trailer controls</string>
+    <string name="cd_seek_bar">Seek bar</string>
     <string name="cd_unlink">Unlink</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Trakt Logo</string>
@@ -3223,8 +3290,6 @@
     <string name="playback_reset_to_default">Reset to Default</string>
     <string name="playback_net_custom">Custom Network</string>
     <string name="playback_net_custom_sub">Use multiple parallel connections to fetch progressive streams. When off, a single connection is used.</string>
-    <string name="playback_net_http2">Enable HTTP/2</string>
-    <string name="playback_net_http2_sub">Enable HTTP/2 protocol for network connections, allowing request multiplexing and faster handshake times.</string>
     <string name="playback_net_parallel">Parallel Connections</string>
     <string name="playback_net_parallel_sub">Use multiple connections in parallel for fetching streams. Activate when you experience buffering although your download speed is definitely more than sufficient.</string>
     <string name="playback_net_connection_count">Connection Count</string>
@@ -3339,4 +3404,20 @@
     <string name="shuffle_save_failed">Could not update shuffle. Try again.</string>
     <string name="shuffle_change_selection">Choose episodes</string>
     <string name="shuffle_badge">Episode shuffle enabled</string>
+
+    <!-- Subtitle AutoSync -->
+    <string name="autosync_setting_title">Auto Sync Subtitles</string>
+    <string name="autosync_setting_description">Match the selected add-on subtitle to the timing of the subtitles embedded in the video.</string>
+    <string name="autosync_tolerance_title">Auto Sync Tolerance</string>
+    <string name="autosync_tolerance_description">Keep the original timing when the correction needed is this small or smaller.</string>
+    <string name="autosync_tolerance_off">Off</string>
+    <string name="autosync_tolerance_value">%1$d ms</string>
+    <string name="autosync_thorough_title">Thorough Auto Sync Search</string>
+    <string name="autosync_thorough_description">Keep comparing other subtitles and embedded tracks for a closer match before syncing. When off, the first strong match is used sooner. Only confident matches are ever applied.</string>
+    <string name="autosync_toast_failed">Sync failed: Auto Sync couldn\'t match this subtitle to the video.</string>
+    <string name="autosync_toast_failed_no_reference">Sync failed: this video has no embedded subtitles to compare with.</string>
+    <string name="autosync_toast_failed_unsupported">Sync failed: Auto Sync doesn\'t support this subtitle format.</string>
+    <string name="autosync_label_synced">Auto synced</string>
+    <string name="stream_resume_from_time">Resume from %1$s</string>
+    <string name="stream_resume_from_percent">Resume from %1$d%%</string>
 </resources>

@@ -76,6 +76,9 @@ data class LayoutSettingsUiState(
     val detailPageTrailerButtonEnabled: Boolean = true,
     val detailPageTrailerAutoplayEnabled: Boolean = true,
     val detailPageTrailerAutoplayDelaySeconds: Int = 7,
+    val detailPageTrailerPlayInBackground: Boolean = false,
+    val detailPageTrailerPauseOnScroll: Boolean = true,
+    val trailer4kEnabled: Boolean = true,
     val preferExternalMetaAddonDetail: Boolean = false,
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
@@ -137,6 +140,9 @@ sealed class LayoutSettingsEvent {
     data class SetDetailPageTrailerButtonEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerAutoplayEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerAutoplayDelaySeconds(val seconds: Int) : LayoutSettingsEvent()
+    data class SetDetailPageTrailerPlayInBackground(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetDetailPageTrailerPauseOnScroll(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetTrailer4kEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetPreferExternalMetaAddonDetail(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHideUnreleasedContent(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetShowFullReleaseDate(val enabled: Boolean) : LayoutSettingsEvent()
@@ -356,7 +362,10 @@ class LayoutSettingsViewModel @Inject constructor(
                 updateUiStateIfChanged {
                     it.copy(
                         detailPageTrailerAutoplayEnabled = settings.enabled,
-                        detailPageTrailerAutoplayDelaySeconds = settings.delaySeconds
+                        detailPageTrailerAutoplayDelaySeconds = settings.delaySeconds,
+                        detailPageTrailerPlayInBackground = settings.playInBackground,
+                        detailPageTrailerPauseOnScroll = settings.pauseOnScroll,
+                        trailer4kEnabled = settings.allow4k
                     )
                 }
             }
@@ -470,6 +479,9 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetDetailPageTrailerButtonEnabled -> setDetailPageTrailerButtonEnabled(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerAutoplayEnabled -> setDetailPageTrailerAutoplayEnabled(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerAutoplayDelaySeconds -> setDetailPageTrailerAutoplayDelaySeconds(event.seconds)
+            is LayoutSettingsEvent.SetDetailPageTrailerPlayInBackground -> setDetailPageTrailerPlayInBackground(event.enabled)
+            is LayoutSettingsEvent.SetDetailPageTrailerPauseOnScroll -> setDetailPageTrailerPauseOnScroll(event.enabled)
+            is LayoutSettingsEvent.SetTrailer4kEnabled -> setTrailer4kEnabled(event.enabled)
             is LayoutSettingsEvent.SetPreferExternalMetaAddonDetail -> setPreferExternalMetaAddonDetail(event.enabled)
             is LayoutSettingsEvent.SetHideUnreleasedContent -> setHideUnreleasedContent(event.enabled)
             is LayoutSettingsEvent.SetShowFullReleaseDate -> setShowFullReleaseDate(event.enabled)
@@ -536,6 +548,14 @@ class LayoutSettingsViewModel @Inject constructor(
 
     fun setShowAddonLogo(enabled: Boolean) {
         viewModelScope.launch { streamBadgeSettingsDataStore.setShowAddonLogo(enabled) }
+    }
+
+    fun setShowBadgesInPlayer(enabled: Boolean) {
+        viewModelScope.launch { streamBadgeSettingsDataStore.setShowInPlayer(enabled) }
+    }
+
+    fun setPlayerBadgeSource(source: String) {
+        viewModelScope.launch { streamBadgeSettingsDataStore.setPlayerBadgeSource(source) }
     }
 
     fun setStreamBadgePlacement(placement: StreamBadgePlacement) {
@@ -757,6 +777,27 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setDetailPageTrailerPlayInBackground(enabled: Boolean) {
+        if (_uiState.value.detailPageTrailerPlayInBackground == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setPlayInBackground(enabled)
+        }
+    }
+
+    private fun setDetailPageTrailerPauseOnScroll(enabled: Boolean) {
+        if (_uiState.value.detailPageTrailerPauseOnScroll == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setPauseOnScroll(enabled)
+        }
+    }
+
+    private fun setTrailer4kEnabled(enabled: Boolean) {
+        if (_uiState.value.trailer4kEnabled == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setAllow4k(enabled)
+        }
+    }
+
     private fun setBlurUnwatchedEpisodes(enabled: Boolean) {
         if (_uiState.value.blurUnwatchedEpisodes == enabled) return
         viewModelScope.launch {
@@ -969,7 +1010,7 @@ class LayoutSettingsViewModel @Inject constructor(
                 val catalogs = addons.flatMap { addon ->
                     addon.catalogs
                         .filter { catalog ->
-                            !catalog.extra.any { it.name.equals("search", ignoreCase = true) && it.isRequired }
+                            !catalog.isSearchOnlyCatalog()
                         }
                         .map { catalog ->
                             CatalogInfo(
@@ -1006,6 +1047,12 @@ data class StreamBadgeSettingsUiState(
 
     val showAddonLogo: Boolean
         get() = settings.showAddonLogo
+
+    val showInPlayer: Boolean
+        get() = settings.showInPlayer
+
+    val playerBadgeSource: String
+        get() = settings.playerBadgeSource
 
     val badgePlacement: StreamBadgePlacement
         get() = settings.badgePlacement

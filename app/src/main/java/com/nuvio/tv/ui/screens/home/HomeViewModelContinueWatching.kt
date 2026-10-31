@@ -4,6 +4,7 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.player.PlayerSessionTracker
 import com.nuvio.tv.core.util.isEpisodeReleaseAired
 import com.nuvio.tv.core.util.parseEpisodeReleaseInstant
 import com.nuvio.tv.core.util.selectEpisodeReleaseValue
@@ -21,9 +22,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -261,6 +265,20 @@ private class CwDebugSession {
     fun logSummary(cancelled: Boolean = false) = Unit
 }
 
+/**
+ * Holds pipeline runs while the in-app player is open. Home is covered then, and a rebuild (for
+ * example when the episode crosses the watched threshold) allocates enough to stall playback
+ * on low-memory TV devices. The hold also covers pause, buffering and seeks, so a held rebuild
+ * cannot start mid-episode and keep running once playback resumes. The latest snapshot runs
+ * once the player closes.
+ */
+private fun Flow<ContinueWatchingSettingsSnapshot>.holdWhilePlayerOpen(): Flow<ContinueWatchingSettingsSnapshot> =
+    combine(this, PlayerSessionTracker.isSessionOpen) { snapshot, playerOpen ->
+        snapshot.takeUnless { playerOpen }
+    }
+        .filterNotNull()
+        .distinctUntilChanged { old, new -> old === new }
+
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 internal fun HomeViewModel.loadContinueWatchingPipeline() {
     cwPipelineJob?.cancel()
@@ -303,7 +321,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 watchedItemsVersion = watchedItemsSize,
                 hasLoadedRemoteProgress = hasLoadedRemoteProgress
             )
-        }.debounce(CW_PROGRESS_DEBOUNCE_MS).collectLatest { snapshot ->
+        }.debounce(CW_PROGRESS_DEBOUNCE_MS).holdWhilePlayerOpen().collectLatest { snapshot ->
             val debug = CwDebugSession()
             val pipelineProfileId = profileManager.activeProfileId.value
             try {
@@ -421,8 +439,8 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                     poster = cached.poster ?: progress.poster,
                                     logo = cached.logo ?: progress.logo,
                                     name = cached.name.takeIf { it.isNotBlank() } ?: progress.name,
-                                    episodeTitle = if (sameEpisode) (cached.episodeTitle ?: progress.episodeTitle) else progress.episodeTitle,
-                                    videoId = if (sameEpisode) (cached.videoId.takeIf { it.isNotBlank() } ?: progress.videoId) else progress.videoId
+                                    episodeTitle = if (sameEpisode) (progress.episodeTitle ?: cached.episodeTitle) else progress.episodeTitle,
+                                    videoId = if (sameEpisode) (progress.videoId.takeIf { it.isNotBlank() } ?: cached.videoId) else progress.videoId
                                 )
                             } else {
                                 progress
@@ -620,12 +638,12 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                     val cached = cachedEnrichmentFromNextUp[nextUp.info.contentId]
                                     if (cached != null && cached.season == nextUp.info.season && cached.episode == nextUp.info.episode) {
                                         nextUp.copy(info = nextUp.info.copy(
-                                            thumbnail = cached.thumbnail ?: nextUp.info.thumbnail,
+                                            thumbnail = nextUp.info.thumbnail ?: cached.thumbnail,
                                             backdrop = cached.backdrop ?: nextUp.info.backdrop,
                                             poster = cached.poster ?: nextUp.info.poster,
                                             logo = cached.logo ?: nextUp.info.logo,
                                             name = cached.name.takeIf { it.isNotBlank() } ?: nextUp.info.name,
-                                            contentLanguage = cached.contentLanguage ?: nextUp.info.contentLanguage
+                                            contentLanguage = nextUp.info.contentLanguage ?: cached.contentLanguage
                                         ))
                                     } else nextUp
                                 }
@@ -1058,16 +1076,16 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                             val cached = cachedEnrichmentFromNextUp[nextUp.info.contentId]
                             if (cached != null && cached.season == nextUp.info.season && cached.episode == nextUp.info.episode) {
                                 nextUp.copy(info = nextUp.info.copy(
-                                    thumbnail = cached.thumbnail ?: nextUp.info.thumbnail,
+                                    thumbnail = nextUp.info.thumbnail ?: cached.thumbnail,
                                     backdrop = cached.backdrop ?: nextUp.info.backdrop,
                                     poster = cached.poster ?: nextUp.info.poster,
                                     logo = cached.logo ?: nextUp.info.logo,
                                     name = cached.name.takeIf { it.isNotBlank() } ?: nextUp.info.name,
-                                    episodeDescription = cached.episodeDescription ?: nextUp.info.episodeDescription,
-                                    imdbRating = cached.imdbRating ?: nextUp.info.imdbRating,
-                                    genres = cached.genres.ifEmpty { nextUp.info.genres },
-                                    releaseInfo = cached.releaseInfo ?: nextUp.info.releaseInfo,
-                                    contentLanguage = cached.contentLanguage ?: nextUp.info.contentLanguage
+                                    episodeDescription = nextUp.info.episodeDescription ?: cached.episodeDescription,
+                                    imdbRating = nextUp.info.imdbRating ?: cached.imdbRating,
+                                    genres = nextUp.info.genres.ifEmpty { cached.genres },
+                                    releaseInfo = nextUp.info.releaseInfo ?: cached.releaseInfo,
+                                    contentLanguage = nextUp.info.contentLanguage ?: cached.contentLanguage
                                 ))
                             } else nextUp
                         },
@@ -1124,6 +1142,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 viewModelScope.launch(Dispatchers.IO) {
                     val currentItems = _uiState.value.continueWatchingItems + _uiState.value.upcomingItems
                     val brokenUrls = com.nuvio.tv.ui.components.brokenImageUrls
+                    val ratingVisibility = layoutPreferenceDataStore.detailImdbRatingsVisibility.first()
                     val nextUpSnap = currentItems.mapNotNull { item ->
                         val nu = item as? ContinueWatchingItem.NextUp ?: return@mapNotNull null
                         val info = nu.info
@@ -1138,12 +1157,14 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                             releaseInfo = info.releaseInfo, sortTimestamp = info.sortTimestamp,
                             releaseTimestamp = info.releaseTimestamp, isReleaseAlert = info.isReleaseAlert,
                             isNewSeasonRelease = info.isNewSeasonRelease, seedSeason = info.seedSeason,
-                            seedEpisode = info.seedEpisode, contentLanguage = info.contentLanguage
+                            seedEpisode = info.seedEpisode, contentLanguage = info.contentLanguage,
+                            ratingVisible = ratingVisibility.showEpisodeRating(isWatched = false)
                         )
                     }
                     val ipSnap = currentItems.mapNotNull { item ->
                         val ip = item as? ContinueWatchingItem.InProgress ?: return@mapNotNull null
                         val p = ip.progress
+                        val isSeries = p.contentType.let { it == "series" || it == "anime" || it == "tv" }
                         com.nuvio.tv.data.local.CachedInProgressItem(
                             contentId = p.contentId, contentType = p.contentType, name = p.name,
                             poster = p.poster, backdrop = p.backdrop, logo = p.logo,
@@ -1153,7 +1174,8 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                             episodeThumbnail = ip.episodeThumbnail?.takeIf { it !in brokenUrls },
                             episodeDescription = ip.episodeDescription, episodeImdbRating = ip.episodeImdbRating,
                             genres = ip.genres, releaseInfo = ip.releaseInfo,
-                            contentLanguage = ip.contentLanguage
+                            contentLanguage = ip.contentLanguage,
+                            ratingVisible = !isSeries || ratingVisibility.showEpisodeRating(isWatched = p.isCompleted())
                         )
                     }
                     if (profileManager.activeProfileId.value == pipelineProfileId) {
@@ -2610,69 +2632,73 @@ private fun HomeViewModel.persistLocalContinueWatchingMetadata(
 
     // Build next-up snapshot for cache
     val brokenUrls = com.nuvio.tv.ui.components.brokenImageUrls
-    val nextUpSnapshot = currentUiItems.mapNotNull { item ->
-        val nextUp = item as? ContinueWatchingItem.NextUp ?: return@mapNotNull null
-        val info = nextUp.info
-        com.nuvio.tv.data.local.CachedNextUpItem(
-            contentId = info.contentId,
-            contentType = info.contentType,
-            name = info.name,
-            poster = info.poster,
-            backdrop = info.backdrop,
-            logo = info.logo,
-            videoId = info.videoId,
-            season = info.season,
-            episode = info.episode,
-            episodeTitle = info.episodeTitle,
-            episodeDescription = info.episodeDescription,
-            thumbnail = info.thumbnail?.takeIf { it !in brokenUrls },
-            released = info.released,
-            hasAired = info.hasAired,
-            airDateLabel = info.airDateLabel,
-            lastWatched = info.lastWatched,
-            imdbRating = info.imdbRating,
-            genres = info.genres,
-            releaseInfo = info.releaseInfo,
-            sortTimestamp = info.sortTimestamp,
-            releaseTimestamp = info.releaseTimestamp,
-            isReleaseAlert = info.isReleaseAlert,
-            isNewSeasonRelease = info.isNewSeasonRelease,
-            seedSeason = info.seedSeason,
-            seedEpisode = info.seedEpisode,
-            contentLanguage = info.contentLanguage
-        )
-    }
-
-    // Build in-progress snapshot for cache
-    val inProgressSnapshot = currentUiItems.mapNotNull { item ->
-        val ip = item as? ContinueWatchingItem.InProgress ?: return@mapNotNull null
-        val p = ip.progress
-        com.nuvio.tv.data.local.CachedInProgressItem(
-            contentId = p.contentId,
-            contentType = p.contentType,
-            name = p.name,
-            poster = p.poster,
-            backdrop = p.backdrop,
-            logo = p.logo,
-            videoId = p.videoId,
-            season = p.season,
-            episode = p.episode,
-            episodeTitle = p.episodeTitle,
-            position = p.position,
-            duration = p.duration,
-            lastWatched = p.lastWatched,
-            progressPercent = p.progressPercent,
-            episodeThumbnail = ip.episodeThumbnail?.takeIf { it !in brokenUrls },
-            episodeDescription = ip.episodeDescription,
-            episodeImdbRating = ip.episodeImdbRating,
-            genres = ip.genres,
-            releaseInfo = ip.releaseInfo,
-            contentLanguage = ip.contentLanguage
-        )
-    }
-
     viewModelScope.launch(Dispatchers.IO) {
         if (profileManager.activeProfileId.value != pipelineProfileId) return@launch
+        val ratingVisibility = layoutPreferenceDataStore.detailImdbRatingsVisibility.first()
+        val nextUpSnapshot = currentUiItems.mapNotNull { item ->
+            val nextUp = item as? ContinueWatchingItem.NextUp ?: return@mapNotNull null
+            val info = nextUp.info
+            com.nuvio.tv.data.local.CachedNextUpItem(
+                contentId = info.contentId,
+                contentType = info.contentType,
+                name = info.name,
+                poster = info.poster,
+                backdrop = info.backdrop,
+                logo = info.logo,
+                videoId = info.videoId,
+                season = info.season,
+                episode = info.episode,
+                episodeTitle = info.episodeTitle,
+                episodeDescription = info.episodeDescription,
+                thumbnail = info.thumbnail?.takeIf { it !in brokenUrls },
+                released = info.released,
+                hasAired = info.hasAired,
+                airDateLabel = info.airDateLabel,
+                lastWatched = info.lastWatched,
+                imdbRating = info.imdbRating,
+                genres = info.genres,
+                releaseInfo = info.releaseInfo,
+                sortTimestamp = info.sortTimestamp,
+                releaseTimestamp = info.releaseTimestamp,
+                isReleaseAlert = info.isReleaseAlert,
+                isNewSeasonRelease = info.isNewSeasonRelease,
+                seedSeason = info.seedSeason,
+                seedEpisode = info.seedEpisode,
+                contentLanguage = info.contentLanguage,
+                ratingVisible = ratingVisibility.showEpisodeRating(isWatched = false)
+            )
+        }
+
+        // Build in-progress snapshot for cache
+        val inProgressSnapshot = currentUiItems.mapNotNull { item ->
+            val ip = item as? ContinueWatchingItem.InProgress ?: return@mapNotNull null
+            val p = ip.progress
+            val isSeries = p.contentType.let { it == "series" || it == "anime" || it == "tv" }
+            com.nuvio.tv.data.local.CachedInProgressItem(
+                contentId = p.contentId,
+                contentType = p.contentType,
+                name = p.name,
+                poster = p.poster,
+                backdrop = p.backdrop,
+                logo = p.logo,
+                videoId = p.videoId,
+                season = p.season,
+                episode = p.episode,
+                episodeTitle = p.episodeTitle,
+                position = p.position,
+                duration = p.duration,
+                lastWatched = p.lastWatched,
+                progressPercent = p.progressPercent,
+                episodeThumbnail = ip.episodeThumbnail?.takeIf { it !in brokenUrls },
+                episodeDescription = ip.episodeDescription,
+                episodeImdbRating = ip.episodeImdbRating,
+                genres = ip.genres,
+                releaseInfo = ip.releaseInfo,
+                contentLanguage = ip.contentLanguage,
+                ratingVisible = !isSeries || ratingVisibility.showEpisodeRating(isWatched = p.isCompleted())
+            )
+        }
+
         if (nextUpSnapshot.isNotEmpty()) {
             runCatching { cwEnrichmentCache.saveNextUpSnapshot(nextUpSnapshot, force = true) }
         }

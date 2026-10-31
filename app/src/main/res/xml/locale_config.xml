@@ -36,4 +36,6 @@
     <locale android:name="bs"/>
     <locale android:name="zh-CN"/>
     <locale android:name="zh-TW"/>
+    <locale android:name="bn"/>
+    <locale android:name="hr"/>
 </locale-config>

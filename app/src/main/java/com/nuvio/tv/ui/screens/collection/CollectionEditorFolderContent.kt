@@ -50,6 +50,12 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -86,6 +92,8 @@ import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -212,8 +220,8 @@ fun FolderEditorContent(
         ) {
             Text(
                 text = stringResource(R.string.collections_editor_edit_folder),
-                style = MaterialTheme.typography.headlineMedium,
-                color = NuvioTheme.colors.TextPrimary
+                style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+                color = NuvioTheme.colors.TextPrimary,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 NuvioButton(onClick = { viewModel.cancelFolderEdit() }) {
@@ -274,6 +282,10 @@ fun FolderEditorContent(
                 Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
                     Button(
                         onClick = { viewModel.clearFolderCover() },
+                        modifier = Modifier.semantics {
+                            role = Role.RadioButton
+                            selected = coverMode == "none"
+                        },
                         colors = ButtonDefaults.colors(
                             containerColor = if (coverMode == "none") NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (coverMode == "none") NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -295,6 +307,10 @@ fun FolderEditorContent(
 
                     Button(
                         onClick = { viewModel.showEmojiPicker() },
+                        modifier = Modifier.semantics {
+                            role = Role.RadioButton
+                            selected = coverMode == "emoji"
+                        },
                         colors = ButtonDefaults.colors(
                             containerColor = if (coverMode == "emoji") NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (coverMode == "emoji") NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -322,6 +338,10 @@ fun FolderEditorContent(
 
                     Button(
                         onClick = { viewModel.switchToImageMode() },
+                        modifier = Modifier.semantics {
+                            role = Role.RadioButton
+                            selected = coverMode == "image"
+                        },
                         colors = ButtonDefaults.colors(
                             containerColor = if (coverMode == "image") NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                             contentColor = if (coverMode == "image") NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -390,7 +410,12 @@ fun FolderEditorContent(
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                 Card(
                     onClick = { viewModel.updateFolderFocusGifEnabled(!folder.focusGifEnabled) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            role = Role.Switch
+                            toggleableState = if (folder.focusGifEnabled) ToggleableState.On else ToggleableState.Off
+                        },
                     colors = CardDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -414,7 +439,7 @@ fun FolderEditorContent(
                         Text(stringResource(R.string.collections_editor_play_gif), style = MaterialTheme.typography.bodyLarge, color = NuvioTheme.colors.TextPrimary)
                         Switch(
                             checked = folder.focusGifEnabled,
-                            onCheckedChange = { viewModel.updateFolderFocusGifEnabled(it) }
+                            onCheckedChange = null
                         )
                     }
                 }
@@ -519,7 +544,12 @@ fun FolderEditorContent(
                         val isSelected = folder.tileShape == shape
                         Button(
                             onClick = { viewModel.updateFolderTileShape(shape) },
-                            modifier = Modifier.focusRequester(shapeFocusRequesters[shape]!!),
+                            modifier = Modifier
+                                .focusRequester(shapeFocusRequesters[shape]!!)
+                                .semantics {
+                                    role = Role.RadioButton
+                                    selected = isSelected
+                                },
                             colors = ButtonDefaults.colors(
                                 containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                                 contentColor = if (isSelected) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
@@ -547,7 +577,12 @@ fun FolderEditorContent(
             item {
                 Card(
                     onClick = { viewModel.updateFolderHideTitle(!folder.hideTitle) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            role = Role.Switch
+                            toggleableState = if (folder.hideTitle) ToggleableState.On else ToggleableState.Off
+                        },
                     colors = CardDefaults.colors(
                         containerColor = NuvioTheme.colors.BackgroundCard,
                         focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -571,8 +606,8 @@ fun FolderEditorContent(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.collections_editor_hide_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = NuvioTheme.colors.TextPrimary
+                                style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.Content),
+                                color = NuvioTheme.colors.TextPrimary,
                             )
                             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                             Text(
@@ -584,7 +619,7 @@ fun FolderEditorContent(
                         Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                         Switch(
                             checked = folder.hideTitle,
-                            onCheckedChange = { viewModel.updateFolderHideTitle(it) },
+                            onCheckedChange = null,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = NuvioTheme.colors.Secondary,
                                 checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f),
@@ -835,17 +870,17 @@ fun FolderEditorContent(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
                     NuvioButton(onClick = { viewModel.showCatalogPicker() }) {
-                        Icon(Icons.Default.Add, stringResource(R.string.cd_add))
+                        Icon(Icons.Default.Add, null)
                         Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                         Text(stringResource(R.string.collections_editor_add_catalog))
                     }
                     NuvioButton(onClick = { viewModel.showTmdbSourcePicker() }) {
-                        Icon(Icons.Default.Add, stringResource(R.string.cd_add))
+                        Icon(Icons.Default.Add, null)
                         Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                         Text(stringResource(R.string.collections_editor_add_tmdb_source))
                     }
                     NuvioButton(onClick = { viewModel.showTraktSourcePicker() }) {
-                        Icon(Icons.Default.Add, stringResource(R.string.cd_add))
+                        Icon(Icons.Default.Add, null)
                         Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                         Text(stringResource(R.string.collections_editor_add_trakt_source))
                     }

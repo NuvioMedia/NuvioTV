@@ -60,6 +60,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
@@ -67,6 +68,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.runtime.State
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -77,6 +82,13 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import androidx.lifecycle.Lifecycle
@@ -506,6 +518,7 @@ fun MetaDetailsScreen(
 
     val currentIsTrailerPlaying by rememberUpdatedState(uiState.isTrailerPlaying)
     val currentShowTrailerControls by rememberUpdatedState(uiState.showTrailerControls)
+    val trailerControllerFocusRequester = remember { FocusRequester() }
     var trailerSeekOverlayVisible by remember { mutableStateOf(false) }
     val trailerSeekOverlayState = remember { TrailerSeekOverlayState() }
     var trailerSeekToken by remember { mutableIntStateOf(0) }
@@ -515,6 +528,12 @@ fun MetaDetailsScreen(
         { position: Long, duration: Long ->
             trailerSeekOverlayState.positionMs = position
             trailerSeekOverlayState.durationMs = duration
+        }
+    }
+
+    LaunchedEffect(uiState.isTrailerPlaying, uiState.showTrailerControls) {
+        if (uiState.isTrailerPlaying && uiState.showTrailerControls) {
+            trailerControllerFocusRequester.requestFocusAfterFrames()
         }
     }
 
@@ -960,6 +979,8 @@ fun MetaDetailsScreen(
                     trailerUrl = uiState.trailerUrl,
                     trailerAudioUrl = uiState.trailerAudioUrl,
                     isTrailerPlaying = uiState.isTrailerPlaying,
+                    isBackgroundTrailerPlaying = uiState.isBackgroundTrailerPlaying,
+                    pauseBackgroundTrailerOnScroll = uiState.pauseBackgroundTrailerOnScroll,
                     isTrailerPaused = isTrailerPaused,
                     showTrailerControls = uiState.showTrailerControls,
                     hideLogoDuringTrailer = uiState.hideLogoDuringTrailer,
@@ -1029,7 +1050,11 @@ fun MetaDetailsScreen(
                         }
                     },
                     onTrailerProgressChanged = onTrailerProgressChanged,
-                    onTrailerEnded = { viewModel.onEvent(MetaDetailsEvent.OnTrailerEnded) },
+                    onTrailerEnded = {
+                        restorePlayFocusAfterTrailerBackToken += 1
+                        isTrailerPaused = false
+                        viewModel.onEvent(MetaDetailsEvent.OnTrailerEnded)
+                    },
                     onTrailerButtonClick = { viewModel.onEvent(MetaDetailsEvent.OnTrailerButtonClick) },
                     onSharedTrailerSelected = { viewModel.onEvent(MetaDetailsEvent.OnSharedTrailerSelected(it)) },
                     onDismissSharedTrailer = { viewModel.onEvent(MetaDetailsEvent.OnDismissSharedTrailer) },
@@ -1123,6 +1148,19 @@ fun MetaDetailsScreen(
                     color = NuvioTheme.colors.TextPrimary
                 )
             }
+        }
+
+        if (uiState.isTrailerPlaying && uiState.showTrailerControls) {
+            // This surface exists only to capture remote keys (back/play/pause/seek) while the
+            // trailer is playing, so it has no visible label of its own to announce.
+            val trailerControlsDescription = stringResource(R.string.cd_trailer_controls)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .focusRequester(trailerControllerFocusRequester)
+                    .focusable()
+                    .semantics { contentDescription = trailerControlsDescription }
+            )
         }
 
         TrailerSeekOverlayHost(
@@ -1230,6 +1268,8 @@ private fun MetaDetailsContent(
     trailerUrl: String?,
     trailerAudioUrl: String?,
     isTrailerPlaying: Boolean,
+    isBackgroundTrailerPlaying: Boolean,
+    pauseBackgroundTrailerOnScroll: Boolean,
     isTrailerPaused: Boolean = false,
     showTrailerControls: Boolean,
     hideLogoDuringTrailer: Boolean,
@@ -1783,6 +1823,12 @@ private fun MetaDetailsContent(
         }
     }
 
+    val belowHeroAlpha = animateFloatAsState(
+        targetValue = if (isTrailerPlaying) 0f else 1f,
+        animationSpec = tween(NuvioMotion.tokens.durations.overlay),
+        label = "belowHeroFade"
+    )
+
     // Pre-compute cast members to avoid recomputation in lazy scope
     val castMembersToShow = remember(meta.castMembers, meta.cast) {
         if (meta.castMembers.isNotEmpty()) {
@@ -2268,6 +2314,8 @@ private fun MetaDetailsContent(
             trailerUrl = trailerUrl,
             trailerAudioUrl = trailerAudioUrl,
             isTrailerPlaying = isTrailerPlaying,
+            isBackgroundTrailerPlaying = isBackgroundTrailerPlaying,
+            pauseBackgroundTrailerOnScroll = pauseBackgroundTrailerOnScroll,
             isTrailerPaused = isTrailerPaused,
             showTrailerControls = showTrailerControls,
             trailerSeekToken = trailerSeekToken,
@@ -2282,7 +2330,9 @@ private fun MetaDetailsContent(
 
         // Single scrollable column with hero + content
         CompositionLocalProvider(
-            LocalBringIntoViewSpec provides if (suppressRestoreBringIntoView) {
+            // The hero grows to full height during a trailer; keep the list from
+            // scrolling to follow the focused hero while it resizes.
+            LocalBringIntoViewSpec provides if (suppressRestoreBringIntoView || isTrailerPlaying) {
                 restoreNoScrollBringIntoViewSpec
             } else {
                 detailPageBringIntoViewSpec
@@ -2292,6 +2342,7 @@ private fun MetaDetailsContent(
             modifier = Modifier
                 .fillMaxSize()
                 .recompositionHighlighter()
+                .fadeBelowHero(listState, belowHeroAlpha)
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
                     if (native.action == KeyEvent.ACTION_DOWN) {
@@ -3186,6 +3237,36 @@ private fun PlaybackHandoffBackdrop(backdropUrl: String?) {
     }
 }
 
+/**
+ * Fades the rows below the hero item while a full-screen trailer plays. On screens
+ * taller than the hero (lower-density TV boxes) the next row would otherwise sit over
+ * the trailer.
+ */
+private fun Modifier.fadeBelowHero(
+    listState: LazyListState,
+    alpha: State<Float>
+): Modifier = drawWithCache {
+    val layerPaint = Paint()
+    onDrawWithContent {
+        val belowHeroAlpha = alpha.value
+        if (belowHeroAlpha >= 1f) {
+            drawContent()
+            return@onDrawWithContent
+        }
+        val heroBottom = listState.layoutInfo.visibleItemsInfo
+            .firstOrNull { it.key == "hero" }
+            ?.let { (it.offset + it.size).toFloat() }
+            ?: 0f
+        clipRect(bottom = heroBottom) { this@onDrawWithContent.drawContent() }
+        if (belowHeroAlpha > 0f) {
+            layerPaint.alpha = belowHeroAlpha
+            drawContext.canvas.saveLayer(Rect(0f, heroBottom, size.width, size.height), layerPaint)
+            clipRect(top = heroBottom) { this@onDrawWithContent.drawContent() }
+            drawContext.canvas.restore()
+        }
+    }
+}
+
 @Composable
 private fun BackdropLayer(
     backdropRequest: ImageRequest,
@@ -3193,6 +3274,8 @@ private fun BackdropLayer(
     trailerUrl: String?,
     trailerAudioUrl: String?,
     isTrailerPlaying: Boolean,
+    isBackgroundTrailerPlaying: Boolean,
+    pauseBackgroundTrailerOnScroll: Boolean,
     isTrailerPaused: Boolean = false,
     showTrailerControls: Boolean,
     trailerSeekToken: Int,
@@ -3207,13 +3290,33 @@ private fun BackdropLayer(
     var showHeroBackdropUnderlay by remember(heroBackdropRequest, backdropRequest) {
         mutableStateOf(heroBackdropRequest != null)
     }
+    val isBackgroundTrailerPaused =
+        isBackgroundTrailerPlaying && pauseBackgroundTrailerOnScroll && isScrolledPastHero
+    val isBackgroundTrailerVisible = isBackgroundTrailerPlaying && !isBackgroundTrailerPaused
+    // Keep the backdrop until the trailer has a frame to show; the request alone can be many
+    // seconds ahead of it while the stream is fetched and buffered.
+    var isTrailerRendered by remember(isTrailerPlaying, isBackgroundTrailerPlaying) { mutableStateOf(false) }
     val backdropAlphaState = animateFloatAsState(
-        targetValue = if (isTrailerPlaying) 0f else if (isScrolledPastHero) 0.15f else 1f,
+        targetValue = when {
+            isTrailerPlaying && isTrailerRendered -> 0f
+            isBackgroundTrailerVisible && isTrailerRendered -> 0f
+            isScrolledPastHero -> 0.15f
+            else -> 1f
+        },
         animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
         label = "backdropFade"
     )
+    val backgroundTrailerAlphaState = animateFloatAsState(
+        targetValue = when {
+            !isBackgroundTrailerVisible -> 0f
+            isScrolledPastHero -> 0.15f
+            else -> 1f
+        },
+        animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
+        label = "backgroundTrailerFade"
+    )
     val gradientAlphaState = animateFloatAsState(
-        targetValue = if (isTrailerPlaying || isScrolledPastHero) 0f else 1f,
+        targetValue = if ((isTrailerPlaying && isTrailerRendered) || isScrolledPastHero) 0f else 1f,
         animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
         label = "gradientFade"
     )
@@ -3242,14 +3345,22 @@ private fun BackdropLayer(
         TrailerPlayer(
             trailerUrl = trailerUrl,
             trailerAudioUrl = trailerAudioUrl,
-            isPlaying = isTrailerPlaying,
-            isPaused = isTrailerPaused,
+            isPlaying = isTrailerPlaying || isBackgroundTrailerPlaying,
+            isPaused = isTrailerPaused || isBackgroundTrailerPaused,
             seekRequestToken = if (showTrailerControls) trailerSeekToken else 0,
             seekDeltaMs = if (showTrailerControls) trailerSeekDeltaMs else 0L,
             onRemoteKey = onTrailerControlKey,
             onProgressChanged = onTrailerProgressChanged,
             onEnded = onTrailerEnded,
-            modifier = Modifier.fillMaxSize()
+            onError = onTrailerEnded,
+            onFirstFrameRendered = { isTrailerRendered = true },
+            cropToFill = isBackgroundTrailerPlaying,
+            autoCropLetterbox = isBackgroundTrailerPlaying,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = if (isBackgroundTrailerPlaying) backgroundTrailerAlphaState.value else 1f
+                }
         )
         Box(
             modifier = Modifier
@@ -3361,6 +3472,10 @@ private fun PeopleSectionTabButton(
                 if (focusedNow) {
                     onFocused()
                 }
+            }
+            .semantics {
+                role = Role.Tab
+                this.selected = selected
             },
         colors = CardDefaults.colors(
             containerColor = Color.Transparent,
@@ -3427,16 +3542,22 @@ private fun LibraryListPickerDialog(
         ) {
             items(tabs, key = { it.key }) { tab ->
                 val selected = membership[tab.key] == true
-                val titleText = if (selected) "\u2713 ${tab.localizedMembershipTitle()}" else tab.localizedMembershipTitle()
+                // The membership state is exposed through semantics below instead of a leading
+                // glyph in the label, so screen readers hear one clean name plus the state.
+                val titleText = tab.localizedMembershipTitle()
+                val rowModifier = if (tab.key == tabs.firstOrNull()?.key) {
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(primaryFocusRequester)
+                } else {
+                    Modifier.fillMaxWidth()
+                }
                 Button(
                     onClick = { onToggle(tab.key) },
                     enabled = !isPending,
-                    modifier = if (tab.key == tabs.firstOrNull()?.key) {
-                        Modifier
-                            .fillMaxWidth()
-                            .focusRequester(primaryFocusRequester)
-                    } else {
-                        Modifier.fillMaxWidth()
+                    modifier = rowModifier.semantics {
+                        role = Role.Checkbox
+                        toggleableState = if (selected) ToggleableState.On else ToggleableState.Off
                     },
                     colors = ButtonDefaults.colors(
                         containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,

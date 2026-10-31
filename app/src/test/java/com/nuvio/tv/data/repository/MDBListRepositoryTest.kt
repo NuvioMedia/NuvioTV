@@ -267,7 +267,7 @@ class MDBListRepositoryTest {
         val client = MdbListRatingsClient(
             api, account.api, account.store, Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
         )
-        return MDBListRepository(client, store, mockk<TmdbService>(), MdbListRatingsLoader(client, backgroundScope))
+        return MDBListRepository(client, store, mockk<TmdbService>(), MdbListRatingsLoader(client, scope = backgroundScope))
     }
 
     private fun meta(mediaType: String = "movie"): Meta = mockk {

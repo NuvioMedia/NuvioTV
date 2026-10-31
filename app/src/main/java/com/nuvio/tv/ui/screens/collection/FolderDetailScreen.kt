@@ -1,10 +1,13 @@
 package com.nuvio.tv.ui.screens.collection
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
@@ -29,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +43,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -74,12 +79,14 @@ import com.nuvio.tv.domain.model.FolderViewMode
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.ui.components.CatalogRowSection
 import com.nuvio.tv.ui.components.ContentCard
+import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
+import com.nuvio.tv.ui.components.LocalLandscapePosterMode
 import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.ui.screens.home.ClassicFocusArtwork
@@ -128,9 +135,11 @@ fun FolderDetailScreen(
         { item -> uiState.movieWatchedStatus[com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)] == true }
     }
 
-    val enrichingItemId by viewModel.enrichingItemId.collectAsStateWithLifecycle()
-    val enrichedPreviews by viewModel.enrichedPreviews.collectAsStateWithLifecycle()
-    val failedEnrichmentIds by viewModel.failedEnrichmentIds.collectAsStateWithLifecycle()
+    // Kept as State down to ModernHomeContent, like ModernHomeRoute: reading the values here would
+    // recompose the whole folder screen on every enrichment update.
+    val enrichingItemId = viewModel.enrichingItemId.collectAsStateWithLifecycle()
+    val enrichedPreviews = viewModel.enrichedPreviews.collectAsStateWithLifecycle()
+    val failedEnrichmentIds = viewModel.failedEnrichmentIds.collectAsStateWithLifecycle()
     val trailerPreviewUrls by viewModel.trailerPreviewUrls.collectAsStateWithLifecycle()
     val trailerPreviewAudioUrls by viewModel.trailerPreviewAudioUrls.collectAsStateWithLifecycle()
     val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
@@ -238,7 +247,7 @@ private fun FolderHeader(folder: com.nuvio.tv.domain.model.CollectionFolder) {
             }
             AsyncImage(
                 model = folder.coverImageUrl,
-                contentDescription = folder.title,
+                contentDescription = null,
                 modifier = Modifier
                     .width(iconWidth)
                     .height(iconHeight)
@@ -302,7 +311,7 @@ private fun TabbedGridContent(
             }
             AsyncImage(
                 model = folder.coverImageUrl,
-                contentDescription = folder.title,
+                contentDescription = null,
                 modifier = Modifier
                     .width(iconWidth)
                     .height(iconHeight)
@@ -393,7 +402,9 @@ private fun TabbedGridContent(
         }
         currentTab.catalogRow != null -> {
             val items = currentTab.catalogRow.items
-            val posterCardStyle = PosterCardDefaults.Style.copy(
+            val posterCardStyle = PosterCardStyle(
+                width = uiState.posterCardWidthDp.dp,
+                height = (uiState.posterCardWidthDp * 1.5f).dp,
                 cornerRadius = uiState.posterCardCornerRadiusDp.dp
             )
             val itemFocusRequesters = remember(uiState.selectedTabIndex) { mutableMapOf<String, FocusRequester>() }
@@ -465,9 +476,10 @@ private fun TabbedGridContent(
                     }
             }
 
+            val globalLandscape = LocalLandscapePosterMode.current
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+                columns = GridCells.Adaptive(minSize = if (globalLandscape) posterCardStyle.height else posterCardStyle.width),
                 modifier = Modifier
                     .fillMaxSize()
                     .onFocusChanged { gridHasFocus = it.hasFocus }
@@ -490,12 +502,13 @@ private fun TabbedGridContent(
                 ) { index, item ->
                     val itemKey = "${item.id}_$index"
                     val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
-                    ContentCard(
+                    GridContentCard(
                         item = item,
                         posterCardStyle = posterCardStyle,
                         focusRequester = focusReq,
                         isWatched = isItemWatched(item),
-                        onFocus = { _ -> lastFocusedItemKey = itemKey },
+                        showReleaseInfo = true,
+                        onFocused = { lastFocusedItemKey = itemKey },
                         onClick = {
                             HeroBackdropState.update(item.backdropUrl)
                             onNavigateToDetail(
@@ -516,15 +529,22 @@ private fun TabbedGridContent(
                     ) {
                         val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
                         val cardDepthStyle = LocalCardDepthStyle.current
+                        val globalLandscape = LocalLandscapePosterMode.current
+                        val loadingCardHeight = if (globalLandscape) {
+                            posterCardStyle.width / com.nuvio.tv.domain.model.PosterShape.LANDSCAPE.aspectRatio()
+                        } else {
+                            posterCardStyle.width * 1.5f
+                        }
                         Column(
                             modifier = Modifier.width(posterCardStyle.width)
                         ) {
                             Card(
                                 onClick = {},
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(posterCardStyle.height)
-                                    .focusProperties { canFocus = false },
+                                    .width(posterCardStyle.width)
+                                    .height(loadingCardHeight)
+                              .clearAndSetSemantics {}
+                              .focusProperties { canFocus = false },
                                 shape = CardDefaults.shape(shape = cardShape),
                                 colors = CardDefaults.colors(
                                     containerColor = NuvioTheme.colors.BackgroundCard,
@@ -768,6 +788,12 @@ private fun RowsContent(
                         tab.label
                     }
                 }
+                val globalLandscape = LocalLandscapePosterMode.current
+                val containerHeight = if (globalLandscape) {
+                    posterCardStyle.width / com.nuvio.tv.domain.model.PosterShape.LANDSCAPE.aspectRatio()
+                } else {
+                    posterCardStyle.height
+                }
                 when {
                     tab.isLoading -> {
                         Column(modifier = Modifier.fillMaxWidth()) {
@@ -780,7 +806,7 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(posterCardStyle.height),
+                                    .height(containerHeight),
                                 contentAlignment = Alignment.Center
                             ) {
                                 LoadingIndicator()
@@ -798,7 +824,7 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(posterCardStyle.height),
+                                    .height(containerHeight),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(text = tab.error, color = NuvioTheme.colors.TextSecondary)
@@ -865,9 +891,9 @@ private fun RowsContent(
 private fun FollowLayoutContent(
     uiState: FolderDetailUiState,
     focusState: HomeScreenFocusState,
-    enrichingItemId: String? = null,
-    enrichedPreviews: Map<String, MetaPreview> = emptyMap(),
-    failedEnrichmentIds: Set<String> = emptySet(),
+    enrichingItemId: State<String?>,
+    enrichedPreviews: State<Map<String, MetaPreview>>,
+    failedEnrichmentIds: State<Set<String>>,
     onNavigateToDetail: (String, String, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit = { _, _, _ -> },
     onSelectTab: (Int) -> Unit = {},

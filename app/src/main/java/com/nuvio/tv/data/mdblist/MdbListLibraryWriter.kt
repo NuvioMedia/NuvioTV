@@ -65,6 +65,7 @@ internal class MdbListLibraryWriter(
     suspend fun applyMembershipChanges(scope: MdbListAuthScope, input: LibraryEntryInput, changes: ListMembershipChanges) {
         val suppliedTarget = runCatching { input.mdbListLibraryItem() }.getOrNull()
         for ((key, desired) in changes.desiredMembership) {
+            if (isMdbListReadOnlyListKey(key)) continue
             mdbListLibraryItemsPath(key)
             write(scope) { library ->
                 val tab = library.tabs().firstOrNull { it.key == key }
