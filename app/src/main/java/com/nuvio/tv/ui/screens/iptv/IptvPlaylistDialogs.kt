@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.iptv
 
+import android.text.format.DateUtils
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,15 +29,18 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.data.iptv.IptvPlaylist
+import com.nuvio.tv.data.iptv.IptvPlaylistUpdate
 import com.nuvio.tv.data.iptv.IptvSourceType
 import com.nuvio.tv.data.iptv.XtreamCodes
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -44,6 +50,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 @Composable
 internal fun IptvPlaylistManagerDialog(
     playlists: List<IptvPlaylist>,
+    updates: Map<String, IptvPlaylistUpdate>,
     onDismiss: () -> Unit,
     onAdd: () -> Unit,
     onEdit: (IptvPlaylist) -> Unit,
@@ -63,9 +70,18 @@ internal fun IptvPlaylistManagerDialog(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             playlists.forEachIndexed { index, playlist ->
+                val updatedAt = updates[playlist.id]?.channelsUpdatedAt ?: 0L
+                val updatedText = if (updatedAt > 0L) {
+                    stringResource(
+                        R.string.iptv_updated,
+                        DateUtils.getRelativeTimeSpanString(updatedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+                    )
+                } else {
+                    stringResource(R.string.iptv_never_updated)
+                }
                 IptvMenuItem(
                     text = playlist.name,
-                    supportingText = playlistSummary(playlist),
+                    supportingText = playlistSummary(playlist) + " · " + updatedText,
                     icon = if (playlist.type == IptvSourceType.XTREAM) Icons.Filled.Dns else Icons.Filled.Link,
                     onClick = { onEdit(playlist) },
                     modifier = if (index == 0) Modifier.focusRequester(firstFocus) else Modifier
@@ -103,7 +119,8 @@ internal fun IptvPlaylistEditorDialog(
     initial: IptvPlaylist?,
     onDismiss: () -> Unit,
     onSave: (IptvPlaylist) -> Unit,
-    onDelete: (IptvPlaylist) -> Unit
+    onDelete: (IptvPlaylist) -> Unit,
+    onRefreshNow: (IptvPlaylist) -> Unit
 ) {
     val defaultName = stringResource(R.string.iptv_default_playlist_name)
     var type by rememberSaveable { mutableStateOf(initial?.type ?: IptvSourceType.M3U) }
@@ -113,6 +130,8 @@ internal fun IptvPlaylistEditorDialog(
     var password by rememberSaveable { mutableStateOf(initial?.password.orEmpty()) }
     var epgUrl by rememberSaveable { mutableStateOf(initial?.epgUrl.orEmpty()) }
     var userAgent by rememberSaveable { mutableStateOf(initial?.userAgent.orEmpty()) }
+    var playlistRefreshDays by rememberSaveable { mutableStateOf(initial?.playlistRefreshDays ?: 1) }
+    var epgRefreshDays by rememberSaveable { mutableStateOf(initial?.epgRefreshDays ?: 1) }
     var error by remember { mutableStateOf<String?>(null) }
     val urlRequired = stringResource(R.string.iptv_error_url_required)
     val credentialsRequired = stringResource(R.string.iptv_error_credentials_required)
@@ -220,6 +239,23 @@ internal fun IptvPlaylistEditorDialog(
                 imeAction = ImeAction.Done,
                 modifier = Modifier.fillMaxWidth()
             )
+            RefreshIntervalPicker(
+                title = stringResource(R.string.iptv_refresh_channels_every),
+                options = PLAYLIST_REFRESH_OPTIONS,
+                selected = playlistRefreshDays,
+                onSelect = { playlistRefreshDays = it }
+            )
+            RefreshIntervalPicker(
+                title = stringResource(R.string.iptv_refresh_guide_every),
+                options = EPG_REFRESH_OPTIONS,
+                selected = epgRefreshDays,
+                onSelect = { epgRefreshDays = it }
+            )
+            Text(
+                text = stringResource(R.string.iptv_refresh_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.TextTertiary
+            )
         }
 
         error?.let {
@@ -258,7 +294,9 @@ internal fun IptvPlaylistEditorDialog(
                                     password = if (type == IptvSourceType.XTREAM) password.trim() else "",
                                     epgUrl = epgUrl.trim(),
                                     userAgent = userAgent.trim(),
-                                    enabled = initial?.enabled ?: true
+                                    enabled = initial?.enabled ?: true,
+                                    playlistRefreshDays = playlistRefreshDays,
+                                    epgRefreshDays = epgRefreshDays
                                 )
                             )
                         }
@@ -271,6 +309,11 @@ internal fun IptvPlaylistEditorDialog(
             )
             if (initial != null) {
                 IptvButton(
+                    text = stringResource(R.string.iptv_refresh_now),
+                    icon = Icons.Filled.Sync,
+                    onClick = { onRefreshNow(initial) }
+                )
+                IptvButton(
                     text = stringResource(R.string.iptv_delete),
                     icon = Icons.Filled.Delete,
                     onClick = { onDelete(initial) }
@@ -281,5 +324,43 @@ internal fun IptvPlaylistEditorDialog(
     LaunchedEffect(Unit) {
         withFrameNanos { }
         runCatching { firstFocus.requestFocus() }
+    }
+}
+
+private val PLAYLIST_REFRESH_OPTIONS = listOf(0, 1, 2, 3, 7, 14)
+private val EPG_REFRESH_OPTIONS = listOf(0, 1, 2, 3, 5, 7)
+
+@Composable
+private fun RefreshIntervalPicker(
+    title: String,
+    options: List<Int>,
+    selected: Int,
+    onSelect: (Int) -> Unit
+) {
+    val resolvedOptions = if (selected in options) options else (options + selected).sorted()
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+            color = NuvioTheme.colors.TextSecondary
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            resolvedOptions.forEach { days ->
+                IptvChoiceChip(
+                    text = if (days == 0) {
+                        stringResource(R.string.iptv_refresh_manual)
+                    } else {
+                        pluralStringResource(R.plurals.iptv_refresh_days, days, days)
+                    },
+                    selected = days == selected,
+                    onClick = { onSelect(days) }
+                )
+            }
+        }
     }
 }
