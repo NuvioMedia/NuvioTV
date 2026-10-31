@@ -36,6 +36,7 @@ import com.nuvio.tv.ui.screens.home.HomeScreen
 import com.nuvio.tv.ui.screens.addon.AddonManagerScreen
 import com.nuvio.tv.ui.screens.addon.CatalogOrderScreen
 import com.nuvio.tv.ui.screens.library.LibraryScreen
+import com.nuvio.tv.ui.screens.iptv.IptvScreen
 import com.nuvio.tv.ui.screens.player.PlayerExitReason
 import com.nuvio.tv.ui.screens.player.PlayerScreen
 import com.nuvio.tv.ui.screens.player.PostPlayRecommendation
@@ -1238,6 +1239,25 @@ private fun PlaybackNavHost(
                             addonName = info.item.providerName,
                             streamDescription = info.item.name,
                             cloudSessionToken = info.sessionToken
+                        )
+                    )
+                }
+            )
+        }
+
+        composable(Screen.Iptv.route) {
+            IptvScreen(
+                onPlayChannel = { channel ->
+                    navController.navigate(
+                        Screen.Player.createRoute(
+                            streamUrl = channel.streamUrl,
+                            title = channel.name,
+                            streamName = channel.name,
+                            headers = channel.headers.takeIf { it.isNotEmpty() },
+                            contentType = "channel",
+                            contentName = channel.name,
+                            logo = channel.logo,
+                            streamDescription = channel.group.takeIf { it.isNotBlank() }
                         )
                     )
                 }
