@@ -1673,7 +1673,77 @@ private fun audioMatchesSubtitleTargetForForced(audioTrack: TrackInfo, target: S
     return audioVariant == baseTarget || audioVariant == normalizedTarget
 }
 
+/**
+ * Result of checking the "forced subtitle" invariant against the currently active
+ * audio track.
+ */
+internal enum class ForcedSubtitleInvariantAction {
+    /** Invariant holds - keep the current selection untouched. */
+    KEEP,
+
+    /** A forced subtitle is selected but the audio no longer matches the target language. */
+    DOWNGRADE,
+
+    /** The audio matches the target language but a normal (non-forced) subtitle is selected. */
+    UPGRADE
+}
+
+/**
+ * Whether the currently active subtitle selection is a forced subtitle.
+ * Addon subtitles are considered forced when their id/url/addon name carries the
+ * "forced" marker, internal tracks use the [TrackInfo.isForced] flag.
+ */
+internal fun currentSubtitleSelectionIsForced(
+    selectedAddonSubtitle: Subtitle?,
+    selectedSubtitleTrackIndex: Int,
+    subtitleTracks: List<TrackInfo>
+): Boolean {
+    if (selectedAddonSubtitle != null) return addonSubtitleIsForced(selectedAddonSubtitle)
+    if (selectedSubtitleTrackIndex >= 0) {
+        return subtitleTracks.getOrNull(selectedSubtitleTrackIndex)?.isForced == true
+    }
+    return false
+}
+
+/**
+ * Resolves whether the current subtitle selection still satisfies the forced-subtitle
+ * invariant.
+ *
+ * A forced subtitle is only meaningful while the active audio track matches the primary
+ * subtitle target language (that is the language the forced subtitle is written for).
+ * When the audio track changes - e.g. the original language is resolved late by TMDB
+ * enrichment - a forced subtitle can become stale: it must be downgraded to the normal
+ * (full) subtitle of the target language. Conversely, when the audio now matches the
+ * target but a normal subtitle is selected, the forced variant should be preferred.
+ *
+ * Pure function (no player access) so it can be unit tested in isolation.
+ */
+internal fun resolveForcedSubtitleInvariantAction(
+    isPrimarySatisfied: Boolean,
+    currentSelectionIsForced: Boolean,
+    useForcedSubtitles: Boolean,
+    primaryTarget: String?,
+    selectedAudioTrack: TrackInfo?
+): ForcedSubtitleInvariantAction {
+    if (!useForcedSubtitles || primaryTarget == null) return ForcedSubtitleInvariantAction.KEEP
+    if (!isPrimarySatisfied) return ForcedSubtitleInvariantAction.KEEP
+    // Without a known audio track we cannot tell whether the invariant is broken.
+    if (selectedAudioTrack == null) return ForcedSubtitleInvariantAction.KEEP
+    val audioMatchesTarget = audioMatchesSubtitleTargetForForced(selectedAudioTrack, primaryTarget)
+    return when {
+        currentSelectionIsForced && !audioMatchesTarget -> ForcedSubtitleInvariantAction.DOWNGRADE
+        !currentSelectionIsForced && audioMatchesTarget -> ForcedSubtitleInvariantAction.UPGRADE
+        else -> ForcedSubtitleInvariantAction.KEEP
+    }
+}
+
 internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailableTracks() {
+    tryAutoSelectPreferredSubtitleFromAvailableTracks(preserveOnNoForcedMatch = false)
+}
+
+private fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailableTracks(
+    preserveOnNoForcedMatch: Boolean
+) {
     if (isUserExplicitSubtitleSelection) {
         Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: user explicitly selected current subtitle")
         return
@@ -1697,7 +1767,47 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
         val hasBetterAddonMatch = !isPrimarySatisfied && primaryTarget != null &&
             state.addonSubtitles.any { PlayerSubtitleUtils.matchesLanguageCode(it.lang, primaryTarget) }
 
-        if (!hasBetterAddonMatch) return
+        val invariantAction = resolveForcedSubtitleInvariantAction(
+            isPrimarySatisfied = isPrimarySatisfied,
+            currentSelectionIsForced = currentSubtitleSelectionIsForced(
+                selectedAddonSubtitle = state.selectedAddonSubtitle,
+                selectedSubtitleTrackIndex = state.selectedSubtitleTrackIndex,
+                subtitleTracks = state.subtitleTracks
+            ),
+            useForcedSubtitles = state.subtitleStyle.useForcedSubtitles,
+            primaryTarget = primaryTarget,
+            selectedAudioTrack = selectedAudioTrackForSubtitleMatching(state)
+        )
+
+        when (invariantAction) {
+            ForcedSubtitleInvariantAction.DOWNGRADE -> {
+                // The active audio track changed (e.g. the original language was resolved
+                // late by TMDB enrichment) so the forced subtitle no longer applies to it.
+                // Drop the auto-select lock and re-run the normal selection, which now
+                // resolves to the full (non-forced) subtitle of the target language.
+                Log.d(
+                    PlayerRuntimeController.TAG,
+                    "AUTO_SUB forced invariant violated: forced subtitle no longer matches audio, re-selecting"
+                )
+                autoSubtitleSelected = false
+            }
+            ForcedSubtitleInvariantAction.UPGRADE -> {
+                // The audio now matches the target language but a normal subtitle is
+                // selected - try to upgrade to the forced variant. Never disable
+                // subtitles in that case: if no forced match exists the current
+                // non-forced selection is kept.
+                Log.d(
+                    PlayerRuntimeController.TAG,
+                    "AUTO_SUB forced invariant violated: audio matches target but selection is not forced, attempting upgrade"
+                )
+                autoSubtitleSelected = false
+                tryAutoSelectPreferredSubtitleFromAvailableTracks(preserveOnNoForcedMatch = true)
+                return
+            }
+            ForcedSubtitleInvariantAction.KEEP -> {
+                if (!hasBetterAddonMatch) return
+            }
+        }
     }
     val selectedAudioTrack = selectedAudioTrackForSubtitleMatching(state)
     val useForcedSubtitles = state.subtitleStyle.useForcedSubtitles
@@ -1800,9 +1910,25 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
         val requiredForcedTarget = forcedTarget ?: return
         if (!hasScannedTextTracksOnce) {
             Log.d(PlayerRuntimeController.TAG, "AUTO_SUB defer forced: text tracks not scanned yet")
+            if (preserveOnNoForcedMatch) {
+                autoSubtitleSelected = true
+                Log.d(
+                    PlayerRuntimeController.TAG,
+                    "AUTO_SUB upgrade deferred: text tracks not scanned yet, keeping non-forced selection"
+                )
+            }
             return
         }
         if (state.isLoadingAddonSubtitles) {
+            if (preserveOnNoForcedMatch) {
+                // Upgrade path: never drop the current subtitle while addons are loading.
+                autoSubtitleSelected = true
+                Log.d(
+                    PlayerRuntimeController.TAG,
+                    "AUTO_SUB upgrade deferred: addon subtitles still loading, keeping non-forced selection"
+                )
+                return
+            }
             // Disable any non-forced subtitle ExoPlayer auto-selected while we wait.
             val hasNonForcedSubtitleActive = state.selectedSubtitleTrackIndex >= 0 &&
                 state.subtitleTracks.getOrNull(state.selectedSubtitleTrackIndex)?.isForced != true
@@ -1824,6 +1950,16 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
             autoSubtitleSelected = true
             Log.d(PlayerRuntimeController.TAG, "AUTO_SUB pick forced addon lang=${forcedAddonMatch.lang} id=${forcedAddonMatch.id}")
             selectAddonSubtitle(forcedAddonMatch)
+            return
+        }
+        if (preserveOnNoForcedMatch) {
+            // Upgrade path: no forced candidate available - keep the current
+            // (non-forced) selection instead of disabling subtitles.
+            autoSubtitleSelected = true
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "AUTO_SUB upgrade skipped: no forced match, keeping non-forced selection"
+            )
             return
         }
         autoSubtitleSelected = true
