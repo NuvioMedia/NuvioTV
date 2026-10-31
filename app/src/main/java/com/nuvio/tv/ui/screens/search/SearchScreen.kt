@@ -592,8 +592,8 @@ fun SearchScreen(
                 backToFieldLatched = true
                 coroutineScope.launch {
                     listState.scrollToItem(0)
-                    runCatching { searchFocusRequester.requestFocus() }
-                    // The focus request can start an input session and show the keyboard.
+                    runCatching { topInputFocusRequester.requestFocus() }
+                    // Dismissing a prior text-entry session should not leave the keyboard open.
                     keyboardController?.hide()
                 }
             }
@@ -823,8 +823,8 @@ fun SearchScreen(
                                 enableRowFocusRestorer = true,
                                 rowFocusRequester = rowFocusRequester,
                                 entryFocusRequester = entryFocusRequester,
-                                // Anchor Up to the field; geometric focus varies with the card.
-                                upFocusRequester = if (index == 0) searchFocusRequester else null,
+                                // Anchor Up to the voice button (or field if voice search is unavailable).
+                                upFocusRequester = if (index == 0) topInputFocusRequester else null,
                                 listState = listState,
                                 restorerFocusedIndex = if (restoringSearchFocus.value && catalogKey == viewModel.savedFocusRowKey) {
                                     viewModel.savedFocusItemIndex
