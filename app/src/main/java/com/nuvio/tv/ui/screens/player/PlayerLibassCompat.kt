@@ -16,6 +16,7 @@ import androidx.media3.extractor.mkv.MatroskaExtractor as StockMatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor as DvMatroskaExtractor
 import com.nuvio.tv.libass.media.AssHandler
+import com.nuvio.tv.ui.screens.player.autosync.AutoSyncLibassSubtitles
 import com.nuvio.tv.libass.media.parser.AssSubtitleParserFactory
 import com.nuvio.tv.libass.media.render.AssRenderersFactory
 import java.util.Collections
@@ -88,7 +89,8 @@ private class CompatAssSubtitleParserFactory(
     }
 
     override fun create(format: Format): SubtitleParser {
-        return delegate.create(normalizeSsaFormat(format))
+        val normalized = normalizeSsaFormat(format)
+        return AutoSyncLibassSubtitles.wrapParser(assHandler, normalized, delegate.create(normalized)) // AutoSync hook
     }
 
     private fun normalizeSsaFormat(format: Format): Format {
