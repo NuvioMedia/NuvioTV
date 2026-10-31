@@ -45,4 +45,15 @@
     <string name="iptv_add_favorite">Add to favorites</string>
     <string name="iptv_remove_favorite">Remove from favorites</string>
     <string name="iptv_preview_error">Can\'t play this channel in preview</string>
+    <string name="iptv_refresh_channels_every">Refresh channels every</string>
+    <string name="iptv_refresh_guide_every">Refresh TV guide every</string>
+    <string name="iptv_refresh_manual">Manual only</string>
+    <plurals name="iptv_refresh_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="iptv_refresh_hint">Channels and the TV guide are cached and open instantly. They are downloaded again automatically after the selected number of days, or only when you press Refresh with Manual only.</string>
+    <string name="iptv_refresh_now">Refresh now</string>
+    <string name="iptv_updated">Updated %1$s</string>
+    <string name="iptv_never_updated">Not updated yet</string>
 </resources>
