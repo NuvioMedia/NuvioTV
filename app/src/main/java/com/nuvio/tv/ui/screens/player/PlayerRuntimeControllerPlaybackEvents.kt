@@ -1894,7 +1894,7 @@ fun PlayerRuntimeController.onEvent(
                 )
             } else {
                 releasePlayer()
-                initializePlayer(currentStreamUrl, currentHeaders)
+                reinitializeCurrentStream()
             }
         }
         PlayerEvent.OnReportPlaybackIssue -> {
