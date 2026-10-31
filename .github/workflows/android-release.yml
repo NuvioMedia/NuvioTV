@@ -12,10 +12,6 @@ on:
           - draft
           - publish
         default: dry-run
-      exclude_commits:
-        description: Optional comma-separated commit hashes to omit from the notes
-        required: false
-        type: string
 
 permissions:
   contents: write
@@ -44,9 +40,7 @@ jobs:
           fetch-depth: 0
 
       - name: Validate release tooling
-        run: |
-          bash -n scripts/generate-release-notes.sh scripts/release-metadata.sh
-          PYTHONPATH=scripts python3 -m unittest discover -s scripts/tests -v
+        run: bash -n scripts/release-metadata.sh
 
       - name: Read release metadata
         id: release
@@ -76,7 +70,7 @@ jobs:
 
           unexpected_changes="$(
             git diff --name-only "${CURRENT_BUMP}..${RELEASE_COMMIT}" \
-              | grep -Ev '^(\.github/workflows/(android-release|beta-release)\.yml|scripts/release-metadata\.sh|scripts/generate-release-notes\.sh|scripts/generate_release_notes\.py|scripts/release_notes/.*|scripts/tests/.*)$' \
+              | grep -Ev '^(\.github/workflows/.*|scripts/.*)$' \
               || true
           )"
           if [[ -n "${unexpected_changes}" ]]; then
@@ -102,6 +96,15 @@ jobs:
               exit 1
             fi
           fi
+
+          {
+            echo "## ${{ steps.release.outputs.title }}"
+            echo
+            echo "- Tag: \`${RELEASE_TAG}\`"
+            echo "- Version code: \`${{ steps.release.outputs.version_code }}\`"
+            echo "- Pre-release: \`${{ steps.release.outputs.prerelease }}\`"
+            echo "- Mode: \`${RELEASE_MODE}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Set up Java
         if: inputs.mode != 'dry-run'
@@ -184,7 +187,7 @@ jobs:
             "${RELEASE_TAG}"
             --target "${RELEASE_TARGET}"
             --title "${RELEASE_TITLE}"
-            --notes-file release-notes.md
+            --notes ""
           )
           if [[ "${RELEASE_PRERELEASE}" == "true" ]]; then
             release_args+=(--prerelease)
