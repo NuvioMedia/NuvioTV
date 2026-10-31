@@ -109,7 +109,8 @@ class StreamRepositoryImpl @Inject constructor(
             season,
             episode,
             preferredPluginOnly,
-            continuePluginOnly
+            continuePluginOnly,
+            priorityBingeGroup
         )
 
         emitAll(
@@ -144,9 +145,17 @@ class StreamRepositoryImpl @Inject constructor(
         type: String,
         videoId: String,
         season: Int?,
-        episode: Int?
+        episode: Int?,
+        priorityBingeGroup: String?
     ): List<AddonStreams>? = streamSearchSessions.peek(
-        buildStreamSearchRequestKey(captureSourceConfiguration(), type, videoId, season, episode)
+        buildStreamSearchRequestKey(
+            captureSourceConfiguration(),
+            type,
+            videoId,
+            season,
+            episode,
+            priorityBingeGroup = priorityBingeGroup
+        )
     )
 
     private fun buildStreamSearchRequestKey(
@@ -156,7 +165,8 @@ class StreamRepositoryImpl @Inject constructor(
         season: Int?,
         episode: Int?,
         preferredPluginOnly: Boolean = false,
-        continuePluginOnly: Boolean = false
+        continuePluginOnly: Boolean = false,
+        priorityBingeGroup: String? = null
     ): StreamSearchRequestKey = StreamSearchRequestKey(
         profileId = sourceConfiguration.profileId,
         type = type.lowercase(),
@@ -178,7 +188,8 @@ class StreamRepositoryImpl @Inject constructor(
             continuePluginOnly -> "continuePluginOnly"
             preferredPluginOnly -> "preferredPluginOnly"
             else -> ""
-        }
+        },
+        priorityBingeGroup = priorityBingeGroup?.trim().orEmpty()
     )
 
     private suspend fun captureSourceConfiguration(): StreamSourceConfigurationSnapshot {

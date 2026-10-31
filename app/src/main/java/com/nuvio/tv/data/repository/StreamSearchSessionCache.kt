@@ -27,7 +27,8 @@ internal data class StreamSearchRequestKey(
     val season: Int?,
     val episode: Int?,
     val sourceConfiguration: String,
-    val searchMode: String = ""
+    val searchMode: String = "",
+    val priorityBingeGroup: String = ""
 )
 
 /**
@@ -76,12 +77,30 @@ internal class StreamSearchSessionCache(
         )
     }
 
-    /** The streams a search for [key] already holds, without starting one or touching its lifetime. */
+    /**
+     * Streams already held for this episode, without starting a search.
+     * The addon, plugin, and debrid setup must match. A different search mode for the
+     * same preferred plugin is still visible. When the caller names a plugin priority,
+     * another plugin's cache is not returned. When the caller does not, a single
+     * cached priority is used; several competing priorities are left unresolved.
+     */
     suspend fun peek(key: StreamSearchRequestKey): List<AddonStreams>? = mutex.withLock {
         removeExpiredLocked()
-        val session = sessions[key] ?: return@withLock null
-        (session.state.value.result as? NetworkResult.Success)?.data
-            ?: session.lastSuccessfulResult?.data
+        val matches = sessions.filterKeys { it.matchesCachedRequest(key) }
+        if (matches.isEmpty()) return@withLock null
+        val samePriority = matches.filterKeys { it.priorityBingeGroup == key.priorityBingeGroup }
+        val candidates = when {
+            samePriority.isNotEmpty() -> samePriority
+            key.priorityBingeGroup.isNotEmpty() -> return@withLock null
+            matches.keys.map { it.priorityBingeGroup }.distinct().size == 1 -> matches
+            else -> return@withLock null
+        }
+        val ordered = candidates.entries.sortedWith(
+            compareByDescending<Map.Entry<StreamSearchRequestKey, Session>> { it.key == key }
+                .thenByDescending { it.key.searchMode.isEmpty() }
+        )
+        ordered.firstNotNullOfOrNull { snapshotData(it.value)?.takeIf { streams -> streams.isNotEmpty() } }
+            ?: ordered.firstNotNullOfOrNull { snapshotData(it.value) }
     }
 
     private suspend fun acquireSession(
@@ -185,9 +204,8 @@ internal class StreamSearchSessionCache(
         while (iterator.hasNext()) {
             val (existingKey, session) = iterator.next()
             val belongsToAnotherProfile = existingKey.profileId != requestedKey.profileId
-            // Search mode is a different session for the same episode, not a new addon setup.
-            // Replacing a plugin continuation with a full search must not abort the scraper
-            // that is already resolving the next episode.
+            // Search mode and the preferred plugin are different sessions for the same
+            // episode, not a new addon setup. Replacing one must not abort the other.
             val sourceConfigurationChanged = existingKey.matchesMediaRequest(requestedKey) &&
                 existingKey.sourceConfiguration != requestedKey.sourceConfiguration
             if (belongsToAnotherProfile || sourceConfigurationChanged) {
@@ -226,12 +244,19 @@ internal class StreamSearchSessionCache(
         job.cancel()
     }
 
+    private fun snapshotData(session: Session): List<AddonStreams>? =
+        (session.state.value.result as? NetworkResult.Success)?.data
+            ?: session.lastSuccessfulResult?.data
+
     private fun StreamSearchRequestKey.matchesMediaRequest(other: StreamSearchRequestKey): Boolean =
         profileId == other.profileId &&
             type == other.type &&
             videoId == other.videoId &&
             season == other.season &&
             episode == other.episode
+
+    private fun StreamSearchRequestKey.matchesCachedRequest(other: StreamSearchRequestKey): Boolean =
+        matchesMediaRequest(other) && sourceConfiguration == other.sourceConfiguration
 
     private companion object {
         const val DEFAULT_COMPLETED_TTL_MS = 15 * 60 * 1_000L
