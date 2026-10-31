@@ -1474,6 +1474,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
                         cancelFirstFrameWatchdog()
                         val detailedError = error.toDisplayMessage(context)
+                        if (returnToFeatureAfterExtraFailure(detailedError)) return
                         cancelStableProgressReset()
 
                         if (Vc1VideoFormatHeuristics.isVc1PlaybackFailure(
@@ -1903,6 +1904,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                 fetchAddonSubtitles()
             }
         } catch (e: Exception) {
+            if (e !is kotlinx.coroutines.CancellationException &&
+                returnToFeatureAfterExtraFailure(e.message ?: e.javaClass.simpleName)
+            ) {
+                return@launch
+            }
             if (
                 maybeAutoSwitchInternalPlayerOnStartupError(
                     detailedError = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_initialize_failed),

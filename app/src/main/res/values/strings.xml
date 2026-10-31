@@ -3406,6 +3406,7 @@
     <string name="player_disc_title_feature">Feature · %1$d min</string>
     <string name="player_disc_title_extra">Extra · %1$d min</string>
     <string name="player_disc_title_subtitles">Subtitles %1$s</string>
+    <string name="player_disc_title_failed">This title could not be played</string>
     <plurals name="player_disc_title_clips">
         <item quantity="one">%d clip</item>
         <item quantity="other">%d clips</item>

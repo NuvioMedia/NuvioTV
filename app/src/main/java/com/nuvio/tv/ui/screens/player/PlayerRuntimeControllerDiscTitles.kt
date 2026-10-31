@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
+import android.widget.Toast
+import com.nuvio.tv.R
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -74,6 +76,20 @@ internal fun PlayerRuntimeController.returnToDiscFeature(): Long? {
     currentStreamBluray = feature.takeUnless { it.segmentUrls == listOf(currentStreamUrl) }
     _uiState.update { it.copy(currentDiscTitle = feature.name, showDiscTitlesDialog = false) }
     return discFeaturePositionMs
+}
+
+/**
+ * An extra that fails gives way to its feature, where it was left. The extra is not the item:
+ * its failure must not retry, switch engines, or count against the source. Returns whether the
+ * failure was an extra's.
+ */
+internal fun PlayerRuntimeController.returnToFeatureAfterExtraFailure(error: String): Boolean {
+    if (!isPlayingDiscExtra()) return false
+    val feature = discFeatureTitle?.takeIf { it in discTitlePlaylists } ?: return false
+    Log.w(PlayerRuntimeController.TAG, "Disc title ${_uiState.value.currentDiscTitle} failed, returning to $feature: $error")
+    Toast.makeText(context, context.getString(R.string.player_disc_title_failed), Toast.LENGTH_SHORT).show()
+    selectDiscTitle(feature)
+    return true
 }
 
 /** Plays another title of the disc from its start, or the feature from where it was left. */

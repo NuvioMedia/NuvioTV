@@ -50,9 +50,6 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
     pendingMpvHardRestartOnNextAttach = switchingToMpv
     delayMpvResumeSeekUntilVideoTrack = switchingToMpv
     releasePlayer(flushPlaybackState = false)
-    returnToDiscFeature()?.let { position ->
-        _uiState.update { it.copy(pendingSeekPosition = position.takeIf { it > 0L }) }
-    }
     initializePlayer(
         url = currentStreamUrl,
         headers = currentHeaders,
