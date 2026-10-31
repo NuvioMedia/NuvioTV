@@ -312,6 +312,7 @@ class PlayerRuntimeController(
             currentStreamInfoHash = navigationArgs.infoHash,
             currentStreamFileIdx = navigationArgs.fileIdx,
             currentStreamAddonName = navigationArgs.addonName,
+            currentStreamDescription = navigationArgs.streamDescription,
             releaseYear = year,
             contentType = contentType,
             backdrop = backdrop,

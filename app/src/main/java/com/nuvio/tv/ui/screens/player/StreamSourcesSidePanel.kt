@@ -368,7 +368,8 @@ internal fun StreamSourcesSidePanel(
                         currentStreamFileIdx = uiState.currentStreamFileIdx,
                         currentStreamAddonName = uiState.currentStreamAddonName,
                         currentStreamUrl = uiState.currentStreamUrl,
-                        currentStreamName = uiState.currentStreamName
+                        currentStreamName = uiState.currentStreamName,
+                        currentStreamDescription = uiState.currentStreamDescription
                     )
 
                     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
@@ -503,13 +504,14 @@ internal fun StreamSourcesSidePanel(
     }
 }
 
-private fun findCurrentStreamIndex(
+internal fun findCurrentStreamIndex(
     streams: List<Stream>,
     currentStreamInfoHash: String?,
     currentStreamFileIdx: Int?,
     currentStreamAddonName: String?,
     currentStreamUrl: String?,
-    currentStreamName: String?
+    currentStreamName: String?,
+    currentStreamDescription: String?
 ): Int {
     if (streams.isEmpty()) return -1
 
@@ -540,6 +542,18 @@ private fun findCurrentStreamIndex(
             stream.getStreamUrl() == currentStreamUrl
         }
         if (urlMatch >= 0) return urlMatch
+    }
+
+    // Last resort: addons may issue a new URL per request, so match what the stream shows.
+    // Templates can repeat across streams, so only trust a single result.
+    if (!currentStreamName.isNullOrBlank()) {
+        val nameMatches = streams.indices.filter { index ->
+            val stream = streams[index]
+            (stream.name ?: stream.addonName) == currentStreamName &&
+                (currentStreamAddonName == null || stream.addonName == currentStreamAddonName) &&
+                (currentStreamDescription == null || stream.description == currentStreamDescription)
+        }
+        nameMatches.singleOrNull()?.let { return it }
     }
 
     return -1
