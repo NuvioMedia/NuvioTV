@@ -12,26 +12,32 @@ internal suspend fun <T, H> fetchProgressiveSubtitles(
     key: (T) -> String,
     emit: (List<T>) -> Unit
 ): List<T> = coroutineScope {
-    val results = linkedMapOf<String, T>()
+    val initialResults = linkedMapOf<String, T>()
+    val matchedResults = linkedMapOf<String, T>()
+    fun results(): List<T> = (matchedResults.values + initialResults.values).distinctBy(key)
     // fetch must deliver callbacks on the caller's dispatcher, as SubtitleRepository does.
-    fun publish(items: List<T>) {
-        items.forEach { results[key(it)] = it }
-        emit(results.values.toList())
+    fun publishInitial(items: List<T>) {
+        items.forEach { initialResults[key(it)] = it }
+        emit(results())
+    }
+    fun publishMatched(items: List<T>) {
+        items.forEach { matchedResults[key(it)] = it }
+        emit(results())
     }
     if (knownHash != null) {
-        publish(fetch(knownHash, ::publish))
+        publishMatched(fetch(knownHash, ::publishMatched))
     } else {
         val hash = async { probeHash() }
         // Avoid duplicate provider calls when the local probe finishes promptly.
         val quickHash = withTimeoutOrNull(100L) { hash.await() }
         if (quickHash != null) {
-            publish(fetch(quickHash, ::publish))
+            publishMatched(fetch(quickHash, ::publishMatched))
         } else {
-            val initial = async { fetch(null, ::publish).also(::publish) }
+            val initial = async { fetch(null, ::publishInitial).also(::publishInitial) }
             val resolved = hash.await()
-            if (resolved != null) publish(fetch(resolved, ::publish))
+            if (resolved != null) publishMatched(fetch(resolved, ::publishMatched))
             initial.await()
         }
     }
-    results.values.toList()
+    results()
 }

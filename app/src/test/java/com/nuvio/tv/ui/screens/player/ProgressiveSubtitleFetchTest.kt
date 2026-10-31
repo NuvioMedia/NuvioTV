@@ -8,6 +8,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ProgressiveSubtitleFetchTest {
+    @Test fun hashMatchesKeepPriorityWhenInitialResponseFinishesLater() = runTest {
+        val result = fetchProgressiveSubtitles<Pair<String, String>, String>(
+            knownHash = null,
+            probeHash = { delay(300); "hash" },
+            fetch = { hash, emit ->
+                if (hash == null) {
+                    val items = listOf("same" to "generic", "id-only" to "generic")
+                    emit(items)
+                    delay(400)
+                    items
+                } else {
+                    listOf("same" to "exact", "hash-only" to "exact")
+                }
+            },
+            key = { it.first }, emit = {}
+        )
+        assertEquals(listOf("same" to "exact", "hash-only" to "exact", "id-only" to "generic"), result)
+    }
+
     @Test fun slowHashDoesNotHoldBackFirstProviderResult() = runTest {
         val times = mutableListOf<Long>()
         val result = fetchProgressiveSubtitles<String, String>(
