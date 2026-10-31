@@ -14,8 +14,18 @@ data class IptvPlaylist(
     val password: String = "",
     val epgUrl: String = "",
     val userAgent: String = "",
-    val enabled: Boolean = true
-)
+    val enabled: Boolean = true,
+    val playlistRefreshDays: Int = 1,
+    val epgRefreshDays: Int = 1
+) {
+    fun hasSameSource(other: IptvPlaylist): Boolean =
+        type == other.type &&
+            url == other.url &&
+            username == other.username &&
+            password == other.password &&
+            epgUrl == other.epgUrl &&
+            userAgent == other.userAgent
+}
 
 @Immutable
 data class IptvChannel(
@@ -53,11 +63,18 @@ data class IptvGroup(
 )
 
 @Immutable
+data class IptvPlaylistUpdate(
+    val channelsUpdatedAt: Long = 0L,
+    val guideUpdatedAt: Long = 0L
+)
+
+@Immutable
 data class IptvContent(
     val channels: List<IptvChannel> = emptyList(),
     val groups: List<IptvGroup> = emptyList(),
     val epg: Map<String, List<IptvProgramme>> = emptyMap(),
-    val loadedAt: Long = 0L
+    val loadedAt: Long = 0L,
+    val updates: Map<String, IptvPlaylistUpdate> = emptyMap()
 )
 
 sealed interface IptvLoadStatus {
