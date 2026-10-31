@@ -144,6 +144,20 @@ private fun PlayerRuntimeController.disposeExoPlayerBeforeRebuild() {
     playbackSpeedAwareAudioSink = null
 }
 
+/**
+ * Starts the current stream again, as a retry or a rebuild of the same playback, in the engine it
+ * plays in: an engine chosen in the player, by hand or by a startup failover, holds until the
+ * stream changes. Without it, the restart would fall back to the settings' engine.
+ */
+internal fun PlayerRuntimeController.reinitializeCurrentStream(startPaused: Boolean = false) {
+    initializePlayer(
+        url = currentStreamUrl,
+        headers = currentHeaders,
+        overrideInternalPlayerEngine = runtimeInternalPlayerEngineOverride,
+        startPaused = startPaused
+    )
+}
+
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.initializePlayer(
     url: String,
