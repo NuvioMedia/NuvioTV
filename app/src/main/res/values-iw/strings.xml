@@ -3256,14 +3256,14 @@
     <string name="playback_buffer_after_rebuffer_sub">כמה תוכן לאגור אחרי שההפעלה נעצרת בגלל טעינה. ערכים גבוהים יותר מפחיתים הפסקות חוזרות.</string>
     <string name="playback_buffer_back">זיכרון לחזרה אחורה</string>
     <string name="playback_buffer_back_sub">כמה מהתוכן שכבר נצפה נשמר בזיכרון, כדי לאפשר חזרה אחורה בלי לחכות לטעינה מחדש. ניתן להגדיר ל-0 כדי להשבית ולחסוך בזיכרון.</string>
-    <string name="playback_buffer_back_reserve">נשמרים כ-%1$dMB מעל למאגר היעד. הגדלת משך המאגר המקסימלי מקטינה זאת בלי לאבד זמן מאגר אחורי.</string>
+    <string name="playback_buffer_back_reserve">נשמרים כ-‎%1$d MB מעל למאגר היעד. הגדלת משך המאגר המקסימלי מקטינה זאת בלי לאבד זמן מאגר אחורי.</string>
     <string name="playback_buffer_managed">ניהול זיכרון אוטומטי</string>
     <string name="playback_buffer_managed_sub">האפליקציה בוחרת בעצמה כמה זיכרון להשתמש כדי לא לפגוע במכשיר. כדאי לכבות רק כדי לקבוע ידנית את כמות הזיכרון (לא מומלץ למשתמשים רגילים).</string>
     <string name="playback_buffer_target">כמות זיכרון לטעינה מראש</string>
     <string name="playback_buffer_target_sub">כמה זיכרון מותר לאפליקציה להשתמש כדי לטעון תוכן מראש.</string>
     <string name="playback_buffer_target_managed_hint">מנוהל על ידי תקציב הזיכרון של המכשיר. יש לכבות את תקציב הזיכרון המנוהל כדי להגדיר זאת.</string>
-    <string name="playback_buffer_target_warning">אזהרה: מעל למגבלת הבטיחות של המכשיר (%1$d MB). האפליקציה עלולה לקרוס במהלך ההפעלה.</string>
-    <string name="playback_buffer_target_danger_warning">סכנה: מעל למגבלת האזהרה (%1$d MB). סיכון גבוה לקריסה.</string>
+    <string name="playback_buffer_target_warning">אזהרה: מעל למגבלת הבטיחות של המכשיר (‎%1$d MB). האפליקציה עלולה לקרוס במהלך ההפעלה.</string>
+    <string name="playback_buffer_target_danger_warning">סכנה: מעל למגבלת האזהרה (‎%1$d MB). סיכון גבוה לקריסה.</string>
     <string name="playback_buffer_allow_large">אפשור זיכרון גדול יותר</string>
     <string name="playback_buffer_allow_large_sub">הסרת ההגבלה הרגילה. עלול לגרום לקריסת האפליקציה במכשירים עם מעט זיכרון.</string>
     <string name="playback_cache_header">מטמון דיסק</string>
