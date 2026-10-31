@@ -116,6 +116,8 @@ class IptvDataStore @Inject constructor(
                     .put("epgUrl", playlist.epgUrl)
                     .put("userAgent", playlist.userAgent)
                     .put("enabled", playlist.enabled)
+                    .put("playlistRefreshDays", playlist.playlistRefreshDays)
+                    .put("epgRefreshDays", playlist.epgRefreshDays)
             )
         }
         return array.toString()
@@ -137,7 +139,9 @@ class IptvDataStore @Inject constructor(
                     password = item.optString("password"),
                     epgUrl = item.optString("epgUrl"),
                     userAgent = item.optString("userAgent"),
-                    enabled = item.optBoolean("enabled", true)
+                    enabled = item.optBoolean("enabled", true),
+                    playlistRefreshDays = item.optInt("playlistRefreshDays", 1).coerceAtLeast(0),
+                    epgRefreshDays = item.optInt("epgRefreshDays", 1).coerceAtLeast(0)
                 )
             }
         }.getOrDefault(emptyList())
