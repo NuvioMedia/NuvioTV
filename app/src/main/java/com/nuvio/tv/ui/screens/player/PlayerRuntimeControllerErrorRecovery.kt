@@ -514,7 +514,12 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
                 if (savedPosition > 0L) {
                     _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
                 }
-                initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+                initializePlayer(
+                    currentStreamUrl,
+                    currentHeaders,
+                    overrideInternalPlayerEngine = runtimeInternalPlayerEngineOverride,
+                    startPaused = paused
+                )
                 return@launch
             }
         }

@@ -109,6 +109,7 @@ internal fun PlayerRuntimeController.selectDiscTitle(name: String) {
                 showLoadingOverlay = it.loadingOverlayEnabled
             )
         }
-        initializePlayer(currentStreamUrl, currentHeaders)
+        // The titles are ExoPlayer's: keep an engine chosen in the player, not the settings' default.
+        initializePlayer(currentStreamUrl, currentHeaders, overrideInternalPlayerEngine = runtimeInternalPlayerEngineOverride)
     }
 }
