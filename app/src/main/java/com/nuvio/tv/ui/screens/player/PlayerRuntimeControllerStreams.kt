@@ -660,6 +660,19 @@ private fun PlayerRuntimeController.applySelectedStreamState(
  * Ensures binge-group, addon info, and video hints are always set regardless
  * of stream type — critical for next-episode binge matching.
  */
+internal fun PlayerRuntimeController.recordDistinctPluginPlay(
+    bingeGroup: String?,
+    playbackIdentity: String
+) {
+    val group = bingeGroup?.trim().orEmpty()
+    if (scraperIdFromPluginBingeGroup(group) == null) return
+    val identity = playbackIdentity.trim().ifEmpty { "$contentId|${currentSeason}|${currentEpisode}" }
+    val key = "$group|$identity"
+    if (key == recordedPluginPlayIdentity) return
+    recordedPluginPlayIdentity = key
+    pluginManager.recordPluginProviderPlay(group)
+}
+
 private fun PlayerRuntimeController.applyStreamMetadata(stream: Stream) {
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
     applyStreamAudioDelay(stream.behaviorHints?.audioDelayMs, stream.behaviorHints?.audioDelayLanguage)
@@ -669,7 +682,6 @@ private fun PlayerRuntimeController.applyStreamMetadata(stream: Stream) {
     currentAddonName = stream.addonName
     currentAddonLogo = stream.addonLogo
     currentStreamDescription = stream.description
-    pluginManager.recordPluginProviderPlay(stream)
     currentVideoCodec = null
     currentVideoWidth = null
     currentVideoHeight = null
@@ -706,7 +718,8 @@ internal fun PlayerRuntimeController.handleStreamRedirect(requestedUrl: String, 
                     type = request.type,
                     videoId = request.videoId,
                     season = request.season,
-                    episode = request.episode
+                    episode = request.episode,
+                    priorityBingeGroup = currentStreamBingeGroup
                 )?.let { cached ->
                     findRedirectTargetStream(cached.flatMap { it.streams }, addonName, requestedUrl, resolvedUrl)
                 }
@@ -1038,12 +1051,21 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                 )
                 player.playWhenReady = true
                 player.prepare()
+                recordDistinctPluginPlay(
+                    bingeGroup = stream.behaviorHints?.bingeGroup,
+                    playbackIdentity = stream.getEffectiveInfoHash() ?: playbackUrl
+                )
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_play_stream_failed)) }
             }
         }
-    } ?: run {
-        initializePlayer(playbackUrl, playbackHeaders)
+    } ?: initializePlayer(playbackUrl, playbackHeaders).also {
+        if (playbackUrl.isNotEmpty()) {
+            recordDistinctPluginPlay(
+                bingeGroup = stream.behaviorHints?.bingeGroup,
+                playbackIdentity = stream.getEffectiveInfoHash() ?: playbackUrl
+            )
+        }
     }
 
     loadSavedProgressFor(currentSeason, currentEpisode)
@@ -1725,6 +1747,10 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
         url = playbackUrl,
         headers = playbackHeaders,
         loadSavedProgress = true
+    )
+    recordDistinctPluginPlay(
+        bingeGroup = stream.behaviorHints?.bingeGroup,
+        playbackIdentity = stream.getEffectiveInfoHash() ?: playbackUrl
     )
 }
 

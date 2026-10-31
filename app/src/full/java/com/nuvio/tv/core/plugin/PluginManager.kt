@@ -657,7 +657,11 @@ class PluginManager @Inject constructor(
      * lets autoplay continue that same provider on the next episode.
      */
     fun recordPluginProviderPlay(stream: Stream) {
-        val scraperId = scraperIdFromPluginBingeGroup(stream.behaviorHints?.bingeGroup) ?: return
+        recordPluginProviderPlay(stream.behaviorHints?.bingeGroup)
+    }
+
+    fun recordPluginProviderPlay(bingeGroup: String?) {
+        val scraperId = scraperIdFromPluginBingeGroup(bingeGroup) ?: return
         syncScope.launch {
             runCatching { dataStore.recordPluginProviderPlay(scraperId) }
                 .onFailure { error -> Log.w(TAG, "Failed to record plugin provider play", error) }

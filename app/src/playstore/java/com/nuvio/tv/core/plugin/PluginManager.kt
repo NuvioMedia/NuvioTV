@@ -53,6 +53,8 @@ class PluginManager {
 
     fun recordPluginProviderPlay(stream: Stream) = Unit
 
+    fun recordPluginProviderPlay(bingeGroup: String?) = Unit
+
     suspend fun executeScrapers(
         tmdbId: String,
         mediaType: String,

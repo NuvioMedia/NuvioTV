@@ -1453,6 +1453,10 @@ class StreamScreenViewModel @Inject constructor(
         updateUiStateIfChanged { it.copy(playbackErrorMessage = null) }
     }
 
+    fun rememberPlayedPlugin(bingeGroup: String?) {
+        pluginManager.recordPluginProviderPlay(bingeGroup)
+    }
+
     fun onInternalPlayerLaunching() {
         streamRepository.setLocalPluginSearchPaused(true)
         updateUiStateIfChanged {
@@ -1551,7 +1555,6 @@ class StreamScreenViewModel @Inject constructor(
      */
     fun getStreamForPlayback(stream: Stream, saveLastLink: Boolean = true): StreamPlaybackInfo {
         cancelStreamsLoad()
-        pluginManager.recordPluginProviderPlay(stream)
         val playbackInfo = StreamPlaybackInfo(
             url = stream.getStreamUrl(),
             title = _uiState.value.title,
@@ -1896,6 +1899,7 @@ class StreamScreenViewModel @Inject constructor(
                 ownsTorrentStream = isTorrentStreamStarted,
                 context = context
             )
+            if (launched) rememberPlayedPlugin(playbackInfo.bingeGroup)
         } finally {
             if (!launched) abortExternalHandoff()
         }
