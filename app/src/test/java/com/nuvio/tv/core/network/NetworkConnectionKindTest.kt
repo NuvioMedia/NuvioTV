@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.network
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class NetworkConnectionKindTest {
@@ -13,7 +14,7 @@ class NetworkConnectionKindTest {
     @Test
     fun `wifi is wifi`() {
         assertEquals(
-            NetworkConnectionKind.WiFi,
+            NetworkConnectionKind.Wifi,
             networkConnectionKind(active = setOf(NetworkTransport.Wifi)),
         )
     }
@@ -29,7 +30,7 @@ class NetworkConnectionKindTest {
     @Test
     fun `cellular counts as connected`() {
         assertEquals(
-            NetworkConnectionKind.WiFi,
+            NetworkConnectionKind.Wifi,
             networkConnectionKind(active = setOf(NetworkTransport.Cellular)),
         )
     }
@@ -37,7 +38,7 @@ class NetworkConnectionKindTest {
     @Test
     fun `vpn that already reports wifi stays wifi`() {
         assertEquals(
-            NetworkConnectionKind.WiFi,
+            NetworkConnectionKind.Wifi,
             networkConnectionKind(active = setOf(NetworkTransport.Vpn, NetworkTransport.Wifi)),
         )
     }
@@ -45,10 +46,10 @@ class NetworkConnectionKindTest {
     @Test
     fun `vpn without an underlying transport uses another wifi network`() {
         assertEquals(
-            NetworkConnectionKind.WiFi,
+            NetworkConnectionKind.Wifi,
             networkConnectionKind(
                 active = setOf(NetworkTransport.Vpn),
-                others = listOf(setOf(NetworkTransport.Wifi)),
+                others = { listOf(setOf(NetworkTransport.Wifi)) },
             ),
         )
     }
@@ -59,10 +60,12 @@ class NetworkConnectionKindTest {
             NetworkConnectionKind.Ethernet,
             networkConnectionKind(
                 active = setOf(NetworkTransport.Vpn),
-                others = listOf(
-                    setOf(NetworkTransport.Wifi),
-                    setOf(NetworkTransport.Ethernet),
-                ),
+                others = {
+                    listOf(
+                        setOf(NetworkTransport.Wifi),
+                        setOf(NetworkTransport.Ethernet),
+                    )
+                },
             ),
         )
     }
@@ -78,5 +81,16 @@ class NetworkConnectionKindTest {
     @Test
     fun `network without a known transport is offline`() {
         assertEquals(NetworkConnectionKind.Offline, networkConnectionKind(active = emptySet()))
+    }
+
+    @Test
+    fun `other networks are not consulted when the active network already has a transport`() {
+        var called = false
+        val kind = networkConnectionKind(active = setOf(NetworkTransport.Wifi)) {
+            called = true
+            listOf(setOf(NetworkTransport.Ethernet))
+        }
+        assertEquals(NetworkConnectionKind.Wifi, kind)
+        assertFalse(called)
     }
 }

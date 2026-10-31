@@ -94,28 +94,24 @@ private interface ProfileManagerEntryPoint {
 
 private enum class NetworkTestState { Idle, TestingLatency, TestingDownload, Done, Error }
 
-private enum class ConnectionType { WiFi, Ethernet, Offline }
-
-private fun getConnectionType(context: android.content.Context): ConnectionType {
-    val cm = context.getSystemService<ConnectivityManager>() ?: return ConnectionType.Offline
-    val kind = runCatching {
+private fun getConnectionType(context: android.content.Context): NetworkConnectionKind {
+    val cm = context.getSystemService<ConnectivityManager>() ?: return NetworkConnectionKind.Offline
+    return runCatching {
         val active = cm.activeNetwork
         val activeCaps = active?.let { cm.getNetworkCapabilities(it) }
         if (active == null || activeCaps == null) {
             NetworkConnectionKind.Offline
         } else {
-            @Suppress("DEPRECATION")
-            val others = cm.allNetworks
-                .filter { it != active }
-                .mapNotNull { network -> cm.getNetworkCapabilities(network)?.toTransportSet() }
-            networkConnectionKind(activeCaps.toTransportSet(), others)
+            networkConnectionKind(activeCaps.toTransportSet()) {
+                @Suppress("DEPRECATION")
+                cm.allNetworks
+                    .filter { it != active }
+                    .mapNotNull { cm.getNetworkCapabilities(it) }
+                    .filter { it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .map { it.toTransportSet() }
+            }
         }
     }.getOrDefault(NetworkConnectionKind.Offline)
-    return when (kind) {
-        NetworkConnectionKind.WiFi -> ConnectionType.WiFi
-        NetworkConnectionKind.Ethernet -> ConnectionType.Ethernet
-        NetworkConnectionKind.Offline -> ConnectionType.Offline
-    }
 }
 
 private fun NetworkCapabilities.toTransportSet(): Set<NetworkTransport> {
@@ -128,11 +124,11 @@ private fun NetworkCapabilities.toTransportSet(): Set<NetworkTransport> {
 }
 
 @Composable
-private fun ConnectionStatusBadge(type: ConnectionType) {
+private fun ConnectionStatusBadge(type: NetworkConnectionKind) {
     val (icon, label, color) = when (type) {
-        ConnectionType.WiFi -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_wifi), NuvioTheme.colors.Success)
-        ConnectionType.Ethernet -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_ethernet), NuvioTheme.colors.Success)
-        ConnectionType.Offline -> Triple(Icons.Default.SignalWifiOff, stringResource(R.string.network_connection_offline), NuvioTheme.colors.Error)
+        NetworkConnectionKind.Wifi -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_wifi), NuvioTheme.colors.Success)
+        NetworkConnectionKind.Ethernet -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_ethernet), NuvioTheme.colors.Success)
+        NetworkConnectionKind.Offline -> Triple(Icons.Default.SignalWifiOff, stringResource(R.string.network_connection_offline), NuvioTheme.colors.Error)
     }
     Row(
         modifier = Modifier
