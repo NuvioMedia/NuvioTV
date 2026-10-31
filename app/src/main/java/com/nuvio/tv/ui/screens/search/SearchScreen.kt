@@ -592,8 +592,8 @@ fun SearchScreen(
                 backToFieldLatched = true
                 coroutineScope.launch {
                     listState.scrollToItem(0)
-                    runCatching { searchFocusRequester.requestFocus() }
-                    // The focus request can start an input session and show the keyboard.
+                    runCatching { topInputFocusRequester.requestFocus() }
+                    // Dismissing a prior text-entry session should not leave the keyboard open.
                     keyboardController?.hide()
                 }
             }
