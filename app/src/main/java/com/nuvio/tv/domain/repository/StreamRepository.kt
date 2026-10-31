@@ -23,18 +23,23 @@ interface StreamRepository {
         videoId: String,
         season: Int? = null,
         episode: Int? = null,
-        forceRefresh: Boolean = false
+        forceRefresh: Boolean = false,
+        priorityBingeGroup: String? = null,
+        preferredPluginOnly: Boolean = false,
+        continuePluginOnly: Boolean = false
     ): Flow<NetworkResult<List<AddonStreams>>>
 
     /**
-     * Returns the streams a recent [getStreamsFromAllAddons] search already holds for this video,
-     * or null when none is cached. Never starts a search.
+     * Returns streams a recent search already holds for this video, including a plugin
+     * continuation stored under a different search mode. A named [priorityBingeGroup]
+     * selects that plugin's cache. Never starts a search.
      */
     suspend fun getCachedStreamsFromAllAddons(
         type: String,
         videoId: String,
         season: Int? = null,
-        episode: Int? = null
+        episode: Int? = null,
+        priorityBingeGroup: String? = null
     ): List<AddonStreams>?
 
     /**

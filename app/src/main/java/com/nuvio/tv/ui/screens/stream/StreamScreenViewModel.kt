@@ -594,21 +594,25 @@ class StreamScreenViewModel @Inject constructor(
                     } else null
                     // Try binge group + filename first
                     val bingeAndFilename = if (nextFilename != null) {
-                        allStreams.firstOrNull { stream ->
-                            !stream.isExternal() &&
-                                stream.behaviorHints?.bingeGroup == persistedBingeGroup &&
-                                com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
-                                    stream.behaviorHints?.filename, nextFilename
-                                )
-                        }
+                        StreamAutoPlaySelector.selectEarlyBingeGroupMatch(
+                            allStreams.filter { stream ->
+                                !stream.isExternal() &&
+                                    com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
+                                        stream.behaviorHints?.filename, nextFilename
+                                    )
+                            },
+                            persistedBingeGroup
+                        )
                     } else null
                     // Try binge group + infoHash when filename match failed or was unavailable
                     val bingeAndInfoHash = if (bingeAndFilename == null && persistedInfoHash != null) {
-                        allStreams.firstOrNull { stream ->
-                            !stream.isExternal() &&
-                                stream.behaviorHints?.bingeGroup == persistedBingeGroup &&
-                                stream.infoHash?.equals(persistedInfoHash, ignoreCase = true) == true
-                        }
+                        StreamAutoPlaySelector.selectEarlyBingeGroupMatch(
+                            allStreams.filter { stream ->
+                                !stream.isExternal() &&
+                                    stream.infoHash?.equals(persistedInfoHash, ignoreCase = true) == true
+                            },
+                            persistedBingeGroup
+                        )
                     } else null
                     // Fall back to binge group alone
                     bingeAndFilename ?: bingeAndInfoHash ?: StreamAutoPlaySelector.selectAutoPlayStream(
@@ -788,7 +792,8 @@ class StreamScreenViewModel @Inject constructor(
                     videoId = videoId,
                     season = season,
                     episode = episode,
-                    forceRefresh = forceRefresh
+                    forceRefresh = forceRefresh,
+                    priorityBingeGroup = persistedBingeGroup
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {
@@ -1448,6 +1453,10 @@ class StreamScreenViewModel @Inject constructor(
         updateUiStateIfChanged { it.copy(playbackErrorMessage = null) }
     }
 
+    fun rememberPlayedPlugin(bingeGroup: String?) {
+        pluginManager.recordPluginProviderPlay(bingeGroup)
+    }
+
     fun onInternalPlayerLaunching() {
         streamRepository.setLocalPluginSearchPaused(true)
         updateUiStateIfChanged {
@@ -1890,6 +1899,7 @@ class StreamScreenViewModel @Inject constructor(
                 ownsTorrentStream = isTorrentStreamStarted,
                 context = context
             )
+            if (launched) rememberPlayedPlugin(playbackInfo.bingeGroup)
         } finally {
             if (!launched) abortExternalHandoff()
         }
