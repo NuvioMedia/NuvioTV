@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.StreamBehaviorHints
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -10,7 +11,8 @@ class CurrentStreamIndexTest {
         description: String? = "Release A",
         url: String? = "https://addon.example/new-token",
         infoHash: String? = null,
-        addonName: String = "AIOStreams"
+        addonName: String = "AIOStreams",
+        filename: String? = null
     ) = Stream(
         name = name,
         title = null,
@@ -20,7 +22,7 @@ class CurrentStreamIndexTest {
         infoHash = infoHash,
         fileIdx = null,
         externalUrl = null,
-        behaviorHints = null,
+        behaviorHints = filename?.let { hints(it) },
         addonName = addonName,
         addonLogo = null
     )
@@ -31,7 +33,8 @@ class CurrentStreamIndexTest {
         addonName: String? = "AIOStreams",
         url: String? = "https://addon.example/old-token",
         name: String? = "1080P WEB-DL ★★★★★",
-        description: String? = "Release A"
+        description: String? = "Release A",
+        filename: String? = null
     ) = findCurrentStreamIndex(
         streams = streams,
         currentStreamInfoHash = infoHash,
@@ -39,7 +42,18 @@ class CurrentStreamIndexTest {
         currentStreamAddonName = addonName,
         currentStreamUrl = url,
         currentStreamName = name,
-        currentStreamDescription = description
+        currentStreamDescription = description,
+        currentFilename = filename
+    )
+
+    private fun hints(filename: String) = StreamBehaviorHints(
+        notWebReady = null,
+        bingeGroup = null,
+        countryWhitelist = null,
+        proxyHeaders = null,
+        videoHash = null,
+        videoSize = null,
+        filename = filename
     )
 
     @Test
@@ -86,6 +100,40 @@ class CurrentStreamIndexTest {
     @Test
     fun `same name from another addon does not match`() {
         assertEquals(-1, find(listOf(stream(addonName = "Torrentio"))))
+    }
+
+    @Test
+    fun `filename separates streams with identical name and description`() {
+        val streams = listOf(stream(filename = "a.mkv"), stream(filename = "b.mkv"))
+
+        assertEquals(1, find(streams, filename = "b.mkv"))
+    }
+
+    @Test
+    fun `filename wins over a different template and description`() {
+        val streams = listOf(
+            stream(),
+            stream(name = "Changed", description = "Changed", filename = "a.mkv")
+        )
+
+        assertEquals(1, find(streams, filename = "a.mkv"))
+    }
+
+    @Test
+    fun `filename from another addon does not match`() {
+        val streams = listOf(stream(name = "720P", addonName = "Torrentio", filename = "a.mkv"))
+
+        assertEquals(-1, find(streams, filename = "a.mkv"))
+    }
+
+    @Test
+    fun `duplicate filename falls through to name and description`() {
+        val streams = listOf(
+            stream(description = "Release B", filename = "a.mkv"),
+            stream(filename = "a.mkv")
+        )
+
+        assertEquals(1, find(streams, filename = "a.mkv"))
     }
 
     @Test

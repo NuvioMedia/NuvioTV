@@ -63,6 +63,7 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 internal fun StreamSourcesSidePanel(
     uiState: PlayerUiState,
+    currentFilename: String?,
     streamsFocusRequester: FocusRequester,
     onClose: () -> Unit,
     onReload: () -> Unit,
@@ -369,7 +370,8 @@ internal fun StreamSourcesSidePanel(
                         currentStreamAddonName = uiState.currentStreamAddonName,
                         currentStreamUrl = uiState.currentStreamUrl,
                         currentStreamName = uiState.currentStreamName,
-                        currentStreamDescription = uiState.currentStreamDescription
+                        currentStreamDescription = uiState.currentStreamDescription,
+                        currentFilename = currentFilename
                     )
 
                     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
@@ -511,7 +513,8 @@ internal fun findCurrentStreamIndex(
     currentStreamAddonName: String?,
     currentStreamUrl: String?,
     currentStreamName: String?,
-    currentStreamDescription: String?
+    currentStreamDescription: String?,
+    currentFilename: String?
 ): Int {
     if (streams.isEmpty()) return -1
 
@@ -544,8 +547,17 @@ internal fun findCurrentStreamIndex(
         if (urlMatch >= 0) return urlMatch
     }
 
-    // Last resort: addons may issue a new URL per request, so match what the stream shows.
-    // Templates can repeat across streams, so only trust a single result.
+    // Addons may issue a new URL per request, so match what identifies the release instead.
+    // Filenames and templates can repeat across streams, so only trust a single result.
+    if (!currentFilename.isNullOrBlank()) {
+        val filenameMatches = streams.indices.filter { index ->
+            val stream = streams[index]
+            (stream.behaviorHints?.filename ?: stream.clientResolve?.filename) == currentFilename &&
+                (currentStreamAddonName == null || stream.addonName == currentStreamAddonName)
+        }
+        filenameMatches.singleOrNull()?.let { return it }
+    }
+
     if (!currentStreamName.isNullOrBlank()) {
         val nameMatches = streams.indices.filter { index ->
             val stream = streams[index]
