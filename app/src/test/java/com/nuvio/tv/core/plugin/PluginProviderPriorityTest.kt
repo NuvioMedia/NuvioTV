@@ -151,8 +151,8 @@ class PluginProviderPriorityTest {
 
         assertEquals(1, indexOfPluginBingeMatch(saved, listOf(original, dual)))
         assertEquals(0, indexOfPluginBingeMatch(french, listOf(frenchNext, frenchOther)))
-        assertEquals(false, pluginBingeGroupMatches(frenchOther, french))
         assertEquals(true, pluginBingeGroupMatches(frenchNext, french))
+        assertEquals(true, pluginBingeGroupMatches(frenchOther, french))
     }
 
     @Test
@@ -238,5 +238,37 @@ class PluginProviderPriorityTest {
 
         assertEquals(2, indexOfPluginBingeMatch(saved, listOf(ultra, fullHd, sd)))
         assertNull(indexOfPluginBingeMatch(saved, listOf(ultra, fullHd)))
+    }
+
+    @Test
+    fun `a single stream still matches when the episode title drops words`() {
+        val saved = pluginBingeGroup(
+            scraperId = "example-plugin",
+            name = "ExampleHost",
+            title = "Example Pilot",
+            quality = "480p"
+        )
+        val next = pluginBingeGroup(
+            scraperId = "example-plugin",
+            name = "ExampleHost",
+            title = "Example S01E02",
+            quality = "480p"
+        )
+        val rewritten = pluginBingeGroup(
+            scraperId = "example-plugin",
+            name = "ExampleHost",
+            title = "Example Episode 2",
+            quality = "480p"
+        )
+        val otherQuality = pluginBingeGroup(
+            scraperId = "example-plugin",
+            name = "ExampleHost",
+            title = "Example S01E02",
+            quality = "1080p"
+        )
+
+        assertEquals(0, indexOfPluginBingeMatch(saved, listOf(next)))
+        assertEquals(0, indexOfPluginBingeMatch(saved, listOf(rewritten)))
+        assertNull(indexOfPluginBingeMatch(saved, listOf(otherQuality)))
     }
 }

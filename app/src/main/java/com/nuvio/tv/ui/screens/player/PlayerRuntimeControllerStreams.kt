@@ -538,8 +538,7 @@ private fun PlayerRuntimeController.markRemainingSourceChipsAsError() {
 private suspend fun PlayerRuntimeController.updateEpisodeSourceChipsForFetchStart(
     type: String,
     videoId: String,
-    installedAddons: List<com.nuvio.tv.domain.model.Addon>,
-    pluginsOnly: Boolean = false
+    installedAddons: List<com.nuvio.tv.domain.model.Addon>
 ) {
     val addonNames = installedAddons
         .filter { it.supportsStreamResourceForChip(type, videoId) }
@@ -574,10 +573,8 @@ private suspend fun PlayerRuntimeController.updateEpisodeSourceChipsForFetchStar
     }
 
     val ordered = buildList {
-        if (!pluginsOnly) {
-            addAll(serverSourceNames(type, videoId))
-            addAll(addonNames)
-        }
+        addAll(serverSourceNames(type, videoId))
+        addAll(addonNames)
         addAll(pluginNames)
     }.distinct()
     _uiState.update {
@@ -1275,13 +1272,12 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
         val preferredServerNames = serverStreams.preferredSourceNames(type, video.id)
         var debridPreparationLaunched = false
 
-        val continuePlugin = scraperIdFromPluginBingeGroup(currentStreamBingeGroup) != null
-        // Initialize episode source chips with LOADING status
+        // The episode list and the fallback picker search every source. Plugin-only
+        // continuation stays on automatic next-episode playback and prefetch.
         updateEpisodeSourceChipsForFetchStart(
             type,
             video.id,
-            installedAddons,
-            pluginsOnly = continuePlugin
+            installedAddons
         )
 
         streamRepository.getStreamsFromAllAddons(
@@ -1289,10 +1285,8 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
             videoId = video.id,
             season = video.season,
             episode = video.episode,
-            forceRefresh = forceRefresh && !continuePlugin,
-            priorityBingeGroup = currentStreamBingeGroup,
-            preferredPluginOnly = continuePlugin,
-            continuePluginOnly = continuePlugin
+            forceRefresh = forceRefresh,
+            priorityBingeGroup = currentStreamBingeGroup
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {

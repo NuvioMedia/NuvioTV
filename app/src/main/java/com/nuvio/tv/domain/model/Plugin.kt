@@ -194,6 +194,8 @@ fun scraperIdFromPluginBingeGroup(bingeGroup: String?): String? {
  * Tokens shared by every candidate are that episode's boilerplate. Tokens present in the
  * saved choice but in none of the candidates were episode-specific and are ignored.
  * What remains is the plugin's own variant, in whatever language it uses.
+ * A lone candidate has no siblings that can separate an episode title from the variant,
+ * so it matches whenever the saved quality is still present.
  */
 fun indexOfPluginBingeMatch(targetGroup: String?, candidateGroups: List<String?>): Int? {
     val targetId = scraperIdFromPluginBingeGroup(targetGroup) ?: return null
@@ -204,9 +206,9 @@ fun indexOfPluginBingeMatch(targetGroup: String?, candidateGroups: List<String?>
     val saved = tokensOfPluginBingeGroup(targetGroup)
     if (saved.isEmpty()) return indexed.first().first
     if (indexed.size == 1) {
-        val only = indexed.first()
-        val required = saved.filter { token -> token.none(Char::isDigit) || isResolutionToken(token) }
-        return if (required.all(only.second::contains)) only.first else null
+        val candidate = indexed.first().second
+        val savedResolution = saved.filter(::isResolutionToken).toSet()
+        return if (savedResolution.all(candidate::contains)) indexed.first().first else null
     }
 
     val sets = indexed.map { it.second }
