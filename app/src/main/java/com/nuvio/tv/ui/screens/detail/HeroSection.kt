@@ -8,8 +8,10 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,6 +39,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -256,18 +260,31 @@ fun HeroContentSection(
                         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        PlayButton(
-                            text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),
-                            enabled = isPlayEnabled,
-                            onClick = onPlayClick,
-                            onLongPress = onPlayLongPress,
-                            focusRequester = playButtonFocusRequester,
-                            restoreFocusToken = restorePlayFocusToken,
-                            onFocusRestored = {
-                                onHeroActionFocused()
-                                onPlayFocusRestored()
+                        val resumeProgress = nextToWatch
+                            ?.takeIf { isPlayEnabled && it.isResume }
+                            ?.watchProgress
+                            ?.progressPercentage
+                            ?.coerceIn(0f, 1f)
+                        Box {
+                            PlayButton(
+                                text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),
+                                enabled = isPlayEnabled,
+                                onClick = onPlayClick,
+                                onLongPress = onPlayLongPress,
+                                focusRequester = playButtonFocusRequester,
+                                restoreFocusToken = restorePlayFocusToken,
+                                onFocusRestored = {
+                                    onHeroActionFocused()
+                                    onPlayFocusRestored()
+                                }
+                            )
+                            if (resumeProgress != null && resumeProgress > 0f) {
+                                ResumeProgressIndicator(
+                                    progress = resumeProgress,
+                                    modifier = Modifier.matchParentSize()
+                                )
                             }
-                        )
+                        }
 
                         ActionIconButton(
                             icon = if (isInLibrary) Icons.Default.Check else null,
@@ -366,6 +383,53 @@ fun HeroContentSection(
                         tmdbRating = tmdbRating
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResumeProgressIndicator(
+    progress: Float,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = true,
+        modifier = modifier,
+        enter = expandHorizontally(
+            expandFrom = Alignment.CenterHorizontally,
+            animationSpec = tween(
+                durationMillis = NuvioMotion.tokens.durations.fast,
+                easing = NuvioMotion.tokens.easings.standard
+            )
+        ) + fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
+        exit = shrinkHorizontally(
+            shrinkTowards = Alignment.CenterHorizontally,
+            animationSpec = tween(
+                durationMillis = NuvioMotion.tokens.durations.fast,
+                easing = NuvioMotion.tokens.easings.standard
+            )
+        ) + fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.fast))
+    ) {
+        Box {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .offset(y = NuvioTheme.spacing.md)
+                    .fillMaxWidth(0.75f)
+                    .height(NuvioTheme.spacing.xs)
+                    .clip(RoundedCornerShape(NuvioTheme.radii.xxs))
+                    .background(NuvioTheme.colors.BackgroundCard)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .height(NuvioTheme.spacing.xs)
+                        .background(
+                            NuvioTheme.colors.Secondary,
+                            RoundedCornerShape(NuvioTheme.radii.xxs)
+                        )
+                )
             }
         }
     }
