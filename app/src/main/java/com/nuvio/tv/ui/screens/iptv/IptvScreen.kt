@@ -123,6 +123,7 @@ fun IptvScreen(
     if (showManager) {
         IptvPlaylistManagerDialog(
             playlists = uiState.playlists,
+            updates = uiState.updates,
             onDismiss = { showManager = false },
             onAdd = { openEditor(null) },
             onEdit = { openEditor(it) },
@@ -148,6 +149,10 @@ fun IptvScreen(
                     viewModel.stopPreview()
                 }
                 viewModel.deletePlaylist(playlist.id)
+            },
+            onRefreshNow = { playlist ->
+                showEditor = false
+                viewModel.refreshPlaylist(playlist.id)
             }
         )
     }
