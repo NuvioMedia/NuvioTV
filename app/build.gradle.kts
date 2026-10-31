@@ -441,6 +441,7 @@ sentry {
 }
 
 dependencies {
+    implementation(project(":hi10-video-decoder"))
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     val composeBom = platform("androidx.compose:compose-bom:2026.05.01")
 
