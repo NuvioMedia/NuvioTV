@@ -3,6 +3,9 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.core.network.NetworkConnectionKind
+import com.nuvio.tv.core.network.NetworkTransport
+import com.nuvio.tv.core.network.networkConnectionKind
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.net.ConnectivityManager
@@ -95,13 +98,32 @@ private enum class ConnectionType { WiFi, Ethernet, Offline }
 
 private fun getConnectionType(context: android.content.Context): ConnectionType {
     val cm = context.getSystemService<ConnectivityManager>() ?: return ConnectionType.Offline
-    val network = cm.activeNetwork ?: return ConnectionType.Offline
-    val caps = cm.getNetworkCapabilities(network) ?: return ConnectionType.Offline
-    return when {
-        caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> ConnectionType.Ethernet
-        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> ConnectionType.WiFi
-        caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> ConnectionType.WiFi // treat cellular as connected
-        else -> ConnectionType.Offline
+    val kind = runCatching {
+        val active = cm.activeNetwork
+        val activeCaps = active?.let { cm.getNetworkCapabilities(it) }
+        if (active == null || activeCaps == null) {
+            NetworkConnectionKind.Offline
+        } else {
+            @Suppress("DEPRECATION")
+            val others = cm.allNetworks
+                .filter { it != active }
+                .mapNotNull { network -> cm.getNetworkCapabilities(network)?.toTransportSet() }
+            networkConnectionKind(activeCaps.toTransportSet(), others)
+        }
+    }.getOrDefault(NetworkConnectionKind.Offline)
+    return when (kind) {
+        NetworkConnectionKind.WiFi -> ConnectionType.WiFi
+        NetworkConnectionKind.Ethernet -> ConnectionType.Ethernet
+        NetworkConnectionKind.Offline -> ConnectionType.Offline
+    }
+}
+
+private fun NetworkCapabilities.toTransportSet(): Set<NetworkTransport> {
+    return buildSet {
+        if (hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) add(NetworkTransport.Wifi)
+        if (hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) add(NetworkTransport.Ethernet)
+        if (hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) add(NetworkTransport.Cellular)
+        if (hasTransport(NetworkCapabilities.TRANSPORT_VPN)) add(NetworkTransport.Vpn)
     }
 }
 
