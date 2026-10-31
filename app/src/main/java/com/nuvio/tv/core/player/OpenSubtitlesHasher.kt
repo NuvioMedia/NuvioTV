@@ -4,9 +4,14 @@ import com.nuvio.tv.ui.screens.player.PlayerMediaSourceFactory
 import com.nuvio.tv.ui.screens.player.PlayerPlaybackNetworking
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.currentCoroutineContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.InputStream
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
  * Calculates the OpenSubtitles file hash for a video stream.
@@ -23,20 +28,28 @@ object OpenSubtitlesHasher {
     suspend fun compute(
         url: String,
         headers: Map<String, String>,
-        client: OkHttpClient = PlayerPlaybackNetworking.createHttpClient(headers)
+        client: OkHttpClient = PlayerPlaybackNetworking.createHttpClient(headers),
+        timeoutMs: Long = 1500L
     ): Result? = withContext(Dispatchers.IO) {
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs.coerceAtLeast(1L))
         try {
-            val fileSize = getContentLength(url, headers, client) ?: return@withContext null
+            currentCoroutineContext().ensureActive()
+            val fileSize = getContentLength(url, headers, client, deadline) ?: return@withContext null
             if (fileSize < CHUNK_SIZE * 2) return@withContext null
 
             var hash = fileSize
-            hash += readChunkSum(url, headers, offset = 0, length = CHUNK_SIZE, client = client)
-            hash += readChunkSum(url, headers, offset = fileSize - CHUNK_SIZE, length = CHUNK_SIZE, client = client)
+            currentCoroutineContext().ensureActive()
+            hash += readChunkSum(url, headers, offset = 0, length = CHUNK_SIZE, client = client, deadline = deadline)
+            currentCoroutineContext().ensureActive()
+            hash += readChunkSum(url, headers, offset = fileSize - CHUNK_SIZE, length = CHUNK_SIZE, client = client, deadline = deadline)
+            currentCoroutineContext().ensureActive()
 
             Result(
                 hash = "%016x".format(hash),
                 fileSize = fileSize
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         }
@@ -45,7 +58,8 @@ object OpenSubtitlesHasher {
     private fun getContentLength(
         url: String,
         headers: Map<String, String>,
-        client: OkHttpClient
+        client: OkHttpClient,
+        deadline: Long
     ): Long? {
         // Query the static probeInfoCache in PlayerMediaSourceFactory to bypass connection if possible
         try {
@@ -77,7 +91,9 @@ object OpenSubtitlesHasher {
         }
 
         return try {
-            client.newCall(requestBuilder.build()).execute().use { response ->
+            client.newCall(requestBuilder.build()).apply {
+                timeout().deadlineNanoTime(deadline)
+            }.execute().use { response ->
                 if (!response.isSuccessful) return null
                 val lenStr = response.header("Content-Length")
                 val len = lenStr?.toLongOrNull() ?: response.body?.contentLength()
@@ -94,7 +110,8 @@ object OpenSubtitlesHasher {
         headers: Map<String, String>,
         offset: Long,
         length: Long,
-        client: OkHttpClient
+        client: OkHttpClient,
+        deadline: Long
     ): Long {
         val requestBuilder = Request.Builder()
             .url(url)
@@ -110,9 +127,9 @@ object OpenSubtitlesHasher {
         }
 
         val request = requestBuilder.build()
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful && response.code != 206) return 0L
-            val stream: InputStream = response.body?.byteStream() ?: return 0L
+        client.newCall(request).apply { timeout().deadlineNanoTime(deadline) }.execute().use { response ->
+            if (response.code != 206) throw IOException("Server ignored hash range")
+            val stream: InputStream = response.body?.byteStream() ?: throw IOException("Empty hash range")
             val buf = ByteArray(LONG_SIZE)
             var sum = 0L
             var remaining = length
@@ -123,7 +140,7 @@ object OpenSubtitlesHasher {
                     if (n < 0) break
                     read += n
                 }
-                if (read < LONG_SIZE) break
+                if (read < LONG_SIZE) throw IOException("Truncated hash range")
                 sum += buf.toLongLE()
                 remaining -= LONG_SIZE
             }
