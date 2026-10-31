@@ -729,7 +729,7 @@
     <string name="playback_section_stream_selection">Lựa chọn luồng</string>
     <string name="playback_section_stream_selection_desc">Cách chọn luồng khi bạn nhấn phát.</string>
     <string name="playback_section_up_next">Tiếp theo</string>
-    <string name="playback_section_up_next_desc">Tự động phát tập kế tiếp và gợi ý sau khi phát xong.</string>
+    <string name="playback_section_up_next_desc">Tự động phát tập tiếp theo và gợi ý sau khi phát xong.</string>
     <string name="playback_section_skip">Bỏ qua phân đoạn</string>
     <string name="playback_section_skip_desc">Bỏ qua giới thiệu, tóm tắt và danh đề.</string>
     <string name="playback_section_interface">Giao diện trình phát</string>
@@ -835,7 +835,7 @@
     <string name="audio_decoder_priority">Thứ tự ưu tiên bộ giải mã</string>
     <string name="audio_enable_downmix_title">Bật tính năng hạ kênh âm thanh</string>
     <string name="audio_enable_downmix_subtitle">Sử dụng đường dẫn hạ kênh âm thanh của FFmpeg. Yêu cầu bật Ưu tiên bộ giải mã ứng dụng (FFmpeg). Khi tắt, âm thanh sẽ sử dụng lại đường dẫn xử lý trước đây của Android/thiết bị.</string>
-    <string name="audio_tunneled">Phát trực tiếp qua phần cứng</string>
+    <string name="audio_tunneled">Phát lại qua đường hầm</string>
     <string name="audio_tunneled_sub">Đồng bộ âm thanh/video ở cấp phần cứng. Có thể cải thiện việc phát lại trên một số thiết bị Android TV</string>
     <string name="audio_force_optical_passthrough">Buộc chuyển mã AC-3 (Cổng quang/SPDIF)</string>
     <string name="audio_force_optical_passthrough_sub">Chuyển mã các định dạng đa kênh (TrueHD, DTS, AAC...) sang Dolby Digital 5.1 theo thời gian thực cho kết nối Cổng quang/SPDIF.</string>
@@ -922,6 +922,13 @@
     <string name="sub_libass_mode">Chế độ kết xuất libass</string>
     <string name="sub_libass_render_scale">Độ phân giải kết xuất phụ đề</string>
     <string name="sub_libass_render_scale_sub">Độ phân giải thấp hơn giúp tăng hiệu năng khi xử lý hiệu ứng phụ đề phức tạp nhưng làm giảm độ sắc nét</string>
+    <string name="sub_libass_render_mode">Chế độ kết xuất ASS</string>
+    <string name="sub_libass_render_mode_sub">Cách phụ đề ASS/SSA được kết xuất lên video</string>
+    <string name="sub_libass_render_mode_tunneled_sub">Phát lại qua đường hầm sẽ bỏ qua quy trình hiệu ứng video. Lớp phủ sẽ được tự động sử dụng.</string>
+    <string name="sub_libass_render_mode_video_effect">Hiệu ứng video</string>
+    <string name="sub_libass_render_mode_video_effect_sub">Kết xuất phụ đề trực tiếp lên từng khung hình video. Định thời gian chính xác theo từng khung hình trên mọi phần cứng. Nội dung HDR được ánh xạ tông màu sang SDR</string>
+    <string name="sub_libass_render_mode_overlay">Lớp phủ</string>
+    <string name="sub_libass_render_mode_overlay_sub">Kết xuất phụ đề trên một lớp riêng biệt. Giữ nguyên đầu ra HDR. Thời gian hiển thị phụ đề có thể không chính xác hoàn toàn trên một số thiết bị.</string>
     <string name="sub_org_none">Không có (thứ tự mặc định)</string>
     <string name="sub_org_by_lang">Theo ngôn ngữ</string>
     <string name="sub_org_by_addon">Theo tiện ích</string>

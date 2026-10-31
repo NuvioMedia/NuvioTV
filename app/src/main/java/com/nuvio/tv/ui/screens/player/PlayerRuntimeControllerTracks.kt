@@ -94,8 +94,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                         }
                     }
                     // Extract video codec, resolution, and bitrate for stream info
-                    currentVideoCodec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
-                        ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+                    currentVideoCodec = CustomDefaultTrackNameProvider.resolveCodecName(format.sampleMimeType, format.codecs)
                     currentVideoWidth = format.width.takeIf { it > 0 }
                     currentVideoHeight = format.height.takeIf { it > 0 }
                     currentVideoBitrate = format.bitrate.takeIf { it > 0 }

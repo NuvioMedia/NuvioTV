@@ -57,7 +57,6 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.extractor.ts.TsExtractor
-import androidx.media3.session.MediaSession
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.nuvio.tv.R
@@ -130,11 +129,7 @@ private suspend fun PlayerRuntimeController.resolveCurrentStreamMimeType(
 
 private fun PlayerRuntimeController.disposeExoPlayerBeforeRebuild() {
     notifyAudioSessionUpdate(false)
-    try {
-        currentMediaSession?.release()
-        currentMediaSession = null
-    } catch (_: Exception) {
-    }
+    releaseMediaSession()
     _exoPlayer?.let { player ->
         runCatching { player.playWhenReady = false }
         runCatching { player.pause() }
@@ -1085,15 +1080,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                 if (playerSettings.skipSilence) skipSilenceEnabled = true
                 setHandleAudioBecomingNoisy(true)
 
-                try {
-                    currentMediaSession?.release()
-                    if (canAdvertiseSession()) {
-                        currentMediaSession = MediaSession.Builder(context, SafeMediaSessionPlayer(this)).build()
-                    }
-                    updateMediaSessionMetadata()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                runCatching { installExoMediaSession(this) }
+                    .onFailure { it.printStackTrace() }
 
                 applyAudioAmplification(_uiState.value.audioAmplificationDb)
                 applyCenterMixLevel(_uiState.value.centerMixLevelDb)

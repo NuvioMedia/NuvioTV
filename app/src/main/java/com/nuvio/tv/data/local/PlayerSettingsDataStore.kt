@@ -154,7 +154,8 @@ data class SubtitleStyleSettings(
     val outlineWidth: Int = 2, // 1-5
     val hdrStyleEnabled: Boolean = false,
     val hdrTextColor: Int = Color.White.toArgb(),
-    val hdrBrightness: Int = HDR_BRIGHTNESS_DEFAULT // 0-100, see hdrBrightnessFactor
+    val hdrBrightness: Int = HDR_BRIGHTNESS_DEFAULT, // 0-100, see hdrBrightnessFactor
+    val hdrDimPlayerControls: Boolean = false
 ) {
     /**
      * The style to render with: on HDR/Dolby Vision video with the override enabled, the HDR text
@@ -168,6 +169,15 @@ data class SubtitleStyleSettings(
             backgroundColor = scaleColorBrightness(backgroundColor, factor),
             outlineColor = scaleColorBrightness(outlineColor, factor)
         )
+    }
+
+    /**
+     * Brightness factor for the player controls and menus drawn over the video: the HDR brightness
+     * on HDR/Dolby Vision video when both HDR options are enabled, otherwise full brightness.
+     */
+    fun playerControlsBrightness(isHdrVideo: Boolean): Float {
+        if (!isHdrVideo || !hdrStyleEnabled || !hdrDimPlayerControls) return 1f
+        return hdrBrightnessFactor(hdrBrightness)
     }
 
     /** The style the in-player editors show: on HDR video with the override enabled, its text color is the HDR one. */
@@ -691,6 +701,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleHdrStyleEnabledKey = booleanPreferencesKey("subtitle_hdr_style_enabled")
     private val subtitleHdrTextColorKey = intPreferencesKey("subtitle_hdr_text_color")
     private val subtitleHdrBrightnessKey = intPreferencesKey("subtitle_hdr_brightness")
+    private val subtitleHdrDimPlayerControlsKey = booleanPreferencesKey("subtitle_hdr_dim_player_controls")
 
     // Buffer settings keys
     private val minBufferMsKey = intPreferencesKey("min_buffer_ms")
@@ -1134,7 +1145,8 @@ class PlayerSettingsDataStore @Inject constructor(
                         outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2,
                         hdrStyleEnabled = prefs[subtitleHdrStyleEnabledKey] ?: false,
                         hdrTextColor = prefs[subtitleHdrTextColorKey] ?: Color.White.toArgb(),
-                        hdrBrightness = prefs[subtitleHdrBrightnessKey] ?: SubtitleStyleSettings.HDR_BRIGHTNESS_DEFAULT
+                        hdrBrightness = prefs[subtitleHdrBrightnessKey] ?: SubtitleStyleSettings.HDR_BRIGHTNESS_DEFAULT,
+                        hdrDimPlayerControls = prefs[subtitleHdrDimPlayerControlsKey] ?: false
                     )
                 },
                 bufferSettings = BufferSettings(
@@ -1701,6 +1713,9 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSubtitleOutlineWidth(width: Int) { store().edit { it[subtitleOutlineWidthKey] = width.coerceIn(1, 5) } }
     suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) { store().edit { it[subtitleHdrStyleEnabledKey] = enabled } }
     suspend fun setSubtitleHdrTextColor(color: Int) { store().edit { it[subtitleHdrTextColorKey] = color } }
+    suspend fun setSubtitleHdrDimPlayerControls(enabled: Boolean) {
+        store().edit { it[subtitleHdrDimPlayerControlsKey] = enabled }
+    }
     suspend fun setSubtitleHdrBrightness(brightness: Int) {
         store().edit {
             it[subtitleHdrBrightnessKey] = brightness.coerceIn(

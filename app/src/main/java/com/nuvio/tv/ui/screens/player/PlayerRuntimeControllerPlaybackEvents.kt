@@ -422,7 +422,11 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                             playbackEnded = naturalEnded
                         )
                     }
+                    // libmpv has no Media3 listener callbacks. Keep Android's active media
+                    // session in sync with the state sampled by this existing progress tick.
+                    refreshMpvMediaSession()
                     updateMpvTracksOnTick()
+                    recomputeChapterSkipIntervalsIfNeeded()
                     updateActiveSkipInterval(pos)
                     if (!_playbackTimeline.value.isLive) {
                         evaluatePostPlayOverlayVisibility(
@@ -491,6 +495,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         )
                     }
                 }
+                recomputeChapterSkipIntervalsIfNeeded()
                 updateActiveSkipInterval(pos)
                 if (!_playbackTimeline.value.isLive) {
                     evaluatePostPlayOverlayVisibility(
@@ -1338,8 +1343,11 @@ fun PlayerRuntimeController.hideControls() {
     _uiState.update { it.copy(showControls = false, showSeekOverlay = false, showMoreDialog = false) }
 }
 
-fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
-    if (event != PlayerEvent.OnParentalGuideHide) {
+fun PlayerRuntimeController.onEvent(
+    event: PlayerEvent,
+    showPlaybackControls: Boolean = true,
+) {
+    if (showPlaybackControls && event != PlayerEvent.OnParentalGuideHide) {
         onUserInteraction()
     }
     when (event) {
@@ -1381,7 +1389,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     publishPartyPlayback(paused = !player.playWhenReady)
                 }
             }
-            showControlsTemporarily()
+            if (showPlaybackControls) showControlsTemporarily()
         }
         PlayerEvent.OnSeekForward -> {
             if (_playbackTimeline.value.isLive) return
@@ -1460,10 +1468,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             updatePlaybackTimeline(currentPosition = target)
             scheduleProgressSyncAfterSeek()
             publishPartyPlayback(positionMs = target)
-            if (_uiState.value.showControls) {
-                showControlsTemporarily()
-            } else {
-                showSeekOverlayTemporarily()
+            if (showPlaybackControls) {
+                if (_uiState.value.showControls) {
+                    showControlsTemporarily()
+                } else {
+                    showSeekOverlayTemporarily()
+                }
             }
         }
         is PlayerEvent.OnSkipChapter -> {
@@ -1789,7 +1799,11 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             selectEpisodesSeason(event.season)
         }
         is PlayerEvent.OnEpisodeSelected -> {
-            loadStreamsForEpisode(event.video)
+            loadStreamsForEpisode(
+                video = event.video,
+                forceRefresh = false,
+                manualSelection = event.manualSelection
+            )
         }
         PlayerEvent.OnReloadEpisodeStreams -> {
             reloadEpisodeStreams()
@@ -2084,8 +2098,7 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
     val videoHeight = matchedFormat?.height?.takeIf { it > 0 } ?: activeVideoFormat?.height?.takeIf { it > 0 } ?: currentVideoHeight
     val videoBitrate = activeVideoFormat?.bitrate?.takeIf { it > 0 } ?: currentVideoBitrate
     val videoCodec = activeVideoFormat?.let { format ->
-        CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
-            ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+        CustomDefaultTrackNameProvider.resolveCodecName(format.sampleMimeType, format.codecs)
     } ?: currentVideoCodec
 
     return StreamInfoData(

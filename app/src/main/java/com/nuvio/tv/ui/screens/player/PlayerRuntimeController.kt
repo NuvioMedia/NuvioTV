@@ -528,6 +528,10 @@ class PlayerRuntimeController(
     internal var backgroundCrashSavedPositionMs: Long = 0L
 
     internal var skipIntervals: List<SkipInterval> = emptyList()
+    internal var chapterSkipIntervals: List<SkipInterval> = emptyList()
+    internal var apiSkipIntervals: List<SkipInterval> = emptyList()
+    internal var skipDetectionChapters: List<PlayerChapter> = emptyList()
+    internal var skipChaptersComputedForDuration: Long = 0L
     internal var skipIntroEnabled: Boolean = true
     internal var parentalGuideEnabled: Boolean = false
     internal var autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet()
@@ -607,6 +611,7 @@ class PlayerRuntimeController(
     internal var loudnessEnhancer: LoudnessEnhancer? = null
     internal var trackSelector: DefaultTrackSelector? = null
     internal var currentMediaSession: MediaSession? = null
+    internal var mpvMediaSessionPlayer: MpvMediaSessionPlayer? = null
     internal var ffmpegAudioRenderer: FfmpegAudioRenderer? = null
     internal var mpvView: NuvioMpvSurfaceView? = null
     internal val subtitleCueTracker = SubtitleCueTracker()
