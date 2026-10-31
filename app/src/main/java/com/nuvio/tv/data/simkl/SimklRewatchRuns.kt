@@ -298,4 +298,10 @@ internal fun SimklMedia.rewatchMatchKeys(contentId: String): List<String> = buil
     ids.idValue("tmdb")?.let { tmdb -> add("tmdb:$tmdb") }
     ids.idValue("tvdb")?.let { tvdb -> add("tvdb:$tvdb") }
     ids.simklIdValue()?.let { simkl -> add("simkl:$simkl") }
+    // Anime references reach the row through any of these forms, so the dismissal and close
+    // lookups must not depend on which one the preference picked for the canonical id.
+    ids.idValue("mal")?.let { mal -> add("mal:$mal") }
+    ids.idValue("kitsu")?.let { kitsu -> add("kitsu:$kitsu") }
+    ids.idValue("anidb")?.let { anidb -> add("anidb:$anidb") }
+    ids.idValue("anilist")?.let { anilist -> add("anilist:$anilist") }
 }.distinct()

@@ -186,6 +186,33 @@ class RewatchRunNextUpSeedsTest {
         assertEquals(2_000L, added.lastWatched)
     }
 
+    @Test
+    fun `a live run overrides a saved dismissal of its title`() {
+        val dismissed = setOf(SHOW, "imdb:$SHOW", OTHER_SHOW)
+
+        val result = withoutLiveRewatchDismissals(
+            dismissed = dismissed,
+            runs = listOf(
+                run(
+                    contentId = SHOW,
+                    season = 1,
+                    episode = 2,
+                    markedAt = 1_000L,
+                    matchKeys = listOf("imdb:$SHOW"),
+                )
+            ),
+        )
+
+        assertEquals(setOf(OTHER_SHOW), result)
+    }
+
+    @Test
+    fun `no runs leave the saved dismissals alone`() {
+        val dismissed = setOf(SHOW, OTHER_SHOW)
+
+        assertSame(dismissed, withoutLiveRewatchDismissals(dismissed, emptyList()))
+    }
+
     private fun seed(
         contentId: String,
         season: Int,

@@ -352,7 +352,12 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 // a provider owning the completed history there is nothing else to carry it.
                 val nextUpSeeds = applyRewatchRunPositions(snapshot.nextUpSeeds, snapshot.rewatchRuns)
                 val daysCap = snapshot.daysCap
-                val dismissedNextUp = snapshot.dismissedNextUp
+                // Closing a run used to leave a dismissal under the card's content id. A new run of
+                // the same title opened on Simkl is a running run, so it outranks that dismissal.
+                val dismissedNextUp = withoutLiveRewatchDismissals(
+                    dismissed = snapshot.dismissedNextUp,
+                    runs = snapshot.rewatchRuns
+                )
                 val showUnairedNextUp = snapshot.showUnairedNextUp
                 val nextUpFromFurthestEpisode = snapshot.nextUpFromFurthestEpisode
                 val continueWatchingSortMode = snapshot.continueWatchingSortMode
@@ -3370,8 +3375,19 @@ internal fun HomeViewModel.removeContinueWatchingPipeline(
                     // Keep the card when the account close failed: removing it locally would
                     // hide a run that is still live on Simkl.
                     if (closeRunningRewatchFor(contentId)) {
-                        runCatching { traktSettingsDataStore.addDismissedNextUpKey(dismissKey) }
+                        // A rewatch close is not a dismissal. The close takes the card out of the
+                        // account, and a later run of the same title must be able to show up again.
+                        runCatching {
+                            traktSettingsDataStore.removeDismissedNextUpKeysForContent(contentId)
+                        }
                         removeNextUpCardLocally(dismissKey)
+                        // The writer reads the sessions back in the background. Hold the row until
+                        // the run is really gone, so the card cannot come back in that window.
+                        withTimeoutOrNull(5_000) {
+                            simklSyncRepository.state.first { state ->
+                                state.snapshot.rewatchRuns.none { run -> run.matches(contentId) }
+                            }
+                        }
                     }
                 } finally {
                     cwPendingRewatchCloseContentIds -= contentId

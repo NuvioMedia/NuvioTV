@@ -70,3 +70,21 @@ private fun RewatchRunPosition.toNextUpSeed(): WatchProgress = WatchProgress(
     lastWatched = markedAtEpochMs,
     progressPercent = 100f
 )
+
+/**
+ * The saved next up dismissals without the ones a running rewatch now overrides.
+ *
+ * A dismissal is kept per content id, and closing a run used to save one. A new run of the same
+ * title opened on another device would then be filtered out of Continue Watching even though the
+ * account reports it as running, while the detail screen still shows it. A run wins over the
+ * dismissal of its title; the other dismissals are left alone.
+ */
+internal fun withoutLiveRewatchDismissals(
+    dismissed: Set<String>,
+    runs: List<RewatchRunPosition>
+): Set<String> {
+    if (dismissed.isEmpty() || runs.isEmpty()) return dismissed
+    return dismissed.filterNotTo(mutableSetOf()) { key ->
+        runs.any { run -> run.matches(key) }
+    }
+}

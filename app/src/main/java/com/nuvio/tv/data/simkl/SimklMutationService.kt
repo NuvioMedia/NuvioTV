@@ -121,7 +121,15 @@ class SimklMutationService internal constructor(
                 retryPolicy = SimklRetryPolicy.SYNC_WRITE
             )
         )
-        return response.status in 200..299 || response.isSoftSuccess
+        val closed = response.status in 200..299 || response.isSoftSuccess
+        if (!closed) {
+            Log.w(
+                TRACKING_SCROBBLE_DIAGNOSTIC_TAG,
+                "simkl rewatch close failed rewatchId=$rewatchId status=${response.status} " +
+                    "body=${response.body.take(300)}"
+            )
+        }
+        return closed
     }
 
     suspend fun removeFromHistory(items: Collection<TrackingMediaReference>): TrackingMutationResult {
