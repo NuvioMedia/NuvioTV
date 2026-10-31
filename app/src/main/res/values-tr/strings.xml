@@ -927,6 +927,8 @@
     <string name="sub_hdr_style_sub">HDR ve Dolby Vision videolarda altyazı için ayrı bir metin rengi ve daha kısık bir parlaklık kullan</string>
     <string name="sub_hdr_text_color">HDR Metin Rengi</string>
     <string name="sub_hdr_brightness">HDR Altyazı Parlaklığı</string>
+    <string name="sub_hdr_dim_player_controls">HDR'de oynatıcı kontrollerini karart</string>
+    <string name="sub_hdr_dim_player_controls_sub">HDR ve Dolby Vision videolarda gösterilen oynatıcı kontrollerine ve menülere HDR parlaklığını uygulayın</string>
     <string name="sub_advanced_section">Gelişmiş Altyazı Oluşturma</string>
     <string name="sub_libass">ASS/SSA altyazıları için libass kullan</string>
     <string name="sub_libass_sub">Bakım nedeniyle geçici olarak devre dışı bırakıldı</string>
