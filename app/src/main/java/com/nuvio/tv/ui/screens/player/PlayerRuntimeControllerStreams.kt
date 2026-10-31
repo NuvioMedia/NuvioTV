@@ -1236,7 +1236,11 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(
     val newScope = kotlinx.coroutines.CoroutineScope(scope.coroutineContext + kotlinx.coroutines.SupervisorJob())
     episodeStreamsScope = newScope
     episodeStreamsJob = newScope.launch {
-        val playerSettings = if (manualSelection) null else playerSettingsDataStore.playerSettings.first()
+        val playerSettings = when {
+            manualSelection -> null
+            hasObservedPlayerSettings -> currentPlayerSettingsForReport
+            else -> playerSettingsDataStore.playerSettings.first()
+        }
         val autoPlaySettings = playerSettings?.takeIf { it.streamAutoPlayMode != StreamAutoPlayMode.MANUAL }
         val state = _uiState.value
         val hasCachedPayload = state.episodeAllStreams.isNotEmpty() || state.episodeStreamsError != null
@@ -1960,7 +1964,11 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
     nextEpisodeAutoPlayJob = scope.launch {
         try {
             streamRepository.setLocalPluginSearchPaused(false)
-            val playerSettings = playerSettingsDataStore.playerSettings.first()
+            val playerSettings = if (hasObservedPlayerSettings) {
+                currentPlayerSettingsForReport
+            } else {
+                playerSettingsDataStore.playerSettings.first()
+            }
             val shouldAutoSelectInManualMode =
                 playerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL &&
                     (
