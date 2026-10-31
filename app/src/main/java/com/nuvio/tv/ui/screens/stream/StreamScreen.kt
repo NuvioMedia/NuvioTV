@@ -98,6 +98,7 @@ import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
 import com.nuvio.tv.ui.components.P2pConsentDialog
+import com.nuvio.tv.ui.components.RewatchPromptOverlay
 import com.nuvio.tv.ui.components.StreamBadgeChips
 import com.nuvio.tv.ui.components.StreamsSkeletonList
 import com.nuvio.tv.ui.screens.player.LoadingOverlay
@@ -163,6 +164,23 @@ fun StreamScreen(
         initialValue = StreamBadgeSettings()
     )
     val scope = rememberCoroutineScope()
+
+    /*
+     * Host the question in this screen, beside the P2P consent dialog, instead of the activity
+     * level overlay. The local host is what makes the dialog appear over the source list before the
+     * player is navigated to; the activity host remains only as a fallback for questions raised
+     * after this screen is gone.
+     */
+    DisposableEffect(viewModel.rewatchConsentRepository) {
+        viewModel.rewatchConsentRepository.setLocalHostActive(true)
+        onDispose {
+            viewModel.rewatchConsentRepository.setLocalHostActive(false)
+            if (viewModel.rewatchConsentRepository.question.value != null) {
+                viewModel.rewatchConsentRepository.dismiss()
+            }
+        }
+    }
+
     val streamHazeState = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) HazeState() else null
     }
@@ -206,8 +224,10 @@ fun StreamScreen(
     }
 
     fun launchInternalPlayer(playbackInfo: StreamPlaybackInfo) {
-        viewModel.onInternalPlayerLaunching()
-        onStreamSelected(playbackInfo)
+        scope.coroutineLaunch {
+            viewModel.onInternalPlayerLaunching()
+            onStreamSelected(playbackInfo)
+        }
     }
 
     fun routePlayback(playbackInfo: StreamPlaybackInfo) {
@@ -222,7 +242,7 @@ fun StreamScreen(
         }
         when (preference) {
             PlayerPreference.INTERNAL -> {
-                launchInternalPlayer(playbackInfo)
+                launchInternalPlayer(playbackInfo = playbackInfo)
             }
             PlayerPreference.EXTERNAL -> {
                 if (playbackInfo.url != null || playbackInfo.isTorrent) {
@@ -275,8 +295,10 @@ fun StreamScreen(
                     viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
                 else -> {
-                    viewModel.onInternalPlayerLaunching()
-                    onAutoPlayResolved(playbackInfo)
+                    scope.coroutineLaunch {
+                        viewModel.onInternalPlayerLaunching()
+                        onAutoPlayResolved(playbackInfo)
+                    }
                 }
             }
             return
@@ -299,7 +321,10 @@ fun StreamScreen(
             viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
             return@LaunchedEffect
         }
-        val playbackInfo = viewModel.resolveStreamForPlayback(stream)
+        val playbackInfo = viewModel.resolveStreamForPlayback(
+            stream = stream,
+            progressPercent = 0.0
+        )
         if (playbackInfo == null) {
             viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
             return@LaunchedEffect
@@ -344,6 +369,8 @@ fun StreamScreen(
                 showP2pConsentDialog = true
                 return@LaunchedEffect
             }
+            // Cached last links do not pass through resolveStreamForPlayback, so ask here too.
+            viewModel.preparePlayback(playbackInfo, 0.0)
             // Respect player preference for cached links too
             when (playerPreference ?: return@LaunchedEffect) {
                 PlayerPreference.EXTERNAL -> {
@@ -474,7 +501,11 @@ fun StreamScreen(
                     partySource = partySource,
                     onSharedStreamSelected = { stream ->
                         scope.coroutineLaunch {
-                            val playbackInfo = viewModel.resolveStreamForPlayback(stream, saveLastLink = false)
+                            val playbackInfo = viewModel.resolveStreamForPlayback(
+                                stream = stream,
+                                saveLastLink = false,
+                                progressPercent = (resumePercent?.toDouble() ?: 0.0) * 100.0
+                            )
                             if (playbackInfo != null) {
                                 pendingRestoreOnResume = true
                                 routePlayback(playbackInfo)
@@ -494,7 +525,10 @@ fun StreamScreen(
                             focusedStreamIndex = currentIndex
                         }
                         scope.coroutineLaunch {
-                            val playbackInfo = viewModel.resolveStreamForPlayback(stream)
+                            val playbackInfo = viewModel.resolveStreamForPlayback(
+                                stream = stream,
+                                progressPercent = (resumePercent?.toDouble() ?: 0.0) * 100.0
+                            )
                             if (playbackInfo != null) {
                                 viewModel.persistBingeGroupForStream(stream)
                                 pendingRestoreOnResume = true
@@ -520,6 +554,11 @@ fun StreamScreen(
                 )
             }
         }
+
+        RewatchPromptOverlay(
+            repository = viewModel.rewatchConsentRepository,
+            isLocalHost = true
+        )
 
         // Player choice dialog for "Ask every time" preference
         if (showPlayerChoiceDialog && pendingPlaybackInfo != null) {

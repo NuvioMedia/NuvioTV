@@ -11,6 +11,17 @@ enum class TrackingSeekScrobblePolicy {
     STOP_AND_RESTART
 }
 
+/**
+ * Where a playback counts as already past the point the trackers report a completion at.
+ *
+ * One number for two sides that have to agree on it: the player, which reports a finished playback
+ * from here up, and each provider, which decides for itself what a start sent above it means. Trakt
+ * treats such a start as the beginning of a viewing, and the stop that follows would record the
+ * watch twice, so its scrobbler skips the start; a tracker whose "watching now" state is its own
+ * wants to hear about the playback anyway.
+ */
+internal const val TRACKING_COMPLETION_BAR_PERCENT = 80.0
+
 enum class TrackingListStatus(val wireValue: String) {
     WATCHING("watching"),
     PLAN_TO_WATCH("plantowatch"),
@@ -26,7 +37,23 @@ enum class TrackingListStatus(val wireValue: String) {
 
 data class TrackingHistoryItem(
     val media: TrackingMediaReference,
-    val watchedAtEpochMs: Long? = null
+    val watchedAtEpochMs: Long? = null,
+    /**
+     * The viewing session this write belongs to, for a provider that keeps rewatches as sessions
+     * beside the watch history. Simkl asks for it on every write after the one that opened the
+     * session, so a run is continued rather than forked. Providers without the concept leave it unset
+     * and it is then never sent.
+     */
+    val rewatchId: Long? = null,
+
+    /**
+     * Whether this write records a repeat viewing rather than a first watch.
+     *
+     * Simkl records a plain add of something the account has already watched as nothing at all, so a
+     * mark that is a repeat has to say so for the account to book it: the write then joins the run of
+     * the item, or opens one. Providers without the concept leave it unset and nothing is sent.
+     */
+    val isRewatch: Boolean = false
 ) {
     /**
      * Whether this mark describes a whole series rather than something that was watched.
@@ -43,7 +70,55 @@ data class TrackingHistoryItem(
 
 data class TrackingScrobbleEvent(
     val media: TrackingMediaReference,
-    val progressPercent: Double
+    val progressPercent: Double,
+    /**
+     * Where the content ends for the tracker, in percent of its duration, when IntroDB knows the
+     * credits: the marker read a fixed few seconds early, the way the player reads it.
+     *
+     * A playback that reached the credits is over, even when the user set the completion point higher
+     * than that. Null means no marker is known for this item, and the percentage decides on its own.
+     */
+    val contentEndPercent: Double? = null,
+    /**
+     * A scrobble of a playback no session owns, for the trackers that keep a watching state of
+     * their own.
+     *
+     * A playback that sits above the completion bar never arms the pause and stop policy, so the
+     * events it produces belong to no session. Simkl wants them anyway; for Trakt a pause is a stop,
+     * and a stop above the bar records a watch, so such an event would write a viewing that never
+     * happened. The player marks them and the coordinator leaves out the scrobblers that do not
+     * accept them (see [TrackingScrobbler.acceptsSessionlessScrobbles]).
+     */
+    val sessionless: Boolean = false,
+
+    /**
+     * Whether the playback behind this event was reported to the trackers from its start, below the
+     * completion bar.
+     *
+     * A playback that began above the bar has no session on the account: its stop is the finish of a
+     * viewing the account already has, not a viewing that can be repeated, so a rewatch must not be
+     * opened for it.
+     */
+    val hasPlaybackSession: Boolean = false,
+
+    /**
+     * Where the playback began, in percent of its duration, when the player reported its start.
+     *
+     * A playback that resumes above [TRACKING_COMPLETION_BAR_PERCENT] is sessionless for the
+     * trackers that record a watch on a stop, but the point that ends the viewing can be higher
+     * than that bar. Simkl reads this to tell a resumed viewing from the tail of a finished one.
+     * Null when the caller does not report it (an external player).
+     */
+    val startProgressPercent: Double? = null,
+
+    /**
+     * Identifies one run of the player for the item.
+     *
+     * A tracker that records a watch on a stop uses it to collapse a completion it already recorded
+     * when the same playback ends again after a pause, without suppressing a later, separate viewing.
+     * Zero means the caller has no playback identity (an external player), and nothing is collapsed.
+     */
+    val playbackId: Long = 0L
 )
 
 data class TrackingMutationResult(
@@ -61,7 +136,12 @@ data class TrackingMutationResult(
 data class TrackingMutationResolution(
     val listStatus: TrackingListStatus? = null,
     val mediaKind: TrackingMediaKind? = null,
-    val providerSubtype: String? = null
+    val providerSubtype: String? = null,
+    /**
+     * How a provider that keeps rewatches as sessions booked the view: the answer it gave back for the
+     * item, and null for a provider without the concept and for a plain first watch.
+     */
+    val rewatchStatus: String? = null
 )
 
 interface TrackingListWriter {
@@ -98,5 +178,22 @@ interface TrackingScrobbler {
     val seekScrobblePolicy: TrackingSeekScrobblePolicy
         get() = TrackingSeekScrobblePolicy.NONE
 
+    /**
+     * Whether a scrobble of a playback no session owns is welcome here.
+     *
+     * Off by default. For Trakt a pause is a stop and a stop above the completion bar records a
+     * watch, so a sessionless pause or stop would write a viewing the user never finished. A tracker
+     * that keeps its own "watching now" state, such as Simkl, turns it on.
+     */
+    val acceptsSessionlessScrobbles: Boolean
+        get() = false
+
     suspend fun scrobble(action: TrackingScrobbleAction, event: TrackingScrobbleEvent)
+
+    /**
+     * A chance to prepare the user before a playback starts. This writes nothing; it exists so a
+     * tracker can ask its own question before the player opens the item. The default keeps every
+     * other tracker out of the path.
+     */
+    suspend fun preparePlayback(media: TrackingMediaReference, progressPercent: Double = 0.0) = Unit
 }

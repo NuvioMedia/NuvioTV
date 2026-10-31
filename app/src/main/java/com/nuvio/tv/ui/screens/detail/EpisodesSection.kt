@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -382,6 +383,7 @@ fun EpisodesRow(
     episodeProgressMap: Map<Pair<Int, Int>, com.nuvio.tv.domain.model.WatchProgress> = emptyMap(),
     episodeRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
     watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
+    rewatchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
     episodeWatchedPendingKeys: Set<String> = emptySet(),
     blurUnwatchedEpisodes: Boolean = false,
     episodeOptionsOverlayStyle: EpisodeOptionsOverlayStyle = EpisodeOptionsOverlayStyle.ARTWORK,
@@ -391,6 +393,8 @@ fun EpisodesRow(
     onEpisodeManualPlayClick: (Video) -> Unit = onEpisodeClick,
     onEpisodeStartFromBeginningClick: (Video) -> Unit = onEpisodeClick,
     onToggleEpisodeWatched: (Video) -> Unit,
+    onMarkEpisodeRewatched: (Video) -> Unit = {},
+    onUnmarkEpisodeRewatched: (Video) -> Unit = {},
     showManualPlayOption: Boolean = false,
     onMarkSeasonWatched: (Int) -> Unit = {},
     onMarkSeasonUnwatched: (Int) -> Unit = {},
@@ -534,6 +538,7 @@ fun EpisodesRow(
             val progress = remember(seasonEp, episodeProgressMap) { seasonEp?.let { episodeProgressMap[it] } }
             val imdbRating = remember(seasonEp, episodeRatings) { seasonEp?.let { episodeRatings[it] } }
             val isMarkedWatched = remember(seasonEp, watchedEpisodes) { seasonEp?.let { watchedEpisodes.contains(it) } ?: false }
+            val isMarkedRewatched = remember(seasonEp, rewatchedEpisodes) { seasonEp?.let { rewatchedEpisodes.contains(it) } ?: false }
             val episodeFocusRequester = remember(episode.id) { episodeFocusRequesters.getOrPut(episode.id) { FocusRequester() } }
             val episodeOnClick = remember(episode, onEpisodeClick) { { onEpisodeClick(episode) } }
             val episodeOnLongPress = remember(episode.id) { { optionsEpisode = episode } }
@@ -547,6 +552,8 @@ fun EpisodesRow(
                 watchProgress = progress,
                 imdbRating = imdbRating,
                 isMarkedWatched = isMarkedWatched,
+                isMarkedRewatched = isMarkedRewatched,
+                rewatchInProgress = rewatchedEpisodes.isNotEmpty(),
                 blurUnwatched = blurUnwatchedEpisodes,
                 suppressMarquee = isOverlayOpen,
                 cardMetrics = cardMetrics,
@@ -581,6 +588,10 @@ fun EpisodesRow(
                 selectedEpisode.episode?.let { episode -> episodeRatings[season to episode] }
             },
             isWatched = selectedWatched,
+            isRewatched = selectedEpisode.season?.let { season ->
+                selectedEpisode.episode?.let { episode -> rewatchedEpisodes.contains(season to episode) }
+            } ?: false,
+            hasActiveRewatch = rewatchedEpisodes.isNotEmpty(),
             blurUnwatchedEpisodes = blurUnwatchedEpisodes,
             style = episodeOptionsOverlayStyle,
             isPending = isPending,
@@ -620,6 +631,14 @@ fun EpisodesRow(
                 onToggleEpisodeWatched(selectedEpisode)
                 optionsEpisode = null
             },
+            onMarkRewatched = {
+                onMarkEpisodeRewatched(selectedEpisode)
+                optionsEpisode = null
+            },
+            onUnmarkRewatched = {
+                onUnmarkEpisodeRewatched(selectedEpisode)
+                optionsEpisode = null
+            },
             onMarkSeasonWatched = {
                 onMarkSeasonWatched(selectedSeason)
                 optionsEpisode = null
@@ -636,6 +655,16 @@ fun EpisodesRow(
     }
 }
 
+/**
+ * How solid the watched marker is on an episode a rewatch in progress has not reached yet.
+ *
+ * A value rather than a number in the drawing code, so the look can be tuned without touching the
+ * layout: the marker is the same one the app has always drawn, only faded while a run owns the
+ * meaning of a full one. The fade has to be deep enough to read as "not this run's yet" next to a
+ * solid marker on a TV at viewing distance, which 0.45 did not.
+ */
+private const val REWATCH_PENDING_MARKER_ALPHA = 0.35f
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun EpisodeCard(
@@ -643,6 +672,8 @@ private fun EpisodeCard(
     watchProgress: com.nuvio.tv.domain.model.WatchProgress? = null,
     imdbRating: Double? = null,
     isMarkedWatched: Boolean = false,
+    isMarkedRewatched: Boolean = false,
+    rewatchInProgress: Boolean = false,
     blurUnwatched: Boolean = false,
     suppressMarquee: Boolean = false,
     cardMetrics: EpisodeCardMetrics,
@@ -673,6 +704,16 @@ private fun EpisodeCard(
     val progressPercent = remember(watchProgress) { watchProgress?.progressPercentage ?: 0f }
     val showProgress = remember(watchProgress) { watchProgress?.isInProgress() == true }
     val showCompletedBadge = isWatched
+    /*
+     * A run in progress is what gives the marker two meanings: solid marks an episode the run has
+     * already rewatched, and half marks one the account watched before the run and the run has not
+     * reached yet. Without a run every watched episode keeps the solid marker it always had.
+     */
+    val rewatchMarkerAlpha = if (rewatchInProgress && isWatched && !isMarkedRewatched) {
+        REWATCH_PENDING_MARKER_ALPHA
+    } else {
+        1f
+    }
     val showNotStartedBadge = remember(showCompletedBadge, progressPercent) { !showCompletedBadge && progressPercent < 0.02f }
     val isUnavailable = remember(episode.available) { episode.available == false }
     val cardBgColor = NuvioTheme.colors.BackgroundCard
@@ -1076,6 +1117,7 @@ private fun EpisodeCard(
                 WatchedMarker(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
+                        .alpha(rewatchMarkerAlpha)
                         .padding(
                             end = cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset

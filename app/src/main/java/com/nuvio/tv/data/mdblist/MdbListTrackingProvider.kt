@@ -2,6 +2,7 @@ package com.nuvio.tv.data.mdblist
 
 import android.util.Log
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.tracking.TRACKING_COMPLETION_BAR_PERCENT
 import com.nuvio.tv.core.tracking.TRACKING_SCROBBLE_DIAGNOSTIC_TAG
 import com.nuvio.tv.core.tracking.TrackingCapability
 import com.nuvio.tv.core.tracking.TrackingHistoryItem
@@ -53,6 +54,14 @@ class MdbListTrackingScrobbler @Inject constructor(
 ) : TrackingScrobbler {
     override val providerId = TrackingProviderId.MDBLIST
 
+    /*
+     * MDBList records a watch on a stop at or above the bar. One playback can report more than one
+     * stop when it is interrupted and resumed; the player's run id lets the repeat be dropped
+     * without touching a later, separate viewing.
+     */
+    @Volatile
+    private var lastCompletedPlaybackId: Long = 0L
+
     override suspend fun scrobble(action: TrackingScrobbleAction, event: TrackingScrobbleEvent) {
         val authenticated = auth.state.value.isAuthenticated
         Log.d(TRACKING_SCROBBLE_DIAGNOSTIC_TAG, "mdblist adapter received action=${action.wireValue} authenticated=$authenticated ${event.scrobbleDiagnosticSummary()}")
@@ -60,12 +69,25 @@ class MdbListTrackingScrobbler @Inject constructor(
             Log.d(TRACKING_SCROBBLE_DIAGNOSTIC_TAG, "mdblist adapter skipped action=${action.wireValue} reason=not_authenticated")
             return
         }
+        val completesPlayback = action == TrackingScrobbleAction.STOP &&
+            event.progressPercent >= TRACKING_COMPLETION_BAR_PERCENT
+        if (completesPlayback &&
+            event.playbackId != 0L &&
+            event.playbackId == lastCompletedPlaybackId
+        ) {
+            return
+        }
         sync.ensureLoaded()
-        try {
+        val written = try {
             service.scrobble(sync.currentScope(), action, event)
         } catch (error: Throwable) {
             Log.w(TRACKING_SCROBBLE_DIAGNOSTIC_TAG, "mdblist adapter failed action=${action.wireValue} error=${error.javaClass.simpleName}:${error.message} ${event.scrobbleDiagnosticSummary()}", error)
             throw error
+        }
+        // The id is latched only after the tracker accepted the write, so a failed stop cannot
+        // suppress the later stop that really ends the playback.
+        if (completesPlayback && written && event.playbackId != 0L) {
+            lastCompletedPlaybackId = event.playbackId
         }
         Log.d(TRACKING_SCROBBLE_DIAGNOSTIC_TAG, "mdblist adapter complete action=${action.wireValue} ${event.scrobbleDiagnosticSummary()}")
     }

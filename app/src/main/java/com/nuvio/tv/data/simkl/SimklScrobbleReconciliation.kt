@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.simkl
 
 import com.nuvio.tv.core.tracking.TrackingExternalIds
+import com.nuvio.tv.core.tracking.TrackingMediaReference
 
 internal data class SimklIndexedSnapshotUpdate(
     val snapshot: SimklSyncSnapshot,
@@ -292,6 +293,71 @@ internal fun List<SimklLibraryEntry>.indexOfMatchingEntryLinear(
         }
     }
     return fallbackIndex
+}
+
+/**
+ * Reads the canonical history for the item a scrobble touched, so the caller can tell whether the
+ * playback was a repeat viewing and how long ago the previous one was.
+ *
+ * The matcher that finds the scrobbled episode is file private, which is why this lives here and not
+ * in `SimklRewatchMode.kt` with the policy that consumes it. A movie only counts as watched when the
+ * account does not hold it as a plan to watch, and an episode Simkl has never marked has no prior
+ * watch at all.
+ */
+internal fun SimklSyncSnapshot.priorWatchForScrobble(result: SimklScrobbleResult): SimklPriorWatch {
+    val entry = entries.matchingEntry(result) ?: return SimklPriorWatch.None
+    val isMovie = result.mediaType == SimklMediaType.MOVIES ||
+        (result.mediaType == SimklMediaType.ANIME && (entry.animeType == "movie" || result.episode == null))
+    if (isMovie) {
+        if (entry.status == SimklListStatus.PLAN_TO_WATCH) return SimklPriorWatch.None
+        return SimklPriorWatch(
+            wasWatched = true,
+            watchedAtEpochMs = entry.lastWatchedAt?.let(::parseSimklUtcEpochMs)
+        )
+    }
+    val target = result.episode ?: return SimklPriorWatch.None
+    val targetNumber = target.number ?: return SimklPriorWatch.None
+    val targetSeason = target.season ?: 1
+    val targetMapping = if (target.tvdbSeason != null && target.tvdbNumber != null) {
+        SimklEpisodeMapping(target.tvdbSeason, target.tvdbNumber)
+    } else {
+        null
+    }
+    val watchedAt = entry.seasons
+        .flatMap { season -> season.episodes.map { episode -> season.number to episode } }
+        .firstOrNull { (seasonNumber, episode) ->
+            episode.matches(targetSeason, targetNumber, targetMapping, seasonNumber)
+        }
+        ?.second
+        ?.watchedAt
+        ?: return SimklPriorWatch.None
+    return SimklPriorWatch(
+        wasWatched = true,
+        watchedAtEpochMs = parseSimklUtcEpochMs(watchedAt)
+    )
+}
+
+/**
+ * The history the question before a playback is asked against.
+ *
+ * The scrobble path reads this after a start answer, but a question has to know it before the
+ * player starts. The result is a read only view of the same matcher, so the pre-play gate and the
+ * start gate cannot disagree about whether a title was already watched.
+ */
+internal fun SimklSyncSnapshot.priorWatchForPlayback(media: TrackingMediaReference): SimklPriorWatch {
+    val episode = media.episode?.let { item ->
+        SimklPlaybackEpisode(season = item.season, number = item.number, title = item.title)
+    }
+    return priorWatchForScrobble(
+        SimklScrobbleResult(
+            outcome = SimklScrobbleOutcome.START,
+            playbackId = null,
+            progress = 0.0,
+            mediaType = media.kind.toSimklMediaType(),
+            media = media.toSimklMedia(),
+            episode = episode
+        )
+    )
 }
 
 internal fun SimklMedia.matchesTarget(target: SimklMedia): Boolean =
