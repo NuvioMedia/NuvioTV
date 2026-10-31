@@ -3,6 +3,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.keepLtr
 
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.alpha
@@ -426,7 +427,7 @@ private fun SubtitleStyleValueDisplay(text: String) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = text,
+            text = text.keepLtr(),
             style = MaterialTheme.typography.bodySmall,
             color = Color.White,
             maxLines = 1,
