@@ -190,9 +190,14 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 mediaSource = createBlurayPlaylistSource(
                     segmentUrls = playlist.first,
                     durationsMs = playlist.second,
+                    // A local engine can wait on its own sources before a clip's first byte: the
+                    // loopback read timeout, as for a single clip.
                     dataSourceFactory = DefaultDataSource.Factory(
                         context,
-                        PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
+                        PlayerPlaybackNetworking.createHttpDataSourceFactory(
+                            sanitizedHeaders,
+                            useLongReadTimeout = isLoopbackUrl(url)
+                        )
                     ),
                     subtitleConfigurations = subtitleConfigurations
                 ),
