@@ -19,6 +19,7 @@ data class StreamScreenUiState(
     val poster: String? = null,
     val backdrop: String? = null,
     val logo: String? = null,
+    val logoLanguage: String? = null,
     // Episode-specific fields
     val season: Int? = null,
     val episode: Int? = null,
