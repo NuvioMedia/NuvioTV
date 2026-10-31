@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -134,6 +135,7 @@ private fun RewatchQuestion(
     modifier: Modifier = Modifier
 ) {
     val grantFocusRequester = remember { FocusRequester() }
+    var allowDeclineFocus by remember(question) { mutableStateOf(false) }
     var interactionCount by remember(question) { mutableIntStateOf(0) }
 
     // The timer restarts on every key press: "no interaction" is measured from the last one, so the
@@ -144,7 +146,10 @@ private fun RewatchQuestion(
     }
 
     LaunchedEffect(question) {
+        // The first focusable child would take the focus for the frames this request waits. Keep the
+        // answer that does nothing out of the focus order until the recording answer owns it.
         runCatching { grantFocusRequester.requestFocusAfterFrames() }
+        allowDeclineFocus = true
     }
 
     Dialog(
@@ -192,7 +197,8 @@ private fun RewatchQuestion(
                     Card(
                         onClick = onDecline,
                         modifier = Modifier
-                            .weight(1f),
+                            .weight(1f)
+                            .focusProperties { canFocus = allowDeclineFocus },
                         colors = CardDefaults.colors(
                             containerColor = NuvioTheme.colors.BackgroundElevated,
                             focusedContainerColor = NuvioTheme.colors.BackgroundElevated
