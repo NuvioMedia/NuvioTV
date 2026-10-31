@@ -54,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -84,6 +85,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.focus.focusRestorer
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -134,9 +137,22 @@ fun PluginScreenContent(
     showHeader: Boolean = true
 ) {
     var repoUrl by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+    val manageFromPhoneFocusRequester = remember { FocusRequester() }
+    var hasEnteredQrMode by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose { viewModel.stopQrMode() }
+    }
+
+    LaunchedEffect(uiState.isQrModeActive) {
+        if (uiState.isQrModeActive) {
+            hasEnteredQrMode = true
+        } else if (hasEnteredQrMode && uiState.pendingRepoChange == null) {
+            repeat(2) { withFrameNanos { } }
+            manageFromPhoneFocusRequester.requestFocus()
+            hasEnteredQrMode = false
+        }
     }
 
     // Clear messages after delay
@@ -165,9 +181,12 @@ fun PluginScreenContent(
                 .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl)
         ) {
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxl),
                 verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .focusRestorer(manageFromPhoneFocusRequester)
             ) {
             if (viewModel.isReadOnly) {
                 item {
@@ -205,7 +224,10 @@ fun PluginScreenContent(
 
                 // Manage from phone card
                 item {
-                    ManageFromPhoneCard(onClick = { viewModel.onEvent(PluginUiEvent.StartQrMode) })
+                    ManageFromPhoneCard(
+                        onClick = { viewModel.onEvent(PluginUiEvent.StartQrMode) },
+                        focusRequester = manageFromPhoneFocusRequester
+                    )
                 }
             }
 
@@ -601,13 +623,17 @@ private fun AddRepositoryInline(
 }
 
 @Composable
-private fun ManageFromPhoneCard(onClick: () -> Unit) {
+private fun ManageFromPhoneCard(
+    onClick: () -> Unit,
+    focusRequester: FocusRequester
+) {
     var isFocused by remember { mutableStateOf(false) }
 
     Surface(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .focusRequester(focusRequester)
             .onFocusChanged { isFocused = it.isFocused }
             .semantics { role = Role.Button },
         colors = ClickableSurfaceDefaults.colors(
