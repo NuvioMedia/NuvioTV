@@ -102,11 +102,13 @@ import com.nuvio.tv.ui.components.StreamBadgeChips
 import com.nuvio.tv.ui.components.StreamsSkeletonList
 import com.nuvio.tv.ui.screens.player.LoadingOverlay
 import com.nuvio.tv.ui.screens.player.AddonFilterChips
+import com.nuvio.tv.ui.screens.player.focusChip
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.navigation.sourceSelectionRestoreTarget
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay as coroutineDelay
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch as coroutineLaunch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -809,19 +811,21 @@ private fun RightStreamSection(
             }
         }
     }
+    val chipListState = rememberLazyListState()
     fun onAddonFilterSelectedGuarded(addon: String?) {
         userMovedFromFirstResult = true
-        onAddonFilterSelected(addon)
-        focusJob?.cancel()
-        focusJob = scope.coroutineLaunch {
-            withFrameNanos {}
-            val targetRequester = if (addon == null) {
-                chipFocusRequesters.getOrNull(1)
-            } else {
-                addonFocusRequesters[addon]
-            }
-            runCatching { targetRequester?.requestFocus() }
+        val targetRequester = if (addon == null) {
+            chipFocusRequesters.getOrNull(1)
+        } else {
+            addonFocusRequesters[addon]
         }
+        focusJob?.cancel()
+        // Focus the chip before the results change: once the focused card is gone,
+        // Compose would otherwise park focus on another chip first.
+        focusJob = scope.coroutineLaunch(start = CoroutineStart.UNDISPATCHED) {
+            chipListState.focusChip(chipFocusRequesters.indexOf(targetRequester), chipFocusRequesters)
+        }
+        onAddonFilterSelected(addon)
     }
 
     LaunchedEffect(Unit) {
@@ -860,7 +864,7 @@ private fun RightStreamSection(
         focusJob?.cancel()
         focusJob = scope.coroutineLaunch {
             withFrameNanos { }
-            runCatching { chipFocusRequesters[index].requestFocus() }
+            chipListState.focusChip(index, chipFocusRequesters)
         }
     }
 
@@ -941,6 +945,7 @@ private fun RightStreamSection(
                             onAddonSelected = { onAddonFilterSelected(it) },
                             externalFocusRequesters = chipFocusRequesters,
                             externalOrderedNames = orderedAddonNames,
+                            chipListState = chipListState,
                             debugTag = "StreamScreen"
                         )
                     }
