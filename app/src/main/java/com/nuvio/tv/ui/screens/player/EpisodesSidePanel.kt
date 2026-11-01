@@ -103,6 +103,7 @@ internal fun EpisodesSidePanel(
     onSeasonSelected: (Int) -> Unit,
     onAddonFilterSelected: (String?) -> Unit,
     onEpisodeSelected: (Video) -> Unit,
+    onEpisodeManualPlay: (Video) -> Unit,
     onStreamSelected: (Stream) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -160,7 +161,8 @@ internal fun EpisodesSidePanel(
                         uiState = uiState,
                         episodesFocusRequester = episodesFocusRequester,
                         onSeasonSelected = onSeasonSelected,
-                        onEpisodeSelected = onEpisodeSelected
+                        onEpisodeSelected = onEpisodeSelected,
+                        onEpisodeManualPlay = onEpisodeManualPlay
                     )
                 }
             }
@@ -509,7 +511,8 @@ private fun EpisodesListView(
     uiState: PlayerUiState,
     episodesFocusRequester: FocusRequester,
     onSeasonSelected: (Int) -> Unit,
-    onEpisodeSelected: (Video) -> Unit
+    onEpisodeSelected: (Video) -> Unit,
+    onEpisodeManualPlay: (Video) -> Unit
 ) {
     val seasonTabFocusRequester = remember { FocusRequester() }
     val episodesListState = rememberLazyListState()
@@ -651,6 +654,8 @@ private fun EpisodesListView(
             showWatchedActions = false,
             isCurrentlyPlaying = episode.season == uiState.currentSeason &&
                 episode.episode == uiState.currentEpisode,
+            showPlayManually = episode.season != uiState.currentSeason ||
+                episode.episode != uiState.currentEpisode,
             onDismiss = { detailsEpisode = null },
             onNavigateEpisode = { step ->
                 adjacentEpisode(uiState.episodes, episode, step)?.let { detailsEpisode = it }
@@ -658,6 +663,10 @@ private fun EpisodesListView(
             onPlay = {
                 detailsEpisode = null
                 onEpisodeSelected(episode)
+            },
+            onPlayManually = {
+                detailsEpisode = null
+                onEpisodeManualPlay(episode)
             },
             onToggleWatched = {}
         )

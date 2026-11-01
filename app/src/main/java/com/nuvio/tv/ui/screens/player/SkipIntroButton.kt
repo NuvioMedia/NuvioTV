@@ -50,6 +50,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.data.repository.SkipInterval
+import com.nuvio.tv.data.repository.segmentCategory
 
 /**
  * Skip Intro/Outro/Recap button for the player.
@@ -88,8 +89,10 @@ fun SkipIntroButton(
     var isFocused by remember { mutableStateOf(false) }
     val progress = remember { Animatable(1f) }
 
-    // Reset auto-hide and progress when interval changes
-    LaunchedEffect(interval?.startTime, interval?.type) {
+    // Reset auto-hide and progress when interval category changes (opening/ending/recap),
+    // but not when the same category switches provider (e.g. op[aniskip] -> intro[chapters]).
+    val intervalCategory = interval?.type?.let { segmentCategory(it) }
+    LaunchedEffect(intervalCategory) {
         autoHidden = false
         manuallyDismissed = false
         progress.snapTo(0f)

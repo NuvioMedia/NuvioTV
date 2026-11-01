@@ -37,14 +37,17 @@ internal fun rememberPlayerBadges(viewModel: PlayerViewModel, uiState: PlayerUiS
     if (filters.isEmpty()) return emptyList()
     val language = selectedAudio?.language
     val text = playbackMatchText(mediaInfo, listOfNotNull(language, language?.let(::languageCodeToName)))
-    val candidates = buildList {
-        if (text.isNotBlank()) add(text)
-        streamFilename?.takeIf { it.isNotBlank() }?.let(::add)
-        uiState.currentStreamName?.takeIf { it.isNotBlank() }?.let(::add)
-    }
-    val mergedCandidate = candidates.joinToString(" ")
-    return remember(mergedCandidate, filters) {
-        StreamBadgeMatcher.matchedBadges(listOfNotNull(mergedCandidate.takeIf { it.isNotBlank() }), filters)
+    // Keep candidates separate so regex lookaheads in one don't bleed into another.
+    // Collapse whitespace so \n in stream names doesn't break single-line regex patterns.
+    val metaCandidates = listOfNotNull(
+        streamFilename?.trim()?.takeIf { it.isNotBlank() },
+        uiState.currentStreamName?.trim()?.takeIf { it.isNotBlank() }
+    )
+    // Refine decoder text with details the decoder can't report (Atmos in MKV, DTS-HD MA vs HRA,
+    // HDR10+) before group exclusion runs, so those badges aren't lost.
+    val playbackCandidate = refinePlaybackText(text, metaCandidates).takeIf { it.isNotBlank() }
+    return remember(playbackCandidate, metaCandidates, filters) {
+        StreamBadgeMatcher.matchedPlayerBadges(playbackCandidate, metaCandidates, filters)
             .filter { it.imageURL.isNotBlank() }
     }
 }

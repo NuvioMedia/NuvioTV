@@ -4,6 +4,8 @@ import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.PluginDataStore
+import com.nuvio.tv.data.local.PluginSyncProfile
+import com.nuvio.tv.data.local.effectivePluginProfileId
 import com.nuvio.tv.data.remote.supabase.SupabasePlugin
 import com.nuvio.tv.domain.model.RemotePluginInfo
 import io.github.jan.supabase.postgrest.Postgrest
@@ -40,13 +42,26 @@ class PluginSyncService @Inject constructor(
      * Push local plugin repository URLs to Supabase via RPC.
      * Uses a SECURITY DEFINER function to handle RLS for linked devices.
      */
+    private fun pluginProfileId(): Int {
+        PluginSyncProfile.current()?.let { return it }
+        val activeProfile = profileManager.activeProfile
+        return effectivePluginProfileId(
+            usesPrimaryPlugins = activeProfile?.usesPrimaryPlugins == true,
+            activeProfileId = profileManager.activeProfileId.value
+        )
+    }
+
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val activeProfile = profileManager.activeProfile
-            val profileId = profileManager.activeProfileId.value
+            val profileId = pluginProfileId()
             Log.d(TAG, "pushToRemote: activeProfile=${activeProfile?.id} isPrimary=${activeProfile?.isPrimary} usesPrimaryPlugins=${activeProfile?.usesPrimaryPlugins} profileId=$profileId")
 
-            if (activeProfile != null && !activeProfile.isPrimary && activeProfile.usesPrimaryPlugins) {
+            if (PluginSyncProfile.current() == null &&
+                activeProfile != null &&
+                !activeProfile.isPrimary &&
+                activeProfile.usesPrimaryPlugins
+            ) {
                 Log.d(TAG, "Profile ${activeProfile.id} uses primary plugins, skipping push")
                 return@withContext Result.success(Unit)
             }
@@ -89,9 +104,7 @@ class PluginSyncService @Inject constructor(
                     IllegalStateException("Unable to resolve sync owner for plugin sync")
                 )
 
-            val activeProfile = profileManager.activeProfile
-            val profileId = if (activeProfile != null && !activeProfile.isPrimary && activeProfile.usesPrimaryPlugins) 1
-                            else profileManager.activeProfileId.value
+            val profileId = pluginProfileId()
 
             val remotePlugins = withJwtRefreshRetry {
                 postgrest.from("plugins")
