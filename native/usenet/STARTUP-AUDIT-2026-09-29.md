@@ -69,7 +69,7 @@ useful context for warm hits, but is not a before/after test of this change.
 
 ## Diagnostics on the TV
 
-Play using **ExoPlayer**, then open **Settings → Advanced → Usenet streaming**.
+Play using **ExoPlayer**, then open **Settings → Integrations → Usenet streaming → Diagnostics**.
 The existing saved diagnostics now include a separate NZB stages card:
 
 * Sidecar startup/reuse, session request, player handoff, decoder and first frame.
@@ -128,7 +128,7 @@ be used to decide whether that remaining cleanup needs separate instrumentation.
 * Final native engine suite: **79 top-level tests passed under the Go race
   detector in WSL**, with three opt-in experiments skipped. Includes their
   subtests for ranges, archives, cache recovery, startup leases, security and
-  blocked pool creation/close. See [saved output](benchmarks/startup-review-race-2026-09-29.txt).
+  blocked pool creation/close. CI now runs the race suite on every pull request.
   Earlier Windows runs intermittently underfilled the scheduling-sensitive
   pipeline-depth fixture; the complete final Linux race run passed it at depths
   2, 4 and 8. The new timing test uses a blocking reader rather than relying on
