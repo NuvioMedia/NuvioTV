@@ -7,6 +7,7 @@ import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionLoader
 import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionRunner
 import com.nuvio.tv.core.plugin.cloudstream.ExternalRepoParser
 import com.nuvio.tv.data.local.PluginDataStore
+import com.nuvio.tv.data.local.PluginSyncProfile
 import com.nuvio.tv.domain.model.ExternalPluginEntry
 import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.PluginManifest
@@ -261,6 +262,11 @@ class PluginManager @Inject constructor(
         }
     }
 
+    /** Drops a deferred push from a plugin pull that was cancelled before it finished. */
+    fun discardPendingSync() {
+        pendingPushAfterSync = false
+    }
+
     private var syncJob: kotlinx.coroutines.Job? = null
 
     private fun triggerRemoteSync() {
@@ -275,7 +281,8 @@ class PluginManager @Inject constructor(
         }
         Log.d(TAG, "triggerRemoteSync: scheduling push in 500ms")
         syncJob?.cancel()
-        syncJob = syncScope.launch {
+        val pinnedProfileId = PluginSyncProfile.current()
+        syncJob = syncScope.launch(pinnedProfileId?.let(::PluginSyncProfile) ?: kotlin.coroutines.EmptyCoroutineContext) {
             kotlinx.coroutines.delay(500)
             val result = pluginSyncService.pushToRemote()
             Log.d(TAG, "triggerRemoteSync: push result=${result.isSuccess} ${result.exceptionOrNull()?.message ?: ""}")

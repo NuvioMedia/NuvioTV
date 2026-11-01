@@ -21,6 +21,8 @@ class PluginManager {
 
     fun flushPendingSync() = Unit
 
+    fun discardPendingSync() = Unit
+
     suspend fun addRepository(manifestUrl: String): Result<PluginRepository> =
         Result.failure(UnsupportedOperationException("Plugins are not available in this build."))
 

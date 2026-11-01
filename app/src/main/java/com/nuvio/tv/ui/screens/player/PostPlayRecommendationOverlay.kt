@@ -108,6 +108,7 @@ fun PostPlayRecommendationOverlay(
     playFocusRequester: FocusRequester,
     playerWindowFocusRequester: FocusRequester,
     onBack: () -> Unit,
+    onForceExit: () -> Unit,
     onStopTrailer: () -> Unit,
     onPlay: (PostPlayRecommendation) -> Unit,
     onPlayManually: (PostPlayRecommendation) -> Unit,
@@ -136,6 +137,7 @@ fun PostPlayRecommendationOverlay(
     var showPlayOptionsDialog by remember(recommendation.id) { mutableStateOf(false) }
     var descriptionTruncated by remember(recommendation.id) { mutableStateOf(false) }
     var showSynopsisOverlay by remember(recommendation.id) { mutableStateOf(false) }
+    var backLongPressed by remember { mutableStateOf(false) }
     var pendingNavigationFocusDirection by remember { mutableIntStateOf(0) }
     val logoHeight by animateDpAsState(
         targetValue = if (state.isTrailerPlaying) 60.dp else 92.dp,
@@ -224,11 +226,20 @@ fun PostPlayRecommendationOverlay(
                 .fillMaxSize()
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
-                    if (native.keyCode == AndroidKeyEvent.KEYCODE_BACK && native.action == AndroidKeyEvent.ACTION_UP) {
-                        if (state.isTrailerPlaying) onStopTrailer() else onBack()
-                        return@onPreviewKeyEvent true
-                    }
-                    if (native.keyCode == AndroidKeyEvent.KEYCODE_BACK && native.action == AndroidKeyEvent.ACTION_DOWN) {
+                    if (native.keyCode == AndroidKeyEvent.KEYCODE_BACK) {
+                        if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
+                            backLongPressed = true
+                            onForceExit()
+                            return@onPreviewKeyEvent true
+                        }
+                        if (native.action == AndroidKeyEvent.ACTION_UP) {
+                            if (backLongPressed) {
+                                backLongPressed = false
+                            } else {
+                                if (state.isTrailerPlaying) onStopTrailer() else onBack()
+                            }
+                            return@onPreviewKeyEvent true
+                        }
                         return@onPreviewKeyEvent true
                     }
                     false

@@ -922,6 +922,13 @@
     <string name="sub_libass_mode">Mode de rendu libass</string>
     <string name="sub_libass_render_scale">Résolution de rendu des sous-titres</string>
     <string name="sub_libass_render_scale_sub">Une résolution plus basse améliore les performances avec les mises en forme complexes, au prix d’une moindre netteté</string>
+    <string name="sub_libass_render_mode">Mode de rendu ASS</string>
+    <string name="sub_libass_render_mode_sub">Manière dont les sous-titres ASS/SSA sont affichés sur la vidéo</string>
+    <string name="sub_libass_render_mode_tunneled_sub">La lecture tunnelisée contourne la chaîne d’effets vidéo. La superposition est utilisée automatiquement.</string>
+    <string name="sub_libass_render_mode_video_effect">Effet vidéo</string>
+    <string name="sub_libass_render_mode_video_effect_sub">Incruste les sous-titres directement dans chaque image vidéo. Synchronisation à l’image près sur tous les appareils. Le contenu HDR est converti en SDR par tone mapping.</string>
+    <string name="sub_libass_render_mode_overlay">Superposition</string>
+    <string name="sub_libass_render_mode_overlay_sub">Affiche les sous-titres sur une couche de surface distincte. Préserve la sortie HDR. La synchronisation des sous-titres peut manquer de précision sur certains appareils.</string>
     <string name="sub_org_none">Aucune (ordre par défaut)</string>
     <string name="sub_org_by_lang">Par langue</string>
     <string name="sub_org_by_addon">Par addon</string>

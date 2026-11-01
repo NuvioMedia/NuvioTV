@@ -238,13 +238,6 @@ class SkipIntroRepository @Inject constructor(
         return chosen.values.toList()
     }
 
-    private fun segmentCategory(type: String): String? = when (type.lowercase()) {
-        "intro", "op", "mixed-op" -> "opening"
-        "outro", "ed", "mixed-ed", "credits", "ending" -> "ending"
-        "recap" -> "recap"
-        else -> null
-    }
-
     private suspend fun fetchFromIntroDb(
         imdbId: String,
         season: Int? = null,
@@ -351,4 +344,11 @@ class SkipIntroRepository @Inject constructor(
     companion object {
         private const val NO_ID = "__none__"
     }
+}
+
+internal fun segmentCategory(type: String): String? = when (type.lowercase()) {
+    "intro", "op", "mixed-op" -> "opening"
+    "outro", "ed", "mixed-ed", "credits", "ending" -> "ending"
+    "recap" -> "recap"
+    else -> null
 }
