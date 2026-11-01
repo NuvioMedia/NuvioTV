@@ -10,7 +10,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -62,6 +65,17 @@ class SimklRewatchConsentRepository @Inject constructor(
     val question: StateFlow<RewatchQuestion?> = _question.asStateFlow()
 
     /**
+     * True once the overlay drew the current question. The pre-play wait uses it to tell a question
+     * the user can see from one that never reached the UI.
+     */
+    private val _questionShown = MutableStateFlow(false)
+    val questionShown: StateFlow<Boolean> = _questionShown.asStateFlow()
+
+    fun markQuestionShown() {
+        _questionShown.value = true
+    }
+
+    /**
      * True while the stream screen hosts the question in its own dialog. The activity-wide host
      * steps aside then, so the same question cannot appear in two windows.
      */
@@ -110,6 +124,7 @@ class SimklRewatchConsentRepository @Inject constructor(
         declinedSeriesKeys.clear()
         dismissedSeriesKeys.clear()
         _question.value = null
+        _questionShown.value = false
     }
 
     /**
@@ -125,29 +140,37 @@ class SimklRewatchConsentRepository @Inject constructor(
         }
         if (answered) return
         if (_question.value?.media?.seriesKey() == seriesKey) return
+        _questionShown.value = false
         _question.value = RewatchQuestion(media)
     }
 
     /**
-     * Raises the question and suspends the caller until it is answered or leaves unanswered.
+     * Raises the question and suspends the caller until it is answered.
      *
      * The stream screen calls this before it opens the player, so the video must not start while
-     * the user is still deciding. The overlay answers through [grant], [decline] or [dismiss]; the
-     * fallback timeout covers a question that never reached the UI, so a broken overlay cannot
-     * block playback forever.
+     * the user is still deciding. The overlay answers through [grant], [decline] or [dismiss], and
+     * the question no longer closes itself: an unanswered one keeps the playback waiting. The
+     * timeout only covers a question that never reached the UI, so a broken overlay cannot block
+     * playback forever.
      */
     suspend fun askAndAwait(media: TrackingMediaReference, timeoutMs: Long = 10_000L) {
         ask(media)
         val seriesKey = media.seriesKey()
         val open = _question.value
         if (open == null || open.media.seriesKey() != seriesKey) return
-        val answered = withTimeoutOrNull(timeoutMs) {
-            question.first { it == null || it.media.seriesKey() != seriesKey }
+        val shown = withTimeoutOrNull(timeoutMs) {
+            merge(
+                questionShown.filter { it }.map { true },
+                question.filter { it == null || it.media.seriesKey() != seriesKey }.map { false }
+            ).first()
         }
-        if (answered == null) {
-            synchronized(lock) {
+        when (shown) {
+            true -> question.first { it == null || it.media.seriesKey() != seriesKey }
+            false -> Unit
+            null -> synchronized(lock) {
                 if (_question.value?.media?.seriesKey() == seriesKey) {
                     _question.value = null
+                    _questionShown.value = false
                     dismissedSeriesKeys += seriesKey
                 }
             }

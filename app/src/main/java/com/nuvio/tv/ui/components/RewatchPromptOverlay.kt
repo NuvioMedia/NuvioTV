@@ -2,7 +2,6 @@
 
 package com.nuvio.tv.ui.components
 
-import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -28,7 +26,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,42 +44,6 @@ import com.nuvio.tv.data.simkl.SimklRewatchConsentRepository
 import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioTheme
-import kotlinx.coroutines.delay
-
-/**
- * How long the question waits before it leaves the screen unanswered.
- *
- * Something has to close it on a TV, where nothing can be tapped outside a dialog, and a question
- * that stays open over a playback blocks what the user is watching. Walking away leaves no answer
- * behind, so the next playback of the item asks again.
- */
-internal const val REWATCH_QUESTION_TIMEOUT_MS = 8_000L
-
-/** What an answer to the question does to it. */
-internal enum class RewatchPromptKeyOutcome {
-    /** The question stays open, the key belongs to the buttons. */
-    KEEP,
-
-    /** The question closes without an answer, the same as walking away from it. */
-    IGNORE
-}
-
-/**
- * What one key press does to the open question.
- *
- * Down is the key that closes the question unanswered. A TV has no way to tap outside a dialog, and
- * down is the key a player opens its own controls with, so it has to leave the question alone
- * without deciding anything: not answering is not a no. Key up and every other key stay with the
- * buttons, which own left, right and the click.
- */
-internal fun rewatchPromptKeyOutcome(keyCode: Int, action: Int): RewatchPromptKeyOutcome {
-    if (action != KeyEvent.ACTION_DOWN) return RewatchPromptKeyOutcome.KEEP
-    return if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-        RewatchPromptKeyOutcome.IGNORE
-    } else {
-        RewatchPromptKeyOutcome.KEEP
-    }
-}
 
 /**
  * The rewatch question, drawn above whatever is on screen.
@@ -92,9 +53,8 @@ internal fun rewatchPromptKeyOutcome(keyCode: Int, action: Int): RewatchPromptKe
  * of the playback and decide there whether the scrobble asks the account for a rewatch. Nothing is
  * written while the question is open, and an unanswered one writes nothing at all.
  *
- * The difference from mobile is the timeout: TV cannot click outside a dialog, so the question
- * closes itself after [REWATCH_QUESTION_TIMEOUT_MS] without an interaction, silently. An answer is
- * only ever what a button press said.
+ * The question does not close itself: it leaves only when the user answers or backs out, because a
+ * timeout closing it would start the playback without a decision.
  */
 @Composable
 fun RewatchPromptOverlay(
@@ -108,6 +68,7 @@ fun RewatchPromptOverlay(
     if (!isLocalHost && localHostActive) return
 
     question?.let { active ->
+        LaunchedEffect(active) { repository.markQuestionShown() }
         RewatchQuestion(
             question = active,
             onGrant = repository::grant,
@@ -136,14 +97,6 @@ private fun RewatchQuestion(
 ) {
     val grantFocusRequester = remember { FocusRequester() }
     var allowDeclineFocus by remember(question) { mutableStateOf(false) }
-    var interactionCount by remember(question) { mutableIntStateOf(0) }
-
-    // The timer restarts on every key press: "no interaction" is measured from the last one, so the
-    // question cannot close while the user is still moving towards an answer.
-    LaunchedEffect(question, interactionCount) {
-        delay(REWATCH_QUESTION_TIMEOUT_MS)
-        onLeave()
-    }
 
     LaunchedEffect(question) {
         // The first focusable child would take the focus for the frames this request waits. Keep the
@@ -179,19 +132,7 @@ private fun RewatchQuestion(
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onPreviewKeyEvent { event ->
-                            val native = event.nativeKeyEvent
-                            if (native.action == KeyEvent.ACTION_DOWN) interactionCount += 1
-                            when (rewatchPromptKeyOutcome(native.keyCode, native.action)) {
-                                RewatchPromptKeyOutcome.KEEP -> false
-                                RewatchPromptKeyOutcome.IGNORE -> {
-                                    onLeave()
-                                    true
-                                }
-                            }
-                        }
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     // The answer that does nothing is first, exactly like Cancel in P2P consent.
                     Card(
