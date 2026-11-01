@@ -351,7 +351,8 @@ private fun PlayerRuntimeController.launchSourceDebridPreparationIfNeeded(
         return
     }
     markLaunched()
-    scope.launch {
+    // Off the main thread, like the stream screen: each prepared link rewrites the stream list.
+    scope.launch(kotlinx.coroutines.Dispatchers.Default) {
         val playerSettings = playerSettingsDataStore.playerSettings.first()
         directDebridStreamPreparer.prepare(
             streams = streams,
@@ -1407,7 +1408,8 @@ private fun PlayerRuntimeController.launchEpisodeDebridPreparationIfNeeded(
         return
     }
     markLaunched()
-    scope.launch {
+    // Off the main thread, like the stream screen: each prepared link rewrites the stream list.
+    scope.launch(kotlinx.coroutines.Dispatchers.Default) {
         val playerSettings = playerSettingsDataStore.playerSettings.first()
         directDebridStreamPreparer.prepare(
             streams = streams,

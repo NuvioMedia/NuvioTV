@@ -919,11 +919,22 @@
     <string name="sub_hdr_style">Estilo independiente para HDR / Dolby Vision</string>
     <string name="sub_hdr_style_sub">Usa un color de texto diferente y un brillo más tenue para los subtítulos en vídeos con HDR y Dolby Vision</string>
     <string name="sub_hdr_text_color">Color de texto en HDR</string>
-    <string name="sub_hdr_brightness">Brillo de subtítulos en HDR</string>
+    <string name="sub_hdr_brightness">Brillo HDR</string>
+    <string name="sub_hdr_dim_player_controls">Atenuar los controles del reproductor en HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">Aplica el brillo HDR a los controles y menús del reproductor que se muestran sobre vídeo HDR y Dolby Vision</string>
     <string name="sub_advanced_section">Renderizado avanzado de subtítulos</string>
     <string name="sub_libass">Usar libass para subtítulos ASS/SSA</string>
     <string name="sub_libass_sub">Renderizado avanzado ASS/SSA (estilos, posicionamiento, animaciones)</string>
     <string name="sub_libass_mode">Modo de renderizado Libass</string>
+    <string name="sub_libass_render_scale">Resolución de renderizado de subtítulos</string>
+    <string name="sub_libass_render_scale_sub">Una resolución más baja mejora el rendimiento con subtítulos muy elaborados, a costa de perder nitidez</string>
+    <string name="sub_libass_render_mode">Modo de renderizado ASS</string>
+    <string name="sub_libass_render_mode_sub">Cómo se dibujan los subtítulos ASS/SSA sobre el vídeo</string>
+    <string name="sub_libass_render_mode_tunneled_sub">La reproducción tunneled omite el flujo de efectos de vídeo. Se usa automáticamente la superposición.</string>
+    <string name="sub_libass_render_mode_video_effect">Efecto de vídeo</string>
+    <string name="sub_libass_render_mode_video_effect_sub">Dibuja los subtítulos directamente sobre cada fotograma, con sincronización exacta en cualquier hardware. El contenido HDR se convierte a SDR mediante mapeo de tonos.</string>
+    <string name="sub_libass_render_mode_overlay">Superposición</string>
+    <string name="sub_libass_render_mode_overlay_sub">Muestra los subtítulos en una capa independiente y conserva la salida HDR. En algunos dispositivos la sincronización puede no ser del todo exacta.</string>
     <string name="sub_org_none">Ninguno (orden predeterminado)</string>
     <string name="sub_org_by_lang">Por idioma</string>
     <string name="sub_org_by_addon">Por complemento</string>
@@ -1406,6 +1417,9 @@
     <string name="settings_stream_size_badges_description">Muestra etiquetas de tamaño de archivo en la lista de fuentes y en los paneles del reproductor.</string>
     <string name="settings_stream_badges_in_player_title">Mostrar en el reproductor</string>
     <string name="settings_stream_badges_in_player_description">Muestra distintivos para el vídeo y audio en reproducción debajo del título del reproductor.</string>
+    <string name="settings_stream_player_badges_title">Insignias del reproductor</string>
+    <string name="settings_stream_player_badges_description">Elige el conjunto de insignias que usa el reproductor.</string>
+    <string name="settings_stream_player_badges_same">Igual que las insignias de las fuentes</string>
     <string name="settings_stream_addon_logo_title">Logotipo del complemento</string>
     <string name="settings_stream_addon_logo_description">Muestra el logotipo y el nombre del complemento junto a las fuentes de vídeo.</string>
     <string name="settings_stream_display_section">Visualización</string>
@@ -2566,6 +2580,12 @@ Utilizas esta función bajo tu entera responsabilidad. P2P se puede desactivar e
     <string name="cd_remove">Eliminar</string>
     <string name="cd_preview">Vista previa</string>
     <string name="cd_test">Prueba</string>
+    <string name="cd_enable_scraper">Activar %1$s</string>
+    <string name="cd_enable_addon">Activar %1$s</string>
+    <string name="cd_color_swatch">Color %1$s</string>
+    <string name="cd_emoji_option">Emoji %1$s</string>
+    <string name="cd_trailer_controls">Controles del tráiler</string>
+    <string name="cd_seek_bar">Barra de progreso</string>
     <string name="cd_unlink">Desvincular</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Logotipo de Trakt</string>
@@ -3409,5 +3429,7 @@ Utilizas esta función bajo tu entera responsabilidad. P2P se puede desactivar e
     <string name="autosync_toast_failed_no_reference">Error de sincronización: este vídeo no tiene subtítulos integrados con los que comparar.</string>
     <string name="autosync_toast_failed_unsupported">Error de sincronización: la sincronización automática no admite este formato de subtítulos.</string>
     <string name="autosync_label_synced">Sincronizado automáticamente</string>
+    <string name="stream_resume_from_time">Reanudar desde %1$s</string>
+    <string name="stream_resume_from_percent">Reanudar desde %1$d%%</string>
 
 </resources>

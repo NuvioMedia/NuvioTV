@@ -916,6 +916,8 @@
     <string name="sub_hdr_style_sub">Sử dụng một màu chữ khác và độ sáng thấp hơn cho phụ đề trên video HDR và Dolby Vision</string>
     <string name="sub_hdr_text_color">Màu chữ HDR</string>
     <string name="sub_hdr_brightness">Độ sáng phụ đề HDR</string>
+    <string name="sub_hdr_dim_player_controls">Làm mờ nút điều khiển trình phát khi bật HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">Áp dụng độ sáng HDR cho nút điều khiển trình phát và danh sách hiển thị trên video HDR và Dolby Vision</string>
     <string name="sub_advanced_section">Hiển thị phụ đề nâng cao</string>
     <string name="sub_libass">Dùng libass cho phụ đề ASS/SSA</string>
     <string name="sub_libass_sub">Thử nghiệm: kết xuất ASS/SSA nâng cao (kiểu chữ, định vị, hoạt ảnh)</string>

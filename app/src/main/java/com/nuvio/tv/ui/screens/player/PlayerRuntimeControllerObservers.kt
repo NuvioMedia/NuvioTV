@@ -369,6 +369,9 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             if (resolvedCenterMixLevelDb != currentState.centerMixLevelDb) {
                 applyCenterMixLevel(resolvedCenterMixLevelDb)
             }
+            if (settings.nightMode != currentState.nightMode) {
+                applyNightMode(settings.nightMode)
+            }
 
             if (settings.rememberAudioDelayPerDevice && !wasRememberingAudioDelayPerDevice) {
                 applyStoredAudioDelayForCurrentRouteIfEnabled()
@@ -984,7 +987,7 @@ internal fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
         yield()
         runCatching {
             releasePlayer(flushPlaybackState = true, keepTorrentStream = true)
-            initializePlayer(currentStreamUrl, currentHeaders)
+            reinitializeCurrentStream()
         }.onFailure { e ->
             _uiState.update {
                 it.copy(

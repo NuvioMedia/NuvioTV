@@ -740,7 +740,9 @@ class StreamScreenViewModel @Inject constructor(
                     return
                 }
                 debridPreparationLaunched = true
-                viewModelScope.launch {
+                // Off the main thread: each prepared link rewrites the whole stream list,
+                // and the badge job can make that update retry many times.
+                viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
                     directDebridStreamPreparer.prepare(
                         streams = _uiState.value.allStreams,
                         season = season,
