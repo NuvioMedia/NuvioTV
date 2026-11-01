@@ -164,7 +164,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
 
     currentStreamHasVideoTrack = hasVideoTrack
     val effectiveVideoFormat = selectedVideoFormat ?: firstVideoFormat
-    val isHdrVideo = effectiveVideoFormat?.isHdrVideoFormat() == true
+    val isHdrVideo = effectiveVideoFormat?.isHdrVideoFormat() == true ||
+        _exoPlayer?.videoFormat?.isHdrVideoFormat() == true
     if (effectiveVideoFormat != null) {
         currentVideoTrackMimeType = effectiveVideoFormat.sampleMimeType
         currentVideoTrackCodecs = effectiveVideoFormat.codecs
@@ -491,6 +492,17 @@ private fun Tracks.hasSelectedAssSsaTextTrack(): Boolean {
 private val DV_PROFILE_7_CODEC = Regex("^(dvhe|dvh1|dvav|dva1)\\.0?7\\.")
 
 private val DV_CODEC_PREFIX = Regex("^(dvhe|dvh1|dvav|dva1|dav1)\\.")
+
+/**
+ * The format reaching the decoder is what is actually playing, and it can carry colour info the
+ * track formats lack (in-band SPS, segmented streams), so it settles HDR in both directions.
+ */
+internal fun PlayerRuntimeController.onVideoInputFormatForHdr(format: Format) {
+    val isHdrVideo = format.isHdrVideoFormat()
+    if (_uiState.value.isHdrVideo != isHdrVideo) {
+        _uiState.update { it.copy(isHdrVideo = isHdrVideo) }
+    }
+}
 
 /** PQ (HDR10/HDR10+), HLG or Dolby Vision video, whose bright output calls for the HDR subtitle style. */
 internal fun Format.isHdrVideoFormat(): Boolean {
