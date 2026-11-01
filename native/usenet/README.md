@@ -479,6 +479,13 @@ prerelease containing the four binaries and manifest, without replacing the
 latest application release. Publish before merging: CI and fresh clones need
 the pinned assets. Release tags must point to the cleaned history; never tag or
 merge the original binary-containing history back into the cleaned branch.
+Alternatively, run the **Publish Usenet native assets** GitHub Actions workflow
+on the branch in the hosting repository. It rebuilds with the pinned toolchain,
+requires an exact match with the committed checksums, and publishes using the
+repository token. Manifest changes on `full-nntp` trigger it automatically.
+If the build differs, it uploads a temporary `usenet-native-build` artifact for
+inspection and publishes nothing. Existing release assets are verified, never
+overwritten. Rerun consumer CI after first publishing a new native release.
 To move hosting upstream, republish the verified assets in `NuvioMedia/NuvioTV`
 and change `downloadBaseUrl` in the manifest. Do not overwrite existing assets
 under a pinned release tag.
