@@ -20,12 +20,16 @@ internal class SimklSnapshotProjection private constructor(
     private val hiddenContentIds: Set<String>,
     private val watchedAnimeEpisodes: Map<String, Set<Int>>,
     private val membershipByContent: Map<SimklProjectionMembershipKey, SimklProjectionMembership>,
+    private val completionThresholdFraction: Float? = null,
     private val baseWatchedMovieIds: Set<String> = emptySet(),
     internal val entryIndex: SimklEntryIndex = SimklEntryIndex(emptyList())
 ) {
     fun withUpdatedPlayback(newSnapshot: SimklSyncSnapshot): SimklSnapshotProjection {
         val index = entryIndex.takeIf { it.matchesEntries(newSnapshot.entries) }
-        val newProgress = newSnapshot.toSimklProgressEntries(index)
+        val newProgress = newSnapshot.toSimklProgressEntries(
+            entryIndex = index,
+            completionThresholdFraction = completionThresholdFraction
+        )
         val newPlaybackByEpisode = linkedMapOf<SimklProjectionItemKey, WatchProgress>()
         newProgress.forEach { item ->
             newPlaybackByEpisode.putIfAbsent(
@@ -49,6 +53,7 @@ internal class SimklSnapshotProjection private constructor(
             hiddenContentIds = hiddenContentIds,
             watchedAnimeEpisodes = watchedAnimeEpisodes,
             membershipByContent = membershipByContent,
+            completionThresholdFraction = completionThresholdFraction,
             baseWatchedMovieIds = baseWatchedMovieIds,
             entryIndex = index ?: SimklEntryIndex(newSnapshot.entries)
         )
@@ -83,15 +88,19 @@ internal class SimklSnapshotProjection private constructor(
         episode: Int?
     ): Boolean {
         val directKey = SimklProjectionItemKey(contentId.simklLookupKey(), season, episode)
-        val playback = playbackByEpisode[directKey]
-        if (playback != null && playback.progressPercentage > 0f && !playback.isCompleted()) return false
+        // A watch the account recorded is a watch, whatever playback position it kept beside it: a
+        // paused playback of an item already watched is where the user stopped the repeat viewing,
+        // not evidence that the item is unwatched.
         if (directKey in watchedKeys) return true
         val resolvedId = canonicalIdByAlias[directKey.contentId]
         if (resolvedId != null) {
             val resolvedKey = SimklProjectionItemKey(resolvedId.simklLookupKey(), season, episode)
             if (resolvedKey in watchedKeys) return true
         }
-        return videoId != null && episode != null && isWatchedByVideoId(videoId, episode)
+        if (videoId != null && episode != null && isWatchedByVideoId(videoId, episode)) return true
+        // No watch was recorded here, so the item is unwatched. A provider playback row below the
+        // history is only a resume position; it cannot make a watched item read as unwatched.
+        return false
     }
 
     fun isHidden(contentId: String): Boolean = contentId.simklLookupKey() in hiddenContentIds
@@ -111,14 +120,18 @@ internal class SimklSnapshotProjection private constructor(
 
         fun create(
             snapshot: SimklSyncSnapshot,
-            existingEntryIndex: SimklEntryIndex? = null
+            existingEntryIndex: SimklEntryIndex? = null,
+            completionThresholdFraction: Float? = null
         ): SimklSnapshotProjection {
             val entryIndex = existingEntryIndex
                 ?.takeIf { it.matchesEntries(snapshot.entries) }
                 ?: SimklEntryIndex(snapshot.entries)
             val library = snapshot.toSimklLibraryProjection()
             val watched = snapshot.toSimklWatchedProjection()
-            val progress = snapshot.toSimklProgressEntries(entryIndex)
+            val progress = snapshot.toSimklProgressEntries(
+                entryIndex = entryIndex,
+                completionThresholdFraction = completionThresholdFraction
+            )
             val canonicalIdByAlias = linkedMapOf<String, String>()
             val siblings = linkedMapOf<String, MutableSet<String>>()
             val hiddenContentIds = linkedSetOf<String>()
@@ -203,6 +216,7 @@ internal class SimklSnapshotProjection private constructor(
                 hiddenContentIds = hiddenContentIds,
                 watchedAnimeEpisodes = watchedAnimeEpisodes,
                 membershipByContent = membershipByContent,
+                completionThresholdFraction = completionThresholdFraction,
                 baseWatchedMovieIds = baseWatchedMovieIds,
                 entryIndex = entryIndex
             )
@@ -211,8 +225,11 @@ internal class SimklSnapshotProjection private constructor(
 }
 
 internal fun SimklSyncSnapshot.toSimklNextUpSeeds(
-    preferFurthestEpisode: Boolean
-): List<WatchProgress> = SimklSnapshotProjection.create(this).nextUp(preferFurthestEpisode)
+    preferFurthestEpisode: Boolean,
+    completionThresholdFraction: Float? = null
+): List<WatchProgress> = SimklSnapshotProjection
+    .create(this, completionThresholdFraction = completionThresholdFraction)
+    .nextUp(preferFurthestEpisode)
 
 private fun SimklSyncSnapshot.simklBaseWatchedMovieIds(): Set<String> {
     val watched = linkedSetOf<String>()

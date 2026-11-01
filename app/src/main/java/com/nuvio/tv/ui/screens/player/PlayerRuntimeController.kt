@@ -707,10 +707,22 @@ class PlayerRuntimeController(
     internal var currentTraktEpisodeMappingKey: String? = null
     internal var hasSentScrobbleStartForCurrentItem: Boolean = false
     internal var hasRequestedScrobbleStartForCurrentItem: Boolean = false
+
+    /** A start was sent for this item while the playback was already past the completion bar. */
+    internal var hasSentStartAboveCompletionBarForCurrentItem: Boolean = false
     internal var scrobbleStartRequestGeneration: Long = 0L
     internal var playbackPreparationJob: Job? = null
     internal var traktMappingJob: Job? = null
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
+
+    /** A start was sent below the bar for this item, so the account owns its playback. */
+    internal var hasOpenedScrobbleSessionForCurrentItem: Boolean = false
+
+    /** Where the last start of this playback began, for a stop that ends above the bar. */
+    internal var scrobbleStartProgressPercent: Double? = null
+
+    /** Identifies this run of the player, so trackers collapse a completion they already wrote. */
+    internal var scrobblePlaybackId: Long = 0L
 
     internal var requestedUseLibassByUser: Boolean = false
     internal var libassPipelineOverrideForCurrentStream: Boolean? = null

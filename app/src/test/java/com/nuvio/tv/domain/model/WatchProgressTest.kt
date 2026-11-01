@@ -1,6 +1,8 @@
 package com.nuvio.tv.domain.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WatchProgressTest {
@@ -84,10 +86,84 @@ class WatchProgressTest {
         assertEquals(0, result)
     }
 
+    @Test
+    fun `a provider playback row at ninety percent is not completed by a threshold of eighty five`() {
+        val wp = watchProgress(
+            position = 0,
+            duration = 0,
+            progressPercent = 90f,
+            source = WatchProgress.SOURCE_SIMKL_PLAYBACK,
+            completionThresholdFraction = 0.85f,
+            isProviderPlaybackPosition = true
+        )
+
+        // The write side reported this stop as a pause, because 90 percent sat under the credits
+        // marker, so the account holds the row open. shouldTreatAsInProgressForContinueWatching drops
+        // a row the moment isCompleted() is true, so reading the row against the user threshold of 85
+        // alone would drop the episode out of Continue Watching. The row is exempt and stays a
+        // position to resume.
+        assertFalse(wp.isCompleted())
+        assertTrue(wp.isInProgress())
+    }
+
+    @Test
+    fun `a provider playback row at the credits marker threshold is still not completed`() {
+        val wp = watchProgress(
+            position = 0,
+            duration = 0,
+            progressPercent = 96f,
+            source = WatchProgress.SOURCE_SIMKL_PLAYBACK,
+            completionThresholdFraction = 0.96f,
+            isProviderPlaybackPosition = true
+        )
+
+        // Where a playback ends is the credits marker of the release, which a row the provider
+        // publishes does not carry, so even the resolved threshold is only a reading number here.
+        assertFalse(wp.isCompleted())
+        assertTrue(wp.isInProgress())
+        assertEquals(0.96f, wp.progressPercentage, 0.0005f)
+    }
+
+    @Test
+    fun `a watch history recorded still completes although it carries the playback source`() {
+        val wp = watchProgress(
+            position = 1,
+            duration = 1,
+            progressPercent = 100f,
+            source = WatchProgress.SOURCE_SIMKL_PLAYBACK
+        )
+
+        // A Simkl playback row and a Simkl watch recorded into history share SOURCE_SIMKL_PLAYBACK,
+        // so the exemption travels with the row the playback projection builds and not with the
+        // source: real completed state still completes.
+        assertFalse(wp.isProviderPlaybackPosition)
+        assertTrue(wp.isCompleted())
+        assertFalse(wp.isInProgress())
+    }
+
+    @Test
+    fun `a row from a source that is not a provider playback completes as before`() {
+        val local = watchProgress(position = 0, duration = 0, progressPercent = 92f)
+        val traktPlayback = watchProgress(
+            position = 0,
+            duration = 0,
+            progressPercent = 95f,
+            source = WatchProgress.SOURCE_TRAKT_PLAYBACK
+        )
+
+        assertTrue(local.isCompleted())
+        assertFalse(local.isInProgress())
+        assertTrue(traktPlayback.isCompleted())
+        assertFalse(traktPlayback.isInProgress())
+    }
+
     private fun watchProgress(
         position: Long,
         duration: Long,
-        progressPercent: Float? = null
+        progressPercent: Float? = null,
+        source: String = WatchProgress.SOURCE_LOCAL,
+        completionThresholdFraction: Float? = null,
+        isProviderPlaybackPosition: Boolean = false
     ): WatchProgress {
         return WatchProgress(
             contentId = "tt1234567",
@@ -103,7 +179,10 @@ class WatchProgressTest {
             position = position,
             duration = duration,
             lastWatched = 1000L,
-            progressPercent = progressPercent
+            progressPercent = progressPercent,
+            source = source,
+            completionThresholdFraction = completionThresholdFraction,
+            isProviderPlaybackPosition = isProviderPlaybackPosition
         )
     }
 }

@@ -66,29 +66,26 @@ class TraktScrobbleService @Inject constructor(
     private val retryDelayMs = 1_500L
     private val serverOverloadedRetryDelayMs = 5_000L
 
-    suspend fun scrobbleStart(item: TraktScrobbleItem, progressPercent: Float) {
+    suspend fun scrobbleStart(item: TraktScrobbleItem, progressPercent: Float): Boolean =
         sendScrobble(action = "start", item = item, progressPercent = progressPercent)
-    }
 
-    suspend fun scrobbleStop(item: TraktScrobbleItem, progressPercent: Float) {
+    suspend fun scrobbleStop(item: TraktScrobbleItem, progressPercent: Float): Boolean =
         sendScrobble(action = "stop", item = item, progressPercent = progressPercent)
-    }
 
-    suspend fun scrobblePause(item: TraktScrobbleItem, progressPercent: Float) {
+    suspend fun scrobblePause(item: TraktScrobbleItem, progressPercent: Float): Boolean =
         sendScrobble(action = "pause", item = item, progressPercent = progressPercent)
-    }
 
     private suspend fun sendScrobble(
         action: String,
         item: TraktScrobbleItem,
         progressPercent: Float
-    ) {
+    ): Boolean {
         val activeProfileId = profileManager.activeProfileId.value
-        if (!traktAuthService.getCurrentAuthState().isAuthenticated) return
-        if (!traktAuthService.hasRequiredCredentials()) return
+        if (!traktAuthService.getCurrentAuthState().isAuthenticated) return false
+        if (!traktAuthService.hasRequiredCredentials()) return false
 
         val clampedProgress = progressPercent.coerceIn(0f, 100f)
-        if (shouldSkip(activeProfileId, action, item.itemKey, clampedProgress)) return
+        if (shouldSkip(activeProfileId, action, item.itemKey, clampedProgress)) return true
 
         val requestBody = buildRequestBody(item, clampedProgress)
 
@@ -120,7 +117,7 @@ class TraktScrobbleService @Inject constructor(
                     continue
                 }
                 Log.w(TAG, "Scrobble $action failed after $attempts attempts", lastException)
-                return
+                return false
             }
 
             if (response.isSuccessful || response.code() == 409) {
@@ -134,7 +131,7 @@ class TraktScrobbleService @Inject constructor(
                 if (action == "stop") {
                     traktProgressService.refreshNow()
                 }
-                return
+                return true
             }
 
             // Server error (5xx) — retry for stop actions
@@ -151,8 +148,9 @@ class TraktScrobbleService @Inject constructor(
 
             // Non-retryable error (4xx other than 409)
             Log.w(TAG, "Scrobble $action failed with code ${response.code()}")
-            return
+            return false
         }
+        return false
     }
 
     internal fun buildRequestBody(

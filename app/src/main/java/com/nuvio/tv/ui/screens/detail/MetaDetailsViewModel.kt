@@ -26,7 +26,11 @@ import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.ListMembershipChanges
+import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
+import com.nuvio.tv.core.tracking.TrackingRefreshIntent
+import com.nuvio.tv.core.tracking.buildTrackingMediaReference
+import com.nuvio.tv.data.simkl.rewatchedEpisodesOf
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaTrailer
@@ -106,6 +110,8 @@ class MetaDetailsViewModel @Inject constructor(
     private val metaDetailsSessionState: MetaDetailsSessionState,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+    private val simklSyncRepository: com.nuvio.tv.data.simkl.SimklSyncRepository,
+    private val simklTrackingHistoryWriter: com.nuvio.tv.data.simkl.SimklTrackingHistoryWriter,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val itemId: String = savedStateHandle["itemId"] ?: ""
@@ -183,8 +189,47 @@ class MetaDetailsViewModel @Inject constructor(
         }
         observeShowFullReleaseDate()
         observeHideUnreleasedContent()
+        observeRewatchRuns()
         loadMeta()
     }
+
+    /**
+     * Re-derives the play action when the account's rewatch runs change.
+     *
+     * A run is read from the account and can arrive after the screen has already computed the
+     * button, so without this the button would keep offering the old watch position until something
+     * else moved.
+     */
+    private fun observeRewatchRuns() {
+        viewModelScope.launch {
+            simklSyncRepository.state
+                .map { state -> state.snapshot.rewatchRuns }
+                .distinctUntilChanged()
+                .collectLatest { calculateNextToWatch() }
+        }
+    }
+
+    /**
+     * The episodes the running rewatch of the item has covered, for the marker the episode list draws.
+     *
+     * Only a run's own episodes are collected; without a run the set is empty and the list draws its
+     * marker exactly as it did before rewatches existed.
+     */
+    private fun refreshRewatchEpisodes() {
+        val snapshot = simklSyncRepository.state.value.snapshot
+        val run = rewatchRunFor(_uiState.value.meta?.id) ?: rewatchRunFor(_effectiveContentId.value)
+        val episodes = run
+            ?.let { active -> snapshot.rewatchSessions.rewatchedEpisodesOf(active.contentId) }
+            .orEmpty()
+        _uiState.update { state ->
+            if (state.rewatchEpisodes == episodes) state else state.copy(rewatchEpisodes = episodes)
+        }
+    }
+
+    /** The rewatch run that matches a content id, if the account is in the middle of one. */
+    private fun rewatchRunFor(contentId: String?): com.nuvio.tv.core.tracking.RewatchRunPosition? =
+        simklSyncRepository.state.value.snapshot.rewatchRuns
+            .firstOrNull { run -> run.matches(contentId) }
 
     private fun observeHideUnreleasedContent() {
         viewModelScope.launch {
@@ -367,6 +412,8 @@ class MetaDetailsViewModel @Inject constructor(
             MetaDetailsEvent.OnRetrySharedTrailer -> retrySharedTrailer()
             MetaDetailsEvent.OnToggleMovieWatched -> toggleMovieWatched()
             is MetaDetailsEvent.OnToggleEpisodeWatched -> toggleEpisodeWatched(event.video)
+            is MetaDetailsEvent.OnMarkEpisodeRewatched -> markEpisodeRewatched(event.video)
+            is MetaDetailsEvent.OnUnmarkEpisodeRewatched -> unmarkEpisodeRewatched(event.video)
             is MetaDetailsEvent.OnMarkSeasonWatched -> markSeasonWatched(event.season)
             is MetaDetailsEvent.OnMarkSeasonUnwatched -> markSeasonUnwatched(event.season)
             is MetaDetailsEvent.OnMarkPreviousEpisodesWatched -> markPreviousEpisodesWatched(event.video)
@@ -1865,6 +1912,7 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun calculateNextToWatch() {
+        refreshRewatchEpisodes()
         val meta = _uiState.value.meta ?: return
         val progressMap = _uiState.value.episodeProgressMap
         val watchedEpisodes = _uiState.value.watchedEpisodes
@@ -1934,6 +1982,48 @@ class MetaDetailsViewModel @Inject constructor(
 
         val nonSpecialEpisodes = allEpisodes.filter { (it.season ?: 0) > 0 }
         val episodePool = if (nonSpecialEpisodes.isNotEmpty()) nonSpecialEpisodes else allEpisodes
+
+        // A rewatch run the user is following decides where Play goes: the run sits at that episode,
+        // so the next step of the run is the right offer even though the series was watched to the
+        // end long ago, and before the resume of the old position. When the run has no episode
+        // after it, or the account holds no run for this series, the canonical position decides
+        // exactly as it does without a run.
+        val rewatchRun = rewatchRunFor(meta.id) ?: rewatchRunFor(_effectiveContentId.value)
+        if (rewatchRun != null) {
+            val runEpisode = nextEpisodeAfterRun(
+                episodes = episodePool,
+                run = rewatchRun,
+                showUnairedNextUp = layoutPreferenceDataStore.showUnairedNextUp.first(),
+            )
+            if (runEpisode != null) {
+                // Starting the run's next episode does not throw away the position the user already
+                // reached in it: the player resumes from there, and the button says so.
+                val runProgress = runEpisode.season?.let { season ->
+                    runEpisode.episode?.let { episode -> progressMap[season to episode] }
+                }?.takeIf { progress -> shouldResumeProgress(progress) }
+                return NextToWatch(
+                    watchProgress = runProgress,
+                    isResume = runProgress != null,
+                    nextVideoId = runEpisode.id,
+                    nextSeason = runEpisode.season,
+                    nextEpisode = runEpisode.episode,
+                    displayText = if (runProgress != null) {
+                        localizedContext.getString(
+                            R.string.detail_btn_resume_episode,
+                            runEpisode.season,
+                            runEpisode.episode
+                        )
+                    } else {
+                        localizedContext.getString(
+                            R.string.detail_btn_next_episode,
+                            runEpisode.season,
+                            runEpisode.episode
+                        )
+                    }
+                )
+            }
+        }
+
         val useFurthestEpisode = layoutPreferenceDataStore.nextUpFromFurthestEpisode.first()
         val latestSeriesProgress = if (useFurthestEpisode) {
             // When using furthest episode mode, consider both progressMap entries
@@ -2509,6 +2599,126 @@ class MetaDetailsViewModel @Inject constructor(
                 )
             }
 
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKey)
+            }
+        }
+    }
+
+    /**
+     * Writes an episode the account already watched into the open rewatch run.
+     *
+     * The mark goes through the same history write as a first watch; Simkl turns a mark of an
+     * already watched episode into a repeat viewing and pins the run the account holds. The local
+     * watched state does not change, so the episode stays watched after the mark.
+     */
+    private fun markEpisodeRewatched(video: Video) {
+        val meta = _uiState.value.meta ?: return
+        val season = video.season ?: return
+        val episode = video.episode ?: return
+        val pendingKey = episodePendingKey(video)
+        if (_uiState.value.episodeWatchedPendingKeys.contains(pendingKey)) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKey)
+            }
+            runCatching {
+                // Only Simkl hears about this one: a rewatch is its concept, and the shared mark
+                // path would also write the viewing to Trakt or MDBList.
+                val media = buildTrackingMediaReference(
+                    contentType = meta.apiType,
+                    parentMetaId = _effectiveContentId.value,
+                    videoId = video.id,
+                    title = meta.name,
+                    releaseInfo = meta.releaseInfo,
+                    seasonNumber = season,
+                    episodeNumber = episode,
+                    episodeTitle = video.title
+                )
+                val result = simklTrackingHistoryWriter.addToHistory(
+                    profileId = profileManager.activeProfileId.value,
+                    // The writer owns the mode and plan gate: it marks the item a rewatch and pins
+                    // the open run only where the account can take one.
+                    items = listOf(TrackingHistoryItem(media = media))
+                )
+                check(result.notFoundCount == 0) { "Simkl did not match the episode" }
+                showMessage(localizedContext.getString(R.string.detail_episode_marked_rewatched))
+            }.onFailure { error ->
+                showMessage(
+                    message = error.message ?: context.getString(com.nuvio.tv.R.string.detail_error_update_episode_watched_failed),
+                    isError = true
+                )
+            }
+            // The run this write opened or extended is not in the snapshot until a read sees it, and
+            // re-deriving the runs only re-reads what is already stored. A failed read must not turn
+            // a recorded mark into an error, so it stays out of the write's result.
+            runCatching {
+                delay(1_500)
+                simklSyncRepository.refresh(TrackingRefreshIntent.USER_INITIATED)
+            }.onFailure { error ->
+                Log.w(TAG, "Could not refresh Simkl after a manual rewatch mark", error)
+            }
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKey)
+            }
+        }
+    }
+
+    /**
+     * Drops the visible rewatch of an episode without touching its original watch.
+     *
+     * The removal names the rewatch session the episode belongs to, so Simkl deletes only that
+     * viewing. The writer reads the session from the account snapshot; when it cannot name one, no
+     * request is sent.
+     */
+    private fun unmarkEpisodeRewatched(video: Video) {
+        val meta = _uiState.value.meta ?: return
+        val season = video.season ?: return
+        val episode = video.episode ?: return
+        val pendingKey = episodePendingKey(video)
+        if (_uiState.value.episodeWatchedPendingKeys.contains(pendingKey)) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKey)
+            }
+            runCatching {
+                val media = buildTrackingMediaReference(
+                    contentType = meta.apiType,
+                    parentMetaId = _effectiveContentId.value,
+                    videoId = video.id,
+                    title = meta.name,
+                    releaseInfo = meta.releaseInfo,
+                    seasonNumber = season,
+                    episodeNumber = episode,
+                    episodeTitle = video.title
+                )
+                val result = simklTrackingHistoryWriter.removeRewatchFromHistory(
+                    profileId = profileManager.activeProfileId.value,
+                    items = listOf(media)
+                )
+                check(result != null && result.notFoundCount == 0) {
+                    "Simkl did not find the rewatch to remove"
+                }
+                // The committed receipt dropped the episode from the running session; re-read the
+                // set so the original watch gets its faded marker back at once.
+                refreshRewatchEpisodes()
+                showMessage(localizedContext.getString(R.string.detail_episode_marked_not_rewatched))
+            }.onFailure { error ->
+                showMessage(
+                    message = error.message ?: context.getString(R.string.detail_error_update_episode_watched_failed),
+                    isError = true
+                )
+            }
+            // The removed viewing is not gone from the snapshot until a read sees it; re-deriving
+            // only re-reads what is already stored.
+            runCatching {
+                delay(1_500)
+                simklSyncRepository.refresh(TrackingRefreshIntent.USER_INITIATED)
+            }.onFailure { error ->
+                Log.w(TAG, "Could not refresh Simkl after a rewatch removal", error)
+            }
             _uiState.update {
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKey)
             }

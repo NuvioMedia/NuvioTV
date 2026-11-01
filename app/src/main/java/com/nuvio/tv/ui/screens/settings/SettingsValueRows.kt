@@ -70,7 +70,8 @@ internal fun SliderSettingsItem(
     subtitle: String? = null,
     onFocused: () -> Unit = {},
     enabled: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showStepper: Boolean = true
 ) {
     val span = (maxValue - minValue).toFloat()
     val progress = if (span > 0f) (value - minValue).toFloat() / span else 0f
@@ -96,7 +97,8 @@ internal fun SliderSettingsItem(
             if (newValue != value) onValueChange(newValue)
         },
         onFocused = onFocused,
-        modifier = modifier
+        modifier = modifier,
+        showStepper = showStepper
     )
 }
 
@@ -156,7 +158,8 @@ private fun SliderSettingsItemLayout(
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
     onFocused: () -> Unit,
-    modifier: Modifier
+    modifier: Modifier,
+    showStepper: Boolean = true
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val contentAlpha = if (enabled) 1f else 0.4f
@@ -246,13 +249,20 @@ private fun SliderSettingsItemLayout(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                SliderStepButton(
-                    icon = Icons.Default.Remove,
-                    contentDescription = stringResource(R.string.cd_decrease),
-                    enabled = enabled,
-                    onClick = onDecrease,
-                    onFocused = onFocused
-                )
+                /*
+                 * Plus and minus are optional: a row whose value is moved with the arrow keys on a
+                 * remote can hide them, while rows that rely on them keep looking the same, because
+                 * `showStepper` defaults to true.
+                 */
+                if (showStepper) {
+                    SliderStepButton(
+                        icon = Icons.Default.Remove,
+                        contentDescription = stringResource(R.string.cd_decrease),
+                        enabled = enabled,
+                        onClick = onDecrease,
+                        onFocused = onFocused
+                    )
+                }
 
                 Box(
                     modifier = Modifier
@@ -270,13 +280,15 @@ private fun SliderSettingsItemLayout(
                     )
                 }
 
-                SliderStepButton(
-                    icon = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.cd_increase),
-                    enabled = enabled,
-                    onClick = onIncrease,
-                    onFocused = onFocused
-                )
+                if (showStepper) {
+                    SliderStepButton(
+                        icon = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.cd_increase),
+                        enabled = enabled,
+                        onClick = onIncrease,
+                        onFocused = onFocused
+                    )
+                }
             }
         }
     }
