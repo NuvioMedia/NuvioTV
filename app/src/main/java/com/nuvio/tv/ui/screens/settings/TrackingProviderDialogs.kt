@@ -649,7 +649,7 @@ private fun SimklSyncInfoContent(
 }
 
 @Composable
-private fun TrackingConnectedWordmark(
+internal fun TrackingConnectedWordmark(
     brand: TrackingDialogBrand,
     logo: Painter,
     contentDescription: String
@@ -672,6 +672,9 @@ private fun TrackingConnectedWordmark(
                 .width(124.dp)
                 .height(30.dp)
             TrackingDialogBrand.MDBLIST -> Modifier.size(40.dp)
+            TrackingDialogBrand.WETRAKR -> Modifier
+                .width(138.dp)
+                .height(30.dp)
         },
         contentScale = ContentScale.Fit,
         alignment = Alignment.CenterStart
@@ -679,16 +682,17 @@ private fun TrackingConnectedWordmark(
 }
 
 @Composable
-private fun TrackingBrandPrimaryButton(
+internal fun TrackingBrandPrimaryButton(
     label: String,
     loading: Boolean,
     enabled: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(48.dp),
         colors = ButtonDefaults.colors(
@@ -731,7 +735,7 @@ private fun TrackingBrandPrimaryButton(
 }
 
 @Composable
-private fun TrackingBrandFooterButton(
+internal fun TrackingBrandFooterButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -768,7 +772,7 @@ private fun TrackingBrandFooterButton(
 }
 
 @Composable
-private fun TrackingBrandMessage(
+internal fun TrackingBrandMessage(
     text: String,
     isError: Boolean
 ) {
@@ -827,7 +831,8 @@ private fun TrackingProviderWordmark(
 internal enum class TrackingDialogBrand {
     TRAKT,
     SIMKL,
-    MDBLIST
+    MDBLIST,
+    WETRAKR
 }
 
 private fun TrackingDialogBrand.cardBrush(): Brush = when (this) {
@@ -839,6 +844,9 @@ private fun TrackingDialogBrand.cardBrush(): Brush = when (this) {
     )
     TrackingDialogBrand.MDBLIST -> Brush.linearGradient(
         colors = listOf(Color(0xFF173D69), Color(0xFF225C97), Color(0xFF16385D))
+    )
+    TrackingDialogBrand.WETRAKR -> Brush.linearGradient(
+        colors = listOf(Color(0xFF13161D), Color(0xFF676BFF), Color(0xFF13161D))
     )
 }
 

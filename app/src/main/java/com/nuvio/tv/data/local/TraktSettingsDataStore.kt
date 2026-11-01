@@ -26,6 +26,7 @@ enum class WatchProgressSource {
     TRAKT,
     SIMKL,
     MDBLIST,
+    WETRAKR,
     NUVIO_SYNC;
 
     companion object {
@@ -38,7 +39,8 @@ enum class WatchProgressSource {
 enum class MoreLikeThisSourcePreference {
     TRAKT,
     TMDB,
-    SIMKL
+    SIMKL,
+    WETRAKR
 }
 
 @Singleton
@@ -70,6 +72,7 @@ class TraktSettingsDataStore @Inject constructor(
     private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
     private val nextUpFromFurthestEpisodeKey = booleanPreferencesKey("next_up_from_furthest_episode")
     private val showMetaCommentsKey = booleanPreferencesKey("show_meta_comments")
+    private val showWeTrakrCommentsKey = booleanPreferencesKey("show_wetrakr_comments")
     private val watchProgressSourceKey = stringPreferencesKey("watch_progress_source")
     private val librarySourceModeKey = stringPreferencesKey("library_source_mode")
     private val rememberedWatchProgressSourceKey = stringPreferencesKey("remembered_watch_progress_source")
@@ -109,6 +112,12 @@ class TraktSettingsDataStore @Inject constructor(
     val showMetaComments: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             prefs[showMetaCommentsKey] ?: DEFAULT_SHOW_META_COMMENTS
+        }
+    }
+
+    val showWeTrakrComments: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            prefs[showWeTrakrCommentsKey] ?: false
         }
     }
 
@@ -183,6 +192,14 @@ class TraktSettingsDataStore @Inject constructor(
     suspend fun setShowMetaComments(enabled: Boolean) {
         store().edit { prefs ->
             prefs[showMetaCommentsKey] = enabled
+            if (enabled) prefs[showWeTrakrCommentsKey] = false
+        }
+    }
+
+    suspend fun setShowWeTrakrComments(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showWeTrakrCommentsKey] = enabled
+            if (enabled) prefs[showMetaCommentsKey] = false
         }
     }
 
