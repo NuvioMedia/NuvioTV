@@ -75,7 +75,9 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
     beginSwitchTraceSession(reason = reason, targetEngine = targetEngine)
     val targetEngineLabel = targetEngineLabel(targetEngine)
     val switchMessage = context.getString(R.string.player_engine_switching_manual_message, targetEngineLabel)
-    val currentPosition = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
+    // An extra of a disc gives way to its feature, where it was left: libmpv plays only the stream.
+    val discFeaturePosition = discFeaturePositionMs.takeIf { isPlayingDiscExtra() }
+    val currentPosition = discFeaturePosition ?: currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
     logSwitchTrace(
         stage = "manual-switch-trigger",
         message = "targetEngine=$targetEngine positionMs=$currentPosition " +
@@ -121,6 +123,8 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
     delayMpvResumeSeekUntilVideoTrack = switchingToMpv
 
     releasePlayer(flushPlaybackState = true, keepTorrentStream = true)
+    // Only once released: while the extra plays, the release saves no progress for the item.
+    returnToDiscFeature()
     initializePlayer(
         url = currentStreamUrl,
         headers = currentHeaders,

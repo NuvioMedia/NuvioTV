@@ -127,6 +127,32 @@ private suspend fun PlayerRuntimeController.resolveCurrentStreamMimeType(
     )
 }
 
+/**
+ * A Blu-ray clip served over HTTP may be one part of its feature: ExoPlayer then plays the feature
+ * playlist beside it. Checked once per stream, within a few seconds, before the first start.
+ */
+private suspend fun PlayerRuntimeController.resolveClipPlaylist(
+    url: String,
+    headers: Map<String, String>,
+    engine: InternalPlayerEngine
+) {
+    if (engine == InternalPlayerEngine.MVP_PLAYER || currentStreamBluray != null || clipPlaylistProbedUrl == url) return
+    clipPlaylistProbedUrl = url
+    if (!BlurayPlaylistResolver.isLikelyBdavM2tsUrl(url) || !url.contains("/BDMV/STREAM/", ignoreCase = true)) return
+    val disc = withTimeoutOrNull(CLIP_PLAYLIST_TIMEOUT_MS) {
+        PlayerMediaSourceFactory.probeBlurayDisc(url = url, headers = headers)
+    } ?: return
+    showDiscTitles(disc)
+    val playlist = disc.feature ?: return
+    Log.i(
+        PlayerRuntimeController.TAG,
+        "Blu-ray clip is part of playlist ${playlist.name}; playing its ${playlist.segmentUrls.size} clips"
+    )
+    currentStreamBluray = playlist
+}
+
+private const val CLIP_PLAYLIST_TIMEOUT_MS = 8_000L
+
 private fun PlayerRuntimeController.disposeExoPlayerBeforeRebuild() {
     notifyAudioSessionUpdate(false)
     releaseMediaSession()
@@ -288,6 +314,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 url = url,
                 headers = headers
             )
+            resolveClipPlaylist(url = url, headers = headers, engine = effectiveInternalPlayerEngine)
 
             val afrJob = async {
                 runAfrPreflightIfEnabled(
@@ -1129,7 +1156,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     mimeTypeOverride = currentStreamMimeType,
                     audioDelayUsProvider = audioDelayUs::get,
                     mediaMetadata = buildMediaSessionMetadata(),
-                    cacheKey = currentStreamCacheKey
+                    cacheKey = currentStreamCacheKey,
+                    bluray = currentStreamBluray
                 )
 
                 if (initialResumePosition > 0L) {
@@ -1489,6 +1517,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
                         cancelFirstFrameWatchdog()
                         val detailedError = error.toDisplayMessage(context)
+                        if (returnToFeatureAfterExtraFailure(detailedError)) return
                         cancelStableProgressReset()
 
                         if (Vc1VideoFormatHeuristics.isVc1PlaybackFailure(
@@ -1918,6 +1947,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                 fetchAddonSubtitles()
             }
         } catch (e: Exception) {
+            if (e !is kotlinx.coroutines.CancellationException &&
+                returnToFeatureAfterExtraFailure(e.message ?: e.javaClass.simpleName)
+            ) {
+                return@launch
+            }
             if (
                 maybeAutoSwitchInternalPlayerOnStartupError(
                     detailedError = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_initialize_failed),

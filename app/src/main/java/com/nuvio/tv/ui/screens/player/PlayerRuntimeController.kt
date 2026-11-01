@@ -668,6 +668,15 @@ class PlayerRuntimeController(
     internal var forceDv7ToHevc: Boolean = false
     internal var startupRetryCount: Int = 0
     internal var parsingErrorProbeAttempted: Boolean = false
+    /** A Blu-ray found behind the current stream after it failed to parse. */
+    internal var currentStreamBluray: BlurayPlaylistResolver.RemoteLayout? = null
+    internal var clipPlaylistProbedUrl: String? = null
+    /** The disc's titles by playlist name, from the clip probe. */
+    internal var discTitlePlaylists: Map<String, BlurayPlaylistResolver.RemoteLayout.Playlist> = emptyMap()
+    internal var discFeatureTitle: String? = null
+    /** Where the feature was left for another title of its disc. */
+    internal var discFeaturePositionMs: Long = 0L
+    internal var discTitleLanguagesJob: Job? = null
     internal var hasRetriedCurrentStreamAfterUnexpectedNpe: Boolean = false
     internal var hasRetriedCurrentStreamAfterMediaPeriodHolderCrash: Boolean = false
     internal var timeoutRecoveryAttempts: Int = 0
