@@ -10,6 +10,7 @@ Shared ExoPlayer and global player defaults were not changed in this work.
    playback survives changes. Provider sockets still require a playback request.
    The tradeoff is idle runtime memory. Zero cold-start time is not guaranteed if
    Play races bootstrap, the profile changes, or Android terminates the process.
+   The default later changed to off; the setting remains.
 2. **Skip sniff for named video: rejected as written.** The first progressive
    read learns authoritative decoded yEnc file size. NZB segment byte counts are
    encoded wire lengths; skipping this step would break Content-Length, suffix

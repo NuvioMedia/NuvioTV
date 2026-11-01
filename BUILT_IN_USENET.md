@@ -1,6 +1,6 @@
 # Built-in Usenet sources
 
-In **Settings → Usenet**, enable **Search built-in indexers**, add an NNTP
+In **Settings → Integrations → Usenet streaming**, enable **Search built-in indexers**, add an NNTP
 provider, and add a Newznab-compatible indexer. No stream addon is needed for
 this source. Existing addon sources can still be used alongside it.
 
