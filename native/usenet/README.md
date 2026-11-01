@@ -439,13 +439,54 @@ to tune for a particular device and account.
 
 ## Build and verify
 
-Standard Android builds package prebuilt native engine binaries automatically from `prebuilt/`, requiring only standard Android SDK and JDK tools (no Go or C++ toolchains needed).
+Standard Android builds download the four native engine binaries from the exact
+GitHub release pinned in `prebuilt/manifest.json`, verify their SHA-256 checksums,
+and cache them in `prebuilt/`. Only standard Android SDK and JDK tools are needed.
+The first build needs network access; subsequent builds can use Gradle's
+`--offline` mode once the assets and other dependencies are cached. Missing or
+corrupt assets fail an offline build rather than silently changing toolchains.
+Generated `.so` files are ignored by Git and must not be committed.
+
+CI fetches and verifies the same assets before running the build:
+
+```sh
+python3 native/usenet/scripts/fetch_prebuilts.py
+python3 native/usenet/scripts/check_prebuilts.py
+```
 
 To recompile the native engine binaries from source, install Go 1.27+, NDK `29.0.14206865` and CMake `3.22.1`, then pass `-PbuildUsenetFromSource=true` (the first build downloads the Go module dependencies; RapidYenc's SIMD kernels are built from the copy in `third_party/rapidyenc-native`):
 
 ```powershell
 .\gradlew.bat :app:assembleFullDebug -PbuildUsenetFromSource=true
 ```
+
+To update the shared prebuilts after changing native source or build scripts,
+build all four ABIs and record a new manifest (choose the repository that will
+host the assets):
+
+```sh
+python3 native/usenet/scripts/build_android.py \
+  --ndk "$ANDROID_HOME/ndk/29.0.14206865" \
+  --cmake "$ANDROID_HOME/cmake/3.22.1/bin/cmake" \
+  --release-repository haaihond/NuvioTV
+python3 native/usenet/scripts/check_prebuilts.py
+```
+
+Commit and push the source and updated manifest, then publish from that clean
+checkout using `python3 native/usenet/scripts/publish_prebuilts.py --target <full-commit-sha>`.
+This requires GitHub CLI authentication with release write access. It creates a
+prerelease containing the four binaries and manifest, without replacing the
+latest application release. Publish before merging: CI and fresh clones need
+the pinned assets. Release tags must point to the cleaned history; never tag or
+merge the original binary-containing history back into the cleaned branch.
+To move hosting upstream, republish the verified assets in `NuvioMedia/NuvioTV`
+and change `downloadBaseUrl` in the manifest. Do not overwrite existing assets
+under a pinned release tag.
+
+Historical commits retained during the binary cleanup have their original
+source and messages but no checked-in prebuilts. Use their source build option
+when checking out those older commits; automatic downloads start with the
+commit that introduces this workflow.
 
 The debug package uses `com.nuviodebug.com` and retains the project's existing
 release signing configuration. Configure `NUVIO_RELEASE_STORE_FILE`,

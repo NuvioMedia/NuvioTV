@@ -1,4 +1,9 @@
-// Applied by app/build.gradle.kts. Requires Go 1.27+, Android NDK 29 and CMake.
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+// Applied by app/build.gradle.kts. Only source builds require Go, NDK and CMake.
 // A PIE executable is named lib*.so solely so PackageManager installs it in the
 // executable nativeLibraryDir. It is launched, never loaded through JNI.
 val nativeRoot = rootProject.file("native/usenet")
@@ -16,6 +21,21 @@ val buildFromSource = providers.gradleProperty("buildUsenetFromSource")
     .map { it.equals("true", ignoreCase = true) || it == "1" }
     .orElse(false)
     .get() || gradle.startParameter.taskNames.any { it.contains("buildUsenet", ignoreCase = true) }
+val prebuiltManifest = File(nativeRoot, "prebuilt/manifest.json")
+val prebuiltMetadata = if (buildFromSource) emptyMap<Any?, Any?>()
+    else JsonSlurper().parse(prebuiltManifest) as Map<*, *>
+fun binarySha256(file: File): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    file.inputStream().use { input ->
+        val buffer = ByteArray(65536)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+}
 
 val buildTasks = abis.map { (abi, target) ->
     tasks.register("buildUsenet${abi.replace("-", "").replace("_", "")}") {
@@ -23,7 +43,7 @@ val buildTasks = abis.map { (abi, target) ->
         val nativeBuild = layout.buildDirectory.dir("usenet/$abi")
         val prebuilt = File(nativeRoot, "prebuilt/$abi/libnuvio_usenet.so")
 
-        if (buildFromSource || !prebuilt.exists()) {
+        if (buildFromSource) {
             inputs.files(fileTree(nativeRoot) {
                 include("**/*.go", "**/*.mod", "**/*.sum", "**/*.cc", "**/*.h", "**/CMakeLists.txt")
                 exclude("build/**", "**/*_test.go", "prebuilt/**")
@@ -31,13 +51,39 @@ val buildTasks = abis.map { (abi, target) ->
             inputs.file(File(nativeRoot, "android.gradle.kts"))
             inputs.property("ndk", ndkVersion)
         } else {
-            inputs.file(prebuilt)
+            inputs.file(prebuiltManifest)
+            inputs.files(fileTree(prebuilt.parentFile) { include(prebuilt.name) })
         }
         outputs.file(output)
 
         doLast {
             output.get().asFile.parentFile.mkdirs()
-            if (!buildFromSource && prebuilt.exists()) {
+            if (!buildFromSource) {
+                val expected = (prebuiltMetadata["binarySha256"] as Map<*, *>)[abi] as String
+                check(expected.matches(Regex("[0-9a-f]{64}"))) { "Invalid Usenet checksum for $abi" }
+                if (!prebuilt.exists() || binarySha256(prebuilt) != expected) {
+                    check(!gradle.startParameter.isOffline) {
+                        "Usenet $abi prebuilt is missing or corrupt. Run once online to download it, or use -PbuildUsenetFromSource=true."
+                    }
+                    val baseUrl = prebuiltMetadata["downloadBaseUrl"] as? String
+                        ?: error("Usenet manifest has no downloadBaseUrl. Rebuild and publish the native assets.")
+                    check(baseUrl.matches(Regex("https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/releases/download/[A-Za-z0-9_.-]+"))) {
+                        "Invalid Usenet release URL"
+                    }
+                    prebuilt.parentFile.mkdirs()
+                    val temporary = File.createTempFile("usenet-", ".part", prebuilt.parentFile)
+                    try {
+                        logger.lifecycle("Downloading verified Usenet native engine for $abi")
+                        val connection = java.net.URI("$baseUrl/libnuvio_usenet-$abi.so").toURL().openConnection()
+                        connection.connectTimeout = 30000
+                        connection.readTimeout = 120000
+                        connection.getInputStream().use { input -> temporary.outputStream().use { input.copyTo(it) } }
+                        check(binarySha256(temporary) == expected) { "Usenet $abi download failed SHA-256 verification" }
+                        Files.move(temporary.toPath(), prebuilt.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                    } finally {
+                        temporary.delete()
+                    }
+                }
                 prebuilt.copyTo(output.get().asFile, overwrite = true)
                 return@doLast
             }

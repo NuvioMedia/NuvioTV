@@ -2,9 +2,9 @@ name: Usenet tests
 
 on:
   pull_request:
-    branches: [dev, nntp]
+    branches: [main, dev, nntp, full-nntp]
   push:
-    branches: [nntp]
+    branches: [nntp, full-nntp]
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,10 @@ jobs:
           go-version-file: native/usenet/go.mod
           cache-dependency-path: native/usenet/go.sum
       - name: Verify Android sidecars
-        run: python3 native/usenet/scripts/check_prebuilts.py
+        run: |
+          python3 -m unittest discover -s tests -p 'usenet_prebuilts_test.py'
+          python3 native/usenet/scripts/fetch_prebuilts.py
+          python3 native/usenet/scripts/check_prebuilts.py
       - name: Test upstream 7z compatibility
         working-directory: native/usenet
         run: go test github.com/javi11/sevenzip/... -timeout 5m

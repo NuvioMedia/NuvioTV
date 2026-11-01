@@ -3,7 +3,7 @@ name: PR Full Debug Build
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [dev]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -67,7 +67,9 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Verify Usenet Android sidecars
-        run: python3 native/usenet/scripts/check_prebuilts.py
+        run: |
+          python3 native/usenet/scripts/fetch_prebuilts.py
+          python3 native/usenet/scripts/check_prebuilts.py
 
       - name: Test updater and Usenet and build fullDebug APK
         run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' --tests '*Usenet*' --tests 'com.nuvio.tv.core.player.StreamFallbackSessionTest' :app:assembleFullDebug --stacktrace

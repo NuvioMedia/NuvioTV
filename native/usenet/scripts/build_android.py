@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--ndk", type=Path, required=True)
     parser.add_argument("--go", default="go")
     parser.add_argument("--cmake", default="cmake")
+    parser.add_argument("--release-repository", required=True, help="GitHub owner/repo that will host the versioned native assets")
     parser.add_argument("--host", default="linux-x86_64", choices=("linux-x86_64", "darwin-x86_64", "windows-x86_64"))
     args = parser.parse_args()
     args.ndk = args.ndk.resolve()
@@ -52,7 +53,7 @@ def main():
     go_version = subprocess.check_output([args.go, "version"], text=True).strip()
     ndk_version = next(line.split("=", 1)[1].strip() for line in (args.ndk / "source.properties").read_text().splitlines()
                        if line.startswith("Pkg.Revision"))
-    record(go_version, ndk_version)
+    record(go_version, ndk_version, args.release_repository)
 
 
 if __name__ == "__main__":

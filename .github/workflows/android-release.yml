@@ -218,7 +218,9 @@ jobs:
 
       - name: Verify Usenet Android sidecars
         if: inputs.mode != 'dry-run'
-        run: python3 native/usenet/scripts/check_prebuilts.py
+        run: |
+          python3 native/usenet/scripts/fetch_prebuilts.py
+          python3 native/usenet/scripts/check_prebuilts.py
 
       - name: Test updater and Usenet and build full release APKs
         if: inputs.mode != 'dry-run'
