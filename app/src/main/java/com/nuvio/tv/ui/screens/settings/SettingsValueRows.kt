@@ -3,6 +3,7 @@
 package com.nuvio.tv.ui.screens.settings
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.keepLtr
 
 import android.view.KeyEvent
 import androidx.compose.foundation.background
@@ -233,7 +234,7 @@ private fun SliderSettingsItemLayout(
                 Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
 
                 Text(
-                    text = valueText,
+                    text = valueText.keepLtr(),
                     style = MaterialTheme.typography.bodyLarge,
                     color = NuvioTheme.colors.Primary.copy(alpha = contentAlpha)
                 )
