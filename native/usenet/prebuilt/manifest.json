@@ -2,10 +2,10 @@
   "version": 1,
   "sourceSha256": "9d41805b1c84f22efb9847e1494f78c5ef8e125972363507d67a8341b8f321e7",
   "binarySha256": {
-    "arm64-v8a": "89788c514ac8752f88b1a35dfbd41a66d71f94eefeb7ef70194219dd25b94836",
-    "armeabi-v7a": "0c4aee8936f7c0a0d7b860761da8c070c68ee61e27390aa086a8971f1240e5e6",
-    "x86_64": "b102691db4267bfd35c36208fdaf033472388d7c66d0f1193536381b086d7494",
-    "x86": "3453eadc382b4d333868ed2397b367c6087f1bc10b9af33dd184cbe9429ed347"
+    "arm64-v8a": "a843c027461ba00687ef17c026fcd5de934d4f741ad0f0c93dc93874aaaae4b6",
+    "armeabi-v7a": "a8e2e226895364ee777c3477c3d27e9df93a9777534e6c06350b099529d6620a",
+    "x86_64": "ee80aeca1d22fd0ad4d9aec75c338d25b15a22e55bdb4a38032050a1c386581a",
+    "x86": "d8698cb92794e4dac47f415af4990da4cbe5107b418695c881f1d71ccab29ea3"
   },
   "downloadBaseUrl": "https://github.com/haaihond/NuvioTV/releases/download/usenet-native-9d41805b1c84f22e",
   "toolchain": {
