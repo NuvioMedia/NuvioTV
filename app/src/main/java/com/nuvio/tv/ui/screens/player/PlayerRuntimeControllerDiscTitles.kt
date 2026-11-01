@@ -44,6 +44,10 @@ internal fun PlayerRuntimeController.resetDiscTitles() {
 internal fun PlayerRuntimeController.isPlayingDiscExtra(): Boolean =
     discFeatureTitle != null && _uiState.value.currentDiscTitle != discFeatureTitle
 
+/** The same, read from the player state. */
+internal val PlayerUiState.isPlayingDiscExtra: Boolean
+    get() = currentDiscTitle != null && discTitles.any { it.name == currentDiscTitle && !it.isFeature }
+
 /** Each title's languages, from its first clip's CLPI, once the titles are first shown. */
 internal fun PlayerRuntimeController.loadDiscTitleLanguages() {
     if (discTitleLanguagesJob != null) return
@@ -88,6 +92,19 @@ internal fun PlayerRuntimeController.returnToFeatureAfterExtraFailure(error: Str
     val feature = discFeatureTitle?.takeIf { it in discTitlePlaylists } ?: return false
     Log.w(PlayerRuntimeController.TAG, "Disc title ${_uiState.value.currentDiscTitle} failed, returning to $feature: $error")
     Toast.makeText(context, context.getString(R.string.player_disc_title_failed), Toast.LENGTH_SHORT).show()
+    selectDiscTitle(feature)
+    return true
+}
+
+/**
+ * An extra that plays to its end gives way to its feature, where it was left, as on a disc player.
+ * Its end is not the item's: no recommendations, next episode or completion. Returns whether the
+ * end was an extra's.
+ */
+internal fun PlayerRuntimeController.returnToFeatureAfterExtraEnded(): Boolean {
+    if (!isPlayingDiscExtra()) return false
+    val feature = discFeatureTitle?.takeIf { it in discTitlePlaylists } ?: return false
+    Log.i(PlayerRuntimeController.TAG, "Disc title ${_uiState.value.currentDiscTitle} ended, returning to $feature")
     selectDiscTitle(feature)
     return true
 }
