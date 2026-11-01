@@ -441,7 +441,7 @@ to tune for a particular device and account.
 
 Standard Android builds package prebuilt native engine binaries automatically from `prebuilt/`, requiring only standard Android SDK and JDK tools (no Go or C++ toolchains needed).
 
-To recompile the native engine binaries from source, install Go 1.27+, NDK `29.0.14206865` and CMake `3.22.1`, then pass `-PbuildUsenetFromSource=true` (initial rebuild requires network access to download and verify the pinned RapidYenc SIMD kernels):
+To recompile the native engine binaries from source, install Go 1.27+, NDK `29.0.14206865` and CMake `3.22.1`, then pass `-PbuildUsenetFromSource=true` (the first build downloads the Go module dependencies; RapidYenc's SIMD kernels are built from the copy in `third_party/rapidyenc-native`):
 
 ```powershell
 .\gradlew.bat :app:assembleFullDebug -PbuildUsenetFromSource=true
