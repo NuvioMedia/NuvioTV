@@ -416,6 +416,10 @@
     <string name="about_version">Sürüm %1$s</string>
     <string name="about_update_banner_title">Otomatik güncelleme bildirimi</string>
     <string name="about_update_banner_subtitle">Yeni sürüm çıktığında bildirim göster</string>
+    <string name="about_update_auto_install_title">Güncellemeleri otomatik yükle</string>
+    <string name="about_update_auto_install_subtitle">Yeni sürümleri arka planda indirip cihaz boştayken yükle</string>
+    <string name="about_update_auto_install_notice_title">Otomatik güncellemeden sonra bildir</string>
+    <string name="about_update_auto_install_notice_subtitle">Uygulama kendini güncelledikten sonra bir sonraki açılışta bildirim göster</string>
     <string name="about_update_channel_title">Güncelleme kanalı</string>
     <string name="about_update_channel_subtitle">Almak istediğiniz uygulama güncellemesi türünü seçin</string>
     <string name="about_check_updates">Güncellemeleri kontrol et</string>
@@ -812,6 +816,9 @@
     <string name="video_section">Video</string>
     <string name="playback_true_black_letterbox">Gerçek siyah bantlar</string>
     <string name="playback_true_black_letterbox_sub">Açıkken görüntünün etrafındaki bantlar boyanmaz ve HDR ekranda gerçek siyah kalır. Bantlarda parlak bir çizgi görürsen kapalı bırak.</string>
+    <string name="playback_chapters_label">Sahneler</string>
+    <string name="playback_exo_chapters_title">Sahneleri göster (ExoPlayer)</string>
+    <string name="playback_exo_chapters_sub">MKV dosyalarındaki sahneleri okuyup ilerleme çubuğunda işaretler ve aralarında atlamayı sağlar. Oynatma başlayınca birkaç küçük ek istek yapar. mpv sahneleri her zaman gösterir.</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Fragman</string>
@@ -916,10 +923,23 @@
     <string name="sub_outline">Dış Çizgi</string>
     <string name="sub_outline_sub">Daha iyi görünürlük için altyazı metninin etrafına dış çizgi ekle</string>
     <string name="sub_outline_color">Dış Çizgi Rengi</string>
+    <string name="sub_hdr_style">HDR / Dolby Vision için ayrı stil</string>
+    <string name="sub_hdr_style_sub">HDR ve Dolby Vision videolarda altyazı için ayrı bir metin rengi ve daha kısık bir parlaklık kullan</string>
+    <string name="sub_hdr_text_color">HDR Metin Rengi</string>
+    <string name="sub_hdr_brightness">HDR Altyazı Parlaklığı</string>
     <string name="sub_advanced_section">Gelişmiş Altyazı Oluşturma</string>
     <string name="sub_libass">ASS/SSA altyazıları için libass kullan</string>
     <string name="sub_libass_sub">Bakım nedeniyle geçici olarak devre dışı bırakıldı</string>
     <string name="sub_libass_mode">Libass Görüntüleme Modu</string>
+    <string name="sub_libass_render_scale">Altyazı İşleme Çözünürlüğü</string>
+    <string name="sub_libass_render_scale_sub">Düşük çözünürlük, yoğun altyazı düzenlerinde akıcılığı artırır; keskinlik azalır</string>
+    <string name="sub_libass_render_mode">ASS İşleme Modu</string>
+    <string name="sub_libass_render_mode_sub">ASS/SSA altyazılarının videoya nasıl çizileceği</string>
+    <string name="sub_libass_render_mode_tunneled_sub">Tünelli oynatma video efektleri hattını atlar. Üst katman kendiliğinden kullanılır.</string>
+    <string name="sub_libass_render_mode_video_effect">Video Efekti</string>
+    <string name="sub_libass_render_mode_video_effect_sub">Altyazıyı doğrudan her video karesine çizer. Zamanlama her donanımda kareyle birebir gider. HDR içerik SDR\'ye ton eşlenir.</string>
+    <string name="sub_libass_render_mode_overlay">Üst Katman</string>
+    <string name="sub_libass_render_mode_overlay_sub">Altyazıyı ayrı bir yüzey katmanında çizer. HDR çıkışı korunur. Bazı cihazlarda zamanlama tam isabetli olmayabilir.</string>
     <string name="sub_org_none">Hiçbiri (varsayılan sıra)</string>
     <string name="sub_org_by_lang">Dile göre</string>
     <string name="sub_org_by_addon">Eklentiye göre</string>
@@ -1179,6 +1199,7 @@
     <string name="layout_custom_poster_screen_library">Kütüphane</string>
     <string name="layout_custom_poster_screen_search">Arama</string>
     <string name="layout_custom_poster_screen_details">Detay Ekranı</string>
+    <string name="layout_custom_poster_screen_tv_recommendations">TV Önerileri</string>
     <string name="layout_always_show_landscape_clearlogo">Yatay Posterlerde Her Zaman Logolu Arka Plan</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Eklentiden gelen yatay posteri yoksayar ve bunun yerine logo katmanlı arka plan kullanır.</string>
     <string name="web_custom_poster_title">Özel Poster Kaynağı</string>
@@ -1391,6 +1412,11 @@
     <string name="settings_stream_badges_section">Fusion Tarzı</string>
     <string name="settings_stream_size_badges_title">Boyut etiketleri</string>
     <string name="settings_stream_size_badges_description">Yayın sonuçlarında ve oynatıcı kaynak panellerinde dosya boyutu etiketlerini gösterir.</string>
+    <string name="settings_stream_badges_in_player_title">Oynatıcıda göster</string>
+    <string name="settings_stream_badges_in_player_description">Oynatılan video ve sesin rozetlerini oynatıcı başlığının altında gösterir. 2160p veya Atmos gibi düz metinle eşleşen bir rozet paketi gerekir.</string>
+    <string name="settings_stream_player_badges_title">Oynatıcı rozetleri</string>
+    <string name="settings_stream_player_badges_description">Oynatıcının kullanacağı rozet paketini seçin.</string>
+    <string name="settings_stream_player_badges_same">Yayın rozetleriyle aynı</string>
     <string name="settings_stream_addon_logo_title">Eklenti logosu</string>
     <string name="settings_stream_addon_logo_description">Yayın kaynaklarının yanında eklenti logosunu ve adını göster.</string>
     <string name="settings_stream_display_section">Görünüm</string>
@@ -1812,6 +1838,8 @@
     <string name="player_engine_switching_title">Oynatıcı Motoru Değiştiriliyor</string>
     <string name="player_engine_switching_message">Başlatma başarısız oldu. %1$s motoruna geçiliyor...</string>
     <string name="player_engine_switching_manual_message">%1$s motoruna geçiliyor...</string>
+    <string name="player_engine_switch_title">%1$s motoruna geçilsin mi?</string>
+    <string name="player_engine_switch_message">Video kaldığınız yerden yeniden yüklenecek.</string>
     <string name="playback_show_loading_status">Yükleme durumunu göster</string>
     <string name="playback_show_loading_status_sub">Oynatıcı başlatılırken adım adım ilerlemeyi göster.</string>
     <string name="player_sync_line">Satırı Senkronize Et</string>
@@ -1961,6 +1989,9 @@
     <string name="subtitle_style_bold">Kalın</string>
     <string name="subtitle_style_text_color">Metin Rengi</string>
     <string name="subtitle_style_text_opacity">Metin Opaklığı</string>
+    <string name="subtitle_style_text_color_hdr">Metin Rengi (HDR)</string>
+    <string name="subtitle_style_text_opacity_hdr">Metin Opaklığı (HDR)</string>
+    <string name="subtitle_style_brightness_hdr">Parlaklık (HDR)</string>
     <string name="subtitle_style_outline">Dış Çizgi</string>
     <string name="subtitle_style_bottom_offset">Alt Konum</string>
     <string name="subtitle_style_defaults">Varsayılanlar</string>
@@ -2413,6 +2444,7 @@
     <string name="update_checking">Güncellemeler kontrol ediliyor…</string>
     <string name="update_waiting_for_stable">Sonraki kararlı sürüm yayınlandığında alacaksınız</string>
     <string name="update_download_complete">İndirme tamamlandı. Kurulum için hazır.</string>
+    <string name="update_installed_automatically">Cihaz boştayken otomatik güncellendi</string>
     <string name="update_up_to_date">Sistem güncel. En son değişiklikler:</string>
     <string name="update_close">Kapat</string>
     <string name="update_open_settings">Ayarları Aç</string>
@@ -2761,6 +2793,10 @@
     <string name="cd_sources">Kaynaklar</string>
     <string name="cd_switch_player_engine">Oynatıcı motorunu değiştir</string>
     <string name="cd_episodes">Bölümler</string>
+    <string name="player_chapter_number">Sahne %1$d</string>
+    <string name="player_chapters">Sahneler</string>
+    <string name="player_chapters_title">Sahneler (%1$d)</string>
+    <string name="player_chapter_remaining">%1$s kaldı</string>
     <string name="cd_playback_speed">Oynatma hızı</string>
     <string name="cd_aspect_ratio">Görüntü oranı</string>
     <string name="cd_open_external_player">Harici oynatıcıda aç</string>
@@ -2782,6 +2818,12 @@
     <string name="cd_remove">Kaldır</string>
     <string name="cd_preview">Önizle</string>
     <string name="cd_test">Test et</string>
+    <string name="cd_enable_scraper">%1$s sağlayıcısını etkinleştir</string>
+    <string name="cd_enable_addon">%1$s eklentisini etkinleştir</string>
+    <string name="cd_color_swatch">Renk %1$s</string>
+    <string name="cd_emoji_option">Emoji %1$s</string>
+    <string name="cd_trailer_controls">Fragman kontrolleri</string>
+    <string name="cd_seek_bar">İlerleme çubuğu</string>
     <string name="cd_unlink">Bağlantıyı kes</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Trakt logosu</string>
@@ -3386,4 +3428,6 @@
     <string name="autosync_toast_failed_no_reference">Eşitleme başarısız: Bu videoda karşılaştırılacak gömülü altyazı yok.</string>
     <string name="autosync_toast_failed_unsupported">Eşitleme başarısız: Otomatik Eşitleme bu altyazı formatını desteklemiyor.</string>
     <string name="autosync_label_synced">Otomatik eşitlendi</string>
+    <string name="stream_resume_from_time">%1$s konumundan devam et</string>
+    <string name="stream_resume_from_percent">%1$d%% konumundan devam et</string>
 </resources>

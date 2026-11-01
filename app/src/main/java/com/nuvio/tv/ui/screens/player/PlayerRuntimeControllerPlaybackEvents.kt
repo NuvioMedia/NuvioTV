@@ -14,6 +14,7 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.tracking.scrobbleDiagnosticIdentity
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.NightMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
@@ -250,6 +251,20 @@ internal fun PlayerRuntimeController.applyAudioAmplification(db: Int) {
     }
 }
 
+internal fun PlayerRuntimeController.applyNightMode(mode: NightMode) {
+    _uiState.update { it.copy(nightMode = mode) }
+    if (isUsingMpvEngine()) return
+    val wasActive = nightModeAudioProcessor.isNightModeEnabled()
+    nightModeAudioProcessor.setMode(mode)
+
+    if (wasActive != nightModeAudioProcessor.isNightModeEnabled()) {
+        playbackSpeedAwareAudioSink?.notifyAudioProcessingRequirementChanged()
+        _exoPlayer?.let { player ->
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().build()
+        }
+    }
+}
+
 internal fun PlayerRuntimeController.applyCenterMixLevel(db: Int) {
     val clampedDb = db.coerceIn(CENTER_MIX_LEVEL_MIN_DB, CENTER_MIX_LEVEL_MAX_DB)
     ffmpegAudioRenderer?.setCenterMixLevelDb(clampedDb)
@@ -274,7 +289,8 @@ internal fun PlayerRuntimeController.updateAudioControlAvailability(
     _uiState.update { state ->
         state.copy(
             isAudioAmplificationAvailable = isAudioAmplificationAvailable,
-            isCenterMixAvailable = isCenterMixAvailable
+            isCenterMixAvailable = isCenterMixAvailable,
+            isNightModeAvailable = _exoPlayer != null && !isUsingMpvEngine()
         )
     }
 }
@@ -433,7 +449,11 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                             playbackEnded = naturalEnded
                         )
                     }
+                    // libmpv has no Media3 listener callbacks. Keep Android's active media
+                    // session in sync with the state sampled by this existing progress tick.
+                    refreshMpvMediaSession()
                     updateMpvTracksOnTick()
+                    recomputeChapterSkipIntervalsIfNeeded()
                     updateActiveSkipInterval(pos)
                     if (!_playbackTimeline.value.isLive) {
                         evaluatePostPlayOverlayVisibility(
@@ -502,6 +522,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         )
                     }
                 }
+                recomputeChapterSkipIntervalsIfNeeded()
                 updateActiveSkipInterval(pos)
                 if (!_playbackTimeline.value.isLive) {
                     evaluatePostPlayOverlayVisibility(
@@ -1349,8 +1370,11 @@ fun PlayerRuntimeController.hideControls() {
     _uiState.update { it.copy(showControls = false, showSeekOverlay = false, showMoreDialog = false) }
 }
 
-fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
-    if (event != PlayerEvent.OnParentalGuideHide) {
+fun PlayerRuntimeController.onEvent(
+    event: PlayerEvent,
+    showPlaybackControls: Boolean = true,
+) {
+    if (showPlaybackControls && event != PlayerEvent.OnParentalGuideHide) {
         onUserInteraction()
     }
     when (event) {
@@ -1392,7 +1416,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     publishPartyPlayback(paused = !player.playWhenReady)
                 }
             }
-            showControlsTemporarily()
+            if (showPlaybackControls) showControlsTemporarily()
         }
         PlayerEvent.OnSeekForward -> {
             if (_playbackTimeline.value.isLive) return
@@ -1471,10 +1495,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             updatePlaybackTimeline(currentPosition = target)
             scheduleProgressSyncAfterSeek()
             publishPartyPlayback(positionMs = target)
-            if (_uiState.value.showControls) {
-                showControlsTemporarily()
-            } else {
-                showSeekOverlayTemporarily()
+            if (showPlaybackControls) {
+                if (_uiState.value.showControls) {
+                    showControlsTemporarily()
+                } else {
+                    showSeekOverlayTemporarily()
+                }
             }
         }
         is PlayerEvent.OnSkipChapter -> {
@@ -1536,6 +1562,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     dbToPersist = if (event.enabled) currentDb else null,
                     centerMixDbToPersist = if (event.enabled) currentCenterMixDb else null
                 )
+            }
+        }
+        is PlayerEvent.OnSetNightMode -> {
+            applyNightMode(event.mode)
+            scope.launch {
+                playerSettingsDataStore.setNightMode(event.mode)
             }
         }
         is PlayerEvent.OnSetCenterMixLevelDb -> {
@@ -1800,7 +1832,11 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             selectEpisodesSeason(event.season)
         }
         is PlayerEvent.OnEpisodeSelected -> {
-            loadStreamsForEpisode(event.video)
+            loadStreamsForEpisode(
+                video = event.video,
+                forceRefresh = false,
+                manualSelection = event.manualSelection
+            )
         }
         PlayerEvent.OnReloadEpisodeStreams -> {
             reloadEpisodeStreams()
@@ -1893,7 +1929,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 )
             } else {
                 releasePlayer()
-                initializePlayer(currentStreamUrl, currentHeaders)
+                reinitializeCurrentStream()
             }
         }
         PlayerEvent.OnReportPlaybackIssue -> {
@@ -2097,8 +2133,7 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
     val videoHeight = matchedFormat?.height?.takeIf { it > 0 } ?: activeVideoFormat?.height?.takeIf { it > 0 } ?: currentVideoHeight
     val videoBitrate = activeVideoFormat?.bitrate?.takeIf { it > 0 } ?: currentVideoBitrate
     val videoCodec = activeVideoFormat?.let { format ->
-        CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
-            ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+        CustomDefaultTrackNameProvider.resolveCodecName(format.sampleMimeType, format.codecs)
     } ?: currentVideoCodec
 
     return StreamInfoData(

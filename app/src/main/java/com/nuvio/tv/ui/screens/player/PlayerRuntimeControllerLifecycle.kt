@@ -60,12 +60,7 @@ internal fun PlayerRuntimeController.releasePlayer(
     audioRouteChangeJob?.cancel()
     audioRouteChangeJob = null
 
-    try {
-        currentMediaSession?.release()
-        currentMediaSession = null
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
+    releaseMediaSession()
     progressJob?.cancel()
     mpvTrackRefreshJob?.cancel()
     mpvTrackRefreshJob = null

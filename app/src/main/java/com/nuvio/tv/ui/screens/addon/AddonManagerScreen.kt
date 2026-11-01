@@ -57,11 +57,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.animation.animateColorAsState
@@ -87,6 +89,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -123,6 +126,11 @@ private sealed interface AddonExperienceModeState {
     data class Loaded(val mode: ExperienceMode?) : AddonExperienceModeState
 }
 
+private enum class AddonManagerFocusTarget {
+    CatalogOrder,
+    Collections
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun AddonManagerScreen(
@@ -134,6 +142,10 @@ fun AddonManagerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val firstAddonToggleFocusRequester = remember { FocusRequester() }
+    val catalogOrderFocusRequester = remember { FocusRequester() }
+    val collectionsFocusRequester = remember { FocusRequester() }
+    var pendingFocusRestore by rememberSaveable { mutableStateOf<AddonManagerFocusTarget?>(null) }
+    val listState = rememberLazyListState()
     val experienceModeState by remember(viewModel) {
         viewModel.experienceMode.map<ExperienceMode?, AddonExperienceModeState> {
             AddonExperienceModeState.Loaded(it)
@@ -207,7 +219,9 @@ fun AddonManagerScreen(
     val requestInputBarFocus = {
         coroutineScope.launch {
             repeat(2) { withFrameNanos { } }
-            runCatching { surfaceFocusRequester.requestFocus() }
+            if (pendingFocusRestore == null) {
+                runCatching { surfaceFocusRequester.requestFocus() }
+            }
         }
     }
 
@@ -222,7 +236,12 @@ fun AddonManagerScreen(
         if (uiState.isQrModeActive) {
             restoreManageFromPhoneFocus = true
         }
-        if (!uiState.isQrModeActive && uiState.pendingChange == null && !isEditing && addonUrlPendingDeletion == null) {
+        if (pendingFocusRestore == null &&
+            !uiState.isQrModeActive &&
+            uiState.pendingChange == null &&
+            !isEditing &&
+            addonUrlPendingDeletion == null
+        ) {
             if (restoreManageFromPhoneFocus) {
                 requestManageFromPhoneFocus()
             } else {
@@ -245,10 +264,28 @@ fun AddonManagerScreen(
         }
     }
 
-    DisposableEffect(lifecycleOwner, uiState.isQrModeActive, uiState.pendingChange, addonUrlPendingDeletion) {
+    DisposableEffect(
+        lifecycleOwner,
+        uiState.isQrModeActive,
+        uiState.pendingChange,
+        addonUrlPendingDeletion,
+        pendingFocusRestore
+    ) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                if (
+                val focusRequester = when (pendingFocusRestore) {
+                    AddonManagerFocusTarget.CatalogOrder -> catalogOrderFocusRequester
+                    AddonManagerFocusTarget.Collections -> collectionsFocusRequester
+                    else -> null
+                }
+                if (focusRequester != null) {
+                    coroutineScope.launch {
+                        repeat(2) { withFrameNanos { } }
+                        if (focusRequester.requestFocus()) {
+                            pendingFocusRestore = null
+                        }
+                    }
+                } else if (
                     !uiState.isQrModeActive &&
                     uiState.pendingChange == null &&
                     !isEditing &&
@@ -280,7 +317,16 @@ fun AddonManagerScreen(
             .background(NuvioTheme.colors.Background)
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRestorer(
+                    when (pendingFocusRestore) {
+                        AddonManagerFocusTarget.CatalogOrder -> catalogOrderFocusRequester
+                        AddonManagerFocusTarget.Collections -> collectionsFocusRequester
+                        null -> surfaceFocusRequester
+                    }
+                ),
             contentPadding = PaddingValues(horizontal = 36.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -456,13 +502,25 @@ fun AddonManagerScreen(
 
             if (!viewModel.isReadOnly && !isEssential && hasHomeVisibleCatalogs) {
                 item {
-                    CatalogOrderEntryCard(onClick = onNavigateToCatalogOrder)
+                    CatalogOrderEntryCard(
+                        onClick = {
+                            pendingFocusRestore = AddonManagerFocusTarget.CatalogOrder
+                            onNavigateToCatalogOrder()
+                        },
+                        focusRequester = catalogOrderFocusRequester
+                    )
                 }
             }
 
             if (!isEssential) {
                 item {
-                    CollectionsEntryCard(onClick = onNavigateToCollections)
+                    CollectionsEntryCard(
+                        onClick = {
+                            pendingFocusRestore = AddonManagerFocusTarget.Collections
+                            onNavigateToCollections()
+                        },
+                        focusRequester = collectionsFocusRequester
+                    )
                 }
             }
 
@@ -754,13 +812,17 @@ private fun ManageFromPhoneCard(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun CatalogOrderEntryCard(onClick: () -> Unit) {
+private fun CatalogOrderEntryCard(
+    onClick: () -> Unit,
+    focusRequester: FocusRequester
+) {
     var isFocused by remember { mutableStateOf(false) }
 
     Surface(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .focusRequester(focusRequester)
             .onFocusChanged { isFocused = it.isFocused }
             .semantics { role = Role.Button },
         colors = ClickableSurfaceDefaults.colors(
@@ -816,13 +878,17 @@ private fun CatalogOrderEntryCard(onClick: () -> Unit) {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun CollectionsEntryCard(onClick: () -> Unit) {
+private fun CollectionsEntryCard(
+    onClick: () -> Unit,
+    focusRequester: FocusRequester
+) {
     var isFocused by remember { mutableStateOf(false) }
 
     Surface(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .focusRequester(focusRequester)
             .onFocusChanged { isFocused = it.isFocused }
             .semantics { role = Role.Button },
         colors = ClickableSurfaceDefaults.colors(
