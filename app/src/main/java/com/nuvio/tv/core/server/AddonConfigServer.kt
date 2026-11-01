@@ -32,6 +32,7 @@ class AddonConfigServer(
     }
 
     override fun serve(session: IHTTPSession): Response {
+        ConfigServerGuard.rejection(session)?.let { return it }
         val uri = session.uri
         val method = session.method
 
