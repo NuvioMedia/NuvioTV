@@ -1,0 +1,104 @@
+name: Publish Usenet native assets
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [full-nntp]
+    paths:
+      - native/usenet/prebuilt/manifest.json
+      - .github/workflows/usenet-native-assets.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: usenet-native-assets-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read pinned build metadata
+        id: metadata
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          data = json.loads(Path('native/usenet/prebuilt/manifest.json').read_text())
+          match = re.fullmatch(r'https://github\.com/([^/]+/[^/]+)/releases/download/(usenet-native-[0-9a-f]{16})', data['downloadBaseUrl'])
+          if not match or match[1] != os.environ['GITHUB_REPOSITORY']:
+              raise SystemExit('Run publication in the repository named by the manifest downloadBaseUrl')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              print(f'tag={match[2]}', file=output)
+              print(f"go-version={data['toolchain']['go'].split()[2].removeprefix('go')}", file=output)
+              print(f"ndk-version={data['toolchain']['ndk']}", file=output)
+          PY
+          cp native/usenet/prebuilt/manifest.json "$RUNNER_TEMP/expected-usenet-manifest.json"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.metadata.outputs.go-version }}
+          cache-dependency-path: native/usenet/go.sum
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - name: Install Android native toolchain
+        env:
+          NDK_VERSION: ${{ steps.metadata.outputs.ndk-version }}
+        run: sdkmanager "ndk;$NDK_VERSION" 'cmake;3.22.1'
+      - name: Build all four ABIs
+        env:
+          NDK_VERSION: ${{ steps.metadata.outputs.ndk-version }}
+        run: |
+          python3 native/usenet/scripts/build_android.py \
+            --ndk "$ANDROID_HOME/ndk/$NDK_VERSION" \
+            --cmake "$ANDROID_HOME/cmake/3.22.1/bin/cmake" \
+            --release-repository "$GITHUB_REPOSITORY"
+      - name: Require the committed source and binary checksums
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          expected = json.loads((Path(os.environ['RUNNER_TEMP']) / 'expected-usenet-manifest.json').read_text())
+          actual = json.loads(Path('native/usenet/prebuilt/manifest.json').read_text())
+          if actual != expected:
+              raise SystemExit('Build differs from the committed manifest. Inspect the native-build artifact before updating the manifest; nothing was published.')
+          PY
+          python3 native/usenet/scripts/check_prebuilts.py
+          git restore native/usenet/prebuilt/manifest.json
+      - name: Publish versioned assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            python3 native/usenet/scripts/publish_prebuilts.py --target "$GITHUB_SHA"
+          fi
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/published-usenet"
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          published = Path(os.environ['RUNNER_TEMP']) / 'published-usenet'
+          expected = json.loads(Path('native/usenet/prebuilt/manifest.json').read_text())
+          if json.loads((published / 'manifest.json').read_text()) != expected:
+              raise SystemExit('Published manifest differs; existing release was not overwritten')
+          for abi, digest in expected['binarySha256'].items():
+              if hashlib.sha256((published / f'libnuvio_usenet-{abi}.so').read_bytes()).hexdigest() != digest:
+                  raise SystemExit(f'Published {abi} checksum differs; existing release was not overwritten')
+          print('Published native assets and manifest verified')
+          PY
+      - name: Save build output for verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usenet-native-build
+          path: native/usenet/prebuilt/
+          retention-days: 7
+          if-no-files-found: warn

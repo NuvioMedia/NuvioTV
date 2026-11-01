@@ -1152,6 +1152,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                 // Exception: tunneled playback bypasses the normal video rendering pipeline
                 // so onRenderedFirstFrame() never fires — TunneledFirstReady starts on READY.
                 playWhenReady = false
+                com.nuvio.tv.core.usenet.UsenetStartupDiagnostics.attach(this, context)
+                com.nuvio.tv.core.usenet.UsenetStartupDiagnostics.mark(currentStreamUrl, "prepare")
                 prepare()
 
                 addListener(object : Player.Listener {
@@ -1299,6 +1301,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 readyTransition.nextState.shouldEnforceAutoplayOnFirstReady
                             val firstFrameAlreadyRendered = hasRenderedFirstFrame
                             if (readyTransition.nextState.hasRenderedFirstFrame && isTunneledPlayback) {
+                                if (!hasRenderedFirstFrame) recordPlayedRelease()
                                 hasRenderedFirstFrame = true
                             }
                             when (val action = readyTransition.action) {
@@ -1454,6 +1457,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     override fun onRenderedFirstFrame() {
                         val isFirstFrame = !hasRenderedFirstFrame  // capture BEFORE flipping
                         hasRenderedFirstFrame = true
+                        if (isFirstFrame) recordPlayedRelease()
                         mediaSourceFactory.unlockStartupPrefetch()
                         if (isFirstFrame && _uiState.value.postPlayDismissedForCurrentEpisode) {
                             _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
@@ -1486,10 +1490,26 @@ internal fun PlayerRuntimeController.initializePlayer(
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
+                        if (streamFallbackSession != null &&
+                            (_exoPlayer !== this@apply || streamFallbackJob?.isActive == true)) return
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
                         cancelFirstFrameWatchdog()
                         val detailedError = error.toDisplayMessage(context)
+                        val usenetResponse = error.findInvalidResponseCodeException()
+                        val permanentUsenetFailure = com.nuvio.tv.core.player.isPermanentUsenetHttpFailure(
+                            com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(currentStreamUrl),
+                            usenetResponse?.responseCode,
+                            usenetResponse?.headerFields.orEmpty()
+                        )
                         cancelStableProgressReset()
+                        if (permanentUsenetFailure) {
+                            val kind = usenetResponse?.headerFields.orEmpty().entries
+                                .firstOrNull { it.key.equals("X-Usenet-Failure", ignoreCase = true) }?.value?.firstOrNull()
+                            streamFallbackSession?.current?.let {
+                                com.nuvio.tv.core.usenet.UnplayableReleases.get(context).record(it, kind)
+                            }
+                        }
+                        if (permanentUsenetFailure && tryNextStream(detailedError)) return
 
                         if (Vc1VideoFormatHeuristics.isVc1PlaybackFailure(
                                 error = error,
@@ -1649,7 +1669,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
 
                         // ── Main Engine Failover ──
-                        if (maybeAutoSwitchInternalPlayerOnStartupError(detailedError = detailedError, allowEngineFailover = allowEngineFailover)) {
+                        if (!permanentUsenetFailure && maybeAutoSwitchInternalPlayerOnStartupError(detailedError = detailedError, allowEngineFailover = allowEngineFailover)) {
                             return
                         }
                         if (attemptAutoRetry(error, detailedError)) {
@@ -1658,6 +1678,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (tryServerFallback()) {
                             return
                         }
+                        if (tryNextStream(detailedError)) return
 
                         if (rebufferStartedAtMs != 0L) {
                             val lastRebufferMs = (SystemClock.elapsedRealtime() - rebufferStartedAtMs).coerceAtLeast(0L)
@@ -1918,6 +1939,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 fetchAddonSubtitles()
             }
         } catch (e: Exception) {
+            if (streamFallbackSession != null && e is kotlinx.coroutines.CancellationException) throw e
             if (
                 maybeAutoSwitchInternalPlayerOnStartupError(
                     detailedError = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_initialize_failed),
@@ -1927,6 +1949,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 return@launch
             }
             val displayError = e.toDisplayMessage(context, context.getString(com.nuvio.tv.R.string.player_error_initialize_failed))
+            if (tryNextStream(displayError)) return@launch
             val diagnostics = LastPlaybackDiagnostics(
                 timestampMs = System.currentTimeMillis(),
                 host = currentStreamUrl.safeHost(),

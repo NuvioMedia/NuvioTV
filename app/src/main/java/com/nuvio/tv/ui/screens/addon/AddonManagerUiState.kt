@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.addon
 
 import android.graphics.Bitmap
+import com.nuvio.tv.core.usenet.BuiltInUsenetOrder
 import com.nuvio.tv.domain.model.Addon
 
 data class AddonManagerUiState(
@@ -16,8 +17,16 @@ data class AddonManagerUiState(
     val qrCodeBitmap: Bitmap? = null,
     val serverUrl: String? = null,
     // Pending change from phone
-    val pendingChange: PendingChangeInfo? = null
-)
+    val pendingChange: PendingChangeInfo? = null,
+    /** Null when built-in Usenet has no provider or indexer yet. */
+    val builtInUsenet: BuiltInUsenetRow? = null
+) {
+    /** Where built-in Usenet is listed among [installedAddons]. */
+    val builtInUsenetIndex: Int?
+        get() = builtInUsenet?.let { BuiltInUsenetOrder.index(installedAddons.map { addon -> addon.baseUrl }, it.addonsAbove) }
+}
+
+data class BuiltInUsenetRow(val enabled: Boolean, val addonsAbove: List<String>?)
 
 data class PendingChangeInfo(
     val changeId: String,

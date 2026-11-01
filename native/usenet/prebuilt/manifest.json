@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "sourceSha256": "9d41805b1c84f22efb9847e1494f78c5ef8e125972363507d67a8341b8f321e7",
+  "binarySha256": {
+    "arm64-v8a": "a843c027461ba00687ef17c026fcd5de934d4f741ad0f0c93dc93874aaaae4b6",
+    "armeabi-v7a": "a8e2e226895364ee777c3477c3d27e9df93a9777534e6c06350b099529d6620a",
+    "x86_64": "ee80aeca1d22fd0ad4d9aec75c338d25b15a22e55bdb4a38032050a1c386581a",
+    "x86": "d8698cb92794e4dac47f415af4990da4cbe5107b418695c881f1d71ccab29ea3"
+  },
+  "downloadBaseUrl": "https://github.com/haaihond/NuvioTV/releases/download/usenet-native-9d41805b1c84f22e",
+  "toolchain": {
+    "go": "go version go1.27.2 linux/amd64",
+    "ndk": "29.0.14206865"
+  }
+}

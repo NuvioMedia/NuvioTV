@@ -357,6 +357,16 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
             if (isUsingMpvEngine()) {
                 val view = mpvView
                 if (view != null) {
+                    val failure = view.consumePlaybackFailure()
+                    if (failure != null && streamFallbackSession?.ownsPlayback(currentStreamUrl) == true) {
+                        if (!maybeAutoSwitchInternalPlayerOnStartupError(failure, allowEngineFailover = true) &&
+                            !tryNextStream(failure)
+                        ) {
+                            cancelNextEpisodeAutoPlayOnFatalError()
+                            _uiState.update { it.copy(error = failure, isBuffering = false, showLoadingOverlay = false) }
+                        }
+                        return@launch
+                    }
                     val pos = view.currentPositionMs().coerceAtLeast(0L)
                     val playerDuration = view.durationMs().coerceAtLeast(0L)
                     applyPendingMpvSeekIfNeeded(
@@ -373,6 +383,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                                 (pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L))
                             if (firstFrameReady) {
                                 hasRenderedFirstFrame = true
+                                recordPlayedRelease()
                                 resetMpvStartupWatchdog()
                                 scheduleMpvStableProgressReset()
                                 val clickToFirstFrameMs = launchStartedAtElapsedMs
@@ -1855,6 +1866,7 @@ fun PlayerRuntimeController.onEvent(
             filterSourceStreamsByAddon(event.addonName)
         }
         is PlayerEvent.OnSourceStreamSelected -> {
+            beginStreamFallbackSession(event.stream, _uiState.value.sourceFilteredStreams.ifEmpty { _uiState.value.sourceAllStreams })
             switchToSourceStream(event.stream)
         }
         PlayerEvent.OnDismissTransientOverlay -> {
@@ -1872,6 +1884,7 @@ fun PlayerRuntimeController.onEvent(
             scheduleHideControls()
         }
         PlayerEvent.OnRetry -> {
+            cancelStreamFallback()
             hasRenderedFirstFrame = false
             endDetectionArmed = false
             mpvEofSeenClear = false
