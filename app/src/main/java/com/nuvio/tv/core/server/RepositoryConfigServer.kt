@@ -42,6 +42,7 @@ class RepositoryConfigServer(
     }
 
     override fun serve(session: IHTTPSession): Response {
+        ConfigServerGuard.rejection(session)?.let { return it }
         val uri = session.uri
         val method = session.method
 
@@ -91,8 +92,7 @@ class RepositoryConfigServer(
 
         val urls: List<String> = try {
             val parsed = gson.fromJson<Map<String, Any>>(body, object : TypeToken<Map<String, Any>>() {}.type)
-            @Suppress("UNCHECKED_CAST")
-            (parsed["urls"] as? List<String>) ?: emptyList()
+            parseStringList(parsed["urls"])
         } catch (e: Exception) {
             val error = mapOf("error" to context.getString(com.nuvio.tv.R.string.web_error_invalid_request_body))
             return newFixedLengthResponse(
@@ -116,6 +116,15 @@ class RepositoryConfigServer(
         val status = change?.status?.name?.lowercase() ?: "not_found"
         val response = mapOf("status" to status)
         return newFixedLengthResponse(Response.Status.OK, "application/json", gson.toJson(response))
+    }
+
+    private fun parseStringList(rawValue: Any?): List<String> {
+        val values = rawValue as? List<*> ?: return emptyList()
+        return values.asSequence()
+            .mapNotNull { (it as? String)?.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .toList()
     }
 
     companion object {
