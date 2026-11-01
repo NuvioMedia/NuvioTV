@@ -431,7 +431,12 @@ class UsenetSidecar private constructor(private val context: Context) {
         if (!binary.canExecute()) throw UsenetPreparationException("Usenet engine is missing for this device's CPU", UsenetPreparationException.Scope.ENGINE)
         val secret = ByteArray(32).also { SecureRandom().nextBytes(it) }
             .joinToString("") { "%02x".format(it) }
-        val child = ProcessBuilder(binary.absolutePath).start()
+        // Go defaults to MADV_FREE on Android (MADV_DONTNEED only for GOOS=linux),
+        // so memory the engine returns after a session stays in its RSS until the
+        // kernel is under pressure. GODEBUG is read before main, hence set here.
+        val child = ProcessBuilder(binary.absolutePath)
+            .apply { environment()["GODEBUG"] = "madvdontneed=1" }
+            .start()
         trace?.mark("sidecar_spawned")
         process = child
         processProfile = cfg.profile
