@@ -1,7 +1,8 @@
 # Fast MKV Startup
 
-The toggle is under Settings → Advanced → Usenet streaming. It defaults to ON
-and applies to the next session. Four cards immediately below the settings show
+The toggle is under Settings → Integrations → Usenet streaming → Playback and
+engine. It defaults to ON and applies to the next session. Four cards in the
+Diagnostics section show
 the last ExoPlayer startup, engine work, NZB stages, and cache activity. They reuse the DV
 diagnostics card and row components and remain readable with the TV remote.
 The latest report is stored in private app preferences; no clipboard action is
