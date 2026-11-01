@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +46,13 @@ type Session struct {
 
 func (s *Session) Close() { s.cancel(); s.warmup.Close(); s.store.Close(); s.pool.Close() }
 
+// A closed session leaves its article slabs and provider buffers as garbage, but
+// an idle engine allocates nothing, so no GC runs and the pages stay resident
+// while it waits. Return them once the last session is gone; the delay lets a
+// response that still holds a slab finish first. The app starts the engine with
+// GODEBUG=madvdontneed=1 so the returned pages leave its RSS at once.
+const idleMemoryReleaseDelay = 2 * time.Second
+
 type Server struct {
 	ctx           context.Context
 	token         string
@@ -56,10 +64,14 @@ type Server struct {
 	opening       bool
 	nzbCache      *nzbCache
 	pools         providerPools
+	// Tests replace these; production returns idle memory with debug.FreeOSMemory.
+	idleMemoryDelay time.Duration
+	freeOSMemory    func()
 }
 
 func NewServer(ctx context.Context, token string, roots *x509.CertPool, client *http.Client) *Server {
-	return &Server{ctx: ctx, token: token, roots: roots, client: nzbHTTPClient(client, false), privateClient: nzbHTTPClient(client, true), sessions: make(map[string]*Session)}
+	return &Server{ctx: ctx, token: token, roots: roots, client: nzbHTTPClient(client, false), privateClient: nzbHTTPClient(client, true), sessions: make(map[string]*Session),
+		idleMemoryDelay: idleMemoryReleaseDelay, freeOSMemory: debug.FreeOSMemory}
 }
 
 // Configure once before serving. The directory comes from the Android bootstrap,
@@ -82,6 +94,17 @@ func (s *Server) Close() {
 	for _, v := range sessions {
 		v.Close()
 	}
+}
+
+func (s *Server) releaseIdleMemory() {
+	time.AfterFunc(s.idleMemoryDelay, func() {
+		s.mu.Lock()
+		idle := len(s.sessions) == 0 && !s.opening
+		s.mu.Unlock()
+		if idle && s.ctx.Err() == nil {
+			s.freeOSMemory()
+		}
+	})
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +149,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.mu.Unlock()
 		if v != nil {
 			v.Close()
+			s.releaseIdleMemory()
 		}
 		w.WriteHeader(http.StatusNoContent)
 	default:
