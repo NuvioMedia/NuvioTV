@@ -16,6 +16,7 @@ import com.nuvio.tv.domain.model.AddonResource
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.domain.model.LocalScraperResult
+import com.nuvio.tv.domain.model.pluginBingeGroup
 import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.RepositoryType
 import com.nuvio.tv.domain.model.ScraperInfo
@@ -125,6 +126,44 @@ class StreamRepositoryPluginIsolationTest {
     }
 
     @Test
+    fun `plugin continuation does not query addons`() = runTest {
+        val scraper = compatibleScraper()
+        val harness = newHarness(listOf(scraper))
+        coEvery { harness.tmdbService.ensureTmdbId("tt1341338", "movie") } returns "123"
+        every {
+            harness.pluginManager.executeScrapersStreaming(
+                "123",
+                "movie",
+                null,
+                null,
+                "local-plugin-plugin",
+                true
+            )
+        } returns flowOf(
+            scraper to listOf(
+                LocalScraperResult(
+                    title = "Episode",
+                    url = "https://stream.example/ep.m3u8"
+                )
+            )
+        )
+
+        val results = harness.repository.getStreamsFromAllAddons(
+            type = "movie",
+            videoId = "tt1341338",
+            season = null,
+            episode = null,
+            priorityBingeGroup = "local-plugin-plugin",
+            preferredPluginOnly = true,
+            continuePluginOnly = true
+        ).toList()
+
+        val groups = (results.last() as NetworkResult.Success).data
+        assertEquals(listOf("Plugin"), groups.map { it.addonName })
+        coVerify(exactly = 0) { harness.api.getStreams(any()) }
+    }
+
+    @Test
     fun `repository grouping preserves each plugin provider name`() = runTest {
         assertPluginProviderNames(groupByRepository = true)
     }
@@ -145,7 +184,9 @@ class StreamRepositoryPluginIsolationTest {
             listOf(PluginRepository(id = "repo", name = "Repository", url = "https://repo.example"))
         )
         coEvery { harness.tmdbService.ensureTmdbId("tt1341338", "movie") } returns "123"
-        every { harness.pluginManager.executeScrapersStreaming("123", "movie", null, null) } returns
+        every {
+            harness.pluginManager.executeScrapersStreaming("123", "movie", null, null, null, false)
+        } returns
             flowOf(*scrapers.map { scraper ->
                 scraper to listOf(LocalScraperResult(
                     title = "Shared title",
@@ -164,6 +205,7 @@ class StreamRepositoryPluginIsolationTest {
         )
         val streams = pluginGroups.flatMap { it.streams }
         assertEquals(scrapers.map { it.name }, streams.map { it.pluginSourceName })
+        assertEquals(scrapers.map { pluginBingeGroup(scraperId = it.id, url = "https://stream.example/" + it.id + ".m3u8", title = "Shared title") }, streams.map { it.behaviorHints?.bingeGroup })
         assertEquals(listOf("Shared title", "Shared title"), streams.map { it.title })
         assertTrue(streams.all { stream ->
             stream.addonName == if (groupByRepository) "Repository" else stream.pluginSourceName

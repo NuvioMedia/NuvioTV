@@ -13,6 +13,7 @@ import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.toTrackPreference
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.scraperIdFromPluginBingeGroup
 import com.nuvio.tv.domain.model.StreamDebridCacheState
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.enabledAddons
@@ -239,7 +240,8 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
             videoId = vid,
             season = seasonArg,
             episode = episodeArg,
-            forceRefresh = forceRefresh
+            forceRefresh = forceRefresh,
+            priorityBingeGroup = currentStreamBingeGroup
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
@@ -572,7 +574,11 @@ private suspend fun PlayerRuntimeController.updateEpisodeSourceChipsForFetchStar
         emptyList()
     }
 
-    val ordered = (serverSourceNames(type, videoId) + addonNames + pluginNames).distinct()
+    val ordered = buildList {
+        addAll(serverSourceNames(type, videoId))
+        addAll(addonNames)
+        addAll(pluginNames)
+    }.distinct()
     _uiState.update {
         it.copy(
             episodeSourceChips = ordered.map { name -> SourceChipItem(name, SourceChipStatus.LOADING) }
@@ -655,6 +661,19 @@ private fun PlayerRuntimeController.applySelectedStreamState(
  * Ensures binge-group, addon info, and video hints are always set regardless
  * of stream type — critical for next-episode binge matching.
  */
+internal fun PlayerRuntimeController.recordDistinctPluginPlay(
+    bingeGroup: String?,
+    playbackIdentity: String
+) {
+    val group = bingeGroup?.trim().orEmpty()
+    if (scraperIdFromPluginBingeGroup(group) == null) return
+    val identity = playbackIdentity.trim().ifEmpty { "$contentId|${currentSeason}|${currentEpisode}" }
+    val key = "$group|$identity"
+    if (key == recordedPluginPlayIdentity) return
+    recordedPluginPlayIdentity = key
+    pluginManager.recordPluginProviderPlay(group)
+}
+
 private fun PlayerRuntimeController.applyStreamMetadata(stream: Stream) {
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
     applyStreamAudioDelay(stream.behaviorHints?.audioDelayMs, stream.behaviorHints?.audioDelayLanguage)
@@ -700,7 +719,8 @@ internal fun PlayerRuntimeController.handleStreamRedirect(requestedUrl: String, 
                     type = request.type,
                     videoId = request.videoId,
                     season = request.season,
-                    episode = request.episode
+                    episode = request.episode,
+                    priorityBingeGroup = currentStreamBingeGroup
                 )?.let { cached ->
                     findRedirectTargetStream(cached.flatMap { it.streams }, addonName, requestedUrl, resolvedUrl)
                 }
@@ -1032,12 +1052,21 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                 )
                 player.playWhenReady = true
                 player.prepare()
+                recordDistinctPluginPlay(
+                    bingeGroup = stream.behaviorHints?.bingeGroup,
+                    playbackIdentity = stream.getEffectiveInfoHash() ?: playbackUrl
+                )
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_play_stream_failed)) }
             }
         }
-    } ?: run {
-        initializePlayer(playbackUrl, playbackHeaders)
+    } ?: initializePlayer(playbackUrl, playbackHeaders).also {
+        if (playbackUrl.isNotEmpty()) {
+            recordDistinctPluginPlay(
+                bingeGroup = stream.behaviorHints?.bingeGroup,
+                playbackIdentity = stream.getEffectiveInfoHash() ?: playbackUrl
+            )
+        }
     }
 
     loadSavedProgressFor(currentSeason, currentEpisode)
@@ -1296,15 +1325,21 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(
         val preferredServerNames = serverStreams.preferredSourceNames(type, video.id)
         var debridPreparationLaunched = false
 
-        // Initialize episode source chips with LOADING status
-        updateEpisodeSourceChipsForFetchStart(type, video.id, installedAddons)
+        // The episode list and the fallback picker search every source. Plugin-only
+        // continuation stays on automatic next-episode playback and prefetch.
+        updateEpisodeSourceChipsForFetchStart(
+            type,
+            video.id,
+            installedAddons
+        )
 
         streamRepository.getStreamsFromAllAddons(
             type = type,
             videoId = video.id,
             season = video.season,
             episode = video.episode,
-            forceRefresh = forceRefresh
+            forceRefresh = forceRefresh,
+            priorityBingeGroup = currentStreamBingeGroup
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
@@ -1715,6 +1750,10 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
         headers = playbackHeaders,
         loadSavedProgress = true
     )
+    recordDistinctPluginPlay(
+        bingeGroup = stream.behaviorHints?.bingeGroup,
+        playbackIdentity = stream.getEffectiveInfoHash() ?: playbackUrl
+    )
 }
 
 private fun String.safeStreamTraceHost(): String {
@@ -1910,7 +1949,10 @@ internal fun PlayerRuntimeController.preloadNextEpisodeSources() {
             type = type,
             videoId = nextVideo.id,
             season = nextVideo.season,
-            episode = nextVideo.episode
+            episode = nextVideo.episode,
+            priorityBingeGroup = currentStreamBingeGroup,
+            preferredPluginOnly = true,
+            continuePluginOnly = scraperIdFromPluginBingeGroup(currentStreamBingeGroup) != null
         ).collect { /* results cached by StreamSearchSessionCache */ }
     }
 }
@@ -2023,7 +2065,11 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
             val searchSettled = CompletableDeferred<Unit>()
 
             fun trySelectStream(data: List<AddonStreams>): Stream? {
-                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder, preferredServerNames)
+                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(
+                    data.withoutAddonsWhenContinuingPlugin(currentStreamBingeGroup),
+                    installedAddonOrder,
+                    preferredServerNames
+                )
                 val allStreams = orderedStreams.flatMap { it.streams }
                 return StreamAutoPlaySelector.selectAutoPlayStream(
                     streams = allStreams,
@@ -2045,7 +2091,11 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
 
             fun tryBingeGroupOnly(data: List<AddonStreams>): Stream? {
                 if (currentStreamBingeGroup == null || !playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode) return null
-                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder, preferredServerNames)
+                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(
+                    data.withoutAddonsWhenContinuingPlugin(currentStreamBingeGroup),
+                    installedAddonOrder,
+                    preferredServerNames
+                )
                 val allStreams = orderedStreams.flatMap { it.streams }
                 // Early: binge group + filename match (most precise)
                 val nextFilename = com.nuvio.tv.core.player.FilenameEpisodeMatcher.buildNextFilename(
@@ -2056,13 +2106,15 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     nextEpisode = nextVideo.episode ?: 0
                 ) ?: currentFilename?.takeIf { it.isNotBlank() }
                 if (nextFilename != null) {
-                    val bingeAndFilename = allStreams.firstOrNull { stream ->
-                        !stream.isExternal() &&
-                            stream.behaviorHints?.bingeGroup == currentStreamBingeGroup &&
-                            com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
-                                stream.behaviorHints?.filename, nextFilename
-                            )
-                    }
+                    val bingeAndFilename = StreamAutoPlaySelector.selectEarlyBingeGroupMatch(
+                        allStreams.filter { stream ->
+                            !stream.isExternal() &&
+                                com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
+                                    stream.behaviorHints?.filename, nextFilename
+                                )
+                        },
+                        currentStreamBingeGroup.orEmpty()
+                    )
                     if (bingeAndFilename != null) return bingeAndFilename
                 }
                 // Early fallback: binge group alone
@@ -2089,7 +2141,11 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     nextEpisode = nextVideo.episode ?: 0
                 ) ?: currentFilename?.takeIf { it.isNotBlank() }
                     ?: return null
-                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder, preferredServerNames)
+                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(
+                    data.withoutAddonsWhenContinuingPlugin(currentStreamBingeGroup),
+                    installedAddonOrder,
+                    preferredServerNames
+                )
                 return orderedStreams.flatMap { it.streams }.firstOrNull { stream ->
                     !stream.isExternal() &&
                         com.nuvio.tv.core.player.FilenameEpisodeMatcher.matches(
@@ -2111,7 +2167,10 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     type = type,
                     videoId = nextVideo.id,
                     season = nextVideo.season,
-                    episode = nextVideo.episode
+                    episode = nextVideo.episode,
+                    priorityBingeGroup = currentStreamBingeGroup,
+                    preferredPluginOnly = true,
+                    continuePluginOnly = scraperIdFromPluginBingeGroup(currentStreamBingeGroup) != null
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {
@@ -2310,5 +2369,15 @@ private fun PlayerRuntimeController.playNextCloudLibraryFile(
                 )
             }
         }
+    }
+}
+
+private fun List<AddonStreams>.withoutAddonsWhenContinuingPlugin(bingeGroup: String?): List<AddonStreams> {
+    if (scraperIdFromPluginBingeGroup(bingeGroup) == null) return this
+    return mapNotNull { group ->
+        val streams = group.streams.filter { stream ->
+            scraperIdFromPluginBingeGroup(stream.behaviorHints?.bingeGroup) != null
+        }
+        if (streams.isEmpty()) null else group.copy(streams = streams)
     }
 }

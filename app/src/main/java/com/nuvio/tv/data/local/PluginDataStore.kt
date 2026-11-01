@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.nuvio.tv.core.plugin.PluginProviderPlayStat
+import com.nuvio.tv.core.plugin.pluginProviderPlayStats
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.ScraperInfo
@@ -34,6 +36,7 @@ class PluginDataStore @Inject constructor(
     companion object {
         internal const val FEATURE = "plugin_settings"
         internal const val GROUP_STREAMS_BY_REPOSITORY = "group_streams_by_repository"
+        private const val MAX_PLUGIN_PROVIDER_PLAYS = 40
     }
 
     private fun effectiveProfileId(): Int {
@@ -76,7 +79,11 @@ class PluginDataStore @Inject constructor(
     private val scrapersKey = stringPreferencesKey("scrapers")
     private val pluginsEnabledKey = booleanPreferencesKey("plugins_enabled")
     private val groupStreamsByRepositoryKey = booleanPreferencesKey(GROUP_STREAMS_BY_REPOSITORY)
+    private val pluginProviderPlaysKey = stringPreferencesKey("plugin_provider_plays")
     private val scraperSettingsKey = stringPreferencesKey("scraper_settings")
+    private val pluginProviderPlaysAdapter = moshi.adapter<List<String>>(
+        Types.newParameterizedType(List::class.java, String::class.java)
+    )
 
     private val repoListType = Types.newParameterizedType(List::class.java, PluginRepository::class.java)
     private val scraperListType = Types.newParameterizedType(List::class.java, ScraperInfo::class.java)
@@ -270,6 +277,36 @@ class PluginDataStore @Inject constructor(
         val json = moshi.adapter<Map<String, Map<String, Any>>>(settingsMapType).toJson(allSettings)
         store().edit { p ->
             p[scraperSettingsKey] = json
+        }
+    }
+
+    /**
+     * Play history follows the viewer, not the profile that owns the plugin list.
+     * A recent window keeps a newly preferred provider able to move to the front.
+     */
+    suspend fun recordPluginProviderPlay(scraperId: String) {
+        val id = scraperId.trim()
+        if (id.isEmpty()) return
+        viewerStore().edit { prefs ->
+            val updated = (decodePluginProviderPlays(prefs[pluginProviderPlaysKey]) + id)
+                .takeLast(MAX_PLUGIN_PROVIDER_PLAYS)
+            prefs[pluginProviderPlaysKey] = pluginProviderPlaysAdapter.toJson(updated)
+        }
+    }
+
+    suspend fun pluginProviderPlayStats(): Map<String, PluginProviderPlayStat> {
+        val json = viewerStore().data.first()[pluginProviderPlaysKey]
+        return pluginProviderPlayStats(decodePluginProviderPlays(json))
+    }
+
+    private fun viewerStore() = factory.get(profileManager.activeProfileId.value, FEATURE)
+
+    private fun decodePluginProviderPlays(json: String?): List<String> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            pluginProviderPlaysAdapter.fromJson(json).orEmpty()
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 }
