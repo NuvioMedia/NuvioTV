@@ -326,6 +326,8 @@ data class PlayerSettings(
     val exoChaptersEnabled: Boolean = false,
     val mpvHi10pGnextSoftwareFallbackEnabled: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
+    /** mpv.conf-style options applied on top of Nuvio's mpv defaults when the player starts. */
+    val mpvUserConfig: String = "",
     // Display settings
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
     val resolutionMatchingEnabled: Boolean = false,
@@ -652,6 +654,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val mpvHi10pGnextSoftwareFallbackEnabledKey =
         booleanPreferencesKey("mpv_hi10p_gnext_software_fallback_enabled")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
+    private val mpvUserConfigKey = stringPreferencesKey("mpv_user_config")
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
     private val frameRateMatchingModeKey = stringPreferencesKey("frame_rate_matching_mode")
     private val resolutionMatchingEnabledKey = booleanPreferencesKey("resolution_matching_enabled")
@@ -1047,6 +1050,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 mpvHi10pGnextSoftwareFallbackEnabled =
                     prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
+                mpvUserConfig = prefs[mpvUserConfigKey] ?: "",
                 frameRateMatchingMode = prefs[frameRateMatchingModeKey]?.let {
                     runCatching { FrameRateMatchingMode.valueOf(it) }.getOrNull()
                 } ?: if (prefs[frameRateMatchingKey] == true) FrameRateMatchingMode.START_STOP else FrameRateMatchingMode.OFF,
@@ -1669,6 +1673,16 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setMpvHi10pGnextSoftwareFallbackEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setMpvUserConfig(config: String) {
+        store().edit { prefs ->
+            if (config.isBlank()) {
+                prefs.remove(mpvUserConfigKey)
+            } else {
+                prefs[mpvUserConfigKey] = config.trimEnd()
+            }
         }
     }
 

@@ -103,6 +103,7 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "strip_hdr10plus_sei",
     "exo_chapters_enabled",
     "mpv_hardware_decode_mode",
+    "mpv_user_config",
     "frame_rate_matching",
     "frame_rate_matching_mode",
     "resolution_matching_enabled",

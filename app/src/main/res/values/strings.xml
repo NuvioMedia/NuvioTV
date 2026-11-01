@@ -886,6 +886,13 @@
     <string name="audio_mpv_hi10p_gnext_sw_title">Hi10P G-NEXT SW fallback (MPV-only)</string>
     <string name="audio_mpv_hi10p_gnext_sw_subtitle">Use G-NEXT software decoding when stream details identify H.264 Hi10P. Off by default; enable only if Hi10P playback freezes or fails.</string>
     <string name="audio_mpv_hwdec_title">Hardware Decoding (MPV-only)</string>
+    <string name="playback_mpv_user_config_title">Custom mpv.conf (MPV-only)</string>
+    <string name="playback_mpv_user_config_sub">Extra mpv options applied when playback starts.</string>
+    <string name="playback_mpv_user_config_dialog_sub">One option per line, as in mpv.conf. Applies from the next playback. Hardware decoding, subtitle style and aspect ratio keep using Nuvio\'s settings.</string>
+    <plurals name="playback_mpv_user_config_option_count">
+        <item quantity="one">%d option</item>
+        <item quantity="other">%d options</item>
+    </plurals>
     <string name="audio_mpv_hwdec_dialog_subtitle">Select how libmpv should use hardware decoders.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (direct -&gt; copy)</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy_desc">Previous default behavior: try direct hardware first, then copy-back.</string>
