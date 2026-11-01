@@ -41,6 +41,11 @@ jobs:
         with:
           go-version: ${{ steps.metadata.outputs.go-version }}
           cache-dependency-path: native/usenet/go.sum
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
       - name: Install Android native toolchain
         env:
           NDK_VERSION: ${{ steps.metadata.outputs.ndk-version }}
