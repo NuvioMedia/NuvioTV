@@ -32,6 +32,7 @@ class AddonConfigServer(
     }
 
     override fun serve(session: IHTTPSession): Response {
+        ConfigServerGuard.rejection(session)?.let { return it }
         val uri = session.uri
         val method = session.method
 
@@ -166,12 +167,12 @@ class AddonConfigServer(
 
         val change: PendingAddonChange = try {
             val parsed = gson.fromJson<Map<String, Any>>(body, object : TypeToken<Map<String, Any>>() {}.type)
-            val urls = parseStringList(parsed["urls"])
-            val catalogOrderKeys = parseStringList(parsed["catalogOrderKeys"])
-            val disabledCatalogKeys = parseStringList(parsed["disabledCatalogKeys"])
+            val urls = parseConfigStringList(parsed["urls"])
+            val catalogOrderKeys = parseConfigStringList(parsed["catalogOrderKeys"])
+            val disabledCatalogKeys = parseConfigStringList(parsed["disabledCatalogKeys"])
             val collectionsRaw = parsed["collections"]
             val collectionsJson = if (collectionsRaw != null) gson.toJson(collectionsRaw) else null
-            val disabledCollectionKeys = parseStringList(parsed["disabledCollectionKeys"])
+            val disabledCollectionKeys = parseConfigStringList(parsed["disabledCollectionKeys"])
             val followAddonsOrder = parsed["followAddonsOrder"] as? Boolean
             sanitizePendingAddonChange(
                 mode = webConfigMode,
@@ -207,15 +208,6 @@ class AddonConfigServer(
         val status = change?.status?.name?.lowercase() ?: "not_found"
         val response = mapOf("status" to status)
         return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", gson.toJson(response))
-    }
-
-    private fun parseStringList(rawValue: Any?): List<String> {
-        val values = rawValue as? List<*> ?: return emptyList()
-        return values.asSequence()
-            .mapNotNull { (it as? String)?.trim() }
-            .filter { it.isNotEmpty() }
-            .distinct()
-            .toList()
     }
 
     companion object {
