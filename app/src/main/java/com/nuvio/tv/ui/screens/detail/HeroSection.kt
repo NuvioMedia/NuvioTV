@@ -67,6 +67,8 @@ import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import android.util.Log
 import com.nuvio.tv.R
+import com.nuvio.tv.core.util.isMovieInTheaters
+import com.nuvio.tv.core.util.resolveMovieReleaseWindows
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MDBListRatings
@@ -659,11 +661,24 @@ private fun MetaInfoRow(
             .joinToString(" • ") { localizedGenreLabel(context, it) }
     }
     val runtimeText = remember(meta.runtime) { meta.runtime?.let { formatRuntime(it) } }
-    val yearText = remember(meta.releaseInfo, meta.released, meta.type, showFullReleaseDate) {
+    val isSeries = meta.type == ContentType.SERIES || meta.type == ContentType.TV
+    val today = remember { java.time.LocalDate.now() }
+    val releaseWindows = remember(meta.releaseDates, isSeries) {
+        if (isSeries) {
+            null
+        } else {
+            resolveMovieReleaseWindows(
+                releaseDates = meta.releaseDates,
+                preferredRegions = listOf(java.util.Locale.getDefault().country, "US")
+            )
+        }
+    }
+    val yearText = remember(meta.releaseInfo, meta.released, meta.type, showFullReleaseDate, releaseWindows) {
         if (showFullReleaseDate && meta.type == ContentType.MOVIE) {
-            meta.released
-                ?.let { runCatching { java.time.OffsetDateTime.parse(it).toLocalDate() }.getOrNull() }
-                ?.let { val locale = java.util.Locale.getDefault(); java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy"), locale).format(java.util.Date(it.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())) }
+            // The theatrical date backs the "In Theaters" badge, so it wins over the addon's date.
+            (releaseWindows?.theatrical
+                ?: meta.released?.let { runCatching { java.time.OffsetDateTime.parse(it).toLocalDate() }.getOrNull() })
+                ?.let { formatReleaseDate(it, skeleton = "dMMMMy") }
                 ?: formatYearRange(meta.releaseInfo)
         } else {
             formatYearRange(meta.releaseInfo)
@@ -681,7 +696,6 @@ private fun MetaInfoRow(
     val ageRatingBadge = remember(meta.ageRating) {
         meta.ageRating?.trim()?.takeIf { it.isNotBlank() }
     }
-    val isSeries = meta.type == ContentType.SERIES || meta.type == ContentType.TV
     val strStatusEnded = stringResource(if (isSeries) R.string.series_status_ended else R.string.movie_status_ended)
     val strStatusContinuing = stringResource(if (isSeries) R.string.series_status_continuing else R.string.movie_status_continuing)
     val strStatusCurrent = stringResource(if (isSeries) R.string.series_status_current else R.string.movie_status_current)
@@ -691,7 +705,15 @@ private fun MetaInfoRow(
     val strStatusRumored = stringResource(if (isSeries) R.string.series_status_rumored else R.string.movie_status_rumored)
     val strStatusInProduction = stringResource(if (isSeries) R.string.series_status_in_production else R.string.movie_status_in_production)
     val strStatusPostProduction = stringResource(if (isSeries) R.string.series_status_post_production else R.string.movie_status_post_production)
-    val statusBadge = remember(meta.status, isSeries) {
+    val strStatusInTheaters = stringResource(R.string.movie_status_in_theaters)
+    val upcomingDigitalText = releaseWindows?.upcomingDigital(today)?.let {
+        stringResource(R.string.movie_release_digital_date, formatReleaseDate(it, skeleton = "dMMMy"))
+    }
+    val inTheaters = remember(meta.status, releaseWindows, today) {
+        releaseWindows != null && isMovieInTheaters(meta.status, releaseWindows, today)
+    }
+    val statusBadge = remember(meta.status, isSeries, inTheaters) {
+        if (inTheaters) return@remember strStatusInTheaters.uppercase()
         when (meta.status?.trim()?.lowercase()) {
             "ended" -> strStatusEnded.uppercase()
             "continuing", "returning series" -> strStatusContinuing.uppercase()
@@ -825,7 +847,21 @@ private fun MetaInfoRow(
                 }
             }
         }
+
+        upcomingDigitalText?.let { text ->
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = NuvioTheme.extendedColors.textSecondary
+            )
+        }
     }
+}
+
+private fun formatReleaseDate(date: java.time.LocalDate, skeleton: String): String {
+    val locale = java.util.Locale.getDefault()
+    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton)
+    return java.time.format.DateTimeFormatter.ofPattern(pattern, locale).format(date)
 }
 
 @Composable
