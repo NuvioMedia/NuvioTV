@@ -1,6 +1,7 @@
 package com.nuvio.tv.baselineprofile
 
 import android.util.Log
+import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 
 private const val LOG_TAG = "NuvioJourneys"
@@ -152,12 +153,13 @@ private fun UiDevice.playerJourney(): JourneyResult {
     }
 
     var inPlayer = false
-    // Prefer the real playback button, fall back to the trailer player.
-    if (awaitExactText(Labels.PLAY, timeoutMs = 2_000)) {
+    // Prefer the real playback button, fall back to the trailer player. Both buttons carry
+    // their label as content-desc on the emulator (no text node), so both accessors are checked.
+    if (awaitExactText(Labels.PLAY, timeoutMs = 2_000) || awaitExactDesc(Labels.PLAY, timeoutMs = 1_500)) {
         focusAndSelect(Labels.PLAY, maxSteps = 8, requireGone = false)
         inPlayer = awaitPlayerSurface()
     }
-    if (!inPlayer && awaitExactText(Labels.PLAY_TRAILER, timeoutMs = 3_000)) {
+    if (!inPlayer && (awaitExactText(Labels.PLAY_TRAILER, timeoutMs = 2_000) || awaitExactDesc(Labels.PLAY_TRAILER, timeoutMs = 1_500))) {
         focusAndSelect(Labels.PLAY_TRAILER, maxSteps = 12, requireGone = false)
         inPlayer = awaitPlayerSurface()
     }
@@ -172,6 +174,13 @@ private fun UiDevice.playerJourney(): JourneyResult {
     }
 
     // Degraded path: no playable surface. No D-pad press is sent here on purpose.
+    // DEBUG: dump what the journey actually saw, so the degradation is diagnosable.
+    runCatching {
+        val hasPlayDesc = findObject(By.desc("Play")) != null
+        val hasPlayText = findObject(By.text("Play")) != null
+        val hasUnavailable = findObject(By.textContains("navailable")) != null
+        Log.w(LOG_TAG, "Player diag: playDesc=$hasPlayDesc playText=$hasPlayText unavailable=$hasUnavailable")
+    }
     return JourneyResult(
         journey = Journey.PLAYER,
         reachedDetail = true,
@@ -183,24 +192,20 @@ private fun UiDevice.playerJourney(): JourneyResult {
 /**
  * Waits for the player surface.
  *
- * The markers are matched exactly. The `Pause`/`Sources`/`Subtitles` buttons of the transport
- * bar are matched as content descriptions, so the settings screens that carry the same words as
- * plain text are not mistaken for the player.
- *
- * The stream picker is recognised by its `Sources` title, but only once the detail screen is
- * gone: the picker is opened *from* the detail screen, so the detail markers have to have
- * disappeared for the title to belong to the player.
+ * The detail screen carries a transport-like button row of its own (Seek bar, Subtitles,
+ * Audio tracks, Chapters, Sources, Watch party) as content descriptions, so the player is
+ * recognised only by markers that cannot exist on the detail screen:
+ * - the `Pause` content description, which exists only while media is actually playing;
+ * - the trailer overlay's `Press back to exit trailer` text;
+ * - the stream picker's `Sources` **title**, which is a text node - the detail screen's
+ *   `Sources` is a content description on a button.
  */
-private fun UiDevice.awaitPlayerSurface(timeoutMs: Long = 15_000): Boolean {
+private fun UiDevice.awaitPlayerSurface(timeoutMs: Long = 20_000): Boolean {
     val deadline = System.currentTimeMillis() + timeoutMs
     while (System.currentTimeMillis() < deadline) {
-        if (awaitAnyExactText(*Labels.PLAYER_TEXT_MARKERS.toTypedArray(), timeoutMs = 500L)) return true
-        if (awaitAnyExactDesc(*Labels.PLAYER_DESC_MARKERS.toTypedArray(), timeoutMs = 500L)) return true
-        if (awaitExactText(Labels.SOURCES_TITLE, timeoutMs = 500L) &&
-            !awaitAnyExactText(*Labels.DETAIL_MARKERS.toTypedArray(), timeoutMs = 500L)
-        ) {
-            return true
-        }
+        if (awaitExactDesc("Pause", timeoutMs = 500L)) return true
+        if (awaitExactText("Press back to exit trailer", timeoutMs = 500L)) return true
+        if (awaitExactText(Labels.SOURCES_TITLE, timeoutMs = 500L)) return true
     }
     return false
 }

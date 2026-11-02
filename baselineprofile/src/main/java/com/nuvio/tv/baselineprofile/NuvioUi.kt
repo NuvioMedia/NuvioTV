@@ -117,26 +117,36 @@ internal fun resolveTargetPackage(device: UiDevice, expected: String): String {
     }
 
     val pluginTarget = instrumentationArg(TARGET_PACKAGE_ARGUMENT)
-    if (!pluginTarget.isNullOrBlank() && pluginTarget != TEST_MODULE_PACKAGE) {
-        Log.i(LOG_TAG, "Resolved target package from $TARGET_PACKAGE_ARGUMENT: $pluginTarget")
-        return pluginTarget
-    }
-
-    val installed = runCatching {
-        device.executeShellCommand("pm list packages com.nuvio.tv")
+    val installedPackages = runCatching {
+        device.executeShellCommand("pm list packages com.nuvio")
             .lineSequence()
             .map { it.trim().removePrefix("package:") }
-            .filter { it.startsWith("com.nuvio.tv") && it != TEST_MODULE_PACKAGE }
+            .filter { it.startsWith("com.nuvio") && it != TEST_MODULE_PACKAGE }
             .sorted()
             .toList()
     }.getOrDefault(emptyList())
 
-    val resolved = installed.firstOrNull { it == expected }
-        ?: installed.firstOrNull { it == BENCHMARK_TARGET_PACKAGE }
-        ?: installed.firstOrNull { it.endsWith(".debug") }
-        ?: installed.firstOrNull()
+    // The plugin computes the target id from the variant's nominal applicationId, which the
+    // app's own applicationId overrides may have renamed - verify the package actually exists
+    // before trusting it, otherwise the journeys would drive whatever app is foreground.
+    if (!pluginTarget.isNullOrBlank() && pluginTarget != TEST_MODULE_PACKAGE) {
+        if (installedPackages.contains(pluginTarget)) {
+            Log.i(LOG_TAG, "Resolved target package from $TARGET_PACKAGE_ARGUMENT: $pluginTarget")
+            return pluginTarget
+        }
+        Log.w(
+            LOG_TAG,
+            "Plugin target package $pluginTarget is not installed (installed: $installedPackages); " +
+                "falling back to the installed-package chain"
+        )
+    }
+
+    val resolved = installedPackages.firstOrNull { it == expected }
+        ?: installedPackages.firstOrNull { it == BENCHMARK_TARGET_PACKAGE }
+        ?: installedPackages.firstOrNull { it.endsWith(".debug") }
+        ?: installedPackages.firstOrNull()
         ?: DEFAULT_TARGET_PACKAGE
-    Log.i(LOG_TAG, "Resolved target package: $resolved (expected: $expected, installed: $installed)")
+    Log.i(LOG_TAG, "Resolved target package: $resolved (expected: $expected, installed: $installedPackages)")
     return resolved
 }
 
@@ -353,10 +363,13 @@ internal fun UiDevice.seedAddonCatalog(packageName: String) {
     val manifest = instrumentationArg("addonManifestUrl") ?: return
     runCatching {
         executeShellCommand(
-            "am start -a android.intent.action.VIEW -d '$manifest' $packageName"
+            "am start -a android.intent.action.VIEW -c android.intent.category.BROWSABLE " +
+                "-d '$manifest' -p $packageName"
         )
     }
-    Thread.sleep(2_000)
+    // The deep link opens the addons screen and installs the manifest without further
+    // confirmation; give the install + toast time to settle before the flow moves on.
+    Thread.sleep(5_000)
 }
 
 /**
@@ -369,8 +382,6 @@ internal fun UiDevice.seedAddonCatalog(packageName: String) {
  * hardcoded one would leak a personal configuration into the repository.
  */
 internal fun UiDevice.prepareHome(packageName: String) {
-    seedAddonCatalog(packageName)
-
     // The drawer entries only exist once the setup is done, so this is the cheap probe.
     val alreadyConfigured = awaitAnyText(Labels.LIBRARY, Labels.SETTINGS, timeoutMs = 2_000)
 
@@ -403,8 +414,14 @@ internal fun UiDevice.prepareHome(packageName: String) {
         waitForIdle()
     }
 
-    // Wait for the app to own the screen and for the first row to land.
-    wait(Until.hasObject(By.pkg(packageName)), 10_000)
+    // The addon seeding runs AFTER onboarding: on a fresh install the deep link only reaches
+    // the addon-install flow once the setup is done - before that it dies behind the
+    // onboarding screens. The run reinstalls the app under test, so the addon has to be
+    // seeded on every run. When the manifest arg is absent this is a no-op.
+    seedAddonCatalog(packageName)
+
+    // The seeding opens the addons screen; leave it so the journeys start from home.
+    goBack()
     awaitAnyText(Labels.LIBRARY, Labels.SETTINGS, timeoutMs = CONTENT_TIMEOUT_MS)
     waitForIdle()
     Thread.sleep(2_000)
