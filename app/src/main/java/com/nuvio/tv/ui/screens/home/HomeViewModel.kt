@@ -412,6 +412,7 @@ class HomeViewModel @Inject constructor(
                     cwEnrichedInProgressOverlay.clear()
                     cwLastBadgeEpisodeKeys = emptySet()
                     cwLastShowIdSiblings = emptyMap()
+                    cwPendingRewatchCloseContentIds.clear()
                     _uiState.update {
                         it.copy(layoutPreferencesReady = false, continueWatchingItems = emptyList())
                     }

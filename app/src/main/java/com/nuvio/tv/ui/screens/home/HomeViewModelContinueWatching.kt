@@ -3367,6 +3367,10 @@ internal fun HomeViewModel.removeContinueWatchingPipeline(
         val dismissKey = nextUpDismissKey(contentId, season, episode)
         val snapshot = simklSyncRepository.state.value.snapshot
         if (runningRewatchFor(snapshot, contentId) != null) {
+            // The close continuation writes into the row and the dismissals, which belong to the
+            // profile that asked for the close. A switch while the write is in flight must not let
+            // it touch the next profile.
+            val closeProfileId = profileManager.activeProfileId.value
             // The run lives on the account, so the card leaves once the close write returns. Keep
             // the current row meanwhile so closing one run cannot empty it.
             cwPendingRewatchCloseContentIds += contentId
@@ -3375,6 +3379,7 @@ internal fun HomeViewModel.removeContinueWatchingPipeline(
                     // Keep the card when the account close failed: removing it locally would
                     // hide a run that is still live on Simkl.
                     if (closeRunningRewatchFor(contentId)) {
+                        if (profileManager.activeProfileId.value != closeProfileId) return@launch
                         // A rewatch close is not a dismissal. The close takes the card out of the
                         // account, and a later run of the same title must be able to show up again.
                         runCatching {
