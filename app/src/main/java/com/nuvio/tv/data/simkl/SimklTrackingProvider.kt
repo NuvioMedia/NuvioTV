@@ -136,34 +136,18 @@ class SimklTrackingScrobbler @Inject constructor(
         // rewatch decision below is gated on that plan, so the cache is corrected where the answer is,
         // instead of at the next read of the user settings. The watch itself is unaffected, and only
         // the plan is written, so an account that resubscribes finds its setting as it left it.
-        val planAllowsRewatches = if (result.rewatchStatus == SimklRewatchStatus.PRO_REQUIRED) {
+        if (result.rewatchStatus == SimklRewatchStatus.PRO_REQUIRED) {
             Log.i(
                 TRACKING_SCROBBLE_DIAGNOSTIC_TAG,
                 "simkl rewatch plan no longer covers sessions; correcting the cached plan"
             )
             authRepository.markPlanAsFree()
-            false
-        } else {
-            isSimklRewatchPlanEligible(accountType)
         }
-        if (action == TrackingScrobbleAction.START) {
-            // The snapshot as it stood before this start answers whether the account already held
-            // the item, which is what the question before a run is about.
-            val priorWatch = syncRepository.state.value.snapshot.priorWatchForScrobble(result)
-            val askToStartRun = shouldAskToStartSimklRewatch(
-                mode = mode,
-                accountType = accountType,
-                action = action,
-                priorWatch = priorWatch,
-                nowEpochMs = System.currentTimeMillis(),
-                hasRunningSession = runningSessionId != null,
-                progressPercent = enrichedEvent.progressPercent,
-                hasPlaybackIdentity = enrichedEvent.playbackId != 0L
-            )
-            if (askToStartRun && planAllowsRewatches) {
-                rewatchConsentRepository.ask(enrichedEvent.media)
-            }
-        }
+        // The question belongs before playback, where the stream screen can hold the launch until
+        // it is answered. A START that arrives here is an in-player switch or autoplay, already
+        // over the player: asking there put a dialog over the video whose focused Yes could be
+        // picked by the OK that opens the player controls. Such a playback simply runs without
+        // asking; the next pre-play question can still grant the series.
         if (action == TrackingScrobbleAction.STOP) {
             // A dismissal is for the playback it happened during: the playback has ended, so the
             // series may be asked about again the next time it plays.
