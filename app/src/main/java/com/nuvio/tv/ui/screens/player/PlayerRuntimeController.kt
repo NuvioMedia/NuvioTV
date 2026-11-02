@@ -436,6 +436,7 @@ class PlayerRuntimeController(
     internal var hidePlayerEngineSwitchInfoJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var subtitleAutoSyncLoadJob: Job? = null
+    internal var addonSubtitleFetchJob: Job? = null
     internal var automaticSubtitleSyncJob: Job? = null // AutoSync hook
     /** mpv: the add-on subtitle download and sub-add in flight, which AutoSync lets land first. */
     internal var mpvAddonSubtitleSelectionJob: Job? = null // AutoSync hook
