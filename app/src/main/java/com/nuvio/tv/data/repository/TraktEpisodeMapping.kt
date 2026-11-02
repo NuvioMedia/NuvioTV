@@ -43,6 +43,18 @@ internal fun reverseRemapEpisodeByTitleOrIndex(
     )
 }
 
+internal fun hasSameSeasonStructure(
+    addonEpisodes: List<EpisodeMappingEntry>,
+    providerEpisodes: List<EpisodeMappingEntry>
+): Boolean {
+    // Compare per-season episode counts, not just the set of season numbers.
+    // Anime often uses the same season numbers in both sources but with completely
+    // different episode distributions.
+    val addonPerSeason = addonEpisodes.groupBy { it.season }.mapValues { it.value.size }
+    val providerPerSeason = providerEpisodes.groupBy { it.season }.mapValues { it.value.size }
+    return addonPerSeason == providerPerSeason
+}
+
 private fun remapEpisodeBetweenLists(
     requestedSeason: Int,
     requestedEpisode: Int,

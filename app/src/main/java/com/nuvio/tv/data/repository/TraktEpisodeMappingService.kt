@@ -1,22 +1,10 @@
 package com.nuvio.tv.data.repository
 
 import android.util.Log
-import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.remote.api.TraktApi
-import com.nuvio.tv.domain.model.Meta
-import com.nuvio.tv.domain.model.Video
-import com.nuvio.tv.domain.repository.MetaRepository
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.dropWhile
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.sync.withPermit
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,7 +12,7 @@ import javax.inject.Singleton
 class TraktEpisodeMappingService @Inject constructor(
     private val traktApi: TraktApi,
     private val traktAuthService: TraktAuthService,
-    private val metaRepository: MetaRepository
+    private val addonEpisodeListService: AddonEpisodeListService
 ) {
     companion object {
         private const val TAG = "TraktEpMapSvc"
@@ -35,12 +23,8 @@ class TraktEpisodeMappingService @Inject constructor(
 
     private val cacheMutex = Mutex()
     private val mappingCache = mutableMapOf<String, EpisodeMappingEntry>()
-    private val addonEpisodesCache = mutableMapOf<String, List<EpisodeMappingEntry>>()
     private val traktEpisodesCache = mutableMapOf<String, List<EpisodeMappingEntry>>()
     private val reverseMappingCache = mutableMapOf<String, EpisodeMappingEntry>()
-    // In-flight dedup: prevents multiple concurrent coroutines from fetching
-    // the same show's addon episodes simultaneously.
-    private val addonEpisodesInFlight = mutableMapOf<String, CompletableDeferred<List<EpisodeMappingEntry>>>()
     private val traktEpisodesInFlight = mutableMapOf<String, CompletableDeferred<List<EpisodeMappingEntry>>>()
 
     internal suspend fun prefetchEpisodeMapping(
@@ -60,25 +44,7 @@ class TraktEpisodeMappingService @Inject constructor(
     internal suspend fun prefetchAddonEpisodes(
         contentIds: List<String>,
         concurrency: Int = 8
-    ) {
-        val unique = contentIds.distinct()
-        if (unique.isEmpty()) return
-        val semaphore = Semaphore(concurrency)
-        supervisorScope {
-            unique.forEach { contentId ->
-                launch {
-                    try {
-                        semaphore.withPermit {
-                            getAddonEpisodes(contentId, "series")
-                        }
-                    } catch (_: Exception) {
-                        // Individual prefetch failures are non-fatal. The mapping phase
-                        // will retry or proceed without cached data for this show.
-                    }
-                }
-            }
-        }
-    }
+    ) = addonEpisodeListService.prefetch(contentIds, concurrency)
 
     internal suspend fun resolveAddonEpisodeMapping(
         contentId: String?,
@@ -131,18 +97,6 @@ class TraktEpisodeMappingService @Inject constructor(
             reverseMappingCache[reverseKey] = mapped
         }
         return mapped
-    }
-
-    private fun hasSameSeasonStructure(
-        addonEpisodes: List<EpisodeMappingEntry>,
-        traktEpisodes: List<EpisodeMappingEntry>
-    ): Boolean {
-        // Compare per-season episode counts, not just the set of season numbers.
-        // Anime often uses the same season numbers in both sources but with completely
-        // different episode distributions.
-        val addonPerSeason = addonEpisodes.groupBy { it.season }.mapValues { it.value.size }
-        val traktPerSeason = traktEpisodes.groupBy { it.season }.mapValues { it.value.size }
-        return addonPerSeason == traktPerSeason
     }
 
     internal suspend fun getCachedEpisodeMapping(
@@ -205,52 +159,7 @@ class TraktEpisodeMappingService @Inject constructor(
     private suspend fun getAddonEpisodes(
         contentId: String,
         contentType: String
-    ): List<EpisodeMappingEntry> {
-        val cacheKey = addonEpisodesCacheKey(contentId, contentType)
-
-        // Fast path: cache hit
-        cacheMutex.withLock {
-            addonEpisodesCache[cacheKey]?.let { return it }
-        }
-
-        // Dedup: if another coroutine is already fetching this show, await its result.
-        val existingDeferred = cacheMutex.withLock { addonEpisodesInFlight[cacheKey] }
-        if (existingDeferred != null) {
-            return try { existingDeferred.await() } catch (_: Exception) { emptyList() }
-        }
-
-        // Register ourselves as the in-flight fetcher.
-        val deferred = kotlinx.coroutines.CompletableDeferred<List<EpisodeMappingEntry>>()
-        val weOwn = cacheMutex.withLock {
-            // Double-check: cache or another flight may have appeared while we waited.
-            addonEpisodesCache[cacheKey]?.let { return it }
-            if (addonEpisodesInFlight.containsKey(cacheKey)) {
-                false
-            } else {
-                addonEpisodesInFlight[cacheKey] = deferred
-                true
-            }
-        }
-        if (!weOwn) {
-            val other = cacheMutex.withLock { addonEpisodesInFlight[cacheKey] }
-            return try { other?.await() ?: emptyList() } catch (_: Exception) { emptyList() }
-        }
-
-        return try {
-            val meta = fetchSeriesMeta(contentId, contentType)
-            val addonEpisodes = meta?.videos?.toEpisodeMappingEntries() ?: emptyList()
-            if (addonEpisodes.isNotEmpty()) {
-                cacheMutex.withLock { addonEpisodesCache[cacheKey] = addonEpisodes }
-            }
-            deferred.complete(addonEpisodes)
-            addonEpisodes
-        } catch (e: Exception) {
-            deferred.completeExceptionally(e)
-            emptyList()
-        } finally {
-            cacheMutex.withLock { addonEpisodesInFlight.remove(cacheKey) }
-        }
-    }
+    ): List<EpisodeMappingEntry> = addonEpisodeListService.episodes(contentId, contentType)
 
     private suspend fun getTraktEpisodes(showLookupId: String): List<EpisodeMappingEntry> {
         cacheMutex.withLock {
@@ -355,10 +264,6 @@ class TraktEpisodeMappingService @Inject constructor(
         return "reverse|${contentType.trim().lowercase()}|${contentId.trim()}|$season|$episode|$normalizedTitle"
     }
 
-    private fun addonEpisodesCacheKey(contentId: String, contentType: String): String {
-        return "${contentType.trim().lowercase()}|${contentId.trim()}"
-    }
-
     private fun resolveShowLookupId(contentId: String?, videoId: String?): String? {
         val contentIds = toTraktIds(parseContentIds(contentId))
         if (contentIds.hasAnyId()) {
@@ -377,60 +282,5 @@ class TraktEpisodeMappingService @Inject constructor(
             !videoIds.slug.isNullOrBlank() -> videoIds.slug
             else -> null
         }
-    }
-
-    private suspend fun fetchSeriesMeta(contentId: String, contentType: String): Meta? {
-        val typeCandidates = buildList {
-            val normalized = contentType.lowercase()
-            if (normalized.isNotBlank()) add(normalized)
-            if (normalized in listOf("series", "tv")) {
-                add("series")
-                add("tv")
-            }
-        }.distinct()
-        if (typeCandidates.isEmpty()) return null
-
-        val idCandidates = buildList {
-            add(contentId)
-            if (contentId.startsWith("tmdb:")) add(contentId.substringAfter(':'))
-            if (contentId.startsWith("trakt:")) add(contentId.substringAfter(':'))
-        }.distinct()
-
-        for (type in typeCandidates) {
-            for (candidateId in idCandidates) {
-                val result = try {
-                    withTimeoutOrNull(8000) {
-                        metaRepository.getMetaFromAllAddons(type = type, id = candidateId)
-                            .dropWhile { it is NetworkResult.Loading }
-                            .firstOrNull()
-                    }
-                } catch (_: Exception) {
-                    null
-                } ?: continue
-                val meta = (result as? NetworkResult.Success)?.data ?: continue
-                if (meta.videos.any { it.season != null && it.episode != null }) {
-                    return meta
-                }
-            }
-        }
-        return null
-    }
-
-    private fun List<Video>.toEpisodeMappingEntries(): List<EpisodeMappingEntry> {
-        return asSequence()
-            .mapNotNull { video ->
-                val season = video.season ?: return@mapNotNull null
-                val episode = video.episode ?: return@mapNotNull null
-                if (season <= 0) return@mapNotNull null
-                EpisodeMappingEntry(
-                    season = season,
-                    episode = episode,
-                    title = video.title,
-                    videoId = video.id.takeIf { it.isNotBlank() }
-                )
-            }
-            .distinctBy { it.videoId ?: "${it.season}:${it.episode}" }
-            .sortedWith(compareBy(EpisodeMappingEntry::season, EpisodeMappingEntry::episode))
-            .toList()
     }
 }
