@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch as coroutineLaunch
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.focus.focusRequester
@@ -195,30 +196,32 @@ internal fun StreamSourcesSidePanel(
         if (!firstCardHasFocus) runCatching { streamsFocusRequester.requestFocus() }
     }
 
+    val chipListState = rememberLazyListState()
     fun requestChipFocus(index: Int) {
         if (index !in chipFocusRequesters.indices) return
         userMovedFromFirstResult = true
         focusJob?.cancel()
         focusJob = scope.coroutineLaunch {
             withFrameNanos { }
-            runCatching { chipFocusRequesters[index].requestFocus() }
+            chipListState.focusChip(index, chipFocusRequesters)
         }
     }
 
     // Called when navigating tabs horizontally from within the stream list
     fun onAddonFilterSelectedGuarded(addon: String?) {
         userMovedFromFirstResult = true
-        onAddonFilterSelected(addon)
-        focusJob?.cancel()
-        focusJob = scope.coroutineLaunch {
-            withFrameNanos {}
-            val targetRequester = if (addon == null) {
-                chipFocusRequesters.getOrNull(1)
-            } else {
-                addonFocusRequesters[addon]
-            }
-            runCatching { targetRequester?.requestFocus() }
+        val targetRequester = if (addon == null) {
+            chipFocusRequesters.getOrNull(1)
+        } else {
+            addonFocusRequesters[addon]
         }
+        focusJob?.cancel()
+        // Focus the chip before the results change: once the focused card is gone,
+        // Compose would otherwise park focus on another chip first.
+        focusJob = scope.coroutineLaunch(start = CoroutineStart.UNDISPATCHED) {
+            chipListState.focusChip(chipFocusRequesters.indexOf(targetRequester), chipFocusRequesters)
+        }
+        onAddonFilterSelected(addon)
     }
 
     // Reset scroll position to top when addon filter changes
@@ -319,6 +322,7 @@ internal fun StreamSourcesSidePanel(
                         },
                         externalFocusRequesters = chipFocusRequesters,
                         externalOrderedNames = orderedAddonNames,
+                        chipListState = chipListState,
                         onUpKey = {
                             userMovedFromFirstResult = true
                             try { closeButtonFocusRequester.requestFocus() } catch (_: Exception) {}
