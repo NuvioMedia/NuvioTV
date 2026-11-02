@@ -228,7 +228,8 @@ object NewznabProtocol {
                 it.groupValues[1].toInt() == request.season && request.episode != null &&
                     names(request.episode, it, release.title)
             }
-            val seasons = SEASON.findAll(release.title).map { it.groupValues[1].toInt() }.toList()
+            // A pack's seasons, ranges spanned (S01-S10 holds S05), as its size per episode counts them.
+            val seasons = release.packSeasons
             if (seasons.isNotEmpty()) return request.season in seasons
             // Obfuscated ID-matched releases rely on the engine's file selection.
             return idSearch && !requireNumbering

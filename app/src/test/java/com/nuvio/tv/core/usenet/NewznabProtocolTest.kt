@@ -33,13 +33,25 @@ class NewznabProtocolTest {
             NewznabProtocol.arrange(listOf(pack, episode), config.copy(sort = UsenetSort.SMALLEST), seasonEpisodes = mapOf(1 to 9)))
     }
 
-    @Test fun `a pack of several seasons is sized by all their episodes`() {
+    @Test fun `a pack of several seasons is found for each of them and sized by all their episodes`() {
         val gb = 1L shl 30
         val pack = UsenetRelease("Show.S01-S03.1080p-GRP", "https://a/pack", size = 34 * gb, indexerId = "one")
         assertEquals(gb, pack.episodeSize(mapOf(1 to 10, 2 to 12, 3 to 12)))
         // A season without a count leaves the whole size.
         assertEquals(34 * gb, pack.episodeSize(mapOf(1 to 10, 2 to 12)))
         assertEquals(34 * gb, pack.episodeSize(null))
+
+        fun holds(release: String, season: Int) = NewznabProtocol.matches(UsenetRelease(release, "url"),
+            UsenetSearchRequest(imdbId = "tt1", series = true, season = season, episode = 1), idSearch = true, requireNumbering = true)
+        assertTrue(holds(pack.title, 2))
+        assertFalse(holds(pack.title, 4))
+        assertTrue(holds("Show.S01-10.1080p", 9))
+        assertTrue(holds("Show Season 1-10 1080p", 9))
+        // Listed seasons are no range, and a resolution after a hyphen is no season.
+        assertTrue(holds("Show.S01.S03.1080p", 3))
+        assertFalse(holds("Show.S01.S03.1080p", 2))
+        assertTrue(holds("Show.S02-720p", 2))
+        assertFalse(holds("Show.S02-720p", 720))
     }
 
     @Test fun `the result limit never cuts a release ranked first`() {
