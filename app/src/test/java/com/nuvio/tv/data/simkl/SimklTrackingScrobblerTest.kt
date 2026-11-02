@@ -372,11 +372,11 @@ class SimklTrackingScrobblerTest {
         settingsDataStore.setSimklRewatchMode(SimklRewatchMode.SEMI_AUTOMATIC)
         accountAnswers(scrobbleResult(outcome = SimklScrobbleOutcome.START, progress = 0.0))
 
-        scrobbler.scrobble(TrackingScrobbleAction.START, event(progressPercent = 0.0))
+        scrobbler.preparePlayback(event(progressPercent = 0.0).media, 0.0)
 
-        // The question is raised while the playback is beginning, and its answer is what the stop at
-        // the end of that playback writes from.
-        verify(exactly = 1) { consentRepository.ask(any()) }
+        // The question is raised before the player opens, and its answer is what the stop at the
+        // end of that playback writes from.
+        coVerify(exactly = 1) { consentRepository.askAndAwait(any(), any()) }
         coVerify(exactly = 0) { authRepository.markPlanAsFree() }
     }
 
