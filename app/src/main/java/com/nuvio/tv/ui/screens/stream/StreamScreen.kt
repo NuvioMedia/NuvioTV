@@ -323,7 +323,7 @@ fun StreamScreen(
         }
         val playbackInfo = viewModel.resolveStreamForPlayback(
             stream = stream,
-            progressPercent = 0.0
+            progressPercent = (resumePercent?.toDouble() ?: 0.0) * 100.0
         )
         if (playbackInfo == null) {
             viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
@@ -370,7 +370,10 @@ fun StreamScreen(
                 return@LaunchedEffect
             }
             // Cached last links do not pass through resolveStreamForPlayback, so ask here too.
-            viewModel.preparePlayback(playbackInfo, 0.0)
+            viewModel.preparePlayback(
+                playbackInfo,
+                (resumePercent?.toDouble() ?: 0.0) * 100.0
+            )
             // Respect player preference for cached links too
             when (playerPreference ?: return@LaunchedEffect) {
                 PlayerPreference.EXTERNAL -> {
