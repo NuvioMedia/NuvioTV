@@ -85,13 +85,16 @@ class SimklSyncEngine internal constructor(
     }
 
     private suspend fun initialSync(): SimklSyncSnapshot {
+        // Read the activity snapshot before the pulls. A change that lands during the pull is then
+        // older than the watermark and is picked up by the next delta, instead of being stamped
+        // after it and silently skipped.
+        val activities = remote.fetchActivities()
         val entries = buildList {
             SimklMediaType.entries.forEach { type ->
                 addAll(remote.fetchAllItems(SimklAllItemsRequest.Bootstrap(type)).entriesFor(type))
             }
         }
         val playback = remote.fetchPlayback()
-        val activities = remote.fetchActivities()
         val now = nowEpochMs()
         val rewatch = readRewatchRuns(current = null)
         return SimklSyncSnapshot(
