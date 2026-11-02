@@ -223,9 +223,11 @@ internal fun PlayerRuntimeController.applyBluetoothAudioRouteInPlace(isBluetooth
             outputChannels.channelCount
         )
         ffmpegAudioRenderer?.setDownmixNormalizationEnabled(!settings.maintainOriginalAudioOnDownmix)
+        ffmpegAudioRenderer?.setLfeMixLevel(settings.downmixLfeLevel.level)
     } else {
         ffmpegAudioRenderer?.setAudioOutputChannels(null, 0)
         ffmpegAudioRenderer?.setDownmixNormalizationEnabled(false)
+        ffmpegAudioRenderer?.setLfeMixLevel(0f)
     }
 
     sink?.notifyAudioProcessingRequirementChanged()

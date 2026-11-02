@@ -823,6 +823,17 @@
     <string name="audio_preferred_lang">Ngôn ngữ âm thanh ưu tiên</string>
     <string name="audio_skip_silence">Bỏ qua đoạn im lặng</string>
     <string name="audio_skip_silence_sub">Bỏ qua các đoạn im lặng trong quá trình phát</string>
+    <string name="audio_night_mode">Chế độ ban đêm</string>
+    <string name="audio_night_mode_sub">Tăng âm lượng lời thoại và các âm thanh nhỏ để bạn có thể giữ mức âm lượng thấp</string>
+    <string name="audio_night_mode_desc">Tăng âm lượng lời thoại và các âm thanh nhỏ; cảnh âm lượng lớn vẫn giữ nguyên như bản phối. Áp dụng cho âm thanh giải mã bằng ứng dụng. Dolby và DTS truyền trực tiếp đến đầu thu hoặc loa thanh sẽ được giữ nguyên.</string>
+    <string name="audio_night_mode_value">Chế độ ban đêm: %1$s</string>
+    <string name="audio_night_mode_off">Tắt</string>
+    <string name="audio_night_mode_light">Nhẹ</string>
+    <string name="audio_night_mode_light_desc">Tăng nhẹ, tối đa +6 dB</string>
+    <string name="audio_night_mode_medium">Trung bình</string>
+    <string name="audio_night_mode_medium_desc">Tăng rõ lời thoại, tối đa +10 dB</string>
+    <string name="audio_night_mode_strong">Mạnh</string>
+    <string name="audio_night_mode_strong_desc">Tối đa +15 dB, phù hợp để xem vào ban đêm với âm lượng thấp</string>
     <string name="audio_remember_delay_per_device">Ghi nhớ độ trễ âm thanh cho từng thiết bị</string>
     <string name="audio_remember_delay_per_device_sub">Lưu và khôi phục độ trễ âm thanh trong trình phát cho đường xuất âm thanh hiện tại</string>
     <string name="audio_advanced_section">Âm thanh nâng cao</string>
