@@ -146,7 +146,7 @@ class SimklSnapshotProjectionTest {
         assertTrue(projection.nextUp(true).none { it.contentId == "tt0000001" })
         assertTrue(projection.isWatchedByVideoId("mal:202:7", 1))
         assertFalse(projection.isWatchedByVideoId("mal:202:8", 8))
-        assertFalse("tt0000003" in projection.watchedMovieIds)
+        assertTrue("tt0000003" in projection.watchedMovieIds)
     }
 
     @Test(timeout = 20_000)

@@ -41,7 +41,7 @@ internal class SimklSnapshotProjection private constructor(
             library = library,
             watched = watched,
             progress = newProgress,
-            watchedMovieIds = baseWatchedMovieIds.filterInProgressMovies(newProgress),
+            watchedMovieIds = baseWatchedMovieIds,
             watchedShowEpisodes = watchedShowEpisodes,
             showIdSiblings = showIdSiblings,
             recentNextUp = recentNextUp,
@@ -197,7 +197,7 @@ internal class SimklSnapshotProjection private constructor(
                 library = library,
                 watched = watched,
                 progress = progress,
-                watchedMovieIds = baseWatchedMovieIds.filterInProgressMovies(progress),
+                watchedMovieIds = baseWatchedMovieIds,
                 watchedShowEpisodes = watched.items
                     .filter { item -> item.season != null && item.episode != null }
                     .groupBy(WatchedItem::contentId)
@@ -249,16 +249,6 @@ private fun SimklSyncSnapshot.simklBaseWatchedMovieIds(): Set<String> {
         }
     }
     return watched
-}
-
-private fun Set<String>.filterInProgressMovies(progress: List<WatchProgress>): Set<String> {
-    val inProgress = progress.filter { item ->
-        item.contentType == "movie" && item.progressPercentage > 0f && !item.isCompleted()
-    }
-    if (inProgress.isEmpty()) return this
-    val result = this.toMutableSet()
-    inProgress.forEach { item -> result.remove(item.contentId) }
-    return result
 }
 
 private fun SimklMedia.simklTrackingContentIds(): Set<String> = buildSet {
