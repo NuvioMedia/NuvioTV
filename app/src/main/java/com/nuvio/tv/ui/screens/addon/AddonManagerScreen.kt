@@ -178,6 +178,7 @@ fun AddonManagerScreen(
     var isEditing by remember { mutableStateOf(false) }
     var addonUrlPendingDeletion by remember { mutableStateOf<String?>(null) }
     var restoreManageFromPhoneFocus by remember { mutableStateOf(false) }
+    var hasHandledInitialFocusState by remember { mutableStateOf(false) }
     val hasHomeVisibleCatalogs = remember(uiState.installedAddons) {
         uiState.installedAddons.any { addon ->
             addon.enabled && addon.catalogs.any { catalog -> !catalog.isSearchOnlyCatalog() }
@@ -237,6 +238,10 @@ fun AddonManagerScreen(
         if (uiState.isQrModeActive) {
             restoreManageFromPhoneFocus = true
         }
+        if (!hasHandledInitialFocusState) {
+            hasHandledInitialFocusState = true
+            return@LaunchedEffect
+        }
         if (pendingFocusRestore == null &&
             !uiState.isQrModeActive &&
             uiState.pendingChange == null &&
@@ -287,16 +292,13 @@ fun AddonManagerScreen(
                         }
                     }
                 } else if (
+                    restoreManageFromPhoneFocus &&
                     !uiState.isQrModeActive &&
                     uiState.pendingChange == null &&
                     !isEditing &&
                     addonUrlPendingDeletion == null
                 ) {
-                    if (restoreManageFromPhoneFocus) {
-                        requestManageFromPhoneFocus()
-                    } else {
-                        requestInputBarFocus()
-                    }
+                    requestManageFromPhoneFocus()
                 }
             }
         }
