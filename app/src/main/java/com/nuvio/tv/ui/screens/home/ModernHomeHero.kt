@@ -669,6 +669,7 @@ private fun HeroTitleContent(
                 color = NuvioTheme.colors.TextPrimary,
                 maxLines = descriptionMaxLines,
                 autoScrollEnabled = descriptionAutoScrollEnabled,
+                paused = trailerPlaying,
                 modifier = Modifier.graphicsLayer { alpha = metaAlpha }
             )
         }
