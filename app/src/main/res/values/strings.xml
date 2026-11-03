@@ -1258,6 +1258,9 @@
     <string name="wetrakr_name">WeTrakr</string>
     <string name="wetrakr_tracking_description">Sync watched history, watchlist and playback progress across devices</string>
     <string name="wetrakr_connected_as">Connected as %1$s</string>
+    <string name="wetrakr_connected_as_plan">Connected as %1$s • %2$s</string>
+    <string name="wetrakr_plan_free">Free</string>
+    <string name="wetrakr_plan_vip">VIP</string>
     <string name="wetrakr_account_fallback">WeTrakr user</string>
     <string name="wetrakr_awaiting_instruction">Scan the QR code, or enter this code at the address below.</string>
     <string name="wetrakr_qr_description">QR code to connect your WeTrakr account</string>
@@ -1311,6 +1314,7 @@
         <item quantity="other">Syncing local data to WeTrakr · %1$d%% · %2$d items left</item>
     </plurals>
     <string name="wetrakr_local_upload_summary">Sync summary</string>
+    <string name="wetrakr_local_upload_complete">Complete</string>
     <string name="wetrakr_local_upload_done_added">Added to WeTrakr: %1$d</string>
     <string name="wetrakr_local_upload_done_already">Already on WeTrakr: %1$d</string>
     <string name="wetrakr_local_upload_done_not_found">Not in WeTrakr\'s catalog: %1$d. These won\'t be offered again for 30 days.</string>

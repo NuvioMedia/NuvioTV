@@ -85,8 +85,15 @@ internal fun decodeWeTrakrUser(body: String): WeTrakrUser {
     return WeTrakrUser(
         id = id,
         username = user.text("username") ?: info?.text("username"),
-        displayName = user.text("display_name") ?: info?.text("display_name")
+        displayName = user.text("display_name") ?: info?.text("display_name"),
+        plan = decodeWeTrakrPlan(user["plan"] ?: root["plan"])
     )
+}
+
+private fun decodeWeTrakrPlan(value: JsonElement?): String? = when (value) {
+    is JsonPrimitive -> value.contentOrNull?.trim()?.takeIf(String::isNotBlank)
+    is JsonObject -> value.text("name", "type", "slug", "plan", "id")
+    else -> null
 }
 
 internal fun decodeWeTrakrActivities(body: String): WeTrakrActivities {

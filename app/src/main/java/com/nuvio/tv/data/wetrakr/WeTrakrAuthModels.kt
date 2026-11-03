@@ -39,7 +39,8 @@ data class WeTrakrAuthState(
 data class WeTrakrUser(
     val id: Long,
     val username: String? = null,
-    val displayName: String? = null
+    val displayName: String? = null,
+    val plan: String? = null
 )
 
 @Serializable

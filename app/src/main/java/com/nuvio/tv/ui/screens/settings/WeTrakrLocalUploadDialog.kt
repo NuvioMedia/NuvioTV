@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
@@ -21,13 +27,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
@@ -46,6 +64,7 @@ internal object WeTrakrLocalUploadTestTags {
     const val UNMATCHED = "wetrakr_local_upload_unmatched"
     const val NOT_FOUND = "wetrakr_local_upload_not_found"
     const val PROGRESS = "wetrakr_local_upload_progress"
+    const val COMPLETE = "wetrakr_local_upload_complete"
 }
 
 private enum class WeTrakrUploadTitleList { UNMATCHED, NOT_FOUND }
@@ -82,7 +101,30 @@ internal fun WeTrakrLocalUploadDialog(
         onDismiss = onDismiss
     ) {
         when {
-            run != null -> Box(modifier = Modifier.testTag(WeTrakrLocalUploadTestTags.PROGRESS)) {
+            run != null -> Column(
+                modifier = Modifier.testTag(WeTrakrLocalUploadTestTags.PROGRESS),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+            ) {
+                if (run.status == WeTrakrUploadStatus.DONE) {
+                    Row(
+                        modifier = Modifier.testTag(WeTrakrLocalUploadTestTags.COMPLETE),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = NuvioTheme.colors.Success,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.wetrakr_local_upload_complete),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = NuvioTheme.colors.Success
+                        )
+                    }
+                }
                 TrackingBrandMessage(
                     text = state.runMessage.orEmpty(),
                     isError = run.status == WeTrakrUploadStatus.FAILED
@@ -90,7 +132,7 @@ internal fun WeTrakrLocalUploadDialog(
             }
             preview != null -> Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 preview.groups.forEachIndexed { index, group ->
-                    SettingsToggleRow(
+                    WeTrakrBrandToggleRow(
                         title = stringResource(group.kind.titleRes()),
                         subtitle = group.summary(),
                         checked = group.kind in state.selected,
@@ -103,7 +145,7 @@ internal fun WeTrakrLocalUploadDialog(
                 }
                 val unmatched = preview.unmatched.sumOf { it.count }
                 if (unmatched > 0) {
-                    SettingsActionRow(
+                    WeTrakrBrandActionRow(
                         title = stringResource(R.string.wetrakr_local_upload_unmatched, unmatched),
                         subtitle = stringResource(R.string.wetrakr_local_upload_unmatched_subtitle),
                         value = stringResource(R.string.wetrakr_local_upload_view),
@@ -113,7 +155,7 @@ internal fun WeTrakrLocalUploadDialog(
                 }
                 val notFound = preview.notFound.sumOf { it.count }
                 if (notFound > 0) {
-                    SettingsActionRow(
+                    WeTrakrBrandActionRow(
                         title = stringResource(R.string.wetrakr_local_upload_not_found, notFound),
                         subtitle = stringResource(R.string.wetrakr_local_upload_not_found_subtitle),
                         value = stringResource(R.string.wetrakr_local_upload_view),
@@ -148,7 +190,8 @@ internal fun WeTrakrLocalUploadDialog(
                 label = stringResource(R.string.wetrakr_local_upload_sync),
                 loading = false,
                 enabled = state.uploadCount > 0,
-                onClick = onSync
+                onClick = onSync,
+                dimWhenUnfocused = true
             )
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -202,7 +245,7 @@ private fun WeTrakrUploadTitlesDialog(
             contentPadding = PaddingValues(vertical = NuvioTheme.spacing.xs)
         ) {
             itemsIndexed(titles) { index, title ->
-                SettingsActionRow(
+                WeTrakrBrandActionRow(
                     title = title.title,
                     subtitle = stringResource(title.kind.titleRes()),
                     value = title.count.takeIf { it > 1 }?.let {
@@ -248,6 +291,108 @@ private fun WeTrakrBrandDialog(
             }
         }
         content()
+    }
+}
+
+@Composable
+private fun WeTrakrBrandToggleRow(
+    title: String,
+    subtitle: String?,
+    checked: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    WeTrakrBrandRow(
+        title = title,
+        subtitle = subtitle,
+        onClick = { if (enabled) onToggle() },
+        enabled = enabled,
+        modifier = modifier.semantics {
+            role = Role.Switch
+            toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
+        }
+    ) {
+        SettingsTogglePill(checked = checked, enabled = enabled)
+    }
+}
+
+@Composable
+private fun WeTrakrBrandActionRow(
+    title: String,
+    subtitle: String?,
+    value: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    WeTrakrBrandRow(title = title, subtitle = subtitle, onClick = onClick, modifier = modifier) {
+        if (value != null) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.82f),
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeTrakrBrandRow(
+    title: String,
+    subtitle: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    trailing: @Composable () -> Unit
+) {
+    val contentAlpha = if (enabled) 1f else 0.4f
+    val shape = RoundedCornerShape(NuvioTheme.radii.md)
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 62.dp)
+            .focusProperties { canFocus = enabled }
+            .semantics { if (!enabled) disabled() },
+        colors = CardDefaults.colors(
+            containerColor = Color.White.copy(alpha = 0.06f),
+            focusedContainerColor = Color.White.copy(alpha = 0.24f)
+        ),
+        border = CardDefaults.border(
+            border = Border.None,
+            focusedBorder = Border(border = BorderStroke(2.dp, Color.White), shape = shape)
+        ),
+        shape = CardDefaults.shape(shape),
+        scale = CardDefaults.scale(focusedScale = 1.02f, pressedScale = 1f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = contentAlpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.76f * contentAlpha),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
+            trailing()
+        }
     }
 }
 

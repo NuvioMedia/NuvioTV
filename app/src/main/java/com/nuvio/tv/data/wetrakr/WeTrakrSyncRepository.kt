@@ -69,6 +69,15 @@ class WeTrakrSyncRepository(
 
     suspend fun ensureLoaded() = withContext(dispatcher) { mutex.withLock { loadCurrent() } }
 
+    suspend fun refreshAccount() = withContext(dispatcher) {
+        val scope = auth.scope()
+        if (!auth.state.value.isAuthenticated || !matchesCurrent(scope)) return@withContext
+        mutex.withLock {
+            checkScope(scope)
+            api.refreshUser(scope)
+        }
+    }
+
     fun refreshAsync(intent: TrackingRefreshIntent) {
         coroutineScope.launch { refresh(intent) }
     }

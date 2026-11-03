@@ -25,7 +25,7 @@ internal fun WeTrakrAccountDialog(
                 brand = TrackingDialogBrand.WETRAKR,
                 logo = logo,
                 logoContentDescription = stringResource(R.string.wetrakr_name),
-                connectedLabel = stringResource(R.string.wetrakr_connected_as, state.username ?: stringResource(R.string.wetrakr_account_fallback)),
+                connectedLabel = weTrakrConnectedLabel(state.username ?: stringResource(R.string.wetrakr_account_fallback), state.plan),
                 connectedDescription = stringResource(R.string.wetrakr_tracking_description) + "\n" +
                     stringResource(R.string.wetrakr_attribution),
                 statusMessage = state.statusMessage,
@@ -59,5 +59,20 @@ internal fun WeTrakrAccountDialog(
                 onDismiss = onDismiss
             )
         }
+    }
+}
+
+@Composable
+private fun weTrakrConnectedLabel(name: String, plan: String?): String {
+    val planLabel = when {
+        plan == null -> null
+        plan.contains("vip", ignoreCase = true) -> stringResource(R.string.wetrakr_plan_vip)
+        plan.contains("free", ignoreCase = true) -> stringResource(R.string.wetrakr_plan_free)
+        else -> plan.replaceFirstChar { it.titlecase() }
+    }
+    return if (planLabel == null) {
+        stringResource(R.string.wetrakr_connected_as, name)
+    } else {
+        stringResource(R.string.wetrakr_connected_as_plan, name, planLabel)
     }
 }

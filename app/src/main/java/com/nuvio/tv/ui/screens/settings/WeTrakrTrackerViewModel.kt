@@ -54,6 +54,7 @@ import kotlinx.coroutines.withContext
 data class WeTrakrTrackerUiState(
     val isConnected: Boolean = false,
     val username: String? = null,
+    val plan: String? = null,
     val session: WeTrakrDeviceSession? = null,
     val credentialsConfigured: Boolean = true,
     val isLoading: Boolean = false,
@@ -127,6 +128,7 @@ class WeTrakrTrackerViewModel @Inject constructor(
         WeTrakrTrackerUiState(
             isConnected = connected,
             username = authorization.user?.let { it.displayName ?: it.username }.takeIf { current },
+            plan = authorization.user?.plan.takeIf { current },
             session = authorization.session.takeIf { current },
             credentialsConfigured = auth.hasRequiredCredentials(),
             isLoading = transient.loading,
@@ -240,7 +242,12 @@ class WeTrakrTrackerViewModel @Inject constructor(
     fun onContinueWatchingDaysCapSelected(days: Int) {
         viewModelScope.launch { settings.setContinueWatchingDaysCap(days) }
     }
-    fun onAccountOpened() = sync.refreshAsync(TrackingRefreshIntent.AUTOMATIC)
+    fun onAccountOpened() {
+        sync.refreshAsync(TrackingRefreshIntent.AUTOMATIC)
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { sync.refreshAccount() }.onFailure { if (it is CancellationException) throw it }
+        }
+    }
 
     fun onShowCommentsChanged(enabled: Boolean) {
         viewModelScope.launch { settings.setShowWeTrakrComments(enabled) }

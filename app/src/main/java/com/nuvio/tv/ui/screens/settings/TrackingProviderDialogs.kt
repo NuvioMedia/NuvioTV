@@ -687,7 +687,8 @@ internal fun TrackingBrandPrimaryButton(
     loading: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dimWhenUnfocused: Boolean = false
 ) {
     Button(
         onClick = onClick,
@@ -696,7 +697,7 @@ internal fun TrackingBrandPrimaryButton(
             .fillMaxWidth()
             .height(48.dp),
         colors = ButtonDefaults.colors(
-            containerColor = Color.White,
+            containerColor = if (dimWhenUnfocused) Color.White.copy(alpha = 0.62f) else Color.White,
             focusedContainerColor = Color.White,
             contentColor = TrackingBrandButtonContent,
             focusedContentColor = TrackingBrandButtonContent,

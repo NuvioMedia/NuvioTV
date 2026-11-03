@@ -76,6 +76,13 @@ class WeTrakrDecodersTest {
 
         assertEquals(42L, user.id)
         assertEquals("you", user.username)
+        assertEquals(null, user.plan)
+    }
+
+    @Test
+    fun `account plan is read as text or from a plan object`() {
+        assertEquals("vip", decodeWeTrakrUser("""{"user":{"id":1},"plan":"vip"}""").plan)
+        assertEquals("free", decodeWeTrakrUser("""{"user":{"id":1,"plan":{"name":"free"}}}""").plan)
     }
 
     @Test
