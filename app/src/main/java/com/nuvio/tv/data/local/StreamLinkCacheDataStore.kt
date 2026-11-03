@@ -30,7 +30,10 @@ data class CachedStreamLink(
     val releaseTitle: String? = null,
     val publishedAt: Long? = null,
     val audioDelayMs: Int? = null,
-    val audioDelayLanguage: String? = null
+    val audioDelayLanguage: String? = null,
+    val addonName: String? = null,
+    val addonLogo: String? = null,
+    val streamDescription: String? = null
 )
 
 @Singleton
@@ -63,7 +66,10 @@ class StreamLinkCacheDataStore @Inject constructor(
         releaseTitle: String? = null,
         publishedAt: Long? = null,
         audioDelayMs: Int? = null,
-        audioDelayLanguage: String? = null
+        audioDelayLanguage: String? = null,
+        addonName: String? = null,
+        addonLogo: String? = null,
+        streamDescription: String? = null
     ) {
         // Loopback Usenet capabilities expire with the playback process; the release is kept instead.
         if (com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)) return
@@ -86,6 +92,9 @@ class StreamLinkCacheDataStore @Inject constructor(
             year?.let { put("year", it) }
             audioDelayMs?.let { put("audioDelayMs", it) }
             audioDelayLanguage?.let { put("audioDelayLanguage", it) }
+            addonName?.let { put("addonName", it) }
+            addonLogo?.let { put("addonLogo", it) }
+            streamDescription?.let { put("streamDescription", it) }
         }.toString()
 
         store().edit { prefs ->
@@ -145,7 +154,10 @@ class StreamLinkCacheDataStore @Inject constructor(
                 releaseTitle = json.optString("releaseTitle", "").ifBlank { null },
                 publishedAt = json.optLong("publishedAt", 0L).takeIf { it > 0L },
                 audioDelayMs = if (json.has("audioDelayMs")) json.optInt("audioDelayMs") else null,
-                audioDelayLanguage = json.optString("audioDelayLanguage", "").ifBlank { null }
+                audioDelayLanguage = json.optString("audioDelayLanguage", "").ifBlank { null },
+                addonName = json.optString("addonName", "").ifBlank { null },
+                addonLogo = json.optString("addonLogo", "").ifBlank { null },
+                streamDescription = json.optString("streamDescription", "").ifBlank { null }
             )
         }.getOrNull()
 

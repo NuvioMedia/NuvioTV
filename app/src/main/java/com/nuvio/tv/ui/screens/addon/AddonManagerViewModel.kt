@@ -37,6 +37,7 @@ import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
 import com.nuvio.tv.core.usenet.BuiltInUsenetOrder
 import com.nuvio.tv.core.usenet.UsenetSourceConfiguration
 import com.nuvio.tv.core.usenet.UsenetSourceSettings
+import com.nuvio.tv.core.util.readAppLogoBytes
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
@@ -99,7 +100,7 @@ class AddonManagerViewModel @Inject constructor(
     }
 
     private var server: AddonConfigServer? = null
-    private var logoBytes: ByteArray? = null
+    private val logoBytes: ByteArray? by lazy { context.readAppLogoBytes() }
     private var homeCatalogOrderKeys: List<String> = emptyList()
     private var disabledHomeCatalogKeys: Set<String> = emptySet()
     private var followAddonsOrderEnabled: Boolean = false
@@ -110,18 +111,10 @@ class AddonManagerViewModel @Inject constructor(
         observeBuiltInUsenet()
         observeCatalogPreferences()
         observeCollections()
-        loadLogoBytes()
     }
 
     fun requestAddonSyncNow() {
         startupSyncService.requestAddonSyncNow()
-    }
-
-    private fun loadLogoBytes() {
-        try {
-            val inputStream = context.resources.openRawResource(R.drawable.app_logo_wordmark)
-            logoBytes = inputStream.use { it.readBytes() }
-        } catch (_: Exception) { }
     }
 
     fun onInstallUrlChange(url: String) {

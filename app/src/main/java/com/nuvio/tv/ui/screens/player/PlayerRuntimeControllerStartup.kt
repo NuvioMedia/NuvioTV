@@ -60,6 +60,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
                 Log.d("PlayerStartup", "Torrent stream ready: $localUrl")
                 currentStreamUrl = localUrl
                 currentHeaders = emptyMap()
+                recordDistinctPluginPlay(
+                    bingeGroup = navigationArgs.bingeGroup,
+                    playbackIdentity = infoHash
+                )
                 preparePlaybackBeforeStart(
                     url = localUrl,
                     headers = emptyMap(),
@@ -87,6 +91,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
         url = currentStreamUrl,
         headers = currentHeaders,
         loadSavedProgress = !navigationArgs.startFromBeginning
+    )
+    recordDistinctPluginPlay(
+        bingeGroup = navigationArgs.bingeGroup,
+        playbackIdentity = navigationArgs.infoHash ?: initialStreamUrl
     )
 }
 
