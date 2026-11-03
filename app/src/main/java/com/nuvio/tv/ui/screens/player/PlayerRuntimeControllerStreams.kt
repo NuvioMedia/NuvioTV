@@ -653,6 +653,9 @@ private fun PlayerRuntimeController.applySelectedStreamState(
         "$hash:$fileIdx"
     }
     parsingErrorProbeAttempted = false
+    currentStreamBluray = null
+    clipPlaylistProbedUrl = null
+    resetDiscTitles()
     applyStreamMetadata(stream)
 }
 
@@ -1056,7 +1059,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                         responseHeaders = currentStreamResponseHeaders,
                         mimeTypeOverride = currentStreamMimeType,
                         audioDelayUsProvider = audioDelayUs::get,
-                        cacheKey = currentStreamCacheKey
+                        cacheKey = currentStreamCacheKey,
+                        bluray = currentStreamBluray
                     )
                 )
                 player.playWhenReady = true
