@@ -86,7 +86,8 @@ data class UsenetRelease(
     }
 }
 
-data class NewznabPage(val releases: List<UsenetRelease>, val total: Int = 0)
+/** [items] counts the page's items, usable or not; [total] is null when the indexer reports none. */
+data class NewznabPage(val releases: List<UsenetRelease>, val total: Int? = null, val items: Int = releases.size)
 
 /** Protocol functions are independent of Android and never include credentials in errors. */
 object NewznabProtocol {
@@ -192,7 +193,7 @@ object NewznabProtocol {
                 published, indexer.id, indexer.name, attributes["password"]?.lowercase() in setOf("1", "2", "true", "yes"))
         }
         val response = root.getElementsByTagNameNS("*", "response").item(0) as? Element
-        return NewznabPage(results, response?.getAttribute("total")?.toIntOrNull() ?: results.size)
+        return NewznabPage(results, response?.getAttribute("total")?.toIntOrNull(), items.length)
     }
 
     /**
@@ -449,7 +450,7 @@ object NewznabProtocol {
                     mediaType = if (series) "series" else "movie"), release.nzbUrl,
                     reliability = rank(release), indexerOrder = priority[release.indexerId] ?: Int.MAX_VALUE)
             }
-            return StreamRankingEngines.get(profile).rank(candidates, now).take(config.maxResults).map { it.candidate.value }
+            return StreamRankingEngines.get(profile).rank(candidates, now).take(config.resultLimit).map { it.candidate.value }
         }
         val primary = when (config.sort) {
             UsenetSort.QUALITY -> compareByDescending<UsenetRelease> { it.resolution }
@@ -462,7 +463,7 @@ object NewznabProtocol {
         }
         return filtered.sortedWith(compareBy(rank).then(primary).thenBy { priority[it.indexerId] ?: Int.MAX_VALUE }
             .thenByDescending { it.resolution }.thenByDescending { it.episodeSize(seasonEpisodes) }.thenBy { it.title }.thenBy { it.nzbUrl })
-            .distinctBy { it.nzbUrl }.take(config.maxResults)
+            .distinctBy { it.nzbUrl }.take(config.resultLimit)
     }
 
     private fun document(xml: String): Element {

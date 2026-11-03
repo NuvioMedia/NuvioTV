@@ -78,23 +78,30 @@ class NewznabClient internal constructor(
     }
 
     /**
-     * An episode is always searched on its own: a long-running series has more releases per season
-     * than the two pages read of it, which are its newest uploads, of any episode. The season search
-     * adds what an episode search never returns, the season packs, and the episode's numbered
-     * releases that an indexer filed without the episode.
+     * Reads up to [results] releases of each search. An episode is always searched on its own: a
+     * long-running series has more releases per season than a search reads, which are its newest
+     * uploads, of any episode. The season search adds what an episode search never returns, the
+     * season packs, and the episode's numbered releases that an indexer filed without the episode.
+     * It runs alongside the episode's, which its pages would otherwise hold up.
      */
-    suspend fun search(indexer: UsenetIndexer, request: UsenetSearchRequest,
-        caps: NewznabCapabilities): List<UsenetRelease> {
-        val season = seasonReleases(indexer, request, caps).orEmpty()
-            .filter { NewznabProtocol.matches(it, request, idSearch = true, requireNumbering = true) }
-        val url = NewznabProtocol.searchUrl(indexer, request, caps) ?: return season
+    suspend fun search(indexer: UsenetIndexer, request: UsenetSearchRequest, caps: NewznabCapabilities,
+        results: Int = UsenetSourceConfiguration.DEFAULT_INDEXER_RESULTS): List<UsenetRelease> = coroutineScope {
+        val season = async {
+            try {
+                Result.success(seasonReleases(indexer, request, caps, results).orEmpty()
+                    .filter { NewznabProtocol.matches(it, request, idSearch = true, requireNumbering = true) })
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { Result.failure(e) }
+        }
+        val url = NewznabProtocol.searchUrl(indexer, request, caps) ?: return@coroutineScope season.await().getOrThrow()
         val episode = try {
-            pages(indexer, url, request, caps)
+            pages(indexer, url, request, caps, results)
                 .filter { NewznabProtocol.matches(it, request, NewznabProtocol.isIdSearch(url)) }
         } catch (e: CancellationException) { throw e }
-        // The season already answered: a failed or paused episode search still shows its releases.
-        catch (e: Exception) { if (season.isEmpty()) throw e else emptyList() }
-        return (episode + season).distinctBy { it.nzbUrl }
+        // When the season answered, a failed or paused episode search still shows its releases.
+        catch (e: Exception) { return@coroutineScope season.await().getOrNull()?.takeIf { it.isNotEmpty() } ?: throw e }
+        // A failed season search leaves only the packs out.
+        (episode + season.await().getOrDefault(emptyList())).distinctBy { it.nzbUrl }
     }
 
     /**
@@ -115,16 +122,17 @@ class NewznabClient internal constructor(
      * URLs carry the API key.
      */
     private suspend fun seasonReleases(indexer: UsenetIndexer, request: UsenetSearchRequest,
-        caps: NewznabCapabilities): List<UsenetRelease>? {
+        caps: NewznabCapabilities, results: Int): List<UsenetRelease>? {
         val url = NewznabProtocol.searchUrl(indexer, request, caps, wholeSeason = true) ?: return null
-        val key = url.toString()
+        // A season read for fewer results than asked for is read again.
+        val key = "$url#$results"
         // Keyed by the endpoint and key, which another profile or a renamed indexer can share:
         // reused releases take the asking indexer's id and name, which ordering and deduplication use.
         synchronized(seasons) { seasons[key] }?.takeIf { now() - it.first < SEASON_TTL_MS }?.let { cached ->
             return cached.second.map { it.copy(indexerId = indexer.id, indexerName = indexer.name) }
         }
         val releases = try {
-            pages(indexer, url, request, caps, wholeSeason = true)
+            pages(indexer, url, request, caps, results, wholeSeason = true)
         } catch (e: CancellationException) { throw e }
         catch (e: IndexerCooldownException) { throw e }
         // Some indexers reject season-only searches; remember it so each episode does not retry.
@@ -133,20 +141,29 @@ class NewznabClient internal constructor(
         return releases
     }
 
-    /** Bound both API usage and memory to two pages; never download NZBs during a search. */
+    /**
+     * Bounds both API usage and memory to [results]; never downloads NZBs during a search. Indexers
+     * leave items out of a page while more follow, so the total they report says whether to ask for
+     * the next; without one, a full page does. An empty page ends the search.
+     */
     private suspend fun pages(indexer: UsenetIndexer, url: HttpUrl, request: UsenetSearchRequest,
-        caps: NewznabCapabilities, wholeSeason: Boolean = false): List<UsenetRelease> {
-        val first = request(indexer, url) { NewznabProtocol.releases(it, indexer) }
+        caps: NewznabCapabilities, results: Int, wholeSeason: Boolean = false): List<UsenetRelease> {
         val limit = caps.limit.coerceIn(1, 100)
-        val second = if (first.total > limit && first.releases.size >= limit) {
-            try {
-                NewznabProtocol.searchUrl(indexer, request, caps, limit, wholeSeason)?.let { next ->
-                    request(indexer, next) { NewznabProtocol.releases(it, indexer) }.releases
-                }.orEmpty()
+        var page = request(indexer, url) { NewznabProtocol.releases(it, indexer) }
+        val releases = page.releases.toMutableList()
+        var offset = limit
+        while (offset < results && page.items > 0 && (page.total?.let { offset < it } ?: (page.items >= limit))) {
+            page = try {
+                NewznabProtocol.searchUrl(indexer, request, caps, offset, wholeSeason)?.let { next ->
+                    request(indexer, next) { NewznabProtocol.releases(it, indexer) }
+                }
             } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { emptyList() }
-        } else emptyList()
-        return first.releases + second
+            // The pages read so far still answer the search.
+            catch (_: Exception) { null } ?: break
+            releases += page.releases
+            offset += limit
+        }
+        return releases
     }
 
     /**
@@ -344,8 +361,8 @@ class BuiltInUsenetService @Inject constructor(
                             val caps = client.capabilities(indexer)
                             val canSearchId = NewznabProtocol.searchUrl(indexer, request, caps) != null
                             val search = if (canSearchId) request else metadata.await() ?: error("Metadata unavailable")
-                            val found = client.search(indexer, search, caps)
-                            Result.success(if (found.isEmpty()) askAgain(indexer, search, caps) { metadata.await() } ?: found else found)
+                            val found = client.search(indexer, search, caps, config.indexerResults)
+                            Result.success(if (found.isEmpty()) askAgain(indexer, search, caps, config.indexerResults) { metadata.await() } ?: found else found)
                         } catch (e: CancellationException) { throw e }
                         catch (e: Exception) { Result.failure(e) }
                         results.send(indexer to result)
@@ -425,7 +442,7 @@ class BuiltInUsenetService @Inject constructor(
      * Each attempt is made only when the ones before it found nothing. Null when none found anything.
      */
     private suspend fun askAgain(indexer: UsenetIndexer, searched: UsenetSearchRequest, caps: NewznabCapabilities,
-        metadata: suspend () -> UsenetSearchRequest?): List<UsenetRelease>? {
+        results: Int, metadata: suspend () -> UsenetSearchRequest?): List<UsenetRelease>? {
         val url = NewznabProtocol.searchUrl(indexer, searched, caps) ?: return null
         val byTitle = (metadata() ?: return null).copy(imdbId = null, tmdbId = null, tvdbId = null)
         val attempts = listOfNotNull(
@@ -436,7 +453,7 @@ class BuiltInUsenetService @Inject constructor(
         )
         for (attempt in attempts) {
             if (NewznabProtocol.searchUrl(indexer, attempt, caps) == null) continue
-            val found = try { client.search(indexer, attempt, caps) }
+            val found = try { client.search(indexer, attempt, caps, results) }
             catch (e: CancellationException) { throw e }
             catch (e: IndexerCooldownException) { throw e }
             // The first search succeeded; a failed later attempt only means nothing more was found.

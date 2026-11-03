@@ -149,8 +149,12 @@ and the maximum size filter and size sorting use it. The list never waits for
 the count; it is arranged again when the count comes, and without it the whole
 size is used.
 
-Searches have a 25-second timeout per request and fetch at most two pages of
-100 results per indexer. NZBs are fetched only when the existing playback or
+Searches have a 25-second timeout per request and read 200 results per
+indexer, or as many as **Maximum results** when it is higher (500); with no
+limit, up to 1000. More results than are listed are read so the filters and
+the sort choose among them. A page with fewer results than asked does not end
+a search while the indexer reports more; each page is one API hit. NZBs are
+fetched only when the existing playback or
 opt-in prefetch path needs them. Failed indexers do not cancel successful
 sources. Configuration changes invalidate the stream search session cache.
 
@@ -189,8 +193,8 @@ messages keep only their host.
   cache. They are not kept longer, so new releases show up.
 - **Seasons:** an episode searched by ID is always searched on its own
   (`season` and `ep`), since a long-running series has more releases per
-  season than the two pages read of a search. Its whole season (no `ep`) is
-  also searched, once for the following episodes, which reuse that result for
+  season than a search reads. Its whole season (no `ep`) is also searched, at
+  the same time, once for the following episodes, which reuse that result for
   2 hours, in memory only: it finds the season packs, which episode searches
   do not return. Only explicitly numbered releases (`S01E02`, `1x02`, season
   packs) are taken from it, since an obfuscated name could be any episode. An
