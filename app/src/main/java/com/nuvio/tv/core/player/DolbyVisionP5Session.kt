@@ -15,10 +15,11 @@ import java.util.concurrent.atomic.AtomicLong
  * practice a scene) share one hash, so a LUT is only built when the mapping changes.
  * [DolbyVisionP5HdrEffect] then looks up the mapping for the time of each frame it draws.
  *
- * A stream starts with an inactive session that only detects Profile 5 ([detected]); the player
- * is then rebuilt once with an [active] session, which rewrites the track to HDR10 and installs
- * the effect (video effects can only be set before the player is prepared). A session with a
- * [blockedReason] only detects, so the player can say why the stream isn't mapped.
+ * An [active] session is set up before the player is built, whenever the device can map: the
+ * effect is installed from the start (Media3 only builds its effect pipeline if effects are set
+ * before the first frame) and passes frames through until a Profile 5 track shows up, which the
+ * extractor then rewrites to HDR10. A session with a [blockedReason] only detects Profile 5, so
+ * the player can say why the stream isn't mapped.
  */
 internal class DolbyVisionP5Session(
     val active: Boolean,

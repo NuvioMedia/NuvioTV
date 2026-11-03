@@ -865,7 +865,7 @@
     <string name="dv7_mode_strip_dv_desc">Removes the Dolby Vision RPU layer from all streams.</string>
     <string name="audio_dv5_to_dv81_title">Convert DV5 to DV8.1</string>
     <string name="audio_dv5_to_hdr10_title">Map DV5 to HDR10 (experimental)</string>
-    <string name="audio_dv5_to_hdr10_sub">For devices without Dolby Vision: applies a Dolby Vision Profile 5 stream\'s colour data on the GPU and plays it as HDR10, instead of with purple and green colours. Needs an HDR10 display. Turns off tunneled playback for those streams.</string>
+    <string name="audio_dv5_to_hdr10_sub">For devices without Dolby Vision: applies a Dolby Vision Profile 5 stream\'s colour data on the GPU and plays it as HDR10, instead of with purple and green colours. Needs an HDR10 display. While on, every video goes through one extra GPU step and tunneled playback stays off.</string>
     <string name="dv5_hdr_note_off_library">Dolby Vision 5 to HDR10 is off: this build has no Dolby Vision library</string>
     <string name="dv5_hdr_note_off_display_dv">Dolby Vision 5 to HDR10 is off: the display supports Dolby Vision</string>
     <string name="dv5_hdr_note_off_display_sdr">Dolby Vision 5 to HDR10 is off: the display doesn\'t report HDR10</string>

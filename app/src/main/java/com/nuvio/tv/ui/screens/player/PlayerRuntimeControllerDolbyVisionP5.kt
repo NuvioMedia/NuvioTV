@@ -35,9 +35,10 @@ private val hdrEffectPathSupported: Boolean by lazy {
 
 /**
  * Starts the Dolby Vision Profile 5 -> HDR10 state of a (re)build of the player for [url], and
- * returns its session, or null when the setting is off. The session maps to HDR10 ([active]) only
- * on a device that can, once an earlier build of this stream found a Profile 5 track; otherwise it
- * only detects, so the player can say why a Profile 5 stream isn't mapped.
+ * returns its session, or null when the setting is off. On a device that can map, the session is
+ * [active] from the start: its effect is installed before the player is prepared and a Profile 5
+ * track is mapped as soon as it shows up, with no restart. Otherwise it only detects Profile 5, so
+ * the player can say why the stream isn't mapped.
  */
 internal fun PlayerRuntimeController.startDolbyVisionP5Session(
     url: String,
@@ -45,27 +46,19 @@ internal fun PlayerRuntimeController.startDolbyVisionP5Session(
 ): DolbyVisionP5Session? {
     if (dv5HdrStreamUrl != url) {
         dv5HdrStreamUrl = url
-        dv5HdrDetectedForCurrentStream = false
         dv5HdrFailedForCurrentStream = false
         dv5HdrNoteShownForCurrentStream = false
     }
-    dv5HdrSwitchInFlight = false
     dv5HdrStatusJob?.cancel()
     dv5HdrStatusJob = null
     releaseDolbyVisionP5Session()
     if (!settings.dv5ToHdr10Enabled) return null
     val blocked = dolbyVisionP5BlockedReason(settings)
-    val session = DolbyVisionP5Session(
-        active = blocked == null && dv5HdrDetectedForCurrentStream,
-        blockedReason = blocked,
-    )
+    val session = DolbyVisionP5Session(active = blocked == null, blockedReason = blocked)
     // Profile 5 can show up only once samples are read, after the tracks were reported.
     session.onDetected = { scope.launch(Dispatchers.Main) { maybeEnableDolbyVisionP5Hdr() } }
     dolbyVisionP5Session = session
-    Log.i(
-        PlayerRuntimeController.TAG,
-        "DV5_HDR: session active=${session.active} blocked=$blocked detectedBefore=$dv5HdrDetectedForCurrentStream"
-    )
+    Log.i(PlayerRuntimeController.TAG, "DV5_HDR: session active=${session.active} blocked=$blocked")
     return session
 }
 
@@ -101,16 +94,12 @@ private fun PlayerRuntimeController.displayHdrTypes(): Set<Int> = runCatching {
 }.getOrDefault(emptySet())
 
 /**
- * Once a Profile 5 track is found (from the tracks, or later from its first RPUs): rebuilds the
- * player once with the mapping active (video effects can only be set before prepare), or says why
- * it can't map this stream. On a mapped stream it says, a few seconds in, how the mapping went.
+ * Once a Profile 5 track is found (from the tracks, or later from its first RPU): says why this
+ * stream can't be mapped, or, a few seconds into a mapped stream, how the mapping went.
  */
 internal fun PlayerRuntimeController.maybeEnableDolbyVisionP5Hdr() {
     val session = dolbyVisionP5Session ?: return
     if (!session.detected) return
-    // Remembered even when another rebuild (libass) runs first: the next build maps then.
-    dv5HdrDetectedForCurrentStream = true
-
     session.blockedReason?.let { reason ->
         if (!dv5HdrNoteShownForCurrentStream) {
             dv5HdrNoteShownForCurrentStream = true
@@ -118,25 +107,7 @@ internal fun PlayerRuntimeController.maybeEnableDolbyVisionP5Hdr() {
         }
         return
     }
-    if (session.active) {
-        scheduleDolbyVisionP5Status(session)
-        return
-    }
-    if (dv5HdrSwitchInFlight || libassPipelineSwitchInFlight) return
-    val player = _exoPlayer ?: return
-    Log.i(PlayerRuntimeController.TAG, "DV5_HDR: Profile 5 track found; rebuilding to map it to HDR10")
-    dv5HdrSwitchInFlight = true
-    val resumePosition = player.currentPosition.takeIf { it > 0L }
-    _uiState.update { state ->
-        state.copy(
-            pendingSeekPosition = resumePosition ?: state.pendingSeekPosition,
-            showLoadingOverlay = state.loadingOverlayEnabled
-        )
-    }
-    scope.launch {
-        releasePlayer(flushPlaybackState = true, keepTorrentStream = true)
-        reinitializeCurrentStream()
-    }
+    if (session.active) scheduleDolbyVisionP5Status(session)
 }
 
 private fun PlayerRuntimeController.scheduleDolbyVisionP5Status(session: DolbyVisionP5Session) {

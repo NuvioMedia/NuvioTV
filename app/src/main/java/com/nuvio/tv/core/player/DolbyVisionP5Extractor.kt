@@ -20,10 +20,11 @@ import java.io.IOException
 /**
  * Wraps an [Extractor] so its video track feeds a [DolbyVisionP5Session].
  *
- * With an inactive session it only detects Profile 5: from the track's codecs, or else from the
- * RPUs of its first samples (a Matroska file whose colour metadata claims SDR loses its Dolby
- * Vision config, so its track reads as plain HEVC). With an active one it also makes the track
- * play as HDR10 through the [DolbyVisionP5HdrEffect]:
+ * Profile 5 is recognised from the track's codecs or, failing that, from the RPU of its first
+ * sample (a Matroska file whose colour metadata claims SDR loses its Dolby Vision config, so its
+ * track reads as plain HEVC). With an active session the format of such a track is held back
+ * until that first sample is read, so the decoder starts with the right one and the player never
+ * has to restart. A Profile 5 track then plays as HDR10 through the [DolbyVisionP5HdrEffect]:
  *  - the format becomes plain HEVC Main10, so a regular HEVC decoder decodes the base layer;
  *  - its colour info becomes BT.2020 / PQ / full range, which routes the frames through Media3's
  *    10-bit HDR effect path and tells it how to read the decoded values (Profile 5 is full range);
@@ -39,8 +40,12 @@ internal class DolbyVisionP5Extractor(
     private val session: DolbyVisionP5Session,
 ) : Extractor {
 
+    private var output: P5ExtractorOutput? = null
+
     override fun init(output: ExtractorOutput) {
-        delegate.init(P5ExtractorOutput(output, session))
+        val wrapped = P5ExtractorOutput(output, session)
+        this.output = wrapped
+        delegate.init(wrapped)
     }
 
     @Throws(IOException::class)
@@ -52,7 +57,11 @@ internal class DolbyVisionP5Extractor(
     override fun read(input: ExtractorInput, seekPosition: PositionHolder): Int =
         delegate.read(input, seekPosition)
 
-    override fun seek(position: Long, timeUs: Long) = delegate.seek(position, timeUs)
+    override fun seek(position: Long, timeUs: Long) {
+        // A half-read sample is dropped by the seek: so are its buffered bytes.
+        output?.onSeek()
+        delegate.seek(position, timeUs)
+    }
 
     override fun release() = delegate.release()
 
@@ -65,10 +74,15 @@ private class P5ExtractorOutput(
     private val session: DolbyVisionP5Session,
 ) : ExtractorOutput {
 
+    private val videoTracks = ArrayList<P5TrackOutput>()
+
     override fun track(id: Int, type: Int): TrackOutput {
         val track = delegate.track(id, type)
-        return if (type == C.TRACK_TYPE_VIDEO) P5TrackOutput(track, session) else track
+        if (type != C.TRACK_TYPE_VIDEO) return track
+        return P5TrackOutput(track, session).also { videoTracks += it }
     }
+
+    fun onSeek() = videoTracks.forEach(P5TrackOutput::onSeek)
 
     override fun endTracks() = delegate.endTracks()
 
@@ -81,25 +95,55 @@ private class P5TrackOutput(
     private val session: DolbyVisionP5Session,
 ) : TrackOutput {
 
-    private var capturing = false
-    // Detecting only: samples whose RPU is still to be checked for Profile 5.
+    private enum class Mode {
+        /** Not Profile 5 (or settled): everything passes straight through. */
+        PASS,
+        /** Session can't map: only look for Profile 5 in the first samples, for the player's note. */
+        PROBE,
+        /** Profile 5 being mapped: the format went out as HDR10, every sample's RPU is recorded. */
+        MAP,
+        /**
+         * HEVC whose container didn't say Profile 5: the format and bytes are held until the first
+         * sample's RPU shows whether it is, so the decoder gets the right format from the start.
+         */
+        DEFER,
+    }
+
+    private var mode = Mode.PASS
+    private var heldFormat: Format? = null
     private var probeSamplesLeft = 0
-    // The main sample bytes written since the last sample was committed.
+    // The main sample bytes since the last committed sample (passed on already, except in DEFER).
     private var buffer = ByteArray(0)
     private var bufferLength = 0
     private val forward = ParsableByteArray()
 
     override fun durationUs(durationUs: Long) = delegate.durationUs(durationUs)
 
+    fun onSeek() {
+        bufferLength = 0
+    }
+
     override fun format(format: Format) {
         val hevc = isHevcOrDolbyVision(format.sampleMimeType)
-        val profile5 = isProfile5(format.codecs) || (session.containerSignalledProfile5 && hevc)
-        if (profile5) session.onProfile5Track()
-        // An active session exists only for a stream already found to be Profile 5.
-        val mapping = session.active && hevc
-        probeSamplesLeft = if (!mapping && hevc && !session.detected) PROBE_SAMPLES else 0
-        capturing = mapping || probeSamplesLeft > 0
-        delegate.format(if (mapping) toHdr10(format) else format)
+        val signalled = hevc && (isProfile5(format.codecs) || session.containerSignalledProfile5)
+        if (signalled) session.onProfile5Track()
+        if (mode == Mode.DEFER) {
+            heldFormat = format
+            return
+        }
+        mode = when {
+            !hevc -> Mode.PASS
+            session.active && signalled -> Mode.MAP
+            session.active -> Mode.DEFER
+            !session.detected -> Mode.PROBE
+            else -> Mode.PASS
+        }
+        probeSamplesLeft = PROBE_SAMPLES
+        when (mode) {
+            Mode.MAP -> delegate.format(toHdr10(format))
+            Mode.DEFER -> heldFormat = format
+            else -> delegate.format(format)
+        }
     }
 
     @Throws(IOException::class)
@@ -109,7 +153,7 @@ private class P5TrackOutput(
         allowEndOfInput: Boolean,
         sampleDataPart: Int,
     ): Int {
-        if (!capturing || sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN) {
+        if (!buffersPart(sampleDataPart)) {
             return delegate.sampleData(input, length, allowEndOfInput, sampleDataPart)
         }
         ensureCapacity(bufferLength + length)
@@ -119,20 +163,18 @@ private class P5TrackOutput(
             throw EOFException()
         }
         if (read <= 0) return read
-        forwardBuffered(bufferLength, read, sampleDataPart)
-        bufferLength += read
+        appended(read)
         return read
     }
 
     override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
-        if (!capturing || sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN || length <= 0) {
+        if (length <= 0 || !buffersPart(sampleDataPart)) {
             delegate.sampleData(data, length, sampleDataPart)
             return
         }
         ensureCapacity(bufferLength + length)
         data.readBytes(buffer, bufferLength, length)
-        forwardBuffered(bufferLength, length, sampleDataPart)
-        bufferLength += length
+        appended(length)
     }
 
     override fun sampleMetadata(
@@ -142,34 +184,68 @@ private class P5TrackOutput(
         offset: Int,
         cryptoData: TrackOutput.CryptoData?,
     ) {
-        if (capturing) {
-            // [offset] bytes at the end already belong to the next sample.
-            val carry = offset.coerceIn(0, bufferLength)
-            val sampleEnd = bufferLength - carry
-            if (cryptoData == null) {
-                val rpu = DolbyVisionP5Nal.findRpu(buffer, sampleEnd)
-                if (rpu != DolbyVisionP5Nal.NONE) {
-                    val result = DolbyVisionP5Nal.ingest(buffer, rpu, DolbyVisionP5Native::ingestRpu)
-                    session.onRpuResult(result)
-                    // A sample without a usable RPU keeps the mapping before it.
-                    if (session.active && result > 0L) session.onSampleMapping(timeUs, result)
-                }
+        if (mode == Mode.PASS) {
+            delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
+            return
+        }
+        // [offset] bytes at the end already belong to the next sample.
+        val carry = offset.coerceIn(0, bufferLength)
+        val sampleEnd = bufferLength - carry
+        var result = DolbyVisionP5Native.NOT_PARSED
+        if (cryptoData == null) {
+            val rpu = DolbyVisionP5Nal.findRpu(buffer, sampleEnd)
+            if (rpu != DolbyVisionP5Nal.NONE) {
+                result = DolbyVisionP5Nal.ingest(buffer, rpu, DolbyVisionP5Native::ingestRpu)
+                session.onRpuResult(result)
             }
+        }
+        if (mode == Mode.DEFER) release(profile5 = result > 0L)
+        // A sample without a usable RPU keeps the mapping before it.
+        if (mode == Mode.MAP && result > 0L) session.onSampleMapping(timeUs, result)
+        if (mode == Mode.PROBE && (session.detected || --probeSamplesLeft <= 0)) mode = Mode.PASS
+        if (mode == Mode.PASS) {
+            bufferLength = 0
+        } else {
             if (carry > 0) System.arraycopy(buffer, sampleEnd, buffer, 0, carry)
             bufferLength = carry
-            if (!session.active && (session.detected || --probeSamplesLeft <= 0)) {
-                // Detection settled: stop buffering. Everything was already passed on.
-                capturing = false
-                bufferLength = 0
-            }
         }
         delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
     }
 
-    private fun forwardBuffered(start: Int, length: Int, sampleDataPart: Int) {
+    /** Whether this part of the sample goes through [buffer]; ends a deferral it can't hold. */
+    private fun buffersPart(sampleDataPart: Int): Boolean {
+        if (mode == Mode.PASS) return false
+        if (sampleDataPart == TrackOutput.SAMPLE_DATA_PART_MAIN) return true
+        // Encryption or supplemental data must keep its place before the main data.
+        if (mode == Mode.DEFER) release(profile5 = false)
+        return false
+    }
+
+    private fun appended(length: Int) {
+        if (mode == Mode.DEFER) {
+            bufferLength += length
+            if (bufferLength > MAX_DEFERRED_BYTES) release(profile5 = false)
+        } else {
+            forwardBuffered(bufferLength, length)
+            bufferLength += length
+        }
+    }
+
+    /** Ends a deferral: sends the held format (as HDR10 for Profile 5) and the held bytes. */
+    private fun release(profile5: Boolean) {
+        val format = heldFormat ?: return
+        heldFormat = null
+        if (profile5) session.onProfile5Track()
+        delegate.format(if (profile5) toHdr10(format) else format)
+        if (bufferLength > 0) forwardBuffered(0, bufferLength)
+        mode = if (profile5) Mode.MAP else Mode.PASS
+        if (mode == Mode.PASS) bufferLength = 0
+    }
+
+    private fun forwardBuffered(start: Int, length: Int) {
         forward.reset(buffer, start + length)
         forward.setPosition(start)
-        delegate.sampleData(forward, length, sampleDataPart)
+        delegate.sampleData(forward, length, TrackOutput.SAMPLE_DATA_PART_MAIN)
     }
 
     private fun ensureCapacity(needed: Int) {
@@ -184,6 +260,8 @@ private class P5TrackOutput(
         const val HEVC_MAIN10_CODECS = "hvc1.2.4.L153.B0"
         /** About two seconds of video: enough to meet an RPU (every Profile 5 frame has one). */
         const val PROBE_SAMPLES = 48
+        /** A first sample larger than this isn't waited for: the track plays as it is. */
+        const val MAX_DEFERRED_BYTES = 16 * 1024 * 1024
         val PROFILE_5 = Regex("^(?:dvhe|dvh1)\\.0?5\\.")
 
         fun isProfile5(codecs: String?): Boolean =

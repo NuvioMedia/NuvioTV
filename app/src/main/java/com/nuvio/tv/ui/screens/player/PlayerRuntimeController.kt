@@ -722,13 +722,10 @@ class PlayerRuntimeController(
     internal var hasDetectedAssSsaTrackForCurrentStream: Boolean = false
     internal var libassPipelineDecisionStreamUrl: String? = null
 
-    // Dolby Vision Profile 5 -> HDR10 (see DolbyVisionP5Session). The first build of a stream
-    // only detects Profile 5; the player is then rebuilt once with the mapping active.
+    // Dolby Vision Profile 5 -> HDR10 (see DolbyVisionP5Session).
     internal var dolbyVisionP5Session: com.nuvio.tv.core.player.DolbyVisionP5Session? = null
     internal var dv5HdrStreamUrl: String? = null
-    internal var dv5HdrDetectedForCurrentStream: Boolean = false
     internal var dv5HdrFailedForCurrentStream: Boolean = false
-    internal var dv5HdrSwitchInFlight: Boolean = false
     internal var dv5HdrNoteShownForCurrentStream: Boolean = false
     internal var dv5HdrStatusJob: Job? = null
     internal var dv5HdrNoteJob: Job? = null
