@@ -78,15 +78,26 @@ val devProperties = Properties().apply {
     }
 }
 
-val enableDoviNative = parseBooleanProperty(
+// The Dolby Vision native bridge (DV7 -> 8.1 conversion, DV5 -> HDR10 mapping) links the libdovi
+// shipped in DV7/libdovi. It is on by default whenever that prebuilt is in the checkout, so builds
+// whose local.properties doesn't mention it (CI secrets) still get it; an explicit
+// DOVI_NATIVE_ENABLED / DOVI_ENABLE_REAL_LINK / DOVI_EXTRACTOR_HOOK_READY value still wins.
+fun parseOptionalBooleanProperty(value: String?): Boolean? =
+    value?.trim()?.takeIf { it.isNotEmpty() }?.let(::parseBooleanProperty)
+
+val bundledLibdoviAvailable = listOf("android-arm64", "android-armeabi-v7a").all { abi ->
+    rootProject.file("DV7/libdovi/$abi/lib/libdovi.a").isFile &&
+        rootProject.file("DV7/libdovi/$abi/include/libdovi/rpu_parser.h").isFile
+}
+val enableDoviNative = parseOptionalBooleanProperty(
     resolveProperty(devProperties, localProperties, "DOVI_NATIVE_ENABLED")
-)
-val doviExtractorHookReady = parseBooleanProperty(
+) ?: bundledLibdoviAvailable
+val doviExtractorHookReady = parseOptionalBooleanProperty(
     resolveProperty(devProperties, localProperties, "DOVI_EXTRACTOR_HOOK_READY")
-)
-val doviEnableRealLink = parseBooleanProperty(
+) ?: bundledLibdoviAvailable
+val doviEnableRealLink = parseOptionalBooleanProperty(
     resolveProperty(devProperties, localProperties, "DOVI_ENABLE_REAL_LINK")
-)
+) ?: bundledLibdoviAvailable
 val doviStaticLibPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_STATIC_LIB")
 val doviIncludeDirPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_INCLUDE_DIR")
 val doviPrebuiltRootPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_PREBUILT_ROOT")
