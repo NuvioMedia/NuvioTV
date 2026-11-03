@@ -13,6 +13,7 @@ import com.android.build.gradle.internal.tasks.CompileArtProfileTask
 import com.android.build.gradle.internal.tasks.L8DexDesugarLibTask
 import java.io.File
 import java.util.Properties
+import javax.inject.Inject
 
 // Copies the per-API dex metadata (.dm) files AGP builds next to the binary ART profile into the APK's assets, so the
 // in-app updater can install the next version together with its profile and have it compiled at install time.
@@ -39,6 +40,57 @@ abstract class EmbedUpdateDexMetadataTask : DefaultTask() {
             "$api=$fileName"
         }
         target.resolve("index.properties").writeText(indexLines.joinToString("\n", postfix = "\n"))
+    }
+}
+
+@CacheableTask
+abstract class CargoNdkBuild @Inject constructor(private val exec: ExecOperations) : DefaultTask() {
+    @get:Internal
+    abstract val workspace: DirectoryProperty
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: ConfigurableFileCollection
+
+    @get:Input
+    abstract val crate: Property<String>
+
+    @get:Input
+    abstract val abis: ListProperty<String>
+
+    @get:Input
+    abstract val minSdk: Property<Int>
+
+    @get:Internal
+    abstract val ndk: DirectoryProperty
+
+    @get:Input
+    abstract val ndkVersion: Property<String>
+
+    @get:OutputDirectory
+    abstract val jniLibs: DirectoryProperty
+
+    @TaskAction
+    fun build() {
+        val out = jniLibs.get().asFile.apply {
+            deleteRecursively()
+            mkdirs()
+        }
+        exec.exec {
+            workingDir = workspace.get().asFile
+            environment("ANDROID_NDK_HOME", ndk.get().asFile.path)
+            commandLine(
+                listOf(cargo(), "ndk", "--platform", minSdk.get().toString()) +
+                    abis.get().flatMap { listOf("-t", it) } +
+                    listOf("-o", out.path, "build", "--release", "-p", crate.get()),
+            )
+        }
+    }
+
+    private fun cargo(): String {
+        val home = System.getenv("CARGO_HOME")?.let(::File) ?: File(System.getProperty("user.home"), ".cargo")
+        val name = if (System.getProperty("os.name").startsWith("Windows")) "cargo.exe" else "cargo"
+        return File(home, "bin/$name").takeIf { it.exists() }?.path ?: "cargo"
     }
 }
 
@@ -373,7 +425,22 @@ android {
     }
 }
 
+val native = rootProject.layout.projectDirectory.dir("native")
+val rust = tasks.register<CargoNdkBuild>("buildRust") {
+    workspace = native
+    sources.from(fileTree(native) { exclude("target/**", "**/*.md") })
+    crate = "aiostreams-native-android"
+    abis = listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+    minSdk = android.defaultConfig.minSdk ?: 24
+    ndkVersion = androidComponents.sdkComponents.ndkDirectory.map { it.asFile.name }
+    ndk = androidComponents.sdkComponents.ndkDirectory
+    jniLibs = layout.buildDirectory.dir("cargo/jniLibs")
+}
+
 androidComponents {
+    onVariants { variant ->
+        variant.sources.jniLibs?.addGeneratedSourceDirectory(rust, CargoNdkBuild::jniLibs)
+    }
     onVariants(selector().withBuildType("debug")) { variant ->
         val isPlaystore = variant.productFlavors.any { it.second == "playstore" }
         variant.applicationId.set(if (isPlaystore) "com.nuvio.appdebug" else "com.nuviodebug.com")

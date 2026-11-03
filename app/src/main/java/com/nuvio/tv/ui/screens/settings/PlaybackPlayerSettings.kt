@@ -163,6 +163,13 @@ internal fun PlaybackPlayerInterfaceSection(
         enabled = internalPlayer
     )
     SettingsToggleRow(
+        title = stringResource(R.string.playback_seek_preview),
+        subtitle = stringResource(R.string.playback_seek_preview_sub),
+        checked = settings.seekPreviewEnabled,
+        onToggle = { onUpdate { setSeekPreviewEnabled(!settings.seekPreviewEnabled) } },
+        enabled = internalPlayer
+    )
+    SettingsToggleRow(
         title = stringResource(R.string.playback_parental_guide),
         subtitle = stringResource(R.string.playback_parental_guide_sub),
         checked = settings.parentalGuideEnabled,

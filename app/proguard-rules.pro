@@ -119,6 +119,7 @@
 # Native code reflects into multiple classes/methods under is.xyz.mpv,
 # so keep the whole package to avoid JNI lookup crashes after R8.
 -keep class is.xyz.mpv.** { *; }
+-keep interface com.nuvio.tv.ui.screens.player.aiostreams.Thumbnails$Listener { *; }
 
 # ── Missing class stubs (referenced by cloudstream3 / jsoup / newpipe) ────────
 -dontwarn org.mozilla.javascript.**

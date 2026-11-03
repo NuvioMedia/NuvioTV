@@ -360,6 +360,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     },
                     pauseOverlayEnabled = settings.pauseOverlayEnabled,
                     osdClockEnabled = settings.osdClockEnabled,
+                    seekPreviewEnabled = settings.seekPreviewEnabled,
                     internalPlayerEngine = resolvedInternalPlayerEngine,
                     frameRateMatchingMode = settings.frameRateMatchingMode,
                     tunnelingEnabled = settings.effectiveTunnelingEnabled &&

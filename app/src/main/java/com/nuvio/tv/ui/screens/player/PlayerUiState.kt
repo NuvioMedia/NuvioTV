@@ -94,6 +94,7 @@ data class PlayerUiState(
     val loadingIssueElapsedMs: Long = 0L,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
+    val seekPreviewEnabled: Boolean = true,
     val transparentLetterbox: Boolean = false,
     val playerStatsHudEnabled: Boolean = false,
     val playerStatsHudButtonAvailable: Boolean = false,

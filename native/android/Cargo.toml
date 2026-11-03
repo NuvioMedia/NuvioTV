@@ -1,0 +1,17 @@
+[package]
+name = "aiostreams-native-android"
+description = "The Android app's native library: every Rust feature behind JNI"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "aiostreams_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+aiostreams-container.workspace = true
+aiostreams-thumbs.workspace = true
+jni.workspace = true
+log.workspace = true

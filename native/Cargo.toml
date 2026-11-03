@@ -1,0 +1,27 @@
+[workspace]
+resolver = "3"
+members = ["container", "thumbs", "android"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+publish = false
+
+[workspace.dependencies]
+aiostreams-container = { path = "container" }
+aiostreams-thumbs = { path = "thumbs" }
+jni = "0.21"
+dolby_vision = "3.4"
+jpeg-encoder = "0.6"
+libc = "0.2"
+libloading = "0.9"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = "3.4"
+windows-sys = "0.61"
+
+[profile.release]
+lto = true
+codegen-units = 1

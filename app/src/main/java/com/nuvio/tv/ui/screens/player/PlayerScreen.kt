@@ -10,6 +10,9 @@ import androidx.compose.ui.layout.boundsInWindow
 import android.graphics.RectF
 import com.nuvio.tv.ui.screens.detail.formatPlaybackTime
 import com.nuvio.tv.ui.theme.NuvioMotion
+import com.nuvio.tv.ui.screens.player.seekpreview.SeekPreviewController
+import com.nuvio.tv.ui.screens.player.seekpreview.SeekPreviewOverlay
+import com.nuvio.tv.ui.screens.player.seekpreview.rememberSeekPreviewController
 import kotlinx.coroutines.delay
 
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -215,6 +218,15 @@ fun PlayerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playerBadges = rememberPlayerBadges(viewModel, uiState)
+    val seekPreview = rememberSeekPreviewController(
+        url = uiState.currentStreamUrl?.takeIf {
+            it.isNotBlank() &&
+                uiState.seekPreviewEnabled &&
+                !uiState.isLive &&
+                !uiState.isTorrentStream
+        },
+        headers = remember(uiState.currentStreamUrl) { viewModel.getCurrentHeaders() },
+    )
     val partyState by viewModel.party.state.collectAsState()
     val partyPlayback by viewModel.party.playback.collectAsState()
     val partyAvailable by viewModel.party.available.collectAsState()
@@ -1593,6 +1605,7 @@ fun PlayerScreen(
                 uiState = uiState,
                 playerBadges = playerBadges,
                 viewModel = viewModel,
+                seekPreview = seekPreview,
                 subtitleReportingActive = playerControlsVisible,
                 onSubtitleClearanceChanged = {
                     if (latestPlayerControlsVisible) subtitleControlsClearancePx = it
@@ -1818,7 +1831,12 @@ fun PlayerScreen(
                 .reportSubtitleClearance(subtitleClearanceGapPx) { seekClearancePx = it }
                 .then(playerControlsDim)
         ) {
-            SeekOverlayHost(viewModel = viewModel, chapters = uiState.chapters)
+            SeekOverlayHost(
+                viewModel = viewModel,
+                chapters = uiState.chapters,
+                seekPreview = seekPreview,
+                seekPreviewActive = uiState.pendingPreviewSeekPosition != null
+            )
         }
 
         // Chapters side panel (slides in from right, over a scrim)
@@ -2791,6 +2809,7 @@ private fun PlayerControlsOverlay(
     uiState: PlayerUiState,
     playerBadges: List<StreamBadge>,
     viewModel: PlayerViewModel,
+    seekPreview: SeekPreviewController? = null,
     playPauseFocusRequester: FocusRequester,
     progressBarFocusRequester: FocusRequester,
     streamInfoFocusRequester: FocusRequester,
@@ -2991,6 +3010,8 @@ private fun PlayerControlsOverlay(
                         PlayerControlsProgressBarHost(
                             viewModel = viewModel,
                             chapters = uiState.chapters,
+                            seekPreview = seekPreview,
+                            seekPreviewActive = uiState.pendingPreviewSeekPosition != null,
                             focusRequester = progressBarFocusRequester,
                             upFocusRequester = progressBarUpFocusRequester,
                             downFocusRequester = playPauseFocusRequester,
@@ -3240,6 +3261,8 @@ private fun PlayerControlsOverlay(
 private fun PlayerControlsProgressBarHost(
     viewModel: PlayerViewModel,
     chapters: List<PlayerChapter>,
+    seekPreview: SeekPreviewController? = null,
+    seekPreviewActive: Boolean = false,
     focusRequester: FocusRequester,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
@@ -3266,7 +3289,9 @@ private fun PlayerControlsProgressBarHost(
         onUpKey = onUpKey,
         onFocused = onFocused,
         onClick = onClick,
-        bufferedPosition = playbackTimeline.bufferedPosition
+        bufferedPosition = playbackTimeline.bufferedPosition,
+        seekPreview = seekPreview,
+        seekPreviewActive = seekPreviewActive
     )
 }
 
@@ -3422,7 +3447,9 @@ private fun ProgressBar(
     /** Position (ms) up to which content is buffered. Pass 0 to skip the overlay. */
     bufferedPosition: Long = 0L,
     /** Each chapter after the first gets a mark where it starts. */
-    chapters: List<PlayerChapter> = emptyList()
+    chapters: List<PlayerChapter> = emptyList(),
+    seekPreview: SeekPreviewController? = null,
+    seekPreviewActive: Boolean = false
 ) {
     val accentBrush = NuvioTheme.palette.accentBrush()
     val seekBarLabel = stringResource(R.string.cd_seek_bar)
@@ -3586,6 +3613,13 @@ private fun ProgressBar(
                     }
                 }
         )
+        SeekPreviewOverlay(
+            controller = seekPreview,
+            active = duration > 0L && seekPreviewActive,
+            positionMs = currentPosition.coerceIn(0L, duration.coerceAtLeast(0L)),
+            durationMs = duration,
+            modifier = Modifier.matchParentSize()
+        )
     }
 }
 
@@ -3609,7 +3643,9 @@ private fun SeekOverlay(
     currentPosition: Long,
     duration: Long,
     bufferedPosition: Long = 0L,
-    chapters: List<PlayerChapter> = emptyList()
+    chapters: List<PlayerChapter> = emptyList(),
+    seekPreview: SeekPreviewController? = null,
+    seekPreviewActive: Boolean = false
 ) {
     Column(
         modifier = Modifier
@@ -3624,7 +3660,9 @@ private fun SeekOverlay(
                 onSeekPreview = {},
                 onSeekCommit = {},
                 bufferedPosition = bufferedPosition,
-                chapters = chapters
+                chapters = chapters,
+                seekPreview = seekPreview,
+                seekPreviewActive = seekPreviewActive
             )
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -3645,14 +3683,21 @@ private fun SeekOverlay(
 }
 
 @Composable
-private fun SeekOverlayHost(viewModel: PlayerViewModel, chapters: List<PlayerChapter>) {
+private fun SeekOverlayHost(
+    viewModel: PlayerViewModel,
+    chapters: List<PlayerChapter>,
+    seekPreview: SeekPreviewController? = null,
+    seekPreviewActive: Boolean = false
+) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
 
     SeekOverlay(
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration,
         bufferedPosition = playbackTimeline.bufferedPosition,
-        chapters = chapters
+        chapters = chapters,
+        seekPreview = seekPreview,
+        seekPreviewActive = seekPreviewActive
     )
 }
 

@@ -66,6 +66,26 @@ jobs:
             echo "NUVIO_RELEASE_STORE_PASSWORD=android"
           } >> "$GITHUB_ENV"
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
+      - name: Install cargo-ndk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
+      - name: Install Android NDK
+        run: |
+          ndk_version="$(sed -n -E 's/^[[:space:]]*ndkVersion[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts)"
+          echo "y" | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "ndk;${ndk_version}" > /dev/null
+
       - name: Test updater and build fullDebug APK
         run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullDebug --stacktrace
 

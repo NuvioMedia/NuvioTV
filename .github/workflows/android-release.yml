@@ -156,6 +156,30 @@ jobs:
             fi
           done
 
+      - name: Set up Rust
+        if: inputs.mode != 'dry-run'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Rust build
+        if: inputs.mode != 'dry-run'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
+      - name: Install cargo-ndk
+        if: inputs.mode != 'dry-run'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
+      - name: Install Android NDK
+        if: inputs.mode != 'dry-run'
+        run: |
+          ndk_version="$(sed -n -E 's/^[[:space:]]*ndkVersion[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts)"
+          echo "y" | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "ndk;${ndk_version}" > /dev/null
+
       - name: Test updater and build full release APKs
         if: inputs.mode != 'dry-run'
         run: ./gradlew :app:testFullReleaseUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullRelease --stacktrace
