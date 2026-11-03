@@ -47,6 +47,9 @@ internal data class UnplayableRelease(val kind: String, val at: Long, val provid
 /** How another episode of the same upload last went: [episode] failed, or played. */
 data class SiblingOutcome(val episode: Int, val failed: Boolean, val blank: Boolean = false)
 
+/** How a release last went with the current providers: it failed for good, or it played recently. */
+data class ReleaseOutcome(val failed: Boolean = false, val played: Boolean = false)
+
 /**
  * How releases last went with the current providers. Mostly releases the engine found unplayable:
  * articles removed or damaged. Such a release fails again on every attempt, and only after its NZB
@@ -102,7 +105,7 @@ class UnplayableReleases internal constructor(
     }
 
     private fun put(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, kind: String, posted: Long?): Boolean {
-        val keys = keys(nzbUrl, title, size?.let { it / MB }).ifEmpty { return false }
+        val keys = keys(nzbUrl, title, listOf(size?.let { it / MB })).ifEmpty { return false }
         val entry = UnplayableRelease(kind, now(), providersKey(servers), posted = posted)
         keys.forEach { entries[it] = entry }
         // The upload's other episodes are told by the newest outcome among its episodes.
@@ -119,7 +122,7 @@ class UnplayableReleases internal constructor(
         val providers = providersKey(servers)
         // Indexers round sizes differently (one to thousands of bytes): compare by megabyte, either side.
         val megabytes = size?.takeIf { it > 0 }?.let { (it / MB - 1..it / MB + 1).toList() } ?: listOf(null)
-        return megabytes.flatMap { keys(nzbUrl, title, it) }.distinct().mapNotNull { entries[it] }
+        return keys(nzbUrl, title, megabytes).mapNotNull { entries[it] }
             // A blank post is the same with every provider.
             .filter { it.providers == providers || it.kind == BLANK }
             // A repost under the same title and size is another upload; indexers list one upload's
@@ -128,14 +131,20 @@ class UnplayableReleases internal constructor(
             .maxByOrNull { it.at }
     }
 
-    @Synchronized
     fun contains(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, posted: Long? = null): Boolean =
-        find(nzbUrl, title, size, servers, posted)?.let { it.kind in KINDS && now() - it.at <= RETENTION_MS } == true
+        outcome(nzbUrl, title, size, servers, posted).failed
 
     /** Whether the release showed its first frame with these providers within [PLAYED_MS]. */
-    @Synchronized
     fun played(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, posted: Long? = null): Boolean =
-        find(nzbUrl, title, size, servers, posted)?.let { it.kind == PLAYED && now() - it.at <= PLAYED_MS } == true
+        outcome(nzbUrl, title, size, servers, posted).played
+
+    /** [contains] and [played] from one lookup: a result list asks both of hundreds of releases. */
+    @Synchronized
+    fun outcome(nzbUrl: String?, title: String?, size: Long?, servers: List<String>, posted: Long? = null): ReleaseOutcome {
+        val entry = find(nzbUrl, title, size, servers, posted) ?: return ReleaseOutcome()
+        val age = now() - entry.at
+        return ReleaseOutcome(failed = entry.kind in KINDS && age <= RETENTION_MS, played = entry.kind == PLAYED && age <= PLAYED_MS)
+    }
 
     /**
      * How another episode of this upload last went with these providers: episodes posted together
@@ -177,19 +186,17 @@ class UnplayableReleases internal constructor(
     fun played(stream: Stream): Boolean =
         played(stream.nzbUrl, stream.title, stream.behaviorHints?.videoSize, stream.servers.orEmpty(), stream.publishedAt)
 
-    private fun keys(nzbUrl: String?, title: String?, megabytes: Long?): List<String> {
+    /** The keys of a release at each of [megabytes]; every key is hashed once, which is what a lookup costs. */
+    private fun keys(nzbUrl: String?, title: String?, megabytes: List<Long?>): List<String> {
         val name = title?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
-        return listOfNotNull(
-            nzbUrl?.takeIf { it.isNotBlank() }?.let { "u:" + sha256(it) },
-            when {
-                name == null -> null
-                // A season pack's title names it, and its listed size changes once the episode count
-                // gives an episode's share: the size is left out of its key.
-                NewznabProtocol.packSeasons(name).isNotEmpty() -> "t:" + sha256("$name\npack")
-                megabytes != null && megabytes > 0 -> "t:" + sha256("$name\n${megabytes}MB")
-                else -> null
-            }
-        )
+        val titles = when {
+            name == null -> emptyList()
+            // A season pack's title names it, and its listed size changes once the episode count
+            // gives an episode's share: the size is left out of its key.
+            NewznabProtocol.packSeasons(name).isNotEmpty() -> listOf("t:" + sha256("$name\npack"))
+            else -> megabytes.filter { it != null && it > 0 }.distinct().map { "t:" + sha256("$name\n${it}MB") }
+        }
+        return listOfNotNull(nzbUrl?.takeIf { it.isNotBlank() }?.let { "u:" + sha256(it) }) + titles
     }
 
     private var lastServers: List<String>? = null

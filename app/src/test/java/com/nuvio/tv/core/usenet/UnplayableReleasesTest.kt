@@ -89,11 +89,14 @@ class UnplayableReleasesTest {
         releases.recordPlayed(url, "Show.S01.1080p-GRP", 30_000_000_000, provider)
         assertTrue(releases.played(url, null, null, provider))
         assertFalse(releases.contains(url, null, null, provider))
+        // One lookup tells both, also by title for another indexer's copy.
+        assertEquals(ReleaseOutcome(played = true), releases.outcome("https://b.test/9", "Show.S01.1080p-GRP", 29_000_000_000, provider))
         // A later failure wins over the earlier success.
         clock += 1000
         releases.record(url, "Show.S01.1080p-GRP", 30_000_000_000, provider, "missing-article")
         assertTrue(releases.contains(url, null, null, provider))
         assertFalse(releases.played(url, null, null, provider))
+        assertEquals(ReleaseOutcome(failed = true), releases.outcome(url, null, null, provider))
         // A newer success wins again, and expires after two weeks.
         clock += 1000
         releases.recordPlayed(url, "Show.S01.1080p-GRP", 30_000_000_000, provider)

@@ -282,6 +282,9 @@ class NewznabClient internal constructor(
 
 data class BuiltInUsenetResult(val group: AddonStreams? = null, val failure: String? = null)
 
+/** How a listed release, and its upload's other episodes, last went. */
+private class ListedOutcome(val failed: Boolean, val played: Boolean, val sibling: SiblingOutcome?)
+
 @Singleton
 class BuiltInUsenetService @Inject constructor(
     private val client: NewznabClient,
@@ -335,15 +338,17 @@ class BuiltInUsenetService @Inject constructor(
             }
             fun seasonCounts(): Map<Int, Int>? = seasonEpisodes.get()
             fun posted(release: UsenetRelease) = release.publishedAt.takeIf { it > 0 }
-            fun failed(release: UsenetRelease) = unplayable?.contains(release.nzbUrl, release.title, release.size, servers, posted(release)) == true
-            fun played(release: UsenetRelease) = unplayable?.played(release.nzbUrl, release.title, release.size, servers, posted(release)) == true
-            fun sibling(release: UsenetRelease) = unplayable?.sibling(release.title, servers, posted(release))
+            // Each release's outcome is looked up once per list, by nzbUrl: the sort compares releases
+            // many times, and the results show it too.
+            fun outcomes(): Map<String, ListedOutcome> = releases.associate {
+                val known = unplayable?.outcome(it.nzbUrl, it.title, it.size, servers, posted(it)) ?: ReleaseOutcome()
+                it.nzbUrl to ListedOutcome(known.failed, known.played, unplayable?.sibling(it.title, servers, posted(it)))
+            }
             // Releases that already failed for good with these providers go last, still selectable;
             // ones that played recently go first unless turned off.
-            fun arranged(): List<UsenetRelease> {
-                // Each release's outcome is looked up once: the sort compares releases many times.
-                val ranks = releases.associate {
-                    it.nzbUrl to outcomeRank(failed(it) || sibling(it)?.blank == true, played(it), config.availableFirst)
+            fun arranged(outcomes: Map<String, ListedOutcome>): List<UsenetRelease> {
+                val ranks = outcomes.mapValues { (_, it) ->
+                    outcomeRank(it.failed || it.sibling?.blank == true, it.played, config.availableFirst)
                 }
                 return NewznabProtocol.arrange(
                     if (config.hideDuplicates) NewznabProtocol.withoutDuplicates(releases, config, seasonEpisodes = seasonCounts(), series = series) else releases, config,
@@ -374,11 +379,15 @@ class BuiltInUsenetService @Inject constructor(
                     android.util.Log.i("UsenetSearch", "${System.currentTimeMillis() - tierStarted}ms $message")
                 }
                 suspend fun show() {
-                    val arranged = arranged()
+                    val outcomes = outcomes()
+                    val arranged = arranged(outcomes)
                     log("show ${arranged.size} results")
                     if (arranged.isNotEmpty()) emit(BuiltInUsenetResult(group = AddonStreams(GROUP_NAME, null,
-                        arranged.map { it.toStream(config, failed(it), played(it), pack = series && it.packSeasons.isNotEmpty(),
-                            seasonEpisodes = seasonCounts(), sibling = sibling(it)) })))
+                        arranged.map {
+                            val outcome = outcomes.getValue(it.nzbUrl)
+                            it.toStream(config, outcome.failed, outcome.played, pack = series && it.packSeasons.isNotEmpty(),
+                                seasonEpisodes = seasonCounts(), sibling = outcome.sibling)
+                        })))
                 }
                 // Like other sources, the list appears whole once every indexer answered, unless one is
                 // slow: after a short wait it shows what came and fills in from there. Progressive
@@ -429,7 +438,8 @@ class BuiltInUsenetService @Inject constructor(
                     seasonLookup.join()
                     if (seasonEpisodes.get() != null) show()
                 }
-                if (arranged().isNotEmpty()) break
+                // A lower priority is searched only when this one listed nothing; after the last, nothing is.
+                if (tier === tiers.last() || arranged(outcomes()).isNotEmpty()) break
             }
             metadata.cancel()
             seasonLookup?.cancel()
