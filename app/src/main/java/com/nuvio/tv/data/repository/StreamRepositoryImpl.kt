@@ -145,17 +145,9 @@ class StreamRepositoryImpl @Inject constructor(
         type: String,
         videoId: String,
         season: Int?,
-        episode: Int?,
-        priorityBingeGroup: String?
+        episode: Int?
     ): List<AddonStreams>? = streamSearchSessions.peek(
-        buildStreamSearchRequestKey(
-            captureSourceConfiguration(),
-            type,
-            videoId,
-            season,
-            episode,
-            priorityBingeGroup = priorityBingeGroup
-        )
+        buildStreamSearchRequestKey(captureSourceConfiguration(), type, videoId, season, episode)
     )
 
     private fun buildStreamSearchRequestKey(
@@ -189,7 +181,14 @@ class StreamRepositoryImpl @Inject constructor(
             preferredPluginOnly -> "preferredPluginOnly"
             else -> ""
         },
-        priorityBingeGroup = priorityBingeGroup?.trim().orEmpty()
+        // A full search returns every source; the priority only changes which scraper
+        // starts first. Keying on it would make the player's source list search again
+        // instead of reusing the stream screen's results.
+        priorityBingeGroup = if (continuePluginOnly || preferredPluginOnly) {
+            priorityBingeGroup?.trim().orEmpty()
+        } else {
+            ""
+        }
     )
 
     private suspend fun captureSourceConfiguration(): StreamSourceConfigurationSnapshot {
