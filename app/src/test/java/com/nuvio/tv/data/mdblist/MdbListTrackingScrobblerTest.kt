@@ -71,7 +71,16 @@ class MdbListTrackingScrobblerTest {
         // The adapter skips an unauthenticated account, so the mock has to report a signed-in one.
         val auth = mockk<MdbListAuthStore>()
         every { auth.state } returns MutableStateFlow(MdbListAuthState(isAuthenticated = true))
-        return MdbListTrackingScrobbler(auth = auth, sync = sync, service = service)
+        // These cases are movies, so the dev numbering step has nothing to map and returns the
+        // reference it was given.
+        val episodeMappings = mockk<MdbListEpisodeMappingService>()
+        coEvery { episodeMappings.toMdbListNumbering(any(), any()) } answers { firstArg() }
+        return MdbListTrackingScrobbler(
+            auth = auth,
+            sync = sync,
+            service = service,
+            episodeMappings = episodeMappings
+        )
     }
 
     private fun event(progressPercent: Double, playbackId: Long) = TrackingScrobbleEvent(
