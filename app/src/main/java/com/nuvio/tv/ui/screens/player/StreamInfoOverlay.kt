@@ -49,6 +49,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.util.keepLtr
 import com.nuvio.tv.ui.util.languageCodeToName
 
 @Composable
@@ -284,7 +285,7 @@ private fun InfoItem(label: String, value: String?, modifier: Modifier = Modifie
             color = NuvioTheme.colors.TextTertiary
         )
         Text(
-            text = value,
+            text = value.keepLtr(),
             style = MaterialTheme.typography.titleMedium,
             color = Color.White,
             maxLines = 1,
