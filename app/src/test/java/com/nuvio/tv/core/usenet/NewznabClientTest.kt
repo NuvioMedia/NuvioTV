@@ -1,8 +1,13 @@
 package com.nuvio.tv.core.usenet
 
+import java.util.Collections
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -20,6 +25,17 @@ class NewznabClientTest {
     private fun MockWebServer.indexer(key: String = "secret") =
         UsenetIndexer(name = "Test", apiUrl = url("/1/api?custom=1").toString(), apiKey = key)
 
+    /** Season and episode searches run at once: each request is answered by what it asks, and kept. */
+    private fun MockWebServer.answer(respond: (HttpUrl) -> MockResponse): MutableList<HttpUrl> {
+        val asked = Collections.synchronizedList(mutableListOf<HttpUrl>())
+        dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest) = request.requestUrl!!.also { asked += it }.let(respond)
+        }
+        return asked
+    }
+
+    private fun List<HttpUrl>.episodes() = map { it.queryParameter("ep") }.sortedBy { it ?: "" }
+
     @Test fun `caps are cached and bounded pagination retains complete endpoint parameters`() = runBlocking {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setBody(capsXml))
@@ -29,7 +45,7 @@ class NewznabClientTest {
             val client = NewznabClient(MemoryStorage())
             val caps = client.capabilities(indexer)
             assertEquals(caps, client.capabilities(indexer))
-            val releases = client.search(indexer, UsenetSearchRequest(imdbId = "tt123"), caps)
+            val releases = client.search(indexer, UsenetSearchRequest(imdbId = "tt123"), caps, results = 2)
             assertEquals(2, releases.size)
             assertEquals(3, server.requestCount)
             assertEquals("caps", server.takeRequest().requestUrl!!.queryParameter("t"))
@@ -74,9 +90,9 @@ class NewznabClientTest {
 
     @Test fun `releases reused from the season cache name the indexer that asked`() = runBlocking {
         MockWebServer().use { server ->
-            server.enqueue(MockResponse().setBody(server.page("Show.S01E02.1080p", 1)))
-            server.enqueue(MockResponse().setBody(emptyPage))
-            server.enqueue(MockResponse().setBody(emptyPage))
+            val asked = server.answer { url ->
+                MockResponse().setBody(if (url.queryParameter("ep") == null) server.page("Show.S01E02.1080p", 1) else emptyPage)
+            }
             // Another profile's indexer, or a renamed one, with the same endpoint and key.
             val first = server.indexer().copy(id = "one", name = "Old name")
             val current = first.copy(id = "two", name = "Current name")
@@ -85,7 +101,7 @@ class NewznabClientTest {
             client.search(first, request, NewznabCapabilities())
             val reused = client.search(current, request, NewznabCapabilities()).single()
             // The season once, the episode each time.
-            assertEquals(3, server.requestCount)
+            assertEquals(listOf(null, "2", "2"), asked.episodes())
             assertEquals("two", reused.indexerId)
             assertEquals("Current name", reused.indexerName)
         }
@@ -147,11 +163,15 @@ class NewznabClientTest {
         MockWebServer().use { server ->
             fun items(vararg titles: String) = titles.mapIndexed { i, title ->
                 """<item><title>$title</title><enclosure type="application/x-nzb" url="${server.url("/get?id=$title$i")}" length="100"/></item>"""
-            }.joinToString("")
-            // The season's pages hold only some of an episode's releases, as in a long-running series.
-            server.enqueue(MockResponse().setBody("""<rss><channel>${items("Show.S01E01.1080p", "Show.S01.2160p", "Show.S01E02.1080p", "a8f3k2b9")}</channel></rss>"""))
-            server.enqueue(MockResponse().setBody("""<rss><channel>${items("Show.S01E01.1080p", "Show.S01E01.2160p")}</channel></rss>"""))
-            server.enqueue(MockResponse().setBody("""<rss><channel>${items("Show.S01E02.2160p")}</channel></rss>"""))
+            }.joinToString("", "<rss><channel>", "</channel></rss>")
+            val asked = server.answer { url ->
+                MockResponse().setBody(when (url.queryParameter("ep")) {
+                    // The season's pages hold only some of an episode's releases, as in a long-running series.
+                    null -> items("Show.S01E01.1080p", "Show.S01.2160p", "Show.S01E02.1080p", "a8f3k2b9")
+                    "1" -> items("Show.S01E01.1080p", "Show.S01E01.2160p")
+                    else -> items("Show.S01E02.2160p")
+                })
+            }
             val client = NewznabClient(MemoryStorage())
             val indexer = server.indexer()
             fun episode(n: Int) = UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = n)
@@ -163,40 +183,68 @@ class NewznabClientTest {
                 client.search(indexer, episode(1), caps).map { it.title })
             assertEquals(listOf("Show.S01E02.2160p", "Show.S01.2160p", "Show.S01E02.1080p"),
                 client.search(indexer, episode(2), caps).map { it.title })
-            assertEquals(3, server.requestCount)
-            val season = server.takeRequest().requestUrl!!
-            assertEquals("1", season.queryParameter("season"))
-            assertNull(season.queryParameter("ep"))
-            assertEquals("1", server.takeRequest().requestUrl!!.queryParameter("ep"))
-            assertEquals("2", server.takeRequest().requestUrl!!.queryParameter("ep"))
+            assertEquals(listOf(null, "1", "2"), asked.episodes())
+            assertTrue(asked.all { it.queryParameter("season") == "1" })
         }
     }
 
     @Test fun `a failed episode search keeps what the season search found`() = runBlocking {
         MockWebServer().use { server ->
-            server.enqueue(MockResponse().setBody(server.page("Show.S01.1080p", 1)))
-            server.enqueue(MockResponse().setResponseCode(500))
+            val asked = server.answer { url ->
+                if (url.queryParameter("ep") == null) MockResponse().setBody(server.page("Show.S01.1080p", 1))
+                else MockResponse().setResponseCode(500)
+            }
             val request = UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = 4)
             assertEquals(listOf("Show.S01.1080p"),
                 NewznabClient(MemoryStorage()).search(server.indexer(), request, NewznabCapabilities()).map { it.title })
-            assertEquals(2, server.requestCount)
+            assertEquals(listOf(null, "4"), asked.episodes())
         }
     }
 
     @Test fun `season search falls back to the episode when the indexer rejects it`() = runBlocking {
         MockWebServer().use { server ->
-            server.enqueue(MockResponse().setResponseCode(400))
-            server.enqueue(MockResponse().setBody(server.page("Show.S02E05.1080p", 1)))
-            server.enqueue(MockResponse().setBody(server.page("Show.S02E06.1080p", 2)))
+            val asked = server.answer { url ->
+                when (val episode = url.queryParameter("ep")) {
+                    null -> MockResponse().setResponseCode(400)
+                    else -> MockResponse().setBody(server.page("Show.S02E0$episode.1080p", episode.toInt()))
+                }
+            }
             val client = NewznabClient(MemoryStorage())
             fun episode(n: Int) = UsenetSearchRequest(imdbId = "tt1", series = true, season = 2, episode = n)
             assertEquals(listOf("Show.S02E05.1080p"), client.search(server.indexer(), episode(5), NewznabCapabilities()).map { it.title })
             assertEquals(listOf("Show.S02E06.1080p"), client.search(server.indexer(), episode(6), NewznabCapabilities()).map { it.title })
             // The rejected season search is not retried for the next episode.
-            assertEquals(3, server.requestCount)
-            assertNull(server.takeRequest().requestUrl!!.queryParameter("ep"))
-            assertEquals("5", server.takeRequest().requestUrl!!.queryParameter("ep"))
-            assertEquals("6", server.takeRequest().requestUrl!!.queryParameter("ep"))
+            assertEquals(listOf(null, "5", "6"), asked.episodes())
+        }
+    }
+
+    @Test fun `pages follow the total the indexer reports, up to the results asked for`() = runBlocking {
+        MockWebServer().use { server ->
+            val reported = AtomicInteger(9)
+            val held = AtomicInteger(9)
+            val asked = server.answer { url ->
+                val offset = url.queryParameter("offset")!!.toInt()
+                // The first page is short, as an indexer sends it when it leaves an item out.
+                val count = if (offset == 0) 1 else (held.get() - offset).coerceIn(0, 2)
+                val items = (offset until offset + count).joinToString("") {
+                    """<item><title>Movie.2020.1080p-G$it</title><enclosure type="application/x-nzb" url="${server.url("/get?id=$it")}" length="100"/></item>"""
+                }
+                MockResponse().setBody("""<rss xmlns:n="urn:newznab"><channel><n:response total="${reported.get()}"/>$items</channel></rss>""")
+            }
+            val client = NewznabClient(MemoryStorage())
+            val caps = NewznabCapabilities(limit = 2)
+            val movie = UsenetSearchRequest(imdbId = "tt1")
+            fun offsets() = asked.map { it.queryParameter("offset")!!.toInt() }.also { asked.clear() }
+
+            assertEquals(8, client.search(server.indexer(), movie, caps, results = 100).size)
+            assertEquals(listOf(0, 2, 4, 6, 8), offsets())
+            assertEquals(5, client.search(server.indexer(), movie, caps, results = 5).size)
+            assertEquals(listOf(0, 2, 4), offsets())
+            // A total far above what the indexer holds ends at its first empty page.
+            reported.set(10_000)
+            held.set(4)
+            assertEquals(3, client.search(server.indexer(), movie, caps, results = 1000).size)
+            assertEquals(listOf(0, 2, 4), offsets())
         }
     }
 

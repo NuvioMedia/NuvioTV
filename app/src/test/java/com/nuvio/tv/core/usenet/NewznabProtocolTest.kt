@@ -63,6 +63,19 @@ class NewznabProtocolTest {
         assertEquals(listOf("Movie.2020.720p-OK", "Movie.2020.2160p-G5", "Movie.2020.2160p-G4"), kept.map { it.title })
     }
 
+    @Test fun `the result limit lists up to 500 or every result, read from more than are listed`() {
+        val unlimited = UsenetSourceConfiguration(indexers = listOf(indexer), maxResults = UsenetSourceConfiguration.UNLIMITED_RESULTS)
+        assertEquals(200, unlimited.copy(maxResults = 50).indexerResults)
+        assertEquals(500, unlimited.copy(maxResults = 500).indexerResults)
+        assertEquals(1000, unlimited.indexerResults)
+        val releases = (1..600).map { UsenetRelease("Movie.2020.1080p-G$it", "https://a/$it", size = it.toLong(), indexerId = "one") }
+        assertEquals(600, NewznabProtocol.arrange(releases, unlimited).size)
+        assertEquals(500, NewznabProtocol.arrange(releases, unlimited.copy(maxResults = 500)).size)
+        unlimited.validate()
+        unlimited.copy(maxResults = 500).validate()
+        assertThrows(IllegalArgumentException::class.java) { unlimited.copy(maxResults = 501).validate() }
+    }
+
     @Test fun `provider credentials are encoded once and IPv6 is preserved`() {
         val provider = UsenetProvider(name = "News", host = "2001:db8::1", username = "a@b", password = "a:+ %/", connections = 30)
         provider.validate()

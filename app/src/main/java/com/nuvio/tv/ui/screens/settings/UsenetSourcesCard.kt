@@ -185,7 +185,8 @@ internal fun UsenetSourcesCard(
             SettingsActionRow(title = stringResource(R.string.usenet_max_age), subtitle = null,
                 value = if (configuration.maxAgeDays == 0) unlimited else "${configuration.maxAgeDays}d", onClick = { picker = "age" })
             SettingsActionRow(title = stringResource(R.string.usenet_result_limit), subtitle = null,
-                value = configuration.maxResults.toString(), onClick = { picker = "limit" })
+                value = if (configuration.maxResults == UsenetSourceConfiguration.UNLIMITED_RESULTS) unlimited
+                    else configuration.maxResults.toString(), onClick = { picker = "limit" })
             SettingsToggleRow(title = stringResource(R.string.usenet_exclude_low_quality), subtitle = null,
                 checked = configuration.excludeLowQuality,
                 onToggle = { update(configuration.copy(excludeLowQuality = !configuration.excludeLowQuality)) })
@@ -221,7 +222,8 @@ internal fun UsenetSourcesCard(
                 "resolution" -> listOf(0, 480, 720, 1080, 2160)
                 "size" -> listOf(0, 5, 10, 20, 40, 80, 120, 200)
                 "age" -> listOf(0, 30, 90, 365, 1000, 3000, 5000)
-                else -> listOf(10, 25, 50, 100, 200)
+                else -> listOf(UsenetSourceConfiguration.UNLIMITED_RESULTS, 10, 25, 50, 100, 200,
+                    UsenetSourceConfiguration.MAX_LISTED_RESULTS)
             }
             val title = stringResource(when (key) {
                 "resolution" -> R.string.usenet_min_resolution

@@ -105,6 +105,7 @@ data class UsenetSourceConfiguration(
     val minResolution: Int = 0,
     val maxSizeGb: Int = 0,
     val maxAgeDays: Int = 0,
+    /** [UNLIMITED_RESULTS] lists every result. */
     val maxResults: Int = 50,
     val excludeLowQuality: Boolean = true,
     /** On: whole Blu-ray and DVD releases are hidden. Off by default: a Blu-ray plays from its feature clip. */
@@ -127,6 +128,17 @@ data class UsenetSourceConfiguration(
     /** Has a provider and an indexer, so it can be listed among the addons even while switched off. */
     val configured: Boolean get() = providers.isNotEmpty() && indexers.isNotEmpty()
 
+    /** How many results are listed. */
+    val resultLimit: Int get() = if (maxResults == UNLIMITED_RESULTS) Int.MAX_VALUE else maxResults
+
+    /**
+     * How many results each indexer is asked for: more than are listed, so the filters and the sort
+     * choose among them, and as many as are listed above that. Unlimited still stops at
+     * [MAX_INDEXER_RESULTS]: a search an indexer cannot narrow reports a total in the thousands.
+     */
+    val indexerResults: Int get() =
+        if (maxResults == UNLIMITED_RESULTS) MAX_INDEXER_RESULTS else maxOf(DEFAULT_INDEXER_RESULTS, maxResults)
+
     /** The enabled providers, as the engine is given them. */
     fun servers(): List<String> = providers.filter { it.enabled }.map { it.serverUrl() }
 
@@ -142,8 +154,16 @@ data class UsenetSourceConfiguration(
         indexers.forEach { it.validate() }
         require(providers.filter { it.enabled }.sumOf { it.connections } <= 4096) { "Total connections exceed 4096" }
         require(minResolution in listOf(0, 480, 720, 1080, 2160))
-        require(maxSizeGb in 0..1000 && maxAgeDays in 0..10000 && maxResults in 1..200)
+        require(maxSizeGb in 0..1000 && maxAgeDays in 0..10000 &&
+            (maxResults == UNLIMITED_RESULTS || maxResults in 1..MAX_LISTED_RESULTS))
         require((addonsAbove?.size ?: 0) <= 500) { "Too many addons above built-in Usenet" }
+    }
+
+    companion object {
+        const val UNLIMITED_RESULTS = 0
+        const val MAX_LISTED_RESULTS = 500
+        const val DEFAULT_INDEXER_RESULTS = 200
+        const val MAX_INDEXER_RESULTS = 1000
     }
 }
 
