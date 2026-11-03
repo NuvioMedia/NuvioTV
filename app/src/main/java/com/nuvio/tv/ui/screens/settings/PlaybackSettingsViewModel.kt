@@ -228,6 +228,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setDv5ToDv81Enabled(enabled)
     }
 
+    suspend fun setDv5ToHdr10Enabled(enabled: Boolean) {
+        playerSettingsDataStore.setDv5ToHdr10Enabled(enabled)
+    }
+
     suspend fun setDv7ToDv81PreserveMappingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setDv7ToDv81PreserveMappingEnabled(enabled)
     }

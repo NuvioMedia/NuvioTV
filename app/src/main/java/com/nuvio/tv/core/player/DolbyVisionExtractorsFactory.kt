@@ -47,7 +47,9 @@ internal class DolbyVisionExtractorsFactory(
     private val delegate: ExtractorsFactory,
     private val config: DolbyVisionConversionConfig,
     private val stripDvRpu: Boolean = false,
-    private val stripHdr10PlusSei: Boolean = false
+    private val stripHdr10PlusSei: Boolean = false,
+    /** When set, Profile 5 video feeds this session (detection, and HDR10 mapping if active). */
+    private val p5Session: DolbyVisionP5Session? = null
 ) : ExtractorsFactory {
 
     override fun createExtractors(): Array<Extractor> =
@@ -66,19 +68,28 @@ internal class DolbyVisionExtractorsFactory(
         // sniff and negotiated core DTS for DTS-HD content. With an inactive
         // config, shouldTransform() is false so non-DV samples pass through.
         if (extractor.javaClass.name == STOCK_MATROSKA_EXTRACTOR) {
-            return DvMatroskaExtractor(
+            val matroska = DvMatroskaExtractor(
                 DefaultSubtitleParserFactory(),
                 /* flags= */ 0,
                 DolbyVisionMatroskaTransformer(
                     config = if (config.active) config else DolbyVisionConversionConfig(active = false),
                     stripRpuOnly = stripDvRpu && !config.active,
                     stripHdr10PlusSei = stripHdr10PlusSei,
+                    p5Session = p5Session,
                 )
             )
+            return p5Session?.let { DolbyVisionP5Extractor(matroska, it) } ?: matroska
         }
-        if (!config.active && !stripDvRpu && !stripHdr10PlusSei) return extractor
-        val nalFormat = nalFormatFor(extractor) ?: return extractor
-        return DolbyVisionExtractor(extractor, config, nalFormat, stripDvRpu, stripHdr10PlusSei)
+        val nalFormat = nalFormatFor(extractor)
+        // Innermost, so it reads each RPU before the DV wrapper below may strip it.
+        val base = if (p5Session != null && nalFormat != null) {
+            DolbyVisionP5Extractor(extractor, p5Session)
+        } else {
+            extractor
+        }
+        if (!config.active && !stripDvRpu && !stripHdr10PlusSei) return base
+        if (nalFormat == null) return base
+        return DolbyVisionExtractor(base, config, nalFormat, stripDvRpu, stripHdr10PlusSei)
     }
 
     private fun nalFormatFor(extractor: Extractor): NalFormat? {

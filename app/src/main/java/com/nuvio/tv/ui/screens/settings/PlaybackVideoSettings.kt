@@ -123,6 +123,13 @@ internal fun PlaybackVideoSection(
             enabled = enabled && dv81Conversion
         )
         SettingsToggleRow(
+            title = stringResource(R.string.audio_dv5_to_hdr10_title),
+            subtitle = stringResource(R.string.audio_dv5_to_hdr10_sub),
+            checked = settings.dv5ToHdr10Enabled,
+            onToggle = { onUpdate { setDv5ToHdr10Enabled(!settings.dv5ToHdr10Enabled) } },
+            enabled = enabled
+        )
+        SettingsToggleRow(
             title = stringResource(R.string.audio_strip_hdr10plus_title),
             subtitle = stringResource(R.string.audio_strip_hdr10plus_sub),
             checked = settings.stripHdr10PlusSei,

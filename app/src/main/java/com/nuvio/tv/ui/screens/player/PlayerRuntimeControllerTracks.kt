@@ -327,6 +327,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     }
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
     maybeAdjustLibassPipelineForTracks(tracks)
+    maybeEnableDolbyVisionP5Hdr()
 }
 
 private fun formatSupportRank(@C.FormatSupport formatSupport: Int): Int {

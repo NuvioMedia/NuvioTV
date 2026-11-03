@@ -30,6 +30,8 @@ internal class DolbyVisionMatroskaTransformer(
     private val config: DolbyVisionConversionConfig,
     private val stripRpuOnly: Boolean = false,
     private val stripHdr10PlusSei: Boolean = false,
+    /** Set when Profile 5 may be mapped to HDR10; then its RPU must reach the session. */
+    private val p5Session: DolbyVisionP5Session? = null,
 ) : MatroskaExtractor.DolbyVisionSampleTransformer {
 
     private var lastTransformedLength = 0
@@ -115,7 +117,10 @@ internal class DolbyVisionMatroskaTransformer(
 
         if (stripRpuOnly) {
             if (profile == 5) {
-                if (!shouldStripDv5Rpu(sample, sampleLength, nalUnitLengthFieldLength)) {
+                // Mapping Profile 5 to HDR10 needs its RPU, which is read after this extractor.
+                if (p5Session?.active == true ||
+                    !shouldStripDv5Rpu(sample, sampleLength, nalUnitLengthFieldLength)
+                ) {
                     return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
                 }
             }
@@ -170,6 +175,10 @@ internal class DolbyVisionMatroskaTransformer(
         codecs: String?,
         dolbyVisionConfigBytes: ByteArray?
     ): String? {
+        // The output format may then already read as plain HEVC: tell the session it is Profile 5.
+        if (p5Session != null && resolveProfile(codecs, dolbyVisionConfigBytes) == 5) {
+            p5Session.onContainerProfile5()
+        }
         if (stripRpuOnly) {
             return null
         }

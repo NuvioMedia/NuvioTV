@@ -112,6 +112,7 @@ internal fun PlayerRuntimeController.releasePlayer(
     }
     _exoPlayer = null
     activeAssVideoEffect = null
+    releaseDolbyVisionP5Session()
     _loadControl = null
     currentBitrateAwareLoadControl = null
     currentParallelChunkOverheadMb = 0
