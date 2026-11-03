@@ -1965,6 +1965,12 @@
     <string name="audio_center_mix_unavailable">Center mix is only available when FFmpeg downmix is active.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">Maintain original audio on downmix</string>
     <string name="audio_maintain_original_audio_on_downmix_subtitle">When disabled, downmix normalization can reduce overall volume.</string>
+    <string name="audio_downmix_lfe_level">LFE level on downmix</string>
+    <string name="audio_downmix_lfe_level_sub">Mixes the subwoofer (LFE) channel into the other speakers instead of dropping it. Only for layouts without LFE, such as 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">Used when the downmix layout has no LFE channel. Applies from the next playback.</string>
+    <string name="audio_downmix_lfe_level_off">Off</string>
+    <string name="audio_downmix_lfe_level_half">50%</string>
+    <string name="audio_downmix_lfe_level_full">100%</string>
 
     <string name="subtitle_dialog_title">Subtitles</string>
     <string name="subtitle_no_builtin">No built-in subtitles available</string>

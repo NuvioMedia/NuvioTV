@@ -87,6 +87,7 @@ import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch as coroutineLaunch
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
@@ -282,29 +283,31 @@ private fun EpisodeStreamsView(
         }
     }
 
+    val chipListState = rememberLazyListState()
     fun requestChipFocus(index: Int) {
         if (index !in chipFocusRequesters.indices) return
         userMovedFromFirstResult = true
         focusJob?.cancel()
         focusJob = scope.coroutineLaunch {
             withFrameNanos { }
-            runCatching { chipFocusRequesters[index].requestFocus() }
+            chipListState.focusChip(index, chipFocusRequesters)
         }
     }
 
     fun onAddonFilterSelectedGuarded(addon: String?) {
         userMovedFromFirstResult = true
-        onAddonFilterSelected(addon)
-        focusJob?.cancel()
-        focusJob = scope.coroutineLaunch {
-            withFrameNanos {}
-            val targetRequester = if (addon == null) {
-                chipFocusRequesters.getOrNull(1)
-            } else {
-                addonFocusRequesters[addon]
-            }
-            runCatching { targetRequester?.requestFocus() }
+        val targetRequester = if (addon == null) {
+            chipFocusRequesters.getOrNull(1)
+        } else {
+            addonFocusRequesters[addon]
         }
+        focusJob?.cancel()
+        // Focus the chip before the results change: once the focused card is gone,
+        // Compose would otherwise park focus on another chip first.
+        focusJob = scope.coroutineLaunch(start = CoroutineStart.UNDISPATCHED) {
+            chipListState.focusChip(chipFocusRequesters.indexOf(targetRequester), chipFocusRequesters)
+        }
+        onAddonFilterSelected(addon)
     }
 
     LaunchedEffect(uiState.episodeSelectedAddonFilter) {
@@ -376,6 +379,7 @@ private fun EpisodeStreamsView(
                 onAddonSelected = { onAddonFilterSelected(it) },
                 externalFocusRequesters = chipFocusRequesters,
                 externalOrderedNames = orderedAddonNames,
+                chipListState = chipListState,
                 onUpKey = {
                     try { backButtonFocusRequester.requestFocus() } catch (_: Exception) {}
                 },
