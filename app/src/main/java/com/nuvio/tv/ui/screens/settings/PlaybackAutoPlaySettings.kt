@@ -167,6 +167,13 @@ internal fun PlaybackStreamSelectionSection(
     )
 
     SettingsToggleRow(
+        title = "Prefer a language for each series",
+        subtitle = "Prioritize matching stream languages while keeping all sources available.",
+        checked = settings.perTitleStreamLanguageEnabled,
+        onToggle = { onUpdate { setPerTitleStreamLanguageEnabled(!settings.perTitleStreamLanguageEnabled) } }
+    )
+
+    SettingsToggleRow(
         title = stringResource(R.string.autoplay_reuse_last_link),
         subtitle = stringResource(R.string.autoplay_reuse_last_link_sub),
         checked = settings.streamReuseLastLinkEnabled,

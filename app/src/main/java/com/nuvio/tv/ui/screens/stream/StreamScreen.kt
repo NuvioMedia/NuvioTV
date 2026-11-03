@@ -457,6 +457,9 @@ fun StreamScreen(
                 // Right side - Streams container
                 RightStreamSection(
                     isLoading = uiState.isLoading,
+                    showLanguagePreference = uiState.perTitleStreamLanguageEnabled && uiState.contentType.lowercase() in setOf("series", "tv"),
+                    preferredSourceLanguage = uiState.preferredSourceLanguage,
+                    onPreferredSourceLanguageChange = viewModel::setPreferredSourceLanguage,
                     resumeText = resumeText,
                     error = uiState.error,
                     streams = uiState.filteredStreams,
@@ -754,6 +757,9 @@ private fun LeftContentSection(
 @Composable
 private fun RightStreamSection(
     isLoading: Boolean,
+    showLanguagePreference: Boolean,
+    preferredSourceLanguage: String,
+    onPreferredSourceLanguageChange: (String) -> Unit,
     resumeText: String?,
     error: String?,
     streams: List<Stream>,
@@ -971,6 +977,9 @@ private fun RightStreamSection(
                         else -> {
                             StreamsList(
                                 streams = streams,
+                                showLanguagePreference = showLanguagePreference,
+                                preferredSourceLanguage = preferredSourceLanguage,
+                                onPreferredSourceLanguageChange = onPreferredSourceLanguageChange,
                                 sharedStream = sharedStream,
                                 partySource = partySource,
                                 onSharedStreamSelected = onSharedStreamSelected,
@@ -1094,6 +1103,9 @@ private fun EmptyState() {
 @Composable
 private fun StreamsList(
     streams: List<Stream>,
+    showLanguagePreference: Boolean,
+    preferredSourceLanguage: String,
+    onPreferredSourceLanguageChange: (String) -> Unit,
     sharedStream: SharedStream?,
     partySource: PartySource?,
     onSharedStreamSelected: (Stream) -> Unit,
@@ -1265,6 +1277,15 @@ private fun StreamsList(
         verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
         contentPadding = PaddingValues(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.xxl)
     ) {
+        if (showLanguagePreference) {
+            item(key = "preferred_source_language") {
+                val languageOptions = listOf("" to "Any", "en" to "English", "es" to "Spanish", "la" to "Latino", "fr" to "French", "de" to "German", "it" to "Italian", "pt" to "Portuguese", "ja" to "Japanese", "ko" to "Korean", "zh" to "Chinese", "hi" to "Hindi")
+                val currentIndex = languageOptions.indexOfFirst { it.first == preferredSourceLanguage }.coerceAtLeast(0)
+                Button(onClick = { onPreferredSourceLanguageChange(languageOptions[(currentIndex + 1) % languageOptions.size].first) }) {
+                    Text("Preferred language: ${languageOptions[currentIndex].second}")
+                }
+            }
+        }
         sharedStream?.let { shared ->
             item(key = "party_shared_stream") {
                 Column(
