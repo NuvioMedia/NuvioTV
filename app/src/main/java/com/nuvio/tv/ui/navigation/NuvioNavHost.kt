@@ -36,7 +36,6 @@ import com.nuvio.tv.ui.screens.home.HomeScreen
 import com.nuvio.tv.ui.screens.addon.AddonManagerScreen
 import com.nuvio.tv.ui.screens.addon.CatalogOrderScreen
 import com.nuvio.tv.ui.screens.library.LibraryScreen
-import com.nuvio.tv.ui.screens.iptv.IptvScreen
 import com.nuvio.tv.ui.screens.player.PlayerExitReason
 import com.nuvio.tv.ui.screens.player.PlayerScreen
 import com.nuvio.tv.ui.screens.player.PostPlayRecommendation
@@ -1245,24 +1244,6 @@ private fun PlaybackNavHost(
             )
         }
 
-        composable(Screen.Iptv.route) {
-            IptvScreen(
-                onPlayChannel = { channel ->
-                    navController.navigate(
-                        Screen.Player.createRoute(
-                            streamUrl = channel.streamUrl,
-                            title = channel.name,
-                            streamName = channel.name,
-                            headers = channel.headers.takeIf { it.isNotEmpty() },
-                            contentType = "channel",
-                            contentName = channel.name,
-                            logo = channel.logo,
-                            streamDescription = channel.group.takeIf { it.isNotBlank() }
-                        )
-                    )
-                }
-            )
-        }
         composable(com.nuvio.tv.reshaped.livetv.LIVE_TV_ROUTE) {
             com.nuvio.tv.ui.reshaped.livetv.LiveTvScreen(onPlay = { navController.navigate(it) }, showBuiltInHeader = !hideBuiltInHeaders)
         }
