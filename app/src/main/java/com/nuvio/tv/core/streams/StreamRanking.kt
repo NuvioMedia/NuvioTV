@@ -2,6 +2,7 @@ package com.nuvio.tv.core.streams
 
 import com.google.re2j.Pattern
 import java.util.Locale
+import java.util.regex.Pattern as NativePattern
 import kotlinx.serialization.Serializable
 
 /** A versioned native profile. It contains data, never executable scripts or remote dependencies. */
@@ -128,10 +129,16 @@ data class StreamRankingFacts(
     }
 }
 
+/**
+ * Its own fixed patterns run on java.util.regex, native on Android and about twice as fast as RE2J
+ * for them; they stay linear in the bounded title, since none nests or leaves open a quantifier.
+ * Patterns that users write in profiles stay on RE2J. `\z` ends the text as `$` does in RE2J
+ * (java.util.regex's `$` also matches before a final line break).
+ */
 private object StreamReleaseParser {
-    private fun pattern(value: String) = Pattern.compile(value, Pattern.CASE_INSENSITIVE)
-    private fun token(value: String) = pattern("(?:^|[^a-z0-9])(?:$value)(?:$|[^a-z0-9])")
-    private val resolution = pattern("(?:^|[^0-9])(2160|1440|1080|720|576|480|360)p?(?:$|[^0-9])")
+    private fun pattern(value: String) = NativePattern.compile(value, NativePattern.CASE_INSENSITIVE)
+    private fun token(value: String) = pattern("(?:^|[^a-z0-9])(?:$value)(?:\\z|[^a-z0-9])")
+    private val resolution = pattern("(?:^|[^0-9])(2160|1440|1080|720|576|480|360)p?(?:\\z|[^0-9])")
     private val uhd = token("4k|uhd")
     private val remux = token("remux")
     private val bluray = token("blu[ ._-]?ray|b[dr]rip|bdremux|b[dr]mv")
@@ -153,9 +160,9 @@ private object StreamReleaseParser {
     private val dtsHd = token("dts[ ._-]?(?:hd|x)")
     private val ddp = token("ddp|e[ ._-]?ac3|dd\\+")
     private val aac = token("aac")
-    private val group = pattern("-((?:D-Z0N3)|[a-z0-9][a-z0-9._]{1,31})$")
+    private val group = pattern("-((?:D-Z0N3)|[a-z0-9][a-z0-9._]{1,31})\\z")
     private val animeGroup = pattern("^\\[([a-z][a-z0-9 _-]{1,30})\\]")
-    private val extension = pattern("\\.(?:mkv|mp4|m2ts|ts|nzb)$")
+    private val extension = pattern("\\.(?:mkv|mp4|m2ts|ts|nzb)\\z")
     private val languagePatterns = linkedMapOf(
         "en" to token("english|eng|en"), "ja" to token("japanese|jpn|ja"), "de" to token("german|ger|deu|de"),
         "fr" to token("french|fre|fra|vff|vfq|truefrench|fr"), "nl" to token("dutch|nld|nederlands|nl"),
@@ -165,7 +172,7 @@ private object StreamReleaseParser {
         "pl" to token("polish|pol"), "tr" to token("turkish|tur"), "multi" to token("multi|multi[ ._-]?audio"),
         "dual" to token("dual|dual[ ._-]?audio")
     )
-    private fun Pattern.has(text: String) = matcher(text).find()
+    private fun NativePattern.has(text: String) = matcher(text).find()
     fun languages(title: String): Set<String> = languagePatterns.filterValues { it.has(title) }.keys.toSet()
     fun parse(title: String): StreamRankingFacts {
         // Bound custom/indexer input before applying even linear-time matchers.
