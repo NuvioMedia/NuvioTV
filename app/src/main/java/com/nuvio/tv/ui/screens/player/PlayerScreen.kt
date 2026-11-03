@@ -1252,7 +1252,6 @@ fun PlayerScreen(
                             isBuffering = uiState.isBuffering,
                             aspectMode = uiState.aspectMode,
                             tunnelingEnabled = uiState.tunnelingEnabled,
-                            tunneledSurfaceFill = uiState.tunneledSurfaceFill,
                             useLibass = uiState.useLibass,
                             libassRenderMode = uiState.libassRenderMode,
                             subtitleStyle = uiState.effectiveSubtitleStyle,
@@ -2242,7 +2241,6 @@ private fun ExoPlayerSurface(
     isBuffering: Boolean,
     aspectMode: AspectMode,
     tunnelingEnabled: Boolean,
-    tunneledSurfaceFill: Boolean,
     useLibass: Boolean,
     libassRenderMode: LibassRenderMode,
     subtitleStyle: SubtitleStyleSettings,
@@ -2254,7 +2252,6 @@ private fun ExoPlayerSurface(
     val context = LocalContext.current
     val latestAspectMode by rememberUpdatedState(aspectMode)
     val latestTunnelingEnabled by rememberUpdatedState(tunnelingEnabled)
-    val latestTunneledSurfaceFill by rememberUpdatedState(tunneledSurfaceFill)
     val latestBindSubtitleView by rememberUpdatedState(onBindSubtitleView)
     val latestSubtitleStyle by rememberUpdatedState(subtitleStyle)
     val latestSubtitleLiftPx by rememberUpdatedState(subtitleLiftPx)
@@ -2319,7 +2316,6 @@ private fun ExoPlayerSurface(
                 playerView.post {
                     playerView.syncExoSurfaceLayout(
                         tunnelingEnabled = latestTunnelingEnabled,
-                        tunneledSurfaceFill = latestTunneledSurfaceFill,
                         aspectMode = latestAspectMode
                     )
                 }
@@ -2329,7 +2325,6 @@ private fun ExoPlayerSurface(
                 playerView.post {
                     playerView.syncExoSurfaceLayout(
                         tunnelingEnabled = latestTunnelingEnabled,
-                        tunneledSurfaceFill = latestTunneledSurfaceFill,
                         aspectMode = latestAspectMode
                     )
                 }
@@ -2347,7 +2342,6 @@ private fun ExoPlayerSurface(
         playerView.post {
             playerView.syncExoSurfaceLayout(
                 tunnelingEnabled = latestTunnelingEnabled,
-                tunneledSurfaceFill = latestTunneledSurfaceFill,
                 aspectMode = latestAspectMode
             )
         }
@@ -2361,7 +2355,6 @@ private fun ExoPlayerSurface(
             playerView.post {
                 playerView.syncExoSurfaceLayout(
                     tunnelingEnabled = latestTunnelingEnabled,
-                    tunneledSurfaceFill = latestTunneledSurfaceFill,
                     aspectMode = latestAspectMode
                 )
             }
@@ -2379,10 +2372,9 @@ private fun ExoPlayerSurface(
         }
     }
 
-    LaunchedEffect(playerView, aspectMode, tunnelingEnabled, tunneledSurfaceFill) {
+    LaunchedEffect(playerView, aspectMode, tunnelingEnabled) {
         playerView.syncExoSurfaceLayout(
             tunnelingEnabled = tunnelingEnabled,
-            tunneledSurfaceFill = tunneledSurfaceFill,
             aspectMode = aspectMode
         )
     }
@@ -2423,16 +2415,14 @@ private fun PlayerView.applyExoAspectMode(mode: AspectMode) {
 
 private fun PlayerView.syncExoSurfaceLayout(
     tunnelingEnabled: Boolean,
-    tunneledSurfaceFill: Boolean,
     aspectMode: AspectMode
 ) {
-    val targetResizeMode = PlayerDisplayModeUtils.exoSurfaceResizeMode(
-        tunnelingEnabled = tunnelingEnabled,
-        tunneledSurfaceFill = tunneledSurfaceFill
-    )
-    if (resizeMode != targetResizeMode) {
-        resizeMode = targetResizeMode
+    // Tunneled video ignores view scale, so there the mode sizes the video frame instead.
+    val surfaceLayout = exoSurfaceLayout(tunnelingEnabled, aspectMode)
+    if (resizeMode != surfaceLayout.resizeMode) {
+        resizeMode = surfaceLayout.resizeMode
     }
+    applyExoContentFrameZoom(this, surfaceLayout.zoom)
     val appliedAspectMode = aspectModeAppliedToExoSurface(tunnelingEnabled, aspectMode)
     applyExoAspectMode(appliedAspectMode)
     setTag(
@@ -2440,8 +2430,7 @@ private fun PlayerView.syncExoSurfaceLayout(
         LibassOverlayGeometryContext(
             requestedAspectMode = aspectMode,
             appliedAspectMode = appliedAspectMode,
-            tunnelingEnabled = tunnelingEnabled,
-            tunneledSurfaceFill = tunneledSurfaceFill
+            tunnelingEnabled = tunnelingEnabled
         )
     )
     syncLibassOverlayGeometry()
@@ -2451,8 +2440,7 @@ private fun PlayerView.syncExoSurfaceLayout(
 private data class LibassOverlayGeometryContext(
     val requestedAspectMode: AspectMode,
     val appliedAspectMode: AspectMode,
-    val tunnelingEnabled: Boolean,
-    val tunneledSurfaceFill: Boolean
+    val tunnelingEnabled: Boolean
 )
 
 private const val LIBASS_OVERLAY_GEOMETRY_TAG = "LibassOverlayGeometry"
@@ -2483,7 +2471,7 @@ private fun PlayerView.syncLibassOverlayGeometry() {
     assOverlayView.invalidateAssOverlay()
     logLibassOverlayGeometry(
         "event=apply requested=${context?.requestedAspectMode} applied=${context?.appliedAspectMode} " +
-            "tunneling=${context?.tunnelingEnabled} tunneledFill=${context?.tunneledSurfaceFill} " +
+            "tunneling=${context?.tunnelingEnabled} " +
             "overlay=${overlayWidth}x${overlayHeight} video=${videoSize?.width}x${videoSize?.height} " +
             "par=${videoSize?.pixelWidthHeightRatio} content=${describeRect(videoBounds)} " +
             "margins=top:${margins.top},bottom:${margins.bottom},left:${margins.left},right:${margins.right}"

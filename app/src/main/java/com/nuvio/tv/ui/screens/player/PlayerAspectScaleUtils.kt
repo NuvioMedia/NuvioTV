@@ -5,8 +5,11 @@ import android.graphics.RectF
 import android.view.SurfaceView
 import android.view.TextureView
 import android.view.View
+import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.annotation.StringRes
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.nuvio.tv.R
 import kotlin.math.roundToInt
@@ -26,6 +29,49 @@ internal fun aspectModeAppliedToExoSurface(
     aspectMode: AspectMode
 ): AspectMode {
     return if (tunnelingEnabled) AspectMode.ORIGINAL else aspectMode
+}
+
+private const val SLIGHT_ZOOM_SCALE = 1.15f
+private const val CINEMA_ZOOM_SCALE = 1.33f
+
+/**
+ * How the ExoPlayer video frame is laid out for an aspect mode: the frame's resize mode, and how
+ * far the frame is enlarged past the player (centred, the overflow cropped).
+ */
+internal data class ExoSurfaceLayout(val resizeMode: Int, val zoom: Float = 1f)
+
+/**
+ * Untunneled, the frame stays FIT and the aspect mode scales the view ([applyExoAspectMode]).
+ * Tunneled video ignores view scale and only follows the frame's size, so there every aspect
+ * mode is laid out as a frame size: crop, stretch and fit width/height as the frame's own resize
+ * modes, and the zooms as a frame larger than the player.
+ */
+internal fun exoSurfaceLayout(tunnelingEnabled: Boolean, aspectMode: AspectMode): ExoSurfaceLayout {
+    if (!tunnelingEnabled) return ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT)
+    return when (aspectMode) {
+        AspectMode.ORIGINAL -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT)
+        AspectMode.FULL_SCREEN -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_ZOOM)
+        AspectMode.STRETCH -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FILL)
+        AspectMode.SLIGHT_ZOOM -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT, SLIGHT_ZOOM_SCALE)
+        AspectMode.CINEMA_ZOOM -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT, CINEMA_ZOOM_SCALE)
+        AspectMode.VERTICAL_STRETCH -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT)
+        AspectMode.HORIZONTAL_STRETCH -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH)
+    }
+}
+
+/** Sizes [PlayerView]'s content frame to [zoom] times the player, centred; 1 fills the player. */
+internal fun applyExoContentFrameZoom(playerView: PlayerView, zoom: Float) {
+    val contentFrame = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_content_frame) ?: return
+    val params = contentFrame.layoutParams ?: return
+    val zoomed = zoom > 1f && playerView.width > 0 && playerView.height > 0
+    val width = if (zoomed) (playerView.width * zoom).roundToInt() else ViewGroup.LayoutParams.MATCH_PARENT
+    val height = if (zoomed) (playerView.height * zoom).roundToInt() else ViewGroup.LayoutParams.MATCH_PARENT
+    val gravityChanged = params is FrameLayout.LayoutParams && params.gravity != Gravity.CENTER
+    if (params.width == width && params.height == height && !gravityChanged) return
+    params.width = width
+    params.height = height
+    if (params is FrameLayout.LayoutParams) params.gravity = Gravity.CENTER
+    contentFrame.layoutParams = params
 }
 
 internal fun nextAspectMode(current: AspectMode): AspectMode {
@@ -156,9 +202,9 @@ internal fun resolveAspectScale(mode: AspectMode, viewAspect: Float, videoAspect
             }
         }
 
-        AspectMode.SLIGHT_ZOOM -> AspectScale(scaleX = 1.15f, scaleY = 1.15f)
+        AspectMode.SLIGHT_ZOOM -> AspectScale(scaleX = SLIGHT_ZOOM_SCALE, scaleY = SLIGHT_ZOOM_SCALE)
 
-        AspectMode.CINEMA_ZOOM -> AspectScale(scaleX = 1.33f, scaleY = 1.33f)
+        AspectMode.CINEMA_ZOOM -> AspectScale(scaleX = CINEMA_ZOOM_SCALE, scaleY = CINEMA_ZOOM_SCALE)
 
         AspectMode.VERTICAL_STRETCH -> {
             val safeVideoAspect = videoAspect?.takeIf { it > 0f }

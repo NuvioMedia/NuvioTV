@@ -2012,36 +2012,6 @@ fun PlayerRuntimeController.onEvent(
         }
         PlayerEvent.OnToggleAspectRatio -> {
             val state = _uiState.value
-            if (state.tunnelingEnabled) {
-                val fill = !state.tunneledSurfaceFill
-                val label = PlayerDisplayModeUtils.resizeModeLabel(
-                    PlayerDisplayModeUtils.exoSurfaceResizeMode(
-                        tunnelingEnabled = true,
-                        tunneledSurfaceFill = fill
-                    ),
-                    context
-                )
-                Log.d(
-                    PlayerRuntimeController.TAG,
-                    "Tunneled surface resize toggled: fill=$fill ($label)"
-                )
-                _uiState.update {
-                    it.copy(
-                        tunneledSurfaceFill = fill,
-                        showAspectRatioIndicator = true,
-                        aspectRatioIndicatorText = label
-                    )
-                }
-                scope.launch {
-                    deviceLocalPlayerPreferences.setTunneledSurfaceFill(fill)
-                }
-                hideAspectRatioIndicatorJob?.cancel()
-                hideAspectRatioIndicatorJob = scope.launch {
-                    delay(1500)
-                    _uiState.update { it.copy(showAspectRatioIndicator = false) }
-                }
-                return
-            }
             val newMode = nextAspectMode(state.aspectMode)
             val label = aspectModeLabel(newMode, context::getString)
             Log.d(PlayerRuntimeController.TAG, "Aspect mode toggled by user: ${state.aspectMode} -> $newMode ($label)")
