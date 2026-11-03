@@ -16,13 +16,21 @@ internal object DolbyVisionP5Native {
             .getOrDefault(false)
     }
 
+    /** [ingestRpu] results other than a mapping hash (hashes are always > 0). */
+    const val RPU_UNREADABLE = -1L
+    const val MAPPING_UNREADABLE = -2L
+    /** An RPU of another profile: the result is OTHER_PROFILE_BASE - profile. */
+    const val OTHER_PROFILE_BASE = -100L
+    /** No native library: nothing was parsed. */
+    const val NOT_PARSED = 0L
+
     /**
-     * Parses one RPU NAL (from its 2-byte NAL header on) and returns the hash of its mapping, or 0
-     * when it is not a usable Profile 5 RPU.
+     * Parses one RPU NAL (from its 2-byte NAL header on). Returns the hash of its mapping (> 0)
+     * when it is a usable Profile 5 RPU, else one of the result codes above.
      */
     fun ingestRpu(data: ByteArray, offset: Int, length: Int): Long {
-        if (!isSupported) return 0L
-        return runCatching { nativeIngestRpu(data, offset, length) }.getOrDefault(0L)
+        if (!isSupported) return NOT_PARSED
+        return runCatching { nativeIngestRpu(data, offset, length) }.getOrDefault(RPU_UNREADABLE)
     }
 
     /** Fills [out] (size^3 * 4 half floats) with the LUT of mapping [hash]; false if unknown. */

@@ -20,8 +20,10 @@ import java.io.IOException
 /**
  * Wraps an [Extractor] so its video track feeds a [DolbyVisionP5Session].
  *
- * With an inactive session it only notes that a Profile 5 track exists. With an active one it
- * also makes the track play as HDR10 through the [DolbyVisionP5HdrEffect]:
+ * With an inactive session it only detects Profile 5: from the track's codecs, or else from the
+ * RPUs of its first samples (a Matroska file whose colour metadata claims SDR loses its Dolby
+ * Vision config, so its track reads as plain HEVC). With an active one it also makes the track
+ * play as HDR10 through the [DolbyVisionP5HdrEffect]:
  *  - the format becomes plain HEVC Main10, so a regular HEVC decoder decodes the base layer;
  *  - its colour info becomes BT.2020 / PQ / full range, which routes the frames through Media3's
  *    10-bit HDR effect path and tells it how to read the decoded values (Profile 5 is full range);
@@ -80,6 +82,8 @@ private class P5TrackOutput(
 ) : TrackOutput {
 
     private var capturing = false
+    // Detecting only: samples whose RPU is still to be checked for Profile 5.
+    private var probeSamplesLeft = 0
     // The main sample bytes written since the last sample was committed.
     private var buffer = ByteArray(0)
     private var bufferLength = 0
@@ -88,11 +92,14 @@ private class P5TrackOutput(
     override fun durationUs(durationUs: Long) = delegate.durationUs(durationUs)
 
     override fun format(format: Format) {
-        val profile5 = isProfile5(format.codecs) ||
-            (session.containerSignalledProfile5 && isHevcOrDolbyVision(format.sampleMimeType))
+        val hevc = isHevcOrDolbyVision(format.sampleMimeType)
+        val profile5 = isProfile5(format.codecs) || (session.containerSignalledProfile5 && hevc)
         if (profile5) session.onProfile5Track()
-        capturing = profile5 && session.active
-        delegate.format(if (capturing) toHdr10(format) else format)
+        // An active session exists only for a stream already found to be Profile 5.
+        val mapping = session.active && hevc
+        probeSamplesLeft = if (!mapping && hevc && !session.detected) PROBE_SAMPLES else 0
+        capturing = mapping || probeSamplesLeft > 0
+        delegate.format(if (mapping) toHdr10(format) else format)
     }
 
     @Throws(IOException::class)
@@ -141,15 +148,20 @@ private class P5TrackOutput(
             val sampleEnd = bufferLength - carry
             if (cryptoData == null) {
                 val rpu = DolbyVisionP5Nal.findRpu(buffer, sampleEnd)
-                val hash = if (rpu == DolbyVisionP5Nal.NONE) {
-                    0L
-                } else {
-                    DolbyVisionP5Nal.ingest(buffer, rpu, DolbyVisionP5Native::ingestRpu)
+                if (rpu != DolbyVisionP5Nal.NONE) {
+                    val result = DolbyVisionP5Nal.ingest(buffer, rpu, DolbyVisionP5Native::ingestRpu)
+                    session.onRpuResult(result)
+                    // A sample without a usable RPU keeps the mapping before it.
+                    if (session.active && result > 0L) session.onSampleMapping(timeUs, result)
                 }
-                session.onSampleMapping(timeUs, hash)
             }
             if (carry > 0) System.arraycopy(buffer, sampleEnd, buffer, 0, carry)
             bufferLength = carry
+            if (!session.active && (session.detected || --probeSamplesLeft <= 0)) {
+                // Detection settled: stop buffering. Everything was already passed on.
+                capturing = false
+                bufferLength = 0
+            }
         }
         delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
     }
@@ -170,6 +182,8 @@ private class P5TrackOutput(
     private companion object {
         /** HEVC Main 10, level 5.1: what a Profile 5 base layer decodes as. */
         const val HEVC_MAIN10_CODECS = "hvc1.2.4.L153.B0"
+        /** About two seconds of video: enough to meet an RPU (every Profile 5 frame has one). */
+        const val PROBE_SAMPLES = 48
         val PROFILE_5 = Regex("^(?:dvhe|dvh1)\\.0?5\\.")
 
         fun isProfile5(codecs: String?): Boolean =

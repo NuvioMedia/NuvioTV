@@ -161,21 +161,35 @@ void remember(uint64_t hash, const dovi_p5::Params& params) {
     }
 }
 
-/** Parses one RPU NAL; returns its mapping's hash, or 0 when it is not a usable Profile 5 RPU. */
-uint64_t ingest(const uint8_t* nal, size_t len) {
+// Results of ingest() other than a mapping hash (which is always > 0).
+constexpr int64_t kRpuUnreadable = -1;
+constexpr int64_t kMappingUnreadable = -2;
+constexpr int64_t kOtherProfileBase = -100;  // -100 - guessed profile
+
+/** A positive, non-zero form of [hash], so it never collides with the error results. */
+int64_t positiveHash(uint64_t hash) {
+    const auto value = static_cast<int64_t>(hash & 0x7FFFFFFFFFFFFFFFULL);
+    return value == 0 ? 1 : value;
+}
+
+/**
+ * Parses one RPU NAL. Returns its mapping's hash (> 0), or kRpuUnreadable, kMappingUnreadable, or
+ * kOtherProfileBase - profile for an RPU that is not Profile 5.
+ */
+int64_t ingest(const uint8_t* nal, size_t len) {
     DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(nal, len);
-    if (rpu == nullptr) return 0;
-    uint64_t result = 0;
+    if (rpu == nullptr) return kRpuUnreadable;
+    int64_t result = kRpuUnreadable;
     const char* error = dovi_rpu_get_error(rpu);
     if (error == nullptr || error[0] == '\0') {
         const DoviRpuDataHeader* header = dovi_rpu_get_header(rpu);
         if (header != nullptr) {
             if (header->guessed_profile != 5) {
-                result = 0;
+                result = kOtherProfileBase - header->guessed_profile;
             } else if (header->use_prev_vdr_rpu_flag) {
                 // Same mapping as before.
                 std::lock_guard<std::mutex> lock(gMutex);
-                result = gLastHash;
+                result = gLastHash != 0 ? positiveHash(gLastHash) : kMappingUnreadable;
             } else {
                 const DoviRpuDataMapping* mapping = dovi_rpu_get_data_mapping(rpu);
                 const DoviVdrDmData* dm = dovi_rpu_get_vdr_dm_data(rpu);
@@ -183,6 +197,7 @@ uint64_t ingest(const uint8_t* nal, size_t len) {
                 bool ok = mapping != nullptr;
                 for (int c = 0; ok && c < 3; ++c) ok = readCurve(mapping->curves[c], *header, params.curves[c]);
                 std::lock_guard<std::mutex> lock(gMutex);
+                result = kMappingUnreadable;
                 if (ok) {
                     if (dm != nullptr) {
                         readMatrices(*dm, params);
@@ -190,9 +205,10 @@ uint64_t ingest(const uint8_t* nal, size_t len) {
                     } else {
                         copyMatrices(gLastMatrices, params);
                     }
-                    result = dovi_p5::hashParams(params);
-                    remember(result, params);
-                    gLastHash = result;
+                    const uint64_t hash = dovi_p5::hashParams(params);
+                    result = positiveHash(hash);
+                    remember(static_cast<uint64_t>(result), params);
+                    gLastHash = static_cast<uint64_t>(result);
                 }
                 if (dm != nullptr) dovi_rpu_free_vdr_dm_data(dm);
                 if (mapping != nullptr) dovi_rpu_free_data_mapping(mapping);
@@ -222,13 +238,13 @@ Java_com_nuvio_tv_core_player_DolbyVisionP5Native_nativeIngestRpu(
     jint length
 ) {
 #if DOVI_REAL_LINKED
-    if (data == nullptr || offset < 0 || length < 3) return 0;
-    if (offset + length > env->GetArrayLength(data)) return 0;
+    if (data == nullptr || offset < 0 || length < 3) return kRpuUnreadable;
+    if (offset + length > env->GetArrayLength(data)) return kRpuUnreadable;
     std::vector<uint8_t> nal(static_cast<size_t>(length));
     env->GetByteArrayRegion(data, offset, length, reinterpret_cast<jbyte*>(nal.data()));
     return static_cast<jlong>(ingest(nal.data(), nal.size()));
 #else
-    return 0;
+    return -1;
 #endif
 }
 

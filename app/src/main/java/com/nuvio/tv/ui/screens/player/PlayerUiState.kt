@@ -209,6 +209,8 @@ data class PlayerUiState(
     // Stream source badge
     val showStreamSourceIndicator: Boolean = false,
     val streamSourceIndicatorText: String = "",
+    /** A short note on the Dolby Vision Profile 5 -> HDR10 mapping of this stream, or null. */
+    val dv5HdrNote: String? = null,
     val showPlayerEngineSwitchInfo: Boolean = false,
     val playerEngineSwitchInfoText: String = "",
     // Frame rate matching

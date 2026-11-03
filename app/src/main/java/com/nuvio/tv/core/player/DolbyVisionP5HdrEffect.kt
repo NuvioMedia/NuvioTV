@@ -53,6 +53,7 @@ private class DolbyVisionP5ShaderProgram(
     private val vertices: FloatBuffer = GlUtil.createBuffer(GlUtil.getNormalizedCoordinateBounds())
 
     init {
+        session.onEffectCreated(useHdr)
         if (!useHdr) Log.w(TAG, "Effect pipeline is not HDR: frames pass through unchanged")
     }
 
@@ -74,6 +75,7 @@ private class DolbyVisionP5ShaderProgram(
     override fun drawFrame(inputTexId: Int, presentationTimeUs: Long) {
         try {
             val enabled = useHdr && prepareLut(presentationTimeUs)
+            session.onFrameDrawn(enabled)
             GLES30.glUseProgram(program)
             GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
             GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTexId)

@@ -1704,6 +1704,21 @@ fun PlayerScreen(
             StreamSourceIndicator(text = uiState.streamSourceIndicatorText)
         }
 
+        AnimatedVisibility(
+            visible = uiState.dv5HdrNote != null,
+            enter = fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
+            exit = fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 176.dp, start = 48.dp, end = 48.dp)
+                .then(playerControlsDim)
+        ) {
+            // Keeps the last text through the fade-out.
+            val shownNote = remember { arrayOf("") }
+            uiState.dv5HdrNote?.let { shownNote[0] = it }
+            StreamSourceIndicator(text = shownNote[0], maxLines = 2)
+        }
+
         partyState.party?.let { party ->
             val waitingNames = if (partyPlayback?.paused == true && partyPlayback?.waiting == true) {
                 PartySync.waitingMemberIds(party, emptySet())
@@ -3784,7 +3799,7 @@ private fun AspectRatioIndicator(text: String) {
 }
 
 @Composable
-private fun StreamSourceIndicator(text: String) {
+private fun StreamSourceIndicator(text: String, maxLines: Int = 1) {
     Row(
         modifier = Modifier
             .background(
@@ -3798,7 +3813,7 @@ private fun StreamSourceIndicator(text: String) {
             text = text,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             color = Color.White,
-            maxLines = 1,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis
         )
     }

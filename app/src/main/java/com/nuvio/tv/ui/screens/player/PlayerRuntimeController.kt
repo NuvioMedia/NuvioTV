@@ -729,6 +729,9 @@ class PlayerRuntimeController(
     internal var dv5HdrDetectedForCurrentStream: Boolean = false
     internal var dv5HdrFailedForCurrentStream: Boolean = false
     internal var dv5HdrSwitchInFlight: Boolean = false
+    internal var dv5HdrNoteShownForCurrentStream: Boolean = false
+    internal var dv5HdrStatusJob: Job? = null
+    internal var dv5HdrNoteJob: Job? = null
     internal var torrentStreamJob: Job? = null
     internal var torrentStateObserverJob: Job? = null
     internal var isTorrentStream: Boolean = navigationArgs.infoHash != null && !initialStreamUrl.startsWith("http")

@@ -4,6 +4,7 @@ import android.util.Log
 import com.nuvio.tv.libass.media.effect.AssFrameTimeMapper
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.LinkedBlockingDeque
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * One player's state for mapping Dolby Vision Profile 5 to HDR10.
@@ -16,14 +17,37 @@ import java.util.concurrent.LinkedBlockingDeque
  *
  * A stream starts with an inactive session that only detects Profile 5 ([detected]); the player
  * is then rebuilt once with an [active] session, which rewrites the track to HDR10 and installs
- * the effect (video effects can only be set before the player is prepared).
+ * the effect (video effects can only be set before the player is prepared). A session with a
+ * [blockedReason] only detects, so the player can say why the stream isn't mapped.
  */
-internal class DolbyVisionP5Session(val active: Boolean) {
+internal class DolbyVisionP5Session(
+    val active: Boolean,
+    /** Why this device can't map Profile 5, or null when it can. */
+    val blockedReason: BlockedReason? = null,
+) {
 
-    /** True once a Profile 5 video track was seen. */
+    enum class BlockedReason { NO_LIBRARY, DISPLAY_DOLBY_VISION, DISPLAY_NOT_HDR10, GPU, DV81_CONVERSION, PLAYBACK_ERROR }
+
+    /** What an active session found, for the player's note a few seconds into playback. */
+    sealed class Status {
+        object NoFrames : Status()
+        object PipelineNotHdr : Status()
+        object NoRpu : Status()
+        data class OtherProfile(val profile: Int) : Status()
+        object RpuUnreadable : Status()
+        object NoLut : Status()
+        object NotMapped : Status()
+        data class Mapping(val tables: Int) : Status()
+    }
+
+    /** True once a Profile 5 video track was seen (by its codecs or by its RPU). */
     @Volatile
     var detected: Boolean = false
         private set
+
+    /** Called once, on a loader thread, when [detected] becomes true. */
+    @Volatile
+    var onDetected: (() -> Unit)? = null
 
     /** Set by the Matroska transformer, which sees the Dolby Vision config before the output does. */
     @Volatile
@@ -32,6 +56,17 @@ internal class DolbyVisionP5Session(val active: Boolean) {
 
     /** Maps the effect's frame timestamps back to media time (fed by the video renderer). */
     val frameTimeMapper = AssFrameTimeMapper()
+
+    private val rpuSamples = AtomicLong()
+    private val profile5Rpus = AtomicLong()
+    private val unreadableRpus = AtomicLong()
+    @Volatile
+    private var otherProfile = -1
+    private val lutsBuilt = AtomicLong()
+    private val framesDrawn = AtomicLong()
+    private val framesMapped = AtomicLong()
+    @Volatile
+    private var effectHdr: Boolean? = null
 
     private val timeline = ConcurrentSkipListMap<Long, Long>()
     private val lutLock = Any()
@@ -53,13 +88,25 @@ internal class DolbyVisionP5Session(val active: Boolean) {
         null
     }
 
-    fun onProfile5Track() {
-        detected = true
-    }
+    fun onProfile5Track() = markDetected()
 
     fun onContainerProfile5() {
         containerSignalledProfile5 = true
-        detected = true
+        markDetected()
+    }
+
+    /** Records one sample's [DolbyVisionP5Native.ingestRpu] result. */
+    fun onRpuResult(result: Long) {
+        rpuSamples.incrementAndGet()
+        when {
+            result > 0L -> {
+                profile5Rpus.incrementAndGet()
+                markDetected()
+            }
+            result <= DolbyVisionP5Native.OTHER_PROFILE_BASE ->
+                otherProfile = (DolbyVisionP5Native.OTHER_PROFILE_BASE - result).toInt()
+            result != DolbyVisionP5Native.NOT_PARSED -> unreadableRpus.incrementAndGet()
+        }
     }
 
     /** Records that the sample at [timeUs] carries mapping [hash] (0 = none: draw it as is). */
@@ -68,9 +115,13 @@ internal class DolbyVisionP5Session(val active: Boolean) {
         while (timeline.size > MAX_TIMELINE_ENTRIES) timeline.pollFirstEntry()
     }
 
-    /** The mapping of the sample shown at [mediaTimeUs]. */
+    /**
+     * The mapping of the sample shown at [mediaTimeUs]. A frame earlier than every recorded
+     * sample takes the first mapping: a close match beats leaving it unmapped.
+     */
     fun mappingAt(mediaTimeUs: Long): Long =
-        timeline.floorEntry(mediaTimeUs + MATCH_TOLERANCE_US)?.value ?: 0L
+        (timeline.floorEntry(mediaTimeUs + MATCH_TOLERANCE_US) ?: timeline.ceilingEntry(mediaTimeUs))
+            ?.value ?: 0L
 
     /** The distinct mappings due soon after [mediaTimeUs], so their LUTs are ready in time. */
     fun upcomingMappings(mediaTimeUs: Long): List<Long> {
@@ -98,12 +149,45 @@ internal class DolbyVisionP5Session(val active: Boolean) {
     /** Builds a LUT on the calling thread (used once, before the first mapped frame). */
     fun buildNow(hash: Long): ShortArray? = build(hash)
 
+    fun onEffectCreated(hdr: Boolean) {
+        effectHdr = hdr
+    }
+
+    fun onFrameDrawn(mapped: Boolean) {
+        framesDrawn.incrementAndGet()
+        if (mapped) framesMapped.incrementAndGet()
+    }
+
+    /** What has happened so far, most basic problem first. */
+    fun status(): Status = when {
+        framesDrawn.get() == 0L -> Status.NoFrames
+        effectHdr == false -> Status.PipelineNotHdr
+        profile5Rpus.get() == 0L && otherProfile >= 0 -> Status.OtherProfile(otherProfile)
+        profile5Rpus.get() == 0L && unreadableRpus.get() > 0L -> Status.RpuUnreadable
+        profile5Rpus.get() == 0L -> Status.NoRpu
+        lutsBuilt.get() == 0L -> Status.NoLut
+        framesMapped.get() == 0L -> Status.NotMapped
+        else -> Status.Mapping(lutsBuilt.get().toInt())
+    }
+
+    fun describeForLog(): String =
+        "rpuSamples=${rpuSamples.get()} p5=${profile5Rpus.get()} unreadable=${unreadableRpus.get()} " +
+            "otherProfile=$otherProfile luts=${lutsBuilt.get()} drawn=${framesDrawn.get()} " +
+            "mapped=${framesMapped.get()} effectHdr=$effectHdr"
+
     fun release() {
         released = true
+        onDetected = null
         worker?.interrupt()
         wanted.clear()
         timeline.clear()
         synchronized(lutLock) { luts.clear() }
+    }
+
+    private fun markDetected() {
+        if (detected) return
+        detected = true
+        onDetected?.invoke()
     }
 
     private fun buildLoop() {
@@ -118,7 +202,7 @@ internal class DolbyVisionP5Session(val active: Boolean) {
     }
 
     private fun build(hash: Long): ShortArray? {
-        if (hash == 0L || released) return null
+        if (hash <= 0L || released) return null
         lutOrNull(hash)?.let { return it }
         val out = ShortArray(LUT_SIZE * LUT_SIZE * LUT_SIZE * 4)
         if (!DolbyVisionP5Native.buildLut(hash, LUT_SIZE, out)) {
@@ -126,6 +210,7 @@ internal class DolbyVisionP5Session(val active: Boolean) {
             return null
         }
         synchronized(lutLock) { luts[hash] = out }
+        lutsBuilt.incrementAndGet()
         return out
     }
 
