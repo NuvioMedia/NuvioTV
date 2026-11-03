@@ -187,13 +187,14 @@ messages keep only their host.
 
 - **Search results** are reused for 15 minutes by the stream search session
   cache. They are not kept longer, so new releases show up.
-- **Seasons:** an episode searched by ID first searches its whole season
-  (no `ep`), and the following episodes reuse that result for 2 hours, in
-  memory only. Only explicitly numbered releases (`S01E02`, `1x02`, season
+- **Seasons:** an episode searched by ID is always searched on its own
+  (`season` and `ep`), since a long-running series has more releases per
+  season than the two pages read of a search. Its whole season (no `ep`) is
+  also searched, once for the following episodes, which reuse that result for
+  2 hours, in memory only: it finds the season packs, which episode searches
+  do not return. Only explicitly numbered releases (`S01E02`, `1x02`, season
   packs) are taken from it, since an obfuscated name could be any episode. An
-  episode the season result has nothing for, such as one that aired since, is
-  then searched on its own. An indexer that rejects season-only searches is
-  not asked again for 2 hours, and its episodes are searched on their own.
+  indexer that rejects season-only searches is not asked again for 2 hours.
 - **Capabilities** (`t=caps`) are stored on the device for 7 days and survive
   restarts. An edited URL or API key fetches them again. When a refresh fails,
   the expired copy is used. **Test indexer** always makes a live request.

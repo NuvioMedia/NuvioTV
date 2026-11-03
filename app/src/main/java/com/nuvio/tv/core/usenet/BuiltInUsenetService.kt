@@ -77,14 +77,24 @@ class NewznabClient internal constructor(
         return caps
     }
 
+    /**
+     * An episode is always searched on its own: a long-running series has more releases per season
+     * than the two pages read of it, which are its newest uploads, of any episode. The season search
+     * adds what an episode search never returns, the season packs, and the episode's numbered
+     * releases that an indexer filed without the episode.
+     */
     suspend fun search(indexer: UsenetIndexer, request: UsenetSearchRequest,
         caps: NewznabCapabilities): List<UsenetRelease> {
-        seasonReleases(indexer, request, caps)
-            ?.filter { NewznabProtocol.matches(it, request, idSearch = true, requireNumbering = true) }
-            ?.takeIf { it.isNotEmpty() }?.let { return it }
-        val url = NewznabProtocol.searchUrl(indexer, request, caps) ?: return emptyList()
-        return pages(indexer, url, request, caps)
-            .filter { NewznabProtocol.matches(it, request, NewznabProtocol.isIdSearch(url)) }
+        val season = seasonReleases(indexer, request, caps).orEmpty()
+            .filter { NewznabProtocol.matches(it, request, idSearch = true, requireNumbering = true) }
+        val url = NewznabProtocol.searchUrl(indexer, request, caps) ?: return season
+        val episode = try {
+            pages(indexer, url, request, caps)
+                .filter { NewznabProtocol.matches(it, request, NewznabProtocol.isIdSearch(url)) }
+        } catch (e: CancellationException) { throw e }
+        // The season already answered: a failed or paused episode search still shows its releases.
+        catch (e: Exception) { if (season.isEmpty()) throw e else emptyList() }
+        return (episode + season).distinctBy { it.nzbUrl }
     }
 
     /**
@@ -101,9 +111,8 @@ class NewznabClient internal constructor(
 
     /**
      * Watching a series asks for one episode after another, and a single season
-     * search answers them all for [SEASON_TTL_MS]. An episode it has nothing for
-     * (one that aired since, or a season with more releases than two pages hold)
-     * is then searched on its own. Memory only: release URLs carry the API key.
+     * search gives them all its packs for [SEASON_TTL_MS]. Memory only: release
+     * URLs carry the API key.
      */
     private suspend fun seasonReleases(indexer: UsenetIndexer, request: UsenetSearchRequest,
         caps: NewznabCapabilities): List<UsenetRelease>? {
