@@ -11,6 +11,7 @@ import com.nuvio.tv.core.server.DeviceIpAddress
 import com.nuvio.tv.core.server.StreamBadgeConfigServer
 import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.core.streams.StreamBadgeRules
+import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
 import com.nuvio.tv.core.streams.StreamBadgeSettings
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
@@ -170,7 +171,8 @@ class LayoutSettingsViewModel @Inject constructor(
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
-    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository
+    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LayoutSettingsUiState())
@@ -859,6 +861,7 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.hideUnreleasedContent == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setHideUnreleasedContent(enabled)
+            homeCatalogSettingsSyncService.triggerPush()
         }
     }
 
