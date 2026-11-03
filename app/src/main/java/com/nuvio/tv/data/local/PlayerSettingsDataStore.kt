@@ -409,7 +409,7 @@ data class PlayerSettings(
 
     /** Tunneled playback bypasses the video effects pipeline, so overlay is the only option. */
     val effectiveLibassRenderMode: LibassRenderMode
-        get() = if (effectiveTunnelingEnabled) LibassRenderMode.OVERLAY else libassRenderMode
+        get() = if (effectiveTunnelingEnabled && libassRenderMode == LibassRenderMode.VIDEO_EFFECT) LibassRenderMode.OVERLAY else libassRenderMode
 
     companion object {
         const val DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD = 3
@@ -556,7 +556,8 @@ enum class LibassRenderMode {
     /** Preserves HDR output; subtitles may have a timing offset on TV hardware. */
     OVERLAY,
     /** Frame-accurate subtitles; HDR tone-mapped to SDR. */
-    VIDEO_EFFECT;
+    VIDEO_EFFECT,
+    CPU_BLEND;
 
     companion object {
         val DEFAULT = OVERLAY
@@ -564,6 +565,7 @@ enum class LibassRenderMode {
         fun fromStoredString(value: String?): LibassRenderMode = when (value) {
             VIDEO_EFFECT.name -> VIDEO_EFFECT
             OVERLAY.name -> OVERLAY
+            CPU_BLEND.name -> CPU_BLEND
             else -> DEFAULT
         }
     }

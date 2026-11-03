@@ -942,6 +942,8 @@
     <string name="sub_libass_render_mode_video_effect_sub">Draws subtitles directly onto each video frame. Frame-accurate timing on all hardware. HDR content is tone-mapped to SDR.</string>
     <string name="sub_libass_render_mode_overlay">Overlay</string>
     <string name="sub_libass_render_mode_overlay_sub">Renders subtitles on a separate surface layer. Preserves HDR output. Subtitle timing may not be perfectly accurate on some devices.</string>
+    <string name="sub_libass_render_mode_cpu_blend">CPU Blend</string>
+    <string name="sub_libass_render_mode_cpu_blend_sub">Blends subtitles on the CPU and draws them on a separate surface layer without OpenGL. Preserves HDR output. Useful on devices with GPU rendering issues; heavy typesetting may be slower.</string>
     <string name="sub_org_none">None (default order)</string>
     <string name="sub_org_by_lang">By language</string>
     <string name="sub_org_by_addon">By addon</string>

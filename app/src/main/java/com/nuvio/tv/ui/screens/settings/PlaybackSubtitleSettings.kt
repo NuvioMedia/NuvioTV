@@ -198,12 +198,8 @@ internal fun PlaybackSubtitlesSection(
                 stringResource(R.string.sub_libass_render_mode_tunneled_sub)
             else
                 stringResource(R.string.sub_libass_render_mode_sub),
-            value = if (settings.effectiveTunnelingEnabled)
-                libassRenderModeLabel(LibassRenderMode.OVERLAY)
-            else
-                libassRenderModeLabel(settings.libassRenderMode),
-            onClick = { onOpenDialog(PlaybackDialog.LIBASS_RENDER_MODE) },
-            enabled = !settings.effectiveTunnelingEnabled
+            value = libassRenderModeLabel(settings.effectiveLibassRenderMode),
+            onClick = { onOpenDialog(PlaybackDialog.LIBASS_RENDER_MODE) }
         )
         SettingsActionRow(
             title = stringResource(R.string.sub_libass_render_scale),
@@ -226,6 +222,7 @@ internal fun subtitleLanguageLabel(style: SubtitleStyleSettings): String = when 
 private fun libassRenderModeLabel(mode: LibassRenderMode): String = when (mode) {
     LibassRenderMode.VIDEO_EFFECT -> stringResource(R.string.sub_libass_render_mode_video_effect)
     LibassRenderMode.OVERLAY -> stringResource(R.string.sub_libass_render_mode_overlay)
+    LibassRenderMode.CPU_BLEND -> stringResource(R.string.sub_libass_render_mode_cpu_blend)
 }
 
 @Composable
@@ -321,19 +318,28 @@ internal fun SubtitleSettingsDialogs(
         )
         PlaybackDialog.LIBASS_RENDER_MODE -> SettingsSingleChoiceDialog(
             title = stringResource(R.string.sub_libass_render_mode),
-            options = listOf(
+            options = listOfNotNull(
                 SettingsPickerOption(
                     LibassRenderMode.OVERLAY,
                     stringResource(R.string.sub_libass_render_mode_overlay),
                     stringResource(R.string.sub_libass_render_mode_overlay_sub)
                 ),
+                if (!settings.effectiveTunnelingEnabled) {
+                    SettingsPickerOption(
+                        LibassRenderMode.VIDEO_EFFECT,
+                        stringResource(R.string.sub_libass_render_mode_video_effect),
+                        stringResource(R.string.sub_libass_render_mode_video_effect_sub)
+                    )
+                } else {
+                    null
+                },
                 SettingsPickerOption(
-                    LibassRenderMode.VIDEO_EFFECT,
-                    stringResource(R.string.sub_libass_render_mode_video_effect),
-                    stringResource(R.string.sub_libass_render_mode_video_effect_sub)
+                    LibassRenderMode.CPU_BLEND,
+                    stringResource(R.string.sub_libass_render_mode_cpu_blend),
+                    stringResource(R.string.sub_libass_render_mode_cpu_blend_sub)
                 )
             ),
-            selectedValue = settings.libassRenderMode,
+            selectedValue = settings.effectiveLibassRenderMode,
             onOptionSelected = { mode ->
                 onUpdate { setLibassRenderMode(mode) }
                 onDismiss()

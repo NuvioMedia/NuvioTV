@@ -1039,6 +1039,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 com.nuvio.tv.libass.media.AssHandler.setRenderScale(
                     playerSettings.libassRenderScale.scale
                 )
+                LibassCpuBlendSurfaceView.renderScale = playerSettings.libassRenderScale.scale
                 val playerDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, headers)
                 ExoPlayer.Builder(context)
                     .setBandwidthMeter(bandwidthMeter)
@@ -1069,7 +1070,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     // code runs again with hasDetectedAssSsaTrackForCurrentStream == true.
                     // This avoids DVFP overhead on non-ASS content.
                     val shouldApplyEffects = hasDetectedAssSsaTrackForCurrentStream &&
-                        playerSettings.effectiveLibassRenderMode != LibassRenderMode.OVERLAY
+                        playerSettings.effectiveLibassRenderMode == LibassRenderMode.VIDEO_EFFECT
                     if (shouldApplyEffects) {
                         val effect = com.nuvio.tv.libass.media.effect.AssVideoEffectAsync(handler)
                         activeAssVideoEffect = effect
