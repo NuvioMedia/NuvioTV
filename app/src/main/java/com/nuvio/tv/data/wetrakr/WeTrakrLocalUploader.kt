@@ -167,15 +167,17 @@ internal fun weTrakrUploadBatches(preview: WeTrakrUploadPreview, kinds: Set<WeTr
 
 private fun WeTrakrUploadKind.status(): String = when (this) {
     WeTrakrUploadKind.WATCHED -> "watched"
+    WeTrakrUploadKind.PROGRESS -> WETRAKR_PAUSED_STATUS
     WeTrakrUploadKind.LIBRARY -> "planning"
 }
 
 private fun WeTrakrUploadKind.resultTypes(): Set<String> = when (this) {
-    WeTrakrUploadKind.WATCHED -> setOf("movies", "episodes")
+    WeTrakrUploadKind.WATCHED, WeTrakrUploadKind.PROGRESS -> setOf("movies", "episodes")
     WeTrakrUploadKind.LIBRARY -> setOf("movies", "shows")
 }
 
 private fun WeTrakrUploadKind.buckets(): Set<WeTrakrSyncBucket> = when (this) {
     WeTrakrUploadKind.WATCHED -> setOf(WeTrakrSyncBucket.WATCHED_MOVIES, WeTrakrSyncBucket.WATCHED_EPISODES)
+    WeTrakrUploadKind.PROGRESS -> setOf(WeTrakrSyncBucket.PLAYBACK)
     WeTrakrUploadKind.LIBRARY -> setOf(WeTrakrSyncBucket.WATCHLIST)
 }

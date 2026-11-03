@@ -8,6 +8,7 @@ import java.math.RoundingMode
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.buildJsonObject
@@ -93,7 +94,7 @@ internal fun WeTrakrIds.requestIds(): JsonObject = buildJsonObject {
     anidb?.let { put("anidb", it) }
 }
 
-internal data class WeTrakrTrackingChange(val target: WeTrakrTarget, val trackedAt: String?)
+internal data class WeTrakrTrackingChange(val target: WeTrakrTarget, val trackedAt: String?, val progress: Double? = null)
 
 internal fun weTrakrTrackingBody(
     changes: List<WeTrakrTrackingChange>,
@@ -101,6 +102,16 @@ internal fun weTrakrTrackingBody(
     allowRewatch: Boolean? = null
 ): String = buildJsonObject {
     allowRewatch?.let { put("allow_rewatch", it) }
+    val paused = status == WETRAKR_PAUSED_STATUS
+    fun JsonObjectBuilder.putState(change: WeTrakrTrackingChange) {
+        if (paused) {
+            put("status", status)
+            change.progress?.let { put("progress", it) }
+            change.trackedAt?.let { put("paused_at", it) }
+        } else {
+            change.trackedAt?.let { put("tracked_at", it) }
+        }
+    }
     val movies = changes.filter { it.target.type == WeTrakrItemType.MOVIE }
     val shows = changes.filter { it.target.type != WeTrakrItemType.MOVIE }
         .groupBy { it.target.media.ids.contentId }
@@ -108,8 +119,8 @@ internal fun weTrakrTrackingBody(
     if (movies.isNotEmpty()) put("movies", JsonArray(movies.map { change ->
         buildJsonObject {
             put("ids", change.target.media.ids.requestIds())
-            put("status", status)
-            change.trackedAt?.let { put("tracked_at", it) }
+            if (!paused) put("status", status)
+            putState(change)
         }
     }))
     if (shows.isNotEmpty()) put("shows", JsonArray(shows.flatMap { group ->
@@ -124,14 +135,14 @@ internal fun weTrakrTrackingBody(
         val episodes = group.filter { it.target.type == WeTrakrItemType.EPISODE }
         val nested = if (episodes.isEmpty()) emptyList() else listOf(buildJsonObject {
             put("ids", ids)
-            put("status", status)
+            if (!paused) put("status", status)
             put("seasons", JsonArray(episodes.groupBy { it.target.season }.toSortedMap(compareBy { it ?: -1 }).map { (season, items) ->
                 buildJsonObject {
                     put("number", requireNotNull(season))
                     put("episodes", JsonArray(items.map { change ->
                         buildJsonObject {
                             put("number", requireNotNull(change.target.episode))
-                            change.trackedAt?.let { put("tracked_at", it) }
+                            putState(change)
                         }
                     }))
                 }
@@ -140,6 +151,8 @@ internal fun weTrakrTrackingBody(
         whole + nested
     }))
 }.toString()
+
+internal const val WETRAKR_PAUSED_STATUS = "paused"
 
 internal fun weTrakrNotFoundCount(body: String): Int = weTrakrResultCount(body, "notFound", "not_found")
 

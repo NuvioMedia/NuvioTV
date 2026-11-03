@@ -6,8 +6,9 @@ import com.nuvio.tv.domain.model.SavedLibraryItem
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.WatchedItem
 import java.time.Instant
+import kotlin.math.roundToInt
 
-enum class WeTrakrUploadKind { WATCHED, LIBRARY }
+enum class WeTrakrUploadKind { WATCHED, PROGRESS, LIBRARY }
 
 data class WeTrakrUnmatchedTitle(
     val kind: WeTrakrUploadKind,
@@ -31,10 +32,11 @@ class WeTrakrUploadGroup internal constructor(
 
 data class WeTrakrUploadPreview(
     val watched: WeTrakrUploadGroup,
-    val library: WeTrakrUploadGroup
+    val library: WeTrakrUploadGroup,
+    val progress: WeTrakrUploadGroup = WeTrakrUploadGroup(WeTrakrUploadKind.PROGRESS)
 ) {
     val groups: List<WeTrakrUploadGroup>
-        get() = listOf(watched, library)
+        get() = listOf(watched, progress, library)
 
     val unmatched: List<WeTrakrUnmatchedTitle>
         get() = groups.flatMap { it.unmatched }
@@ -48,6 +50,7 @@ data class WeTrakrUploadPreview(
 }
 
 internal const val WETRAKR_UPLOAD_BATCH_SIZE = 500
+internal const val WETRAKR_MIN_PAUSED_PROGRESS = 0.05f
 
 internal fun weTrakrUploadPreview(
     watched: List<WatchedItem>,
@@ -66,18 +69,39 @@ internal fun weTrakrUploadPreview(
     }
     val localWatched = watched + progress.map { it.toWatchedItem() }
     val localTitles = localWatched.flatMapTo(HashSet()) { it.titleKeys() }
+    val completed = watched + progress.filter { it.isCompleted() }.map { it.toWatchedItem() }
+    val completedKeys = completed.mapNotNullTo(HashSet()) { item -> item.weTrakrTarget()?.uploadKey() }
+    val isWatchedRemotely = { target: WeTrakrTarget ->
+        target.media.ids.aliases().any { weTrakrUploadKey(target.type, it, target.season, target.episode) in remoteWatched }
+    }
     return WeTrakrUploadPreview(
-        watched = (watched + progress.filter { it.isCompleted() }.map { it.toWatchedItem() }).uploadGroup(
+        watched = completed.uploadGroup(
             kind = WeTrakrUploadKind.WATCHED,
             target = { it.weTrakrTarget() },
             trackedAt = { it.watchedAt },
             title = { it.title.ifBlank { it.contentId } },
             groupKey = { it.contentId },
             notFound = notFound,
-            isRemote = { target ->
-                target.media.ids.aliases().any { weTrakrUploadKey(target.type, it, target.season, target.episode) in remoteWatched }
-            }
+            isRemote = { _, target -> isWatchedRemotely(target) }
         ),
+        progress = progress
+            .filter { !it.isCompleted() && it.progressPercentage >= WETRAKR_MIN_PAUSED_PROGRESS }
+            .sortedByDescending { it.lastWatched }
+            .filterNot { item -> item.toWatchedItem().weTrakrTarget()?.uploadKey() in completedKeys }
+            .uploadGroup(
+                kind = WeTrakrUploadKind.PROGRESS,
+                target = { it.toWatchedItem().weTrakrTarget() },
+                trackedAt = { it.lastWatched },
+                title = { it.name.ifBlank { it.contentId } },
+                groupKey = { it.contentId },
+                notFound = notFound,
+                progress = { (it.progressPercentage * 1000f).roundToInt() / 10.0 },
+                isRemote = { item, target ->
+                    isWatchedRemotely(target) || snapshot.playback.any { remote ->
+                        target.matches(remote) && !item.isNewerThan(remote)
+                    }
+                }
+            ),
         library = library.uploadGroup(
             kind = WeTrakrUploadKind.LIBRARY,
             target = { it.weTrakrTarget() },
@@ -85,7 +109,7 @@ internal fun weTrakrUploadPreview(
             title = { it.name.ifBlank { it.id } },
             groupKey = { it.id },
             notFound = notFound,
-            isRemote = { target ->
+            isRemote = { _, target ->
                 target.media.ids.aliases().any { titleKey(target.type, it).let { key -> key in remoteTitles || key in localTitles } }
             }
         )
@@ -99,7 +123,8 @@ private inline fun <T> List<T>.uploadGroup(
     title: (T) -> String,
     groupKey: (T) -> String,
     notFound: Set<String>,
-    isRemote: (WeTrakrTarget) -> Boolean
+    progress: (T) -> Double? = { null },
+    isRemote: (T, WeTrakrTarget) -> Boolean
 ): WeTrakrUploadGroup {
     val seen = HashSet<String>()
     val changes = ArrayList<WeTrakrTrackingChange>()
@@ -113,7 +138,7 @@ private inline fun <T> List<T>.uploadGroup(
             continue
         }
         if (!seen.add(resolved.uploadKey())) continue
-        if (isRemote(resolved)) {
+        if (isRemote(item, resolved)) {
             already++
             continue
         }
@@ -122,7 +147,7 @@ private inline fun <T> List<T>.uploadGroup(
             continue
         }
         val at = trackedAt(item).takeIf { it > 0L }?.let { Instant.ofEpochMilli(it).toString() }
-        changes += WeTrakrTrackingChange(resolved, at)
+        changes += WeTrakrTrackingChange(resolved, at, progress(item))
     }
     return WeTrakrUploadGroup(
         kind = kind,
@@ -136,6 +161,11 @@ private inline fun <T> List<T>.uploadGroup(
 private fun MutableMap<String, Pair<String, Int>>.count(key: String, title: String) {
     val previous = get(key)
     put(key, (previous?.first ?: title) to ((previous?.second ?: 0) + 1))
+}
+
+private fun WatchProgress.isNewerThan(remote: WeTrakrPlayback): Boolean {
+    val remoteAt = runCatching { Instant.parse(remote.updatedAt).toEpochMilli() }.getOrNull() ?: return false
+    return lastWatched > remoteAt
 }
 
 private fun WatchProgress.toWatchedItem() = WatchedItem(

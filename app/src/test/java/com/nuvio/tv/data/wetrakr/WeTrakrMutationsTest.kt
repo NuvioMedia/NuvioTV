@@ -5,6 +5,7 @@ import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -42,6 +43,35 @@ class WeTrakrMutationsTest {
         assertEquals(2, item["number"]!!.jsonPrimitive.int)
         assertEquals("2026-09-26T08:00:00Z", item["tracked_at"]!!.jsonPrimitive.content)
         assertNull(body["movies"])
+    }
+
+    @Test
+    fun `paused titles carry progress and paused_at, with the status on the episode`() {
+        val movie = WeTrakrTarget(WeTrakrItemType.MOVIE, weTrakrMovie("tt0137523"))
+        val show = WeTrakrTarget(WeTrakrItemType.EPISODE, WeTrakrMedia(WeTrakrIds(tmdb = 1399)), 1, 3)
+        val body = Json.parseToJsonElement(
+            weTrakrTrackingBody(
+                listOf(
+                    WeTrakrTrackingChange(movie, "2026-10-01T20:00:00Z", 42.5),
+                    WeTrakrTrackingChange(show, "2026-10-02T21:00:00Z", 12.0)
+                ),
+                WETRAKR_PAUSED_STATUS
+            )
+        ).jsonObject
+
+        val movieItem = body["movies"]!!.jsonArray.single().jsonObject
+        assertEquals("paused", movieItem["status"]!!.jsonPrimitive.content)
+        assertEquals(42.5, movieItem["progress"]!!.jsonPrimitive.double, 0.0)
+        assertEquals("2026-10-01T20:00:00Z", movieItem["paused_at"]!!.jsonPrimitive.content)
+        assertNull(movieItem["tracked_at"])
+        val showItem = body["shows"]!!.jsonArray.single().jsonObject
+        assertNull(showItem["status"])
+        val item = showItem["seasons"]!!.jsonArray.single().jsonObject["episodes"]!!.jsonArray.single().jsonObject
+        assertEquals(3, item["number"]!!.jsonPrimitive.int)
+        assertEquals("paused", item["status"]!!.jsonPrimitive.content)
+        assertEquals(12.0, item["progress"]!!.jsonPrimitive.double, 0.0)
+        assertEquals("2026-10-02T21:00:00Z", item["paused_at"]!!.jsonPrimitive.content)
+        assertFalse("allow_rewatch" in body)
     }
 
     @Test

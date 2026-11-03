@@ -174,6 +174,37 @@ class WeTrakrLocalUploaderTest {
     }
 
     @Test
+    fun `watch progress is sent as paused without rewatches and counts paused additions`() = runTest {
+        val harness = WeTrakrTestHarness()
+        val uploader = setup(harness)
+        val progressPreview = WeTrakrUploadPreview(
+            watched = WeTrakrUploadGroup(WeTrakrUploadKind.WATCHED),
+            library = WeTrakrUploadGroup(WeTrakrUploadKind.LIBRARY),
+            progress = WeTrakrUploadGroup(
+                WeTrakrUploadKind.PROGRESS,
+                listOf(
+                    WeTrakrTrackingChange(WeTrakrTarget(WeTrakrItemType.MOVIE, weTrakrMovie("tt8")), "2026-10-01T20:00:00Z", 40.0),
+                    WeTrakrTrackingChange(WeTrakrTarget(WeTrakrItemType.MOVIE, weTrakrMovie("tt9")), "2026-10-01T20:00:00Z", 70.0)
+                )
+            )
+        )
+        harness.reply(body = """{"added":{"paused":{"movies":1,"episodes":0},"hold":{"episodes":0}},"existing":{"paused":{"movies":1}}}""")
+
+        assertTrue(uploader.start(harness.store.scope(), progressPreview, WeTrakrUploadKind.entries.toSet()))
+        advanceUntilIdle()
+
+        val body = Json.parseToJsonElement(harness.engine.requests.single().body!!).jsonObject
+        assertNull(body["allow_rewatch"])
+        val movie = body["movies"]!!.jsonArray.first().jsonObject
+        assertEquals("paused", movie["status"]!!.jsonPrimitive.content)
+        assertEquals("40.0", movie["progress"]!!.jsonPrimitive.content)
+        val run = uploader.run.value!!
+        assertEquals(WeTrakrUploadStatus.DONE, run.status)
+        assertEquals(1, run.added)
+        assertEquals(1, run.alreadyOnWeTrakr)
+    }
+
+    @Test
     fun `cancel stops the upload and nothing starts without changes`() = runTest {
         val harness = WeTrakrTestHarness()
         val uploader = setup(harness)

@@ -42,6 +42,7 @@ import com.nuvio.tv.ui.util.rememberRawSvgPainter
 internal object WeTrakrLocalUploadTestTags {
     const val WATCHED = "wetrakr_local_upload_watched"
     const val LIBRARY = "wetrakr_local_upload_library"
+    const val IN_PROGRESS = "wetrakr_local_upload_in_progress"
     const val UNMATCHED = "wetrakr_local_upload_unmatched"
     const val NOT_FOUND = "wetrakr_local_upload_not_found"
     const val PROGRESS = "wetrakr_local_upload_progress"
@@ -256,10 +257,12 @@ private fun WeTrakrUploadGroup.summary(): String =
 
 private fun WeTrakrUploadKind.titleRes(): Int = when (this) {
     WeTrakrUploadKind.WATCHED -> R.string.wetrakr_local_upload_watched
+    WeTrakrUploadKind.PROGRESS -> R.string.wetrakr_local_upload_in_progress
     WeTrakrUploadKind.LIBRARY -> R.string.wetrakr_local_upload_library
 }
 
 private fun WeTrakrUploadKind.testTag(): String = when (this) {
     WeTrakrUploadKind.WATCHED -> WeTrakrLocalUploadTestTags.WATCHED
+    WeTrakrUploadKind.PROGRESS -> WeTrakrLocalUploadTestTags.IN_PROGRESS
     WeTrakrUploadKind.LIBRARY -> WeTrakrLocalUploadTestTags.LIBRARY
 }

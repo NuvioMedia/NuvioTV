@@ -1287,10 +1287,11 @@
     <string name="wetrakr_pause_reason_rate">WeTrakr request limit reached</string>
     <string name="wetrakr_comments_subtitle">Show WeTrakr reviews on metadata pages. Turns off Trakt comments.</string>
     <string name="wetrakr_local_upload_title">Sync local data to WeTrakr</string>
-    <string name="wetrakr_local_upload_row_subtitle">Add your Nuvio watched history and library to this WeTrakr account.</string>
+    <string name="wetrakr_local_upload_row_subtitle">Add your Nuvio watched history, watch progress and library to this WeTrakr account.</string>
     <string name="wetrakr_local_upload_subtitle">Choose what to add. Titles already on WeTrakr are skipped.</string>
     <string name="wetrakr_local_upload_scanning">Checking your local data…</string>
     <string name="wetrakr_local_upload_watched">Watched history</string>
+    <string name="wetrakr_local_upload_in_progress">Watch progress</string>
     <string name="wetrakr_local_upload_library">Library as planning</string>
     <string name="wetrakr_local_upload_counts">%1$d to add · %2$d already on WeTrakr</string>
     <string name="wetrakr_local_upload_unmatched">Can\'t be matched (%1$d)</string>

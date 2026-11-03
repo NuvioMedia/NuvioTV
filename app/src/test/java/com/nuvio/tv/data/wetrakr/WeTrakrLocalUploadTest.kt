@@ -165,6 +165,53 @@ class WeTrakrLocalUploadTest {
         )
     }
 
+    @Test
+    fun `watch progress sends in progress titles from 5 percent and skips watched or older remote positions`() {
+        val withPlayback = snapshot.copy(
+            playback = listOf(
+                WeTrakrPlayback(WeTrakrItemType.MOVIE, weTrakrMovie("tt0000030"), 20f, "2023-11-14T22:13:20Z"),
+                WeTrakrPlayback(WeTrakrItemType.MOVIE, weTrakrMovie("tt0000031"), 20f, "2023-11-14T22:13:20Z")
+            )
+        )
+        val preview = weTrakrUploadPreview(
+            watched = listOf(watched("tt0000032", "movie")),
+            library = emptyList(),
+            snapshot = withPlayback,
+            progress = listOf(
+                progress("tt0000020", "movie", position = 40, lastWatched = 1_700_000_000_000L),
+                progress("tt0000020", "movie", position = 10, lastWatched = 1_600_000_000_000L),
+                progress("tt0000021", "movie", position = 4),
+                progress("tt0000022", "movie", position = 95),
+                progress("tt0000023", "series", season = 2, episode = 5, position = 33, lastWatched = 1_700_000_000_000L),
+                progress("tmdb:90", "series", season = 1, episode = 2, position = 50),
+                progress("tt0000030", "movie", position = 60, lastWatched = 1_600_000_000_000L),
+                progress("tt0000031", "movie", position = 60, lastWatched = 1_800_000_000_000L),
+                progress("tt0000032", "movie", position = 50),
+                progress("pengu:7", "series", season = 1, episode = 1, position = 50)
+            )
+        )
+
+        val group = preview.progress
+        assertEquals(WeTrakrUploadKind.PROGRESS, group.kind)
+        assertEquals(
+            listOf(
+                "MOVIE tt0000031 null null 60.0 2027-01-15T08:00:00Z",
+                "MOVIE tt0000020 null null 40.0 2023-11-14T22:13:20Z",
+                "EPISODE tt0000023 2 5 33.0 2023-11-14T22:13:20Z"
+            ),
+            group.changes.map {
+                "${it.target.type} ${it.target.media.ids.contentId} ${it.target.season} ${it.target.episode} ${it.progress} ${it.trackedAt}"
+            }
+        )
+        assertEquals(2, group.alreadyOnWeTrakr)
+        assertEquals(listOf(WeTrakrUnmatchedTitle(WeTrakrUploadKind.PROGRESS, "pengu:7", 1)), group.unmatched)
+        assertEquals(
+            listOf("tt0000032", "tt0000022"),
+            preview.watched.changes.map { it.target.media.ids.contentId }
+        )
+        assertEquals(listOf(preview.watched, preview.progress, preview.library), preview.groups)
+    }
+
     private fun progress(
         id: String,
         type: String,
