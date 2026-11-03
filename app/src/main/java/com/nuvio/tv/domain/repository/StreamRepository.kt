@@ -31,15 +31,13 @@ interface StreamRepository {
 
     /**
      * Returns streams a recent search already holds for this video, including a plugin
-     * continuation stored under a different search mode. A named [priorityBingeGroup]
-     * selects that plugin's cache. Never starts a search.
+     * continuation stored under a different search mode. Never starts a search.
      */
     suspend fun getCachedStreamsFromAllAddons(
         type: String,
         videoId: String,
         season: Int? = null,
-        episode: Int? = null,
-        priorityBingeGroup: String? = null
+        episode: Int? = null
     ): List<AddonStreams>?
 
     /**

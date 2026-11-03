@@ -719,8 +719,7 @@ internal fun PlayerRuntimeController.handleStreamRedirect(requestedUrl: String, 
                     type = request.type,
                     videoId = request.videoId,
                     season = request.season,
-                    episode = request.episode,
-                    priorityBingeGroup = currentStreamBingeGroup
+                    episode = request.episode
                 )?.let { cached ->
                     findRedirectTargetStream(cached.flatMap { it.streams }, addonName, requestedUrl, resolvedUrl)
                 }
@@ -1958,14 +1957,17 @@ internal fun PlayerRuntimeController.preloadNextEpisodeSources() {
     nextEpisodePreloadJob?.cancel()
     nextEpisodePreloadJob = scope.launch {
         Log.d(PlayerRuntimeController.TAG, "Preloading sources for next episode: S${nextVideo.season}E${nextVideo.episode}")
+        // The plugin-only modes continue a plugin series. After an addon stream they would
+        // narrow the search and keep it from being reused by the episode picker.
+        val continuingPlugin = scraperIdFromPluginBingeGroup(currentStreamBingeGroup) != null
         streamRepository.getStreamsFromAllAddons(
             type = type,
             videoId = nextVideo.id,
             season = nextVideo.season,
             episode = nextVideo.episode,
             priorityBingeGroup = currentStreamBingeGroup,
-            preferredPluginOnly = true,
-            continuePluginOnly = scraperIdFromPluginBingeGroup(currentStreamBingeGroup) != null
+            preferredPluginOnly = continuingPlugin,
+            continuePluginOnly = continuingPlugin
         ).collect { /* results cached by StreamSearchSessionCache */ }
     }
 }
@@ -2175,6 +2177,7 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
 
             val timeoutSeconds = playerSettings.streamAutoPlayTimeoutSeconds
 
+            val continuingPlugin = scraperIdFromPluginBingeGroup(currentStreamBingeGroup) != null
             val innerJob = launch {
                 streamRepository.getStreamsFromAllAddons(
                     type = type,
@@ -2182,8 +2185,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     season = nextVideo.season,
                     episode = nextVideo.episode,
                     priorityBingeGroup = currentStreamBingeGroup,
-                    preferredPluginOnly = true,
-                    continuePluginOnly = scraperIdFromPluginBingeGroup(currentStreamBingeGroup) != null
+                    preferredPluginOnly = continuingPlugin,
+                    continuePluginOnly = continuingPlugin
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {
