@@ -15,6 +15,7 @@ add_library(
 )
 
 find_library(log-lib log)
+find_library(android-lib android)
 
 target_compile_features(dovi_bridge PRIVATE cxx_std_17)
 target_compile_options(dovi_bridge PRIVATE -Wall -Wextra -Wno-unused-parameter)
@@ -69,11 +70,11 @@ if (DOVI_ENABLE_LIBDOVI
     endif()
     target_compile_definitions(dovi_bridge PRIVATE DOVI_REAL_LINKED=1)
     message(STATUS "libdovi enabled for ABI=${ANDROID_ABI} lib=${_dovi_resolved_static_lib}")
-    target_link_libraries(dovi_bridge dovi_static ${log-lib})
+    target_link_libraries(dovi_bridge dovi_static ${log-lib} ${android-lib})
 else()
     target_compile_definitions(dovi_bridge PRIVATE DOVI_REAL_LINKED=0)
     if (DOVI_ENABLE_LIBDOVI)
         message(WARNING "libdovi requested but no static library resolved for ABI=${ANDROID_ABI}. Using stub mode.")
     endif()
-    target_link_libraries(dovi_bridge ${log-lib})
+    target_link_libraries(dovi_bridge ${log-lib} ${android-lib})
 endif()

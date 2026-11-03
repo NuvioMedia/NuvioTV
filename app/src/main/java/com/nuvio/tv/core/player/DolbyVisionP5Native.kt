@@ -41,6 +41,17 @@ internal object DolbyVisionP5Native {
             .getOrDefault(false)
     }
 
+    /**
+     * Marks the buffers of [surface] as HDR10 (BT.2020 PQ), for output where EGL has no BT.2020 PQ
+     * colour space. False when the system can't (before Android 9) or the library isn't loaded.
+     */
+    fun setHdr10Dataspace(surface: android.view.Surface): Boolean {
+        if (!DoviBridge.isAvailable()) return false
+        return runCatching { nativeSetHdr10Dataspace(surface) }
+            .onFailure { Log.w(TAG, "Setting the HDR10 dataspace failed: ${it.message}") }
+            .getOrDefault(false)
+    }
+
     fun reset() {
         if (!isSupported) return
         runCatching { nativeReset() }
@@ -54,6 +65,9 @@ internal object DolbyVisionP5Native {
 
     @JvmStatic
     private external fun nativeBuildLut(hash: Long, size: Int, out: ShortArray): Boolean
+
+    @JvmStatic
+    private external fun nativeSetHdr10Dataspace(surface: android.view.Surface): Boolean
 
     @JvmStatic
     private external fun nativeReset()

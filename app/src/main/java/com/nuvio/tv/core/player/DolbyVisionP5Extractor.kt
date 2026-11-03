@@ -24,10 +24,10 @@ import java.io.IOException
  * sample (a Matroska file whose colour metadata claims SDR loses its Dolby Vision config, so its
  * track reads as plain HEVC). With an active session the format of such a track is held back
  * until that first sample is read, so the decoder starts with the right one and the player never
- * has to restart. A Profile 5 track then plays as HDR10 through the [DolbyVisionP5HdrEffect]:
+ * has to restart. A Profile 5 track then plays as HDR10 through the [DolbyVisionP5SurfaceRenderer]:
  *  - the format becomes plain HEVC Main10, so a regular HEVC decoder decodes the base layer;
- *  - its colour info becomes BT.2020 / PQ / full range, which routes the frames through Media3's
- *    10-bit HDR effect path and tells it how to read the decoded values (Profile 5 is full range);
+ *  - its colour info becomes BT.2020 / PQ / full range (Profile 5 is full range), so the decoder
+ *    is set up for 10-bit HDR output;
  *  - each sample's RPU NAL is parsed and its mapping recorded at the sample's time.
  * Sample bytes are passed on unchanged: HEVC decoders ignore the RPU NAL type.
  *

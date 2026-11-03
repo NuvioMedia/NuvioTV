@@ -30,6 +30,16 @@ class DolbyVisionP5SessionTest {
     }
 
     @Test
+    fun mediaTimeOfRelease_findsTheFrameOrTakesTheLatest() {
+        val session = DolbyVisionP5Session(active = false)
+        session.onFrameReleased(mediaTimeUs = 40_000L, releaseTimeNs = 1_000L)
+        session.onFrameReleased(mediaTimeUs = 80_000L, releaseTimeNs = 2_000L)
+        assertEquals(40_000L, session.mediaTimeOfRelease(1_000L))
+        assertEquals(80_000L, session.mediaTimeOfRelease(9_999L))
+        assertEquals(2L, session.framesReleasedCount())
+    }
+
+    @Test
     fun profile5Rpu_detectsOnceAndNotifies() {
         val session = DolbyVisionP5Session(active = false)
         var notified = 0
@@ -46,25 +56,25 @@ class DolbyVisionP5SessionTest {
     fun status_reportsTheFirstMissingStep() {
         val session = DolbyVisionP5Session(active = false)
         assertEquals(DolbyVisionP5Session.Status.NoFrames, session.status())
-        session.onEffectCreated(hdr = false)
+        session.onOutputCreated(hdr10 = false)
         session.onFrameDrawn(mapped = false)
-        assertEquals(DolbyVisionP5Session.Status.PipelineNotHdr, session.status())
+        assertEquals(DolbyVisionP5Session.Status.OutputNotHdr10, session.status())
 
         val other = DolbyVisionP5Session(active = false)
-        other.onEffectCreated(hdr = true)
+        other.onOutputCreated(hdr10 = true)
         other.onFrameDrawn(mapped = false)
         assertEquals(DolbyVisionP5Session.Status.NoRpu, other.status())
         other.onRpuResult(DolbyVisionP5Native.OTHER_PROFILE_BASE - 8)
         assertEquals(DolbyVisionP5Session.Status.OtherProfile(8), other.status())
 
         val unreadable = DolbyVisionP5Session(active = false)
-        unreadable.onEffectCreated(hdr = true)
+        unreadable.onOutputCreated(hdr10 = true)
         unreadable.onFrameDrawn(mapped = false)
         unreadable.onRpuResult(DolbyVisionP5Native.RPU_UNREADABLE)
         assertEquals(DolbyVisionP5Session.Status.RpuUnreadable, unreadable.status())
 
         val noLut = DolbyVisionP5Session(active = false)
-        noLut.onEffectCreated(hdr = true)
+        noLut.onOutputCreated(hdr10 = true)
         noLut.onFrameDrawn(mapped = false)
         noLut.onRpuResult(42L)
         assertEquals(DolbyVisionP5Session.Status.NoLut, noLut.status())

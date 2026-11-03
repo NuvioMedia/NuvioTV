@@ -4,14 +4,17 @@ import android.hardware.display.DisplayManager
 import android.os.Build
 import android.util.Log
 import android.view.Display
-import androidx.media3.common.C
+import android.view.SurfaceView
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.GlUtil
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.DolbyVisionP5Native
 import com.nuvio.tv.core.player.DolbyVisionP5Session
+import com.nuvio.tv.core.player.DolbyVisionP5SurfaceRenderer
+import com.nuvio.tv.data.local.LibassRenderMode
 import com.nuvio.tv.core.player.DolbyVisionP5Session.BlockedReason
 import com.nuvio.tv.core.player.DolbyVisionP5Session.Status
 import com.nuvio.tv.data.local.Dv7HandlingMode
@@ -22,7 +25,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val DV5_NOTE_MS = 20_000L
-/** A mapped player with this much buffered and still no frame has stalled in the effect path. */
+/** The player's view can come a little after Profile 5 is found: wait for it this long. */
+private const val DV5_ATTACH_RETRIES = 25
+private const val DV5_ATTACH_RETRY_MS = 200L
+/** A mapped player with this much buffered and still no frame drawn has stalled. */
 private const val DV5_START_TIMEOUT_MS = 12_000L
 private const val DV5_STALL_BUFFERED_MS = 4_000L
 /** Past this, a player still without a frame is left to the player's own error handling. */
@@ -39,16 +45,16 @@ private var dv5EffectStalledFramesDrawn = 0L
 private const val DV5_STATUS_DELAY_MS = 6_000L
 
 /**
- * What this device's GL lacks for Media3's 10-bit HDR effect path to an HDR10 output, or null when
- * it has everything: sampling decoded 10-bit YUV as is (EXT_YUV_target) and an HDR10 output
- * surface (EGL BT.2020 PQ, Android 13+).
+ * What this device lacks for [DolbyVisionP5SurfaceRenderer], or null when it has everything: a GPU
+ * that samples decoded 10-bit YUV as is (EXT_YUV_target), and Android 9+ to mark the output as
+ * HDR10 (ANativeWindow_setBuffersDataSpace; EGL's own BT.2020 PQ colour space isn't needed).
  */
 @androidx.annotation.OptIn(UnstableApi::class)
-private val hdrEffectPathMissing: BlockedReason? by lazy {
+private val rendererMissing: BlockedReason? by lazy {
     val missing = runCatching {
         when {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.P -> BlockedReason.GPU_NO_HDR_OUTPUT
             !GlUtil.isYuvTargetExtensionSupported() -> BlockedReason.GPU_NO_YUV_TARGET
-            !GlUtil.isColorTransferSupported(C.COLOR_TRANSFER_ST2084) -> BlockedReason.GPU_NO_HDR_OUTPUT
             else -> null
         }
     }.getOrElse {
@@ -66,9 +72,9 @@ private val hdrEffectPathMissing: BlockedReason? by lazy {
 /**
  * Starts the Dolby Vision Profile 5 -> HDR10 state of a (re)build of the player for [url], and
  * returns its session, or null when the setting is off. On a device that can map, the session is
- * [active] from the start: its effect is installed before the player is prepared and a Profile 5
- * track is mapped as soon as it shows up, with no restart. Otherwise it only detects Profile 5, so
- * the player can say why the stream isn't mapped.
+ * [active]: once a Profile 5 track shows up, the decoder's output is routed through a
+ * [DolbyVisionP5SurfaceRenderer], with no restart. Otherwise it only detects Profile 5, so the
+ * player can say why the stream isn't mapped.
  */
 internal fun PlayerRuntimeController.startDolbyVisionP5Session(
     url: String,
@@ -78,6 +84,7 @@ internal fun PlayerRuntimeController.startDolbyVisionP5Session(
         dv5HdrStreamUrl = url
         dv5HdrFailedForCurrentStream = false
         dv5HdrNoteShownForCurrentStream = false
+        dv5HdrProfile5ForCurrentStream = false
     }
     dv5HdrStatusJob?.cancel()
     dv5HdrStatusJob = null
@@ -107,7 +114,7 @@ private fun PlayerRuntimeController.dolbyVisionP5BlockedReason(settings: PlayerS
     ) {
         return BlockedReason.DISPLAY_NOT_HDR10
     }
-    return hdrEffectPathMissing
+    return rendererMissing
 }
 
 /** The display's HDR types, from both the old and (Android 14+) the per-mode API. */
@@ -124,12 +131,13 @@ private fun PlayerRuntimeController.displayHdrTypes(): Set<Int> = runCatching {
 }.getOrDefault(emptySet())
 
 /**
- * Once a Profile 5 track is found (from the tracks, or later from its first RPU): says why this
- * stream can't be mapped, or, a few seconds into a mapped stream, how the mapping went.
+ * Once a Profile 5 track is found (from the tracks, or later from its first RPU): routes it through
+ * the renderer and, a few seconds in, says how the mapping went; or says why it can't be mapped.
  */
 internal fun PlayerRuntimeController.maybeEnableDolbyVisionP5Hdr() {
     val session = dolbyVisionP5Session ?: return
     if (!session.detected) return
+    dv5HdrProfile5ForCurrentStream = true
     session.blockedReason?.let { reason ->
         if (!dv5HdrNoteShownForCurrentStream) {
             dv5HdrNoteShownForCurrentStream = true
@@ -143,7 +151,77 @@ internal fun PlayerRuntimeController.maybeEnableDolbyVisionP5Hdr() {
         }
         return
     }
-    if (session.active) scheduleDolbyVisionP5Status(session)
+    if (session.active) {
+        attachDolbyVisionP5Renderer(session)
+        scheduleDolbyVisionP5Status(session)
+    }
+}
+
+/**
+ * Puts a [DolbyVisionP5SurfaceRenderer] between the decoder and the player's SurfaceView: the
+ * decoder renders into the renderer, which draws into the SurfaceView as HDR10.
+ */
+@androidx.annotation.OptIn(UnstableApi::class)
+private fun PlayerRuntimeController.attachDolbyVisionP5Renderer(session: DolbyVisionP5Session) {
+    if (dolbyVisionP5Renderer != null || dolbyVisionP5Session !== session) return
+    val player = _exoPlayer
+    val playerView = exoPlayerView
+    val surfaceView = playerView?.videoSurfaceView as? SurfaceView
+    if (player == null || playerView == null || playerView.player !== player || surfaceView == null) {
+        // Profile 5 can be found while the player's view is still being attached.
+        if (dv5HdrAttachRetries++ < DV5_ATTACH_RETRIES) {
+            scope.launch(Dispatchers.Main) {
+                delay(DV5_ATTACH_RETRY_MS)
+                attachDolbyVisionP5Renderer(session)
+            }
+        } else {
+            Log.w(PlayerRuntimeController.TAG, "DV5_HDR: no SurfaceView to draw into; not mapping")
+        }
+        return
+    }
+    if (activeAssVideoEffect != null) {
+        // libass already draws through Media3's video effects on this player, which would take the
+        // decoder's output instead.
+        showDolbyVisionP5NoteOnce(context.getString(R.string.dv5_hdr_note_off_libass))
+        return
+    }
+    val renderer = DolbyVisionP5SurfaceRenderer(session)
+    if (!renderer.start()) {
+        renderer.release()
+        Log.w(PlayerRuntimeController.TAG, "DV5_HDR: renderer couldn't start")
+        showDolbyVisionP5NoteOnce(context.getString(R.string.dv5_hdr_note_off_renderer))
+        return
+    }
+    // The renderer needs the decoder's frames, which a tunneled decoder never hands out.
+    trackSelector?.let { selector ->
+        if (selector.parameters.tunnelingEnabled) {
+            selector.setParameters(selector.buildUponParameters().setTunnelingEnabled(false))
+        }
+    }
+    _uiState.update { state ->
+        state.copy(
+            tunnelingEnabled = false,
+            // libass draws over the video instead of into it, which this stream's frames can't take.
+            libassRenderMode = if (state.libassRenderMode == LibassRenderMode.VIDEO_EFFECT) {
+                LibassRenderMode.OVERLAY
+            } else {
+                state.libassRenderMode
+            }
+        )
+    }
+    player.setVideoFrameMetadataListener(renderer.frameMetadataListener)
+    // Detaches the SurfaceView from the decoder (blocking until done), so the renderer can draw into it.
+    player.setVideoSurface(renderer.inputSurface)
+    renderer.followOutput(surfaceView.holder)
+    dolbyVisionP5Renderer = renderer
+    Log.i(PlayerRuntimeController.TAG, "DV5_HDR: renderer attached")
+    watchDolbyVisionP5Start(session, player)
+}
+
+private fun PlayerRuntimeController.showDolbyVisionP5NoteOnce(text: String) {
+    if (dv5HdrNoteShownForCurrentStream) return
+    dv5HdrNoteShownForCurrentStream = true
+    showDolbyVisionP5Note(text)
 }
 
 private fun PlayerRuntimeController.scheduleDolbyVisionP5Status(session: DolbyVisionP5Session) {
@@ -156,7 +234,7 @@ private fun PlayerRuntimeController.scheduleDolbyVisionP5Status(session: DolbyVi
         showDolbyVisionP5Note(
             when (val status = session.status()) {
                 Status.NoFrames -> context.getString(R.string.dv5_hdr_note_no_frames)
-                Status.PipelineNotHdr -> context.getString(R.string.dv5_hdr_note_not_hdr)
+                Status.OutputNotHdr10 -> context.getString(R.string.dv5_hdr_note_not_hdr)
                 Status.NoRpu -> context.getString(R.string.dv5_hdr_note_no_rpu)
                 is Status.OtherProfile -> context.getString(R.string.dv5_hdr_note_other_profile, status.profile)
                 Status.RpuUnreadable -> context.getString(R.string.dv5_hdr_note_rpu_unreadable)
@@ -181,28 +259,20 @@ private fun BlockedReason.noteRes(): Int = when (this) {
 }
 
 /**
- * Watches a freshly built player that has the mapping effect installed. If it has data buffered
- * but never shows a frame, the effect path doesn't work on this device: turn the mapping off and
- * play the stream again without it, instead of leaving the player stuck.
+ * Watches a player whose output was just routed through the renderer. If it has data buffered but
+ * the renderer never draws a frame, this device can't run it: turn the mapping off and play the
+ * stream again without it, instead of leaving the player stuck.
  */
-internal fun PlayerRuntimeController.watchDolbyVisionP5Start() {
-    val session = dolbyVisionP5Session?.takeIf { it.active } ?: return
-    val player = _exoPlayer ?: return
+private fun PlayerRuntimeController.watchDolbyVisionP5Start(session: DolbyVisionP5Session, player: ExoPlayer) {
     dv5HdrStartWatchdogJob?.cancel()
-    var rendered = false
-    val listener = object : Player.Listener {
-        override fun onRenderedFirstFrame() {
-            rendered = true
-        }
-    }
-    player.addListener(listener)
     dv5HdrStartWatchdogJob = scope.launch(Dispatchers.Main) {
-        try {
             var waitedMs = 0L
             while (waitedMs < DV5_WATCH_LIMIT_MS) {
                 delay(1_000L)
                 waitedMs += 1_000L
-                if (rendered || dolbyVisionP5Session !== session || _exoPlayer !== player) return@launch
+                if (session.framesDrawnCount() > 0L || dolbyVisionP5Session !== session || _exoPlayer !== player) {
+                    return@launch
+                }
                 if (waitedMs < DV5_START_TIMEOUT_MS) continue
                 val dataReady = player.playbackState == Player.STATE_READY ||
                     player.totalBufferedDuration >= DV5_STALL_BUFFERED_MS
@@ -213,7 +283,7 @@ internal fun PlayerRuntimeController.watchDolbyVisionP5Start() {
                         session.describeForLog()
                 )
                 dv5EffectStalledOnDevice = true
-                dv5EffectStalledFramesDrawn = session.framesDrawnCount()
+                dv5EffectStalledFramesDrawn = session.framesReleasedCount()
                 dv5HdrNoteShownForCurrentStream = false
                 val resumePosition = player.currentPosition.takeIf { it > 0L }
                 _uiState.update { state ->
@@ -228,9 +298,6 @@ internal fun PlayerRuntimeController.watchDolbyVisionP5Start() {
                 reinitializeCurrentStream()
                 return@launch
             }
-        } finally {
-            runCatching { player.removeListener(listener) }
-        }
     }
 }
 
@@ -260,9 +327,28 @@ internal fun PlayerRuntimeController.onDolbyVisionP5PlayerError(errorCode: Int) 
     }
 }
 
+@androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.releaseDolbyVisionP5Session() {
     dv5HdrStartWatchdogJob?.cancel()
     dv5HdrStartWatchdogJob = null
+    dv5HdrAttachRetries = 0
+    dolbyVisionP5Renderer?.let { renderer ->
+        val player = _exoPlayer
+        if (player != null) {
+            // The player stays: take the decoder off the renderer before it goes, then give the
+            // player its own view back.
+            runCatching {
+                player.clearVideoFrameMetadataListener(renderer.frameMetadataListener)
+                player.clearVideoSurface(renderer.inputSurface)
+            }
+        }
+        renderer.release()
+        if (player != null) {
+            (exoPlayerView?.takeIf { it.player === player }?.videoSurfaceView as? SurfaceView)
+                ?.let { runCatching { player.setVideoSurfaceView(it) } }
+        }
+    }
+    dolbyVisionP5Renderer = null
     dolbyVisionP5Session?.let { session ->
         Log.i(PlayerRuntimeController.TAG, "DV5_HDR: releasing session ${session.describeForLog()}")
         session.release()

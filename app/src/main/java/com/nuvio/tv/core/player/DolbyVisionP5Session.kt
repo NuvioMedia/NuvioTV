@@ -1,7 +1,6 @@
 package com.nuvio.tv.core.player
 
 import android.util.Log
-import com.nuvio.tv.libass.media.effect.AssFrameTimeMapper
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.atomic.AtomicLong
@@ -13,13 +12,12 @@ import java.util.concurrent.atomic.AtomicLong
  * curves and colour matrices) is applied. [DolbyVisionP5Extractor] reads the RPU of every video
  * sample and records which mapping it carries at that sample's time; identical mappings (in
  * practice a scene) share one hash, so a LUT is only built when the mapping changes.
- * [DolbyVisionP5HdrEffect] then looks up the mapping for the time of each frame it draws.
+ * [DolbyVisionP5SurfaceRenderer] then looks up the mapping for the time of each frame it draws.
  *
- * An [active] session is set up before the player is built, whenever the device can map: the
- * effect is installed from the start (Media3 only builds its effect pipeline if effects are set
- * before the first frame) and passes frames through until a Profile 5 track shows up, which the
- * extractor then rewrites to HDR10. A session with a [blockedReason] only detects Profile 5, so
- * the player can say why the stream isn't mapped.
+ * An [active] session is set up before the player is built, whenever the device can map. When a
+ * Profile 5 track shows up, the extractor rewrites it to plain HEVC and the player routes the
+ * decoder's output through the renderer, which draws it as HDR10. A session with a
+ * [blockedReason] only detects Profile 5, so the player can say why the stream isn't mapped.
  */
 internal class DolbyVisionP5Session(
     val active: Boolean,
@@ -42,7 +40,8 @@ internal class DolbyVisionP5Session(
     /** What an active session found, for the player's note a few seconds into playback. */
     sealed class Status {
         object NoFrames : Status()
-        object PipelineNotHdr : Status()
+        /** The output surface couldn't be marked as HDR10. */
+        object OutputNotHdr10 : Status()
         object NoRpu : Status()
         data class OtherProfile(val profile: Int) : Status()
         object RpuUnreadable : Status()
@@ -65,8 +64,15 @@ internal class DolbyVisionP5Session(
     var containerSignalledProfile5: Boolean = false
         private set
 
-    /** Maps the effect's frame timestamps back to media time (fed by the video renderer). */
-    val frameTimeMapper = AssFrameTimeMapper()
+    // The media time of each frame the decoder released to the renderer, by its release time
+    // (what the renderer's SurfaceTexture reports for the frame).
+    private val releaseLock = Any()
+    private val releasedFrames = object : LinkedHashMap<Long, Long>(64) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Long>?): Boolean =
+            size > MAX_RELEASED_FRAMES
+    }
+    @Volatile
+    private var lastReleasedFrameUs = -1L
 
     private val rpuSamples = AtomicLong()
     private val profile5Rpus = AtomicLong()
@@ -75,9 +81,10 @@ internal class DolbyVisionP5Session(
     private var otherProfile = -1
     private val lutsBuilt = AtomicLong()
     private val framesDrawn = AtomicLong()
+    private val framesReleased = AtomicLong()
     private val framesMapped = AtomicLong()
     @Volatile
-    private var effectHdr: Boolean? = null
+    private var outputHdr10: Boolean? = null
 
     private val timeline = ConcurrentSkipListMap<Long, Long>()
     private val lutLock = Any()
@@ -160,9 +167,20 @@ internal class DolbyVisionP5Session(
     /** Builds a LUT on the calling thread (used once, before the first mapped frame). */
     fun buildNow(hash: Long): ShortArray? = build(hash)
 
-    fun onEffectCreated(hdr: Boolean) {
-        effectHdr = hdr
+    fun onOutputCreated(hdr10: Boolean) {
+        outputHdr10 = hdr10
     }
+
+    /** From the player's frame metadata listener: the frame at [mediaTimeUs] is released at [releaseTimeNs]. */
+    fun onFrameReleased(mediaTimeUs: Long, releaseTimeNs: Long) {
+        framesReleased.incrementAndGet()
+        synchronized(releaseLock) { releasedFrames[releaseTimeNs] = mediaTimeUs }
+        lastReleasedFrameUs = mediaTimeUs
+    }
+
+    /** The media time of the frame released at [releaseTimeNs], or of the latest one if unknown. */
+    fun mediaTimeOfRelease(releaseTimeNs: Long): Long =
+        synchronized(releaseLock) { releasedFrames[releaseTimeNs] } ?: lastReleasedFrameUs
 
     fun onFrameDrawn(mapped: Boolean) {
         framesDrawn.incrementAndGet()
@@ -172,7 +190,7 @@ internal class DolbyVisionP5Session(
     /** What has happened so far, most basic problem first. */
     fun status(): Status = when {
         framesDrawn.get() == 0L -> Status.NoFrames
-        effectHdr == false -> Status.PipelineNotHdr
+        outputHdr10 == false -> Status.OutputNotHdr10
         profile5Rpus.get() == 0L && otherProfile >= 0 -> Status.OtherProfile(otherProfile)
         profile5Rpus.get() == 0L && unreadableRpus.get() > 0L -> Status.RpuUnreadable
         profile5Rpus.get() == 0L -> Status.NoRpu
@@ -183,10 +201,13 @@ internal class DolbyVisionP5Session(
 
     fun framesDrawnCount(): Long = framesDrawn.get()
 
+    /** Frames the decoder released to the renderer. */
+    fun framesReleasedCount(): Long = framesReleased.get()
+
     fun describeForLog(): String =
         "rpuSamples=${rpuSamples.get()} p5=${profile5Rpus.get()} unreadable=${unreadableRpus.get()} " +
             "otherProfile=$otherProfile luts=${lutsBuilt.get()} drawn=${framesDrawn.get()} " +
-            "mapped=${framesMapped.get()} effectHdr=$effectHdr"
+            "mapped=${framesMapped.get()} released=${framesReleased.get()} outputHdr10=$outputHdr10"
 
     fun release() {
         released = true
@@ -238,5 +259,6 @@ internal class DolbyVisionP5Session(
         private const val MATCH_TOLERANCE_US = 500L
         private const val LOOKAHEAD_US = 3_000_000L
         private const val MAX_PREFETCH = 3
+        private const val MAX_RELEASED_FRAMES = 120
     }
 }

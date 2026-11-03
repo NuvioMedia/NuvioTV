@@ -63,18 +63,16 @@ uint64_t hashParams(const Params& params);
 void reshape(const Params& params, const double s[3], double outIpt[3]);
 
 /**
- * Maps one pixel as Media3 hands it to a video effect, to HDR10.
- *
- * [rgbPq] is the PQ-encoded BT.2020 RGB that Media3's HDR input shader computed from the decoded
- * base-layer values with its BT.2020 full-range YUV -> RGB matrix and (0.0625, 0.5, 0.5) offset.
- * That step is inverted to recover the decoded values, which are then reshaped, converted from
- * IPT-PQ-c2 to linear BT.2020 and PQ-encoded again. Output is PQ BT.2020 RGB in [0, 1].
+ * Maps one decoded base-layer pixel to HDR10. [yuv] are its three components as the GPU samples
+ * them from the decoder's output (EXT_YUV_target: normalized codes, no colour conversion). They
+ * are reshaped, converted from IPT-PQ-c2 to linear BT.2020 and PQ-encoded: the output is PQ
+ * BT.2020 RGB in [0, 1].
  */
-void mapPixel(const Params& params, const double rgbPq[3], double outRgbPq[3]);
+void mapPixel(const Params& params, const double yuv[3], double outRgbPq[3]);
 
 /**
- * Builds a [size]^3 RGBA half-float LUT (R fastest, then G, then B), indexed by Media3's
- * PQ-encoded RGB, holding the HDR10 PQ RGB for that input. [out] gets size^3 * 4 halves.
+ * Builds a [size]^3 RGBA half-float LUT (Y fastest, then Cb, then Cr), indexed by the decoded
+ * base-layer values, holding the HDR10 PQ RGB for that input. [out] gets size^3 * 4 halves.
  */
 void buildLut(const Params& params, int size, uint16_t* out);
 

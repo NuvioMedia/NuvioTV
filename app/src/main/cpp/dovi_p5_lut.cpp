@@ -14,15 +14,6 @@ constexpr double kPqC1 = 3424.0 / 4096.0;
 constexpr double kPqC2 = 2413.0 / 4096.0 * 32.0;
 constexpr double kPqC3 = 2392.0 / 4096.0 * 32.0;
 
-// Media3's BT.2020 full-range YUV -> RGB matrix (DefaultShaderProgram), row-major here, and the
-// offset its HDR input shader subtracts first (fragment_shader_transformation_external_yuv_es3).
-constexpr double kMedia3YuvToRgb[9] = {
-    1.0, 0.0, 1.4746,
-    1.0, -0.1646, -0.5714,
-    1.0, 1.8814, 0.0,
-};
-constexpr double kMedia3YuvOffset[3] = {0.0625, 0.5, 0.5};
-
 inline double clamp01(double v) { return v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v); }
 
 void mul3(const double m[9], const double v[3], double out[3]) {
@@ -161,24 +152,17 @@ void reshape(const Params& params, const double s[3], double outIpt[3]) {
 namespace {
 
 struct Prepared {
-    double media3RgbToYuv[9];
     double lmsToRgb[9];
 };
 
 bool prepare(const Params& params, Prepared& out) {
-    return invert3(kMedia3YuvToRgb, out.media3RgbToYuv) && invert3(params.rgbToLms, out.lmsToRgb);
+    return invert3(params.rgbToLms, out.lmsToRgb);
 }
 
-void mapPixelPrepared(const Params& params, const Prepared& prepared, const double rgbPq[3],
+void mapPixelPrepared(const Params& params, const Prepared& prepared, const double yuvIn[3],
                       double outRgbPq[3]) {
-    // 1. Undo Media3's YUV -> RGB: recover the decoded base-layer values.
-    const double rgb[3] = {clamp01(rgbPq[0]), clamp01(rgbPq[1]), clamp01(rgbPq[2])};
-    double yuv[3];
-    mul3(prepared.media3RgbToYuv, rgb, yuv);
-    for (int c = 0; c < 3; ++c) yuv[c] = clamp01(yuv[c] + kMedia3YuvOffset[c]);
-    // Media3 clamps everything darker than its 0.0625 luma offset to black, so black stands for
-    // that whole range: take its bottom (true black) rather than lift black to the offset.
-    if (rgb[0] <= 0.0 && rgb[1] <= 0.0 && rgb[2] <= 0.0) yuv[0] = 0.0;
+    // 1. The decoded base-layer values, as the GPU samples them (normalized codes).
+    const double yuv[3] = {clamp01(yuvIn[0]), clamp01(yuvIn[1]), clamp01(yuvIn[2])};
 
     // 2. Reshape with the RPU's curves: base layer -> IPT-PQ-c2.
     double ipt[3];
@@ -202,13 +186,13 @@ void mapPixelPrepared(const Params& params, const Prepared& prepared, const doub
 
 }  // namespace
 
-void mapPixel(const Params& params, const double rgbPq[3], double outRgbPq[3]) {
+void mapPixel(const Params& params, const double yuv[3], double outRgbPq[3]) {
     Prepared prepared{};
     if (!prepare(params, prepared)) {
-        for (int c = 0; c < 3; ++c) outRgbPq[c] = clamp01(rgbPq[c]);
+        for (int c = 0; c < 3; ++c) outRgbPq[c] = clamp01(yuv[c]);
         return;
     }
-    mapPixelPrepared(params, prepared, rgbPq, outRgbPq);
+    mapPixelPrepared(params, prepared, yuv, outRgbPq);
 }
 
 void buildLut(const Params& params, int size, uint16_t* out) {

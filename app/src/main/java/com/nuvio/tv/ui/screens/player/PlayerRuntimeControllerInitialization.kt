@@ -225,10 +225,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                     "Tunneled playback skipped: media audio goes to USB (route=${currentAudioOutputRoute?.key})"
                 )
             }
-            // Profile 5 -> HDR10 maps frames through a video effect, which tunneling bypasses.
+            // Profile 5 -> HDR10: turns tunneling off for the stream itself once Profile 5 shows up.
             val dv5HdrSession = startDolbyVisionP5Session(url, playerSettings)
-            val tunnelingActive = playerSettings.effectiveTunnelingEnabled && !tunnelingBlockedByUsbAudio &&
-                dv5HdrSession?.active != true
+            val tunnelingActive = playerSettings.effectiveTunnelingEnabled && !tunnelingBlockedByUsbAudio
             if (rememberAudioDelayPerDeviceEnabled) {
                 applyStoredAudioDelayForCurrentRouteIfEnabled()
             }
@@ -944,7 +943,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                 initialForcePcm = hasTriedAudioPcmFallback || isBluetoothAudioOutput,
                 preferSoftwareAudioOnly = isBluetoothAudioOutput,
                 mapDv7ToHevc = mapDv7ToHevcEnabled,
-                videoFrameTimeMapper = dv5HdrSession?.takeIf { it.active }?.frameTimeMapper,
                 onPlaybackSpeedAwareAudioSinkCreated = { playbackSpeedAwareAudioSink = it },
                 onFfmpegAudioRendererChanged = { renderer ->
                     ffmpegAudioRenderer = renderer
@@ -1067,11 +1065,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             activePlayerUsesLibass = useLibass
             libassPipelineSwitchInFlight = false
 
-            // Effects run in list order: the Profile 5 colour mapping before subtitles are drawn.
             val videoEffects = mutableListOf<androidx.media3.common.Effect>()
-            if (dv5HdrSession?.active == true && _exoPlayer != null) {
-                videoEffects += com.nuvio.tv.core.player.DolbyVisionP5HdrEffect(dv5HdrSession)
-            }
             if (useLibass) {
                 _exoPlayer?.getAssHandlerCompat()?.let { handler ->
                     // Apply video effects only when an ASS track has been detected for
@@ -1079,8 +1073,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                     // skipped. When tracks scan finds ASS, the player is rebuilt and this
                     // code runs again with hasDetectedAssSsaTrackForCurrentStream == true.
                     // This avoids DVFP overhead on non-ASS content.
+                    // Not for a mapped Profile 5 stream: its own renderer takes the decoder's output.
                     val shouldApplyEffects = hasDetectedAssSsaTrackForCurrentStream &&
-                        playerSettings.effectiveLibassRenderMode == LibassRenderMode.VIDEO_EFFECT
+                        playerSettings.effectiveLibassRenderMode == LibassRenderMode.VIDEO_EFFECT &&
+                        !(dv5HdrProfile5ForCurrentStream && dv5HdrSession?.active == true)
                     if (shouldApplyEffects) {
                         val effect = com.nuvio.tv.libass.media.effect.AssVideoEffectAsync(handler)
                         activeAssVideoEffect = effect
@@ -1096,7 +1092,6 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (videoEffects.isNotEmpty()) {
                 _exoPlayer?.setVideoEffects(videoEffects)
             }
-            watchDolbyVisionP5Start()
 
             _exoPlayer?.apply {
                 val audioAttributes = AudioAttributes.Builder()
@@ -2207,8 +2202,6 @@ private class SubtitleOffsetRenderersFactory(
      */
     private val preferSoftwareAudioOnly: Boolean = false,
     private val mapDv7ToHevc: Boolean = false,
-    /** Fed with the video renderer's stream offsets, for effects that need a frame's media time. */
-    private val videoFrameTimeMapper: com.nuvio.tv.libass.media.effect.AssFrameTimeMapper? = null,
     private val onPlaybackSpeedAwareAudioSinkCreated: (PlaybackSpeedAwareAudioSink) -> Unit,
     private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit,
     private val onCuesShown: (List<Cue>) -> Unit = {}
@@ -2252,12 +2245,7 @@ private class SubtitleOffsetRenderersFactory(
                     .setEventListener(eventListener)
                     .setMaxDroppedFramesToNotify(DefaultRenderersFactory.MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY)
                     .setMapDV7ToHevc(mapDv7ToHevc)
-                val videoRenderer: Renderer = HardwareFirstVideoRenderer(builder)
-                out.add(
-                    videoFrameTimeMapper?.let {
-                        com.nuvio.tv.libass.media.effect.AssVideoRendererWrapper(videoRenderer, it)
-                    } ?: videoRenderer
-                )
+                out.add(HardwareFirstVideoRenderer(builder))
             } else {
                 out.add(renderer)
             }

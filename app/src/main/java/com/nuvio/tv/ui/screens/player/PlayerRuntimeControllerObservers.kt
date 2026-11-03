@@ -364,7 +364,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     frameRateMatchingMode = settings.frameRateMatchingMode,
                     tunnelingEnabled = settings.effectiveTunnelingEnabled &&
                             !tunnelingBlockedByUsbAudio &&
-                            dolbyVisionP5Session?.active != true &&
+                            dolbyVisionP5Renderer == null &&
                             resolvedInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER,
                     persistAudioAmplification = settings.persistAudioAmplification,
                     audioAmplificationDb = resolvedAudioAmplificationDb,

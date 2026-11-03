@@ -6,6 +6,9 @@
 
 #include <jni.h>
 #include <android/log.h>
+#include <android/native_window.h>
+#include <android/native_window_jni.h>
+#include <dlfcn.h>
 
 #include <cstdint>
 #include <cstring>
@@ -274,6 +277,35 @@ Java_com_nuvio_tv_core_player_DolbyVisionP5Native_nativeBuildLut(
 #else
     return JNI_FALSE;
 #endif
+}
+
+/**
+ * Marks the buffers [surface] gets from now on as HDR10 (BT.2020, PQ, full range), so the system
+ * shows what GL draws into it as HDR10 even where EGL has no BT.2020 PQ colour space. Needs
+ * Android 9 (ANativeWindow_setBuffersDataSpace), looked up at run time for older systems.
+ */
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_nuvio_tv_core_player_DolbyVisionP5Native_nativeSetHdr10Dataspace(
+    JNIEnv* env,
+    jclass /* clazz */,
+    jobject surface
+) {
+    using SetDataSpace = int32_t (*)(ANativeWindow*, int32_t);
+    static SetDataSpace setDataSpace = []() -> SetDataSpace {
+        void* android = dlopen("libandroid.so", RTLD_NOW);
+        return android != nullptr
+            ? reinterpret_cast<SetDataSpace>(dlsym(android, "ANativeWindow_setBuffersDataSpace"))
+            : nullptr;
+    }();
+    if (setDataSpace == nullptr || surface == nullptr) return JNI_FALSE;
+    ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
+    if (window == nullptr) return JNI_FALSE;
+    // ADATASPACE_BT2020_PQ: STANDARD_BT2020 | TRANSFER_ST2084 | RANGE_FULL.
+    constexpr int32_t kDataSpaceBt2020Pq = (6 << 16) | (7 << 22) | (1 << 27);
+    const int32_t result = setDataSpace(window, kDataSpaceBt2020Pq);
+    ANativeWindow_release(window);
+    if (result != 0) P5_LOGW("ANativeWindow_setBuffersDataSpace failed: %d", result);
+    return result == 0 ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL

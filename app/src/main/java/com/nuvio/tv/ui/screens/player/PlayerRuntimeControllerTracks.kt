@@ -411,7 +411,9 @@ internal fun PlayerRuntimeController.maybeAdjustLibassPipelineForTracks(tracks: 
         activeAssVideoEffect == null &&
         activePlayerUsesLibass &&
         _uiState.value.libassRenderMode == com.nuvio.tv.data.local.LibassRenderMode.VIDEO_EFFECT &&
-        !hasDvVideoTrack
+        !hasDvVideoTrack &&
+        // A mapped Profile 5 stream draws through its own renderer, not video effects.
+        dolbyVisionP5Renderer == null && !dv5HdrProfile5ForCurrentStream
 
     // Don't rebuild just to drop libass, except when it's holding the MKV extractor on a DV
     // file and blocking conversion; then drop it so the DV extractor runs.

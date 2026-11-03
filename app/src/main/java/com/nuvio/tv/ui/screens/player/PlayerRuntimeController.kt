@@ -730,6 +730,10 @@ class PlayerRuntimeController(
     internal var dv5HdrStatusJob: Job? = null
     internal var dv5HdrNoteJob: Job? = null
     internal var dv5HdrStartWatchdogJob: Job? = null
+    internal var dolbyVisionP5Renderer: com.nuvio.tv.core.player.DolbyVisionP5SurfaceRenderer? = null
+    /** Kept across rebuilds of the same stream (libass, errors): it is Profile 5. */
+    internal var dv5HdrProfile5ForCurrentStream: Boolean = false
+    internal var dv5HdrAttachRetries: Int = 0
     internal var torrentStreamJob: Job? = null
     internal var torrentStateObserverJob: Job? = null
     internal var isTorrentStream: Boolean = navigationArgs.infoHash != null && !initialStreamUrl.startsWith("http")
