@@ -78,13 +78,13 @@ class SimklSyncEngineTest {
     }
 
     @Test
-    fun `initial sync pulls each type sequentially before playback and activities`() = runBlocking {
+    fun `initial sync reads activities before the pulls and playback`() = runBlocking {
         val remote = ScriptedRemote(
+            Step.Activities(activities(all = "v1")),
             Step.AllItems(SimklMediaType.SHOWS, responseOf(entry(SimklMediaType.SHOWS, "1"))),
             Step.AllItems(SimklMediaType.MOVIES, responseOf(entry(SimklMediaType.MOVIES, "2"))),
             Step.AllItems(SimklMediaType.ANIME, responseOf(entry(SimklMediaType.ANIME, "3"))),
-            Step.Playback(listOf(playback("2"))),
-            Step.Activities(activities(all = "v1"))
+            Step.Playback(listOf(playback("2")))
         )
 
         val result = engine(remote) { 500L }.synchronize(SimklSyncSnapshot())
@@ -286,14 +286,14 @@ class SimklSyncEngineTest {
     @Test
     fun `initial sync discards playback superseded by watched history`() = runBlocking {
         val remote = ScriptedRemote(
+            Step.Activities(activities(all = "v1", playback = "p1")),
             Step.AllItems(
                 SimklMediaType.SHOWS,
                 responseOf(watchedShowEntry("1", "2024-04-30T22:14:00Z"))
             ),
             Step.AllItems(SimklMediaType.MOVIES, SimklAllItemsResponse(movies = emptyList())),
             Step.AllItems(SimklMediaType.ANIME, SimklAllItemsResponse(anime = emptyList())),
-            Step.Playback(listOf(episodePlayback("1", "2024-04-30T22:13:00Z"))),
-            Step.Activities(activities(all = "v1", playback = "p1"))
+            Step.Playback(listOf(episodePlayback("1", "2024-04-30T22:13:00Z")))
         )
 
         val result = engine(remote) { 900L }.synchronize(SimklSyncSnapshot())
@@ -460,11 +460,11 @@ class SimklSyncEngineTest {
         // Runs are read while rewatches are recorded; the default keeps them out of the row.
         settingsDataStore.setSimklRewatchMode(SimklRewatchMode.SEMI_AUTOMATIC)
         val remote = ScriptedRemote(
+            Step.Activities(activities(all = "v1")),
             Step.AllItems(SimklMediaType.SHOWS, responseOf(entry(SimklMediaType.SHOWS, "1"))),
             Step.AllItems(SimklMediaType.MOVIES, SimklAllItemsResponse(movies = emptyList())),
             Step.AllItems(SimklMediaType.ANIME, SimklAllItemsResponse(anime = emptyList())),
             Step.Playback(listOf(playback("1"))),
-            Step.Activities(activities(all = "v1")),
             Step.RewatchSessions(
                 listOf(rewatchEntry("1", season = 2, watched = listOf(6 to REWATCH_OLDER, 7 to REWATCH_NEWER)))
             )
@@ -487,11 +487,11 @@ class SimklSyncEngineTest {
         settingsDataStore.setSimklRewatchMode(SimklRewatchMode.SEMI_AUTOMATIC)
         val result = engine(
             ScriptedRemote(
+                Step.Activities(activities(all = "v1")),
                 Step.AllItems(SimklMediaType.SHOWS, responseOf(entry(SimklMediaType.SHOWS, "1"))),
                 Step.AllItems(SimklMediaType.MOVIES, SimklAllItemsResponse(movies = emptyList())),
                 Step.AllItems(SimklMediaType.ANIME, SimklAllItemsResponse(anime = emptyList())),
                 Step.Playback(listOf(playback("1"))),
-                Step.Activities(activities(all = "v1")),
                 Step.RewatchSessions(
                     listOf(rewatchEntry("1", season = 2, watched = listOf(7 to REWATCH_NEWER)))
                 )
@@ -508,11 +508,11 @@ class SimklSyncEngineTest {
     fun `a stored off rewatch mode keeps every run and session out`() = runBlocking {
         settingsDataStore.setSimklRewatchMode(SimklRewatchMode.OFF)
         val remote = ScriptedRemote(
+            Step.Activities(activities(all = "v1")),
             Step.AllItems(SimklMediaType.SHOWS, responseOf(entry(SimklMediaType.SHOWS, "1"))),
             Step.AllItems(SimklMediaType.MOVIES, SimklAllItemsResponse(movies = emptyList())),
             Step.AllItems(SimklMediaType.ANIME, SimklAllItemsResponse(anime = emptyList())),
-            Step.Playback(listOf(playback("1"))),
-            Step.Activities(activities(all = "v1"))
+            Step.Playback(listOf(playback("1")))
         )
 
         val result = engine(remote) { 900L }.synchronize(SimklSyncSnapshot())
@@ -530,11 +530,11 @@ class SimklSyncEngineTest {
         settingsDataStore.setSimklRewatchMode(SimklRewatchMode.SEMI_AUTOMATIC)
         every { authStorage.state } returns MutableStateFlow(SimklAuthState(accountType = "free"))
         val remote = ScriptedRemote(
+            Step.Activities(activities(all = "v1")),
             Step.AllItems(SimklMediaType.SHOWS, responseOf(entry(SimklMediaType.SHOWS, "1"))),
             Step.AllItems(SimklMediaType.MOVIES, SimklAllItemsResponse(movies = emptyList())),
             Step.AllItems(SimklMediaType.ANIME, SimklAllItemsResponse(anime = emptyList())),
-            Step.Playback(listOf(playback("1"))),
-            Step.Activities(activities(all = "v1"))
+            Step.Playback(listOf(playback("1")))
         )
 
         val result = engine(remote) { 900L }.synchronize(SimklSyncSnapshot())
