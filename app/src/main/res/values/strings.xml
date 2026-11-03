@@ -871,6 +871,7 @@
     <string name="dv5_hdr_note_off_display_sdr">Dolby Vision 5 to HDR10 is off: the display doesn\'t report HDR10</string>
     <string name="dv5_hdr_note_off_gpu">Dolby Vision 5 to HDR10 is off: the GPU can\'t run the HDR video effect</string>
     <string name="dv5_hdr_note_off_dv81">Dolby Vision 5 to HDR10 is off: turn off Convert DV5 to DV8.1</string>
+    <string name="dv5_hdr_note_off_stalled">Dolby Vision 5 to HDR10 is off: the colour effect couldn\'t start on this device (%1$d frames reached it)</string>
     <string name="dv5_hdr_note_off_error">Dolby Vision 5 to HDR10 is off: it stopped after a playback error</string>
     <string name="dv5_hdr_note_no_frames">Dolby Vision 5 to HDR10: no video frames reached the colour effect</string>
     <string name="dv5_hdr_note_not_hdr">Dolby Vision 5 to HDR10: the video pipeline isn\'t HDR on this device</string>

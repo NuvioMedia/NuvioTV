@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.Display
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.media3.common.util.GlUtil
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.R
@@ -21,6 +22,19 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val DV5_NOTE_MS = 7_000L
+/** A mapped player with this much buffered and still no frame has stalled in the effect path. */
+private const val DV5_START_TIMEOUT_MS = 12_000L
+private const val DV5_STALL_BUFFERED_MS = 4_000L
+/** Past this, a player still without a frame is left to the player's own error handling. */
+private const val DV5_WATCH_LIMIT_MS = 60_000L
+
+/**
+ * Set once a mapped player never showed a frame. Some TV chips can't hand 10-bit HDR video to the
+ * GPU at all; then every mapped stream would stall, so the mapping stays off until the app restarts.
+ */
+@Volatile
+private var dv5EffectStalledOnDevice = false
+private var dv5EffectStalledFramesDrawn = 0L
 /** How long a mapped stream plays before the player says how the mapping is going. */
 private const val DV5_STATUS_DELAY_MS = 6_000L
 
@@ -63,6 +77,7 @@ internal fun PlayerRuntimeController.startDolbyVisionP5Session(
 }
 
 private fun PlayerRuntimeController.dolbyVisionP5BlockedReason(settings: PlayerSettings): BlockedReason? {
+    if (dv5EffectStalledOnDevice) return BlockedReason.EFFECT_STALLED
     if (dv5HdrFailedForCurrentStream) return BlockedReason.PLAYBACK_ERROR
     // The DV5 -> 8.1 RPU conversion would rewrite the RPU this needs.
     if (settings.dv5ToDv81Enabled && settings.dv7HandlingMode == Dv7HandlingMode.DV81_LIBDOVI) {
@@ -103,7 +118,13 @@ internal fun PlayerRuntimeController.maybeEnableDolbyVisionP5Hdr() {
     session.blockedReason?.let { reason ->
         if (!dv5HdrNoteShownForCurrentStream) {
             dv5HdrNoteShownForCurrentStream = true
-            showDolbyVisionP5Note(context.getString(reason.noteRes()))
+            showDolbyVisionP5Note(
+                if (reason == BlockedReason.EFFECT_STALLED) {
+                    context.getString(R.string.dv5_hdr_note_off_stalled, dv5EffectStalledFramesDrawn)
+                } else {
+                    context.getString(reason.noteRes())
+                }
+            )
         }
         return
     }
@@ -139,6 +160,61 @@ private fun BlockedReason.noteRes(): Int = when (this) {
     BlockedReason.GPU -> R.string.dv5_hdr_note_off_gpu
     BlockedReason.DV81_CONVERSION -> R.string.dv5_hdr_note_off_dv81
     BlockedReason.PLAYBACK_ERROR -> R.string.dv5_hdr_note_off_error
+    BlockedReason.EFFECT_STALLED -> R.string.dv5_hdr_note_off_stalled
+}
+
+/**
+ * Watches a freshly built player that has the mapping effect installed. If it has data buffered
+ * but never shows a frame, the effect path doesn't work on this device: turn the mapping off and
+ * play the stream again without it, instead of leaving the player stuck.
+ */
+internal fun PlayerRuntimeController.watchDolbyVisionP5Start() {
+    val session = dolbyVisionP5Session?.takeIf { it.active } ?: return
+    val player = _exoPlayer ?: return
+    dv5HdrStartWatchdogJob?.cancel()
+    var rendered = false
+    val listener = object : Player.Listener {
+        override fun onRenderedFirstFrame() {
+            rendered = true
+        }
+    }
+    player.addListener(listener)
+    dv5HdrStartWatchdogJob = scope.launch(Dispatchers.Main) {
+        try {
+            var waitedMs = 0L
+            while (waitedMs < DV5_WATCH_LIMIT_MS) {
+                delay(1_000L)
+                waitedMs += 1_000L
+                if (rendered || dolbyVisionP5Session !== session || _exoPlayer !== player) return@launch
+                if (waitedMs < DV5_START_TIMEOUT_MS) continue
+                val dataReady = player.playbackState == Player.STATE_READY ||
+                    player.totalBufferedDuration >= DV5_STALL_BUFFERED_MS
+                if (!dataReady) continue
+                Log.w(
+                    PlayerRuntimeController.TAG,
+                    "DV5_HDR: no frame after ${waitedMs}ms with data buffered; turning the mapping off. " +
+                        session.describeForLog()
+                )
+                dv5EffectStalledOnDevice = true
+                dv5EffectStalledFramesDrawn = session.framesDrawnCount()
+                dv5HdrNoteShownForCurrentStream = false
+                val resumePosition = player.currentPosition.takeIf { it > 0L }
+                _uiState.update { state ->
+                    state.copy(
+                        pendingSeekPosition = resumePosition ?: state.pendingSeekPosition,
+                        showLoadingOverlay = state.loadingOverlayEnabled
+                    )
+                }
+                // This job is the one releasePlayer would cancel: let go of it first.
+                dv5HdrStartWatchdogJob = null
+                releasePlayer(flushPlaybackState = true, keepTorrentStream = true)
+                reinitializeCurrentStream()
+                return@launch
+            }
+        } finally {
+            runCatching { player.removeListener(listener) }
+        }
+    }
 }
 
 private fun PlayerRuntimeController.showDolbyVisionP5Note(text: String) {
@@ -167,6 +243,8 @@ internal fun PlayerRuntimeController.onDolbyVisionP5PlayerError(errorCode: Int) 
 }
 
 internal fun PlayerRuntimeController.releaseDolbyVisionP5Session() {
+    dv5HdrStartWatchdogJob?.cancel()
+    dv5HdrStartWatchdogJob = null
     dolbyVisionP5Session?.let { session ->
         Log.i(PlayerRuntimeController.TAG, "DV5_HDR: releasing session ${session.describeForLog()}")
         session.release()

@@ -27,7 +27,11 @@ internal class DolbyVisionP5Session(
     val blockedReason: BlockedReason? = null,
 ) {
 
-    enum class BlockedReason { NO_LIBRARY, DISPLAY_DOLBY_VISION, DISPLAY_NOT_HDR10, GPU, DV81_CONVERSION, PLAYBACK_ERROR }
+    enum class BlockedReason {
+        NO_LIBRARY, DISPLAY_DOLBY_VISION, DISPLAY_NOT_HDR10, GPU, DV81_CONVERSION, PLAYBACK_ERROR,
+        /** An earlier stream never showed a frame through the effect: this device can't run it. */
+        EFFECT_STALLED,
+    }
 
     /** What an active session found, for the player's note a few seconds into playback. */
     sealed class Status {
@@ -170,6 +174,8 @@ internal class DolbyVisionP5Session(
         framesMapped.get() == 0L -> Status.NotMapped
         else -> Status.Mapping(lutsBuilt.get().toInt())
     }
+
+    fun framesDrawnCount(): Long = framesDrawn.get()
 
     fun describeForLog(): String =
         "rpuSamples=${rpuSamples.get()} p5=${profile5Rpus.get()} unreadable=${unreadableRpus.get()} " +

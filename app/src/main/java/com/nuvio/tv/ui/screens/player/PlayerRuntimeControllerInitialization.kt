@@ -1096,6 +1096,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (videoEffects.isNotEmpty()) {
                 _exoPlayer?.setVideoEffects(videoEffects)
             }
+            watchDolbyVisionP5Start()
 
             _exoPlayer?.apply {
                 val audioAttributes = AudioAttributes.Builder()
