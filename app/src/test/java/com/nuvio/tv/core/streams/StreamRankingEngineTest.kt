@@ -39,6 +39,9 @@ class StreamRankingEngineTest {
         assertEquals("NTb", StreamRankingFacts.parse("Film.WEB-DL-NTb").group)
         assertTrue("DV_ONLY" in StreamRankingFacts.parse("Film.2160p.WEB-DL.DV-FLUX").visual)
         assertEquals(StreamReleaseQuality.UNKNOWN, StreamRankingFacts.parse("obfuscated.release").quality)
+        // A group or extension ends the name: a line break after it is not the end.
+        assertEquals("", StreamRankingFacts.parse("Film.WEB-DL-NTb\n").group)
+        assertEquals("", StreamRankingFacts.parse("Film.WEB-DL.mkv\n").group)
     }
 
     @Test fun `best quality prefers 1080p remux above 4K web and 4K remux above both`() {
