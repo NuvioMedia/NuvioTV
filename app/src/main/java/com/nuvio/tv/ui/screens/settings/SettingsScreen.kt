@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
@@ -161,6 +162,7 @@ private fun settingsSectionSpec(category: SettingsCategory): SettingsSectionSpec
     SettingsCategory.LAYOUT -> SettingsSectionSpec(category, stringResource(R.string.settings_layout), Icons.Default.GridView, destination = SettingsSectionDestination.Inline)
     SettingsCategory.CONTENT_DISCOVERY -> SettingsSectionSpec(category, stringResource(R.string.settings_content_discovery), Icons.Default.Explore, destination = SettingsSectionDestination.Inline)
     SettingsCategory.PLAYBACK -> SettingsSectionSpec(category, stringResource(R.string.settings_playback), Icons.Rounded.PlayArrow, destination = SettingsSectionDestination.Inline)
+    SettingsCategory.LIVE_TV -> SettingsSectionSpec(category, stringResource(R.string.settings_live_tv_title), Icons.Default.LiveTv, destination = SettingsSectionDestination.Inline)
     SettingsCategory.INTEGRATION -> SettingsSectionSpec(category, stringResource(R.string.settings_integration), Icons.Default.Link, destination = SettingsSectionDestination.Inline)
     SettingsCategory.TRACKING -> SettingsSectionSpec(category, stringResource(R.string.settings_tracking_title), Icons.Default.Sync, destination = SettingsSectionDestination.Inline)
     SettingsCategory.ADVANCED -> SettingsSectionSpec(category, stringResource(R.string.settings_advanced), Icons.Default.Build, destination = SettingsSectionDestination.Inline)
@@ -980,6 +982,7 @@ private fun SettingsDetailPane(
             }
         )
         SettingsCategory.DEBUG -> DebugSettingsContent()
+        SettingsCategory.LIVE_TV -> LiveTvSettingsContent()
     }
 }
 

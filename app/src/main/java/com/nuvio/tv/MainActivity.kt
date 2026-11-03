@@ -1046,8 +1046,10 @@ open class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    val rootRoutes = remember(discoverLocation) {
+                    val liveTvMenuItem = com.nuvio.tv.ui.reshaped.livetv.rememberLiveTvMenuItem(currentRoute, navController)
+                    val rootRoutes = remember(discoverLocation, liveTvMenuItem) {
                         buildSet {
+                            liveTvMenuItem?.let { add(it.route) }
                             add(Screen.Home.route)
                             add(Screen.Search.route)
                             add(Screen.Library.route)
@@ -1072,7 +1074,8 @@ open class MainActivity : ComponentActivity() {
                         strNavLibrary,
                         strNavIptv,
                         strNavSettings,
-                        discoverLocation
+                        discoverLocation,
+                        liveTvMenuItem
                     ) {
                         buildList {
                             add(
@@ -1112,6 +1115,7 @@ open class MainActivity : ComponentActivity() {
                                     icon = Icons.Default.LiveTv
                                 )
                             )
+                            liveTvMenuItem?.let(::add)
                             add(
                                 DrawerItem(
                                     route = Screen.Settings.route,

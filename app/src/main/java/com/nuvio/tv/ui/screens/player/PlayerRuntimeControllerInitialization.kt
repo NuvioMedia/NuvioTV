@@ -836,7 +836,7 @@ internal fun PlayerRuntimeController.initializePlayer(
 
             // ── Extractors & DV Hook ──
             val extractorsFactory = DefaultExtractorsFactory()
-                .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS)
+                .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS or com.nuvio.tv.reshaped.livetv.LiveTvTsFlags.extraFor(url))
                 .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE)
 
             // Manual Convert-to-DV8.1 uses mode 2; if a prior attempt at this stream
@@ -1489,6 +1489,7 @@ internal fun PlayerRuntimeController.initializePlayer(
 
                     override fun onPlayerError(error: PlaybackException) {
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
+                        if (!isInBackground && com.nuvio.tv.reshaped.livetv.LiveEdgeRecovery.tryRejoin(error, _exoPlayer)) return
                         cancelFirstFrameWatchdog()
                         val detailedError = error.toDisplayMessage(context)
                         cancelStableProgressReset()

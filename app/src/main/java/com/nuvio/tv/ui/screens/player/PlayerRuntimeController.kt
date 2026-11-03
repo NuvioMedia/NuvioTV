@@ -382,7 +382,7 @@ class PlayerRuntimeController(
         )
         val isLive = LivePlaybackUiPolicy.isLivePlayback(
             playerReportsLive = playerReportsLive,
-            contentType = contentType,
+            contentType = contentType.takeUnless { com.nuvio.tv.reshaped.livetv.LiveTvPlaybackRegistry.isCatchup(currentStreamUrl) },
             latchedLive = livePlaybackLatched
         )
         val watched = liveWatchClock.watchedDurationMs(

@@ -23,6 +23,7 @@ class SettingsCatalogTest {
                 SettingsCategory.LAYOUT,
                 SettingsCategory.CONTENT_DISCOVERY,
                 SettingsCategory.PLAYBACK,
+                SettingsCategory.LIVE_TV,
                 SettingsCategory.INTEGRATION,
                 SettingsCategory.TRACKING,
                 SettingsCategory.ADVANCED,

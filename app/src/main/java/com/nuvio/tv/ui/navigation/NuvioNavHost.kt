@@ -1263,6 +1263,9 @@ private fun PlaybackNavHost(
                 }
             )
         }
+        composable(com.nuvio.tv.reshaped.livetv.LIVE_TV_ROUTE) {
+            com.nuvio.tv.ui.reshaped.livetv.LiveTvScreen(onPlay = { navController.navigate(it) }, showBuiltInHeader = !hideBuiltInHeaders)
+        }
 
         composable(Screen.Settings.route) {
             SettingsScreen(

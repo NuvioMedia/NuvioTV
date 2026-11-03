@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import com.nuvio.tv.ui.util.languageCodeToName
+import com.nuvio.tv.ui.reshaped.livetv.measureLiveTvFrameRate
 
 @UnstableApi
 internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
@@ -92,6 +93,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                                 )
                             }
                         }
+                    } else {
+                        measureLiveTvFrameRate()
                     }
                     // Extract video codec, resolution, and bitrate for stream info
                     currentVideoCodec = CustomDefaultTrackNameProvider.resolveCodecName(format.sampleMimeType, format.codecs)
