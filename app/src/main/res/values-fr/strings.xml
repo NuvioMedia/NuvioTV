@@ -829,11 +829,11 @@
     <string name="audio_night_mode_value">Mode nuit&#160;: %1$s</string>
     <string name="audio_night_mode_off">Désactivé</string>
     <string name="audio_night_mode_light">Léger</string>
-    <string name="audio_night_mode_light_desc">Rehaussement léger, jusqu’à +6&#160;dB</string>
+    <string name="audio_night_mode_light_desc">Rehaussement léger, jusqu’à +6 dB</string>
     <string name="audio_night_mode_medium">Moyen</string>
-    <string name="audio_night_mode_medium_desc">Dialogues nettement rehaussés, jusqu’à +10&#160;dB</string>
+    <string name="audio_night_mode_medium_desc">Dialogues nettement rehaussés, jusqu’à +10 dB</string>
     <string name="audio_night_mode_strong">Fort</string>
-    <string name="audio_night_mode_strong_desc">Jusqu’à +15&#160;dB, pour regarder tard le soir à faible volume</string>
+    <string name="audio_night_mode_strong_desc">Jusqu’à +15 dB, pour regarder tard le soir à faible volume</string>
     <string name="audio_remember_delay_per_device">Mémoriser le délai audio par appareil</string>
     <string name="audio_remember_delay_per_device_sub">Enregistrer et rétablir le délai audio du lecteur pour la sortie audio actuelle</string>
     <string name="audio_advanced_section">Audio avancé</string>
@@ -1965,6 +1965,12 @@
     <string name="audio_center_mix_unavailable">Le niveau du canal central n’est disponible que lorsque le downmix FFmpeg est actif.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">Conserver l’audio d’origine lors du downmix</string>
     <string name="audio_maintain_original_audio_on_downmix_subtitle">Lorsque cette option est désactivée, la normalisation du downmix peut réduire le volume global.</string>
+    <string name="audio_downmix_lfe_level">Niveau LFE lors du downmix</string>
+    <string name="audio_downmix_lfe_level_sub">Mixe le canal du caisson de basses (LFE) dans les autres haut-parleurs au lieu de l’ignorer. Uniquement pour les dispositions sans LFE, comme le 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">Utilisé lorsque la disposition du downmix n’a pas de canal LFE. S’applique à partir de la prochaine lecture.</string>
+    <string name="audio_downmix_lfe_level_off">Désactivé</string>
+    <string name="audio_downmix_lfe_level_half">50&#160;%</string>
+    <string name="audio_downmix_lfe_level_full">100&#160;%</string>
 
     <string name="subtitle_dialog_title">Sous-titres</string>
     <string name="subtitle_no_builtin">Aucun sous-titre intégré disponible</string>

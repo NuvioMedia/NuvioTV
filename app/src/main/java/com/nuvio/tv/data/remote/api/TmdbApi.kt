@@ -511,7 +511,8 @@ data class TmdbEpisode(
     @Json(name = "overview") val overview: String? = null,
     @Json(name = "still_path") val stillPath: String? = null,
     @Json(name = "air_date") val airDate: String? = null,
-    @Json(name = "runtime") val runtime: Int? = null
+    @Json(name = "runtime") val runtime: Int? = null,
+    @Json(name = "id") val id: Long? = null
 )
 
 @JsonClass(generateAdapter = true)
