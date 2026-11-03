@@ -28,7 +28,13 @@ internal class DolbyVisionP5Session(
 ) {
 
     enum class BlockedReason {
-        NO_LIBRARY, DISPLAY_DOLBY_VISION, DISPLAY_NOT_HDR10, GPU, DV81_CONVERSION, PLAYBACK_ERROR,
+        NO_LIBRARY, DISPLAY_DOLBY_VISION, DISPLAY_NOT_HDR10, DV81_CONVERSION, PLAYBACK_ERROR,
+        /** The GPU can't sample decoded 10-bit YUV as is (no EXT_YUV_target). */
+        GPU_NO_YUV_TARGET,
+        /** The GPU can't output HDR10 (no EGL BT.2020 PQ colour space). */
+        GPU_NO_HDR_OUTPUT,
+        /** The GPU check itself failed. */
+        GPU,
         /** An earlier stream never showed a frame through the effect: this device can't run it. */
         EFFECT_STALLED,
     }

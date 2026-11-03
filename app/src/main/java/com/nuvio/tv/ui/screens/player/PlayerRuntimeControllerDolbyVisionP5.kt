@@ -21,7 +21,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val DV5_NOTE_MS = 7_000L
+private const val DV5_NOTE_MS = 20_000L
 /** A mapped player with this much buffered and still no frame has stalled in the effect path. */
 private const val DV5_START_TIMEOUT_MS = 12_000L
 private const val DV5_STALL_BUFFERED_MS = 4_000L
@@ -38,13 +38,29 @@ private var dv5EffectStalledFramesDrawn = 0L
 /** How long a mapped stream plays before the player says how the mapping is going. */
 private const val DV5_STATUS_DELAY_MS = 6_000L
 
-/** Whether this device's GL can run Media3's 10-bit HDR effect path to an HDR10 output. */
+/**
+ * What this device's GL lacks for Media3's 10-bit HDR effect path to an HDR10 output, or null when
+ * it has everything: sampling decoded 10-bit YUV as is (EXT_YUV_target) and an HDR10 output
+ * surface (EGL BT.2020 PQ, Android 13+).
+ */
 @androidx.annotation.OptIn(UnstableApi::class)
-private val hdrEffectPathSupported: Boolean by lazy {
-    runCatching {
-        GlUtil.isYuvTargetExtensionSupported() && GlUtil.isColorTransferSupported(C.COLOR_TRANSFER_ST2084)
-    }.onFailure { Log.w(PlayerRuntimeController.TAG, "DV5_HDR: GL capability check failed: ${it.message}") }
-        .getOrDefault(false)
+private val hdrEffectPathMissing: BlockedReason? by lazy {
+    val missing = runCatching {
+        when {
+            !GlUtil.isYuvTargetExtensionSupported() -> BlockedReason.GPU_NO_YUV_TARGET
+            !GlUtil.isColorTransferSupported(C.COLOR_TRANSFER_ST2084) -> BlockedReason.GPU_NO_HDR_OUTPUT
+            else -> null
+        }
+    }.getOrElse {
+        Log.w(PlayerRuntimeController.TAG, "DV5_HDR: GL capability check failed: ${it.message}")
+        BlockedReason.GPU
+    }
+    Log.i(
+        PlayerRuntimeController.TAG,
+        "DV5_HDR: GL check missing=$missing device=${Build.MANUFACTURER} ${Build.MODEL} " +
+            "soc=${if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL else "?"} api=${Build.VERSION.SDK_INT}"
+    )
+    missing
 }
 
 /**
@@ -91,8 +107,7 @@ private fun PlayerRuntimeController.dolbyVisionP5BlockedReason(settings: PlayerS
     ) {
         return BlockedReason.DISPLAY_NOT_HDR10
     }
-    if (!hdrEffectPathSupported) return BlockedReason.GPU
-    return null
+    return hdrEffectPathMissing
 }
 
 /** The display's HDR types, from both the old and (Android 14+) the per-mode API. */
@@ -158,6 +173,8 @@ private fun BlockedReason.noteRes(): Int = when (this) {
     BlockedReason.DISPLAY_DOLBY_VISION -> R.string.dv5_hdr_note_off_display_dv
     BlockedReason.DISPLAY_NOT_HDR10 -> R.string.dv5_hdr_note_off_display_sdr
     BlockedReason.GPU -> R.string.dv5_hdr_note_off_gpu
+    BlockedReason.GPU_NO_YUV_TARGET -> R.string.dv5_hdr_note_off_gpu_yuv
+    BlockedReason.GPU_NO_HDR_OUTPUT -> R.string.dv5_hdr_note_off_gpu_hdr_output
     BlockedReason.DV81_CONVERSION -> R.string.dv5_hdr_note_off_dv81
     BlockedReason.PLAYBACK_ERROR -> R.string.dv5_hdr_note_off_error
     BlockedReason.EFFECT_STALLED -> R.string.dv5_hdr_note_off_stalled
@@ -219,6 +236,7 @@ internal fun PlayerRuntimeController.watchDolbyVisionP5Start() {
 
 private fun PlayerRuntimeController.showDolbyVisionP5Note(text: String) {
     Log.i(PlayerRuntimeController.TAG, "DV5_HDR note: $text")
+    com.nuvio.tv.core.player.DolbyVisionP5Status.onNote(text)
     _uiState.update { it.copy(dv5HdrNote = text) }
     dv5HdrNoteJob?.cancel()
     dv5HdrNoteJob = scope.launch(Dispatchers.Main) {

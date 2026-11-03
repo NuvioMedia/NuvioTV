@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,6 +130,18 @@ internal fun PlaybackVideoSection(
             onToggle = { onUpdate { setDv5ToHdr10Enabled(!settings.dv5ToHdr10Enabled) } },
             enabled = enabled
         )
+        // The player's last note on this, which fades from the screen after a while.
+        val dv5LastNote by com.nuvio.tv.core.player.DolbyVisionP5Status.lastNote.collectAsState()
+        val dv5Note = dv5LastNote
+        if (settings.dv5ToHdr10Enabled && dv5Note != null) {
+            SettingsActionRow(
+                title = stringResource(R.string.audio_dv5_to_hdr10_last_title),
+                subtitle = dv5Note,
+                value = null,
+                enabled = enabled,
+                onClick = {}
+            )
+        }
         SettingsToggleRow(
             title = stringResource(R.string.audio_strip_hdr10plus_title),
             subtitle = stringResource(R.string.audio_strip_hdr10plus_sub),
