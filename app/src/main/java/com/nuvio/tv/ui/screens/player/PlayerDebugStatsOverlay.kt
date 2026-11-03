@@ -34,7 +34,6 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Text
 import com.nuvio.tv.core.network.StreamSpeedTester
-import com.nuvio.tv.ui.screens.settings.MemoryBudget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -245,8 +244,7 @@ private class DebugStatsSampler(context: Context) {
     private fun memoryStat(snapshot: PlayerSnapshot?): DebugStat {
         val runtime = Runtime.getRuntime()
         val usedMb = (runtime.totalMemory() - runtime.freeMemory()) / MB
-        // The heap the playback budget is taken from, which is below maxMemory() on a low-RAM TV.
-        val maxMb = MemoryBudget.heapMb
+        val maxMb = runtime.maxMemory() / MB
         val playerNativeBytes = snapshot?.nativeMemoryBytes
         val nativeMb = if (playerNativeBytes != null && playerNativeBytes >= 0L) {
             playerNativeBytes / MB
