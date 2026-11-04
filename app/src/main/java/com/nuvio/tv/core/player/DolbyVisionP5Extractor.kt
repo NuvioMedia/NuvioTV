@@ -14,6 +14,7 @@ import androidx.media3.extractor.PositionHolder
 import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.SniffFailure
 import androidx.media3.extractor.TrackOutput
+import com.nuvio.tv.ui.screens.player.RewrappableExtractor
 import java.io.EOFException
 import java.io.IOException
 
@@ -32,13 +33,18 @@ import java.io.IOException
  * Sample bytes are passed on unchanged: HEVC decoders ignore the RPU NAL type.
  *
  * Wrap it directly around the extractor that writes the samples, so it sees each RPU before any
- * other wrapper can strip it.
+ * other wrapper can strip it. It is a [RewrappableExtractor], so it stays in place when libass
+ * swaps in its own Matroska extractor.
  */
 @UnstableApi
 internal class DolbyVisionP5Extractor(
     private val delegate: Extractor,
     private val session: DolbyVisionP5Session,
-) : Extractor {
+) : RewrappableExtractor {
+
+    override val wrappedExtractor: Extractor get() = delegate
+
+    override fun rewrap(inner: Extractor): Extractor = DolbyVisionP5Extractor(inner, session)
 
     private var output: P5ExtractorOutput? = null
 
@@ -193,6 +199,7 @@ private class P5TrackOutput(
         val sampleEnd = bufferLength - carry
         var result = DolbyVisionP5Native.NOT_PARSED
         if (cryptoData == null) {
+            session.onSampleScanned()
             val rpu = DolbyVisionP5Nal.findRpu(buffer, sampleEnd)
             if (rpu != DolbyVisionP5Nal.NONE) {
                 result = DolbyVisionP5Nal.ingest(buffer, rpu, DolbyVisionP5Native::ingestRpu)

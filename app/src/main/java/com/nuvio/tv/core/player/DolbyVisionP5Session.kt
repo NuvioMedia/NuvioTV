@@ -42,7 +42,8 @@ internal class DolbyVisionP5Session(
         object NoFrames : Status()
         /** The output surface couldn't be marked as HDR10. */
         object OutputNotHdr10 : Status()
-        object NoRpu : Status()
+        /** [samples] video samples were checked and none had an RPU. */
+        data class NoRpu(val samples: Long) : Status()
         data class OtherProfile(val profile: Int) : Status()
         object RpuUnreadable : Status()
         object NoLut : Status()
@@ -75,6 +76,7 @@ internal class DolbyVisionP5Session(
     private var lastReleasedFrameUs = -1L
 
     private val rpuSamples = AtomicLong()
+    private val samplesScanned = AtomicLong()
     private val profile5Rpus = AtomicLong()
     private val unreadableRpus = AtomicLong()
     @Volatile
@@ -111,6 +113,11 @@ internal class DolbyVisionP5Session(
     fun onContainerProfile5() {
         containerSignalledProfile5 = true
         markDetected()
+    }
+
+    /** Records that one video sample was checked for an RPU. */
+    fun onSampleScanned() {
+        samplesScanned.incrementAndGet()
     }
 
     /** Records one sample's [DolbyVisionP5Native.ingestRpu] result. */
@@ -193,7 +200,7 @@ internal class DolbyVisionP5Session(
         outputHdr10 == false -> Status.OutputNotHdr10
         profile5Rpus.get() == 0L && otherProfile >= 0 -> Status.OtherProfile(otherProfile)
         profile5Rpus.get() == 0L && unreadableRpus.get() > 0L -> Status.RpuUnreadable
-        profile5Rpus.get() == 0L -> Status.NoRpu
+        profile5Rpus.get() == 0L -> Status.NoRpu(samplesScanned.get())
         lutsBuilt.get() == 0L -> Status.NoLut
         framesMapped.get() == 0L -> Status.NotMapped
         else -> Status.Mapping(lutsBuilt.get().toInt())
@@ -205,7 +212,7 @@ internal class DolbyVisionP5Session(
     fun framesReleasedCount(): Long = framesReleased.get()
 
     fun describeForLog(): String =
-        "rpuSamples=${rpuSamples.get()} p5=${profile5Rpus.get()} unreadable=${unreadableRpus.get()} " +
+        "scanned=${samplesScanned.get()} rpuSamples=${rpuSamples.get()} p5=${profile5Rpus.get()} unreadable=${unreadableRpus.get()} " +
             "otherProfile=$otherProfile luts=${lutsBuilt.get()} drawn=${framesDrawn.get()} " +
             "mapped=${framesMapped.get()} released=${framesReleased.get()} outputHdr10=$outputHdr10"
 

@@ -235,7 +235,7 @@ private fun PlayerRuntimeController.scheduleDolbyVisionP5Status(session: DolbyVi
             when (val status = session.status()) {
                 Status.NoFrames -> context.getString(R.string.dv5_hdr_note_no_frames)
                 Status.OutputNotHdr10 -> context.getString(R.string.dv5_hdr_note_not_hdr)
-                Status.NoRpu -> context.getString(R.string.dv5_hdr_note_no_rpu)
+                is Status.NoRpu -> context.getString(R.string.dv5_hdr_note_no_rpu, status.samples)
                 is Status.OtherProfile -> context.getString(R.string.dv5_hdr_note_other_profile, status.profile)
                 Status.RpuUnreadable -> context.getString(R.string.dv5_hdr_note_rpu_unreadable)
                 Status.NoLut -> context.getString(R.string.dv5_hdr_note_no_lut)

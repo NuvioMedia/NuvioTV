@@ -71,12 +71,29 @@ internal class DolbyVisionMatroskaTransformer(
 
     // Reuses the package-private ExposedByteArrayOutputStream from HevcDvRpuStripper.kt
 
+    /**
+     * Profile 5 by the track's codecs or Dolby Vision config when it was set up. The samples only
+     * see the config, which some files don't have: their codecs alone say Profile 5.
+     */
+    @Volatile
+    private var trackIsProfile5 = false
+
+    private fun noteTrackProfile(codecs: String?, dolbyVisionConfigBytes: ByteArray?) {
+        if (resolveProfile(codecs, dolbyVisionConfigBytes) == 5) trackIsProfile5 = true
+    }
+
+    /** Whether the RPU must be kept for the Profile 5 -> HDR10 mapping, which reads it after this extractor. */
+    private fun keepsProfile5Rpu(profile: Int?): Boolean =
+        p5Session?.active == true && (profile == 5 || trackIsProfile5)
+
     override fun onDolbyVisionBlockAdditionalData(
         blockAdditionalData: ByteArray?,
         blockAddIdType: Int,
         dolbyVisionConfigBytes: ByteArray?
     ): ByteArray? {
         if (blockAdditionalData == null) return null
+        // Kept as is: transformHevcSample moves it into the sample for the mapping.
+        if (keepsProfile5Rpu(resolveProfile(null, dolbyVisionConfigBytes))) return null
         if (stripRpuOnly) return ByteArray(0)
         val profile = resolveProfile(null, dolbyVisionConfigBytes)
         if (!config.shouldConvert(profile)) return null
@@ -85,6 +102,9 @@ internal class DolbyVisionMatroskaTransformer(
     }
 
     override fun shouldTransform(codecs: String?, dolbyVisionConfigBytes: ByteArray?): Boolean {
+        noteTrackProfile(codecs, dolbyVisionConfigBytes)
+        // To move a BlockAdditional RPU into the sample, where the mapping reads it.
+        if (keepsProfile5Rpu(null)) return true
         if (stripHdr10PlusSei) return true
         val isDv = codecs?.startsWith("dv", ignoreCase = true) == true ||
                 (dolbyVisionConfigBytes != null && dolbyVisionConfigBytes.isNotEmpty())
@@ -115,12 +135,25 @@ internal class DolbyVisionMatroskaTransformer(
 
         lastTransformedLength = sampleLength
 
+        if (keepsProfile5Rpu(profile)) {
+            // Mapping Profile 5 to HDR10 needs its RPU in the sample: never strip it, and carry
+            // one that came as BlockAdditional in the sample (decoders ignore the RPU NAL type).
+            val rpu = blockAdditionalData?.takeIf { it.isNotEmpty() }?.let(::asRpuNal)
+            if (rpu != null) {
+                scratch.reset()
+                scratch.write(sample, 0, sampleLength)
+                if (appendLengthDelimitedNalToScratch(rpu, nalUnitLengthFieldLength)) {
+                    val withRpu = finishScratch()
+                    return stripHdr10PlusIfEnabled(withRpu, lastTransformedLength, nalUnitLengthFieldLength) ?: withRpu
+                }
+                lastTransformedLength = sampleLength
+            }
+            return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
+        }
+
         if (stripRpuOnly) {
             if (profile == 5) {
-                // Mapping Profile 5 to HDR10 needs its RPU, which is read after this extractor.
-                if (p5Session?.active == true ||
-                    !shouldStripDv5Rpu(sample, sampleLength, nalUnitLengthFieldLength)
-                ) {
+                if (!shouldStripDv5Rpu(sample, sampleLength, nalUnitLengthFieldLength)) {
                     return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
                 }
             }
@@ -166,6 +199,12 @@ internal class DolbyVisionMatroskaTransformer(
         return stripHdr10PlusIfEnabled(dvResult, lastTransformedLength, nalUnitLengthFieldLength) ?: dvResult
     }
 
+    /** [data] as an RPU NAL unit: a bare RPU payload gets the UNSPEC62 NAL header (0x7C 0x01). */
+    private fun asRpuNal(data: ByteArray): ByteArray {
+        val hasHeader = data.size >= 2 && (data[0].toInt() and 0xFF) == 0x7C && data[1].toInt() == 0x01
+        return if (hasHeader) data else byteArrayOf(0x7C, 0x01) + data
+    }
+
     private fun finishScratch(): ByteArray {
         lastTransformedLength = scratch.size()
         return scratch.backingArray()
@@ -175,8 +214,9 @@ internal class DolbyVisionMatroskaTransformer(
         codecs: String?,
         dolbyVisionConfigBytes: ByteArray?
     ): String? {
+        noteTrackProfile(codecs, dolbyVisionConfigBytes)
         // The output format may then already read as plain HEVC: tell the session it is Profile 5.
-        if (p5Session != null && resolveProfile(codecs, dolbyVisionConfigBytes) == 5) {
+        if (p5Session != null && trackIsProfile5) {
             p5Session.onContainerProfile5()
         }
         if (stripRpuOnly) {

@@ -11,6 +11,7 @@ import androidx.media3.extractor.ExtractorOutput
 import androidx.media3.extractor.PositionHolder
 import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.TrackOutput
+import com.nuvio.tv.ui.screens.player.replaceInnermostExtractor
 import java.io.ByteArrayOutputStream
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -137,6 +138,21 @@ class DolbyVisionP5ExtractorTest {
         track.format(format(MimeTypes.VIDEO_H264, "avc1.640028"))
         track.sampleData(ParsableByteArray(sample), sample.size, TrackOutput.SAMPLE_DATA_PART_MAIN)
         assertEquals(listOf("format", "data"), recorder.events)
+    }
+
+    @Test
+    fun libassSwap_keepsTheWrapperAroundTheNewExtractor() {
+        // libass replaces the innermost Matroska extractor: the Profile 5 wrapper must stay.
+        val session = DolbyVisionP5Session(active = true).also { sessions += it }
+        val replacement = FakeExtractor()
+        val swapped = DolbyVisionP5Extractor(FakeExtractor(), session).replaceInnermostExtractor(replacement)
+        assertTrue(swapped is DolbyVisionP5Extractor)
+        assertTrue(swapped.underlyingImplementation === replacement)
+
+        val recorder = RecordingTrackOutput()
+        swapped.init(FakeExtractorOutput(recorder))
+        replacement.output.track(0, C.TRACK_TYPE_VIDEO).format(format(MimeTypes.VIDEO_DOLBY_VISION, "dvhe.05.06"))
+        assertEquals(MimeTypes.VIDEO_H265, recorder.lastFormat?.sampleMimeType)
     }
 
     @Test

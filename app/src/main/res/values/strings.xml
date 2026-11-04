@@ -882,7 +882,7 @@
     <string name="dv5_hdr_note_off_error">Dolby Vision 5 to HDR10 is off: it stopped after a playback error</string>
     <string name="dv5_hdr_note_no_frames">Dolby Vision 5 to HDR10: no video frames reached the colour renderer</string>
     <string name="dv5_hdr_note_not_hdr">Dolby Vision 5 to HDR10: the screen output couldn\'t be switched to HDR10</string>
-    <string name="dv5_hdr_note_no_rpu">Dolby Vision 5 to HDR10: no Dolby Vision data found in the video</string>
+    <string name="dv5_hdr_note_no_rpu">Dolby Vision 5 to HDR10: no Dolby Vision data found in %1$d video frames</string>
     <string name="dv5_hdr_note_other_profile">Dolby Vision 5 to HDR10: the Dolby Vision data is profile %1$d, not 5</string>
     <string name="dv5_hdr_note_rpu_unreadable">Dolby Vision 5 to HDR10: the Dolby Vision data couldn\'t be read</string>
     <string name="dv5_hdr_note_no_lut">Dolby Vision 5 to HDR10: the colour tables couldn\'t be built</string>

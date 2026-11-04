@@ -63,7 +63,8 @@ class DolbyVisionP5SessionTest {
         val other = DolbyVisionP5Session(active = false)
         other.onOutputCreated(hdr10 = true)
         other.onFrameDrawn(mapped = false)
-        assertEquals(DolbyVisionP5Session.Status.NoRpu, other.status())
+        other.onSampleScanned()
+        assertEquals(DolbyVisionP5Session.Status.NoRpu(1L), other.status())
         other.onRpuResult(DolbyVisionP5Native.OTHER_PROFILE_BASE - 8)
         assertEquals(DolbyVisionP5Session.Status.OtherProfile(8), other.status())
 
