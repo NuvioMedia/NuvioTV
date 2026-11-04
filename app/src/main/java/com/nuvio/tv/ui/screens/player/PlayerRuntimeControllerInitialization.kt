@@ -21,6 +21,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.decoder.ffmpeg.ExperimentalFfmpegVideoRenderer
 import androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -646,6 +647,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             val safeAudioModeEnabled = safeAudioForcedStreamUrls.contains(url)
             val audioDisabledForStream = audioDisabledForcedStreamUrls.contains(url)
             val vc1TrackSelectionBypassActive = vc1TrackSelectionBypassStreamUrls.contains(url)
+            val vc1SoftwareDecodeActive = vc1SoftwareDecodeStreamUrls.contains(url)
             isSafeAudioModeActiveForCurrentPlayback = safeAudioModeEnabled
             isAudioDisabledForCurrentPlayback = audioDisabledForStream
             isVc1TrackSelectionBypassActiveForCurrentPlayback = vc1TrackSelectionBypassActive
@@ -946,6 +948,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 initialForcePcm = hasTriedAudioPcmFallback || isBluetoothAudioOutput,
                 preferSoftwareAudioOnly = isBluetoothAudioOutput,
                 mapDv7ToHevc = mapDv7ToHevcEnabled,
+                vc1SoftwareDecode = vc1SoftwareDecodeActive,
                 onPlaybackSpeedAwareAudioSinkCreated = { playbackSpeedAwareAudioSink = it },
                 onFfmpegAudioRendererChanged = { renderer ->
                     ffmpegAudioRenderer = renderer
@@ -1778,6 +1781,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         initializationDurationMs: Long
                     ) {
                         currentDiagnostics = currentDiagnostics.copy(dv81DecoderName = decoderName)
+                        currentVideoDecoderName = decoderName
                         playbackAnalyticsDiagnostics.onVideoDecoderInitialized(
                             eventTime = eventTime,
                             decoderName = decoderName,
@@ -2156,6 +2160,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     lastKnownDuration = 0L
     currentStreamHasVideoTrack = false
     currentVideoTrackIsLikelyVc1 = false
+    currentVideoDecoderName = null
     currentVideoTrackMimeType = null
     currentVideoTrackCodecs = null
     currentVideoTrackWidth = 0
@@ -2207,6 +2212,8 @@ private class SubtitleOffsetRenderersFactory(
      */
     private val preferSoftwareAudioOnly: Boolean = false,
     private val mapDv7ToHevc: Boolean = false,
+    /** Hides platform VC-1 decoders so the FFmpeg video renderer decodes VC-1 in software. */
+    private val vc1SoftwareDecode: Boolean = false,
     private val onPlaybackSpeedAwareAudioSinkCreated: (PlaybackSpeedAwareAudioSink) -> Unit,
     private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit,
     private val onCuesShown: (List<Cue>) -> Unit = {}
@@ -2227,11 +2234,16 @@ private class SubtitleOffsetRenderersFactory(
             extensionRendererMode == EXTENSION_RENDERER_MODE_PREFER -> EXTENSION_RENDERER_MODE_ON
             else -> extensionRendererMode
         }
+        val videoCodecSelector = if (vc1SoftwareDecode) {
+            FfmpegVideoFallback.withoutPlatformDecoders(mediaCodecSelector)
+        } else {
+            mediaCodecSelector
+        }
         val built = ArrayList<Renderer>()
         super.buildVideoRenderers(
             context,
             videoExtensionMode,
-            mediaCodecSelector,
+            videoCodecSelector,
             enableDecoderFallback,
             eventHandler,
             eventListener,
@@ -2243,7 +2255,7 @@ private class SubtitleOffsetRenderersFactory(
             if (renderer::class.java == MediaCodecVideoRenderer::class.java) {
                 val builder = MediaCodecVideoRenderer.Builder(context)
                     .setCodecAdapterFactory(getCodecAdapterFactory())
-                    .setMediaCodecSelector(mediaCodecSelector)
+                    .setMediaCodecSelector(videoCodecSelector)
                     .setAllowedJoiningTimeMs(allowedVideoJoiningTimeMs)
                     .setEnableDecoderFallback(enableDecoderFallback)
                     .setEventHandler(eventHandler)
@@ -2254,6 +2266,12 @@ private class SubtitleOffsetRenderersFactory(
             } else {
                 out.add(renderer)
             }
+        }
+        // Media3 adds the FFmpeg video renderer only when extension renderers are on; VC-1 needs it
+        // either way. It claims only the codecs FFmpeg was built with, so others stay on MediaCodec.
+        if (built.none { it is ExperimentalFfmpegVideoRenderer }) {
+            FfmpegVideoFallback.createRenderer(allowedVideoJoiningTimeMs, eventHandler, eventListener)
+                ?.let(out::add)
         }
     }
 

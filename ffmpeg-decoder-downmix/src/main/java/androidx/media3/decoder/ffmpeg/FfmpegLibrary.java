@@ -110,6 +110,11 @@ public final class FfmpegLibrary {
     return true;
   }
 
+  /** Returns whether the native library has the named decoder, without logging when it does not. */
+  /* package */ static boolean hasDecoder(String codecName) {
+    return isAvailable() && ffmpegHasDecoder(codecName);
+  }
+
   /**
    * Returns the name of the FFmpeg decoder that could be used to decode the format, or {@code null}
    * if it's unsupported.
@@ -153,6 +158,8 @@ public final class FfmpegLibrary {
         return "h264";
       case MimeTypes.VIDEO_H265:
         return "hevc";
+      case MimeTypes.VIDEO_VC1:
+        return "vc1";
       default:
         return null;
     }

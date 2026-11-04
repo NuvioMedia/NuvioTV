@@ -684,6 +684,8 @@ class PlayerRuntimeController(
     // attempt is forced to libdovi mode 1 before falling back to HDR10 base layer.
     internal val dv7Mode1ForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal val vc1TrackSelectionBypassStreamUrls: MutableSet<String> = mutableSetOf()
+    // Streams whose VC-1 video failed on the platform decoder; replayed with FFmpeg software decoding.
+    internal val vc1SoftwareDecodeStreamUrls: MutableSet<String> = mutableSetOf()
     internal val safeAudioForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal val audioDisabledForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal var isMapDv7ToHevcActiveForCurrentPlayback: Boolean = false
@@ -751,6 +753,7 @@ class PlayerRuntimeController(
 
     internal var currentStreamHasVideoTrack: Boolean = false
     internal var currentVideoTrackIsLikelyVc1: Boolean = false
+    internal var currentVideoDecoderName: String? = null
     internal var currentVideoTrackMimeType: String? = null
     internal var currentVideoTrackCodecs: String? = null
     internal var currentVideoTrackWidth: Int = 0

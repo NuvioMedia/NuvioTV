@@ -5,6 +5,7 @@ import com.nuvio.tv.core.player.OpenSubtitlesHasher
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlaybackException
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.repository.SkipInterval
@@ -941,6 +942,8 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
                 retryCurrentStreamWithDv7Mode1Fallback(currentPosition)
             }
             PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.FailVc1Unsupported -> {
+                // A hardware VC-1 decoder that never outputs a frame gets the software decoder.
+                if (maybeRetryVc1WithSoftwareDecoder()) return@launch
                 val exoError = livePlayer.playerError ?: return@launch
                 handleVc1PlaybackFailure(errorMessage = exoError.toDisplayMessage(context))
             }
@@ -949,7 +952,43 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
     }
 }
 
+/**
+ * Replays the stream with VC-1 decoded by FFmpeg after the platform VC-1 decoder failed. Returns
+ * false when that already happened, FFmpeg was the decoder that failed, or FFmpeg has no VC-1.
+ */
+internal fun PlayerRuntimeController.maybeRetryVc1WithSoftwareDecoder(): Boolean {
+    val url = currentStreamUrl
+    if (url.isBlank()) return false
+    val playerError = _exoPlayer?.playerError
+    val rendererError = (playerError as? ExoPlaybackException)
+        ?.takeIf { it.type == ExoPlaybackException.TYPE_RENDERER }
+    val failedRendererName = rendererError?.rendererName
+    if (!FfmpegVideoFallback.shouldRetryWithSoftwareDecoder(
+            alreadyRetried = url in vc1SoftwareDecodeStreamUrls,
+            softwareDecoderAvailable = FfmpegVideoFallback.isVc1DecoderAvailable,
+            // No error at all is the first-frame watchdog: the decoder produced nothing.
+            isDecoderFailure = playerError == null || rendererError != null,
+            failedRendererName = failedRendererName,
+            activeVideoDecoderName = currentVideoDecoderName,
+        )
+    ) {
+        return false
+    }
+    vc1SoftwareDecodeStreamUrls.add(url)
+    val positionMs = _exoPlayer?.currentPosition?.coerceAtLeast(0L) ?: 0L
+    Log.w(
+        PlayerRuntimeController.TAG,
+        "VC-1 failed on the platform decoder (renderer=$failedRendererName decoder=$currentVideoDecoderName); " +
+            "retrying with FFmpeg software decoding at ${positionMs}ms"
+    )
+    errorRetryJob?.cancel()
+    errorRetryJob = null
+    scheduleDeferredPlayerReinitialize(fromPositionMs = positionMs)
+    return true
+}
+
 internal fun PlayerRuntimeController.handleVc1PlaybackFailure(errorMessage: String? = null) {
+    if (maybeRetryVc1WithSoftwareDecoder()) return
     val displayMessage = errorMessage?.takeIf { it.isNotBlank() }
         ?: _exoPlayer?.playerError?.toDisplayMessage(context)
         ?: return
