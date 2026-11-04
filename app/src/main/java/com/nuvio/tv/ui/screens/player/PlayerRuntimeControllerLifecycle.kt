@@ -97,6 +97,8 @@ internal fun PlayerRuntimeController.releasePlayer(
     cancelNextEpisodePreload()
     debridResolveJob?.cancel()
     debridResolveJob = null
+    episodeMismatchCheckJob?.cancel()
+    episodeMismatchCheckJob = null
     stillWatchingPromptJob?.cancel()
     stillWatchingPromptJob = null
     errorRetryJob?.cancel()

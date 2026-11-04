@@ -4,8 +4,12 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import androidx.media3.common.util.UnstableApi
+import com.nuvio.tv.core.debrid.DirectDebridMitigationResult
 import com.nuvio.tv.core.debrid.DirectDebridPlayableResult
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.player.EpisodeMismatchDetector
+import com.nuvio.tv.core.player.EpisodeMismatchInfo
+import com.nuvio.tv.core.player.FilenameEpisodeMatcher
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.StreamAutoPlayMode
@@ -654,6 +658,7 @@ private fun PlayerRuntimeController.applySelectedStreamState(
  * of stream type — critical for next-episode binge matching.
  */
 private fun PlayerRuntimeController.applyStreamMetadata(stream: Stream) {
+    mitigatedFromStreamUrl = null
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
     applyStreamAudioDelay(stream.behaviorHints?.audioDelayMs, stream.behaviorHints?.audioDelayLanguage)
     currentVideoHash = stream.behaviorHints?.videoHash
@@ -734,6 +739,182 @@ internal fun PlayerRuntimeController.handleStreamRedirect(requestedUrl: String, 
         )
         persistSelectedStreamForReuse(stream = target, url = targetRequest.url, headers = targetRequest.headers)
     }
+}
+
+internal fun PlayerRuntimeController.startEpisodeMismatchVerification(
+    url: String,
+    headers: Map<String, String>
+) {
+    episodeMismatchCheckJob?.cancel()
+    val season = currentSeason ?: return
+    val episode = currentEpisode ?: return
+    if (isTorrentStream || url.isBlank() || mitigatedFromStreamUrl == url) return
+
+    episodeMismatchCheckJob = scope.launch {
+        val staticMismatch = EpisodeMismatchDetector.detectMismatch(
+            expectedSeason = season,
+            expectedEpisode = episode,
+            streamUrl = url,
+            candidateLabels = listOf(currentFilename)
+        )
+        if (staticMismatch != null) {
+            onEpisodeMismatchDetected(requestedUrl = url, mismatch = staticMismatch)
+            return@launch
+        }
+
+        val hintFilename = currentFilename
+        if (!hintFilename.isNullOrBlank() && FilenameEpisodeMatcher.extractSeasonEpisode(hintFilename) != null) {
+            return@launch
+        }
+
+        val probedCandidates = probeStreamLabels(url, headers)
+        if (probedCandidates.isEmpty() || isReleasingPlayer || url != currentStreamUrl || mitigatedFromStreamUrl == url) {
+            return@launch
+        }
+        if (currentFilename.isNullOrBlank()) {
+            currentFilename = probedCandidates.firstOrNull { !it.isNullOrBlank() }
+        }
+        val probedMismatch = EpisodeMismatchDetector.detectMismatch(
+            expectedSeason = season,
+            expectedEpisode = episode,
+            streamUrl = url,
+            candidateLabels = probedCandidates + currentFilename
+        )
+        if (probedMismatch != null) {
+            onEpisodeMismatchDetected(requestedUrl = url, mismatch = probedMismatch)
+        }
+    }
+}
+
+private val episodeProbeHttpClient by lazy {
+    PlayerPlaybackNetworking.playbackHttpClient.newBuilder()
+        .callTimeout(4_000, java.util.concurrent.TimeUnit.MILLISECONDS)
+        .connectTimeout(3_000, java.util.concurrent.TimeUnit.MILLISECONDS)
+        .readTimeout(3_000, java.util.concurrent.TimeUnit.MILLISECONDS)
+        .build()
+}
+
+private suspend fun probeStreamLabels(
+    url: String,
+    headers: Map<String, String>
+): List<String?> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    if (!url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true)) {
+        return@withContext emptyList()
+    }
+    val sanitizedHeaders = PlayerMediaSourceFactory.sanitizeHeaders(headers)
+    runCatching {
+        val requestBuilder = okhttp3.Request.Builder()
+            .url(url)
+            .header("Range", "bytes=0-0")
+        sanitizedHeaders.forEach { (key, value) ->
+            if (!key.equals("Range", ignoreCase = true)) {
+                requestBuilder.header(key, value)
+            }
+        }
+        if (sanitizedHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
+            requestBuilder.header("User-Agent", PlayerMediaSourceFactory.DEFAULT_USER_AGENT)
+        }
+        episodeProbeHttpClient.newCall(requestBuilder.build()).execute().use { response ->
+            if (!response.isSuccessful && response.code !in 200..308) return@use emptyList()
+            val contentDisposition = EpisodeMismatchDetector.extractContentDispositionFilename(
+                response.header("Content-Disposition")
+            )
+            val finalUrl = response.request.url.toString()
+            val urlFilename = finalUrl.substringBefore('?').substringAfterLast('/', "")
+                .takeIf { it.isNotBlank() && '.' in it }
+            listOf(contentDisposition, urlFilename)
+        }
+    }.getOrDefault(emptyList())
+}
+
+private suspend fun PlayerRuntimeController.onEpisodeMismatchDetected(
+    requestedUrl: String,
+    mismatch: EpisodeMismatchInfo
+) {
+    if (isReleasingPlayer || requestedUrl != currentStreamUrl || mitigatedFromStreamUrl == requestedUrl) return
+    mitigatedFromStreamUrl = requestedUrl
+    Log.w(
+        PlayerRuntimeController.TAG,
+        "Episode mismatch detected: expected=${mismatch.formatExpectedCode()} detected=${mismatch.formatDetectedCode()} label=${mismatch.detectedLabel}"
+    )
+
+    if (directDebridResolver.hasSavedDebridKey()) {
+        val mitigation = directDebridResolver.mitigateMismatchedEpisodeStream(
+            infoHash = _uiState.value.currentStreamInfoHash,
+            filenameHint = currentFilename,
+            streamUrl = requestedUrl,
+            bingeGroup = currentStreamBingeGroup,
+            sources = currentTorrentSources,
+            title = _uiState.value.currentStreamName,
+            addonName = currentAddonName ?: "Debrid",
+            season = mismatch.expectedSeason,
+            episode = mismatch.expectedEpisode
+        )
+        if (!isReleasingPlayer && mitigation is DirectDebridMitigationResult.Mitigated && requestedUrl == currentStreamUrl) {
+            Log.i(
+                PlayerRuntimeController.TAG,
+                "Auto-mitigated episode mismatch (${mismatch.formatDetectedCode()} -> ${mismatch.formatExpectedCode()}) via ${mitigation.providerName}"
+            )
+            val resolvedUrl = mitigation.result.url
+            mitigatedFromStreamUrl = resolvedUrl
+            currentStreamUrl = resolvedUrl
+            currentHeaders = emptyMap()
+            currentFilename = mitigation.result.filename ?: streamFilenameFromUrl(resolvedUrl)
+            currentVideoSize = mitigation.result.videoSize ?: currentVideoSize
+            currentStreamCacheKey = null
+            currentStreamResponseHeaders = emptyMap()
+            currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
+                url = resolvedUrl,
+                filename = currentFilename,
+                responseHeaders = emptyMap()
+            )
+            if (streamReuseLastLinkEnabled) {
+                streamCacheKey?.let { key ->
+                    val name = (_uiState.value.currentStreamName?.takeIf { it.isNotBlank() } ?: currentAddonName)
+                        ?.takeIf { it.isNotBlank() } ?: title
+                    scope.launch {
+                        streamLinkCacheDataStore.save(
+                            contentKey = key,
+                            url = resolvedUrl,
+                            streamName = name,
+                            headers = emptyMap(),
+                            filename = currentFilename,
+                            videoHash = currentVideoHash,
+                            videoSize = currentVideoSize,
+                            bingeGroup = currentStreamBingeGroup,
+                            contentLanguage = contentLanguage,
+                            year = year
+                        )
+                    }
+                }
+            }
+            _uiState.update { it.copy(currentStreamUrl = resolvedUrl) }
+            val indicatorText = context.getString(
+                com.nuvio.tv.R.string.player_episode_mismatch_mitigated,
+                mismatch.formatDetectedCode(),
+                mismatch.formatExpectedCode(),
+                mitigation.providerName
+            )
+            episodeMismatchCheckJob = null
+            _exoPlayer?.stop()
+            releasePlayer(flushPlaybackState = false)
+            showCustomStreamSourceIndicator(indicatorText, durationMs = 4500L)
+            preparePlaybackBeforeStart(
+                url = resolvedUrl,
+                headers = emptyMap(),
+                loadSavedProgress = true
+            )
+            return
+        }
+    }
+
+    if (isReleasingPlayer || requestedUrl != currentStreamUrl) return
+    val warningText = context.getString(
+        com.nuvio.tv.R.string.player_episode_mismatch_warning,
+        mismatch.formatDetectedCode(),
+        mismatch.formatExpectedCode()
+    )
+    showCustomStreamSourceIndicator(warningText, durationMs = 6000L)
 }
 
 private fun PlayerRuntimeController.persistSelectedStreamForReuse(

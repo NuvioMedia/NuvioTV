@@ -446,16 +446,23 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
 internal fun PlayerRuntimeController.showStreamSourceIndicator(stream: Stream) {
     val chosenSource = (stream.name?.takeIf { it.isNotBlank() } ?: stream.addonName).trim()
     if (chosenSource.isBlank()) return
+    showCustomStreamSourceIndicator("Source: $chosenSource", durationMs = 2200L)
+}
 
+internal fun PlayerRuntimeController.showCustomStreamSourceIndicator(
+    text: String,
+    durationMs: Long = 2200L
+) {
+    if (text.isBlank()) return
     hideStreamSourceIndicatorJob?.cancel()
     _uiState.update {
         it.copy(
             showStreamSourceIndicator = true,
-            streamSourceIndicatorText = "Source: $chosenSource"
+            streamSourceIndicatorText = text
         )
     }
     hideStreamSourceIndicatorJob = scope.launch {
-        delay(2200)
+        delay(durationMs)
         _uiState.update { it.copy(showStreamSourceIndicator = false) }
     }
 }
