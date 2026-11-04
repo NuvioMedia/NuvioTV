@@ -653,8 +653,8 @@
     <string name="sub_section">Titulky</string>
     <string name="sub_not_set">Nenastavené</string>
     <string name="sub_forced_lang">Vynútené</string>
-    <string name="sub_preferred_lang">Preferovaný jazyk</string>
-    <string name="sub_secondary_lang">Sekundárny preferovaný jazyk</string>
+    <string name="sub_preferred_lang">Preferovaný jazyk titulkov</string>
+    <string name="sub_secondary_lang">Sekundárny jazyk titulkov</string>
     <string name="sub_use_forced_subtitles">Použiť vynútené titulky</string>
     <string name="sub_use_forced_subtitles_desc">Uprednostniť vynútené titulky, keď sa jazyk audia zhoduje s jazykom titulkov; ak nie sú dostupné, nevyberať nič.</string>
     <string name="sub_show_only_preferred_languages">Zobraziť iba preferované jazyky</string>
@@ -2539,9 +2539,9 @@
 <string name="dv7_libdovi_mode_4_sub">Konvertovať na statický profil 8.4.</string>
 <string name="layout_section_streams">Streamy</string>
 <string name="layout_section_streams_desc">Nastavenia zobrazenia pre výsledky streamov a panely zdrojov prehrávača.</string>
-<string name="layout_cw_sort_split_upcoming">Oddelený riadok Nespustené</string>
-<string name="layout_cw_sort_split_upcoming_desc">Presunie neodvysielané epizódy do samostatného riadka Nespustené</string>
-<string name="upcoming_section_title">Nespustené</string>
+<string name="layout_cw_sort_split_upcoming">Oddelený riadok Neodvysielané</string>
+<string name="layout_cw_sort_split_upcoming_desc">Presunie neodvysielané epizódy do samostatného riadka Neodvysielané</string>
+<string name="upcoming_section_title">Neodvysielané</string>
 <string name="settings_card_depth_title">Efekt hĺbky karty</string>
 <string name="settings_card_depth_description">Pridáva osvetlený horný okraj a lesk kartám s obrázkami pre jemný pocit hĺbky.</string>
 <string name="settings_card_depth_enabled">Povoliť efekt hĺbky</string>
