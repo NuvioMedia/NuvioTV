@@ -11,6 +11,7 @@ import kotlin.math.max
 internal object AutoSyncSubtitleCueParser {
     private val timestampRegex = Regex("""(?:(\d+):)?(\d{1,2}):(\d{2})([.,](\d+))?""")
     private const val CANCELLATION_CHECK_INTERVAL = 64
+    private val assOverrideBlockRegex = Regex("""\{[^}]*\}""")
     private val assEventsHeaderRegex =
         Regex("""^[ \t]*\[Events\][ \t]*$""", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))
 
@@ -217,7 +218,7 @@ internal object AutoSyncSubtitleCueParser {
             .mapNotNull { event ->
                 val body = normalizeCueText(
                     event.rawText
-                        .replace(Regex("""\{[^}]*\}"""), "")
+                        .replace(assOverrideBlockRegex, "")
                         .replace("\\N", "\n")
                         .replace("\\n", "\n")
                         .replace("\\h", " ")
