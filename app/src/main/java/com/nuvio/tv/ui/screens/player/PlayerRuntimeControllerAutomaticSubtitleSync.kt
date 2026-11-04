@@ -424,8 +424,11 @@ private fun PlayerRuntimeController.isLibassAddonSubtitle(subtitle: Subtitle): B
  * ExoPlayer path for ASS/SSA add-on subtitles drawn by libass. The analysis is the same as for the
  * sidecar renderer, while libass keeps showing the original. A confident result is applied by
  * loading a copy of the subtitle whose timestamps are rewritten into libass's track for it
- * ([AutoSyncLibassSubtitles]), so styling is kept and the media source is not reloaded. Only
- * ASS/SSA candidates compete, so switching to a better-fitting subtitle never drops the styling.
+ * ([AutoSyncLibassSubtitles]), so styling is kept and the media source is not reloaded.
+ *
+ * The startup search tries ASS/SSA candidates first, so the styling is kept whenever one fits.
+ * Only when none does are the other formats tried, and a fitting SRT/VTT is shown by the sidecar
+ * renderer: a synced subtitle without styling beats a styled one that is out of sync.
  */
 private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
     selectedSubtitle: Subtitle,
@@ -437,9 +440,8 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
     val sourceUrlAtStart = currentStreamUrl
     val sourceHeadersAtStart = currentHeaders.toMap()
     val selectedUrl = selectedSubtitle.url
-    fun List<Subtitle>.assOnly() =
-        filter { PlayerSubtitleUtils.mimeTypeFromUrl(it.url) == MimeTypes.TEXT_SSA }
-    val candidatesAtStart = (_uiState.value.addonSubtitles.assOnly() + selectedSubtitle)
+    fun Subtitle.isAss() = PlayerSubtitleUtils.mimeTypeFromUrl(url) == MimeTypes.TEXT_SSA
+    val candidatesAtStart = (_uiState.value.addonSubtitles + selectedSubtitle)
         .distinctBy { it.url }
     val candidateByUrl = candidatesAtStart.associateBy { it.url }
 
@@ -457,26 +459,39 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
                     "lang=${selectedSubtitle.lang} candidates=${candidatesAtStart.size}",
             )
             var analysisOutcome: AutoSyncAnalysisOutcome? = null
-            val resolved = AutomaticSubtitleSync.findTimelineRetime(
+            val startupSearch = candidateScope == AutoSyncCandidateScope.STARTUP_SEARCH
+            suspend fun search(ass: Boolean) = AutomaticSubtitleSync.findTimelineRetime(
                 sourceKey = sourceUrlAtStart,
                 sourceHeaders = sourceHeadersAtStart,
                 selectedSubtitleUrl = selectedUrl,
                 selectedSubtitleHeaders = selectedSubtitle.headers.orEmpty(),
                 preferredLanguage = selectedSubtitle.lang,
-                alternativeSubtitles = if (candidateScope == AutoSyncCandidateScope.STARTUP_SEARCH) {
-                    candidatesAtStart.map { it.toAutoSyncCandidate() }
+                alternativeSubtitles = if (startupSearch) {
+                    candidatesAtStart.filter { it.isAss() == ass }.map { it.toAutoSyncCandidate() }
                 } else {
                     emptyList()
                 },
-                alternativeSubtitlesProvider = if (
-                    candidateScope == AutoSyncCandidateScope.STARTUP_SEARCH
-                ) {
-                    { _uiState.value.addonSubtitles.assOnly().map { it.toAutoSyncCandidate() } }
+                alternativeSubtitlesProvider = if (startupSearch) {
+                    {
+                        _uiState.value.addonSubtitles
+                            .filter { it.isAss() == ass }
+                            .map { it.toAutoSyncCandidate() }
+                    }
                 } else {
                     null
                 },
                 onAnalysisOutcome = { outcome -> analysisOutcome = outcome },
             )
+            var resolved = search(ass = true)
+            // No ASS/SSA fits: try the other formats, unless the video has nothing to compare with.
+            if (
+                resolved == null && startupSearch && streamUnchanged() &&
+                analysisOutcome != AutoSyncAnalysisOutcome.NO_SUBTITLE_TRACKS &&
+                analysisOutcome != AutoSyncAnalysisOutcome.NO_USABLE_REFERENCE &&
+                _uiState.value.addonSubtitles.any { !it.isAss() }
+            ) {
+                resolved = search(ass = false)
+            }
 
             if (!streamUnchanged()) return@launch
             val activeSubtitleUrl = _uiState.value.selectedAddonSubtitle?.url
@@ -503,7 +518,7 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
                 resolved.timeline.maxAlignmentShiftMs() <= toleranceMs
             val applied = withinTolerance || applyLibassAutoSyncResult(
                 player = player,
-                selectedUrl = selectedUrl,
+                selectedSubtitle = selectedSubtitle,
                 chosenSubtitle = chosenSubtitle,
                 resolved = resolved,
                 stillApplicable = {
@@ -545,16 +560,40 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
 }
 
 /**
- * Applies [resolved] for the libass path: the ASS/SSA result is retimed as text and loaded into
- * libass's track, after Nuvio's own switch when AutoSync picked another ASS file.
+ * Applies [resolved] for the libass path. An ASS/SSA result is retimed as text and loaded into
+ * libass's track, after Nuvio's own switch when AutoSync picked another ASS file. An SRT/VTT result
+ * (no ASS/SSA fitted) is shown by the sidecar renderer and retimed there; if that fails, the
+ * selected ASS subtitle is put back, so the viewer is never left without a subtitle.
  */
 private suspend fun PlayerRuntimeController.applyLibassAutoSyncResult(
     player: ExoPlayer,
-    selectedUrl: String,
+    selectedSubtitle: Subtitle,
     chosenSubtitle: Subtitle,
     resolved: AutoSyncResolvedTimeline,
     stillApplicable: () -> Boolean,
 ): Boolean {
+    val selectedUrl = selectedSubtitle.url
+    if (PlayerSubtitleUtils.mimeTypeFromUrl(chosenSubtitle.url) != MimeTypes.TEXT_SSA) {
+        if (!canAttachAddonSubtitleViaSidecar(chosenSubtitle) || !stillApplicable()) return false
+        disableSubtitles()
+        pendingAddonSubtitleLanguage = null
+        pendingAddonSubtitleTrackId = null
+        pendingAudioSelectionAfterSubtitleRefresh = null
+        val applied = startSidecarAddonSubtitle(
+            subtitle = chosenSubtitle,
+            rawBodyLoader = resolved.subtitleBody?.let { body -> suspend { body } },
+        ) && applyAutoSyncSidecarTimeline(
+            sidecar = this,
+            url = chosenSubtitle.url,
+            timeline = resolved.timeline,
+        )
+        if (!applied) {
+            stopSidecarAddonSubtitle()
+            selectAddonSubtitle(selectedSubtitle)
+        }
+        return applied
+    }
+
     val assHandler = player.getAssHandlerCompat() ?: return false
     val body = resolved.subtitleBody
         ?: downloadSubtitleBody(chosenSubtitle.url, chosenSubtitle.lang, chosenSubtitle.headers)
