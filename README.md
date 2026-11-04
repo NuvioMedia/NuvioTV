@@ -50,6 +50,7 @@ This fork of [NuvioMedia/NuvioTV](https://github.com/NuvioMedia/NuvioTV) adds th
 - HDR10+ metadata stripping now applies only to HEVC tracks, so H.264 streams (most Live TV channels) are no longer corrupted.
 - Zoom and stretch now work during tunneled playback.
 - vc-1 codec sw decoding
+- h.264 hi10 decoding 
 
 ## Get Nuvio TV
 
