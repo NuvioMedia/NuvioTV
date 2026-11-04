@@ -180,6 +180,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.media3.exoplayer.ExoPlayer
 import com.nuvio.tv.libass.media.widget.AssSubtitleSurfaceView
+import com.nuvio.tv.libass.media.widget.AssCpuBlendSurfaceView
 import kotlin.math.abs
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
@@ -2696,7 +2697,7 @@ private fun PlayerView.syncLibassOverlay(
     // Overlay is needed when libass is enabled AND the user chose OVERLAY mode.
     // OVERLAY mode skips setVideoEffects entirely so HDR passthrough is preserved.
     // VIDEO_EFFECT (default) draws subtitles onto the video frame - no overlay needed.
-    val useCpuBlend = renderMode == LibassRenderMode.CPU_BLEND
+    val useCpuBlend = renderMode == LibassRenderMode.OVERLAY_CPU_BLEND
     val needsOverlay = enabled && (renderMode == LibassRenderMode.OVERLAY || useCpuBlend)
     val boundPlayer = getTag(R.id.libass_overlay_bound_player) as? ExoPlayer
     val hasOverlayChild = overlayContainer.hasAssOverlayChild()
@@ -2713,14 +2714,15 @@ private fun PlayerView.syncLibassOverlay(
     }
 
     val assHandler = player.getAssHandlerCompat() ?: return
-    val overlayMatchesMode = (overlayContainer.findAssOverlayChild() is LibassCpuBlendSurfaceView) == useCpuBlend
+    val overlayMatchesMode = (overlayContainer.findAssOverlayChild() is AssCpuBlendSurfaceView) == useCpuBlend
     if (boundPlayer === player && hasOverlayChild && overlayMatchesMode) {
         return
     }
 
     overlayContainer.removeAssOverlayChildren()
     if (useCpuBlend) {
-        val cpuBlendView = LibassCpuBlendSurfaceView(overlayContainer.context, assHandler)
+        // CPU-blended overlay: NEON alpha blend directly into ANativeWindow, zero GPU.
+        val cpuBlendView = AssCpuBlendSurfaceView(overlayContainer.context, assHandler)
         assHandler.videoFrameCallback = { presentationTimeUs, releaseTimeNs ->
             cpuBlendView.requestRender(presentationTimeUs, releaseTimeNs)
         }
@@ -2756,7 +2758,7 @@ private fun PlayerView.syncLibassOverlay(
 private fun android.widget.FrameLayout.hasAssOverlayChild(): Boolean {
     for (index in 0 until childCount) {
         val child = getChildAt(index)
-        if (child is AssSubtitleSurfaceView || child is LibassCpuBlendSurfaceView) {
+        if (child is AssSubtitleSurfaceView || child is AssCpuBlendSurfaceView) {
             return true
         }
     }
@@ -2766,7 +2768,7 @@ private fun android.widget.FrameLayout.hasAssOverlayChild(): Boolean {
 private fun android.widget.FrameLayout.findAssOverlayChild(): android.view.View? {
     for (index in 0 until childCount) {
         val child = getChildAt(index)
-        if (child is AssSubtitleSurfaceView || child is LibassCpuBlendSurfaceView) {
+        if (child is AssSubtitleSurfaceView || child is AssCpuBlendSurfaceView) {
             return child
         }
     }
@@ -2776,14 +2778,14 @@ private fun android.widget.FrameLayout.findAssOverlayChild(): android.view.View?
 private fun android.view.View.invalidateAssOverlay() {
     when (this) {
         is AssSubtitleSurfaceView -> invalidateSubtitles()
-        is LibassCpuBlendSurfaceView -> invalidateSubtitles()
+        is AssCpuBlendSurfaceView -> invalidateSubtitles()
     }
 }
 
 private fun android.widget.FrameLayout.removeAssOverlayChildren() {
     for (index in childCount - 1 downTo 0) {
         val child = getChildAt(index)
-        if (child is AssSubtitleSurfaceView || child is LibassCpuBlendSurfaceView) {
+        if (child is AssSubtitleSurfaceView || child is AssCpuBlendSurfaceView) {
             removeViewAt(index)
         }
     }

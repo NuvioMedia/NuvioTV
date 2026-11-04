@@ -560,15 +560,20 @@ enum class LibassRenderMode {
     OVERLAY,
     /** Frame-accurate subtitles; HDR tone-mapped to SDR. */
     VIDEO_EFFECT,
-    CPU_BLEND;
+    /** CPU-blended overlay via ANativeWindow. Zero GPU, NEON-optimized alpha blend.
+     *  Same as OVERLAY but bypasses GL entirely */
+    OVERLAY_CPU_BLEND;
 
     companion object {
         val DEFAULT = OVERLAY
+        private const val LEGACY_CPU_BLEND = "CPU_BLEND"
 
         fun fromStoredString(value: String?): LibassRenderMode = when (value) {
             VIDEO_EFFECT.name -> VIDEO_EFFECT
             OVERLAY.name -> OVERLAY
-            CPU_BLEND.name -> CPU_BLEND
+            OVERLAY_CPU_BLEND.name -> OVERLAY_CPU_BLEND
+            // Previous app-side CPU blend mode; migrate to the library implementation.
+            LEGACY_CPU_BLEND -> OVERLAY_CPU_BLEND
             else -> DEFAULT
         }
     }

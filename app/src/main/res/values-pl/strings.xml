@@ -322,6 +322,8 @@
     <string name="sub_libass_render_mode_video_effect_sub">Rysuje napisy bezpośrednio na każdej klatce wideo. Idealnie dokładny timing na każdym sprzęcie. Treści HDR są konwertowane do SDR.</string>
     <string name="sub_libass_render_mode_overlay">Nakładka</string>
     <string name="sub_libass_render_mode_overlay_sub">Renderuje napisy na osobnej warstwie. Zachowuje wyjście HDR. Timing napisów może nie być idealnie dokładny na niektórych urządzeniach.</string>
+    <string name="sub_libass_render_mode_cpu_blend">Nakładka (CPU Blend)</string>
+    <string name="sub_libass_render_mode_cpu_blend_sub">Renderuje napisy z użyciem NEON-zoptymalizowanego blendingu CPU bezpośrednio na warstwie nakładki. Zero użycia GPU, lepsza wydajność na urządzeniach ze słabym GPU.</string>
     <string name="sub_org_none">Brak (domyślna kolejność)</string>
     <string name="sub_org_by_lang">Według języka</string>
     <string name="sub_org_by_addon">Według dodatku</string>

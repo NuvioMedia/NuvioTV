@@ -29,9 +29,10 @@ internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
     playerMediaSourceFactory: PlayerMediaSourceFactory? = null,
     dataSourceFactory: DataSource.Factory = PlayerPlaybackNetworking.createDataSourceFactory(context),
     extractorsFactory: ExtractorsFactory = DefaultExtractorsFactory(),
-    renderersFactory: RenderersFactory = DefaultRenderersFactory(context)
+    renderersFactory: RenderersFactory = DefaultRenderersFactory(context),
+    assHandlerConfig: com.nuvio.tv.libass.media.AssHandlerConfig = com.nuvio.tv.libass.media.AssHandlerConfig()
 ): ExoPlayer {
-    val assHandler = AssHandler()
+    val assHandler = AssHandler(assHandlerConfig)
     val assSubtitleParserFactory = CompatAssSubtitleParserFactory(assHandler)
     val assExtractorsFactory = extractorsFactory.withAssMkvSupportCompat(
         subtitleParserFactory = assSubtitleParserFactory,

@@ -222,7 +222,7 @@ internal fun subtitleLanguageLabel(style: SubtitleStyleSettings): String = when 
 private fun libassRenderModeLabel(mode: LibassRenderMode): String = when (mode) {
     LibassRenderMode.VIDEO_EFFECT -> stringResource(R.string.sub_libass_render_mode_video_effect)
     LibassRenderMode.OVERLAY -> stringResource(R.string.sub_libass_render_mode_overlay)
-    LibassRenderMode.CPU_BLEND -> stringResource(R.string.sub_libass_render_mode_cpu_blend)
+    LibassRenderMode.OVERLAY_CPU_BLEND -> stringResource(R.string.sub_libass_render_mode_cpu_blend)
 }
 
 @Composable
@@ -334,7 +334,7 @@ internal fun SubtitleSettingsDialogs(
                     null
                 },
                 SettingsPickerOption(
-                    LibassRenderMode.CPU_BLEND,
+                    LibassRenderMode.OVERLAY_CPU_BLEND,
                     stringResource(R.string.sub_libass_render_mode_cpu_blend),
                     stringResource(R.string.sub_libass_render_mode_cpu_blend_sub)
                 )
