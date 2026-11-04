@@ -4,6 +4,7 @@ import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.RemotePluginInfo
 import com.nuvio.tv.domain.model.ScraperInfo
+import com.nuvio.tv.domain.model.Stream
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -50,18 +51,25 @@ class PluginManager {
 
     suspend fun setGroupStreamsByRepository(enabled: Boolean) = Unit
 
+    fun recordPluginProviderPlay(stream: Stream) = Unit
+
+    fun recordPluginProviderPlay(bingeGroup: String?) = Unit
+
     suspend fun executeScrapers(
         tmdbId: String,
         mediaType: String,
         season: Int? = null,
-        episode: Int? = null
+        episode: Int? = null,
+        priorityBingeGroup: String? = null
     ): List<LocalScraperResult> = emptyList()
 
     fun executeScrapersStreaming(
         tmdbId: String,
         mediaType: String,
         season: Int? = null,
-        episode: Int? = null
+        episode: Int? = null,
+        priorityBingeGroup: String? = null,
+        preferredPluginOnly: Boolean = false
     ): Flow<Pair<ScraperInfo, List<LocalScraperResult>>> = emptyFlow()
 
     suspend fun executeScraper(

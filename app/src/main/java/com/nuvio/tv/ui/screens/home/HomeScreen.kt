@@ -547,6 +547,9 @@ private fun ClassicHomeRoute(
         showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onNavigateToFolderDetail = onNavigateToFolderDetail,
+        onMarkContinueWatchingWatched = remember(viewModel) {
+            { item -> viewModel.onEvent(HomeEvent.OnMarkContinueWatchingWatched(item)) }
+        },
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
         },
@@ -604,6 +607,9 @@ private fun GridHomeRoute(
         showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onNavigateToFolderDetail = onNavigateToFolderDetail,
+        onMarkContinueWatchingWatched = remember(viewModel) {
+            { item -> viewModel.onEvent(HomeEvent.OnMarkContinueWatchingWatched(item)) }
+        },
         onRemoveContinueWatching = remember(viewModel) {
             { contentId, season, episode, isNextUp ->
                 viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
@@ -689,6 +695,9 @@ private fun ModernHomeRoute(
         showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onRequestTrailerPreview = requestTrailerPreview,
         onLoadMoreCatalog = loadMoreCatalog,
+        onMarkContinueWatchingWatched = remember(viewModel) {
+            { item -> viewModel.onEvent(HomeEvent.OnMarkContinueWatchingWatched(item)) }
+        },
         onRemoveContinueWatching = removeContinueWatching,
         isCatalogItemWatched = isCatalogItemWatched,
         onCatalogItemLongPress = onCatalogItemLongPress,
