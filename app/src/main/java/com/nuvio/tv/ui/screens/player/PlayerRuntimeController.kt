@@ -312,6 +312,7 @@ class PlayerRuntimeController(
             currentStreamInfoHash = navigationArgs.infoHash,
             currentStreamFileIdx = navigationArgs.fileIdx,
             currentStreamAddonName = navigationArgs.addonName,
+            currentStreamDescription = navigationArgs.streamDescription,
             releaseYear = year,
             contentType = contentType,
             backdrop = backdrop,
@@ -528,6 +529,10 @@ class PlayerRuntimeController(
     internal var backgroundCrashSavedPositionMs: Long = 0L
 
     internal var skipIntervals: List<SkipInterval> = emptyList()
+    internal var chapterSkipIntervals: List<SkipInterval> = emptyList()
+    internal var apiSkipIntervals: List<SkipInterval> = emptyList()
+    internal var skipDetectionChapters: List<PlayerChapter> = emptyList()
+    internal var skipChaptersComputedForDuration: Long = 0L
     internal var skipIntroEnabled: Boolean = true
     internal var parentalGuideEnabled: Boolean = false
     internal var autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet()
@@ -576,6 +581,7 @@ class PlayerRuntimeController(
     internal var mpvHardwareDecodeModeSetting: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
     internal var mpvPreferredAudioLanguages: List<String> = emptyList()
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
+    internal var recordedPluginPlayIdentity: String? = null
     // Per-device delay + current stream's behaviorHints.audioDelayMs + the user's tweak on that stream.
     internal var audioDelayParts: AudioDelayParts = AudioDelayParts().withStream(navigationArgs.audioDelayMs ?: 0, navigationArgs.audioDelayLanguage)
     internal var hasAppliedRememberedAudioSelection: Boolean = false
@@ -604,9 +610,11 @@ class PlayerRuntimeController(
     internal var lastNextEpisodeEvaluationUptimeMs: Long = 0L
     internal var bufferLogJob: Job? = null
     internal val gainAudioProcessor = GainAudioProcessor()
+    internal val nightModeAudioProcessor = NightModeAudioProcessor()
     internal var loudnessEnhancer: LoudnessEnhancer? = null
     internal var trackSelector: DefaultTrackSelector? = null
     internal var currentMediaSession: MediaSession? = null
+    internal var mpvMediaSessionPlayer: MpvMediaSessionPlayer? = null
     internal var ffmpegAudioRenderer: FfmpegAudioRenderer? = null
     internal var mpvView: NuvioMpvSurfaceView? = null
     internal val subtitleCueTracker = SubtitleCueTracker()

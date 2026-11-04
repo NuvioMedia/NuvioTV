@@ -9,6 +9,7 @@ import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.LibassRenderMode
+import com.nuvio.tv.data.local.NightMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
@@ -74,6 +75,7 @@ data class PlayerUiState(
     val currentStreamInfoHash: String? = null, // InfoHash of the currently playing stream (for debrid matching)
     val currentStreamFileIdx: Int? = null, // FileIdx of the currently playing stream (for debrid matching)
     val currentStreamAddonName: String? = null, // Addon name of the currently playing stream
+    val currentStreamDescription: String? = null, // Description of the currently playing stream
     val backdrop: String? = null,
     val logo: String? = null,
     val description: String? = null,
@@ -112,6 +114,8 @@ data class PlayerUiState(
     val persistAudioAmplification: Boolean = false,
     val centerMixLevelDb: Int = 0,
     val isCenterMixAvailable: Boolean = false,
+    val nightMode: NightMode = NightMode.OFF,
+    val isNightModeAvailable: Boolean = false,
     val showAudioOverlay: Boolean = false,
     val showSubtitleOverlay: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
@@ -256,6 +260,10 @@ data class PlayerUiState(
 
     val editableSubtitleStyle: SubtitleStyleSettings
         get() = subtitleStyle.editableForVideo(isHdrVideo)
+
+    /** Brightness factor for the player controls and menus drawn over the video (1 = undimmed). */
+    val playerControlsBrightness: Float
+        get() = subtitleStyle.playerControlsBrightness(isHdrVideo)
 }
 
 internal fun PlayerUiState.clearFrameRateDetection(): PlayerUiState = copy(
@@ -324,6 +332,7 @@ sealed class PlayerEvent {
     data class OnSetAudioAmplificationDb(val db: Int) : PlayerEvent()
     data class OnSetPersistAudioAmplification(val enabled: Boolean) : PlayerEvent()
     data class OnSetCenterMixLevelDb(val db: Int) : PlayerEvent()
+    data class OnSetNightMode(val mode: NightMode) : PlayerEvent()
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
     data object OnDisableSubtitles : PlayerEvent()
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()
@@ -349,7 +358,7 @@ sealed class PlayerEvent {
     data object OnDismissEpisodesPanel : PlayerEvent()
     data object OnBackFromEpisodeStreams : PlayerEvent()
     data class OnEpisodeSeasonSelected(val season: Int) : PlayerEvent()
-    data class OnEpisodeSelected(val video: Video) : PlayerEvent()
+    data class OnEpisodeSelected(val video: Video, val manualSelection: Boolean = false) : PlayerEvent()
     data object OnReloadEpisodeStreams : PlayerEvent()
     data class OnEpisodeAddonFilterSelected(val addonName: String?) : PlayerEvent()
     data class OnEpisodeStreamSelected(val stream: Stream) : PlayerEvent()

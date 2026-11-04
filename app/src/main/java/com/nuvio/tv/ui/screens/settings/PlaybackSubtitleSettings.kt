@@ -174,6 +174,13 @@ internal fun PlaybackSubtitlesSection(
             onValueChange = { brightness -> onUpdate { setSubtitleHdrBrightness(brightness) } },
             enabled = enabled
         )
+        SettingsToggleRow(
+            title = stringResource(R.string.sub_hdr_dim_player_controls),
+            subtitle = stringResource(R.string.sub_hdr_dim_player_controls_sub),
+            checked = style.hdrDimPlayerControls,
+            onToggle = { onUpdate { setSubtitleHdrDimPlayerControls(!style.hdrDimPlayerControls) } },
+            enabled = enabled
+        )
     }
 
     SettingsSectionLabel(text = stringResource(R.string.sub_advanced_section))

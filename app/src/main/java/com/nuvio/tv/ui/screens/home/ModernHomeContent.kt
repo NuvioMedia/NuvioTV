@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -118,10 +119,11 @@ fun ModernHomeContent(
     uiState: HomeUiState,
     modernPresentation: ModernHomePresentationState = ModernHomePresentationState(),
     focusState: HomeScreenFocusState,
-    enrichingItemId: String? = null,
-    lastEnrichedPreview: MetaPreview? = null,
-    enrichedPreviews: Map<String, MetaPreview> = emptyMap(),
-    failedEnrichmentIds: Set<String> = emptySet(),
+    // Taken as State: enrichment changes on most focus moves, and taking the values as
+    // parameters recomposed all of the home content each time instead of only the hero state.
+    enrichingItemId: State<String?>,
+    enrichedPreviews: State<Map<String, MetaPreview>>,
+    failedEnrichmentIds: State<Set<String>>,
     trailerPreviewUrls: Map<String, String> = emptyMap(),
     trailerPreviewAudioUrls: Map<String, String> = emptyMap(),
     onNavigateToDetail: (String, String, String) -> Unit,
@@ -132,6 +134,7 @@ fun ModernHomeContent(
     onRequestTrailerPreview: (String, String, String?, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
+    onMarkContinueWatchingWatched: (ContinueWatchingItem) -> Unit = {},
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
@@ -312,8 +315,12 @@ fun ModernHomeContent(
                 metricsHolder.state?.putState("HomeScrolling", scrolling.toString())
             }
     }
-    LaunchedEffect(enrichingItemId) {
-        metricsHolder.state?.putState("HeroEnriching", (enrichingItemId != null).toString())
+    val currentEnrichingItemId by rememberUpdatedState(enrichingItemId)
+    LaunchedEffect(Unit) {
+        snapshotFlow { currentEnrichingItemId.value != null }
+            .collect { enriching ->
+                metricsHolder.state?.putState("HeroEnriching", enriching.toString())
+            }
     }
 
     // Both effects restart when the settled selection or scroll state changes. Hosting them in their
@@ -719,9 +726,10 @@ fun ModernHomeContent(
                 derivedStateOf {
                     val activeCarouselItem = activeCarouselItemState.value
                     val activeItemId = activeCarouselItem?.metaPreview?.id
-                    val enrichmentActive = enrichingItemId != null && enrichingItemId == activeItemId
-                    
-                    val enrichedItem = activeItemId?.let { enrichedPreviews[it] }
+                    val enrichingId = enrichingItemId.value
+                    val enrichmentActive = enrichingId != null && enrichingId == activeItemId
+
+                    val enrichedItem = activeItemId?.let { enrichedPreviews.value[it] }
                     val enrichedHero = if (enrichedItem != null) {
                         HeroPreview(
                             title = enrichedItem.name,
@@ -763,7 +771,7 @@ fun ModernHomeContent(
                     // Exception: if enrichment already failed for this item, show addon data.
                     // Also treat as pending when activeCarouselItem is null (row not yet resolved).
                     val heroEnrichmentEnabled = uiState.heroEnrichmentEnabled
-                    val enrichmentFailed = activeItemId != null && activeItemId in failedEnrichmentIds
+                    val enrichmentFailed = activeItemId != null && activeItemId in failedEnrichmentIds.value
                     val effectiveEnrichmentActive = activeCarouselItem == null || enrichmentActive ||
                         (enrichedHero == null && activeItemId != null && heroEnrichmentEnabled && !enrichmentFailed)
                     
@@ -1180,8 +1188,7 @@ fun ModernHomeContent(
             val stableTrailerContentAlphaLambda = remember { { trailerContentAlphaState.value } }
             val stableExpandedTrailerPreviewUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.first } }
             val stableExpandedTrailerPreviewAudioUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.second } }
-            val stableEnrichedPreviews = remember { androidx.compose.runtime.mutableStateOf(enrichedPreviews.asStable()) }
-                .apply { value = enrichedPreviews.asStable() }
+            val stableEnrichedPreviews = remember(enrichedPreviews) { derivedStateOf { enrichedPreviews.value.asStable() } }
             val stableTrailerPreviewUrls = remember(trailerPreviewUrls) { trailerPreviewUrls.asStable() }
             val stableTrailerPreviewAudioUrls = remember(trailerPreviewAudioUrls) { trailerPreviewAudioUrls.asStable() }
 
@@ -1298,6 +1305,15 @@ fun ModernHomeContent(
             showPlayManually = showContinueWatchingManualPlayOption,
             onPlayManually = {
                 onContinueWatchingPlayManually(selectedOptionsItem)
+                optionsItem.value = null
+            },
+            onMarkWatched = {
+                val targetIndex = if (uiState.continueWatchingItems.size <= 1) null
+                else lastFocusedContinueWatchingIndex.intValue.coerceAtMost(uiState.continueWatchingItems.lastIndex)
+                pendingRowFocusKey.value = if (targetIndex != null) "continue_watching" else null
+                pendingRowFocusIndex.value = targetIndex
+                pendingRowFocusNonce.intValue++
+                onMarkContinueWatchingWatched(selectedOptionsItem)
                 optionsItem.value = null
             }
         )

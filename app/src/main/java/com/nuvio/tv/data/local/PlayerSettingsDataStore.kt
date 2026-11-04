@@ -154,7 +154,8 @@ data class SubtitleStyleSettings(
     val outlineWidth: Int = 2, // 1-5
     val hdrStyleEnabled: Boolean = false,
     val hdrTextColor: Int = Color.White.toArgb(),
-    val hdrBrightness: Int = HDR_BRIGHTNESS_DEFAULT // 0-100, see hdrBrightnessFactor
+    val hdrBrightness: Int = HDR_BRIGHTNESS_DEFAULT, // 0-100, see hdrBrightnessFactor
+    val hdrDimPlayerControls: Boolean = false
 ) {
     /**
      * The style to render with: on HDR/Dolby Vision video with the override enabled, the HDR text
@@ -168,6 +169,15 @@ data class SubtitleStyleSettings(
             backgroundColor = scaleColorBrightness(backgroundColor, factor),
             outlineColor = scaleColorBrightness(outlineColor, factor)
         )
+    }
+
+    /**
+     * Brightness factor for the player controls and menus drawn over the video: the HDR brightness
+     * on HDR/Dolby Vision video when both HDR options are enabled, otherwise full brightness.
+     */
+    fun playerControlsBrightness(isHdrVideo: Boolean): Float {
+        if (!isHdrVideo || !hdrStyleEnabled || !hdrDimPlayerControls) return 1f
+        return hdrBrightnessFactor(hdrBrightness)
     }
 
     /** The style the in-player editors show: on HDR video with the override enabled, its text color is the HDR one. */
@@ -243,11 +253,39 @@ enum class AudioOutputChannels(
     CHANNELS_7_0("7.0", "7.0", 7, "7.0"),
     CHANNELS_7_1("7.1", "7.1", 8, "7.1");
 
+    val hasLfe: Boolean get() = settingValue.endsWith(".1")
+
     companion object {
         val default = CHANNELS_7_1
 
         fun fromSettingValue(value: String?): AudioOutputChannels {
             return entries.firstOrNull { it.settingValue == value } ?: default
+        }
+    }
+}
+
+/** LFE share mixed into the other channels when the downmix layout has no LFE channel. */
+enum class DownmixLfeLevel(val settingValue: String, val level: Float) {
+    OFF("off", 0f),
+    HALF("50", 0.5f),
+    FULL("100", 1f);
+
+    companion object {
+        fun fromSettingValue(value: String?): DownmixLfeLevel {
+            return entries.firstOrNull { it.settingValue == value } ?: OFF
+        }
+    }
+}
+
+enum class NightMode(val settingValue: String) {
+    OFF("off"),
+    LIGHT("light"),
+    MEDIUM("medium"),
+    STRONG("strong");
+
+    companion object {
+        fun fromSettingValue(value: String?): NightMode {
+            return entries.firstOrNull { it.settingValue == value } ?: OFF
         }
     }
 }
@@ -270,9 +308,11 @@ data class PlayerSettings(
     val downmixEnabled: Boolean = false,
     val audioOutputChannels: AudioOutputChannels = AudioOutputChannels.default,
     val maintainOriginalAudioOnDownmix: Boolean = true,
+    val downmixLfeLevel: DownmixLfeLevel = DownmixLfeLevel.OFF,
     val tunnelingEnabled: Boolean = false,
     val forceOpticalPassthrough: Boolean = false,
     val skipSilence: Boolean = false,
+    val nightMode: NightMode = NightMode.OFF,
     val audioAmplificationDb: Int = 0,
     val centerMixLevelDb: Int = 0,
     val persistAudioAmplification: Boolean = false,
@@ -592,11 +632,13 @@ class PlayerSettingsDataStore @Inject constructor(
     private val audioOutputChannelsKey = stringPreferencesKey("audio_output_channels")
     private val maintainOriginalAudioOnDownmixKey =
         booleanPreferencesKey("maintain_original_audio_on_downmix")
+    private val downmixLfeLevelKey = stringPreferencesKey("downmix_lfe_level")
     private val downmixNormalizationEnabledLegacyKey =
         booleanPreferencesKey("downmix_normalization_enabled")
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val forceOpticalPassthroughKey = booleanPreferencesKey("force_optical_passthrough")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
+    private val nightModeKey = stringPreferencesKey("night_mode")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val centerMixLevelDbKey = intPreferencesKey("center_mix_level_db")
     private val persistAudioAmplificationKey = booleanPreferencesKey("persist_audio_amplification")
@@ -691,6 +733,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleHdrStyleEnabledKey = booleanPreferencesKey("subtitle_hdr_style_enabled")
     private val subtitleHdrTextColorKey = intPreferencesKey("subtitle_hdr_text_color")
     private val subtitleHdrBrightnessKey = intPreferencesKey("subtitle_hdr_brightness")
+    private val subtitleHdrDimPlayerControlsKey = booleanPreferencesKey("subtitle_hdr_dim_player_controls")
 
     // Buffer settings keys
     private val minBufferMsKey = intPreferencesKey("min_buffer_ms")
@@ -977,9 +1020,11 @@ class PlayerSettingsDataStore @Inject constructor(
                 maintainOriginalAudioOnDownmix =
                     prefs[maintainOriginalAudioOnDownmixKey]
                         ?: !(prefs[downmixNormalizationEnabledLegacyKey] ?: false),
+                downmixLfeLevel = DownmixLfeLevel.fromSettingValue(prefs[downmixLfeLevelKey]),
                 tunnelingEnabled = prefs[tunnelingEnabledKey] ?: false,
                 forceOpticalPassthrough = prefs[forceOpticalPassthroughKey] ?: false,
                 skipSilence = prefs[skipSilenceKey] ?: false,
+                nightMode = NightMode.fromSettingValue(prefs[nightModeKey]),
                 audioAmplificationDb = (prefs[audioAmplificationDbKey] ?: 0).coerceIn(
                     AUDIO_AMPLIFICATION_DB_MIN,
                     AUDIO_AMPLIFICATION_DB_MAX
@@ -1134,7 +1179,8 @@ class PlayerSettingsDataStore @Inject constructor(
                         outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2,
                         hdrStyleEnabled = prefs[subtitleHdrStyleEnabledKey] ?: false,
                         hdrTextColor = prefs[subtitleHdrTextColorKey] ?: Color.White.toArgb(),
-                        hdrBrightness = prefs[subtitleHdrBrightnessKey] ?: SubtitleStyleSettings.HDR_BRIGHTNESS_DEFAULT
+                        hdrBrightness = prefs[subtitleHdrBrightnessKey] ?: SubtitleStyleSettings.HDR_BRIGHTNESS_DEFAULT,
+                        hdrDimPlayerControls = prefs[subtitleHdrDimPlayerControlsKey] ?: false
                     )
                 },
                 bufferSettings = BufferSettings(
@@ -1222,6 +1268,12 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setDownmixLfeLevel(level: DownmixLfeLevel) {
+        store().edit { prefs ->
+            prefs[downmixLfeLevelKey] = level.settingValue
+        }
+    }
+
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[tunnelingEnabledKey] = enabled
@@ -1237,6 +1289,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSkipSilence(enabled: Boolean) {
         store().edit { prefs ->
             prefs[skipSilenceKey] = enabled
+        }
+    }
+
+    suspend fun setNightMode(mode: NightMode) {
+        store().edit { prefs ->
+            prefs[nightModeKey] = mode.settingValue
         }
     }
 
@@ -1701,6 +1759,9 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSubtitleOutlineWidth(width: Int) { store().edit { it[subtitleOutlineWidthKey] = width.coerceIn(1, 5) } }
     suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) { store().edit { it[subtitleHdrStyleEnabledKey] = enabled } }
     suspend fun setSubtitleHdrTextColor(color: Int) { store().edit { it[subtitleHdrTextColorKey] = color } }
+    suspend fun setSubtitleHdrDimPlayerControls(enabled: Boolean) {
+        store().edit { it[subtitleHdrDimPlayerControlsKey] = enabled }
+    }
     suspend fun setSubtitleHdrBrightness(brightness: Int) {
         store().edit {
             it[subtitleHdrBrightnessKey] = brightness.coerceIn(
