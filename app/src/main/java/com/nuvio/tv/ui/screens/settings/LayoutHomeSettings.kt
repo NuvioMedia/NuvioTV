@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -49,6 +50,8 @@ import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.ui.components.ClassicLayoutPreview
 import com.nuvio.tv.ui.components.GridLayoutPreview
 import com.nuvio.tv.ui.components.ModernLayoutPreview
+import com.nuvio.tv.ui.screens.calendar.ReleaseCalendarPreferences
+import com.nuvio.tv.ui.screens.calendar.rememberReleaseCalendarEnabled
 
 @Composable
 internal fun LayoutHomeLayoutSection(
@@ -230,6 +233,14 @@ internal fun LayoutSidebarSection(
         selectedLocation = uiState.discoverLocation,
         rememberedLocation = uiState.lastNonOffDiscoverLocation,
         onLocationSelected = { location -> onEvent(LayoutSettingsEvent.SetDiscoverLocation(location)) }
+    )
+    val context = LocalContext.current
+    val releaseCalendarEnabled = rememberReleaseCalendarEnabled()
+    SettingsToggleRow(
+        title = stringResource(R.string.layout_show_release_calendar),
+        subtitle = stringResource(R.string.layout_show_release_calendar_sub),
+        checked = releaseCalendarEnabled,
+        onToggle = { ReleaseCalendarPreferences.setEnabled(context, !releaseCalendarEnabled) }
     )
 }
 

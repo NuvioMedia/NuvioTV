@@ -1244,6 +1244,23 @@ private fun PlaybackNavHost(
             )
         }
 
+        composable(com.nuvio.tv.ui.screens.calendar.RELEASE_CALENDAR_ROUTE) {
+            com.nuvio.tv.ui.screens.calendar.ReleaseCalendarScreen(
+                showBuiltInHeader = !hideBuiltInHeaders,
+                onNavigateToDetail = { itemId, itemType, addonBaseUrl, season, episode ->
+                    navController.navigate(
+                        Screen.Detail.createRoute(
+                            itemId = itemId,
+                            itemType = itemType,
+                            addonBaseUrl = addonBaseUrl,
+                            returnFocusSeason = season,
+                            returnFocusEpisode = episode
+                        )
+                    )
+                }
+            )
+        }
+
         composable(com.nuvio.tv.reshaped.livetv.LIVE_TV_ROUTE) {
             com.nuvio.tv.ui.reshaped.livetv.LiveTvScreen(onPlay = { navController.navigate(it) }, showBuiltInHeader = !hideBuiltInHeaders)
         }

@@ -1046,9 +1046,11 @@ open class MainActivity : ComponentActivity() {
                     }
 
                     val liveTvMenuItem = com.nuvio.tv.ui.reshaped.livetv.rememberLiveTvMenuItem(currentRoute, navController)
-                    val rootRoutes = remember(discoverLocation, liveTvMenuItem) {
+                    val releaseCalendarMenuItem = com.nuvio.tv.ui.screens.calendar.rememberReleaseCalendarMenuItem(currentRoute, navController)
+                    val rootRoutes = remember(discoverLocation, liveTvMenuItem, releaseCalendarMenuItem) {
                         buildSet {
                             liveTvMenuItem?.let { add(it.route) }
+                            releaseCalendarMenuItem?.let { add(it.route) }
                             add(Screen.Home.route)
                             add(Screen.Search.route)
                             add(Screen.Library.route)
@@ -1071,7 +1073,8 @@ open class MainActivity : ComponentActivity() {
                         strNavLibrary,
                         strNavSettings,
                         discoverLocation,
-                        liveTvMenuItem
+                        liveTvMenuItem,
+                        releaseCalendarMenuItem
                     ) {
                         buildList {
                             add(
@@ -1104,6 +1107,7 @@ open class MainActivity : ComponentActivity() {
                                     iconRes = R.raw.sidebar_library
                                 )
                             )
+                            releaseCalendarMenuItem?.let(::add)
                             liveTvMenuItem?.let(::add)
                             add(
                                 DrawerItem(

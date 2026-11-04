@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="release_calendar_nav">Calendar</string>
+    <string name="release_calendar_title">Calendar</string>
+    <string name="release_calendar_subtitle">Shows saved titles and episode releases with exact dates.</string>
+    <string name="release_calendar_refresh">Refresh</string>
+    <string name="release_calendar_refreshing">Refreshing…</string>
+    <string name="release_calendar_today">Today</string>
+    <string name="release_calendar_previous_month">Previous month</string>
+    <string name="release_calendar_next_month">Next month</string>
+    <string name="release_calendar_agenda">Release agenda</string>
+    <string name="release_calendar_available">Available now</string>
+    <string name="release_calendar_upcoming">Coming soon</string>
+    <string name="release_calendar_loading">Loading saved releases…</string>
+    <string name="release_calendar_empty_title">No calendar dates found</string>
+    <string name="release_calendar_empty_message">Saved movies and series episodes with exact dates will appear here.</string>
+    <string name="release_calendar_no_day_events_title">Nothing scheduled for this day</string>
+    <string name="release_calendar_no_day_events_message">Choose a highlighted date to see what is coming.</string>
+    <string name="release_calendar_retry">Retry</string>
+    <plurals name="release_calendar_release_count">
+        <item quantity="one">%1$d release</item>
+        <item quantity="other">%1$d releases</item>
+    </plurals>
+    <plurals name="release_calendar_failed_series">
+        <item quantity="one">%1$d series couldn\'t be loaded</item>
+        <item quantity="other">%1$d series couldn\'t be loaded</item>
+    </plurals>
+    <string name="layout_show_release_calendar">Show Calendar</string>
+    <string name="layout_show_release_calendar_sub">Adds a release calendar for your saved titles to the sidebar.</string>
+</resources>
