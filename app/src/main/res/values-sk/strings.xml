@@ -3434,4 +3434,24 @@
     <string name="cd_emoji_option">Emodži %1$s</string>
     <string name="cd_trailer_controls">Ovládacie prvky Traileru</string>
     <string name="cd_seek_bar">Časová os</string>
+
+    <string name="audio_night_mode">Nočný režim</string>
+    <string name="audio_night_mode_sub">Zvýrazní dialógy a tiché zvuky, takže môžete mať nižšiu hlasitosť</string>
+    <string name="audio_night_mode_desc">Zvýrazňuje dialógy a tiché zvuky; hlasné scény zostávajú tak, ako boli namixované. Funguje pri zvuku dekódovanom aplikáciou. Formáty Dolby a DTS odoslané do prijímača alebo soundbaru cez priechod zvuku zostávajú bez zmeny.</string>
+    <string name="audio_night_mode_value">Nočný režim: %1$s</string>
+    <string name="audio_night_mode_off">Vypnuté</string>
+    <string name="audio_night_mode_light">Jemný</string>
+    <string name="audio_night_mode_light_desc">Jemné zvýraznenie, až do +6 dB</string>
+    <string name="audio_night_mode_medium">Stredný</string>
+    <string name="audio_night_mode_medium_desc">Zreteľne zvýraznené dialógy, až do +10 dB</string>
+    <string name="audio_night_mode_strong">Silný</string>
+    <string name="audio_night_mode_strong_desc">Až do +15 dB, na sledovanie neskoro v noci pri nízkej hlasitosti</string>
+    <string name="sub_hdr_dim_player_controls">Stlmiť ovládacie prvky prehrávača v HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">Použiť jas pre HDR na ovládacie prvky prehrávača a ponuky zobrazené nad videom v HDR a Dolby Vision</string>
+    <string name="audio_downmix_lfe_level">Úroveň LFE pri downmixovaní</string>
+    <string name="audio_downmix_lfe_level_sub">Zmieša kanál subwoofera (LFE) do ostatných reproduktorov namiesto jeho vynechania. Len pre konfigurácie bez LFE, ako je napríklad 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">Používa sa, keď rozloženie pre downmix nemá kanál LFE. Prejaví sa od nasledujúceho prehrávania.</string>
+    <string name="audio_downmix_lfe_level_off">Vypnuté</string>
+    <string name="audio_downmix_lfe_level_half">50 %</string>
+    <string name="audio_downmix_lfe_level_full">100 %</string>
 </resources>
