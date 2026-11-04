@@ -3431,4 +3431,4 @@
     <string name="autosync_label_synced">Sincronizado automáticamente</string>
     <string name="stream_resume_from_time">Reanudar desde %1$s</string>
     <string name="stream_resume_from_percent">Reanudar desde el %1$d%%</string>
-</resources>
+    </resources>
