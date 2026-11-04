@@ -21,7 +21,10 @@ class WeTrakrScrobbleService @Inject constructor(
                 "/scrobble/${action.wireValue}",
                 target.scrobbleBody(progress, configuration.appVersion).toString(),
                 scope,
-                acceptedStatuses = setOf(404)
+                acceptedStatuses = setOf(404),
+                query = if (action == TrackingScrobbleAction.PAUSE) emptyMap() else {
+                    mapOf("min_progress" to sync.watchedPercent.toString())
+                }
             )
             if (response.status == 404) return@write snapshot to Unit
             val body = weTrakrElement(response.body).weTrakrObject()

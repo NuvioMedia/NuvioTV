@@ -6,6 +6,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
 import com.nuvio.tv.data.local.ProfileDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.wetrakr.AndroidWeTrakrAuthPersistence
 import com.nuvio.tv.data.wetrakr.AndroidWeTrakrSyncStorage
 import com.nuvio.tv.data.wetrakr.AndroidWeTrakrUploadMemory
@@ -30,6 +31,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
@@ -86,11 +89,17 @@ object WeTrakrModule {
         storage: AndroidWeTrakrSyncStorage,
         auth: WeTrakrAuthStore,
         api: WeTrakrApiClient,
-        profiles: ProfileManager
-    ) = WeTrakrSyncRepository(
-        storage, auth, api, profiles.activeProfileId,
-        CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    )
+        profiles: ProfileManager,
+        settings: TraktSettingsDataStore
+    ): WeTrakrSyncRepository {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        return WeTrakrSyncRepository(
+            storage, auth, api, profiles.activeProfileId, scope,
+            watchedPercentSetting = settings.weTrakrWatchedPercent.stateIn(
+                scope, SharingStarted.Eagerly, TraktSettingsDataStore.DEFAULT_WETRAKR_WATCHED_PERCENT
+            )
+        )
+    }
 
     @Provides
     @Singleton

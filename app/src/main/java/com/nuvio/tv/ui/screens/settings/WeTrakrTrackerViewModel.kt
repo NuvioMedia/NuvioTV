@@ -109,6 +109,8 @@ class WeTrakrTrackerViewModel @Inject constructor(
     private val mutableLocalUpload = MutableStateFlow(WeTrakrLocalUploadUiState())
     val showComments: StateFlow<Boolean> = settings.showWeTrakrComments
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val watchedPercent: StateFlow<Int> = settings.weTrakrWatchedPercent
+        .stateIn(viewModelScope, SharingStarted.Eagerly, TraktSettingsDataStore.DEFAULT_WETRAKR_WATCHED_PERCENT)
     val localUpload: StateFlow<WeTrakrLocalUploadUiState> = combine(mutableLocalUpload, uploader.run) { state, run ->
         val current = run?.takeIf { it.scope == authStore.scope() && it.scope.profileId == profiles.activeProfileId.value }
         state.copy(run = current, runMessage = current?.message())
@@ -247,6 +249,10 @@ class WeTrakrTrackerViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { sync.refreshAccount() }.onFailure { if (it is CancellationException) throw it }
         }
+    }
+
+    fun onWatchedPercentSelected(percent: Int) {
+        viewModelScope.launch { settings.setWeTrakrWatchedPercent(percent) }
     }
 
     fun onShowCommentsChanged(enabled: Boolean) {

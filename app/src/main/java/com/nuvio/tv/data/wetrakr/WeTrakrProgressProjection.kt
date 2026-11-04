@@ -4,7 +4,10 @@ import com.nuvio.tv.core.tracking.selectPreferredTrackingNextUpSeeds
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.WatchedItem
 
-internal class WeTrakrProgressProjection(snapshot: WeTrakrSyncSnapshot) {
+internal class WeTrakrProgressProjection(
+    snapshot: WeTrakrSyncSnapshot,
+    val watchedPercent: Int = WETRAKR_DEFAULT_WATCHED_PERCENT
+) {
     private val episodes = snapshot.watched.filter { it.type == WeTrakrItemType.EPISODE }
     private val watchedByAlias = episodes
         .flatMap { record -> record.media.ids.aliases().map { it to record } }
@@ -37,7 +40,7 @@ internal class WeTrakrProgressProjection(snapshot: WeTrakrSyncSnapshot) {
         .groupBy({ it.first }, { it.second })
         .mapValues { (_, groups) -> groups.flatten().toSet() }
     val progress: List<WatchProgress> = snapshot.playback.filter { session ->
-        session.progress < COMPLETION_PERCENT && watchedAfter(snapshot, session) == null
+        session.progress < watchedPercent && watchedAfter(snapshot, session) == null
     }.map { session ->
         progress(
             session.type, session.media, session.season, session.episode, session.episodeTitle,
@@ -104,13 +107,19 @@ internal class WeTrakrProgressProjection(snapshot: WeTrakrSyncSnapshot) {
             source = source,
             trackingProviderId = PROVIDER_ID,
             trackingProviderItemId = media.id?.let { "$PROVIDER_ID:$it" },
-            completionThresholdOverride = COMPLETION_PERCENT / 100f
+            completionThresholdOverride = watchedPercent / 100f
         )
     }
 
     companion object {
-        const val COMPLETION_PERCENT = 80f
         const val PROVIDER_ID = "wetrakr"
         val Empty = WeTrakrProgressProjection(WeTrakrSyncSnapshot(0))
     }
 }
+
+internal const val WETRAKR_DEFAULT_WATCHED_PERCENT = 80
+internal const val WETRAKR_MIN_WATCHED_PERCENT = 50
+internal const val WETRAKR_MAX_WATCHED_PERCENT = 100
+
+internal fun weTrakrWatchedPercent(value: Int): Int =
+    value.coerceIn(WETRAKR_MIN_WATCHED_PERCENT, WETRAKR_MAX_WATCHED_PERCENT)

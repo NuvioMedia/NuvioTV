@@ -28,6 +28,26 @@ class WeTrakrProgressProjectionTest {
     }
 
     @Test
+    fun `the watched setting decides which paused titles stay in continue watching`() {
+        val snapshot = WeTrakrSyncSnapshot(
+            1,
+            playback = listOf(
+                WeTrakrPlayback(WeTrakrItemType.MOVIE, weTrakrMovie("tt1"), 75f, "2026-09-20T10:00:00Z", runtimeSeconds = 6_000),
+                WeTrakrPlayback(WeTrakrItemType.MOVIE, weTrakrMovie("tt2"), 92f, "2026-09-20T10:00:00Z", runtimeSeconds = 6_000)
+            )
+        )
+
+        assertEquals(listOf("tt1"), WeTrakrProgressProjection(snapshot).progress.map { it.contentId })
+        assertTrue(WeTrakrProgressProjection(snapshot, watchedPercent = 70).progress.isEmpty())
+        assertEquals(
+            listOf("tt2", "tt1"),
+            WeTrakrProgressProjection(snapshot, watchedPercent = 95).progress.map { it.contentId }.sorted().reversed()
+        )
+        assertEquals(50, weTrakrWatchedPercent(10))
+        assertEquals(100, weTrakrWatchedPercent(150))
+    }
+
+    @Test
     fun `a play logged after the pause hides the paused session`() {
         val projection = WeTrakrProgressProjection(
             WeTrakrSyncSnapshot(

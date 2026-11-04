@@ -19,8 +19,9 @@ class WeTrakrApiClient(
         body: String,
         scope: WeTrakrAuthScope = store.scope(),
         acceptedStatuses: Set<Int> = emptySet(),
-        idempotencyKey: String = UUID.randomUUID().toString()
-    ): WeTrakrHttpResponse = execute(WeTrakrHttpMethod.POST, path, emptyMap(), body, scope, acceptedStatuses, idempotencyKey)
+        idempotencyKey: String = UUID.randomUUID().toString(),
+        query: Map<String, String> = emptyMap()
+    ): WeTrakrHttpResponse = execute(WeTrakrHttpMethod.POST, path, query, body, scope, acceptedStatuses, idempotencyKey)
 
     suspend fun delete(
         path: String,

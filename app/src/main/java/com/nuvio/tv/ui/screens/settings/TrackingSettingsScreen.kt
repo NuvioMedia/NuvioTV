@@ -78,6 +78,7 @@ fun TrackingSettingsContent(
     val weTrakrState by weTrakrViewModel.uiState.collectAsStateWithLifecycle()
     val weTrakrLocalUpload by weTrakrViewModel.localUpload.collectAsStateWithLifecycle()
     val weTrakrShowComments by weTrakrViewModel.showComments.collectAsStateWithLifecycle()
+    val weTrakrWatchedPercent by weTrakrViewModel.watchedPercent.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
@@ -89,6 +90,7 @@ fun TrackingSettingsContent(
     val continueWatchingFocusRequester = remember { FocusRequester() }
     val weTrakrContinueWatchingFocusRequester = remember { FocusRequester() }
     val weTrakrLocalUploadFocusRequester = remember { FocusRequester() }
+    val weTrakrWatchedPercentFocusRequester = remember { FocusRequester() }
     val moreLikeThisFocusRequester = remember { FocusRequester() }
 
     var activeProvider by remember { mutableStateOf<TrackingProviderId?>(null) }
@@ -99,6 +101,7 @@ fun TrackingSettingsContent(
     var showWatchProgressDialog by remember { mutableStateOf(false) }
     var showDaysCapDialog by remember { mutableStateOf(false) }
     var daysCapForWeTrakr by remember { mutableStateOf(false) }
+    var showWatchedPercentDialog by remember { mutableStateOf(false) }
     var showMoreLikeThisSourceDialog by remember { mutableStateOf(false) }
     var showAnimeIdDialog by remember { mutableStateOf(false) }
     var showMdbListLibraryListsDialog by remember { mutableStateOf(false) }
@@ -108,6 +111,7 @@ fun TrackingSettingsContent(
         showLibrarySourceDialog ||
         showWatchProgressDialog ||
         showDaysCapDialog ||
+        showWatchedPercentDialog ||
         showMoreLikeThisSourceDialog ||
         showAnimeIdDialog ||
         showMdbListLibraryListsDialog ||
@@ -149,6 +153,7 @@ fun TrackingSettingsContent(
                 TrackingFocusTarget.CONTINUE_WATCHING -> continueWatchingFocusRequester.requestFocus()
                 TrackingFocusTarget.WETRAKR_CONTINUE_WATCHING -> weTrakrContinueWatchingFocusRequester.requestFocus()
                 TrackingFocusTarget.WETRAKR_LOCAL_UPLOAD -> weTrakrLocalUploadFocusRequester.requestFocus()
+                TrackingFocusTarget.WETRAKR_WATCHED_PERCENT -> weTrakrWatchedPercentFocusRequester.requestFocus()
                 TrackingFocusTarget.MORE_LIKE_THIS -> moreLikeThisFocusRequester.requestFocus()
             }
         }
@@ -246,6 +251,12 @@ fun TrackingSettingsContent(
             showDaysCapDialog = true
         },
         weTrakrLocalUploadFocusRequester = weTrakrLocalUploadFocusRequester,
+        weTrakrWatchedPercent = weTrakrWatchedPercent,
+        weTrakrWatchedPercentFocusRequester = weTrakrWatchedPercentFocusRequester,
+        onWeTrakrWatchedPercentClick = {
+            restoreFocusTarget = TrackingFocusTarget.WETRAKR_WATCHED_PERCENT
+            showWatchedPercentDialog = true
+        },
         onWeTrakrLocalUploadClick = {
             restoreFocusTarget = TrackingFocusTarget.WETRAKR_LOCAL_UPLOAD
             weTrakrViewModel.onLocalUploadOpened()
@@ -466,6 +477,25 @@ fun TrackingSettingsContent(
         )
     }
 
+    if (showWatchedPercentDialog) {
+        val options = remember { (50..100 step 5).toList() }
+        SettingsSingleChoiceDialog(
+            title = stringResource(R.string.wetrakr_watched_percent_title),
+            subtitle = stringResource(R.string.wetrakr_watched_percent_subtitle),
+            options = options.map { percent ->
+                SettingsPickerOption(percent, weTrakrWatchedPercentLabel(percent))
+            },
+            selectedValue = weTrakrWatchedPercent,
+            onOptionSelected = { percent ->
+                weTrakrViewModel.onWatchedPercentSelected(percent)
+                showWatchedPercentDialog = false
+            },
+            onDismiss = { showWatchedPercentDialog = false },
+            width = 620.dp,
+            maxHeight = 420.dp
+        )
+    }
+
     if (showMoreLikeThisSourceDialog) {
         SettingsSingleChoiceDialog(
             title = stringResource(R.string.trakt_more_like_this_source_dialog_title),
@@ -576,6 +606,9 @@ internal fun TrackingSettingsOverview(
     onContinueWatchingWindowClick: () -> Unit,
     onWeTrakrContinueWatchingWindowClick: () -> Unit = {},
     weTrakrLocalUploadFocusRequester: FocusRequester = remember { FocusRequester() },
+    weTrakrWatchedPercent: Int = TraktSettingsDataStore.DEFAULT_WETRAKR_WATCHED_PERCENT,
+    weTrakrWatchedPercentFocusRequester: FocusRequester = remember { FocusRequester() },
+    onWeTrakrWatchedPercentClick: () -> Unit = {},
     onWeTrakrLocalUploadClick: () -> Unit = {},
     weTrakrShowComments: Boolean = false,
     onWeTrakrCommentsChanged: (Boolean) -> Unit = {},
@@ -794,6 +827,15 @@ internal fun TrackingSettingsOverview(
                                     .testTag(TrackingSettingsTestTags.WETRAKR_CONTINUE_WATCHING)
                             )
                             SettingsActionRow(
+                                title = stringResource(R.string.wetrakr_watched_percent_title),
+                                subtitle = stringResource(R.string.wetrakr_watched_percent_row_subtitle),
+                                value = weTrakrWatchedPercentLabel(weTrakrWatchedPercent),
+                                onClick = onWeTrakrWatchedPercentClick,
+                                modifier = Modifier
+                                    .focusRequester(weTrakrWatchedPercentFocusRequester)
+                                    .testTag(TrackingSettingsTestTags.WETRAKR_WATCHED_PERCENT)
+                            )
+                            SettingsActionRow(
                                 title = stringResource(R.string.wetrakr_local_upload_title),
                                 subtitle = weTrakrLocalUploadStatus ?: stringResource(R.string.wetrakr_local_upload_row_subtitle),
                                 onClick = onWeTrakrLocalUploadClick,
@@ -975,6 +1017,7 @@ private enum class TrackingFocusTarget {
     CONTINUE_WATCHING,
     WETRAKR_CONTINUE_WATCHING,
     WETRAKR_LOCAL_UPLOAD,
+    WETRAKR_WATCHED_PERCENT,
     MORE_LIKE_THIS
 }
 
@@ -991,6 +1034,15 @@ internal object TrackingSettingsTestTags {
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"
     const val CONTINUE_WATCHING = "tracking_trakt_continue_watching"
     const val WETRAKR_CONTINUE_WATCHING = "tracking_wetrakr_continue_watching"
+    const val WETRAKR_WATCHED_PERCENT = "tracking_wetrakr_watched_percent"
     const val COMMENTS = "tracking_trakt_comments"
     const val MORE_LIKE_THIS = "tracking_trakt_more_like_this"
 }
+
+@Composable
+private fun weTrakrWatchedPercentLabel(percent: Int): String =
+    if (percent == TraktSettingsDataStore.DEFAULT_WETRAKR_WATCHED_PERCENT) {
+        stringResource(R.string.wetrakr_watched_percent_default, percent)
+    } else {
+        stringResource(R.string.wetrakr_watched_percent_value, percent)
+    }

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -30,7 +31,8 @@ class WeTrakrSyncRepository(
     private val coroutineScope: CoroutineScope,
     private val now: () -> Long = System::currentTimeMillis,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val remote: (WeTrakrAuthScope) -> WeTrakrSyncRemote = { WeTrakrHttpSyncRemote(api, it) }
+    private val remote: (WeTrakrAuthScope) -> WeTrakrSyncRemote = { WeTrakrHttpSyncRemote(api, it) },
+    private val watchedPercentSetting: StateFlow<Int> = MutableStateFlow(WETRAKR_DEFAULT_WATCHED_PERCENT)
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val mutex = Mutex()
@@ -41,7 +43,13 @@ class WeTrakrSyncRepository(
     val state = mutableState.asStateFlow()
     internal val progressState = mutableProjection.asStateFlow()
 
+    val watchedPercent: Int
+        get() = weTrakrWatchedPercent(watchedPercentSetting.value)
+
     init {
+        coroutineScope.launch {
+            watchedPercentSetting.drop(1).distinctUntilChanged().collect { reproject() }
+        }
         coroutineScope.launch {
             combine(activeProfileId, auth.state) { profileId, authorization ->
                 Triple(profileId, authorization.scope, authorization.user?.id)
@@ -57,6 +65,15 @@ class WeTrakrSyncRepository(
                     )
                 }
             }
+        }
+    }
+
+    private suspend fun reproject() = withContext(dispatcher) {
+        mutex.withLock {
+            val current = mutableState.value
+            val snapshot = current.snapshot ?: return@withLock
+            if (!matchesCurrent(current.scope)) return@withLock
+            mutableProjection.value = WeTrakrProgressState(current.scope, WeTrakrProgressProjection(snapshot, watchedPercent))
         }
     }
 
@@ -183,7 +200,7 @@ class WeTrakrSyncRepository(
         val snapshot = payload?.let { runCatching { json.decodeFromString<WeTrakrSyncSnapshot>(it) }.getOrNull() }
             ?.takeIf { it.accountId == accountId } ?: WeTrakrSyncSnapshot(accountId)
         checkScope(scope)
-        val projection = runCatching { WeTrakrProgressProjection(snapshot) }.getOrNull()
+        val projection = runCatching { WeTrakrProgressProjection(snapshot, watchedPercent) }.getOrNull()
         val usable = if (projection != null) snapshot else WeTrakrSyncSnapshot(accountId)
         mutableProjection.value = WeTrakrProgressState(scope, projection ?: WeTrakrProgressProjection.Empty)
         mutableState.value = WeTrakrSyncState(scope, usable)
@@ -193,10 +210,11 @@ class WeTrakrSyncRepository(
     private suspend fun commit(scope: WeTrakrAuthScope, snapshot: WeTrakrSyncSnapshot) {
         checkScope(scope)
         val previous = mutableState.value.snapshot
+        val percent = watchedPercent
         val projection = if (previous != null && previous.watched === snapshot.watched &&
-            previous.playback === snapshot.playback) {
+            previous.playback === snapshot.playback && mutableProjection.value.projection.watchedPercent == percent) {
             mutableProjection.value.projection
-        } else WeTrakrProgressProjection(snapshot)
+        } else WeTrakrProgressProjection(snapshot, percent)
         storage.save(scope.profileId, json.encodeToString(snapshot)) { checkScope(scope) }
         checkScope(scope)
         mutableProjection.value = WeTrakrProgressState(scope, projection)
