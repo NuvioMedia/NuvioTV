@@ -266,6 +266,7 @@ private class NativeOptimizedVideoTrackOutput(
 
     private var converting = false
     private var shouldProcess = false
+    private var stripHdr10PlusForTrack = false
     private var profile: Int? = null
     private var codecs: String? = null
     private var nalLengthFieldLength = 4
@@ -307,8 +308,12 @@ private class NativeOptimizedVideoTrackOutput(
 
         val rewriteSamples = converting && !(profile == 5 && !config.convertDv5Rpu)
         val shouldStripDovi = stripDvRpu && strippedCodecs != null && strippedCodecs != format.codecs
-        
-        shouldProcess = rewriteSamples || shouldStripDovi || stripHdr10PlusSei
+        // HDR10+ SEI only exists in HEVC. Other codecs (H.264 live channels above all) must pass
+        // through untouched: the native stripper parses NAL headers as HEVC and mangles them.
+        val shouldStripHdr10Plus = stripHdr10PlusSei && isHevcTrack(format)
+
+        shouldProcess = rewriteSamples || shouldStripDovi || shouldStripHdr10Plus
+        stripHdr10PlusForTrack = shouldStripHdr10Plus
         codecs = outFormat.codecs
         delegate.format(outFormat)
     }
@@ -381,7 +386,7 @@ private class NativeOptimizedVideoTrackOutput(
             doviMode = mode,
             doviProfile = profile ?: -1,
             stripDoviRpu = stripDvRpu,
-            stripHdr10Plus = stripHdr10PlusSei
+            stripHdr10Plus = stripHdr10PlusForTrack
         )
 
         val useRewritten = written > 0
@@ -399,6 +404,14 @@ private class NativeOptimizedVideoTrackOutput(
     }
 
     private companion object {
+        /** HEVC video, including Dolby Vision on an HEVC base layer (not AVC-based dvav/dva1). */
+        fun isHevcTrack(format: Format): Boolean = when (format.sampleMimeType) {
+            MimeTypes.VIDEO_H265 -> true
+            MimeTypes.VIDEO_DOLBY_VISION -> format.codecs?.trim()?.lowercase()
+                ?.let { !it.startsWith("dvav") && !it.startsWith("dva1") } ?: true
+            else -> false
+        }
+
         fun parseDvProfile(codecs: String?): Int? {
             if (codecs.isNullOrBlank()) return null
             val m = Regex("^(?:dvhe|dvav|dvh1|dva1)\\.(\\d+)\\.")
