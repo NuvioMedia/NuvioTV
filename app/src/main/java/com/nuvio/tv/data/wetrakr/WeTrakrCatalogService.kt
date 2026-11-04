@@ -35,6 +35,7 @@ class WeTrakrCatalogService(
     private val episodeIds = ConcurrentHashMap<String, Long>()
     private val comments = ConcurrentHashMap<String, Timed<TraktCommentsPage>>()
     private val similar = ConcurrentHashMap<String, Timed<List<MetaPreview>>>()
+    private val ratings = ConcurrentHashMap<String, Timed<Double?>>()
 
     suspend fun getCommentsPage(
         meta: Meta,
@@ -83,6 +84,17 @@ class WeTrakrCatalogService(
         val items = if (response.status == 404) emptyList() else decodeWeTrakrSimilar(response.body)
         similar[key] = Timed(items, now())
         return items
+    }
+
+    suspend fun getRating(meta: Meta, fallbackItemId: String? = null, fallbackItemType: String? = null): Double? {
+        val kind = weTrakrCatalogKind(meta, fallbackItemType) ?: return null
+        val titleId = resolveTitleId(kind, meta, fallbackItemId) ?: return null
+        val key = "${kind.path}/$titleId"
+        ratings[key]?.takeIf { now() - it.atMs <= CACHE_TTL_MS }?.let { return it.value }
+        val response = api.get("/${kind.path}/$titleId", acceptedStatuses = setOf(404))
+        val rating = if (response.status == 404) null else decodeWeTrakrRating(response.body)
+        ratings[key] = Timed(rating, now())
+        return rating
     }
 
     private suspend fun resolveTitleId(kind: WeTrakrCatalogKind, meta: Meta, fallbackItemId: String?): Long? {
@@ -214,3 +226,6 @@ internal fun weTrakrPlainText(value: String): String = value
     .replace("&gt;", ">")
     .replace("&amp;", "&")
     .trim()
+
+internal fun decodeWeTrakrRating(body: String): Double? =
+    weTrakrElement(body).weTrakrObject().decimal("rating")?.takeIf { it > 0.0 && it <= 10.0 }

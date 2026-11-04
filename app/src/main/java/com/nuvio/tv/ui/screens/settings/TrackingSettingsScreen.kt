@@ -79,6 +79,7 @@ fun TrackingSettingsContent(
     val weTrakrLocalUpload by weTrakrViewModel.localUpload.collectAsStateWithLifecycle()
     val weTrakrShowComments by weTrakrViewModel.showComments.collectAsStateWithLifecycle()
     val weTrakrWatchedPercent by weTrakrViewModel.watchedPercent.collectAsStateWithLifecycle()
+    val weTrakrShowRating by weTrakrViewModel.showRating.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
@@ -252,6 +253,8 @@ fun TrackingSettingsContent(
         },
         weTrakrLocalUploadFocusRequester = weTrakrLocalUploadFocusRequester,
         weTrakrWatchedPercent = weTrakrWatchedPercent,
+        weTrakrShowRating = weTrakrShowRating,
+        onWeTrakrRatingChanged = weTrakrViewModel::onShowRatingChanged,
         weTrakrWatchedPercentFocusRequester = weTrakrWatchedPercentFocusRequester,
         onWeTrakrWatchedPercentClick = {
             restoreFocusTarget = TrackingFocusTarget.WETRAKR_WATCHED_PERCENT
@@ -607,6 +610,8 @@ internal fun TrackingSettingsOverview(
     onWeTrakrContinueWatchingWindowClick: () -> Unit = {},
     weTrakrLocalUploadFocusRequester: FocusRequester = remember { FocusRequester() },
     weTrakrWatchedPercent: Int = TraktSettingsDataStore.DEFAULT_WETRAKR_WATCHED_PERCENT,
+    weTrakrShowRating: Boolean = true,
+    onWeTrakrRatingChanged: (Boolean) -> Unit = {},
     weTrakrWatchedPercentFocusRequester: FocusRequester = remember { FocusRequester() },
     onWeTrakrWatchedPercentClick: () -> Unit = {},
     onWeTrakrLocalUploadClick: () -> Unit = {},
@@ -851,6 +856,14 @@ internal fun TrackingSettingsOverview(
                                 onToggle = { onWeTrakrCommentsChanged(!weTrakrShowComments) },
                                 modifier = Modifier.testTag(TrackingSettingsTestTags.WETRAKR_COMMENTS)
                             )
+                            SettingsToggleRow(
+                                title = stringResource(R.string.wetrakr_rating_title),
+                                subtitle = stringResource(R.string.wetrakr_rating_subtitle),
+                                checked = weTrakrShowRating,
+                                enabled = true,
+                                onToggle = { onWeTrakrRatingChanged(!weTrakrShowRating) },
+                                modifier = Modifier.testTag(TrackingSettingsTestTags.WETRAKR_RATING)
+                            )
                         }
                     }
                 }
@@ -1035,6 +1048,7 @@ internal object TrackingSettingsTestTags {
     const val CONTINUE_WATCHING = "tracking_trakt_continue_watching"
     const val WETRAKR_CONTINUE_WATCHING = "tracking_wetrakr_continue_watching"
     const val WETRAKR_WATCHED_PERCENT = "tracking_wetrakr_watched_percent"
+    const val WETRAKR_RATING = "tracking_wetrakr_rating"
     const val COMMENTS = "tracking_trakt_comments"
     const val MORE_LIKE_THIS = "tracking_trakt_more_like_this"
 }

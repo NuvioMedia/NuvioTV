@@ -165,6 +165,7 @@ class MetaDetailsViewModel @Inject constructor(
     private var commentsSource: CommentsSource? = null
     private var traktAuthenticated = false
     private var weTrakrConnected = false
+    private var weTrakrRatingJob: kotlinx.coroutines.Job? = null
     private var moreLikeThisSourcePreference = com.nuvio.tv.data.local.MoreLikeThisSourcePreference.TRAKT
 
     /** Content ID used for watch-progress and watched-items lookups.
@@ -286,6 +287,7 @@ class MetaDetailsViewModel @Inject constructor(
 
                     if (meta != null) {
                         loadMoreLikeThisAsync(meta)
+                        loadWeTrakrRatingAsync(meta)
                     }
 
                     if (shouldShow && meta != null) {
@@ -781,6 +783,7 @@ class MetaDetailsViewModel @Inject constructor(
                     mdbListRatings = null,
                     isMdbListRatingsActive = isMdbListActive,
                     tmdbRating = null,
+                    weTrakrRating = null,
                     moreLikeThis = emptyList(),
                     moreLikeThisSource = null,
                     collection = emptyList(),
@@ -1040,6 +1043,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private suspend fun applyMetaWithEnrichment(meta: Meta) {
         if (!isServerItem) loadMoreLikeThisAsync(meta)
+        if (!isServerItem) loadWeTrakrRatingAsync(meta)
         val enriched = if (isServerItem) meta else enrichMeta(meta)
 
         syncEffectiveContentId(enriched)
@@ -1311,6 +1315,22 @@ class MetaDetailsViewModel @Inject constructor(
     private fun cancelCommentsRequests() {
         commentsJob?.cancel()
         commentsLoadMoreJob?.cancel()
+    }
+
+    private fun loadWeTrakrRatingAsync(meta: Meta) {
+        weTrakrRatingJob?.cancel()
+        weTrakrRatingJob = viewModelScope.launch {
+            val rating = if (weTrakrConnected && supportsComments(meta) && traktSettingsDataStore.showWeTrakrRating.first()) {
+                runCatching { weTrakrCatalogService.getRating(meta, itemId, itemType) }
+                    .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+                    .getOrNull()
+            } else {
+                null
+            }
+            _uiState.update { current ->
+                if (current.meta?.id != meta.id) current else current.copy(weTrakrRating = rating?.toFloat())
+            }
+        }
     }
 
     private fun loadMoreLikeThisAsync(meta: Meta) {

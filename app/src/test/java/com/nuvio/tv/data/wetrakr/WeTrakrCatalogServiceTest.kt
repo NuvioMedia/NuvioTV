@@ -74,6 +74,28 @@ class WeTrakrCatalogServiceTest {
     }
 
     @Test
+    fun `rating reads the title's combined score and is cached`() = runTest {
+        val harness = WeTrakrTestHarness()
+        val service = service(harness)
+        harness.reply(body = SEARCH)
+        harness.reply(body = """{"id":435,"rating":8.5,"rating_votes":8875323}""")
+
+        val first = service.getRating(movie())
+        val second = service.getRating(movie())
+
+        assertEquals(8.5, first!!, 0.0)
+        assertEquals(8.5, second!!, 0.0)
+        assertEquals(listOf("/search", "/movies/435"), harness.engine.requests.map { it.path })
+    }
+
+    @Test
+    fun `a missing or out of range rating is ignored`() {
+        assertEquals(null, decodeWeTrakrRating("""{"id":1}"""))
+        assertEquals(null, decodeWeTrakrRating("""{"rating":0}"""))
+        assertEquals(null, decodeWeTrakrRating("""{"rating":42}"""))
+    }
+
+    @Test
     fun `a search result only counts when its ids match`() = runTest {
         val harness = WeTrakrTestHarness()
         val service = service(harness)

@@ -894,6 +894,7 @@ fun MetaDetailsScreen(
                     mdbListRatingOrder = uiState.mdbListRatingOrder,
                     isMdbListRatingsActive = uiState.isMdbListRatingsActive,
                     tmdbRating = uiState.tmdbRating,
+                    weTrakrRating = uiState.weTrakrRating,
                     comments = uiState.comments,
                     commentsCurrentPage = uiState.commentsCurrentPage,
                     commentsPageCount = uiState.commentsPageCount,
@@ -1238,6 +1239,7 @@ private fun MetaDetailsContent(
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     isMdbListRatingsActive: Boolean,
     tmdbRating: Float?,
+    weTrakrRating: Float? = null,
     comments: List<TraktCommentReview>,
     commentsCurrentPage: Int,
     commentsPageCount: Int,
@@ -2500,6 +2502,7 @@ private fun MetaDetailsContent(
                         mdbListRatingOrder = mdbListRatingOrder,
                         hideMetaInfoImdb = !showStandardOverallRatings,
                         tmdbRating = tmdbRating.takeIf { showStandardOverallRatings },
+                        weTrakrRating = weTrakrRating.takeIf { showStandardOverallRatings },
                         showFullReleaseDate = showFullReleaseDate,
                         trailerAvailable = trailerButtonEnabled && !trailerUrl.isNullOrBlank(),
                         onTrailerClick = onTrailerButtonClick,
@@ -3148,7 +3151,8 @@ private fun MetaDetailsContent(
                 transitionDirection = commentOverlayDirection,
                 onPrevious = onShowPreviousComment,
                 onNext = onShowNextComment,
-                onDismiss = onDismissCommentOverlay
+                onDismiss = onDismissCommentOverlay,
+                source = commentsSource
             )
         }
 

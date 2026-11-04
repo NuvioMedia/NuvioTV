@@ -75,6 +75,7 @@ class TraktSettingsDataStore @Inject constructor(
     private val showMetaCommentsKey = booleanPreferencesKey("show_meta_comments")
     private val showWeTrakrCommentsKey = booleanPreferencesKey("show_wetrakr_comments")
     private val weTrakrWatchedPercentKey = intPreferencesKey("wetrakr_watched_percent")
+    private val showWeTrakrRatingKey = booleanPreferencesKey("show_wetrakr_rating")
     private val watchProgressSourceKey = stringPreferencesKey("watch_progress_source")
     private val librarySourceModeKey = stringPreferencesKey("library_source_mode")
     private val rememberedWatchProgressSourceKey = stringPreferencesKey("remembered_watch_progress_source")
@@ -120,6 +121,18 @@ class TraktSettingsDataStore @Inject constructor(
     val showWeTrakrComments: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             prefs[showWeTrakrCommentsKey] ?: false
+        }
+    }
+
+    val showWeTrakrRating: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            prefs[showWeTrakrRatingKey] ?: true
+        }
+    }
+
+    suspend fun setShowWeTrakrRating(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showWeTrakrRatingKey] = enabled
         }
     }
 

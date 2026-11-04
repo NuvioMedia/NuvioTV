@@ -1258,6 +1258,8 @@
     <string name="wetrakr_name">WeTrakr</string>
     <string name="wetrakr_tracking_description">Sync watched history, watchlist and playback progress across devices</string>
     <string name="wetrakr_connected_as">Connected as %1$s</string>
+    <string name="wetrakr_rating_title">WeTrakr rating</string>
+    <string name="wetrakr_rating_subtitle">Show WeTrakr\'s score next to IMDb and TMDB on title pages.</string>
     <string name="wetrakr_watched_percent_title">Mark as watched at</string>
     <string name="wetrakr_watched_percent_row_subtitle">How far you need to get for WeTrakr to mark a title watched.</string>
     <string name="wetrakr_watched_percent_subtitle">When you stop at or past this point, WeTrakr marks the title watched. Below it, the title stays in Continue Watching.</string>
