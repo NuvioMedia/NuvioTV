@@ -20,6 +20,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,11 +39,29 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.screens.player.formatTime
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private val PreviewWidth = 160.dp
 private val PreviewShape = RoundedCornerShape(10.dp)
 private const val DefaultAspectRatio = 16f / 9f
+private const val SeekPreviewLingerMs = 3_000L
+
+@Composable
+internal fun rememberSeekPreviewPosition(scrubPositionMs: Long?): Long? {
+    var lastPositionMs by remember { mutableStateOf<Long?>(null) }
+    var lingering by remember { mutableStateOf(false) }
+    LaunchedEffect(scrubPositionMs) {
+        if (scrubPositionMs != null) {
+            lastPositionMs = scrubPositionMs
+            lingering = true
+        } else if (lingering) {
+            delay(SeekPreviewLingerMs)
+            lingering = false
+        }
+    }
+    return scrubPositionMs ?: lastPositionMs.takeIf { lingering }
+}
 
 @Composable
 internal fun SeekPreviewOverlay(

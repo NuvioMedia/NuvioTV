@@ -12,6 +12,7 @@ import com.nuvio.tv.ui.screens.detail.formatPlaybackTime
 import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.screens.player.seekpreview.SeekPreviewController
 import com.nuvio.tv.ui.screens.player.seekpreview.SeekPreviewOverlay
+import com.nuvio.tv.ui.screens.player.seekpreview.rememberSeekPreviewPosition
 import com.nuvio.tv.ui.screens.player.seekpreview.rememberSeekPreviewController
 import kotlinx.coroutines.delay
 
@@ -3613,10 +3614,14 @@ private fun ProgressBar(
                     }
                 }
         )
+        // The thumbnail stays up for a few seconds after scrubbing stops, at the last scrubbed spot.
+        val seekPreviewPositionMs = rememberSeekPreviewPosition(
+            if (duration > 0L && seekPreviewActive) currentPosition.coerceIn(0L, duration) else null
+        )
         SeekPreviewOverlay(
             controller = seekPreview,
-            active = duration > 0L && seekPreviewActive,
-            positionMs = currentPosition.coerceIn(0L, duration.coerceAtLeast(0L)),
+            active = duration > 0L && seekPreviewPositionMs != null,
+            positionMs = (seekPreviewPositionMs ?: currentPosition).coerceIn(0L, duration.coerceAtLeast(0L)),
             durationMs = duration,
             modifier = Modifier.matchParentSize()
         )
