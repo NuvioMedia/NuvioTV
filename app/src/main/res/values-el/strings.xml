@@ -3317,9 +3317,6 @@
   <string name="autosync_tolerance_value">%1$d ms</string>
   <string name="autosync_thorough_title">Εξονυχιστική αναζήτηση αυτόματου συγχρονισμού</string>
   <string name="autosync_thorough_description">Συνεχίστε τη σύγκριση άλλων υποτίτλων και ενσωματωμένων κομματιών για ακριβέστερη αντιστοίχιση πριν από τον συγχρονισμό. Όταν είναι ανενεργό, χρησιμοποιείται νωρίτερα η πρώτη ισχυρή αντιστοίχιση. Εφαρμόζονται μόνο αντιστοιχίσεις υψηλής βεβαιότητας.</string>
-  <string name="autosync_toast_failed">Ο συγχρονισμός απέτυχε: ο αυτόματος συγχρονισμός δεν μπόρεσε να αντιστοιχίσει αυτόν τον υπότιτλο με το βίντεο.</string>
-  <string name="autosync_toast_failed_no_reference">Ο συγχρονισμός απέτυχε: αυτό το βίντεο δεν έχει ενσωματωμένους υποτίτλους για σύγκριση.</string>
-  <string name="autosync_toast_failed_unsupported">Ο συγχρονισμός απέτυχε: ο αυτόματος συγχρονισμός δεν υποστηρίζει αυτή τη μορφή υποτίτλων.</string>
   <string name="autosync_label_synced">Αυτόματα συγχρονισμένος</string>
   <string name="stream_resume_from_time">Συνέχεια από %1$s</string>
   <string name="stream_resume_from_percent">Συνέχεια από %1$d%%</string>
