@@ -3434,7 +3434,7 @@
     <string name="autosync_thorough_title">Dokładne wyszukiwanie synchronizacji</string>
     <string name="autosync_thorough_description">Porównuj kolejne ścieżki napisów w poszukiwaniu lepszego dopasowania przed synchronizacją. Po wyłączeniu pierwsze silne dopasowanie jest używane szybciej. Tylko pewne dopasowania są stosowane.</string>
     <string name="autosync_toast_no_fit">Synchronizacja nie powiodła się: te napisy nie pasują do tej wersji wideo.</string>
-    <string name="autosync_label_synced">Zsynchronizowane automatycznie</string>
+    <string name="autosync_label_synced">Dopasowane</string>
 
     <string name="layout_trailer_4k">Zwiastuny 4K</string>
     <string name="layout_trailer_4k_sub">Odtwarzaj zwiastuny w rozdzielczości powyżej 1080p, gdy są dostępne. Zużywa znacznie więcej pamięci; domyślnie wyłączone na urządzeniach z 2 GB RAM lub mniej.</string>
