@@ -823,6 +823,17 @@
     <string name="audio_preferred_lang">Ngôn ngữ âm thanh ưu tiên</string>
     <string name="audio_skip_silence">Bỏ qua đoạn im lặng</string>
     <string name="audio_skip_silence_sub">Bỏ qua các đoạn im lặng trong quá trình phát</string>
+    <string name="audio_night_mode">Chế độ ban đêm</string>
+    <string name="audio_night_mode_sub">Tăng âm lượng lời thoại và các âm thanh nhỏ để bạn có thể giữ mức âm lượng thấp</string>
+    <string name="audio_night_mode_desc">Tăng âm lượng lời thoại và các âm thanh nhỏ; cảnh âm lượng lớn vẫn giữ nguyên như bản phối. Áp dụng cho âm thanh giải mã bằng ứng dụng. Dolby và DTS truyền trực tiếp đến đầu thu hoặc loa thanh sẽ được giữ nguyên.</string>
+    <string name="audio_night_mode_value">Chế độ ban đêm: %1$s</string>
+    <string name="audio_night_mode_off">Tắt</string>
+    <string name="audio_night_mode_light">Nhẹ</string>
+    <string name="audio_night_mode_light_desc">Tăng nhẹ, tối đa +6 dB</string>
+    <string name="audio_night_mode_medium">Trung bình</string>
+    <string name="audio_night_mode_medium_desc">Tăng rõ lời thoại, tối đa +10 dB</string>
+    <string name="audio_night_mode_strong">Mạnh</string>
+    <string name="audio_night_mode_strong_desc">Tối đa +15 dB, phù hợp để xem vào ban đêm với âm lượng thấp</string>
     <string name="audio_remember_delay_per_device">Ghi nhớ độ trễ âm thanh cho từng thiết bị</string>
     <string name="audio_remember_delay_per_device_sub">Lưu và khôi phục độ trễ âm thanh trong trình phát cho đường xuất âm thanh hiện tại</string>
     <string name="audio_advanced_section">Âm thanh nâng cao</string>
@@ -916,6 +927,8 @@
     <string name="sub_hdr_style_sub">Sử dụng một màu chữ khác và độ sáng thấp hơn cho phụ đề trên video HDR và Dolby Vision</string>
     <string name="sub_hdr_text_color">Màu chữ HDR</string>
     <string name="sub_hdr_brightness">Độ sáng phụ đề HDR</string>
+    <string name="sub_hdr_dim_player_controls">Làm mờ nút điều khiển trình phát khi bật HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">Áp dụng độ sáng HDR cho nút điều khiển trình phát và danh sách hiển thị trên video HDR và Dolby Vision</string>
     <string name="sub_advanced_section">Hiển thị phụ đề nâng cao</string>
     <string name="sub_libass">Dùng libass cho phụ đề ASS/SSA</string>
     <string name="sub_libass_sub">Thử nghiệm: kết xuất ASS/SSA nâng cao (kiểu chữ, định vị, hoạt ảnh)</string>
@@ -1952,6 +1965,12 @@
     <string name="audio_center_mix_unavailable">Trộn kênh trung tâm chỉ khả dụng khi bật hạ kênh âm thanh bằng FFmpeg.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">Giữ nguyên âm lượng gốc khi hạ kênh âm thanh</string>
     <string name="audio_maintain_original_audio_on_downmix_subtitle">Khi tắt, chuẩn hóa khi hạ kênh âm thanh có thể làm giảm âm lượng tổng thể.</string>
+    <string name="audio_downmix_lfe_level">Mức LFE khi hạ kênh âm thanh</string>
+    <string name="audio_downmix_lfe_level_sub">Trộn kênh loa siêu trầm (LFE) vào các loa khác thay vì loại bỏ kênh này. Chỉ áp dụng cho các bố cục không có LFE, ví dụ như 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">Sử dụng khi bố cục hạ kênh âm thanh không có kênh LFE. Áp dụng từ lần phát lại tiếp theo.</string>
+    <string name="audio_downmix_lfe_level_off">Tắt</string>
+    <string name="audio_downmix_lfe_level_half">50%</string>
+    <string name="audio_downmix_lfe_level_full">100%</string>
 
     <string name="subtitle_dialog_title">Phụ đề</string>
     <string name="subtitle_no_builtin">Không có phụ đề tích hợp</string>

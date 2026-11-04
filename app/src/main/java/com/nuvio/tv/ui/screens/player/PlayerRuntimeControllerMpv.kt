@@ -295,7 +295,7 @@ internal fun PlayerRuntimeController.resumeForLifecycle() {
             _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
         }
         if (currentStreamUrl.isNotEmpty()) {
-            initializePlayer(currentStreamUrl, currentHeaders, startPaused = true)
+            reinitializeCurrentStream(startPaused = true)
         }
         return
     }

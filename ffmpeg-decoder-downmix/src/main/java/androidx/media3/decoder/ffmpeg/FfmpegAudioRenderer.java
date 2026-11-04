@@ -57,6 +57,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
   @Nullable private volatile String requestedOutputLayoutName;
   private volatile int requestedOutputChannelCount;
   private volatile boolean downmixNormalizationEnabled;
+  private volatile float lfeMixLevel;
   @Nullable private volatile FfmpegAudioDecoder activeDecoder;
   private volatile boolean rendererEnabled;
   private volatile boolean downmixActive;
@@ -216,6 +217,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
             outputEncoding);
     decoder.setUserCenterMixLevelDb(userCenterMixLevelDb);
     decoder.setDownmixNormalizationEnabled(downmixNormalizationEnabled);
+    decoder.setLfeMixLevel(lfeMixLevel);
     activeDecoder = decoder;
     TraceUtil.endSection();
     return decoder;
@@ -261,6 +263,15 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     @Nullable FfmpegAudioDecoder decoder = activeDecoder;
     if (decoder != null) {
       decoder.setDownmixNormalizationEnabled(downmixNormalizationEnabled);
+    }
+  }
+
+  /** Sets the LFE mix level used when the downmix layout has no LFE channel (0 to 1). */
+  public void setLfeMixLevel(float lfeMixLevel) {
+    this.lfeMixLevel = lfeMixLevel;
+    @Nullable FfmpegAudioDecoder decoder = activeDecoder;
+    if (decoder != null) {
+      decoder.setLfeMixLevel(lfeMixLevel);
     }
   }
 

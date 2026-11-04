@@ -456,17 +456,17 @@
   <string name="stream_auto_play_first_stream">Πρώτη ροή</string>
   <string name="stream_auto_play_manual_short">Χειροκίνητα</string>
   <string name="stream_auto_play_smart_match">Έξυπνη αντιστοίχιση</string>
-  <string name="essential_subtitle_language">Γλώσσα υπότιτλων</string>
+  <string name="essential_subtitle_language">Γλώσσα υποτίτλων</string>
   <string name="essential_audio_language">Γλώσσα ήχου</string>
   <string name="audio_lang_media_default">Προεπιλογή πολυμέσου</string>
   <string name="essential_playback_header_title">Αναπαραγωγή</string>
-  <string name="essential_playback_header_subtitle">Απλές προτιμήσεις αναπαραγωγής, υπότιτλων, ήχου και P2P.</string>
+  <string name="essential_playback_header_subtitle">Απλές προτιμήσεις αναπαραγωγής, υποτίτλων, ήχου και P2P.</string>
   <string name="essential_stream_selection_subtitle">Επιλέξτε χειροκίνητα ή αυτόματη αναπαραγωγή της πρώτης διαθέσιμης ροής.</string>
   <string name="essential_autoplay_next_episode">Αυτόματη αναπαραγωγή επόμενου επεισοδίου</string>
   <string name="essential_autoplay_next_episode_subtitle">Συνέχεια στο επόμενο επεισόδιο μετά το τέλος μιας ροής.</string>
   <string name="essential_p2p_streams">Ροές P2P</string>
   <string name="essential_p2p_streams_subtitle">Να επιτρέπονται πηγές ροής peer-to-peer.</string>
-  <string name="essential_subtitle_language_subtitle">Προτιμώμενη γλώσσα υπότιτλων.</string>
+  <string name="essential_subtitle_language_subtitle">Προτιμώμενη γλώσσα υποτίτλων.</string>
   <string name="essential_audio_language_subtitle">Προτιμώμενη γλώσσα ήχου.</string>
   <!-- Account / sign-in error messages -->
   <string name="account_error_incorrect_pin">Λανθασμένο PIN.</string>
@@ -556,7 +556,7 @@
   <string name="settings_debrid_subtitle">Πειραματικές πηγές cloud λογαριασμού</string>
   <!-- PlaybackSettingsScreen -->
   <string name="playback_title">Ρυθμίσεις αναπαραγωγής</string>
-  <string name="playback_subtitle">Διαμόρφωση αναπαραγωγής βίντεο και επιλογών υπότιτλων</string>
+  <string name="playback_subtitle">Διαμόρφωση αναπαραγωγής βίντεο και επιλογών υποτίτλων</string>
   <string name="cd_decrease">Μείωση</string>
   <string name="cd_increase">Αύξηση</string>
   <string name="action_cancel">Ακύρωση</string>
@@ -760,32 +760,41 @@
   <string name="sub_use_forced_subtitles_desc">Προτίμηση εξαναγκασμένων υποτίτλων όταν ο ήχος ταιριάζει με τη γλώσσα υποτίτλων· αν δεν είναι διαθέσιμοι, μην επιλέξετε τίποτα</string>
   <string name="sub_show_only_preferred_languages">Εμφάνιση μόνο προτιμώμενων γλωσσών</string>
   <string name="sub_show_only_preferred_languages_desc">Απόκρυψη όλων των άλλων γλωσσών υποτίτλων από τη λίστα επιλογής</string>
-  <string name="sub_organization">Οργάνωση υπότιτλων</string>
+  <string name="sub_organization">Οργάνωση υποτίτλων</string>
   <string name="sub_size">Μέγεθος</string>
   <string name="sub_vertical_offset">Κάθετη μετατόπιση</string>
   <string name="sub_bold">Έντονα</string>
-  <string name="sub_bold_sub">Χρήση έντονης γραμματοσειράς για υπότιτλους</string>
+  <string name="sub_bold_sub">Χρήση έντονης γραμματοσειράς για υποτίτλους</string>
   <string name="sub_text_color">Χρώμα κειμένου</string>
   <string name="sub_bg_color">Χρώμα φόντου</string>
   <string name="sub_outline">Περίγραμμα</string>
-  <string name="sub_outline_sub">Προσθήκη περιγράμματος γύρω από το κείμενο υπότιτλων για καλύτερη ορατότητα</string>
+  <string name="sub_outline_sub">Προσθήκη περιγράμματος γύρω από το κείμενο υποτίτλων για καλύτερη ορατότητα</string>
   <string name="sub_outline_color">Χρώμα περιγράμματος</string>
   <string name="sub_hdr_style">Ξεχωριστό στυλ HDR / Dolby Vision</string>
-  <string name="sub_hdr_style_sub">Διαφορετικό χρώμα κειμένου και χαμηλότερη φωτεινότητα για τους υπότιτλους σε βίντεο HDR και Dolby Vision</string>
+  <string name="sub_hdr_style_sub">Διαφορετικό χρώμα κειμένου και χαμηλότερη φωτεινότητα για τους υποτίτλους σε βίντεο HDR και Dolby Vision</string>
   <string name="sub_hdr_text_color">Χρώμα κειμένου HDR</string>
-  <string name="sub_hdr_brightness">Φωτεινότητα υπότιτλων HDR</string>
-  <string name="sub_advanced_section">Για προχωρημένους απόδοση υπότιτλων</string>
-  <string name="sub_libass">Χρήση libass για υπότιτλους ASS/SSA</string>
+  <string name="sub_hdr_brightness">Φωτεινότητα HDR</string>
+  <string name="sub_hdr_dim_player_controls">Μείωση φωτεινότητας χειριστηρίων σε HDR</string>
+  <string name="sub_hdr_dim_player_controls_sub">Εφαρμογή της φωτεινότητας HDR στα χειριστήρια και τα μενού του προγράμματος αναπαραγωγής που εμφανίζονται πάνω σε βίντεο HDR και Dolby Vision</string>
+  <string name="sub_advanced_section">Προχωρημένη απόδοση υποτίτλων</string>
+  <string name="sub_libass">Χρήση libass για υποτίτλους ASS/SSA</string>
   <string name="sub_libass_sub">Προχωρημένη απόδοση ASS/SSA (στυλ, τοποθέτηση, κινούμενα σχέδια)</string>
   <string name="sub_libass_mode">Λειτουργία απόδοσης Libass</string>
   <string name="sub_libass_render_scale">Ανάλυση απόδοσης υποτίτλων</string>
   <string name="sub_libass_render_scale_sub">Η χαμηλότερη ανάλυση βελτιώνει την απόδοση σε βαριά στοιχειοθεσία με κόστος την ευκρίνεια</string>
+  <string name="sub_libass_render_mode">Λειτουργία απόδοσης ASS</string>
+  <string name="sub_libass_render_mode_sub">Πώς σχεδιάζονται οι υπότιτλοι ASS/SSA πάνω στο βίντεο</string>
+  <string name="sub_libass_render_mode_tunneled_sub">Η αναπαραγωγή tunneled παρακάμπτει την αλυσίδα εφέ βίντεο. Χρησιμοποιείται αυτόματα η επικάλυψη.</string>
+  <string name="sub_libass_render_mode_video_effect">Εφέ βίντεο</string>
+  <string name="sub_libass_render_mode_video_effect_sub">Σχεδιάζει τους υποτίτλους απευθείας σε κάθε καρέ του βίντεο. Ακριβής χρονισμός ως το καρέ σε κάθε υλικό. Το περιεχόμενο HDR μετατρέπεται σε SDR με χαρτογράφηση τόνων.</string>
+  <string name="sub_libass_render_mode_overlay">Επικάλυψη</string>
+  <string name="sub_libass_render_mode_overlay_sub">Αποδίδει τους υποτίτλους σε ξεχωριστό επίπεδο επιφάνειας. Διατηρεί την έξοδο HDR. Ο χρονισμός των υποτίτλων μπορεί να μην είναι απόλυτα ακριβής σε ορισμένες συσκευές.</string>
   <string name="sub_org_none">Κανένα (προεπιλεγμένη σειρά)</string>
   <string name="sub_org_by_lang">Ανά γλώσσα</string>
   <string name="sub_org_by_addon">Ανά πρόσθετο</string>
-  <string name="sub_org_none_desc">Εμφάνιση υπότιτλων με την προεπιλεγμένη σειρά αποτελεσμάτων πρόσθετου.</string>
-  <string name="sub_org_by_lang_desc">Ομαδοποίηση υπότιτλων ανά γλώσσα.</string>
-  <string name="sub_org_by_addon_desc">Ομαδοποίηση υπότιτλων ανά πηγή πρόσθετου.</string>
+  <string name="sub_org_none_desc">Εμφάνιση υποτίτλων με την προεπιλεγμένη σειρά αποτελεσμάτων πρόσθετου.</string>
+  <string name="sub_org_by_lang_desc">Ομαδοποίηση υποτίτλων ανά γλώσσα.</string>
+  <string name="sub_org_by_addon_desc">Ομαδοποίηση υποτίτλων ανά πηγή πρόσθετου.</string>
   <string name="sub_strip_sdh">Αφαίρεση υποτίτλων SDH</string>
   <string name="sub_strip_sdh_desc">Απόκρυψη περιγραφών ήχου και ετικετών ομιλητών από τους υποτίτλους κειμένου</string>
   <!-- PlaybackAutoPlaySettings -->
@@ -1648,9 +1657,9 @@
   <string name="player_no_external_player">Δεν βρέθηκε εξωτερικό πρόγραμμα αναπαραγωγής</string>
   <string name="player_loading_preparing">Προετοιμασία ροής…</string>
   <string name="player_loading_detecting_format">Ανίχνευση μορφής ροής…</string>
-  <string name="player_loading_subtitles">Ανάκτηση υπότιτλων…</string>
-  <string name="player_loading_subtitles_from">Ανάκτηση υπότιτλων από %1$d πρόσθετα…</string>
-  <string name="player_loading_subtitles_progress">Ανάκτηση υπότιτλων… (%1$d / %2$d)</string>
+  <string name="player_loading_subtitles">Ανάκτηση υποτίτλων…</string>
+  <string name="player_loading_subtitles_from">Ανάκτηση υποτίτλων από %1$d πρόσθετα…</string>
+  <string name="player_loading_subtitles_progress">Ανάκτηση υποτίτλων… (%1$d / %2$d)</string>
   <string name="player_loading_subtitles_addon">Υπότιτλοι: %1$s (%2$d / %3$d)</string>
   <string name="player_loading_building">Δημιουργία προγράμματος αναπαραγωγής…</string>
   <string name="player_loading_starting">Εκκίνηση ροής…</string>
@@ -1667,11 +1676,11 @@
   <string name="player_sync_line">Συγχρονισμός γραμμής</string>
   <string name="subtitle_timing_press_sync">Πατήστε Συγχρονισμός όταν ακούσετε μια γραμμή διαλόγου.</string>
   <string name="subtitle_timing_sync_button">Συγχρονισμός</string>
-  <string name="subtitle_timing_select_addon_first">Επιλέξτε πρώτα κομμάτι υπότιτλων από πρόσθετο.</string>
-  <string name="subtitle_auto_sync_select_addon_track">Επιλέξτε κομμάτι υπότιτλων από πρόσθετο για χρήση Auto Sync.</string>
+  <string name="subtitle_timing_select_addon_first">Επιλέξτε πρώτα κομμάτι υποτίτλων από πρόσθετο.</string>
+  <string name="subtitle_auto_sync_select_addon_track">Επιλέξτε κομμάτι υποτίτλων από πρόσθετο για χρήση Auto Sync.</string>
   <string name="subtitle_auto_sync_applied">Εφαρμόστηκε συγχρονισμός: %1$s</string>
-  <string name="subtitle_timing_loading">Φόρτωση γραμμών υπότιτλων…</string>
-  <string name="subtitle_timing_no_lines_found">Δεν βρέθηκαν γραμμές υπότιτλων γύρω από αυτή τη στιγμή.</string>
+  <string name="subtitle_timing_loading">Φόρτωση γραμμών υποτίτλων…</string>
+  <string name="subtitle_timing_no_lines_found">Δεν βρέθηκαν γραμμές υποτίτλων γύρω από αυτή τη στιγμή.</string>
   <string name="subtitle_timing_press_back_cancel">Πατήστε Πίσω για ακύρωση</string>
   <string name="subtitle_timing_captured_at">Καταγράφηκε στο %1$s</string>
   <string name="subtitle_timing_capturing">Καταγραφή…</string>
@@ -1688,7 +1697,7 @@
   <string name="player_live_watched">ΖΩΝΤΑΝΑ  %1$s</string>
   <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
   <string name="season_episode_format">S%1$d E%2$d</string>
-  <string name="player_subtitle_delay">Καθυστέρηση υπότιτλων</string>
+  <string name="player_subtitle_delay">Καθυστέρηση υποτίτλων</string>
   <string name="player_error_title">Σφάλμα αναπαραγωγής</string>
   <string name="player_go_back">Επιστροφή</string>
   <string name="player_switch_to_mpv">Εναλλαγή σε MPV</string>
@@ -1764,7 +1773,7 @@
   <!-- SubtitleDialog / SubtitleStyleSidePanel -->
   <string name="subtitle_dialog_title">Υπότιτλοι</string>
   <string name="subtitle_no_builtin">Δεν υπάρχουν ενσωματωμένοι υπότιτλοι</string>
-  <string name="subtitle_loading_addon">Φόρτωση υπότιτλων από πρόσθετα…</string>
+  <string name="subtitle_loading_addon">Φόρτωση υποτίτλων από πρόσθετα…</string>
   <string name="subtitle_no_addon">Δεν υπάρχουν υπότιτλοι από πρόσθετα</string>
   <string name="subtitle_text_color">Χρώμα κειμένου</string>
   <string name="subtitle_outline_color">Χρώμα περιγράμματος</string>
@@ -1785,7 +1794,7 @@
   <string name="subtitle_bottom_offset">Μετατόπιση κάτω</string>
   <string name="subtitle_on">Ενεργό</string>
   <string name="subtitle_off">Απενεργοποιημένο</string>
-  <string name="subtitle_style_title">Στυλ υπότιτλων</string>
+  <string name="subtitle_style_title">Στυλ υποτίτλων</string>
   <string name="subtitle_style_customize">Προσαρμογή</string>
   <string name="subtitle_style_color">Χρώμα</string>
   <string name="subtitle_style_reset">Επαναφορά</string>
@@ -2342,6 +2351,12 @@
   <string name="cd_preview">Προεπισκόπηση</string>
   <string name="cd_test">Δοκιμή</string>
   <string name="cd_clear_search">Εκκαθάριση αναζήτησης</string>
+  <string name="cd_enable_scraper">Ενεργοποίηση %1$s</string>
+  <string name="cd_enable_addon">Ενεργοποίηση %1$s</string>
+  <string name="cd_color_swatch">Χρώμα %1$s</string>
+  <string name="cd_emoji_option">Emoji %1$s</string>
+  <string name="cd_trailer_controls">Χειριστήρια τρέιλερ</string>
+  <string name="cd_seek_bar">Γραμμή προόδου αναπαραγωγής</string>
   <string name="cd_unlink">Αποσύνδεση</string>
   <string name="cd_nuvio_logo">NuvioTV</string>
   <string name="cd_trakt_logo">Λογότυπο Trakt</string>
@@ -2693,10 +2708,10 @@
   <string name="player_error_torrent">Σφάλμα torrent: %1$s</string>
   <string name="player_error_playback_fallback">Σφάλμα αναπαραγωγής</string>
   <!-- Subtitle timing recovery -->
-  <string name="subtitle_timing_file_no_lines">Δεν βρέθηκαν γραμμές υπότιτλων σε αυτό το αρχείο.</string>
-  <string name="subtitle_timing_load_lines_failed">Αποτυχία φόρτωσης γραμμών υπότιτλων.</string>
-  <string name="subtitle_download_failed_http">Αποτυχία λήψης υπότιτλων (HTTP %1$d)</string>
-  <string name="subtitle_download_empty_content">Η λήψη υπότιτλων επέστρεψε κενό περιεχόμενο.</string>
+  <string name="subtitle_timing_file_no_lines">Δεν βρέθηκαν γραμμές υποτίτλων σε αυτό το αρχείο.</string>
+  <string name="subtitle_timing_load_lines_failed">Αποτυχία φόρτωσης γραμμών υποτίτλων.</string>
+  <string name="subtitle_download_failed_http">Αποτυχία λήψης υποτίτλων (HTTP %1$d)</string>
+  <string name="subtitle_download_empty_content">Η λήψη υποτίτλων επέστρεψε κενό περιεχόμενο.</string>
   <!-- Collection import errors -->
   <string name="collections_import_error_empty_input">Κενή είσοδος</string>
   <string name="collections_import_error_expected_array">Μη έγκυρη μορφή: αναμενόταν πίνακας</string>
@@ -3303,7 +3318,7 @@
   <string name="autosync_thorough_title">Εξονυχιστική αναζήτηση αυτόματου συγχρονισμού</string>
   <string name="autosync_thorough_description">Συνεχίστε τη σύγκριση άλλων υποτίτλων και ενσωματωμένων κομματιών για ακριβέστερη αντιστοίχιση πριν από τον συγχρονισμό. Όταν είναι ανενεργό, χρησιμοποιείται νωρίτερα η πρώτη ισχυρή αντιστοίχιση. Εφαρμόζονται μόνο αντιστοιχίσεις υψηλής βεβαιότητας.</string>
   <string name="autosync_toast_failed">Ο συγχρονισμός απέτυχε: ο αυτόματος συγχρονισμός δεν μπόρεσε να αντιστοιχίσει αυτόν τον υπότιτλο με το βίντεο.</string>
-  <string name="autosync_toast_failed_no_reference">Ο συγχρονισμός απέτυχε: αυτό το βίντεο δεν έχει ενσωματωμένους υπότιτλους για σύγκριση.</string>
+  <string name="autosync_toast_failed_no_reference">Ο συγχρονισμός απέτυχε: αυτό το βίντεο δεν έχει ενσωματωμένους υποτίτλους για σύγκριση.</string>
   <string name="autosync_toast_failed_unsupported">Ο συγχρονισμός απέτυχε: ο αυτόματος συγχρονισμός δεν υποστηρίζει αυτή τη μορφή υποτίτλων.</string>
   <string name="autosync_label_synced">Αυτόματα συγχρονισμένος</string>
   <string name="stream_resume_from_time">Συνέχεια από %1$s</string>

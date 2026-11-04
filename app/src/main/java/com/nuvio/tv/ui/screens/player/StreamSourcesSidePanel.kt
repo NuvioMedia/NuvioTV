@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch as coroutineLaunch
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.focus.focusRequester
@@ -63,6 +64,7 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 internal fun StreamSourcesSidePanel(
     uiState: PlayerUiState,
+    currentFilename: String?,
     streamsFocusRequester: FocusRequester,
     onClose: () -> Unit,
     onReload: () -> Unit,
@@ -195,30 +197,32 @@ internal fun StreamSourcesSidePanel(
         if (!firstCardHasFocus) runCatching { streamsFocusRequester.requestFocus() }
     }
 
+    val chipListState = rememberLazyListState()
     fun requestChipFocus(index: Int) {
         if (index !in chipFocusRequesters.indices) return
         userMovedFromFirstResult = true
         focusJob?.cancel()
         focusJob = scope.coroutineLaunch {
             withFrameNanos { }
-            runCatching { chipFocusRequesters[index].requestFocus() }
+            chipListState.focusChip(index, chipFocusRequesters)
         }
     }
 
     // Called when navigating tabs horizontally from within the stream list
     fun onAddonFilterSelectedGuarded(addon: String?) {
         userMovedFromFirstResult = true
-        onAddonFilterSelected(addon)
-        focusJob?.cancel()
-        focusJob = scope.coroutineLaunch {
-            withFrameNanos {}
-            val targetRequester = if (addon == null) {
-                chipFocusRequesters.getOrNull(1)
-            } else {
-                addonFocusRequesters[addon]
-            }
-            runCatching { targetRequester?.requestFocus() }
+        val targetRequester = if (addon == null) {
+            chipFocusRequesters.getOrNull(1)
+        } else {
+            addonFocusRequesters[addon]
         }
+        focusJob?.cancel()
+        // Focus the chip before the results change: once the focused card is gone,
+        // Compose would otherwise park focus on another chip first.
+        focusJob = scope.coroutineLaunch(start = CoroutineStart.UNDISPATCHED) {
+            chipListState.focusChip(chipFocusRequesters.indexOf(targetRequester), chipFocusRequesters)
+        }
+        onAddonFilterSelected(addon)
     }
 
     // Reset scroll position to top when addon filter changes
@@ -319,6 +323,7 @@ internal fun StreamSourcesSidePanel(
                         },
                         externalFocusRequesters = chipFocusRequesters,
                         externalOrderedNames = orderedAddonNames,
+                        chipListState = chipListState,
                         onUpKey = {
                             userMovedFromFirstResult = true
                             try { closeButtonFocusRequester.requestFocus() } catch (_: Exception) {}
@@ -368,7 +373,9 @@ internal fun StreamSourcesSidePanel(
                         currentStreamFileIdx = uiState.currentStreamFileIdx,
                         currentStreamAddonName = uiState.currentStreamAddonName,
                         currentStreamUrl = uiState.currentStreamUrl,
-                        currentStreamName = uiState.currentStreamName
+                        currentStreamName = uiState.currentStreamName,
+                        currentStreamDescription = uiState.currentStreamDescription,
+                        currentFilename = currentFilename
                     )
 
                     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
@@ -503,13 +510,15 @@ internal fun StreamSourcesSidePanel(
     }
 }
 
-private fun findCurrentStreamIndex(
+internal fun findCurrentStreamIndex(
     streams: List<Stream>,
     currentStreamInfoHash: String?,
     currentStreamFileIdx: Int?,
     currentStreamAddonName: String?,
     currentStreamUrl: String?,
-    currentStreamName: String?
+    currentStreamName: String?,
+    currentStreamDescription: String?,
+    currentFilename: String?
 ): Int {
     if (streams.isEmpty()) return -1
 
@@ -540,6 +549,27 @@ private fun findCurrentStreamIndex(
             stream.getStreamUrl() == currentStreamUrl
         }
         if (urlMatch >= 0) return urlMatch
+    }
+
+    // Addons may issue a new URL per request, so match what identifies the release instead.
+    // Filenames and templates can repeat across streams, so only trust a single result.
+    if (!currentFilename.isNullOrBlank()) {
+        val filenameMatches = streams.indices.filter { index ->
+            val stream = streams[index]
+            (stream.behaviorHints?.filename ?: stream.clientResolve?.filename) == currentFilename &&
+                (currentStreamAddonName == null || stream.addonName == currentStreamAddonName)
+        }
+        filenameMatches.singleOrNull()?.let { return it }
+    }
+
+    if (!currentStreamName.isNullOrBlank()) {
+        val nameMatches = streams.indices.filter { index ->
+            val stream = streams[index]
+            (stream.name ?: stream.addonName) == currentStreamName &&
+                (currentStreamAddonName == null || stream.addonName == currentStreamAddonName) &&
+                (currentStreamDescription == null || stream.description == currentStreamDescription)
+        }
+        nameMatches.singleOrNull()?.let { return it }
     }
 
     return -1
