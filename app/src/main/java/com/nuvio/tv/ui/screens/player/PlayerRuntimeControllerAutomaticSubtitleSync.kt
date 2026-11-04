@@ -424,7 +424,8 @@ private fun PlayerRuntimeController.isLibassAddonSubtitle(subtitle: Subtitle): B
  * ExoPlayer path for ASS/SSA add-on subtitles drawn by libass. The analysis is the same as for the
  * sidecar renderer, while libass keeps showing the original. A confident result is applied by
  * loading a copy of the subtitle whose timestamps are rewritten into libass's track for it
- * ([AutoSyncLibassSubtitles]), so styling is kept and the media source is not reloaded.
+ * ([AutoSyncLibassSubtitles]), so styling is kept and the media source is not reloaded. Only
+ * ASS/SSA candidates compete, so switching to a better-fitting subtitle never drops the styling.
  */
 private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
     selectedSubtitle: Subtitle,
@@ -436,7 +437,9 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
     val sourceUrlAtStart = currentStreamUrl
     val sourceHeadersAtStart = currentHeaders.toMap()
     val selectedUrl = selectedSubtitle.url
-    val candidatesAtStart = (_uiState.value.addonSubtitles + selectedSubtitle)
+    fun List<Subtitle>.assOnly() =
+        filter { PlayerSubtitleUtils.mimeTypeFromUrl(it.url) == MimeTypes.TEXT_SSA }
+    val candidatesAtStart = (_uiState.value.addonSubtitles.assOnly() + selectedSubtitle)
         .distinctBy { it.url }
     val candidateByUrl = candidatesAtStart.associateBy { it.url }
 
@@ -468,7 +471,7 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
                 alternativeSubtitlesProvider = if (
                     candidateScope == AutoSyncCandidateScope.STARTUP_SEARCH
                 ) {
-                    { _uiState.value.addonSubtitles.map { it.toAutoSyncCandidate() } }
+                    { _uiState.value.addonSubtitles.assOnly().map { it.toAutoSyncCandidate() } }
                 } else {
                     null
                 },
@@ -542,9 +545,8 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
 }
 
 /**
- * Applies [resolved] for the libass path. An ASS/SSA result is retimed as text and loaded into
- * libass's track (after Nuvio's own switch when AutoSync picked another ASS file); any other format
- * AutoSync switched to is shown by the sidecar renderer and retimed there, as on the regular path.
+ * Applies [resolved] for the libass path: the ASS/SSA result is retimed as text and loaded into
+ * libass's track, after Nuvio's own switch when AutoSync picked another ASS file.
  */
 private suspend fun PlayerRuntimeController.applyLibassAutoSyncResult(
     player: ExoPlayer,
@@ -553,23 +555,6 @@ private suspend fun PlayerRuntimeController.applyLibassAutoSyncResult(
     resolved: AutoSyncResolvedTimeline,
     stillApplicable: () -> Boolean,
 ): Boolean {
-    if (PlayerSubtitleUtils.mimeTypeFromUrl(chosenSubtitle.url) != MimeTypes.TEXT_SSA) {
-        if (!canAttachAddonSubtitleViaSidecar(chosenSubtitle)) return false
-        disableSubtitles()
-        pendingAddonSubtitleLanguage = null
-        pendingAddonSubtitleTrackId = null
-        pendingAudioSelectionAfterSubtitleRefresh = null
-        val started = startSidecarAddonSubtitle(
-            subtitle = chosenSubtitle,
-            rawBodyLoader = resolved.subtitleBody?.let { body -> suspend { body } },
-        )
-        return started && applyAutoSyncSidecarTimeline(
-            sidecar = this,
-            url = chosenSubtitle.url,
-            timeline = resolved.timeline,
-        )
-    }
-
     val assHandler = player.getAssHandlerCompat() ?: return false
     val body = resolved.subtitleBody
         ?: downloadSubtitleBody(chosenSubtitle.url, chosenSubtitle.lang, chosenSubtitle.headers)

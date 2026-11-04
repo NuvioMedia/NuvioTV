@@ -49,8 +49,9 @@ internal object AutoSyncLibassSubtitles {
 
     /**
      * Shows [retimedText] in place of the subtitle libass registered under [trackId]. The track
-     * swap runs on the main thread, where Media3 creates libass tracks, and the parse runs on
-     * AutoSync's background dispatcher, as Media3's loader parses the original.
+     * swap runs on the main thread ([AssHandler.createTrack] is synchronized, so it is safe next to
+     * Media3's loader thread, which creates the original), and the parse runs on AutoSync's
+     * background dispatcher, as Media3's loader parses the original.
      */
     suspend fun apply(assHandler: AssHandler, trackId: String, retimedText: String) {
         val bytes = retimedText.toByteArray(Charsets.UTF_8)
