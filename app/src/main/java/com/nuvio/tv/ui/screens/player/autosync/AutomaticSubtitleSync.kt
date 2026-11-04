@@ -878,7 +878,14 @@ internal object AutomaticSubtitleSync {
                 val family = completed.hypothesis.family
                 val pairMatch = completed.evaluation.match
                 family.evaluatedPairs++
-                if (!AutoSyncNoFitTracker.isNoFit(pairMatch?.timeline)) family.onlyNoFit = false
+                if (
+                    AutoSyncNoFitTracker.confirmsNoFit(
+                        result = pairMatch?.timeline,
+                        sampledReference = completed.hypothesis.rankedReference.track.sampled,
+                    )
+                ) {
+                    family.noFitPairs++
+                }
                 if (pairMatch != null) {
                     family.completedUsableAttempts++
                     if (isBetterMatch(pairMatch, family.best, sameTarget = true)) {
@@ -1046,12 +1053,12 @@ internal object AutomaticSubtitleSync {
                     family.members.any { it.candidate.url == selectedSubtitleUrl }
                 }
                 val confirmedNoFit = selectedFamily != null &&
-                    selectedFamily.onlyNoFit &&
-                    selectedFamily.evaluatedPairs > 0 &&
-                    (
-                        selectedFamily.abandoned ||
-                            selectedFamily.evaluatedPairs >= selectedFamily.rankedReferences.size
-                        )
+                    AutoSyncNoFitTracker.isConfirmedNoFit(
+                        evaluatedPairs = selectedFamily.evaluatedPairs,
+                        noFitPairs = selectedFamily.noFitPairs,
+                        rankedReferences = selectedFamily.rankedReferences.size,
+                        abandoned = selectedFamily.abandoned,
+                    )
                 onAnalysisOutcome?.invoke(
                     if (confirmedNoFit) {
                         AutoSyncAnalysisOutcome.NO_FIT
@@ -1935,8 +1942,8 @@ internal object AutomaticSubtitleSync {
         val noFit: AutoSyncNoFitTracker = AutoSyncNoFitTracker(),
         var abandoned: Boolean = false,
         var evaluatedPairs: Int = 0,
-        /** Every evaluated pair was a clear no-fit ([AutoSyncNoFitTracker.isNoFit]). */
-        var onlyNoFit: Boolean = true,
+        /** Pairs that confirmed a no-fit ([AutoSyncNoFitTracker.confirmsNoFit]). */
+        var noFitPairs: Int = 0,
     )
     private data class PairHypothesis(
         val family: CandidateTimingFamilyState,
