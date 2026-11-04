@@ -2267,8 +2267,9 @@ private class SubtitleOffsetRenderersFactory(
                 out.add(renderer)
             }
         }
-        // Media3 adds the FFmpeg video renderer only when extension renderers are on; VC-1 needs it
-        // either way. It claims only the codecs FFmpeg was built with, so others stay on MediaCodec.
+        // Media3 adds the FFmpeg video renderer only when extension renderers are on; VC-1 and
+        // high bit depth H.264 (Hi10P) need it either way. It claims only VC-1 and H.264 beyond
+        // 8-bit 4:2:0 (FfmpegVideoFormats), so everything else stays on MediaCodec.
         if (built.none { it is ExperimentalFfmpegVideoRenderer }) {
             FfmpegVideoFallback.createRenderer(allowedVideoJoiningTimeMs, eventHandler, eventListener)
                 ?.let(out::add)

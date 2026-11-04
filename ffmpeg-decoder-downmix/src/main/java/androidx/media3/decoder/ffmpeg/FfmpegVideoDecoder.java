@@ -21,14 +21,17 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 /**
- * FFmpeg software video decoder, used for codecs that Android TV hardware often lacks (VC-1).
+ * FFmpeg software video decoder, used for streams that Android TV hardware often cannot decode
+ * (VC-1, and high bit depth H.264 such as Hi10P). Frames come out as 8-bit I420; the native side
+ * dithers 9 to 16-bit and 4:2:2 / 4:4:4 pictures down to that.
  *
- * <p>The FFmpeg VC-1 decoder returns at most one frame per packet and delays output by one frame
- * when the stream has B-frames, so each input produces zero or one output.
+ * <p>The FFmpeg decoders return at most one frame per packet (after a delay for reordering and
+ * frame threading), so each input produces zero or one output.
  *
  * <p>VC-1 in Matroska (VfW mode) and ASF is stamped in decode order, while other muxers write
- * presentation timestamps. Each output frame therefore takes the smallest timestamp among the
- * inputs not yet output, which is the presentation order in both cases.
+ * presentation timestamps. Each VC-1 output frame therefore takes the smallest timestamp among the
+ * inputs not yet output, which is the presentation order in both cases. H.264 inputs always carry
+ * presentation timestamps, so its frames keep the timestamp FFmpeg carried through from the packet.
  */
 @UnstableApi
 public final class FfmpegVideoDecoder
@@ -45,6 +48,8 @@ public final class FfmpegVideoDecoder
   private static final int MAX_PENDING_TIMESTAMPS = 16;
 
   private final String codecName;
+  /** Whether output frames are stamped from the pending input timestamps (VC-1). */
+  private final boolean usesPendingTimestamps;
   private final long nativeContext;
   private final PriorityQueue<Long> pendingTimestampsUs;
 
@@ -77,6 +82,7 @@ public final class FfmpegVideoDecoder
       throw new FfmpegDecoderException("Unsupported video MIME type: " + mimeType);
     }
     this.codecName = codecName;
+    usesPendingTimestamps = !"h264".equals(codecName);
     pendingTimestampsUs = new PriorityQueue<>();
     nativeContext =
         ffmpegInitialize(
@@ -133,16 +139,27 @@ public final class FfmpegVideoDecoder
       outputBuffer.shouldBeSkipped = true;
       return null;
     }
-    pendingTimestampsUs.add(inputBuffer.timeUs);
-    if (result == VIDEO_DECODER_NO_FRAME) {
-      while (pendingTimestampsUs.size() > MAX_PENDING_TIMESTAMPS) {
-        pendingTimestampsUs.poll();
+    long frameTimeUs;
+    if (usesPendingTimestamps) {
+      pendingTimestampsUs.add(inputBuffer.timeUs);
+      if (result == VIDEO_DECODER_NO_FRAME) {
+        while (pendingTimestampsUs.size() > MAX_PENDING_TIMESTAMPS) {
+          pendingTimestampsUs.poll();
+        }
+        outputBuffer.shouldBeSkipped = true;
+        return null;
       }
-      outputBuffer.shouldBeSkipped = true;
-      return null;
+      frameTimeUs = Assertions.checkNotNull(pendingTimestampsUs.poll());
+    } else {
+      if (result == VIDEO_DECODER_NO_FRAME) {
+        outputBuffer.shouldBeSkipped = true;
+        return null;
+      }
+      frameTimeUs = ffmpegGetFrameTimeUs(nativeContext);
+      if (frameTimeUs == C.TIME_UNSET) {
+        frameTimeUs = inputBuffer.timeUs;
+      }
     }
-
-    long frameTimeUs = Assertions.checkNotNull(pendingTimestampsUs.poll());
     if (!isAtLeastOutputStartTimeUs(frameTimeUs)) {
       // Decoded only to keep reference frames; no need to copy it out.
       outputBuffer.shouldBeSkipped = true;
@@ -199,6 +216,9 @@ public final class FfmpegVideoDecoder
       String codecName, @Nullable byte[] extraData, int width, int height, int threads);
 
   private native int ffmpegDecode(long context, ByteBuffer encoded, int length, long timeUs);
+
+  /** Returns the timestamp of the decoded frame, or {@link C#TIME_UNSET} if it has none. */
+  private native long ffmpegGetFrameTimeUs(long context);
 
   private native boolean ffmpegCopyFrame(long context, VideoDecoderOutputBuffer outputBuffer);
 

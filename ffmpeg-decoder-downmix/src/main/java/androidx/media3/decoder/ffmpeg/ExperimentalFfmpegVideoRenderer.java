@@ -46,8 +46,9 @@ import java.util.Objects;
 /**
  * Decodes and renders video using FFmpeg.
  *
- * <p>Only the video decoders compiled into the native library are claimed (VC-1 in the NuvioTV
- * build), so the platform {@code MediaCodec} renderer keeps handling everything else.
+ * <p>Only the video decoders compiled into the native library are claimed (VC-1 and H.264 in the
+ * NuvioTV build), and H.264 only in its high bit depth profiles such as Hi10P (see {@link
+ * FfmpegVideoFormats}), so the platform {@code MediaCodec} renderer keeps handling everything else.
  * {@link androidx.media3.exoplayer.DefaultRenderersFactory} loads this class by name when the
  * extension renderer mode is on.
  */
@@ -60,8 +61,8 @@ public final class ExperimentalFfmpegVideoRenderer extends DecoderVideoRenderer 
   private static final int DEFAULT_NUM_OUTPUT_BUFFERS = 4;
 
   /**
-   * The default input buffer size. A 1080p VC-1 frame from a Blu-ray rarely exceeds this; the
-   * buffer grows if one does.
+   * The default input buffer size. A 1080p VC-1 or H.264 frame rarely exceeds this; the buffer grows
+   * if one does.
    */
   private static final int DEFAULT_INPUT_BUFFER_SIZE = 1024 * 1024;
 
@@ -97,10 +98,15 @@ public final class ExperimentalFfmpegVideoRenderer extends DecoderVideoRenderer 
     if (mimeType == null || !MimeTypes.isVideo(mimeType) || !FfmpegLibrary.isAvailable()) {
       return RendererCapabilities.create(C.FORMAT_UNSUPPORTED_TYPE);
     }
-    // Every video track is offered here; most (H.264, HEVC) are not in the FFmpeg build.
+    // Every video track is offered here; most (HEVC, VP9, AV1) are not in the FFmpeg build.
     @Nullable String codecName = FfmpegLibrary.getCodecName(mimeType);
     if (codecName == null || !FfmpegLibrary.hasDecoder(codecName)) {
       return RendererCapabilities.create(C.FORMAT_UNSUPPORTED_TYPE);
+    }
+    // 8-bit 4:2:0 H.264 belongs to the hardware decoder. Not claiming it at all keeps this renderer
+    // from taking it even when it is ordered first (extension renderer mode "prefer").
+    if (!FfmpegVideoFormats.isSoftwareDecodeCandidate(format)) {
+      return RendererCapabilities.create(C.FORMAT_UNSUPPORTED_SUBTYPE);
     }
     if (format.cryptoType != C.CRYPTO_TYPE_NONE) {
       return RendererCapabilities.create(C.FORMAT_UNSUPPORTED_DRM);

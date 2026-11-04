@@ -10,8 +10,12 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 
 /**
- * Software decoding through the FFmpeg extension for video codecs that many Android TV chips have
- * no hardware decoder for (VC-1, common on Blu-ray remuxes).
+ * Software decoding through the FFmpeg extension for video that many Android TV chips have no
+ * hardware decoder for: VC-1 (common on Blu-ray remuxes) and high bit depth H.264 (Hi10P, common
+ * in anime encodes). Which formats the renderer takes is decided by `FfmpegVideoFormats`.
+ *
+ * Hi10P needs nothing here: platform decoders report it as beyond their capabilities, so the
+ * FFmpeg renderer, which reports it as handled, is picked up front.
  *
  * The FFmpeg video renderer sits after the platform renderer, so a working hardware decoder is still
  * preferred. When the hardware decoder fails, the stream is retried with the platform decoders for

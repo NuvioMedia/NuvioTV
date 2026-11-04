@@ -2,8 +2,11 @@
  * SPDX-License-Identifier: GPL-3.0-only
  *
  * FFmpeg software video decoding for the NuvioTV FFmpeg extension, used for
- * codecs that Android TV hardware often lacks (VC-1 / WMV3). The surface
- * rendering follows the AndroidX Media3 libvpx extension (Apache-2.0).
+ * streams that Android TV hardware often cannot decode (VC-1 / WMV3, and
+ * high bit depth H.264 such as Hi10P). Frames are handed to Java as 8-bit
+ * I420; 9 to 16-bit and 4:2:2 / 4:4:4 pictures are reduced with an ordered
+ * dither. The surface rendering follows the AndroidX Media3 libvpx extension
+ * (Apache-2.0).
  */
 #include <android/log.h>
 #include <android/native_window.h>
@@ -19,6 +22,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/error.h>
 #include <libavutil/pixdesc.h>
+#include <libavutil/pixfmt.h>
 }
 
 #define LOG_TAG "ffmpeg_video_jni"
@@ -58,6 +62,15 @@ static const int32_t DATASPACE_UNKNOWN = 0;
 static const int32_t DATASPACE_BT601_625 = 281149440;
 static const int32_t DATASPACE_BT709 = 281083904;
 static const int32_t DATASPACE_BT2020 = 147193856;
+
+// Returned by ffmpegGetFrameTimeUs when the frame has no timestamp; matches
+// C.TIME_UNSET.
+static const int64_t TIME_UNSET = INT64_MIN + 1;
+
+// 4x4 Bayer matrix, used to dither high bit depth samples down to 8 bits so
+// that gradients (common in Hi10P anime encodes) do not band.
+static const uint8_t DITHER_4X4[4][4] = {
+    {0, 8, 2, 10}, {12, 4, 14, 6}, {3, 11, 1, 9}, {15, 7, 13, 5}};
 
 // A run of undecodable packets this long means the stream will not decode;
 // shorter runs are damaged packets FFmpeg recovers from.
@@ -264,6 +277,11 @@ VIDEO_DECODER_FUNC(jlong, ffmpegInitialize, jstring codecName,
   codec_context->thread_count = threads;
   codec_context->pkt_timebase = AVRational{1, 1000000};
   codec_context->err_recognition = 0;
+  if (codec->id == AV_CODEC_ID_H264) {
+    // High bit depth H.264 is heavy in software; allow FFmpeg's non-bitexact
+    // speedups, as mpv does.
+    codec_context->flags2 |= AV_CODEC_FLAG2_FAST;
+  }
 
   int result = avcodec_open2(codec_context, codec, nullptr);
   if (result < 0) {
@@ -348,14 +366,150 @@ VIDEO_DECODER_FUNC(jint, ffmpegDecode, jlong jContext, jobject encoded,
   return result;
 }
 
+// Planar YUV (or gray) with 8 to 16-bit samples, each component in its own
+// plane, little endian, chroma at most halved in each direction. Covers what
+// the H.264 and VC-1 decoders output.
+static bool isConvertibleFormat(const AVPixFmtDescriptor* desc) {
+  if (desc == nullptr) return false;
+  if ((desc->flags & (AV_PIX_FMT_FLAG_PLANAR)) == 0 && desc->nb_components > 1) {
+    return false;
+  }
+  if (desc->flags & (AV_PIX_FMT_FLAG_BE | AV_PIX_FMT_FLAG_RGB |
+                     AV_PIX_FMT_FLAG_PAL | AV_PIX_FMT_FLAG_HWACCEL |
+                     AV_PIX_FMT_FLAG_BITSTREAM | AV_PIX_FMT_FLAG_FLOAT)) {
+    return false;
+  }
+  if (desc->log2_chroma_w > 1 || desc->log2_chroma_h > 1) return false;
+  const int depth = desc->comp[0].depth;
+  if (depth < 8 || depth > 16) return false;
+  const int components = desc->nb_components >= 3 ? 3 : 1;
+  for (int i = 0; i < components; i++) {
+    const AVComponentDescriptor& comp = desc->comp[i];
+    if (comp.plane != i || comp.shift != 0 || comp.offset != 0 ||
+        comp.depth != depth || comp.step != (depth > 8 ? 2 : 1)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Copies a luma plane, reducing samples above 8 bits with an ordered dither.
+template <typename T>
+static void convertLumaPlane(const uint8_t* src, int src_stride, int width,
+                             int height, int shift, uint8_t* dst,
+                             int dst_stride) {
+  for (int y = 0; y < height; y++) {
+    const T* row = reinterpret_cast<const T*>(src + (size_t)y * src_stride);
+    uint8_t* out = dst + (size_t)y * dst_stride;
+    if (shift == 0) {
+      for (int x = 0; x < width; x++) out[x] = static_cast<uint8_t>(row[x]);
+      continue;
+    }
+    const uint8_t* dither = DITHER_4X4[y & 3];
+    for (int x = 0; x < width; x++) {
+      const int value = (row[x] + ((dither[x & 3] << shift) >> 4)) >> shift;
+      out[x] = static_cast<uint8_t>(value > 255 ? 255 : value);
+    }
+  }
+}
+
+// Writes a 4:2:0 chroma plane from a 4:2:0, 4:2:2 or 4:4:4 source, averaging
+// the source samples each output sample covers, then dithering to 8 bits.
+template <typename T>
+static void convertChromaPlane(const uint8_t* src, int src_stride, int src_width,
+                               int src_height, int x_factor, int y_factor,
+                               int shift, uint8_t* dst, int dst_stride,
+                               int dst_width, int dst_height) {
+  // Four samples are summed, which adds two bits of precision.
+  const int total_shift = shift + 2;
+  for (int y = 0; y < dst_height; y++) {
+    const int row0 = std::min(y * y_factor, src_height - 1);
+    const int row1 = std::min(row0 + y_factor - 1, src_height - 1);
+    const T* line0 = reinterpret_cast<const T*>(src + (size_t)row0 * src_stride);
+    const T* line1 = reinterpret_cast<const T*>(src + (size_t)row1 * src_stride);
+    const uint8_t* dither = DITHER_4X4[y & 3];
+    uint8_t* out = dst + (size_t)y * dst_stride;
+    for (int x = 0; x < dst_width; x++) {
+      const int col0 = std::min(x * x_factor, src_width - 1);
+      const int col1 = std::min(col0 + x_factor - 1, src_width - 1);
+      const int sum = line0[col0] + line0[col1] + line1[col0] + line1[col1];
+      const int value =
+          (sum + ((dither[x & 3] << total_shift) >> 4)) >> total_shift;
+      out[x] = static_cast<uint8_t>(value > 255 ? 255 : value);
+    }
+  }
+}
+
+static void convertFrame(const AVFrame* frame, const AVPixFmtDescriptor* desc,
+                         uint8_t* data, int y_stride, int uv_stride) {
+  const int width = frame->width;
+  const int height = frame->height;
+  const int uv_width = (width + 1) / 2;
+  const int uv_height = (height + 1) / 2;
+  const int depth = desc->comp[0].depth;
+  const int shift = depth - 8;
+  const bool wide = depth > 8;
+  uint8_t* destination_u = data + (size_t)y_stride * height;
+  uint8_t* destination_v = destination_u + (size_t)uv_stride * uv_height;
+
+  if (!wide) {
+    convertLumaPlane<uint8_t>(frame->data[0], frame->linesize[0], width,
+                              height, 0, data, y_stride);
+  } else {
+    convertLumaPlane<uint16_t>(frame->data[0], frame->linesize[0], width,
+                               height, shift, data, y_stride);
+  }
+
+  if (desc->nb_components < 3) {
+    // Monochrome: neutral chroma.
+    for (int y = 0; y < uv_height; y++) {
+      memset(destination_u + (size_t)y * uv_stride, 128, uv_width);
+      memset(destination_v + (size_t)y * uv_stride, 128, uv_width);
+    }
+    return;
+  }
+
+  const int src_uv_width = AV_CEIL_RSHIFT(width, desc->log2_chroma_w);
+  const int src_uv_height = AV_CEIL_RSHIFT(height, desc->log2_chroma_h);
+  const int x_factor = 2 >> desc->log2_chroma_w;
+  const int y_factor = 2 >> desc->log2_chroma_h;
+  for (int plane = 1; plane <= 2; plane++) {
+    uint8_t* destination = plane == 1 ? destination_u : destination_v;
+    if (wide) {
+      convertChromaPlane<uint16_t>(frame->data[plane], frame->linesize[plane],
+                                   src_uv_width, src_uv_height, x_factor,
+                                   y_factor, shift, destination, uv_stride,
+                                   uv_width, uv_height);
+    } else {
+      convertChromaPlane<uint8_t>(frame->data[plane], frame->linesize[plane],
+                                  src_uv_width, src_uv_height, x_factor,
+                                  y_factor, 0, destination, uv_stride,
+                                  uv_width, uv_height);
+    }
+  }
+}
+
+VIDEO_DECODER_FUNC(jlong, ffmpegGetFrameTimeUs, jlong jContext) {
+  VideoDecoderContext* context =
+      reinterpret_cast<VideoDecoderContext*>(jContext);
+  if (!context->has_frame) return TIME_UNSET;
+  const AVFrame* frame = context->frame;
+  if (frame->pts != AV_NOPTS_VALUE) return frame->pts;
+  if (frame->best_effort_timestamp != AV_NOPTS_VALUE) {
+    return frame->best_effort_timestamp;
+  }
+  return TIME_UNSET;
+}
+
 VIDEO_DECODER_FUNC(jboolean, ffmpegCopyFrame, jlong jContext,
                    jobject outputBuffer) {
   VideoDecoderContext* context =
       reinterpret_cast<VideoDecoderContext*>(jContext);
   if (!context->has_frame) return JNI_FALSE;
   const AVFrame* frame = context->frame;
-  if (frame->format != AV_PIX_FMT_YUV420P &&
-      frame->format != AV_PIX_FMT_YUVJ420P) {
+  const AVPixFmtDescriptor* desc =
+      av_pix_fmt_desc_get(static_cast<AVPixelFormat>(frame->format));
+  if (!isConvertibleFormat(desc)) {
     const char* name =
         av_get_pix_fmt_name(static_cast<AVPixelFormat>(frame->format));
     LOGE("Unsupported pixel format %s", name ? name : "unknown");
@@ -366,7 +520,6 @@ VIDEO_DECODER_FUNC(jboolean, ffmpegCopyFrame, jlong jContext,
   const int width = frame->width;
   const int height = frame->height;
   const int uv_width = (width + 1) / 2;
-  const int uv_height = (height + 1) / 2;
   const int y_stride = alignTo16(width);
   const int uv_stride = alignTo16(uv_width);
   jboolean initialized = env->CallBooleanMethod(
@@ -384,19 +537,7 @@ VIDEO_DECODER_FUNC(jboolean, ffmpegCopyFrame, jlong jContext,
   if (data_object) env->DeleteLocalRef(data_object);
   if (data == nullptr) return JNI_FALSE;
 
-  uint8_t* destination = data;
-  for (int y = 0; y < height; y++) {
-    memcpy(destination, frame->data[0] + y * frame->linesize[0], width);
-    destination += y_stride;
-  }
-  uint8_t* destination_u = data + y_stride * height;
-  uint8_t* destination_v = destination_u + uv_stride * uv_height;
-  for (int y = 0; y < uv_height; y++) {
-    memcpy(destination_u, frame->data[1] + y * frame->linesize[1], uv_width);
-    memcpy(destination_v, frame->data[2] + y * frame->linesize[2], uv_width);
-    destination_u += uv_stride;
-    destination_v += uv_stride;
-  }
+  convertFrame(frame, desc, data, y_stride, uv_stride);
   return JNI_TRUE;
 }
 

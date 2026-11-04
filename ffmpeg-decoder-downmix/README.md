@@ -27,15 +27,20 @@ These can be set in `local.properties` or environment variables. See `local.exam
 
 ## Video decoding
 
-Besides audio, the module decodes VC-1 video in software (`FfmpegVideoDecoder`,
-`ExperimentalFfmpegVideoRenderer`, `src/main/jni/ffmpeg_video_jni.cc`). Media3's
-`DefaultRenderersFactory` loads `ExperimentalFfmpegVideoRenderer` by name, and the app adds it
-explicitly when extension renderers are off. The renderer only claims codecs compiled into
-FFmpeg, so the FFmpeg build must keep `vc1` in its decoder list:
+Besides audio, the module decodes VC-1 and high bit depth H.264 (Hi10P, High 4:2:2 / 4:4:4)
+video in software (`FfmpegVideoDecoder`, `ExperimentalFfmpegVideoRenderer`,
+`src/main/jni/ffmpeg_video_jni.cc`). Media3's `DefaultRenderersFactory` loads
+`ExperimentalFfmpegVideoRenderer` by name, and the app adds it explicitly when extension
+renderers are off. `FfmpegVideoFormats` decides which tracks the renderer takes: VC-1, and H.264
+only in profiles 110/122/244/44, so 8-bit H.264 stays on the hardware decoder. Frames reach the
+surface as 8-bit YV12; 10-bit and 4:2:2 / 4:4:4 pictures are dithered down to that natively.
+
+The renderer only claims codecs compiled into FFmpeg, so the FFmpeg build must keep `vc1` and
+`h264` in its decoder list:
 
 ```
 build_ffmpeg.sh <module path> <NDK path> linux-x86_64 24 \
-    vorbis opus flac alac pcm_mulaw pcm_alaw mp3 amrnb amrwb aac ac3 eac3 dca mlp truehd vc1 wmv3
+    vorbis opus flac alac pcm_mulaw pcm_alaw mp3 amrnb amrwb aac ac3 eac3 dca mlp truehd vc1 wmv3 h264
 ```
 
 and point `FFMPEG_SOURCE_DIR` at the FFmpeg tree and `FFMPEG_BUILD_DIR` at its `android-libs`.
