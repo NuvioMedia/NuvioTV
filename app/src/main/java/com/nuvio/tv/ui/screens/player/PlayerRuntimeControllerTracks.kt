@@ -1199,7 +1199,8 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
                 subtitleAddonRestoredByPersistedPreference = true
                 pendingRestoredAddonSubtitle = addonMatch
                 selectAddonSubtitle(addonMatch)
-                maybeRunAutomaticSubtitleSync(addonMatch) // AutoSync hook
+                // The user's own pick for this series: sync it, never swap in another subtitle.
+                runSelectedAutomaticSubtitleSync(addonMatch) // AutoSync hook
                 updatedAddonSubtitle = addonMatch
                 val shouldKeepPendingUntilMpvConfirmsSelection =
                     usingSwitchPending && isUsingMpvEngine()
