@@ -3400,9 +3400,6 @@
     <string name="autosync_tolerance_value">%1$d мс</string>
     <string name="autosync_thorough_title">Пълно търсене с автоматична синхронизация</string>
     <string name="autosync_thorough_description">Продължете да сравнявате други субтитри и вградени записи за по-точно съвпадение преди синхронизиране. Когато е изключено, първото силно съвпадение се използва по-рано. Прилагат се само уверени съвпадения.</string>
-    <string name="autosync_toast_failed">Синхронизирането не бе успешно: Автоматичното синхронизиране не можа да съпостави тези субтитри с видеото.</string>
-    <string name="autosync_toast_failed_no_reference">Синхронизирането не бе успешно: това видео няма вградени субтитри за сравнение.</string>
-    <string name="autosync_toast_failed_unsupported">Синхронизирането не бе успешно: Автоматичното синхронизиране не поддържа този формат на субтитрите.</string>
     <string name="autosync_label_synced">Автоматично синхронизирано</string>
     <string name="stream_resume_from_time">Възобновяване от %1$s</string>
     <string name="stream_resume_from_percent">Възобновяване от %1$d%%</string>

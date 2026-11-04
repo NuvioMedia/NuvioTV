@@ -877,6 +877,8 @@ internal object AutomaticSubtitleSync {
 
                 val family = completed.hypothesis.family
                 val pairMatch = completed.evaluation.match
+                family.evaluatedPairs++
+                if (!AutoSyncNoFitTracker.isNoFit(pairMatch?.timeline)) family.onlyNoFit = false
                 if (pairMatch != null) {
                     family.completedUsableAttempts++
                     if (isBetterMatch(pairMatch, family.best, sameTarget = true)) {
@@ -1038,6 +1040,25 @@ internal object AutomaticSubtitleSync {
                 }
             }
             if (winningFamily == null || winningMatch == null || !winningMatch.timeline.confident) {
+                // Only a selected subtitle that clearly fits none of the references it was tried
+                // against is reported as out of sync; anything less certain stays inconclusive.
+                val selectedFamily = timingFamilies.firstOrNull { family ->
+                    family.members.any { it.candidate.url == selectedSubtitleUrl }
+                }
+                val confirmedNoFit = selectedFamily != null &&
+                    selectedFamily.onlyNoFit &&
+                    selectedFamily.evaluatedPairs > 0 &&
+                    (
+                        selectedFamily.abandoned ||
+                            selectedFamily.evaluatedPairs >= selectedFamily.rankedReferences.size
+                        )
+                onAnalysisOutcome?.invoke(
+                    if (confirmedNoFit) {
+                        AutoSyncAnalysisOutcome.NO_FIT
+                    } else {
+                        AutoSyncAnalysisOutcome.INCONCLUSIVE
+                    },
+                )
                 if (!selectedResolved) {
                     selectedSubtitleDeferred.cancel()
                 }
@@ -1913,6 +1934,9 @@ internal object AutomaticSubtitleSync {
         var bestSchedulingScore: Double = Double.NEGATIVE_INFINITY,
         val noFit: AutoSyncNoFitTracker = AutoSyncNoFitTracker(),
         var abandoned: Boolean = false,
+        var evaluatedPairs: Int = 0,
+        /** Every evaluated pair was a clear no-fit ([AutoSyncNoFitTracker.isNoFit]). */
+        var onlyNoFit: Boolean = true,
     )
     private data class PairHypothesis(
         val family: CandidateTimingFamilyState,
@@ -1948,6 +1972,12 @@ internal enum class AutoSyncAnalysisOutcome {
     SUBTITLE_UNAVAILABLE,
     NO_SUBTITLE_TRACKS,
     NO_USABLE_REFERENCE,
+
+    /** The selected subtitle clearly fits none of the video's references: it is out of sync with it. */
+    NO_FIT,
+
+    /** No confident match, but nothing shows that the selected subtitle does not fit. */
+    INCONCLUSIVE,
 }
 
 internal data class AutoSyncResolvedTimeline(

@@ -115,7 +115,6 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
     }
 
     if (!canAttachAddonSubtitleViaSidecar(selectedSubtitle)) {
-        showAutoSyncToast(context.getString(R.string.autosync_toast_failed_unsupported))
         return
     }
 
@@ -139,7 +138,6 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
         },
     )
     if (!started) {
-        showAutoSyncToast(context.getString(R.string.autosync_toast_failed))
         return
     }
 
@@ -205,7 +203,7 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
                 if (activeSidecarSubtitleKey == null) {
                     startSidecarAddonSubtitle(selectedSubtitle)
                 }
-                showAutoSyncToast(context.buildAutoSyncFailureToast(analysisOutcome))
+                context.buildAutoSyncFailureToast(analysisOutcome)?.let(::showAutoSyncToast)
                 return@launch
             }
 
@@ -268,7 +266,6 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
                 if (activeSidecarSubtitleKey == null) {
                     startSidecarAddonSubtitle(selectedSubtitle)
                 }
-                showAutoSyncToast(context.getString(R.string.autosync_toast_failed))
                 return@launch
             }
 
@@ -291,7 +288,6 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
             if (activeSidecarSubtitleKey == null) {
                 startSidecarAddonSubtitle(selectedSubtitle)
             }
-            showAutoSyncToast(context.getString(R.string.autosync_toast_failed))
         }
     }.also { job ->
         job.invokeOnCompletion { selectedBodyDeferred.complete(null) }
@@ -357,7 +353,7 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
             if (resolved == null) {
                 Log.d(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 mpv no match outcome=$analysisOutcome")
                 if (activeSubtitleUrl == selectedUrl) {
-                    showAutoSyncToast(context.buildAutoSyncFailureToast(analysisOutcome))
+                    context.buildAutoSyncFailureToast(analysisOutcome)?.let(::showAutoSyncToast)
                 }
                 return@launch
             }
@@ -387,7 +383,6 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
                     language = PlayerSubtitleUtils.normalizeLanguageCode(chosenSubtitle.lang),
                 ) == true
                 if (!added) {
-                    showAutoSyncToast(context.getString(R.string.autosync_toast_failed))
                     return@launch
                 }
                 keepMpvPlayingIfNeeded(wasPlaying)
@@ -417,9 +412,6 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
             throw cancel
         } catch (error: Throwable) {
             Log.w(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 mpv failed", error)
-            if (streamUnchanged() && _uiState.value.selectedAddonSubtitle?.url == selectedUrl) {
-                showAutoSyncToast(context.getString(R.string.autosync_toast_failed))
-            }
         }
     }
 }
@@ -488,7 +480,7 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
             if (resolved == null) {
                 Log.d(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 libass no match outcome=$analysisOutcome")
                 if (activeSubtitleUrl == selectedUrl) {
-                    showAutoSyncToast(context.buildAutoSyncFailureToast(analysisOutcome))
+                    context.buildAutoSyncFailureToast(analysisOutcome)?.let(::showAutoSyncToast)
                 }
                 return@launch
             }
@@ -519,7 +511,6 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
                 },
             )
             if (!applied) {
-                if (stillRelevant()) showAutoSyncToast(context.getString(R.string.autosync_toast_failed))
                 return@launch
             }
 
@@ -546,7 +537,6 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
             throw cancel
         } catch (error: Throwable) {
             Log.w(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 libass failed", error)
-            if (stillRelevant()) showAutoSyncToast(context.getString(R.string.autosync_toast_failed))
         }
     }
 }
@@ -638,15 +628,19 @@ private fun Subtitle.toAutoSyncCandidate() = AutoSyncSubtitleCandidate(
     name = addonName.ifBlank { id },
 )
 
-/** Why AutoSync kept the original timing, in the fewest words that still help the viewer. */
-private fun Context.buildAutoSyncFailureToast(analysisOutcome: AutoSyncAnalysisOutcome?): String =
-    getString(
-        when (analysisOutcome) {
-            AutoSyncAnalysisOutcome.NO_SUBTITLE_TRACKS,
-            AutoSyncAnalysisOutcome.NO_USABLE_REFERENCE,
-            -> R.string.autosync_toast_failed_no_reference
-            AutoSyncAnalysisOutcome.SUBTITLE_UNAVAILABLE,
-            null,
-            -> R.string.autosync_toast_failed
-        },
-    )
+/**
+ * The one AutoSync result worth telling the viewer: the subtitle was checked against this video's
+ * own subtitles and does not fit them, so it stays out of sync with this release, and another
+ * stream may fit it. Any other failure is technical or inconclusive and stays silent; the viewer
+ * can still adjust the timing by hand.
+ */
+private fun Context.buildAutoSyncFailureToast(analysisOutcome: AutoSyncAnalysisOutcome?): String? =
+    when (analysisOutcome) {
+        AutoSyncAnalysisOutcome.NO_FIT -> getString(R.string.autosync_toast_no_fit)
+        AutoSyncAnalysisOutcome.SUBTITLE_UNAVAILABLE,
+        AutoSyncAnalysisOutcome.NO_SUBTITLE_TRACKS,
+        AutoSyncAnalysisOutcome.NO_USABLE_REFERENCE,
+        AutoSyncAnalysisOutcome.INCONCLUSIVE,
+        null,
+        -> null
+    }

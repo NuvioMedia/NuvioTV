@@ -3425,9 +3425,6 @@ Utilizas esta función bajo tu entera responsabilidad. P2P se puede desactivar e
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Búsqueda exhaustiva de sincronización automática</string>
     <string name="autosync_thorough_description">Continúa comparando otros subtítulos y pistas integradas para lograr un ajuste más preciso antes de sincronizar. Si está desactivada, se utiliza antes la primera coincidencia clara. Solo se aplican coincidencias fiables.</string>
-    <string name="autosync_toast_failed">Error de sincronización: la sincronización automática no ha podido hacer coincidir este subtítulo con el vídeo.</string>
-    <string name="autosync_toast_failed_no_reference">Error de sincronización: este vídeo no tiene subtítulos integrados con los que comparar.</string>
-    <string name="autosync_toast_failed_unsupported">Error de sincronización: la sincronización automática no admite este formato de subtítulos.</string>
     <string name="autosync_label_synced">Sincronizado automáticamente</string>
     <string name="stream_resume_from_time">Reanudar desde %1$s</string>
     <string name="stream_resume_from_percent">Reanudar desde %1$d%%</string>
