@@ -159,6 +159,8 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                     autoSubtitleSelected = true
                     selectAddonSubtitle(match)
                     _uiState.update { it.copy(selectedAddonSubtitle = match, selectedSubtitleTrackIndex = -1) }
+                    // After a player rebuild this reapplies the earlier result without analysing again.
+                    runSelectedAutomaticSubtitleSync(match) // AutoSync hook
                     return@launch
                 }
             }

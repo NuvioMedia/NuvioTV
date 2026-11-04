@@ -278,7 +278,7 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
                 }
                 rememberAddonSubtitleSelection(chosenSubtitle)
             }
-            setSubtitleDelayMs(targetMs = 0, showOverlay = false)
+            if (!resolved.reused) setSubtitleDelayMs(targetMs = 0, showOverlay = false)
             AutoSyncSyncedSubtitle.mark(chosenSubtitle.url)
         } catch (cancel: CancellationException) {
             throw cancel
@@ -398,7 +398,7 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
                 rememberAddonSubtitleSelection(chosenSubtitle)
             }
             if (!withinTolerance) updateMpvAvailableTracks()
-            setSubtitleDelayMs(targetMs = 0, showOverlay = false)
+            if (!resolved.reused) setSubtitleDelayMs(targetMs = 0, showOverlay = false)
             AutoSyncSyncedSubtitle.mark(chosenSubtitle.url)
             Log.d(
                 PlayerRuntimeController.TAG,
@@ -541,7 +541,7 @@ private fun PlayerRuntimeController.runLibassAutomaticSubtitleSync(
                 }
                 rememberAddonSubtitleSelection(chosenSubtitle)
             }
-            setSubtitleDelayMs(targetMs = 0, showOverlay = false)
+            if (!resolved.reused) setSubtitleDelayMs(targetMs = 0, showOverlay = false)
             AutoSyncSyncedSubtitle.mark(chosenSubtitle.url)
             Log.d(
                 PlayerRuntimeController.TAG,

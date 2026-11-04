@@ -81,6 +81,7 @@ internal object AutomaticSubtitleSync {
     private const val HTTP_429_RETRY_DELAY_MS = 900L
     private const val SUBTITLE_DOWNLOAD_TIMEOUT_MS = 15_000L
     private const val MAX_SUBTITLE_RESPONSE_BYTES = 4 * 1024 * 1024
+    private const val MAX_RESOLVED_CACHE_ENTRIES = 4
     private const val MAX_PARSED_SUBTITLE_CACHE_ENTRIES = 8
 
     private val parsedSubtitleCacheLock = Any()
@@ -93,6 +94,23 @@ internal object AutomaticSubtitleSync {
             override fun removeEldestEntry(
                 eldest: MutableMap.MutableEntry<ParsedSubtitleCacheKey, CachedParsedSubtitle>?,
             ): Boolean = size > MAX_PARSED_SUBTITLE_CACHE_ENTRIES
+        }
+
+    /**
+     * The last results AutoSync applied, by stream and subtitle. Checking only the selected
+     * subtitle again on the same stream (the player rebuilt after the app was in the background,
+     * or the viewer switched back to it) reuses the result instead of analysing again.
+     */
+    private val resolvedCacheLock = Any()
+    private val resolvedCache =
+        object : LinkedHashMap<Pair<String, String>, AutoSyncResolvedTimeline>(
+            MAX_RESOLVED_CACHE_ENTRIES,
+            0.75f,
+            true,
+        ) {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<Pair<String, String>, AutoSyncResolvedTimeline>?,
+            ): Boolean = size > MAX_RESOLVED_CACHE_ENTRIES
         }
 
     suspend fun findTimelineRetime(
@@ -110,7 +128,10 @@ internal object AutomaticSubtitleSync {
         /** False when the player does not feed [EmbeddedSubtitleCueStore] (mpv): indexed references only. */
         allowLiveReference: Boolean = true,
     ): AutoSyncResolvedTimeline? {
-        Unit
+        if (alternativeSubtitles.isEmpty() && alternativeSubtitlesProvider == null) {
+            synchronized(resolvedCacheLock) { resolvedCache[sourceKey to selectedSubtitleUrl] }
+                ?.let { return it.copy(reused = true) }
+        }
         val aggressiveMode = AutoSyncPreferences.aggressiveMode.value
 
         val result = supervisorScope {
@@ -1100,6 +1121,9 @@ internal object AutomaticSubtitleSync {
                 timeline = memberMatch.timeline,
             )
         }
+        if (result != null) {
+            synchronized(resolvedCacheLock) { resolvedCache[sourceKey to result.subtitleUrl] = result }
+        }
         return result
     }
 
@@ -1992,6 +2016,8 @@ internal data class AutoSyncResolvedTimeline(
     val subtitleHeaders: Map<String, String>,
     val subtitleBody: String?,
     val timeline: AutoSyncTimelineRetimeResult,
+    /** Applied before on this stream: the viewer's own delay since then is kept, not reset. */
+    val reused: Boolean = false,
 )
 
 internal data class ReferenceTrack(
