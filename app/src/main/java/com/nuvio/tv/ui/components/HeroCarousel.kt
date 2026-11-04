@@ -111,8 +111,8 @@ fun HeroCarousel(
     val currentOnActiveItemChanged by rememberUpdatedState(onActiveItemChanged)
     var activeIndex by remember { mutableIntStateOf(initialActiveIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))) }
     var isFocused by remember { mutableStateOf(false) }
-    // True while the active slide's description is still on its first scroll pass.
-    var descriptionScrollHold by remember { mutableStateOf(false) }
+    // Slide whose description is still on its first scroll pass, or -1.
+    var descriptionScrollHoldIndex by remember { mutableIntStateOf(-1) }
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     LaunchedEffect(activeIndex, isFocused) {
@@ -131,7 +131,7 @@ fun HeroCarousel(
         while (true) {
             delay(AUTO_ADVANCE_INTERVAL_MS)
             // Let a long description finish scrolling before the slide is replaced.
-            snapshotFlow { descriptionScrollHold }.first { !it }
+            snapshotFlow { descriptionScrollHoldIndex == activeIndex }.first { !it }
             if (!isFocused) {
                 activeIndex = (activeIndex + 1) % items.size
             }
@@ -205,8 +205,13 @@ fun HeroCarousel(
                 mdbListRatingOrder = mdbListRatingOrder,
                 descriptionAutoScrollEnabled = descriptionAutoScrollEnabled,
                 onDescriptionScrollHoldChanged = { hold ->
-                    // The outgoing slide stays composed during the crossfade; ignore it.
-                    if (index == activeIndex) descriptionScrollHold = hold
+                    // A slide can only clear its own hold, so the outgoing slide in the
+                    // crossfade can't release the new one, and a slide without a
+                    // description never blocks the advance.
+                    when {
+                        hold -> descriptionScrollHoldIndex = index
+                        descriptionScrollHoldIndex == index -> descriptionScrollHoldIndex = -1
+                    }
                 }
             )
         }

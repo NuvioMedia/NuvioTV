@@ -129,9 +129,11 @@ fun AutoScrollingText(
                 snapshotFlow { currentPaused() }
                     .distinctUntilChanged()
                     .collectLatest { isPaused ->
-                        offset.snapTo(0f)
                         currentOnScrollHoldChanged(!isPaused)
+                        // On pause the running animation is cancelled and the text stays put
+                        // while it fades out; the reset happens on resume, while it's hidden.
                         if (isPaused) return@collectLatest
+                        offset.snapTo(0f)
                         repeat(AUTO_SCROLL_MAX_CYCLES) { cycle ->
                             delay(AUTO_SCROLL_START_DELAY_MS)
                             offset.animateTo(
