@@ -1073,3 +1073,11 @@ internal fun PlayerRuntimeController.observeDeviceLocalTunneledSurfaceFill() {
             }
     }
 }
+
+internal fun PlayerRuntimeController.observeDeviceLocalReleaseDecoderOnBackground() {
+    scope.launch {
+        deviceLocalPlayerPreferences.releaseDecoderOnBackground
+            .distinctUntilChanged()
+            .collect { enabled -> releaseDecoderOnBackground = enabled }
+    }
+}
