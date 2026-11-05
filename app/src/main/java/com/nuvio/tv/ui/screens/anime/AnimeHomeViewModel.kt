@@ -41,11 +41,14 @@ import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.data.repository.OmdbAwardsRepository
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 import com.nuvio.tv.ui.screens.home.CwMetaSummary
+import com.nuvio.tv.ui.screens.home.HomeViewModel
 import com.nuvio.tv.ui.screens.home.NextUpInfo
 import com.nuvio.tv.ui.screens.home.NextUpResolution
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -107,6 +110,12 @@ class AnimeHomeViewModel @Inject constructor(
     internal var animeHeroEnrichmentJob: Job? = null
     internal var lastAnimeHeroEnrichmentSignature: String? = null
     internal var lastHeroEnrichedItems: List<MetaPreview> = emptyList()
+    // Rating MDBList richiesto al focus di un item (speculare di
+    // HomeViewModel.maybeFetchMdbListRatingForItem): senza questo, le stelle
+    // di valutazione non compaiono mai sui poster di Anime.
+    internal val animeMdbListRatingFetchedIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    internal var animeMdbListRatingFocusJob: Job? = null
+    internal var pendingAnimeMdbListRatingItemId: String? = null
     internal val trailerPreviewLoadingIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     internal val trailerPreviewNegativeCache: MutableSet<String> = ConcurrentHashMap.newKeySet()
     internal val trailerPreviewUrlsState = mutableStateMapOf<String, String>()
@@ -892,10 +901,82 @@ class AnimeHomeViewModel @Inject constructor(
         return visibleRows.firstOrNull(::isRealRow)
     }
 
+    /**
+     * Speculare di [com.nuvio.tv.ui.screens.home.HomeViewModel]: al focus di un
+     * item richiede il rating IMDb da MDBList (con debounce) e lo applica a righe
+     * e hero, così le stelle di valutazione compaiono sui poster di Anime.
+     */
+    private fun maybeFetchAnimeMdbListRatingForItem(item: MetaPreview) {
+        val mdbEnabled = currentAnimeMdbListSettings.enabled &&
+            currentAnimeMdbListSettings.apiKey.isNotBlank()
+        if (!mdbEnabled) return
+        if (item.id in animeMdbListRatingFetchedIds) return
+
+        pendingAnimeMdbListRatingItemId = item.id
+        animeMdbListRatingFocusJob?.cancel()
+        animeMdbListRatingFocusJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(HomeViewModel.EXTERNAL_META_PREFETCH_FOCUS_DEBOUNCE_MS)
+            if (pendingAnimeMdbListRatingItemId != item.id) return@launch
+            if (item.id in animeMdbListRatingFetchedIds) return@launch
+            val rating = runCatching {
+                mdbListRepository.getImdbRatingForItem(item.id, item.apiType)
+            }.getOrNull()
+            if (rating != null) {
+                updateAnimeItemImdbRating(item.id, rating.toFloat())
+                animeMdbListRatingFetchedIds.add(item.id)
+            }
+        }
+    }
+
+    private fun updateAnimeItemImdbRating(itemId: String, rating: Float) {
+        _uiState.update { state ->
+            var changed = false
+            val updatedRows = state.rows.map { row ->
+                val index = row.items.indexOfFirst { it.id == itemId }
+                if (index < 0) row
+                else {
+                    val updated = row.items[index].copy(imdbRating = rating)
+                    if (updated == row.items[index]) row
+                    else {
+                        changed = true
+                        row.copy(items = row.items.toMutableList().also { it[index] = updated })
+                    }
+                }
+            }
+            val updatedHeroItems = state.heroItems.map { hero ->
+                if (hero.id == itemId && hero.imdbRating != rating) {
+                    changed = true
+                    hero.copy(imdbRating = rating)
+                } else {
+                    hero
+                }
+            }
+            val updatedHeroItem = state.heroItem?.let { hero ->
+                if (hero.id == itemId && hero.imdbRating != rating) {
+                    changed = true
+                    hero.copy(imdbRating = rating)
+                } else {
+                    hero
+                }
+            } ?: state.heroItem
+            if (changed) {
+                state.copy(
+                    rows = updatedRows,
+                    heroItems = updatedHeroItems,
+                    heroItem = updatedHeroItem
+                )
+            } else {
+                state
+            }
+        }
+    }
+
     fun onEvent(event: AnimeHomeEvent) {
         when (event) {
             is AnimeHomeEvent.OnLoadMoreCatalog ->
                 loadMoreCatalogItems(event.catalogId, event.addonId, event.type)
+            is AnimeHomeEvent.OnItemFocus ->
+                maybeFetchAnimeMdbListRatingForItem(event.item)
             AnimeHomeEvent.OnRetry -> {
                 viewModelScope.launch {
                     val addons = lastAddons.filter { it.enabled }

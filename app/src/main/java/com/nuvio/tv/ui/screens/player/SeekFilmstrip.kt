@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -34,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.core.player.SeekThumbnailEntryPoint
 import com.nuvio.tv.core.player.SeekThumbnailGenerator
+import com.nuvio.tv.core.player.SeekThumbnailSlot
 import com.nuvio.tv.core.player.SeekThumbnailSlots
 import com.nuvio.tv.ui.theme.NuvioTheme
 import dagger.hilt.android.EntryPointAccessors
@@ -115,6 +117,12 @@ fun SeekFilmstrip(
             )
         }
 
+        // Direzione dello scrub: la posizione dell'ultimo bucket servito. Serve
+        // per precaricare il bucket oltre il bordo visibile sul lato in cui
+        // l'utente sta andando, così il passo successivo trova il frame già
+        // estratto invece di attendere una nuova estrazione di rete.
+        val previousPositionMs = remember(streamUrl) { mutableStateOf(currentPosition) }
+
         LaunchedEffect(streamUrl, bucketKey, supported, active) {
             if (!active || !supported || streamUrl == null || stepMs <= 0L) {
                 return@LaunchedEffect
@@ -122,10 +130,20 @@ fun SeekFilmstrip(
             // First paint must be instant; only debounced while the strip is
             // already showing and the scrub keeps hopping between buckets.
             if (frames.isNotEmpty()) delay(SEEK_FILMSTRIP_DEBOUNCE_MS)
-            // Center tile first so the strip anchors visually before its edges fill in.
-            val ordered = slots.sortedBy { slot ->
-                abs((slot.bucketMs + stepMs / 2) - currentPosition)
-            }
+            val previousPosition = previousPositionMs.value
+            previousPositionMs.value = currentPosition
+            val scrubForward = currentPosition >= previousPosition
+            // Center tile first so the strip anchors visually before its edges
+            // fill in; a parità di distanza vanno avanti i bucket verso la
+            // direzione dello scrub, che è dove l'utente guarda.
+            val ordered = slots.sortedWith(
+                compareBy<SeekThumbnailSlot> { slot ->
+                    abs((slot.bucketMs + stepMs / 2) - currentPosition)
+                }.thenBy { slot ->
+                    val ahead = (slot.bucketMs + stepMs / 2) > currentPosition
+                    if (scrubForward == ahead) 0 else 1
+                }
+            )
             for (slot in ordered) {
                 if (frames.containsKey(slot.bucketMs) || slot.bucketMs in failedBuckets) continue
                 val frame = generator.getFrame(
@@ -137,6 +155,27 @@ fun SeekFilmstrip(
                     frames[slot.bucketMs] = frame
                 } else {
                     failedBuckets += slot.bucketMs
+                }
+            }
+            // Prefetch direzionale: riscalda il bucket successivo oltre il
+            // bordo visibile nella direzione di scrub. Un fallimento qui non
+            // segna il bucket come irrecuperabile: sarà la striscia vera e
+            // propria a riprovarci quando quel bucket entrerà in vista.
+            if (duration > 0L && slots.isNotEmpty()) {
+                val edgeBucketMs = if (scrubForward) {
+                    slots.maxOf { it.bucketMs } + stepMs
+                } else {
+                    slots.minOf { it.bucketMs } - stepMs
+                }
+                if (edgeBucketMs >= 0L && edgeBucketMs < duration &&
+                    edgeBucketMs !in failedBuckets && !frames.containsKey(edgeBucketMs)
+                ) {
+                    val frame = generator.getFrame(
+                        url = streamUrl,
+                        headers = headers,
+                        positionMs = edgeBucketMs + stepMs / 2
+                    )
+                    if (frame != null) frames[edgeBucketMs] = frame
                 }
             }
         }

@@ -36,6 +36,18 @@ internal fun coerceStringList(value: Any?): List<String> {
     }.mapNotNull { it.trim().takeIf(String::isNotBlank) }
 }
 
+/**
+ * Lenient int reader for optional numeric fields: catalogs report counts
+ * either as a number ("vote_count": 1234) or as a string ("votes": "1234"),
+ * and both must parse without failing the whole catalog response.
+ */
+internal fun coerceInt(value: Any?): Int? = when (value) {
+    is Number -> value.toInt()
+    is String -> value.trim().toIntOrNull()
+        ?: value.filter { it.isDigit() }.takeIf { it.isNotEmpty() }?.toIntOrNull()
+    else -> null
+}
+
 internal fun mapPeople(
     people: List<AppExtrasCastMemberDto>?,
     roleFallback: String? = null,

@@ -77,7 +77,12 @@ class TrailerService(
         val tmdbSettings = tmdbSettingsOverride
             ?: runCatching { tmdbSettingsDataStore.settings.first() }.getOrNull()
         if (tmdbSettings?.enabled != true || tmdbSettings?.useTrailers != true) {
-            Log.d(TAG, "Trailers disabled in TMDB enrichment settings; skipping lookup")
+            Log.d(
+                TAG,
+                "Trailers disabled in TMDB enrichment settings " +
+                    "(enabled=${tmdbSettings?.enabled}, useTrailers=${tmdbSettings?.useTrailers}); " +
+                    "skipping lookup"
+            )
             return@withContext null
         }
         val tmdbLanguage = normalizeTmdbTrailerLanguage(tmdbSettings.language)
@@ -115,6 +120,11 @@ class TrailerService(
                 cache[cacheKey] = NEGATIVE_CACHE
             }
             null
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Never swallow cancellation: the caller is going away, and caching a
+            // miss here would mark this title as "no trailer" for the whole
+            // session (upstream fix cc9d37586).
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching trailer for $title: ${e.message}", e)
             null
@@ -333,6 +343,8 @@ class TrailerService(
             } else {
                 response.body()?.results.orEmpty()
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "TMDB movie videos error ($tmdbId/$language): ${e.message}")
             emptyList()
@@ -352,6 +364,8 @@ class TrailerService(
             } else {
                 response.body()?.results.orEmpty()
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "TMDB tv videos error ($tmdbId/$language): ${e.message}")
             emptyList()
@@ -498,21 +512,30 @@ internal fun normalizeTmdbMediaType(type: String?): String? {
 }
 
 internal fun rankTmdbVideoCandidates(results: List<TmdbVideoResult>): List<TmdbVideoResult> {
-    return results
-        .asSequence()
+    val youtubeOnly = results.asSequence()
         .filter { (it.site ?: "").equals("YouTube", ignoreCase = true) }
         .filter { !it.key.isNullOrBlank() }
+
+    val ranked = youtubeOnly
         .filter {
             val normalizedType = it.type?.trim()?.lowercase()
             normalizedType == "trailer" || normalizedType == "teaser"
         }
-        .sortedWith(
-            compareBy<TmdbVideoResult> { videoTypePriority(it.type) }
-                .thenBy { if (it.official == true) 0 else 1 }
-                .thenByDescending { it.size ?: 0 }
-                .thenByDescending { parsePublishedAtEpoch(it.publishedAt) }
-        )
+        .sortedWith(candidateComparator())
         .toList()
+    if (ranked.isNotEmpty()) return ranked
+
+    // Plenty of titles (older series especially) publish only featurettes or
+    // behind-the-scenes clips on TMDB. Playing one of those beats showing no
+    // trailer at all in the hero / detail page.
+    return youtubeOnly.sortedWith(candidateComparator()).toList()
+}
+
+private fun candidateComparator(): Comparator<TmdbVideoResult> {
+    return compareBy<TmdbVideoResult> { videoTypePriority(it.type) }
+        .thenBy { if (it.official == true) 0 else 1 }
+        .thenByDescending { it.size ?: 0 }
+        .thenByDescending { parsePublishedAtEpoch(it.publishedAt) }
 }
 
 private fun videoTypePriority(type: String?): Int {

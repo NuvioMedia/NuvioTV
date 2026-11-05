@@ -76,6 +76,7 @@ class StartupHomePreloader @Inject constructor(
 
         // Trailer warm-up: bounded so a slow extraction never holds the gate.
         private const val TRAILER_WARM_BUDGET_MS = 30_000L
+        private const val TRAILER_WARM_ITEM_MS = 6_000L
         private const val TRAILER_WARM_COUNT = 6
 
         // Modalità graduale (stile Netflix) per dispositivi con poca RAM: sotto
@@ -91,7 +92,7 @@ class StartupHomePreloader @Inject constructor(
         // catalogo (+10s). Priorità Netflix: pronta, non "arriva dopo".
         private const val GENTLE_CW_IMAGE_WARM_DELAY_MS = 1_000L
         private const val GENTLE_IMAGE_WARM_DELAY_MS = 10_000L
-        private const val GENTLE_TRANSLATION_WARM_DELAY_MS = 30_000L
+        private const val GENTLE_TRANSLATION_WARM_DELAY_MS = 5_000L
 
         /**
          * Il warm immagini compete con lo scroll per CPU e decodifica: su una
@@ -151,8 +152,11 @@ class StartupHomePreloader @Inject constructor(
 
         // Fire-and-forget: pre-download the translation model once so the first
         // detail screen doesn't stall waiting for a multi-MB ML Kit download.
-        // In modalità graduale parte con ritardo: il modello è un carico nativo
-        // da alcuni MB e non deve competere con il primo rendering della home.
+        // In modalità graduale parte con un piccolo ritardo: il modello è un
+        // carico nativo da alcuni MB e non deve competere con il primo
+        // rendering della home. Prima erano 30 secondi — abbastanza perché le
+        // prime hero apparissero non tradotte e solo poi cambiassero; a 5s il
+        // modello è pronto mentre la home si sta ancora popolando.
         warmUpScope.launch {
             if (gentleProfile) delay(GENTLE_TRANSLATION_WARM_DELAY_MS)
             warmUpTranslationModel()
@@ -351,7 +355,10 @@ class StartupHomePreloader @Inject constructor(
         if (items.isEmpty()) return
         items.forEach { item ->
             val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
-            runCatching {
+            // Per-item budget: a single slow title must not cancel the lookups
+            // still in flight, because a cancelled lookup used to be cached as
+            // "no trailer" for the whole session.
+            withTimeoutOrNull(TRAILER_WARM_ITEM_MS) {
                 trailerService.getTrailerPlaybackSource(
                     title = item.name,
                     year = extractYear(item.releaseInfo),

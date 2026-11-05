@@ -1,7 +1,6 @@
 package com.nuvio.tv.ui.screens.anime
 
 import com.nuvio.tv.core.perf.LocalFluidMode
-
 import android.content.Context
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.foundation.background
@@ -39,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.focus.focusRequester
 import com.nuvio.tv.LocalContentFocusRequester
 import com.nuvio.tv.ui.util.rowsListUpRecovery
+import com.nuvio.tv.ui.util.rowsListDownRecovery
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,6 +81,7 @@ import com.nuvio.tv.ui.components.GridContinueWatchingSection
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardStyle
+import com.nuvio.tv.ui.components.TOP_BAR_BAND_HEIGHT
 import com.nuvio.tv.ui.components.rememberPlaceholderShimmerOffsetState
 import com.nuvio.tv.ui.screens.home.ClassicFocusArtwork
 import com.nuvio.tv.ui.screens.home.ClassicFocusGradientBackdrop
@@ -88,6 +90,7 @@ import com.nuvio.tv.ui.screens.home.HeroPreview
 import com.nuvio.tv.ui.screens.home.HeroTitleBlock
 import com.nuvio.tv.ui.screens.home.MODERN_HERO_MEDIA_WIDTH_FRACTION
 import com.nuvio.tv.ui.screens.home.MODERN_HERO_TEXT_WIDTH_FRACTION
+import com.nuvio.tv.ui.screens.home.MODERN_ROW_HEADER_FOCUS_INSET
 import com.nuvio.tv.ui.screens.home.ModernHeroScene
 import com.nuvio.tv.ui.screens.home.ModernHeroSceneState
 import com.nuvio.tv.ui.screens.home.extractYearText
@@ -102,6 +105,7 @@ import com.nuvio.tv.ui.util.localizedLanguageText
 import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import androidx.compose.ui.focus.focusRestorer
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -116,7 +120,13 @@ fun AnimeHomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val rows = uiState.rows
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // Sfondo opaco: copre la schermata uscente finché questa non è pronta,
+    // altrimenti la barra sezioni già aggiornata si sovrappone a quella vecchia (issue #11).
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NuvioTheme.colors.Background)
+    ) {
         when {
             uiState.isLoading && rows.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -181,7 +191,8 @@ fun AnimeHomeScreen(
                         onContinueWatchingClick = onContinueWatchingClick,
                         onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
                         onRemoveContinueWatching = onRemoveContinueWatching,
-                        onLoadMoreCatalog = viewModel::loadMoreCatalogItems
+                        onLoadMoreCatalog = viewModel::loadMoreCatalogItems,
+                        onItemFocus = { viewModel.onEvent(AnimeHomeEvent.OnItemFocus(it)) }
                     )
                     HomeLayout.CLASSIC -> AnimeClassicContent(
                         uiState = uiState,
@@ -192,7 +203,8 @@ fun AnimeHomeScreen(
                         onNavigateToSeeAll = onNavigateToSeeAll,
                         onContinueWatchingClick = onContinueWatchingClick,
                         onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
-                        onRemoveContinueWatching = onRemoveContinueWatching
+                        onRemoveContinueWatching = onRemoveContinueWatching,
+                        onItemFocus = { viewModel.onEvent(AnimeHomeEvent.OnItemFocus(it)) }
                     )
                     HomeLayout.GRID -> AnimeGridContent(uiState = uiState, onNavigateToDetail = onNavigateToDetail, onNavigateToSeeAll = onNavigateToSeeAll, onContinueWatchingClick = onContinueWatchingClick, onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning, onRemoveContinueWatching = onRemoveContinueWatching)
                 }
@@ -218,6 +230,7 @@ private fun AnimeHeroItem(
     )
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun AnimeModernContent(
     uiState: AnimeHomeUiState,
@@ -229,7 +242,8 @@ private fun AnimeModernContent(
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
     onRemoveContinueWatching: (ContinueWatchingItem) -> Unit,
-    onLoadMoreCatalog: (String, String, String) -> Unit
+    onLoadMoreCatalog: (String, String, String) -> Unit,
+    onItemFocus: (MetaPreview) -> Unit
 ) {
     val defaultHeroItem = uiState.heroItem
     var focusedHeroItem by remember {
@@ -244,7 +258,7 @@ private fun AnimeModernContent(
         if (enriched != null) enrichedHeroItem = enriched
         if (uiState.focusedPosterBackdropTrailerEnabled) {
             // Request AFTER enrichment so kitsu/mal/anilist items already carry
-            // their localized YT ids / IMDb id — requesting the raw item first
+            // their localized YT ids / IMDb id â€” requesting the raw item first
             // would negative-cache them for the session.
             delay(150)
             onRequestTrailerPreview(enriched ?: current)
@@ -254,7 +268,7 @@ private fun AnimeModernContent(
     val fullScreenBackdrop = uiState.modernHeroFullScreenBackdropEnabled
     val useLandscapePosters = uiState.modernLandscapePostersEnabled
     // Mirror the main modern home: exactly one trailer surface is armed by the
-    // "Playback target" setting — hero or expanded card, never both.
+    // "Playback target" setting â€” hero or expanded card, never both.
     val trailerPlaybackTarget = uiState.focusedPosterBackdropTrailerPlaybackTarget
     val heroPlaysTrailer = uiState.focusedPosterBackdropTrailerEnabled &&
         trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
@@ -333,92 +347,121 @@ private fun AnimeModernContent(
         }
 
         val rowsListState = rememberLazyListState()
-        LazyColumn(
-            state = rowsListState,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth()
-                .then(if (heroEnabled) Modifier.height(rowsViewportHeight) else Modifier.fillMaxSize())
-                .dpadRepeatThrottle()
-                .focusRequester(LocalContentFocusRequester.current)
-                .rowsListUpRecovery(rowsListState),
-            contentPadding = PaddingValues(
-                // Con l'hero attivo le righe occupano solo la fascia bassa;
-                // senza hero partono dalla cima e devono scendere sotto la
-                // barra sezioni.
-                top = if (heroEnabled) NuvioTheme.spacing.none else 72.dp,
-                bottom = NuvioTheme.spacing.xxl
-            ),
-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)
-        ) {
-            if (uiState.continueWatchingItems.isNotEmpty()) {
-                item(key = "anime_continue_watching") {
-                    AnimeModernContinueWatchingRow(
-                        title = stringResource(R.string.continue_watching),
-                        items = uiState.continueWatchingItems,
-                        cardStyle = continueWatchingCardStyle,
-                        cardWidth = continueWatchingCardWidth,
-                        imageHeight = continueWatchingCardHeight,
-                        cornerRadius = uiState.posterCardCornerRadiusDp.dp,
-                        blurUnwatchedEpisodes = uiState.blurContinueWatchingNextUp,
-                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
-                        onItemClick = onContinueWatchingClick,
-                        onDetailsClick = { item -> handleAnimeCwClick(item, onNavigateToDetail) },
-                        onStartFromBeginning = onContinueWatchingStartFromBeginning,
-                        onRemoveItem = onRemoveContinueWatching,
-                        onItemFocus = { focusedHeroItem = it }
-                    )
+        val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
+        // Home-style vertical bring-into-view: pin the focused row header at the
+        // target inset so a poster never stops half-cut at the viewport edge.
+        val verticalRowBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowsListState, heroEnabled) {
+            val topInsetPx = with(density) {
+                (MODERN_ROW_HEADER_FOCUS_INSET + (if (heroEnabled) NuvioTheme.spacing.none else 72.dp)).toPx()
+            }
+            @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+            object : BringIntoViewSpec {
+                override val scrollAnimationSpec: AnimationSpec<Float> = defaultBringIntoViewSpec.scrollAnimationSpec
+                override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+                    // Relaxed vertical scroll: only scroll when the row header
+                    // leading edge is not already at the target inset.
+                    val currentLeadingEdge = offset
+                    if (abs(currentLeadingEdge - topInsetPx) < 1f) return 0f
+                    val distance = currentLeadingEdge - topInsetPx
+                    if (distance < 0f && !rowsListState.canScrollBackward) return 0f
+                    return distance
                 }
             }
-            if (uiState.upcomingItems.isNotEmpty()) {
-                item(key = "anime_upcoming") {
-                    AnimeModernContinueWatchingRow(
-                        title = stringResource(R.string.upcoming_section_title),
-                        items = uiState.upcomingItems,
-                        cardStyle = continueWatchingCardStyle,
-                        cardWidth = continueWatchingCardWidth,
-                        imageHeight = continueWatchingCardHeight,
-                        cornerRadius = uiState.posterCardCornerRadiusDp.dp,
-                        blurUnwatchedEpisodes = uiState.blurContinueWatchingNextUp,
-                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
-                        onItemClick = onContinueWatchingClick,
-                        onDetailsClick = { item -> handleAnimeCwClick(item, onNavigateToDetail) },
-                        onStartFromBeginning = onContinueWatchingStartFromBeginning,
-                        onRemoveItem = onRemoveContinueWatching,
-                        onItemFocus = { focusedHeroItem = it }
+        }
+        CompositionLocalProvider(LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec) {
+            LazyColumn(
+                state = rowsListState,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .then(if (heroEnabled) Modifier.height(rowsViewportHeight) else Modifier.fillMaxSize())
+                    .clipToBounds()
+                    .focusRequester(LocalContentFocusRequester.current)
+                    .focusRestorer()
+                    .dpadRepeatThrottle(scrollableState = rowsListState)
+                    .rowsListUpRecovery(rowsListState)
+                    .rowsListDownRecovery(rowsListState),
+                contentPadding = PaddingValues(
+                    // Con l'hero attivo le righe occupano solo la fascia bassa;
+                    // senza hero partono dalla cima e devono scendere sotto la
+                    // barra sezioni.
+                    top = if (heroEnabled) NuvioTheme.spacing.none else 72.dp,
+                    bottom = rowsViewportHeight
+                ),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)
+            ) {
+                if (uiState.continueWatchingItems.isNotEmpty()) {
+                    item(key = "anime_continue_watching") {
+                        AnimeModernContinueWatchingRow(
+                            title = stringResource(R.string.continue_watching),
+                            items = uiState.continueWatchingItems,
+                            cardStyle = continueWatchingCardStyle,
+                            cardWidth = continueWatchingCardWidth,
+                            imageHeight = continueWatchingCardHeight,
+                            cornerRadius = uiState.posterCardCornerRadiusDp.dp,
+                            blurUnwatchedEpisodes = uiState.blurContinueWatchingNextUp,
+                            useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                            onItemClick = onContinueWatchingClick,
+                            onDetailsClick = { item -> handleAnimeCwClick(item, onNavigateToDetail) },
+                            onStartFromBeginning = onContinueWatchingStartFromBeginning,
+                            onRemoveItem = onRemoveContinueWatching,
+                            onItemFocus = { focusedHeroItem = it }
+                        )
+                    }
+                }
+                if (uiState.upcomingItems.isNotEmpty()) {
+                    item(key = "anime_upcoming") {
+                        AnimeModernContinueWatchingRow(
+                            title = stringResource(R.string.upcoming_section_title),
+                            items = uiState.upcomingItems,
+                            cardStyle = continueWatchingCardStyle,
+                            cardWidth = continueWatchingCardWidth,
+                            imageHeight = continueWatchingCardHeight,
+                            cornerRadius = uiState.posterCardCornerRadiusDp.dp,
+                            blurUnwatchedEpisodes = uiState.blurContinueWatchingNextUp,
+                            useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                            onItemClick = onContinueWatchingClick,
+                            onDetailsClick = { item -> handleAnimeCwClick(item, onNavigateToDetail) },
+                            onStartFromBeginning = onContinueWatchingStartFromBeginning,
+                            onRemoveItem = onRemoveContinueWatching,
+                            onItemFocus = { focusedHeroItem = it }
+                        )
+                    }
+                }
+    
+                items(
+                    items = uiState.rows,
+                    key = { row -> row.legacyKey() }
+                ) { row ->
+                    AnimeModernCatalogRow(
+                        catalogRow = row,
+                        useLandscapePosters = useLandscapePosters,
+                        showLabels = uiState.posterLabelsEnabled,
+                        posterCardCornerRadius = uiState.posterCardCornerRadiusDp.dp,
+                        portraitCardWidth = portraitCatalogCardWidth,
+                        portraitCardHeight = portraitCatalogCardHeight,
+                        landscapeCardWidth = landscapeCatalogCardWidth,
+                        landscapeCardHeight = landscapeCatalogCardHeight,
+                        showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
+                        focusedPosterBackdropExpandEnabled = uiState.focusedPosterBackdropExpandEnabled &&
+                            !heroPlaysTrailer,
+                        focusedPosterBackdropExpandDelaySeconds = uiState.focusedPosterBackdropExpandDelaySeconds,
+                        focusedPosterBackdropTrailerEnabled = uiState.focusedPosterBackdropTrailerEnabled,
+                        focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
+                        trailerPreviewUrls = if (cardPlaysTrailer) trailerPreviewUrls else emptyMap(),
+                        trailerPreviewAudioUrls = if (cardPlaysTrailer) {
+                            trailerPreviewAudioUrls
+                        } else {
+                            emptyMap()
+                        },
+                        onItemClick = onNavigateToDetail,
+                        onItemFocus = { item ->
+                            focusedHeroItem = item
+                            onItemFocus(item)
+                        },
+                        onLoadMoreCatalog = onLoadMoreCatalog
                     )
                 }
-            }
-
-            items(
-                items = uiState.rows,
-                key = { row -> row.legacyKey() }
-            ) { row ->
-                AnimeModernCatalogRow(
-                    catalogRow = row,
-                    useLandscapePosters = useLandscapePosters,
-                    showLabels = uiState.posterLabelsEnabled,
-                    posterCardCornerRadius = uiState.posterCardCornerRadiusDp.dp,
-                    portraitCardWidth = portraitCatalogCardWidth,
-                    portraitCardHeight = portraitCatalogCardHeight,
-                    landscapeCardWidth = landscapeCatalogCardWidth,
-                    landscapeCardHeight = landscapeCatalogCardHeight,
-                    showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
-                    focusedPosterBackdropExpandEnabled = uiState.focusedPosterBackdropExpandEnabled &&
-                        !heroPlaysTrailer,
-                    focusedPosterBackdropExpandDelaySeconds = uiState.focusedPosterBackdropExpandDelaySeconds,
-                    focusedPosterBackdropTrailerEnabled = uiState.focusedPosterBackdropTrailerEnabled,
-                    focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
-                    trailerPreviewUrls = if (cardPlaysTrailer) trailerPreviewUrls else emptyMap(),
-                    trailerPreviewAudioUrls = if (cardPlaysTrailer) {
-                        trailerPreviewAudioUrls
-                    } else {
-                        emptyMap()
-                    },
-                    onItemClick = onNavigateToDetail,
-                    onItemFocus = { focusedHeroItem = it },
-                    onLoadMoreCatalog = onLoadMoreCatalog
-                )
             }
         }
     }
@@ -806,7 +849,20 @@ private fun AnimeModernHero(
     }
     var trailerFirstFrameRendered by remember { mutableStateOf(false) }
     var trailerEnded by remember { mutableStateOf(false) }
+    val trailerPreviewDelaySeconds = 4
     LaunchedEffect(trailerPreviewUrl) {
+        trailerFirstFrameRendered = false
+        trailerEnded = false
+    }
+    // Attesa di alcuni secondi prima di mostrare il trailer nella hero,
+    // così l'utente ha modo di leggere la descrizione senza che il video
+    // prenda il sopravvento immediatamente (come invece succedeva prima).
+    LaunchedEffect(trailerPreviewUrl) {
+        delay(trailerPreviewDelaySeconds * 1000L)
+        // Dopo il delay, ricarichiamo lo stato per riflettere che il trailer
+        // può ora partire. Il flag shouldPlayTrailer viene ricalcolato dal
+        // compositore padre (ModernHomeHero/AnimeModernContent) quando il
+        // valore cambia.
         trailerFirstFrameRendered = false
         trailerEnded = false
     }
@@ -876,7 +932,10 @@ private fun AnimeModernHero(
             trailerPlaying = { shouldPlayTrailer && trailerFirstFrameRendered && !trailerEnded },
             modifier = Modifier
                 .align(Alignment.BottomStart)
+                // Tutto il blocco testo dell'hero parte sotto la banda nera
+                // della barra: il logo non resta più mezzo coperto dalla striscia.
                 .padding(
+                    top = TOP_BAR_BAND_HEIGHT,
                     start = 52.dp,
                     end = NuvioTheme.spacing.xxxl,
                     bottom = rowsViewportHeight + NuvioTheme.spacing.lg
@@ -911,7 +970,8 @@ private fun AnimeClassicContent(
     onNavigateToSeeAll: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
-    onRemoveContinueWatching: (ContinueWatchingItem) -> Unit
+    onRemoveContinueWatching: (ContinueWatchingItem) -> Unit,
+    onItemFocus: (MetaPreview) -> Unit
 ) {
     var focusedArtwork by remember { mutableStateOf<ClassicFocusArtwork?>(null) }
     var focusedCatalogItem by remember { mutableStateOf<MetaPreview?>(null) }
@@ -920,6 +980,7 @@ private fun AnimeClassicContent(
     }
     val handleMetaFocus: (MetaPreview) -> Unit = { item ->
         focusedCatalogItem = item
+        onItemFocus(item)
         if (uiState.classicFocusGradientEnabled) {
             focusedArtwork = item.toAnimeClassicFocusArtwork(uiState.focusedPosterBackdropExpandEnabled)
         }
@@ -947,8 +1008,11 @@ private fun AnimeClassicContent(
             state = rowsListState,
             modifier = Modifier
                 .fillMaxSize()
-                .dpadRepeatThrottle()
-                .rowsListUpRecovery(rowsListState),
+                .focusRequester(LocalContentFocusRequester.current)
+                .focusRestorer()
+                .dpadRepeatThrottle(scrollableState = rowsListState)
+                .rowsListUpRecovery(rowsListState)
+                .rowsListDownRecovery(rowsListState),
             contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxl)
         ) {
             if (uiState.heroEnabled && uiState.heroItems.isNotEmpty()) {
@@ -1025,8 +1089,11 @@ private fun AnimeGridContent(
         state = rowsListState,
         modifier = Modifier
             .fillMaxSize()
-            .dpadRepeatThrottle()
-            .rowsListUpRecovery(rowsListState),
+            .focusRequester(LocalContentFocusRequester.current)
+            .focusRestorer()
+            .dpadRepeatThrottle(scrollableState = rowsListState)
+            .rowsListUpRecovery(rowsListState)
+            .rowsListDownRecovery(rowsListState),
         contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxl)
     ) {
         if (uiState.heroEnabled && uiState.heroItems.isNotEmpty()) {
@@ -1351,4 +1418,5 @@ private fun ContinueWatchingItem.toAnimeClassicFocusArtwork(useBackdrop: Boolean
             seed = "${info.contentId}|${info.name}|${info.contentType}"
         )
     }
+
 

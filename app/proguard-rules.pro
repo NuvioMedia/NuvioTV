@@ -19,6 +19,14 @@
 -keep class com.google.gson.reflect.TypeToken { *; }
 -keep class * extends com.google.gson.reflect.TypeToken
 
+# Snapshot mensile "Ultime Uscite" (LatestReleaseMonthStore, letto/scritto con
+# Gson): se R8 erade la firma generica di `items: List<Entry>` e rinomina i
+# campi, Gson deserializza gli elementi come LinkedTreeMap e il cast in
+# toItems() lancia ClassCastException, facendo fallire l'intero flusso: la riga
+# della Home non veniva mai costruita ("latest releases failed").
+-keep class com.nuvio.tv.data.local.LatestReleaseMonthStore { *; }
+-keep class com.nuvio.tv.data.local.LatestReleaseMonthStore$* { *; }
+
 # ── Retrofit ───────────────────────────────────────────────────────────────────
 # Keep generic signatures for Retrofit service methods
 -keepattributes Signature

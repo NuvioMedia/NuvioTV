@@ -1158,6 +1158,18 @@ class MetaDetailsViewModel @Inject constructor(
         // renders fine without it. Side effects (trailer, comments) start with
         // this first paint, so the enriched re-apply below skips them.
         applyMeta(meta)
+        // La sinossi va tradotta SUBITO, in parallelo con l'enrichment:
+        // enrichMeta() può bruciare secondi (id TMDB + main + episodi per
+        // stagione + TVDB) e la traduzione partiva solo alla fine, tenendo il
+        // dettaglio inglese per tutto quel tempo.
+        var earlySynopsis: Pair<String?, String>? = null
+        viewModelScope.launch {
+            val translated = translateDescriptionEarly(meta)
+            if (translated != null) {
+                earlySynopsis = meta.description to translated
+                publishTranslatedDescription(meta, translated)
+            }
+        }
         val enriched = enrichMeta(meta)
 
         // Pre-compute nextToWatch before applyMeta so the PlayButton text is stable
@@ -1176,6 +1188,13 @@ class MetaDetailsViewModel @Inject constructor(
 
         if (enriched !== meta) {
             applyMeta(enriched, startSideEffects = false)
+            // applyMeta sostituisce meta wholesale: se la sinossi non è
+            // cambiata, ripubblica quella già tradotta invece di tornare
+            // all'inglese per un frame (o per sempre, se il batch tarda).
+            val early = earlySynopsis
+            if (early != null && enriched.description == early.first) {
+                publishTranslatedDescription(enriched, early.second)
+            }
         }
         // Episode ratings and MDBList are independent — launch both without waiting.
         loadEpisodeRatingsAsync(enriched)
@@ -1206,9 +1225,16 @@ class MetaDetailsViewModel @Inject constructor(
                 } else {
                     current.videos
                 }
+                val nextDescription = if (current.description == enriched.description) {
+                    translated.description ?: current.description
+                } else {
+                    // Sinossi già sostituita (traduzione anticipata): non tornare
+                    // mai al testo grezzo.
+                    current.description
+                }
                 state.copy(
                     meta = current.copy(
-                        description = translated.description ?: current.description,
+                        description = nextDescription,
                         videos = mergedVideos
                     ),
                     episodesForSeason = getEpisodesForSeason(mergedVideos, state.selectedSeason)
@@ -1883,6 +1909,22 @@ class MetaDetailsViewModel @Inject constructor(
         }
 
         return enrichSeriesWithTvdb(updated)
+    }
+
+    /**
+     * Traduce solo la sinossi appena il meta grezzo è dipinto, senza aspettare
+     * l'enrichment: è il ritardo percepito "la traduzione arriva in ritardo".
+     * Ritorna null quando non c'è nulla da tradurre.
+     */
+    private suspend fun translateDescriptionEarly(raw: Meta): String? {
+        val description = raw.description?.takeIf { it.isNotBlank() } ?: return null
+        val language = runCatching {
+            activeTmdbSettingsDataStore.settings.first().language
+        }.getOrNull() ?: return null
+        val translated = runCatching {
+            metadataTextTranslator.translateDescription(description, language)
+        }.getOrNull()
+        return translated?.takeIf { it.isNotBlank() && it != description }
     }
 
     /**

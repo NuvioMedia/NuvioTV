@@ -35,14 +35,18 @@ internal fun buildLatestReleaseHomeRow(
     title: String,
     format: (LocalDate) -> String
 ): HomeRow.Catalog? {
-    if (items.isEmpty()) return null
-    val metas = items.map { item ->
+    // Cards without the title logo would fall back to plain text and look out of
+    // place in this row, so they are dropped here (not in the repository: the
+    // Calendar screen keeps them). The row is rebuilt on every emission, so an
+    // item reappears by itself once enrichment fills in its logo.
+    val metas = items.filter { !it.meta.logo.isNullOrBlank() }.map { item ->
         val date = item.releaseDate ?: return@map item.meta
         item.meta.copy(
             releaseInfo = format(date),
             released = date.toString()
         )
     }
+    if (metas.isEmpty()) return null
     return HomeRow.Catalog(
         CatalogRow(
             addonId = LATEST_RELEASE_ADDON_ID,

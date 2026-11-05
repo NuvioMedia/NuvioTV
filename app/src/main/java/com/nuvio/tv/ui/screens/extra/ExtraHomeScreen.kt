@@ -54,6 +54,9 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.asStable
 import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import com.nuvio.tv.ui.util.rowsListUpRecovery
+import com.nuvio.tv.ui.util.rowsListDownRecovery
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.focus.focusRestorer
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -68,7 +71,13 @@ fun ExtraHomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val rows = uiState.rows
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // Sfondo opaco: copre la schermata uscente finché questa non è pronta,
+    // altrimenti la barra sezioni già aggiornata si sovrappone a quella vecchia (issue #11).
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NuvioTheme.colors.Background)
+    ) {
         when {
             uiState.isLoading && rows.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -232,14 +241,16 @@ private fun ExtraClassicContent(
                 .fillMaxSize()
                 .background(NuvioTheme.colors.Background)
         )
-        val rowsListState = androidx.compose.foundation.lazy.rememberLazyListState()
+        val rowsListState = rememberLazyListState()
         LazyColumn(
             state = rowsListState,
             modifier = Modifier
                 .fillMaxSize()
-                .dpadRepeatThrottle()
                 .focusRequester(LocalContentFocusRequester.current)
-                .rowsListUpRecovery(rowsListState),
+                .focusRestorer()
+                .dpadRepeatThrottle(scrollableState = rowsListState)
+                .rowsListUpRecovery(rowsListState)
+                .rowsListDownRecovery(rowsListState),
             contentPadding = PaddingValues(top = 72.dp, bottom = NuvioTheme.spacing.xxl)
         ) {
             if (uiState.heroEnabled && uiState.heroItems.isNotEmpty()) {
@@ -338,14 +349,16 @@ private fun ExtraModernContent(
     val posterCardStyle = extraPosterCardStyle(uiState)
     val (cwCardWidth, cwCardHeight) = extraCwCardSize(uiState)
 
-    val rowsListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val rowsListState = rememberLazyListState()
     LazyColumn(
         state = rowsListState,
         modifier = Modifier
             .fillMaxSize()
-            .dpadRepeatThrottle()
             .focusRequester(LocalContentFocusRequester.current)
-            .rowsListUpRecovery(rowsListState),
+            .focusRestorer()
+            .dpadRepeatThrottle(scrollableState = rowsListState)
+            .rowsListUpRecovery(rowsListState)
+            .rowsListDownRecovery(rowsListState),
         contentPadding = PaddingValues(top = 72.dp, bottom = NuvioTheme.spacing.xxl)
     ) {
         if (uiState.heroEnabled && uiState.heroItems.isNotEmpty()) {
@@ -431,14 +444,16 @@ private fun ExtraGridContent(
 ) {
     val posterCardStyle = extraPosterCardStyle(uiState)
 
-    val rowsListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val rowsListState = rememberLazyListState()
     LazyColumn(
         state = rowsListState,
         modifier = Modifier
             .fillMaxSize()
-            .dpadRepeatThrottle()
             .focusRequester(LocalContentFocusRequester.current)
-            .rowsListUpRecovery(rowsListState),
+            .focusRestorer()
+            .dpadRepeatThrottle(scrollableState = rowsListState)
+            .rowsListUpRecovery(rowsListState)
+            .rowsListDownRecovery(rowsListState),
         contentPadding = PaddingValues(top = 72.dp, bottom = NuvioTheme.spacing.xxl)
     ) {
         if (uiState.heroEnabled && uiState.heroItems.isNotEmpty()) {
@@ -503,3 +518,4 @@ private fun ExtraGridContent(
         }
     }
 }
+

@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -102,6 +103,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
+import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.DiscoverLocation
@@ -133,6 +135,16 @@ private val SEARCH_LEFT_PANEL_WIDTH =
 
 /** How many retries (50ms apart) for the initial focus grab before giving up. */
 private const val MAX_INITIAL_FOCUS_ATTEMPTS = 20
+
+/** Start inset of the search banner while the glass sidebar panel is open: the
+ *  panel spans ≈14dp…254dp, so without this the first button ("Scopri") would
+ *  be half-covered by the glass. */
+private val SIDEBAR_PANEL_CLEARANCE = 240.dp
+
+/** Start inset of the search banner with the icon rail collapsed: 48dp (xxxl)
+ *  let the black rail overlap the first button ("Scopri" half-covered), so the
+ *  row shifts a bit further right while staying aligned with the page. */
+private val SIDEBAR_COLLAPSED_CLEARANCE = 72.dp
 
 /** Maximum recent-search entries shown under the virtual keyboard. */
 private const val PANEL_RECENT_SEARCH_LIMIT = 4
@@ -338,8 +350,8 @@ fun SearchScreen(
     val trimmedQuery = remember(uiState.query) { uiState.query.trim() }
     val trimmedSubmittedQuery = remember(uiState.submittedQuery) { uiState.submittedQuery.trim() }
 
-    // Focus restore bookkeeping for the results grid — mirrors ClassicHomeContent pattern so
-    // the grid keeps focus when placeholder→real data transitions.
+    // Focus restore bookkeeping for the results grid â€” mirrors ClassicHomeContent pattern so
+    // the grid keeps focus when placeholderâ†’real data transitions.
     var lastFocusedGridItemIndex by remember { mutableIntStateOf(-1) }
     val keyboardFirstKeyFocusRequester = remember { FocusRequester() }
     val resultsFirstItemFocusRequester = remember { FocusRequester() }
@@ -394,8 +406,8 @@ fun SearchScreen(
 
     // Single mixed grid of every result (movies + series): best title match first,
     // popular franchises ahead of deep cuts, sequels after their original in release
-    // order — then re-ordered by the selected sort mode (release / rating) when chosen.
-    // Ranking is O(n²) with several regex passes per comparison: run it off the
+    // order â€” then re-ordered by the selected sort mode (release / rating) when chosen.
+    // Ranking is O(nÂ²) with several regex passes per comparison: run it off the
     // UI thread or each addon batch freezes the search screen on slow sticks.
     val mergedResults by produceState(
         initialValue = emptyList<SearchGridEntry>(),
@@ -436,10 +448,12 @@ fun SearchScreen(
                     }
                 }
             }
-            orderSearchResults(
+            val ordered = orderSearchResults(
                 sortMode,
-                rankSearchResults(trimmedQuery, entryByKey.values.map { it.item })
+                rankSearchResults(trimmedQuery, entryByKey.values.map { it.item }),
+                trimmedQuery
             ).mapNotNull { item -> entryByKey["${item.apiType}:${item.id}"] }
+            ordered
         }
     }
 
@@ -447,9 +461,8 @@ fun SearchScreen(
         trimmedQuery.length >= MIN_SEARCH_QUERY_LENGTH &&
             trimmedQuery != trimmedSubmittedQuery
     }
-    val canMoveToResults = remember(trimmedSubmittedQuery, uiState.catalogRows) {
-        trimmedSubmittedQuery.length >= MIN_SEARCH_QUERY_LENGTH &&
-            uiState.catalogRows.any { it.items.isNotEmpty() }
+    val canMoveToResults = remember(trimmedSubmittedQuery, mergedResults) {
+        trimmedSubmittedQuery.length >= MIN_SEARCH_QUERY_LENGTH && mergedResults.isNotEmpty()
     }
     val submitCurrentQuery: (String) -> Unit = { submittedQuery ->
         viewModel.onEvent(SearchEvent.SubmitSearch)
@@ -570,7 +583,7 @@ fun SearchScreen(
                     restoreDiscoverFocus = true
                     pendingDiscoverRestoreOnResume = false
                 } else if (viewModel.hasSavedSearchFocus || didRestoreSearchFocus.value) {
-                    // Returning from details — don't steal focus, the results grid already
+                    // Returning from details â€” don't steal focus, the results grid already
                     // restored it or will restore it via its focused item index.
                     didRestoreSearchFocus.value = false
                 } else if (!latestShouldKeepSearchFocus) {
@@ -597,12 +610,26 @@ fun SearchScreen(
     ) {
         // Full-width search banner: always visible, spanning the whole page, with the clear
         // (X) button at the far end. Only the keyboard + recents panel below collapses.
+        // Con il pannello laterale aperto (LEFT dai contenuti) il vetro coprirebbe
+        // il primo pulsante della riga: "Scopri" resta tagliato a metà. La riga
+        // scivola a destra finché il pannello è aperto e torna al posto da sola.
+        val bannerStartInset by animateDpAsState(
+            targetValue = if (LocalSidebarExpanded.current) {
+                SIDEBAR_PANEL_CLEARANCE
+            } else {
+                // Rail icone chiuso: 48dp non bastava, "Scopri" veniva coperto
+                // dal nero della barra laterale. 72dp tiene la riga dentro la
+                // zona visibile pur restando allineata al resto della pagina.
+                SIDEBAR_COLLAPSED_CLEARANCE
+            },
+            label = "searchBannerStartInset"
+        )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .zIndex(1f)
                 .padding(
-                    start = NuvioTheme.spacing.xxxl,
+                    start = bannerStartInset,
                     end = NuvioTheme.spacing.xxxl,
                     top = NuvioTheme.spacing.lg,
                     bottom = NuvioTheme.spacing.lg
@@ -622,7 +649,9 @@ fun SearchScreen(
                 onSubmit = {
                     submitCurrentQuery(uiState.query.trim())
                 },
-                showVoiceSearch = isVoiceSearchAvailable,
+                // Microfono rimosso su richiesta dell'utente: nella riga resta
+                // solo il pulsante "Scopri".
+                showVoiceSearch = false,
                 isVoiceListening = isVoiceListening,
                 voiceRmsLevel = voiceRmsLevel,
                 onVoiceSearch = launchVoiceSearch,
@@ -685,7 +714,7 @@ fun SearchScreen(
                     } else {
                         null
                     },
-                    onMoveToResults = if (canMoveToResults) {
+                    onMoveToResults = if (mergedResults.isNotEmpty()) {
                         { focusResults = true }
                     } else {
                         null
@@ -781,7 +810,7 @@ fun SearchScreen(
                                     didRestoreSearchFocus.value = true
                                     viewModel.hasSavedSearchFocus = false
                                 }
-                                // User manually navigated to a result — cancel any
+                                // User manually navigated to a result â€” cancel any
                                 // pending auto-focus so it doesn't steal focus later.
                                 pendingFocusMoveToResultsQuery = null
                                 lastFocusedGridItemIndex = itemIndex
@@ -947,6 +976,9 @@ private fun SearchInputField(
                             false
                         }
                     }
+                    // Stacco netto dal pulsante "Scopri" a sinistra: con lo
+                    // spacing della Row (md) i due riquadri quasi si toccavano.
+                    .padding(start = NuvioTheme.spacing.xl)
                     .size(NuvioTheme.spacing.xxl)
                     .border(
                         width = if (isVoiceButtonFocused || isVoiceListening) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,
@@ -1215,6 +1247,12 @@ private fun SingleSearchResultsGrid(
         if (lastRequestedFocusItemKey !in validKeys) {
             lastRequestedFocusItemKey = null
         }
+        // A shorter result set (new query, dropped duplicates) can leave the last
+        // focused index pointing past the end of the list: entry target and
+        // focus restorer would then aim at a card that no longer exists.
+        if (lastFocusedItemIndex >= entries.size) {
+            lastFocusedItemIndex = -1
+        }
     }
 
     // Restore focus from saved state when focusedItemIndex is set.
@@ -1225,7 +1263,15 @@ private fun SingleSearchResultsGrid(
             if (lastRequestedFocusItemKey == targetKey) return@LaunchedEffect
             val requester = itemFocusRequestersByKey.getOrPut(targetKey) { FocusRequester() }
             repeat(2) { withFrameNanos { } }
-            val focused = runCatching { requester.requestFocus() }.isSuccess
+            var focused = runCatching { requester.requestFocus() }.isSuccess
+            if (!focused) {
+                // The grid can be restored further down the list, leaving the
+                // target card uncomposed: scroll it into view and retry instead
+                // of leaving focus stuck on the keyboard.
+                runCatching { gridState.scrollToItem(focusedItemIndex) }
+                repeat(2) { withFrameNanos { } }
+                focused = runCatching { requester.requestFocus() }.isSuccess
+            }
             if (focused) {
                 lastRequestedFocusItemKey = targetKey
             }
@@ -1246,8 +1292,16 @@ private fun SingleSearchResultsGrid(
                 (posterCardStyle.width + horizontalSpacing)
             cols.toInt().coerceAtLeast(1)
         }
-        val entryTargetIndex = (if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else 0)
-            .coerceIn(0, (entries.size - 1).coerceAtLeast(0))
+        // The keyboard's right-arrow FocusRequester lives on exactly one card. If
+        // that card is off screen (restored scroll position, shorter result set)
+        // the requester is never attached and the move fails silently, so aim it
+        // at a card that is on screen right now.
+        val visibleIndices = gridState.layoutInfo.visibleItemsInfo.map { it.index }
+        val entryTargetIndex = (if (lastFocusedItemIndex >= 0 && lastFocusedItemIndex in visibleIndices) {
+            lastFocusedItemIndex
+        } else {
+            visibleIndices.firstOrNull() ?: 0
+        }).coerceIn(0, (entries.size - 1).coerceAtLeast(0))
 
         LazyVerticalGrid(
             state = gridState,
@@ -1405,3 +1459,4 @@ private fun SearchResultsSkeletonGrid(
         }
     }
 }
+

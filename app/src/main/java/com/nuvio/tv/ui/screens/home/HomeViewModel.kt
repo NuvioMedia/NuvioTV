@@ -132,7 +132,11 @@ class HomeViewModel @Inject constructor(
         private const val MAX_ENRICHMENT_CACHE_SIZE = 64
         private const val MAX_PREFETCH_CACHE_SIZE = 64
         private const val PREVIEW_TRANSLATION_MAX_ATTEMPTS = 3
-        private const val PREVIEW_TRANSLATION_RETRY_DELAY_MS = 4_000L
+        // Retry ravvicinato: i fallimenti transitori (modello ML Kit ancora in
+        // download, rilevazione lingua in timeout) erano separati da 4 s, così
+        // la descrizione restava inglese a lungo anche quando il secondo
+        // tentativo sarebbe riuscito subito.
+        private const val PREVIEW_TRANSLATION_RETRY_DELAY_MS = 1_500L
 
         private fun <K, V> createLruMap(maxSize: Int): MutableMap<K, V> {
             val lru = object : LinkedHashMap<K, V>(maxSize + 4, 0.75f, true) {
@@ -201,14 +205,69 @@ class HomeViewModel @Inject constructor(
     /** Last description already handed to the translator, per item. */
     private val previewTranslationProcessed: MutableMap<String, String> = createLruMap(MAX_ENRICHMENT_CACHE_SIZE)
 
-    internal fun addEnrichedPreview(id: String, preview: MetaPreview) {
+    /**
+     * Traduzioni arrivate PRIMA che l'arricchimento pubblicasse l'item (chiave:
+     * id → descrizione originale → traduzione). Senza questo "pending" una
+     * traduzione avviata al primo focus veniva buttata via: al termine non
+     * esisteva ancora nessuna entry in _enrichedPreviews su cui applicarla, e
+     * il ciclo successivo saltava per "già processata" — il testo restava
+     * inglese.
+     */
+    private val pendingPreviewTranslations: MutableMap<String, Pair<String, String>> =
+        createLruMap(MAX_ENRICHMENT_CACHE_SIZE)
+
+    private val previewTranslationLock = Any()
+
+    /**
+     * Catena seriale per le traduzioni di sfondo dei preview: le pubblicazioni
+     * di arricchimento arrivano a raffica (prefetch adiacenti, hero) e ML Kit
+     * processa le stringhe in pratica una alla volta, così ogni richiesta
+     * aggiunge ~1 s di attesa a TUTTE quelle successive — durante lo scroll la
+     * traduzione dell'hero visibile finiva in coda dietro quelle di sfondo
+     * ("le traduzioni sono lente a comparire"). Una sola coroutine di sfondo
+     * alla volta tiene la coda lunga al massimo uno.
+     */
+    private var backgroundPreviewTranslationJob: Job? = null
+
+    /**
+     * Corsia prioritaria per il focus: solo la traduzione dell'item che
+     * l'utente sta guardando conta, quindi ne resta comunque una sola — al
+     * cambio di focus quella precedente viene annullata (il claim viene
+     * rilasciato in invokeOnCompletion, così l'item annullato verrà ritentato).
+     */
+    private var focusPreviewTranslationJob: Job? = null
+
+    internal fun addEnrichedPreview(id: String, preview: MetaPreview, priority: Boolean = false) {
         putEnrichedPreview(id, preview)
-        schedulePreviewDescriptionTranslation(id, preview)
+        schedulePreviewDescriptionTranslation(id, preview, priority)
     }
 
     private fun putEnrichedPreview(id: String, preview: MetaPreview) {
+        // Se la traduzione di questa stessa descrizione era già pronta, applichila
+        // subito: la UI vede italiano dal primo fotogramma.
+        val stored = synchronized(previewTranslationLock) {
+            val pending = pendingPreviewTranslations[id]
+            when {
+                pending != null && pending.first == preview.description ->
+                    preview.copy(description = pending.second)
+                else -> {
+                    // "Flash inglese": se il traduttore ha già in cache (su
+                    // disco) la traduzione di questa descrizione, pubblichiamola
+                    // direttamente tradotta — l'originale non compare nemmeno
+                    // per un frame. Altrimenti si pubblica l'originale e la
+                    // coroutine di traduzione lo sostituisce appena pronta.
+                    val cached = metadataTextTranslator.peekCachedTranslation(
+                        currentTmdbSettings.language,
+                        preview.description
+                    )
+                    if (cached != null && cached != preview.description) {
+                        preview.copy(description = cached)
+                    } else preview
+                }
+            }
+        }
         _enrichedPreviews.update { current ->
-            val updated = current + (id to preview)
+            val updated = current + (id to stored)
             if (updated.size <= MAX_ENRICHMENT_CACHE_SIZE) updated
             else LinkedHashMap(updated).apply { while (size > MAX_ENRICHMENT_CACHE_SIZE) remove(keys.first()) }
         }
@@ -221,50 +280,106 @@ class HomeViewModel @Inject constructor(
      * description (async, so the raw text may flash briefly) and re-publish
      * only while the stored entry still holds the string we translated.
      */
-    private fun schedulePreviewDescriptionTranslation(id: String, preview: MetaPreview) {
-        val description = preview.description?.takeIf { it.isNotBlank() } ?: return
-        synchronized(previewTranslationProcessed) {
+    internal fun schedulePreviewDescriptionTranslation(
+        id: String,
+        preview: MetaPreview,
+        priority: Boolean = false
+    ) {
+        val description = preview.description?.takeIf { it.isNotBlank() }
+        if (description == null) {
+            return
+        }
+        // Sotto la soglia di lunghezza (o con lingua non traducibile) il traduttore
+        // risponde sempre "null": non serve nemmeno avviare il ciclo di tentativi.
+        if (!com.nuvio.tv.data.translation.shouldTranslate(description, currentTmdbSettings.language)) {
+            return
+        }
+        val job = synchronized(previewTranslationLock) {
             if (previewTranslationProcessed[id] == description) return
             previewTranslationProcessed[id] = description
-        }
-        viewModelScope.launch {
-            var translated: String? = null
-            for (attempt in 0 until PREVIEW_TRANSLATION_MAX_ATTEMPTS) {
-                if (attempt > 0) delay(PREVIEW_TRANSLATION_RETRY_DELAY_MS)
-                val candidate = runCatching {
-                    metadataTextTranslator.translateDescription(description, currentTmdbSettings.language)
-                }.getOrNull()
-                if (!candidate.isNullOrBlank() && candidate != description) {
-                    translated = candidate
-                    break
+            val created = if (priority) {
+                focusPreviewTranslationJob?.cancel()
+                viewModelScope.launch { runPreviewTranslation(id, description) }
+            } else {
+                val previous = backgroundPreviewTranslationJob
+                viewModelScope.launch {
+                    previous?.join()
+                    runPreviewTranslation(id, description)
                 }
             }
-            val result = translated
-            if (result == null) {
-                // The ML Kit models may still have been downloading — release the
-                // claim so the next publish/focus for this item retries instead
-                // of leaving the raw English text on screen forever.
-                synchronized(previewTranslationProcessed) {
-                    if (previewTranslationProcessed[id] == description) {
-                        previewTranslationProcessed.remove(id)
+            if (priority) focusPreviewTranslationJob = created
+            created
+        }
+        if (priority) {
+            // Annullata (o fallita) → rilascia il claim: senza questo l'item
+            // non verrebbe mai ritentato al prossimo focus.
+            job.invokeOnCompletion { cause ->
+                if (cause != null) {
+                    synchronized(previewTranslationLock) {
+                        if (previewTranslationProcessed[id] == description) {
+                            previewTranslationProcessed.remove(id)
+                        }
+                        if (focusPreviewTranslationJob === job) focusPreviewTranslationJob = null
                     }
                 }
-                return@launch
             }
-            _enrichedPreviews.update { current ->
-                val existing = current[id]
-                if (existing != null && existing.description == description) {
-                    current + (id to existing.copy(description = result))
-                } else {
-                    current
+        }
+    }
+
+    /** Corpo della traduzione di un preview: tentativi, apply e pending. */
+    private suspend fun runPreviewTranslation(id: String, description: String) {
+        var translated: String? = null
+        for (attempt in 0 until PREVIEW_TRANSLATION_MAX_ATTEMPTS) {
+            if (attempt > 0) delay(PREVIEW_TRANSLATION_RETRY_DELAY_MS)
+            val candidate = runCatching {
+                metadataTextTranslator.translateDescription(description, currentTmdbSettings.language)
+            }.getOrNull()
+            if (!candidate.isNullOrBlank() && candidate != description) {
+                translated = candidate
+                break
+            }
+        }
+        val result = translated
+        if (result == null) {
+            // The ML Kit models may still have been downloading — release the
+            // claim so the next publish/focus for this item retries instead
+            // of leaving the raw English text on screen forever.
+            synchronized(previewTranslationLock) {
+                if (previewTranslationProcessed[id] == description) {
+                    previewTranslationProcessed.remove(id)
                 }
             }
-            _lastEnrichedPreview.update { current ->
-                if (current != null && current.id == id && current.description == description) {
-                    current.copy(description = result)
-                } else {
-                    current
-                }
+            return
+        }
+        var applied = false
+        _enrichedPreviews.update { current ->
+            val existing = current[id]
+            val pend = synchronized(previewTranslationLock) { pendingPreviewTranslations[id] }
+            Log.d(
+                TAG,
+                "apply id=$id existingDesc=${existing?.description?.take(30)} " +
+                    "result=${result.take(30)} pending=${pend?.first?.take(30)} pendingOk=${pend != null}"
+            )
+            if (existing != null && existing.description == description) {
+                applied = true
+                current + (id to existing.copy(description = result))
+            } else {
+                current
+            }
+        }
+        _lastEnrichedPreview.update { current ->
+            if (current != null && current.id == id && current.description == description) {
+                current.copy(description = result)
+            } else {
+                current
+            }
+        }
+        if (!applied) {
+            // L'arricchimento non ha ancora pubblicato l'item: tieni la
+            // traduzione da parte, putEnrichedPreview la applica appena il
+            // testo identico entra nella mappa.
+            synchronized(previewTranslationLock) {
+                pendingPreviewTranslations[id] = description to result
             }
         }
     }

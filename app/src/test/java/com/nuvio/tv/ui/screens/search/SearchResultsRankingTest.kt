@@ -204,13 +204,55 @@ class SearchResultsRankingTest {
     }
 
     @Test
-    fun `popularity sort keeps the relevance ranking untouched`() {
-        val exact = preview(id = "exact", name = "Dexter", rating = 6f)
-        val partial = preview(id = "partial", name = "Dexter Discussion", rating = 9f)
-        val ranked = rankSearchResults("dexter", listOf(partial, exact))
+    fun `popularity sort orders by votes then rating and keeps relevance for ties`() {
+        val mostVoted = preview(id = "most-voted", name = "Dexter Discussion", rating = 6f, votes = 900)
+        val lessVoted = preview(id = "less-voted", name = "Dexter", rating = 9f, votes = 100)
+        val unratedButVoted = preview(id = "voted-only", name = "Dexter Spinoff", rating = null, votes = 50)
+        val tieA = preview(id = "tie-a", name = "Dexter B", rating = 8f, votes = null)
+        val tieB = preview(id = "tie-b", name = "Dexter A", rating = 8f, votes = null)
+        val ranked = rankSearchResults(
+            "dexter",
+            listOf(tieA, tieB, unratedButVoted, lessVoted, mostVoted)
+        )
+        val ordered = orderSearchResults(SearchSortMode.POPULARITY, ranked).map { it.id }
+        // Votes beat rating, rated beats unrated...
+        assertEquals(listOf("most-voted", "less-voted", "voted-only"), ordered.take(3))
+        // ...and equally popular items keep the relevance order the ranking
+        // already computed (stable sort).
         assertEquals(
-            ranked.map { it.id },
-            orderSearchResults(SearchSortMode.POPULARITY, ranked).map { it.id }
+            ranked.map { it.id }.filter { it == "tie-a" || it == "tie-b" },
+            ordered.drop(3)
+        )
+    }
+
+    @Test
+    fun `popularity sort keeps an exact title match ahead of a famous partial match`() {
+        // L'utente che cerca "berlino" deve vedere "Berlino" in cima: la fama
+        // del titolo parziale non deve seppellire la corrispondenza esatta.
+        val exactButObscure = preview(id = "exact", name = "Berlino", rating = 5.5f, votes = 3)
+        val famousPartial = preview(
+            id = "famous",
+            name = "La casa di carta: De Tokio a Berlin",
+            rating = 8.3f,
+            votes = 9000
+        )
+        val ranked = rankSearchResults("berlino", listOf(exactButObscure, famousPartial))
+        assertEquals(
+            listOf("exact", "famous"),
+            orderSearchResults(SearchSortMode.POPULARITY, ranked, "berlino").map { it.id }
+        )
+    }
+
+    @Test
+    fun `popularity sort prefers a word prefix match over fame`() {
+        // "gioielli" è prefisso della parola "gioielli" in "I gioielli di
+        // Parigi": deve superare un titolo famoso con solo contains.
+        val wordPrefix = preview(id = "jewels", name = "I gioielli di Parigi", rating = 7f, votes = 50)
+        val famousContains = preview(id = "famous", name = "Il gioiello mancante", rating = 9f, votes = 5000)
+        val ranked = rankSearchResults("gioielli", listOf(famousContains, wordPrefix))
+        assertEquals(
+            listOf("jewels", "famous"),
+            orderSearchResults(SearchSortMode.POPULARITY, ranked, "gioielli").map { it.id }
         )
     }
 
@@ -220,7 +262,8 @@ class SearchResultsRankingTest {
         rating: Float? = null,
         year: Int? = null,
         released: String? = null,
-        releaseInfo: String? = null
+        releaseInfo: String? = null,
+        votes: Int? = null
     ): MetaPreview = MetaPreview(
         id = id,
         type = ContentType.SERIES,
@@ -233,6 +276,7 @@ class SearchResultsRankingTest {
         releaseInfo = releaseInfo ?: year?.toString(),
         imdbRating = rating,
         genres = emptyList(),
-        released = released ?: year?.let { "$it-01-01" }
+        released = released ?: year?.let { "$it-01-01" },
+        voteCount = votes
     )
 }

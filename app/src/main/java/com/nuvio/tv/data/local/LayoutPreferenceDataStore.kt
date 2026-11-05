@@ -134,6 +134,10 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val fastHorizontalNavigationEnabledKey = booleanPreferencesKey("fast_horizontal_navigation_enabled")
 
     private val fluidModeEnabledKey = booleanPreferencesKey("fluid_mode_enabled")
+    private val preFluidModeExpandEnabledKey =
+        booleanPreferencesKey("pre_fluid_mode_expand_enabled")
+    private val preFluidModeTrailerEnabledKey =
+        booleanPreferencesKey("pre_fluid_mode_trailer_enabled")
     private val followAddonsOrderKey = booleanPreferencesKey("follow_addons_order")
     private val composeHighlighterEnabledKey = booleanPreferencesKey("compose_highlighter_enabled")
     private val animeTabVisibleKey = booleanPreferencesKey("anime_tab_visible")
@@ -469,13 +473,36 @@ class LayoutPreferenceDataStore @Inject constructor(
      * One-touch preset for slow devices: turns off every GPU-heavy effect
      * (blurs, poster expansion, trailer preview) and speeds up D-pad repeat.
      * Turning it off restores the corresponding defaults.
+     *
+     * The poster-expansion and trailer switches are the user's own choices, so
+     * their current values are saved while Fluid Mode is on and written back
+     * when it is turned off. Before this, turning Fluid Mode off always forced
+     * the trailer switch to false, which silently killed trailer previews even
+     * though the user had explicitly enabled them.
      */
     suspend fun setFluidModeEnabled(enabled: Boolean) {
         store().edit { prefs ->
+            if (enabled) {
+                prefs[preFluidModeExpandEnabledKey] =
+                    prefs[focusedPosterBackdropExpandEnabledKey] ?: true
+                prefs[preFluidModeTrailerEnabledKey] =
+                    prefs[focusedPosterBackdropTrailerEnabledKey] ?: false
+            }
             prefs[fluidModeEnabledKey] = enabled
             prefs[modernSidebarBlurEnabledKey] = false
-            prefs[focusedPosterBackdropExpandEnabledKey] = !enabled
-            prefs[focusedPosterBackdropTrailerEnabledKey] = false
+            prefs[focusedPosterBackdropExpandEnabledKey] = if (enabled) {
+                false
+            } else {
+                prefs[preFluidModeExpandEnabledKey] ?: true
+            }
+            prefs[focusedPosterBackdropTrailerEnabledKey] = if (enabled) {
+                false
+            } else {
+                prefs[preFluidModeTrailerEnabledKey] ?: true
+            }
+            if (enabled) {
+                prefs[focusedPosterBackdropTrailerMutedKey] = true
+            }
             prefs[blurUnwatchedEpisodesKey] = false
             prefs[blurContinueWatchingNextUpKey] = false
             prefs[fastHorizontalNavigationEnabledKey] = enabled

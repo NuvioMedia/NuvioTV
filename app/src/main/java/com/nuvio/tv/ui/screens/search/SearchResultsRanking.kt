@@ -16,8 +16,16 @@ internal fun searchMatchQuality(query: String, title: String): Int {
     val q = searchNormalizeText(query)
     val t = searchNormalizeText(title)
     if (q.isEmpty() || t.isEmpty()) return Int.MAX_VALUE
+    val qt = searchNormalizeTitle(query)
+    val tt = searchNormalizeTitle(title)
+    // "the mentalist (2008)" typed against "The Mentalist" is an exact hit, so
+    // decorations are stripped from both sides before comparing. A decorated
+    // *title* only reaches bucket 0 when it carries no season number, otherwise
+    // a single season entry would tie with — and then outrank — the bare show.
+    val decoratedExact = qt.isNotEmpty() && tt == qt && SEASON_NUMBER_REGEX.find(title) == null
     return when {
         t == q -> 0
+        decoratedExact -> 0
         t.startsWith(q) -> 1
         t.split(' ').any { it.startsWith(q) } -> 2
         // Contiguous phrase implies every token is present, so it ranks above
@@ -270,13 +278,40 @@ internal fun searchReleaseStamp(item: MetaPreview): Long? {
 }
 
 /**
- * Re-orders already-ranked results for the selected mode. POPULARITY keeps the
- * relevance ranking untouched; RELEASE and RATING are stable sorts, so items
- * without a date/rating keep their relevance order at the tail.
+ * Popularity proxy for the POPULARITY sort: how many people voted when the
+ * catalog reports a vote count (the real "how famous is this?" signal), the
+ * IMDb rating when it does not. Unvoted/unrated items sink to the tail.
+ *
+ * Strong title matches always come first though: when the query is the title,
+ * a prefix of it, or a prefix of one of its words ("gioielli" → "I gioielli
+ * di Parigi", "berlino" → "Berlino"), fame must not bury the exact hit the
+ * user typed — the exact match wins over a famous partial one, and popularity
+ * only decides inside each group.
  */
-internal fun orderSearchResults(mode: SearchSortMode, items: List<MetaPreview>): List<MetaPreview> =
+internal const val SEARCH_STRONG_MATCH_MAX_QUALITY = 2
+
+internal fun searchPopularityComparator(query: String = ""): Comparator<MetaPreview> =
+    compareByDescending<MetaPreview> {
+        searchMatchQuality(query, it.name) <= SEARCH_STRONG_MATCH_MAX_QUALITY
+    }
+        .thenByDescending { it.voteCount ?: -1 }
+        .thenByDescending { it.imdbRating ?: Float.NEGATIVE_INFINITY }
+
+/**
+ * Re-orders already-ranked results for the selected mode. POPULARITY puts
+ * strong title matches (exact / prefix / word prefix) ahead of the rest and
+ * sorts each group by fame (votes, then rating); RELEASE and RATING are
+ * stable sorts, so items without a date/rating keep their relevance order at
+ * the tail. Every sort is stable, so equally popular items stay in the
+ * relevance order computed by [rankSearchResults].
+ */
+internal fun orderSearchResults(
+    mode: SearchSortMode,
+    items: List<MetaPreview>,
+    query: String = ""
+): List<MetaPreview> =
     when (mode) {
-        SearchSortMode.POPULARITY -> items
+        SearchSortMode.POPULARITY -> items.sortedWith(searchPopularityComparator(query))
         SearchSortMode.RELEASE ->
             items.sortedByDescending { searchReleaseStamp(it) ?: Long.MIN_VALUE }
         SearchSortMode.RATING ->

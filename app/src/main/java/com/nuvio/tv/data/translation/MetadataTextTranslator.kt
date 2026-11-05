@@ -72,6 +72,43 @@ class MetadataTextTranslator @Inject constructor(
     @Volatile private var dirty = false
 
     /**
+     * Snapshot lock-free della cache per le letture rapide della UI.
+     *
+     * Alla pubblicazione di un item la Home fa un lookup **non sospeso** qui:
+     * se la traduzione è già in cache (persistente su disco) pubblica
+     * direttamente l'italiano e la descrizione inglese non si vede nemmeno un
+     * frame ("flash inglese"). Tenuta in sincronia con [cache] in ogni punto
+     * di lettura/scrittura sotto mutex.
+     */
+    private val fastCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * Rilevamenti di lingua già calcolati (testo → codice), LRU in memoria.
+     *
+     * [identifyLanguage] è una chiamata sospesa con timeout di 6 s: ogni
+     * ritentativo e ogni testo ripetuto (stessa descrizione pubblicata due
+     * volte, focus che torna sull'item) la pagava di nuovo. Con questa cache
+     * il secondo passaggio sullo stesso testo va direttamente alla traduzione.
+     */
+    private val detectionCache = object : LinkedHashMap<String, String>(128, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean =
+            size > 500
+    }
+
+    /**
+     * Coppie "source->target" il cui modello ML Kit è già pronto.
+     *
+     * [Translator.downloadModelIfNeeded] è una await su un Task che, anche a
+     * modello già scaricato, aggiunge decine di millisecondi a OGNI stringa:
+     * dopo il primo successo per la coppia lo saltiamo, così l'ondata di
+     * traduzioni del dettaglio parte senza attese (richiesta "le traduzioni
+     * devono essere più veloci"). Se il download non va a buon fine la coppia
+     * non viene marcata e il prossimo tentativo riprova da capo.
+     */
+    private val downloadedKeys: MutableSet<String> =
+        java.util.Collections.synchronizedSet(java.util.HashSet())
+
+    /**
      * One live [com.google.mlkit.nl.translate.Translator] at a time.
      *
      * Building a fresh client per string made ML Kit re-instantiate the wordpiece
@@ -122,6 +159,7 @@ class MetadataTextTranslator @Inject constructor(
         // the model the first Home row is about to need again.
         val translator = translatorFor("en", target)
         if (translator.downloadModelIfNeeded().awaitOk()) {
+            downloadedKeys.add("en->$target")
             Log.d(TAG, "Translation model warm-up completed for $target")
         }
     }
@@ -234,44 +272,104 @@ class MetadataTextTranslator @Inject constructor(
             return null
         }
         val key = translationCacheKey(target, text)
-        cachedValue(key)?.let { return it.ifBlank { null } }
-        if (System.currentTimeMillis() - startedAtMs > BATCH_DEADLINE_MS) return null
+        // Lookup lock-free prima del mutex: sulla UI la cache in memoria è già
+        // calda e non serve nemmeno toccare il caricamento da disco.
+        fastCache[key]?.let { cached ->
+            if (cached.isNotBlank()) return cached
+        }
+        val cached = cachedValue(key)
+        if (cached != null) {
+            // Un negativo non dovrebbe più esistere (non lo scriviamo più), ma
+            // quello lasciato in memoria da una build precedente non deve
+            // bloccare per sempre il testo: lo scartiamo e ripartiamo da zero.
+            if (cached.isNotBlank()) {
+                return cached
+            }
+            clearCachedValue(key)
+        }
+        if (System.currentTimeMillis() - startedAtMs > BATCH_DEADLINE_MS) {
+            return null
+        }
 
         val detected = withTimeoutOrNull(DETECT_TIMEOUT_MS) {
             identifyLanguage(body)
         }
-        if (detected == null) return null
+        if (detected == null) {
+            return null
+        }
         if (!shouldTranslateDetected(body, detected, target, minLength)) {
-            rememberValue(key, null)
+            // Non memorizzare MAI un negativo in cache. Una singola volta che il
+            // rilevamento lingua torna "stesso linguaggio" (o "und" per un testo
+            // ambiguo, o l'entry appena pubblicata è un'altra descrizione dello
+            // stesso item) bloccava quel testo per TUTTA la sessione: l'hero
+            // restava in inglese anche quando la traduzione era fattibile. La
+            // rilevazione è un'operazione locale e veloce, quindi ritentare al
+            // prossimo focus non costa nulla e fa sí che un testo davvero
+            // inglese venga tradotto appena il testo giusto arriva in cache.
             return null
         }
 
         // Reused across calls; never closed here (see translatorFor).
         val translator = translatorFor(detected, target)
-        val modelReady = withTimeoutOrNull(MODEL_TIMEOUT_MS) {
-            translator.downloadModelIfNeeded().awaitOk()
+        val modelKey = "$detected->$target"
+        if (modelKey !in downloadedKeys) {
+            val modelReady = withTimeoutOrNull(MODEL_TIMEOUT_MS) {
+                translator.downloadModelIfNeeded().awaitOk()
+            }
+            if (modelReady != true) {
+                return null
+            }
+            downloadedKeys.add(modelKey)
         }
-        if (modelReady != true) return null
         val translated = withTimeoutOrNull(TRANSLATE_TIMEOUT_MS) {
             translator.translate(body).awaitText()
-        }?.takeIf { it.isNotBlank() && it != body } ?: return null
-        rememberValue(key, translated)
+        }?.takeIf { it.isNotBlank() && it != body }
+        if (translated == null) {
+            return null
+        }
+        rememberTranslation(key, translated)
         return translated
     }
 
-    private suspend fun identifyLanguage(text: String): String? =
-        languageIdentifier.identifyLanguage(text).awaitText()
+    private suspend fun identifyLanguage(text: String): String? {
+        synchronized(detectionCache) { detectionCache[text] }?.let { cached ->
+            if (cached.isNotBlank()) return cached
+        }
+        val detected = languageIdentifier.identifyLanguage(text).awaitText()
+        if (!detected.isNullOrBlank()) {
+            synchronized(detectionCache) { detectionCache[text] = detected }
+        }
+        return detected
+    }
 
     private suspend fun cachedValue(key: String): String? = mutex.withLock {
         ensureLoadedLocked()[key]
     }
 
-    private suspend fun rememberValue(key: String, value: String?) = mutex.withLock {
-        ensureLoadedLocked()[key] = value ?: ""
-        // Only successful translations are worth persisting: a negative entry
-        // (e.g. language detection returned "und" for a short digit-heavy
-        // string) must stay session-only so a later retry can succeed.
-        if (value != null) dirty = true
+    /** Drops a stale blank (negative) entry so the text can be retried. */
+    private suspend fun clearCachedValue(key: String) = mutex.withLock {
+        val removed = ensureLoadedLocked().remove(key) != null
+        fastCache.remove(key)
+        if (removed) dirty = true
+    }
+
+    /** Only successful translations are cached: [value] is always non-blank. */
+    private suspend fun rememberTranslation(key: String, value: String) = mutex.withLock {
+        ensureLoadedLocked()[key] = value
+        fastCache[key] = value
+        dirty = true
+    }
+
+    /**
+     * Lookup **non sospeso** della traduzione già in cache, per la UI: se
+     * ritorna un valore, la pubblicazione parte subito in italiano e la
+     * descrizione inglese non compare nemmeno per un frame.
+     */
+    fun peekCachedTranslation(targetLanguage: String?, text: String?): String? {
+        val target = normalizeLanguageCode(targetLanguage) ?: return null
+        if (text.isNullOrEmpty()) return null
+        if (target !in TRANSLATION_SUPPORTED_LANGUAGES) return null
+        return fastCache[translationCacheKey(target, text)]
     }
 
     /** Coalesces [persistCacheIfDirty] writes; never blocks the caller. */
@@ -304,6 +402,9 @@ class MetadataTextTranslator @Inject constructor(
         cache?.let { return it }
         val loaded = readCacheFromDisk()
         cache = loaded
+        // Popola lo snapshot lock-free (solo voci valide: un negativo residuo
+        // di una vecchia build non deve mai essere proposto alla UI).
+        loaded.forEach { (entryKey, value) -> if (value.isNotBlank()) fastCache[entryKey] = value }
         return loaded
     }
 

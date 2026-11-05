@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -352,11 +354,11 @@ private fun HeroTitleContent(
 ) {
     val preview = previewProvider() ?: return
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
-    val descriptionMaxLines = 4
+    val descriptionMaxLines = 3
     val descriptionScale = if (portraitMode) 0.90f else 1f
     val titleScale = if (portraitMode) 0.92f else 1f
     val metaScale = 1f
-    val titleSpacing = NuvioTheme.spacing.sm * titleScale
+    val titleSpacing = NuvioTheme.spacing.xs * titleScale
     val metaSpacing = NuvioTheme.spacing.sm * metaScale
     val imdbMetaSpacing = NuvioTheme.spacing.xs * metaScale
     val context = LocalContext.current
@@ -364,11 +366,17 @@ private fun HeroTitleContent(
     val headlineLarge = MaterialTheme.typography.headlineLarge
     val labelMedium = MaterialTheme.typography.labelMedium
     val bodyMedium = MaterialTheme.typography.bodyMedium
-    val logoMaxWidthPx = remember(density) { with(density) { 220.dp.roundToPx() } }
-    val logoHeightPx = remember(density) { with(density) { 100.dp.roundToPx() } }
+    val logoMaxWidthPx = remember(density) { with(density) { 256.dp.roundToPx() } }
+    val logoHeightPx = remember(density) { with(density) { 56.dp.roundToPx() } }
 
-    val logoModel = remember(context, preview.logo, logoMaxWidthPx, logoHeightPx) {
-        preview.logo?.let {
+    // Logo risolto: prima il logo corrente, poi quello "congelato" della card
+    // (il primo valore non vuoto vince): durante lo scroll l'hero non deve mai
+    // ricadere sul titolo scritto se esiste un logo già caricato.
+    val effectiveLogoUrl = preview.logo?.takeIf { it.isNotBlank() }
+        ?: preview.frozenLogoUrl?.takeIf { it.isNotBlank() }
+
+    val logoModel = remember(context, effectiveLogoUrl, logoMaxWidthPx, logoHeightPx) {
+        effectiveLogoUrl?.let {
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(true)
@@ -396,19 +404,23 @@ private fun HeroTitleContent(
     }
 
     Column(
-        modifier = if (highlighterEnabled) Modifier.recompositionHighlighter() else Modifier,
+        modifier = (if (highlighterEnabled) Modifier.recompositionHighlighter() else Modifier)
+            // Il blocco sta tra la banda nera (in alto) e le righe (in basso):
+            // se il contenuto non entra, si taglia in coda invece di finire
+            // sopra la riga "Continua a guardare".
+            .clipToBounds(),
         verticalArrangement = Arrangement.spacedBy(titleSpacing)
     ) {
-        var logoLoadFailed by remember(preview.logo) { mutableStateOf(false) }
-        val showLogo = !preview.logo.isNullOrBlank() && !logoLoadFailed
+        var logoLoadFailed by remember(effectiveLogoUrl) { mutableStateOf(false) }
+        val showLogo = !effectiveLogoUrl.isNullOrBlank() && !logoLoadFailed
         if (showLogo) {
             AsyncImage(
                 model = logoModel,
                 contentDescription = preview.title,
                 onError = { logoLoadFailed = true },
                 modifier = Modifier
-                    .height(100.dp)
-                    .widthIn(min = 100.dp, max = 220.dp)
+                    .height(56.dp)
+                    .widthIn(min = 100.dp, max = 256.dp)
                     .fillMaxWidth(),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.CenterStart
@@ -660,14 +672,28 @@ private fun HeroTitleContent(
         }
 
         preview.description?.takeIf { it.isNotBlank() }?.let { description ->
-            Text(
-                text = description,
-                style = scaledDescriptionStyle,
-                color = NuvioTheme.colors.TextPrimary,
-                maxLines = descriptionMaxLines,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.graphicsLayer { alpha = metaAlpha }
-            )
+            // Lo spazio che resta è misurato qui: le righe che entrano davvero
+            // si arrotondano per difetto, così la sinossi non viene mai
+            // tagliata a metà riga (richiesta "la descrizione viene tagliata").
+            BoxWithConstraints(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .graphicsLayer { alpha = metaAlpha }
+            ) {
+                val lineHeightPx = with(density) { scaledDescriptionStyle.lineHeight.toPx() }
+                val linesThatFit = if (lineHeightPx > 0f) {
+                    (with(density) { maxHeight.toPx() } / lineHeightPx).toInt()
+                } else {
+                    descriptionMaxLines
+                }
+                Text(
+                    text = description,
+                    style = scaledDescriptionStyle,
+                    color = NuvioTheme.colors.TextPrimary,
+                    maxLines = linesThatFit.coerceIn(1, descriptionMaxLines),
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

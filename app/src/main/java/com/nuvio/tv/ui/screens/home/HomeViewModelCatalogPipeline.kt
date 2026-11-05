@@ -947,6 +947,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             val enrichmentSignature = heroEnrichmentSignaturePipeline(baseHeroItems, tmdbSettings)
             if (lastHeroEnrichmentSignature == enrichmentSignature) {
                 val cached = lastHeroEnrichedItems
+                publishHeroItemsForTranslationPipeline(cached)
                 _uiState.update { state ->
                     state.copy(
                         heroItems = if (state.heroItems == cached) state.heroItems else cached,
@@ -957,9 +958,21 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
                     )
                 }
             } else {
+                // Avvia subito la traduzione delle descrizioni GREZZE dell'hero,
+                // in parallelo con l'arricchimento di rete: senza questo, la
+                // traduzione partiva solo al termine delle fetch (più secondi)
+                // e l'utente vedeva l'hero in inglese — stessa logica del
+                // translateDescriptionEarly dello schermo dettaglio. Se
+                // l'arricchimento pubblica la stessa descrizione, la traduzione
+                // già pronta viene applicata al volo (pendingPreviewTranslations);
+                // se la descrizione cambia, la pubblicazione riarmata la propria.
+                baseHeroItems.forEach { hero ->
+                    schedulePreviewDescriptionTranslation(hero.id, hero)
+                }
                 val enrichedItems = enrichHeroItemsPipeline(baseHeroItems, tmdbSettings)
                 lastHeroEnrichmentSignature = enrichmentSignature
                 lastHeroEnrichedItems = enrichedItems
+                publishHeroItemsForTranslationPipeline(enrichedItems)
                 _uiState.update { state ->
                     state.copy(
                         heroItems = if (state.heroItems == enrichedItems) state.heroItems else enrichedItems,
@@ -978,6 +991,31 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     }
 
     schedulePosterStatusReconcilePipeline(displayRows)
+}
+
+/**
+ * L'hero veniva arricchito e pubblicato SOLO in `uiState.heroItems`: la home
+ * moderna però risolve titolo/descrizione da `_enrichedPreviews`, dove l'entry
+ * dell'hero non esisteva ancora — quindi `schedulePreviewDescriptionTranslation`
+ * non partiva mai per l'hero (nessun log "preview translation") e la
+ * descrizione restava inglese finché un arricchimento manuale non pubblicava
+ * l'item. Pubblica (o completa) ogni hero e arma la traduzione.
+ *
+ * Non si sovrascrive mai una descrizione già presente: se l'entry esiste la si
+ * tiene e si rilancia solo la traduzione, così un eventuale testo già tradotto
+ * non torna indietro all'originale.
+ */
+internal fun HomeViewModel.publishHeroItemsForTranslationPipeline(items: List<MetaPreview>) {
+    if (items.isEmpty()) return
+    items.forEach { hero ->
+        val existing = _enrichedPreviews.value[hero.id]
+        when {
+            existing == null -> addEnrichedPreview(hero.id, hero)
+            existing.description.isNullOrBlank() && !hero.description.isNullOrBlank() ->
+                addEnrichedPreview(hero.id, hero)
+            else -> schedulePreviewDescriptionTranslation(hero.id, existing)
+        }
+    }
 }
 
 private fun stableHeroSortKey(

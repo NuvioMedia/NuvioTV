@@ -84,8 +84,10 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
@@ -94,6 +96,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -122,13 +125,17 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Border
 import androidx.tv.material3.Icon
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.LocalContentFocusRequester
 import com.nuvio.tv.R
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.SettingsUiStyle
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.screens.livetv.LiveTvAddPlaylistForm
+import com.nuvio.tv.ui.util.rowsListDownRecovery
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 internal enum class SettingsCategory {
@@ -483,6 +490,10 @@ fun SettingsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            // Sfondo opaco (prima solo il padding era trasparente): copre la
+            // schermata uscente finché questa non è pronta, così non si vedono
+            // due barre sovrapposte durante il cambio di rotta (issue #11).
+            .background(NuvioTheme.colors.Background)
             .padding(
                 start = NuvioTheme.spacing.xxl,
                 end = NuvioTheme.spacing.xxl,
@@ -707,6 +718,12 @@ integrationAnimeSkipFocusRequester = integrationAnimeSkipFocusRequester,
             var railCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
             var focusedRailBounds by remember { mutableStateOf<Rect?>(null) }
             val density = LocalDensity.current
+            // Fix GIÙ nel dettaglio: si muove il focus e si verifica dove è
+            // finito invece di affidarsi al focus search geometrico (che da
+            // una riga di dettaglio aggancia le icone del rail laterale).
+            val detailContentFocusRequester = LocalContentFocusRequester.current
+            val detailFocusScope = rememberCoroutineScope()
+            var detailFocusInside by remember { mutableStateOf(false) }
 
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -804,6 +821,8 @@ integrationAnimeSkipFocusRequester = integrationAnimeSkipFocusRequester,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
+                        .focusRequester(detailContentFocusRequester)
+                        .focusRestorer()
                         .onKeyEvent { event ->
                             val toRailKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
                             if (event.type == KeyEventType.KeyDown && event.key == toRailKey) {
@@ -818,11 +837,34 @@ integrationAnimeSkipFocusRequester = integrationAnimeSkipFocusRequester,
                                     }
                                 }
                                 true
+                            } else if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
+                                // GIÙ non deve mai consegnare il focus al rail laterale:
+                                // si muove e, se il focus è uscito dal dettaglio, si rientra
+                                // sulla riga attiva (focusRestorer) prima che il rail lo tenga.
+                                // allowDetailAutofocus va aperto prima del restore, altrimenti
+                                // il guard onFocusChanged sotto rimanderebbe il focus al rail.
+                                detailFocusScope.launch {
+                                    focusManager.moveFocus(FocusDirection.Down)
+                                    repeat(3) { withFrameNanos { } }
+                                    if (!detailFocusInside) {
+                                        allowDetailAutofocus = true
+                                        val restored = runCatching {
+                                            detailContentFocusRequester.requestFocusAfterFrames()
+                                        }.getOrDefault(false)
+                                        if (!restored) {
+                                            runCatching {
+                                                contentFocusRequesters[selectedCategory]?.requestFocus()
+                                            }
+                                        }
+                                    }
+                                }
+                                true
                             } else {
                                 false
                             }
                         }
                         .onFocusChanged { state ->
+                            detailFocusInside = state.hasFocus
                             if (state.hasFocus && !allowDetailAutofocus) {
                                 railFocusRequesters[selectedCategory]?.let { requester ->
                                     runCatching { requester.requestFocus() }
@@ -1176,6 +1218,7 @@ private fun LibrarySettingsHubContent(
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = libraryHubState,
+                            modifier = Modifier.rowsListDownRecovery(libraryHubState),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             item(key = "library_hub_sources") {
@@ -1278,6 +1321,7 @@ private fun AnimeSettingsContent(
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = animeHubState,
+                            modifier = Modifier.rowsListDownRecovery(animeHubState),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             item(key = "anime_hub_tab_visibility") {
@@ -1389,6 +1433,7 @@ private fun AnimeSettingsContent(
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = animeIntegrationsState,
+                            modifier = Modifier.rowsListDownRecovery(animeIntegrationsState),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                             contentPadding = PaddingValues(8.dp)
                         ) {
@@ -1530,6 +1575,7 @@ private fun ExtraSettingsContent(
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = extraHubState,
+                            modifier = Modifier.rowsListDownRecovery(extraHubState),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             item(key = "extra_hub_tab_name") {
@@ -1639,6 +1685,7 @@ private fun ExtraSettingsContent(
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = contentDiscoveryState,
+                            modifier = Modifier.rowsListDownRecovery(contentDiscoveryState),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             item(key = "extra_content_discovery_addons") {
@@ -1695,6 +1742,7 @@ private fun ExtraSettingsContent(
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = integrationsState,
+                            modifier = Modifier.rowsListDownRecovery(integrationsState),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             item(key = "extra_integration_tmdb") {
@@ -1799,6 +1847,7 @@ private fun LiveTvSettingsContent(
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
                     state = liveTvHubState,
+                    modifier = Modifier.rowsListDownRecovery(liveTvHubState),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     item(key = "live_tv_hub_tab_visibility") {
@@ -2023,6 +2072,7 @@ private fun IntegrationSettingsContent(
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = integrationHubState,
+                            modifier = Modifier.rowsListDownRecovery(integrationHubState),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             item(key = "integration_hub_debrid") {

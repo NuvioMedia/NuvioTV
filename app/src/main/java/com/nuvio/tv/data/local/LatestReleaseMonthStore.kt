@@ -43,17 +43,30 @@ internal class LatestReleaseMonthStore(
 
     fun load(monthKey: String): List<CalendarItem>? {
         cached?.let { snapshot ->
-            if (snapshot.monthKey == monthKey) return snapshot.toItems()
+            if (snapshot.monthKey == monthKey) {
+                // La conversione può esplodere (vedi catch qui sotto): non deve
+                // mai propagarsi, altrimenti muore tutto il flusso del mese.
+                runCatching { snapshot.toItems() }.getOrNull()?.let { return it }
+                cached = null
+            }
         }
-        val snapshot = try {
+        // Parsing E conversione sotto lo stesso try: con R8 la firma generica
+        // di `items` può venire erasa, Gson restituisce LinkedTreeMap al posto
+        // di Entry e il cast lancia ClassCastException. In quel caso si butta
+        // via lo snapshot corrotto e la riga "Ultime Uscite" riparte dai dati
+        // di rete, invece di non comparire affatto.
+        return try {
             if (!file.exists()) return null
-            gson.fromJson(file.readText(), Snapshot::class.java)
+            val snapshot = gson.fromJson(file.readText(), Snapshot::class.java)
+                ?: return null
+            if (snapshot.monthKey != monthKey) return null
+            snapshot.toItems().also { cached = snapshot }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to read month snapshot: ${e.message}")
+            Log.w(TAG, "Month snapshot unreadable, deleting file: $e")
+            cached = null
+            runCatching { file.delete() }
             null
-        } ?: return null
-        cached = snapshot
-        return if (snapshot.monthKey == monthKey) snapshot.toItems() else null
+        }
     }
 
     fun save(monthKey: String, items: List<CalendarItem>) {

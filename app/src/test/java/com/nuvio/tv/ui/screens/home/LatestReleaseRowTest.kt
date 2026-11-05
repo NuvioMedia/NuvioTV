@@ -12,7 +12,11 @@ import org.junit.Test
 
 class LatestReleaseRowTest {
 
-    private fun meta(id: String, releaseInfo: String? = null): MetaPreview = MetaPreview(
+    private fun meta(
+        id: String,
+        releaseInfo: String? = null,
+        logo: String? = "https://example.com/logo-$id.png"
+    ): MetaPreview = MetaPreview(
         id = id,
         type = ContentType.MOVIE,
         rawType = "movie",
@@ -20,15 +24,18 @@ class LatestReleaseRowTest {
         poster = null,
         posterShape = PosterShape.POSTER,
         background = null,
-        logo = null,
+        logo = logo,
         description = null,
         releaseInfo = releaseInfo,
         imdbRating = null,
         genres = emptyList()
     )
 
-    private fun item(id: String, date: LocalDate?): CalendarItem =
-        CalendarItem(meta = meta(id, if (date == null) "2026" else null), releaseDate = date)
+    private fun item(id: String, date: LocalDate?, logo: String? = "https://example.com/logo-$id.png"): CalendarItem =
+        CalendarItem(
+            meta = meta(id, if (date == null) "2026" else null, logo),
+            releaseDate = date
+        )
 
     private val format: (LocalDate) -> String = { "DATE:${it}" }
 
@@ -76,5 +83,30 @@ class LatestReleaseRowTest {
         val card = requireNotNull(row).row.items.single()
         assertEquals("2026", card.releaseInfo)
         assertNull(card.released)
+    }
+
+    @Test
+    fun itemWithoutLogoIsExcluded() {
+        val row = buildLatestReleaseHomeRow(
+            items = listOf(
+                item("a", LocalDate.of(2026, 9, 5)),
+                item("no-logo", LocalDate.of(2026, 9, 6), logo = null),
+                item("blank-logo", LocalDate.of(2026, 9, 7), logo = "  ")
+            ),
+            title = "Ultime Uscite",
+            format = format
+        )
+        val ids = requireNotNull(row).row.items.map { it.id }
+        assertEquals(listOf("a"), ids)
+    }
+
+    @Test
+    fun rowWithoutAnyLogoReturnsNull() {
+        val row = buildLatestReleaseHomeRow(
+            items = listOf(item("a", LocalDate.of(2026, 9, 5), logo = null)),
+            title = "Ultime Uscite",
+            format = format
+        )
+        assertNull(row)
     }
 }

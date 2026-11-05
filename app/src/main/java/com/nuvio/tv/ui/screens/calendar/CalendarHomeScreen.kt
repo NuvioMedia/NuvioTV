@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.calendar
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -9,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +29,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -36,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import com.nuvio.tv.LocalContentFocusRequester
@@ -50,6 +55,9 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,15 +80,20 @@ import com.nuvio.tv.domain.model.CalendarSection
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.GlassPanel
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.TOP_BAR_BAND_HEIGHT
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.screens.home.HeroBackdropState
+import com.nuvio.tv.ui.screens.home.MODERN_ROW_HEADER_FOCUS_INSET
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import com.nuvio.tv.ui.util.rowsListUpRecovery
+import com.nuvio.tv.ui.util.rowsListDownRecovery
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
 import kotlinx.coroutines.delay
+import com.nuvio.tv.ui.util.dpadRepeatThrottle
 
 private val HERO_HEIGHT = 380.dp
 private val SECTION_PADDING_HORIZONTAL = 48.dp
@@ -88,7 +101,7 @@ private val SECTION_PADDING_HORIZONTAL = 48.dp
 /** The hero rotates through at most this many backdrops. */
 private const val HERO_MAX_SLIDES = 10
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CalendarHomeScreen(
     onBackPress: () -> Unit,
@@ -99,6 +112,23 @@ fun CalendarHomeScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val firstCardFocusRequester = remember { FocusRequester() }
+    // Primo poster della prima riga: target esplicito di GIÙ dall'hero (vedi
+    // CalendarHeroSection) — senza il target, il focus search di Compose
+    // aggancia la card più vicina al centro dell'hero, aka il 4°/5° poster.
+    val firstSectionPosterFocusRequester = remember { FocusRequester() }
+
+    // Initial focus lands on the hero once per screen entry. This must NOT
+    // live inside CalendarHeroSection: the hero is a LazyColumn item that
+    // leaves and re-enters composition while scrolling, and re-running it
+    // stole focus from the rows during UP navigation (the list scrolled to
+    // reveal a partially visible row, re-composed the hero, and the hero
+    // grabbed focus 50ms later, jumping to the top bar).
+    LaunchedEffect(Unit) {
+        while (uiState.sections.isEmpty() && !uiState.hasLoaded) delay(100)
+        if (uiState.sections.isEmpty()) return@LaunchedEffect
+        delay(50)
+        runCatching { firstCardFocusRequester.requestFocusAfterFrames(2) }
+    }
 
     // Error/empty must be reachable: only show the spinner while loading with
     // nothing to display yet (previous logic hid both states forever).
@@ -138,20 +168,47 @@ fun CalendarHomeScreen(
                 val firstSection = uiState.sections.firstOrNull()
 
                 val rowsListState = rememberLazyListState()
+                val density = LocalDensity.current
+                val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
+                // Stesso spec verticale della Home/Anime: il focus resta agganciato
+                // sotto la banda della barra e il poster in testa non si ferma mai
+                // tagliato a metà quando si risale con SU.
+                val verticalRowBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowsListState) {
+                    val topInsetPx = with(density) {
+                        (TOP_BAR_BAND_HEIGHT + MODERN_ROW_HEADER_FOCUS_INSET).toPx()
+                    }
+                    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+                    object : BringIntoViewSpec {
+                        override val scrollAnimationSpec: AnimationSpec<Float> = defaultBringIntoViewSpec.scrollAnimationSpec
+                        override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+                            val currentLeadingEdge = offset
+                            if (abs(currentLeadingEdge - topInsetPx) < 1f) return 0f
+                            val distance = currentLeadingEdge - topInsetPx
+                            if (distance < 0f && !rowsListState.canScrollBackward) return 0f
+                            return distance
+                        }
+                    }
+                }
+                CompositionLocalProvider(LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec) {
                 LazyColumn(
                     state = rowsListState,
                     modifier = Modifier
                         .fillMaxSize()
+                        .clipToBounds()
                         .focusRequester(LocalContentFocusRequester.current)
-                        .rowsListUpRecovery(rowsListState),
-                    contentPadding = PaddingValues(top = 72.dp, bottom = 160.dp)
+                        .focusRestorer()
+                        .dpadRepeatThrottle(scrollableState = rowsListState)
+                        .rowsListUpRecovery(rowsListState)
+                        .rowsListDownRecovery(rowsListState),
+                    contentPadding = PaddingValues(top = 72.dp, bottom = 200.dp)
                 ) {
                     if (firstSection != null) {
                         item(key = "hero_header") {
                             CalendarHeroSection(
                                 section = firstSection,
                                 onNavigateToDetail = onNavigateToDetail,
-                                initialFocusRequester = firstCardFocusRequester
+                                initialFocusRequester = firstCardFocusRequester,
+                                downFocusRequester = firstSectionPosterFocusRequester
                             )
                         }
                     }
@@ -159,12 +216,16 @@ fun CalendarHomeScreen(
                     itemsIndexed(
                         items = uiState.sections,
                         key = { _, section -> section.label }
-                    ) { _, section ->
+                    ) { index, section ->
                         CalendarSection(
                             section = section,
-                            onNavigateToDetail = onNavigateToDetail
+                            onNavigateToDetail = onNavigateToDetail,
+                            firstPosterFocusRequester = if (index == 0) {
+                                firstSectionPosterFocusRequester
+                            } else null
                         )
                     }
+                }
                 }
             }
         }
@@ -229,7 +290,8 @@ private fun CalendarMessageState(
 private fun CalendarHeroSection(
     section: CalendarSection,
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
-    initialFocusRequester: FocusRequester? = null
+    initialFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null
 ) {
     val firstItem = section.items.firstOrNull() ?: return
     var displayedIndex by rememberSaveable(section.label) { mutableIntStateOf(0) }
@@ -275,13 +337,6 @@ private fun CalendarHeroSection(
     // Initial focus lands on the hero itself (top of the list): on compact or
     // zoomed TV viewports, focusing a poster below triggered a bring-into-view
     // scroll that pushed the whole hero off-screen (Fire Stick).
-    LaunchedEffect(initialFocusRequester) {
-        if (initialFocusRequester != null) {
-            delay(50)
-            runCatching { initialFocusRequester.requestFocusAfterFrames(2) }
-        }
-    }
-
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -301,6 +356,21 @@ private fun CalendarHeroSection(
                     }
                 }
                 .onPreviewKeyEvent { event ->
+                    // GIÙ dall'hero: apri la riga sul PRIMO poster. Il focus
+                    // search di Compose sceglie invece la card più vicina al
+                    // centro dell'hero (il 4°/5° poster della riga) e da lì la
+                    // colonna non si riprende più.
+                    if (event.type == KeyEventType.KeyDown &&
+                        event.key == Key.DirectionDown &&
+                        downFocusRequester != null
+                    ) {
+                        val moved = runCatching {
+                            downFocusRequester.requestFocus()
+                        }.getOrDefault(false)
+                        // Se il poster non è ancora composto/agganciabile si
+                        // lascia il comportamento di default.
+                        return@onPreviewKeyEvent moved
+                    }
                     if (event.type == KeyEventType.KeyUp &&
                         (event.key == Key.DirectionCenter || event.key == Key.Enter)
                     ) {
@@ -557,10 +627,61 @@ private fun CalendarHeroSection(
 @Composable
 private fun CalendarSection(
     section: CalendarSection,
-    onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit
+    onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
+    firstPosterFocusRequester: FocusRequester? = null
 ) {
     val rowState = rememberLazyListState()
-    val firstPosterRequester = remember(section.label) { FocusRequester() }
+    // Chi ha bisogno di agganciare il primo poster (GIÙ dall'hero) passa il
+    // proprio requester: quello interno resta il target di focusRestorer.
+    val ownFirstPosterRequester = remember(section.label) { FocusRequester() }
+    val firstPosterRequester = firstPosterFocusRequester ?: ownFirstPosterRequester
+
+    // Spec orizzontale della riga: la LazyRow vive dentro lo spec verticale
+    // della lista, che altrimenti interpreterebbe le richieste di scorrimento
+    // orizzontali come movimenti verticali.
+    val density = LocalDensity.current
+    val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, isRtl) {
+        val parentStartOffsetPx = with(density) { SECTION_PADDING_HORIZONTAL.roundToPx() }
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        object : BringIntoViewSpec {
+            override val scrollAnimationSpec: AnimationSpec<Float> =
+                defaultBringIntoViewSpec.scrollAnimationSpec
+
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float
+            ): Float {
+                val childSize = abs(size)
+                if (isRtl) {
+                    val childSmallerThanParent = childSize <= containerSize
+                    val initialTarget = containerSize - parentStartOffsetPx.toFloat()
+                    val targetForTrailingEdge =
+                        if (childSmallerThanParent && initialTarget < childSize) {
+                            childSize
+                        } else {
+                            initialTarget
+                        }
+                    return (offset + size) - targetForTrailingEdge
+                } else {
+                    val childSmallerThanParent = childSize <= containerSize
+                    val initialTarget = parentStartOffsetPx.toFloat()
+                    val spaceAvailable = containerSize - initialTarget
+
+                    val targetForLeadingEdge =
+                        if (childSmallerThanParent && spaceAvailable < childSize) {
+                            containerSize - childSize
+                        } else {
+                            initialTarget
+                        }
+
+                    return offset - targetForLeadingEdge
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -592,6 +713,7 @@ private fun CalendarSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
         LazyRow(
             state = rowState,
             contentPadding = PaddingValues(horizontal = SECTION_PADDING_HORIZONTAL),
@@ -618,6 +740,7 @@ private fun CalendarSection(
                     focusRequester = if (index == 0) firstPosterRequester else null
                 )
             }
+        }
         }
     }
 }
@@ -756,3 +879,4 @@ private fun CalendarPortraitCard(
         }
     }
 }
+

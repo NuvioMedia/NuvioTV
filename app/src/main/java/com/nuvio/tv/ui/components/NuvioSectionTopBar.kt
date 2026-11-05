@@ -1,17 +1,14 @@
 package com.nuvio.tv.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,13 +24,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 data class TopBarSectionTab(
@@ -42,26 +37,36 @@ data class TopBarSectionTab(
 )
 
 /**
+ * Banda nera sotto la barra: le tab finiscono a 64dp (topPadding sm=8dp +
+ * altezza tab 56dp), quindi la banda copre esattamente la fascia delle tab.
+ * Ridurla da 96dp a 64dp alza il tetto del blocco testo dell'hero di 32dp (il
+ * padding top dello spec è questa stessa costante): con logo grande e premi su
+ * due righe il blocco supera i 190dp e senza spazio in cima la descrizione
+ * finiva tagliata a metà riga. Mantenere questa costante ≥64dp, o le tab
+ * restano scoperte.
+ */
+internal val TOP_BAR_BAND_HEIGHT = 64.dp
+
+/**
  * Barra alta delle sezioni — il riferimento è Prime Video: una striscia di
  * tab testuali in alto (Home · Extra · Anime · Calendario) raggiungibile
  * con SU dalla prima riga di contenuti, che si dimmera quando il focus è
- * altrove. A destra l'avatar del profilo (come Netflix/Prime). Le etichette
- * delle sezioni vivono QUI; il rail a sinistra resta a icone.
+ * altrove. A destra resta vuoto: nessun marchio e nessun avatar (richiesta
+ * dell'utente: la barra deve restare solo navigazione). Le etichette delle
+ * sezioni vivono QUI; il rail a sinistra resta a icone.
  *
- * Zero immagini: solo testo, un scrim verticale di leggibilità e
- * ProfileAvatarCircle (avatar già caricato altrove o iniziale).
+ * Sotto le tab c'è una banda nera opaca (come la colonna nera del rail): il
+ * contenuto che scorre in alto sparisce dietro la barra invece di passarci
+ * attraverso, e la dissolvenza finale evita il taglio netto.
  */
 @Composable
 internal fun NuvioSectionTopBar(
     tabs: List<TopBarSectionTab>,
     selectedRoute: String?,
     tabFocusRequesters: Map<String, FocusRequester>,
-    showProfile: Boolean,
-    profileName: String,
-    profileColorHex: String,
-    profileAvatarImageUrl: String?,
-    onProfileClick: () -> Unit,
     onNavigate: (String) -> Unit,
+    startPadding: Dp = 0.dp,
+    topPadding: Dp = 0.dp,
     modifier: Modifier = Modifier
 ) {
     var barHasFocus by remember { mutableStateOf(false) }
@@ -71,59 +76,44 @@ internal fun NuvioSectionTopBar(
     )
 
     Box(
-        modifier = modifier.graphicsLayer { alpha = barAlpha }
+        modifier = modifier.height(TOP_BAR_BAND_HEIGHT)
     ) {
-        // Scrim verticale sottile: leggibilità delle tab sopra backdrop chiari.
+        // Banda nera: opaca dietro le tab (fino a ~48dp) con la dissolvenza
+        // che termina esattamente a fine tab (64dp), così il contenuto che
+        // scorre in alto sparisce dietro la fascia delle tab senza taglio netto.
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent)
+                        colorStops = arrayOf(
+                            0f to Color.Black,
+                            0.75f to Color.Black,
+                            0.93f to Color.Black.copy(alpha = 0.85f),
+                            1f to Color.Transparent
+                        )
                     )
                 )
         )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(start = startPadding + NuvioTheme.spacing.lg, top = topPadding)
                 .height(56.dp)
-                .padding(horizontal = NuvioTheme.spacing.lg)
+                // Solo le tab si dimmeranno: la banda resta sempre opaca.
+                .graphicsLayer { alpha = barAlpha }
                 .onFocusChanged { state -> barHasFocus = state.hasFocus },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
         ) {
-            // Marchio "nuvio" a sinistra come su Prime Video: la barra non è
-            // solo un tratto di tab ma anche identità di sezione.
-            Image(
-                painter = painterResource(R.drawable.nuvio_text),
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(end = NuvioTheme.spacing.md)
-                    .height(20.dp),
-                contentScale = ContentScale.FillHeight
-            )
+            // Nessun marchio "nuvio" e nessun avatar: la barra è solo una
+            // striscia di tab, così non c'è nulla da sovrapporre ai testi.
             tabs.forEach { tab ->
                 SectionTab(
                     label = tab.label,
                     selected = tab.route == selectedRoute,
                     focusRequester = tabFocusRequesters[tab.route],
                     onClick = { onNavigate(tab.route) }
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            if (showProfile && profileName.isNotBlank()) {
-                // L'avatar è l'elemento cliccabile e focusabile: così il
-                // ring di focus si accende SULL'avatar, non su un riquadro
-                // invisibile affianco.
-                ProfileAvatarCircle(
-                    name = profileName,
-                    colorHex = profileColorHex,
-                    avatarImageUrl = profileAvatarImageUrl,
-                    size = 36.dp,
-                    modifier = Modifier
-                        .padding(start = NuvioTheme.spacing.sm)
-                        .clip(RoundedCornerShape(50))
-                        .clickable(onClick = onProfileClick)
                 )
             }
         }

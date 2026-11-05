@@ -45,4 +45,5 @@ data class AnimeHomeUiState(
 sealed class AnimeHomeEvent {
     data class OnLoadMoreCatalog(val catalogId: String, val addonId: String, val type: String) : AnimeHomeEvent()
     data object OnRetry : AnimeHomeEvent()
+    data class OnItemFocus(val item: MetaPreview) : AnimeHomeEvent()
 }

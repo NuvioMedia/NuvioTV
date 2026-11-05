@@ -19,6 +19,7 @@ fun MetaPreviewDto.toDomain(catalogType: String, sourceAddonBaseUrl: String? = n
         description = description,
         releaseInfo = releaseInfo,
         imdbRating = imdbRating?.toFloatOrNull(),
+        voteCount = coerceInt(votes) ?: coerceInt(voteCountJson) ?: coerceInt(tmdbVoteCount),
         genres = genres ?: emptyList(),
         runtime = runtime,
         status = status?.trim()?.takeIf { it.isNotBlank() },

@@ -35,5 +35,13 @@ data class MetaPreviewDto(
     @Json(name = "links") val links: List<MetaLinkDto>? = null,
     @Json(name = "trailers") val trailers: List<MetaTrailerDto>? = null,
     @Json(name = "behaviorHints") val behaviorHints: MetaBehaviorHintsDto? = null,
-    @Json(name = "trailerStreams") val trailerStreams: List<TrailerStreamDto>? = null
+    @Json(name = "trailerStreams") val trailerStreams: List<TrailerStreamDto>? = null,
+    // Optional popularity signals. Catalogs mix the shapes: some report "votes"
+    // as a string, others a TMDB-style "vote_count" number. Read as Any? (like
+    // director/writer above) and coerced in the mapper, so a catalog that
+    // omits them - or changes their type - never breaks parsing of the whole
+    // response. They are what the "Popolarità" sort in Ricerca orders by.
+    @Json(name = "votes") val votes: Any? = null,
+    @Json(name = "voteCount") val voteCountJson: Any? = null,
+    @Json(name = "vote_count") val tmdbVoteCount: Any? = null
 )

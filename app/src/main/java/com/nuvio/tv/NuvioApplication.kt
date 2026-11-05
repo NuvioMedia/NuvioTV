@@ -331,10 +331,13 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                                 // a single Home load was holding 6 parallel connections to
                                 // aiometadata.elfhosted.com and 46 live OkHttp threads. Image
                                 // fetches are the bulk of that traffic, so cap them here.
+                                // 2 per host era troppo stretto: durante lo scroll si
+                                // vedevano le card nude in attesa del turno. A 4 le immagini
+                                // arrivano con lo scroll, mentre il totale resta fermo a 8.
                                 .dispatcher(
                                     okhttp3.Dispatcher().apply {
                                         maxRequests = 8
-                                        maxRequestsPerHost = 2
+                                        maxRequestsPerHost = 4
                                     }
                                 )
                                 // OkHttp defaults to 10s: poster/backdrop fetches on
@@ -371,7 +374,11 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             .precision(coil3.size.Precision.INEXACT)
             .allowHardware(true)
             .allowRgb565(true)
-            .bitmapFactoryMaxParallelism(2)
+            // 2 parallele significava che, scrollando, si alternavano momenti in
+            // cui nessuna card stava venendo decodificata: le righe dense (Top 10,
+            // "Potrebbero piacerti") restavano vuote più del necessario. 3 resta
+            // sotto il numero di core utile di una stick.
+            .bitmapFactoryMaxParallelism(3)
             .build()
     }
 }

@@ -258,12 +258,14 @@ object MemoryWatch {
 
         var memAvailKb = -1L
         var swapFreeKb = -1L
+        var swapTotalKb = -1L
         runCatching {
             File("/proc/meminfo").forEachLine { line ->
                 val value = line.substringAfter(':').trim()
                 when {
                     line.startsWith("MemAvailable:") -> memAvailKb = value.removeSuffix("kB").trim().toLongOrNull() ?: -1L
                     line.startsWith("SwapFree:") -> swapFreeKb = value.removeSuffix("kB").trim().toLongOrNull() ?: -1L
+                    line.startsWith("SwapTotal:") -> swapTotalKb = value.removeSuffix("kB").trim().toLongOrNull() ?: -1L
                 }
             }
         }
@@ -275,7 +277,7 @@ object MemoryWatch {
         val runaway = rssKb >= RUNAWAY_MIN_RSS_KB &&
             lastRssKb >= 0L && rssKb - lastRssKb >= RUNAWAY_RSS_DELTA_KB
         if (rssKb >= 0L) lastRssKb = rssKb
-        evaluatePressure(memAvailKb, swapFreeKb, rssKb, swapKb, runaway)
+        evaluatePressure(memAvailKb, swapFreeKb, swapTotalKb, rssKb, swapKb, runaway)
 
         // 3) Modalità rapida sotto pressione/fuga: saltiamo il breakdown PSS
         //    (Debug.getMemoryInfo sul main handler) — serve solo a log.
@@ -321,9 +323,26 @@ object MemoryWatch {
      * - SOFT  → log diagnostico senza azioni (evita trim inutili).
      * - NONE  → condizioni di recupero: la prossima ripresa è di nuovo libera.
      * Valori di parse non validi (-1) mantengono lo stato corrente.
+     *
+     * Le soglie SwapFree valgono solo quando esiste davvero dello swap
+     * ([swapTotalKb] > 0): i dispositivi senza swap (emulatori, TV senza zRAM)
+     * dichiarano SwapFree=0 a prescindere dal carico e con la regola in OR
+     * restavano in HARD perennemente, bloccando trailer e preloader anche con
+     * gigabyte liberi (#7 "non ci sono più trailer").
      */
-    private fun evaluatePressure(memAvailKb: Long, swapFreeKb: Long, rssKb: Long, swapKb: Long, runaway: Boolean = false) {
+    private fun evaluatePressure(
+        memAvailKb: Long,
+        swapFreeKb: Long,
+        swapTotalKb: Long,
+        rssKb: Long,
+        swapKb: Long,
+        runaway: Boolean = false
+    ) {
         val within = { value: Long, limit: Long -> value >= 0L && value <= limit }
+        val hasSwap = swapTotalKb > 0L
+        val swapExhausted = hasSwap && within(swapFreeKb, HARD_PRESSURE_SWAP_KB)
+        val swapSoftOk = !hasSwap || within(swapFreeKb, SOFT_PRESSURE_SWAP_KB)
+        val swapReleased = !hasSwap || swapFreeKb > RELEASE_SWAP_KB
         // Pressione auto-imposta sulla nostra RSS (solo classi RAM basse):
         // se il processo supera il tetto, siamo noi il problema, non il sistema.
         // La fuga RSS (delta >= 100 MB tra due campioni) vale PER TUTTI i
@@ -331,9 +350,9 @@ object MemoryWatch {
         // prima che il sistema abbia tempo di avvisare.
         val selfRssHard = totalMemKb in 1L until LOW_RAM_TOTAL_KB && rssKb >= HARD_SELF_RSS_KB
         val newState = when {
-            within(swapFreeKb, HARD_PRESSURE_SWAP_KB) || within(memAvailKb, HARD_PRESSURE_AVAIL_KB) || selfRssHard || runaway -> Pressure.HARD
-            within(memAvailKb, SOFT_PRESSURE_AVAIL_KB) && within(swapFreeKb, SOFT_PRESSURE_SWAP_KB) -> Pressure.SOFT
-            memAvailKb > RELEASE_AVAIL_KB && swapFreeKb > RELEASE_SWAP_KB -> Pressure.NONE
+            swapExhausted || within(memAvailKb, HARD_PRESSURE_AVAIL_KB) || selfRssHard || runaway -> Pressure.HARD
+            within(memAvailKb, SOFT_PRESSURE_AVAIL_KB) && swapSoftOk -> Pressure.SOFT
+            memAvailKb > RELEASE_AVAIL_KB && swapReleased -> Pressure.NONE
             else -> pressureState
         }
         val old = pressureState

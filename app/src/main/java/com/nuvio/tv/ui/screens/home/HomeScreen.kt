@@ -232,8 +232,14 @@ fun HomeScreen(
     // Reports the home screen as fully drawn once it leaves the loading state so startup timing is measurable and post-launch work can be deferred.
     ReportDrawnWhen { !showStartupLoader }
 
+    // Sfondo opaco: durante il cambio di rotta NavHost tiene la schermata
+    // vecchia finché la nuova non è pronta. Senza sfondo la vecchia traspare
+    // sotto la barra sezioni (già aggiornata dallo scaffold) e si vedono due
+    // barre sovrapposte per ~150 ms (issue #11).
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NuvioTheme.colors.Background)
     ) {
         when {
             !uiState.layoutPreferencesReady -> {

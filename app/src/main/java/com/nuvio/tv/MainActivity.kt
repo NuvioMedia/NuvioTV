@@ -177,6 +177,7 @@ import com.nuvio.tv.ui.components.TopBarSectionTab
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.navigation.NuvioNavHost
 import com.nuvio.tv.ui.navigation.Screen
+import com.nuvio.tv.ui.navigation.SectionRouteProbeState
 import com.nuvio.tv.ui.notifications.NewEpisodeNoticeHost
 import com.nuvio.tv.ui.notifications.NewEpisodeNoticeViewModel
 import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
@@ -211,6 +212,12 @@ import kotlinx.coroutines.launch
 
 val LocalSidebarExpanded = compositionLocalOf { false }
 val LocalContentFocusRequester = compositionLocalOf { FocusRequester.Default }
+// Piazza il focus sulla tab di sezione attiva nella barra alta. Le schermate
+// lo usano quando SU dalla riga più in alto delle righe non può avanzare
+// (un moveFocus alla cieca qui aggancia il rail laterale): MainWindow intercetta
+// solo SU non consumato, ma dentro rowsListUpRecovery il tasto è già stato
+// consumato, quindi serve un modo esplicito di raggiungere la barra.
+val LocalFocusSectionTopBar = compositionLocalOf<(() -> Boolean)?> { null }
 
 private const val SIDEBAR_AUTO_COLLAPSE_DELAY_MS = 4_000L
 
@@ -1757,9 +1764,20 @@ private fun ModernSidebarScaffold(
         }
     }
 
+    // La pill in Impostazioni è forzata a mostrare l'etichetta: appena se ne
+    // esce va richiusa subito, altrimenti resta appesa sopra il contenuto per
+    // l'intero timeout di auto-collapse (4 secondi di "barra fantasma").
+    var floatingPillWasExpanded by remember { mutableStateOf(keepFloatingPillExpanded) }
     LaunchedEffect(keepFloatingPillExpanded, showSidebar) {
-        if (!showSidebar || keepFloatingPillExpanded) {
+        if (!showSidebar) {
+            floatingPillWasExpanded = false
             isFloatingPillIconOnly = false
+        } else if (keepFloatingPillExpanded) {
+            floatingPillWasExpanded = true
+            isFloatingPillIconOnly = false
+        } else if (floatingPillWasExpanded) {
+            floatingPillWasExpanded = false
+            isFloatingPillIconOnly = true
         }
     }
 
@@ -2025,9 +2043,24 @@ private fun ModernSidebarScaffold(
                     }
                 }
         ) {
+            // Piazza il focus sulla tab di sezione attiva (o alla prima). Le
+            // schermate lo invocano quando SU dalla riga in cima non può
+            // avanzare: MainWindow intercetta solo SU non consumato, ma dentro
+            // rowsListUpRecovery il tasto è già stato consumato.
+            val focusSectionTopBar: () -> Boolean = {
+                if (topBarTabs.isNotEmpty() && currentRoute in sectionRoutes) {
+                    val target = topBarTabFocusRequesters[selectedDrawerRoute]
+                        ?: topBarTabFocusRequesters[topBarTabs.first().route]
+                    target != null &&
+                        runCatching { target.requestFocus() }.getOrDefault(false)
+                } else {
+                    false
+                }
+            }
             CompositionLocalProvider(
                 LocalSidebarExpanded provides isSidebarExpanded,
-                LocalContentFocusRequester provides contentFocusRequester
+                LocalContentFocusRequester provides contentFocusRequester,
+                LocalFocusSectionTopBar provides focusSectionTopBar
             ) {
                 NuvioNavHost(
                     navController = navController,
@@ -2040,18 +2073,18 @@ private fun ModernSidebarScaffold(
         // La barra sezioni vive sulle sezioni (Home, Anime, Extra, Calendario);
         // nelle schermate strumentali (Ricerca, Scopri, Libreria, Live TV,
         // Impostazioni...) sparisce per non sovrapporsi ai contenuti.
-        if (showSidebar && currentRoute in sectionRoutes && topBarTabs.isNotEmpty()) {
+        if (showSidebar &&
+            currentRoute in sectionRoutes &&
+            // La barra compare solo quando la schermata di sezione è davvero
+            // composta: altrimenti commuta subito mentre la schermata vecchia
+            // è ancora visibile e si vedono due barre sovrapposte (issue #11).
+            currentRoute == SectionRouteProbeState.composedRoute &&
+            topBarTabs.isNotEmpty()
+        ) {
             NuvioSectionTopBar(
                 tabs = topBarTabs,
                 selectedRoute = selectedDrawerRoute,
                 tabFocusRequesters = topBarTabFocusRequesters,
-                // L'avatar del profilo è sempre visibile (come su Prime), anche
-                // con profilo unico: è l'ancora destra della barra.
-                showProfile = activeProfileName.isNotEmpty(),
-                profileName = activeProfileName,
-                profileColorHex = activeProfileColorHex,
-                profileAvatarImageUrl = activeProfileAvatarImageUrl,
-                onProfileClick = onSwitchProfile,
                 onNavigate = { route ->
                     // Come nel pannello laterale: rotta ottimistica per l'highlight
                     // IMMEDIATO + navigazione Vera sul NavController, altrimenti la
@@ -2066,15 +2099,11 @@ private fun ModernSidebarScaffold(
                     // (come la Home): il focus atterra direttamente sulla prima riga.
                     pendingContentFocusTransfer = true
                 },
+                startPadding = 52.dp, // Marchio subito dopo la colonna nera del rail
+                topPadding = NuvioTheme.spacing.sm,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .fillMaxWidth()
-                    .padding(
-                        // Marchio subito dopo la colonna nera del rail (52dp):
-                        // molto più a sinistra del vecchio collapsedWidth.
-                        start = 52.dp,
-                        top = NuvioTheme.spacing.sm
-                    )
                     // GIÙ dalla barra alta = contenuto. Senza questo handler il
                     // focus search geometrico vede prima il rail laterale (più
                     // vicino in basso a sinistra) e il focus resta "bloccato"
@@ -2182,12 +2211,14 @@ private fun ModernSidebarScaffold(
             if (sidebarShowCollapsedPill) {
                 // Colonna a tutta altezza sotto le icone (stile Prime Video):
                 // chiude il lato sinistro e tiene le icone nude leggibili su
-                // ogni backdrop. Pieno nero per i primi ~39dp (sotto le icone),
-                // poi dissolvenza orizzontale sugli ultimi ~13dp: le card
+                // ogni backdrop. Pieno nero per i primi ~34dp (sotto le icone),
+                // poi dissolvenza orizzontale che è completa a ~46dp: le card
                 // luminose che scorrono dentro la colonna sbiadiscono invece
-                // di essere sezionate dal bordo. Stessi 52dp di rowStartPadding
-                // delle righe: la dissolvenza finisce esattamente dove il
-                // contenuto riposa, senza scurire le card a riposo.
+                // di essere sezionate dal bordo. I testi delle schermate
+                // partono da 48-52dp, quindi la dissolvenza deve essere già
+                // terminata prima di lì: con la vecchia fine a 52dp le prime
+                // lettere di Ricerca/Libreria/Home cadevano dentro la
+                // dissolvenza e venivano scurite dalla striscia nera.
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -2196,7 +2227,8 @@ private fun ModernSidebarScaffold(
                         .background(
                             Brush.horizontalGradient(
                                 0f to Color.Black,
-                                0.75f to Color.Black,
+                                0.65f to Color.Black,
+                                0.88f to Color.Transparent,
                                 1f to Color.Transparent
                             )
                         )

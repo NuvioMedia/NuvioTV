@@ -38,9 +38,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
@@ -99,7 +102,19 @@ internal fun DiscoverSection(
     val availableGenres = selectedCatalog?.genres ?: emptyList()
 
     val gridState = rememberLazyGridState()
+    val initialFocusRequester = remember { FocusRequester() }
+    var focusInside by remember { mutableStateOf(false) }
     var expandedPicker by remember { mutableStateOf<String?>(null) }
+
+    // Focus iniziale deterministico sul primo elemento della schermata (il
+    // filtro "Tipo"): il focus search geometrico finisce invece sui poster
+    // della griglia o sugli altri filtri a seconda da dove si entra.
+    LaunchedEffect(Unit) {
+        repeat(3) { withFrameNanos { } }
+        if (!focusInside) {
+            runCatching { initialFocusRequester.requestFocus() }
+        }
+    }
 
     LaunchedEffect(uiState.discoverHasMore, uiState.pendingDiscoverResults) {
         if (uiState.discoverHasMore && uiState.pendingDiscoverResults.isEmpty()) {
@@ -113,7 +128,8 @@ internal fun DiscoverSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = NuvioTheme.spacing.xxxl),
+            .padding(horizontal = NuvioTheme.spacing.xxxl)
+            .onFocusChanged { focusInside = it.hasFocus },
         verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         if (showBuiltInHeader) {
@@ -129,7 +145,9 @@ internal fun DiscoverSection(
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             DiscoverDropdownPicker(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(initialFocusRequester),
                 title = stringResource(R.string.discover_filter_type),
                 value = localizedContentType(context, selectedType),
                 selectedValue = selectedType,

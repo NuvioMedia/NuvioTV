@@ -8,7 +8,9 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
@@ -56,6 +58,44 @@ import com.nuvio.tv.ui.screens.profile.ProfileSelectionMode
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
 import com.nuvio.tv.ui.screens.tmdb.TmdbEntityBrowseScreen
 import com.nuvio.tv.ui.screens.home.HeroBackdropState
+
+/**
+ * Ricorda quale schermata di sezione è **composta** nel NavHost.
+ *
+ * La barra sezioni è renderizzata dallo scaffold di MainActivity (fuori dal
+ * NavHost), quindi commuta subito appena cambia la rotta, mentre la schermata
+ * di destinazione impiega qualche frame a comparsi e quella uscente resta
+ * visibile: senza questo segnale per ~150 ms si vedono due barre sovrapposte
+ * l'una sull'altra (issue #11). Lo scaffold mostra la barra solo quando
+ * `composedRoute` coincide con la rotta corrente.
+ */
+internal object SectionRouteProbeState {
+    private val current = mutableStateOf<String?>(null)
+
+    /** Rotta della schermata di sezione attualmente composta (null = nessuna). */
+    val composedRoute: String? get() = current.value
+
+    fun markComposed(route: String) {
+        current.value = route
+    }
+
+    fun markDisposed(route: String) {
+        if (current.value == route) current.value = null
+    }
+}
+
+/**
+ * Da dichiarare come prima cosa dentro la destination di una schermata di
+ * sezione: segnala a [SectionRouteProbeState] che la schermata è entrata in
+ * composizione (e smonta il segnale quando esce). Non disegna nulla.
+ */
+@Composable
+internal fun SectionRouteProbe(route: String) {
+    DisposableEffect(route) {
+        SectionRouteProbeState.markComposed(route)
+        onDispose { SectionRouteProbeState.markDisposed(route) }
+    }
+}
 
 private fun createContinueWatchingRoute(
     item: ContinueWatchingItem,
@@ -176,7 +216,13 @@ fun NuvioNavHost(
             val isAutoPlayNav = targetState.arguments
                 ?.getString("autoPlayNav")
                 ?.toBooleanStrictOrNull() == true
-            if (isStreamToPlayer(from, to) && isAutoPlayNav) {
+            // Stessa regola di enter/popEnter/popExit: tra schermate con chrome
+            // non si dissolve MAI la schermata vecchia. Con il fade in uscita
+            // la schermata di partenza (es. le Impostazioni con la sua barra
+            // schede) resta mezza trasparente sopra la nuova per ~150 ms e,
+            // finché la nuova non ha composto il primo frame, si vedono
+            // sovrapposte entrambe le barre ("barra visibile e sovrapposta").
+            if ((isStreamToPlayer(from, to) && isAutoPlayNav) || involvesChrome(from, to)) {
                 ExitTransition.None
             } else {
                 fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.medium))
@@ -233,6 +279,7 @@ fun NuvioNavHost(
         }
 
         composable(Screen.Home.route) {
+            SectionRouteProbe(Screen.Home.route)
             HomeScreen(
                     onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                         val heroBackdrop = HeroBackdropState.consumeAndClear()
@@ -1192,6 +1239,7 @@ fun NuvioNavHost(
         }
 
         composable(Screen.Anime.route) {
+            SectionRouteProbe(Screen.Anime.route)
             val animeViewModel: com.nuvio.tv.ui.screens.anime.AnimeHomeViewModel =
                 androidx.hilt.navigation.compose.hiltViewModel()
             com.nuvio.tv.ui.screens.anime.AnimeHomeScreen(
@@ -1269,6 +1317,7 @@ fun NuvioNavHost(
         }
 
         composable(Screen.Extra.route) {
+            SectionRouteProbe(Screen.Extra.route)
             val extraViewModel: com.nuvio.tv.ui.screens.extra.ExtraHomeViewModel =
                 androidx.hilt.navigation.compose.hiltViewModel()
             com.nuvio.tv.ui.screens.extra.ExtraHomeScreen(
@@ -1346,6 +1395,7 @@ fun NuvioNavHost(
         }
 
         composable(Screen.Calendar.route) {
+            SectionRouteProbe(Screen.Calendar.route)
             com.nuvio.tv.ui.screens.calendar.CalendarHomeScreen(
                 onBackPress = { navController.popBackStack() },
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->

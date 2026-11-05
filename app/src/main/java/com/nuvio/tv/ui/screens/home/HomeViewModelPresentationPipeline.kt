@@ -409,7 +409,12 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
                             trailerPreviewAudioUrlsState[itemId] = fallbackAudio
                         }
                     } else {
-                        trailerPreviewNegativeCache.add(itemId)
+                        // Only remember a miss when we actually had something to
+                        // resolve: a TMDB id that failed to resolve (rate limit,
+                        // cold start) is transient and must be retried on focus.
+                        if (tmdbId != null || resolvedFallbackYtId != null) {
+                            trailerPreviewNegativeCache.add(itemId)
+                        }
                         trailerPreviewUrlsState.remove(itemId)
                         trailerPreviewAudioUrlsState.remove(itemId)
                     }
@@ -558,9 +563,16 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             // Ensure enrichedPreviews contains this item so the UI can display
             // hero data immediately (e.g. when adjacent prefetch resolved it
             // before the user focused on it).
-            if (item.id !in _enrichedPreviews.value) {
+            val existing = _enrichedPreviews.value[item.id]
+            if (existing == null) {
                 val enriched = findCatalogItemById(item.id) ?: item
                 addEnrichedPreview(item.id, enriched)
+            } else {
+                // A first translation attempt can fail transiently (ML Kit model
+                // still downloading, detection timeout) and leave the raw English
+                // description in the map: without re-arming here, no later focus
+                // would ever retry it and the hero stayed in English forever.
+                schedulePreviewDescriptionTranslation(item.id, existing)
             }
             if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
             // Un arricchimento rimasto appeso a un altro item è ormai stale: questo
@@ -580,7 +592,14 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             return
         }
     }
-    if (pendingTmdbEnrichItemId == item.id) return
+    // Un job cancellato durante il debounce (prima del try/finally) lascia
+    // `pendingTmdbEnrichItemId` appeso: senza questo controllo ogni focus
+    // futuro su questo item tornerebbe qui in silenzio e l'arricchimento
+    // (e quindi la traduzione della descrizione) non ripartirebbe mai.
+    if (pendingTmdbEnrichItemId == item.id) {
+        if (tmdbEnrichFocusJob?.isActive == true) return
+        pendingTmdbEnrichItemId = null
+    }
 
     // Clear enriching for previous item immediately when focus moves away
     if (_enrichingItemId.value != null && _enrichingItemId.value != item.id) {
@@ -601,6 +620,18 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
             return@launch
         }
+        // Traduzione subito, in parallelo con le fetch di rete: l'hero mostra
+        // l'item focused e la sua descrizione va italiana appena pronta, invece
+        // di aspettare TMDB/OMDb più la traduzione in serie (era il ritardo
+        // percepito "la traduzione arriva in ritardo" durante lo scroll).
+        // Pubblicare l'entry solo quando non esiste: sovrascrivere un entry
+        // già arricchito e tradotto col testo grezzo rimetterebbe l'inglese.
+        val existingPreview = _enrichedPreviews.value[item.id]
+        if (existingPreview == null) {
+            addEnrichedPreview(item.id, item, priority = true)
+        } else {
+            schedulePreviewDescriptionTranslation(item.id, existingPreview, priority = true)
+        }
         if (willEnrich) {
             setEnrichingItemId(item.id)
             android.util.Log.i("HomePipeline", "enrich start item=${item.id}")
@@ -609,6 +640,16 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
         if ((item.id in prefetchedTmdbIds || item.id in prefetchedExternalMetaIds) && tvdbAlreadyDone) {
             if (!externalEnrichmentOutstanding(item.id)) {
                 if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
+                // Publish what the earlier prefetch already merged (or the raw
+                // catalog item): this path used to return without publishing
+                // anything, so the hero kept the addon's English description and
+                // the translation never got scheduled for it.
+                val existing = _enrichedPreviews.value[item.id]
+                if (existing == null) {
+                    addEnrichedPreview(item.id, findCatalogItemById(item.id) ?: item)
+                } else {
+                    schedulePreviewDescriptionTranslation(item.id, existing)
+                }
                 // Still prefetch full meta in background for instant detail screen.
                 prefetchBackgroundMetaForItem(item)
                 return@launch

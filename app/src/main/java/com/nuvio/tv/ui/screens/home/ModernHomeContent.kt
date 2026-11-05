@@ -79,6 +79,7 @@ import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.ContinueWatchingOptionsDialog
+import com.nuvio.tv.ui.components.TOP_BAR_BAND_HEIGHT
 import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.LocalContentFocusRequester
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
@@ -652,7 +653,13 @@ fun ModernHomeContent(
                     val enrichedHero = if (enrichedItem != null) {
                         HeroPreview(
                             title = enrichedItem.name,
-                            logo = enrichedItem.logo,
+                            // Fallback al logo della card di catalogo: se TMDB non
+                        // ha il logo per quel titolo, tenere il logo esistente
+                        // invece di azzerarlo (altrimenti l'hero passa dal logo
+                        // al titolo scritto appena l'arricchimento arriva).
+                            logo = enrichedItem.logo
+                                ?: activeCarouselItem?.heroPreview?.logo
+                                ?: activeCarouselItem?.heroPreview?.frozenLogoUrl,
                             description = enrichedItem.description,
                             contentTypeText = activeCarouselItem?.heroPreview?.contentTypeText,
                             isSeries = isSeriesType(enrichedItem.apiType),
@@ -1105,7 +1112,14 @@ fun ModernHomeContent(
             val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight) {
                 Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = rowHorizontalPadding, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.none + rowsViewportHeight + NuvioTheme.spacing.lg)
+                    // Tutto il blocco testo dell'hero parte sotto la banda nera
+                    // della barra: il logo non resta più mezzo coperto dalla striscia.
+                    .padding(
+                        top = TOP_BAR_BAND_HEIGHT,
+                        start = rowHorizontalPadding,
+                        end = NuvioTheme.spacing.xxxl,
+                        bottom = NuvioTheme.spacing.none + rowsViewportHeight + NuvioTheme.spacing.lg
+                    )
                     .fillMaxWidth(MODERN_HERO_TEXT_WIDTH_FRACTION)
             }
 
