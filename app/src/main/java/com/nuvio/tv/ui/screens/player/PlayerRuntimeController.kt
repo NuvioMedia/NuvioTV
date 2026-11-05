@@ -525,6 +525,7 @@ class PlayerRuntimeController(
     internal var userPausedManually = false
 
     internal var isInBackground: Boolean = false
+    internal var releaseDecoderOnBackground: Boolean = false
     internal var pendingBackgroundCrashRecovery: Boolean = false
     internal var backgroundCrashSavedPositionMs: Long = 0L
 
@@ -778,6 +779,7 @@ class PlayerRuntimeController(
         observeDeviceLocalAspectMode()
         observeDeviceLocalTransparentLetterbox()
         observeDeviceLocalTunneledSurfaceFill()
+        observeDeviceLocalReleaseDecoderOnBackground()
         observePlayerStatsHud()
         observeStreamDelayTrackSelection()
     }
