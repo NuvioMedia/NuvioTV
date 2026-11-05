@@ -45,7 +45,6 @@ data class WatchProgress(
         const val SOURCE_SIMKL_PLAYBACK = "simkl_playback"
         const val SOURCE_REMOTE_PLAYBACK = "remote_playback"
         const val SOURCE_REMOTE_HISTORY = "remote_history"
-        const val STARTED_THRESHOLD = 0.02f
         const val COMPLETED_THRESHOLD = 0.90f
         const val SIMKL_COMPLETED_THRESHOLD = 0.80f
     }
@@ -67,10 +66,10 @@ data class WatchProgress(
     fun isCompleted(threshold: Float = completionThreshold()): Boolean = progressPercentage >= threshold
 
     /**
-     * Returns true if the content has been started but not completed
+     * Returns true if any progress was saved and the content is not completed.
+     * No start threshold, same as NuvioMobile.
      */
-    fun isInProgress(startThreshold: Float = STARTED_THRESHOLD, endThreshold: Float = completionThreshold()): Boolean =
-        progressPercentage >= startThreshold && progressPercentage < endThreshold
+    fun isInProgress(): Boolean = !isCompleted() && (position > 0L || progressPercentage > 0f)
 
     private fun completionThreshold(): Float =
         completionThresholdOverride?.takeIf { it.isFinite() && it > 0f && it <= 1f }
