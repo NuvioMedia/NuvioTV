@@ -74,25 +74,25 @@ class WeTrakrCatalogServiceTest {
     }
 
     @Test
-    fun `rating reads the title's combined score and is cached`() = runTest {
+    fun `rating reads the WeTrakr community score and is cached`() = runTest {
         val harness = WeTrakrTestHarness()
         val service = service(harness)
         harness.reply(body = SEARCH)
-        harness.reply(body = """{"id":435,"rating":8.5,"rating_votes":8875323}""")
+        harness.reply(body = """{"wetrakr":{"rating":8.6,"votes":1014,"distribution":{"10":300}}}""")
 
         val first = service.getRating(movie())
         val second = service.getRating(movie())
 
-        assertEquals(8.5, first!!, 0.0)
-        assertEquals(8.5, second!!, 0.0)
-        assertEquals(listOf("/search", "/movies/435"), harness.engine.requests.map { it.path })
+        assertEquals(8.6, first!!, 0.0)
+        assertEquals(8.6, second!!, 0.0)
+        assertEquals(listOf("/search", "/movies/435/ratings"), harness.engine.requests.map { it.path })
     }
 
     @Test
-    fun `a missing or out of range rating is ignored`() {
-        assertEquals(null, decodeWeTrakrRating("""{"id":1}"""))
-        assertEquals(null, decodeWeTrakrRating("""{"rating":0}"""))
-        assertEquals(null, decodeWeTrakrRating("""{"rating":42}"""))
+    fun `a missing, unrated or out of range score is ignored`() {
+        assertEquals(null, decodeWeTrakrRating("""{"rating":8.5}"""))
+        assertEquals(null, decodeWeTrakrRating("""{"wetrakr":{"rating":0,"votes":0}}"""))
+        assertEquals(null, decodeWeTrakrRating("""{"wetrakr":{"rating":42,"votes":3}}"""))
     }
 
     @Test

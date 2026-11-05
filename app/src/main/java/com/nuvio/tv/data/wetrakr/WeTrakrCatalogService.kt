@@ -91,7 +91,7 @@ class WeTrakrCatalogService(
         val titleId = resolveTitleId(kind, meta, fallbackItemId) ?: return null
         val key = "${kind.path}/$titleId"
         ratings[key]?.takeIf { now() - it.atMs <= CACHE_TTL_MS }?.let { return it.value }
-        val response = api.get("/${kind.path}/$titleId", acceptedStatuses = setOf(404))
+        val response = api.get("/${kind.path}/$titleId/ratings", acceptedStatuses = setOf(404))
         val rating = if (response.status == 404) null else decodeWeTrakrRating(response.body)
         ratings[key] = Timed(rating, now())
         return rating
@@ -227,5 +227,8 @@ internal fun weTrakrPlainText(value: String): String = value
     .replace("&amp;", "&")
     .trim()
 
-internal fun decodeWeTrakrRating(body: String): Double? =
-    weTrakrElement(body).weTrakrObject().decimal("rating")?.takeIf { it > 0.0 && it <= 10.0 }
+internal fun decodeWeTrakrRating(body: String): Double? {
+    val community = weTrakrElement(body).weTrakrObject()["wetrakr"] as? JsonObject ?: return null
+    if ((community.decimal("votes") ?: 0.0) <= 0.0) return null
+    return community.decimal("rating")?.takeIf { it > 0.0 && it <= 10.0 }
+}

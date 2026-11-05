@@ -799,9 +799,11 @@ private fun MetaInfoRow(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
                 ) {
                     Image(
-                        painter = rememberRawSvgPainter(R.raw.wetrakr_icon, NuvioTheme.spacing.xl),
+                        painter = rememberRawSvgPainter(R.raw.wetrakr_we_gradient, 34.dp),
                         contentDescription = stringResource(R.string.wetrakr_name),
-                        modifier = Modifier.size(NuvioTheme.spacing.xl),
+                        modifier = Modifier
+                            .width(34.dp)
+                            .height(16.dp),
                         contentScale = ContentScale.Fit
                     )
                     val ratingText = remember(rating) { String.format("%.1f", rating) }
