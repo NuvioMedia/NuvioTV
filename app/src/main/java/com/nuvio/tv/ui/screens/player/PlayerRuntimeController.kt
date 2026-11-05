@@ -525,6 +525,7 @@ class PlayerRuntimeController(
     internal var userPausedManually = false
 
     internal var isInBackground: Boolean = false
+    internal var releaseDecoderOnBackground: Boolean = false
     internal var pendingBackgroundCrashRecovery: Boolean = false
     internal var backgroundCrashSavedPositionMs: Long = 0L
 
@@ -678,6 +679,7 @@ class PlayerRuntimeController(
     internal var errorRetryJob: Job? = null
     internal var stableProgressResetJob: Job? = null
     @Volatile internal var currentPlayerSettingsForReport: PlayerSettings = PlayerSettings()
+    @Volatile internal var hasObservedPlayerSettings: Boolean = false
 
     internal val dv7ToHevcForcedStreamUrls: MutableSet<String> = mutableSetOf()
     // Streams where manual Convert-to-DV8.1 mode 2 failed to play, so the next
@@ -793,6 +795,7 @@ class PlayerRuntimeController(
         observeDeviceLocalAspectMode()
         observeDeviceLocalTransparentLetterbox()
         observeDeviceLocalTunneledSurfaceFill()
+        observeDeviceLocalReleaseDecoderOnBackground()
         observePlayerStatsHud()
         observeStreamDelayTrackSelection()
     }

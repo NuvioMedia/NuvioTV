@@ -2199,16 +2199,8 @@ class MetaDetailsViewModel @Inject constructor(
         return meta.videos.firstOrNull { it.id == defaultVideoId && it.available != false }
     }
 
-    private fun shouldResumeProgress(progress: WatchProgress): Boolean {
-        if (progress.isCompleted()) return false
-        if (progress.progressPercentage >= 0.02f) return true
-
-        val hasStartedPlayback = progress.position > 0L ||
-            progress.progressPercent?.let { it > 0f } == true
-        return hasStartedPlayback &&
-            progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
-            progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
-    }
+    // Same rule the player uses to resume, so Resume never restarts from 0
+    private fun shouldResumeProgress(progress: WatchProgress): Boolean = progress.isInProgress()
 
     private fun toggleLibrary() {
         if (

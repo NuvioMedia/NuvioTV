@@ -3424,9 +3424,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Kapsamlı Otomatik Eşitleme Araması</string>
     <string name="autosync_thorough_description">Eşitlemeden önce daha yakın bir eşleşme için diğer altyazıları ve gömülü parçaları karşılaştırmaya devam eder. Kapalıyken ilk güçlü eşleşme daha hızlı kullanılır. Yalnızca güvenilir eşleşmeler uygulanır.</string>
-    <string name="autosync_toast_failed">Eşitleme başarısız: Otomatik Eşitleme bu altyazıyı video ile eşleştiremedi.</string>
-    <string name="autosync_toast_failed_no_reference">Eşitleme başarısız: Bu videoda karşılaştırılacak gömülü altyazı yok.</string>
-    <string name="autosync_toast_failed_unsupported">Eşitleme başarısız: Otomatik Eşitleme bu altyazı formatını desteklemiyor.</string>
     <string name="autosync_label_synced">Otomatik eşitlendi</string>
     <string name="stream_resume_from_time">%1$s konumundan devam et</string>
     <string name="stream_resume_from_percent">%1$d%% konumundan devam et</string>

@@ -778,6 +778,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Auto-switch engine on startup error</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">If stream startup fails, switch between ExoPlayer and libmpv automatically.</string>
+    <string name="playback_release_decoder_on_background">Release decoder in background</string>
+    <string name="playback_release_decoder_on_background_sub">Free the video decoder when Nuvio goes to the background. Turn on if playback fails with a decoder error after returning to the app. The player reloads on return, also after the screensaver</string>
     <string name="playback_external_forward_subtitles">Forward subtitles to external player</string>
     <string name="playback_external_forward_subtitles_sub">Fetch subtitles in your preferred language from addons and pass them to the external player.</string>
     <string name="playback_external_send_skip_segments">Send intro and outro timestamps</string>
@@ -3453,9 +3455,7 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Thorough Auto Sync Search</string>
     <string name="autosync_thorough_description">Keep comparing other subtitles and embedded tracks for a closer match before syncing. When off, the first strong match is used sooner. Only confident matches are ever applied.</string>
-    <string name="autosync_toast_failed">Sync failed: Auto Sync couldn\'t match this subtitle to the video.</string>
-    <string name="autosync_toast_failed_no_reference">Sync failed: this video has no embedded subtitles to compare with.</string>
-    <string name="autosync_toast_failed_unsupported">Sync failed: Auto Sync doesn\'t support this subtitle format.</string>
+    <string name="autosync_toast_no_fit">Sync failed: these subtitles don\'t match this version of the video.</string>
     <string name="autosync_label_synced">Auto synced</string>
     <string name="stream_resume_from_time">Resume from %1$s</string>
     <string name="stream_resume_from_percent">Resume from %1$d%%</string>

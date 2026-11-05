@@ -3427,9 +3427,7 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Tìm kiếm tự động đồng bộ chính xác</string>
     <string name="autosync_thorough_description">Tiếp tục so sánh các phụ đề khác với bản nhúng sẵn để tìm bản khớp hơn trước khi đồng bộ. Khi tắt, bản khớp đầu tiên sẽ được dùng ngay. Chỉ bản khớp có độ tin cậy cao mới được áp dụng</string>
-    <string name="autosync_toast_failed">Đồng bộ thất bại: Tự động đồng bộ không thể khớp phụ đề này với video.</string>
-    <string name="autosync_toast_failed_no_reference">Đồng bộ thất bại: video này không có phụ đề nhúng sẵn để so sánh.</string>
-    <string name="autosync_toast_failed_unsupported">Đồng bộ thất bại: Tự động đồng bộ không hỗ trợ đồng bộ định dạng phụ đề này.</string>
+    <string name="autosync_toast_no_fit">Đồng bộ thất bại: Phụ đề không khớp với bản video này.</string>
     <string name="autosync_label_synced">Đã tự động đồng bộ</string>
     <string name="stream_resume_from_time">Xem tiếp từ %1$s</string>
     <string name="stream_resume_from_percent">Xem tiếp từ %1$d%%</string>
