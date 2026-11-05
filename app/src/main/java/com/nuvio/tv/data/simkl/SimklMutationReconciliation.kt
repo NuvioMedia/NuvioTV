@@ -16,7 +16,11 @@ internal fun SimklSyncSnapshot.applyMutationReceipt(
             committedAtEpochMs,
             entryIndex
         )
-        is SimklCommittedMutation.RemoveFromHistory -> withoutHistory(mutation.items)
+        is SimklCommittedMutation.RemoveFromHistory -> if (mutation.rewatchId != null) {
+            withRewatchRemoval(mutation.items, mutation.rewatchId)
+        } else {
+            withoutHistory(mutation.items)
+        }
     }.reconcileWatchedPlayback()
 }
 
@@ -110,6 +114,40 @@ private fun SimklSyncSnapshot.withResolvedHistoryStatus(
     return copy(entries = entries.toMutableList().apply { this[index] = updated })
 }
 
+/**
+ * Drops one episode from the rewatch session that was named, and leaves the canonical watch alone.
+ *
+ * A canonical removal clears the watched episode from the library entries. A rewatch removal must
+ * not: the original watch is what the detail screen shows as a faded marker while the run is open,
+ * and clearing the entry would make the episode look unwatched.
+ */
+private fun SimklSyncSnapshot.withRewatchRemoval(
+    mutations: List<TrackingMediaReference>,
+    rewatchId: Long
+): SimklSyncSnapshot {
+    if (mutations.isEmpty()) return this
+    var updatedSessions = rewatchSessions
+    mutations.forEach { mutation ->
+        val target = mutation.toSimklMedia()
+        val season = mutation.episode?.season
+        val number = mutation.episode?.number ?: return@forEach
+        updatedSessions = updatedSessions.map { entry ->
+            if (entry.rewatchId == rewatchId && entry.media?.matchesTarget(target) == true) {
+                entry.withoutWatchedEpisode(season, number, dropFromList = true)
+            } else {
+                entry
+            }
+        }
+    }
+    return copy(
+        rewatchSessions = updatedSessions,
+        rewatchRuns = deriveSimklRewatchRuns(
+            entries = updatedSessions,
+            offerRuns = rewatchRuns.isNotEmpty()
+        )
+    )
+}
+
 private fun SimklSyncSnapshot.withoutHistory(
     mutations: List<TrackingMediaReference>
 ): SimklSyncSnapshot {
@@ -142,16 +180,32 @@ private fun SimklSyncSnapshot.withoutHistory(
 
 private fun SimklLibraryEntry.withoutWatchedEpisode(
     season: Int?,
-    number: Int
+    number: Int,
+    dropFromList: Boolean = false
 ): SimklLibraryEntry {
-    val targetSeason = season ?: 1
     val updatedSeasons = seasons.map { candidateSeason ->
         candidateSeason.copy(
-            episodes = candidateSeason.episodes.map { episode ->
-                val matchesCanonical = candidateSeason.number == targetSeason && episode.number == number
-                val matchesTvdb = episode.tvdb?.season == targetSeason &&
-                    episode.tvdb.episode == number
-                if (matchesCanonical || matchesTvdb) episode.copy(watchedAt = null) else episode
+            episodes = candidateSeason.episodes.mapNotNull { episode ->
+                // A flat anime session has no season number, and simkl may return it either as
+                // null or as season 1. Match both so a removal also updates the local snapshot.
+                val matchesCanonical = when (season) {
+                    null -> (candidateSeason.number == null || candidateSeason.number == 1) &&
+                        episode.number == number
+                    else -> candidateSeason.number == season && episode.number == number
+                }
+                val matchesTvdb = when (season) {
+                    null -> (episode.tvdb?.season == null || episode.tvdb?.season == 1) &&
+                        episode.tvdb?.episode == number
+                    else -> episode.tvdb?.season == season && episode.tvdb?.episode == number
+                }
+                when {
+                    !(matchesCanonical || matchesTvdb) -> episode
+                    // A rewatch removal removes the viewing from the session. Leaving the episode
+                    // behind with a null date made rewatchedEpisodes fall back to the session date
+                    // and draw the removed episode as rewatched again.
+                    dropFromList -> null
+                    else -> episode.copy(watchedAt = null)
+                }
             }
         )
     }

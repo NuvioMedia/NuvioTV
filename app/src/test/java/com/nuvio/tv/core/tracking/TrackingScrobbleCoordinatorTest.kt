@@ -59,14 +59,61 @@ class TrackingScrobbleCoordinatorTest {
         assertEquals(0, mdblist.callCount)
     }
 
+    @Test
+    fun `a sessionless scrobble reaches only the scrobblers that accept it`() = runTest {
+        val trakt = FakeScrobbler(TrackingProviderId.TRAKT)
+        val simkl = FakeScrobbler(TrackingProviderId.SIMKL, acceptsSessionless = true)
+        val event = TrackingScrobbleEvent(
+            media = TrackingMediaReference(
+                kind = TrackingMediaKind.MOVIE,
+                ids = TrackingExternalIds(imdb = "tt0111161")
+            ),
+            progressPercent = 92.0,
+            sessionless = true
+        )
+
+        dispatchTrackingScrobble(
+            scrobblers = listOf(trakt, simkl),
+            action = TrackingScrobbleAction.PAUSE,
+            event = event
+        )
+
+        assertEquals(0, trakt.callCount)
+        assertEquals(1, simkl.callCount)
+    }
+
+    @Test
+    fun `a sessioned scrobble still reaches every scrobbler`() = runTest {
+        val trakt = FakeScrobbler(TrackingProviderId.TRAKT)
+        val simkl = FakeScrobbler(TrackingProviderId.SIMKL, acceptsSessionless = true)
+        val event = TrackingScrobbleEvent(
+            media = TrackingMediaReference(
+                kind = TrackingMediaKind.MOVIE,
+                ids = TrackingExternalIds(imdb = "tt0111161")
+            ),
+            progressPercent = 40.0
+        )
+
+        dispatchTrackingScrobble(
+            scrobblers = listOf(trakt, simkl),
+            action = TrackingScrobbleAction.PAUSE,
+            event = event
+        )
+
+        assertEquals(1, trakt.callCount)
+        assertEquals(1, simkl.callCount)
+    }
+
     private class FakeScrobbler(
         override val providerId: TrackingProviderId,
         private val failure: Throwable? = null,
-        private val seekPolicy: TrackingSeekScrobblePolicy = TrackingSeekScrobblePolicy.NONE
+        private val seekPolicy: TrackingSeekScrobblePolicy = TrackingSeekScrobblePolicy.NONE,
+        private val acceptsSessionless: Boolean = false
     ) : TrackingScrobbler {
         var callCount = 0
         val actions = mutableListOf<TrackingScrobbleAction>()
         override val seekScrobblePolicy = seekPolicy
+        override val acceptsSessionlessScrobbles = acceptsSessionless
 
         override suspend fun scrobble(action: TrackingScrobbleAction, event: TrackingScrobbleEvent) {
             callCount += 1

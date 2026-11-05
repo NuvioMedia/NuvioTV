@@ -30,6 +30,7 @@ data class SimklAuthState(
     val isAuthenticated: Boolean = false,
     val username: String? = null,
     val accountId: Long? = null,
+    val accountType: String? = null,
     val hasFetchedUserSettings: Boolean = false,
     val settingsActivityWatermark: String? = null,
     val pinSession: SimklPinSession? = null,
@@ -56,6 +57,7 @@ class SimklAuthException(val error: SimklAuthError, cause: Throwable? = null) : 
 internal data class SimklStoredAuthMetadata(
     val username: String? = null,
     val accountId: Long? = null,
+    val accountType: String? = null,
     val hasFetchedUserSettings: Boolean = false,
     val settingsActivityWatermark: String? = null,
     val pinSession: SimklPinSession? = null
@@ -102,4 +104,4 @@ internal data class SimklUserSettingsResponse(
 internal data class SimklUser(val name: String? = null)
 
 @Serializable
-internal data class SimklAccount(val id: Long? = null)
+internal data class SimklAccount(val id: Long? = null, val type: String? = null)

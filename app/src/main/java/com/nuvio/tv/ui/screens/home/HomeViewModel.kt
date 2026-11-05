@@ -88,6 +88,8 @@ class HomeViewModel @Inject constructor(
     internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
     internal val profileManager: com.nuvio.tv.core.profile.ProfileManager,
     internal val tvRecommendationManager: TvRecommendationManager,
+    internal val simklSyncRepository: com.nuvio.tv.data.simkl.SimklSyncRepository,
+    internal val simklRewatchWriter: com.nuvio.tv.data.simkl.SimklRewatchWriter,
     internal val serverCatalog: ServerCatalog,
     internal val metaPreviewEnricher: MetaPreviewEnricher = MetaPreviewEnricher(
         tmdbService,
@@ -294,6 +296,8 @@ class HomeViewModel @Inject constructor(
     internal val discoveredOlderNextUpItems = Collections.synchronizedList(mutableListOf<ContinueWatchingItem.NextUp>())
     internal val cwLastProcessedNextUpContentIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     internal val cwProcessedOlderSeedContentIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    /** Running rewatch cards whose close write is still in flight. */
+    internal val cwPendingRewatchCloseContentIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     internal val cwEnrichedNextUpOverlay = ConcurrentHashMap<String, NextUpInfo>()
     /** In-memory cache of enriched InProgress items per contentId+episode key. */
     internal val cwEnrichedInProgressOverlay = ConcurrentHashMap<String, ContinueWatchingItem.InProgress>()
@@ -371,6 +375,7 @@ class HomeViewModel @Inject constructor(
             watchedSeriesStateHolder.loadFromDisk()
             observeExternalMetaPrefetchPreference()
             observeContinueWatchingSortMode()
+            observeRewatchRuns()
             loadHomeCatalogOrderPreference()
             loadFollowAddonsOrder()
             loadDisabledHomeCatalogPreference()
@@ -408,6 +413,7 @@ class HomeViewModel @Inject constructor(
                     cwEnrichedInProgressOverlay.clear()
                     cwLastBadgeEpisodeKeys = emptySet()
                     cwLastShowIdSiblings = emptyMap()
+                    cwPendingRewatchCloseContentIds.clear()
                     _uiState.update {
                         it.copy(layoutPreferencesReady = false, continueWatchingItems = emptyList())
                     }
@@ -447,7 +453,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun clearAllCwInMemoryCaches() {
+    private fun clearAllCwInMemoryCaches(clearRow: Boolean = true) {
         cwMetaCache.clear()
         cwMetaNegativeCacheTimestamps.clear()
         cwBadgeEpisodeCache.clear()
@@ -463,6 +469,9 @@ class HomeViewModel @Inject constructor(
         cwLastBadgeEpisodeKeys = emptySet()
         cwLastShowIdSiblings = emptyMap()
         watchedSeriesStateHolder.clearValidationState()
+        // A rewatch run move clears the answers only: the pipeline rebuilds from the run change
+        // itself, and wiping the row here is what made the whole row blink after a close.
+        if (!clearRow) return
         _uiState.update { it.copy(continueWatchingItems = emptyList(), upcomingItems = emptyList()) }
         // Bump trigger so the pipeline's collectLatest restarts with fresh state.
         cwPipelineRefreshTrigger.value++
@@ -499,6 +508,36 @@ class HomeViewModel @Inject constructor(
                     }
                     // Clear caches so the new sort is applied immediately on next pipeline run
                     clearAllCwInMemoryCaches()
+                }
+        }
+    }
+
+    /**
+     * Rewatches in Continue Watching: the runs decide which series the row follows, and the caches hold
+     * the answers for the previous ones per content id. A run that appears or moves (a confirmed
+     * rewatch, a sync, or the mode setting re-deriving them) has to drop those answers, or the row
+     * keeps the one it already had until the app restarts.
+     */
+    private fun observeRewatchRuns() {
+        viewModelScope.launch {
+            var initial = true
+            simklSyncRepository.state
+                .map { state -> state.snapshot.rewatchRuns }
+                .distinctUntilChanged()
+                .collect { _ ->
+                    // Dismissals are not healed here any more: clearing every run's keys on every
+                    // emission (the first included) made a dismissal unable to keep a run card
+                    // hidden. The close path clears the keys of the one run it actually closes; the
+                    // cost is that a stale dismissal from a build that could not close a session is
+                    // no longer swept away.
+                    if (initial) {
+                        initial = false
+                        return@collect
+                    }
+                    // The pipeline already watches the runs, so it rebuilds on the change. Clear
+                    // the per content answers without emptying the row: a close removes one card,
+                    // it must not make the whole Continue Watching row blink.
+                    clearAllCwInMemoryCaches(clearRow = false)
                 }
         }
     }
