@@ -1224,16 +1224,9 @@ private fun deduplicateInProgress(items: List<WatchProgress>): List<WatchProgres
     return (nonSeries + latestPerShow).sortedByDescending { it.lastWatched }
 }
 
-private fun shouldTreatAsInProgressForContinueWatching(progress: WatchProgress): Boolean {
-    if (progress.isCompleted()) return false
-    if (progress.isInProgress() && progress.progressPercentage >= 0.02f) return true
-
-    val hasStartedPlayback = progress.position > 0L ||
-        progress.progressPercent?.let { it > 0f } == true
-    return hasStartedPlayback &&
-        progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
-        progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
-}
+// Same rule the player uses to resume, so CW never shows items that would restart from 0
+private fun shouldTreatAsInProgressForContinueWatching(progress: WatchProgress): Boolean =
+    progress.isInProgress()
 
 internal fun HomeViewModel.shouldUseAsCompletedSeed(progress: WatchProgress): Boolean {
     if (isMalformedNextUpSeedContentId(progress.contentId)) return false
