@@ -776,6 +776,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Tự động chuyển lõi trình phát khi khởi động bị lỗi</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Nếu khởi động luồng phát thất bại, tự động chuyển đổi giữa ExoPlayer và libmpv.</string>
+    <string name="playback_release_decoder_on_background">Giải phóng bộ giải mã trong nền</string>
+    <string name="playback_release_decoder_on_background_sub">Giải phóng bộ giải mã video khi Nuvio chuyển sang nền. Bật tùy chọn này nếu phát lại bị lỗi bộ giải mã sau khi quay lại ứng dụng. Trình phát sẽ tải lại khi quay lại, kể cả sau khi trình bảo vệ màn hình hoạt động.</string>
     <string name="playback_external_forward_subtitles">Chuyển phụ đề sang trình phát bên ngoài</string>
     <string name="playback_external_forward_subtitles_sub">Tải phụ đề bằng ngôn ngữ ưu tiên từ các tiện ích rồi chuyển sang trình phát bên ngoài.</string>
     <string name="playback_external_send_skip_segments">Gửi mốc thời gian phần giới thiệu và đoạn kết</string>
