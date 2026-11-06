@@ -109,6 +109,7 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.screens.settings.BuiltInUsenetNoticeDialog
 import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -176,6 +177,7 @@ fun AddonManagerScreen(
     val deleteDialogFocusRequester = remember { FocusRequester() }
     var isEditing by remember { mutableStateOf(false) }
     var addonUrlPendingDeletion by remember { mutableStateOf<String?>(null) }
+    var usenetNotice by remember { mutableStateOf(false) }
     var restoreManageFromPhoneFocus by remember { mutableStateOf(false) }
     var hasHandledInitialFocusState by remember { mutableStateOf(false) }
     val hasHomeVisibleCatalogs = remember(uiState.installedAddons) {
@@ -595,7 +597,10 @@ fun AddonManagerScreen(
                                     bringIntoViewRequester.bringIntoView()
                                 }
                             },
-                            onEnabledChange = viewModel::setBuiltInUsenetEnabled,
+                            onEnabledChange = { enabled ->
+                                if (enabled && uiState.builtInUsenet?.firstUseAccepted == false) usenetNotice = true
+                                else viewModel.setBuiltInUsenetEnabled(enabled)
+                            },
                             isReadOnly = viewModel.isReadOnly,
                             showReorder = !isEssential,
                             toggleFocusRequester = if (row == 0) firstAddonToggleFocusRequester else null
@@ -650,6 +655,16 @@ fun AddonManagerScreen(
                     onReject = viewModel::rejectPendingChange
                 )
             }
+        }
+
+        if (usenetNotice) {
+            BuiltInUsenetNoticeDialog(
+                onTurnOn = {
+                    viewModel.setBuiltInUsenetEnabled(true)
+                    usenetNotice = false
+                },
+                onDismiss = { usenetNotice = false }
+            )
         }
 
         addonUrlPendingDeletion?.let { addonUrl ->

@@ -97,6 +97,8 @@ enum class UsenetSort { QUALITY, LARGEST, SMALLEST, NEWEST, INDEXER }
 @Serializable
 data class UsenetSourceConfiguration(
     val enabled: Boolean = false,
+    /** Set once the notice shown before the first switch-on in this profile was accepted. */
+    val firstUseAccepted: Boolean = false,
     val providers: List<UsenetProvider> = emptyList(),
     val indexers: List<UsenetIndexer> = emptyList(),
     val sort: UsenetSort = UsenetSort.QUALITY,

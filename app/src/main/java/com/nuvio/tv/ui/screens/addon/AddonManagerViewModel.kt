@@ -232,7 +232,9 @@ class AddonManagerViewModel @Inject constructor(
 
     fun moveBuiltInUsenetDown() = moveWithBuiltInUsenet(null, 1)
 
-    fun setBuiltInUsenetEnabled(enabled: Boolean) = updateBuiltInUsenet { it.copy(enabled = enabled) }
+    /** The screen shows the first-use notice before switching on, so switching on accepts it. */
+    fun setBuiltInUsenetEnabled(enabled: Boolean) =
+        updateBuiltInUsenet { it.copy(enabled = enabled, firstUseAccepted = it.firstUseAccepted || enabled) }
 
     /** Moves an addon, or built-in Usenet when [baseUrl] is null, in the list that shows both. */
     private fun moveWithBuiltInUsenet(baseUrl: String?, direction: Int) {
@@ -253,7 +255,7 @@ class AddonManagerViewModel @Inject constructor(
         runCatching {
             val updated = change(usenetSourceSettings.read())
             usenetSourceSettings.update(updated)
-            _uiState.update { it.copy(builtInUsenet = BuiltInUsenetRow(updated.enabled, updated.addonsAbove)) }
+            _uiState.update { it.copy(builtInUsenet = BuiltInUsenetRow(updated.enabled, updated.addonsAbove, updated.firstUseAccepted)) }
         }
     }
 
@@ -843,7 +845,7 @@ class AddonManagerViewModel @Inject constructor(
     private fun observeBuiltInUsenet() {
         viewModelScope.launch {
             usenetSourceSettings.snapshots.flowOn(Dispatchers.IO).collectLatest { (_, result) ->
-                val row = result.getOrNull()?.takeIf { it.configured }?.let { BuiltInUsenetRow(it.enabled, it.addonsAbove) }
+                val row = result.getOrNull()?.takeIf { it.configured }?.let { BuiltInUsenetRow(it.enabled, it.addonsAbove, it.firstUseAccepted) }
                 _uiState.update { it.copy(builtInUsenet = row) }
             }
         }
