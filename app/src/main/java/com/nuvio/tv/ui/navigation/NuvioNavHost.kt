@@ -13,6 +13,8 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -95,6 +97,14 @@ private fun PlaybackNavHost(
         return from.startsWith("player/") && to.startsWith("stream/")
     }
 
+    fun isLibraryToDetail(from: String, to: String): Boolean {
+        return from == Screen.Library.route && to.startsWith("detail/")
+    }
+
+    fun isDetailToLibrary(from: String, to: String): Boolean {
+        return from.startsWith("detail/") && to == Screen.Library.route
+    }
+
     fun openPartyMedia(media: PartyMedia) {
         if (navController.currentDestination?.route?.startsWith("player/") == true) navController.popBackStack()
         navController.navigate(
@@ -126,6 +136,11 @@ private fun PlaybackNavHost(
                 ?.toBooleanStrictOrNull() == true
             if (isStreamToPlayer(from, to) && isAutoPlayNav) {
                 EnterTransition.None
+            } else if (isLibraryToDetail(from, to)) {
+                slideInHorizontally(
+                    animationSpec = tween(NuvioMotion.tokens.durations.medium),
+                    initialOffsetX = { it }
+                ) + fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.medium))
             } else {
                 fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.medium))
             }
@@ -138,6 +153,11 @@ private fun PlaybackNavHost(
                 ?.toBooleanStrictOrNull() == true
             if (isStreamToPlayer(from, to) && isAutoPlayNav) {
                 ExitTransition.None
+            } else if (isLibraryToDetail(from, to)) {
+                slideOutHorizontally(
+                    animationSpec = tween(NuvioMotion.tokens.durations.medium),
+                    targetOffsetX = { -it }
+                ) + fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.medium))
             } else {
                 fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.medium))
             }
@@ -150,6 +170,11 @@ private fun PlaybackNavHost(
                 ?.toBooleanStrictOrNull() == true
             if (isPlayerToStream(from, to) && isAutoPlayNav) {
                 EnterTransition.None
+            } else if (isDetailToLibrary(from, to)) {
+                slideInHorizontally(
+                    animationSpec = tween(NuvioMotion.tokens.durations.medium),
+                    initialOffsetX = { -it }
+                ) + fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.medium))
             } else {
                 fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.medium))
             }
@@ -162,6 +187,11 @@ private fun PlaybackNavHost(
                 ?.toBooleanStrictOrNull() == true
             if (isPlayerToStream(from, to) && isAutoPlayNav) {
                 ExitTransition.None
+            } else if (isDetailToLibrary(from, to)) {
+                slideOutHorizontally(
+                    animationSpec = tween(NuvioMotion.tokens.durations.medium),
+                    targetOffsetX = { it }
+                ) + fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.medium))
             } else {
                 fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.medium))
             }
