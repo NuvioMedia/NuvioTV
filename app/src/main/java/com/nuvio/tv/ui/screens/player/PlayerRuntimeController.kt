@@ -499,6 +499,8 @@ class PlayerRuntimeController(
     internal var endDetectionArmed = false
     // Ignore EOF until MPV has reported a non-EOF state for this stream.
     internal var mpvEofSeenClear = false
+    // Set once the Exo progress loop forced a natural end for a position past duration.
+    internal var exoEndOverrunHandled = false
     internal var shouldEnforceAutoplayOnFirstReady = true
 
     internal var rebufferCount: Int = 0
