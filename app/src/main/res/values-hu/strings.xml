@@ -277,7 +277,7 @@
     <string name="tmdb_error_list_not_found">TMDB lista nem található</string>
     <string name="tmdb_error_collection_not_found">TMDB gyűjtemény nem található</string>
     <string name="tmdb_error_company_not_found">TMDB stúdió nem található</string>
-    <string name="tmdb_error_network_not_found">TMDB hálózat nem található</string>
+    <string name="tmdb_error_network_not_found">TMDB-csatorna nem található</string>
     <string name="tmdb_error_person_not_found">TMDB személy nem található</string>
     <string name="tmdb_error_missing_list_id">Hiányzó TMDB lista azonosító</string>
     <string name="tmdb_error_missing_collection_id">Hiányzó TMDB gyűjtemény azonosító</string>
@@ -775,6 +775,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Béta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automatikus motorváltás indítási hiba esetén</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ha a stream indítása sikertelen, váltson automatikusan az ExoPlayer és libmpv között.</string>
+    <string name="playback_release_decoder_on_background">Dekóder felszabadítása a háttérben</string>
+    <string name="playback_release_decoder_on_background_sub">Felszabadítja a videódekódert, amikor a Nuvio a háttérbe kerül. Kapcsold be, ha az alkalmazásba visszatérve dekóderhiba miatt nem működik a lejátszás. Visszatéréskor a lejátszó újratöltődik, a képernyőkímélő után is.</string>
     <string name="playback_external_forward_subtitles">Feliratok továbbítása külső lejátszónak</string>
     <string name="playback_external_forward_subtitles_sub">Lekéri a bővítményekből az előnyben részesített nyelvű feliratokat, és átadja őket a külső lejátszónak.</string>
     <string name="playback_external_send_skip_segments">Intrók és stáblisták időbélyegeinek küldése</string>
@@ -822,6 +824,17 @@
     <string name="audio_preferred_lang">Hang előnyben részesített nyelve</string>
     <string name="audio_skip_silence">Csend átugrása</string>
     <string name="audio_skip_silence_sub">Néma szakaszok átugrása lejátszás közben</string>
+    <string name="audio_night_mode">Éjszakai mód</string>
+    <string name="audio_night_mode_sub">Felerősíti a párbeszédeket és a halk hangokat, így alacsony hangerőn is jól hallhatók</string>
+    <string name="audio_night_mode_desc">Felerősíti a párbeszédeket és a halk hangokat; a hangos jelenetek hangereje az eredeti keverésnek megfelelő marad. Az alkalmazás által dekódolt hangra érvényes. Az erősítőnek vagy soundbarnak közvetlenül továbbított (passthrough) Dolby- és DTS-hang változatlan marad.</string>
+    <string name="audio_night_mode_value">Éjszakai mód: %1$s</string>
+    <string name="audio_night_mode_off">Kikapcsolva</string>
+    <string name="audio_night_mode_light">Enyhe</string>
+    <string name="audio_night_mode_light_desc">Enyhe erősítés, legfeljebb +6 dB</string>
+    <string name="audio_night_mode_medium">Közepes</string>
+    <string name="audio_night_mode_medium_desc">A párbeszédek jól hallható erősítése, legfeljebb +10 dB</string>
+    <string name="audio_night_mode_strong">Erős</string>
+    <string name="audio_night_mode_strong_desc">Legfeljebb +15 dB, késő esti megtekintéshez, alacsony hangerőn</string>
     <string name="audio_remember_delay_per_device">Késleltetés megjegyzése eszközönként</string>
     <string name="audio_remember_delay_per_device_sub">Menti és visszaállítja a lejátszón belüli hangkésleltetést az aktuális hangkimenethez</string>
     <string name="audio_advanced_section">Speciális hangbeállítások</string>
@@ -839,8 +852,8 @@
     <string name="audio_force_optical_passthrough">AC-3 átkódolás kényszerítése (optikai/SPDIF)</string>
     <string name="audio_force_optical_passthrough_sub">Valós időben Dolby Digital 5.1-re átkódolja a többcsatornás formátumokat (TrueHD, DTS, AAC stb.) optikai/SPDIF kapcsolatokhoz.</string>
     <!-- DV7 Handling Mode -->
-    <string name="dv7_handling_title">Dolby Vision Profile 7 kezelése</string>
-    <string name="dv7_handling_dialog_subtitle">Válaszd ki, hogyan dolgozza fel a lejátszó a DV Profile 7 streameket.</string>
+    <string name="dv7_handling_title">Dolby Vision kezelése</string>
+    <string name="dv7_handling_dialog_subtitle">Válaszd ki, hogyan dolgozza fel a lejátszó a DV-streameket lejátszás közben.</string>
     <string name="dv7_mode_auto">Automatikus (ajánlott)</string>
     <string name="dv7_mode_auto_desc">Észleli a kijelződet és kiválasztja a legjobb módot. Ha lejátszási problémák lépnek fel, próbáld ki a HDR10 alapréteget.</string>
     <string name="dv7_mode_hdr10_base_layer">HDR10 alapréteg</string>
@@ -915,10 +928,21 @@
     <string name="sub_hdr_style_sub">Eltérő szövegszín és alacsonyabb fényerő használata a HDR- és Dolby Vision-videók feliratainál</string>
     <string name="sub_hdr_text_color">HDR szövegszíne</string>
     <string name="sub_hdr_brightness">HDR-felirat fényereje</string>
+    <string name="sub_hdr_dim_player_controls">Lejátszóvezérlők fényerejének csökkentése HDR esetén</string>
+    <string name="sub_hdr_dim_player_controls_sub">A HDR-fényerő alkalmazása a HDR- és Dolby Vision-videók felett megjelenő lejátszóvezérlőkre és menükre</string>
     <string name="sub_advanced_section">Speciális felirat-megjelenítés</string>
     <string name="sub_libass">Libass használata ASS/SSA feliratokhoz</string>
-    <string name="sub_libass_sub">Kísérleti: fejlett ASS/SSA-megjelenítés stílusokkal, pozicionálással és animációkkal</string>
+    <string name="sub_libass_sub">Fejlett ASS/SSA-megjelenítés stílusokkal, pozicionálással és animációkkal</string>
     <string name="sub_libass_mode">Libass megjelenítési mód</string>
+    <string name="sub_libass_render_scale">Felirat megjelenítési felbontása</string>
+    <string name="sub_libass_render_scale_sub">Az alacsonyabb felbontás javítja a teljesítményt az összetett formázású feliratoknál, de csökkenti az élességet</string>
+    <string name="sub_libass_render_mode">ASS-megjelenítési mód</string>
+    <string name="sub_libass_render_mode_sub">Az ASS/SSA-feliratok videón való megjelenítésének módja</string>
+    <string name="sub_libass_render_mode_tunneled_sub">Az alagutazott (tunneled) lejátszás megkerüli a videóeffektusok feldolgozási láncát. Ilyenkor automatikusan külön rétegen jelennek meg a feliratok.</string>
+    <string name="sub_libass_render_mode_video_effect">Videóeffektus</string>
+    <string name="sub_libass_render_mode_video_effect_sub">A feliratokat közvetlenül az egyes videóképkockákra rajzolja. Minden hardveren képkockapontos időzítést biztosít. A HDR-tartalmat tónusleképezéssel SDR-re alakítja.</string>
+    <string name="sub_libass_render_mode_overlay">Külön réteg</string>
+    <string name="sub_libass_render_mode_overlay_sub">A feliratokat külön felületi rétegen jeleníti meg. Megőrzi a HDR-kimenetet. Egyes eszközökön a feliratok időzítése nem feltétlenül tökéletesen pontos.</string>
     <string name="sub_org_none">Nincs (alapértelmezett sorrend)</string>
     <string name="sub_org_by_lang">Nyelv szerint</string>
     <string name="sub_org_by_addon">Bővítmény szerint</string>
@@ -1936,6 +1960,12 @@
     <string name="audio_maintain_original_audio_on_downmix_title">Eredeti hang megtartása lekeveréskor</string>
     <string name="audio_maintain_original_audio_on_downmix_subtitle">Ha le van tiltva, a lekeverés normalizálása csökkentheti az általános hangerőt.</string>
 
+    <string name="audio_downmix_lfe_level">LFE-szint lekeveréskor</string>
+    <string name="audio_downmix_lfe_level_sub">A mélynyomó (LFE) csatornáját elhagyás helyett belekeveri a többi hangszóró jelébe. Csak LFE-csatorna nélküli kiosztásokhoz, például 2.0-hoz.</string>
+    <string name="audio_downmix_lfe_level_desc">Akkor használatos, ha a lekeverés csatornakiosztása nem tartalmaz LFE-csatornát. A következő lejátszástól érvényes.</string>
+    <string name="audio_downmix_lfe_level_off">Kikapcsolva</string>
+    <string name="audio_downmix_lfe_level_half">50%</string>
+    <string name="audio_downmix_lfe_level_full">100%</string>
     <string name="subtitle_dialog_title">Feliratok</string>
     <string name="subtitle_no_builtin">Nincs elérhető beépített felirat</string>
     <string name="subtitle_loading_addon">Külső feliratok betöltése a bővítményekből\u2026</string>
@@ -2547,6 +2577,12 @@
     <string name="cd_remove">Eltávolítás</string>
     <string name="cd_preview">Előnézet</string>
     <string name="cd_test">Tesztelés</string>
+    <string name="cd_enable_scraper">%1$s engedélyezése</string>
+    <string name="cd_enable_addon">%1$s engedélyezése</string>
+    <string name="cd_color_swatch">Szín: %1$s</string>
+    <string name="cd_emoji_option">Hangulatjel: %1$s</string>
+    <string name="cd_trailer_controls">Előzetes vezérlői</string>
+    <string name="cd_seek_bar">Lejátszási pozíció csúszkája</string>
     <string name="cd_unlink">Leválasztás</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Trakt logó</string>
@@ -3364,6 +3400,7 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Alaposabb feliratszinkronizálás</string>
     <string name="autosync_thorough_description">A pontosabb egyezésért további feliratokat és beágyazott sávokat is összehasonlít. Kikapcsolva hamarabb alkalmazza az első megbízható egyezést. Csak biztos egyezés esetén módosítja az időzítést.</string>
+    <string name="autosync_toast_no_fit">Sikertelen szinkronizálás: ezek a feliratok nem illeszkednek a videó ezen változatához.</string>
     <string name="autosync_label_synced">Automatikusan időzítve</string>
     <string name="stream_resume_from_time">Folytatás innen: %1$s</string>
     <string name="stream_resume_from_percent">Folytatás innen: %1$d%%</string>
