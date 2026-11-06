@@ -553,6 +553,9 @@ class PlayerRuntimeController(
     internal var pendingAudioSelectionAfterSubtitleRefresh: PendingAudioSelection? = null
     internal var rememberedTrackPreference: TrackPreference? = null
     internal var persistedTrackPreference: TrackPreference? = null
+    // Snapshot of what was loaded from storage. persistedTrackPreference is consumed as tracks
+    // get restored, so it cannot serve as the base when something else is saved later.
+    internal var loadedTrackPreference: TrackPreference? = null
     internal var pendingEngineSwitchTrackPreference: PendingEngineSwitchTrackPreference? = null
     internal var explicitSubtitleSelectionForEngineSwitch: ExplicitSubtitleSelectionForEngineSwitch? = null
     internal var effectiveSubtitleSelectionForEngineSwitch: ExplicitSubtitleSelectionForEngineSwitch? = null

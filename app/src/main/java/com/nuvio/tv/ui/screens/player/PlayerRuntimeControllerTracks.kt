@@ -1199,8 +1199,12 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
                 subtitleAddonRestoredByPersistedPreference = true
                 pendingRestoredAddonSubtitle = addonMatch
                 selectAddonSubtitle(addonMatch)
-                // The user's own pick for this series: sync it, never swap in another subtitle.
-                runSelectedAutomaticSubtitleSync(addonMatch) // AutoSync hook
+                // The user's own pick for this series: try it first and keep it if it fits;
+                // only when it does not, look for another same-language subtitle that does.
+                maybeRunAutomaticSubtitleSync(
+                    addonMatch,
+                    com.nuvio.tv.ui.screens.player.autosync.AutoSyncCandidateScope.SELECTED_THEN_SEARCH
+                ) // AutoSync hook
                 updatedAddonSubtitle = addonMatch
                 val shouldKeepPendingUntilMpvConfirmsSelection =
                     usingSwitchPending && isUsingMpvEngine()
