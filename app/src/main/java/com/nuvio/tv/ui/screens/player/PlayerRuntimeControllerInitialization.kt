@@ -191,6 +191,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     playbackIssueReportError = null
                 )
             }
+            startEpisodeMismatchVerification(url, headers)
             resetLoadingOverlayForNewStream()
             if (startPaused) {
                 userPausedManually = true

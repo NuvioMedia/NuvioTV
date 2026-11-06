@@ -141,6 +141,54 @@ class FilenameEpisodeMatcherTest {
         assertNull(FilenameEpisodeMatcher.extractSeasonEpisode("Movie.1920x1080.mkv"))
     }
 
+    @Test
+    fun `extract anime dash episode pattern`() {
+        val salieri = FilenameEpisodeMatcher.extractSeasonEpisode(
+            "[Salieri] Vivy - Fluorite Eye's Song - 08 - 1080p (HDR) [Dual-Audio].mkv"
+        )
+        assertEquals(null to 8, salieri)
+
+        val subsPlease = FilenameEpisodeMatcher.extractSeasonEpisode(
+            "[SubsPlease] Sousou no Frieren - 01 (1080p) [89B93EDF].mkv"
+        )
+        assertEquals(null to 1, subsPlease)
+    }
+
+    @Test
+    fun `extract ignores CRC32 hex bracket and batch ranges`() {
+        val ember = FilenameEpisodeMatcher.extractSeasonEpisode(
+            "S01E16-Long-Lived Friends [21E3FD7E].mkv"
+        )
+        assertEquals(1 to 16, ember)
+
+        assertNull(
+            FilenameEpisodeMatcher.extractSeasonEpisode(
+                "[EMBER] Vivy - Fluorite Eye's Song (2021) (Season 1) [BDRip] [1080p]"
+            )
+        )
+        assertNull(
+            FilenameEpisodeMatcher.extractSeasonEpisode(
+                "[SubsPlease] Vivy - 01-13 [1080p].mkv"
+            )
+        )
+        assertNull(
+            FilenameEpisodeMatcher.extractSeasonEpisode(
+                "[SubsPlease] Vivy - 01 - 13 [1080p].mkv"
+            )
+        )
+        assertEquals(
+            null to 1,
+            FilenameEpisodeMatcher.extractSeasonEpisode("[Group] Show - 01 [16x9] [4x3].mkv")
+        )
+        assertEquals(
+            null to 1,
+            FilenameEpisodeMatcher.extractSeasonEpisode("Parte 1 e 2 - 01 [1080p].mkv")
+        )
+        assertNull(
+            FilenameEpisodeMatcher.extractSeasonEpisode("a1b2c3d4-e567-4890-abcd-ef1234567890")
+        )
+    }
+
     // --- matches ---
 
     @Test

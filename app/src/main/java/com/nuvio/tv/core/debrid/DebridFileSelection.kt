@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.debrid
 
+import com.nuvio.tv.core.player.FilenameEpisodeMatcher
 import com.nuvio.tv.domain.model.StreamClientResolve
 
 internal fun <T> selectDebridFile(
@@ -23,12 +24,21 @@ internal fun <T> selectDebridFile(
         if (matches.isNotEmpty()) return matches.singleOrNull()
     }
 
-    val episodePattern = buildEpisodePattern(season ?: resolve.season, episode ?: resolve.episode)
+    val targetSeason = season ?: resolve.season
+    val targetEpisode = episode ?: resolve.episode
+    val episodePattern = buildEpisodePattern(targetSeason, targetEpisode)
     if (episodePattern != null) {
         val matches = playable.filter {
             episodePattern.containsMatchIn(path(it).normalizedPath().substringAfterLast('/'))
         }
         if (matches.isNotEmpty()) return matches.singleOrNull()
+
+        val animeMatches = playable.filter { candidate ->
+            val basename = path(candidate).normalizedPath().substringAfterLast('/')
+            val (detectedSeason, detectedEp) = FilenameEpisodeMatcher.extractSeasonEpisode(basename) ?: return@filter false
+            detectedEp == targetEpisode && (detectedSeason == targetSeason || (detectedSeason == null && targetSeason == 1))
+        }
+        if (animeMatches.isNotEmpty()) return animeMatches.singleOrNull()
     }
 
     if (names.isNotEmpty() || episodePattern != null) return null
