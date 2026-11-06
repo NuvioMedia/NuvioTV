@@ -457,7 +457,7 @@
     <string name="licenses_attributions_torbox_title">TorBox</string>
     <string name="licenses_attributions_torbox_body">Nuvio; hesap doğrulama, bulut kütüphanesine erişim, önbellek kontrolü ve bulut oynatma özellikleri için TorBox\'a bağlanır. Nuvio\'nun TorBox ile herhangi bir ortaklığı veya resmi bağı yoktur.</string>
     <string name="licenses_attributions_mdblist_title">MDBList</string>
-    <string name="licenses_attributions_mdblist_body">Nuvio, puanlar ve harici skor sağlayıcı verileri için MDBList\'i kullanır. Nuvio MDBList ile bağlantılı veya onaylanmış değildir.</string>
+    <string name="licenses_attributions_mdblist_body">Nuvio, puanlar, izleme geçmişi ve oynatma takibi için MDBList\'i kullanır. Nuvio MDBList ile bağlantılı veya onaylanmış değildir.</string>
     <string name="licenses_attributions_introdb_title">IntroDB</string>
     <string name="licenses_attributions_introdb_body">Nuvio, atlatma kontrolleri için topluluk tarafından sağlanan intro, özet, jenerik ve önizleme zaman damgaları için IntroDB API\'sini kullanır. Nuvio IntroDB ile bağlantılı veya onaylanmış değildir.</string>
     <string name="licenses_attributions_imdb_title">IMDb Non-Commercial Datasets</string>
@@ -784,6 +784,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Başlangıç hatasında motoru otomatik değiştir</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Yayın başlarken hata olursa ExoPlayer ile libmpv arasında otomatik geçiş yap.</string>
+    <string name="playback_release_decoder_on_background">Dekoderi arka planda serbest bırak</string>
+    <string name="playback_release_decoder_on_background_sub">Nuvio arka plana geçtiğinde video dekoderini serbest bırakır. Uygulamaya geri döndükten sonra oynatma dekoder hatası veriyorsa açın. Oynatıcı geri dönüldüğünde ve ekran koruyucudan sonra yeniden yüklenir</string>
     <string name="playback_external_forward_subtitles">Altyazıları harici oynatıcıya aktar</string>
     <string name="playback_external_forward_subtitles_sub">Altyazıları tercih ettiğiniz dilde eklentilerden çekip harici oynatıcıya gönderir.</string>
     <string name="playback_external_send_skip_segments">Açılış ve kapanış zaman damgalarını gönder</string>
@@ -833,6 +835,17 @@
     <string name="audio_preferred_lang">Tercih Edilen Ses Dili</string>
     <string name="audio_skip_silence">Sessizliği Atla</string>
     <string name="audio_skip_silence_sub">Oynatma sırasında sesin sessiz kısımlarını atla</string>
+    <string name="audio_night_mode">Gece Modu</string>
+    <string name="audio_night_mode_sub">Sesi düşük seviyede tutabilmeniz için diyalogları ve kısık sesleri yükseltir</string>
+    <string name="audio_night_mode_desc">Diyalogları ve kısık sesleri yükseltir; yüksek sesli sahneler ise mikslendiği gibi kalır. Uygulama tarafından kodu çözülen seslerde çalışır. Bir alıcıya veya soundbar\'a doğrudan aktarımla (passthrough) iletilen Dolby ve DTS sesler olduğu gibi bırakılır.</string>
+    <string name="audio_night_mode_value">Gece modu: %1$s</string>
+    <string name="audio_night_mode_off">Kapalı</string>
+    <string name="audio_night_mode_light">Hafif</string>
+    <string name="audio_night_mode_light_desc">Hafif yükseltme, +6 dB\'ye kadar</string>
+    <string name="audio_night_mode_medium">Orta</string>
+    <string name="audio_night_mode_medium_desc">Diyaloglar belirgin şekilde yükseltilir, +10 dB\'ye kadar</string>
+    <string name="audio_night_mode_strong">Güçlü</string>
+    <string name="audio_night_mode_strong_desc">+15 dB\'ye kadar, gece geç saatlerde düşük sesle izlemek için</string>
     <string name="audio_remember_delay_per_device">Her Cihaz İçin Ses Gecikmesini Hatırla</string>
     <string name="audio_remember_delay_per_device_sub">Mevcut ses çıkış cihazı için oynatıcıdaki ses gecikmesini kaydet ve geri yükle</string>
     <string name="audio_advanced_section">Gelişmiş Ses</string>
@@ -926,10 +939,12 @@
     <string name="sub_hdr_style">HDR / Dolby Vision için ayrı stil</string>
     <string name="sub_hdr_style_sub">HDR ve Dolby Vision videolarda altyazı için ayrı bir metin rengi ve daha kısık bir parlaklık kullan</string>
     <string name="sub_hdr_text_color">HDR Metin Rengi</string>
-    <string name="sub_hdr_brightness">HDR Altyazı Parlaklığı</string>
+    <string name="sub_hdr_brightness">HDR Parlaklığı</string>
+    <string name="sub_hdr_dim_player_controls">HDR\'de oynatıcı kontrollerini kıs</string>
+    <string name="sub_hdr_dim_player_controls_sub">HDR ve Dolby Vision videolarda gösterilen oynatıcı kontrollerine ve menülerine de HDR parlaklığını uygula</string>
     <string name="sub_advanced_section">Gelişmiş Altyazı Oluşturma</string>
     <string name="sub_libass">ASS/SSA altyazıları için libass kullan</string>
-    <string name="sub_libass_sub">Bakım nedeniyle geçici olarak devre dışı bırakıldı</string>
+    <string name="sub_libass_sub">Gelişmiş ASS/SSA işleme (stiller, konumlandırma, animasyonlar)</string>
     <string name="sub_libass_mode">Libass Görüntüleme Modu</string>
     <string name="sub_libass_render_scale">Altyazı İşleme Çözünürlüğü</string>
     <string name="sub_libass_render_scale_sub">Düşük çözünürlük, yoğun altyazı düzenlerinde akıcılığı artırır; keskinlik azalır</string>
@@ -1019,8 +1034,8 @@
     <string name="layout_modern_desc">Daha hızlı gezinme için tek aktif satırlı sabit hero alanı</string>
     <string name="layout_section_home">Ana Sayfa Düzeni</string>
     <string name="layout_section_home_desc">Yapıyı ve ana gösterim (hero) kaynağını seçin.</string>
-    <string name="layout_landscape_posters">Yatay Posterler</string>
-    <string name="layout_landscape_posters_sub">Modern görünüm için dikey ve yatay kartlar arasında geçiş yapın.</string>
+    <string name="layout_landscape_posters">Yatay Poster Modu</string>
+    <string name="layout_landscape_posters_sub">Her yerde yatay kartlar kullan.</string>
     <string name="layout_preview_row">Önizleme Satırını Göster</string>
     <string name="layout_preview_row_sub">Modern Ana Sayfa düzeninde aşağıdaki satır için kısmi bir önizleme gösterin.</string>
     <string name="layout_hero_catalogs">Geniş Gösterim Katalogları (Hero)</string>
@@ -1956,6 +1971,12 @@
     <string name="audio_center_mix_unavailable">Merkez miks yalnızca FFmpeg downmix aktifken kullanılabilir.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">Downmix\'te orijinal sesi koru</string>
     <string name="audio_maintain_original_audio_on_downmix_subtitle">Devre dışı bırakıldığında, downmix normalleştirmesi genel sesi azaltabilir.</string>
+    <string name="audio_downmix_lfe_level">Downmix\'te LFE seviyesi</string>
+    <string name="audio_downmix_lfe_level_sub">Subwoofer (LFE) kanalını yok saymak yerine diğer hoparlörlere miksler. Yalnızca 2.0 gibi LFE kanalı bulunmayan hoparlör düzenleri içindir.</string>
+    <string name="audio_downmix_lfe_level_desc">Downmix düzeninde LFE kanalı bulunmadığında kullanılır. Sonraki oynatmadan itibaren geçerli olur.</string>
+    <string name="audio_downmix_lfe_level_off">Kapalı</string>
+    <string name="audio_downmix_lfe_level_half">%50</string>
+    <string name="audio_downmix_lfe_level_full">%100</string>
 
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Altyazılar</string>
@@ -3424,6 +3445,7 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Kapsamlı Otomatik Eşitleme Araması</string>
     <string name="autosync_thorough_description">Eşitlemeden önce daha yakın bir eşleşme için diğer altyazıları ve gömülü parçaları karşılaştırmaya devam eder. Kapalıyken ilk güçlü eşleşme daha hızlı kullanılır. Yalnızca güvenilir eşleşmeler uygulanır.</string>
+    <string name="autosync_toast_no_fit">Eşitleme başarısız: Bu altyazı videonun bu sürümüyle uyuşmuyor.</string>
     <string name="autosync_label_synced">Otomatik eşitlendi</string>
     <string name="stream_resume_from_time">%1$s konumundan devam et</string>
     <string name="stream_resume_from_percent">%1$d%% konumundan devam et</string>
