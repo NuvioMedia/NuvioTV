@@ -519,6 +519,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         durationMs = playerDuration.coerceAtLeast(0L)
                     )
                 }
+                checkExoPlaybackOverrun(player, pos, playerDuration)
 
                 if (player.isPlaying) {
                     val now = System.currentTimeMillis()
@@ -548,6 +549,64 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
             delay(500)
         }
     }
+}
+
+internal const val EXO_END_OVERRUN_GRACE_MS = 1_000L
+
+/** Whether at least one audio renderer is enabled and every enabled one has ended. */
+private fun exoAudioRendererEnded(player: androidx.media3.exoplayer.ExoPlayer): Boolean =
+    runCatching {
+        val audio = (0 until player.rendererCount)
+            .filter { player.getRendererType(it) == androidx.media3.common.C.TRACK_TYPE_AUDIO }
+            .map { player.getRenderer(it) }
+            .filter { it.state != androidx.media3.exoplayer.Renderer.STATE_DISABLED }
+        audio.isNotEmpty() && audio.all { it.isEnded }
+    }.getOrDefault(false)
+
+/**
+ * ExoPlayer only reaches STATE_ENDED once every enabled renderer reports isEnded().
+ * Some hardware decoders never let the video renderer read the end-of-stream
+ * marker, so it never ends: audio finishes, the screen goes black and the
+ * standalone clock keeps ticking past the duration forever.
+ * Once audio has ended past the duration, finish naturally instead.
+ */
+internal fun PlayerRuntimeController.checkExoPlaybackOverrun(
+    player: androidx.media3.exoplayer.ExoPlayer,
+    positionMs: Long,
+    durationMs: Long
+) {
+    if (durationMs <= 0L || player.isCurrentMediaItemLive) return
+    if (player.playbackState == Player.STATE_ENDED) return
+    val overrunMs = positionMs - durationMs
+    if (overrunMs <= 0L) {
+        if (exoEndOverrunHandled) {
+            // User seeked back after a forced end; allow detection again.
+            exoEndOverrunHandled = false
+            _uiState.update { it.copy(playbackEnded = false) }
+        }
+        return
+    }
+    if (exoEndOverrunHandled || overrunMs < EXO_END_OVERRUN_GRACE_MS) return
+    if (!endDetectionArmed || !hasRenderedFirstFrame) return
+    // Audio still running past duration means the duration is wrong, not the player.
+    if (!exoAudioRendererEnded(player)) return
+
+    exoEndOverrunHandled = true
+    Log.i(
+        PlayerRuntimeController.TAG,
+        "EXO_END_OVERRUN: forcing natural end positionMs=$positionMs durationMs=$durationMs"
+    )
+    val naturalEnded = shouldTreatAsNaturalPlaybackCompletion(
+        hasRenderedFirstFrame = hasRenderedFirstFrame,
+        hasFatalError = !_uiState.value.error.isNullOrBlank(),
+        durationMs = maxOf(durationMs, lastKnownDuration)
+    )
+    if (!naturalEnded) return
+    // Stop the runaway clock. The completion scrobble below clears the active
+    // scrobble, so the pause that follows does not send a Trakt pause.
+    _uiState.update { it.copy(playbackEnded = true, isBuffering = false) }
+    handleNaturalPlaybackEnded()
+    player.pause()
 }
 
 internal fun PlayerRuntimeController.stopProgressUpdates() {
@@ -818,7 +877,7 @@ internal fun PlayerRuntimeController.getEffectiveDuration(position: Long): Long 
     val isEnded = if (isUsingMpvEngine()) {
         position >= (effectiveDuration - 500L)
     } else {
-        _exoPlayer?.playbackState == Player.STATE_ENDED
+        _exoPlayer?.playbackState == Player.STATE_ENDED || exoEndOverrunHandled
     }
     if (!isEnded && effectiveDuration < position) return 0L
 
@@ -1875,6 +1934,7 @@ fun PlayerRuntimeController.onEvent(
             hasRenderedFirstFrame = false
             endDetectionArmed = false
             mpvEofSeenClear = false
+            exoEndOverrunHandled = false
             hasRetriedCurrentStreamAfter416 = false
             playbackIssueReportRequestVersion.incrementAndGet()
             resetErrorRetryState()
