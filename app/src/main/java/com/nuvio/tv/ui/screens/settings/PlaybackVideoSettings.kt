@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -165,6 +166,13 @@ internal fun PlaybackVideoSection(
             },
             enabled = enabled
         )
+        SettingsActionRow(
+            title = stringResource(R.string.playback_mpv_user_config_title),
+            subtitle = stringResource(R.string.playback_mpv_user_config_sub),
+            value = mpvUserConfigSummary(settings.mpvUserConfig),
+            enabled = enabled,
+            onClick = { onOpenDialog(PlaybackDialog.MPV_USER_CONFIG) }
+        )
     }
 }
 
@@ -213,6 +221,16 @@ private fun mpvHardwareDecodeModeLabel(mode: MpvHardwareDecodeMode): String = wh
     MpvHardwareDecodeMode.HARDWARE_COPY -> stringResource(R.string.audio_mpv_hwdec_hardware_copy)
     MpvHardwareDecodeMode.HARDWARE_DIRECT -> stringResource(R.string.audio_mpv_hwdec_hardware_direct)
     MpvHardwareDecodeMode.DISABLED -> stringResource(R.string.audio_mpv_hwdec_disabled)
+}
+
+@Composable
+private fun mpvUserConfigSummary(config: String): String {
+    val optionCount = mpvUserConfigOptionCount(config)
+    return if (optionCount == 0) {
+        stringResource(R.string.sub_not_set)
+    } else {
+        pluralStringResource(R.plurals.playback_mpv_user_config_option_count, optionCount, optionCount)
+    }
 }
 
 @Composable
@@ -322,6 +340,14 @@ internal fun VideoSettingsDialogs(
             selectedMode = settings.mpvHardwareDecodeMode,
             onModeSelected = { mode ->
                 onUpdate { setMpvHardwareDecodeMode(mode) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
+        PlaybackDialog.MPV_USER_CONFIG -> MpvUserConfigDialog(
+            initialConfig = settings.mpvUserConfig,
+            onSave = { config ->
+                onUpdate { setMpvUserConfig(config) }
                 onDismiss()
             },
             onDismiss = onDismiss
