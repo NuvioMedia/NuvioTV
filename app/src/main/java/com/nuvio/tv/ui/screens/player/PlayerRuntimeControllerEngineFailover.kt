@@ -826,7 +826,7 @@ private fun PlayerRuntimeController.findAddonSubtitleByTrackIdOrLanguage(
 ): com.nuvio.tv.domain.model.Subtitle? {
     val normalizedTrackId = trackId?.trim()
     if (!normalizedTrackId.isNullOrBlank()) {
-        state.addonSubtitles.firstOrNull { subtitle ->
+        state.selectableAddonSubtitles.firstOrNull { subtitle ->
             val addonTrackId = buildAddonSubtitleTrackId(subtitle)
             addonTrackId.equals(normalizedTrackId, ignoreCase = true) ||
                 normalizedTrackId.contains(addonTrackId, ignoreCase = true)
@@ -840,7 +840,7 @@ private fun PlayerRuntimeController.findAddonSubtitleByTrackIdOrLanguage(
     }
     val lang = language?.trim()
     if (!lang.isNullOrBlank()) {
-        state.addonSubtitles.firstOrNull { subtitle ->
+        state.selectableAddonSubtitles.firstOrNull { subtitle ->
             PlayerSubtitleUtils.matchesLanguageCode(subtitle.lang, lang)
         }?.let {
             logSwitchTrace(
