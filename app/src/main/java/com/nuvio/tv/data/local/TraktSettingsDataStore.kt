@@ -53,6 +53,7 @@ class TraktSettingsDataStore @Inject constructor(
         const val DEFAULT_CONTINUE_WATCHING_DAYS_CAP = 60
         const val DEFAULT_SHOW_UNAIRED_NEXT_UP = true
         const val DEFAULT_SHOW_META_COMMENTS = true
+        const val DEFAULT_POST_PLAY_RATING_PROMPT = false
         val DEFAULT_WATCH_PROGRESS_SOURCE = WatchProgressSource.TRAKT
         val DEFAULT_LIBRARY_SOURCE_MODE = LibrarySourceMode.TRAKT
         val DEFAULT_MORE_LIKE_THIS_SOURCE = MoreLikeThisSourcePreference.TRAKT
@@ -70,6 +71,7 @@ class TraktSettingsDataStore @Inject constructor(
     private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
     private val nextUpFromFurthestEpisodeKey = booleanPreferencesKey("next_up_from_furthest_episode")
     private val showMetaCommentsKey = booleanPreferencesKey("show_meta_comments")
+    private val postPlayRatingPromptKey = booleanPreferencesKey("post_play_rating_prompt")
     private val watchProgressSourceKey = stringPreferencesKey("watch_progress_source")
     private val librarySourceModeKey = stringPreferencesKey("library_source_mode")
     private val rememberedWatchProgressSourceKey = stringPreferencesKey("remembered_watch_progress_source")
@@ -109,6 +111,12 @@ class TraktSettingsDataStore @Inject constructor(
     val showMetaComments: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             prefs[showMetaCommentsKey] ?: DEFAULT_SHOW_META_COMMENTS
+        }
+    }
+
+    val postPlayRatingPrompt: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            prefs[postPlayRatingPromptKey] ?: DEFAULT_POST_PLAY_RATING_PROMPT
         }
     }
 
@@ -183,6 +191,12 @@ class TraktSettingsDataStore @Inject constructor(
     suspend fun setShowMetaComments(enabled: Boolean) {
         store().edit { prefs ->
             prefs[showMetaCommentsKey] = enabled
+        }
+    }
+
+    suspend fun setPostPlayRatingPrompt(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[postPlayRatingPromptKey] = enabled
         }
     }
 
