@@ -7,7 +7,6 @@ import com.nuvio.tv.core.debrid.DebridStreamFormatterDefaults
 import com.nuvio.tv.domain.model.DebridStreamPreferences
 import fi.iki.elonen.NanoHTTPD
 import java.io.ByteArrayInputStream
-import java.nio.charset.StandardCharsets
 
 class DebridFormatterConfigServer(
     private val currentSettingsProvider: () -> DebridFormatterSettings,
@@ -20,6 +19,7 @@ class DebridFormatterConfigServer(
     private val settingsMapType = object : TypeToken<Map<String, Any?>>() {}.type
 
     override fun serve(session: IHTTPSession): Response {
+        ConfigServerGuard.rejection(session)?.let { return it }
         return when {
             session.method == Method.GET && session.uri == "/" -> serveWebPage()
             session.method == Method.GET && session.uri == "/logo.png" -> serveLogo()
@@ -75,7 +75,7 @@ class DebridFormatterConfigServer(
     }
 
     private fun handleSettingsUpdate(session: IHTTPSession): Response {
-        val body = readUtf8Body(session)
+        val body = ConfigServerGuard.readBody(session)
         val parsed = runCatching {
             gson.fromJson<Map<String, Any?>>(body, settingsMapType)
         }.getOrNull()
@@ -105,19 +105,6 @@ class DebridFormatterConfigServer(
             "application/json; charset=utf-8",
             gson.toJson(mapOf("error" to message))
         )
-
-    private fun readUtf8Body(session: IHTTPSession): String {
-        val length = session.headers["content-length"]?.toIntOrNull() ?: return ""
-        if (length <= 0) return ""
-        val buffer = ByteArray(length)
-        var offset = 0
-        while (offset < length) {
-            val read = session.inputStream.read(buffer, offset, length - offset)
-            if (read <= 0) break
-            offset += read
-        }
-        return String(buffer, 0, offset, StandardCharsets.UTF_8)
-    }
 
     companion object {
         fun startOnAvailablePort(
