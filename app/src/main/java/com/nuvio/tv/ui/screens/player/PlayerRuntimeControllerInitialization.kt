@@ -2115,6 +2115,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     hasRenderedFirstFrame = false
     endDetectionArmed = false
     mpvEofSeenClear = false
+    exoEndOverrunHandled = false
     hasMarkedCurrentEpisodeCompleted = false
     shouldEnforceAutoplayOnFirstReady = true
     userPausedManually = false
