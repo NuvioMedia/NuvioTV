@@ -28,3 +28,12 @@ enum class ContentType {
             ?: "movie"
     }
 }
+
+/**
+ * Whether items of this add-on type are shows with episodes. Items of any other type, such as
+ * "movie" or an add-on's "youtube", are one video and are marked watched as a whole.
+ */
+fun isSeriesLikeType(apiType: String?): Boolean = when (apiType?.trim()?.lowercase()) {
+    "series", "tv", "anime" -> true
+    else -> false
+}

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.google.gson.Gson
@@ -41,6 +42,12 @@ class WatchedItemsPreferences @Inject constructor(
     private val lastSuccessfulPushMsKey = longPreferencesKey("last_successful_watched_push_ms")
     private val deltaCursorKey = longPreferencesKey("watched_items_delta_cursor")
     private val deltaInitializedKey = booleanPreferencesKey("watched_items_delta_initialized")
+
+    // Content ids of single items (no season or episode) marked watched while a tracking provider
+    // was the watch progress source, which that provider has not reported yet. Its data alone
+    // decides what shows as watched, and it may never know an item, such as an add-on's YouTube
+    // video, so these marks are read alongside it until it reports them or they are unmarked.
+    private val pendingProviderMarksKey = stringSetPreferencesKey("pending_provider_watched_marks")
 
     // Decoded items per profile, keyed by their stored JSON. Every collector of observeAllItems
     // decodes the full set on each change; reusing unchanged entries keeps a single write (such as
@@ -115,6 +122,29 @@ class WatchedItemsPreferences @Inject constructor(
             .flowOn(Dispatchers.Default)
     }
 
+    /** The active profile's pending provider marks; see [observePendingProviderMarks]. */
+    internal val pendingProviderMarks: Flow<Set<String>> = profileManager.activeProfileId.flatMapLatest { pid ->
+        observePendingProviderMarks(pid)
+    }
+
+    /**
+     * Content ids of single items marked watched while a tracking provider was the source and not
+     * reported by it yet, that are still marked here.
+     */
+    fun observePendingProviderMarks(profileId: Int): Flow<Set<String>> {
+        return store(profileId).data
+            .map { preferences -> pendingMarksStillWatched(preferences) }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+    }
+
+    private fun pendingMarksStillWatched(preferences: Preferences): Set<String> {
+        val pending = preferences[pendingProviderMarksKey].orEmpty()
+        if (pending.isEmpty()) return emptySet()
+        val storedKeys = preferences[watchedItemsKey].orEmpty().mapTo(HashSet(), ::extractWatchedItemKey)
+        return pending.filterTo(linkedSetOf()) { contentId -> buildWatchedKey(contentId, null, null) in storedKeys }
+    }
+
     fun isWatched(contentId: String, season: Int? = null, episode: Int? = null): Flow<Boolean> {
         return allItems.map { items ->
             items.any { item ->
@@ -143,9 +173,14 @@ class WatchedItemsPreferences @Inject constructor(
         }
     }
 
+    /**
+     * Stores [item]. With [pendingProviderMark], a single item is also kept as a pending provider
+     * mark, for a mark made while a tracking provider is the watch progress source.
+     */
     suspend fun markAsWatched(
         item: WatchedItem,
-        profileId: Int = profileManager.activeProfileId.value
+        profileId: Int = profileManager.activeProfileId.value,
+        pendingProviderMark: Boolean = false
     ) {
         store(profileId).edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()
@@ -154,6 +189,10 @@ class WatchedItemsPreferences @Inject constructor(
                 extractWatchedItemKey(json) == itemKey
             }
             preferences[watchedItemsKey] = filtered.toSet() + gson.toJson(item)
+            if (pendingProviderMark && item.season == null && item.episode == null) {
+                preferences[pendingProviderMarksKey] =
+                    preferences[pendingProviderMarksKey].orEmpty() + item.contentId
+            }
         }
     }
 
@@ -185,6 +224,23 @@ class WatchedItemsPreferences @Inject constructor(
                 extractWatchedItemKey(json) == removeKey
             }
             preferences[watchedItemsKey] = filtered.toSet()
+            if (season == null && episode == null) {
+                val pending = preferences[pendingProviderMarksKey].orEmpty()
+                if (contentId in pending) preferences[pendingProviderMarksKey] = pending - contentId
+            }
+        }
+    }
+
+    /** Stops treating [contentIds] as pending once the tracking provider reports them watched. */
+    suspend fun acknowledgePendingProviderMarks(
+        contentIds: Set<String>,
+        profileId: Int = profileManager.activeProfileId.value
+    ) {
+        if (contentIds.isEmpty()) return
+        store(profileId).edit { preferences ->
+            val pending = preferences[pendingProviderMarksKey].orEmpty()
+            val remaining = pending - contentIds
+            if (remaining.size != pending.size) preferences[pendingProviderMarksKey] = remaining
         }
     }
 
@@ -314,6 +370,30 @@ class WatchedItemsPreferences @Inject constructor(
     suspend fun clearAll(profileId: Int = profileManager.activeProfileId.value) {
         store(profileId).edit { preferences ->
             preferences.remove(watchedItemsKey)
+            preferences.remove(deltaCursorKey)
+            preferences.remove(deltaInitializedKey)
+            preferences.remove(pendingProviderMarksKey)
+        }
+        decodeCaches.remove(profileId)
+    }
+
+    /**
+     * [clearAll] for a change of watch progress source, except for the pending provider marks,
+     * which no source can bring back.
+     */
+    suspend fun clearAllKeepingPendingProviderMarks(profileId: Int = profileManager.activeProfileId.value) {
+        store(profileId).edit { preferences ->
+            val pending = pendingMarksStillWatched(preferences)
+            val keptKeys = pending.mapTo(HashSet()) { contentId -> buildWatchedKey(contentId, null, null) }
+            val kept = preferences[watchedItemsKey].orEmpty()
+                .filterTo(linkedSetOf()) { json -> extractWatchedItemKey(json) in keptKeys }
+            if (kept.isEmpty()) {
+                preferences.remove(watchedItemsKey)
+                preferences.remove(pendingProviderMarksKey)
+            } else {
+                preferences[watchedItemsKey] = kept
+                preferences[pendingProviderMarksKey] = pending
+            }
             preferences.remove(deltaCursorKey)
             preferences.remove(deltaInitializedKey)
         }

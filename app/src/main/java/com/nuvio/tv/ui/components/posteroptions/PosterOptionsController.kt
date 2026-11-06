@@ -14,6 +14,7 @@ import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.domain.model.isSeriesLikeType
 import com.nuvio.tv.domain.repository.LibraryRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
@@ -402,7 +403,7 @@ class PosterOptionsController @Inject constructor(
     fun toggleMovieWatched() {
         val state = _state.value
         val item = state.target ?: return
-        if (!item.apiType.equals("movie", ignoreCase = true)) return
+        if (isSeriesLikeType(item.apiType)) return
         if (state.isWatchedPending) return
         val scope = this.scope ?: return
 

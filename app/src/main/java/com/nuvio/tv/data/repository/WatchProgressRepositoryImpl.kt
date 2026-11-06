@@ -47,6 +47,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -407,7 +408,32 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 activeProgressProviderId = provider?.providerId
             }
         }
+        syncScope.launch { acknowledgeReportedProviderMarks() }
     }
+
+    /**
+     * Ends a pending provider mark once the active provider reports the item as watched. From then
+     * on the provider's data decides, so an unmark made through it elsewhere shows up here.
+     */
+    private suspend fun acknowledgeReportedProviderMarks() {
+        activeProgressProviderState
+            .flatMapLatest { provider -> provider?.let(::pendingMarksReportedBy) ?: emptyFlow() }
+            .collect { (profileId, reported) ->
+                runCatching { watchedItemsPreferences.acknowledgePendingProviderMarks(reported, profileId) }
+                    .onFailure { error -> Log.w(TAG, "Failed to acknowledge provider-reported marks", error) }
+            }
+    }
+
+    /** The active profile's pending provider marks that [provider] now reports as watched. */
+    private fun pendingMarksReportedBy(provider: TrackingProgressProvider): Flow<Pair<Int, Set<String>>> =
+        profileManager.activeProfileId.flatMapLatest { profileId ->
+            combine(
+                provider.reportedWatchedMovieIds,
+                watchedItemsPreferences.observePendingProviderMarks(profileId)
+            ) { reported, pending ->
+                profileId to pending.filterTo(linkedSetOf()) { contentId -> contentId in reported }
+            }
+        }
 
     private fun activeProgressProviderFlow(): Flow<TrackingProgressProvider?> = activeProgressProviderState
 
@@ -668,7 +694,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
         val baseFlow = activeProgressProviderFlow()
             .flatMapLatest { provider ->
                 if (provider != null) {
-                    provider.watchedMovieIds
+                    // Single items marked here stay watched until the provider reports them.
+                    combine(
+                        provider.watchedMovieIds,
+                        watchedItemsPreferences.pendingProviderMarks
+                    ) { providerIds, pendingMarks -> providerIds + pendingMarks }
                 } else {
                     combine(
                         watchProgressPreferences.allProgress,
@@ -783,7 +813,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     }
                 }
 
-                provider.isWatched(contentId, videoId, season, episode)
+                val providerWatched = provider.isWatched(contentId, videoId, season, episode)
+                if (season != null || episode != null) return@flatMapLatest providerWatched
+                combine(providerWatched, watchedItemsPreferences.pendingProviderMarks) { watched, pendingMarks ->
+                    watched || contentId in pendingMarks || (videoId != null && videoId in pendingMarks)
+                }
             }
     }
 
@@ -1032,7 +1066,15 @@ class WatchProgressRepositoryImpl @Inject constructor(
         }
         watchProgressPreferences.saveProgress(completed, profileId = profileId)
         val watchedItem = completed.toWatchedItem(watchedAt = now)
-        watchedItemsPreferences.markAsWatched(watchedItem, profileId = profileId)
+        // With a tracking provider as the source, only its data decides what shows as watched, and it
+        // may never report a single item such as an add-on's YouTube video, so keep the mark pending.
+        val pendingProviderMark = watchedItem.season == null && watchedItem.episode == null &&
+            profileManager.activeProfileId.value == profileId && activeProgressProvider() != null
+        watchedItemsPreferences.markAsWatched(
+            watchedItem,
+            profileId = profileId,
+            pendingProviderMark = pendingProviderMark
+        )
         mutationStore.queueWatchedUpserts(listOf(watchedItem), profileId)
         if (broadcastTrackingHistory) {
             broadcastHistoryAdd(profileId, listOf(completed.toTrackingHistoryItem(now)))
