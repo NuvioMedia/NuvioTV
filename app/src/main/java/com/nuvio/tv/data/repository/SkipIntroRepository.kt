@@ -7,6 +7,7 @@ import com.nuvio.tv.data.local.AnimeSkipSettingsDataStore
 import com.nuvio.tv.data.remote.api.AniSkipApi
 import com.nuvio.tv.data.remote.api.AnimeSkipApi
 import com.nuvio.tv.data.remote.api.AnimeSkipRequest
+import com.nuvio.tv.data.remote.api.AnimeSkipEpisode
 import com.nuvio.tv.data.remote.api.AnimeSkipTimestamp
 import com.nuvio.tv.data.remote.api.IntroDbApi
 import com.nuvio.tv.data.remote.api.IntroDbSegment
@@ -298,17 +299,13 @@ class SkipIntroRepository @Inject constructor(
                 if (!episodesResponse.isSuccessful) continue
 
                 val episodes = episodesResponse.body()?.data?.findEpisodesByShowId ?: continue
-                // A show can hold several community entries for the same episode number,
-                // some of them incomplete; use the first one that yields usable segments.
                 val result = episodes
-                    .asSequence()
                     .filter { ep ->
                         ep.number?.toIntOrNull() == episode &&
                             (season == null || ep.season?.toIntOrNull() == season)
                     }
-                    .map { it.timestamps.orEmpty().toAnimeSkipIntervals(it.baseDuration) }
-                    .firstOrNull { it.isNotEmpty() }
-                if (result != null) return result
+                    .bestAnimeSkipIntervals()
+                if (result.isNotEmpty()) return result
             }
             emptyList()
         } catch (e: Exception) {
@@ -338,6 +335,22 @@ class SkipIntroRepository @Inject constructor(
         private const val NO_ID = "__none__"
     }
 }
+
+/**
+ * A show can hold several community entries for the same episode number, some of them incomplete.
+ * Pick the entry covering the most segment categories (opening / ending / recap), then the one
+ * with the most segments; on a tie the earlier entry wins.
+ */
+internal fun List<AnimeSkipEpisode>.bestAnimeSkipIntervals(): List<SkipInterval> =
+    map { it.timestamps.orEmpty().toAnimeSkipIntervals(it.baseDuration) }
+        .filter { it.isNotEmpty() }
+        .maxWithOrNull(
+            compareBy<List<SkipInterval>>(
+                { intervals -> intervals.mapNotNull { segmentCategory(it.type) }.toSet().size },
+                { it.size }
+            )
+        )
+        .orEmpty()
 
 /**
  * Anime-Skip timestamps only mark where a segment starts; each one ends where the next begins.
