@@ -33,6 +33,8 @@ class TrailerSettingsDataStore @Inject constructor(
     private val playInBackgroundKey = booleanPreferencesKey("trailer_play_in_background")
     private val pauseOnScrollKey = booleanPreferencesKey("trailer_pause_on_scroll")
     private val allow4kKey = booleanPreferencesKey("trailer_allow_4k")
+    private val subtitlesEnabledKey = booleanPreferencesKey("trailer_subtitles_enabled")
+    private val subtitlesSdhFilterKey = booleanPreferencesKey("trailer_subtitles_sdh_filter")
 
     val settings: Flow<TrailerSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -41,7 +43,9 @@ class TrailerSettingsDataStore @Inject constructor(
                 delaySeconds = prefs[delaySecondsKey] ?: 7,
                 playInBackground = prefs[playInBackgroundKey] ?: false,
                 pauseOnScroll = prefs[pauseOnScrollKey] ?: true,
-                allow4k = prefs[allow4kKey] ?: default4kTrailers
+                allow4k = prefs[allow4kKey] ?: default4kTrailers,
+                subtitlesEnabled = prefs[subtitlesEnabledKey] ?: true,
+                subtitlesSdhFilterEnabled = prefs[subtitlesSdhFilterKey] ?: true
             )
         }
     }
@@ -65,6 +69,14 @@ class TrailerSettingsDataStore @Inject constructor(
     suspend fun setAllow4k(enabled: Boolean) {
         store().edit { it[allow4kKey] = enabled }
     }
+
+    suspend fun setSubtitlesEnabled(enabled: Boolean) {
+        store().edit { it[subtitlesEnabledKey] = enabled }
+    }
+
+    suspend fun setSubtitlesSdhFilterEnabled(enabled: Boolean) {
+        store().edit { it[subtitlesSdhFilterKey] = enabled }
+    }
 }
 
 data class TrailerSettings(
@@ -72,5 +84,7 @@ data class TrailerSettings(
     val delaySeconds: Int = 7,
     val playInBackground: Boolean = false,
     val pauseOnScroll: Boolean = true,
-    val allow4k: Boolean = true
+    val allow4k: Boolean = true,
+    val subtitlesEnabled: Boolean = true,
+    val subtitlesSdhFilterEnabled: Boolean = true
 )
