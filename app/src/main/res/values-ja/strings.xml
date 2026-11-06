@@ -1167,8 +1167,8 @@
     <string name="settings_card_depth_surface_episodes">エピソードカード</string>
     <string name="settings_card_depth_surface_cast">キャスト</string>
     <string name="settings_card_depth_surface_trailers">予告編</string>
-    <string name="layout_open">開く</string>
-    <string name="layout_closed">閉じる</string>
+    <string name="layout_open">閉じる</string>
+    <string name="layout_closed">開く</string>
     <string name="layout_trailer_location">モダン予告編再生場所</string>
     <string name="layout_trailer_location_sub">モダンホームで予告編プレビューを再生する場所を選択</string>
     <string name="layout_trailer_expanded_card">拡大カード</string>
