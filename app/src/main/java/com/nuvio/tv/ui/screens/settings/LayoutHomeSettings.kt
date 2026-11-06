@@ -172,6 +172,12 @@ internal fun LayoutHomeContentSection(
         onToggle = { onEvent(LayoutSettingsEvent.SetHideUnreleasedContent(!uiState.hideUnreleasedContent)) }
     )
     SettingsToggleRow(
+        title = stringResource(R.string.layout_home_watchlist_row),
+        subtitle = stringResource(R.string.layout_home_watchlist_row_sub),
+        checked = uiState.homeWatchlistRowEnabled,
+        onToggle = { onEvent(LayoutSettingsEvent.SetHomeWatchlistRowEnabled(!uiState.homeWatchlistRowEnabled)) }
+    )
+    SettingsToggleRow(
         title = stringResource(R.string.layout_overall_ratings),
         subtitle = stringResource(
             if (uiState.homeImdbRatingsVisibility.showRatings) {
