@@ -30,6 +30,38 @@ class AutoSyncNoFitTrackerTest {
         assertFalse(AutoSyncNoFitTracker.isNoFit(fit.copy(confident = false, activityMargin = 0.015)))
     }
 
+    @Test
+    fun onlyARealAmbiguousResultAgainstAFullReferenceConfirmsANoFit() {
+        val reference = timeline(seed = 1)
+        val fit = checkNotNull(AutoSyncTimelineRetimer.retime(reference, reference, 1.0, 0.0, true))
+        val ambiguous = fit.copy(confident = false, activityMargin = 0.004)
+
+        assertTrue(AutoSyncNoFitTracker.confirmsNoFit(ambiguous, sampledReference = false))
+        assertFalse(AutoSyncNoFitTracker.confirmsNoFit(null, sampledReference = false))
+        assertFalse(AutoSyncNoFitTracker.confirmsNoFit(ambiguous, sampledReference = true))
+        assertFalse(AutoSyncNoFitTracker.confirmsNoFit(fit, sampledReference = false))
+        assertFalse(
+            AutoSyncNoFitTracker.confirmsNoFit(
+                fit.copy(confident = false, activityMargin = 0.015),
+                sampledReference = false,
+            ),
+        )
+    }
+
+    @Test
+    fun aNoFitIsConfirmedOnlyWhenEveryTriedReferenceAgreed() {
+        // Every ranked reference tried, all no-fit.
+        assertTrue(AutoSyncNoFitTracker.isConfirmedNoFit(3, 3, rankedReferences = 3, abandoned = false))
+        // Abandoned early by the tracker after enough independent sources.
+        assertTrue(AutoSyncNoFitTracker.isConfirmedNoFit(3, 3, rankedReferences = 5, abandoned = true))
+        // One reference left untried.
+        assertFalse(AutoSyncNoFitTracker.isConfirmedNoFit(2, 2, rankedReferences = 3, abandoned = false))
+        // One pair was inconclusive or a fit.
+        assertFalse(AutoSyncNoFitTracker.isConfirmedNoFit(3, 2, rankedReferences = 3, abandoned = false))
+        // Never evaluated.
+        assertFalse(AutoSyncNoFitTracker.isConfirmedNoFit(0, 0, rankedReferences = 0, abandoned = false))
+    }
+
     private fun activity(seed: Int) =
         checkNotNull(AutoSyncTimelineRetimer.prepareUnitActivity(timeline(seed)))
 

@@ -25,6 +25,7 @@ import javax.inject.Singleton
  *  - tunneledSurfaceFill  (ExoPlayer surface fill while tunneling; does not affect aspectMode)
  *  - playerStatsHudButtonEnabled  (whether stats overlay button is available in stream info)
  *  - playerStatsHudActive  (whether playback stats HUD is turned on by the user)
+ *  - releaseDecoderOnBackground  (free the hardware decoder when the app leaves the foreground)
  */
 @Singleton
 class DeviceLocalPlayerPreferences @Inject constructor(
@@ -43,6 +44,7 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     private val tunneledSurfaceFillKey = booleanPreferencesKey("tunneled_surface_fill")
     private val playerStatsHudButtonEnabledKey = booleanPreferencesKey("player_stats_hud_enabled")
     private val playerStatsHudActiveKey = booleanPreferencesKey("player_stats_hud_active")
+    private val releaseDecoderOnBackgroundKey = booleanPreferencesKey("release_decoder_on_background")
 
     val aspectMode: Flow<AspectMode> = store.data.map { prefs ->
         prefs[aspectModeKey]?.let {
@@ -109,6 +111,16 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     suspend fun setPlayerStatsHudActive(active: Boolean) {
         store.edit { prefs ->
             prefs[playerStatsHudActiveKey] = active
+        }
+    }
+
+    val releaseDecoderOnBackground: Flow<Boolean> = store.data.map { prefs ->
+        prefs[releaseDecoderOnBackgroundKey] ?: false
+    }
+
+    suspend fun setReleaseDecoderOnBackground(enabled: Boolean) {
+        store.edit { prefs ->
+            prefs[releaseDecoderOnBackgroundKey] = enabled
         }
     }
 }

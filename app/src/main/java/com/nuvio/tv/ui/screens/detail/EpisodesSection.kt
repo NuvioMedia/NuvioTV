@@ -714,7 +714,7 @@ private fun EpisodeCard(
     } else {
         1f
     }
-    val showNotStartedBadge = remember(showCompletedBadge, progressPercent) { !showCompletedBadge && progressPercent < 0.02f }
+    val showNotStartedBadge = !showCompletedBadge && !showProgress
     val isUnavailable = remember(episode.available) { episode.available == false }
     val cardBgColor = NuvioTheme.colors.BackgroundCard
     val isFocusedState = remember { mutableStateOf(false) }
