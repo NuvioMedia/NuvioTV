@@ -125,6 +125,44 @@ class SimklSnapshotProjectionTest {
         assertFalse("tt0000003" in projection.watchedMovieIds)
     }
 
+    @Test
+    fun `watching show with no watched episodes is seeded before its first episode`() {
+        val unstarted = entry(
+            type = SimklMediaType.SHOWS,
+            status = SimklListStatus.WATCHING,
+            media = media(1, "tt0000001")
+        )
+        val planned = entry(
+            type = SimklMediaType.SHOWS,
+            status = SimklListStatus.PLAN_TO_WATCH,
+            media = media(2, "tt0000002")
+        )
+        val started = entry(
+            type = SimklMediaType.SHOWS,
+            status = SimklListStatus.WATCHING,
+            media = media(3, "tt0000003"),
+            episodes = listOf(SimklEpisode(4, WATCHED_AT))
+        )
+        val countedWithoutHistory = entry(
+            type = SimklMediaType.SHOWS,
+            status = SimklListStatus.WATCHING,
+            media = media(4, "tt0000004")
+        ).copy(watchedEpisodesCount = 3)
+
+        val projection = SimklSnapshotProjection.create(
+            SimklSyncSnapshot(entries = listOf(unstarted, planned, started, countedWithoutHistory))
+        )
+        val seeds = projection.nextUp(true).associateBy { it.contentId }
+
+        assertEquals(setOf("tt0000001", "tt0000003"), seeds.keys)
+        assertEquals(1, seeds.getValue("tt0000001").season)
+        assertEquals(0, seeds.getValue("tt0000001").episode)
+        assertTrue(seeds.getValue("tt0000001").isCompleted())
+        assertEquals(4, seeds.getValue("tt0000003").episode)
+        assertFalse(projection.isWatched("tt0000001", null, 1, 0))
+        assertTrue(projection.watchedShowEpisodes["tt0000001"].isNullOrEmpty())
+    }
+
     @Test(timeout = 20_000)
     fun `large account is projected once and queried through indexes`() {
         val seriesCount = 386

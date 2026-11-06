@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.simkl
 
+import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.core.tracking.selectPreferredTrackingNextUpSeeds
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.WatchedItem
@@ -178,6 +179,7 @@ internal class SimklSnapshotProjection private constructor(
                 .filter { item -> item.season != null && item.episode != null && item.season != 0 }
                 .map(WatchedItem::toSimklCompletedProgress)
                 .toList()
+                .let { seeds -> seeds + snapshot.simklUnstartedWatchingSeeds(seeds) }
 
             val baseWatchedMovieIds = snapshot.simklBaseWatchedMovieIds()
             return SimklSnapshotProjection(
@@ -213,6 +215,35 @@ internal class SimklSnapshotProjection private constructor(
 internal fun SimklSyncSnapshot.toSimklNextUpSeeds(
     preferFurthestEpisode: Boolean
 ): List<WatchProgress> = SimklSnapshotProjection.create(this).nextUp(preferFurthestEpisode)
+
+// A show on the Watching list with no watched episode has no seed, so S1E1 never reaches Next Up.
+// Seed it at S1E0 so Next Up resolves the first episode once it airs.
+private fun SimklSyncSnapshot.simklUnstartedWatchingSeeds(
+    existingSeeds: List<WatchProgress>
+): List<WatchProgress> {
+    val seededIds = existingSeeds.mapTo(hashSetOf()) { seed -> seed.contentId.simklLookupKey() }
+    return entries.mapNotNull { entry ->
+        if (entry.status != SimklListStatus.WATCHING || entry.isMovieEntry()) return@mapNotNull null
+        if (entry.watchedEpisodesCount > 0) return@mapNotNull null
+        val media = entry.media ?: return@mapNotNull null
+        val contentId = media.canonicalContentId() ?: return@mapNotNull null
+        if (contentId.simklLookupKey() in seededIds) return@mapNotNull null
+        WatchedItem(
+            contentId = contentId,
+            contentType = "series",
+            title = media.title?.takeIf(String::isNotBlank) ?: contentId,
+            season = 1,
+            episode = 0,
+            watchedAt = parseSimklUtcEpochMs(entry.lastWatchedAt)
+                ?: parseSimklUtcEpochMs(entry.addedToWatchlistAt)
+                ?: 0L,
+            poster = entry.resolvedPosterUrl(),
+            trackingProviderId = TrackingProviderId.SIMKL.storageId,
+            trackingProviderItemId = media.simklTrackingProviderItemId(),
+            trackingSourceUrl = buildSimklSourceUrl(entry.mediaType, media)
+        ).toSimklCompletedProgress()
+    }
+}
 
 private fun SimklSyncSnapshot.simklBaseWatchedMovieIds(): Set<String> {
     val watched = linkedSetOf<String>()
