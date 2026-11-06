@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.accentBrush
 
+import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
@@ -81,6 +82,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -181,6 +183,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 
 private const val PLAYER_CONTROLS_FADE_DURATION_MS = 200
+
+// Back presses are ignored for this long after the controls go from visible to hidden (manual or auto-hide).
+private const val PLAYER_BACK_EXIT_GUARD_MS = 500L
 
 private fun PlayerUiState.returnFocusSeasonEpisode(completed: Boolean): Pair<Int?, Int?> {
     val next = nextEpisode?.takeIf {
@@ -351,6 +356,15 @@ fun PlayerScreen(
         }
     }
 
+    var controlsHiddenAtMs by remember { mutableLongStateOf(0L) }
+    var controlsWereVisible by remember { mutableStateOf(uiState.showControls) }
+    LaunchedEffect(uiState.showControls) {
+        if (controlsWereVisible && !uiState.showControls) {
+            controlsHiddenAtMs = SystemClock.elapsedRealtime()
+        }
+        controlsWereVisible = uiState.showControls
+    }
+
     val handleBackPress = handleBackPress@{
         if (externalHandoffInProgress) return@handleBackPress
         if (postPlayRecommendationState.canReturnToPlayer && !uiState.playbackEnded) {
@@ -416,7 +430,11 @@ fun PlayerScreen(
         } else if (uiState.showControls) {
             viewModel.hideControls()
         } else {
-            exitPlayer()
+            val hiddenRecently = controlsHiddenAtMs != 0L &&
+                SystemClock.elapsedRealtime() - controlsHiddenAtMs < PLAYER_BACK_EXIT_GUARD_MS
+            if (!hiddenRecently) {
+                exitPlayer()
+            }
         }
     }
 
