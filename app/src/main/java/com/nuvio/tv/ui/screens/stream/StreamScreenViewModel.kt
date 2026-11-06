@@ -28,6 +28,7 @@ import com.nuvio.tv.core.streams.StreamBadgePresentation
 import com.nuvio.tv.core.streams.YouTubeStreamResolver
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.SourceLanguagePreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
@@ -86,6 +87,7 @@ class StreamScreenViewModel @Inject constructor(
     private val pluginManager: PluginManager,
     private val metaRepository: MetaRepository,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
+    private val sourceLanguagePreferenceDataStore: SourceLanguagePreferenceDataStore,
     private val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     private val streamBadgePresentation: StreamBadgePresentation,
     streamBadgeSettingsDataStore: StreamBadgeSettingsDataStore,
@@ -182,6 +184,7 @@ class StreamScreenViewModel @Inject constructor(
             videoId = videoId,
             contentType = contentType,
             title = title,
+            preferredSourceLanguage = "",
             poster = poster,
             backdrop = backdrop,
             logo = logo,
@@ -194,6 +197,57 @@ class StreamScreenViewModel @Inject constructor(
         )
     )
     val uiState: StateFlow<StreamScreenUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val id = contentId ?: videoId.substringBefore(":")
+            val settings = playerSettingsDataStore.playerSettings.first()
+            updateUiStateIfChanged {
+                it.copy(
+                    preferredSourceLanguage = sourceLanguagePreferenceDataStore.get(id),
+                    perTitleStreamLanguageEnabled = settings.perTitleStreamLanguageEnabled
+                )
+            }
+        }
+    }
+
+    fun setPreferredSourceLanguage(language: String) {
+        viewModelScope.launch {
+            val id = contentId ?: videoId.substringBefore(":")
+            sourceLanguagePreferenceDataStore.set(id, language)
+            val settings = playerSettingsDataStore.playerSettings.first()
+            val ordered = orderSourceLanguages(_uiState.value.addonStreams, language.takeIf { settings.perTitleStreamLanguageEnabled }.orEmpty())
+            val all = ordered.flatMap { it.streams }
+            val filter = _uiState.value.selectedAddonFilter
+            val filtered = groupStreamsByProvider(if (filter == null) all else all.filter { it.addonName == filter })
+            streamFilterFullList = filtered
+            updateUiStateIfChanged { it.copy(preferredSourceLanguage = language, addonStreams = ordered, allStreams = all, filteredStreams = filtered) }
+        }
+    }
+
+    private fun orderSourceLanguages(groups: List<AddonStreams>, language: String): List<AddonStreams> {
+        val terms = when (language) {
+            "en" -> listOf("english", "eng")
+            "es" -> listOf("spanish", "espanol", "español", "castellano", "spa")
+            "la" -> listOf("latino", "latam", "lat")
+            "fr" -> listOf("french", "français", "francais")
+            "de" -> listOf("german", "deutsch")
+            "it" -> listOf("italian", "italiano")
+            "pt" -> listOf("portuguese", "português", "portugues")
+            "ja" -> listOf("japanese")
+            "ko" -> listOf("korean")
+            "zh" -> listOf("chinese")
+            "hi" -> listOf("hindi")
+            else -> emptyList()
+        }
+        if (terms.isEmpty()) return groups
+        return groups.map { group -> group.copy(streams = group.streams.withIndex().sortedWith(
+            compareBy<IndexedValue<com.nuvio.tv.domain.model.Stream>> { entry ->
+                val text = "${entry.value.name} ${entry.value.title} ${entry.value.description}".lowercase()
+                if (terms.any(text::contains)) 0 else 1
+            }.thenBy { it.index }
+        ).map { it.value }) }
+    }
     val watchProgress = run {
         val id = contentId ?: videoId.substringBefore(":")
         if (season != null && episode != null) {
@@ -573,7 +627,10 @@ class StreamScreenViewModel @Inject constructor(
                     }
                 }
 
-                val allStreams = mergedAddonStreams.flatMap { it.streams }
+                val languageEnabled = playerSettings.perTitleStreamLanguageEnabled
+                val language = if (languageEnabled) _uiState.value.preferredSourceLanguage else ""
+                val orderedAddonStreams = orderSourceLanguages(mergedAddonStreams, language)
+                val allStreams = orderedAddonStreams.flatMap { it.streams }
                 val availableAddons = mergedAddonStreams.map { it.addonName }
 
                 // Early binge group match: if we have a persisted binge group, try to
@@ -676,7 +733,7 @@ class StreamScreenViewModel @Inject constructor(
                 updateUiStateIfChanged {
                     it.copy(
                         isLoading = false,
-                        addonStreams = mergedAddonStreams,
+                        addonStreams = orderedAddonStreams,
                         allStreams = allStreams,
                         filteredStreams = paginatedStreams,
                         availableAddons = availableAddons,

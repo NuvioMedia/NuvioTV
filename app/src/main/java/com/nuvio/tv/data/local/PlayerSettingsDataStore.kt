@@ -346,6 +346,7 @@ data class PlayerSettings(
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
     val resolutionMatchingEnabled: Boolean = false,
     // Stream selection settings
+    val perTitleStreamLanguageEnabled: Boolean = false,
     val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,
     val streamAutoPlaySource: StreamAutoPlaySource = StreamAutoPlaySource.ALL_SOURCES,
     val streamAutoPlaySelectedAddons: Set<String> = emptySet(),
@@ -672,6 +673,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
     private val frameRateMatchingModeKey = stringPreferencesKey("frame_rate_matching_mode")
     private val resolutionMatchingEnabledKey = booleanPreferencesKey("resolution_matching_enabled")
+    private val perTitleStreamLanguageEnabledKey = booleanPreferencesKey("per_title_stream_language_enabled")
     private val streamAutoPlayModeKey = stringPreferencesKey("stream_auto_play_mode")
     private val streamAutoPlaySourceKey = stringPreferencesKey("stream_auto_play_source")
     private val streamAutoPlaySelectedAddonsKey = stringSetPreferencesKey("stream_auto_play_selected_addons")
@@ -1069,6 +1071,7 @@ class PlayerSettingsDataStore @Inject constructor(
                     runCatching { FrameRateMatchingMode.valueOf(it) }.getOrNull()
                 } ?: if (prefs[frameRateMatchingKey] == true) FrameRateMatchingMode.START_STOP else FrameRateMatchingMode.OFF,
                 resolutionMatchingEnabled = prefs[resolutionMatchingEnabledKey] ?: false,
+                perTitleStreamLanguageEnabled = prefs[perTitleStreamLanguageEnabledKey] ?: false,
                 streamAutoPlayMode = prefs[streamAutoPlayModeKey]?.let {
                     runCatching { StreamAutoPlayMode.valueOf(it) }.getOrDefault(StreamAutoPlayMode.MANUAL)
                 } ?: StreamAutoPlayMode.MANUAL,
@@ -1477,6 +1480,10 @@ class PlayerSettingsDataStore @Inject constructor(
                 PlayerSettings.MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT
             )
         }
+    }
+
+    suspend fun setPerTitleStreamLanguageEnabled(enabled: Boolean) {
+        store().edit { prefs -> prefs[perTitleStreamLanguageEnabledKey] = enabled }
     }
 
     suspend fun setStreamAutoPlayNextEpisodeEnabled(enabled: Boolean) {

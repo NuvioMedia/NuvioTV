@@ -16,6 +16,8 @@ data class StreamScreenUiState(
     val videoId: String = "",
     val contentType: String = "",
     val title: String = "",
+    val preferredSourceLanguage: String = "",
+    val perTitleStreamLanguageEnabled: Boolean = false,
     val poster: String? = null,
     val backdrop: String? = null,
     val logo: String? = null,
