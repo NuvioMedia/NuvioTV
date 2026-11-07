@@ -16,6 +16,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
     if (initialPlaybackStarted) return
 
     initialPlaybackStarted = true
+    streamCacheKey?.let { key ->
+        streamFallbackSession = com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, initialStreamUrl)
+            ?: com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, currentStreamUrl)
+    }
 
     val bg = navigationArgs.bingeGroup
     val cid = contentId

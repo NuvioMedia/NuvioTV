@@ -458,7 +458,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         val trackTitle = buildAddonSubtitleTrackId(subtitle)
         AutoSyncSyncedSubtitle.clear() // AutoSync hook
         mpvAddonSubtitleSelectionJob = scope.launch {
-            val localPath = try {
+            val localPath = if (com.nuvio.tv.core.usenet.UsenetSidecar.isSubtitleUrl(subtitle.url)) subtitle.url else try {
                 val decodedBody = downloadSubtitleBody(subtitle.url, subtitle.lang, subtitle.headers)
                 val sanitized = SubtitleMojibakeSanitizer.sanitize(decodedBody).toString()
                 val cacheDir = java.io.File(context.cacheDir, "subtitles").also { it.mkdirs() }
