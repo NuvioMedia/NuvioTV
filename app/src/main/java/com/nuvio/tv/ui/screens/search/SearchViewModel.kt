@@ -258,6 +258,9 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun onQueryChanged(query: String) {
+        // The field can re-commit the text it already holds (for example when focus returns to it).
+        // Nothing was edited, so restarting the live run would only refetch the current results.
+        if (query == uiState.value.query) return
         _uiState.update {
             val trimmedInput = query.trim()
             // Narrow the strip to what still matches before anything is fetched, so a letter
