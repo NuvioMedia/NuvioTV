@@ -321,7 +321,8 @@ class UpdateViewModel @Inject constructor(
             runCatching { ApkInstaller.install(context, apkFile, background = false) }
                 .onFailure {
                     Log.w(TAG, "Session install failed, falling back to the system installer", it)
-                    ApkInstaller.launchSystemInstaller(context, apkFile)
+                    runCatching { ApkInstaller.launchSystemInstaller(context, apkFile) }
+                        .onFailure { error -> Log.w(TAG, "System installer failed", error) }
                 }
         }
     }
