@@ -88,6 +88,25 @@ class SearchViewModelPaginationTest {
     }
 
     @Test
+    fun `retyping the same text does not refetch the current results`() = runTest {
+        val repository = RecordingCatalogRepository()
+        val viewModel = newViewModel(repository)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+        repository.firstPageRequests.clear()
+
+        // The field re-commits the same text, e.g. when focus returns to it. Nothing was edited.
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+
+        assertTrue(
+            "re-fetched unchanged query: ${repository.firstPageRequests}",
+            repository.firstPageRequests.isEmpty()
+        )
+    }
+
+    @Test
     fun `a page that arrives after a new search does not merge into the new rows`() = runTest {
         val repository = RecordingCatalogRepository(pageDelayMs = 500)
         val viewModel = newViewModel(repository)
@@ -118,6 +137,7 @@ class SearchViewModelPaginationTest {
         private val pageDelayMs: Long = 0L
     ) : CatalogRepository {
         val queries = mutableListOf<String>()
+        val firstPageRequests = mutableListOf<String>()
 
         override fun getCatalog(
             addonBaseUrl: String,
@@ -137,6 +157,8 @@ class SearchViewModelPaginationTest {
             if (skip > 0) {
                 queries.add(query)
                 if (pageDelayMs > 0) delay(pageDelayMs)
+            } else {
+                firstPageRequests.add(query)
             }
             emit(NetworkResult.Success(row(catalogId, query, skip)))
         }
