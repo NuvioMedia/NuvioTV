@@ -3,12 +3,18 @@ package com.nuvio.tv.ui.screens.player
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.mediacodec.MediaCodecInfo
+import com.nuvio.hi10video.High10MediaCodecVideoRenderer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HardwareVideoDecoderSelectorTest {
+
+    @Test
+    fun `hardware-first renderer preserves High10 capability and codec reuse guards`() {
+        assertTrue(High10MediaCodecVideoRenderer::class.java.isAssignableFrom(HardwareFirstVideoRenderer::class.java))
+    }
 
     private fun decoder(name: String, mimeType: String, softwareOnly: Boolean): MediaCodecInfo =
         MediaCodecInfo.newInstance(

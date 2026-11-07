@@ -66,6 +66,13 @@ jobs:
             echo "NUVIO_RELEASE_STORE_PASSWORD=android"
           } >> "$GITHUB_ENV"
 
+      - name: Build pinned High10 FFmpeg libraries
+        run: |
+          sdkmanager "ndk;29.0.14206865"
+          bash hi10-video-decoder/src/main/jni/build_ffmpeg_armv7.sh \
+            "$GITHUB_WORKSPACE/hi10-video-decoder" \
+            "$ANDROID_HOME/ndk/29.0.14206865"
+
       - name: Test updater and build fullDebug APK
         run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullDebug --stacktrace
 
