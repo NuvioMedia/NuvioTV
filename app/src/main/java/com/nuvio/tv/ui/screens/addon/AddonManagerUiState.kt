@@ -26,7 +26,7 @@ data class AddonManagerUiState(
         get() = builtInUsenet?.let { BuiltInUsenetOrder.index(installedAddons.map { addon -> addon.baseUrl }, it.addonsAbove) }
 }
 
-data class BuiltInUsenetRow(val enabled: Boolean, val addonsAbove: List<String>?)
+data class BuiltInUsenetRow(val enabled: Boolean, val addonsAbove: List<String>?, val firstUseAccepted: Boolean)
 
 data class PendingChangeInfo(
     val changeId: String,

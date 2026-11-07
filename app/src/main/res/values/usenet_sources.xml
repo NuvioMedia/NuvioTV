@@ -3,6 +3,8 @@
     <string name="usenet_sources_title">Built-in Usenet sources</string>
     <string name="usenet_builtin_enabled">Search built-in indexers</string>
     <string name="usenet_builtin_description">Find NZBs and play them directly with your providers. Credentials stay on this device, in this profile.</string>
+    <string name="usenet_notice_body">Nuvio connects to your indexers and Usenet providers directly from this device, with your own accounts. Nothing goes through a Nuvio or shared server.\n\n• Your indexers and providers see this device\'s IP address, like any other app you use at home.\n• API keys and logins stay on this device, in this profile.\n• Every search uses API hits on each enabled indexer. For indexers with low limits, give them a lower priority and turn on Search lower priorities only as fallback.\n• Each indexer and provider still applies its own rules and limits.</string>
+    <string name="usenet_notice_turn_on">Turn on</string>
     <string name="usenet_add_provider">Add NNTP provider</string>
     <string name="usenet_add_indexer">Add Newznab indexer</string>
     <string name="usenet_indexer_hint">Enter the indexer URL; the API path (usually /api) is added to it. Supports Newznab and compatible Prowlarr or NZBHydra endpoints.</string>

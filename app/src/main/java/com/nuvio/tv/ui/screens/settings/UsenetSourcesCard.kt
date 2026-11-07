@@ -85,6 +85,7 @@ internal fun UsenetSourcesCard(
     var indexer by remember { mutableStateOf<UsenetIndexer?>(null) }
     var picker by remember { mutableStateOf<String?>(null) }
     var selectedId by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf(false) }
     val sortOptions = listOf(
         SettingsPickerOption(UsenetSort.QUALITY, stringResource(R.string.usenet_sort_quality)),
         SettingsPickerOption(UsenetSort.LARGEST, stringResource(R.string.usenet_sort_largest)),
@@ -121,7 +122,11 @@ internal fun UsenetSourcesCard(
         SettingsGroupCard(title = stringResource(R.string.usenet_sources_title)) {
             SettingsToggleRow(title = stringResource(R.string.usenet_builtin_enabled),
                 subtitle = stringResource(R.string.usenet_builtin_description), checked = configuration.enabled,
-                onToggle = { update(configuration.copy(enabled = !configuration.enabled)) },
+                onToggle = {
+                    // The first switch-on in a profile explains where it connects; switching off never asks.
+                    if (!configuration.enabled && !configuration.firstUseAccepted) notice = true
+                    else update(configuration.copy(enabled = !configuration.enabled))
+                },
                 modifier = Modifier.focusRequester(initialFocusRequester))
             if (configuration.enabled && !configuration.ready) {
                 SettingsNote(stringResource(R.string.usenet_sources_needed), tone = SettingsNoteTone.Warning)
@@ -318,6 +323,9 @@ internal fun UsenetSourcesCard(
             }
         }
     }
+    if (notice) BuiltInUsenetNoticeDialog(onTurnOn = {
+        update(configuration.copy(enabled = true, firstUseAccepted = true)); notice = false
+    }, onDismiss = { notice = false })
     provider?.let { item -> ProviderEditor(item, isNew = configuration.providers.none { it.id == item.id },
         testProvider, onDismiss = { provider = null }, onSave = {
         update(configuration.copy(providers = configuration.providers.replaceOrAdd(it) { p -> p.id }))

@@ -4,6 +4,14 @@ In **Settings → Integrations → Usenet streaming**, enable **Search built-in 
 provider, and add a Newznab-compatible indexer. No stream addon is needed for
 this source. Existing addon sources can still be used alongside it.
 
+The first time a profile turns it on, here or on its row among the addons, a
+notice explains that searches and downloads go directly from the device with
+the user's own accounts: indexers and providers see the device's IP address,
+keys and logins stay in the profile, and every search uses API hits on each
+enabled indexer. **Turn on** accepts it and enables the source; **Cancel**
+leaves it off. It is not shown again in that profile, and switching off never
+asks.
+
 Providers accept a host, port, TLS setting, username, password and connection
 allowance. Add multiple providers for missing-article failover. The existing
 global maximum-connections setting can further limit their combined allowance.
