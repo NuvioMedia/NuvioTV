@@ -240,6 +240,7 @@ internal class LiveTvGuideState(
     private var handledDown = -1
     /** Repeats of a held ◀ while at the left edge, see [moveProgramme]. */
     private var heldAtEdge = 0
+    private var waitedForHistory: String? = null
     private var longPressed = false
 
     fun onKey(event: KeyEvent): Boolean {
@@ -359,7 +360,10 @@ internal class LiveTvGuideState(
             (programme == null || !LiveTvCatchupLinks.isPlayable(channel.catchup, programme, now))
         ) {
             // Not before its older days were looked for: they may carry on there.
-            if (olderDaysPending && current.start > first) return true
+            if (olderDaysPending && current.start > first && waitedForHistory != channel.streamUrl) {
+                waitedForHistory = channel.streamUrl
+                return true
+            }
             // A held ◀ pauses on what is on now, then goes on to the categories: it never
             // needs letting go and pressing again, which felt stuck.
             if (!repeating || ++heldAtEdge >= EXIT_AFTER_REPEATS) {
