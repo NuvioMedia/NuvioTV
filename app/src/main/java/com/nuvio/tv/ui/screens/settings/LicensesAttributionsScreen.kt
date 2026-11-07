@@ -73,6 +73,7 @@ private const val SimklUrl = "https://simkl.com"
 private const val PremiumizeUrl = "https://www.premiumize.me"
 private const val TorboxUrl = "https://torbox.app"
 private const val MdbListUrl = "https://mdblist.com"
+private const val WeTrakrUrl = "https://wetrakr.com"
 private const val IntroDbUrl = "https://introdb.app/"
 private const val ImdbDatasetsUrl = "https://developer.imdb.com/non-commercial-datasets/"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
@@ -393,6 +394,12 @@ private fun dataAttributionItems() = listOf(
         body = stringResource(R.string.licenses_attributions_mdblist_body),
         url = MdbListUrl,
         logo = LicenseLogo.Raw(R.raw.mdblist_logo)
+    ),
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_wetrakr_title),
+        body = stringResource(R.string.licenses_attributions_wetrakr_body),
+        url = WeTrakrUrl,
+        logo = LicenseLogo.Raw(R.raw.wetrakr_icon)
     ),
     LicenseAttributionItem(
         title = stringResource(R.string.licenses_attributions_introdb_title),

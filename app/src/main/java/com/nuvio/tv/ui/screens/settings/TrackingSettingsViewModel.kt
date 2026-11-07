@@ -16,6 +16,7 @@ import com.nuvio.tv.data.simkl.SimklAnimeIdPreference
 import com.nuvio.tv.data.simkl.SimklAuthRepository
 import com.nuvio.tv.data.simkl.SimklSyncRepository
 import com.nuvio.tv.data.mdblist.MdbListAuthStore
+import com.nuvio.tv.data.wetrakr.WeTrakrAuthStore
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -48,6 +49,7 @@ class TrackingSettingsViewModel @Inject constructor(
     traktAuthDataStore: TraktAuthDataStore,
     simklAuthRepository: SimklAuthRepository,
     mdbListAuth: MdbListAuthStore,
+    weTrakrAuth: WeTrakrAuthStore,
     profiles: ProfileManager
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TrackingSettingsUiState())
@@ -55,11 +57,18 @@ class TrackingSettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val connected = combine(traktAuthDataStore.state, simklAuthRepository.state, mdbListAuth.state, profiles.activeProfileId) { trakt, simkl, mdblist, profileId ->
-                if (mdblist.scope.profileId != profileId) null else buildSet<TrackingProviderId> {
+            val connected = combine(
+                traktAuthDataStore.state,
+                simklAuthRepository.state,
+                mdbListAuth.state,
+                weTrakrAuth.state,
+                profiles.activeProfileId
+            ) { trakt, simkl, mdblist, wetrakr, profileId ->
+                if (mdblist.scope.profileId != profileId || wetrakr.scope.profileId != profileId) null else buildSet<TrackingProviderId> {
                     if (trakt.isAuthenticated) add(TrackingProviderId.TRAKT)
                     if (simkl.isAuthenticated) add(TrackingProviderId.SIMKL)
                     if (mdblist.isAuthenticated) add(TrackingProviderId.MDBLIST)
+                    if (wetrakr.isAuthenticated) add(TrackingProviderId.WETRAKR)
                 }
             }
             combine(
@@ -82,7 +91,8 @@ class TrackingSettingsViewModel @Inject constructor(
                 )
             }.collect { state ->
                 _uiState.value = state
-                if (state.isReady && mdbListAuth.scope().profileId == profiles.activeProfileId.value) {
+                if (state.isReady && mdbListAuth.scope().profileId == profiles.activeProfileId.value &&
+                    weTrakrAuth.scope().profileId == profiles.activeProfileId.value) {
                     sourceController.reconcileConnectedProviders(state.connectedProviderIds)
                 }
             }

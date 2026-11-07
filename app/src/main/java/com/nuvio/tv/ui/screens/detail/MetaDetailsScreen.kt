@@ -894,6 +894,7 @@ fun MetaDetailsScreen(
                     mdbListRatingOrder = uiState.mdbListRatingOrder,
                     isMdbListRatingsActive = uiState.isMdbListRatingsActive,
                     tmdbRating = uiState.tmdbRating,
+                    weTrakrRating = uiState.weTrakrRating,
                     comments = uiState.comments,
                     commentsCurrentPage = uiState.commentsCurrentPage,
                     commentsPageCount = uiState.commentsPageCount,
@@ -902,6 +903,7 @@ fun MetaDetailsScreen(
                     commentsError = uiState.commentsError,
                     shouldShowCommentsSection = uiState.shouldShowCommentsSection,
                     commentsMode = uiState.commentsMode,
+                    commentsSource = uiState.commentsSource,
                     commentsEpisodeTarget = uiState.commentsEpisodeTarget,
                     selectedComment = uiState.selectedComment,
                     onSeasonSelected = { viewModel.onEvent(MetaDetailsEvent.OnSeasonSelected(it)) },
@@ -1237,6 +1239,7 @@ private fun MetaDetailsContent(
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     isMdbListRatingsActive: Boolean,
     tmdbRating: Float?,
+    weTrakrRating: Float? = null,
     comments: List<TraktCommentReview>,
     commentsCurrentPage: Int,
     commentsPageCount: Int,
@@ -1245,6 +1248,7 @@ private fun MetaDetailsContent(
     commentsError: String?,
     shouldShowCommentsSection: Boolean,
     commentsMode: CommentsMode,
+    commentsSource: CommentsSource,
     commentsEpisodeTarget: Video?,
     selectedComment: TraktCommentReview?,
     onSeasonSelected: (Int) -> Unit,
@@ -1903,6 +1907,7 @@ private fun MetaDetailsContent(
         MoreLikeThisSource.TMDB -> stringResource(R.string.detail_more_like_this_powered_by_tmdb)
         MoreLikeThisSource.TRAKT -> stringResource(R.string.detail_more_like_this_powered_by_trakt)
         MoreLikeThisSource.SIMKL -> stringResource(R.string.detail_more_like_this_powered_by_simkl)
+        MoreLikeThisSource.WETRAKR -> stringResource(R.string.detail_more_like_this_powered_by_wetrakr)
         null -> null
     }
     val peopleTabItems = remember(
@@ -2497,6 +2502,7 @@ private fun MetaDetailsContent(
                         mdbListRatingOrder = mdbListRatingOrder,
                         hideMetaInfoImdb = !showStandardOverallRatings,
                         tmdbRating = tmdbRating.takeIf { showStandardOverallRatings },
+                        weTrakrRating = weTrakrRating.takeIf { showStandardOverallRatings },
                         showFullReleaseDate = showFullReleaseDate,
                         trailerAvailable = trailerButtonEnabled && !trailerUrl.isNullOrBlank(),
                         onTrailerClick = onTrailerButtonClick,
@@ -2896,6 +2902,7 @@ private fun MetaDetailsContent(
                     CommentsSection(
                         comments = comments,
                         commentsMode = commentsMode,
+                        source = commentsSource,
                         canToggleEpisodeComments = canToggleEpisodeComments,
                         titleModeFocusRequester = commentsTitleModeFocusRequester,
                         episodeModeFocusRequester = commentsEpisodeModeFocusRequester,
@@ -3144,7 +3151,8 @@ private fun MetaDetailsContent(
                 transitionDirection = commentOverlayDirection,
                 onPrevious = onShowPreviousComment,
                 onNext = onShowNextComment,
-                onDismiss = onDismissCommentOverlay
+                onDismiss = onDismissCommentOverlay,
+                source = commentsSource
             )
         }
 

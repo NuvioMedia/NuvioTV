@@ -18,7 +18,13 @@ import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
 enum class MoreLikeThisSource {
     TMDB,
     TRAKT,
-    SIMKL
+    SIMKL,
+    WETRAKR
+}
+
+enum class CommentsSource {
+    TRAKT,
+    WETRAKR
 }
 
 enum class CommentsMode {
@@ -84,6 +90,7 @@ data class MetaDetailsUiState(
     val mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     val isMdbListRatingsActive: Boolean = false,
     val tmdbRating: Float? = null,
+    val weTrakrRating: Float? = null,
     val comments: List<TraktCommentReview> = emptyList(),
     val commentsCurrentPage: Int = 0,
     val commentsPageCount: Int = 0,
@@ -91,6 +98,7 @@ data class MetaDetailsUiState(
     val isCommentsLoadingMore: Boolean = false,
     val commentsError: String? = null,
     val shouldShowCommentsSection: Boolean = false,
+    val commentsSource: CommentsSource = CommentsSource.TRAKT,
     val commentsMode: CommentsMode = CommentsMode.TITLE,
     val commentsEpisodeTarget: Video? = null,
     val selectedComment: TraktCommentReview? = null,
