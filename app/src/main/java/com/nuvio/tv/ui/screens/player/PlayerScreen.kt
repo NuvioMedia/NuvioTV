@@ -2452,13 +2452,12 @@ private fun PlayerView.syncExoSurfaceLayout(
     tunnelingEnabled: Boolean,
     aspectMode: AspectMode
 ) {
-    // Tunneled video ignores view scale, so there the mode sizes the video frame instead.
-    val surfaceLayout = exoSurfaceLayout(tunnelingEnabled, aspectMode)
+    val surfaceLayout = exoSurfaceLayout(aspectMode)
     if (resizeMode != surfaceLayout.resizeMode) {
         resizeMode = surfaceLayout.resizeMode
     }
     applyExoContentFrameZoom(this, surfaceLayout.zoom)
-    val appliedAspectMode = aspectModeAppliedToExoSurface(tunnelingEnabled, aspectMode)
+    val appliedAspectMode = AspectMode.ORIGINAL
     applyExoAspectMode(appliedAspectMode)
     setTag(
         R.id.player_view_libass_geometry_context_tag,

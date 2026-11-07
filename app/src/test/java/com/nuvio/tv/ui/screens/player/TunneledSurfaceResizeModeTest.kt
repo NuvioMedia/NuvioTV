@@ -7,17 +7,7 @@ import org.junit.Test
 class TunneledSurfaceResizeModeTest {
 
     @Test
-    fun exoSurfaceLayout_staysFitWithoutTunneling() {
-        AspectMode.entries.forEach { mode ->
-            assertEquals(
-                ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT),
-                exoSurfaceLayout(tunnelingEnabled = false, aspectMode = mode)
-            )
-        }
-    }
-
-    @Test
-    fun exoSurfaceLayout_laysOutEveryModeAsAFrameSizeWhileTunneling() {
+    fun exoSurfaceLayout_laysOutEveryModeAsAFrameSize() {
         val expected = mapOf(
             AspectMode.ORIGINAL to ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT),
             AspectMode.FULL_SCREEN to ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_ZOOM),
@@ -29,25 +19,7 @@ class TunneledSurfaceResizeModeTest {
         )
         assertEquals(AspectMode.entries.toSet(), expected.keys)
         expected.forEach { (mode, layout) ->
-            assertEquals(layout, exoSurfaceLayout(tunnelingEnabled = true, aspectMode = mode))
+            assertEquals(layout, exoSurfaceLayout(aspectMode = mode))
         }
-    }
-
-    @Test
-    fun aspectModeAppliedToExoSurface_dropsScaleModesWhileTunneling() {
-        assertEquals(
-            AspectMode.CINEMA_ZOOM,
-            aspectModeAppliedToExoSurface(
-                tunnelingEnabled = false,
-                aspectMode = AspectMode.CINEMA_ZOOM
-            )
-        )
-        assertEquals(
-            AspectMode.ORIGINAL,
-            aspectModeAppliedToExoSurface(
-                tunnelingEnabled = true,
-                aspectMode = AspectMode.CINEMA_ZOOM
-            )
-        )
     }
 }

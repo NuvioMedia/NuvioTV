@@ -24,13 +24,6 @@ enum class AspectMode(@StringRes val labelResId: Int) {
     HORIZONTAL_STRETCH(R.string.player_aspect_fit_width)
 }
 
-internal fun aspectModeAppliedToExoSurface(
-    tunnelingEnabled: Boolean,
-    aspectMode: AspectMode
-): AspectMode {
-    return if (tunnelingEnabled) AspectMode.ORIGINAL else aspectMode
-}
-
 private const val SLIGHT_ZOOM_SCALE = 1.15f
 private const val CINEMA_ZOOM_SCALE = 1.33f
 
@@ -41,13 +34,10 @@ private const val CINEMA_ZOOM_SCALE = 1.33f
 internal data class ExoSurfaceLayout(val resizeMode: Int, val zoom: Float = 1f)
 
 /**
- * Untunneled, the frame stays FIT and the aspect mode scales the view ([applyExoAspectMode]).
- * Tunneled video ignores view scale and only follows the frame's size, so there every aspect
- * mode is laid out as a frame size: crop, stretch and fit width/height as the frame's own resize
- * modes, and the zooms as a frame larger than the player.
+ * Every aspect mode is laid out as a frame size: crop, stretch and fit width/height as the
+ * frame's own resize modes, and the zooms as a frame larger than the player.
  */
-internal fun exoSurfaceLayout(tunnelingEnabled: Boolean, aspectMode: AspectMode): ExoSurfaceLayout {
-    if (!tunnelingEnabled) return ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT)
+internal fun exoSurfaceLayout(aspectMode: AspectMode): ExoSurfaceLayout {
     return when (aspectMode) {
         AspectMode.ORIGINAL -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT)
         AspectMode.FULL_SCREEN -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_ZOOM)
