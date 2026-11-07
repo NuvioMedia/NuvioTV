@@ -368,8 +368,8 @@ fun LiveTvScreen(
                 if (runCatching { target.requestFocus() }.isSuccess) return@launch
             }
             // The selected category is out of view: brought into view first.
-            val index = if (target === categoryFocus) viewModel.categoryKeys.indexOf(filterKey) else 0
-            if (index >= 0) categoryList.scrollToItem((index - 3).coerceAtLeast(0))
+            val index = if (target === categoryFocus) viewModel.categoryKeys.indexOf(filterKey).coerceAtLeast(0) else 0
+            categoryList.scrollToItem((index - 3).coerceAtLeast(0))
             repeat(5) {
                 withFrameNanos { }
                 if (runCatching { target.requestFocus() }.isSuccess) return@launch
