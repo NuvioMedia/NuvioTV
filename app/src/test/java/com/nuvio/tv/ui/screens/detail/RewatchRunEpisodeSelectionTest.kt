@@ -4,7 +4,9 @@ import com.nuvio.tv.core.tracking.RewatchRunPosition
 import com.nuvio.tv.domain.model.Video
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -257,6 +259,21 @@ class RewatchRunEpisodeSelectionTest {
         )
 
         assertEquals("2:1", allowed?.id)
+    }
+
+    @Test
+    fun `a run older than the canonical watch does not decide`() {
+        assertFalse(run(season = 1, episode = 7).isNewerThanCanonicalWatch(2_000L))
+    }
+
+    @Test
+    fun `a run newer than the canonical watch decides`() {
+        assertTrue(run(season = 1, episode = 7).isNewerThanCanonicalWatch(500L))
+    }
+
+    @Test
+    fun `a run at the canonical watch mark still decides`() {
+        assertTrue(run(season = 1, episode = 7).isNewerThanCanonicalWatch(1_000L))
     }
 
     private fun episode(season: Int, episode: Int, released: String? = null) = Video(
