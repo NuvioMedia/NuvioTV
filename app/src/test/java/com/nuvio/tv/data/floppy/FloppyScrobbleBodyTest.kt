@@ -2,6 +2,7 @@ package com.nuvio.tv.data.floppy
 
 import com.nuvio.tv.core.tracking.TrackingEpisode
 import com.nuvio.tv.core.tracking.TrackingExternalIds
+import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
@@ -122,6 +123,29 @@ class FloppyScrobbleBodyTest {
             assertNull(body(TrackingScrobbleAction.STOP, media, 90.0))
         }
         assertNull(body(TrackingScrobbleAction.STOP, movie(), Double.NaN))
+    }
+
+    @Test
+    fun `a manual mark is a completed stop with the time it was marked`() {
+        val body = floppyManualMarkBody(
+            TrackingHistoryItem(movie(), watchedAtEpochMs = 1_762_150_000_000L)
+        )!!
+
+        assertEquals("stop", body.text("action"))
+        assertTrue(body["completed"]!!.jsonPrimitive.boolean)
+        assertTrue(body["manual"]!!.jsonPrimitive.boolean)
+        assertEquals(JsonPrimitive("2025-11-03T06:06:40Z"), body["played_at"])
+        assertTrue(body.text("client_event_id").startsWith("nuvio-mark-"))
+    }
+
+    @Test
+    fun `unwatch uses the same identity as a mark`() {
+        val body = floppyUnwatchBody(movie())!!
+
+        assertEquals("unwatch", body.text("action"))
+        assertEquals("movie", body.text("media_type"))
+        assertEquals(JsonPrimitive("603"), body["ids"]!!.jsonObject["tmdb"])
+        assertNull(floppyUnwatchBody(show(episode = null)))
     }
 
     private fun body(action: TrackingScrobbleAction, media: TrackingMediaReference, percent: Double): JsonObject? =

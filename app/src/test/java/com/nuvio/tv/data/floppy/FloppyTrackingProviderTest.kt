@@ -2,6 +2,7 @@ package com.nuvio.tv.data.floppy
 
 import com.nuvio.tv.core.tracking.TrackingCapability
 import com.nuvio.tv.core.tracking.TrackingExternalIds
+import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingProviderId
@@ -20,12 +21,16 @@ import org.junit.Test
 
 class FloppyTrackingProviderTest {
     @Test
-    fun `the provider is scrobble only`() {
+    fun `the provider advertises playback and watched writes`() {
         val harness = Harness()
 
         assertEquals(TrackingProviderId.FLOPPY, harness.provider.descriptor.id)
         assertEquals(
-            setOf(TrackingCapability.AUTHENTICATION, TrackingCapability.SCROBBLE),
+            setOf(
+                TrackingCapability.AUTHENTICATION,
+                TrackingCapability.SCROBBLE,
+                TrackingCapability.WATCHED_WRITE
+            ),
             harness.provider.descriptor.capabilities
         )
     }
@@ -93,6 +98,31 @@ class FloppyTrackingProviderTest {
         }
     }
 
+    @Test
+    fun `manual marks and unmarks use the scrobble endpoint`() = runTest {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody("""{"detail":"accepted"}"""))
+            server.enqueue(MockResponse().setBody("""{"detail":"accepted"}"""))
+            val harness = Harness()
+            harness.auth.save(FloppyCredentials(server.url("/").toString().trimEnd('/'), "flp_secret"))
+
+            val mark = harness.history.addToHistory(
+                1,
+                listOf(TrackingHistoryItem(event().media, watchedAtEpochMs = 1_762_150_000_000L))
+            )
+            assertEquals(1, mark.attemptedCount)
+            val markRequest = server.takeRequest()
+            assertEquals("/api/v1/scrobble/", markRequest.path)
+            assertTrue(markRequest.body.readUtf8().contains(""""manual":true"""))
+
+            val unmark = harness.history.removeFromHistory(1, listOf(event().media))
+            assertEquals(1, unmark.attemptedCount)
+            val unmarkRequest = server.takeRequest()
+            assertEquals("/api/v1/scrobble/", unmarkRequest.path)
+            assertTrue(unmarkRequest.body.readUtf8().contains(""""action":"unwatch""""))
+        }
+    }
+
     private fun event(percent: Double = 0.0) = TrackingScrobbleEvent(
         TrackingMediaReference(TrackingMediaKind.MOVIE, title = "The Matrix", ids = TrackingExternalIds(tmdb = 603L)),
         percent
@@ -105,9 +135,8 @@ class FloppyTrackingProviderTest {
 
     private class Harness {
         val auth = FloppyAuthStore(MemoryPersistence())
-        val provider = FloppyTrackingProvider(
-            auth,
-            FloppyTrackingScrobbler(auth, FloppyApiClient(OkHttpClient(), "9.9.9"))
-        )
+        val api = FloppyApiClient(OkHttpClient(), "9.9.9")
+        val provider = FloppyTrackingProvider(auth, FloppyTrackingScrobbler(auth, api))
+        val history = FloppyTrackingHistoryWriter(auth, api)
     }
 }
