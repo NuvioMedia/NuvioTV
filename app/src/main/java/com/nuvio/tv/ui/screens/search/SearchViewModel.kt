@@ -266,14 +266,14 @@ class SearchViewModel @Inject constructor(
         }
         
         // Detect if this is a recomposition artifact: transitioning to empty from the last
-        // non-empty query WITHIN 100ms (indicates Compose recomposition, not user X button click).
-        // Recomposition happens in rapid succession during focus changes. X button clicks have
-        // longer gaps due to user navigation time.
+        // non-empty query WITHIN 2 seconds (indicates Compose recomposition during focus change).
+        // Recomposition happens in rapid succession during focus changes. X button clicks are
+        // deliberate user actions that happen separately from the query being set.
         val now = System.currentTimeMillis()
         val isRecompositionArtifact = query.isEmpty() && 
             query != _uiState.value.query && 
             _uiState.value.query == lastNonEmptyQuery &&
-            (now - lastNonEmptyQueryTime) < 100
+            (now - lastNonEmptyQueryTime) < 2000
         
         // Track non-empty queries and their timestamp for recomposition detection
         if (query.isNotEmpty()) {
