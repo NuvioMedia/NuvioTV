@@ -97,6 +97,7 @@ class SearchViewModel @Inject constructor(
     private var lastCompletedRequestKey: String? = null
     private var hasRenderedFirstCatalog = false
     private var pendingCatalogResponses = 0
+    private var lastNonEmptyQuery: String = ""
     private var revealBatchAfterNextDiscoverFetch = false
     private var hideUnreleasedContent = false
 
@@ -258,6 +259,22 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun onQueryChanged(query: String) {
+        // Skip if transitioning to empty from the last non-empty query
+        // (recomposition artifact during focus change on Fire TV)
+        if (query.isEmpty() && query != _uiState.value.query && _uiState.value.query == lastNonEmptyQuery) {
+            return
+        }
+        
+        // Skip if query is exactly the same (no change at all)
+        if (query == _uiState.value.query) {
+            return
+        }
+        
+        // Track non-empty queries for recomposition detection
+        if (query.isNotEmpty()) {
+            lastNonEmptyQuery = query
+        }
+
         _uiState.update {
             val trimmedInput = query.trim()
             // Narrow the strip to what still matches before anything is fetched, so a letter
