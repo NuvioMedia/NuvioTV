@@ -19,7 +19,8 @@ class SimklTrackingHistoryWriter @Inject constructor(
     private val syncRepository: SimklSyncRepository,
     private val profileManager: ProfileManager,
     private val settingsDataStore: TraktSettingsDataStore,
-    private val authRepository: SimklAuthRepository
+    private val authRepository: SimklAuthRepository,
+    private val rewatchWriter: SimklRewatchWriter
 ) : TrackingHistoryWriter {
     override val providerId = TrackingProviderId.SIMKL
 
@@ -49,26 +50,38 @@ class SimklTrackingHistoryWriter @Inject constructor(
         val entryIndex = syncRepository.currentEntryIndex()
         val mode = settingsDataStore.simklRewatchMode.first()
         val accountType = authRepository.state.value.accountType
-        val result = service.addToHistory(
-            pushableItems.map { item ->
-                val enriched = snapshot
-                    .enrichMediaReference(item.media, entryIndex)
-                    .resolveAnimeEpisodeForSimkl()
-                val runningSessionId = snapshot.rewatchSessions.activeRewatchSessionId(enriched)
-                if (
-                    shouldRecordSimklRewatchOnMark(
-                        mode = mode,
-                        accountType = accountType,
-                        isRepeatViewing = snapshot.entries.hasWatchedTitle(enriched),
-                        hasRunningSession = runningSessionId != null
-                    )
-                ) {
-                    item.copy(media = enriched, isRewatch = true, rewatchId = runningSessionId)
-                } else {
-                    item.copy(media = enriched)
-                }
+        val resolved = pushableItems.map { item ->
+            val enriched = snapshot
+                .enrichMediaReference(item.media, entryIndex)
+                .resolveAnimeEpisodeForSimkl()
+            val runningSessionId = snapshot.rewatchSessions.activeRewatchSessionId(enriched)
+            if (
+                shouldRecordSimklRewatchOnMark(
+                    mode = mode,
+                    accountType = accountType,
+                    isRepeatViewing = snapshot.entries.hasWatchedTitle(enriched),
+                    hasRunningSession = runningSessionId != null
+                )
+            ) {
+                item.copy(media = enriched, isRewatch = true, rewatchId = runningSessionId)
+            } else {
+                item.copy(media = enriched)
             }
-        )
+        }
+        val result = service.addToHistory(resolved)
+        // The run this mark opened or extended is not in the snapshot until a read sees it. The
+        // history write updates the canonical entry but not the rewatch session sidecar, so the
+        // Continue Watching row would keep the old run position until a sync. Read the sessions
+        // back and adopt them, the same way a confirmed rewatch does.
+        val target = resolved.firstOrNull { item -> item.isRewatch }?.media
+        val targetContentId = target?.catalog?.contentId?.takeIf(String::isNotBlank)
+        val targetSeason = target?.episode?.season
+        val targetEpisode = target?.episode?.number
+        if (result.isComplete && targetContentId != null && targetSeason != null && targetEpisode != null) {
+            rewatchWriter.refreshRewatchSessions { sessions ->
+                sessions.rewatchedEpisodesOf(targetContentId).contains(targetSeason to targetEpisode)
+            }
+        }
         // The answer is what says whether the account booked the view: `pro_required` and `too_soon`
         // are the two that come back for a mark that was recorded as nothing, and both are silent in
         // the counts.

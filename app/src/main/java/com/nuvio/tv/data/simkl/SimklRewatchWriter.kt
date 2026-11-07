@@ -58,8 +58,11 @@ class SimklRewatchWriter @Inject constructor(
      * Runs in the background, because Simkl can take a while to publish a session change and nobody
      * is waiting for this. The last read is stored even when the condition never became true, so the
      * snapshot carries the freshest state the account offered.
+     *
+     * Internal because a manual mark that opened or extended a run needs the same read: the mark
+     * writes history, not the session sidecar, so the row would keep the old run until a sync.
      */
-    private fun refreshRewatchSessions(settled: (List<SimklLibraryEntry>) -> Boolean) {
+    internal fun refreshRewatchSessions(settled: (List<SimklLibraryEntry>) -> Boolean) {
         scope.launch {
             // The read is paired with the sync watermark, so it carries the items changed since the
             // last sync, the write this waits for among them once Simkl publishes it. Every pass of
