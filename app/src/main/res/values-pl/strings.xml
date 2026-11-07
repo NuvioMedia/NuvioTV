@@ -1583,6 +1583,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automatyczne przełączanie silnika przy błędzie</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Jeśli uruchomienie strumienia się nie powiedzie, automatycznie przełącz między ExoPlayer a libmpv.</string>
+    <string name="playback_release_decoder_on_background">Zwalniaj dekoder w tle</string>
+    <string name="playback_release_decoder_on_background_sub">Zwalnia dekoder wideo, gdy Nuvio przechodzi w tło. Włącz, jeśli po powrocie do aplikacji odtwarzanie kończy się błędem dekodera. Po powrocie, także po wygaszaczu ekranu, odtwarzacz ładuje się od nowa</string>
     <string name="playback_external_forward_subtitles">Przekazuj napisy do zewnętrznego odtwarzacza</string>
     <string name="playback_external_forward_subtitles_sub">Pobierz napisy w preferowanym języku z dodatków i przekaż je do zewnętrznego odtwarzacza.</string>
     <string name="playback_engine_exoplayer_desc">Najlepsza kompatybilność z funkcjami Nuvio.</string>
