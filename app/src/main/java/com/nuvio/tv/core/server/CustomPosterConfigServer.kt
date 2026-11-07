@@ -3,7 +3,6 @@ package com.nuvio.tv.core.server
 import android.content.Context
 import com.nuvio.tv.R
 import fi.iki.elonen.NanoHTTPD
-import java.nio.charset.StandardCharsets
 
 class CustomPosterConfigServer(
     private val currentPatternProvider: () -> String,
@@ -22,12 +21,7 @@ class CustomPosterConfigServer(
         }
     }
 
-    private fun serveWebPage(): Response =
-        newFixedLengthResponse(
-            Response.Status.OK,
-            "text/html; charset=utf-8",
-            CustomPosterWebPage.html(context)
-        )
+    private fun serveWebPage(): Response = htmlResponse(CustomPosterWebPage.html(context))
 
     private fun serveCurrentPattern(): Response {
         val pattern = currentPatternProvider()
@@ -85,19 +79,6 @@ class CustomPosterConfigServer(
         }
     }
 
-    private fun readUtf8Body(session: IHTTPSession): String {
-        val length = session.headers["content-length"]?.toIntOrNull() ?: return ""
-        if (length <= 0) return ""
-        val buffer = ByteArray(length)
-        var offset = 0
-        while (offset < length) {
-            val read = session.inputStream.read(buffer, offset, length - offset)
-            if (read <= 0) break
-            offset += read
-        }
-        return String(buffer, 0, offset, StandardCharsets.UTF_8)
-    }
-
     companion object {
         fun startOnAvailablePort(
             currentPatternProvider: () -> String,
@@ -105,21 +86,13 @@ class CustomPosterConfigServer(
             context: Context? = null,
             startPort: Int = 8092,
             maxAttempts: Int = 10
-        ): CustomPosterConfigServer? {
-            for (port in startPort until startPort + maxAttempts) {
-                try {
-                    val server = CustomPosterConfigServer(
-                        currentPatternProvider = currentPatternProvider,
-                        onPatternChanged = onPatternChanged,
-                        context = context,
-                        port = port
-                    )
-                    server.start(SOCKET_READ_TIMEOUT, false)
-                    return server
-                } catch (_: Exception) {
-                }
-            }
-            return null
+        ): CustomPosterConfigServer? = startServerOnAvailablePort(startPort, maxAttempts) { port ->
+            CustomPosterConfigServer(
+                currentPatternProvider = currentPatternProvider,
+                onPatternChanged = onPatternChanged,
+                context = context,
+                port = port
+            )
         }
     }
 }

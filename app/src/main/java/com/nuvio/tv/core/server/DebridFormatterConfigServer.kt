@@ -6,8 +6,6 @@ import com.google.gson.reflect.TypeToken
 import com.nuvio.tv.core.debrid.DebridStreamFormatterDefaults
 import com.nuvio.tv.domain.model.DebridStreamPreferences
 import fi.iki.elonen.NanoHTTPD
-import java.io.ByteArrayInputStream
-import java.nio.charset.StandardCharsets
 
 class DebridFormatterConfigServer(
     private val currentSettingsProvider: () -> DebridFormatterSettings,
@@ -29,27 +27,9 @@ class DebridFormatterConfigServer(
         }
     }
 
-    private fun serveWebPage(): Response {
-        return newFixedLengthResponse(
-            Response.Status.OK,
-            "text/html; charset=utf-8",
-            DebridFormatterWebPage.html(context)
-        )
-    }
+    private fun serveWebPage(): Response = htmlResponse(DebridFormatterWebPage.html(context))
 
-    private fun serveLogo(): Response {
-        val bytes = logoProvider?.invoke()
-        return if (bytes != null) {
-            newFixedLengthResponse(
-                Response.Status.OK,
-                "image/png",
-                ByteArrayInputStream(bytes),
-                bytes.size.toLong()
-            )
-        } else {
-            newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
-        }
-    }
+    private fun serveLogo(): Response = pngLogoResponse(logoProvider?.invoke())
 
     private fun serveSettings(): Response {
         val settings = currentSettingsProvider()
@@ -106,19 +86,6 @@ class DebridFormatterConfigServer(
             gson.toJson(mapOf("error" to message))
         )
 
-    private fun readUtf8Body(session: IHTTPSession): String {
-        val length = session.headers["content-length"]?.toIntOrNull() ?: return ""
-        if (length <= 0) return ""
-        val buffer = ByteArray(length)
-        var offset = 0
-        while (offset < length) {
-            val read = session.inputStream.read(buffer, offset, length - offset)
-            if (read <= 0) break
-            offset += read
-        }
-        return String(buffer, 0, offset, StandardCharsets.UTF_8)
-    }
-
     companion object {
         fun startOnAvailablePort(
             currentSettingsProvider: () -> DebridFormatterSettings,
@@ -127,22 +94,14 @@ class DebridFormatterConfigServer(
             logoProvider: (() -> ByteArray?)? = null,
             startPort: Int = 8090,
             maxAttempts: Int = 10
-        ): DebridFormatterConfigServer? {
-            for (port in startPort until startPort + maxAttempts) {
-                try {
-                    val server = DebridFormatterConfigServer(
-                        currentSettingsProvider = currentSettingsProvider,
-                        onSettingsChanged = onSettingsChanged,
-                        context = context,
-                        logoProvider = logoProvider,
-                        port = port
-                    )
-                    server.start(SOCKET_READ_TIMEOUT, false)
-                    return server
-                } catch (e: Exception) {
-                }
-            }
-            return null
+        ): DebridFormatterConfigServer? = startServerOnAvailablePort(startPort, maxAttempts) { port ->
+            DebridFormatterConfigServer(
+                currentSettingsProvider = currentSettingsProvider,
+                onSettingsChanged = onSettingsChanged,
+                context = context,
+                logoProvider = logoProvider,
+                port = port
+            )
         }
     }
 }

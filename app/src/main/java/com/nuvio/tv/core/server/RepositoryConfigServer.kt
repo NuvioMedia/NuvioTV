@@ -4,7 +4,6 @@ import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import fi.iki.elonen.NanoHTTPD
-import java.io.ByteArrayInputStream
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -55,23 +54,9 @@ class RepositoryConfigServer(
         }
     }
 
-    private fun serveWebPage(): Response {
-        return newFixedLengthResponse(Response.Status.OK, "text/html", RepositoryWebPage.getHtml(context))
-    }
+    private fun serveWebPage(): Response = htmlResponse(RepositoryWebPage.getHtml(context))
 
-    private fun serveLogo(): Response {
-        val bytes = logoProvider?.invoke()
-        return if (bytes != null) {
-            newFixedLengthResponse(
-                Response.Status.OK,
-                "image/png",
-                ByteArrayInputStream(bytes),
-                bytes.size.toLong()
-            )
-        } else {
-            newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
-        }
-    }
+    private fun serveLogo(): Response = pngLogoResponse(logoProvider?.invoke())
 
     private fun serveRepositoryList(): Response {
         val repos = currentRepositoriesProvider()
@@ -126,17 +111,8 @@ class RepositoryConfigServer(
             logoProvider: (() -> ByteArray?)? = null,
             startPort: Int = 8090,
             maxAttempts: Int = 10
-        ): RepositoryConfigServer? {
-            for (port in startPort until startPort + maxAttempts) {
-                try {
-                    val server = RepositoryConfigServer(context, currentRepositoriesProvider, onChangeProposed, logoProvider, port)
-                    server.start(SOCKET_READ_TIMEOUT, false)
-                    return server
-                } catch (e: Exception) {
-                    // Port in use, try next
-                }
-            }
-            return null
+        ): RepositoryConfigServer? = startServerOnAvailablePort(startPort, maxAttempts) { port ->
+            RepositoryConfigServer(context, currentRepositoriesProvider, onChangeProposed, logoProvider, port)
         }
     }
 }
