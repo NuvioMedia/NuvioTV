@@ -676,6 +676,8 @@
   <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
   <string name="playback_auto_switch_internal_player_on_error">Αυτόματη εναλλαγή μηχανής σε σφάλμα εκκίνησης</string>
   <string name="playback_auto_switch_internal_player_on_error_sub">Αν αποτύχει η εκκίνηση ροής, γίνεται αυτόματη εναλλαγή μεταξύ ExoPlayer και libmpv.</string>
+  <string name="playback_release_decoder_on_background">Απελευθέρωση αποκωδικοποιητή στο παρασκήνιο</string>
+  <string name="playback_release_decoder_on_background_sub">Ελευθερώνει τον αποκωδικοποιητή βίντεο όταν το Nuvio πηγαίνει στο παρασκήνιο. Ενεργοποιήστε το αν η αναπαραγωγή αποτυγχάνει με σφάλμα αποκωδικοποιητή μετά την επιστροφή στην εφαρμογή. Το πρόγραμμα αναπαραγωγής φορτώνει ξανά κατά την επιστροφή, ακόμη και μετά την προφύλαξη οθόνης</string>
   <string name="playback_section_subtitles">Υπότιτλοι</string>
   <string name="playback_section_subtitles_desc">Γλώσσα, στυλ και τρόπος απόδοσης.</string>
   <string name="playback_afr_off">Απενεργοποιημένο</string>
@@ -718,6 +720,17 @@
   <string name="audio_preferred_lang">Προτιμώμενη γλώσσα ήχου</string>
   <string name="audio_skip_silence">Παράλειψη σιγής</string>
   <string name="audio_skip_silence_sub">Παράλειψη σιωπηλών τμημάτων ήχου κατά την αναπαραγωγή</string>
+  <string name="audio_night_mode">Λειτουργία νύχτας</string>
+  <string name="audio_night_mode_sub">Ανεβάζει τους διαλόγους και τους χαμηλούς ήχους, ώστε να μπορείτε να κρατάτε χαμηλή την ένταση</string>
+  <string name="audio_night_mode_desc">Ανεβάζει τους διαλόγους και τους χαμηλούς ήχους· οι δυνατές σκηνές παραμένουν όπως αναμίχθηκαν. Λειτουργεί στον ήχο που αποκωδικοποιεί η εφαρμογή. Το Dolby και το DTS που αποστέλλονται ως passthrough σε AV receiver ή soundbar παραμένουν ως έχουν.</string>
+  <string name="audio_night_mode_value">Λειτουργία νύχτας: %1$s</string>
+  <string name="audio_night_mode_off">Απενεργοποιημένη</string>
+  <string name="audio_night_mode_light">Ήπια</string>
+  <string name="audio_night_mode_light_desc">Ήπια ενίσχυση, έως +6 dB</string>
+  <string name="audio_night_mode_medium">Μέτρια</string>
+  <string name="audio_night_mode_medium_desc">Σαφής ενίσχυση διαλόγων, έως +10 dB</string>
+  <string name="audio_night_mode_strong">Ισχυρή</string>
+  <string name="audio_night_mode_strong_desc">Έως +15 dB, για προβολή αργά το βράδυ σε χαμηλή ένταση</string>
   <string name="audio_remember_delay_per_device">Απομνημόνευση καθυστέρησης ήχου ανά συσκευή</string>
   <string name="audio_remember_delay_per_device_sub">Αποθήκευση και επαναφορά της καθυστέρησης ήχου του προγράμματος αναπαραγωγής για την τρέχουσα έξοδο ήχου</string>
   <string name="audio_advanced_section">Για προχωρημένους ήχος</string>
@@ -1051,6 +1064,8 @@
   <string name="layout_custom_poster_screen_tv_recommendations">Προτάσεις TV</string>
   <string name="layout_always_show_landscape_clearlogo">Πάντα φόντο με λογότυπο για οριζόντιες αφίσες</string>
   <string name="layout_always_show_landscape_clearlogo_sub">Αγνόηση της οριζόντιας αφίσας από το πρόσθετο και χρήση φόντου με επικάλυψη clearlogo.</string>
+  <string name="layout_hero_description_auto_scroll">Αυτόματη κύλιση περιγραφών</string>
+  <string name="layout_hero_description_auto_scroll_sub">Αργή κύλιση των μεγάλων περιγραφών στην Αρχική οθόνη αντί για περικοπή τους.</string>
   <string name="web_custom_poster_title">Προσαρμοσμένη πηγή αφίσας</string>
   <string name="web_custom_poster_subtitle">Επικολλήστε παρακάτω ένα μοτίβο URL αφίσας και πατήστε Αποθήκευση.</string>
   <string name="web_custom_poster_label">Μοτίβο URL</string>
@@ -1770,6 +1785,12 @@
   <string name="audio_center_mix_unavailable">Το center mix είναι διαθέσιμο μόνο όταν το downmix FFmpeg είναι ενεργό.</string>
   <string name="audio_maintain_original_audio_on_downmix_title">Διατήρηση αρχικού ήχου στο downmix</string>
   <string name="audio_maintain_original_audio_on_downmix_subtitle">Όταν είναι απενεργοποιημένο, η κανονικοποίηση downmix μπορεί να μειώσει τη συνολική ένταση.</string>
+  <string name="audio_downmix_lfe_level">Επίπεδο LFE στο downmix</string>
+  <string name="audio_downmix_lfe_level_sub">Αναμιγνύει το κανάλι του subwoofer (LFE) στα υπόλοιπα ηχεία αντί να το απορρίπτει. Μόνο για διατάξεις χωρίς LFE, όπως 2.0.</string>
+  <string name="audio_downmix_lfe_level_desc">Χρησιμοποιείται όταν η διάταξη downmix δεν έχει κανάλι LFE. Εφαρμόζεται από την επόμενη αναπαραγωγή.</string>
+  <string name="audio_downmix_lfe_level_off">Απενεργοποιημένο</string>
+  <string name="audio_downmix_lfe_level_half">50%</string>
+  <string name="audio_downmix_lfe_level_full">100%</string>
   <!-- SubtitleDialog / SubtitleStyleSidePanel -->
   <string name="subtitle_dialog_title">Υπότιτλοι</string>
   <string name="subtitle_no_builtin">Δεν υπάρχουν ενσωματωμένοι υπότιτλοι</string>
@@ -3317,6 +3338,7 @@
   <string name="autosync_tolerance_value">%1$d ms</string>
   <string name="autosync_thorough_title">Εξονυχιστική αναζήτηση αυτόματου συγχρονισμού</string>
   <string name="autosync_thorough_description">Συνεχίστε τη σύγκριση άλλων υποτίτλων και ενσωματωμένων κομματιών για ακριβέστερη αντιστοίχιση πριν από τον συγχρονισμό. Όταν είναι ανενεργό, χρησιμοποιείται νωρίτερα η πρώτη ισχυρή αντιστοίχιση. Εφαρμόζονται μόνο αντιστοιχίσεις υψηλής βεβαιότητας.</string>
+  <string name="autosync_toast_no_fit">Ο συγχρονισμός απέτυχε: αυτοί οι υπότιτλοι δεν ταιριάζουν με αυτή την έκδοση του βίντεο.</string>
   <string name="autosync_label_synced">Αυτόματα συγχρονισμένος</string>
   <string name="stream_resume_from_time">Συνέχεια από %1$s</string>
   <string name="stream_resume_from_percent">Συνέχεια από %1$d%%</string>
