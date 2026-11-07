@@ -1211,6 +1211,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Toujours utiliser l’arrière-plan avec logo pour les affiches paysage</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Ignorer l’affiche paysage fournie par l’addon et utiliser à la place l’arrière-plan avec le logo en superposition.</string>
+    <string name="layout_hero_description_auto_scroll">Défilement automatique des descriptions</string>
+    <string name="layout_hero_description_auto_scroll_sub">Faire défiler lentement les longues descriptions sur l’écran d’accueil au lieu de les couper.</string>
     <string name="web_custom_poster_title">Source d’affiches personnalisée</string>
     <string name="web_custom_poster_subtitle">Collez un modèle d’URL d’affiche ci-dessous, puis appuyez sur «&#160;Enregistrer&#160;».</string>
     <string name="web_custom_poster_label">Modèle d’URL</string>
