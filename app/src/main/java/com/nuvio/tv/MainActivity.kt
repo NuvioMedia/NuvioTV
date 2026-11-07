@@ -154,6 +154,7 @@ import com.nuvio.tv.data.local.AppOnboardingDataStore
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.ProfileLockStateDataStore
 import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.data.local.ThemeDataStore
 import com.nuvio.tv.data.repository.MemberAccessRepository
@@ -294,6 +295,9 @@ open class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var profileSyncService: ProfileSyncService
+
+    @Inject
+    lateinit var profileLockStateDataStore: ProfileLockStateDataStore
 
     @Inject
     lateinit var profileManager: ProfileManager
@@ -444,29 +448,42 @@ open class MainActivity : ComponentActivity() {
             val activeProfile = remember(activeProfileId, profiles) {
                 profiles.firstOrNull { it.id == activeProfileId }
             }
-            var profilePinStates by remember { mutableStateOf<Map<Int, Boolean>>(emptyMap()) }
+            // PIN states as last known on this device (the profile picker reads the same cache).
+            // Null until read, so no profile is shown or auto-selected before the PINs are known.
+            val cachedPinStates by remember(profileLockStateDataStore) {
+                profileLockStateDataStore.pinEnabled.map<Map<Int, Boolean>, Map<Int, Boolean>?> { it }
+            }.collectAsState(initial = null)
+            // Set when Remember Last Profile skipped the picker, until the server's PIN states arrive.
+            var autoSelectPinCheckPending by rememberSaveable { mutableStateOf(false) }
+            var profileSwitchedManually by remember { mutableStateOf(false) }
 
             LaunchedEffect(authState, profiles) {
                 if (authState is AuthState.FullAccount) {
-                    profileSyncService.pullProfileLockStates()
-                        .onSuccess { profilePinStates = it }
-                        .onFailure { profilePinStates = emptyMap() }
-                } else {
-                    profilePinStates = emptyMap()
+                    // A failed refresh keeps the cached states, so being offline unlocks nothing.
+                    profileSyncService.pullProfileLockStates().onSuccess { states ->
+                        profileLockStateDataStore.replaceAll(states)
+                        if (autoSelectPinCheckPending) {
+                            autoSelectPinCheckPending = false
+                            // The cache can miss a PIN set on another device; ask for it now.
+                            if (states[profileManager.activeProfileId.value] == true) {
+                                profileSwitchedManually = true
+                                splashTriggered = false
+                                hasSelectedProfileThisSession = false
+                            }
+                        }
+                    }
                 }
             }
 
-            val activeProfileHasPin = remember(activeProfileId, profilePinStates) {
-                profilePinStates[activeProfileId] == true
-            }
+            val activeProfileHasPin = cachedPinStates?.get(activeProfileId) == true
 
-            var profileSwitchedManually by remember { mutableStateOf(false) }
-            val shouldAutoSelectProfile = rememberLastProfileEnabled &&
+            val shouldAutoSelectProfile = cachedPinStates != null && rememberLastProfileEnabled &&
                 hasEverSelectedProfile && !activeProfileHasPin &&
                 !hasSelectedProfileThisSession && !profileSwitchedManually
             if (shouldAutoSelectProfile && !splashTriggered) {
                 splashTriggered = true
                 hasSelectedProfileThisSession = true
+                autoSelectPinCheckPending = true
             }
             LaunchedEffect(shouldAutoSelectProfile) {
                 if (shouldAutoSelectProfile) {
@@ -736,7 +753,8 @@ open class MainActivity : ComponentActivity() {
 
                     var startupDestination = StartupDestination.Loading
                     val surfaceContentReady = hasSeenAuthQrOnFirstLaunch != null &&
-                        authState !is AuthState.Loading
+                        authState !is AuthState.Loading &&
+                        cachedPinStates != null
 
                     if (!surfaceContentReady) {
                         // Still loading auth state; nothing to show yet.
@@ -812,6 +830,7 @@ open class MainActivity : ComponentActivity() {
                             },
                             onProfileSelected = {
                                 hasSelectedProfileThisSession = true
+                                autoSelectPinCheckPending = false
                                 if (authManager.authState.value is AuthState.FullAccount) {
                                     startupSyncService.requestSyncNow()
                                 }
@@ -1156,6 +1175,7 @@ open class MainActivity : ComponentActivity() {
                             startupSession++
                             splashTriggered = false
                             profileSwitchedManually = true
+                            autoSelectPinCheckPending = false
                             focusedSplashColor = null
                             focusedSplashBgUrl = null
                             focusedSplashCacheKey = null
