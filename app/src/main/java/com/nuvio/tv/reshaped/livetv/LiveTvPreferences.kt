@@ -18,6 +18,8 @@ object LiveTvPreferences {
     private const val KEY_SHOW_ALL = "live_tv_show_all"
     private const val KEY_PREFER_HLS = "live_tv_prefer_hls"
     private const val KEY_GUIDE_REFRESH_HOURS = "live_tv_guide_refresh_hours"
+    private const val KEY_LIST_VIEW = "live_tv_list_view"
+    private const val KEY_QUICK_FILTERS = "live_tv_quick_filters"
 
     /** How often a saved guide is downloaded again; the first is the default. */
     val guideRefreshOptionsHours = listOf(12, 24, 48)
@@ -48,6 +50,12 @@ object LiveTvPreferences {
     private val _guideRefreshHours = MutableStateFlow(guideRefreshOptionsHours.first())
     val guideRefreshHours: StateFlow<Int> = _guideRefreshHours.asStateFlow()
 
+    private val _listView = MutableStateFlow(true)
+    val listView: StateFlow<Boolean> = _listView.asStateFlow()
+
+    private val _quickFilters = MutableStateFlow<List<String>>(emptyList())
+    val quickFilters: StateFlow<List<String>> = _quickFilters.asStateFlow()
+
     @Volatile
     private var loaded = false
 
@@ -64,6 +72,9 @@ object LiveTvPreferences {
             _preferHls.value = prefs.getBoolean(KEY_PREFER_HLS, false)
             _guideRefreshHours.value = prefs.getInt(KEY_GUIDE_REFRESH_HOURS, guideRefreshOptionsHours.first())
                 .takeIf { it in guideRefreshOptionsHours } ?: guideRefreshOptionsHours.first()
+            _listView.value = prefs.getBoolean(KEY_LIST_VIEW, true)
+            _quickFilters.value = prefs.getString(KEY_QUICK_FILTERS, null).orEmpty()
+                .lineSequence().map(String::trim).filter(String::isNotEmpty).distinct().toList()
             loaded = true
         }
     }
@@ -109,6 +120,29 @@ object LiveTvPreferences {
         ensureLoaded(context)
         _guideRefreshHours.value = hours
         prefs(context).edit().putInt(KEY_GUIDE_REFRESH_HOURS, hours).apply()
+    }
+
+    fun setListView(context: Context, list: Boolean) {
+        ensureLoaded(context)
+        _listView.value = list
+        prefs(context).edit().putBoolean(KEY_LIST_VIEW, list).apply()
+    }
+
+    fun addQuickFilter(context: Context, filter: String) {
+        ensureLoaded(context)
+        val word = filter.trim().ifEmpty { return }
+        if (_quickFilters.value.any { it.equals(word, ignoreCase = true) }) return
+        saveQuickFilters(context, _quickFilters.value + word)
+    }
+
+    fun removeQuickFilter(context: Context, filter: String) {
+        ensureLoaded(context)
+        saveQuickFilters(context, _quickFilters.value.filterNot { it == filter })
+    }
+
+    private fun saveQuickFilters(context: Context, filters: List<String>) {
+        _quickFilters.value = filters
+        prefs(context).edit().putString(KEY_QUICK_FILTERS, filters.joinToString("\n")).apply()
     }
 
     // Its own tiny file: this is read on the main thread when the menu is built.

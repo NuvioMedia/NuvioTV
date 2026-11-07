@@ -301,6 +301,13 @@ internal class LiveTvStorage(context: Context, private val profileId: Int) {
         }.apply()
     }
 
+    fun recentUrls(): List<String> =
+        string(RECENT_URLS)?.lineSequence()?.map(String::trim)?.filter(String::isNotBlank)?.distinct()?.toList().orEmpty()
+
+    fun saveRecentUrls(urls: List<String>) {
+        prefs.edit().putOrRemove(RECENT_URLS, urls.joinToString("\n").ifEmpty { null }).apply()
+    }
+
     companion object {
         const val PREFS = "nuvio_live_tv"
         private const val SOURCES = "sources"
@@ -327,5 +334,6 @@ internal class LiveTvStorage(context: Context, private val profileId: Int) {
         private const val RECENT_LOGO = "recent_channel_logo"
         private const val RECENT_GROUP = "recent_channel_group"
         private const val RECENT_TVG_ID = "recent_channel_tvg_id"
+        private const val RECENT_URLS = "recent_channel_urls"
     }
 }

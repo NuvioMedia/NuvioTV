@@ -978,11 +978,10 @@ private fun LiveTvInfoCard(
 ) {
     // Read once per minute tick: the kept guide is a map lookup.
     val next = remember(channel.guideKey, now, clock.value / 60_000L) { LiveTvRepository.nextProgramme(channel.guideKey) }
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(24.dp)
     Row(
         modifier = Modifier
-            .padding(start = 48.dp, end = 48.dp, bottom = 36.dp)
-            .widthIn(max = 880.dp)
+            .padding(start = 40.dp, end = 40.dp, bottom = 28.dp)
             .fillMaxWidth()
             .clip(shape)
             .background(LiveTvCardBackground)
@@ -990,17 +989,11 @@ private fun LiveTvInfoCard(
             .padding(horizontal = 22.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LiveTvLogo(url = logo, name = channel.name, width = 104.dp, height = 64.dp)
+        LiveTvLogo(url = logo, name = channel.name, width = 96.dp, height = 60.dp)
         Column(modifier = Modifier.weight(1f).padding(start = 20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (number > 0) {
-                    Text(
-                        text = number.toString(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.68f),
-                        modifier = Modifier.padding(end = 10.dp),
-                    )
+                    LiveTvDetailChip(stringResource(R.string.live_tv_channel_number, number), modifier = Modifier.padding(end = 12.dp))
                 }
                 Text(
                     text = channel.name,
@@ -1011,64 +1004,72 @@ private fun LiveTvInfoCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                details.labels.forEach { label ->
-                    LiveTvDetailChip(label, modifier = Modifier.padding(start = 8.dp))
+                listOf(
+                    listOfNotNull(details.resolution, details.frameRate),
+                    listOfNotNull(details.videoCodec, details.audio),
+                ).filter { it.isNotEmpty() }.forEachIndexed { index, labels ->
+                    LiveTvDetailChip(labels.joinToString(" · "), modifier = Modifier.padding(start = if (index == 0) 12.dp else 8.dp))
+                }
+                if (rewind) {
+                    LiveTvDetailChip(stringResource(R.string.live_tv_catchup), modifier = Modifier.padding(start = 8.dp))
                 }
             }
             if (now == null) {
                 Text(
                     text = stringResource(R.string.live_tv_info_no_guide),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.78f),
-                    modifier = Modifier.padding(top = 6.dp),
+                    modifier = Modifier.padding(top = 8.dp),
                 )
             } else {
+                Text(
+                    text = now.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                val minutes = ((now.stopEpochMs - now.startEpochMs) / 60_000L).toInt().coerceAtLeast(0)
                 Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = stringResource(R.string.live_tv_info_now).uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.Black,
-                        modifier = Modifier
-                            .clip(LiveTvPillShape)
-                            .background(Color.White.copy(alpha = 0.92f))
-                            .padding(horizontal = 7.dp, vertical = 1.dp),
-                    )
-                    Text(
-                        text = now.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White,
+                        text = LiveTvClock.formatSpan(now) + "  |  " + stringResource(R.string.live_tv_duration_minutes, minutes),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White.copy(alpha = 0.85f),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 10.dp),
                     )
-                }
-                Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     LiveTvProgressBar(
                         programme = now,
                         clock = clock,
                         fill = Color.White,
                         track = Color.White.copy(alpha = 0.18f),
-                        modifier = Modifier.width(240.dp),
+                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                     )
                     Text(
-                        text = "${LiveTvClock.formatSpan(now)}  ·  ${liveTvTimeLeft(now, clock)}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.78f),
+                        text = liveTvTimeLeft(now, clock),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White.copy(alpha = 0.85f),
                         maxLines = 1,
-                        modifier = Modifier.padding(start = 12.dp),
                     )
                 }
                 next?.let {
-                    Text(
-                        text = stringResource(R.string.live_tv_info_next, LiveTvClock.formatClock(it.startEpochMs)) + "  " + it.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.85f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
+                    Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.live_tv_next_title, it.title),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.85f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = LiveTvClock.formatClock(it.startEpochMs),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White.copy(alpha = 0.78f),
+                            modifier = Modifier.padding(start = 12.dp),
+                        )
+                    }
                 }
             }
             Text(
@@ -1093,13 +1094,15 @@ private fun LiveTvInfoCard(
 private fun LiveTvDetailChip(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelSmall,
+        style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Medium,
-        color = Color.White.copy(alpha = 0.82f),
+        color = Color.White.copy(alpha = 0.88f),
         maxLines = 1,
         modifier = modifier
-            .border(1.dp, Color.White.copy(alpha = 0.24f), LiveTvPillShape)
-            .padding(horizontal = 8.dp, vertical = 2.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .border(1.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp, vertical = 3.dp),
     )
 }
 

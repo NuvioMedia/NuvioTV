@@ -188,6 +188,7 @@ data class LiveTvUiState(
     /** Goes up each time the kept guide is read again, so the programme guide redraws. */
     val guideVersion: Int = 0,
     val recentChannel: LiveTvRecentChannel? = null,
+    val recentUrls: List<String> = emptyList(),
     val favoriteUrls: Set<String> = emptySet(),
     /** The viewer's own playlists, oldest first. */
     val customLists: List<LiveTvCustomList> = emptyList(),

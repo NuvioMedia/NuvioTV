@@ -80,6 +80,8 @@ class LiveTvScreenModel @Inject constructor(
     /** The channel played from the guide, for the return when the one last watched is not in the list shown. */
     var launchedUrl: String? = null
 
+    internal val browse = LiveTvBrowseState()
+
     /** Sources whose categories are folded away in the category column. */
     val collapsedSources = androidx.compose.runtime.mutableStateMapOf<String, Boolean>()
 
@@ -97,6 +99,7 @@ class LiveTvScreenModel @Inject constructor(
     internal fun computeSourceSections(state: LiveTvUiState, visibleGroups: List<String>): LiveTvSections {
         val inputs = sectionInputs(state, visibleGroups)
         val counts = HashMap<String, Int>()
+        val groupCounts = HashMap<String, Int>()
         val groupsBySource = HashMap<String, HashSet<String>>()
         val shownGroups = visibleGroups.toHashSet()
         var total = 0
@@ -104,6 +107,9 @@ class LiveTvScreenModel @Inject constructor(
             if (channel.group !in shownGroups || channel.hideKey in state.hiddenChannelKeys) return@forEach
             total++
             counts[channel.sourceId] = (counts[channel.sourceId] ?: 0) + 1
+            groupCounts[channel.group] = (groupCounts[channel.group] ?: 0) + 1
+            val sourceKey = sourceGroupKey(channel.sourceId, channel.group)
+            groupCounts[sourceKey] = (groupCounts[sourceKey] ?: 0) + 1
             groupsBySource.getOrPut(channel.sourceId) { HashSet() }.add(channel.group)
         }
         val bySource = state.sources.map { source ->
@@ -111,7 +117,7 @@ class LiveTvScreenModel @Inject constructor(
             // In the source's own order when the viewer moved its categories (see LiveTvUiState.sourceGroupOrders).
             LiveTvSourceSection(source, counts[source.id] ?: 0, state.groupsOf(source, own, visibleGroups))
         }
-        return LiveTvSections(total, bySource).also {
+        return LiveTvSections(total, bySource, groupCounts).also {
             sectionsFor = inputs
             sections = it
         }
@@ -124,7 +130,7 @@ class LiveTvScreenModel @Inject constructor(
 }
 
 /** The channels shown in all, and each source's heading: its shown channels and categories, in order. */
-internal class LiveTvSections(val total: Int, val sources: List<LiveTvSourceSection>)
+internal class LiveTvSections(val total: Int, val sources: List<LiveTvSourceSection>, val groupCounts: Map<String, Int> = emptyMap())
 
 internal class LiveTvSourceSection(val source: LiveTvSource, val channelCount: Int, val groups: List<String>)
 
@@ -137,11 +143,13 @@ class LiveTvFilterInput(
     val filterKey: String,
     val query: String,
     val customLists: List<com.nuvio.tv.reshaped.livetv.LiveTvCustomList>,
+    val recentUrls: List<String> = emptyList(),
 ) {
     fun sameAs(other: LiveTvFilterInput): Boolean =
         channels === other.channels && favoriteUrls === other.favoriteUrls && hiddenGroups === other.hiddenGroups &&
             hiddenChannels === other.hiddenChannels &&
-            filterKey == other.filterKey && query == other.query && customLists === other.customLists
+            filterKey == other.filterKey && query == other.query && customLists === other.customLists &&
+            recentUrls === other.recentUrls
 }
 
 /**

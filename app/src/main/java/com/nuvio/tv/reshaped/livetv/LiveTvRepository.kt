@@ -46,6 +46,7 @@ class LiveTvReplay(val playback: LiveTvChannel, val window: LiveTvReplayWindow, 
 object LiveTvRepository {
     private const val TAG = "LiveTv"
     private const val EPG_TICK_MS = 60_000L
+    private const val MAX_RECENT_CHANNELS = 40
     /** How long a replay waits for the panel's HLS playlist before playing its TS replay. */
     private const val HLS_CHECK_MS = 6_000L
     /** How long a part of a replay is when the guide has no programme for that time. */
@@ -200,6 +201,7 @@ object LiveTvRepository {
                 sourceGroupOrders = store.sourceGroupOrders(),
                 hiddenChannelKeys = hiddenChannels,
                 recentChannel = store.recentChannel(),
+                recentUrls = store.recentUrls(),
                 isLoading = sources.isNotEmpty(),
             )
             sources.forEach { launchSourceLoad(it, adding = false, useSaved = true) }
@@ -650,9 +652,27 @@ object LiveTvRepository {
     /** [channel] is the list's own entry (not a resolved Stalker link), so it can be found again. */
     fun recordRecentChannel(channel: LiveTvChannel) {
         val recent = LiveTvRecentChannel(channel.streamUrl, channel.name, channel.logoUrl, channel.group, channel.tvgId)
-        if (_uiState.value.recentChannel == recent) return
-        _uiState.update { it.copy(recentChannel = recent) }
-        storage?.let { store -> scope.launch(writer) { store.saveRecentChannel(recent) } }
+        val state = _uiState.value
+        val urls = (listOf(channel.streamUrl) + state.recentUrls.filterNot { it == channel.streamUrl }).take(MAX_RECENT_CHANNELS)
+        if (state.recentChannel == recent && state.recentUrls == urls) return
+        _uiState.update { it.copy(recentChannel = recent, recentUrls = urls) }
+        storage?.let { store ->
+            scope.launch(writer) {
+                store.saveRecentChannel(recent)
+                store.saveRecentUrls(urls)
+            }
+        }
+    }
+
+    fun clearRecentChannels() {
+        _uiState.update { it.copy(recentUrls = emptyList()) }
+        storage?.let { store -> scope.launch(writer) { store.saveRecentUrls(emptyList()) } }
+    }
+
+    fun removeRecentChannel(channel: LiveTvChannel) {
+        val urls = _uiState.value.recentUrls.filterNot { it == channel.streamUrl }
+        _uiState.update { it.copy(recentUrls = urls) }
+        storage?.let { store -> scope.launch(writer) { store.saveRecentUrls(urls) } }
     }
 
     /** The list entry for a remembered channel, or a stand-in when the list no longer has it. */
@@ -1112,7 +1132,10 @@ object LiveTvRepository {
         val state = _uiState.value
         val recent = state.recentChannel
         val listed = state.customLists.flatMapTo(HashSet()) { it.urls }
-        val wanted = before.channels.filter { it.streamUrl in state.favoriteUrls || it.streamUrl in listed || it.streamUrl == recent?.streamUrl }
+        val recents = state.recentUrls.toHashSet()
+        val wanted = before.channels.filter {
+            it.streamUrl in state.favoriteUrls || it.streamUrl in listed || it.streamUrl == recent?.streamUrl || it.streamUrl in recents
+        }
         if (wanted.isEmpty()) return
         val byKey = HashMap<Long, LiveTvChannel>(after.channels.size * 2)
         after.channels.forEach { byKey.putIfAbsent(it.hideKey, it) }
@@ -1134,16 +1157,19 @@ object LiveTvRepository {
         var favorites: Set<String> = emptySet()
         var lists: List<LiveTvCustomList> = emptyList()
         var newRecent: LiveTvRecentChannel? = null
+        var recents: List<String> = emptyList()
         _uiState.update { state ->
             favorites = state.favoriteUrls.mapTo(HashSet()) { moved[it]?.streamUrl ?: it }
             lists = state.customLists.movedTo(moved)
             newRecent = state.recentChannel?.let { r -> moved[r.streamUrl]?.let { r.copy(streamUrl = it.streamUrl, logoUrl = it.logoUrl) } ?: r }
-            state.copy(favoriteUrls = favorites, customLists = lists, recentChannel = newRecent)
+            recents = state.recentUrls.map { moved[it]?.streamUrl ?: it }.distinct()
+            state.copy(favoriteUrls = favorites, customLists = lists, recentChannel = newRecent, recentUrls = recents)
         }
         scope.launch(writer) {
             store.saveFavoriteUrls(favorites)
             store.saveCustomLists(lists)
             newRecent?.let(store::saveRecentChannel)
+            store.saveRecentUrls(recents)
         }
     }
 
@@ -1158,7 +1184,7 @@ object LiveTvRepository {
         fun matches(url: String): Boolean = LiveTvCatchupLinks.xtreamLogin(url)?.let { (server, user, pass) ->
             server.trimEnd('/').equals(login.first.trimEnd('/'), ignoreCase = true) && user == login.second && pass == login.third
         } == true
-        val wanted = (state.favoriteUrls + state.customLists.flatMap { it.urls } + listOfNotNull(recent?.streamUrl)).filter(::matches)
+        val wanted = (state.favoriteUrls + state.customLists.flatMap { it.urls } + listOfNotNull(recent?.streamUrl) + state.recentUrls).filter(::matches)
         if (wanted.isEmpty()) return
         val byFile = HashMap<String, LiveTvChannel>(after.channels.size * 2)
         after.channels.forEach { byFile.putIfAbsent(it.streamUrl.substringBefore('?').substringAfterLast('/').substringBefore('.'), it) }
