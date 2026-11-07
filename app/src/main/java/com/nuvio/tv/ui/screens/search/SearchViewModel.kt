@@ -98,6 +98,7 @@ class SearchViewModel @Inject constructor(
     private var hasRenderedFirstCatalog = false
     private var pendingCatalogResponses = 0
     private var lastNonEmptyQuery: String = ""
+    private var lastNonEmptyQueryTime: Long = 0L
     private var revealBatchAfterNextDiscoverFetch = false
     private var hideUnreleasedContent = false
 
@@ -265,12 +266,19 @@ class SearchViewModel @Inject constructor(
         }
         
         // Detect if this is a recomposition artifact: transitioning to empty from the last
-        // non-empty query. In this case, skip fetches but still update UI state.
-        val isRecompositionArtifact = query.isEmpty() && query != _uiState.value.query && _uiState.value.query == lastNonEmptyQuery
+        // non-empty query WITHIN 100ms (indicates Compose recomposition, not user X button click).
+        // Recomposition happens in rapid succession during focus changes. X button clicks have
+        // longer gaps due to user navigation time.
+        val now = System.currentTimeMillis()
+        val isRecompositionArtifact = query.isEmpty() && 
+            query != _uiState.value.query && 
+            _uiState.value.query == lastNonEmptyQuery &&
+            (now - lastNonEmptyQueryTime) < 100
         
-        // Track non-empty queries for recomposition detection
+        // Track non-empty queries and their timestamp for recomposition detection
         if (query.isNotEmpty()) {
             lastNonEmptyQuery = query
+            lastNonEmptyQueryTime = now
         }
 
         _uiState.update {
