@@ -259,16 +259,14 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun onQueryChanged(query: String) {
-        // Skip if transitioning to empty from the last non-empty query
-        // (recomposition artifact during focus change on Fire TV)
-        if (query.isEmpty() && query != _uiState.value.query && _uiState.value.query == lastNonEmptyQuery) {
-            return
-        }
-        
         // Skip if query is exactly the same (no change at all)
         if (query == _uiState.value.query) {
             return
         }
+        
+        // Detect if this is a recomposition artifact: transitioning to empty from the last
+        // non-empty query. In this case, skip fetches but still update UI state.
+        val isRecompositionArtifact = query.isEmpty() && query != _uiState.value.query && _uiState.value.query == lastNonEmptyQuery
         
         // Track non-empty queries for recomposition detection
         if (query.isNotEmpty()) {
@@ -292,6 +290,11 @@ class SearchViewModel @Inject constructor(
                 // debounce. The screen renders skeleton rows for this window instead.
                 catalogRows = if (trimmedInput.length < MIN_SEARCH_QUERY_LENGTH) emptyList() else it.catalogRows
             )
+        }
+
+        // Skip fetches for recomposition artifacts to avoid unnecessary network calls
+        if (isRecompositionArtifact) {
+            return
         }
 
         // Drop in-flight requests for the previous keystroke before scheduling the next run.
