@@ -7,6 +7,7 @@ import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.sync.ProfileSettingsSyncService
 import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.SetProfilePinResult
+import com.nuvio.tv.data.local.ProfileLockSettingsDataStore
 import com.nuvio.tv.data.local.ProfileLockStateDataStore
 import com.nuvio.tv.data.remote.supabase.AvatarCatalogItem
 import com.nuvio.tv.data.remote.supabase.AvatarRepository
@@ -51,6 +52,7 @@ class ProfileSelectionViewModel @Inject constructor(
     private val profileBackgroundRepository: ProfileBackgroundRepository,
     memberAccessRepository: MemberAccessRepository,
     private val profileLockStateDataStore: ProfileLockStateDataStore,
+    private val profileLockSettingsDataStore: ProfileLockSettingsDataStore,
     private val themeDataStore: com.nuvio.tv.data.local.ThemeDataStore
 ) : ViewModel() {
     val activeProfileId: StateFlow<Int> = profileManager.activeProfileId
@@ -92,6 +94,18 @@ class ProfileSelectionViewModel @Inject constructor(
 
     private val _isPinOperationInProgress = MutableStateFlow(false)
     val isPinOperationInProgress: StateFlow<Boolean> = _isPinOperationInProgress.asStateFlow()
+
+    val askPinOnAppStart: StateFlow<Map<Int, Boolean>> = profiles.flatMapLatest { profileList ->
+        if (profileList.isEmpty()) {
+            flowOf(emptyMap())
+        } else {
+            combine(
+                profileList.map { profile ->
+                    profileLockSettingsDataStore.askPinOnAppStart(profile.id).map { ask -> profile.id to ask }
+                }
+            ) { entries -> entries.toMap() }
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     // Declared before init: the theme collector below can emit synchronously on
     // Main.immediate when the theme stores are already cached.
@@ -321,6 +335,15 @@ class ProfileSelectionViewModel @Inject constructor(
             }
             _isPinOperationInProgress.value = false
             onComplete(success)
+        }
+    }
+
+    fun setAskPinOnAppStart(profileId: Int, enabled: Boolean, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            profileSettingsSyncService.updateProfileSettings(profileId) {
+                profileLockSettingsDataStore.setAskPinOnAppStart(profileId, enabled)
+            }
+            onComplete()
         }
     }
 
