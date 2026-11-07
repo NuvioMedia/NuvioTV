@@ -288,7 +288,12 @@ class SearchViewModel @Inject constructor(
                 // Keep whatever is on screen while a keystroke waits to run. Clearing here flashed
                 // the no-results state on every letter, because on a remote each letter outlasts the
                 // debounce. The screen renders skeleton rows for this window instead.
-                catalogRows = if (trimmedInput.length < MIN_SEARCH_QUERY_LENGTH) emptyList() else it.catalogRows
+                // For recomposition artifacts (empty query during focus change), preserve catalogRows.
+                catalogRows = when {
+                    isRecompositionArtifact -> it.catalogRows
+                    trimmedInput.length < MIN_SEARCH_QUERY_LENGTH -> emptyList()
+                    else -> it.catalogRows
+                }
             )
         }
 
