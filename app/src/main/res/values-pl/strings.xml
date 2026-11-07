@@ -517,6 +517,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Zawsze tło z logo dla poziomych plakatów</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Ignoruj poziomy plakat z dodatku i użyj tła z nakładką logo.</string>
+    <string name="layout_hero_description_auto_scroll">Automatyczne przewijanie opisów</string>
+    <string name="layout_hero_description_auto_scroll_sub">Powoli przewijaj długie opisy na ekranie głównym zamiast je ucinać.</string>
     <string name="web_custom_poster_title">Niestandardowe źródło plakatów</string>
     <string name="web_custom_poster_subtitle">Wklej wzorzec URL poniżej i naciśnij Zapisz.</string>
     <string name="web_custom_poster_label">Wzorzec URL</string>
