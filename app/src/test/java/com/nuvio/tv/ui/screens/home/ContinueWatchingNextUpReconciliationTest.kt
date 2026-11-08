@@ -138,6 +138,47 @@ class ContinueWatchingNextUpReconciliationTest {
         assertEquals(null, snapshot.single().thumbnail)
     }
 
+    @Test
+    fun `finished episode keeps its card until the series is placed again`() {
+        val finished = inProgress("series")
+        val other = nextUp("other", season = 2, episode = 4, seedSeason = 2, seedEpisode = 3)
+
+        val result = continueWatchingCardsAwaitingNextUp(
+            shownItems = listOf(finished, other),
+            placedContentIds = setOf("other"),
+            seededContentIds = setOf("series", "other"),
+            dismissedNextUpKeys = emptySet()
+        )
+
+        assertEquals(listOf(finished), result)
+    }
+
+    @Test
+    fun `placed or unseeded cards are not kept`() {
+        val result = continueWatchingCardsAwaitingNextUp(
+            shownItems = listOf(inProgress("series"), inProgress("movie")),
+            placedContentIds = setOf("series"),
+            seededContentIds = setOf("series"),
+            dismissedNextUpKeys = emptySet()
+        )
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `dismissed next up is not kept`() {
+        val dismissed = nextUp("series", season = 1, episode = 2, seedSeason = 1, seedEpisode = 1)
+
+        val result = continueWatchingCardsAwaitingNextUp(
+            shownItems = listOf(dismissed),
+            placedContentIds = emptySet(),
+            seededContentIds = setOf("series"),
+            dismissedNextUpKeys = setOf(nextUpDismissKey("series", 1, 1))
+        )
+
+        assertTrue(result.isEmpty())
+    }
+
     private fun nextUp(
         contentId: String,
         season: Int,
