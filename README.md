@@ -46,6 +46,8 @@ This fork of [NuvioMedia/NuvioTV](https://github.com/NuvioMedia/NuvioTV) adds th
 - Subtitles are blended into the overlay surface with NEON-optimised CPU code and use no GPU. This can run better on devices with weak GPUs, and it keeps HDR output.
 - Choose it in the subtitle settings under **ASS Render Mode**.
 
+### anilist as a tracker
+
 ### Other fixes
 - HDR10+ metadata stripping now applies only to HEVC tracks, so H.264 streams (most Live TV channels) are no longer corrupted.
 - Zoom and stretch now work during tunneled playback.
