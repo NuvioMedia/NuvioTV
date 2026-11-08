@@ -18,6 +18,7 @@ enum class AspectMode(@StringRes val labelResId: Int) {
     ORIGINAL(R.string.player_aspect_fit),
     FULL_SCREEN(R.string.player_aspect_crop),
     STRETCH(R.string.player_aspect_stretch),
+    FORCE_STRETCH(R.string.player_aspect_force_stretch),
     SLIGHT_ZOOM(R.string.player_aspect_mode_slight_zoom),
     CINEMA_ZOOM(R.string.player_aspect_mode_cinema_zoom),
     VERTICAL_STRETCH(R.string.player_aspect_fit_height),
@@ -26,22 +27,42 @@ enum class AspectMode(@StringRes val labelResId: Int) {
 
 private const val SLIGHT_ZOOM_SCALE = 1.15f
 private const val CINEMA_ZOOM_SCALE = 1.33f
+private const val FORCE_STRETCH_PICTURE_ASPECT = 2.39f
 
 /**
  * How the ExoPlayer video frame is laid out for an aspect mode: the frame's resize mode, and how
  * far the frame is enlarged past the player (centred, the overflow cropped).
  */
-internal data class ExoSurfaceLayout(val resizeMode: Int, val zoom: Float = 1f)
+internal data class ExoSurfaceLayout(
+    val resizeMode: Int,
+    val zoom: Float = 1f,
+    val verticalZoom: Float = zoom
+)
+
+internal fun forceStretchVerticalScale(videoAspect: Float?, viewAspect: Float): Float {
+    if (viewAspect <= 0f) return 1f
+    val frameAspect = maxOf(videoAspect?.takeIf { it > 0f } ?: viewAspect, viewAspect)
+    return (FORCE_STRETCH_PICTURE_ASPECT / frameAspect).coerceAtLeast(1f)
+}
 
 /**
  * Every aspect mode is laid out as a frame size: crop, stretch and fit width/height as the
  * frame's own resize modes, and the zooms as a frame larger than the player.
  */
-internal fun exoSurfaceLayout(aspectMode: AspectMode): ExoSurfaceLayout {
+internal fun exoSurfaceLayout(
+    aspectMode: AspectMode,
+    videoAspect: Float? = null,
+    viewAspect: Float = 0f
+): ExoSurfaceLayout {
     return when (aspectMode) {
         AspectMode.ORIGINAL -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT)
         AspectMode.FULL_SCREEN -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_ZOOM)
         AspectMode.STRETCH -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FILL)
+        AspectMode.FORCE_STRETCH -> ExoSurfaceLayout(
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL,
+            zoom = 1f,
+            verticalZoom = forceStretchVerticalScale(videoAspect, viewAspect)
+        )
         AspectMode.SLIGHT_ZOOM -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT, SLIGHT_ZOOM_SCALE)
         AspectMode.CINEMA_ZOOM -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIT, CINEMA_ZOOM_SCALE)
         AspectMode.VERTICAL_STRETCH -> ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT)
@@ -50,12 +71,12 @@ internal fun exoSurfaceLayout(aspectMode: AspectMode): ExoSurfaceLayout {
 }
 
 /** Sizes [PlayerView]'s content frame to [zoom] times the player, centred; 1 fills the player. */
-internal fun applyExoContentFrameZoom(playerView: PlayerView, zoom: Float) {
+internal fun applyExoContentFrameZoom(playerView: PlayerView, zoom: Float, verticalZoom: Float = zoom) {
     val contentFrame = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_content_frame) ?: return
     val params = contentFrame.layoutParams ?: return
-    val zoomed = zoom > 1f && playerView.width > 0 && playerView.height > 0
-    val width = if (zoomed) (playerView.width * zoom).roundToInt() else ViewGroup.LayoutParams.MATCH_PARENT
-    val height = if (zoomed) (playerView.height * zoom).roundToInt() else ViewGroup.LayoutParams.MATCH_PARENT
+    val zoomed = (zoom > 1f || verticalZoom > 1f) && playerView.width > 0 && playerView.height > 0
+    val width = if (zoomed) (playerView.width * zoom.coerceAtLeast(1f)).roundToInt() else ViewGroup.LayoutParams.MATCH_PARENT
+    val height = if (zoomed) (playerView.height * verticalZoom.coerceAtLeast(1f)).roundToInt() else ViewGroup.LayoutParams.MATCH_PARENT
     val gravityChanged = params is FrameLayout.LayoutParams && params.gravity != Gravity.CENTER
     if (params.width == width && params.height == height && !gravityChanged) return
     params.width = width
@@ -136,6 +157,7 @@ internal fun aspectModeNeedsVideoAspect(mode: AspectMode): Boolean {
     return when (mode) {
         AspectMode.FULL_SCREEN,
         AspectMode.STRETCH,
+        AspectMode.FORCE_STRETCH,
         AspectMode.VERTICAL_STRETCH,
         AspectMode.HORIZONTAL_STRETCH -> true
 
@@ -190,6 +212,14 @@ internal fun resolveAspectScale(mode: AspectMode, viewAspect: Float, videoAspect
             } else {
                 AspectScale(scaleX = viewAspect / safeVideoAspect, scaleY = 1.0f)
             }
+        }
+
+        AspectMode.FORCE_STRETCH -> {
+            val stretch = resolveAspectScale(AspectMode.STRETCH, viewAspect, videoAspect)
+            AspectScale(
+                scaleX = stretch.scaleX,
+                scaleY = stretch.scaleY * forceStretchVerticalScale(videoAspect, viewAspect)
+            )
         }
 
         AspectMode.SLIGHT_ZOOM -> AspectScale(scaleX = SLIGHT_ZOOM_SCALE, scaleY = SLIGHT_ZOOM_SCALE)

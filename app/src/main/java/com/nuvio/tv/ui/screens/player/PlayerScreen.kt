@@ -2452,11 +2452,15 @@ private fun PlayerView.syncExoSurfaceLayout(
     tunnelingEnabled: Boolean,
     aspectMode: AspectMode
 ) {
-    val surfaceLayout = exoSurfaceLayout(aspectMode)
+    val surfaceLayout = exoSurfaceLayout(
+        aspectMode = aspectMode,
+        videoAspect = readExoVideoAspectRatio(this),
+        viewAspect = readViewAspectRatio(width, height)
+    )
     if (resizeMode != surfaceLayout.resizeMode) {
         resizeMode = surfaceLayout.resizeMode
     }
-    applyExoContentFrameZoom(this, surfaceLayout.zoom)
+    applyExoContentFrameZoom(this, surfaceLayout.zoom, surfaceLayout.verticalZoom)
     val appliedAspectMode = AspectMode.ORIGINAL
     applyExoAspectMode(appliedAspectMode)
     setTag(

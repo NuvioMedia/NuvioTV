@@ -1970,6 +1970,7 @@
     <string name="player_speed_normal">Normal</string>
     <string name="player_aspect_fit">Fit (Original)</string>
     <string name="player_aspect_stretch">Stretch</string>
+    <string name="player_aspect_force_stretch">Force Stretch</string>
     <string name="player_aspect_fit_width">Fit Width</string>
     <string name="player_aspect_fit_height">Fit Height</string>
     <string name="player_aspect_crop">Crop</string>
