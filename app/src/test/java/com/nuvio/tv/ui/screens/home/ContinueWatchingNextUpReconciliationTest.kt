@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.home
 import com.nuvio.tv.domain.model.WatchProgress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -177,6 +178,15 @@ class ContinueWatchingNextUpReconciliationTest {
         )
 
         assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `card key stays with the series when its card moves to the next episode`() {
+        val finished = inProgress("series")
+        val next = nextUp("series", season = 1, episode = 2, seedSeason = 1, seedEpisode = 1)
+
+        assertEquals(continueWatchingItemKey(finished), continueWatchingItemKey(next))
+        assertNotEquals(continueWatchingItemKey(finished), continueWatchingItemKey(inProgress("other")))
     }
 
     private fun nextUp(
