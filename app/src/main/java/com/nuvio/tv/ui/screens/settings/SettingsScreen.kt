@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.GridView
@@ -1141,6 +1142,7 @@ private fun IntegrationSettingsContent(
                                 SettingsActionRow(
                                     title = stringResource(R.string.usenet_title),
                                     subtitle = stringResource(R.string.settings_usenet_subtitle),
+                                    leadingIcon = Icons.Default.Dns,
                                     onClick = { onSelectSection(IntegrationSettingsSection.Usenet) },
                                     modifier = if (hubEntryTargetSection == IntegrationSettingsSection.Usenet) {
                                         Modifier.focusRequester(hubEntryFocusRequester)
