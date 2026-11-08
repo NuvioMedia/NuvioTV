@@ -654,10 +654,14 @@ private fun TrackingConnectedWordmark(
     logo: Painter,
     contentDescription: String
 ) {
-    if (brand == TrackingDialogBrand.MDBLIST) {
+    if (brand == TrackingDialogBrand.MDBLIST || brand == TrackingDialogBrand.ANILIST) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Image(painter = logo, contentDescription = null, modifier = Modifier.size(40.dp))
-            Text(stringResource(R.string.mdblist_name), color = Color.White, style = MaterialTheme.typography.headlineSmall)
+            Text(
+                stringResource(if (brand == TrackingDialogBrand.ANILIST) R.string.anilist_name else R.string.mdblist_name),
+                color = Color.White,
+                style = MaterialTheme.typography.headlineSmall
+            )
         }
         return
     }
@@ -671,7 +675,8 @@ private fun TrackingConnectedWordmark(
             TrackingDialogBrand.SIMKL -> Modifier
                 .width(124.dp)
                 .height(30.dp)
-            TrackingDialogBrand.MDBLIST -> Modifier.size(40.dp)
+            TrackingDialogBrand.MDBLIST,
+            TrackingDialogBrand.ANILIST -> Modifier.size(40.dp)
         },
         contentScale = ContentScale.Fit,
         alignment = Alignment.CenterStart
@@ -827,7 +832,8 @@ private fun TrackingProviderWordmark(
 internal enum class TrackingDialogBrand {
     TRAKT,
     SIMKL,
-    MDBLIST
+    MDBLIST,
+    ANILIST
 }
 
 private fun TrackingDialogBrand.cardBrush(): Brush = when (this) {
@@ -839,6 +845,9 @@ private fun TrackingDialogBrand.cardBrush(): Brush = when (this) {
     )
     TrackingDialogBrand.MDBLIST -> Brush.linearGradient(
         colors = listOf(Color(0xFF173D69), Color(0xFF225C97), Color(0xFF16385D))
+    )
+    TrackingDialogBrand.ANILIST -> Brush.linearGradient(
+        colors = listOf(Color(0xFF0B1622), Color(0xFF152232), Color(0xFF1E4F70))
     )
 }
 

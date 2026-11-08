@@ -1257,6 +1257,27 @@
     <string name="web_custom_poster_placeholders_info">Placeholders: {id} passes all content IDs. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} target a single ID type - if unavailable, the original poster is kept. {imdb_id|tmdb_id|kitsu_id} declares supported ID types - the matching one is used, or the original poster is kept. Add ? to make a placeholder optional, resolving to empty instead of skipping: {imdb_id?}. Other placeholders: {id_type}, {typed_id}, {type}, {shape}.</string>
 
 
+    <string name="anilist_name">AniList</string>
+    <string name="anilist_tracking_description">Sync your anime lists, episode progress and Continue Watching with AniList.</string>
+    <string name="anilist_connected_as">Connected as %1$s</string>
+    <string name="anilist_account_fallback">AniList user</string>
+    <string name="anilist_qr_instruction">Scan the QR code with your phone, sign in to AniList and paste the token on the page that opens. Your phone must be on the same network as this TV.</string>
+    <string name="anilist_qr_description">QR code to connect your AniList account</string>
+    <string name="anilist_status_waiting">Waiting for you to finish signing in on your phone…</string>
+    <string name="anilist_status_syncing">Syncing your AniList lists…</string>
+    <string name="anilist_last_synced">Last synced %1$s</string>
+    <string name="anilist_disconnect_title">Disconnect AniList?</string>
+    <string name="anilist_disconnect_subtitle">Stop sending watch updates from this profile. Your AniList lists are kept.</string>
+    <string name="anilist_missing_client">AniList connection is unavailable in this build.</string>
+    <string name="anilist_auth_denied">Connection was declined. Try again to connect your account.</string>
+    <string name="anilist_auth_invalid">AniList did not accept this sign-in. Please try again.</string>
+    <string name="anilist_auth_revoked">Your AniList connection has expired or been revoked. Connect again to resume syncing.</string>
+    <string name="anilist_unavailable">Could not sync with AniList. Please try again.</string>
+    <string name="anilist_rate_limited">AniList’s request limit has been reached. Syncing will resume shortly.</string>
+    <string name="anilist_no_network">Connect this TV to your local network to sign in with your phone.</string>
+    <string name="anilist_server_unavailable">Could not start the sign-in page on this TV. Please try again.</string>
+    <string name="library_anilist_empty_title">Your AniList library is empty</string>
+    <string name="library_anilist_empty_message">Add anime to your AniList lists to see them here.</string>
     <string name="mdblist_name">MDBList</string>
     <string name="mdblist_tracking_description">Sync watched history and playback progress across devices</string>
     <string name="mdblist_connected_as">Connected as %1$s</string>
@@ -1315,6 +1336,8 @@
     <string name="mdblist_library_lists_description">Choose which MDBList lists appear in the Library and in Manage Lists. The Watchlist is always shown.</string>
     <string name="mdblist_library_lists_empty">No lists found in your MDBList account yet. Sync to load them.</string>
     <string name="mdblist_library_lists_summary">%1$d of %2$d shown</string>
+    <string name="tracking_anilist_features_title">AniList features</string>
+    <string name="tracking_anilist_features_subtitle">AniList-specific settings</string>
     <string name="tracking_mdblist_features_title">MDBList features</string>
     <string name="tracking_mdblist_features_subtitle">MDBList-specific settings</string>
 

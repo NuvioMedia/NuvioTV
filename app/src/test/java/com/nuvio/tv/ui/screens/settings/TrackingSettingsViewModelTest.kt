@@ -5,6 +5,8 @@ import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.core.tracking.TrackingSourceController
 import com.nuvio.tv.core.tracking.TrackingSourceSelection
+import com.nuvio.tv.data.anilist.AniListAuthPersistence
+import com.nuvio.tv.data.anilist.AniListAuthStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktAuthState
 import com.nuvio.tv.data.local.TraktSettingsDataStore
@@ -55,7 +57,8 @@ class TrackingSettingsViewModelTest {
         }
         val trakt = mockk<TraktAuthDataStore> { every { state } returns flowOf(TraktAuthState()) }
         val simkl = mockk<SimklAuthRepository> { every { state } returns MutableStateFlow(SimklAuthState()) }
-        val viewModel = TrackingSettingsViewModel(controller, settings, mockk(), trakt, simkl, harness.store, profiles)
+        val aniList = AniListAuthStore(InMemoryAniListAuthPersistence(), initialProfileId = 1)
+        val viewModel = TrackingSettingsViewModel(controller, settings, mockk(), trakt, simkl, harness.store, aniList, profiles)
         runCurrent()
         assertEquals(setOf(TrackingProviderId.MDBLIST), viewModel.uiState.value.connectedProviderIds)
         val previousCount = reconciliations.size
@@ -64,9 +67,19 @@ class TrackingSettingsViewModelTest {
         assertFalse(viewModel.uiState.value.isReady)
         assertEquals(previousCount, reconciliations.size)
         harness.store.selectProfile(2)
+        aniList.selectProfile(2)
         runCurrent()
         assertTrue(viewModel.uiState.value.isReady)
         assertEquals(WatchProgressSource.MDBLIST, viewModel.uiState.value.watchProgressSource)
         assertTrue(reconciliations.all { TrackingProviderId.MDBLIST in it })
     }
+}
+
+private class InMemoryAniListAuthPersistence : AniListAuthPersistence {
+    private val values = mutableMapOf<Int, String>()
+    override fun read(profileId: Int): String? = values[profileId]
+    override fun write(profileId: Int, value: String?) {
+        if (value == null) values.remove(profileId) else values[profileId] = value
+    }
+    override fun clear() = values.clear()
 }

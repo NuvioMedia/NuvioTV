@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import com.nuvio.tv.core.tracking.TrackingAnimeIdMapper
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingProviderId
@@ -14,7 +15,8 @@ import javax.inject.Singleton
 @Singleton
 class TraktTrackingScrobbler @Inject constructor(
     private val service: TraktScrobbleService,
-    private val episodeMappingService: TraktEpisodeMappingService
+    private val episodeMappingService: TraktEpisodeMappingService,
+    private val animeIdMapper: TrackingAnimeIdMapper
 ) : TrackingScrobbler {
     override val providerId = TrackingProviderId.TRAKT
     override val seekScrobblePolicy = TrackingSeekScrobblePolicy.STOP_AND_RESTART
@@ -23,7 +25,7 @@ class TraktTrackingScrobbler @Inject constructor(
         action: TrackingScrobbleAction,
         event: TrackingScrobbleEvent
     ) {
-        val item = event.media.toTraktScrobbleItem() ?: return
+        val item = animeIdMapper.toImdbReference(event.media).toTraktScrobbleItem() ?: return
         when (action) {
             TrackingScrobbleAction.START -> service.scrobbleStart(item, event.progressPercent.toFloat())
             TrackingScrobbleAction.PAUSE -> service.scrobbleStop(item, event.progressPercent.toFloat())

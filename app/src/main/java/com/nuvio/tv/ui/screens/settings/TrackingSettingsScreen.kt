@@ -67,6 +67,7 @@ fun TrackingSettingsContent(
     traktViewModel: TraktViewModel = hiltViewModel(),
     simklViewModel: SimklSettingsViewModel = hiltViewModel(),
     mdbListViewModel: MdbListTrackerViewModel = hiltViewModel(),
+    aniListViewModel: AniListTrackerViewModel = hiltViewModel(),
     trackingViewModel: TrackingSettingsViewModel = hiltViewModel(),
     initialFocusRequester: FocusRequester? = null
 ) {
@@ -74,11 +75,13 @@ fun TrackingSettingsContent(
     val simklState by simklViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListState by mdbListViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListLibraryLists by mdbListViewModel.libraryLists.collectAsStateWithLifecycle()
+    val aniListState by aniListViewModel.uiState.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
     val simklFocusRequester = remember { FocusRequester() }
     val mdbListFocusRequester = remember { FocusRequester() }
+    val aniListFocusRequester = remember { FocusRequester() }
     val libraryFocusRequester = remember { FocusRequester() }
     val watchProgressFocusRequester = remember { FocusRequester() }
     val continueWatchingFocusRequester = remember { FocusRequester() }
@@ -109,12 +112,14 @@ fun TrackingSettingsContent(
         dismissOnConnected,
         traktState.mode,
         simklState.mode,
-        mdbListState.isConnected
+        mdbListState.isConnected,
+        aniListState.isConnected
     ) {
         val connected = when (dismissOnConnected) {
             TrackingProviderId.TRAKT -> traktState.mode == TraktConnectionMode.CONNECTED
             TrackingProviderId.SIMKL -> simklState.mode == SimklConnectionMode.CONNECTED
             TrackingProviderId.MDBLIST -> mdbListState.isConnected
+            TrackingProviderId.ANILIST -> aniListState.isConnected
             null -> false
         }
         if (activeProvider == dismissOnConnected && connected) {
@@ -132,6 +137,7 @@ fun TrackingSettingsContent(
                 TrackingFocusTarget.TRAKT -> traktFocusRequester.requestFocus()
                 TrackingFocusTarget.SIMKL -> simklFocusRequester.requestFocus()
                 TrackingFocusTarget.MDBLIST -> mdbListFocusRequester.requestFocus()
+                TrackingFocusTarget.ANILIST -> aniListFocusRequester.requestFocus()
                 TrackingFocusTarget.LIBRARY -> libraryFocusRequester.requestFocus()
                 TrackingFocusTarget.WATCH_PROGRESS -> watchProgressFocusRequester.requestFocus()
                 TrackingFocusTarget.CONTINUE_WATCHING -> continueWatchingFocusRequester.requestFocus()
@@ -146,6 +152,7 @@ fun TrackingSettingsContent(
             TrackingProviderId.TRAKT -> TrackingFocusTarget.TRAKT
             TrackingProviderId.SIMKL -> TrackingFocusTarget.SIMKL
             TrackingProviderId.MDBLIST -> TrackingFocusTarget.MDBLIST
+            TrackingProviderId.ANILIST -> TrackingFocusTarget.ANILIST
         }
         activeProvider = provider
         disconnectProvider = null
@@ -179,6 +186,15 @@ fun TrackingSettingsContent(
                     mdbListViewModel.onConnect()
                 }
             }
+            TrackingProviderId.ANILIST -> {
+                if (aniListState.isConnected) {
+                    dismissOnConnected = null
+                    aniListViewModel.onAccountOpened()
+                } else {
+                    dismissOnConnected = provider
+                    aniListViewModel.onConnect()
+                }
+            }
         }
     }
 
@@ -197,6 +213,9 @@ fun TrackingSettingsContent(
         onTraktClick = { openProvider(TrackingProviderId.TRAKT) },
         onSimklClick = { openProvider(TrackingProviderId.SIMKL) },
         onMdbListClick = { openProvider(TrackingProviderId.MDBLIST) },
+        aniListState = aniListState,
+        aniListFocusRequester = aniListFocusRequester,
+        onAniListClick = { openProvider(TrackingProviderId.ANILIST) },
         onLibrarySourceClick = {
             restoreFocusTarget = TrackingFocusTarget.LIBRARY
             showLibrarySourceDialog = true
@@ -282,6 +301,23 @@ fun TrackingSettingsContent(
                 }
             )
         }
+        TrackingProviderId.ANILIST -> {
+            AniListAccountDialog(
+                state = aniListState,
+                onStartConnection = aniListViewModel::onConnect,
+                onSync = aniListViewModel::onSyncNow,
+                onDisconnect = {
+                    activeProvider = null
+                    dismissOnConnected = null
+                    disconnectProvider = TrackingProviderId.ANILIST
+                },
+                onDismiss = {
+                    if (!aniListState.isConnected) aniListViewModel.onCancel()
+                    activeProvider = null
+                    dismissOnConnected = null
+                }
+            )
+        }
         null -> Unit
     }
 
@@ -296,6 +332,7 @@ fun TrackingSettingsContent(
                     TrackingProviderId.TRAKT -> R.string.trakt_disconnect_title
                     TrackingProviderId.SIMKL -> R.string.simkl_disconnect_title
                     TrackingProviderId.MDBLIST -> R.string.mdblist_disconnect_title
+                    TrackingProviderId.ANILIST -> R.string.anilist_disconnect_title
                 }
             ),
             subtitle = stringResource(
@@ -303,6 +340,7 @@ fun TrackingSettingsContent(
                     TrackingProviderId.TRAKT -> R.string.trakt_disconnect_subtitle
                     TrackingProviderId.SIMKL -> R.string.simkl_disconnect_subtitle
                     TrackingProviderId.MDBLIST -> R.string.mdblist_disconnect_subtitle
+                    TrackingProviderId.ANILIST -> R.string.anilist_disconnect_subtitle
                 }
             ),
             width = 520.dp,
@@ -324,6 +362,7 @@ fun TrackingSettingsContent(
                             TrackingProviderId.TRAKT -> traktViewModel.onDisconnectClick()
                             TrackingProviderId.SIMKL -> simklViewModel.onDisconnect()
                             TrackingProviderId.MDBLIST -> mdbListViewModel.onDisconnect()
+                            TrackingProviderId.ANILIST -> aniListViewModel.onDisconnect()
                         }
                     },
                     primary = true
@@ -491,12 +530,16 @@ internal fun TrackingSettingsOverview(
     onMoreLikeThisClick: () -> Unit,
     onAnimeIdClick: () -> Unit,
     mdbListLibraryLists: MdbListLibraryListsUiState = MdbListLibraryListsUiState(),
-    onMdbListLibraryListsClick: () -> Unit = {}
+    onMdbListLibraryListsClick: () -> Unit = {},
+    aniListState: AniListTrackerUiState = AniListTrackerUiState(),
+    aniListFocusRequester: FocusRequester? = null,
+    onAniListClick: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val traktPresentation = traktConnectionPresentation(traktState)
     val simklPresentation = simklConnectionPresentation(simklState)
     val mdbListPresentation = mdbListConnectionPresentation(mdbListState)
+    val aniListPresentation = aniListConnectionPresentation(aniListState)
     val traktConnected = traktState.mode == TraktConnectionMode.CONNECTED
     val traktProgressActive = trackingState.watchProgressSource == WatchProgressSource.TRAKT
 
@@ -557,6 +600,17 @@ internal fun TrackingSettingsOverview(
                             modifier = Modifier
                                 .focusRequester(mdbListFocusRequester)
                                 .testTag(TrackingSettingsTestTags.MDBLIST_PROVIDER)
+                        )
+                        SettingsActionRow(
+                            title = stringResource(R.string.anilist_name),
+                            subtitle = aniListPresentation.subtitle,
+                            value = aniListPresentation.value,
+                            valueColor = aniListPresentation.color,
+                            leadingRawIconRes = R.raw.anilist_logo,
+                            leadingArtworkSize = 40.dp,
+                            onClick = onAniListClick,
+                            modifier = (aniListFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+                                .testTag(TrackingSettingsTestTags.ANILIST_PROVIDER)
                         )
                     }
                 }
@@ -644,6 +698,22 @@ internal fun TrackingSettingsOverview(
                                 value = animeIdPreferenceLabel(trackingState.simklAnimeIdPreference),
                                 onClick = onAnimeIdClick,
                                 modifier = Modifier.testTag("tracking_simkl_anime_id")
+                            )
+                        }
+                    }
+                }
+                if (aniListState.isConnected && simklState.mode != SimklConnectionMode.CONNECTED) {
+                    item(key = "tracking_anilist_features") {
+                        SettingsGroupCard(
+                            title = stringResource(R.string.tracking_anilist_features_title),
+                            subtitle = stringResource(R.string.tracking_anilist_features_subtitle)
+                        ) {
+                            SettingsActionRow(
+                                title = stringResource(R.string.tracking_simkl_anime_id_title),
+                                subtitle = stringResource(R.string.tracking_simkl_anime_id_subtitle),
+                                value = animeIdPreferenceLabel(trackingState.simklAnimeIdPreference),
+                                onClick = onAnimeIdClick,
+                                modifier = Modifier.testTag("tracking_anilist_anime_id")
                             )
                         }
                     }
@@ -757,10 +827,31 @@ private fun mdbListConnectionPresentation(state: MdbListTrackerUiState): Trackin
 }
 
 @Composable
+private fun aniListConnectionPresentation(state: AniListTrackerUiState): TrackingConnectionPresentation = when {
+    state.isLoading && !state.isConnected -> TrackingConnectionPresentation(
+        stringResource(R.string.tracking_connecting_provider, stringResource(R.string.anilist_name)),
+        stringResource(R.string.tracking_status_connecting), NuvioTheme.colors.Info
+    )
+    state.isConnected -> TrackingConnectionPresentation(
+        stringResource(R.string.anilist_connected_as, state.username ?: stringResource(R.string.anilist_account_fallback)),
+        stringResource(R.string.tracking_status_connected), NuvioTheme.colors.Success
+    )
+    state.session != null -> TrackingConnectionPresentation(
+        state.errorMessage ?: stringResource(R.string.tracking_finish_connection),
+        stringResource(R.string.tracking_status_waiting), NuvioTheme.colors.Warning
+    )
+    else -> TrackingConnectionPresentation(
+        state.errorMessage ?: stringResource(R.string.anilist_tracking_description),
+        stringResource(R.string.tracking_status_disconnected), NuvioTheme.colors.TextSecondary
+    )
+}
+
+@Composable
 private fun watchProgressSourceLabel(source: WatchProgressSource): String = when (source) {
     WatchProgressSource.TRAKT -> stringResource(R.string.trakt_name)
     WatchProgressSource.SIMKL -> stringResource(R.string.simkl_name)
     WatchProgressSource.MDBLIST -> stringResource(R.string.mdblist_name)
+    WatchProgressSource.ANILIST -> stringResource(R.string.anilist_name)
     WatchProgressSource.NUVIO_SYNC -> stringResource(R.string.trakt_watch_progress_source_nuvio)
 }
 
@@ -769,6 +860,7 @@ private fun librarySourceLabel(mode: LibrarySourceMode): String = when (mode) {
     LibrarySourceMode.TRAKT -> stringResource(R.string.trakt_name)
     LibrarySourceMode.SIMKL -> stringResource(R.string.simkl_name)
     LibrarySourceMode.MDBLIST -> stringResource(R.string.mdblist_name)
+    LibrarySourceMode.ANILIST -> stringResource(R.string.anilist_name)
     LibrarySourceMode.LOCAL -> stringResource(R.string.trakt_library_source_nuvio)
 }
 
@@ -800,6 +892,7 @@ private enum class TrackingFocusTarget {
     TRAKT,
     SIMKL,
     MDBLIST,
+    ANILIST,
     LIBRARY,
     WATCH_PROGRESS,
     CONTINUE_WATCHING,
@@ -811,6 +904,7 @@ internal object TrackingSettingsTestTags {
     const val TRAKT_PROVIDER = "tracking_provider_trakt"
     const val SIMKL_PROVIDER = "tracking_provider_simkl"
     const val MDBLIST_PROVIDER = "tracking_provider_mdblist"
+    const val ANILIST_PROVIDER = "tracking_provider_anilist"
     const val MDBLIST_LIBRARY_LISTS = "tracking_mdblist_library_lists"
     const val LIBRARY_SOURCE = "tracking_source_library"
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"

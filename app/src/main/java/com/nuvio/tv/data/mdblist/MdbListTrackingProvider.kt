@@ -3,6 +3,7 @@ package com.nuvio.tv.data.mdblist
 import android.util.Log
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tracking.TRACKING_SCROBBLE_DIAGNOSTIC_TAG
+import com.nuvio.tv.core.tracking.TrackingAnimeIdMapper
 import com.nuvio.tv.core.tracking.TrackingCapability
 import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingHistoryWriter
@@ -50,7 +51,8 @@ class MdbListTrackingScrobbler @Inject constructor(
     private val auth: MdbListAuthStore,
     private val sync: MdbListSyncRepository,
     private val service: MdbListScrobbleService,
-    private val episodeMappings: MdbListEpisodeMappingService
+    private val episodeMappings: MdbListEpisodeMappingService,
+    private val animeIdMapper: TrackingAnimeIdMapper
 ) : TrackingScrobbler {
     override val providerId = TrackingProviderId.MDBLIST
 
@@ -63,7 +65,7 @@ class MdbListTrackingScrobbler @Inject constructor(
         }
         sync.ensureLoaded()
         try {
-            val media = episodeMappings.toMdbListNumbering(event.media, sync.currentProjection().mediaIndex)
+            val media = episodeMappings.toMdbListNumbering(animeIdMapper.toImdbReference(event.media), sync.currentProjection().mediaIndex)
             service.scrobble(sync.currentScope(), action, event.copy(media = media))
         } catch (error: Throwable) {
             Log.w(TRACKING_SCROBBLE_DIAGNOSTIC_TAG, "mdblist adapter failed action=${action.wireValue} error=${error.javaClass.simpleName}:${error.message} ${event.scrobbleDiagnosticSummary()}", error)
@@ -77,7 +79,8 @@ class MdbListTrackingScrobbler @Inject constructor(
 class MdbListTrackingHistoryWriter @Inject constructor(
     private val sync: MdbListSyncRepository,
     private val service: MdbListHistoryService,
-    private val episodeMappings: MdbListEpisodeMappingService
+    private val episodeMappings: MdbListEpisodeMappingService,
+    private val animeIdMapper: TrackingAnimeIdMapper
 ) : TrackingHistoryWriter {
     override val providerId = TrackingProviderId.MDBLIST
 
@@ -98,6 +101,6 @@ class MdbListTrackingHistoryWriter @Inject constructor(
 
     private suspend fun TrackingMediaReference.inMdbListNumbering(): TrackingMediaReference {
         sync.ensureLoaded()
-        return episodeMappings.toMdbListNumbering(this, sync.currentProjection().mediaIndex)
+        return episodeMappings.toMdbListNumbering(animeIdMapper.toImdbReference(this), sync.currentProjection().mediaIndex)
     }
 }

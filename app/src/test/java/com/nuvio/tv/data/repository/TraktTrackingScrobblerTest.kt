@@ -5,6 +5,7 @@ import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -16,7 +17,8 @@ class TraktTrackingScrobblerTest {
         val service = mockk<TraktScrobbleService>(relaxed = true)
         val scrobbler = TraktTrackingScrobbler(
             service = service,
-            episodeMappingService = mockk(relaxed = true)
+            episodeMappingService = mockk(relaxed = true),
+            animeIdMapper = mockk { coEvery { toImdbReference(any()) } answers { firstArg() } }
         )
 
         scrobbler.scrobble(

@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.repository
 
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.tracking.TrackingAnimeIdMapper
 import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingHistoryWriter
@@ -15,7 +16,8 @@ import javax.inject.Singleton
 @Singleton
 class TraktTrackingHistoryWriter @Inject constructor(
     private val service: TraktProgressService,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val animeIdMapper: TrackingAnimeIdMapper
 ) : TrackingHistoryWriter {
     override val providerId = TrackingProviderId.TRAKT
 
@@ -24,7 +26,7 @@ class TraktTrackingHistoryWriter @Inject constructor(
         items: Collection<TrackingHistoryItem>
     ): TrackingMutationResult {
         if (profileId != profileManager.activeProfileId.value) return TrackingMutationResult(0)
-        val progress = items.map { item -> item.media.toWatchProgress(item.watchedAtEpochMs) }
+        val progress = animeIdMapper.toImdbHistoryItems(items).map { item -> item.media.toWatchProgress(item.watchedAtEpochMs) }
         progress.groupBy { item -> item.contentId }.values.forEach { group ->
             if (group.size > 1 && group.all { it.season != null && it.episode != null }) {
                 service.markSeasonWatchedBatch(group)
@@ -42,7 +44,7 @@ class TraktTrackingHistoryWriter @Inject constructor(
         items: Collection<TrackingMediaReference>
     ): TrackingMutationResult {
         if (profileId != profileManager.activeProfileId.value) return TrackingMutationResult(0)
-        items.groupBy(TrackingMediaReference::stableKey).values.forEach { group ->
+        animeIdMapper.toImdbReferences(items).groupBy(TrackingMediaReference::stableKey).values.forEach { group ->
             val first = group.first()
             val episodes = group.mapNotNull { media ->
                 media.episode?.season?.let { season -> season to media.episode.number }

@@ -8,6 +8,7 @@ val WatchProgressSource.providerId: TrackingProviderId?
         WatchProgressSource.TRAKT -> TrackingProviderId.TRAKT
         WatchProgressSource.SIMKL -> TrackingProviderId.SIMKL
         WatchProgressSource.MDBLIST -> TrackingProviderId.MDBLIST
+        WatchProgressSource.ANILIST -> TrackingProviderId.ANILIST
         WatchProgressSource.NUVIO_SYNC -> null
     }
 
@@ -17,6 +18,7 @@ val LibrarySourceMode.providerId: TrackingProviderId?
         LibrarySourceMode.TRAKT -> TrackingProviderId.TRAKT
         LibrarySourceMode.SIMKL -> TrackingProviderId.SIMKL
         LibrarySourceMode.MDBLIST -> TrackingProviderId.MDBLIST
+        LibrarySourceMode.ANILIST -> TrackingProviderId.ANILIST
     }
 
 fun effectiveWatchProgressSource(
@@ -61,6 +63,7 @@ fun availableWatchProgressSources(
     if (TrackingProviderId.TRAKT in connectedProviderIds) add(WatchProgressSource.TRAKT)
     if (TrackingProviderId.SIMKL in connectedProviderIds) add(WatchProgressSource.SIMKL)
     if (TrackingProviderId.MDBLIST in connectedProviderIds) add(WatchProgressSource.MDBLIST)
+    if (TrackingProviderId.ANILIST in connectedProviderIds) add(WatchProgressSource.ANILIST)
 }
 
 fun availableLibrarySourceModes(
@@ -70,4 +73,5 @@ fun availableLibrarySourceModes(
     if (TrackingProviderId.TRAKT in connectedProviderIds) add(LibrarySourceMode.TRAKT)
     if (TrackingProviderId.SIMKL in connectedProviderIds) add(LibrarySourceMode.SIMKL)
     if (TrackingProviderId.MDBLIST in connectedProviderIds) add(LibrarySourceMode.MDBLIST)
+    if (TrackingProviderId.ANILIST in connectedProviderIds) add(LibrarySourceMode.ANILIST)
 }
