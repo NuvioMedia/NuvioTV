@@ -32,6 +32,7 @@ jobs:
       RELEASE_KEY_ALIAS: ${{ secrets.NUVIO_RELEASE_KEY_ALIAS }}
       RELEASE_KEY_PASSWORD: ${{ secrets.NUVIO_RELEASE_KEY_PASSWORD }}
       RELEASE_STORE_PASSWORD: ${{ secrets.NUVIO_RELEASE_STORE_PASSWORD }}
+      ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
 
     steps:
       - name: Check out full history
@@ -141,6 +142,10 @@ jobs:
           set_property NUVIO_RELEASE_KEY_ALIAS "${RELEASE_KEY_ALIAS}"
           set_property NUVIO_RELEASE_KEY_PASSWORD "${RELEASE_KEY_PASSWORD}"
           set_property NUVIO_RELEASE_STORE_PASSWORD "${RELEASE_STORE_PASSWORD}"
+          set_property ANILIST_CLIENT_ID "${ANILIST_CLIENT_ID}"
+          if [[ -n "${ANILIST_CLIENT_ID}" && -f local.dev.properties ]]; then
+            sed -i -E '/^[[:space:]]*ANILIST_CLIENT_ID[[:space:]]*=/d' local.dev.properties
+          fi
 
           required_properties=(
             NUVIO_RELEASE_STORE_PASSWORD

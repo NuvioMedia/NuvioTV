@@ -33,6 +33,7 @@ jobs:
         env:
           LOCAL_PROPERTIES_BASE64: ${{ secrets.LOCAL_PROPERTIES_BASE64 }}
           LOCAL_DEV_PROPERTIES_BASE64: ${{ secrets.LOCAL_DEV_PROPERTIES_BASE64 }}
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
         run: |
           if [ -n "$LOCAL_PROPERTIES_BASE64" ]; then
             printf '%s' "$LOCAL_PROPERTIES_BASE64" | base64 --decode > local.properties
@@ -44,6 +45,11 @@ jobs:
             printf '%s' "$LOCAL_DEV_PROPERTIES_BASE64" | base64 --decode > local.dev.properties
           else
             touch local.dev.properties
+          fi
+
+          if [ -n "$ANILIST_CLIENT_ID" ]; then
+            sed -i -E '/^[[:space:]]*ANILIST_CLIENT_ID[[:space:]]*=/d' local.properties local.dev.properties
+            printf '\n%s=%s\n' "ANILIST_CLIENT_ID" "$ANILIST_CLIENT_ID" >> local.properties
           fi
 
       - name: Prepare CI signing config
