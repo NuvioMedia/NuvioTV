@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.core.util.readAppLogoBytes
+import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
@@ -10,6 +12,7 @@ import com.nuvio.tv.core.server.DeviceIpAddress
 import com.nuvio.tv.core.server.StreamBadgeConfigServer
 import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.core.streams.StreamBadgeRules
+import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
 import com.nuvio.tv.core.streams.StreamBadgeSettings
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
@@ -66,7 +69,8 @@ data class LayoutSettingsUiState(
     val posterCardCornerRadiusDp: Int = 12,
     val cardDepthStyle: CardDepthStyle = CardDepthStyle(),
     val blurUnwatchedEpisodes: Boolean = false,
-    val episodeOptionsOverlayStyle: EpisodeOptionsOverlayStyle = EpisodeOptionsOverlayStyle.ARTWORK,
+    val randomEpisodeEnabled: Boolean = false,
+    val episodeOptionsOverlayStyle: EpisodeOptionsOverlayStyle = EpisodeOptionsOverlayStyle.BLUR,
     val homeImdbRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
     val detailImdbRatingsVisibility: DetailImdbRatingsVisibility = DetailImdbRatingsVisibility.SHOW_ALL,
     val blurContinueWatchingNextUp: Boolean = false,
@@ -74,6 +78,9 @@ data class LayoutSettingsUiState(
     val detailPageTrailerButtonEnabled: Boolean = true,
     val detailPageTrailerAutoplayEnabled: Boolean = true,
     val detailPageTrailerAutoplayDelaySeconds: Int = 7,
+    val detailPageTrailerPlayInBackground: Boolean = false,
+    val detailPageTrailerPauseOnScroll: Boolean = true,
+    val trailer4kEnabled: Boolean = true,
     val preferExternalMetaAddonDetail: Boolean = false,
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
@@ -82,6 +89,11 @@ data class LayoutSettingsUiState(
     val continueWatchingEnabled: Boolean = true,
     val continueWatchingSortMode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT,
     val continueWatchingCardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
+    val customPosterUrlPattern: String = "",
+    val customPosterEnabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen> =
+        com.nuvio.tv.core.poster.CustomPosterScreen.ALL,
+    val alwaysShowLandscapeClearlogo: Boolean = false,
+    val heroDescriptionAutoScrollEnabled: Boolean = false,
 )
 
 data class CatalogInfo(
@@ -122,6 +134,7 @@ sealed class LayoutSettingsEvent {
         val enabled: Boolean
     ) : LayoutSettingsEvent()
     data class SetBlurUnwatchedEpisodes(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetRandomEpisodeEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetEpisodeOptionsOverlayStyle(val style: EpisodeOptionsOverlayStyle) : LayoutSettingsEvent()
     data class SetHomeImdbRatingsVisibility(val visibility: HomeImdbRatingsVisibility) : LayoutSettingsEvent()
     data class SetDetailImdbRatingsVisibility(val visibility: DetailImdbRatingsVisibility) : LayoutSettingsEvent()
@@ -130,6 +143,9 @@ sealed class LayoutSettingsEvent {
     data class SetDetailPageTrailerButtonEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerAutoplayEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerAutoplayDelaySeconds(val seconds: Int) : LayoutSettingsEvent()
+    data class SetDetailPageTrailerPlayInBackground(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetDetailPageTrailerPauseOnScroll(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetTrailer4kEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetPreferExternalMetaAddonDetail(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHideUnreleasedContent(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetShowFullReleaseDate(val enabled: Boolean) : LayoutSettingsEvent()
@@ -138,8 +154,16 @@ sealed class LayoutSettingsEvent {
     data class SetContinueWatchingEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetContinueWatchingSortMode(val mode: ContinueWatchingSortMode) : LayoutSettingsEvent()
     data class SetContinueWatchingCardStyle(val style: ContinueWatchingCardStyle) : LayoutSettingsEvent()
+    data class SetAlwaysShowLandscapeClearlogo(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetHeroDescriptionAutoScrollEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data object ResetPosterCardStyle : LayoutSettingsEvent()
     data object ResetCardDepthStyle : LayoutSettingsEvent()
+    data class SetCustomPosterUrlPattern(val pattern: String) : LayoutSettingsEvent()
+    data object ClearCustomPosterSettings : LayoutSettingsEvent()
+    data class SetCustomPosterScreenEnabled(
+        val screen: com.nuvio.tv.core.poster.CustomPosterScreen,
+        val enabled: Boolean
+    ) : LayoutSettingsEvent()
 }
 
 @HiltViewModel
@@ -150,13 +174,14 @@ class LayoutSettingsViewModel @Inject constructor(
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
-    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository
+    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LayoutSettingsUiState())
     val uiState: StateFlow<LayoutSettingsUiState> = _uiState.asStateFlow()
     private var streamBadgeServer: StreamBadgeConfigServer? = null
-    private var logoBytes: ByteArray? = null
+    private val logoBytes: ByteArray? by lazy { context.readAppLogoBytes() }
 
     private val _streamBadgeUiState = MutableStateFlow(StreamBadgeSettingsUiState())
     val streamBadgeUiState: StateFlow<StreamBadgeSettingsUiState> = _streamBadgeUiState.asStateFlow()
@@ -171,7 +196,6 @@ class LayoutSettingsViewModel @Inject constructor(
     }
 
     init {
-        loadLogoBytes()
         viewModelScope.launch {
             streamBadgeSettingsDataStore.settings.collectLatest { settings ->
                 _streamBadgeUiState.update { it.copy(settings = settings) }
@@ -303,6 +327,11 @@ class LayoutSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            layoutPreferenceDataStore.randomEpisodeEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(randomEpisodeEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
             layoutPreferenceDataStore.episodeOptionsOverlayStyle.distinctUntilChanged().collectLatest { style ->
                 updateUiStateIfChanged { it.copy(episodeOptionsOverlayStyle = style) }
             }
@@ -337,7 +366,10 @@ class LayoutSettingsViewModel @Inject constructor(
                 updateUiStateIfChanged {
                     it.copy(
                         detailPageTrailerAutoplayEnabled = settings.enabled,
-                        detailPageTrailerAutoplayDelaySeconds = settings.delaySeconds
+                        detailPageTrailerAutoplayDelaySeconds = settings.delaySeconds,
+                        detailPageTrailerPlayInBackground = settings.playInBackground,
+                        detailPageTrailerPauseOnScroll = settings.pauseOnScroll,
+                        trailer4kEnabled = settings.allow4k
                     )
                 }
             }
@@ -388,6 +420,34 @@ class LayoutSettingsViewModel @Inject constructor(
                     updateUiStateIfChanged { it.copy(continueWatchingCardStyle = style) }
                 }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.customPosterUrlPattern
+                .distinctUntilChanged()
+                .collect { pattern ->
+                    updateUiStateIfChanged { it.copy(customPosterUrlPattern = pattern) }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.customPosterEnabledScreens
+                .distinctUntilChanged()
+                .collect { screens ->
+                    updateUiStateIfChanged { it.copy(customPosterEnabledScreens = screens) }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.alwaysShowLandscapeClearlogo
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    updateUiStateIfChanged { it.copy(alwaysShowLandscapeClearlogo = enabled) }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.heroDescriptionAutoScrollEnabled
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    updateUiStateIfChanged { it.copy(heroDescriptionAutoScrollEnabled = enabled) }
+                }
+        }
         loadAvailableCatalogs()
     }
 
@@ -421,6 +481,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetCardDepthSurfaceEnabled ->
                 setCardDepthSurfaceEnabled(event.surface, event.enabled)
             is LayoutSettingsEvent.SetBlurUnwatchedEpisodes -> setBlurUnwatchedEpisodes(event.enabled)
+            is LayoutSettingsEvent.SetRandomEpisodeEnabled -> setRandomEpisodeEnabled(event.enabled)
             is LayoutSettingsEvent.SetEpisodeOptionsOverlayStyle -> setEpisodeOptionsOverlayStyle(event.style)
             is LayoutSettingsEvent.SetHomeImdbRatingsVisibility -> setHomeImdbRatingsVisibility(event.visibility)
             is LayoutSettingsEvent.SetDetailImdbRatingsVisibility -> setDetailImdbRatingsVisibility(event.visibility)
@@ -429,6 +490,9 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetDetailPageTrailerButtonEnabled -> setDetailPageTrailerButtonEnabled(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerAutoplayEnabled -> setDetailPageTrailerAutoplayEnabled(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerAutoplayDelaySeconds -> setDetailPageTrailerAutoplayDelaySeconds(event.seconds)
+            is LayoutSettingsEvent.SetDetailPageTrailerPlayInBackground -> setDetailPageTrailerPlayInBackground(event.enabled)
+            is LayoutSettingsEvent.SetDetailPageTrailerPauseOnScroll -> setDetailPageTrailerPauseOnScroll(event.enabled)
+            is LayoutSettingsEvent.SetTrailer4kEnabled -> setTrailer4kEnabled(event.enabled)
             is LayoutSettingsEvent.SetPreferExternalMetaAddonDetail -> setPreferExternalMetaAddonDetail(event.enabled)
             is LayoutSettingsEvent.SetHideUnreleasedContent -> setHideUnreleasedContent(event.enabled)
             is LayoutSettingsEvent.SetShowFullReleaseDate -> setShowFullReleaseDate(event.enabled)
@@ -437,8 +501,13 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetContinueWatchingEnabled -> setContinueWatchingEnabled(event.enabled)
             is LayoutSettingsEvent.SetContinueWatchingSortMode -> setContinueWatchingSortMode(event.mode)
             is LayoutSettingsEvent.SetContinueWatchingCardStyle -> setContinueWatchingCardStyle(event.style)
+            is LayoutSettingsEvent.SetAlwaysShowLandscapeClearlogo -> setAlwaysShowLandscapeClearlogo(event.enabled)
+            is LayoutSettingsEvent.SetHeroDescriptionAutoScrollEnabled -> setHeroDescriptionAutoScrollEnabled(event.enabled)
             LayoutSettingsEvent.ResetPosterCardStyle -> resetPosterCardStyle()
             LayoutSettingsEvent.ResetCardDepthStyle -> resetCardDepthStyle()
+            is LayoutSettingsEvent.SetCustomPosterUrlPattern -> setCustomPosterUrlPattern(event.pattern)
+            LayoutSettingsEvent.ClearCustomPosterSettings -> clearCustomPosterSettings()
+            is LayoutSettingsEvent.SetCustomPosterScreenEnabled -> setCustomPosterScreenEnabled(event.screen, event.enabled)
         }
     }
 
@@ -493,16 +562,16 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch { streamBadgeSettingsDataStore.setShowAddonLogo(enabled) }
     }
 
-    fun setStreamBadgePlacement(placement: StreamBadgePlacement) {
-        viewModelScope.launch { streamBadgeSettingsDataStore.setStreamBadgePlacement(placement) }
+    fun setShowBadgesInPlayer(enabled: Boolean) {
+        viewModelScope.launch { streamBadgeSettingsDataStore.setShowInPlayer(enabled) }
     }
 
-    private fun loadLogoBytes() {
-        try {
-            val inputStream = context.resources.openRawResource(R.drawable.app_logo_wordmark)
-            logoBytes = inputStream.use { it.readBytes() }
-        } catch (_: Exception) {
-        }
+    fun setPlayerBadgeSource(source: String) {
+        viewModelScope.launch { streamBadgeSettingsDataStore.setPlayerBadgeSource(source) }
+    }
+
+    fun setStreamBadgePlacement(placement: StreamBadgePlacement) {
+        viewModelScope.launch { streamBadgeSettingsDataStore.setStreamBadgePlacement(placement) }
     }
 
     private fun stopStreamBadgeServer() {
@@ -712,6 +781,27 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setDetailPageTrailerPlayInBackground(enabled: Boolean) {
+        if (_uiState.value.detailPageTrailerPlayInBackground == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setPlayInBackground(enabled)
+        }
+    }
+
+    private fun setDetailPageTrailerPauseOnScroll(enabled: Boolean) {
+        if (_uiState.value.detailPageTrailerPauseOnScroll == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setPauseOnScroll(enabled)
+        }
+    }
+
+    private fun setTrailer4kEnabled(enabled: Boolean) {
+        if (_uiState.value.trailer4kEnabled == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setAllow4k(enabled)
+        }
+    }
+
     private fun setBlurUnwatchedEpisodes(enabled: Boolean) {
         if (_uiState.value.blurUnwatchedEpisodes == enabled) return
         viewModelScope.launch {
@@ -723,6 +813,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.episodeOptionsOverlayStyle == style) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setEpisodeOptionsOverlayStyle(style)
+        }
+    }
+
+    private fun setRandomEpisodeEnabled(enabled: Boolean) {
+        if (_uiState.value.randomEpisodeEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setRandomEpisodeEnabled(enabled)
         }
     }
 
@@ -766,6 +863,7 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.hideUnreleasedContent == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setHideUnreleasedContent(enabled)
+            homeCatalogSettingsSyncService.triggerPush()
         }
     }
 
@@ -804,6 +902,20 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setAlwaysShowLandscapeClearlogo(enabled: Boolean) {
+        if (_uiState.value.alwaysShowLandscapeClearlogo == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setAlwaysShowLandscapeClearlogo(enabled)
+        }
+    }
+
+    private fun setHeroDescriptionAutoScrollEnabled(enabled: Boolean) {
+        if (_uiState.value.heroDescriptionAutoScrollEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setHeroDescriptionAutoScrollEnabled(enabled)
+        }
+    }
+
     private fun setContinueWatchingSortMode(mode: ContinueWatchingSortMode) {
         if (_uiState.value.continueWatchingSortMode == mode) return
         viewModelScope.launch {
@@ -833,6 +945,76 @@ class LayoutSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun setCustomPosterUrlPattern(pattern: String) {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setCustomPosterUrlPattern(pattern)
+        }
+    }
+
+    private fun clearCustomPosterSettings() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.clearCustomPosterSettings()
+        }
+    }
+
+    private fun setCustomPosterScreenEnabled(screen: com.nuvio.tv.core.poster.CustomPosterScreen, enabled: Boolean) {
+        viewModelScope.launch {
+            val current = _uiState.value.customPosterEnabledScreens
+            val updated = if (enabled) current + screen else current - screen
+            layoutPreferenceDataStore.setCustomPosterEnabledScreens(updated)
+        }
+    }
+
+    // -- Custom poster QR mode --
+
+    private var customPosterServer: com.nuvio.tv.core.server.CustomPosterConfigServer? = null
+
+    private val _customPosterQrState = MutableStateFlow(CustomPosterQrState())
+    val customPosterQrState: StateFlow<CustomPosterQrState> = _customPosterQrState.asStateFlow()
+
+    fun startCustomPosterQrMode() {
+        val ip = DeviceIpAddress.get(context)
+        if (ip == null) {
+            _customPosterQrState.update { it.copy(serverError = context.getString(com.nuvio.tv.R.string.error_network_required)) }
+            return
+        }
+        stopCustomPosterServer()
+        customPosterServer = com.nuvio.tv.core.server.CustomPosterConfigServer.startOnAvailablePort(
+            currentPatternProvider = { _uiState.value.customPosterUrlPattern },
+            onPatternChanged = { pattern ->
+                _uiState.update { it.copy(customPosterUrlPattern = pattern) }
+                viewModelScope.launch { layoutPreferenceDataStore.setCustomPosterUrlPattern(pattern) }
+            },
+            context = context
+        )
+        val server = customPosterServer
+        if (server == null) {
+            _customPosterQrState.update { it.copy(serverError = context.getString(com.nuvio.tv.R.string.error_server_ports_unavailable)) }
+            return
+        }
+        val url = "http://$ip:${server.listeningPort}"
+        _customPosterQrState.update {
+            it.copy(
+                isActive = true,
+                qrCodeBitmap = com.nuvio.tv.core.qr.QrCodeGenerator.generate(url, 512),
+                serverUrl = url,
+                serverError = null
+            )
+        }
+    }
+
+    fun stopCustomPosterQrMode() {
+        stopCustomPosterServer()
+        _customPosterQrState.update {
+            it.copy(isActive = false, qrCodeBitmap = null, serverUrl = null)
+        }
+    }
+
+    private fun stopCustomPosterServer() {
+        customPosterServer?.stop()
+        customPosterServer = null
+    }
+
     private fun loadAvailableCatalogs() {
         viewModelScope.launch {
             addonRepository.getInstalledAddons().collectLatest { installedAddons ->
@@ -840,16 +1022,16 @@ class LayoutSettingsViewModel @Inject constructor(
                 val catalogs = addons.flatMap { addon ->
                     addon.catalogs
                         .filter { catalog ->
-                            !catalog.extra.any { it.name.equals("search", ignoreCase = true) && it.isRequired }
+                            !catalog.isSearchOnlyCatalog()
                         }
                         .map { catalog ->
                             CatalogInfo(
-                                key = "${addon.id}_${catalog.apiType}_${catalog.id}",
+                                key = catalogRowLegacyKey(addon.id, catalog.apiType, catalog.id),
                                 name = catalog.name,
                                 addonName = addon.displayName
                             )
                         }
-                }
+                }.distinctBy { it.key }
                 updateUiStateIfChanged { it.copy(availableCatalogs = catalogs) }
             }
         }
@@ -857,6 +1039,7 @@ class LayoutSettingsViewModel @Inject constructor(
 
     override fun onCleared() {
         stopStreamBadgeServer()
+        stopCustomPosterServer()
         super.onCleared()
     }
 }
@@ -877,6 +1060,19 @@ data class StreamBadgeSettingsUiState(
     val showAddonLogo: Boolean
         get() = settings.showAddonLogo
 
+    val showInPlayer: Boolean
+        get() = settings.showInPlayer
+
+    val playerBadgeSource: String
+        get() = settings.playerBadgeSource
+
     val badgePlacement: StreamBadgePlacement
         get() = settings.badgePlacement
 }
+
+data class CustomPosterQrState(
+    val isActive: Boolean = false,
+    val qrCodeBitmap: android.graphics.Bitmap? = null,
+    val serverUrl: String? = null,
+    val serverError: String? = null
+)

@@ -71,6 +71,7 @@ import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
+import com.nuvio.tv.domain.model.catalogTypesMatch
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.CollectionSource
 import com.nuvio.tv.domain.model.FolderViewMode
@@ -83,6 +84,11 @@ import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -122,11 +128,16 @@ fun CatalogPickerContent(
                 key = { index, c -> "${c.addonId}_${c.type}_${c.catalogId}_$index" }
             ) { _, catalog ->
                 val isAdded = alreadyAdded.any {
-                    it is AddonCatalogCollectionSource && it.addonId == catalog.addonId && it.type == catalog.type && it.catalogId == catalog.catalogId
+                    it is AddonCatalogCollectionSource && it.addonId == catalog.addonId && catalogTypesMatch(it.type, catalog.type) && it.catalogId == catalog.catalogId
                 }
                 Card(
                     onClick = { onToggle(catalog) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            role = Role.Checkbox
+                            toggleableState = if (isAdded) ToggleableState.On else ToggleableState.Off
+                        },
                     colors = CardDefaults.colors(
                         containerColor = if (isAdded) NuvioTheme.colors.Secondary.copy(alpha = 0.15f) else NuvioTheme.colors.BackgroundCard,
                         focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -171,13 +182,13 @@ fun CatalogPickerContent(
                         if (isAdded) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.collection_editor_remove_cd),
+                                contentDescription = null,
                                 tint = NuvioTheme.colors.TextSecondary
                             )
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = stringResource(R.string.cd_add),
+                                contentDescription = null,
                                 tint = NuvioTheme.colors.TextTertiary
                             )
                         }

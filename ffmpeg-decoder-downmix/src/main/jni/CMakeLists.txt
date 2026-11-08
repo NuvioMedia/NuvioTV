@@ -44,7 +44,6 @@ foreach(ffmpeg_lib avutil swresample avcodec)
             ${ffmpeg_lib_file_path})
 endforeach()
 
-include_directories(${ffmpeg_include_dir})
 find_library(android_log_lib log)
 find_library(android_lib android)
 find_library(z_lib z)
@@ -53,6 +52,13 @@ find_library(m_lib m)
 add_library(ffmpegJNI
             SHARED
             ffmpeg_jni.cc)
+
+# FFmpeg ships a top-level file named VERSION. On case-insensitive hosts a
+# regular -I for the FFmpeg root can shadow libc++'s <version> header. Search
+# the FFmpeg root only after the toolchain's system include directories.
+target_compile_options(ffmpegJNI PRIVATE
+                       "-idirafter"
+                       "${ffmpeg_include_dir}")
 
 target_link_libraries(ffmpegJNI
                       PRIVATE ${android_lib}

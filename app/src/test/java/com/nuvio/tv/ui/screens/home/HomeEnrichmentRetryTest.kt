@@ -441,6 +441,8 @@ class HomeEnrichmentRetryTest {
                 every { getAllEpisodeProgress(any()) } returns flowOf(emptyMap())
             }
         val viewModel = HomeViewModel(
+            episodeShuffleStore = mockk(relaxed = true),
+            episodeShuffle = com.nuvio.tv.domain.model.EpisodeShuffle(),
             appContext = mockk(relaxed = true),
             addonRepository = mockk(relaxed = true),
             startupSyncService = mockk(relaxed = true),
@@ -458,11 +460,13 @@ class HomeEnrichmentRetryTest {
             tmdbService = tmdbService,
             tmdbMetadataService = tmdbMetadataService,
             mdbListRepository = mockk(relaxed = true),
+            imdbEpisodeRatingsRepository = mockk(relaxed = true),
             trailerService = mockk(relaxed = true),
             watchedSeriesStateHolder = mockk(relaxed = true),
             cwEnrichmentCache = cwEnrichmentCache,
             profileManager = profileManager,
-            tvRecommendationManager = mockk(relaxed = true)
+            tvRecommendationManager = mockk(relaxed = true),
+            serverCatalog = mockk(relaxed = true)
         )
         // The pipeline defers everything while the startup grace period is active, and TMDB is
         // switched off so the external addon is the only enrichment source under test.

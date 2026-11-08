@@ -10,6 +10,7 @@ import com.nuvio.tv.core.logging.bodySnippetForLog
 import com.nuvio.tv.core.logging.diagnosticSummary
 import com.nuvio.tv.core.logging.rawForLog
 import com.nuvio.tv.core.logging.urlForLog
+import com.nuvio.tv.core.util.findCause
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.remote.supabase.DeviceLoginStartResult
 import com.nuvio.tv.data.remote.supabase.TvLoginExchangeResult
@@ -989,15 +990,6 @@ private fun Throwable.shouldRetryWithAuthFallback(): Boolean {
 
 private inline fun <reified T : Throwable> Throwable.hasCause(): Boolean =
     findCause<T>() != null
-
-private inline fun <reified T : Throwable> Throwable.findCause(): T? {
-    var current: Throwable? = this
-    while (current != null) {
-        if (current is T) return current
-        current = current.cause
-    }
-    return null
-}
 
 private fun Throwable.causeMessages(): String {
     val messages = mutableListOf<String>()

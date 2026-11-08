@@ -2,25 +2,55 @@ package com.nuvio.tv.data.repository
 
 import android.util.Log
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.AnimeSkipSettingsDataStore
 import com.nuvio.tv.data.remote.api.AniSkipApi
 import com.nuvio.tv.data.remote.api.AnimeSkipApi
 import com.nuvio.tv.data.remote.api.AnimeSkipRequest
+import com.nuvio.tv.data.remote.api.AnimeSkipEpisode
+import com.nuvio.tv.data.remote.api.AnimeSkipTimestamp
 import com.nuvio.tv.data.remote.api.IntroDbApi
 import com.nuvio.tv.data.remote.api.IntroDbSegment
+import com.nuvio.tv.data.remote.api.IntroDbSegmentsResponse
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.firstOrNull
 
 data class SkipInterval(
     val startTime: Double, // seconds
     val endTime: Double,   // seconds
-    val type: String,      // "intro", "op", "mixed-op", "ed", "mixed-ed", "recap", "outro", "credits", "ending"
+    val type: String,      // intro/op, recap, outro/ed, movie-credits, post-credits
     val provider: String   // "introdb", "aniskip", "animeskip"
 )
+
+internal fun IntroDbSegmentsResponse.toSkipIntervals(movie: Boolean): List<SkipInterval> {
+    if (!movie) return listOfNotNull(
+        intro.toSkipIntervalOrNull("intro"),
+        recap.toSkipIntervalOrNull("recap"),
+        outro.toSkipIntervalOrNull("outro")
+    )
+    val credits = outro.toSkipIntervalOrNull("movie-credits")
+    val scene = postCredits.toSkipIntervalOrNull("post-credits")
+    // Skipping credits must not also skip the post-credits scene.
+    val safeCredits = if (credits != null && scene != null &&
+        scene.startTime < credits.endTime && scene.endTime > credits.startTime
+    ) {
+        credits.copy(endTime = scene.startTime).takeIf { it.endTime > it.startTime }
+    } else credits
+    return listOfNotNull(safeCredits, scene)
+}
+
+private fun IntroDbSegment?.toSkipIntervalOrNull(type: String): SkipInterval? {
+    if (this == null) return null
+    val start = startSec ?: startMs?.let { it / 1000.0 } ?: return null
+    val end = endSec ?: endMs?.let { it / 1000.0 } ?: return null
+    if (!start.isFinite() || !end.isFinite() || start < 0 || end <= start) return null
+    return SkipInterval(startTime = start, endTime = end, type = type, provider = "introdb")
+}
 
 @Singleton
 class SkipIntroRepository @Inject constructor(
@@ -28,11 +58,31 @@ class SkipIntroRepository @Inject constructor(
     private val aniSkipApi: AniSkipApi,
     private val animeSkipApi: AnimeSkipApi,
     private val simklResolver: SimklIdResolver,
-    private val animeSkipSettingsDataStore: AnimeSkipSettingsDataStore
+    private val animeSkipSettingsDataStore: AnimeSkipSettingsDataStore,
+    private val tmdbService: TmdbService
 ) {
     private val cache = ConcurrentHashMap<String, List<SkipInterval>>()
     private val animeSkipShowIdCache = ConcurrentHashMap<String, String>()
     private val introDbConfigured = BuildConfig.INTRODB_API_URL.isNotEmpty()
+
+    suspend fun getMovieSkipIntervals(contentId: String?, videoId: String? = null): List<SkipInterval> {
+        if (!introDbConfigured) return emptyList()
+        val ids = listOfNotNull(contentId, videoId).distinct()
+        val imdbId = ids.firstNotNullOfOrNull { id ->
+            id.substringBefore(':').takeIf { it.matches(Regex("tt[0-9]+")) }
+        } ?: ids.firstNotNullOfOrNull { id ->
+            val parts = id.split(':')
+            val value = parts.getOrNull(1) ?: return@firstNotNullOfOrNull null
+            when (parts[0]) {
+                "tmdb" -> value.toIntOrNull()?.let { tmdbService.tmdbToImdb(it, "movie") }
+                "mal", "kitsu" -> simklResolver.resolveIds(parts[0], value)?.imdb
+                else -> null
+            }
+        } ?: return emptyList()
+        val key = "movie:$imdbId"
+        cache[key]?.let { return it }
+        return fetchFromIntroDb(imdbId, isMovie = true).also { cache[key] = it }
+    }
 
     /**
      * Standard path for IMDB-identified content.
@@ -45,22 +95,33 @@ class SkipIntroRepository @Inject constructor(
         val introDbDeferred = async {
             if (introDbConfigured) fetchFromIntroDb(imdbId, season, episode) else emptyList()
         }
-        // Resolve IMDB -> MAL/AniList via Simkl
-        val simklIdsDeferred = async { simklResolver.resolveIds("imdb", imdbId) }
+        // Resolve IMDB -> season-specific MAL/AniList via Simkl episode mapping
+        val simklIdsDeferred = async { simklResolver.resolveIdsForImdbEpisode(imdbId, season, episode) }
         val simklIds = simklIdsDeferred.await()
         val malId = simklIds?.mal
         val anilistId = simklIds?.anilist
+
+        // Remap the TVDB episode number to the anime-entry-local episode number.
+        // When the resolved entry owns a specific TVDB season, its episode mapping
+        // tells us which anime episode corresponds to the requested TVDB episode.
+        val animeEpisode = if (simklIds != null) {
+            val mapping = simklResolver.getEpisodeMapping(simklIds.simklId, simklIds.type)
+            mapping.firstOrNull { it.tvdbSeason == season && it.tvdbEpisode == episode }
+                ?.animeEpisode
+                ?: episode
+        } else episode
+
         val aniSkipDeferred = async {
-            if (malId != null) fetchFromAniSkip(malId, episode) else emptyList()
+            if (malId != null) fetchFromAniSkip(malId, animeEpisode) else emptyList()
         }
         val animeSkipDeferred = async {
-            if (anilistId != null) fetchFromAnimeSkip(anilistId, episode, season = null) else emptyList()
+            if (anilistId != null) fetchFromAnimeSkip(anilistId, animeEpisode, season = null) else emptyList()
         }
 
         return@coroutineScope mergeByPriority(
+            introDbDeferred.await(),
             aniSkipDeferred.await(),
-            animeSkipDeferred.await(),
-            introDbDeferred.await()
+            animeSkipDeferred.await()
         ).also { cache[cacheKey] = it }
     }
 
@@ -81,34 +142,29 @@ class SkipIntroRepository @Inject constructor(
         val resolvedImdbId = imdbId ?: simklIds?.imdb
 
         val tvdbDeferred = async {
-            if (resolvedImdbId != null && imdbSeason == null && simklIds != null) {
+            if (introDbConfigured && resolvedImdbId != null && imdbSeason == null && simklIds != null) {
                 simklResolver.resolveEpisodeTvdb("mal", malId, episode)
             } else null
         }
 
-        var introDb = emptyList<SkipInterval>()
-        var animeSkip = emptyList<SkipInterval>()
-        if (resolvedImdbId != null) {
-            val tvdb = tvdbDeferred.await()
-            val introDbSeason = imdbSeason ?: tvdb?.first ?: return@coroutineScope run {
-                mergeByPriority(aniSkipDeferred.await(), animeSkip).also { cache[cacheKey] = it }
-            }
-            val introDbEpisode = imdbEpisode ?: tvdb?.second ?: episode
-            val introDbDeferred = async {
-                if (introDbConfigured) fetchFromIntroDb(resolvedImdbId, introDbSeason, introDbEpisode) else emptyList()
-            }
-            val anilistId = simklIds?.anilist
-            val animeSkipDeferred = async {
-                if (anilistId != null) fetchFromAnimeSkip(anilistId, episode, season = null) else emptyList()
-            }
-            introDb = introDbDeferred.await()
-            animeSkip = animeSkipDeferred.await()
-        } else {
-            val anilistId = simklIds?.anilist
-            if (anilistId != null) animeSkip = fetchFromAnimeSkip(anilistId, episode, season = null)
+        // Anime-Skip only needs the AniList id, so it must not depend on the IntroDB episode mapping.
+        val anilistId = simklIds?.anilist
+        val animeSkipDeferred = async {
+            if (anilistId != null) fetchFromAnimeSkip(anilistId, episode, season = null) else emptyList()
         }
 
-        return@coroutineScope mergeByPriority(aniSkipDeferred.await(), animeSkip, introDb).also { cache[cacheKey] = it }
+        var introDb = emptyList<SkipInterval>()
+        if (resolvedImdbId != null && introDbConfigured) {
+            val tvdb = tvdbDeferred.await()
+            val introDbSeason = imdbSeason ?: tvdb?.first
+            if (introDbSeason != null) {
+                val introDbEpisode = imdbEpisode ?: tvdb?.second ?: episode
+                introDb = fetchFromIntroDb(resolvedImdbId, introDbSeason, introDbEpisode)
+            }
+        }
+
+        return@coroutineScope mergeByPriority(introDb, aniSkipDeferred.await(), animeSkipDeferred.await())
+            .also { cache[cacheKey] = it }
     }
 
     suspend fun getSkipIntervalsForKitsu(
@@ -132,40 +188,35 @@ class SkipIntroRepository @Inject constructor(
         }
 
         val tvdbDeferred = async {
-            if (resolvedImdbId != null && imdbSeason == null && simklIds != null) {
+            if (introDbConfigured && resolvedImdbId != null && imdbSeason == null && simklIds != null) {
                 simklResolver.resolveEpisodeTvdb("kitsu", kitsuId, episode)
             } else null
         }
 
-        var introDb = emptyList<SkipInterval>()
-        var animeSkip = emptyList<SkipInterval>()
-        if (resolvedImdbId != null) {
-            val tvdb = tvdbDeferred.await()
-            val introDbSeason = imdbSeason ?: tvdb?.first ?: return@coroutineScope run {
-                mergeByPriority(aniSkipDeferred.await(), animeSkip).also { cache[cacheKey] = it }
-            }
-            val introDbEpisode = imdbEpisode ?: tvdb?.second ?: episode
-            val introDbDeferred = async {
-                if (introDbConfigured) fetchFromIntroDb(resolvedImdbId, introDbSeason, introDbEpisode) else emptyList()
-            }
-            val anilistId = simklIds?.anilist
-            val animeSkipDeferred = async {
-                if (anilistId != null) fetchFromAnimeSkip(anilistId, episode, season = null) else emptyList()
-            }
-            introDb = introDbDeferred.await()
-            animeSkip = animeSkipDeferred.await()
-        } else {
-            val anilistId = simklIds?.anilist
-            if (anilistId != null) animeSkip = fetchFromAnimeSkip(anilistId, episode, season = null)
+        // Anime-Skip only needs the AniList id, so it must not depend on the IntroDB episode mapping.
+        val anilistId = simklIds?.anilist
+        val animeSkipDeferred = async {
+            if (anilistId != null) fetchFromAnimeSkip(anilistId, episode, season = null) else emptyList()
         }
 
-        return@coroutineScope mergeByPriority(aniSkipDeferred.await(), animeSkip, introDb).also { cache[cacheKey] = it }
+        var introDb = emptyList<SkipInterval>()
+        if (resolvedImdbId != null && introDbConfigured) {
+            val tvdb = tvdbDeferred.await()
+            val introDbSeason = imdbSeason ?: tvdb?.first
+            if (introDbSeason != null) {
+                val introDbEpisode = imdbEpisode ?: tvdb?.second ?: episode
+                introDb = fetchFromIntroDb(resolvedImdbId, introDbSeason, introDbEpisode)
+            }
+        }
+
+        return@coroutineScope mergeByPriority(introDb, aniSkipDeferred.await(), animeSkipDeferred.await())
+            .also { cache[cacheKey] = it }
     }
 
     /**
      * Merge provider results into one best-of: fill each segment category (opening / ending /
      * recap) from the highest-priority provider that has it. Arguments MUST be passed in priority
-     * order (AniSkip has native anime IDs, then Anime-Skip, then IntroDB as fallback),
+     * order (IntroDB, then AniSkip, then Anime-Skip as fallback),
      * so a partial result from one provider never shadows a complete segment from another.
      */
     private fun mergeByPriority(vararg providerResults: List<SkipInterval>): List<SkipInterval> {
@@ -179,36 +230,23 @@ class SkipIntroRepository @Inject constructor(
         return chosen.values.toList()
     }
 
-    private fun segmentCategory(type: String): String? = when (type.lowercase()) {
-        "intro", "op", "mixed-op" -> "opening"
-        "outro", "ed", "mixed-ed", "credits", "ending" -> "ending"
-        "recap" -> "recap"
-        else -> null
-    }
-
-    private suspend fun fetchFromIntroDb(imdbId: String, season: Int, episode: Int): List<SkipInterval> {
+    private suspend fun fetchFromIntroDb(
+        imdbId: String,
+        season: Int? = null,
+        episode: Int? = null,
+        isMovie: Boolean = false
+    ): List<SkipInterval> {
         return try {
-            val response = introDbApi.getSegments(imdbId, season, episode)
+            val response = introDbApi.getSegments(imdbId, season, episode, true.takeIf { isMovie })
             if (response.isSuccessful && response.body() != null) {
-                val data = response.body()!!
-                listOfNotNull(
-                    data.intro.toSkipIntervalOrNull("intro"),
-                    data.recap.toSkipIntervalOrNull("recap"),
-                    data.outro.toSkipIntervalOrNull("outro")
-                )
+                response.body()!!.toSkipIntervals(isMovie)
             } else emptyList()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.d("SkipIntro", "IntroDB: no data for $imdbId S${season}E${episode}")
             emptyList()
         }
-    }
-
-    private fun IntroDbSegment?.toSkipIntervalOrNull(type: String): SkipInterval? {
-        if (this == null) return null
-        val start = startSec ?: startMs?.let { it / 1000.0 }
-        val end = endSec ?: endMs?.let { it / 1000.0 }
-        if (start == null || end == null || end <= start) return null
-        return SkipInterval(startTime = start, endTime = end, type = type, provider = "introdb")
     }
 
     private suspend fun fetchFromAniSkip(malId: String, episode: Int): List<SkipInterval> {
@@ -245,30 +283,18 @@ class SkipIntroRepository @Inject constructor(
                 val episodesResponse = animeSkipApi.query(
                     clientId = clientId,
                     body = AnimeSkipRequest(
-                        query = "{ findEpisodesByShowId(showId: \"$showId\") { season number timestamps { at type { name } } } }"
+                        query = "{ findEpisodesByShowId(showId: \"$showId\") { season number baseDuration timestamps { at type { name } } } }"
                     )
                 )
                 if (!episodesResponse.isSuccessful) continue
 
                 val episodes = episodesResponse.body()?.data?.findEpisodesByShowId ?: continue
-                val targetEpisode = episodes.firstOrNull { ep ->
-                    ep.number?.toIntOrNull() == episode &&
-                        (season == null || ep.season?.toIntOrNull() == season)
-                } ?: continue
-
-                val sorted = (targetEpisode.timestamps ?: continue).sortedBy { it.at }
-                val result = sorted.mapIndexedNotNull { i, ts ->
-                    val endTime = sorted.getOrNull(i + 1)?.at ?: Double.MAX_VALUE
-                    val type = when (ts.type.name.lowercase()) {
-                        "intro", "new intro" -> "op"
-                        "credits", "new credits" -> "ed"
-                        "mixed intro" -> "mixed-op"
-                        "mixed credits" -> "mixed-ed"
-                        "recap" -> "recap"
-                        else -> return@mapIndexedNotNull null
+                val result = episodes
+                    .filter { ep ->
+                        ep.number?.toIntOrNull() == episode &&
+                            (season == null || ep.season?.toIntOrNull() == season)
                     }
-                    SkipInterval(startTime = ts.at, endTime = endTime, type = type, provider = "animeskip")
-                }
+                    .bestAnimeSkipIntervals()
                 if (result.isNotEmpty()) return result
             }
             emptyList()
@@ -298,4 +324,55 @@ class SkipIntroRepository @Inject constructor(
     companion object {
         private const val NO_ID = "__none__"
     }
+}
+
+/**
+ * A show can hold several community entries for the same episode number, some of them incomplete.
+ * Pick the entry covering the most segment categories (opening / ending / recap), then the one
+ * with the most segments; on a tie the earlier entry wins.
+ */
+internal fun List<AnimeSkipEpisode>.bestAnimeSkipIntervals(): List<SkipInterval> =
+    map { it.timestamps.orEmpty().toAnimeSkipIntervals(it.baseDuration) }
+        .filter { it.isNotEmpty() }
+        .maxWithOrNull(
+            compareBy<List<SkipInterval>>(
+                { intervals -> intervals.mapNotNull { segmentCategory(it.type) }.toSet().size },
+                { it.size }
+            )
+        )
+        .orEmpty()
+
+/**
+ * Anime-Skip timestamps only mark where a segment starts; each one ends where the next begins.
+ * The last timestamp has no known end. Only an ending may run to the end of the episode, and only
+ * when it starts in the second half of it (if the duration is known); an open-ended intro or recap
+ * is dropped, since stretching it would skip the whole episode.
+ */
+internal fun List<AnimeSkipTimestamp>.toAnimeSkipIntervals(baseDuration: Double? = null): List<SkipInterval> {
+    val sorted = sortedBy { it.at }
+    return sorted.mapIndexedNotNull { i, ts ->
+        val type = when (ts.type.name.lowercase()) {
+            "intro", "new intro" -> "op"
+            "credits", "new credits" -> "ed"
+            "mixed intro" -> "mixed-op"
+            "mixed credits" -> "mixed-ed"
+            "recap" -> "recap"
+            else -> return@mapIndexedNotNull null
+        }
+        val next = sorted.getOrNull(i + 1)
+        val endTime = when {
+            next != null -> next.at.takeIf { it > ts.at } ?: return@mapIndexedNotNull null
+            segmentCategory(type) == "ending" && (baseDuration == null || ts.at >= baseDuration / 2) ->
+                Double.MAX_VALUE
+            else -> return@mapIndexedNotNull null
+        }
+        SkipInterval(startTime = ts.at, endTime = endTime, type = type, provider = "animeskip")
+    }
+}
+
+internal fun segmentCategory(type: String): String? = when (type.lowercase()) {
+    "intro", "op", "mixed-op" -> "opening"
+    "outro", "ed", "mixed-ed", "credits", "ending" -> "ending"
+    "recap" -> "recap"
+    else -> null
 }

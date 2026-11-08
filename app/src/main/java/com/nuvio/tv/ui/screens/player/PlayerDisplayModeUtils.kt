@@ -14,6 +14,19 @@ internal object PlayerDisplayModeUtils {
         }
     }
 
+    /**
+     * Tunneled video ignores view scale, so the surface size is the only aspect control.
+     * Fill is opt-in for that session; every other playback path stays FIT so the aspect
+     * scale modes keep a video-sized frame.
+     */
+    fun exoSurfaceResizeMode(tunnelingEnabled: Boolean, tunneledSurfaceFill: Boolean): Int {
+        return if (tunnelingEnabled && tunneledSurfaceFill) {
+            AspectRatioFrameLayout.RESIZE_MODE_FILL
+        } else {
+            AspectRatioFrameLayout.RESIZE_MODE_FIT
+        }
+    }
+
     fun resizeModeLabel(mode: Int, context: Context): String {
         return when (mode) {
             AspectRatioFrameLayout.RESIZE_MODE_FIT -> context.getString(R.string.player_aspect_fit)

@@ -31,8 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,6 +43,8 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.core.server.AddonWebConfigMode
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -71,8 +71,8 @@ fun EssentialAddonSetupScreen(
         ) {
             Text(
                 text = stringResource(R.string.essential_addon_setup_title),
-                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                color = NuvioTheme.colors.TextPrimary
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold, textDirection = TextDirection.Content),
+                color = NuvioTheme.colors.TextPrimary,
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
@@ -99,8 +99,8 @@ fun EssentialAddonSetupScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.addon_install_title),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = NuvioTheme.colors.TextPrimary
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, textDirection = TextDirection.Content),
+                            color = NuvioTheme.colors.TextPrimary,
                         )
                         BasicTextField(
                             value = uiState.installUrl,
@@ -119,7 +119,8 @@ fun EssentialAddonSetupScreen(
                                     keyboardController?.hide()
                                 }
                             ),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary,
+                                            textDirection = TextDirection.Content),
                             cursorBrush = SolidColor(NuvioTheme.colors.Primary),
                             decorationBox = { innerTextField ->
                                 Box(
@@ -186,8 +187,8 @@ fun EssentialAddonSetupScreen(
                         )
                         Text(
                             text = stringResource(R.string.addon_manage_from_phone_title),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = NuvioTheme.colors.TextPrimary
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, textDirection = TextDirection.Content),
+                            color = NuvioTheme.colors.TextPrimary,
                         )
                         Text(
                             text = stringResource(R.string.addon_manage_addons_only_from_phone_subtitle),
@@ -228,8 +229,8 @@ fun EssentialAddonSetupScreen(
             }
         }
 
-        if (uiState.isQrModeActive) {
-            Popup(properties = PopupProperties(focusable = true)) {
+        if (uiState.isQrModeActive || uiState.pendingChange != null) {
+            if (uiState.isQrModeActive) {
                 QrCodeOverlay(
                     qrBitmap = uiState.qrCodeBitmap,
                     serverUrl = uiState.serverUrl,
@@ -238,17 +239,13 @@ fun EssentialAddonSetupScreen(
                     hasPendingChange = uiState.pendingChange != null
                 )
             }
-        }
 
-        if (uiState.pendingChange != null) {
-            Popup(properties = PopupProperties(focusable = true)) {
-                uiState.pendingChange?.let { pending ->
-                    ConfirmAddonChangesDialog(
-                        pendingChange = pending,
-                        onConfirm = viewModel::confirmPendingChange,
-                        onReject = viewModel::rejectPendingChange
-                    )
-                }
+            uiState.pendingChange?.let { pending ->
+                ConfirmAddonChangesDialog(
+                    pendingChange = pending,
+                    onConfirm = viewModel::confirmPendingChange,
+                    onReject = viewModel::rejectPendingChange
+                )
             }
         }
 

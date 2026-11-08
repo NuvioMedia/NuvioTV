@@ -3,7 +3,9 @@ package com.nuvio.tv.ui.screens.detail
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
@@ -33,6 +35,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +50,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -57,6 +63,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
@@ -84,6 +94,7 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
 import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
+import com.nuvio.tv.ui.components.LightweightCard
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.WatchedMarker
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -96,13 +107,16 @@ import androidx.compose.ui.draw.shadow
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 
 private const val EPISODE_CARD_CONTENT_TYPE = "episode_card"
 private const val EPISODE_SCROLL_REPEAT_THROTTLE_MS = 80L
 private const val EPISODE_RESTORE_FALLBACK_MS = 250L
+private const val EPISODE_RESTORE_FOCUS_ATTEMPTS = 24
 private const val EPISODE_OVERLAY_PREFETCH_DELAY_MS = 120L
+private const val SEASON_EDGE_PIN_COUNT = 4
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -134,44 +148,129 @@ fun SeasonTabs(
     val typography = MaterialTheme.typography
     val tabTextStyle = remember(typography) { typography.titleMedium }
     val textSecondary = NuvioTheme.extendedColors.textSecondary
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val initialSeasonIndex = remember(sortedSeasons, selectedSeason) {
-        sortedSeasons.indexOf(selectedSeason).coerceAtLeast(0)
+        (sortedSeasons.indexOf(selectedSeason) - (SEASON_EDGE_PIN_COUNT - 1)).coerceAtLeast(0)
     }
     val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialSeasonIndex)
 
     var suppressFocusSwitch by remember { mutableStateOf(false) }
     var lastAppliedSeason by remember { mutableStateOf(selectedSeason) }
+    var lastFocusedSeason by remember { mutableStateOf(selectedSeason) }
+    val seasonFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     // Clear suppress whenever selectedSeason actually settles (composition runs
     // with the new value). This guarantees reset even if the scroll coroutine is cancelled.
     if (lastAppliedSeason != selectedSeason) {
         lastAppliedSeason = selectedSeason
         suppressFocusSwitch = false
+        lastFocusedSeason = selectedSeason
     }
 
     var pendingSeason by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(pendingSeason) {
         val target = pendingSeason ?: return@LaunchedEffect
         delay(150)
+        if (pendingSeason != target) return@LaunchedEffect
         onSeasonSelected(target)
-        pendingSeason = null
+        if (pendingSeason == target) pendingSeason = null
     }
 
     LaunchedEffect(sortedSeasons, selectedSeason) {
         val selectedIndex = sortedSeasons.indexOf(selectedSeason)
         if (selectedIndex < 0) return@LaunchedEffect
+        val lastIndex = sortedSeasons.lastIndex
+        val pinToStart = selectedIndex < SEASON_EDGE_PIN_COUNT
+        val pinToEnd = selectedIndex > lastIndex - SEASON_EDGE_PIN_COUNT
+        var attempts = 0
+        while (attempts < 2) {
+            attempts++
+            val info = snapshotFlow { lazyListState.layoutInfo }
+                .first { it.visibleItemsInfo.isNotEmpty() }
+            val visible = info.visibleItemsInfo
+            val contentEnd = info.viewportEndOffset - info.afterContentPadding
+            if (pinToStart) {
+                if (lazyListState.firstVisibleItemIndex != 0 || lazyListState.firstVisibleItemScrollOffset != 0) {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(0)
+                    suppressFocusSwitch = false
+                }
+                return@LaunchedEffect
+            }
+            if (pinToEnd) {
+                val lastItem = visible.firstOrNull { it.index == lastIndex }
+                if (lastItem == null) {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(
+                        lastIndex,
+                        scrollOffset = -(contentEnd - visible.last().size).coerceAtLeast(0)
+                    )
+                    suppressFocusSwitch = false
+                    snapshotFlow { lazyListState.layoutInfo }
+                        .first { it.visibleItemsInfo.any { it.index == lastIndex } }
+                    continue
+                }
+                if (lastItem.offset + lastItem.size > contentEnd) {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(
+                        lastIndex,
+                        scrollOffset = -(contentEnd - lastItem.size)
+                    )
+                    suppressFocusSwitch = false
+                }
+                return@LaunchedEffect
+            }
+            val item = visible.firstOrNull { it.index == selectedIndex }
+            if (item == null) {
+                suppressFocusSwitch = true
+                if (selectedIndex > visible.last().index) {
+                    lazyListState.scrollToItem(
+                        selectedIndex,
+                        scrollOffset = -(contentEnd - visible.last().size).coerceAtLeast(0)
+                    )
+                } else {
+                    lazyListState.scrollToItem(selectedIndex)
+                }
+                suppressFocusSwitch = false
+                snapshotFlow { lazyListState.layoutInfo }
+                    .first { it.visibleItemsInfo.any { it.index == selectedIndex } }
+                continue
+            }
+            when {
+                item.offset < 0 -> {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(selectedIndex)
+                    suppressFocusSwitch = false
+                }
+                item.offset + item.size > contentEnd -> {
+                    suppressFocusSwitch = true
+                    lazyListState.scrollToItem(
+                        selectedIndex,
+                        scrollOffset = -(contentEnd - item.size)
+                    )
+                    suppressFocusSwitch = false
+                }
+            }
+            break
+        }
+    }
 
-        val visibleIndices = lazyListState.layoutInfo.visibleItemsInfo.map { it.index }
-        if (selectedIndex in visibleIndices) return@LaunchedEffect
-
-        suppressFocusSwitch = true
-        lazyListState.scrollToItem(selectedIndex)
-        suppressFocusSwitch = false
+    val restorerRequester = remember(lastFocusedSeason, selectedSeason, selectedTabFocusRequester) {
+        when {
+            lastFocusedSeason == selectedSeason -> selectedTabFocusRequester
+            else -> seasonFocusRequesters.getOrPut(lastFocusedSeason) { FocusRequester() }
+        }
     }
 
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .focusRestorer(selectedTabFocusRequester)
+            .focusRestorer {
+                if (suppressFocusSwitch || pendingSeason != null) {
+                    FocusRequester.Cancel
+                } else {
+                    restorerRequester
+                }
+            }
             .focusGroup(),
         state = lazyListState,
         contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
@@ -179,9 +278,16 @@ fun SeasonTabs(
     ) {
         items(sortedSeasons, key = { it }) { season ->
             val isSelected = season == selectedSeason
+            val isRightEdge = if (isRtl) season == sortedSeasons.first() else season == sortedSeasons.last()
+            val isLeftEdge = if (isRtl) season == sortedSeasons.last() else season == sortedSeasons.first()
             var isFocused by remember { mutableStateOf(false) }
             var longPressTriggered by remember { mutableStateOf(false) }
             val longPressKeyTracker = rememberLongPressKeyTracker()
+            val seasonFocusRequester = if (isSelected) {
+                selectedTabFocusRequester
+            } else {
+                remember(season) { seasonFocusRequesters.getOrPut(season) { FocusRequester() } }
+            }
 
             Card(
                 onClick = {
@@ -192,9 +298,11 @@ fun SeasonTabs(
                     }
                 },
                 modifier = Modifier
-                    .then(if (isSelected) Modifier.focusRequester(selectedTabFocusRequester) else Modifier)
+                    .focusRequester(seasonFocusRequester)
                     .focusProperties {
                         canFocus = isFocusEnabled
+                        if (isRightEdge) right = FocusRequester.Cancel
+                        if (isLeftEdge) left = FocusRequester.Cancel
                         if (isSelected && downFocusRequester != null) {
                             down = downFocusRequester
                         }
@@ -205,8 +313,11 @@ fun SeasonTabs(
                     .onFocusChanged {
                     val nowFocused = it.isFocused
                     isFocused = nowFocused
-                    if (nowFocused && !isSelected && !suppressFocusSwitch) {
-                        pendingSeason = season
+                    if (nowFocused) {
+                        lastFocusedSeason = season
+                        if (!isSelected && !suppressFocusSwitch) {
+                            pendingSeason = season
+                        }
                     }
                 }
                     .onPreviewKeyEvent { event ->
@@ -236,6 +347,10 @@ fun SeasonTabs(
                             return@onPreviewKeyEvent true
                         }
                         false
+                    }
+                    .semantics {
+                        role = Role.Tab
+                        selected = isSelected
                     },
                 shape = CardDefaults.shape(shape = tabShape),
                 colors = CardDefaults.colors(
@@ -272,6 +387,7 @@ fun EpisodesRow(
     episodeOptionsOverlayStyle: EpisodeOptionsOverlayStyle = EpisodeOptionsOverlayStyle.ARTWORK,
     posterCardCornerRadiusDp: Int = 12,
     onEpisodeClick: (Video) -> Unit,
+    canPlayEpisode: (Video) -> Boolean = { true },
     onEpisodeManualPlayClick: (Video) -> Unit = onEpisodeClick,
     onEpisodeStartFromBeginningClick: (Video) -> Unit = onEpisodeClick,
     onToggleEpisodeWatched: (Video) -> Unit,
@@ -291,17 +407,18 @@ fun EpisodesRow(
     onRestoreFocusHandled: () -> Unit = {},
     onEpisodeFocused: (episodeId: String) -> Unit = {},
     scrollToEpisodeId: String? = null,
-    onScrollToEpisodeHandled: () -> Unit = {}
+    onScrollToEpisodeHandled: () -> Unit = {},
+    anchorEpisodeId: String? = null,
+    windowResetKey: String? = null
 ) {
     val dedupedEpisodes = remember(episodes) { episodes.distinctBy { it.id } }
-    val restoreTargetRequester = restoreEpisodeId?.let { episodeFocusRequesters[it] }
     var optionsEpisode by remember { mutableStateOf<Video?>(null) }
     val isOverlayOpen = optionsEpisode != null
     val cardMetrics = rememberEpisodeCardMetrics(posterCardCornerRadiusDp)
     val density = LocalDensity.current
     val rowPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
-    val initialEpisodeIndex = remember(dedupedEpisodes, restoreEpisodeId, scrollToEpisodeId) {
-        val initialEpisodeId = restoreEpisodeId ?: scrollToEpisodeId
+    val initialEpisodeIndex = remember(dedupedEpisodes, restoreEpisodeId, scrollToEpisodeId, anchorEpisodeId) {
+        val initialEpisodeId = restoreEpisodeId ?: scrollToEpisodeId ?: anchorEpisodeId
         val targetIndex = dedupedEpisodes.indexOfFirst { it.id == initialEpisodeId }
         if (restoreEpisodeId != null) {
             (targetIndex - 1).coerceAtLeast(0)
@@ -313,17 +430,26 @@ fun EpisodesRow(
         initialFirstVisibleItemIndex = initialEpisodeIndex,
         prefetchStrategy = rowPrefetchStrategy
     )
+    val episodeWindowIds = remember(dedupedEpisodes) { dedupedEpisodes.map { it.id } }
+    lazyListState.keepDetailRowWindow(
+        itemIds = episodeWindowIds,
+        lazyKeyAt = { index -> dedupedEpisodes.getOrNull(index)?.id },
+        resetKey = windowResetKey
+    )
     var lastHorizontalKeyRepeatTime by remember { mutableStateOf(0L) }
     val episodeIds = remember(dedupedEpisodes) { dedupedEpisodes.mapTo(mutableSetOf()) { it.id } }
     LaunchedEffect(episodeIds, episodeFocusRequesters) {
         episodeFocusRequesters.keys.retainAll(episodeIds)
     }
 
-    LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, dedupedEpisodes) {
+    LaunchedEffect(restoreFocusToken, restoreEpisodeId, dedupedEpisodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
         if (dedupedEpisodes.none { it.id == restoreEpisodeId }) {
+            if (dedupedEpisodes.isEmpty()) return@LaunchedEffect
             delay(EPISODE_RESTORE_FALLBACK_MS)
-            onRestoreFocusHandled()
+            if (dedupedEpisodes.none { it.id == restoreEpisodeId }) {
+                onRestoreFocusHandled()
+            }
             return@LaunchedEffect
         }
         val index = dedupedEpisodes.indexOfFirst { it.id == restoreEpisodeId }
@@ -331,13 +457,15 @@ fun EpisodesRow(
             val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
             lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
         }
-        val focusRequested = restoreTargetRequester?.requestFocusAfterFrames(frames = 1) == true
-        if (!focusRequested) {
-            onRestoreFocusHandled()
-            return@LaunchedEffect
+        repeat(EPISODE_RESTORE_FOCUS_ATTEMPTS) {
+            val requester = episodeFocusRequesters[restoreEpisodeId]
+            if (requester != null && requester.requestFocusAfterFrames(frames = 1)) {
+                delay(EPISODE_RESTORE_FALLBACK_MS)
+                onRestoreFocusHandled()
+                return@LaunchedEffect
+            }
+            withFrameNanos { }
         }
-        delay(EPISODE_RESTORE_FALLBACK_MS)
-        onRestoreFocusHandled()
     }
 
     LaunchedEffect(scrollToEpisodeId, dedupedEpisodes) {
@@ -347,6 +475,27 @@ fun EpisodesRow(
         val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
         lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
         onScrollToEpisodeHandled()
+    }
+
+    var anchorPlaced by remember { mutableStateOf(false) }
+    LaunchedEffect(dedupedEpisodes) {
+        if (anchorPlaced) return@LaunchedEffect
+        if (!restoreEpisodeId.isNullOrBlank() || !scrollToEpisodeId.isNullOrBlank()) {
+            anchorPlaced = true
+            return@LaunchedEffect
+        }
+        val anchor = anchorEpisodeId ?: run {
+            anchorPlaced = true
+            return@LaunchedEffect
+        }
+        val index = dedupedEpisodes.indexOfFirst { it.id == anchor }
+        if (index < 0) return@LaunchedEffect
+        snapshotFlow { lazyListState.layoutInfo.visibleItemsInfo.map { it.index } }
+            .first { it.isNotEmpty() }
+        if (index !in lazyListState.layoutInfo.visibleItemsInfo.map { it.index }) {
+            lazyListState.scrollToItem(index)
+        }
+        anchorPlaced = true
     }
 
     LazyRow(
@@ -386,7 +535,7 @@ fun EpisodesRow(
             val imdbRating = remember(seasonEp, episodeRatings) { seasonEp?.let { episodeRatings[it] } }
             val isMarkedWatched = remember(seasonEp, watchedEpisodes) { seasonEp?.let { watchedEpisodes.contains(it) } ?: false }
             val episodeFocusRequester = remember(episode.id) { episodeFocusRequesters.getOrPut(episode.id) { FocusRequester() } }
-            val episodeOnClick = remember(episode.id) { { onEpisodeClick(episode) } }
+            val episodeOnClick = remember(episode, onEpisodeClick) { { onEpisodeClick(episode) } }
             val episodeOnLongPress = remember(episode.id) { { optionsEpisode = episode } }
             val episodeOnFocused = remember(episode.id) { { onEpisodeFocused(episode.id) } }
             val isRestoreTarget = episode.id == restoreEpisodeId
@@ -445,6 +594,10 @@ fun EpisodesRow(
                 }
             } ?: false,
             onDismiss = { optionsEpisode = null },
+            onNavigateEpisode = { step ->
+                adjacentEpisode(dedupedEpisodes, selectedEpisode, step)?.let { optionsEpisode = it }
+            },
+            isPlayEnabled = canPlayEpisode(selectedEpisode),
             onPlay = {
                 onEpisodeClick(selectedEpisode)
                 optionsEpisode = null
@@ -462,7 +615,7 @@ fun EpisodesRow(
                 onEpisodeManualPlayClick(selectedEpisode)
                 optionsEpisode = null
             },
-            showPlayManually = showManualPlayOption,
+            showPlayManually = showManualPlayOption && canPlayEpisode(selectedEpisode),
             onToggleWatched = {
                 onToggleEpisodeWatched(selectedEpisode)
                 optionsEpisode = null
@@ -520,7 +673,7 @@ private fun EpisodeCard(
     val progressPercent = remember(watchProgress) { watchProgress?.progressPercentage ?: 0f }
     val showProgress = remember(watchProgress) { watchProgress?.isInProgress() == true }
     val showCompletedBadge = isWatched
-    val showNotStartedBadge = remember(showCompletedBadge, progressPercent) { !showCompletedBadge && progressPercent < 0.02f }
+    val showNotStartedBadge = !showCompletedBadge && !showProgress
     val isUnavailable = remember(episode.available) { episode.available == false }
     val cardBgColor = NuvioTheme.colors.BackgroundCard
     val isFocusedState = remember { mutableStateOf(false) }
@@ -586,7 +739,7 @@ private fun EpisodeCard(
     }
     val ratingStyle = remember(typography) {
         typography.labelSmall.copy(
-            color = Color(0xFFF5C518),
+            color = NuvioPrimitives.imdb,
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -663,24 +816,11 @@ private fun EpisodeCard(
         episode.episode?.let { number -> "$prefix $number" } ?: prefix
     }
 
-    val primaryColor = NuvioTheme.colors.Primary
+    val primaryColor = NuvioTheme.colors.Secondary
     val textPrimary = NuvioTheme.colors.TextPrimary
     val focusRingBorder = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)
-    val cardShape = CardDefaults.shape(shape = shape)
-    val cardColors = CardDefaults.colors(
-        containerColor = Color.Transparent,
-        focusedContainerColor = Color.Transparent
-    )
-    val cardBorder = CardDefaults.border(
-        focusedBorder = Border(
-            border = focusRingBorder,
-            shape = shape
-        )
-    )
-    val cardScale = CardDefaults.scale(focusedScale = 1.0f)
-    val cardGlow = CardDefaults.glow()
 
-    Card(
+    LightweightCard(
         onClick = {
             if (longPressTriggered) {
                 longPressTriggered = false
@@ -733,11 +873,12 @@ private fun EpisodeCard(
                     down = downFocusRequester
                 }
             },
-        shape = cardShape,
-        colors = cardColors,
-        border = cardBorder,
-        scale = cardScale,
-        glow = cardGlow
+        shape = shape,
+        containerColor = Color.Transparent,
+        focusedBorder = Border(
+            border = focusRingBorder,
+            shape = shape
+        )
     ) {
         Box(
             modifier = Modifier
@@ -754,7 +895,9 @@ private fun EpisodeCard(
             val bgPainter = remember(cardBgColor) { androidx.compose.ui.graphics.painter.ColorPainter(cardBgColor) }
             AsyncImage(
                 model = thumbnailRequest,
-                contentDescription = episode.title.localizeEpisodeTitle(context),
+                // The card announces the episode title through FocusMarqueeText below, so the
+                // artwork must not repeat it.
+                contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
@@ -836,7 +979,7 @@ private fun EpisodeCard(
                 if (description.isNotBlank()) {
                     Text(
                         text = description,
-                        style = descriptionStyle,
+                        style = descriptionStyle.copy(textDirection = description.contentTextDirection()),
                         maxLines = cardMetrics.descriptionMaxLines,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -932,9 +1075,9 @@ private fun EpisodeCard(
             if (showCompletedBadge) {
                 WatchedMarker(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
+                        .align(Alignment.TopEnd)
                         .padding(
-                            start = cardMetrics.statusBadgeInset,
+                            end = cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
                         ),
                     size = cardMetrics.statusBadgeSize,
@@ -945,9 +1088,10 @@ private fun EpisodeCard(
             if (isUnavailable) {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(if (showCompletedBadge) Alignment.TopStart else Alignment.TopEnd)
                         .padding(
-                            end = cardMetrics.statusBadgeInset,
+                            start = if (showCompletedBadge) cardMetrics.statusBadgeInset else 0.dp,
+                            end = if (showCompletedBadge) 0.dp else cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
                         )
                         .background(
@@ -969,9 +1113,9 @@ private fun EpisodeCard(
                 val dashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f) }
                 Canvas(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
+                        .align(Alignment.TopEnd)
                         .padding(
-                            start = cardMetrics.statusBadgeInset,
+                            end = cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
                         )
                         .size(cardMetrics.statusBadgeSize)

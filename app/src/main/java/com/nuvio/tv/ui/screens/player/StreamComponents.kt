@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,10 +30,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +58,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.SourceChipItem
@@ -59,6 +66,8 @@ import com.nuvio.tv.ui.components.SourceChipStatus
 import com.nuvio.tv.ui.components.SourceStatusFilterChip
 import com.nuvio.tv.ui.components.StreamBadgeChips
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.contentTextDirection
+import com.nuvio.tv.ui.util.toAbsoluteAlignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
@@ -155,28 +164,33 @@ internal fun StreamItem(
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
-                ) {
-                    Text(
-                        text = streamName,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = NuvioTheme.colors.TextPrimary
-                    )
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Row(
+                        modifier = Modifier.align(streamName.contentTextDirection().toAbsoluteAlignment()),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                    ) {
+                        Text(
+                            text = streamName,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                textDirection = streamName.contentTextDirection()
+                            ),
+                            color = NuvioTheme.colors.TextPrimary
+                        )
 
-                    if (isCurrentStream) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(NuvioTheme.colors.Primary.copy(alpha = 0.2f))
-                                .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.sources_playing),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NuvioTheme.colors.Primary
-                            )
+                        if (isCurrentStream) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(NuvioTheme.colors.Primary.copy(alpha = 0.2f))
+                                    .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.sources_playing),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NuvioTheme.colors.Primary
+                                )
+                            }
                         }
                     }
                 }
@@ -185,7 +199,10 @@ internal fun StreamItem(
                     if (description != streamName) {
                         Text(
                             text = description,
-                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.align(description.contentTextDirection().toAbsoluteAlignment()),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = description.contentTextDirection()
+                            ),
                             color = NuvioTheme.extendedColors.textSecondary
                         )
                     }
@@ -208,7 +225,9 @@ internal fun StreamItem(
                     if (addonLogoModel != null) {
                         AsyncImage(
                             model = addonLogoModel,
-                            contentDescription = stream.addonName,
+                            // Decorative: the addon name is announced by the sibling Text below,
+                            // so naming the logo too would duplicate it in the merged card.
+                            contentDescription = null,
                             modifier = Modifier
                                 .size(NuvioTheme.spacing.xxl)
                                 .clip(RoundedCornerShape(NuvioTheme.radii.xs)),
@@ -220,7 +239,9 @@ internal fun StreamItem(
 
                     Text(
                         text = stream.addonName,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            textDirection = stream.addonName.contentTextDirection()
+                        ),
                         color = NuvioTheme.extendedColors.textTertiary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -229,6 +250,19 @@ internal fun StreamItem(
             }
         }
     }
+}
+
+/**
+ * Chips sit in a LazyRow, so a chip scrolled out of view has no focus node and
+ * requestFocus() on it fails without moving focus. Scroll it into the row first.
+ */
+internal suspend fun LazyListState.focusChip(index: Int, chipFocusRequesters: List<FocusRequester>): Boolean {
+    val requester = chipFocusRequesters.getOrNull(index) ?: return false
+    if (layoutInfo.visibleItemsInfo.none { it.index == index }) {
+        scrollToItem(index)
+        withFrameNanos {}
+    }
+    return runCatching { requester.requestFocus() }.getOrDefault(false)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -243,6 +277,8 @@ internal fun AddonFilterChips(
     externalFocusRequesters: List<FocusRequester>? = null,
     externalOrderedNames: List<String>? = null,
     onUpKey: (() -> Unit)? = null,
+    onFocusIndexChanged: (Int) -> Unit = {},
+    chipListState: LazyListState = rememberLazyListState(),
     debugTag: String = "AddonFilterChips"
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -298,9 +334,7 @@ internal fun AddonFilterChips(
         // move actual focus to the correct chip so highlight doesn't stick on the wrong one.
         if (chipRowHasFocus) {
             withFrameNanos {}
-            if (idx in focusRequesters.indices) {
-                runCatching { focusRequesters[idx].requestFocus() }
-            }
+            chipListState.focusChip(idx, focusRequesters)
         }
     }
     val scope = rememberCoroutineScope()
@@ -311,7 +345,7 @@ internal fun AddonFilterChips(
             refreshHasFocus = true
             scope.coroutineLaunch {
                 withFrameNanos {}
-                try { focusRequesters[0].requestFocus() } catch (_: Exception) {}
+                chipListState.focusChip(0, focusRequesters)
             }
             return
         }
@@ -325,19 +359,26 @@ internal fun AddonFilterChips(
         onAddonSelected(selectedFilter)
         scope.coroutineLaunch {
             withFrameNanos {}
-            if (targetIndex in focusRequesters.indices) {
-                try { focusRequesters[targetIndex].requestFocus() } catch (_: Exception) {}
-            }
+            chipListState.focusChip(targetIndex, focusRequesters)
         }
     }
 
-    val chipListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // While focus is in the results, keep the selected chip in view so the row
+    // shows it and it can take focus again.
+    LaunchedEffect(focusedChipIndex) {
+        val visibleItems = chipListState.layoutInfo.visibleItemsInfo
+        if (focusedChipIndex >= 0 && !chipRowHasFocus &&
+            visibleItems.isNotEmpty() && visibleItems.none { it.index == focusedChipIndex }
+        ) {
+            chipListState.scrollToItem(focusedChipIndex)
+        }
+    }
 
     // When the selected addon is removed, switch filter to the last available addon
     LaunchedEffect(selectedAddon, orderedNames) {
         if (selectedAddon != null && selectedAddon !in orderedNames) {
-            val lastAddon = orderedNames.lastOrNull()
-            onAddonSelected(lastAddon)
+            val lastIndex = if (hasRefresh) orderedNames.size + 1 else orderedNames.size
+            moveFocusTo(lastIndex.coerceAtLeast(if (hasRefresh) 1 else 0))
         }
     }
 
@@ -351,7 +392,7 @@ internal fun AddonFilterChips(
                 if (hasFocus && !chipRowHasFocus && isRtl) {
                     scope.coroutineLaunch {
                         withFrameNanos {}
-                        focusRequesters.getOrNull(focusedChipIndex)?.requestFocus()
+                        chipListState.focusChip(focusedChipIndex, focusRequesters)
                     }
                 }
                 chipRowHasFocus = hasFocus
@@ -399,7 +440,10 @@ internal fun AddonFilterChips(
                     isLoading = isStillFetching,
                     onFocusChanged = { isFocused ->
                         refreshHasFocus = isFocused
-                        if (isFocused) focusedChipIndex = 0
+                        if (isFocused) {
+                            focusedChipIndex = 0
+                            onFocusIndexChanged(0)
+                        }
                     },
                     modifier = Modifier
                         .focusRequester(focusRequesters[0])
@@ -423,6 +467,7 @@ internal fun AddonFilterChips(
                         if (it.isFocused) {
                             focusedChipIndex = allChipIndex
                             refreshHasFocus = false
+                            onFocusIndexChanged(allChipIndex)
                         }
                     }
             )
@@ -445,6 +490,7 @@ internal fun AddonFilterChips(
                         if (it.isFocused) {
                             focusedChipIndex = requesterIdx
                             refreshHasFocus = false
+                            onFocusIndexChanged(requesterIdx)
                         }
                     }
             )

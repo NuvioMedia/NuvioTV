@@ -41,8 +41,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch as coroutineLaunch
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import android.view.KeyEvent
@@ -61,11 +64,13 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 internal fun StreamSourcesSidePanel(
     uiState: PlayerUiState,
+    currentFilename: String?,
     streamsFocusRequester: FocusRequester,
     onClose: () -> Unit,
     onReload: () -> Unit,
     onAddonFilterSelected: (String?) -> Unit,
     onStreamSelected: (Stream) -> Unit,
+    onExpandStreams: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -115,10 +120,47 @@ internal fun StreamSourcesSidePanel(
     }
     var firstCardHasFocus by remember(firstStreamKey) { mutableStateOf(false) }
 
-    // Request initial focus when loading finishes and streams are available,
-    // only if the user has not navigated away or focused the chips row.
+    var focusedStreamKey by remember { mutableStateOf<String?>(null) }
+    var closeButtonHasFocus by remember { mutableStateOf(false) }
+    var chipsHasFocus by remember { mutableStateOf(false) }
+
+    LaunchedEffect(streamKeys, focusedStreamKey, userMovedFromFirstResult) {
+        if (!userMovedFromFirstResult) return@LaunchedEffect
+        val key = focusedStreamKey ?: return@LaunchedEffect
+        val newIndex = streamKeys.indexOf(key)
+        if (newIndex < 0) return@LaunchedEffect
+        val firstVisible = streamListState.firstVisibleItemIndex
+        val lastVisible = streamListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: firstVisible
+        if (newIndex < firstVisible || newIndex > lastVisible) {
+            streamListState.scrollToItem(newIndex)
+        }
+        if (closeButtonHasFocus || chipsHasFocus) return@LaunchedEffect
+        val requester = if (key == firstStreamKey) {
+            streamsFocusRequester
+        } else {
+            streamFocusRequesters[key]
+        }
+        if (requester != null) {
+            withFrameNanos { }
+            runCatching { requester.requestFocus() }
+        }
+    }
+
+    // Keep focus inside the panel while waiting for the first source result.
+    LaunchedEffect(firstStreamKey) {
+        if (firstStreamKey != null) return@LaunchedEffect
+        withFrameNanos { }
+        val hasAddonChips = orderedAddonNames.isNotEmpty() ||
+            uiState.sourceAvailableAddons.isNotEmpty() || uiState.sourceChips.isNotEmpty()
+        runCatching {
+            if (hasAddonChips) allFocusRequester.requestFocus()
+            else closeButtonFocusRequester.requestFocus()
+        }
+    }
+
+    // Focus the first result as soon as one is available, unless the user has moved elsewhere.
     LaunchedEffect(uiState.isLoadingSourceStreams, firstStreamKey, userMovedFromFirstResult, firstResultFocusAssigned) {
-        if (!uiState.isLoadingSourceStreams && firstStreamKey != null &&
+        if (firstStreamKey != null &&
             !userMovedFromFirstResult && !firstResultFocusAssigned
         ) {
             firstResultFocusAssigned = true
@@ -142,41 +184,45 @@ internal fun StreamSourcesSidePanel(
         trackedFirstStreamKey = firstStreamKey
     }
 
-    LaunchedEffect(firstStreamFocusRequestId) {
+    LaunchedEffect(firstStreamFocusRequestId, firstStreamKey, userMovedFromFirstResult) {
         val requestedKey = firstStreamKey
-        if (firstStreamFocusRequestId <= 0 || requestedKey == null) return@LaunchedEffect
-        streamListState.scrollToItem(0)
-        repeat(30) {
-            withFrameNanos { }
-            if (firstCardHasFocus) return@LaunchedEffect
-            runCatching { streamFocusRequesters.getValue(requestedKey).requestFocus() }
+        if (firstStreamFocusRequestId <= 0 || requestedKey == null || userMovedFromFirstResult) {
+            return@LaunchedEffect
         }
+        streamListState.scrollToItem(0)
+        snapshotFlow {
+            streamListState.layoutInfo.visibleItemsInfo.any { it.index == 0 }
+        }.first { it }
+        withFrameNanos { }
+        if (!firstCardHasFocus) runCatching { streamsFocusRequester.requestFocus() }
     }
 
+    val chipListState = rememberLazyListState()
     fun requestChipFocus(index: Int) {
         if (index !in chipFocusRequesters.indices) return
         userMovedFromFirstResult = true
         focusJob?.cancel()
         focusJob = scope.coroutineLaunch {
             withFrameNanos { }
-            runCatching { chipFocusRequesters[index].requestFocus() }
+            chipListState.focusChip(index, chipFocusRequesters)
         }
     }
 
     // Called when navigating tabs horizontally from within the stream list
     fun onAddonFilterSelectedGuarded(addon: String?) {
         userMovedFromFirstResult = true
-        onAddonFilterSelected(addon)
-        focusJob?.cancel()
-        focusJob = scope.coroutineLaunch {
-            withFrameNanos {}
-            val targetRequester = if (addon == null) {
-                chipFocusRequesters.getOrNull(1)
-            } else {
-                addonFocusRequesters[addon]
-            }
-            runCatching { targetRequester?.requestFocus() }
+        val targetRequester = if (addon == null) {
+            chipFocusRequesters.getOrNull(1)
+        } else {
+            addonFocusRequesters[addon]
         }
+        focusJob?.cancel()
+        // Focus the chip before the results change: once the focused card is gone,
+        // Compose would otherwise park focus on another chip first.
+        focusJob = scope.coroutineLaunch(start = CoroutineStart.UNDISPATCHED) {
+            chipListState.focusChip(chipFocusRequesters.indexOf(targetRequester), chipFocusRequesters)
+        }
+        onAddonFilterSelected(addon)
     }
 
     // Reset scroll position to top when addon filter changes
@@ -209,6 +255,7 @@ internal fun StreamSourcesSidePanel(
                     isPrimary = false,
                     modifier = Modifier
                         .focusRequester(closeButtonFocusRequester)
+                        .onFocusChanged { closeButtonHasFocus = it.isFocused }
                         .onKeyEvent { event ->
                             if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
                                 event.key == Key.DirectionDown
@@ -258,31 +305,49 @@ internal fun StreamSourcesSidePanel(
                 enter = fadeIn(animationSpec = tween(200)),
                 exit = fadeOut(animationSpec = tween(120))
             ) {
-                AddonFilterChips(
-                    addons = uiState.sourceAvailableAddons,
-                    sourceChips = uiState.sourceChips,
-                    selectedAddon = uiState.sourceSelectedAddonFilter,
-                    isStillFetching = uiState.isLoadingSourceStreams ||
-                        uiState.sourceChips.any { it.status == SourceChipStatus.LOADING },
-                    onRefresh = {
-                        userMovedFromFirstResult = false
-                        firstResultFocusAssigned = false
-                        onReload()
-                    },
-                    onAddonSelected = { onAddonFilterSelected(it) },
-                    externalFocusRequesters = chipFocusRequesters,
-                    externalOrderedNames = orderedAddonNames,
-                    onUpKey = {
-                        try { closeButtonFocusRequester.requestFocus() } catch (_: Exception) {}
-                    },
-                    debugTag = "SourcesSidePanel"
-                )
+                Box(modifier = Modifier.onFocusChanged { chipsHasFocus = it.hasFocus }) {
+                    AddonFilterChips(
+                        addons = uiState.sourceAvailableAddons,
+                        sourceChips = uiState.sourceChips,
+                        selectedAddon = uiState.sourceSelectedAddonFilter,
+                        isStillFetching = uiState.isLoadingSourceStreams ||
+                            uiState.sourceChips.any { it.status == SourceChipStatus.LOADING },
+                        onRefresh = {
+                            userMovedFromFirstResult = false
+                            firstResultFocusAssigned = false
+                            onReload()
+                        },
+                        onAddonSelected = {
+                            userMovedFromFirstResult = true
+                            onAddonFilterSelected(it)
+                        },
+                        externalFocusRequesters = chipFocusRequesters,
+                        externalOrderedNames = orderedAddonNames,
+                        chipListState = chipListState,
+                        onUpKey = {
+                            userMovedFromFirstResult = true
+                            try { closeButtonFocusRequester.requestFocus() } catch (_: Exception) {}
+                        },
+                        onFocusIndexChanged = { index ->
+                            if (index != 1) userMovedFromFirstResult = true
+                        },
+                        debugTag = "SourcesSidePanel"
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
             when {
-                uiState.isLoadingSourceStreams -> {
+                uiState.sourceStreamsError != null -> {
+                    Text(
+                        text = uiState.sourceStreamsError,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                }
+
+                uiState.sourceFilteredStreams.isEmpty() && uiState.isLoadingSourceStreams -> {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -291,14 +356,6 @@ internal fun StreamSourcesSidePanel(
                     ) {
                         LoadingIndicator()
                     }
-                }
-
-                uiState.sourceStreamsError != null -> {
-                    Text(
-                        text = uiState.sourceStreamsError,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
                 }
 
                 uiState.sourceFilteredStreams.isEmpty() -> {
@@ -316,10 +373,23 @@ internal fun StreamSourcesSidePanel(
                         currentStreamFileIdx = uiState.currentStreamFileIdx,
                         currentStreamAddonName = uiState.currentStreamAddonName,
                         currentStreamUrl = uiState.currentStreamUrl,
-                        currentStreamName = uiState.currentStreamName
+                        currentStreamName = uiState.currentStreamName,
+                        currentStreamDescription = uiState.currentStreamDescription,
+                        currentFilename = currentFilename
                     )
 
                     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
+
+                    val lastVisibleIndex = remember(streamListState) {
+                        androidx.compose.runtime.derivedStateOf {
+                            streamListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        }
+                    }
+                    LaunchedEffect(lastVisibleIndex.value, uiState.sourceFilteredStreams.size) {
+                        if (lastVisibleIndex.value >= uiState.sourceFilteredStreams.size - 20) {
+                            onExpandStreams()
+                        }
+                    }
 
                     LazyColumn(
                         state = streamListState,
@@ -396,13 +466,20 @@ internal fun StreamSourcesSidePanel(
                         }) { index, stream ->
                             StreamItem(
                                 stream = stream,
-                                focusRequester = streamFocusRequesters.getValue(streamKeys[index]),
+                                focusRequester = if (index == 0) {
+                                    streamsFocusRequester
+                                } else {
+                                    streamFocusRequesters.getValue(streamKeys[index])
+                                },
                                 isCurrentStream = index == currentStreamIndex,
                                 showFileSizeBadges = uiState.showFileSizeBadges,
                                 showAddonLogo = uiState.showAddonLogo,
                                 badgePlacement = uiState.streamBadgePlacement,
                                 onClick = { onStreamSelected(stream) },
                                 onFocusChanged = { focused ->
+                                    if (focused) {
+                                        focusedStreamKey = streamKeys[index]
+                                    }
                                     if (index == 0) {
                                         firstCardHasFocus = focused
                                     }
@@ -414,6 +491,18 @@ internal fun StreamSourcesSidePanel(
                                 }} else null
                             )
                         }
+                        if (uiState.isLoadingSourceStreams) {
+                            item(key = "loading-more") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = NuvioTheme.spacing.lg),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    LoadingIndicator()
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -421,13 +510,15 @@ internal fun StreamSourcesSidePanel(
     }
 }
 
-private fun findCurrentStreamIndex(
+internal fun findCurrentStreamIndex(
     streams: List<Stream>,
     currentStreamInfoHash: String?,
     currentStreamFileIdx: Int?,
     currentStreamAddonName: String?,
     currentStreamUrl: String?,
-    currentStreamName: String?
+    currentStreamName: String?,
+    currentStreamDescription: String?,
+    currentFilename: String?
 ): Int {
     if (streams.isEmpty()) return -1
 
@@ -458,6 +549,27 @@ private fun findCurrentStreamIndex(
             stream.getStreamUrl() == currentStreamUrl
         }
         if (urlMatch >= 0) return urlMatch
+    }
+
+    // Addons may issue a new URL per request, so match what identifies the release instead.
+    // Filenames and templates can repeat across streams, so only trust a single result.
+    if (!currentFilename.isNullOrBlank()) {
+        val filenameMatches = streams.indices.filter { index ->
+            val stream = streams[index]
+            (stream.behaviorHints?.filename ?: stream.clientResolve?.filename) == currentFilename &&
+                (currentStreamAddonName == null || stream.addonName == currentStreamAddonName)
+        }
+        filenameMatches.singleOrNull()?.let { return it }
+    }
+
+    if (!currentStreamName.isNullOrBlank()) {
+        val nameMatches = streams.indices.filter { index ->
+            val stream = streams[index]
+            (stream.name ?: stream.addonName) == currentStreamName &&
+                (currentStreamAddonName == null || stream.addonName == currentStreamAddonName) &&
+                (currentStreamDescription == null || stream.description == currentStreamDescription)
+        }
+        nameMatches.singleOrNull()?.let { return it }
     }
 
     return -1

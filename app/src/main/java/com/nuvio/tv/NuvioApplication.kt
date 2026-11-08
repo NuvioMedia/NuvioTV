@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.StrictMode
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import com.nuvio.tv.core.image.CustomPosterFallbackInterceptor
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.gif.GifDecoder
@@ -24,9 +25,13 @@ import com.nuvio.tv.core.runtime.PluginRuntimeHooks
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.core.sync.androidtv.AndroidTvChannelSyncService
 import com.nuvio.tv.core.network.IPv4FirstDns
+import com.nuvio.tv.core.network.NoDelaySocketFactory
+import com.nuvio.tv.core.network.imageNetworkFetcherFactory
 import com.nuvio.tv.data.local.ImagePerformancePreferences
 import com.nuvio.tv.data.local.SentrySettingsDataStore
+import com.nuvio.tv.data.mediaserver.ServerUserStateProjection
 import com.nuvio.tv.data.simkl.SimklAnimeIdPreferenceHolder
+import com.nuvio.tv.ui.screens.settings.MemoryBudget
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -44,6 +49,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     @Inject lateinit var sentrySettingsDataStore: SentrySettingsDataStore
     @Inject lateinit var imagePerformancePreferences: ImagePerformancePreferences
     @Inject lateinit var simklAnimeIdPreferenceHolder: SimklAnimeIdPreferenceHolder
+    @Inject lateinit var serverUserStateProjection: ServerUserStateProjection
 
     companion object {
         /**
@@ -75,11 +81,15 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         }
     }
 
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onCreate() {
+        // Before super.onCreate(): Hilt creates injected services there, and the budget is read once.
+        MemoryBudget.init(this)
         super.onCreate()
         SentryInitializer.start(this, sentrySettingsDataStore)
         PluginRuntimeHooks.onApplicationCreate(this)
         androidTvChannelSyncService.start()
+        serverUserStateProjection.start()
         // Load locale synchronously so it's available before Activity.attachBaseContext.
         // SharedPreferences reads are fast (cached in memory after first access).
         val tag = getSharedPreferences("app_locale", Context.MODE_PRIVATE)
@@ -87,6 +97,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         LocaleCache.localeTag = tag ?: ""
     }
 
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun newImageLoader(context: android.content.Context): ImageLoader {
         val imageOkHttpClient by lazy {
             val imageDispatcher = okhttp3.Dispatcher().apply {
@@ -96,9 +107,10 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             OkHttpClient.Builder()
                 .dispatcher(imageDispatcher)
                 .dns(IPv4FirstDns())
+                .socketFactory(NoDelaySocketFactory)
                 .connectTimeout(4, TimeUnit.SECONDS)
                 .readTimeout(5, TimeUnit.SECONDS)
-                .callTimeout(12, TimeUnit.SECONDS)
+                .callTimeout(8, TimeUnit.SECONDS)
                 .addInterceptor { chain ->
                     try {
                         chain.proceed(chain.request())
@@ -117,6 +129,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
         return ImageLoader.Builder(this)
             .components {
+                add(CustomPosterFallbackInterceptor())
                 if (Build.VERSION.SDK_INT >= 28) {
                     add(AnimatedImageDecoder.Factory())
                 } else {
@@ -124,7 +137,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                 }
                 add(SvgDecoder.Factory())
                 add(
-                    coil3.network.okhttp.OkHttpNetworkFetcherFactory(
+                    imageNetworkFetcherFactory(
                         callFactory = { imageOkHttpClient },
                         cacheStrategy = {
                             StaleWhileRevalidateCacheStrategy(
@@ -150,9 +163,17 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                     totalRamMb <= 3072 -> 0.20
                     else -> 0.25
                 }
-                MemoryCache.Builder()
-                    .maxSizePercent(context, cachePercent)
-                    .build()
+                // maxSizePercent takes the share of largeMemoryClass under largeHeap (512 MB on
+                // 1 GB TVs, ~77 MB of bitmaps), so when MemoryBudget sizes from a smaller heap on
+                // such a TV the cache takes its share from that heap too.
+                val budgetHeapBytes = MemoryBudget.heapMb * 1024L * 1024L
+                val builder = MemoryCache.Builder()
+                if (budgetHeapBytes < Runtime.getRuntime().maxMemory()) {
+                    builder.maxSizeBytes((budgetHeapBytes * cachePercent).toLong())
+                } else {
+                    builder.maxSizePercent(context, cachePercent)
+                }
+                builder.build()
             }
             .diskCache {
                 DiskCache.Builder()

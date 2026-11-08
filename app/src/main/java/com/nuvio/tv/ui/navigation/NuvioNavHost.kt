@@ -1,6 +1,12 @@
 package com.nuvio.tv.ui.navigation
 
 import com.nuvio.tv.ui.theme.NuvioMotion
+import com.nuvio.tv.ui.components.PlaybackAvailabilityProvider
+import com.nuvio.tv.ui.components.LocalPlaybackAvailability
+import com.nuvio.tv.ui.components.canStream
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.R
 
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.EnterTransition
@@ -8,16 +14,20 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.party.PartyMedia
 import com.nuvio.tv.domain.model.ExperienceMode
+import com.nuvio.tv.data.mediaserver.ServerCatalog
 import com.nuvio.tv.ui.screens.CatalogSeeAllScreen
 import com.nuvio.tv.ui.screens.ExperienceModeSelectionScreen
 import com.nuvio.tv.ui.screens.LayoutSelectionScreen
@@ -29,6 +39,8 @@ import com.nuvio.tv.ui.screens.library.LibraryScreen
 import com.nuvio.tv.ui.screens.player.PlayerExitReason
 import com.nuvio.tv.ui.screens.player.PlayerScreen
 import com.nuvio.tv.ui.screens.player.PostPlayRecommendation
+import com.nuvio.tv.ui.screens.player.playerBackOpensCurrentEpisodeStreams
+import com.nuvio.tv.ui.screens.party.PartyScreen
 import com.nuvio.tv.ui.screens.plugin.PluginScreen
 import com.nuvio.tv.ui.screens.search.DiscoverScreen
 import com.nuvio.tv.ui.screens.search.SearchScreen
@@ -56,12 +68,51 @@ fun NuvioNavHost(
     startDestination: String = Screen.Home.route,
     hideBuiltInHeaders: Boolean = false
 ) {
+    PlaybackAvailabilityProvider {
+        // The NavController keeps its back stack ViewModels in the store of the owner it is
+        // composed under, so use the session store when MainActivity provides one.
+        val navViewModelStoreOwner = LocalNavViewModelStoreOwner.current
+            ?: checkNotNull(LocalViewModelStoreOwner.current)
+        CompositionLocalProvider(LocalViewModelStoreOwner provides navViewModelStoreOwner) {
+            PlaybackNavHost(navController, startDestination, hideBuiltInHeaders)
+        }
+    }
+}
+
+@Composable
+private fun PlaybackNavHost(
+    navController: NavHostController,
+    startDestination: String,
+    hideBuiltInHeaders: Boolean
+) {
+    val playbackAvailability = LocalPlaybackAvailability.current
+    val context = LocalContext.current
     fun isStreamToPlayer(from: String, to: String): Boolean {
         return from.startsWith("stream/") && to.startsWith("player/")
     }
 
     fun isPlayerToStream(from: String, to: String): Boolean {
         return from.startsWith("player/") && to.startsWith("stream/")
+    }
+
+    fun openPartyMedia(media: PartyMedia) {
+        if (navController.currentDestination?.route?.startsWith("player/") == true) navController.popBackStack()
+        navController.navigate(
+            Screen.Stream.createRoute(
+                videoId = media.videoId ?: media.metaId,
+                contentType = media.type,
+                title = media.title,
+                poster = media.poster,
+                backdrop = media.background,
+                logo = media.logo,
+                season = media.season,
+                episode = media.episode,
+                episodeName = media.episodeTitle,
+                contentId = media.metaId,
+                contentName = media.title,
+                manualSelection = true
+            )
+        )
     }
 
     NavHost(
@@ -205,15 +256,27 @@ fun NuvioNavHost(
                         )
                     )
                 },
-                onContinueWatchingClick = { item ->
+                onContinueWatchingClick = onContinueWatchingClick@{ item ->
+                    if (!playbackAvailability.canStream(item)) {
+                        Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
+                        return@onContinueWatchingClick
+                    }
                     navController.navigate(createContinueWatchingRoute(item))
                 },
-                onContinueWatchingStartFromBeginning = { item ->
+                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning@{ item ->
+                    if (!playbackAvailability.canStream(item)) {
+                        Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
+                        return@onContinueWatchingStartFromBeginning
+                    }
                     navController.navigate(
                         createContinueWatchingRoute(item, startFromBeginning = true)
                     )
                 },
-                onContinueWatchingPlayManually = { item ->
+                onContinueWatchingPlayManually = onContinueWatchingPlayManually@{ item ->
+                    if (!playbackAvailability.canStream(item)) {
+                        Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
+                        return@onContinueWatchingPlayManually
+                    }
                     navController.navigate(
                         createContinueWatchingRoute(item, manualSelection = true)
                     )
@@ -270,6 +333,10 @@ fun NuvioNavHost(
             )
         ) { backStackEntry ->
             val detailArgs = backStackEntry.arguments
+            if (ServerCatalog.isCollection(detailArgs?.getString("itemId"), detailArgs?.getString("itemType"))) {
+                ServerCatalogDestination(navController, backStackEntry)
+                return@composable
+            }
             val savedState = backStackEntry.savedStateHandle
             val returnToHomeOnBack = detailArgs
                 ?.getString("returnToHomeOnBack")
@@ -286,6 +353,7 @@ fun NuvioNavHost(
             val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
             val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
             val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
+            DetailChildHost(parentNavController = navController) { childNav ->
             MetaDetailsScreen(
                 returnFocusSeason = returnFocusSeason,
                 returnFocusEpisode = returnFocusEpisode,
@@ -310,10 +378,10 @@ fun NuvioNavHost(
                     }
                 },
                 onNavigateToCastDetail = { personId, personName, preferCrew ->
-                    navController.navigate(Screen.CastDetail.createRoute(personId, personName, preferCrew))
+                    childNav.navigate(Screen.CastDetail.createRoute(personId, personName, preferCrew))
                 },
                 onNavigateToTmdbEntityBrowse = { entityKind, entityId, entityName, sourceType ->
-                    navController.navigate(
+                    childNav.navigate(
                         Screen.TmdbEntityBrowse.createRoute(
                             entityKind = entityKind,
                             entityId = entityId,
@@ -323,7 +391,7 @@ fun NuvioNavHost(
                     )
                 },
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
-                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                    childNav.navigateNestedDetail(itemId, itemType, addonBaseUrl)
                 },
                 onPlayClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
                     navController.navigate(
@@ -394,6 +462,7 @@ fun NuvioNavHost(
                     )
                 }
             )
+            }
         }
 
         composable(
@@ -401,7 +470,10 @@ fun NuvioNavHost(
             arguments = listOf(
                 navArgument("videoId") { type = NavType.StringType },
                 navArgument("contentType") { type = NavType.StringType },
-                navArgument("title") { type = NavType.StringType },
+                navArgument("title") {
+                    type = NavType.StringType
+                    nullable = true
+                },
                 navArgument("poster") {
                     type = NavType.StringType
                     nullable = true
@@ -576,7 +648,9 @@ fun NuvioNavHost(
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
                                 contentLanguage = playbackInfo.contentLanguage,
-                                profileId = playbackInfo.profileId
+                                profileId = playbackInfo.profileId,
+                                audioDelayMs = playbackInfo.audioDelayMs,
+                                audioDelayLanguage = playbackInfo.audioDelayLanguage
                             )
                         )
                     }
@@ -617,7 +691,9 @@ fun NuvioNavHost(
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
                                 contentLanguage = playbackInfo.contentLanguage,
-                                profileId = playbackInfo.profileId
+                                profileId = playbackInfo.profileId,
+                                audioDelayMs = playbackInfo.audioDelayMs,
+                                audioDelayLanguage = playbackInfo.audioDelayLanguage
                             )
                         ) {
                             popUpTo(Screen.Stream.route) { inclusive = true }
@@ -631,7 +707,10 @@ fun NuvioNavHost(
             route = Screen.Player.route,
             arguments = listOf(
                 navArgument("streamUrl") { type = NavType.StringType },
-                navArgument("title") { type = NavType.StringType },
+                navArgument("title") {
+                    type = NavType.StringType
+                    nullable = true
+                },
                 navArgument("streamName") {
                     type = NavType.StringType
                     nullable = true
@@ -771,6 +850,16 @@ fun NuvioNavHost(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
+                },
+                navArgument("audioDelayMs") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("audioDelayLanguage") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 }
             )
         ) { backStackEntry ->
@@ -864,15 +953,32 @@ fun NuvioNavHost(
                     }
 
                     when {
+                        playbackCompleted && contentId.isNotBlank() -> {
+                            returnToDetail()
+                        }
                         episodeChangedInPlace && autoPlayEnabled -> {
                             // autoplay moved to next episode — skip Stream, go to detail
                             if (returnToDetailOnBack && contentType.equals("series", ignoreCase = true) && contentId.isNotBlank()) {
                                 returnToDetail()
+                            } else if (
+                                navController.previousBackStackEntry?.destination?.route
+                                    ?.startsWith("stream/") == true
+                            ) {
+                                // Binge group reuse keeps the first episode's manual Stream screen
+                                // below the player; drop it like the autoplay path does
+                                navController.popBackStack(Screen.Stream.route, inclusive = true)
+                                navController.currentBackStackEntry
+                                    ?.takeIf { it.destination.route?.startsWith("detail/") == true }
+                                    ?.savedStateHandle
+                                    ?.let { state ->
+                                        state["returnFocusSeason"] = focusSeason
+                                        state["returnFocusEpisode"] = focusEpisode
+                                    }
                             } else {
                                 navController.popBackStack()
                             }
                         }
-                        episodeChangedInPlace && !autoPlayEnabled -> {
+                        playerBackOpensCurrentEpisodeStreams(episodeChangedInPlace, autoPlayEnabled) -> {
                             // manual stream switch to next episode — go to Stream of current episode
                             val videoId = currentVideoId ?: args?.getString("videoId").orEmpty()
                             if (videoId.isNotBlank() && contentType.isNotBlank()) {
@@ -903,18 +1009,12 @@ fun NuvioNavHost(
                             }
                         }
                         else -> {
-                            // normal back — skip Stream screen if episode/movie was completed
-                            val skipStreamScreen = playbackCompleted && contentId.isNotBlank()
-                            if (skipStreamScreen) {
-                                returnToDetail()
-                            } else {
-                                val returnedToStream = popBackToStream()
-                                if (!returnedToStream) {
-                                    if (returnToDetailOnBack && contentType.equals("series", ignoreCase = true) && contentId.isNotBlank()) {
-                                        returnToDetail()
-                                    } else {
-                                        navController.popBackStack()
-                                    }
+                            val returnedToStream = popBackToStream()
+                            if (!returnedToStream) {
+                                if (returnToDetailOnBack && contentType.equals("series", ignoreCase = true) && contentId.isNotBlank()) {
+                                    returnToDetail()
+                                } else {
+                                    navController.popBackStack()
                                 }
                             }
                         }
@@ -1044,6 +1144,7 @@ fun NuvioNavHost(
                         playOnLoad = false
                     )
                 },
+                onOpenPartyMedia = ::openPartyMedia,
                 onPlaybackErrorBack = {
                     val returnedToStream = popBackToStream()
                     if (!returnedToStream) {
@@ -1136,6 +1237,9 @@ fun NuvioNavHost(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },
+                onNavigateToCatalogSeeAll = { catalogId, addonId, type ->
+                    navController.navigate(Screen.CatalogSeeAll.createRoute(catalogId, addonId, type))
+                },
                 onCloudPlaybackResolved = { info ->
                     val filename = info.filename ?: info.file.name
                     navController.navigate(
@@ -1163,7 +1267,6 @@ fun NuvioNavHost(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
-                onNavigateToTracking = { navController.navigate(Screen.Tracking.route) },
                 onNavigateToAddons = { navController.navigate(Screen.AddonManager.route) },
                 onNavigateToPlugins = { navController.navigate(Screen.Plugins.route) },
                 onNavigateToAuthQrSignIn = { navController.navigate(Screen.AuthQrSignIn.route) },
@@ -1173,7 +1276,24 @@ fun NuvioNavHost(
                 },
                 onNavigateToLicensesAttributions = {
                     navController.navigate(Screen.LicensesAttributions.route)
+                },
+                onNavigateToWatchParty = { navController.navigate(Screen.WatchParty.createRoute()) }
+            )
+        }
+
+        composable(
+            route = Screen.WatchParty.route,
+            arguments = listOf(
+                navArgument("code") {
+                    type = NavType.StringType
+                    defaultValue = ""
                 }
+            )
+        ) { backStackEntry ->
+            PartyScreen(
+                initialCode = backStackEntry.arguments?.getString("code").orEmpty(),
+                onBackPress = { navController.popBackStack() },
+                onWatch = ::openPartyMedia
             )
         }
 
@@ -1338,6 +1458,10 @@ fun NuvioNavHost(
             val addonId = backStackEntry.arguments?.getString("addonId") ?: ""
             val type = backStackEntry.arguments?.getString("type") ?: ""
             val fromSearch = backStackEntry.arguments?.getBoolean("fromSearch") ?: false
+            if (ServerCatalog.isServerAddonId(addonId) && !fromSearch) {
+                ServerCatalogDestination(navController, backStackEntry)
+                return@composable
+            }
 
             // When coming from search, get the SearchViewModel from the Search back stack entry
             // so we share the same data (existing results + pagination)

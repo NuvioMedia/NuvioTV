@@ -7,6 +7,10 @@ package com.nuvio.tv.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +49,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,10 +60,12 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.contentTextDirection
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.exp
+import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @Composable
 fun SynopsisDescription(
@@ -76,6 +83,7 @@ fun SynopsisDescription(
     var isTruncated by rememberSaveable(description, maxLines) { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val highlightInset = 12.dp
+    val readMoreLabel = stringResource(R.string.hero_synopsis_read_more)
 
     LaunchedEffect(isTruncated) {
         onTruncationChanged(isTruncated)
@@ -120,6 +128,7 @@ fun SynopsisDescription(
                         indication = null,
                         onClick = onShowFullDescription
                     )
+                    .semantics { role = Role.Button; contentDescription = readMoreLabel }
                     .padding(horizontal = highlightInset, vertical = 8.dp)
             } else {
                 Modifier
@@ -128,7 +137,9 @@ fun SynopsisDescription(
     ) {
         Text(
             text = description,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                textDirection = description.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextPrimary,
             maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
@@ -205,6 +216,7 @@ fun SynopsisOverlay(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -285,12 +297,16 @@ fun SynopsisOverlay(
                             }
                         }
                         .focusRequester(contentFocusRequester)
+                        .semantics { this.contentDescription = title }
                         .focusable()
+                        .semantics { contentDescription = title }
                         .verticalScroll(scrollState)
                 ) {
                     Text(
                         text = description,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            textDirection = description.contentTextDirection()
+                        ),
                         color = Color.White.copy(alpha = 0.92f),
                         modifier = Modifier
                             .fillMaxWidth()

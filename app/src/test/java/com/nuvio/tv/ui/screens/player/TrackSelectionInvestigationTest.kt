@@ -505,6 +505,7 @@ class TrackSelectionInvestigationTest {
             currentStreamName = "Test Stream",
             detectedFrameRate = 23.976f
         ))
+        every { controller.playbackTimeline } returns MutableStateFlow(PlaybackTimelineState())
         every { controller.currentAddonName } returns "Test Addon"
         every { controller.currentAddonLogo } returns "logo.png"
         every { controller.currentStreamDescription } returns "Description"

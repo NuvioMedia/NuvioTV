@@ -34,12 +34,12 @@ import com.nuvio.tv.core.server.TraktSourceSearchResultInfo
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
 import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
+import com.nuvio.tv.core.util.readAppLogoBytes
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.Collection
-import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.TmdbCollectionSource
@@ -94,7 +94,7 @@ class AddonManagerViewModel @Inject constructor(
     }
 
     private var server: AddonConfigServer? = null
-    private var logoBytes: ByteArray? = null
+    private val logoBytes: ByteArray? by lazy { context.readAppLogoBytes() }
     private var homeCatalogOrderKeys: List<String> = emptyList()
     private var disabledHomeCatalogKeys: Set<String> = emptySet()
     private var followAddonsOrderEnabled: Boolean = false
@@ -104,18 +104,10 @@ class AddonManagerViewModel @Inject constructor(
         observeInstalledAddons()
         observeCatalogPreferences()
         observeCollections()
-        loadLogoBytes()
     }
 
     fun requestAddonSyncNow() {
         startupSyncService.requestAddonSyncNow()
-    }
-
-    private fun loadLogoBytes() {
-        try {
-            val inputStream = context.resources.openRawResource(R.drawable.app_logo_wordmark)
-            logoBytes = inputStream.use { it.readBytes() }
-        } catch (_: Exception) { }
     }
 
     fun onInstallUrlChange(url: String) {
@@ -883,10 +875,6 @@ class AddonManagerViewModel @Inject constructor(
 
     private fun catalogKey(addonId: String, type: String, catalogId: String): String {
         return homeCatalogKey(addonId, type, catalogId)
-    }
-
-    private fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
-        return extra.any { extra -> extra.name.equals("search", ignoreCase = true) && extra.isRequired }
     }
 
     private data class QrCatalogEntry(

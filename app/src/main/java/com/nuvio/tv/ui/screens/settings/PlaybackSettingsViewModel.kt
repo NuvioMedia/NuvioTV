@@ -3,8 +3,13 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
+import com.nuvio.tv.data.local.LibassRenderScale
 import com.nuvio.tv.data.local.LibassRenderType
+import com.nuvio.tv.data.local.LibassRenderMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.DownmixLfeLevel
+import com.nuvio.tv.data.local.NightMode
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -20,13 +25,20 @@ import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleOrganizationMode
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
+import com.nuvio.tv.core.torrent.TorrentCacheClearResult
+import com.nuvio.tv.core.torrent.TorrentCacheSize
+import com.nuvio.tv.core.torrent.TorrentCacheState
+import com.nuvio.tv.core.torrent.TorrentProfile
+import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.core.torrent.TorrentSettingsData
+import com.nuvio.tv.core.torrent.TorrentState
 import com.nuvio.tv.data.local.VodCacheSizeMode
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -35,18 +47,27 @@ import javax.inject.Inject
 @HiltViewModel
 class PlaybackSettingsViewModel @Inject constructor(
     private val playerSettingsDataStore: PlayerSettingsDataStore,
+    private val deviceLocalPlayerPreferences: DeviceLocalPlayerPreferences,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
-    private val torrentSettings: TorrentSettings
+    private val torrentSettings: TorrentSettings,
+    private val torrentService: TorrentService
 ) : ViewModel() {
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
+    val transparentLetterbox: Flow<Boolean> = deviceLocalPlayerPreferences.transparentLetterbox
+    val releaseDecoderOnBackground: Flow<Boolean> = deviceLocalPlayerPreferences.releaseDecoderOnBackground
     val trailerSettings: Flow<TrailerSettings> = trailerSettingsDataStore.settings
     val torrentSettingsFlow: Flow<TorrentSettingsData> = torrentSettings.settings
+    val torrentCacheState: StateFlow<TorrentCacheState> = torrentService.cacheState
+    val torrentState: StateFlow<TorrentState> = torrentService.state
 
     fun setP2pEnabled(enabled: Boolean) = torrentSettings.setP2pEnabled(enabled)
     fun setHideTorrentStats(enabled: Boolean) = torrentSettings.setHideTorrentStats(enabled)
+    fun setTorrentProfile(profile: TorrentProfile) = torrentSettings.setTorrentProfile(profile)
+    fun setTorrentCacheSize(size: TorrentCacheSize) = torrentSettings.setCacheSize(size)
+    suspend fun clearTorrentCache(): TorrentCacheClearResult = torrentService.clearCache()
 
     val lastPlaybackDiagnostics: Flow<LastPlaybackDiagnostics> = playerSettingsDataStore.lastPlaybackDiagnostics
     val installedAddonNames: Flow<List<String>> = addonRepository.getInstalledAddons().map { addons ->
@@ -118,6 +139,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setMaintainOriginalAudioOnDownmix(enabled)
     }
 
+    suspend fun setDownmixLfeLevel(level: DownmixLfeLevel) {
+        playerSettingsDataStore.setDownmixLfeLevel(level)
+    }
+
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setTunnelingEnabled(enabled)
     }
@@ -128,6 +153,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSkipSilence(enabled: Boolean) {
         playerSettingsDataStore.setSkipSilence(enabled)
+    }
+
+    suspend fun setNightMode(mode: NightMode) {
+        playerSettingsDataStore.setNightMode(mode)
     }
 
     suspend fun setRememberAudioDelayPerDevice(enabled: Boolean) {
@@ -156,6 +185,14 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setOsdClockEnabled(enabled: Boolean) {
         playerSettingsDataStore.setOsdClockEnabled(enabled)
+    }
+
+    suspend fun setTransparentLetterbox(enabled: Boolean) {
+        deviceLocalPlayerPreferences.setTransparentLetterbox(enabled)
+    }
+
+    suspend fun setReleaseDecoderOnBackground(enabled: Boolean) {
+        deviceLocalPlayerPreferences.setReleaseDecoderOnBackground(enabled)
     }
 
     suspend fun setSkipIntroEnabled(enabled: Boolean) {
@@ -218,12 +255,24 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setStripHdr10PlusSei(enabled)
     }
 
+    suspend fun setExoChaptersEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setExoChaptersEnabled(enabled)
+    }
+
     suspend fun setUseLibass(enabled: Boolean) {
         playerSettingsDataStore.setUseLibass(enabled)
     }
 
     suspend fun setLibassRenderType(renderType: LibassRenderType) {
         playerSettingsDataStore.setLibassRenderType(renderType)
+    }
+
+    suspend fun setLibassRenderScale(scale: LibassRenderScale) {
+        playerSettingsDataStore.setLibassRenderScale(scale)
+    }
+
+    suspend fun setLibassRenderMode(mode: LibassRenderMode) {
+        playerSettingsDataStore.setLibassRenderMode(mode)
     }
 
     suspend fun setSubtitlePreferredLanguage(language: String) {
@@ -276,6 +325,22 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSubtitleOutlineWidth(width: Int) {
         playerSettingsDataStore.setSubtitleOutlineWidth(width)
+    }
+
+    suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleHdrStyleEnabled(enabled)
+    }
+
+    suspend fun setSubtitleHdrTextColor(color: Int) {
+        playerSettingsDataStore.setSubtitleHdrTextColor(color)
+    }
+
+    suspend fun setSubtitleHdrBrightness(brightness: Int) {
+        playerSettingsDataStore.setSubtitleHdrBrightness(brightness)
+    }
+
+    suspend fun setSubtitleHdrDimPlayerControls(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleHdrDimPlayerControls(enabled)
     }
 
     suspend fun setSubtitleOrganizationMode(mode: SubtitleOrganizationMode) {
@@ -366,10 +431,6 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setParallelNetworkEnabled(enabled: Boolean) {
         playerSettingsDataStore.setParallelNetworkEnabled(enabled)
-    }
-
-    suspend fun setEnableHttp2(enabled: Boolean) {
-        playerSettingsDataStore.setEnableHttp2(enabled)
     }
 
     suspend fun setAllowLargeTargetBuffer(enabled: Boolean) {
@@ -490,6 +551,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setStreamAutoPlayTimeoutSeconds(seconds: Int) {
         playerSettingsDataStore.setStreamAutoPlayTimeoutSeconds(seconds)
+    }
+
+    suspend fun setPreloadNextEpisodeSources(enabled: Boolean) {
+        playerSettingsDataStore.setPreloadNextEpisodeSources(enabled)
     }
 
     suspend fun setStillWatchingEnabled(enabled: Boolean) {

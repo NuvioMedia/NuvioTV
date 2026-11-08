@@ -9,10 +9,11 @@ data class TrackingExternalIds(
     val mal: Long? = null,
     val anidb: Long? = null,
     val anilist: Long? = null,
-    val kitsu: Long? = null
+    val kitsu: Long? = null,
+    val mdblist: String? = null
 ) {
     val hasAny: Boolean
-        get() = listOf(imdb, tmdb, tvdb, trakt, simkl, mal, anidb, anilist, kitsu).any { it != null }
+        get() = listOf(imdb, tmdb, tvdb, trakt, simkl, mal, anidb, anilist, kitsu, mdblist).any { it != null }
 
     fun mergeMissing(other: TrackingExternalIds): TrackingExternalIds = TrackingExternalIds(
         imdb = imdb ?: other.imdb,
@@ -23,7 +24,8 @@ data class TrackingExternalIds(
         mal = mal ?: other.mal,
         anidb = anidb ?: other.anidb,
         anilist = anilist ?: other.anilist,
-        kitsu = kitsu ?: other.kitsu
+        kitsu = kitsu ?: other.kitsu,
+        mdblist = mdblist ?: other.mdblist
     )
 }
 
@@ -38,7 +40,8 @@ data class TrackingEpisode(
     val number: Int,
     val title: String? = null,
     val tvdbId: Long? = null,
-    val usesTvdbSeasonMapping: Boolean = false
+    val usesTvdbSeasonMapping: Boolean = false,
+    val tmdbId: Long? = null
 )
 
 data class TrackingCatalogReference(
@@ -73,6 +76,7 @@ data class TrackingMediaReference(
                     ?: ids.anidb?.let { "anidb:$it" }
                     ?: ids.anilist?.let { "anilist:$it" }
                     ?: ids.kitsu?.let { "kitsu:$it" }
+                    ?: ids.mdblist?.let { "mdblist:$it" }
                     ?: "title:${title.orEmpty().trim().lowercase()}:${year ?: 0}"
             )
         }
@@ -96,6 +100,7 @@ fun parseTrackingExternalIds(rawValue: String?): TrackingExternalIds {
         "anidb" -> TrackingExternalIds(anidb = value.toLongOrNull())
         "anilist" -> TrackingExternalIds(anilist = value.toLongOrNull())
         "kitsu" -> TrackingExternalIds(kitsu = value.toLongOrNull())
+        "mdblist" -> TrackingExternalIds(mdblist = value.takeIf(String::isNotBlank))
         else -> TrackingExternalIds(trakt = full.toLongOrNull())
     }
 }

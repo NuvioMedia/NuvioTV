@@ -8,6 +8,27 @@ import org.junit.Test
 
 class TrackingSourcesTest {
     @Test
+    fun `MDBList is available independently for watch and library sources`() {
+        val connected = setOf(TrackingProviderId.TRAKT, TrackingProviderId.SIMKL, TrackingProviderId.MDBLIST)
+        assertEquals(WatchProgressSource.MDBLIST, WatchProgressSource.fromStorage("MDBLIST"))
+        assertEquals(TrackingProviderId.MDBLIST, WatchProgressSource.MDBLIST.providerId)
+        assertEquals(
+            listOf(WatchProgressSource.NUVIO_SYNC, WatchProgressSource.TRAKT, WatchProgressSource.SIMKL, WatchProgressSource.MDBLIST),
+            availableWatchProgressSources(connected)
+        )
+        assertEquals(
+            listOf(LibrarySourceMode.LOCAL, LibrarySourceMode.TRAKT, LibrarySourceMode.SIMKL, LibrarySourceMode.MDBLIST),
+            availableLibrarySourceModes(connected)
+        )
+        val selection = TrackingSourceSelection(WatchProgressSource.MDBLIST, LibrarySourceMode.TRAKT)
+        assertEquals(selection, effectiveTrackingSourceSelection(selection, connected))
+        assertEquals(
+            selection.copy(watchProgressSource = WatchProgressSource.NUVIO_SYNC),
+            effectiveTrackingSourceSelection(selection, connected - TrackingProviderId.MDBLIST)
+        )
+    }
+
+    @Test
     fun `legacy source names retain their stored meaning`() {
         assertEquals(WatchProgressSource.TRAKT, WatchProgressSource.fromStorage("TRAKT"))
         assertEquals(WatchProgressSource.NUVIO_SYNC, WatchProgressSource.fromStorage("NUVIO_SYNC"))

@@ -2,7 +2,9 @@
 
 package com.nuvio.tv.ui.screens.account
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.contentTextDirection
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -266,7 +268,7 @@ private fun SyncStatChip(label: String, value: String) {
 @Composable
 private fun ProfileSyncRow(profile: ProfileSyncStats) {
     val color = runCatching { Color(android.graphics.Color.parseColor(profile.avatarColorHex)) }
-        .getOrDefault(Color(0xFF1E88E5))
+        .getOrDefault(NuvioPrimitives.blue500)
     val rowShape = RoundedCornerShape(6.dp)
     var isFocused by remember { mutableStateOf(false) }
 
@@ -306,7 +308,9 @@ private fun ProfileSyncRow(profile: ProfileSyncStats) {
 
         Text(
             text = profile.profileName,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodySmall.copy(
+                textDirection = profile.profileName.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextPrimary,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -464,8 +468,8 @@ private fun SignOutSettingsButton(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.colors(
-            containerColor = Color(0xFFC62828).copy(alpha = 0.12f),
-            focusedContainerColor = Color(0xFFC62828).copy(alpha = 0.25f)
+            containerColor = NuvioPrimitives.red600.copy(alpha = 0.12f),
+            focusedContainerColor = NuvioPrimitives.red600.copy(alpha = 0.25f)
         ),
         border = CardDefaults.border(
             focusedBorder = Border(

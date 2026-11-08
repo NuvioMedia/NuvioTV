@@ -81,6 +81,23 @@ class StreamBadgeConfigServerTest {
     }
 
     @Test
+    fun `keeps settings the web page does not send`() {
+        var saved: StreamBadgeSettings? = null
+        val server = StreamBadgeConfigServer(
+            currentSettingsProvider = { StreamBadgeSettings(showAddonLogo = false, showInPlayer = true) },
+            onSettingsChanged = { saved = it }
+        )
+        val body = Gson().toJson(mapOf("showFileSizeBadges" to false))
+
+        val response = server.serve(FakePostSession(body))
+
+        assertEquals(NanoHTTPD.Response.Status.OK, response.status)
+        assertEquals(true, saved?.showInPlayer)
+        assertEquals(false, saved?.showAddonLogo)
+        assertEquals(false, saved?.showFileSizeBadges)
+    }
+
+    @Test
     fun `normalizes badge rules with a selected source through settings payload`() {
         var saved: StreamBadgeSettings? = null
         val rules = StreamBadgeRules(

@@ -21,7 +21,10 @@ import com.nuvio.tv.updater.UpdateChannel
 import com.nuvio.tv.updater.UpdateViewModel
 
 @Composable
-internal fun UpdateChannelSettings(initialFocusRequester: FocusRequester?) {
+internal fun UpdateChannelSettings(
+    initialFocusRequester: FocusRequester?,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val viewModel: UpdateViewModel = hiltViewModel(context as ComponentActivity)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -36,11 +39,10 @@ internal fun UpdateChannelSettings(initialFocusRequester: FocusRequester?) {
         subtitle = stringResource(R.string.about_update_channel_subtitle),
         value = channelName,
         onClick = { showChannelDialog = true },
-        modifier = if (initialFocusRequester != null) {
-            Modifier.focusRequester(initialFocusRequester)
-        } else {
-            Modifier
-        }
+        modifier = modifier.then(
+            if (initialFocusRequester != null) Modifier.focusRequester(initialFocusRequester)
+            else Modifier
+        )
     )
 
     SettingsToggleRow(
@@ -51,6 +53,27 @@ internal fun UpdateChannelSettings(initialFocusRequester: FocusRequester?) {
             viewModel.setUpdateBannerEnabled(!state.updateBannerEnabled)
         }
     )
+
+    if (state.autoInstallSupported) {
+        SettingsToggleRow(
+            title = stringResource(R.string.about_update_auto_install_title),
+            subtitle = stringResource(R.string.about_update_auto_install_subtitle),
+            checked = state.autoInstallEnabled,
+            onToggle = {
+                viewModel.setAutoInstallEnabled(!state.autoInstallEnabled)
+            }
+        )
+        if (state.autoInstallEnabled) {
+            SettingsToggleRow(
+                title = stringResource(R.string.about_update_auto_install_notice_title),
+                subtitle = stringResource(R.string.about_update_auto_install_notice_subtitle),
+                checked = state.autoInstallNoticeEnabled,
+                onToggle = {
+                    viewModel.setAutoInstallNoticeEnabled(!state.autoInstallNoticeEnabled)
+                }
+            )
+        }
+    }
 
     SettingsActionRow(
         title = stringResource(R.string.about_check_updates),

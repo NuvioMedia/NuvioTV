@@ -15,6 +15,13 @@ class DeepLinkParserTest {
     }
 
     @Test
+    fun parsesPartyInviteDeepLink() {
+        assertEquals(AppDeepLink.Party("ABC234"), DeepLinkParser.parse("nuvio://party/abc234"))
+        assertEquals(AppDeepLink.Party("ABC234"), DeepLinkParser.parse("nuvio://party?code=ABC-234"))
+        assertNull(DeepLinkParser.parse("nuvio://party/ABC10"))
+    }
+
+    @Test
     fun parsesAddonInstallDeepLink() {
         assertEquals(
             AppDeepLink.AddonInstall("https://free.nebulapro.xyz/sports/i/free/manifest.json"),

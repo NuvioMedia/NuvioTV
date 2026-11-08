@@ -84,6 +84,8 @@ import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -149,7 +151,8 @@ fun NuvioTextField(
                     }
                 ),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = NuvioTheme.colors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary,
+                                            textDirection = TextDirection.Content
                 ),
                 cursorBrush = SolidColor(if (isEditing) NuvioTheme.colors.Primary else Color.Transparent),
                 decorationBox = { innerTextField ->
@@ -194,6 +197,16 @@ fun NuvioButton(
         shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         content = { content() }
     )
+}
+
+fun collectionSourceKeys(sources: List<CollectionSource>): List<String> {
+    val seen = HashMap<String, Int>()
+    return sources.map { source ->
+        val key = collectionSourceKey(source)
+        val occurrence = seen.getOrDefault(key, 0)
+        seen[key] = occurrence + 1
+        if (occurrence == 0) key else "$key#$occurrence"
+    }
 }
 
 fun collectionSourceKey(source: CollectionSource): String {

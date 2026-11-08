@@ -7,6 +7,7 @@ import com.nuvio.tv.core.cloud.CloudLibraryPlaybackProgressStore
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackSessionStore
 import com.nuvio.tv.core.cloud.CloudLibraryRepository
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
@@ -15,13 +16,16 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
+import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.ui.screens.player.PlayerNextEpisodeRules
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,6 +43,14 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+
+internal fun PlayerSettings.shouldSendSkipSegments(): Boolean = externalPlayerSendSkipSegments
+
+internal fun externalSkipIntervals(
+    intervals: List<SkipInterval>
+): List<SkipInterval> = intervals.map {
+    if (it.type == "movie-credits") it.copy(type = "end-credits") else it
+}
 
 /**
  * Metadata about the content being played in an external player.
@@ -112,7 +124,8 @@ data class ExternalNextEpisodeSnapshot(
     val metadataResolved: Boolean,
     val nextVideoId: String? = null,
     val nextSeason: Int? = null,
-    val nextEpisode: Int? = null
+    val nextEpisode: Int? = null,
+    val shufflePlayback: Boolean = false
 ) {
     val hasNextEpisode: Boolean?
         get() = if (!metadataResolved) null else nextVideoId != null && nextEpisode != null
@@ -174,12 +187,14 @@ class ExternalPlaybackTracker @Inject constructor(
     private val watchProgressRepository: WatchProgressRepository,
     private val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
     private val metaRepository: MetaRepository,
+    private val episodeShufflePlayback: EpisodeShufflePlayback,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val skipIntroRepository: SkipIntroRepository,
     private val cloudLibraryRepository: CloudLibraryRepository,
     private val cloudPlaybackProgressStore: CloudLibraryPlaybackProgressStore,
     private val cloudPlaybackSessionStore: CloudLibraryPlaybackSessionStore,
-    private val profileManager: com.nuvio.tv.core.profile.ProfileManager
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager,
+    private val torrentService: TorrentService
 ) {
     companion object {
         private const val TAG = "ExtPlaybackTracker"
@@ -242,6 +257,10 @@ class ExternalPlaybackTracker @Inject constructor(
     private var nextEpisodeSnapshot: ExternalNextEpisodeSnapshot = ExternalNextEpisodeSnapshot.Unknown
     private var autoNextEnabledForPendingLaunch: Boolean? = null
     private var pendingCloudSessionToken: String? = null
+    @Volatile
+    private var ownsTorrentStream = false
+    val isOwningTorrentStream: Boolean get() = ownsTorrentStream
+    private var pendingOwnsTorrentStream = false
 
     private val autoPlayNextNavigationEvents = ExternalAutoNextNavigationEvents(
         maxAgeMs = AUTO_NEXT_OVERLAY_TIMEOUT_MS
@@ -373,8 +392,11 @@ class ExternalPlaybackTracker @Inject constructor(
         autoLaunch: Boolean = false,
         nextEpisodeSnapshot: ExternalNextEpisodeSnapshot? = null,
         cloudSessionToken: String? = null,
+        ownsTorrentStream: Boolean = false,
         context: Context
     ): Boolean {
+        this.ownsTorrentStream = false
+        this.pendingOwnsTorrentStream = ownsTorrentStream
         if (shouldCancelPendingAutoLaunch(autoLaunch)) {
             Log.d(AUTO_NEXT_TAG, "auto launch cancelled before tracker setup")
             return false
@@ -415,7 +437,7 @@ class ExternalPlaybackTracker @Inject constructor(
                 false
             } else {
                 withContext(Dispatchers.Main.immediate) {
-                    doLaunch(
+                    val intentSent = doLaunch(
                         url = url,
                         title = title,
                         headers = headers,
@@ -425,6 +447,9 @@ class ExternalPlaybackTracker @Inject constructor(
                         skipSegmentsJson = skipSegmentsJson,
                         context = context
                     )
+                    if (intentSent) this@ExternalPlaybackTracker.ownsTorrentStream =
+                        pendingOwnsTorrentStream
+                    intentSent
                 }
             }
         }
@@ -444,20 +469,21 @@ class ExternalPlaybackTracker @Inject constructor(
     /**
      * Resolves intro/outro skip segments for [metadata] via the same repository the internal
      * player uses, and serializes them to a JSON array string for the external player. Mirrors
-     * the id-format handling in `fetchSkipIntervals`. Returns null when skip is disabled, the
+     * the id-format handling in `fetchSkipIntervals`. Returns null when forwarding is disabled, the
      * content can't be identified, or nothing is found.
      */
     private suspend fun resolveSkipSegmentsJson(metadata: ExternalPlaybackMetadata): String? {
         if (metadata.contentType.equals("cloud", ignoreCase = true)) return null
-        // Opt-in via the External Player setting (not the internal player's "Skip Intro", which is
-        // greyed out while external player is selected).
-        if (!playerSettingsDataStore.playerSettings.first().externalPlayerSendSkipSegments) return null
+        val settings = playerSettingsDataStore.playerSettings.first()
+        if (!settings.shouldSendSkipSegments()) return null
 
         // videoId carries the episode-specific id (e.g. mal:/kitsu:/imdb); fall back to contentId.
         val effectiveId = metadata.videoId.takeIf { it.isNotBlank() } ?: metadata.contentId
 
         val intervals = withTimeoutOrNull(SKIP_RESOLVE_TIMEOUT_MS) {
             when {
+                metadata.contentType.equals("movie", ignoreCase = true) ->
+                    skipIntroRepository.getMovieSkipIntervals(metadata.contentId, effectiveId)
                 effectiveId.startsWith("mal:") -> {
                     val parts = effectiveId.split(":")
                     val malId = parts.getOrNull(1) ?: return@withTimeoutOrNull null
@@ -483,8 +509,10 @@ class ExternalPlaybackTracker @Inject constructor(
         }
         if (intervals.isNullOrEmpty()) return null
 
+        val forwardedIntervals = externalSkipIntervals(intervals)
+
         val arr = org.json.JSONArray()
-        intervals.forEach { iv ->
+        forwardedIntervals.forEach { iv ->
             arr.put(
                 org.json.JSONObject()
                     .put("type", iv.type)
@@ -761,6 +789,7 @@ class ExternalPlaybackTracker @Inject constructor(
             .putBoolean("autoNextEnabled", autoNextEnabled == true)
             .putBoolean("nextEpisodeSnapshotPresent", true)
             .putBoolean("nextEpisodeMetadataResolved", snapshot.metadataResolved)
+            .putBoolean("nextEpisodeShufflePlayback", snapshot.shufflePlayback)
             .putString("nextEpisodeVideoId", snapshot.nextVideoId)
             .putInt("nextEpisodeSeason", snapshot.nextSeason ?: Int.MIN_VALUE)
             .putInt("nextEpisodeNumber", snapshot.nextEpisode ?: Int.MIN_VALUE)
@@ -781,6 +810,7 @@ class ExternalPlaybackTracker @Inject constructor(
         return ExternalNextEpisodeSnapshot(
             metadataResolved = p.getBoolean("nextEpisodeMetadataResolved", false),
             nextVideoId = p.getString("nextEpisodeVideoId", null),
+            shufflePlayback = p.getBoolean("nextEpisodeShufflePlayback", false),
             nextSeason = p.getInt("nextEpisodeSeason", Int.MIN_VALUE)
                 .takeIf { it != Int.MIN_VALUE },
             nextEpisode = p.getInt("nextEpisodeNumber", Int.MIN_VALUE)
@@ -840,7 +870,8 @@ class ExternalPlaybackTracker @Inject constructor(
                 if (refreshedSnapshot.metadataResolved) {
                     // Keep a playable successor captured from the screen's complete episode list
                     // if a background addon refresh returns a thinner list with no successor.
-                    val keepLoadedSuccessor = nextEpisodeSnapshot.hasNextEpisode == true &&
+                    val keepLoadedSuccessor = !refreshedSnapshot.shufflePlayback &&
+                        nextEpisodeSnapshot.hasNextEpisode == true &&
                         refreshedSnapshot.hasNextEpisode == false
                     if (!keepLoadedSuccessor) {
                         nextEpisodeSnapshot = refreshedSnapshot
@@ -877,9 +908,25 @@ class ExternalPlaybackTracker @Inject constructor(
         }
     }
 
-    private suspend fun resolveNextEpisodeSnapshot(
-        metadata: ExternalPlaybackMetadata
+    private var loadedNextEpisodeMeta: Pair<ExternalPlaybackMetadata, List<Video>>? = null
+
+    suspend fun resolveNextEpisodeSnapshot(
+        metadata: ExternalPlaybackMetadata,
+        videos: List<Video>,
+        preferredVideoId: String? = null
     ): ExternalNextEpisodeSnapshot {
+        loadedNextEpisodeMeta = metadata to videos
+        return episodeShufflePlayback.externalSnapshot(metadata, videos, preferredVideoId)
+    }
+
+    private suspend fun resolveNextEpisodeSnapshot(
+        metadata: ExternalPlaybackMetadata,
+        preferredVideoId: String? = null
+    ): ExternalNextEpisodeSnapshot {
+        val loaded = loadedNextEpisodeMeta?.takeIf { it.first == metadata }?.second
+        if (loaded != null && episodeShufflePlayback.isEnabled(metadata)) {
+            return resolveNextEpisodeSnapshot(metadata, loaded, preferredVideoId)
+        }
         val result = withTimeoutOrNull(META_FETCH_TIMEOUT_MS) {
             metaRepository
                 .getMetaFromAllAddons(type = metadata.contentType, id = metadata.contentId)
@@ -887,11 +934,7 @@ class ExternalPlaybackTracker @Inject constructor(
         }
         val meta = (result as? NetworkResult.Success)?.data
             ?: return ExternalNextEpisodeSnapshot.Unknown
-        return resolveExternalNextEpisodeSnapshot(
-            videos = meta.videos,
-            currentSeason = metadata.season,
-            currentEpisode = metadata.episode
-        )
+        return resolveNextEpisodeSnapshot(metadata, meta.videos, preferredVideoId)
     }
 
     // True on a natural end (end_by != "user"), or for players without end_by once the
@@ -964,6 +1007,15 @@ class ExternalPlaybackTracker @Inject constructor(
                     withTimeoutOrNull(NEXT_EPISODE_PREFETCH_RETURN_WAIT_MS) { prefetchJob.join() }
                     if (prefetchJob.isActive) prefetchJob.cancel()
                 }
+            }
+            if (nextEpisodeSnapshot.shufflePlayback || episodeShufflePlayback.isEnabled(metadata)) {
+                val loaded = loadedNextEpisodeMeta?.takeIf { it.first == metadata }?.second
+                nextEpisodeSnapshot = if (loaded != null) {
+                    resolveNextEpisodeSnapshot(metadata, loaded, nextEpisodeSnapshot.nextVideoId)
+                } else {
+                    resolveNextEpisodeSnapshot(metadata, preferredVideoId = nextEpisodeSnapshot.nextVideoId)
+                }
+                persistAutoNextState(nextEpisodeSnapshot, autoPlayNextEnabled)
             }
             val resolvedSnapshot = nextEpisodeSnapshot.takeIf { it.metadataResolved }
                 ?: resolveNextEpisodeSnapshot(metadata).also { refreshed ->
@@ -1298,6 +1350,10 @@ class ExternalPlaybackTracker @Inject constructor(
     fun stopTracking() {
         zidooMonitorJob?.cancel()
         zidooMonitorJob = null
+        if (ownsTorrentStream) {
+            ownsTorrentStream = false
+            torrentService.stopStream()
+        }
         awaitingExternalPlayerResult = false
         pendingMetadata = null
         pendingCloudSessionToken = null
@@ -1402,7 +1458,11 @@ class ExternalPlaybackTracker @Inject constructor(
             Log.d(TAG, "Saving progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +
                 "content=${metadata.contentId}, video=${metadata.videoId}, " +
                 "progressPct=${progress.progressPercentage}, isInProgress=${progress.isInProgress()}")
-            watchProgressRepository.saveProgress(progress, metadata.profileId)
+            try {
+                watchProgressRepository.saveProgress(progress, metadata.profileId)
+            } catch (error: IOException) {
+                Log.w(TAG, "Watch progress could not be saved", error)
+            }
 
             val progressPercent = if (effectiveDuration > 0L) {
                 (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)

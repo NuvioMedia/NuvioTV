@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens
 
+import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,6 +78,7 @@ fun CatalogSeeAllScreen(
     addonId: String,
     type: String,
     searchViewModel: SearchViewModel? = null,
+    serverCatalog: ServerCatalogViewModel? = null,
     viewModel: HomeViewModel = hiltViewModel(),
     posterOptionsViewModel: com.nuvio.tv.ui.components.posteroptions.PosterOptionsViewModel = hiltViewModel(),
     onNavigateToDetail: (String, String, String) -> Unit,
@@ -96,7 +99,7 @@ fun CatalogSeeAllScreen(
     BackHandler { onBackPress() }
 
     val isSearchMode = searchViewModel != null
-    val catalogKey = "${addonId}_${type}_${catalogId}"
+    val catalogKey = catalogRowLegacyKey(addonId, type, catalogId)
 
     // In search mode, get the catalog row from SearchViewModel's existing results.
     // Otherwise fall back to HomeViewModel's fullCatalogRows (home screen catalogs).
@@ -109,10 +112,16 @@ fun CatalogSeeAllScreen(
     val homeCatalogRow = fullCatalogRows.find {
         it.legacyKey() == catalogKey
     }
-    val catalogRow = if (isSearchMode) searchCatalogRow else homeCatalogRow
+    val serverRow = serverCatalog?.row?.collectAsState()
+    val serverFailed = serverCatalog?.failed?.collectAsState()
+    val catalogRow = when {
+        serverCatalog != null -> serverRow?.value
+        isSearchMode -> searchCatalogRow
+        else -> homeCatalogRow
+    }
 
     LaunchedEffect(catalogKey, isSearchMode, catalogRow != null) {
-        if (!isSearchMode && catalogRow == null) {
+        if (!isSearchMode && serverCatalog == null && catalogRow == null) {
             viewModel.requestLazyCatalogLoad(catalogKey)
         }
     }
@@ -145,7 +154,9 @@ fun CatalogSeeAllScreen(
                 if (total > 0 && lastVisible >= total - 10) {
                     val row = catalogRow
                     if (row != null && row.hasMore && !row.isLoading) {
-                        if (isSearchMode) {
+                        if (serverCatalog != null) {
+                            serverCatalog.loadMore()
+                        } else if (isSearchMode) {
                             searchViewModel.onEvent(
                                 SearchEvent.LoadMoreCatalog(row.catalogId, row.addonId, row.apiType)
                             )
@@ -219,7 +230,7 @@ fun CatalogSeeAllScreen(
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
         val hasItems = catalogRow?.items?.isNotEmpty() == true
-        val isCatalogLoading = catalogRow == null || catalogRow.isLoading
+        val isCatalogLoading = if (catalogRow == null) serverFailed?.value != true else catalogRow.isLoading
 
         if (hasItems) {
             val seeAllItemKeys = remember(catalogRow?.items) {
@@ -228,7 +239,9 @@ fun CatalogSeeAllScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+                    columns = GridCells.Adaptive(
+                        minSize = if (com.nuvio.tv.ui.components.LocalLandscapePosterMode.current) posterCardStyle.height else posterCardStyle.width
+                    ),
                     modifier = Modifier.dpadRepeatThrottle(),
                     contentPadding = PaddingValues(
                         start = NuvioTheme.spacing.xxxl,
@@ -291,15 +304,18 @@ fun CatalogSeeAllScreen(
                                 androidx.compose.foundation.shape.RoundedCornerShape(posterCardStyle.cornerRadius)
                             }
                             val cardDepthStyle = com.nuvio.tv.ui.components.LocalCardDepthStyle.current
+                            val globalLandscape = com.nuvio.tv.ui.components.LocalLandscapePosterMode.current
                             Column(
                                 modifier = Modifier
-                                    .width(posterCardStyle.width)
+                                    .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
                             ) {
                                 androidx.tv.material3.Card(
                                     onClick = {},
                                     modifier = Modifier
-                                        .width(posterCardStyle.width)
-                                        .height(posterCardStyle.height)
+                                        .then(
+                                            if (globalLandscape) Modifier.fillMaxWidth().aspectRatio(com.nuvio.tv.domain.model.PosterShape.LANDSCAPE.aspectRatio())
+                                            else Modifier.width(posterCardStyle.width).height(posterCardStyle.height)
+                                        )
                                         .then(Modifier.focusProperties { canFocus = false }),
                                     shape = androidx.tv.material3.CardDefaults.shape(shape = cardShape),
                                     colors = androidx.tv.material3.CardDefaults.colors(
@@ -325,7 +341,7 @@ fun CatalogSeeAllScreen(
                                 }
                                 Spacer(
                                     modifier = Modifier
-                                        .width(posterCardStyle.width)
+                                        .then(if (globalLandscape) Modifier.fillMaxWidth() else Modifier.width(posterCardStyle.width))
                                         .padding(top = NuvioTheme.spacing.sm)
                                         .height(MaterialTheme.typography.titleMedium.lineHeight.value.dp)
                                 )

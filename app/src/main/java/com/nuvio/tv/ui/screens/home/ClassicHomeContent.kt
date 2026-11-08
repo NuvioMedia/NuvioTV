@@ -24,7 +24,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -63,10 +62,13 @@ import androidx.compose.ui.Alignment
 import com.nuvio.tv.ui.components.CatalogRowSection
 import com.nuvio.tv.ui.components.CollectionRowSection
 import com.nuvio.tv.ui.components.ContinueWatchingSection
+import com.nuvio.tv.ui.components.LocalLandscapePosterMode
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.HeroCarouselBackdrop
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.LocalStartupSplashEnabled
 import com.nuvio.tv.ui.components.PosterCardStyle
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
@@ -99,12 +101,13 @@ fun ClassicHomeContent(
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
+    onMarkContinueWatchingWatched: (ContinueWatchingItem) -> Unit = {},
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onRequestTrailerPreview: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
     catalogSeeAllLabel: String? = null,
-    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
+    onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Map<String, String>, Int, Int) -> Unit,
     onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0,
     onRequestLazyCatalogLoad: (String) -> Unit = {}
@@ -123,18 +126,21 @@ fun ClassicHomeContent(
             height = posterCardStyle.height * CLASSIC_SECONDARY_ROW_POSTER_SCALE
         )
     }
-    val classicContinueWatchingCardWidth = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle) {
+    val classicLandscapeCatalogWidth = classicCatalogPosterCardStyle.height
+    val classicLandscapeCatalogHeight = classicLandscapeCatalogWidth / (16f / 9f)
+    val globalLandscape = LocalLandscapePosterMode.current
+    val classicContinueWatchingCardWidth = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle, globalLandscape) {
         when (uiState.continueWatchingCardStyle) {
-            ContinueWatchingCardStyle.POSTER -> classicCatalogPosterCardStyle.width
-            ContinueWatchingCardStyle.WIDE -> classicSecondaryPosterCardStyle.width * 2.5f
-            ContinueWatchingCardStyle.CARD -> classicSecondaryPosterCardStyle.width * (16f / 9f)
+            ContinueWatchingCardStyle.POSTER -> if (globalLandscape) classicLandscapeCatalogWidth else classicCatalogPosterCardStyle.width
+            ContinueWatchingCardStyle.WIDE -> if (globalLandscape) classicLandscapeCatalogWidth else classicSecondaryPosterCardStyle.width * 2.5f
+            ContinueWatchingCardStyle.CARD -> if (globalLandscape) classicLandscapeCatalogWidth else classicSecondaryPosterCardStyle.width * (16f / 9f)
         }
     }
-    val classicContinueWatchingImageHeight = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle) {
+    val classicContinueWatchingImageHeight = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle, globalLandscape) {
         when (uiState.continueWatchingCardStyle) {
-            ContinueWatchingCardStyle.POSTER -> classicCatalogPosterCardStyle.height
-            ContinueWatchingCardStyle.WIDE -> classicSecondaryPosterCardStyle.width * 2.5f * 0.4f
-            ContinueWatchingCardStyle.CARD -> classicSecondaryPosterCardStyle.width
+            ContinueWatchingCardStyle.POSTER -> if (globalLandscape) classicLandscapeCatalogHeight else classicCatalogPosterCardStyle.height
+            ContinueWatchingCardStyle.WIDE -> if (globalLandscape) classicLandscapeCatalogHeight else classicSecondaryPosterCardStyle.width * 2.5f * 0.4f
+            ContinueWatchingCardStyle.CARD -> if (globalLandscape) classicLandscapeCatalogHeight else classicSecondaryPosterCardStyle.width
         }
     }
     // Match catalog poster label style so CW poster titles look the same as catalog ones.
@@ -209,7 +215,7 @@ fun ClassicHomeContent(
     // Store scroll state for each row to persist position during recycling
     val rowStates = remember { mutableMapOf<String, LazyListState>() }
     val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    val rowFocusedItemIndex = remember { mutableStateMapOf<String, Int>() }
+    val rowFocusedItemIndex = remember { mutableMapOf<String, Int>() }
     // Item keys of each row as they were when its focused index was last recorded, so the index
     // can be relocated when a refresh shifts the row instead of pointing at a new card.
     val previousRowItemKeys = remember { mutableMapOf<String, List<String>>() }
@@ -296,6 +302,7 @@ fun ClassicHomeContent(
                 currentFocusSnapshot.rowKey,
                 emptyMap(), // Classic doesn't use ID-based restoration for inner rows yet
                 focusState.catalogRowScrollStates + rowStates.mapValues { it.value.firstVisibleItemIndex },
+                focusState.catalogRowScrollAnchors,
                 currentFocusSnapshot.rowIndex,
                 currentFocusSnapshot.itemIndex
             )
@@ -325,6 +332,22 @@ fun ClassicHomeContent(
         }
     }
 
+    val shouldRestoreHeroFocus = restoringFocus && heroVisible &&
+        focusState.focusedRowKey == "hero_carousel"
+    LaunchedEffect(shouldRestoreHeroFocus) {
+        if (!shouldRestoreHeroFocus) return@LaunchedEffect
+        columnListState.scrollToItem(0)
+        repeat(8) {
+            withFrameNanos { }
+            val focused = runCatching { heroFocusRequester.requestFocus(); true }
+                .getOrDefault(false)
+            if (focused) {
+                restoringFocus = false
+                return@LaunchedEffect
+            }
+        }
+    }
+
     val contentFocusRequester = LocalContentFocusRequester.current
 
     // Surfaced from [Modifier.dpadVerticalFastScroll] so cards inside the
@@ -342,6 +365,7 @@ fun ClassicHomeContent(
     var activeHeroItem by remember(uiState.heroItems.firstOrNull()?.id) {
         mutableStateOf(uiState.heroItems.firstOrNull())
     }
+    val savedHeroIndex = rememberSaveable { mutableIntStateOf(0) }
     val latestOnItemFocus by rememberUpdatedState(onItemFocus)
     val latestOnRequestTrailerPreview by rememberUpdatedState(onRequestTrailerPreview)
 
@@ -357,10 +381,10 @@ fun ClassicHomeContent(
         }
     }
 
-    val handleMetaFocus: (MetaPreview) -> Unit = remember(uiState.classicFocusGradientEnabled, uiState.focusedPosterBackdropExpandEnabled, uiState.focusedPosterBackdropTrailerEnabled) {
+    val handleMetaFocus: (MetaPreview) -> Unit = remember(uiState.classicFocusGradientEnabled, uiState.focusedPosterBackdropExpandEnabled, uiState.focusedPosterBackdropTrailerEnabled, globalLandscape) {
         { item ->
             if (uiState.classicFocusGradientEnabled) {
-                focusedArtwork = item.toClassicFocusArtwork(uiState.focusedPosterBackdropExpandEnabled)
+                focusedArtwork = item.toClassicFocusArtwork(uiState.focusedPosterBackdropExpandEnabled, useLandscape = globalLandscape)
             }
             if (uiState.focusedPosterBackdropTrailerEnabled) {
                 focusedCatalogItem = item
@@ -371,6 +395,9 @@ fun ClassicHomeContent(
 
     val handleHeroFocus: (MetaPreview) -> Unit = remember(uiState.classicFocusGradientEnabled) {
         { item ->
+            currentFocusSnapshot.rowIndex = -2
+            currentFocusSnapshot.itemIndex = 0
+            currentFocusSnapshot.rowKey = "hero_carousel"
             activeRowKeyState.value = null
             if (uiState.classicFocusGradientEnabled) {
                 focusedArtwork = null
@@ -386,13 +413,15 @@ fun ClassicHomeContent(
     }
 
     if (deferContentFocus) {
-        // Show spinner while waiting for hero data to arrive — prevents
-        // content rows from claiming focus before the hero is ready.
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            LoadingIndicator()
+        // When the startup splash is active it already shows a spinner,
+        // so skip the redundant loading indicator underneath.
+        if (!LocalStartupSplashEnabled.current) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                LoadingIndicator()
+            }
         }
         return
     }
@@ -571,11 +600,19 @@ fun ClassicHomeContent(
             item(key = "hero_carousel", contentType = "hero") {
                 HeroCarousel(
                     items = uiState.heroItems.asStable(),
-                    focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
+                    focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
                     showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
-                    onActiveItemChanged = { activeHeroItem = it },
+                    mdbListShowOnHero = uiState.mdbListShowOnHero,
+                    mdbListRatingOrder = uiState.mdbListRatingOrder,
+                    descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
+                    onActiveItemChanged = { item ->
+                        activeHeroItem = item
+                        val idx = uiState.heroItems.indexOfFirst { it.id == item.id }
+                        if (idx >= 0) savedHeroIndex.intValue = idx
+                    },
                     showBackdrop = false,
                     onItemFocus = handleHeroFocus,
+                    initialActiveIndex = savedHeroIndex.intValue,
                     onItemClick = { item ->
                         onNavigateToDetail(
                             item.id,
@@ -597,7 +634,15 @@ fun ClassicHomeContent(
                     }
                 }
                 ContinueWatchingSection(
-                    items = uiState.continueWatchingItems,
+                    items = remember(
+                        uiState.continueWatchingItems,
+                        uiState.customPosterUrlPattern,
+                        uiState.customPosterEnabledScreens,
+                    ) {
+                        uiState.continueWatchingItems.withCustomPosterUrls(
+                            com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
+                        )
+                    },
                     onItemClick = { item ->
                         onContinueWatchingClick(item)
                     },
@@ -617,6 +662,7 @@ fun ClassicHomeContent(
                             ""
                         )
                     },
+                    onMarkWatched = onMarkContinueWatchingWatched,
                     onRemoveItem = { item ->
                         val contentId = when (item) {
                             is ContinueWatchingItem.InProgress -> item.progress.contentId
@@ -675,7 +721,15 @@ fun ClassicHomeContent(
                     }
                 }
                 ContinueWatchingSection(
-                    items = uiState.upcomingItems,
+                    items = remember(
+                        uiState.upcomingItems,
+                        uiState.customPosterUrlPattern,
+                        uiState.customPosterEnabledScreens,
+                    ) {
+                        uiState.upcomingItems.withCustomPosterUrls(
+                            com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
+                        )
+                    },
                     title = stringResource(R.string.upcoming_section_title),
                     onItemClick = { item ->
                         onContinueWatchingClick(item)
@@ -696,6 +750,7 @@ fun ClassicHomeContent(
                             ""
                         )
                     },
+                    onMarkWatched = onMarkContinueWatchingWatched,
                     onRemoveItem = { item ->
                         val contentId = when (item) {
                             is ContinueWatchingItem.InProgress -> item.progress.contentId
@@ -723,6 +778,11 @@ fun ClassicHomeContent(
                         currentFocusSnapshot.rowKey = "upcoming_section"
                         activeRowKeyState.value = "upcoming_section"
                         cwFocusedIndex.intValue = itemIndex
+                        onFocusedRowKeyChanged(null)
+                        if (uiState.classicFocusGradientEnabled) {
+                            focusedArtwork = uiState.upcomingItems.getOrNull(itemIndex)
+                                ?.toClassicFocusArtwork(uiState.focusedPosterBackdropExpandEnabled)
+                        }
                     },
                     cardWidth = classicContinueWatchingCardWidth,
                     imageHeight = classicContinueWatchingImageHeight,
@@ -882,9 +942,11 @@ fun ClassicHomeContent(
     } // CompositionLocalProvider
 }
 
-private fun MetaPreview.toClassicFocusArtwork(useBackdrop: Boolean): ClassicFocusArtwork {
+internal fun MetaPreview.toClassicFocusArtwork(useBackdrop: Boolean, useLandscape: Boolean = false): ClassicFocusArtwork {
     return ClassicFocusArtwork(
-        imageUrl = if (useBackdrop) {
+        imageUrl = if (useLandscape) {
+            landscapePoster ?: background ?: poster
+        } else if (useBackdrop) {
             background ?: landscapePoster ?: poster
         } else {
             poster ?: landscapePoster ?: background

@@ -3,7 +3,11 @@ from __future__ import annotations
 import unittest
 from unittest.mock import Mock, patch
 
-from release_notes.compose import generate_release_notes, should_exclude_pull_request
+from release_notes.compose import (
+    candidates_from_pull_request,
+    generate_release_notes,
+    should_exclude_pull_request,
+)
 from release_notes.consolidate import consolidate_candidates, merge_texts
 from release_notes.model import Candidate, Commit, GenerationResult, PullRequest
 from release_notes.render import render_notes
@@ -112,6 +116,12 @@ Implementation detail.
         )
         self.assertTrue(blocking)
 
+    def test_i18n_prefix_is_removed(self) -> None:
+        self.assertEqual(
+            normalize_text("i18n(vi): update latest missing strings"),
+            "Updated latest missing strings",
+        )
+
     def test_generic_titles_are_detected(self) -> None:
         self.assertTrue(is_generic("Slider"))
         self.assertTrue(is_generic("Update PlayerScreen.kt"))
@@ -130,6 +140,41 @@ Implementation detail.
 
 
 class ReleaseNoteCompositionTests(unittest.TestCase):
+    def test_release_blocking_pr_titles_generate_valid_notes(self) -> None:
+        cases = (
+            (
+                3542,
+                "fix: limit anime ID preference to entries with anime-specific IDs",
+                (),
+                "Restricted anime ID preference to entries with anime-specific IDs",
+                "Improvements & Fixes",
+            ),
+            (
+                3557,
+                "i18n(vi): update latest missing strings",
+                ("app/src/main/res/values-vi/strings.xml",),
+                "Updated Vietnamese translations",
+                "Localization",
+            ),
+        )
+        for number, title, files, expected_text, expected_category in cases:
+            with self.subTest(number=number):
+                pull_request = PullRequest(
+                    number=number,
+                    title=title,
+                    body="",
+                    author="person",
+                    labels=(),
+                    merge_sha="a" * 40,
+                    order=1,
+                    files=files,
+                )
+                candidates = candidates_from_pull_request(pull_request)
+                self.assertEqual(len(candidates), 1)
+                self.assertEqual(candidates[0].text, expected_text)
+                self.assertEqual(candidates[0].category, expected_category)
+                self.assertEqual(candidates[0].blocking_issues, ())
+
     def candidate(
         self,
         text: str,

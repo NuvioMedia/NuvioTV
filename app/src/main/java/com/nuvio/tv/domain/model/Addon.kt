@@ -45,7 +45,11 @@ data class CatalogDescriptor(
     val extraRequired: List<String> = emptyList()
 ) {
     val apiType: String
-        get() = type.toApiString(rawType)
+        get() = rawType.trim().ifBlank { type.toApiString() }
+
+    /** True when the catalog is only usable through search (it has a required "search" extra). */
+    fun isSearchOnlyCatalog(): Boolean =
+        extra.any { it.name.equals("search", ignoreCase = true) && it.isRequired }
 }
 
 @Immutable

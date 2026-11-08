@@ -32,9 +32,12 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
+import com.nuvio.tv.core.streams.StreamBadgeMatcher
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.BingeGroupCacheDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
+import com.nuvio.tv.data.mediaserver.ServerPlayback
+import com.nuvio.tv.data.mediaserver.ServerStreams
 import com.nuvio.tv.data.repository.ParentalGuideRepository
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.data.repository.PlaybackIssueReportRepository
@@ -62,6 +65,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.nuvio.tv.core.util.withAppLocale
 import java.lang.ref.WeakReference
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 class PlayerRuntimeController(
@@ -82,6 +86,7 @@ class PlayerRuntimeController(
     internal val streamBadgeSettingsDataStore: StreamBadgeSettingsDataStore,
     internal val bingeGroupCacheDataStore: BingeGroupCacheDataStore,
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
+    internal val episodeShufflePlayback: com.nuvio.tv.core.player.EpisodeShufflePlayback,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
     internal val audioDelayRouteDataStore: AudioDelayRouteDataStore,
@@ -91,6 +96,7 @@ class PlayerRuntimeController(
     internal val tmdbMetadataService: com.nuvio.tv.core.tmdb.TmdbMetadataService,
     internal val tmdbSettingsDataStore: com.nuvio.tv.data.local.TmdbSettingsDataStore,
     internal val directDebridResolver: DirectDebridResolver,
+    internal val youTubeStreamResolver: com.nuvio.tv.core.streams.YouTubeStreamResolver,
     internal val directDebridStreamPreparer: DirectDebridStreamPreparer,
     internal val cloudLibraryRepository: CloudLibraryRepository,
     internal val cloudPlaybackProgressStore: CloudLibraryPlaybackProgressStore,
@@ -98,6 +104,9 @@ class PlayerRuntimeController(
     internal val streamBadgePresentation: com.nuvio.tv.core.streams.StreamBadgePresentation,
     internal val playbackIssueReportRepository: PlaybackIssueReportRepository,
     internal val tvRecommendationManager: com.nuvio.tv.core.recommendations.TvRecommendationManager,
+    internal val serverPlayback: ServerPlayback,
+    internal val serverStreams: ServerStreams,
+    internal val party: com.nuvio.tv.core.party.PartyRepository,
     internal val profileId: Int,
     savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
@@ -107,6 +116,7 @@ class PlayerRuntimeController(
     internal val context: Context = context.withAppLocale()
 
     companion object {
+        private val CONVERTIBLE_DV_PROFILES = setOf("5", "7")
         internal const val TAG = "PlayerViewModel"
         internal const val SWITCH_TRACE_TAG = "SwitchTrace"
         internal const val SWITCH_TRACE_ENABLED = false
@@ -184,13 +194,33 @@ class PlayerRuntimeController(
     internal val rememberedAudioLanguage: String? = navigationArgs.rememberedAudioLanguage
     internal val rememberedAudioName: String? = navigationArgs.rememberedAudioName
     internal val cloudSessionToken: String? = navigationArgs.cloudSessionToken
-    internal val mediaSourceFactory = PlayerMediaSourceFactory(context.applicationContext)
+    internal val mediaSourceFactory = PlayerMediaSourceFactory(context.applicationContext).apply {
+        onStreamRedirected = { requestedUrl, resolvedUrl -> handleStreamRedirect(requestedUrl, resolvedUrl) }
+    }
+
+    // The file rate is the only one every container reports, so the playhead is placed in the
+    // file by how far through it is rather than by any declared bitrate.
+    private val vodCachePlayheadBytesProvider: () -> Long = {
+        val timeline = playbackTimeline.value
+        val sizeBytes = currentVideoSize ?: 0L
+        if (timeline.duration > 0L && sizeBytes > 0L && timeline.currentPosition > 0L) {
+            (sizeBytes.toDouble() * timeline.currentPosition / timeline.duration).toLong()
+        } else {
+            0L
+        }
+    }
+
+    init {
+        PlayerMediaSourceFactory.vodCachePlayheadBytesProvider = vodCachePlayheadBytesProvider
+    }
+
+    // Closed on exit (stopAndRelease) or when the ViewModel is cleared, whichever comes first.
+    private val playerSession = com.nuvio.tv.core.player.PlayerSessionTracker.open()
 
     internal var currentVideoHash: String? = navigationArgs.videoHash
     internal var currentVideoSize: Long? = navigationArgs.videoSize
     internal var currentFilename: String? = navigationArgs.filename
-        ?: initialStreamUrl.substringBefore('?').substringAfterLast('/', "")
-            .takeIf { it.isNotBlank() && it.contains('.') }
+        ?: streamFilenameFromUrl(initialStreamUrl)
     internal var currentAddonName: String? = navigationArgs.addonName
     internal var currentAddonLogo: String? = navigationArgs.addonLogo
     internal var currentStreamDescription: String? = navigationArgs.streamDescription
@@ -200,7 +230,10 @@ class PlayerRuntimeController(
     internal var currentVideoHeight: Int? = null
     internal var currentVideoBitrate: Int? = null
     internal var currentStreamUrl: String
+    internal var reportedServerUrl: String? = null
+    internal var serverAudioChosenByUser = false
     internal var currentStreamResponseHeaders: Map<String, String> = emptyMap()
+    internal var currentStreamCacheKey: String? = null
     internal var currentStreamMimeType: String?
     internal var currentHeaders: Map<String, String>
     internal var streamSubtitles: List<Subtitle> = emptyList()
@@ -225,7 +258,44 @@ class PlayerRuntimeController(
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
 
     fun stopAndRelease() {
+        leavePartyPlayback()
+        // Cache counters only reach the card on a natural finish, so capture them when the user exits too.
+        val diagnostics = lastPlaybackDiagnosticsForReport
+        if (diagnostics.timestampMs > 0L) {
+            // Only a profile 5 or 7 source that actually converted counts; every other playback
+            // still runs the bridge self-test and would otherwise stamp a conversion that never ran.
+            val converted = diagnostics.dv7DoviSuccess > 0 &&
+                diagnostics.dvSourceProfile in CONVERTIBLE_DV_PROFILES
+            val updated = diagnostics.copy(
+                vodCacheStats = mediaSourceFactory.vodCacheStatsLabel(context),
+                dvConvertEndedAtMs = if (converted) {
+                    System.currentTimeMillis()
+                } else {
+                    diagnostics.dvConvertEndedAtMs
+                }
+            )
+            lastPlaybackDiagnosticsForReport = updated
+            scope.launch {
+                runCatching { playerSettingsDataStore.setLastPlaybackDiagnostics(updated) }
+            }
+        }
+        mediaSourceFactory.logVodCacheStats()
+        releaseProcessWideReferences()
+        mediaSourceFactory.evictCachedSession()
         releasePlayer()
+        playerSession.close()
+    }
+
+    // These are process wide, so without this the exited player stays reachable until the next one
+    // replaces them; the identity checks keep a player that has already started from losing its own.
+    private fun releaseProcessWideReferences() {
+        if (PlayerMediaSourceFactory.vodCachePlayheadBytesProvider === vodCachePlayheadBytesProvider) {
+            PlayerMediaSourceFactory.vodCachePlayheadBytesProvider = null
+        }
+        val ownAllocator = _loadControl?.allocator
+        if (ownAllocator != null && NuvioExoPlayerPerformanceHelper.liveAllocator === ownAllocator) {
+            NuvioExoPlayerPerformanceHelper.liveAllocator = null
+        }
     }
 
     internal var currentVideoId: String? = videoId
@@ -242,6 +312,7 @@ class PlayerRuntimeController(
             currentStreamInfoHash = navigationArgs.infoHash,
             currentStreamFileIdx = navigationArgs.fileIdx,
             currentStreamAddonName = navigationArgs.addonName,
+            currentStreamDescription = navigationArgs.streamDescription,
             releaseYear = year,
             contentType = contentType,
             backdrop = backdrop,
@@ -275,6 +346,7 @@ class PlayerRuntimeController(
 
     internal val liveWatchClock = LivePlaybackWatchClock()
     internal var livePlaybackLatched: Boolean = false
+    internal var mpvDurationGrowth = LivePlaybackUiPolicy.DurationGrowth()
 
     internal fun updatePlaybackTimeline(
         currentPosition: Long = _playbackTimeline.value.currentPosition,
@@ -283,6 +355,9 @@ class PlayerRuntimeController(
         isLive: Boolean = _playbackTimeline.value.isLive,
         watchedDurationMs: Long = _playbackTimeline.value.watchedDurationMs
     ) {
+        if (_uiState.value.isLive != isLive) {
+            _uiState.update { it.copy(isLive = isLive) }
+        }
         _playbackTimeline.update {
             it.copy(
                 currentPosition = currentPosition.coerceAtLeast(0L),
@@ -326,8 +401,12 @@ class PlayerRuntimeController(
 
     internal fun resetPlaybackTimeline() {
         livePlaybackLatched = false
+        mpvDurationGrowth = LivePlaybackUiPolicy.DurationGrowth()
         liveWatchClock.reset()
         pendingPreviewSeekPosition = null
+        if (_uiState.value.isLive) {
+            _uiState.update { it.copy(isLive = false) }
+        }
         _playbackTimeline.value = PlaybackTimelineState()
     }
 
@@ -343,21 +422,36 @@ class PlayerRuntimeController(
     internal var vodTelemetryJob: Job? = null
     internal var firstFrameWatchdogJob: Job? = null
     internal var stallWatchdogJob: Job? = null
+    internal var seekSourceLogJob: Job? = null
     internal var hideControlsJob: Job? = null
     internal var hideSeekOverlayJob: Job? = null
     internal var watchProgressSaveJob: Job? = null
     internal var seekProgressSyncJob: Job? = null
     internal var frameRateProbeJob: Job? = null
     internal var frameRateProbeToken: Long = 0L
+    internal val afrPreflightGate = AfrPreflightGate()
     internal var hideAspectRatioIndicatorJob: Job? = null
     internal var hideStreamSourceIndicatorJob: Job? = null
+    internal var partyRateNudge: Float? = null
+    internal var partyPreviousKey: String? = null
     internal var hidePlayerEngineSwitchInfoJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var subtitleAutoSyncLoadJob: Job? = null
+    internal var automaticSubtitleSyncJob: Job? = null // AutoSync hook
+    /** mpv: the add-on subtitle download and sub-add in flight, which AutoSync lets land first. */
+    internal var mpvAddonSubtitleSelectionJob: Job? = null // AutoSync hook
     /** ExoPlayer sidecar path: external addon cues without setMediaSource (preserves buffer). */
     internal var sidecarSubtitleJob: Job? = null
+    internal var sidecarGenerationCounter: Long = 0L // AutoSync hook
+    internal var activeSidecarGeneration: Long = 0L // AutoSync hook
     internal var activeSidecarSubtitleKey: String? = null
     internal var sidecarTimedCues: List<androidx.media3.extractor.text.CuesWithTiming> = emptyList()
+        set(value) {
+            field = value
+            subtitleCueTracker.setPrescannedTexts(
+                value.flatMap { it.cues }.mapNotNull { it.text?.toString()?.takeIf(String::isNotBlank) }
+            )
+        }
     internal var lastSidecarCueSignature: Long? = null
     internal var exoSubtitleViewRef: WeakReference<androidx.media3.ui.SubtitleView>? = null
     /** Cancels previous TEXT-track bounce jobs when subtitle delay is adjusted repeatedly. */
@@ -368,6 +462,7 @@ class PlayerRuntimeController(
     internal var startupLoadingReportJob: Job? = null
     internal var sourceStreamsJob: Job? = null
     internal var sourceBadgeJob: Job? = null
+    internal var sourceFilterFullList: List<com.nuvio.tv.domain.model.Stream> = emptyList()
     internal var sourceBadgedAddonNames: Set<String> = emptySet()
     internal var sourceStreamsScope: kotlinx.coroutines.CoroutineScope? = null
     internal var episodeStreamsScope: kotlinx.coroutines.CoroutineScope? = null
@@ -400,6 +495,12 @@ class PlayerRuntimeController(
 
     internal var playbackStartedForParentalGuide = false
     internal var hasRenderedFirstFrame = false
+    // Prevent the previous stream's end from completing the new stream.
+    internal var endDetectionArmed = false
+    // Ignore EOF until MPV has reported a non-EOF state for this stream.
+    internal var mpvEofSeenClear = false
+    // Set once the Exo progress loop forced a natural end for a position past duration.
+    internal var exoEndOverrunHandled = false
     internal var shouldEnforceAutoplayOnFirstReady = true
 
     internal var rebufferCount: Int = 0
@@ -409,22 +510,32 @@ class PlayerRuntimeController(
     internal var effectiveBackBufferDurationMs: Int = 0
     /** Custom LoadControl for this playback (null when using stock); used to resolve the back buffer at first frame. */
     internal var currentBitrateAwareLoadControl: BitrateAwareLoadControl? = null
+    /** Parallel chunk buffer overhead (MB) currently deducted from the target buffer size. */
+    internal var currentParallelChunkOverheadMb: Int = 0
     /** Back buffer (ms) the user configured, captured at build to restore once DV7 status is known. */
     internal var configuredBackBufferMs: Int = 0
     internal var metaVideos: List<Video> = emptyList()
+    internal var playbackShuffleState: com.nuvio.tv.core.player.PlaybackShuffleState? = null
     internal var cloudPlaybackContext: CloudLibraryPlaybackContext? =
         cloudPlaybackSessionStore.load(cloudSessionToken)
     internal var metaGenres: List<String> = emptyList()
     internal var metaCountry: String? = null
     internal var metaFetchJob: Job? = null
     internal var nextEpisodeVideo: Video? = null
+    internal var nextEpisodePreloadJob: Job? = null
+    internal var nextEpisodePreloadTriggered: Boolean = false
     internal var userPausedManually = false
 
     internal var isInBackground: Boolean = false
+    internal var releaseDecoderOnBackground: Boolean = false
     internal var pendingBackgroundCrashRecovery: Boolean = false
     internal var backgroundCrashSavedPositionMs: Long = 0L
 
     internal var skipIntervals: List<SkipInterval> = emptyList()
+    internal var chapterSkipIntervals: List<SkipInterval> = emptyList()
+    internal var apiSkipIntervals: List<SkipInterval> = emptyList()
+    internal var skipDetectionChapters: List<PlayerChapter> = emptyList()
+    internal var skipChaptersComputedForDuration: Long = 0L
     internal var skipIntroEnabled: Boolean = true
     internal var parentalGuideEnabled: Boolean = false
     internal var autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet()
@@ -442,6 +553,9 @@ class PlayerRuntimeController(
     internal var pendingAudioSelectionAfterSubtitleRefresh: PendingAudioSelection? = null
     internal var rememberedTrackPreference: TrackPreference? = null
     internal var persistedTrackPreference: TrackPreference? = null
+    // Snapshot of what was loaded from storage. persistedTrackPreference is consumed as tracks
+    // get restored, so it cannot serve as the base when something else is saved later.
+    internal var loadedTrackPreference: TrackPreference? = null
     internal var pendingEngineSwitchTrackPreference: PendingEngineSwitchTrackPreference? = null
     internal var explicitSubtitleSelectionForEngineSwitch: ExplicitSubtitleSelectionForEngineSwitch? = null
     internal var effectiveSubtitleSelectionForEngineSwitch: ExplicitSubtitleSelectionForEngineSwitch? = null
@@ -461,6 +575,8 @@ class PlayerRuntimeController(
     internal var streamAutoPlayModeSetting: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
     internal var streamAutoPlayPreferBingeGroupForNextEpisodeSetting: Boolean = false
+    internal var streamAutoPlayTimeoutSecondsSetting: Int = 10
+    internal var preloadNextEpisodeSourcesSetting: Boolean = false
     internal var nextEpisodeThresholdModeSetting: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
     internal var nextEpisodeThresholdPercentSetting: Float = 98f
     internal var nextEpisodeThresholdMinutesBeforeEndSetting: Float = 2f
@@ -471,11 +587,16 @@ class PlayerRuntimeController(
     internal var mpvHardwareDecodeModeSetting: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
     internal var mpvPreferredAudioLanguages: List<String> = emptyList()
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
+    internal var recordedPluginPlayIdentity: String? = null
+    // Per-device delay + current stream's behaviorHints.audioDelayMs + the user's tweak on that stream.
+    internal var audioDelayParts: AudioDelayParts = AudioDelayParts().withStream(navigationArgs.audioDelayMs ?: 0, navigationArgs.audioDelayLanguage)
     internal var hasAppliedRememberedAudioSelection: Boolean = false
     internal var hasInitializedAudioAmplificationForSession: Boolean = false
     internal var hasInitializedCenterMixForSession: Boolean = false
     internal var rememberAudioDelayPerDeviceEnabled: Boolean = false
     internal var currentAudioOutputRoute: AudioOutputRoute? = null
+    /** USB audio has no hardware A/V sync output, so tunneled playback is skipped while it plays. */
+    internal var tunnelingBlockedByUsbAudio: Boolean = false
     internal var audioOutputRouteCallback: AudioDeviceCallback? = null
     internal var audioRouteChangeJob: Job? = null
 
@@ -495,16 +616,36 @@ class PlayerRuntimeController(
     internal var lastNextEpisodeEvaluationUptimeMs: Long = 0L
     internal var bufferLogJob: Job? = null
     internal val gainAudioProcessor = GainAudioProcessor()
+    internal val nightModeAudioProcessor = NightModeAudioProcessor()
     internal var loudnessEnhancer: LoudnessEnhancer? = null
     internal var trackSelector: DefaultTrackSelector? = null
     internal var currentMediaSession: MediaSession? = null
+    internal var mpvMediaSessionPlayer: MpvMediaSessionPlayer? = null
     internal var ffmpegAudioRenderer: FfmpegAudioRenderer? = null
     internal var mpvView: NuvioMpvSurfaceView? = null
+    internal val subtitleCueTracker = SubtitleCueTracker()
     internal var mpvInitializationInProgress: Boolean = false
     internal var mpvMediaLoadPrepared: Boolean = false
     internal var mpvTrackRefreshJob: Job? = null
     internal var mpvTrackRefreshInProgress: Boolean = false
+    /** The stream whose chapters [PlayerUiState.chapters] holds. */
+    internal var mpvChaptersStreamUrl: String? = null
+    internal var exoChapterLoadJob: Job? = null
+    internal val mpvTrackRefreshGate = MpvTrackRefreshGate()
     internal var pendingMpvHardRestartOnNextAttach: Boolean = false
+    internal var mpvEventRelay: MpvEventRelay? = null
+    internal var mpvEventRelayEpoch: Long = 0
+    internal var mpvSurfaceWaitTicks: Int = 0
+    internal var mpvIdleActiveTicks: Int = 0
+    internal var mpvStartupStallTicks: Int = 0
+    internal var mpvStartupAbsoluteTicks: Int = 0
+    internal var mpvLastDemuxerCacheSec: Double = 0.0
+    internal var mpvActivePlaylistEntryId: Long? = null
+    internal var mpvLastFileError: String? = null
+    internal var mpvErrorRecoveryArmed: Boolean = false
+    internal var mpvStableProgressResetJob: Job? = null
+    @Volatile internal var mpvLastErrorLogLine: String? = null
+    internal val mpvErrorHandlingInProgress = AtomicBoolean(false)
     internal var delayMpvResumeSeekUntilVideoTrack: Boolean = false
     internal var mpvDelayStartAfterAfrSwitch: Boolean = false
     internal var pauseOverlayJob: Job? = null
@@ -512,6 +653,8 @@ class PlayerRuntimeController(
     internal val seekProgressSyncDebounceMs = 700L
     internal val audioDelayUs = AtomicLong(0L)
     internal val subtitleDelayUs = AtomicLong(0L)
+    // Offset for embedded subtitles from the stream's audio source; never persisted.
+    internal val streamSubtitleDelayUs = AtomicLong(0L)
     internal var pendingPreviewSeekPosition: Long?
         get() = _uiState.value.pendingPreviewSeekPosition
         set(value) {
@@ -541,19 +684,18 @@ class PlayerRuntimeController(
     internal var errorRetryJob: Job? = null
     internal var stableProgressResetJob: Job? = null
     @Volatile internal var currentPlayerSettingsForReport: PlayerSettings = PlayerSettings()
+    @Volatile internal var hasObservedPlayerSettings: Boolean = false
 
     internal val dv7ToHevcForcedStreamUrls: MutableSet<String> = mutableSetOf()
     // Streams where manual Convert-to-DV8.1 mode 2 failed to play, so the next
     // attempt is forced to libdovi mode 1 before falling back to HDR10 base layer.
     internal val dv7Mode1ForcedStreamUrls: MutableSet<String> = mutableSetOf()
-    internal val vc1SoftwarePreferredStreamUrls: MutableSet<String> = mutableSetOf()
     internal val vc1TrackSelectionBypassStreamUrls: MutableSet<String> = mutableSetOf()
     internal val safeAudioForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal val audioDisabledForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal var isMapDv7ToHevcActiveForCurrentPlayback: Boolean = false
     internal var isManualDv81Mode2ActiveForCurrentPlayback: Boolean = false
     internal var isExperimentalDv7ToDv81ActiveForCurrentPlayback: Boolean = false
-    internal var isVc1SoftwareFallbackActiveForCurrentPlayback: Boolean = false
     internal var isVc1TrackSelectionBypassActiveForCurrentPlayback: Boolean = false
     internal var isSafeAudioModeActiveForCurrentPlayback: Boolean = false
     internal var isAudioDisabledForCurrentPlayback: Boolean = false
@@ -582,6 +724,7 @@ class PlayerRuntimeController(
     internal var requestedUseLibassByUser: Boolean = false
     internal var libassPipelineOverrideForCurrentStream: Boolean? = null
     internal var activePlayerUsesLibass: Boolean = false
+    internal var activeAssVideoEffect: com.nuvio.tv.libass.media.effect.AssVideoEffectAsync? = null
     internal var libassPipelineSwitchInFlight: Boolean = false
     internal var hasDetectedAssSsaTrackForCurrentStream: Boolean = false
     internal var libassPipelineDecisionStreamUrl: String? = null
@@ -634,11 +777,34 @@ class PlayerRuntimeController(
             fetchMetaDetails(contentId, contentType)
         }
         observeBlurUnwatchedEpisodes()
+        observeEpisodeOptionsOverlayStyle()
         observeEpisodeWatchProgress()
         observeTorrentSettings()
         observeStreamBadgeSettings()
         observeDeviceLocalAspectMode()
+        observeDeviceLocalTransparentLetterbox()
+        observeDeviceLocalTunneledSurfaceFill()
+        observeDeviceLocalReleaseDecoderOnBackground()
         observePlayerStatsHud()
+        observeStreamDelayTrackSelection()
+    }
+
+    // The stream delay hint can be scoped to a language: re-apply it whenever the selected tracks change.
+    private fun observeStreamDelayTrackSelection() {
+        scope.launch {
+            _uiState
+                .map { state ->
+                    val audio = state.audioTracks.getOrNull(state.selectedAudioTrackIndex)
+                    val subtitle = state.subtitleTracks.getOrNull(state.selectedSubtitleTrackIndex)
+                    listOf(
+                        audio != null, audio?.language,
+                        subtitle != null, subtitle?.language,
+                        state.selectedAddonSubtitle != null
+                    )
+                }
+                .distinctUntilChanged()
+                .collect { syncStreamDelayWithSelectedTracks() }
+        }
     }
 
     private fun observeTorrentSettings() {
@@ -656,7 +822,12 @@ class PlayerRuntimeController(
                     it.copy(
                         showFileSizeBadges = settings.showFileSizeBadges,
                         showAddonLogo = settings.showAddonLogo,
-                        streamBadgePlacement = settings.badgePlacement
+                        streamBadgePlacement = settings.badgePlacement,
+                        playerBadgeFilters = if (settings.showInPlayer) {
+                            StreamBadgeMatcher.compile(settings.rules.forPlayer(settings.playerBadgeSource))
+                        } else {
+                            emptyList()
+                        }
                     )
                 }
             }
@@ -664,8 +835,11 @@ class PlayerRuntimeController(
     }
 
     fun onCleared() {
+        playerSession.close()
+        stopServerPlayback()
         releasePlayer()
         stopTorrentStream()
+        torrentService.shutdown()
         startupLoadingReportJob?.cancel()
         vodTelemetryJob?.cancel()
         mediaSourceFactory.shutdown()

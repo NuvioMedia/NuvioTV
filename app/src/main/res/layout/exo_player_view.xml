@@ -22,33 +22,6 @@
             android:layout_height="match_parent"
             android:scaleType="fitXY" />
 
-        <FrameLayout
-            android:id="@+id/libass_overlay_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <ProgressBar
-            android:id="@id/exo_buffering"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:indeterminate="true" />
-
-        <TextView
-            android:id="@id/exo_error_message"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginBottom="@dimen/exo_error_message_margin_bottom"
-            android:background="@drawable/exo_rounded_rectangle"
-            android:gravity="center"
-            android:lineSpacingMultiplier="1.1"
-            android:paddingLeft="@dimen/exo_error_message_text_padding_horizontal"
-            android:paddingTop="@dimen/exo_error_message_text_padding_vertical"
-            android:paddingRight="@dimen/exo_error_message_text_padding_horizontal"
-            android:paddingBottom="@dimen/exo_error_message_text_padding_vertical"
-            android:textColor="@color/exo_white"
-            android:textSize="@dimen/exo_error_message_text_size" />
     </androidx.media3.ui.AspectRatioFrameLayout>
 
     <FrameLayout
@@ -68,11 +41,6 @@
 
     <FrameLayout
         android:id="@id/exo_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <View
-        android:id="@id/exo_controller_placeholder"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 </merge>

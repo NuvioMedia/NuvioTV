@@ -24,7 +24,12 @@ data class CachedStreamLink(
     val sources: List<String>? = null,
     val bingeGroup: String? = null,
     val contentLanguage: String? = null,
-    val year: String? = null
+    val year: String? = null,
+    val audioDelayMs: Int? = null,
+    val audioDelayLanguage: String? = null,
+    val addonName: String? = null,
+    val addonLogo: String? = null,
+    val streamDescription: String? = null
 )
 
 @Singleton
@@ -52,7 +57,12 @@ class StreamLinkCacheDataStore @Inject constructor(
         sources: List<String>? = null,
         bingeGroup: String? = null,
         contentLanguage: String? = null,
-        year: String? = null
+        year: String? = null,
+        audioDelayMs: Int? = null,
+        audioDelayLanguage: String? = null,
+        addonName: String? = null,
+        addonLogo: String? = null,
+        streamDescription: String? = null
     ) {
         val payload = JSONObject().apply {
             put("url", url)
@@ -68,6 +78,11 @@ class StreamLinkCacheDataStore @Inject constructor(
             bingeGroup?.let { put("bingeGroup", it) }
             contentLanguage?.let { put("contentLanguage", it) }
             year?.let { put("year", it) }
+            audioDelayMs?.let { put("audioDelayMs", it) }
+            audioDelayLanguage?.let { put("audioDelayLanguage", it) }
+            addonName?.let { put("addonName", it) }
+            addonLogo?.let { put("addonLogo", it) }
+            streamDescription?.let { put("streamDescription", it) }
         }.toString()
 
         store().edit { prefs ->
@@ -121,7 +136,12 @@ class StreamLinkCacheDataStore @Inject constructor(
                 sources = sources,
                 bingeGroup = json.optString("bingeGroup", "").ifBlank { null },
                 contentLanguage = json.optString("contentLanguage", "").ifBlank { null },
-                year = json.optString("year", "").ifBlank { null }
+                year = json.optString("year", "").ifBlank { null },
+                audioDelayMs = if (json.has("audioDelayMs")) json.optInt("audioDelayMs") else null,
+                audioDelayLanguage = json.optString("audioDelayLanguage", "").ifBlank { null },
+                addonName = json.optString("addonName", "").ifBlank { null },
+                addonLogo = json.optString("addonLogo", "").ifBlank { null },
+                streamDescription = json.optString("streamDescription", "").ifBlank { null }
             )
         }.getOrNull()
 

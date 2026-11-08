@@ -47,11 +47,14 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.LibraryListTab
-import com.nuvio.tv.domain.model.localizedTitle
+import com.nuvio.tv.domain.model.localizedMembershipTitle
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ErrorState
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.LocalStartupLoadingState
+import com.nuvio.tv.ui.components.LocalStartupSplashEnabled
+import com.nuvio.tv.ui.components.shouldShowHomeStartupLoader
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
@@ -102,6 +105,7 @@ fun HomeScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.beginShuffleHomeVisit()
                 viewModel.refreshHomeCatalogsIfStale()
             }
         }
@@ -220,7 +224,7 @@ fun HomeScreen(
         )
     }
 
-    val noAddonsError = stringResource(R.string.home_error_no_addons)
+    val noAddonsError = stringResource(R.string.home_empty_no_sources_title)
     val noCatalogAddonsError = stringResource(R.string.home_error_no_catalog_addons)
     val hasAnyContent = uiState.catalogRows.isNotEmpty() ||
         (uiState.continueWatchingEnabled && uiState.continueWatchingItems.isNotEmpty()) ||
@@ -238,6 +242,18 @@ fun HomeScreen(
 
     // Reports the home screen as fully drawn once it leaves the loading state so startup timing is measurable and post-launch work can be deferred.
     ReportDrawnWhen { !showStartupLoader }
+
+    val startupLoadingState = LocalStartupLoadingState.current
+    val showHomeLoader = shouldShowHomeStartupLoader(
+        loading = showStartupLoader,
+        sharedSplashEnabled = LocalStartupSplashEnabled.current,
+        startupComplete = startupLoadingState?.complete != false
+    )
+    LaunchedEffect(showStartupLoader, startupLoadingState) {
+        if (!showStartupLoader) {
+            startupLoadingState?.complete = true
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -397,7 +413,7 @@ fun HomeScreen(
             }
         }
 
-        if (showStartupLoader) {
+        if (showHomeLoader) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -535,6 +551,9 @@ private fun ClassicHomeRoute(
         showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onNavigateToFolderDetail = onNavigateToFolderDetail,
+        onMarkContinueWatchingWatched = remember(viewModel) {
+            { item -> viewModel.onEvent(HomeEvent.OnMarkContinueWatchingWatched(item)) }
+        },
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
         },
@@ -546,8 +565,8 @@ private fun ClassicHomeRoute(
         onItemFocus = { item ->
             viewModel.onItemFocus(item)
         },
-        onSaveFocusState = { vi, vo, rk, ikm, m, ri, ii ->
-            viewModel.saveFocusState(vi, vo, rk, ikm, m, ri, ii)
+        onSaveFocusState = { vi, vo, rk, ikm, m, ma, ri, ii ->
+            viewModel.saveFocusState(vi, vo, rk, ikm, m, ma, ri, ii)
             // Authoritative: this is the row that actually held focus when Home went away.
             viewModel.setLiveFocusedRowKey(rk)
         },
@@ -592,6 +611,9 @@ private fun GridHomeRoute(
         showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onNavigateToFolderDetail = onNavigateToFolderDetail,
+        onMarkContinueWatchingWatched = remember(viewModel) {
+            { item -> viewModel.onEvent(HomeEvent.OnMarkContinueWatchingWatched(item)) }
+        },
         onRemoveContinueWatching = remember(viewModel) {
             { contentId, season, episode, isNextUp ->
                 viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
@@ -628,10 +650,11 @@ private fun ModernHomeRoute(
     val focusState by viewModel.focusState.collectAsStateWithLifecycle()
     val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
     val modernPresentation by viewModel.modernHomePresentation.collectAsStateWithLifecycle()
-    val enrichingItemId by viewModel.enrichingItemId.collectAsStateWithLifecycle()
-    val lastEnrichedPreview by viewModel.lastEnrichedPreview.collectAsStateWithLifecycle()
-    val enrichedPreviews by viewModel.enrichedPreviews.collectAsStateWithLifecycle()
-    val failedEnrichmentIds by viewModel.failedEnrichmentIds.collectAsStateWithLifecycle()
+    // Passed down as State, not values: enrichment changes on most focus moves, and reading it
+    // here recomposed all of the home content for each one.
+    val enrichingItemId = viewModel.enrichingItemId.collectAsStateWithLifecycle()
+    val enrichedPreviews = viewModel.enrichedPreviews.collectAsStateWithLifecycle()
+    val failedEnrichmentIds = viewModel.failedEnrichmentIds.collectAsStateWithLifecycle()
     val requestTrailerPreview = remember(viewModel) {
         { itemId: String, title: String, releaseInfo: String?, apiType: String ->
             viewModel.requestTrailerPreview(itemId, title, releaseInfo, apiType)
@@ -648,8 +671,8 @@ private fun ModernHomeRoute(
         }
     }
     val saveModernFocusState = remember(viewModel) {
-        { vi: Int, vo: Int, rk: String?, ikm: Map<String, String>, m: Map<String, Int>, ri: Int, ii: Int ->
-            viewModel.saveFocusState(vi, vo, rk, ikm, m, ri, ii)
+        { vi: Int, vo: Int, rk: String?, ikm: Map<String, String>, m: Map<String, Int>, ma: Map<String, String>, ri: Int, ii: Int ->
+            viewModel.saveFocusState(vi, vo, rk, ikm, m, ma, ri, ii)
             // Authoritative: this is the row that actually held focus when Home went away.
             viewModel.setLiveFocusedRowKey(rk)
         }
@@ -665,7 +688,6 @@ private fun ModernHomeRoute(
         focusState = focusState,
         scrollToTopTrigger = scrollToTopTrigger,
         enrichingItemId = enrichingItemId,
-        lastEnrichedPreview = lastEnrichedPreview,
         enrichedPreviews = enrichedPreviews,
         failedEnrichmentIds = failedEnrichmentIds,
         trailerPreviewUrls = viewModel.trailerPreviewUrls,
@@ -677,6 +699,9 @@ private fun ModernHomeRoute(
         showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onRequestTrailerPreview = requestTrailerPreview,
         onLoadMoreCatalog = loadMoreCatalog,
+        onMarkContinueWatchingWatched = remember(viewModel) {
+            { item -> viewModel.onEvent(HomeEvent.OnMarkContinueWatchingWatched(item)) }
+        },
         onRemoveContinueWatching = removeContinueWatching,
         isCatalogItemWatched = isCatalogItemWatched,
         onCatalogItemLongPress = onCatalogItemLongPress,
@@ -819,7 +844,7 @@ private fun HomeLibraryListPickerDialog(
         ) {
             items(tabs, key = { it.key }) { tab ->
                 val selected = membership[tab.key] == true
-                val titleText = if (selected) "\u2713 ${tab.localizedTitle()}" else tab.localizedTitle()
+                val titleText = if (selected) "\u2713 ${tab.localizedMembershipTitle()}" else tab.localizedMembershipTitle()
                 Button(
                     onClick = { onToggle(tab.key) },
                     enabled = !isPending,

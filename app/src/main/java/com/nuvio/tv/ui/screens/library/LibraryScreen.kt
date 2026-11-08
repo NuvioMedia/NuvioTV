@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -38,20 +37,22 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MenuDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -60,14 +61,20 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -87,7 +94,6 @@ import com.nuvio.tv.core.cloud.CloudLibraryPlaybackInfo
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.PosterShape
-import com.nuvio.tv.domain.model.TraktListPrivacy
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.GridContentCard
@@ -101,18 +107,20 @@ import com.nuvio.tv.domain.model.localizedTitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
-import com.nuvio.tv.ui.util.formatAddonTypeLabel
 import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.TextStyle
 import com.nuvio.tv.R
 
 private const val KEY_REPEAT_THROTTLE_MS = 80L
 
 private enum class LibraryViewMode {
     Saved,
-    Cloud
+    Cloud,
+    Servers
 }
 
 @Composable
@@ -121,12 +129,14 @@ private fun localizedTypeLabel(key: String): String = when (key.lowercase()) {
     else -> localizedContentType(key)
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel(),
+    serversViewModel: LibraryServersViewModel = hiltViewModel(),
     showBuiltInHeader: Boolean = true,
     onNavigateToDetail: (String, String, String?) -> Unit,
+    onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> },
     onCloudPlaybackResolved: (CloudLibraryPlaybackInfo) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -134,9 +144,14 @@ fun LibraryScreen(
     val watchedSeriesIds by viewModel.watchedSeriesIds.collectAsState()
     val activityContext = LocalContext.current
     val scope = rememberCoroutineScope()
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember(uiState.showManageDialog) { mutableStateOf(false) }
     var expandedPicker by remember { mutableStateOf<String?>(null) }
-    var viewMode by rememberSaveable { mutableStateOf(LibraryViewMode.Saved) }
+    var selectedViewMode by rememberSaveable { mutableStateOf(LibraryViewMode.Saved) }
+    val servers by serversViewModel.servers.collectAsState()
+    val serverShelves by serversViewModel.shelves.collectAsState()
+    val hasServers = servers.enabledConnections.isNotEmpty()
+    val viewModes = LibraryViewMode.entries.filter { it != LibraryViewMode.Servers || hasServers }
+    val viewMode = selectedViewMode.takeIf { it in viewModes } ?: LibraryViewMode.Saved
     var activeCloudItem by remember { mutableStateOf<CloudLibraryItem?>(null) }
     var pendingCloudPlayback by remember { mutableStateOf<CloudLibraryPlaybackInfo?>(null) }
     var showCloudPlayerChoice by remember { mutableStateOf(false) }
@@ -144,6 +159,9 @@ fun LibraryScreen(
     val selectorFocusRequester = remember { FocusRequester() }
     val gridState = rememberLazyGridState()
     var pendingPrimaryFocus by remember { mutableStateOf(true) }
+    var serverFocusTarget by remember {
+        mutableStateOf(serversViewModel.focusedShelfKey?.let { key -> serversViewModel.focusedIndexes[key]?.let { key to it } })
+    }
     var lastFocusedPosterKey by rememberSaveable { mutableStateOf<String?>(null) }
     val visibleItemKeys = remember(uiState.visibleItems) {
         uiState.visibleItems.map { "${it.type}:${it.id}" }
@@ -154,8 +172,18 @@ fun LibraryScreen(
     val posterFocusRequesters = remember(visibleItemKeys) {
         visibleItemKeys.associateWith { FocusRequester() }
     }
+    val layoutDirection = LocalLayoutDirection.current
     val firstVisiblePosterKey = visibleItemKeys.firstOrNull()
+    val firstVisibleCardKey = visibleItemKeys.let { keys ->
+        if (layoutDirection == LayoutDirection.Rtl) {
+            keys.lastOrNull()  // Last in logical order = rightmost in RTL
+        } else {
+            keys.firstOrNull() // First in logical order = leftmost in LTR
+        }
+    }
     val posterCardStyle = PosterCardDefaults.Style.copy(
+        width = uiState.posterCardWidthDp.dp,
+        height = (uiState.posterCardWidthDp * 3 / 2).dp,
         cornerRadius = uiState.posterCardCornerRadiusDp.dp
     )
 
@@ -180,6 +208,10 @@ fun LibraryScreen(
         }
     }
 
+    LaunchedEffect(viewMode, servers.revision) {
+        if (viewMode == LibraryViewMode.Servers) serversViewModel.load()
+    }
+
     LaunchedEffect(uiState.isLoading) {
         if (uiState.isLoading) {
             pendingPrimaryFocus = true
@@ -187,6 +219,9 @@ fun LibraryScreen(
     }
 
     LaunchedEffect(uiState.isLoading, uiState.sourceMode, uiState.listTabs.size) {
+        if (!uiState.isLoading && pendingPrimaryFocus && viewMode == LibraryViewMode.Servers && serverFocusTarget != null) {
+            pendingPrimaryFocus = false
+        }
         if (!uiState.isLoading && pendingPrimaryFocus) {
             val restoreKey = lastFocusedPosterKey
             val restoreIndex = restoreKey?.let { visibleItemIndexByKey[it] }
@@ -231,6 +266,7 @@ fun LibraryScreen(
 
     if (uiState.isLoading) {
         val loadingFocusRequester = remember { FocusRequester() }
+        val loadingLabel = stringResource(R.string.library_syncing_library)
         LaunchedEffect(uiState.isLoading) {
             loadingFocusRequester.requestFocus()
         }
@@ -244,6 +280,7 @@ fun LibraryScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .focusRequester(loadingFocusRequester)
+                    .semantics { contentDescription = loadingLabel }
                     .focusable()
             )
             Column(
@@ -263,12 +300,24 @@ fun LibraryScreen(
 
     val lastKeyRepeatTime = remember { longArrayOf(0L) }
 
+    val globalLandscape = com.nuvio.tv.ui.components.LocalLandscapePosterMode.current
+
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+        columns = GridCells.Adaptive(
+            minSize = if (globalLandscape) posterCardStyle.height else posterCardStyle.width
+        ),
         state = gridState,
         modifier = Modifier
             .fillMaxSize()
             .background(NuvioTheme.colors.Background)
+            .focusRestorer {
+                val lastKey = lastFocusedPosterKey
+                (if (lastKey != null && lastKey in posterFocusRequesters) {
+                    posterFocusRequesters[lastKey]
+                } else {
+                    posterFocusRequesters[firstVisibleCardKey]
+                }) ?: FocusRequester()
+            }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
@@ -300,8 +349,10 @@ fun LibraryScreen(
                 Text(
                     text = when {
                         viewMode == LibraryViewMode.Cloud -> stringResource(R.string.library_source_cloud).uppercase()
+                        viewMode == LibraryViewMode.Servers -> stringResource(R.string.library_source_servers).uppercase()
                         uiState.sourceMode == LibrarySourceMode.TRAKT -> "TRAKT"
                         uiState.sourceMode == LibrarySourceMode.SIMKL -> "SIMKL"
+                        uiState.sourceMode == LibrarySourceMode.MDBLIST -> "MDBLIST"
                         uiState.isNuvioAccount -> "NUVIO"
                         else -> stringResource(R.string.library_source_local)
                     },
@@ -315,10 +366,11 @@ fun LibraryScreen(
 
         item(span = { GridItemSpan(maxLineSpan) }) {
             LibraryViewModeRow(
+                modes = viewModes,
                 selectedMode = viewMode,
                 primaryFocusRequester = primaryFocusRequester,
                 onSelected = { mode ->
-                    viewMode = mode
+                    selectedViewMode = mode
                     expandedPicker = null
                 },
                 // Refresh belongs to the cloud view only, pinned right in line with the tabs.
@@ -395,12 +447,12 @@ fun LibraryScreen(
                 )
             }
 
-            if (uiState.sourceMode == LibrarySourceMode.TRAKT && uiState.isTrackingAuthenticated) {
+            if (uiState.listManagement != null && uiState.isTrackingAuthenticated) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     LibraryActionsRow(
                         pending = uiState.pendingOperation,
                         isSyncing = uiState.isSyncing,
-                        showManageLists = uiState.sourceMode == LibrarySourceMode.TRAKT,
+                        showManageLists = uiState.listManagement != null,
                         onManageLists = viewModel::onOpenManageLists,
                         onRefresh = viewModel::onRefresh
                     )
@@ -413,14 +465,14 @@ fun LibraryScreen(
                     val title = when {
                         uiState.sourceMode == LibrarySourceMode.TRAKT && !uiState.isTrackingAuthenticated -> stringResource(R.string.library_empty_trakt_not_auth_title)
                         uiState.sourceMode == LibrarySourceMode.SIMKL && !uiState.isTrackingAuthenticated -> stringResource(R.string.library_empty_simkl_not_auth_title)
-                        uiState.sourceMode == LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_title, selectedTypeLabel)
+                        uiState.sourceMode == LibrarySourceMode.TRAKT || uiState.sourceMode == LibrarySourceMode.MDBLIST -> stringResource(R.string.library_empty_trakt_title, selectedTypeLabel)
                         uiState.sourceMode == LibrarySourceMode.SIMKL -> stringResource(R.string.library_empty_simkl_title, selectedTypeLabel)
                         else -> stringResource(R.string.library_empty_local_title, selectedTypeLabel)
                     }
                     val subtitle = when {
                         uiState.sourceMode == LibrarySourceMode.TRAKT && !uiState.isTrackingAuthenticated -> stringResource(R.string.library_empty_trakt_not_auth_subtitle)
                         uiState.sourceMode == LibrarySourceMode.SIMKL && !uiState.isTrackingAuthenticated -> stringResource(R.string.library_empty_simkl_not_auth_subtitle)
-                        uiState.sourceMode == LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_subtitle)
+                        uiState.sourceMode == LibrarySourceMode.TRAKT || uiState.sourceMode == LibrarySourceMode.MDBLIST -> stringResource(R.string.library_empty_trakt_subtitle)
                         uiState.sourceMode == LibrarySourceMode.SIMKL -> stringResource(R.string.library_empty_simkl_subtitle)
                         else -> stringResource(R.string.library_empty_local_subtitle)
                     }
@@ -460,6 +512,28 @@ fun LibraryScreen(
                     }
                 )
             }
+        } else if (viewMode == LibraryViewMode.Servers) {
+            libraryServerContent(
+                shelves = serverShelves,
+                posterCardStyle = posterCardStyle,
+                rowInset = NuvioTheme.spacing.xxxl,
+                focusTarget = serverFocusTarget,
+                focusedIndexes = serversViewModel.focusedIndexes,
+                onItemFocused = { shelfKey, index ->
+                    val target = serverFocusTarget
+                    if (target == null || target == shelfKey to index) {
+                        serverFocusTarget = null
+                        serversViewModel.onItemFocused(shelfKey, index)
+                    }
+                },
+                isWatched = { item ->
+                    val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
+                    if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds
+                },
+                onItemClick = { itemId, itemType, addonBaseUrl -> onNavigateToDetail(itemId, itemType, addonBaseUrl) },
+                onSeeAll = { row -> onNavigateToCatalogSeeAll(row.catalogId, row.addonId, row.apiType) },
+                onItemLongPress = { item, addonBaseUrl -> viewModel.posterOptions.show(item, addonBaseUrl) }
+            )
         } else {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 CloudLibrarySelectorsRow(
@@ -546,8 +620,9 @@ fun LibraryScreen(
         item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm)) }
     }
 
-    if (uiState.showManageDialog && uiState.sourceMode == LibrarySourceMode.TRAKT) {
+    if (uiState.showManageDialog && uiState.listManagement != null) {
         ManageListsDialog(
+            capabilities = requireNotNull(uiState.listManagement),
             tabs = uiState.listTabs,
             selectedKey = uiState.manageSelectedListKey,
             errorMessage = uiState.errorMessage,
@@ -562,7 +637,7 @@ fun LibraryScreen(
         )
     }
 
-    if (showDeleteConfirm) {
+    if (showDeleteConfirm && uiState.showManageDialog) {
         ConfirmDeleteDialog(
             pending = uiState.pendingOperation,
             onConfirm = {
@@ -574,8 +649,9 @@ fun LibraryScreen(
     }
 
     val listEditor = uiState.listEditorState
-    if (listEditor != null && uiState.showManageDialog) {
+    if (listEditor != null && uiState.showManageDialog && uiState.listManagement != null) {
         ListEditorDialog(
+            capabilities = requireNotNull(uiState.listManagement),
             state = listEditor,
             pending = uiState.pendingOperation,
             onNameChanged = viewModel::onUpdateEditorName,
@@ -654,6 +730,7 @@ fun LibraryScreen(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun LibraryViewModeRow(
+    modes: List<LibraryViewMode>,
     selectedMode: LibraryViewMode,
     primaryFocusRequester: FocusRequester,
     onSelected: (LibraryViewMode) -> Unit,
@@ -666,12 +743,16 @@ private fun LibraryViewModeRow(
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
-            LibraryViewMode.entries.forEach { mode ->
+            modes.forEach { mode ->
                 val selected = mode == selectedMode
                 Button(
                     onClick = { onSelected(mode) },
                     modifier = Modifier
-                        .then(if (selected) Modifier.focusRequester(primaryFocusRequester) else Modifier),
+                        .then(if (selected) Modifier.focusRequester(primaryFocusRequester) else Modifier)
+                        .semantics {
+                            role = Role.Tab
+                            this.selected = selected
+                        },
                     colors = ButtonDefaults.colors(
                         containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
                         contentColor = NuvioTheme.colors.TextPrimary
@@ -681,6 +762,7 @@ private fun LibraryViewModeRow(
                         text = when (mode) {
                             LibraryViewMode.Saved -> stringResource(R.string.library_source_saved)
                             LibraryViewMode.Cloud -> stringResource(R.string.library_source_cloud)
+                            LibraryViewMode.Servers -> stringResource(R.string.library_source_servers)
                         }
                     )
                 }
@@ -846,7 +928,8 @@ private fun CloudLibrarySearchRow(
                     }
                 ),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = NuvioTheme.colors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary,
+                                            textDirection = TextDirection.Content
                 ),
                 cursorBrush = SolidColor(
                     if (editing) NuvioTheme.colors.FocusRing else Color.Transparent
@@ -1388,6 +1471,12 @@ private fun LibraryDropdownPicker(
                             color = itemBackgroundColor,
                             shape = RoundedCornerShape(10.dp)
                         )
+                        .semantics {
+                            // The current option is only distinguished by a background tint,
+                            // so expose the selection state explicitly.
+                            role = Role.RadioButton
+                            this.selected = isSelected
+                        }
                         .onFocusChanged { state ->
                             val hasFocus = state.isFocused || state.hasFocus
                             focusedOptionValue = when {
@@ -1454,306 +1543,6 @@ private fun LibraryActionsRow(
             )
         ) {
             Text(if (isSyncing) stringResource(R.string.library_syncing_btn) else stringResource(R.string.library_sync_btn))
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ManageListsDialog(
-    tabs: List<LibraryListTab>,
-    selectedKey: String?,
-    errorMessage: String?,
-    pending: Boolean,
-    onSelect: (String) -> Unit,
-    onCreate: () -> Unit,
-    onEdit: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
-    onDelete: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val personalTabs = remember(tabs) { tabs.filter { it.type == LibraryListTab.Type.PERSONAL } }
-    val firstFocusRequester = remember { FocusRequester() }
-    val closeFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(personalTabs.size) {
-        val target = if (personalTabs.isNotEmpty()) firstFocusRequester else closeFocusRequester
-        val focused = runCatching { target.requestFocus() }.isSuccess
-        if (!focused) {
-            delay(16)
-            runCatching { target.requestFocus() }
-        }
-    }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Box(
-            modifier = Modifier
-                .width(620.dp)
-                .background(NuvioTheme.colors.BackgroundElevated, RoundedCornerShape(NuvioTheme.radii.xl))
-                .padding(NuvioTheme.spacing.xl)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(
-                    text = stringResource(R.string.library_manage_trakt_lists),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = NuvioTheme.colors.TextPrimary
-                )
-
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFFFB6B6)
-                    )
-                }
-
-                if (personalTabs.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.library_no_lists),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = NuvioTheme.extendedColors.textSecondary
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(personalTabs, key = { it.key }) { tab ->
-                            val selected = tab.key == selectedKey
-                            Button(
-                                onClick = { onSelect(tab.key) },
-                                enabled = !pending,
-                                modifier = if (tab.key == personalTabs.firstOrNull()?.key) {
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(firstFocusRequester)
-                                } else {
-                                    Modifier.fillMaxWidth()
-                                },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
-                                    contentColor = NuvioTheme.colors.TextPrimary
-                                )
-                            ) {
-                                Text(
-                                    text = tab.localizedTitle(),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(
-                        onClick = onCreate,
-                        enabled = !pending,
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioTheme.colors.BackgroundCard,
-                            contentColor = NuvioTheme.colors.TextPrimary
-                        )
-                    ) { Text(stringResource(R.string.library_list_create)) }
-                    Button(
-                        onClick = onEdit,
-                        enabled = !pending && selectedKey != null,
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioTheme.colors.BackgroundCard,
-                            contentColor = NuvioTheme.colors.TextPrimary
-                        )
-                    ) { Text(stringResource(R.string.library_list_edit)) }
-                    Button(
-                        onClick = onMoveUp,
-                        enabled = !pending && selectedKey != null,
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioTheme.colors.BackgroundCard,
-                            contentColor = NuvioTheme.colors.TextPrimary
-                        )
-                    ) { Text(stringResource(R.string.library_list_move_up)) }
-                    Button(
-                        onClick = onMoveDown,
-                        enabled = !pending && selectedKey != null,
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioTheme.colors.BackgroundCard,
-                            contentColor = NuvioTheme.colors.TextPrimary
-                        )
-                    ) { Text(stringResource(R.string.library_list_move_down)) }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(
-                        onClick = onDelete,
-                        enabled = !pending && selectedKey != null,
-                        colors = ButtonDefaults.colors(
-                            containerColor = Color(0xFF4A2323),
-                            contentColor = NuvioTheme.colors.TextPrimary
-                        )
-                    ) { Text(stringResource(R.string.library_list_delete)) }
-                    Button(
-                        onClick = onDismiss,
-                        enabled = !pending,
-                        modifier = Modifier.focusRequester(closeFocusRequester),
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioTheme.colors.BackgroundCard,
-                            contentColor = NuvioTheme.colors.TextPrimary
-                        )
-                    ) { Text(stringResource(R.string.library_list_close)) }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ListEditorDialog(
-    state: LibraryListEditorState,
-    pending: Boolean,
-    onNameChanged: (String) -> Unit,
-    onDescriptionChanged: (String) -> Unit,
-    onPrivacyChanged: (TraktListPrivacy) -> Unit,
-    onSave: () -> Unit,
-    onCancel: () -> Unit
-) {
-    val nameFocusRequester = remember { FocusRequester() }
-    val descriptionFocusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    var nameEditing by remember { mutableStateOf(false) }
-    var descriptionEditing by remember { mutableStateOf(false) }
-
-    fun isSelectKey(keyCode: Int): Boolean {
-        return keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
-            keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
-            keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
-    }
-
-    LaunchedEffect(Unit) {
-        nameFocusRequester.requestFocus()
-    }
-
-    NuvioDialog(
-        onDismiss = onCancel,
-        title = if (state.mode == LibraryListEditorState.Mode.CREATE) stringResource(R.string.library_list_create_dialog_title) else stringResource(R.string.library_list_edit_dialog_title),
-        width = 560.dp
-    ) {
-        androidx.compose.material3.OutlinedTextField(
-            value = state.name,
-            onValueChange = onNameChanged,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(nameFocusRequester)
-                .onFocusChanged {
-                    if (!it.isFocused) {
-                        nameEditing = false
-                    }
-                }
-                .onPreviewKeyEvent { event ->
-                    val native = event.nativeKeyEvent
-                    if (native.action == AndroidKeyEvent.ACTION_DOWN && isSelectKey(native.keyCode)) {
-                        nameEditing = true
-                        descriptionEditing = false
-                        keyboardController?.show()
-                    }
-                    false
-                },
-            enabled = !pending,
-            readOnly = !nameEditing,
-            singleLine = true,
-            maxLines = 1,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    nameEditing = false
-                    keyboardController?.hide()
-                }
-            ),
-            label = { androidx.compose.material3.Text(stringResource(R.string.library_list_name_label)) },
-            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                focusedTextColor = NuvioTheme.colors.TextPrimary,
-                unfocusedTextColor = NuvioTheme.colors.TextPrimary,
-                focusedContainerColor = NuvioTheme.colors.BackgroundCard,
-                unfocusedContainerColor = NuvioTheme.colors.BackgroundCard,
-                focusedBorderColor = NuvioTheme.colors.FocusRing,
-                unfocusedBorderColor = NuvioTheme.colors.Border,
-                focusedLabelColor = NuvioTheme.colors.TextSecondary,
-                unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
-                cursorColor = NuvioTheme.colors.FocusRing
-            )
-        )
-
-        androidx.compose.material3.OutlinedTextField(
-            value = state.description,
-            onValueChange = onDescriptionChanged,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(descriptionFocusRequester)
-                .onFocusChanged {
-                    if (!it.isFocused) {
-                        descriptionEditing = false
-                    }
-                }
-                .onPreviewKeyEvent { event ->
-                    val native = event.nativeKeyEvent
-                    if (native.action == AndroidKeyEvent.ACTION_DOWN && isSelectKey(native.keyCode)) {
-                        descriptionEditing = true
-                        nameEditing = false
-                        keyboardController?.show()
-                    }
-                    false
-                },
-            enabled = !pending,
-            readOnly = !descriptionEditing,
-            minLines = 3,
-            maxLines = 5,
-            label = { androidx.compose.material3.Text(stringResource(R.string.library_list_description_label)) },
-            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                focusedTextColor = NuvioTheme.colors.TextPrimary,
-                unfocusedTextColor = NuvioTheme.colors.TextPrimary,
-                focusedContainerColor = NuvioTheme.colors.BackgroundCard,
-                unfocusedContainerColor = NuvioTheme.colors.BackgroundCard,
-                focusedBorderColor = NuvioTheme.colors.FocusRing,
-                unfocusedBorderColor = NuvioTheme.colors.Border,
-                focusedLabelColor = NuvioTheme.colors.TextSecondary,
-                unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
-                cursorColor = NuvioTheme.colors.FocusRing
-            )
-        )
-
-        Text(
-            text = stringResource(R.string.library_list_privacy),
-            style = MaterialTheme.typography.bodyMedium,
-            color = NuvioTheme.extendedColors.textSecondary
-        )
-
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(TraktListPrivacy.entries.toList(), key = { it.name }) { privacy ->
-                val selected = privacy == state.privacy
-                Button(
-                    onClick = { onPrivacyChanged(privacy) },
-                    enabled = !pending,
-                    colors = ButtonDefaults.colors(
-                        containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
-                        contentColor = NuvioTheme.colors.TextPrimary
-                    )
-                ) {
-                    Text(privacy.apiValue.replaceFirstChar { it.uppercase() })
-                }
-            }
-        }
-
-        Button(
-            onClick = onSave,
-            enabled = !pending,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioTheme.colors.BackgroundCard,
-                contentColor = NuvioTheme.colors.TextPrimary
-            )
-        ) {
-            Text(if (pending) stringResource(R.string.action_saving) else stringResource(R.string.action_save))
         }
     }
 }

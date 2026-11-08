@@ -230,7 +230,7 @@ fun LoadingOverlay(
                 // is acting as the fill indicator. The text message stays visible.
                 val showHorizontalBar = progress != null && !showLogo
                 if (!message.isNullOrBlank() || showHorizontalBar) {
-                    val messageOffset = if (showLogo || !title.isNullOrBlank()) 94.dp else 86.dp
+                    val messageOffset = if (showLogo || !title.isNullOrBlank()) 120.dp else 86.dp
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier

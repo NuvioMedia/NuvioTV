@@ -29,13 +29,17 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -46,6 +50,7 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.TrailerPlayer
 import kotlinx.coroutines.delay
 import android.view.KeyEvent
+import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @Stable
 class TrailerSeekOverlayState {
@@ -70,6 +75,7 @@ fun SharedTrailerOverlay(
     var seekToken by remember { mutableIntStateOf(0) }
     var seekDeltaMs by remember { mutableLongStateOf(0L) }
 
+    val overlayFocusRequester = remember { FocusRequester() }
     val canControlPlayback = !trailerUrl.isNullOrBlank() && !isLoading && errorMessage == null
 
     LaunchedEffect(trailerUrl, trailerAudioUrl, isLoading, errorMessage) {
@@ -91,10 +97,18 @@ fun SharedTrailerOverlay(
             decorFitsSystemWindows = false
         )
     ) {
+        AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
+                .focusRequester(overlayFocusRequester)
+                .focusable()
+                // This surface exists only to capture remote keys (back/play/pause/seek) and has no
+                // label of its own, so merge the overlay's own text (title + "press back" hint)
+                // into it. Merging leaves exactly one named node on the overlay; a bare
+                // contentDescription here would leave those texts as separate named siblings.
+                .semantics(mergeDescendants = true) { }
                 .onPreviewKeyEvent { keyEvent ->
                     if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
                         return@onPreviewKeyEvent false
@@ -173,6 +187,9 @@ fun SharedTrailerOverlay(
                     }
                 }
         ) {
+            LaunchedEffect(canControlPlayback, errorMessage) {
+                overlayFocusRequester.requestFocusAfterFrames()
+            }
             if (!trailerUrl.isNullOrBlank() && errorMessage == null) {
                 TrailerPlayer(
                     trailerUrl = trailerUrl,

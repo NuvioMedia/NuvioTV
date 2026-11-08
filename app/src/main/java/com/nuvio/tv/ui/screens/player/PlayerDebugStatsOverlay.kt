@@ -246,7 +246,7 @@ private class DebugStatsSampler(context: Context) {
         val usedMb = (runtime.totalMemory() - runtime.freeMemory()) / MB
         val maxMb = runtime.maxMemory() / MB
         val playerNativeBytes = snapshot?.nativeMemoryBytes
-        val nativeMb = if (playerNativeBytes != null && playerNativeBytes > 0L) {
+        val nativeMb = if (playerNativeBytes != null && playerNativeBytes >= 0L) {
             playerNativeBytes / MB
         } else {
             runCatching { Debug.getNativeHeapAllocatedSize() / MB }.getOrDefault(-1L)

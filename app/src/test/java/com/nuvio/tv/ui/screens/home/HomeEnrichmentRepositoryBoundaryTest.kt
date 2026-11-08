@@ -111,7 +111,7 @@ class HomeEnrichmentRepositoryBoundaryTest {
         val addonRepository = mockk<AddonRepository>(relaxed = true) {
             every { getInstalledAddons() } returns flowOf(listOf(metaAddon()))
         }
-        return MetaRepositoryImpl(context = context, api = api, addonRepository = addonRepository)
+        return MetaRepositoryImpl(context = context, api = api, addonRepository = addonRepository, serverCatalog = mockk(relaxed = true))
     }
 
     /** Deliberately not the catalog source, or the lookup short-circuits as source-sufficient. */
@@ -176,6 +176,8 @@ class HomeEnrichmentRepositoryBoundaryTest {
                 every { getAllEpisodeProgress(any()) } returns flowOf(emptyMap())
             }
         val viewModel = HomeViewModel(
+            episodeShuffleStore = mockk(relaxed = true),
+            episodeShuffle = com.nuvio.tv.domain.model.EpisodeShuffle(),
             appContext = mockk(relaxed = true),
             addonRepository = mockk(relaxed = true),
             startupSyncService = mockk(relaxed = true),
@@ -193,11 +195,13 @@ class HomeEnrichmentRepositoryBoundaryTest {
             tmdbService = mockk(relaxed = true),
             tmdbMetadataService = mockk(relaxed = true),
             mdbListRepository = mockk(relaxed = true),
+            imdbEpisodeRatingsRepository = mockk(relaxed = true),
             trailerService = mockk(relaxed = true),
             watchedSeriesStateHolder = mockk(relaxed = true),
             cwEnrichmentCache = cwEnrichmentCache,
             profileManager = profileManager,
-            tvRecommendationManager = mockk(relaxed = true)
+            tvRecommendationManager = mockk(relaxed = true),
+            serverCatalog = mockk(relaxed = true)
         )
         viewModel.startupGracePeriodActive = false
         viewModel.externalMetaPrefetchEnabled = true

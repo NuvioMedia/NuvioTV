@@ -16,6 +16,7 @@
 package com.nuvio.tv.core.player.dvmkv;
 
 import androidx.media3.common.C;
+import androidx.media3.common.ParserException;
 import androidx.media3.extractor.ExtractorInput;
 import java.io.EOFException;
 import java.io.IOException;
@@ -67,7 +68,7 @@ import java.io.IOException;
    *     should be considered an error, causing an {@link EOFException} to be thrown.
    * @param removeLengthMask Removes the variable-length integer length mask from the value.
    * @param maximumAllowedLength Maximum allowed length of the variable integer to be read.
-   * @return The read value, or {@link C#RESULT_END_OF_INPUT} if {@code allowEndOfStream} is true
+   * @return The read value, or {@link C#RESULT_END_OF_INPUT} if {@code allowEndOfInput} is true
    *     and the end of the input was encountered, or {@link C#RESULT_MAX_LENGTH_EXCEEDED} if the
    *     length of the varint exceeded maximumAllowedLength.
    * @throws IOException If an error occurs reading from the input.
@@ -86,7 +87,12 @@ import java.io.IOException;
       int firstByte = scratch[0] & 0xFF;
       length = parseUnsignedVarintLength(firstByte);
       if (length == C.LENGTH_UNSET) {
-        throw new IllegalStateException("No valid varint length mask found");
+        state = STATE_BEGIN_READING;
+        if (allowEndOfInput) {
+          return C.RESULT_MAX_LENGTH_EXCEEDED;
+        }
+        throw ParserException.createForMalformedContainer(
+            "No valid varint length mask found", /* cause= */ null);
       }
       state = STATE_READ_CONTENTS;
     }

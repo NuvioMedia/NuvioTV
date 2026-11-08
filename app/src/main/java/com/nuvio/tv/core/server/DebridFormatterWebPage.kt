@@ -390,7 +390,7 @@ const options = {
   audioTags: [['ATMOS','Atmos'],['DD_PLUS','DD+'],['DD','DD'],['DTS_X','DTS:X'],['DTS_HD_MA','DTS-HD MA'],['DTS_HD','DTS-HD'],['DTS_ES','DTS-ES'],['DTS','DTS'],['TRUEHD','TrueHD'],['OPUS','OPUS'],['FLAC','FLAC'],['AAC','AAC'],['UNKNOWN','Unknown']],
   audioChannels: [['CH_7_1','7.1'],['CH_6_1','6.1'],['CH_5_1','5.1'],['CH_2_0','2.0'],['UNKNOWN','Unknown']],
   encodes: [['AV1','AV1'],['HEVC','HEVC'],['AVC','AVC'],['XVID','XviD'],['DIVX','DivX'],['UNKNOWN','Unknown']],
-  languages: [['EN','English'],['HI','Hindi'],['IT','Italian'],['ES','Spanish'],['FR','French'],['DE','German'],['PT','Portuguese'],['JA','Japanese'],['KO','Korean'],['ZH','Chinese'],['MULTI','Multi'],['UNKNOWN','Unknown']]
+  languages: [['EN','English'],['HI','Hindi'],['IT','Italian'],['ES','Spanish'],['FR','French'],['DE','German'],['PT','Portuguese'],['JA','Japanese'],['KO','Korean'],['ZH','Chinese'],['HE','Hebrew'],['MULTI','Multi'],['UNKNOWN','Unknown']]
 };
 const groups = [
   ['preferredResolutions','${s(R.string.debrid_stream_resolutions_preferred, "Preferred resolutions").js()}','resolutions'],

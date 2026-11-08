@@ -4,23 +4,27 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.content.Context
 import android.graphics.Bitmap
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size as DrawSize
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size as DrawSize
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -61,11 +65,17 @@ internal fun ClassicFocusGradientBackdrop(
     val context = LocalContext.current
     val fallbackColor = NuvioTheme.colors.FocusBackground
     val colorCache = remember(fallbackColor) { classicFocusGradientColorCache() }
-    var targetColor by remember { mutableStateOf(Color.Transparent) }
-    val animatedColor = animateColorAsState(
-        targetValue = targetColor,
-        animationSpec = tween(durationMillis = NuvioTheme.motion.durations.overlay),
-        label = "classicFocusGradientColor"
+    val overlayDuration = NuvioTheme.motion.durations.overlay
+
+    // Two-slot crossfade: slot 0 and slot 1 alternate as "incoming" layer.
+    var slotColors by remember { mutableStateOf(Color.Transparent to Color.Transparent) }
+    var activeSlot by remember { mutableIntStateOf(0) }
+    // crossfadeProgress: 0 = slot 0 fully visible, 1 = slot 1 fully visible
+    var crossfadeTarget by remember { mutableFloatStateOf(0f) }
+    val crossfadeProgress by animateFloatAsState(
+        targetValue = crossfadeTarget,
+        animationSpec = tween(durationMillis = overlayDuration),
+        label = "classicFocusGradientCrossfade"
     )
 
     LaunchedEffect(context, fallbackColor) {
@@ -74,63 +84,98 @@ internal fun ClassicFocusGradientBackdrop(
         }.collectLatest { (artwork, visible, updatesPaused) ->
             if (!visible || updatesPaused) return@collectLatest
             if (artwork == null) {
-                targetColor = Color.Transparent
+                // Fade to transparent: put transparent on the incoming slot
+                val nextSlot = 1 - activeSlot
+                slotColors = if (nextSlot == 0) {
+                    Color.Transparent to slotColors.second
+                } else {
+                    slotColors.first to Color.Transparent
+                }
+                activeSlot = nextSlot
+                crossfadeTarget = if (nextSlot == 1) 1f else 0f
                 return@collectLatest
             }
 
             delay(CLASSIC_FOCUS_GRADIENT_DEBOUNCE_MS)
-            colorCache[artwork]?.let {
-                targetColor = it
-                return@collectLatest
+
+            val color = colorCache[artwork] ?: run {
+                var resolved = resolveArtworkColor(context, artwork, fallbackColor)
+                if (!resolved.cacheable) {
+                    delay(CLASSIC_FOCUS_GRADIENT_CACHE_RETRY_MS)
+                    resolved = resolveArtworkColor(context, artwork, fallbackColor)
+                }
+                if (resolved.cacheable) colorCache[artwork] = resolved.color
+                resolved.color
             }
 
-            var resolvedColor = resolveArtworkColor(context, artwork, fallbackColor)
-            targetColor = resolvedColor.color
-            if (!resolvedColor.cacheable) {
-                delay(CLASSIC_FOCUS_GRADIENT_CACHE_RETRY_MS)
-                resolvedColor = resolveArtworkColor(context, artwork, fallbackColor)
-                targetColor = resolvedColor.color
+            // Place new color on the inactive slot, then animate towards it.
+            val nextSlot = 1 - activeSlot
+            slotColors = if (nextSlot == 0) {
+                color to slotColors.second
+            } else {
+                slotColors.first to color
             }
-            if (resolvedColor.cacheable) {
-                colorCache[artwork] = resolvedColor.color
-            }
+            activeSlot = nextSlot
+            crossfadeTarget = if (nextSlot == 1) 1f else 0f
         }
     }
 
-    Box(
-        modifier = modifier
-            .graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
-            }
-            .drawWithCache {
-            val visible = visibleProvider()
-            val firstVisibleX = size.width * 0.29f
-            val brush = if (visible) {
-                val color = animatedColor.value
-                Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0f to Color.Transparent,
-                        0.42f to Color.Transparent,
-                        0.66f to color.copy(alpha = 0.16f),
-                        0.84f to color.copy(alpha = 0.30f),
-                        1f to color.copy(alpha = 0.44f)
-                    ),
-                    start = Offset(size.width * 0.12f, 0f),
-                    end = Offset(size.width, size.height * 0.82f)
-                )
-            } else {
-                null
-            }
-            onDrawBehind {
-                if (brush != null) {
-                    drawRect(
-                        brush = brush,
-                        topLeft = Offset(firstVisibleX, 0f),
-                        size = DrawSize(size.width - firstVisibleX, size.height)
-                    )
-                }
+    val color0 = slotColors.first
+    val color1 = slotColors.second
+    val alpha0 = 1f - crossfadeProgress
+    val alpha1 = crossfadeProgress
+
+    // Skip compositing entirely when both layers are invisible.
+    if ((color0 == Color.Transparent || alpha0 < 0.005f) &&
+        (color1 == Color.Transparent || alpha1 < 0.005f)
+    ) return
+
+    Box(modifier = modifier.fillMaxSize()) {
+        if (color0 != Color.Transparent && alpha0 >= 0.005f) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = alpha0
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+            ) {
+                drawFocusGradient(color0)
             }
         }
+        if (color1 != Color.Transparent && alpha1 >= 0.005f) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = alpha1
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+            ) {
+                drawFocusGradient(color1)
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawFocusGradient(color: Color) {
+    if (color == Color.Transparent) return
+    val firstVisibleX = size.width * 0.29f
+    val brush = Brush.linearGradient(
+        colorStops = arrayOf(
+            0f to Color.Transparent,
+            0.42f to Color.Transparent,
+            0.66f to color.copy(alpha = 0.16f),
+            0.84f to color.copy(alpha = 0.30f),
+            1f to color.copy(alpha = 0.44f)
+        ),
+        start = Offset(size.width * 0.12f, 0f),
+        end = Offset(size.width, size.height * 0.82f)
+    )
+    drawRect(
+        brush = brush,
+        topLeft = Offset(firstVisibleX, 0f),
+        size = DrawSize(size.width - firstVisibleX, size.height)
     )
 }
 

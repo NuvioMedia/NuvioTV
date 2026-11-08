@@ -70,9 +70,9 @@ jobs:
         run: ./gradlew :app:testFullDebugUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullDebug --stacktrace
 
       - name: Upload fullDebug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: nuvio-full-debug-pr-${{ github.event.pull_request.number || github.run_number }}
           path: app/build/outputs/apk/full/debug/app-full-universal-debug.apk
+          archive: false
           if-no-files-found: error
           retention-days: 7

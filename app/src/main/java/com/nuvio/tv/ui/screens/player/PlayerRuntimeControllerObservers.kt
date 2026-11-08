@@ -7,6 +7,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.enabledAddons
@@ -73,9 +74,12 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
                         sources = currentTorrentSources,
                         bingeGroup = currentStreamBingeGroup,
                         contentLanguage = contentLanguage,
-                        year = year
+                        year = year,
+                        addonName = currentAddonName,
+                        addonLogo = currentAddonLogo,
+                        streamDescription = currentStreamDescription
                     )
-                } else if (currentStreamUrl.isNotBlank()) {
+                } else if (currentStreamUrl.isNotBlank() && !isServerStream) {
                     streamLinkCacheDataStore.save(
                         contentKey = key,
                         url = currentStreamUrl,
@@ -84,9 +88,14 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
                         filename = currentFilename,
                         videoHash = currentVideoHash,
                         videoSize = currentVideoSize,
+                        infoHash = state.currentStreamInfoHash,
+                        fileIdx = state.currentStreamFileIdx,
                         bingeGroup = currentStreamBingeGroup,
                         contentLanguage = contentLanguage,
-                        year = year
+                        year = year,
+                        addonName = currentAddonName,
+                        addonLogo = currentAddonLogo,
+                        streamDescription = currentStreamDescription
                     )
                 }
             }
@@ -150,6 +159,8 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                     autoSubtitleSelected = true
                     selectAddonSubtitle(match)
                     _uiState.update { it.copy(selectedAddonSubtitle = match, selectedSubtitleTrackIndex = -1) }
+                    // After a player rebuild this reapplies the earlier result without analysing again.
+                    runSelectedAutomaticSubtitleSync(match) // AutoSync hook
                     return@launch
                 }
             }
@@ -274,19 +285,23 @@ internal fun PlayerRuntimeController.observeBlurUnwatchedEpisodes() {
     }
 }
 
+internal fun PlayerRuntimeController.observeEpisodeOptionsOverlayStyle() {
+    scope.launch {
+        layoutPreferenceDataStore.episodeOptionsOverlayStyle.collectLatest { style ->
+            _uiState.update { it.copy(episodeOptionsOverlayStyle = style) }
+        }
+    }
+}
+
 internal fun PlayerRuntimeController.observeEpisodeWatchProgress() {
     val id = contentId ?: return
     val type = contentType ?: return
-    if (type.lowercase() != "series") return
-    val baseId = id.split(":").firstOrNull() ?: id
+    if (!type.equals("series", true) && !type.equals("tv", true)) return
     scope.launch {
-        watchProgressRepository.getAllEpisodeProgress(baseId, profileId).collectLatest { progressMap ->
-            _uiState.update { it.copy(episodeWatchProgressMap = progressMap) }
-        }
-    }
-    scope.launch {
-        watchedItemsPreferences.getWatchedEpisodesForContent(baseId, profileId).collectLatest { watchedSet ->
-            _uiState.update { it.copy(watchedEpisodeKeys = watchedSet) }
+        episodeShufflePlayback.observe(profileId, id, type).collectLatest { state ->
+            playbackShuffleState = state
+            _uiState.update { it.copy(episodeWatchProgressMap = state.progress, watchedEpisodeKeys = state.watched) }
+            recomputeNextEpisode(resetVisibility = false)
         }
     }
 }
@@ -295,6 +310,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
             currentPlayerSettingsForReport = settings
+            hasObservedPlayerSettings = true
             val currentState = _uiState.value
             val showOnlyPreferredLanguagesChanged =
                 currentState.subtitleStyle.showOnlyPreferredLanguages != settings.subtitleStyle.showOnlyPreferredLanguages
@@ -350,6 +366,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     internalPlayerEngine = resolvedInternalPlayerEngine,
                     frameRateMatchingMode = settings.frameRateMatchingMode,
                     tunnelingEnabled = settings.effectiveTunnelingEnabled &&
+                            !tunnelingBlockedByUsbAudio &&
                             resolvedInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER,
                     persistAudioAmplification = settings.persistAudioAmplification,
                     audioAmplificationDb = resolvedAudioAmplificationDb,
@@ -363,6 +380,9 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             if (resolvedCenterMixLevelDb != currentState.centerMixLevelDb) {
                 applyCenterMixLevel(resolvedCenterMixLevelDb)
             }
+            if (settings.nightMode != currentState.nightMode) {
+                applyNightMode(settings.nightMode)
+            }
 
             if (settings.rememberAudioDelayPerDevice && !wasRememberingAudioDelayPerDevice) {
                 applyStoredAudioDelayForCurrentRouteIfEnabled()
@@ -372,12 +392,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             if (settings.frameRateMatchingMode == FrameRateMatchingMode.OFF) {
                 frameRateProbeJob?.cancel()
                 _uiState.update {
-                    it.copy(
-                        detectedFrameRateRaw = 0f,
-                        detectedFrameRate = 0f,
-                        detectedFrameRateSource = null,
-                        afrProbeRunning = false
-                    )
+                    it.clearFrameRateDetection().copy(afrProbeRunning = false)
                 }
             }
 
@@ -394,6 +409,8 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             currentInternalPlayerEngine = resolvedInternalPlayerEngine
             streamAutoPlayModeSetting = settings.streamAutoPlayMode
             streamAutoPlayNextEpisodeEnabledSetting = settings.streamAutoPlayNextEpisodeEnabled
+            streamAutoPlayTimeoutSecondsSetting = settings.streamAutoPlayTimeoutSeconds
+            preloadNextEpisodeSourcesSetting = settings.preloadNextEpisodeSources
             _uiState.update {
                 it.copy(
                     streamAutoPlayMode = settings.streamAutoPlayMode,
@@ -485,6 +502,9 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             if (!skipIntroEnabled) {
                 if (skipIntervals.isNotEmpty() || _uiState.value.activeSkipInterval != null) {
                     skipIntervals = emptyList()
+                    apiSkipIntervals = emptyList()
+                    chapterSkipIntervals = emptyList()
+                    skipChaptersComputedForDuration = 0L
                     skipIntroFetchedKey = null
                     autoSkippedIntervalKeys.clear()
                     _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = true) }
@@ -506,7 +526,7 @@ internal fun PlayerRuntimeController.loadSavedProgressFor(season: Int?, episode:
 
     scope.launch {
         pendingResumeProgress = null
-        val progress = if (isCloudLibraryPlayback) {
+        val local = if (isCloudLibraryPlayback) {
             loadCloudLibraryResumeProgress()
         } else if (season != null && episode != null) {
             watchProgressRepository.getEpisodeProgress(
@@ -518,6 +538,7 @@ internal fun PlayerRuntimeController.loadSavedProgressFor(season: Int?, episode:
         } else {
             watchProgressRepository.getProgress(progressContentId!!, profileId).firstOrNull()
         }
+        val progress = newerServerProgress(local)
 
         progress?.let { saved ->
 
@@ -555,7 +576,7 @@ internal suspend fun PlayerRuntimeController.loadSavedProgressSuspend(season: In
     if (!isCloudLibraryPlayback && progressContentId == null) return
 
     pendingResumeProgress = null
-    val progress = if (isCloudLibraryPlayback) {
+    val local = if (isCloudLibraryPlayback) {
         loadCloudLibraryResumeProgress()
     } else if (season != null && episode != null) {
         watchProgressRepository.getEpisodeProgress(
@@ -567,6 +588,7 @@ internal suspend fun PlayerRuntimeController.loadSavedProgressSuspend(season: In
     } else {
         watchProgressRepository.getProgress(progressContentId!!, profileId).firstOrNull()
     }
+    val progress = newerServerProgress(local)
 
     progress?.let { saved ->
         if (saved.isInProgress()) {
@@ -609,8 +631,26 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
     if (!skipIntroEnabled) return
     if (id.isNullOrBlank()) return
 
-    // Prefer videoId over contentId — videoId carries the season/episode-specific ID
+    // Prefer videoId over contentId - videoId carries the season/episode-specific ID
     val effectiveId = currentVideoId?.takeIf { it.isNotBlank() } ?: id
+
+    if (contentType.equals("movie", ignoreCase = true)) {
+        val key = "movie:$id:$effectiveId"
+        if (skipIntroFetchedKey == key) return
+        skipIntroFetchedKey = key
+        scope.launch {
+            val api = withTimeoutOrNull(15_000L) {
+                skipIntroRepository.getMovieSkipIntervals(id, effectiveId)
+            } ?: emptyList()
+            setApiSkipIntervals(api)
+        }
+        return
+    }
+
+    val metaImdbId = contentType?.let { type ->
+        metaRepository.getCachedMeta(type, id)?.imdbId
+            ?: metaRepository.getCachedMeta(type, effectiveId.substringBefore(':'))?.imdbId
+    }?.takeIf { it.startsWith("tt") }
 
     // MAL ID format: "mal:57658:1" (malId:episode)
     if (effectiveId.startsWith("mal:")) {
@@ -620,11 +660,12 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
         val key = "mal:$malId:$malEpisode"
         if (skipIntroFetchedKey == key) return
         skipIntroFetchedKey = key
-        val imdbId = id?.takeIf { it.startsWith("tt") }
+        val imdbId = id?.takeIf { it.startsWith("tt") } ?: metaImdbId
         scope.launch {
-            skipIntervals = withTimeoutOrNull(15_000L) {
+            val api = withTimeoutOrNull(15_000L) {
                 skipIntroRepository.getSkipIntervalsForMal(malId, malEpisode, imdbId = imdbId, imdbSeason = season, imdbEpisode = episode)
             } ?: emptyList()
+            setApiSkipIntervals(api)
         }
         return
     }
@@ -637,11 +678,12 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
         val key = "kitsu:$kitsuId:$kitsuEpisode"
         if (skipIntroFetchedKey == key) return
         skipIntroFetchedKey = key
-        val imdbId = id?.takeIf { it.startsWith("tt") }
+        val imdbId = id?.takeIf { it.startsWith("tt") } ?: metaImdbId
         scope.launch {
-            skipIntervals = withTimeoutOrNull(15_000L) {
+            val api = withTimeoutOrNull(15_000L) {
                 skipIntroRepository.getSkipIntervalsForKitsu(kitsuId, kitsuEpisode, imdbId = imdbId, imdbSeason = season, imdbEpisode = episode)
             } ?: emptyList()
+            setApiSkipIntervals(api)
         }
         return
     }
@@ -654,10 +696,25 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
     skipIntroFetchedKey = key
 
     scope.launch {
-        skipIntervals = withTimeoutOrNull(15_000L) {
+        val api = withTimeoutOrNull(15_000L) {
             skipIntroRepository.getSkipIntervals(imdbId, season, episode)
         } ?: emptyList()
+        setApiSkipIntervals(api)
     }
+}
+
+/** Store API results and recompute the merged skipIntervals. */
+private fun PlayerRuntimeController.setApiSkipIntervals(api: List<SkipInterval>) {
+    apiSkipIntervals = api
+    recomputeMergedSkipIntervals()
+}
+
+/** Recompute the merged skipIntervals from chapters (priority) + API (gap-fill). */
+internal fun PlayerRuntimeController.recomputeMergedSkipIntervals() {
+    val isMovie = contentType.equals("movie", ignoreCase = true)
+    val merged = mergeSkipIntervals(apiSkipIntervals, chapterSkipIntervals, isMovie = isMovie)
+    if (merged == skipIntervals) return
+    skipIntervals = merged
 }
 
 internal fun PlayerRuntimeController.tryApplyPendingResumeProgress(player: Player) {
@@ -740,10 +797,6 @@ internal fun PlayerRuntimeController.retryCurrentStreamWithDolbyVisionFallback(f
 
 internal fun PlayerRuntimeController.retryCurrentStreamWithDv7Mode1Fallback(fromPositionMs: Long) {
     scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs, clearResumeProgress = true)
-}
-
-internal fun PlayerRuntimeController.retryCurrentStreamWithVc1SoftwareFallback(fromPositionMs: Long) {
-    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
 }
 
 internal fun PlayerRuntimeController.retryCurrentStreamWithVc1TrackSelectionBypass(fromPositionMs: Long) {
@@ -881,9 +934,6 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
                     isManualDv81Mode2Active = isManualDv81Mode2ActiveForCurrentPlayback,
                     dv7Mode1AlreadyForced = dv7Mode1ForcedStreamUrls.contains(currentStreamUrl),
                     currentVideoTrackIsLikelyVc1 = currentVideoTrackIsLikelyVc1,
-                    isVc1SoftwareFallbackActive = isVc1SoftwareFallbackActiveForCurrentPlayback,
-                    currentVideoTrackSelected = currentVideoTrackSelected,
-                    isVc1TrackSelectionBypassActive = isVc1TrackSelectionBypassActiveForCurrentPlayback,
                 )
             )
         ) {
@@ -891,16 +941,40 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
                 dv7Mode1ForcedStreamUrls.add(currentStreamUrl)
                 retryCurrentStreamWithDv7Mode1Fallback(currentPosition)
             }
-            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.RetryVc1Software -> {
-                vc1SoftwarePreferredStreamUrls.add(currentStreamUrl)
-                retryCurrentStreamWithVc1SoftwareFallback(currentPosition)
-            }
-            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.RetryVc1TrackBypass -> {
-                vc1TrackSelectionBypassStreamUrls.add(currentStreamUrl)
-                retryCurrentStreamWithVc1TrackSelectionBypass(currentPosition)
+            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.FailVc1Unsupported -> {
+                val exoError = livePlayer.playerError ?: return@launch
+                handleVc1PlaybackFailure(errorMessage = exoError.toDisplayMessage(context))
             }
             PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.None -> Unit
         }
+    }
+}
+
+internal fun PlayerRuntimeController.handleVc1PlaybackFailure(errorMessage: String? = null) {
+    val displayMessage = errorMessage?.takeIf { it.isNotBlank() }
+        ?: _exoPlayer?.playerError?.toDisplayMessage(context)
+        ?: return
+    cancelFirstFrameWatchdog()
+    cancelStallWatchdog()
+    cancelStableProgressReset()
+    errorRetryJob?.cancel()
+    errorRetryJob = null
+    releasePlayer(flushPlaybackState = false)
+    cancelNextEpisodeAutoPlayOnFatalError()
+    _uiState.update {
+        it.copy(
+            error = displayMessage,
+            showSwitchToMpvErrorAction = true,
+            isPlaying = false,
+            showControls = false,
+            isBuffering = false,
+            showLoadingOverlay = false,
+            showPauseOverlay = false,
+            loadingIssueReportVisible = false,
+            loadingIssueElapsedMs = 0L,
+            playbackEnded = false,
+            postPlayMode = null
+        )
     }
 }
 
@@ -923,8 +997,8 @@ internal fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
     scope.launch {
         yield()
         runCatching {
-            releasePlayer()
-            initializePlayer(currentStreamUrl, currentHeaders)
+            releasePlayer(flushPlaybackState = true, keepTorrentStream = true)
+            reinitializeCurrentStream()
         }.onFailure { e ->
             _uiState.update {
                 it.copy(
@@ -971,5 +1045,39 @@ internal fun PlayerRuntimeController.observeDeviceLocalAspectMode() {
                     _uiState.update { it.copy(aspectMode = mode) }
                 }
             }
+    }
+}
+
+internal fun PlayerRuntimeController.observeDeviceLocalTransparentLetterbox() {
+    scope.launch {
+        deviceLocalPlayerPreferences.transparentLetterbox
+            .distinctUntilChanged()
+            .collect { enabled ->
+                _uiState.update { it.copy(transparentLetterbox = enabled) }
+            }
+    }
+}
+
+internal fun PlayerRuntimeController.observeDeviceLocalTunneledSurfaceFill() {
+    scope.launch {
+        deviceLocalPlayerPreferences.tunneledSurfaceFill
+            .distinctUntilChanged()
+            .collect { fill ->
+                if (_uiState.value.tunneledSurfaceFill != fill) {
+                    Log.d(
+                        PlayerRuntimeController.TAG,
+                        "Tunneled surface fill restored from device-local prefs: $fill"
+                    )
+                    _uiState.update { it.copy(tunneledSurfaceFill = fill) }
+                }
+            }
+    }
+}
+
+internal fun PlayerRuntimeController.observeDeviceLocalReleaseDecoderOnBackground() {
+    scope.launch {
+        deviceLocalPlayerPreferences.releaseDecoderOnBackground
+            .distinctUntilChanged()
+            .collect { enabled -> releaseDecoderOnBackground = enabled }
     }
 }

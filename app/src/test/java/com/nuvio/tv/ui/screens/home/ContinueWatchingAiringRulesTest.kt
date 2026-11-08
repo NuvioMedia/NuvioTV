@@ -9,6 +9,7 @@ import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 
 /**
  * Regression tests for currently-airing series leaving Continue Watching on air day.
@@ -104,7 +105,6 @@ class ContinueWatchingAiringRulesTest {
     @Test
     fun `earliestUpcomingEpisodeMs uses next mid-season air time not only next season`() {
         val now = Instant.parse("2026-07-12T12:00:00Z")
-        val zone = ZoneId.systemDefault()
         val tomorrow = LocalDate.of(2026, 7, 13)
         val nextSeasonPremiere = LocalDate.of(2026, 9, 1)
 
@@ -130,7 +130,7 @@ class ContinueWatchingAiringRulesTest {
 
         val ms = meta.earliestUpcomingEpisodeMs(now)
         assertNotNull(ms)
-        val expected = tomorrow.atStartOfDay(zone).toInstant().toEpochMilli()
+        val expected = tomorrow.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         assertEquals(expected, ms)
 
         // Revalidation should prefer the nearer mid-season episode over S2 premiere window.

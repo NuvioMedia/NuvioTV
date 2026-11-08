@@ -2,6 +2,9 @@ package com.nuvio.tv.domain.model
 
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.core.debrid.DebridProviders
+import com.nuvio.tv.data.mediaserver.ServerPlaybackTarget
+import kotlin.math.roundToInt
+import kotlinx.serialization.Serializable
 
 /**
  * Represents a stream source from a Stremio addon
@@ -25,7 +28,9 @@ data class Stream(
     val clientResolve: StreamClientResolve? = null,
     val debridCacheStatus: StreamDebridCacheStatus? = null,
     val badges: List<StreamBadge> = emptyList(),
-    val subtitles: List<Subtitle> = emptyList()
+    val subtitles: List<Subtitle> = emptyList(),
+    val serverTarget: ServerPlaybackTarget? = null,
+    val pluginSourceName: String? = null
 ) {
     /**
      * Returns the primary stream source URL
@@ -106,6 +111,15 @@ data class Stream(
     fun isYouTube(): Boolean = ytId != null
 
     /**
+     * Returns the YouTube video id when [ytId] is the only way to play this stream,
+     * so the video has to be resolved on the device before playback.
+     */
+    fun youTubeIdToResolve(): String? =
+        ytId?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.takeIf { getStreamUrl() == null && !isTorrent() && !isDirectDebrid() }
+
+    /**
      * Returns true if this is an external URL (opens in browser)
      */
     fun isExternal(): Boolean = externalUrl != null && url == null && !externalUrl.isMagnetLink()
@@ -135,7 +149,7 @@ data class Stream(
     fun stableKey(occurrence: Int = 0): String = buildString {
         append(addonName)
         append('\u0000')
-        append(url ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: "")
+        append(url ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: serverTarget?.key() ?: "")
         append('\u0000')
         append(getEffectiveFileIdx() ?: "")
         append('\u0000')
@@ -154,6 +168,7 @@ data class Stream(
 }
 
 @Immutable
+@Serializable
 data class StreamBadge(
     val name: String,
     val imageURL: String = "",
@@ -179,6 +194,20 @@ enum class StreamDebridCacheState {
     UNKNOWN
 }
 
+const val AUDIO_DELAY_MIN_MS = -60000
+const val AUDIO_DELAY_MAX_MS = 60000
+
+/** Normalizes a `behaviorHints.audioDelayMs` value: whole ms, NaN/Infinity dropped, clamped to ±60 s. */
+fun Number?.toStreamAudioDelayMs(): Int? =
+    this?.toDouble()
+        ?.takeIf { it.isFinite() }
+        ?.roundToInt()
+        ?.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
+
+/** Normalizes a `behaviorHints.audioDelayLanguage` value: trimmed language code, blank or oversized values dropped. */
+fun String?.toStreamAudioDelayLanguage(): String? =
+    this?.trim()?.takeIf { it.isNotEmpty() && it.length <= 35 }
+
 @Immutable
 data class StreamBehaviorHints(
     val notWebReady: Boolean?,
@@ -187,7 +216,11 @@ data class StreamBehaviorHints(
     val proxyHeaders: ProxyHeaders?,
     val videoHash: String? = null,
     val videoSize: Long? = null,
-    val filename: String? = null
+    val filename: String? = null,
+    // Extra audio delay for this stream (ms, >0 = audio later), added on top of the user's/device delay.
+    val audioDelayMs: Int? = null,
+    // When set, audioDelayMs only applies to audio and embedded subtitle tracks in this language.
+    val audioDelayLanguage: String? = null
 )
 
 @Immutable

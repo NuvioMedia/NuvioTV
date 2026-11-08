@@ -71,6 +71,16 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.node.LayoutModifierNode
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.constrain
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalContext
@@ -78,14 +88,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.tv.material3.Border
-import androidx.tv.material3.Card
-import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
@@ -116,7 +125,8 @@ import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.components.WatchedMarker
 import com.nuvio.tv.ui.components.placeholderCardShimmer
 import com.nuvio.tv.ui.components.nuvioCardDepth
-import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
+import com.nuvio.tv.ui.components.LightweightCard
+import com.nuvio.tv.ui.components.rememberArtworkBackedFocusGlow
 import com.nuvio.tv.ui.components.rememberPlaceholderShimmerOffsetState
 import com.nuvio.tv.LocalSidebarExpanded
 import kotlin.math.abs
@@ -127,6 +137,7 @@ import com.nuvio.tv.ui.util.recompositionHighlighter
 import com.nuvio.tv.ui.util.StableMap
 import com.nuvio.tv.ui.util.StableRef
 import com.nuvio.tv.ui.util.asStable
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.debounce
@@ -220,6 +231,7 @@ private fun ModernCatalogRowItem(
     requester: FocusRequester,
     isTargetItem: Boolean = false,
     useLandscapePosters: Boolean,
+    alwaysShowLandscapeClearlogo: Boolean = false,
     showLabels: Boolean,
     placeholderShimmerOffsetState: State<Float>?,
     posterCardCornerRadius: Dp,
@@ -369,6 +381,7 @@ private fun ModernCatalogRowItem(
     ModernCarouselCard(
         item = item,
         useLandscapeOverlayTreatment = useLandscapePosters,
+        alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
         showLabels = showLabels,
         placeholderShimmerOffsetState = placeholderShimmerOffsetState,
         cardCornerRadius = posterCardCornerRadius,
@@ -429,6 +442,7 @@ internal fun ModernRowSection(
     rowTitleBottom: Dp,
     defaultBringIntoViewSpec: BringIntoViewSpec,
     focusStateCatalogRowScrollIndex: Int,
+    focusStateCatalogRowScrollAnchor: String?,
     focusedItemByRow: StableRef<MutableMap<String, Int>>,
     rowListStates: StableRef<MutableMap<String, LazyListState>>,
     loadMoreRequestedTotals: StableRef<MutableMap<String, Int>>,
@@ -438,6 +452,7 @@ internal fun ModernRowSection(
     onPendingRowFocusCleared: () -> Unit,
     onRowItemFocused: (String, Int, Boolean) -> Unit,
     useLandscapePosters: Boolean,
+    alwaysShowLandscapeClearlogo: Boolean = false,
     showLabels: Boolean,
     posterCardCornerRadius: Dp,
     focusedPosterBackdropTrailerMuted: Boolean,
@@ -533,14 +548,19 @@ internal fun ModernRowSection(
         }
         Text(
             text = rowTitle,
-            style = rowTitleStyle,
+            style = rowTitleStyle.copy(textDirection = rowTitle.contentTextDirection()),
             color = textColor,
             modifier = textModifier
         )
 
         val rowListState = rowListStates.getOrPut(row.key) {
+            // Resolved when the row is built, so a refresh that already moved the card is seen.
+            val restoredIndex = focusStateCatalogRowScrollAnchor
+                ?.let { anchor -> row.items.list.indexOfFirst { it.key == anchor } }
+                ?.takeIf { it >= 0 }
+                ?: focusStateCatalogRowScrollIndex
             LazyListState(
-                firstVisibleItemIndex = focusStateCatalogRowScrollIndex,
+                firstVisibleItemIndex = restoredIndex,
                 prefetchStrategy = LazyListPrefetchStrategy(nestedPrefetchItemCount = NESTED_PREFETCH_COUNT)
             )
         }
@@ -1001,6 +1021,7 @@ internal fun ModernRowSection(
                                 requester = requester,
                                 isTargetItem = isTargetItem,
                                 useLandscapePosters = useLandscapePosters,
+                                alwaysShowLandscapeClearlogo = alwaysShowLandscapeClearlogo,
                                 showLabels = showLabels,
                                 placeholderShimmerOffsetState = placeholderShimmerOffsetState,
                                 posterCardCornerRadius = posterCardCornerRadius,
@@ -1047,6 +1068,7 @@ internal fun ModernRowSection(
 private fun ModernCarouselCard(
     item: ModernCarouselItem,
     useLandscapeOverlayTreatment: Boolean,
+    alwaysShowLandscapeClearlogo: Boolean = false,
     showLabels: Boolean,
     placeholderShimmerOffsetState: State<Float>? = null,
     cardCornerRadius: Dp,
@@ -1092,7 +1114,6 @@ private fun ModernCarouselCard(
     } else {
         rememberUpdatedState(cardWidth)
     }
-    val animatedCardWidth by animatedCardWidthState
     // Freeze the logo URL for row cards - enrichment updates must not cause flickering.
     // The first non-blank value wins and is never replaced.
     // Primary source of truth is the data-layer frozen value (survives navigation);
@@ -1130,14 +1151,28 @@ private fun ModernCarouselCard(
     var isFocused by remember { mutableStateOf(false) }
     val payload = item.payload as? ModernPayload.CollectionFolder
     val isCollectionFolder = item.payload is ModernPayload.CollectionFolder
+    val effectiveIgnoreLandscapePoster = alwaysShowLandscapeClearlogo
+    val useLandscapeAsExpanded = focusedPosterBackdropExpandEnabled && isBackdropExpanded &&
+        !alwaysShowLandscapeClearlogo &&
+        !item.metaPreview?.landscapePoster.isNullOrBlank()
     val baseImageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
         if (useLandscapeOverlayTreatment) {
-            effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+            if (effectiveIgnoreLandscapePoster) {
+                effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+            } else {
+                item.metaPreview?.landscapePoster ?: effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+            }
+        } else if (useLandscapeAsExpanded) {
+            item.metaPreview?.landscapePoster
         } else {
             item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
         }
     } else if (useLandscapeOverlayTreatment && !isCollectionFolder) {
-        effectiveBackdropUrl ?: item.heroPreview.poster
+        if (effectiveIgnoreLandscapePoster) {
+            effectiveBackdropUrl ?: item.heroPreview.poster
+        } else {
+            item.metaPreview?.landscapePoster ?: effectiveBackdropUrl ?: item.heroPreview.poster
+        }
     } else if (isCollectionFolder && !payload?.coverEmoji.isNullOrBlank()) {
         // Emoji cover folders: never fall back to backdrop for the card poster
         item.imageUrl
@@ -1175,6 +1210,7 @@ private fun ModernCarouselCard(
     }
 
     val revalidationKey = com.nuvio.tv.core.image.rememberImageRevalidationKey(imageUrl)
+    var customPosterLoadFailed by remember(imageUrl) { mutableStateOf(false) }
     val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx, revalidationKey) {
         imageUrl?.let {
             val builder = ImageRequest.Builder(context)
@@ -1184,6 +1220,18 @@ private fun ModernCarouselCard(
                 .size(width = requestWidthPx, height = requestHeightPx)
             if (revalidationKey > 0) {
                 builder.placeholderMemoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}_v${revalidationKey - 1}")
+            }
+            val isLandscapeCustomPoster = useLandscapeOverlayTreatment && !effectiveIgnoreLandscapePoster && !item.metaPreview?.landscapePoster.isNullOrBlank()
+            val fallbackUrl = if (isLandscapeCustomPoster) {
+                // Landscape custom poster -> fall back to original backdrop
+                item.metaPreview?.background ?: item.heroPreview.backdrop ?: item.metaPreview?.rawPosterUrl
+            } else {
+                item.metaPreview?.rawPosterUrl
+            }
+            if (!fallbackUrl.isNullOrBlank() && fallbackUrl != it) {
+                builder.memoryCacheKeyExtras(
+                    mapOf(com.nuvio.tv.core.image.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackUrl)
+                )
             }
             builder.build()
         }
@@ -1208,6 +1256,7 @@ private fun ModernCarouselCard(
     }
     var landscapeLogoLoadFailed by remember(effectiveLogoUrl) { mutableStateOf(false) }
     val shouldPlayTrailerInCard = playTrailerInExpandedCard && !trailerPreviewUrl.isNullOrBlank()
+    var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
 
     // Use the image model directly — Coil's memory cache handles repeated
     // requests efficiently without needing scroll-aware request swapping.
@@ -1216,7 +1265,9 @@ private fun ModernCarouselCard(
         (useLandscapeOverlayTreatment || isBackdropExpanded) &&
             !isCollectionFolder &&
             !effectiveLogoUrl.isNullOrBlank() &&
-            !landscapeLogoLoadFailed
+            !landscapeLogoLoadFailed &&
+            !(useLandscapeAsExpanded && !trailerFirstFrameRendered) &&
+            (effectiveIgnoreLandscapePoster || isBackdropExpanded || item.metaPreview?.landscapePoster.isNullOrBlank() || customPosterLoadFailed)
     var longPressTriggered by remember { mutableStateOf(false) }
     val longPressKeyTracker = rememberLongPressKeyTracker()
     val backgroundCardColor = NuvioTheme.colors.BackgroundCard
@@ -1244,27 +1295,26 @@ private fun ModernCarouselCard(
         )
     }
     val effectiveFocusedBorder = if (isFastScrolling) transparentFocusBorder else focusedBorder
-    val noFocusGlow = remember { CardDefaults.glow(focusedGlow = Glow.None) }
-    val cardGlow = when (payload) {
-        is ModernPayload.CollectionFolder -> rememberArtworkBackedCardGlow(
+    val cardFocusGlow = when (payload) {
+        is ModernPayload.CollectionFolder -> rememberArtworkBackedFocusGlow(
             imageUrl = imageUrl,
             fallbackSeed = "${item.title}:${payload.collectionTitle}",
             enabled = payload.focusGlowEnabled
         )
-        else -> noFocusGlow
+        else -> Glow.None
     }
-    val effectiveCardGlow = if (isFastScrolling) noFocusGlow else cardGlow
+    val effectiveFocusGlow = if (isFastScrolling) Glow.None else cardFocusGlow
     val titleStyle = remember(titleMedium) {
         titleMedium.copy(fontWeight = FontWeight.Medium)
     }
 
     Column(
         modifier = modifier
-            .width(animatedCardWidth)
+            .animatedWidth(animatedCardWidthState)
             .recompositionHighlighter(),
         verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
-        Card(
+        LightweightCard(
             onClick = {
                 if (longPressTriggered) {
                     longPressTriggered = false
@@ -1314,14 +1364,10 @@ private fun ModernCarouselCard(
                     }
                     false
                 },
-            shape = CardDefaults.shape(cardShape),
-            colors = CardDefaults.colors(
-                containerColor = backgroundCardColor,
-                focusedContainerColor = backgroundCardColor
-            ),
-            border = CardDefaults.border(focusedBorder = effectiveFocusedBorder),
-            scale = CardDefaults.scale(focusedScale = 1f),
-            glow = effectiveCardGlow
+            shape = cardShape,
+            containerColor = backgroundCardColor,
+            focusedBorder = effectiveFocusedBorder,
+            focusedGlow = effectiveFocusGlow
         ) {
             Box(
                 modifier = Modifier
@@ -1369,7 +1415,12 @@ private fun ModernCarouselCard(
                             placeholder = backgroundPainter,
                             error = backgroundPainter,
                             fallback = backgroundPainter,
-                            contentScale = imageContentScale
+                            contentScale = imageContentScale,
+                            onError = {
+                                if (!item.metaPreview?.landscapePoster.isNullOrBlank() || !item.metaPreview?.rawPosterUrl.isNullOrBlank()) {
+                                    customPosterLoadFailed = true
+                                }
+                            }
                         )
                     } else if (isCollectionFolder && !payload?.coverEmoji.isNullOrBlank()) {
                         Box(
@@ -1418,6 +1469,7 @@ private fun ModernCarouselCard(
                                 trailerAudioUrl = trailerPreviewAudioUrl,
                                 isPlaying = true,
                                 onEnded = onTrailerEnded,
+                                onFirstFrameRendered = { trailerFirstFrameRendered = true },
                                 muted = focusedPosterBackdropTrailerMuted,
                                 cropToFill = true,
                                 overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
@@ -1440,10 +1492,12 @@ private fun ModernCarouselCard(
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart
                     )
-                } else if (useLandscapeOverlayTreatment || isBackdropExpanded) {
+                } else if ((useLandscapeOverlayTreatment || isBackdropExpanded) && !isCollectionFolder && !(useLandscapeAsExpanded && !trailerFirstFrameRendered) && (effectiveIgnoreLandscapePoster || item.metaPreview?.landscapePoster.isNullOrBlank() || customPosterLoadFailed)) {
                     Text(
                         text = item.title,
-                        style = titleStyle,
+                        style = titleStyle.copy(
+                            textDirection = item.title.contentTextDirection()
+                        ),
                         color = Color.White,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -1473,7 +1527,9 @@ private fun ModernCarouselCard(
             ) {
                 Text(
                     text = item.title,
-                    style = titleStyle,
+                    style = titleStyle.copy(
+                        textDirection = item.title.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1482,7 +1538,9 @@ private fun ModernCarouselCard(
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            textDirection = subtitle.contentTextDirection()
+                        ),
                         color = NuvioTheme.colors.TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1516,4 +1574,39 @@ private fun isSelectKey(keyCode: Int): Boolean {
     return keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
         keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
         keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
+}
+
+/**
+ * Modifier.width(width.value) that reads the width while measuring. The expand-on-focus width
+ * animation then re-lays out the card on each frame instead of recomposing all of it.
+ */
+private fun Modifier.animatedWidth(width: State<Dp>): Modifier = this then AnimatedWidthElement(width)
+
+private data class AnimatedWidthElement(val width: State<Dp>) : ModifierNodeElement<AnimatedWidthNode>() {
+    override fun create() = AnimatedWidthNode(width)
+
+    override fun update(node: AnimatedWidthNode) {
+        node.width = width
+    }
+}
+
+// Measures exactly like the node behind Modifier.width: a fixed width, coerced into the incoming
+// constraints, with the incoming height constraints passed through.
+private class AnimatedWidthNode(var width: State<Dp>) : LayoutModifierNode, Modifier.Node() {
+    private fun Density.widthPx() = width.value.roundToPx().coerceAtLeast(0)
+
+    override fun MeasureScope.measure(measurable: Measurable, constraints: Constraints): MeasureResult {
+        val placeable = measurable.measure(constraints.constrain(Constraints.fixedWidth(widthPx())))
+        return layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+    }
+
+    override fun IntrinsicMeasureScope.minIntrinsicWidth(measurable: IntrinsicMeasurable, height: Int) = widthPx()
+
+    override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurable: IntrinsicMeasurable, height: Int) = widthPx()
+
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurable: IntrinsicMeasurable, width: Int) =
+        measurable.minIntrinsicHeight(width)
+
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurable: IntrinsicMeasurable, width: Int) =
+        measurable.maxIntrinsicHeight(width)
 }

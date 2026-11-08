@@ -6,6 +6,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -105,6 +109,10 @@ private fun ProfileEditorTabItem(
                 indication = null,
                 onClick = onClick
             )
+            .semantics {
+                role = Role.Tab
+                selected = isSelected
+            }
             .padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.sm)
     )
 }

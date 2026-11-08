@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.account
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -91,7 +92,7 @@ fun SyncCodeClaimScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            color = Color(0xFF2E7D32).copy(alpha = 0.15f),
+                            color = NuvioPrimitives.green700.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                         .padding(20.dp),
@@ -100,7 +101,7 @@ fun SyncCodeClaimScreen(
                     Text(
                         text = stringResource(R.string.sync_claim_success),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF66BB6A),
+                        color = NuvioPrimitives.green300,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Medium
                     )

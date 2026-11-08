@@ -141,9 +141,9 @@ data class SubtitleStyleSettings(
     val preferredLanguage: String = "en",
     val isPreferredLanguageSystemDefault: Boolean = true,
     val secondaryPreferredLanguage: String? = null,
-    val useForcedSubtitles: Boolean = false,
+    val useForcedSubtitles: Boolean = true,
     val showOnlyPreferredLanguages: Boolean = false,
-    val stripSdh: Boolean = false,
+    val stripSdh: Boolean = true,
     val size: Int = 120, // Percentage (50-200)
     val verticalOffset: Int = 5, // Percentage from bottom (-20 to 50)
     val bold: Boolean = false,
@@ -151,8 +151,59 @@ data class SubtitleStyleSettings(
     val backgroundColor: Int = Color.Transparent.toArgb(),
     val outlineEnabled: Boolean = true,
     val outlineColor: Int = Color.Black.toArgb(),
-    val outlineWidth: Int = 2 // 1-5
-)
+    val outlineWidth: Int = 2, // 1-5
+    val hdrStyleEnabled: Boolean = false,
+    val hdrTextColor: Int = Color.White.toArgb(),
+    val hdrBrightness: Int = HDR_BRIGHTNESS_DEFAULT, // 0-100, see hdrBrightnessFactor
+    val hdrDimPlayerControls: Boolean = false
+) {
+    /**
+     * The style to render with: on HDR/Dolby Vision video with the override enabled, the HDR text
+     * color replaces the text color and every subtitle color is dimmed by the HDR brightness.
+     */
+    fun forVideo(isHdrVideo: Boolean): SubtitleStyleSettings {
+        if (!isHdrVideo || !hdrStyleEnabled) return this
+        val factor = hdrBrightnessFactor(hdrBrightness)
+        return copy(
+            textColor = scaleColorBrightness(hdrTextColor, factor),
+            backgroundColor = scaleColorBrightness(backgroundColor, factor),
+            outlineColor = scaleColorBrightness(outlineColor, factor)
+        )
+    }
+
+    /**
+     * Brightness factor for the player controls and menus drawn over the video: the HDR brightness
+     * on HDR/Dolby Vision video when both HDR options are enabled, otherwise full brightness.
+     */
+    fun playerControlsBrightness(isHdrVideo: Boolean): Float {
+        if (!isHdrVideo || !hdrStyleEnabled || !hdrDimPlayerControls) return 1f
+        return hdrBrightnessFactor(hdrBrightness)
+    }
+
+    /** The style the in-player editors show: on HDR video with the override enabled, its text color is the HDR one. */
+    fun editableForVideo(isHdrVideo: Boolean): SubtitleStyleSettings {
+        if (!isHdrVideo || !hdrStyleEnabled) return this
+        return copy(textColor = hdrTextColor)
+    }
+
+    companion object {
+        const val HDR_BRIGHTNESS_MIN = 0
+        const val HDR_BRIGHTNESS_MAX = 100
+        const val HDR_BRIGHTNESS_DEFAULT = 40
+
+        /** Maps the 0-100 setting onto 30%-100% of full brightness, so 0 still leaves readable text. */
+        private fun hdrBrightnessFactor(brightness: Int): Float =
+            (0.7f * brightness.coerceIn(HDR_BRIGHTNESS_MIN, HDR_BRIGHTNESS_MAX) + 30f) / 100f
+
+        private fun scaleColorBrightness(color: Int, factor: Float): Int {
+            val alpha = (color ushr 24) and 0xFF
+            val red = (((color shr 16) and 0xFF) * factor).toInt()
+            val green = (((color shr 8) and 0xFF) * factor).toInt()
+            val blue = ((color and 0xFF) * factor).toInt()
+            return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
+        }
+    }
+}
 
 /**
  * Data class representing buffer settings
@@ -171,11 +222,8 @@ data class BufferSettings(
         const val DEFAULT_MAX_BUFFER_MS = 45_000
         const val DEFAULT_BUFFER_FOR_PLAYBACK_MS = 5_000
         const val DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 3_000
-        const val DEFAULT_TARGET_BUFFER_SIZE_MB: Int = 150
-        // Media3 reserves additional bytes for back buffer as a fraction of
-        // targetBufferBytes. 15s default keeps peak heap within Fire TV class
-        // limits while still covering 3 default 5s seek-back presses.
-        const val DEFAULT_BACK_BUFFER_DURATION_MS = 15_000
+        const val DEFAULT_TARGET_BUFFER_SIZE_MB: Int = 50
+        const val DEFAULT_BACK_BUFFER_DURATION_MS = 0
     }
 }
 
@@ -205,11 +253,39 @@ enum class AudioOutputChannels(
     CHANNELS_7_0("7.0", "7.0", 7, "7.0"),
     CHANNELS_7_1("7.1", "7.1", 8, "7.1");
 
+    val hasLfe: Boolean get() = settingValue.endsWith(".1")
+
     companion object {
         val default = CHANNELS_7_1
 
         fun fromSettingValue(value: String?): AudioOutputChannels {
             return entries.firstOrNull { it.settingValue == value } ?: default
+        }
+    }
+}
+
+/** LFE share mixed into the other channels when the downmix layout has no LFE channel. */
+enum class DownmixLfeLevel(val settingValue: String, val level: Float) {
+    OFF("off", 0f),
+    HALF("50", 0.5f),
+    FULL("100", 1f);
+
+    companion object {
+        fun fromSettingValue(value: String?): DownmixLfeLevel {
+            return entries.firstOrNull { it.settingValue == value } ?: OFF
+        }
+    }
+}
+
+enum class NightMode(val settingValue: String) {
+    OFF("off"),
+    LIGHT("light"),
+    MEDIUM("medium"),
+    STRONG("strong");
+
+    companion object {
+        fun fromSettingValue(value: String?): NightMode {
+            return entries.firstOrNull { it.settingValue == value } ?: OFF
         }
     }
 }
@@ -221,8 +297,10 @@ data class PlayerSettings(
     val playerPreference: PlayerPreference = PlayerPreference.INTERNAL,
     val internalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER,
     val autoSwitchInternalPlayerOnError: Boolean = false,
-    val useLibass: Boolean = false,
+    val useLibass: Boolean = true,
     val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
+    val libassRenderScale: LibassRenderScale = LibassRenderScale.FULL,
+    val libassRenderMode: LibassRenderMode = LibassRenderMode.DEFAULT,
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
     val bufferSettings: BufferSettings = BufferSettings(),
     // Audio settings
@@ -230,9 +308,11 @@ data class PlayerSettings(
     val downmixEnabled: Boolean = false,
     val audioOutputChannels: AudioOutputChannels = AudioOutputChannels.default,
     val maintainOriginalAudioOnDownmix: Boolean = true,
+    val downmixLfeLevel: DownmixLfeLevel = DownmixLfeLevel.OFF,
     val tunnelingEnabled: Boolean = false,
     val forceOpticalPassthrough: Boolean = false,
     val skipSilence: Boolean = false,
+    val nightMode: NightMode = NightMode.OFF,
     val audioAmplificationDb: Int = 0,
     val centerMixLevelDb: Int = 0,
     val persistAudioAmplification: Boolean = false,
@@ -258,6 +338,8 @@ data class PlayerSettings(
     // Only honored when dv7HandlingMode is OFF or DV81_LIBDOVI.
     val dv7LibdoviModeOverride: Int = -1,
     val stripHdr10PlusSei: Boolean = false,
+    /** ExoPlayer reads Matroska chapters itself over HTTP; mpv always lists them. */
+    val exoChaptersEnabled: Boolean = false,
     val mpvHi10pGnextSoftwareFallbackEnabled: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
     // Display settings
@@ -274,15 +356,16 @@ data class PlayerSettings(
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
     val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = true,
-    val streamAutoPlayReuseBingeGroup: Boolean = true,
-    val streamAutoPlayTimeoutSeconds: Int = 3,
+    val streamAutoPlayReuseBingeGroup: Boolean = false,
+    val streamAutoPlayTimeoutSeconds: Int = 10,
+    val preloadNextEpisodeSources: Boolean = false,
     val stillWatchingEnabled: Boolean = false,
     val stillWatchingEpisodeThreshold: Int = DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD,
     val nextEpisodeThresholdMode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
     val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
-    val streamReuseLastLinkEnabled: Boolean = false,
-    val streamReuseLastLinkCacheHours: Int = 24,
+    val streamReuseLastLinkEnabled: Boolean = true,
+    val streamReuseLastLinkCacheHours: Int = 1,
     val externalPlayerForwardSubtitles: Boolean = false,
     val externalPlayerSendSkipSegments: Boolean = false,
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
@@ -324,11 +407,15 @@ data class PlayerSettings(
     val effectiveTunnelingEnabled: Boolean
         get() = tunnelingEnabled && isTunnelingCompatible
 
+    /** Tunneled playback bypasses the video effects pipeline, so overlay is the only option. */
+    val effectiveLibassRenderMode: LibassRenderMode
+        get() = if (effectiveTunnelingEnabled) LibassRenderMode.OVERLAY else libassRenderMode
+
     companion object {
         const val DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD = 3
         const val MIN_STILL_WATCHING_EPISODE_THRESHOLD = 2
         const val MAX_STILL_WATCHING_EPISODE_THRESHOLD = 6
-        const val DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 90
+        const val DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 96
         const val MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 80
         const val MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 100
 
@@ -349,7 +436,7 @@ data class PlayerSettings(
         fun isBoundedTimeout(timeoutSeconds: Int): Boolean =
             timeoutSeconds > 0 && timeoutSeconds != STREAM_AUTOPLAY_TIMEOUT_UNLIMITED
 
-        const val DEFAULT_BUFFER_BUDGET_MANAGED = true
+        const val DEFAULT_BUFFER_BUDGET_MANAGED = false
         const val DEFAULT_ALLOW_LARGE_TARGET_BUFFER = false
         const val LARGE_TARGET_BUFFER_MAX_MB = 2048
         const val DEFAULT_VOD_CACHE_ENABLED = false
@@ -401,7 +488,8 @@ enum class MpvHardwareDecodeMode {
 enum class AutoSkipSegmentType(val storedValue: String) {
     INTRO("intro"),
     RECAP("recap"),
-    OUTRO("outro");
+    OUTRO("outro"),
+    MOVIE_CREDITS("movie-credits");
 
     companion object {
         fun fromStoredValue(value: String): AutoSkipSegmentType? =
@@ -411,6 +499,7 @@ enum class AutoSkipSegmentType(val storedValue: String) {
             "op", "opening", "mixed-op", "intro" -> INTRO
             "recap" -> RECAP
             "ed", "ending", "mixed-ed", "outro", "credits" -> OUTRO
+            "movie-credits" -> MOVIE_CREDITS
             else -> null
         }
     }
@@ -427,7 +516,57 @@ enum class InternalPlayerEngine {
 }
 
 enum class LibassRenderType {
-    CUES, EFFECTS_CANVAS, EFFECTS_OPEN_GL, OVERLAY_CANVAS, OVERLAY_OPEN_GL
+    // Legacy values kept for backward compatibility with persisted preferences.
+    // The new libass module always uses the SurfaceView atlas pipeline.
+    CUES, EFFECTS_CANVAS, EFFECTS_OPEN_GL, OVERLAY_CANVAS, OVERLAY_OPEN_GL;
+
+    companion object {
+        val DEFAULT = OVERLAY_OPEN_GL
+    }
+}
+
+/**
+ * Subtitle render resolution for the libass atlas pipeline. Lowering the scale
+ * reduces rasterization cost (proportional to pixel area) at the expense of
+ * sharpness - GL upscales the result to the full surface. Useful on weak TV
+ * hardware where heavy typesetting exceeds the frame budget at full resolution.
+ */
+enum class LibassRenderScale(val scale: Float, val label: String) {
+    FULL(1.0f, "1:1"),
+    THREE_QUARTER(0.75f, "\u00BE"),
+    HALF(0.5f, "\u00BD"),
+    THIRD(0.33f, "\u2153"),
+    QUARTER(0.25f, "\u00BC")
+}
+
+/**
+ * How libass subtitles are rendered relative to the video surface.
+ *
+ * setVideoEffects forces DefaultVideoFrameProcessor into the ExoPlayer pipeline.
+ * On devices that support HDR output (e.g. TCL MediaTek API 34), this processor
+ * tone-maps HDR to SDR. Skipping setVideoEffects keeps the default video path
+ * and preserves HDR passthrough.
+ *
+ * - VIDEO_EFFECT: subtitles drawn onto each video frame (frame-accurate timing).
+ *   HDR content is tone-mapped to SDR because DefaultVideoFrameProcessor is active.
+ * - OVERLAY: subtitles rendered on a separate SurfaceView layer. HDR passthrough
+ *   is preserved but subtitle timing may not be perfectly accurate on some TVs.
+ */
+enum class LibassRenderMode {
+    /** Preserves HDR output; subtitles may have a timing offset on TV hardware. */
+    OVERLAY,
+    /** Frame-accurate subtitles; HDR tone-mapped to SDR. */
+    VIDEO_EFFECT;
+
+    companion object {
+        val DEFAULT = OVERLAY
+
+        fun fromStoredString(value: String?): LibassRenderMode = when (value) {
+            VIDEO_EFFECT.name -> VIDEO_EFFECT
+            OVERLAY.name -> OVERLAY
+            else -> DEFAULT
+        }
+    }
 }
 /**
  * How DV7 streams should be handled at playback time.
@@ -486,16 +625,20 @@ class PlayerSettingsDataStore @Inject constructor(
     private val autoSwitchInternalPlayerOnErrorKey = booleanPreferencesKey("auto_switch_internal_player_on_error")
     private val useLibassKey = booleanPreferencesKey("use_libass")
     private val libassRenderTypeKey = stringPreferencesKey("libass_render_type")
+    private val libassRenderScaleKey = stringPreferencesKey("libass_render_scale")
+    private val libassRenderModeKey = stringPreferencesKey("libass_render_mode")
     private val decoderPriorityKey = intPreferencesKey("decoder_priority")
     private val downmixEnabledKey = booleanPreferencesKey("downmix_enabled")
     private val audioOutputChannelsKey = stringPreferencesKey("audio_output_channels")
     private val maintainOriginalAudioOnDownmixKey =
         booleanPreferencesKey("maintain_original_audio_on_downmix")
+    private val downmixLfeLevelKey = stringPreferencesKey("downmix_lfe_level")
     private val downmixNormalizationEnabledLegacyKey =
         booleanPreferencesKey("downmix_normalization_enabled")
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val forceOpticalPassthroughKey = booleanPreferencesKey("force_optical_passthrough")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
+    private val nightModeKey = stringPreferencesKey("night_mode")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val centerMixLevelDbKey = intPreferencesKey("center_mix_level_db")
     private val persistAudioAmplificationKey = booleanPreferencesKey("persist_audio_amplification")
@@ -522,6 +665,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val legacyMapDv7ToHevcKey = booleanPreferencesKey("map_dv7_to_hevc")
     private val dv7LibdoviModeOverrideKey = intPreferencesKey("dv7_libdovi_mode_override")
     private val stripHdr10PlusSeiKey = booleanPreferencesKey("strip_hdr10plus_sei")
+    private val exoChaptersEnabledKey = booleanPreferencesKey("exo_chapters_enabled")
     private val mpvHi10pGnextSoftwareFallbackEnabledKey =
         booleanPreferencesKey("mpv_hi10p_gnext_software_fallback_enabled")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
@@ -540,6 +684,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val streamAutoPlayPreferBingeGroupForNextEpisodeKey = booleanPreferencesKey("stream_auto_play_prefer_bingegroup_next_episode")
     private val streamAutoPlayReuseBingeGroupKey = booleanPreferencesKey("stream_auto_play_reuse_binge_group")
     private val streamAutoPlayTimeoutSecondsKey = intPreferencesKey("stream_auto_play_timeout_seconds")
+    private val preloadNextEpisodeSourcesKey = booleanPreferencesKey("preload_next_episode_sources")
     private val stillWatchingEnabledKey = booleanPreferencesKey("still_watching_enabled")
     private val stillWatchingEpisodeThresholdKey = intPreferencesKey("still_watching_episode_threshold")
     private val nextEpisodeThresholdModeKey = stringPreferencesKey("next_episode_threshold_mode")
@@ -585,6 +730,10 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleOutlineEnabledKey = booleanPreferencesKey("subtitle_outline_enabled")
     private val subtitleOutlineColorKey = intPreferencesKey("subtitle_outline_color")
     private val subtitleOutlineWidthKey = intPreferencesKey("subtitle_outline_width")
+    private val subtitleHdrStyleEnabledKey = booleanPreferencesKey("subtitle_hdr_style_enabled")
+    private val subtitleHdrTextColorKey = intPreferencesKey("subtitle_hdr_text_color")
+    private val subtitleHdrBrightnessKey = intPreferencesKey("subtitle_hdr_brightness")
+    private val subtitleHdrDimPlayerControlsKey = booleanPreferencesKey("subtitle_hdr_dim_player_controls")
 
     // Buffer settings keys
     private val minBufferMsKey = intPreferencesKey("min_buffer_ms")
@@ -606,6 +755,9 @@ class PlayerSettingsDataStore @Inject constructor(
     private val migrationAfterRebufferLoweredDoneKey = booleanPreferencesKey("migration_after_rebuffer_lowered_done")
     private val migrationBackBufferDurationReducedDoneKey = booleanPreferencesKey("migration_back_buffer_duration_reduced_done")
     private val migrationTargetBufferSizeReducedDoneKey = booleanPreferencesKey("migration_target_buffer_size_reduced_done")
+    private val migrationAllowLargeTargetBufferOffDoneKey = booleanPreferencesKey("migration_allow_large_target_buffer_off_done")
+    private val migrationBufferBudgetManagedExoDoneKey = booleanPreferencesKey("migration_buffer_budget_managed_exo_done")
+    private val migrationVodCacheBackBufferZeroedDoneKey = booleanPreferencesKey("migration_vod_cache_back_buffer_zeroed_done")
     init {
         ioScope.launch {
             profileManager.activeProfileId.collect { pid ->
@@ -735,6 +887,33 @@ class PlayerSettingsDataStore @Inject constructor(
                     prefs[migrationTargetBufferSizeReducedDoneKey] = true
                 }
 
+                val allowLargeOff = prefs[migrationAllowLargeTargetBufferOffDoneKey] ?: false
+                if (!allowLargeOff) {
+                    if (prefs[allowLargeTargetBufferKey] == true) {
+                        val safeLimitMb =
+                            NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+                        val storedTarget = prefs[targetBufferSizeMbKey]
+                        if (storedTarget == null || storedTarget <= safeLimitMb) {
+                            prefs[allowLargeTargetBufferKey] = false
+                        }
+                    }
+                    prefs[migrationAllowLargeTargetBufferOffDoneKey] = true
+                }
+
+                val budgetManagedExo = prefs[migrationBufferBudgetManagedExoDoneKey] ?: false
+                if (!budgetManagedExo) {
+                    if (!isNativeMemoryActive(prefs) && prefs[bufferBudgetManagedKey] != true) {
+                        prefs[bufferBudgetManagedKey] = true
+                    }
+                    prefs[migrationBufferBudgetManagedExoDoneKey] = true
+                }
+
+                val vodBackBufferZeroed = prefs[migrationVodCacheBackBufferZeroedDoneKey] ?: false
+                if (!vodBackBufferZeroed) {
+                    if (prefs[vodCacheEnabledKey] == true) prefs[backBufferDurationMsKey] = 0
+                    prefs[migrationVodCacheBackBufferZeroedDoneKey] = true
+                }
+
                 val min = prefs[minBufferMsKey]
                 val max = prefs[maxBufferMsKey]
                 if (min != null && max != null && max < min) prefs[maxBufferMsKey] = min
@@ -819,10 +998,14 @@ class PlayerSettingsDataStore @Inject constructor(
                     runCatching { InternalPlayerEngine.valueOf(it) }.getOrDefault(InternalPlayerEngine.EXOPLAYER)
                 } ?: InternalPlayerEngine.EXOPLAYER,
                 autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false,
-                useLibass = prefs[useLibassKey] ?: false,
+                useLibass = prefs[useLibassKey] ?: true,
                 libassRenderType = prefs[libassRenderTypeKey]?.let {
                     try { LibassRenderType.valueOf(it) } catch (e: Exception) { LibassRenderType.OVERLAY_OPEN_GL }
                 } ?: LibassRenderType.OVERLAY_OPEN_GL,
+                libassRenderScale = prefs[libassRenderScaleKey]?.let {
+                    try { LibassRenderScale.valueOf(it) } catch (e: Exception) { LibassRenderScale.FULL }
+                } ?: LibassRenderScale.FULL,
+                libassRenderMode = LibassRenderMode.fromStoredString(prefs[libassRenderModeKey]),
                 decoderPriority = prefs[decoderPriorityKey] ?: 1,
                 downmixEnabled =
                     prefs[downmixEnabledKey]
@@ -837,9 +1020,11 @@ class PlayerSettingsDataStore @Inject constructor(
                 maintainOriginalAudioOnDownmix =
                     prefs[maintainOriginalAudioOnDownmixKey]
                         ?: !(prefs[downmixNormalizationEnabledLegacyKey] ?: false),
+                downmixLfeLevel = DownmixLfeLevel.fromSettingValue(prefs[downmixLfeLevelKey]),
                 tunnelingEnabled = prefs[tunnelingEnabledKey] ?: false,
                 forceOpticalPassthrough = prefs[forceOpticalPassthroughKey] ?: false,
                 skipSilence = prefs[skipSilenceKey] ?: false,
+                nightMode = NightMode.fromSettingValue(prefs[nightModeKey]),
                 audioAmplificationDb = (prefs[audioAmplificationDbKey] ?: 0).coerceIn(
                     AUDIO_AMPLIFICATION_DB_MIN,
                     AUDIO_AMPLIFICATION_DB_MAX
@@ -876,6 +1061,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 },
                 dv7LibdoviModeOverride = (prefs[dv7LibdoviModeOverrideKey] ?: -1).coerceIn(-1, 4),
                 stripHdr10PlusSei = prefs[stripHdr10PlusSeiKey] ?: false,
+                exoChaptersEnabled = prefs[exoChaptersEnabledKey] ?: false,
                 mpvHi10pGnextSoftwareFallbackEnabled =
                     prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
@@ -903,10 +1089,11 @@ class PlayerSettingsDataStore @Inject constructor(
                 streamAutoPlayPreferBingeGroupForNextEpisode =
                     prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] ?: true,
                 streamAutoPlayReuseBingeGroup =
-                    prefs[streamAutoPlayReuseBingeGroupKey] ?: true,
+                    prefs[streamAutoPlayReuseBingeGroupKey] ?: false,
                 streamAutoPlayTimeoutSeconds = PlayerSettings.applyLegacyTimeoutSentinelMigration(
                     prefs[streamAutoPlayTimeoutSecondsKey]
                 ),
+                preloadNextEpisodeSources = prefs[preloadNextEpisodeSourcesKey] ?: false,
                 stillWatchingEnabled = prefs[stillWatchingEnabledKey] ?: false,
                 stillWatchingEpisodeThreshold = prefs[stillWatchingEpisodeThresholdKey]
                     ?.coerceIn(
@@ -948,7 +1135,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 bufferBudgetManaged = prefs[bufferBudgetManagedKey] ?: PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED,
                 parallelConnectionCount = run {
                     val isNativeMemory = isNativeMemoryActive(prefs)
-                    val defaultConnectionCount = if (isNativeMemory) 4 else PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
+                    val defaultConnectionCount = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
                     val maxConnectionCount = if (isNativeMemory) 16 else PlayerSettings.MAX_PARALLEL_CONNECTION_COUNT
                     (prefs[parallelConnectionCountKey] ?: defaultConnectionCount).coerceIn(PlayerSettings.MIN_PARALLEL_CONNECTION_COUNT, maxConnectionCount)
                 },
@@ -989,7 +1176,11 @@ class PlayerSettingsDataStore @Inject constructor(
                         backgroundColor = prefs[subtitleBackgroundColorKey] ?: Color.Transparent.toArgb(),
                         outlineEnabled = prefs[subtitleOutlineEnabledKey] ?: true,
                         outlineColor = prefs[subtitleOutlineColorKey] ?: Color.Black.toArgb(),
-                        outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2
+                        outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2,
+                        hdrStyleEnabled = prefs[subtitleHdrStyleEnabledKey] ?: false,
+                        hdrTextColor = prefs[subtitleHdrTextColorKey] ?: Color.White.toArgb(),
+                        hdrBrightness = prefs[subtitleHdrBrightnessKey] ?: SubtitleStyleSettings.HDR_BRIGHTNESS_DEFAULT,
+                        hdrDimPlayerControls = prefs[subtitleHdrDimPlayerControlsKey] ?: false
                     )
                 },
                 bufferSettings = BufferSettings(
@@ -1011,7 +1202,7 @@ class PlayerSettingsDataStore @Inject constructor(
     val useLibass: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.onStart { migrateProfile(pid) }
     }.map { prefs ->
-        prefs[useLibassKey] ?: false
+        prefs[useLibassKey] ?: true
     }
 
     val libassRenderType: Flow<LibassRenderType> = profileManager.activeProfileId.flatMapLatest { pid ->
@@ -1077,6 +1268,12 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setDownmixLfeLevel(level: DownmixLfeLevel) {
+        store().edit { prefs ->
+            prefs[downmixLfeLevelKey] = level.settingValue
+        }
+    }
+
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[tunnelingEnabledKey] = enabled
@@ -1092,6 +1289,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSkipSilence(enabled: Boolean) {
         store().edit { prefs ->
             prefs[skipSilenceKey] = enabled
+        }
+    }
+
+    suspend fun setNightMode(mode: NightMode) {
+        store().edit { prefs ->
+            prefs[nightModeKey] = mode.settingValue
         }
     }
 
@@ -1306,6 +1509,12 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setPreloadNextEpisodeSources(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[preloadNextEpisodeSourcesKey] = enabled
+        }
+    }
+
     suspend fun setStillWatchingEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[stillWatchingEnabledKey] = enabled
@@ -1399,6 +1608,7 @@ class PlayerSettingsDataStore @Inject constructor(
             "pt-br", "pt_br", "br", "pob" -> "pt-br"
             "pt-pt", "pt_pt", "por" -> "pt"
             "forced", "force", "forc" -> SUBTITLE_LANGUAGE_FORCED
+            "iw", "heb", "hbo" -> "he"
             "zh-cn", "zh_cn" -> "zh-CN"
             "zh-tw", "zh_tw" -> "zh-TW"
             "en-au", "en_au" -> "en-AU"
@@ -1504,12 +1714,31 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    /**
+     * Set the libass subtitle render scale (resolution reduction for performance).
+     */
+    suspend fun setLibassRenderScale(scale: LibassRenderScale) {
+        store().edit { prefs ->
+            prefs[libassRenderScaleKey] = scale.name
+        }
+    }
+
+    /**
+     * Set the libass subtitle render mode (video effect vs overlay).
+     */
+    suspend fun setLibassRenderMode(mode: LibassRenderMode) {
+        store().edit { prefs ->
+            prefs[libassRenderModeKey] = mode.name
+        }
+    }
+
     // Dolby Vision setters (libdovi conversion)
     suspend fun setDv5ToDv81Enabled(enabled: Boolean) { store().edit { it[dv5ToDv81EnabledKey] = enabled } }
     suspend fun setDv7ToDv81PreserveMappingEnabled(enabled: Boolean) { store().edit { it[dv7ToDv81PreserveMappingEnabledKey] = enabled } }
     suspend fun setDv7HandlingMode(mode: Dv7HandlingMode) { store().edit { it[dv7HandlingModeKey] = mode.name } }
     suspend fun setDv7LibdoviModeOverride(mode: Int) { store().edit { it[dv7LibdoviModeOverrideKey] = mode.coerceIn(-1, 4) } }
     suspend fun setStripHdr10PlusSei(enabled: Boolean) { store().edit { it[stripHdr10PlusSeiKey] = enabled } }
+    suspend fun setExoChaptersEnabled(enabled: Boolean) { store().edit { it[exoChaptersEnabledKey] = enabled } }
 
     // Subtitle styles
     suspend fun setSubtitlePreferredLanguage(language: String) { store().edit { it[subtitlePreferredLanguageKey] = normalizeSelectableLanguageCode(language.ifBlank { SubtitleLanguageOption.DEVICE }) } }
@@ -1528,6 +1757,19 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSubtitleOutlineEnabled(enabled: Boolean) { store().edit { it[subtitleOutlineEnabledKey] = enabled } }
     suspend fun setSubtitleOutlineColor(color: Int) { store().edit { it[subtitleOutlineColorKey] = color } }
     suspend fun setSubtitleOutlineWidth(width: Int) { store().edit { it[subtitleOutlineWidthKey] = width.coerceIn(1, 5) } }
+    suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) { store().edit { it[subtitleHdrStyleEnabledKey] = enabled } }
+    suspend fun setSubtitleHdrTextColor(color: Int) { store().edit { it[subtitleHdrTextColorKey] = color } }
+    suspend fun setSubtitleHdrDimPlayerControls(enabled: Boolean) {
+        store().edit { it[subtitleHdrDimPlayerControlsKey] = enabled }
+    }
+    suspend fun setSubtitleHdrBrightness(brightness: Int) {
+        store().edit {
+            it[subtitleHdrBrightnessKey] = brightness.coerceIn(
+                SubtitleStyleSettings.HDR_BRIGHTNESS_MIN,
+                SubtitleStyleSettings.HDR_BRIGHTNESS_MAX
+            )
+        }
+    }
 
     suspend fun setUseForcedSubtitles(enabled: Boolean) {
         store().edit { prefs ->
@@ -1581,12 +1823,28 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun resetBufferSettingsToDefaults() {
         store().edit { prefs ->
+            // Native exo installs its own buffer profile when it is turned on, so resetting to the
+            // exo custom values here would leave the mode running on settings it never chose.
+            val nativeEnabled = prefs[nuvioPerformanceModeEnabledKey] ?: false
             prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
             prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
             prefs[bufferForPlaybackMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
             prefs[bufferForPlaybackAfterRebufferMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
-            prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
-            prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
+            if (nativeEnabled) {
+                val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+                prefs[targetBufferSizeMbKey] =
+                    NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_TARGET_BUFFER_MB
+                        .coerceAtMost(safeLimitMb)
+                prefs[backBufferDurationMsKey] =
+                    NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_BACK_BUFFER_MS
+                prefs[allowLargeTargetBufferKey] = false
+                prefs[bufferBudgetManagedKey] = false
+            } else {
+                prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
+                prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
+                prefs[allowLargeTargetBufferKey] = false
+                prefs[bufferBudgetManagedKey] = true
+            }
             prefs[retainBackBufferFromKeyframeKey] = false
             // VOD cache is grouped with the playback buffer section in the UI
             // (both extend seek-back smoothness), so reset its values here too.
@@ -1606,11 +1864,12 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setEnableHttp2(enabled: Boolean) {
-        store().edit { it[enableHttp2Key] = enabled }
+    suspend fun setVodCacheEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[vodCacheEnabledKey] = enabled
+            if (enabled) prefs[backBufferDurationMsKey] = 0
+        }
     }
-
-    suspend fun setVodCacheEnabled(enabled: Boolean) { store().edit { it[vodCacheEnabledKey] = enabled } }
     suspend fun setVodCacheSizeMode(mode: VodCacheSizeMode) { store().edit { it[vodCacheSizeModeKey] = mode.name } }
     suspend fun setVodCacheSizeMb(mb: Int) { store().edit { it[vodCacheSizeMbKey] = mb.coerceIn(PlayerSettings.MIN_VOD_CACHE_SIZE_MB, PlayerSettings.MAX_VOD_CACHE_SIZE_MB) } }
     suspend fun setUseParallelConnections(enabled: Boolean) { store().edit { it[useParallelConnectionsKey] = enabled } }
@@ -1701,16 +1960,22 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs[nuvioPerformanceModeEnabledKey] = actualEnabled
             if (actualEnabled) {
                 val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-                prefs[minBufferMsKey] = 200_000
-                prefs[maxBufferMsKey] = 280_000
-                prefs[bufferForPlaybackMsKey] = 1_500
-                prefs[bufferForPlaybackAfterRebufferMsKey] = 1_500
-                prefs[targetBufferSizeMbKey] = safeLimitMb
-                prefs[backBufferDurationMsKey] = 12_000
-                prefs[allowLargeTargetBufferKey] = true
-                prefs[useParallelConnectionsKey] = true
-                prefs[parallelConnectionCountKey] = 4
-                prefs[parallelChunkSizeKbKey] = 16 * 1024
+                prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
+                prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
+                prefs[bufferForPlaybackMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
+                prefs[bufferForPlaybackAfterRebufferMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                // The tier limit is the ceiling, not the value to start at, so seed the native
+                // default and let it be clamped on devices whose tier sits below it.
+                prefs[targetBufferSizeMbKey] =
+                    NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_TARGET_BUFFER_MB
+                        .coerceAtMost(safeLimitMb)
+                prefs[backBufferDurationMsKey] =
+                    NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_BACK_BUFFER_MS
+                prefs[allowLargeTargetBufferKey] = false
+                prefs[bufferBudgetManagedKey] = false
+                prefs[useParallelConnectionsKey] = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
+                prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
+                prefs[parallelChunkSizeKbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
                 prefs.remove(parallelChunkSizeMbKey)
             } else {
                 prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
@@ -1721,7 +1986,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
                 prefs[allowLargeTargetBufferKey] = false
                 prefs[useParallelConnectionsKey] = false
-                prefs[parallelConnectionCountKey] = 2
+                prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
                 prefs[parallelChunkSizeKbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
                 prefs.remove(parallelChunkSizeMbKey)
                 prefs[bufferBudgetManagedKey] = true

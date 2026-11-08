@@ -43,6 +43,7 @@ import coil3.request.allowHardware
 import coil3.request.allowRgb565
 import coil3.request.crossfade
 import coil3.size.Precision
+import com.nuvio.tv.core.network.imageNetworkFetcherFactory
 import com.nuvio.tv.domain.model.StreamBadge
 import okio.Path.Companion.toOkioPath
 import kotlin.math.round
@@ -65,6 +66,9 @@ private var badgeImageLoader: ImageLoader? = null
 private fun getBadgeImageLoader(context: android.content.Context): ImageLoader {
     badgeImageLoader?.let { return it }
     val loader = ImageLoader.Builder(context.applicationContext)
+        .components {
+            add(imageNetworkFetcherFactory())
+        }
         .memoryCache {
             MemoryCache.Builder()
                 .maxSizePercent(context.applicationContext, 0.05)
@@ -169,7 +173,7 @@ private fun StreamFileSizeBadge(bytes: Long) {
 }
 
 @Composable
-private fun StreamImportedBadgeChip(badge: StreamBadge, crossfade: Boolean = false) {
+internal fun StreamImportedBadgeChip(badge: StreamBadge, crossfade: Boolean = false) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val backgroundColor = remember(badge.tagColor, badge.tagStyle) {

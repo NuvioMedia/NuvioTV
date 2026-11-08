@@ -48,6 +48,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -65,6 +71,7 @@ import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AppIconOption
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.domain.model.CustomThemeColors
 import com.nuvio.tv.domain.model.SettingsUiStyle
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
@@ -99,6 +106,8 @@ fun ThemeSettingsContent(
     var showFontDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showAppIconDialog by remember { mutableStateOf(false) }
+    var showCustomThemeDialog by remember(uiState.customThemeGradientEnabled) { mutableStateOf(false) }
+    var restoreCustomThemeFocus by remember { mutableStateOf(false) }
     var appIconConfirmation by remember { mutableStateOf<AppIconOption?>(null) }
     var pendingLanguageRestart by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -108,7 +117,7 @@ fun ThemeSettingsContent(
         val tags = listOf(
             "en", "ru", "ar", "bg", "bs", "da", "de", "el", "es", "es-419", "hu", "fr", "in", "it",
             "no", "pl", "pt-PT", "pt-BR", "tr", "uk", "cs", "sk", "sl", "sq", "sr-Latn", "sv", "ta", "ro", "ja",
-            "nl", "vi", "hi", "lt", "he", "zh-CN", "zh-TW"
+            "nl", "vi", "hi", "lt", "he", "zh-CN", "zh-TW", "bn", "hr"
         )
         listOf(null to strLanguageSystem) + tags.map { tag ->
             val locale = Locale.forLanguageTag(tag)
@@ -136,6 +145,18 @@ fun ThemeSettingsContent(
 
     val styleFocusRequesters = remember { SettingsUiStyle.entries.associateWith { FocusRequester() } }
     val firstThemeFocusRequester = remember { FocusRequester() }
+    val customThemeFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(showCustomThemeDialog, uiState.availableThemes) {
+        if (AppTheme.CUSTOM !in uiState.availableThemes) {
+            val wasEditing = showCustomThemeDialog
+            showCustomThemeDialog = false
+            restoreCustomThemeFocus = false
+            if (wasEditing) firstThemeFocusRequester.requestFocusAfterFrames()
+        } else if (!showCustomThemeDialog && restoreCustomThemeFocus) {
+            restoreCustomThemeFocus = false
+            customThemeFocusRequester.requestFocusAfterFrames()
+        }
+    }
     val appliedSettingsUiStyle = NuvioTheme.settingsUiStyle
     LaunchedEffect(Unit) {
         if (viewModel.consumeStyleFocusRestore()) {
@@ -186,8 +207,16 @@ fun ThemeSettingsContent(
                         ) { themeIndex, theme ->
                             ThemeSwatchChip(
                                 theme = theme,
+                                customColors = uiState.customThemeColors,
                                 isSelected = theme == uiState.selectedTheme,
-                                onClick = { viewModel.onEvent(ThemeSettingsEvent.SelectTheme(theme)) },
+                                onClick = {
+                                    if (theme == AppTheme.CUSTOM) {
+                                        restoreCustomThemeFocus = true
+                                        showCustomThemeDialog = true
+                                    } else {
+                                        viewModel.onEvent(ThemeSettingsEvent.SelectTheme(theme))
+                                    }
+                                },
                                 modifier = if (
                                     uiState.themesLoaded &&
                                     theme == initialTheme &&
@@ -202,6 +231,9 @@ fun ThemeSettingsContent(
                                     } else {
                                         Modifier
                                     }
+                                ).then(
+                                    if (theme == AppTheme.CUSTOM) Modifier.focusRequester(customThemeFocusRequester)
+                                    else Modifier
                                 )
                             )
                         }
@@ -276,6 +308,8 @@ fun ThemeSettingsContent(
                 )
             }
 
+            AmbientModeSettingsCard()
+
             SettingsGroupCard(
                 modifier = Modifier.fillMaxWidth(),
                 title = stringResource(R.string.appearance_font_and_language),
@@ -296,6 +330,18 @@ fun ThemeSettingsContent(
             }
         }
         SettingsVerticalScrollIndicators(state = themeScrollState)
+    }
+
+    if (showCustomThemeDialog && AppTheme.CUSTOM in uiState.availableThemes) {
+        CustomThemeDialog(
+            initialColors = uiState.customThemeColors,
+            allowGradient = uiState.customThemeGradientEnabled,
+            onSave = { colors ->
+                viewModel.onEvent(ThemeSettingsEvent.SaveCustomTheme(colors))
+                showCustomThemeDialog = false
+            },
+            onDismiss = { showCustomThemeDialog = false }
+        )
     }
 
     if (showFontDialog) {
@@ -380,13 +426,15 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @Composable
 private fun ThemeSwatchChip(
     theme: AppTheme,
+    customColors: CustomThemeColors,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val palette = ThemeColors.getColorPalette(theme)
+    val palette = remember(theme, customColors) { ThemeColors.getColorPalette(theme, customColors) }
     val chipShape = RoundedCornerShape(18.dp)
+    val label = theme.localizedName()
 
     Card(
         onClick = onClick,
@@ -415,6 +463,11 @@ private fun ThemeSwatchChip(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clearAndSetSemantics {
+                    contentDescription = label
+                    role = Role.RadioButton
+                    this.selected = isSelected
+                }
                 .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.md),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -465,6 +518,10 @@ private fun SettingsStyleOptionCard(
                 if (isFocused != nowFocused) {
                     isFocused = nowFocused
                 }
+            }
+            .semantics {
+                role = Role.RadioButton
+                this.selected = isSelected
             },
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.Background,
@@ -499,7 +556,7 @@ private fun SettingsStyleOptionCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = stringResource(R.string.cd_selected),
+                        contentDescription = null,
                         tint = NuvioTheme.colors.Secondary,
                         modifier = Modifier
                             .size(16.dp)
@@ -536,6 +593,7 @@ private fun SettingsUiStyle.localizedDescription(): String = when (this) {
 
 @Composable
 private fun AppTheme.localizedName(): String = when (this) {
+    AppTheme.CUSTOM -> stringResource(R.string.theme_color_custom)
     AppTheme.GOLD -> stringResource(R.string.theme_color_gold)
     AppTheme.JADE -> stringResource(R.string.theme_color_jade)
     AppTheme.ROSE_GOLD -> stringResource(R.string.theme_color_rose_gold)

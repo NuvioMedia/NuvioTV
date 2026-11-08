@@ -49,6 +49,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.util.keepLtr
 import com.nuvio.tv.ui.util.languageCodeToName
 
 @Composable
@@ -166,9 +167,16 @@ private fun StreamInfoContent(data: StreamInfoData) {
                 modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
             )
         }
-        if (data.playerEngine != null) {
+        if (data.playerEngine != null || data.serverPlayback != null) {
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
-            InfoItem(label = stringResource(R.string.stream_info_player_engine), value = data.playerEngine)
+            Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
+                InfoItem(label = stringResource(R.string.stream_info_player_engine), value = data.playerEngine)
+                InfoItem(
+                    label = stringResource(R.string.stream_info_server),
+                    value = data.serverPlayback,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     }
@@ -277,7 +285,7 @@ private fun InfoItem(label: String, value: String?, modifier: Modifier = Modifie
             color = NuvioTheme.colors.TextTertiary
         )
         Text(
-            text = value,
+            text = value.keepLtr(),
             style = MaterialTheme.typography.titleMedium,
             color = Color.White,
             maxLines = 1,

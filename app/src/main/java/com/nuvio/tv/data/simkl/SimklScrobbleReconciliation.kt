@@ -2,31 +2,57 @@ package com.nuvio.tv.data.simkl
 
 import com.nuvio.tv.core.tracking.TrackingExternalIds
 
+internal data class SimklIndexedSnapshotUpdate(
+    val snapshot: SimklSyncSnapshot,
+    val entryIndex: SimklEntryIndex?
+)
+
 internal fun SimklSyncSnapshot.applyScrobbleResult(
     result: SimklScrobbleResult,
-    committedAtEpochMs: Long
-): SimklSyncSnapshot {
+    committedAtEpochMs: Long,
+    entryIndex: SimklEntryIndex? = null
+): SimklSyncSnapshot = applyScrobbleResultWithIndex(result, committedAtEpochMs, entryIndex).snapshot
+
+internal fun SimklSyncSnapshot.applyScrobbleResultWithIndex(
+    result: SimklScrobbleResult,
+    committedAtEpochMs: Long,
+    entryIndex: SimklEntryIndex? = null
+): SimklIndexedSnapshotUpdate {
     val localCommittedAt = committedAtEpochMs.epochMsToUtcIso()
-        ?: return this
+        ?: return SimklIndexedSnapshotUpdate(this, entryIndex)
     return when (result.outcome) {
-        SimklScrobbleOutcome.START -> this
-        SimklScrobbleOutcome.PAUSE -> withPausedScrobble(result, localCommittedAt)
+        SimklScrobbleOutcome.START -> SimklIndexedSnapshotUpdate(
+            snapshot = this.reconcileWatchedPlayback(entryIndex),
+            entryIndex = entryIndex
+        )
+        SimklScrobbleOutcome.PAUSE -> SimklIndexedSnapshotUpdate(
+            snapshot = withPausedScrobble(result, localCommittedAt, entryIndex)
+                .reconcileWatchedPlayback(entryIndex),
+            entryIndex = entryIndex
+        )
         SimklScrobbleOutcome.SCROBBLE -> withCompletedScrobble(
             result = result,
             committedAt = result.watchedAt
                 ?.takeIf { value -> parseSimklUtcEpochMs(value) != null }
-                ?: localCommittedAt
+                ?: localCommittedAt,
+            entryIndex = entryIndex
         )
-    }.reconcileWatchedPlayback()
+    }
 }
 
 private fun SimklSyncSnapshot.withPausedScrobble(
     result: SimklScrobbleResult,
-    committedAt: String
+    committedAt: String,
+    entryIndex: SimklEntryIndex? = null
 ): SimklSyncSnapshot {
-    val existingEntry = entries.matchingEntry(result)
+    val existingEntry = entries.matchingEntry(result, entryIndex)
+    val targetIds = result.media.toTrackingExternalIds()
     val existingSession = playback.firstOrNull { session ->
-        session.media?.matchesTarget(result.media) == true
+        session.media?.matchesTargetWithIds(
+            session.media?.toTrackingExternalIds() ?: TrackingExternalIds(),
+            result.media,
+            targetIds
+        ) == true
     }
     val media = result.media
         .mergeMissing(existingEntry?.media)
@@ -46,17 +72,23 @@ private fun SimklSyncSnapshot.withPausedScrobble(
     )
     return copy(
         playback = playback.filterNot { candidate ->
-            candidate.media?.matchesTarget(result.media) == true
+            val candidateMedia = candidate.media ?: return@filterNot false
+            candidateMedia.matchesTargetWithIds(
+                candidateMedia.toTrackingExternalIds(),
+                result.media,
+                targetIds
+            )
         } + session
     )
 }
 
 private fun SimklSyncSnapshot.withCompletedScrobble(
     result: SimklScrobbleResult,
-    committedAt: String
-): SimklSyncSnapshot {
+    committedAt: String,
+    entryIndex: SimklEntryIndex? = null
+): SimklIndexedSnapshotUpdate {
     val updatedEntries = entries.toMutableList()
-    val index = updatedEntries.indexOfMatchingEntry(result)
+    val index = entries.indexOfMatchingEntry(result, entryIndex)
     val existing = updatedEntries.getOrNull(index)
     val updated = when {
         result.mediaType == SimklMediaType.MOVIES ||
@@ -73,12 +105,24 @@ private fun SimklSyncSnapshot.withCompletedScrobble(
     } else {
         updatedEntries += updated
     }
-    return copy(
+    val targetIds = result.media.toTrackingExternalIds()
+    val updatedIndex = entryIndex?.withUpdatedEntry(
+        newEntries = updatedEntries,
+        index = if (index >= 0) index else updatedEntries.lastIndex,
+        updatedEntry = updated
+    )
+    val reconciledSnapshot = copy(
         entries = updatedEntries,
         playback = playback.filterNot { session ->
-            session.media?.matchesTarget(result.media) == true
+            val sessionMedia = session.media ?: return@filterNot false
+            sessionMedia.matchesTargetWithIds(
+                sessionMedia.toTrackingExternalIds(),
+                result.media,
+                targetIds
+            )
         }
-    )
+    ).reconcileWatchedPlayback(updatedIndex)
+    return SimklIndexedSnapshotUpdate(reconciledSnapshot, updatedIndex)
 }
 
 private fun SimklLibraryEntry.withWatchedMovie(
@@ -224,24 +268,40 @@ private fun SimklPlaybackEpisode.mergeMissing(
 }
 
 private fun List<SimklLibraryEntry>.matchingEntry(
-    result: SimklScrobbleResult
-): SimklLibraryEntry? = getOrNull(indexOfMatchingEntry(result))
+    result: SimklScrobbleResult,
+    entryIndex: SimklEntryIndex? = null
+): SimklLibraryEntry? = getOrNull(indexOfMatchingEntry(result, entryIndex))
 
 private fun List<SimklLibraryEntry>.indexOfMatchingEntry(
+    result: SimklScrobbleResult,
+    entryIndex: SimklEntryIndex? = null
+): Int = entryIndex?.indexOfMatchingEntry(this, result) ?: indexOfMatchingEntryLinear(result)
+
+internal fun List<SimklLibraryEntry>.indexOfMatchingEntryLinear(
     result: SimklScrobbleResult
 ): Int {
-    val sameType = indexOfFirst { entry ->
-        entry.mediaType == result.mediaType &&
-            entry.media?.matchesTarget(result.media) == true
+    val target = result.media
+    val targetIds = target.toTrackingExternalIds()
+    var fallbackIndex = -1
+    for (index in indices) {
+        val entry = this[index]
+        val media = entry.media ?: continue
+        if (media.matchesTargetWithIds(media.toTrackingExternalIds(), target, targetIds)) {
+            if (entry.mediaType == result.mediaType) return index
+            if (fallbackIndex < 0) fallbackIndex = index
+        }
     }
-    return if (sameType >= 0) sameType else indexOfFirst { entry ->
-        entry.media?.matchesTarget(result.media) == true
-    }
+    return fallbackIndex
 }
 
-internal fun SimklMedia.matchesTarget(target: SimklMedia): Boolean {
-    val candidateIds = toTrackingExternalIds()
-    val targetIds = target.toTrackingExternalIds()
+internal fun SimklMedia.matchesTarget(target: SimklMedia): Boolean =
+    matchesTargetWithIds(toTrackingExternalIds(), target, target.toTrackingExternalIds())
+
+internal fun SimklMedia.matchesTargetWithIds(
+    candidateIds: TrackingExternalIds,
+    target: SimklMedia,
+    targetIds: TrackingExternalIds
+): Boolean {
     candidateIds.comparableMatch(targetIds)?.let { return it }
     return title?.trim()?.equals(target.title?.trim(), ignoreCase = true) == true &&
         (year == null || target.year == null || year == target.year)

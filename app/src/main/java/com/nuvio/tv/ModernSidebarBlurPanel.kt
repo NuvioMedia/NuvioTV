@@ -36,17 +36,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
-import coil3.compose.rememberAsyncImagePainter
-import coil3.request.ImageRequest
 import com.nuvio.tv.ui.components.AutoResizeText
 import com.nuvio.tv.ui.components.BrandWordmark
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
@@ -55,11 +57,12 @@ import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioRadii
 import com.nuvio.tv.ui.theme.NuvioStrokes
 import com.nuvio.tv.ui.theme.NuvioTheme
-import com.nuvio.tv.ui.theme.ThemeColors
 import com.nuvio.tv.ui.theme.accentBrush
+import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.draw.drawWithCache
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.hazeEffect
@@ -109,12 +112,21 @@ internal fun ModernSidebarBlurPanel(
     val bgElevated = colors.BackgroundElevated
     val bgCard = colors.BackgroundCard
     val borderBase = colors.Border
-    val panelBackgroundBrush = remember(blurEnabled) {
-        val alpha = if (blurEnabled) 0.65f else 0.96f
+    val isAmoledBlack = bgElevated == Color.Black
+    val panelBackgroundBrush = remember(blurEnabled, isAmoledBlack, bgElevated, bgCard) {
+        val baseColor = if (isAmoledBlack) Color.Black else Color(0xFF161618)
+        val alpha = when {
+            blurEnabled -> 0.65f
+            isAmoledBlack -> 1f
+            else -> 0.97f
+        }
         Brush.verticalGradient(listOf(
-            Color(0xFF1C1C1E).copy(alpha = alpha),
-            Color(0xFF1C1C1E).copy(alpha = alpha)
+            baseColor.copy(alpha = alpha),
+            baseColor.copy(alpha = alpha)
         ))
+    }
+    val panelBorderColor = remember(isAmoledBlack, blurEnabled, borderBase) {
+        if (!blurEnabled && isAmoledBlack) borderBase.copy(alpha = 0.9f) else Color.Transparent
     }
 
     Column(
@@ -131,6 +143,13 @@ internal fun ModernSidebarBlurPanel(
             .clip(panelShape)
             .then(expandedPanelBlurModifier)
             .background(brush = panelBackgroundBrush, shape = panelShape)
+            .then(
+                if (panelBorderColor != Color.Transparent) {
+                    Modifier.border(width = NuvioStrokes.tokens.hairline, color = panelBorderColor, shape = panelShape)
+                } else {
+                    Modifier
+                }
+            )
             .padding(horizontal = NuvioTheme.spacing.md, vertical = NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs)
     ) {
         if (showProfileSelector && activeProfileName.isNotEmpty()) {
@@ -226,7 +245,7 @@ private fun SidebarNavigationItem(
     var isFocused by remember { mutableStateOf(false) }
     val colors = NuvioTheme.colors
     val shape = RoundedCornerShape(NuvioRadii.tokens.full)
-    val palette = ThemeColors.getColorPalette(NuvioTheme.currentTheme)
+    val palette = NuvioTheme.palette
     val accentColor = palette.secondary
     val backgroundColorTarget = when {
         isFocused && selected -> accentColor.copy(alpha = 0.28f)
@@ -300,6 +319,11 @@ private fun SidebarNavigationItem(
     ) {
         Row(
             modifier = Modifier
+                .semantics {
+                    contentDescription = label
+                    role = Role.Tab
+                    this.selected = selected
+                }
                 .fillMaxWidth()
                 .padding(horizontal = NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs, vertical = NuvioTheme.spacing.sm + NuvioTheme.spacing.xxs),
             verticalAlignment = Alignment.CenterVertically
@@ -350,7 +374,7 @@ private fun SidebarNavigationItem(
                 .weight(1f)
                 .graphicsLayer { alpha = labelAlpha }
         )
-    }
+        }
     }
 }
 
@@ -393,6 +417,10 @@ private fun SidebarProfileItem(
     ) {
         Row(
             modifier = Modifier
+                .semantics {
+                    contentDescription = profileName
+                    role = Role.Button
+                }
                 .fillMaxWidth()
                 .padding(horizontal = NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs, vertical = NuvioTheme.spacing.sm + NuvioTheme.spacing.xxs),
             verticalAlignment = Alignment.CenterVertically
@@ -417,21 +445,10 @@ private fun SidebarProfileItem(
                 .weight(1f)
                 .graphicsLayer { alpha = labelAlpha },
             style = androidx.tv.material3.MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                textDirection = profileName.contentTextDirection()
             )
         )
+        }
     }
-    }
-}
-
-@Composable
-private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { NuvioTheme.spacing.xl.roundToPx() }
-    return rememberAsyncImagePainter(
-        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-            .data(rawIconRes)
-            .size(sizePx)
-            .build()
-    )
 }

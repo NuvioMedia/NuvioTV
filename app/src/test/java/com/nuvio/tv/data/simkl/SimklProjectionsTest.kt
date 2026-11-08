@@ -255,8 +255,10 @@ class SimklProjectionsTest {
         assertEquals(1, progress.season)
         assertEquals(3, progress.episode)
         assertEquals(80.0f, progress.progressPercent)
-        assertEquals(3_000_000L, progress.duration)
-        assertEquals(2_400_000L, progress.position)
+        // No duration is invented from the show runtime, so the resume goes through the percentage:
+        // the player scales it by the duration of the episode it really opened.
+        assertEquals(0L, progress.duration)
+        assertEquals(0L, progress.position)
         assertEquals(12345L, progress.simklPlaybackId)
         assertEquals(WatchProgress.SOURCE_SIMKL_PLAYBACK, progress.source)
         assertEquals("simkl:39687", progress.trackingProviderItemId)
@@ -290,6 +292,19 @@ class SimklProjectionsTest {
         assertEquals(951_782_400_123L, parseSimklUtcEpochMs("2000-02-29T00:00:00.123Z"))
         assertNull(parseSimklUtcEpochMs("2023-02-29T00:00:00Z"))
         assertNull(parseSimklUtcEpochMs("2024-01-01T00:00:00+01:00"))
+    }
+
+    @Test
+    fun `timestamp parser is case insensitive and rejects malformed input`() {
+        assertEquals(951_782_400_000L, parseSimklUtcEpochMs("2000-02-29t00:00:00z"))
+        assertEquals(951_782_400_500L, parseSimklUtcEpochMs(" 2000-02-29T00:00:00.5Z "))
+        assertNull(parseSimklUtcEpochMs(null))
+        assertNull(parseSimklUtcEpochMs(""))
+        assertNull(parseSimklUtcEpochMs("2000-02-29 00:00:00Z"))
+        assertNull(parseSimklUtcEpochMs("2000-02-29T00:00:00"))
+        assertNull(parseSimklUtcEpochMs("2000-13-01T00:00:00Z"))
+        assertNull(parseSimklUtcEpochMs("2000-02-29T24:00:00Z"))
+        assertNull(parseSimklUtcEpochMs("2000-02-29T00:00:00.1234567890Z"))
     }
 
     private fun entry(

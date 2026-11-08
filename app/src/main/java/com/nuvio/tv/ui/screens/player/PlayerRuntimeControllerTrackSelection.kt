@@ -6,6 +6,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import com.nuvio.tv.domain.model.Subtitle
+import com.nuvio.tv.ui.screens.player.autosync.AutoSyncSyncedSubtitle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -71,10 +72,10 @@ internal fun PlayerRuntimeController.selectAudioTrack(trackIndex: Int) {
                             .buildUpon()
                             .setOverrideForType(override)
                             .build()
-                        // Nudge the player to avoid infinite buffering after audio track switch
-                        // where the new track requires a different segment.
-                        val pos = player.currentPosition
-                        if (pos > 0) player.seekTo((pos - 1).coerceAtLeast(0))
+                        if (hasRenderedFirstFrame) {
+                            val pos = player.currentPosition
+                            if (pos > 0) player.seekTo((pos - 1).coerceAtLeast(0))
+                        }
                         return
                     }
                     currentAudioIndex++
@@ -410,6 +411,15 @@ internal fun PlayerRuntimeController.addonSubtitleKey(subtitle: Subtitle): Strin
     return "${subtitle.id}|${subtitle.url}"
 }
 
+/** Routes for [SubtitleRoutingDataSourceFactory], keyed by configuration URI. When subtitles share a URI, the first route is used. */
+internal fun PlayerRuntimeController.subtitleRoutes(subtitles: List<Subtitle>): Map<String, SubtitleRoute> =
+    buildMap {
+        subtitles.forEach { subtitle ->
+            val key = toSubtitleConfiguration(subtitle).uri.toString()
+            if (key !in this) put(key, SubtitleRoute(subtitle.url, subtitle.headers))
+        }
+    }
+
 internal fun PlayerRuntimeController.toSubtitleConfiguration(subtitle: Subtitle): MediaItem.SubtitleConfiguration {
     val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
     val subtitleMimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
@@ -446,7 +456,8 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         val wasPlaying = isPlaybackCurrentlyPlaying()
         val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
         val trackTitle = buildAddonSubtitleTrackId(subtitle)
-        scope.launch {
+        AutoSyncSyncedSubtitle.clear() // AutoSync hook
+        mpvAddonSubtitleSelectionJob = scope.launch {
             val localPath = try {
                 val decodedBody = downloadSubtitleBody(subtitle.url, subtitle.lang, subtitle.headers)
                 val sanitized = SubtitleMojibakeSanitizer.sanitize(decodedBody).toString()
@@ -600,10 +611,12 @@ internal fun PlayerRuntimeController.attachAddonSubtitleViaMediaReload(subtitle:
             url = currentStreamUrl,
             headers = currentHeaders,
             subtitleConfigurations = subtitleConfigurations,
+            subtitleRoutes = subtitleRoutes(_uiState.value.addonSubtitles + subtitle),
             filename = currentFilename,
             responseHeaders = currentStreamResponseHeaders,
             mimeTypeOverride = currentStreamMimeType,
-            audioDelayUsProvider = audioDelayUs::get
+            audioDelayUsProvider = audioDelayUs::get,
+            cacheKey = currentStreamCacheKey
         ),
         currentPosition
     )
@@ -661,7 +674,13 @@ internal fun PlayerRuntimeController.rememberAddonSubtitleSelection(subtitle: Su
 }
 
 private fun PlayerRuntimeController.currentTrackPreferenceForPersistence(): PlayerRuntimeController.TrackPreference {
-    return rememberedTrackPreference ?: persistedTrackPreference ?: PlayerRuntimeController.TrackPreference()
+    // A restored selection is cleared from persistedTrackPreference once applied, so a later
+    // save (e.g. AutoSync resetting the delay) must fall back to the loaded snapshot instead,
+    // or it would overwrite the stored subtitle with nothing.
+    return rememberedTrackPreference
+        ?: loadedTrackPreference
+        ?: persistedTrackPreference
+        ?: PlayerRuntimeController.TrackPreference()
 }
 
 internal fun PlayerRuntimeController.persistTrackPreference() {

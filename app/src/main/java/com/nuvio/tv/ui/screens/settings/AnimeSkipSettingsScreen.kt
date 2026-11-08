@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -182,7 +183,10 @@ private fun AnimeSkipClientIdDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = NuvioTheme.colors.TextPrimary,
+                        textDirection = TextDirection.Content
+                    ),
                     cursorBrush = SolidColor(
                         if (isInputFocused) NuvioTheme.colors.Primary
                         else androidx.compose.ui.graphics.Color.Transparent

@@ -41,12 +41,28 @@ internal object PlayerSubtitleUtils {
             return "es"
         }
 
+        if (containsAny("bahasa indonesia", "indonesian", "indonesia")) {
+            return "id"
+        }
+        if (containsAny("bahasa malaysia", "bahasa melayu", "malaysian")) {
+            return "ms"
+        }
+
+        if (containsAny("hbs")) {
+            stripPrefixAndNormalizeLanguageCode(tokenized, "hbs")?.let { return it }
+        }
+
         resolveLanguageNameAlias(tokenized)?.let { return it }
 
         // LANGUAGE_OVERRIDES uses pt-BR (mixed case) — normalize to lowercase for consistency
         return LANGUAGE_OVERRIDES[code]?.lowercase()
             ?: LANGUAGE_OVERRIDES[normalizedCode]?.lowercase()
             ?: normalizedCode
+    }
+
+    private fun stripPrefixAndNormalizeLanguageCode(language: String, prefix: String): String? {
+        val stripped = language.replace(prefix,"").trim()
+        return LANGUAGE_OVERRIDES[stripped]?.lowercase()
     }
 
     fun matchesLanguageCode(language: String?, target: String): Boolean {
@@ -121,6 +137,12 @@ internal object PlayerSubtitleUtils {
             return baseLang
         }
 
+        if (baseLang == "ms" || baseLang == "msa" || baseLang == "may") {
+            val hasIndonesian = INDONESIAN_TAGS.any { haystack.contains(it) }
+            if (hasIndonesian) return "id"
+            return baseLang
+        }
+
         return baseLang
     }
 
@@ -136,6 +158,9 @@ internal object PlayerSubtitleUtils {
     )
     internal val CASTILIAN_TAGS = listOf(
         "es-es", "es_es", "castilian", "castellano", "spain", "españa", "espana", "iberian"
+    )
+    internal val INDONESIAN_TAGS = listOf(
+        "indonesia", "indonesian", "bahasa indonesia"
     )
 
     fun mimeTypeFromUrl(url: String): String {
@@ -221,8 +246,12 @@ internal object PlayerSubtitleUtils {
      * to prevent Media3 SubtitlePainter from drawing colliding lines on top of each other.
      */
     fun mergeOverlappingCues(cues: List<Cue>): List<Cue> {
-        if (cues.size <= 1 || !cues.all { it.bitmap == null && it.line == Cue.DIMEN_UNSET }) {
-            return cues
+        if (cues.size <= 1) return cues
+        val unpositioned = cues.filter { it.bitmap == null && it.line == Cue.DIMEN_UNSET }
+        if (unpositioned.size <= 1) return cues
+        if (unpositioned.size < cues.size) {
+            val positioned = cues.filterNot { it.bitmap == null && it.line == Cue.DIMEN_UNSET }
+            return positioned + mergeOverlappingCues(unpositioned)
         }
         val validTexts = cues.mapNotNull { it.text }.filter { it.isNotBlank() }
         if (validTexts.isEmpty()) return emptyList()
@@ -240,4 +269,22 @@ internal object PlayerSubtitleUtils {
         }
         return listOf(cues[0].buildUpon().setText(mergedText).build())
     }
+
+    fun normalizeBottomCuePosition(cue: Cue): Cue {
+        if (cue.bitmap != null || cue.verticalType != Cue.TYPE_UNSET || cue.line == Cue.DIMEN_UNSET) {
+            return cue
+        }
+        val placedAwayFromBottom = when (cue.lineType) {
+            Cue.LINE_TYPE_FRACTION -> cue.line < BOTTOM_CUE_LINE_FRACTION
+            Cue.LINE_TYPE_NUMBER -> cue.line >= 0f
+            else -> false
+        }
+        if (placedAwayFromBottom) return cue
+        return cue.buildUpon()
+            .setLine(Cue.DIMEN_UNSET, Cue.TYPE_UNSET)
+            .setLineAnchor(Cue.TYPE_UNSET)
+            .build()
+    }
+
+    private const val BOTTOM_CUE_LINE_FRACTION = 0.6f
 }
