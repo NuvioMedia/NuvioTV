@@ -1203,6 +1203,8 @@
     <string name="layout_custom_poster_screen_tv_recommendations">TV-ajánlások</string>
     <string name="layout_always_show_landscape_clearlogo">Fekvő poszter helyett háttérkép logóval</string>
     <string name="layout_always_show_landscape_clearlogo_sub">A bővítmény fekvő posztere helyett a háttérkép jelenik meg a tartalom logójával.</string>
+    <string name="layout_hero_description_auto_scroll">Leírások automatikus görgetése</string>
+    <string name="layout_hero_description_auto_scroll_sub">A kezdőlapon a hosszú leírásokat levágás helyett lassan görgeti.</string>
     <string name="web_custom_poster_title">Egyéni poszterforrás</string>
     <string name="web_custom_poster_subtitle">Illeszd be alább a poszter-URL-mintát, majd nyomd meg a Mentés gombot.</string>
     <string name="web_custom_poster_label">URL-minta</string>
