@@ -68,6 +68,12 @@ data class MetaDetailsUiState(
      * episode list marks them apart from the ones watched before the run.
      */
     val rewatchEpisodes: Set<Pair<Int, Int>> = emptySet(),
+    /**
+     * Whether the running rewatch is newer than the canonical watch, so the marker fade applies.
+     * An older run still keeps its episodes for the overlay actions, but the list draws the plain
+     * watched markers the app had before rewatches.
+     */
+    val rewatchMarkersActive: Boolean = false,
     val episodeWatchedPendingKeys: Set<String> = emptySet(),
     val blurUnwatchedEpisodes: Boolean = false,
     val randomEpisodeEnabled: Boolean = false,
