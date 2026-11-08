@@ -368,6 +368,9 @@ private fun ExtraModernContent(
                     onItemClick = { item ->
                         onNavigateToDetail(item.id, item.rawType, uiState.heroAddonBaseUrl.orEmpty())
                     },
+                    // 64dp: in sync con rowHorizontalPadding della home moderna —
+                    // il blocco testo non deve finire sotto la rail laterale.
+                    startPadding = 64.dp,
                     modifier = Modifier.padding(bottom = NuvioTheme.spacing.lg)
                 )
             }
@@ -387,6 +390,7 @@ private fun ExtraModernContent(
                     cornerRadius = posterCardStyle.cornerRadius,
                     blurUnwatchedEpisodes = uiState.blurContinueWatchingNextUp,
                     useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                    startPadding = 64.dp,
                     modifier = Modifier.padding(bottom = NuvioTheme.spacing.md)
                 )
             }
@@ -406,6 +410,7 @@ private fun ExtraModernContent(
                     cornerRadius = posterCardStyle.cornerRadius,
                     blurUnwatchedEpisodes = uiState.blurContinueWatchingNextUp,
                     useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                    startPadding = 64.dp,
                     modifier = Modifier.padding(bottom = NuvioTheme.spacing.md)
                 )
             }
@@ -426,7 +431,8 @@ private fun ExtraModernContent(
                 showPosterLabels = uiState.posterLabelsEnabled,
                 showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
                 focusedPosterBackdropExpandEnabled = uiState.focusedPosterBackdropExpandEnabled,
-                focusedPosterBackdropExpandDelaySeconds = uiState.focusedPosterBackdropExpandDelaySeconds
+                focusedPosterBackdropExpandDelaySeconds = uiState.focusedPosterBackdropExpandDelaySeconds,
+                startPadding = 64.dp
             )
         }
     }

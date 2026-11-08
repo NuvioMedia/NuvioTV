@@ -146,6 +146,11 @@ fun ContinueWatchingSection(
     imageHeight: Dp = 162.dp,
     cardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
     cornerRadius: Dp = NuvioTheme.radii.md,
+    /**
+     * Margine sinistro di titolo e riga. Default invariato (48dp): il Dazn
+     * passa 64dp per allinearsi alla rail laterale come home/anime.
+     */
+    startPadding: Dp = NuvioTheme.spacing.xxxl,
     posterTitleOverride: TextStyle? = null
 ) {
     if (items.isEmpty()) return
@@ -182,7 +187,7 @@ fun ContinueWatchingSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.lg),
+                .padding(start = startPadding, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.lg),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -197,8 +202,8 @@ fun ContinueWatchingSection(
         val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
         val layoutDirection = LocalLayoutDirection.current
         val isRtl = layoutDirection == LayoutDirection.Rtl
-        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, isRtl) {
-            val startPx = with(density) { NuvioTheme.spacing.xxxl.roundToPx() }
+        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, isRtl, startPadding) {
+            val startPx = with(density) { startPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             object : BringIntoViewSpec {
                 override val scrollAnimationSpec: AnimationSpec<Float> =
@@ -236,7 +241,7 @@ fun ContinueWatchingSection(
                         ?: FocusRequester.Default
                 }
                 .focusGroup(),
-            contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl),
+            contentPadding = PaddingValues(start = startPadding, end = NuvioTheme.spacing.xxxl),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
             state = listState
         ) {

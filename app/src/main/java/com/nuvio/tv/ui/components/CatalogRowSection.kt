@@ -51,6 +51,7 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -94,6 +95,11 @@ fun CatalogRowSection(
     isItemWatched: (MetaPreview) -> Boolean = { false },
     onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
+    /**
+     * Margine sinistro di titolo e riga. Default invariato (48dp): la home
+     * moderna e l'anime passano 64dp per allinearsi alla rail laterale.
+     */
+    startPadding: Dp = NuvioTheme.spacing.xxxl,
     enableRowFocusRestorer: Boolean = true,
     initialScrollIndex: Int = 0,
     /** Used only for initial focus restore (e.g. returning from detail screen). */
@@ -211,7 +217,7 @@ fun CatalogRowSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.md),
+                .padding(start = startPadding, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.md),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -230,8 +236,8 @@ fun CatalogRowSection(
         val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
         val layoutDirection = LocalLayoutDirection.current
         val isRtl = layoutDirection == LayoutDirection.Rtl
-        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, isRtl) {
-            val startPx = with(density) { NuvioTheme.spacing.xxxl.roundToPx() }
+        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, isRtl, startPadding) {
+            val startPx = with(density) { startPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             object : BringIntoViewSpec {
                 override val scrollAnimationSpec: AnimationSpec<Float> =
@@ -287,7 +293,7 @@ fun CatalogRowSection(
                     }
                 )
                 .focusGroup(),
-            contentPadding = PaddingValues(start = NuvioTheme.spacing.xxxl, end = 200.dp),
+            contentPadding = PaddingValues(start = startPadding, end = 200.dp),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
             itemsIndexed(

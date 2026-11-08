@@ -132,7 +132,12 @@ fun ContentCard(
     var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
-    // Modalità Fluida: niente espansione locandina né anteprime trailer.
+    // Modalità Fluida: niente anteprime trailer ESTERNE alla card (il trailer
+    // dell'hero resta gestito da ModernHomeContent). L'espansione della card
+    // segue invece le impostazioni dell'utente anche con la fluida attiva:
+    // con fluid ON + "Espandi locandina" ON la card si apre dopo il ritardo
+    // e le ★ del voto tornano visibili (le card Anime erano bloccate da un
+    // gate hardcoded !fluidMode che ignorava le impostazioni).
     val fluidMode = LocalFluidMode.current
     val nextEpisodeDateLabel = rememberNextEpisodeDateLabel(item)
 
@@ -146,7 +151,7 @@ fun ContentCard(
 
     val isPlaceholderItem = item.poster == PLACEHOLDER_IMAGE_URL
 
-    if (focusedPosterBackdropExpandEnabled && !fluidMode && !isPlaceholderItem) {
+    if (focusedPosterBackdropExpandEnabled && !isPlaceholderItem) {
         LaunchedEffect(
             focusedPosterBackdropExpandDelaySeconds,
             isFocused,
@@ -393,7 +398,7 @@ fun ContentCard(
                     MonochromePosterPlaceholder()
                 }
 
-                val shouldPlayTrailerPreview = !fluidMode && isBackdropExpanded &&
+                val shouldPlayTrailerPreview = isBackdropExpanded &&
                     focusedPosterBackdropTrailerEnabled &&
                     isFocused &&
                     trailerPreviewUrl != null

@@ -1,6 +1,5 @@
 package com.nuvio.tv.ui.screens.anime
 
-import com.nuvio.tv.core.perf.LocalFluidMode
 import android.content.Context
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.foundation.background
@@ -34,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
@@ -49,7 +49,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
 import com.nuvio.tv.LocalContentFocusRequester
+import com.nuvio.tv.LocalPendingContentFocusTransfer
+import com.nuvio.tv.ui.components.SectionTopBarScrimState
 import com.nuvio.tv.ui.util.rowsListUpRecovery
 import com.nuvio.tv.ui.util.rowsListDownRecovery
 import androidx.compose.ui.unit.dp
@@ -105,6 +108,7 @@ import com.nuvio.tv.ui.util.localizedLanguageText
 import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import androidx.compose.ui.focus.focusRestorer
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -245,6 +249,15 @@ private fun AnimeModernContent(
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onItemFocus: (MetaPreview) -> Unit
 ) {
+    // Come la Home moderna: l'hero arriva fino in cima, quindi la banda nera
+    // sotto la barra sezioni va spenta. Con la banda attiva (default delle
+    // altre schermate) i primi 64dp dell'immagine venivano coperti: "in anime
+    // l'immagine viene tagliata".
+    DisposableEffect(Unit) {
+        SectionTopBarScrimState.visible = false
+        onDispose { SectionTopBarScrimState.visible = true }
+    }
+
     val defaultHeroItem = uiState.heroItem
     var focusedHeroItem by remember {
         mutableStateOf(defaultHeroItem)
@@ -320,7 +333,7 @@ private fun AnimeModernContent(
                     fullScreenBackdrop = fullScreenBackdrop,
                     useLandscapePosters = useLandscapePosters,
                     showFullReleaseDate = uiState.showFullReleaseDate,
-                    trailerPreviewUrl = if (heroPlaysTrailer && !LocalFluidMode.current) {
+                    trailerPreviewUrl = if (heroPlaysTrailer) {
                         trailerPreviewUrls[currentHeroItem.id]
                     } else {
                         null
@@ -347,6 +360,46 @@ private fun AnimeModernContent(
         }
 
         val rowsListState = rememberLazyListState()
+
+        // Entry della schermata (avvio app con navigazione ripristinata, entry
+        // via tab/sidebar, ritorno dal detail): il primo focus deve atterrare
+        // su "Continua a guardare", come sulla Home.
+        // - La lista (rememberLazyListState, sopravvive al riavvio) può essere
+        //   scrollata sulla riga usata l'ultima volta: la riportiamo in cima.
+        // - La riga CW può arrivare dopo (dati in caricamento): il loop viene
+        //   rieseguito anche quando continueWatchingItems passa da vuota a
+        //   piena.
+        // - Si verifica la stabilita' del focus su piu' frame prima di
+        //   fermarsi (un bring-into-view tardivo puo' spostarlo).
+        // NB: l'esterno NON usa focusRestorer: ripristinava l'ultima card
+        // (es. Crunchyroll Movies) appena il focus entrava nella lista,
+        // scavalcando la prima card di "Continua a guardare".
+        val pendingContentFocusTransfer = LocalPendingContentFocusTransfer.current
+        val firstCwCardFocusRequester = remember { FocusRequester() }
+        var firstCwCardFocused by remember { mutableStateOf(false) }
+        var entryFocusRequest by remember { mutableStateOf(0) }
+        LaunchedEffect(Unit) {
+            snapshotFlow { pendingContentFocusTransfer.value }
+                .filter { it }
+                .collect { entryFocusRequest++ }
+        }
+        LaunchedEffect(entryFocusRequest, uiState.continueWatchingItems.isNotEmpty()) {
+            if (uiState.continueWatchingItems.isEmpty()) return@LaunchedEffect
+            var stableChecks = 0
+            repeat(30) {
+                if (firstCwCardFocused) {
+                    // Conferma su ~240ms: se qualcosa sposta il focus poco
+                    // dopo, il ciclo se ne accorge e lo rimette su CW.
+                    stableChecks++
+                    if (stableChecks >= 3) return@LaunchedEffect
+                } else {
+                    stableChecks = 0
+                    rowsListState.scrollToItem(0)
+                    runCatching { firstCwCardFocusRequester.requestFocus() }
+                }
+                delay(80)
+            }
+        }
         val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
         // Home-style vertical bring-into-view: pin the focused row header at the
         // target inset so a poster never stops half-cut at the viewport edge.
@@ -377,7 +430,6 @@ private fun AnimeModernContent(
                     .then(if (heroEnabled) Modifier.height(rowsViewportHeight) else Modifier.fillMaxSize())
                     .clipToBounds()
                     .focusRequester(LocalContentFocusRequester.current)
-                    .focusRestorer()
                     .dpadRepeatThrottle(scrollableState = rowsListState)
                     .rowsListUpRecovery(rowsListState)
                     .rowsListDownRecovery(rowsListState),
@@ -405,7 +457,9 @@ private fun AnimeModernContent(
                             onDetailsClick = { item -> handleAnimeCwClick(item, onNavigateToDetail) },
                             onStartFromBeginning = onContinueWatchingStartFromBeginning,
                             onRemoveItem = onRemoveContinueWatching,
-                            onItemFocus = { focusedHeroItem = it }
+                            onItemFocus = { focusedHeroItem = it },
+                            firstCardFocusRequester = firstCwCardFocusRequester,
+                            onFirstCardFocus = { firstCwCardFocused = it }
                         )
                     }
                 }
@@ -506,7 +560,9 @@ private fun AnimeModernCatalogRow(
     val rowTitleStyle = remember(titleMediumStyle) {
         titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
     }
-    val rowStartPadding = 52.dp
+    // 64dp: in sync con rowHorizontalPadding della home moderna — la card
+    // espansa non deve arrivare sulla rail laterale.
+    val rowStartPadding = 64.dp
     val rowTitleBottom = 14.dp
     val posterCardStyle = remember(
         useLandscapePosters,
@@ -666,7 +722,12 @@ private fun AnimeModernContinueWatchingRow(
     onDetailsClick: (ContinueWatchingItem) -> Unit,
     onStartFromBeginning: (ContinueWatchingItem) -> Unit,
     onRemoveItem: (ContinueWatchingItem) -> Unit,
-    onItemFocus: (MetaPreview) -> Unit
+    onItemFocus: (MetaPreview) -> Unit,
+    // Chiesto dall'entry (avvio/tab/ritorno) per atterrare sulla prima card.
+    firstCardFocusRequester: FocusRequester? = null,
+    // Segnala quando la prima card ha davvero il focus: l'entry ci riprova
+    // finché non è vero (il restore di focusRestorer può sovrascriverla).
+    onFirstCardFocus: ((Boolean) -> Unit)? = null
 ) {
     if (items.isEmpty()) return
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
@@ -674,7 +735,7 @@ private fun AnimeModernContinueWatchingRow(
     val rowTitleStyle = remember(titleMediumStyle) {
         titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
     }
-    val rowStartPadding = 52.dp
+    val rowStartPadding = 64.dp
 
     val density = LocalDensity.current
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
@@ -738,7 +799,7 @@ private fun AnimeModernContinueWatchingRow(
                 itemsIndexed(
                     items = items,
                     key = { _, item -> continueWatchingItemKey(item) }
-                ) { _, item ->
+                ) { index, item ->
                     var cardFocused by remember { mutableStateOf(false) }
                     ContinueWatchingCard(
                         item = item,
@@ -751,12 +812,21 @@ private fun AnimeModernContinueWatchingRow(
                         cardStyle = cardStyle,
                         cornerRadius = cornerRadius,
                         isFocused = cardFocused,
-                        modifier = Modifier.onFocusChanged { state ->
-                            cardFocused = state.isFocused
-                            if (state.isFocused) {
-                                continueWatchingItemToMetaPreview(item)?.let { onItemFocus(it) }
+                        modifier = Modifier
+                            .then(
+                                if (index == 0 && firstCardFocusRequester != null) {
+                                    Modifier.focusRequester(firstCardFocusRequester)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .onFocusChanged { state ->
+                                cardFocused = state.isFocused
+                                if (index == 0) onFirstCardFocus?.invoke(state.isFocused)
+                                if (state.isFocused) {
+                                    continueWatchingItemToMetaPreview(item)?.let { onItemFocus(it) }
+                                }
                             }
-                        }
                     )
                 }
             }
@@ -849,24 +919,22 @@ private fun AnimeModernHero(
     }
     var trailerFirstFrameRendered by remember { mutableStateOf(false) }
     var trailerEnded by remember { mutableStateOf(false) }
-    val trailerPreviewDelaySeconds = 4
+    var trailerDwellPassed by remember { mutableStateOf(false) }
+    // Come sulla Home: il trailer non parte nell'istante del cambio card, ma
+    // dopo che il focus si e' fermato (dwell). Il vecchio secondo LaunchedEffect
+    // con delay 4s azzerava trailerFirstFrameRendered DOPO il primo frame: il
+    // player restava montato ma con alpha 0, quindi i trailer sembravano non
+    // partire mai.
     LaunchedEffect(trailerPreviewUrl) {
         trailerFirstFrameRendered = false
         trailerEnded = false
+        trailerDwellPassed = false
+        if (trailerPreviewUrl != null) {
+            delay(1200L)
+            trailerDwellPassed = true
+        }
     }
-    // Attesa di alcuni secondi prima di mostrare il trailer nella hero,
-    // così l'utente ha modo di leggere la descrizione senza che il video
-    // prenda il sopravvento immediatamente (come invece succedeva prima).
-    LaunchedEffect(trailerPreviewUrl) {
-        delay(trailerPreviewDelaySeconds * 1000L)
-        // Dopo il delay, ricarichiamo lo stato per riflettere che il trailer
-        // può ora partire. Il flag shouldPlayTrailer viene ricalcolato dal
-        // compositore padre (ModernHomeHero/AnimeModernContent) quando il
-        // valore cambia.
-        trailerFirstFrameRendered = false
-        trailerEnded = false
-    }
-    val shouldPlayTrailer = trailerPreviewUrl != null && !trailerEnded
+    val shouldPlayTrailer = trailerPreviewUrl != null && trailerDwellPassed && !trailerEnded
     val liveHeroSceneState by rememberUpdatedState(
         ModernHeroSceneState(
             heroBackdrop = firstNonBlank(
@@ -936,7 +1004,7 @@ private fun AnimeModernHero(
                 // della barra: il logo non resta più mezzo coperto dalla striscia.
                 .padding(
                     top = TOP_BAR_BAND_HEIGHT,
-                    start = 52.dp,
+                    start = 64.dp,
                     end = NuvioTheme.spacing.xxxl,
                     bottom = rowsViewportHeight + NuvioTheme.spacing.lg
                 )

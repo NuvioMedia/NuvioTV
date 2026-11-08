@@ -194,6 +194,7 @@ import com.nuvio.tv.ui.theme.NuvioStrokes
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.LocalFastHorizontalNavigationEnabled
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
+import com.nuvio.tv.ui.util.PrimeRailFocusGuard
 import com.nuvio.tv.ui.util.rememberDrawerItemFocusRequesters
 import com.nuvio.tv.updater.UpdateViewModel
 import com.nuvio.tv.updater.ui.UpdateBannerHost
@@ -212,6 +213,12 @@ import kotlinx.coroutines.launch
 
 val LocalSidebarExpanded = compositionLocalOf { false }
 val LocalContentFocusRequester = compositionLocalOf { FocusRequester.Default }
+// True mentre MainActivity sta trasferendo il focus dalla barra al contenuto
+// (entry via tab/sidebar). Anime lo usa per distinguere l'entry — dove il
+// focus deve atterrare sulla prima card di "Continua a guardare" — dal
+// ritorno dalla scheda dettaglio, che deve invece ripristinare il focus
+// dove era.
+val LocalPendingContentFocusTransfer = compositionLocalOf { mutableStateOf(false) }
 // Piazza il focus sulla tab di sezione attiva nella barra alta. Le schermate
 // lo usano quando SU dalla riga più in alto delle righe non può avanzare
 // (un moveFocus alla cieca qui aggancia il rail laterale): MainWindow intercetta
@@ -1343,7 +1350,8 @@ private fun LegacySidebarScaffold(
     val focusManager = LocalFocusManager.current
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val contentFocusRequester = remember { FocusRequester() }
-    var pendingContentFocusTransfer by remember { mutableStateOf(false) }
+    val pendingContentFocusTransferState = remember { mutableStateOf(false) }
+    var pendingContentFocusTransfer by pendingContentFocusTransferState
     var pendingSidebarFocusRequest by remember { mutableStateOf(false) }
     // Bumped on every key event the drawer sees so the auto-collapse timer
     // resets while the user navigates between drawer items.
@@ -1560,7 +1568,8 @@ private fun LegacySidebarScaffold(
         ) {
             CompositionLocalProvider(
                 LocalSidebarExpanded provides (drawerState.currentValue == DrawerValue.Open),
-                LocalContentFocusRequester provides contentFocusRequester
+                LocalContentFocusRequester provides contentFocusRequester,
+                LocalPendingContentFocusTransfer provides pendingContentFocusTransferState
             ) {
                 NuvioNavHost(
                     navController = navController,
@@ -1744,7 +1753,8 @@ private fun ModernSidebarScaffold(
 
     var isSidebarExpanded by remember { mutableStateOf(false) }
     var sidebarCollapsePending by remember { mutableStateOf(false) }
-    var pendingContentFocusTransfer by remember { mutableStateOf(false) }
+    val pendingContentFocusTransferState = remember { mutableStateOf(false) }
+    var pendingContentFocusTransfer by pendingContentFocusTransferState
     var pendingSidebarFocusRequest by remember { mutableStateOf(false) }
     var focusedDrawerIndex by remember { mutableStateOf(-1) }
     var isFloatingPillIconOnly by remember { mutableStateOf(false) }
@@ -1959,6 +1969,27 @@ private fun ModernSidebarScaffold(
         pendingContentFocusTransfer = false
     }
 
+    // Ritorno da una sotto-schermata (detail/stream/player/impostazioni) a una
+    // sezione: durante il pop il focus si perde e finisce sulla barra alta.
+    // Riusare pendingContentFocusTransfer (= entry via tab) fa due cose:
+    // 1) MainActivity rimette il focus sul contenuto (focusRestorer.onEnter);
+    // 2) AnimeHomeScreen porta la lista in cima e piazza il focus sulla prima
+    //    card di "Continua a guardare", che e' il comportamento voluto anche
+    //    al ritorno dal detail.
+    var routeBeforeSectionReturn by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(currentRoute) {
+        val previousRoute = routeBeforeSectionReturn
+        routeBeforeSectionReturn = currentRoute
+        if (currentRoute == null ||
+            currentRoute !in sectionRoutes ||
+            previousRoute == null ||
+            previousRoute in sectionRoutes
+        ) {
+            return@LaunchedEffect
+        }
+        pendingContentFocusTransfer = true
+    }
+
     LaunchedEffect(isSidebarExpanded, pendingSidebarFocusRequest, showSidebar, selectedDrawerRoute) {
         if (!showSidebar || !pendingSidebarFocusRequest || !isSidebarExpanded) {
             return@LaunchedEffect
@@ -2060,6 +2091,7 @@ private fun ModernSidebarScaffold(
             CompositionLocalProvider(
                 LocalSidebarExpanded provides isSidebarExpanded,
                 LocalContentFocusRequester provides contentFocusRequester,
+                LocalPendingContentFocusTransfer provides pendingContentFocusTransferState,
                 LocalFocusSectionTopBar provides focusSectionTopBar
             ) {
                 NuvioNavHost(
@@ -2099,7 +2131,7 @@ private fun ModernSidebarScaffold(
                     // (come la Home): il focus atterra direttamente sulla prima riga.
                     pendingContentFocusTransfer = true
                 },
-                startPadding = 52.dp, // Marchio subito dopo la colonna nera del rail
+                startPadding = 66.dp, // Marchio subito dopo la colonna nera del rail (allargata)
                 topPadding = NuvioTheme.spacing.sm,
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -2211,24 +2243,23 @@ private fun ModernSidebarScaffold(
             if (sidebarShowCollapsedPill) {
                 // Colonna a tutta altezza sotto le icone (stile Prime Video):
                 // chiude il lato sinistro e tiene le icone nude leggibili su
-                // ogni backdrop. Pieno nero per i primi ~34dp (sotto le icone),
-                // poi dissolvenza orizzontale che è completa a ~46dp: le card
+                // ogni backdrop. Pieno nero per i primi ~50dp (sotto le icone),
+                // poi dissolvenza orizzontale che è completa a 64dp: le card
                 // luminose che scorrono dentro la colonna sbiadiscono invece
                 // di essere sezionate dal bordo. I testi delle schermate
-                // partono da 48-52dp, quindi la dissolvenza deve essere già
-                // terminata prima di lì: con la vecchia fine a 52dp le prime
-                // lettere di Ricerca/Libreria/Home cadevano dentro la
-                // dissolvenza e venivano scurite dalla striscia nera.
+                // partono da ~64dp, quindi la dissolvenza termina prima delle
+                // lettere (la colonna nera è stata allargata su richiesta:
+                // "più spazio nero" per tab e icone, a livello di sistema).
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .fillMaxHeight()
-                        .width(52.dp)
+                        .width(64.dp)
                         .background(
                             Brush.horizontalGradient(
                                 0f to Color.Black,
-                                0.65f to Color.Black,
-                                0.88f to Color.Transparent,
+                                0.78f to Color.Black,
+                                0.94f to Color.Transparent,
                                 1f to Color.Transparent
                             )
                         )
@@ -2261,7 +2292,7 @@ private fun ModernSidebarScaffold(
                         .align(Alignment.CenterStart)
                         .offset {
                             IntOffset(
-                                (NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs).roundToPx(),
+                                (NuvioTheme.spacing.xl - NuvioTheme.spacing.xs).roundToPx(),
                                 sidebarDeflateOffsetY.roundToPx()
                             )
                         }
@@ -2287,7 +2318,7 @@ private fun PrimeRailStrip(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         items.forEachIndexed { index, item ->
@@ -2333,6 +2364,10 @@ private fun PrimeRailItem(
         onClick = onClick,
         modifier = modifier
             .size(itemSize)
+            // Con il focus nel dettaglio Impostazioni le icone del rail escono
+            // dal focus search geometrico: altrimenti GIÙ da una riga le
+            // aggancia (più vicine in Y) invece dell'elemento sotto ("Esci").
+            .focusProperties { canFocus = !PrimeRailFocusGuard.railFocusSearchExcluded.value }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 isFocused = it.hasFocus

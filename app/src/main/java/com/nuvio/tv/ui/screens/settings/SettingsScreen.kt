@@ -5,6 +5,7 @@ package com.nuvio.tv.ui.screens.settings
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.components.ExtraLogoOption
 import com.nuvio.tv.ui.components.ExtraLogoPicker
+import com.nuvio.tv.ui.util.PrimeRailFocusGuard
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RawRes
@@ -78,6 +79,7 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -444,8 +446,24 @@ fun SettingsScreen(
     var pendingContentFocusCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var pendingContentFocusRequestId by remember { mutableLongStateOf(0L) }
     var allowDetailAutofocus by remember { mutableStateOf(false) }
+    // Categoria della tab attualmente focusata (layout Horizon): serve sia al
+    // glide che all'entry forzato su Account.
+    var focusedTabCategory by remember { mutableStateOf<SettingsCategory?>(null) }
+    // Durante l'entry il rail non deve ripristinare l'ultima categoria salvata:
+    // ci pensa il LaunchedEffect(Unit) a piazzare il focus su Account.
+    var entryFocusSettled by remember { mutableStateOf(false) }
+    // Il primo input dell'utente interrompe subito l'enforcement di Account:
+    // l'entry non deve mai combattere contro la navigazione.
+    var entryUserOverride by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
+
+    // Se la schermata viene chiusa mentre il focus è dentro il dettaglio,
+    // l'esclusione del rail va azzerata: altrimenti le icone restano
+    // irraggiungibili dal focus search per il resto della sessione.
+    DisposableEffect(Unit) {
+        onDispose { PrimeRailFocusGuard.railFocusSearchExcluded.value = false }
+    }
 
     LaunchedEffect(visibleSections) {
         if (visibleSections.none { it.category == selectedCategory }) {
@@ -454,7 +472,57 @@ fun SettingsScreen(
     }
 
     LaunchedEffect(Unit) {
-        runCatching { railContainerFocusRequester.requestFocus() }
+        // Il gear deve aprire sempre Impostazioni su Account, non sull'ultima
+        // categoria usata: selectedCategory e' rememberSaveable e puo'
+        // ripristinare PROFILES (o altro) al rientro. Il ripristino automatico
+        // del focus (e la selezione ritardata della tab focusata) possono
+        // scattare qualche centinaio di ms dopo l'entry: quindi non basta un
+        // requestFocus una tantum, serve mantenere Account per una finestra
+        // con verifica di stabilita'. Il primo tasto dell'utente interrompe
+        // subito l'enforcement.
+        if (visibleSections.any { it.category == SettingsCategory.ACCOUNT }) {
+            selectedCategory = SettingsCategory.ACCOUNT
+            withFrameNanos { }
+            withFrameNanos { }
+            val accountRequester = railFocusRequesters[SettingsCategory.ACCOUNT]
+            if (isHorizonStyle && accountRequester != null) {
+                var stableChecks = 0
+                for (attempt in 0 until 40) {
+                    if (entryUserOverride) break
+                    if (focusedTabCategory != SettingsCategory.ACCOUNT) {
+                        runCatching { accountRequester.requestFocus() }
+                    }
+                    if (selectedCategory != SettingsCategory.ACCOUNT) {
+                        selectedCategory = SettingsCategory.ACCOUNT
+                    }
+                    withFrameNanos { }
+                    if (
+                        focusedTabCategory == SettingsCategory.ACCOUNT &&
+                        selectedCategory == SettingsCategory.ACCOUNT
+                    ) {
+                        stableChecks += 1
+                    } else {
+                        stableChecks = 0
+                    }
+                    // Dopo i primi ~0.6s richiedi ~1.2s di focus stabile su
+                    // Account consecutivi prima di considerare assestata
+                    // l'entry (copre il ripristino automatico del focus).
+                    if (attempt >= 8 && stableChecks >= 15) break
+                    delay(80L)
+                }
+                if (!entryUserOverride) {
+                    runCatching { accountRequester.requestFocus() }
+                    if (selectedCategory != SettingsCategory.ACCOUNT) {
+                        selectedCategory = SettingsCategory.ACCOUNT
+                    }
+                }
+            } else {
+                runCatching { railContainerFocusRequester.requestFocus() }
+            }
+        } else {
+            runCatching { railContainerFocusRequester.requestFocus() }
+        }
+        entryFocusSettled = true
     }
 
     LaunchedEffect(selectedCategory) {
@@ -524,10 +592,11 @@ fun SettingsScreen(
                 var topBarCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
                 var focusedTabBounds by remember { mutableStateOf<Rect?>(null) }
                 val density = LocalDensity.current
+                val detailFocusScope = rememberCoroutineScope()
+                var detailFocusInside by remember { mutableStateOf(false) }
 
-                var focusedTabCategory by remember { mutableStateOf<SettingsCategory?>(null) }
                 val selectFocusedTab: (SettingsCategory) -> Unit = { category ->
-                    if (selectedCategory != category) {
+                    if (entryFocusSettled && selectedCategory != category) {
                         if (category == SettingsCategory.INTEGRATION) {
                             integrationSection = IntegrationSettingsSection.Hub
                         }
@@ -538,6 +607,10 @@ fun SettingsScreen(
 
                 LaunchedEffect(focusedTabCategory) {
                     val category = focusedTabCategory ?: return@LaunchedEffect
+                    // Durante l'entry su Account il focus puo' transitare su
+                    // altre tab: non lasciare che il select-on-focus cambi
+                    // categoria prima che l'entry sia assestata.
+                    if (!entryFocusSettled) return@LaunchedEffect
                     delay(SETTINGS_TAB_FOCUS_SELECT_DELAY_MS)
                     selectFocusedTab(category)
                 }
@@ -583,18 +656,29 @@ fun SettingsScreen(
                                     val justGainedFocus = !railHadFocus && state.hasFocus
                                     railHadFocus = state.hasFocus
                                     if (justGainedFocus) {
-                                        val requester = railFocusRequesters[selectedCategory]
-                                        val requested = if (requester != null) {
-                                            runCatching { requester.requestFocus() }.isSuccess
+                                        if (!entryFocusSettled) {
+                                            // Entry in corso: il focus su Account lo
+                                            // piazza il LaunchedEffect(Unit).
                                         } else {
-                                            false
-                                        }
-                                        if (!requested) {
-                                            focusManager.moveFocus(FocusDirection.Enter)
+                                            val requester = railFocusRequesters[selectedCategory]
+                                            val requested = if (requester != null) {
+                                                runCatching { requester.requestFocus() }.isSuccess
+                                            } else {
+                                                false
+                                            }
+                                            if (!requested) {
+                                                focusManager.moveFocus(FocusDirection.Enter)
+                                            }
                                         }
                                     }
                                 }
                                 .onPreviewKeyEvent { event ->
+                                    if (event.type == KeyEventType.KeyDown) {
+                                        // Primo input dell'utente: interrompi
+                                        // l'enforcement dell'entry su Account.
+                                        entryUserOverride = true
+                                        entryFocusSettled = true
+                                    }
                                     if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
                                         focusedTabCategory?.let(selectFocusedTab)
                                         allowDetailAutofocus = true
@@ -634,10 +718,50 @@ fun SettingsScreen(
                             .weight(1f)
                             .fillMaxWidth()
                             .onFocusChanged { state ->
+                                // Con il focus dentro il dettaglio le icone del rail
+                                // laterale escono dal focus search: altrimenti GIÙ da
+                                // una riga le aggancia (più vicine in Y) invece
+                                // dell'elemento sotto ("Esci").
+                                detailFocusInside = state.hasFocus
+                                PrimeRailFocusGuard.railFocusSearchExcluded.value = state.hasFocus
                                 if (state.hasFocus && !allowDetailAutofocus) {
-                                    railFocusRequesters[selectedCategory]?.let { requester ->
+                                    val restoreCategory = if (entryFocusSettled) {
+                                        selectedCategory
+                                    } else {
+                                        SettingsCategory.ACCOUNT
+                                    }
+                                    railFocusRequesters[restoreCategory]?.let { requester ->
                                         runCatching { requester.requestFocus() }
                                     }
+                                }
+                            }
+                            .onKeyEvent { event ->
+                                val toRailKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
+                                if (event.type == KeyEventType.KeyDown && event.key == toRailKey) {
+                                    val moved = focusManager.moveFocus(
+                                        if (isRtl) FocusDirection.Right else FocusDirection.Left
+                                    )
+                                    if (!moved) {
+                                        // A sinistra del dettaglio c'è solo il rail
+                                        // laterale, escluso dallo search: lo riapriamo e
+                                        // riproviamo dopo la recomposizione (come
+                                        // focusPrimeRail nel root handler).
+                                        PrimeRailFocusGuard.railFocusSearchExcluded.value = false
+                                        detailFocusScope.launch {
+                                            repeat(2) { withFrameNanos { } }
+                                            val retryMoved = focusManager.moveFocus(
+                                                if (isRtl) FocusDirection.Right else FocusDirection.Left
+                                            )
+                                            if (!retryMoved && detailFocusInside) {
+                                                // Niente a sinistra: il focus è ancora
+                                                // dentro il dettaglio, riattiva l'esclusione.
+                                                PrimeRailFocusGuard.railFocusSearchExcluded.value = true
+                                            }
+                                        }
+                                    }
+                                    true
+                                } else {
+                                    false
                                 }
                             }
                     ) {
@@ -846,15 +970,16 @@ integrationAnimeSkipFocusRequester = integrationAnimeSkipFocusRequester,
                                 detailFocusScope.launch {
                                     focusManager.moveFocus(FocusDirection.Down)
                                     repeat(3) { withFrameNanos { } }
-                                    if (!detailFocusInside) {
+                                    val inside = detailFocusInside
+                                    val restored = if (!inside) {
                                         allowDetailAutofocus = true
-                                        val restored = runCatching {
+                                        runCatching {
                                             detailContentFocusRequester.requestFocusAfterFrames()
                                         }.getOrDefault(false)
-                                        if (!restored) {
-                                            runCatching {
-                                                contentFocusRequesters[selectedCategory]?.requestFocus()
-                                            }
+                                    } else false
+                                    if (!inside && !restored) {
+                                        runCatching {
+                                            contentFocusRequesters[selectedCategory]?.requestFocus()
                                         }
                                     }
                                 }
@@ -1585,7 +1710,9 @@ private fun ExtraSettingsContent(
                                     value = extraHubUiState.extraTabName,
                                     onClick = { showTabNameDialog = true },
                                     leadingIcon = Icons.Default.Edit,
-                                    modifier = Modifier.padding(top = NuvioTheme.spacing.xxs)
+                                    modifier = Modifier
+                                        .padding(top = NuvioTheme.spacing.xxs)
+                                        .focusRequester(hubEntryFocusRequester)
                                 )
                             }
                             item(key = "extra_hub_tab_visibility") {
@@ -1615,8 +1742,7 @@ private fun ExtraSettingsContent(
                                     title = stringResource(R.string.extra_settings_addons_title),
                                     subtitle = stringResource(R.string.extra_settings_addons_subtitle),
                                     onClick = { onSelectSection(ExtraSettingsSection.ContentDiscovery) },
-                                    leadingIcon = Icons.Default.Explore,
-                                    modifier = Modifier.focusRequester(hubEntryFocusRequester)
+                                    leadingIcon = Icons.Default.Explore
                                 )
                             }
                             item(key = "extra_hub_layout") {

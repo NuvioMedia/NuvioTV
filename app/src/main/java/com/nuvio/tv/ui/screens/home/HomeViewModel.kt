@@ -219,15 +219,18 @@ class HomeViewModel @Inject constructor(
     private val previewTranslationLock = Any()
 
     /**
-     * Catena seriale per le traduzioni di sfondo dei preview: le pubblicazioni
+     * Coda seriale per le traduzioni di sfondo dei preview: le pubblicazioni
      * di arricchimento arrivano a raffica (prefetch adiacenti, hero) e ML Kit
      * processa le stringhe in pratica una alla volta, così ogni richiesta
      * aggiunge ~1 s di attesa a TUTTE quelle successive — durante lo scroll la
      * traduzione dell'hero visibile finiva in coda dietro quelle di sfondo
      * ("le traduzioni sono lente a comparire"). Una sola coroutine di sfondo
-     * alla volta tiene la coda lunga al massimo uno.
+     * alla volta tiene la coda lunga al massimo uno. La coda è ESPLICITA
+     * (non una catena di join) così la corsia prioritaria del focus può
+     * RUBARE la propria voce e tradurla subito.
      */
-    private var backgroundPreviewTranslationJob: Job? = null
+    private val backgroundTranslationQueue: ArrayDeque<Pair<String, String>> = ArrayDeque()
+    private var backgroundTranslationWorker: Job? = null
 
     /**
      * Corsia prioritaria per il focus: solo la traduzione dell'item che
@@ -294,26 +297,47 @@ class HomeViewModel @Inject constructor(
         if (!com.nuvio.tv.data.translation.shouldTranslate(description, currentTmdbSettings.language)) {
             return
         }
-        val job = synchronized(previewTranslationLock) {
-            if (previewTranslationProcessed[id] == description) return
-            previewTranslationProcessed[id] = description
-            val created = if (priority) {
+        val job: Job? = synchronized(previewTranslationLock) {
+            val claimed = previewTranslationProcessed[id] == description
+            if (priority) {
+                if (claimed) {
+                    // Corsia prioritaria (focus): se l'item è ancora IN CODA di
+                    // sfondo lo ruba e lo traduce subito. Prima il "return" per
+                    // claim già presente lo lasciava dietro TUTTE le traduzioni
+                    // di prefetch: al focus l'hero restava in inglese per
+                    // diversi secondi ("le traduzioni arrivano in ritardo").
+                    val stolen = backgroundTranslationQueue.removeAll {
+                        it.first == id && it.second == description
+                    }
+                    // Non in coda → già in esecuzione o tradotta: niente da fare.
+                    if (!stolen) return
+                } else {
+                    previewTranslationProcessed[id] = description
+                }
                 focusPreviewTranslationJob?.cancel()
                 viewModelScope.launch { runPreviewTranslation(id, description) }
+                    .also { focusPreviewTranslationJob = it }
             } else {
-                val previous = backgroundPreviewTranslationJob
-                viewModelScope.launch {
-                    previous?.join()
-                    runPreviewTranslation(id, description)
+                if (claimed) return
+                previewTranslationProcessed[id] = description
+                backgroundTranslationQueue.addLast(id to description)
+                if (backgroundTranslationWorker?.isActive != true) {
+                    backgroundTranslationWorker = viewModelScope.launch {
+                        while (true) {
+                            val next = synchronized(previewTranslationLock) {
+                                backgroundTranslationQueue.removeFirstOrNull()
+                            } ?: break
+                            runPreviewTranslation(next.first, next.second)
+                        }
+                    }
                 }
+                null
             }
-            if (priority) focusPreviewTranslationJob = created
-            created
         }
         if (priority) {
             // Annullata (o fallita) → rilascia il claim: senza questo l'item
             // non verrebbe mai ritentato al prossimo focus.
-            job.invokeOnCompletion { cause ->
+            job?.invokeOnCompletion { cause ->
                 if (cause != null) {
                     synchronized(previewTranslationLock) {
                         if (previewTranslationProcessed[id] == description) {

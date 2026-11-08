@@ -139,6 +139,19 @@ fun ThemeSettingsContent(
 
     val themeScrollState = rememberScrollState()
     val themeRowState = rememberLazyListState()
+    // Il requestFocus una tantum puo' perdere la corsa contro il
+    // focusRestorer del contenitore dettaglio, che ripristina l'ultimo chip
+    // usato (es. Oceano). Ritentiamo finche' il chip Bianco (indice 0) non ha
+    // davvero il focus, cosi' l'entry in Aspetto parte sempre da Bianco.
+    var firstThemeChipFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(initialFocusRequester != null) {
+        if (initialFocusRequester == null) return@LaunchedEffect
+        repeat(20) {
+            if (firstThemeChipFocused) return@LaunchedEffect
+            runCatching { initialFocusRequester.requestFocus() }
+            delay(80L)
+        }
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -172,7 +185,9 @@ fun ThemeSettingsContent(
                                 isSelected = theme == uiState.selectedTheme,
                                 onClick = { viewModel.onEvent(ThemeSettingsEvent.SelectTheme(theme)) },
                                 modifier = if (index == 0 && initialFocusRequester != null) {
-                                    Modifier.focusRequester(initialFocusRequester)
+                                    Modifier
+                                        .focusRequester(initialFocusRequester)
+                                        .onFocusChanged { firstThemeChipFocused = it.isFocused }
                                 } else {
                                     Modifier
                                 }

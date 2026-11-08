@@ -78,6 +78,11 @@ fun HeroCarousel(
     onItemFocus: (MetaPreview) -> Unit = {},
     focusRequester: FocusRequester? = null,
     fullWidth: Dp = Dp.Unspecified,
+    /**
+     * Margine sinistro del blocco testo. Default invariato (48dp): il Dazn
+     * passa 64dp per allinearsi alla rail laterale come home/anime.
+     */
+    startPadding: Dp = NuvioTheme.spacing.xxxl,
     modifier: Modifier = Modifier
 ) {
     if (items.isEmpty()) return
@@ -153,7 +158,7 @@ fun HeroCarousel(
             label = "heroSlide"
         ) { index ->
             val item = items.getOrNull(index) ?: return@Crossfade
-            HeroCarouselSlide(item = item)
+            HeroCarouselSlide(item = item, startPadding = startPadding)
         }
 
         // Indicator dots — optimized to minimize recompositions and layout passes
@@ -196,7 +201,8 @@ fun HeroCarousel(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun HeroCarouselSlide(
-    item: MetaPreview
+    item: MetaPreview,
+    startPadding: Dp = NuvioTheme.spacing.xxxl
 ) {
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
     val context = LocalContext.current
@@ -281,7 +287,7 @@ private fun HeroCarouselSlide(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
+                .padding(start = startPadding, bottom = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
                 .fillMaxWidth(0.5f)
         ) {
             // Title logo or text title

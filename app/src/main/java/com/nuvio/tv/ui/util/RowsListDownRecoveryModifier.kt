@@ -113,8 +113,14 @@ fun Modifier.rowsListDownRecovery(state: LazyListState): Modifier = composed {
                         }
                     }
 
-                    // In fondo alla lista e il focus non può avanzare: resta sul
-                    // contenuto (l'ultimo elemento) invece di uscire sul rail.
+                    // In fondo alla lista con il focus ANCORA DENTRO il
+                    // contenuto: non fare nulla. Il restore qui riaggancia il
+                    // figlio remembered dal focusRestorer (la riga precedente)
+                    // e il focus rimbalza su e giù a ogni GIÙ (bug Calendario:
+                    // Novembre ↔ Dicembre).
+                    !escaped -> Unit
+
+                    // Il focus è uscito dal contenuto senza candidati: rientra.
                     else -> {
                         runCatching { contentFocusRequester.requestFocusAfterFrames() }
                     }

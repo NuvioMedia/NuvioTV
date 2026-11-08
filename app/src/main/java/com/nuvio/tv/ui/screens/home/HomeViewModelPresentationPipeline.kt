@@ -612,6 +612,20 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
         item.apiType in listOf("series", "tv")
     val willEnrich = tmdbEnabledForCurrentLayout || tvdbEnabledForCurrentLayout || externalMetaPrefetchEnabled
 
+    // Corsia prioritaria della traduzione SUBITO, prima del debounce di rete:
+    // finché il ritardo stava davanti, al focus l'hero restava in inglese per
+    // tutta la sua durata ("le traduzioni sono ancora leggermente lente").
+    // Qui non si pubblica nulla: se la traduzione è pronta prima che l'entry
+    // entri nella mappa, runPreviewTranslation la mette in
+    // pendingPreviewTranslations e putEnrichedPreview la applica al primo
+    // publish (stesso meccanismo usato dalla corsia normale).
+    val focusedPreviewNow = _enrichedPreviews.value[item.id]
+    schedulePreviewDescriptionTranslation(
+        item.id,
+        focusedPreviewNow ?: item,
+        priority = true
+    )
+
     pendingTmdbEnrichItemId = item.id
     tmdbEnrichFocusJob?.cancel()
     tmdbEnrichFocusJob = viewModelScope.launch(Dispatchers.IO) {

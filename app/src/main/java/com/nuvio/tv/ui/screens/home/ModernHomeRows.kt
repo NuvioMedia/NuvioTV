@@ -102,6 +102,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import coil3.BitmapImage
 import coil3.compose.AsyncImage
 import coil3.imageLoader
 import coil3.memory.MemoryCache
@@ -150,20 +151,22 @@ private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
 private const val POSTER_PREFETCH_DISTANCE = 2
 private const val NESTED_PREFETCH_COUNT = 2
 
-// Top 10 row metrics: the left gutter that hosts the big outlined rank number.
-// The digits' font size derives from the card HEIGHT, so the gutter is sized
-// as a card-height fraction too (stays correct for portrait and landscape
-// posters alike): a single digit gets ~one digit of room, the two-digit rank
-// ~two, and both minus the tuck so the number's right edge slips under the
-// poster. Condensation scales the digits horizontally with a left-origin
-// layer scale so the tuck lands deterministically under the card.
-private const val TOP10_RANK_SLOT_FRACTION = 0.55f
-private const val TOP10_RANK_SLOT_WIDE_FRACTION = 1.05f
-private const val TOP10_RANK_TUCK_FRACTION = 0.12f
+// Top 10 row metrics: the whole item is TOP10_RANK_SLOT_FRACTION card-widths
+// wide (like the old look in the reference): the rank number occupies the
+// left part of that slot and the poster sits on the right, overlapping the
+// digits by TOP10_RANK_TUCK_FRACTION of a card width. Stile "un tempo"
+// (ripristinato su richiesta): gutter e tuck rapportati alla LARGHEZZA della
+// card, non alla sua altezza.
+private const val TOP10_RANK_SLOT_FRACTION = 1.6f
+private const val TOP10_RANK_TUCK_FRACTION = 0.25f
 private const val TOP10_RANK_CONDENSE_FACTOR = 0.72f
 
-private fun top10RankSlotWidth(cardHeight: Dp, rank: Int): Dp =
-    cardHeight * (if (rank >= 10) TOP10_RANK_SLOT_WIDE_FRACTION else TOP10_RANK_SLOT_FRACTION)
+private fun top10RankSlotWidth(cardWidth: Dp): Dp =
+    cardWidth * TOP10_RANK_SLOT_FRACTION
+
+/** Space to the LEFT of the poster inside a Top 10 item (the visible gutter). */
+private fun top10RankGutter(cardWidth: Dp): Dp =
+    top10RankSlotWidth(cardWidth) - cardWidth
 
 internal val LocalVerticalRowsScrolling = compositionLocalOf<State<Boolean>> { mutableStateOf(false) }
 
@@ -578,7 +581,7 @@ internal fun ModernRowSection(
         val rowTitle = row.title
         val textColor = NuvioTheme.colors.TextPrimary
         val textModifier = remember(rowTitleBottom) {
-            Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
+            Modifier.padding(start = 64.dp, bottom = rowTitleBottom)
         }
         Text(
             text = rowTitle,
@@ -679,7 +682,10 @@ internal fun ModernRowSection(
         }
 
         val density = LocalDensity.current
-        val rowStartPadding = 52.dp
+        // 64dp: deve restare in sync con rowHorizontalPadding in
+        // ModernHomeContent (titoli riga, hero e card), altrimenti la card
+        // espansa arriva sulla rail laterale.
+        val rowStartPadding = 64.dp
         val context = LocalContext.current
         val imageLoader = context.imageLoader
 
@@ -847,10 +853,10 @@ internal fun ModernRowSection(
         // what asks to be brought into view, so pinning its own left edge to
         // rowStartPadding scrolled the rank number off-screen the moment a card
         // took focus. Compensate with the gutter of the card being focused.
-        val top10CardHeightForGutter = if (useLandscapePosters) {
-            landscapeCatalogCardHeight
+        val top10CardWidthForGutter = if (useLandscapePosters) {
+            landscapeCatalogCardWidth
         } else {
-            portraitCatalogCardHeight
+            portraitCatalogCardWidth
         }
         val horizontalBringIntoViewSpec = remember(
             density, defaultBringIntoViewSpec, rowStartPadding, isRtl, isTop10Row
@@ -868,9 +874,8 @@ internal fun ModernRowSection(
                 ): Float {
                     val childSize = abs(size)
                     val top10GutterPx = if (isTop10Row) {
-                        val rank = rowFocusedIndex.value + 1
                         with(density) {
-                            top10RankSlotWidth(top10CardHeightForGutter, rank).roundToPx()
+                            top10RankGutter(top10CardWidthForGutter).roundToPx()
                         }.toFloat()
                     } else {
                         0f
@@ -1072,11 +1077,11 @@ internal fun ModernRowSection(
                                 }
                             }
                             val placeholderFocusBlock = isPlaceholder && index > 0
-                            val top10SlotWidth = top10RankSlotWidth(top10CardHeight, index + 1)
+                            val top10SlotWidth = top10RankSlotWidth(top10CardWidth)
                             Box(modifier = (if (placeholderFocusBlock) {
                                 Modifier.focusProperties { canFocus = false }
                             } else Modifier).then(
-                                if (isTop10Row) Modifier.width(top10SlotWidth + top10CardWidth)
+                                if (isTop10Row) Modifier.width(top10SlotWidth)
                                 else Modifier
                             )) {
                             if (isTop10Row) {
@@ -1084,7 +1089,7 @@ internal fun ModernRowSection(
                                     rank = index + 1,
                                     isTargetItem = isTargetItem,
                                     cardHeight = top10CardHeight,
-                                    numberWidth = (top10SlotWidth + top10CardHeight * TOP10_RANK_TUCK_FRACTION) / TOP10_RANK_CONDENSE_FACTOR,
+                                    numberWidth = (top10RankGutter(top10CardWidth) + top10CardWidth * TOP10_RANK_TUCK_FRACTION) / TOP10_RANK_CONDENSE_FACTOR,
                                     modifier = Modifier.align(Alignment.CenterStart)
                                 )
                             }
@@ -1096,7 +1101,7 @@ internal fun ModernRowSection(
                                 modifier = if (isTop10Row) {
                                     Modifier
                                         .align(Alignment.CenterStart)
-                                        .offset(x = top10SlotWidth)
+                                        .offset(x = top10RankGutter(top10CardWidth))
                                 } else {
                                     Modifier
                                 },
@@ -1471,6 +1476,14 @@ private fun ModernCarouselCard(
                             placeholder = backgroundPainter,
                             error = backgroundPainter,
                             fallback = backgroundPainter,
+                            // Fix 7 (scatti): pre-upload della texture non
+                            // appena decodificata, così il primo disegno della
+                            // card non paga l'upload dentro il frame.
+                            onSuccess = { state ->
+                                runCatching {
+                                    (state.result.image as? BitmapImage)?.bitmap?.prepareToDraw()
+                                }
+                            },
                             contentScale = imageContentScale
                         )
                     } else if (isCollectionFolder && !payload?.coverEmoji.isNullOrBlank()) {
@@ -1534,6 +1547,12 @@ private fun ModernCarouselCard(
                         model = logoModel,
                         contentDescription = item.title,
                         onError = { landscapeLogoLoadFailed = true },
+                        // Fix 7: pre-upload texture anche del logo della card.
+                        onSuccess = { state ->
+                            runCatching {
+                                (state.result.image as? BitmapImage)?.bitmap?.prepareToDraw()
+                            }
+                        },
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .fillMaxWidth(0.62f)

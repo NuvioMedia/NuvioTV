@@ -6,8 +6,6 @@
 
 package com.nuvio.tv.ui.screens.home
 
-import com.nuvio.tv.core.perf.LocalFluidMode
-
 import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 
@@ -80,6 +78,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.ContinueWatchingOptionsDialog
 import com.nuvio.tv.ui.components.TOP_BAR_BAND_HEIGHT
+import com.nuvio.tv.ui.components.SectionTopBarScrimState
 import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.LocalContentFocusRequester
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
@@ -170,7 +169,9 @@ fun ModernHomeContent(
                     onItemClick = { item ->
                         onNavigateToDetail(item.id, item.apiType, item.sourceAddonBaseUrl.orEmpty())
                     },
-                    onItemFocus = { item -> onItemFocus(item) }
+                    onItemFocus = { item -> onItemFocus(item) },
+                    // 64dp: come rowHorizontalPadding del resto della home moderna.
+                    startPadding = 64.dp
                 )
             }
         }
@@ -274,6 +275,17 @@ fun ModernHomeContent(
     }
     LaunchedEffect(enrichingItemId) {
         metricsHolder.state?.putState("HeroEnriching", (enrichingItemId != null).toString())
+    }
+
+    // Banda della barra sezioni: nel layout moderno le righe sono ritagliate
+    // nel viewport in basso e NON passano mai sotto la barra — l'unica cosa
+    // sotto la banda è l'immagine hero, che la banda nera oscurava per i suoi
+    // primi 64dp ("la barra superiore copre gran parte dell'immagine"). Con la
+    // home composta la banda viene quindi spenta; alla navigazione via si
+    // ripristina (le altre schermate la vogliono opaca).
+    DisposableEffect(Unit) {
+        SectionTopBarScrimState.visible = false
+        onDispose { SectionTopBarScrimState.visible = true }
     }
 
     LaunchedEffect(
@@ -627,7 +639,11 @@ fun ModernHomeContent(
 
     Box(modifier = Modifier.fillMaxSize()) {
             val posterCardCornerRadius = remember(uiState.posterCardCornerRadiusDp) { uiState.posterCardCornerRadiusDp.dp }
-            val rowHorizontalPadding = 52.dp
+            // 64dp invece di 52: con il padding vecchio la card espansa
+            // (dopo il ritardo di espansione) scivola ~10dp oltre il bordo
+            // della LazyRow e finisce sopra la fascia sfumata della rail
+            // laterale ("la barra laterale ha una parte coperta dal poster").
+            val rowHorizontalPadding = 64.dp
 
             val activeCarouselItemState = remember(carouselRows, rowByKey) {
                 derivedStateOf {
@@ -779,7 +795,6 @@ fun ModernHomeContent(
             val isScrollStoppedState = remember(verticalRowListState) {
                 derivedStateOf { !verticalRowListState.isScrollInProgress }
             }
-            val fluidMode = LocalFluidMode.current
             val shouldPlayCatalogHeroTrailerState = remember(
                 isScrollStoppedState,
                 effectiveAutoplayEnabled,
@@ -787,13 +802,16 @@ fun ModernHomeContent(
                 heroTrailerUrlsState,
                 isSidebarExpanded,
                 isRapidHorizontalNav,
-                heroSettlePending,
-                fluidMode
+                heroSettlePending
             ) {
                 derivedStateOf {
                     isScrollStoppedState.value &&
                         effectiveAutoplayEnabled &&
-                        !fluidMode &&
+                        // La Modalità Fluida non spegne più il trailer dell'hero:
+                        // il punto dove gira lo decide l'impostazione "Modern
+                        // Trailer Playback Location" (hero oppure card), non la
+                        // modalità prestazioni ("viene mostrato nel poster e non
+                        // affianco alla hero").
                         !isSidebarExpanded.value &&
                         !isRapidHorizontalNav.value &&
                         // Niente start trailer durante il dwell: parte una sola
@@ -1055,20 +1073,109 @@ fun ModernHomeContent(
             // Stick 1GB ogni decode a freddo costava 90-130ms di frame janky:
             // era la differenza percepita "Nuvio è più lenta di Prime".
             val heroPrefetchContext = LocalContext.current
-            LaunchedEffect(activeHeroItemKey, activeRow, heroMediaWidthPx, heroMediaHeightPx) {
+            LaunchedEffect(activeHeroItemKey, activeRow, heroMediaWidthPx, heroMediaHeightPx, enrichedPreviews) {
                 val row = activeRow ?: return@LaunchedEffect
                 val loader = heroPrefetchContext.imageLoader
-                listOf(clampedActiveItemIndex - 1, clampedActiveItemIndex + 1).forEach { index ->
-                    val item = row.items.list.getOrNull(index) ?: return@forEach
-                    val url = item.heroPreview.backdrop?.takeIf { it.isNotBlank() }
-                        ?: item.heroPreview.imageUrl?.takeIf { it.isNotBlank() }
-                        ?: return@forEach
+                fun enqueueHero(url: String?) {
+                    val data = url?.takeIf { it.isNotBlank() } ?: return
                     loader.enqueue(
                         ImageRequest.Builder(heroPrefetchContext)
-                            .data(url)
+                            .data(data)
                             .size(heroMediaWidthPx, heroMediaHeightPx)
                             .build()
                     )
+                }
+                // Prefetch del LOGO dell'hero alla stessa size dell'AsyncImage
+                // del titolo: senza questo, anche a loghi noti l'immagine
+                // partiva in rete al momento dello swap ("i loghi hanno un
+                // problema a comparire").
+                val (logoWidthPx, logoHeightPx) = with(localDensity) {
+                    300.dp.roundToPx() to 72.dp.roundToPx()
+                }
+                fun prefetchLogo(url: String?) {
+                    val data = url?.takeIf { it.isNotBlank() } ?: return
+                    loader.enqueue(
+                        ImageRequest.Builder(heroPrefetchContext)
+                            .data(data)
+                            .size(width = logoWidthPx, height = logoHeightPx)
+                            .build()
+                    )
+                }
+                listOf(clampedActiveItemIndex - 1, clampedActiveItemIndex + 1).forEach { index ->
+                    val item = row.items.list.getOrNull(index) ?: return@forEach
+                    enqueueHero(item.heroPreview.backdrop?.takeIf { it.isNotBlank() }
+                        ?: item.heroPreview.imageUrl?.takeIf { it.isNotBlank() })
+                    prefetchLogo(
+                        item.metaPreview?.id?.let { enrichedPreviews[it]?.logo }
+                            ?: item.heroPreview.logo?.takeIf { it.isNotBlank() }
+                            ?: item.heroPreview.frozenLogoUrl?.takeIf { it.isNotBlank() }
+                    )
+                }
+                row.items.list.getOrNull(clampedActiveItemIndex)?.let { active ->
+                    prefetchLogo(
+                        active.metaPreview?.id?.let { enrichedPreviews[it]?.logo }
+                            ?: active.heroPreview.logo?.takeIf { it.isNotBlank() }
+                            ?: active.heroPreview.frozenLogoUrl?.takeIf { it.isNotBlank() }
+                    )
+                }
+                // Fix 7 (scatti navigando): prefetch PREDITTIVA della riga
+                // sopra/sotto, all'indice su cui arriverà il focus. Il primo
+                // ingresso in una riga mai visitata costava 200-700ms (rete +
+                // decode + upload texture nello stesso frame dello swap):
+                // riscaldando in anticipo, lo swap dell'hero trova tutto pronto.
+                val rowIndex = carouselRows.list.indexOfFirst { it.key == row.key }
+                if (rowIndex >= 0) {
+                    listOf(rowIndex - 1, rowIndex + 1).forEach { neighborIndex ->
+                        val neighbor = carouselRows.list.getOrNull(neighborIndex) ?: return@forEach
+                        val targetIndex = (focusedItemByRow[neighbor.key] ?: clampedActiveItemIndex)
+                            .coerceIn(0, (neighbor.items.size - 1).coerceAtLeast(0))
+                        val item = neighbor.items.list.getOrNull(targetIndex) ?: return@forEach
+                        enqueueHero(item.heroPreview.backdrop?.takeIf { it.isNotBlank() }
+                            ?: item.heroPreview.imageUrl?.takeIf { it.isNotBlank() })
+                        prefetchLogo(
+                            item.metaPreview?.id?.let { enrichedPreviews[it]?.logo }
+                                ?: item.heroPreview.logo?.takeIf { it.isNotBlank() }
+                                ?: item.heroPreview.frozenLogoUrl?.takeIf { it.isNotBlank() }
+                        )
+                    }
+                }
+            }
+
+            // Prefetch di TUTTI i loghi già noti (enrichment o catalogo), a
+            // partire dalla riga attiva e allontanandosi: l'hero cambia appena
+            // il focus si muove, quindi se il logo non è già in cache la
+            // scritta compariva prima del logo e alcuni loghi non finivano
+            // nemmeno in memoria ("non riesce a caricare tutti i loghi").
+            // Il set dedupla perché l'effetto si ri-attiva a ogni enrichment.
+            val prefetchedLogoUrls = remember { mutableSetOf<String>() }
+            LaunchedEffect(activeRow, enrichedPreviews, carouselRows) {
+                val loader = heroPrefetchContext.imageLoader
+                val (logoWidthPx, logoHeightPx) = with(localDensity) {
+                    300.dp.roundToPx() to 72.dp.roundToPx()
+                }
+                val rows = carouselRows.list
+                val center = rows.indexOfFirst { it.key == activeRow?.key }
+                val order = if (center < 0) {
+                    rows.indices
+                } else {
+                    rows.indices.sortedBy { kotlin.math.abs(it - center) }
+                }
+                for (rowIndex in order) {
+                    if (prefetchedLogoUrls.size >= 120) break
+                    for (item in rows[rowIndex].items.list) {
+                        if (prefetchedLogoUrls.size >= 120) break
+                        val url = item.metaPreview?.id?.let { enrichedPreviews[it]?.logo }
+                            ?: item.heroPreview.logo?.takeIf { it.isNotBlank() }
+                            ?: item.heroPreview.frozenLogoUrl?.takeIf { it.isNotBlank() }
+                            ?: continue
+                        if (!prefetchedLogoUrls.add(url)) continue
+                        loader.enqueue(
+                            ImageRequest.Builder(heroPrefetchContext)
+                                .data(url)
+                                .size(width = logoWidthPx, height = logoHeightPx)
+                                .build()
+                        )
+                    }
                 }
             }
 
@@ -1112,8 +1219,13 @@ fun ModernHomeContent(
             val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight) {
                 Modifier
                     .align(Alignment.BottomStart)
-                    // Tutto il blocco testo dell'hero parte sotto la banda nera
-                    // della barra: il logo non resta più mezzo coperto dalla striscia.
+                    // Vincolo alla banda della barra (64dp): il blocco è
+                    // ancorato in basso, senza questo inset poteva salire
+                    // DIETRO la barra e il titolo veniva tagliato in alto
+                    // (1.0.97). Lo spazio perso non appiattisce la sinossi:
+                    // la descrizione in ModernHomeHero misura lo spazio che
+                    // resta e si ferma su righe intere (mai taglio a metà
+                    // riga), tipicamente 3 righe.
                     .padding(
                         top = TOP_BAR_BAND_HEIGHT,
                         start = rowHorizontalPadding,

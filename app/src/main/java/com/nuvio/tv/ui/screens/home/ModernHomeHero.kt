@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import coil3.BitmapImage
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -174,6 +175,16 @@ internal fun ModernHeroMediaLayer(
             AsyncImage(
                 model = model,
                 contentDescription = null,
+                // Fix 7 (scatti): appena decodificato, la texture viene
+                // caricata in anticipo sul render-thread (prepareToDraw)
+                // durante la sosta: il primo disegno dello swap non paga
+                // più l'upload dentro il frame (200-700ms sul primo
+                // ingresso in una riga).
+                onSuccess = { state ->
+                    runCatching {
+                        (state.result.image as? BitmapImage)?.bitmap?.prepareToDraw()
+                    }
+                },
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
@@ -354,7 +365,7 @@ private fun HeroTitleContent(
 ) {
     val preview = previewProvider() ?: return
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
-    val descriptionMaxLines = 3
+    val descriptionMaxLines = 4
     val descriptionScale = if (portraitMode) 0.90f else 1f
     val titleScale = if (portraitMode) 0.92f else 1f
     val metaScale = 1f
@@ -363,11 +374,10 @@ private fun HeroTitleContent(
     val imdbMetaSpacing = NuvioTheme.spacing.xs * metaScale
     val context = LocalContext.current
     val density = LocalDensity.current
-    val headlineLarge = MaterialTheme.typography.headlineLarge
-    val labelMedium = MaterialTheme.typography.labelMedium
     val bodyMedium = MaterialTheme.typography.bodyMedium
-    val logoMaxWidthPx = remember(density) { with(density) { 256.dp.roundToPx() } }
-    val logoHeightPx = remember(density) { with(density) { 56.dp.roundToPx() } }
+    val labelMedium = MaterialTheme.typography.labelMedium
+    val logoMaxWidthPx = remember(density) { with(density) { 300.dp.roundToPx() } }
+    val logoHeightPx = remember(density) { with(density) { 72.dp.roundToPx() } }
 
     // Logo risolto: prima il logo corrente, poi quello "congelato" della card
     // (il primo valore non vuoto vince): durante lo scroll l'hero non deve mai
@@ -390,12 +400,6 @@ private fun HeroTitleContent(
         animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.slow),
         label = "heroMetaFade"
     )
-    val scaledTitleStyle = remember(headlineLarge, titleScale) {
-        headlineLarge.copy(
-            fontSize = headlineLarge.fontSize * titleScale,
-            lineHeight = headlineLarge.lineHeight * titleScale
-        )
-    }
     val scaledDescriptionStyle = remember(bodyMedium, descriptionScale) {
         bodyMedium.copy(
             fontSize = bodyMedium.fontSize * descriptionScale,
@@ -412,27 +416,44 @@ private fun HeroTitleContent(
         verticalArrangement = Arrangement.spacedBy(titleSpacing)
     ) {
         var logoLoadFailed by remember(effectiveLogoUrl) { mutableStateOf(false) }
+        // Titolo visibile FINCHÉ il logo non ha caricato il primo fotogramma:
+        // prima l'area restava vuota (o il titolo spariva) finché l'immagine
+        // non arrivava — "i loghi hanno un problema a comparire".
+        var logoLoaded by remember(effectiveLogoUrl) { mutableStateOf(false) }
         val showLogo = !effectiveLogoUrl.isNullOrBlank() && !logoLoadFailed
+        val logoAlpha by animateFloatAsState(
+            targetValue = if (logoLoaded) 1f else 0f,
+            animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.overlay),
+            label = "heroLogoFade"
+        )
         if (showLogo) {
-            AsyncImage(
-                model = logoModel,
-                contentDescription = preview.title,
-                onError = { logoLoadFailed = true },
+            Box(
                 modifier = Modifier
-                    .height(56.dp)
-                    .widthIn(min = 100.dp, max = 256.dp)
-                    .fillMaxWidth(),
-                contentScale = ContentScale.Fit,
-                alignment = Alignment.CenterStart
-            )
-        } else if (preview.title.isNotBlank()) {
-            Text(
-                text = preview.title,
-                style = scaledTitleStyle,
-                color = NuvioTheme.colors.TextPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+                    .height(72.dp)
+                    .widthIn(min = 100.dp, max = 300.dp)
+                    .fillMaxWidth()
+                    .clipToBounds()
+            ) {
+                AsyncImage(
+                    model = logoModel,
+                    contentDescription = preview.title,
+                    onError = { logoLoadFailed = true },
+                    // Fix 7: pre-upload della texture anche del logo (stesso
+                    // motivo del backdrop: niente upload dentro il frame dello
+                    // swap dell'hero).
+                    onSuccess = { state ->
+                        logoLoaded = true
+                        runCatching {
+                            (state.result.image as? BitmapImage)?.bitmap?.prepareToDraw()
+                        }
+                    },
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer { alpha = logoAlpha },
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.CenterStart
+                )
+            }
         }
 
         val localizedAwards = remember(preview.awards, context) {
@@ -675,6 +696,8 @@ private fun HeroTitleContent(
             // Lo spazio che resta è misurato qui: le righe che entrano davvero
             // si arrotondano per difetto, così la sinossi non viene mai
             // tagliata a metà riga (richiesta "la descrizione viene tagliata").
+            // Se lo spazio non basta nemmeno per una riga intera, la sinossi
+            // salta piuttosto che essere ritagliata a metà (clipToBounds).
             BoxWithConstraints(
                 modifier = Modifier
                     .weight(1f, fill = false)
@@ -686,13 +709,15 @@ private fun HeroTitleContent(
                 } else {
                     descriptionMaxLines
                 }
-                Text(
-                    text = description,
-                    style = scaledDescriptionStyle,
-                    color = NuvioTheme.colors.TextPrimary,
-                    maxLines = linesThatFit.coerceIn(1, descriptionMaxLines),
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (linesThatFit >= 1) {
+                    Text(
+                        text = description,
+                        style = scaledDescriptionStyle,
+                        color = NuvioTheme.colors.TextPrimary,
+                        maxLines = linesThatFit.coerceAtMost(descriptionMaxLines),
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

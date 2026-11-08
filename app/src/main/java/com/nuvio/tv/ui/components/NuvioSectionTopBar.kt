@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +49,19 @@ data class TopBarSectionTab(
 internal val TOP_BAR_BAND_HEIGHT = 64.dp
 
 /**
+ * Stato condiviso della banda scura sotto la barra sezioni: `false` quando
+ * NON va oscurato ciò che sta sotto. La home moderna lo imposta a false: nel
+ * suo layout il contenuto non passa mai sotto la barra (le righe sono
+ * ritagliate nel viewport in basso) e la banda copriva solo i primi 64dp
+ * dell'immagine hero ("la barra superiore copre gran parte dell'immagine").
+ * Le altre schermate lasciano il default `true`: la banda continua a coprire
+ * il contenuto che scorre.
+ */
+internal object SectionTopBarScrimState {
+    var visible by mutableStateOf(true)
+}
+
+/**
  * Barra alta delle sezioni — il riferimento è Prime Video: una striscia di
  * tab testuali in alto (Home · Extra · Anime · Calendario) raggiungibile
  * con SU dalla prima riga di contenuti, che si dimmera quando il focus è
@@ -74,6 +88,13 @@ internal fun NuvioSectionTopBar(
         targetValue = if (barHasFocus) 1f else 0.72f,
         label = "topBarAlpha"
     )
+    // La banda scompare (con dissolvenza) quando la schermata dichiara che
+    // sotto la barra c'è solo l'immagine hero da non oscurare.
+    val bandAlpha by animateFloatAsState(
+        targetValue = if (SectionTopBarScrimState.visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 280),
+        label = "topBarBandAlpha"
+    )
 
     Box(
         modifier = modifier.height(TOP_BAR_BAND_HEIGHT)
@@ -84,6 +105,7 @@ internal fun NuvioSectionTopBar(
         Box(
             modifier = Modifier
                 .matchParentSize()
+                .graphicsLayer { alpha = bandAlpha }
                 .background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
@@ -146,7 +168,7 @@ private fun SectionTab(
         Text(
             text = label,
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = if (selected || focused) FontWeight.SemiBold else FontWeight.Normal,
+            fontWeight = FontWeight.Bold,
             color = textColor,
             maxLines = 1
         )
