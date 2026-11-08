@@ -147,7 +147,7 @@
     <string name="cw_hours_min_left">Остават %1$dh %2$dm</string>
     <string name="cw_min_left">Остава %1$dm</string>
     <string name="cw_almost_done">Почти готово</string>
-    <string name="cw_airs_date">Излъчва се %1$s</string>
+    <string name="cw_airs_date">Ще се излъчи на %1$s</string>
     <string name="cw_airs_today">Излъчва се днес</string>
     <string name="cw_airs_tomorrow">Излъчва се утре</string>
         <plurals name="cw_airs_in_days">
@@ -176,7 +176,7 @@
     <string name="hero_director">Режисьор: %1$s</string>
     <string name="hero_writer">Автор: %1$s</string>
     <string name="hero_play">Учаватват</string>
-    <string name="hero_play_episode">Пусни Сезон %1$d Епизод %2$d</string>
+    <string name="hero_play_episode">Пусни Сезон %1$d еп. %2$d</string>
     <string name="hero_add_to_library">Добавяне към библиотеката</string>
     <string name="hero_remove_from_library">Премахване от библиотеката</string>
     <string name="hero_mark_watched">Маркирай като гледано</string>
@@ -188,7 +188,7 @@
     <string name="cd_rating">Рейтинг</string>
     
     <string name="episodes_season">Сезон %1$d</string>
-    <string name="episodes_specials">Специални издания</string>
+    <string name="episodes_specials">Специални епизоди</string>
     <string name="episodes_episode">Епизод</string>
     <string name="episodes_cd_watched">Гледано</string>
     <string name="episodes_dialog_subtitle">Действия с епизода</string>
@@ -219,12 +219,12 @@
     <string name="detail_marked_previous_watched">Предишни епизоди, маркирани като гледани: %1$d</string>
     
     <string name="playback_unavailable">Възпроизвеждането не е налично</string>
-    <string name="playback_unavailable_message">Възпроизвеждането не е възможно за това заглавие с текущата ви настройка.</string>
+    <string name="playback_unavailable_message">Възпроизвеждането не е възможно за това заглавие с текущата настройка.</string>
     <string name="detail_btn_play">Пускане</string>
-    <string name="detail_btn_resume">Автобиография</string>
-    <string name="detail_btn_play_episode">Пусни Сезон %1$d Епизод %2$d</string>
-    <string name="detail_btn_resume_episode">Възобновяване на Сезон %1$d Епизод %2$d</string>
-    <string name="detail_btn_next_episode">Следва Сезон %1$d Епизод %2$d</string>
+    <string name="detail_btn_resume">Продължи</string>
+    <string name="detail_btn_play_episode">Пусни Сезон %1$d еп. %2$d</string>
+    <string name="detail_btn_resume_episode">Възобновяване на Сезон %1$d еп. %2$d</string>
+    <string name="detail_btn_next_episode">Следва Сезон %1$d еп. %2$d</string>
     <string name="detail_tab_cast">Създател и актьорски състав</string>
     <string name="cast_role_creator">Създател</string>
     <string name="cast_role_director">Режисьор</string>
@@ -237,14 +237,14 @@
     <string name="detail_more_like_this_powered_by_simkl">Задвижвано от Simkl</string>
     <string name="detail_comments_title">Коментари</string>
     <string name="detail_comments_subtitle">Отзиви от Trakt</string>
-    <string name="detail_comments_subtitle_episode">Отзиви от Trakt за S%1$dE%2$d</string>
+    <string name="detail_comments_subtitle_episode">Отзиви от Trakt за Сезон %1$d еп. %2$d</string>
     <string name="detail_comments_mode_show">Показване</string>
-    <string name="detail_comments_mode_episode">Епизод</string>
+    <string name="detail_comments_mode_episode">еп.</string>
     <string name="detail_comments_mode_episode_change">Промяна на епизода (%1$s)</string>
     <string name="detail_comments_episode_picker_title">Избор на епизод</string>
     <string name="detail_comments_episode_picker_subtitle">Изберете епизод, за да видите рецензиите му в Trakt</string>
     <string name="detail_section_network">Мрежа</string>
-    <string name="detail_section_production">Производство</string>
+    <string name="detail_section_production">Продукция</string>
     <string name="detail_comments_empty">Все още няма налични отзиви за Trakt.</string>
     <string name="detail_comments_error">Не можах да заредя отзивите за Trakt в момента.</string>
     <string name="detail_trailer_loading">Зареждане на трейлъра...</string>
@@ -262,7 +262,7 @@
     <string name="tmdb_entity_rail_popular">Популярни</string>
     <string name="tmdb_entity_rail_top_rated">Най-високо оценени</string>
     <string name="tmdb_entity_rail_recent">Последни</string>
-    <string name="tmdb_entity_rail_most_voted">Най-гласуван</string>
+    <string name="tmdb_entity_rail_most_voted">Най-оценен</string>
     <string name="collections_editor_tmdb_watch_region">Регион за наблюдение</string>
     <string name="collections_editor_tmdb_watch_region_helper">Код на държавата по ISO 3166-1, където е налично заглавието. Пример: САЩ, Великобритания.</string>
     <string name="collections_editor_tmdb_quick_watch_regions">Региони за бързо наблюдение</string>
@@ -289,23 +289,23 @@
     <string name="episodes_unavailable">Не е налично</string>
 <!-- Status labels for series (some languages need gendered forms) -->
     <string name="series_status_ended">Приключи</string>
-    <string name="series_status_continuing">В процес</string>
-    <string name="series_status_current">Текущ</string>
-    <string name="series_status_cancelled">Отменено</string>
-    <string name="series_status_released">Издадена</string>
-    <string name="series_status_planned">Планирано</string>
-    <string name="series_status_rumored">Слухове</string>
-    <string name="series_status_in_production">В процес на производство</string>
+    <string name="series_status_continuing">Продължава</string>
+    <string name="series_status_current">Излъчва се</string>
+    <string name="series_status_cancelled">Отменен</string>
+    <string name="series_status_released">Излязъл</string>
+    <string name="series_status_planned">Планиран</string>
+    <string name="series_status_rumored">Слух</string>
+    <string name="series_status_in_production">В процес на продукция</string>
     <string name="series_status_post_production">Постпродукция</string>
 <!-- Status labels for movies (allows gendered translations in languages that need it) -->
     <string name="movie_status_ended">Приключи</string>
-    <string name="movie_status_continuing">В процес</string>
+    <string name="movie_status_continuing">Продължава</string>
     <string name="movie_status_current">Текущ</string>
-    <string name="movie_status_cancelled">Отменено</string>
-    <string name="movie_status_released">Издаден</string>
+    <string name="movie_status_cancelled">Отменен</string>
+    <string name="movie_status_released">Излязъл</string>
     <string name="movie_status_planned">Планиран</string>
-    <string name="movie_status_rumored">Носят се слухове</string>
-    <string name="movie_status_in_production">В процес на производство</string>
+    <string name="movie_status_rumored">Слух</string>
+    <string name="movie_status_in_production">В процес на продукция</string>
     <string name="movie_status_post_production">Постпродукция</string>
     <string name="detail_lists_fallback">Списъци</string>
     <string name="detail_lists_subtitle">Изберете кои списъци да включват това заглавие.</string>
@@ -1857,7 +1857,7 @@
     <string name="player_ends_at">Край на %1$s</string>
     <string name="player_live_watched">НА ЖИВО %1$s</string>
 <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. --> 
-    <string name="season_episode_format">Сезон %1$d Епизод %2$d</string>
+    <string name="season_episode_format">Сезон %1$d еп. %2$d</string>
     <string name="player_subtitle_delay">Забавяне на субтитрите</string>
     <string name="player_error_title">Грешка при възпроизвеждане</string>
     <string name="player_go_back">Връщане назад</string>
@@ -3400,9 +3400,6 @@
     <string name="autosync_tolerance_value">%1$d мс</string>
     <string name="autosync_thorough_title">Пълно търсене с автоматична синхронизация</string>
     <string name="autosync_thorough_description">Продължете да сравнявате други субтитри и вградени записи за по-точно съвпадение преди синхронизиране. Когато е изключено, първото силно съвпадение се използва по-рано. Прилагат се само уверени съвпадения.</string>
-    <string name="autosync_toast_failed">Синхронизирането не бе успешно: Автоматичното синхронизиране не можа да съпостави тези субтитри с видеото.</string>
-    <string name="autosync_toast_failed_no_reference">Синхронизирането не бе успешно: това видео няма вградени субтитри за сравнение.</string>
-    <string name="autosync_toast_failed_unsupported">Синхронизирането не бе успешно: Автоматичното синхронизиране не поддържа този формат на субтитрите.</string>
     <string name="autosync_label_synced">Автоматично синхронизирано</string>
     <string name="stream_resume_from_time">Възобновяване от %1$s</string>
     <string name="stream_resume_from_percent">Възобновяване от %1$d%%</string>

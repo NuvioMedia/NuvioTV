@@ -418,8 +418,14 @@ fun StreamScreen(
         )
 
         if (!uiState.autoPlayDecided) {
-            // Don't render overlay or stream list until ViewModel decides
-            // whether direct autoplay is active — prevents single-frame flash.
+            LoadingOverlay(
+                visible = true,
+                backdropUrl = uiState.backdrop ?: uiState.poster,
+                logoUrl = uiState.logo,
+                title = uiState.title,
+                message = stringResource(R.string.stream_finding_source),
+                modifier = Modifier.fillMaxSize()
+            )
         } else if (showOverlay) {
             LoadingOverlay(
                 visible = true,

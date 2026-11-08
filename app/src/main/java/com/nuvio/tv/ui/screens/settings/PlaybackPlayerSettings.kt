@@ -12,6 +12,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 @Composable
 internal fun PlaybackPlayerSection(
     settings: PlayerSettings,
+    releaseDecoderOnBackground: Boolean,
     onUpdate: PlaybackSettingsUpdate,
     onOpenDialog: (PlaybackDialog) -> Unit
 ) {
@@ -37,6 +38,14 @@ internal fun PlaybackPlayerSection(
         onToggle = { onUpdate { setAutoSwitchInternalPlayerOnError(!settings.autoSwitchInternalPlayerOnError) } },
         enabled = !usesExternalPlayer
     )
+    if (!usesExternalPlayer) {
+        SettingsToggleRow(
+            title = stringResource(R.string.playback_release_decoder_on_background),
+            subtitle = stringResource(R.string.playback_release_decoder_on_background_sub),
+            checked = releaseDecoderOnBackground,
+            onToggle = { onUpdate { setReleaseDecoderOnBackground(!releaseDecoderOnBackground) } }
+        )
+    }
 
     if (settings.playerPreference != PlayerPreference.INTERNAL) {
         SettingsSectionLabel(text = stringResource(R.string.playback_external_player_label))

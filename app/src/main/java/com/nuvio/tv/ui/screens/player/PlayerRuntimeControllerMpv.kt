@@ -45,6 +45,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         hasRenderedFirstFrame = false
         endDetectionArmed = false
         mpvEofSeenClear = false
+        exoEndOverrunHandled = false
         _uiState.update {
             it.copy(
                 isBuffering = true,
@@ -162,6 +163,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         hasRenderedFirstFrame = false
         endDetectionArmed = false
         mpvEofSeenClear = false
+        exoEndOverrunHandled = false
         _uiState.update {
             it.copy(
                 isBuffering = true,
@@ -266,10 +268,11 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
 /**
  * Frees the hardware decoder once the app is no longer visible, so the next foreground app gets
  * it without a forced reclaim. Uses the same release and paused rebuild on resume as a decoder
- * that was reclaimed while in the background.
+ * that was reclaimed while in the background. Opt-in per device: on devices that never reclaim
+ * the decoder it only turns a screensaver or a quick app switch into a full player rebuild.
  */
 internal fun PlayerRuntimeController.releaseForBackground() {
-    if (isUsingMpvEngine() || pendingBackgroundCrashRecovery) return
+    if (!releaseDecoderOnBackground || isUsingMpvEngine() || pendingBackgroundCrashRecovery) return
     val player = _exoPlayer ?: return
     if (currentStreamUrl.isEmpty()) return
     backgroundCrashSavedPositionMs = if (_uiState.value.isLive) 0L else player.currentPosition.coerceAtLeast(0L)

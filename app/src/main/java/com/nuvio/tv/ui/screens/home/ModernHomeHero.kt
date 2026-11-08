@@ -63,6 +63,7 @@ import com.nuvio.tv.R
 import kotlinx.coroutines.delay
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.TrailerPlayer
+import com.nuvio.tv.ui.components.AutoScrollingText
 import androidx.compose.ui.res.stringResource
 
 private data class ModernHeroSecondaryMeta(
@@ -304,6 +305,7 @@ internal fun HeroTitleBlock(
     mdbListShowOnHero: Boolean = false,
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     trailerPlaying: () -> Boolean = { false },
+    descriptionAutoScrollEnabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // The providers read hero state that is rewritten on every focus move, often with an equal
@@ -341,7 +343,8 @@ internal fun HeroTitleBlock(
             showImdbRatings = showImdbRatings,
             mdbListShowOnHero = mdbListShowOnHero,
             mdbListRatingOrder = mdbListRatingOrder,
-            trailerPlaying = trailerPlaying
+            trailerPlaying = trailerPlaying,
+            descriptionAutoScrollEnabled = descriptionAutoScrollEnabled
         )
     }
 }
@@ -353,7 +356,8 @@ private fun HeroTitleContent(
     showImdbRatings: Boolean,
     mdbListShowOnHero: Boolean = false,
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
-    trailerPlaying: () -> Boolean = { false }
+    trailerPlaying: () -> Boolean = { false },
+    descriptionAutoScrollEnabled: Boolean = false
 ) {
     val preview = previewProvider() ?: return
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
@@ -659,12 +663,13 @@ private fun HeroTitleContent(
         }
 
         preview.description?.takeIf { it.isNotBlank() }?.let { description ->
-            Text(
+            AutoScrollingText(
                 text = description,
                 style = scaledDescriptionStyle.copy(textDirection = description.contentTextDirection()),
                 color = NuvioTheme.colors.TextPrimary,
                 maxLines = descriptionMaxLines,
-                overflow = TextOverflow.Ellipsis,
+                autoScrollEnabled = descriptionAutoScrollEnabled,
+                paused = trailerPlaying,
                 modifier = Modifier.graphicsLayer { alpha = metaAlpha }
             )
         }
