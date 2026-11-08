@@ -215,6 +215,76 @@ class SimklRewatchRunsTest {
     }
 
     @Test
+    fun `a flat anime session holds the marked episode by its number`() {
+        val sessions = listOf(animeSession(season = null, episode = 7))
+
+        assertTrue(
+            sessions.rewatchSessionHolds(
+                contentId = "mal:16498",
+                kind = TrackingMediaKind.ANIME,
+                season = null,
+                episode = 7
+            )
+        )
+        assertFalse(
+            sessions.rewatchSessionHolds(
+                contentId = "mal:16498",
+                kind = TrackingMediaKind.ANIME,
+                season = null,
+                episode = 8
+            )
+        )
+        // A target with a season still finds the flat session by its unique number.
+        assertTrue(
+            sessions.rewatchSessionHolds(
+                contentId = "mal:16498",
+                kind = TrackingMediaKind.ANIME,
+                season = 1,
+                episode = 7
+            )
+        )
+    }
+
+    @Test
+    fun `an anime number in two seasons does not settle the read back`() {
+        val sessions = listOf(
+            animeSession(season = null, episode = 7, rewatchId = 51L),
+            animeSession(season = 2, episode = 7, rewatchId = 52L),
+        )
+
+        assertFalse(
+            sessions.rewatchSessionHolds(
+                contentId = "mal:16498",
+                kind = TrackingMediaKind.ANIME,
+                season = 1,
+                episode = 7
+            )
+        )
+    }
+
+    @Test
+    fun `a show session holds its exact episode`() {
+        val sessions = listOf(session(id = 61, status = "active"))
+
+        assertTrue(
+            sessions.rewatchSessionHolds(
+                contentId = "tt5753856",
+                kind = TrackingMediaKind.SHOW,
+                season = 2,
+                episode = 7
+            )
+        )
+        assertFalse(
+            sessions.rewatchSessionHolds(
+                contentId = "tt5753856",
+                kind = TrackingMediaKind.SHOW,
+                season = 2,
+                episode = 8
+            )
+        )
+    }
+
+    @Test
     fun `the running session of the item is the one a write joins`() {
         val sessions = listOf(
             session(id = 41, status = "completed"),
@@ -323,6 +393,29 @@ class SimklRewatchRunsTest {
             rewatchStatus = status,
             show = SimklMedia(title = "Dark", year = 2017, ids = ids),
         )
+
+    /** One flat anime session: the account lists the episodes without a season number. */
+    private fun animeSession(
+        season: Int?,
+        episode: Int,
+        rewatchId: Long = 50L,
+    ): SimklLibraryEntry = SimklLibraryEntry(
+        mediaType = SimklMediaType.ANIME,
+        isRewatch = true,
+        rewatchId = rewatchId,
+        rewatchStatus = "active",
+        show = SimklMedia(
+            title = "Attack on Titan",
+            year = 2013,
+            ids = mapOf("mal" to JsonPrimitive(16498L)),
+        ),
+        seasons = listOf(
+            SimklSeason(
+                number = season,
+                episodes = listOf(SimklEpisode(number = episode, watchedAt = NEWER)),
+            )
+        ),
+    )
 
     /** The item the sessions are looked for: the same show, at the episode the sessions hold. */
     private fun episode() = TrackingMediaReference(

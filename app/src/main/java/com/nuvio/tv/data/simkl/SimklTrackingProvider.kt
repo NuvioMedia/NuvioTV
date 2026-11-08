@@ -197,7 +197,7 @@ class SimklTrackingScrobbler @Inject constructor(
             mode = rewatchMode(),
             accountType = authRepository.state.value.accountType,
             action = TrackingScrobbleAction.START,
-            priorWatch = snapshot.priorWatchForPlayback(enriched),
+            priorWatch = snapshot.priorWatchForMark(catalogue = enriched, resolved = resolved),
             nowEpochMs = System.currentTimeMillis(),
             hasRunningSession = false,
             progressPercent = progressPercent,

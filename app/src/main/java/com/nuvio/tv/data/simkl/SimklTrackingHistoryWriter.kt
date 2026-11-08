@@ -52,10 +52,9 @@ class SimklTrackingHistoryWriter @Inject constructor(
         val mode = settingsDataStore.simklRewatchMode.first()
         val accountType = authRepository.state.value.accountType
         val resolved = pushableItems.map { item ->
-            val enriched = snapshot
-                .enrichMediaReference(item.media, entryIndex)
-                .resolveAnimeEpisodeForSimkl()
-            val repeatViewing = snapshot.priorWatchForPlayback(enriched).wasWatched
+            val catalogue = snapshot.enrichMediaReference(item.media, entryIndex)
+            val enriched = catalogue.resolveAnimeEpisodeForSimkl()
+            val repeatViewing = snapshot.priorWatchForMark(catalogue, enriched).wasWatched
             if (
                 shouldRecordSimklRewatchOnMark(
                     mode = mode,
@@ -78,13 +77,37 @@ class SimklTrackingHistoryWriter @Inject constructor(
         // history write updates the canonical entry but not the rewatch session sidecar, so the
         // Continue Watching row would keep the old run position until a sync. Read the sessions
         // back and adopt them, the same way a confirmed rewatch does.
-        val target = resolved.firstOrNull { item -> item.isRewatch }?.media
-        val targetContentId = target?.catalog?.contentId?.takeIf(String::isNotBlank)
+        val targetItem = resolved.firstOrNull { item -> item.isRewatch }
+        val target = targetItem?.media
+        // The running session is found by its id, so its own canonical id is used for the read
+        // back. A flat anime session can resolve to a different id form than the catalogue item.
+        val sessionContentId = targetItem?.rewatchId?.let { rewatchId ->
+            snapshot.rewatchSessions
+                .firstOrNull { session ->
+                    session.rewatchId == rewatchId && session.isRunningRewatchSession()
+                }
+                ?.media
+                ?.canonicalContentId()
+                ?.takeIf(String::isNotBlank)
+        }
+        val targetContentId = sessionContentId
+            ?: target?.let { media ->
+                media.toSimklMedia().canonicalContentId()?.takeIf(String::isNotBlank)
+            }
+            ?: target?.catalog?.contentId?.takeIf(String::isNotBlank)
         val targetSeason = target?.episode?.season
         val targetEpisode = target?.episode?.number
-        if (result.isComplete && targetContentId != null && targetSeason != null && targetEpisode != null) {
+        if (result.isComplete && target != null && targetContentId != null && targetEpisode != null) {
+            val readContentId = targetContentId
+            val readEpisode = targetEpisode
+            val readKind = target.kind
             rewatchWriter.refreshRewatchSessions { sessions ->
-                sessions.rewatchedEpisodesOf(targetContentId).contains(targetSeason to targetEpisode)
+                sessions.rewatchSessionHolds(
+                    contentId = readContentId,
+                    kind = readKind,
+                    season = targetSeason,
+                    episode = readEpisode
+                )
             }
         }
         // The answer is what says whether the account booked the view: `pro_required` and `too_soon`

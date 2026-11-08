@@ -317,7 +317,8 @@ internal fun SimklSyncSnapshot.priorWatchForScrobble(result: SimklScrobbleResult
     }
     val target = result.episode ?: return SimklPriorWatch.None
     val targetNumber = target.number ?: return SimklPriorWatch.None
-    val targetSeason = target.season ?: 1
+    val targetSeasonNumber = target.season
+    val targetSeason = targetSeasonNumber ?: 1
     val targetMapping = if (target.tvdbSeason != null && target.tvdbNumber != null) {
         SimklEpisodeMapping(target.tvdbSeason, target.tvdbNumber)
     } else {
@@ -330,11 +331,37 @@ internal fun SimklSyncSnapshot.priorWatchForScrobble(result: SimklScrobbleResult
         }
         ?.second
         ?.watchedAt
+        ?: entry.flatAnimeEpisodeWatchedAt(
+            mediaType = result.mediaType,
+            targetSeason = targetSeasonNumber,
+            targetNumber = targetNumber
+        )
         ?: return SimklPriorWatch.None
     return SimklPriorWatch(
         wasWatched = true,
         watchedAtEpochMs = parseSimklUtcEpochMs(watchedAt)
     )
+}
+
+/**
+ * The date of the only episode with this number in a flat anime entry.
+ *
+ * A flat anime can arrive with no season number while the playback reference carries the absolute
+ * episode number, so the exact matcher cannot pair a null season with season 1. The number alone
+ * decides here, and only a unique match is accepted: two seasons with the same number cannot be
+ * told apart from the reference, and guessing would turn a first watch into a repeat.
+ */
+private fun SimklLibraryEntry.flatAnimeEpisodeWatchedAt(
+    mediaType: SimklMediaType,
+    targetSeason: Int?,
+    targetNumber: Int
+): String? {
+    if (mediaType != SimklMediaType.ANIME) return null
+    if (targetSeason != null) return null
+    val matches = seasons
+        .flatMap { season -> season.episodes }
+        .filter { episode -> episode.number == targetNumber }
+    return matches.singleOrNull()?.watchedAt
 }
 
 /**
@@ -358,6 +385,22 @@ internal fun SimklSyncSnapshot.priorWatchForPlayback(media: TrackingMediaReferen
             episode = episode
         )
     )
+}
+
+/**
+ * The prior watch for a manual mark, read from both the catalogue and the Simkl-native reference.
+ *
+ * The anime resolution rewrites the episode to Simkl's flat numbering, and the local canonical
+ * history can be shaped either way. Try the native reference first; when that misses and the two
+ * references differ, try the catalogue one. A missing watch on both stays a first watch.
+ */
+internal fun SimklSyncSnapshot.priorWatchForMark(
+    catalogue: TrackingMediaReference,
+    resolved: TrackingMediaReference
+): SimklPriorWatch {
+    val native = priorWatchForPlayback(resolved)
+    if (native.wasWatched || resolved === catalogue) return native
+    return priorWatchForPlayback(catalogue)
 }
 
 internal fun SimklMedia.matchesTarget(target: SimklMedia): Boolean =
