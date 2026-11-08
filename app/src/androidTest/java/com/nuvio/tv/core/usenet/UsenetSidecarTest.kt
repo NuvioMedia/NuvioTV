@@ -6,7 +6,9 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.nuvio.tv.domain.model.ProxyHeaders
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.StreamBehaviorHints
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.File
@@ -463,6 +465,37 @@ class UsenetSidecarTest {
         }
     }
 
+    @Test fun nzbDownloadsUseDownloadAgentAndPreserveAddonOverrides() = runBlocking {
+        val savedAgents = listOf("searchUserAgent", "downloadUserAgent").associateWith { prefs.getString(it, null) }
+        val sidecar = UsenetSidecar.get(context)
+        UsenetSidecar.onAppForegrounded()
+        try {
+            prefs.edit().putString("searchUserAgent", "SearchClient/1.0")
+                .putString("downloadUserAgent", "DownloadClient/2.0").commit()
+            Fixture().use { fixture ->
+                suspend fun resolveAndRelease(stream: Stream, expectedAgent: String) {
+                    val resolved = sidecar.resolve(stream, null, null, 1)
+                    try { assertEquals(expectedAgent, fixture.nzbAgents.last()) }
+                    finally { sidecar.release(resolved.url) }
+                }
+                resolveAndRelease(fixture.stream(), "DownloadClient/2.0")
+                prefs.edit().putString("downloadUserAgent", "").commit()
+                resolveAndRelease(fixture.stream(), NUVIO_USER_AGENT)
+                for (header in listOf("User-Agent", "user-agent")) {
+                    val stream = fixture.stream().copy(behaviorHints = StreamBehaviorHints(
+                        notWebReady = null, bingeGroup = null, countryWhitelist = null,
+                        proxyHeaders = ProxyHeaders(request = mapOf(header to "AddonClient/3.0"), response = null)))
+                    resolveAndRelease(stream, "AddonClient/3.0")
+                }
+                assertEquals(4, fixture.nzbReads.get())
+            }
+        } finally {
+            prefs.edit().apply {
+                savedAgents.forEach { (key, value) -> if (value == null) remove(key) else putString(key, value) }
+            }.commit()
+        }
+    }
+
     private class Fixture(private val nzbGate: CountDownLatch? = null) : Closeable {
         val payload = ByteArray(256 * 1024) { ((it * 131 + it / 257) % 256).toByte() }
         val subtitlePayload = "1\n00:00:01,000 --> 00:00:03,000\nNative Usenet subtitle\n".toByteArray()
@@ -475,6 +508,7 @@ class UsenetSidecarTest {
         @Volatile var stats = 0
         @Volatile var subtitleReads = 0
         val nzbReads = AtomicInteger()
+        val nzbAgents = CopyOnWriteArrayList<String>()
         fun stream() = Stream(name = "Fixture", title = null, description = null, url = null,
             ytId = null, infoHash = null, fileIdx = null, externalUrl = null, behaviorHints = null,
             addonName = "Usenet protocol test", addonLogo = null, nzbUrl = nzbUrl,
@@ -488,7 +522,14 @@ class UsenetSidecarTest {
         init {
             accept(http) { socket ->
                 val reader = socket.getInputStream().bufferedReader()
-                while (!reader.readLine().isNullOrEmpty()) { }
+                var agent = ""
+                while (true) {
+                    val line = reader.readLine()?.takeIf { it.isNotEmpty() } ?: break
+                    if (line.substringBefore(':').equals("User-Agent", ignoreCase = true)) {
+                        agent = line.substringAfter(':').trim()
+                    }
+                }
+                nzbAgents.add(agent)
                 nzbReads.incrementAndGet()
                 nzbGate?.await(15, TimeUnit.SECONDS)
                 val body = xml.toByteArray()
