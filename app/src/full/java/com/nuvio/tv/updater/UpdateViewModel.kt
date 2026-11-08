@@ -1,7 +1,9 @@
 package com.nuvio.tv.updater
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -319,7 +321,8 @@ class UpdateViewModel @Inject constructor(
             runCatching { ApkInstaller.install(context, apkFile, background = false) }
                 .onFailure {
                     Log.w(TAG, "Session install failed, falling back to the system installer", it)
-                    ApkInstaller.launchSystemInstaller(context, apkFile)
+                    runCatching { ApkInstaller.launchSystemInstaller(context, apkFile) }
+                        .onFailure { error -> Log.w(TAG, "System installer failed", error) }
                 }
         }
     }
@@ -373,6 +376,9 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun openUnknownSourcesSettings() {
-        ApkInstaller.buildUnknownSourcesSettingsIntent(context)?.let(context::startActivity)
+        listOfNotNull(
+            ApkInstaller.buildUnknownSourcesSettingsIntent(context),
+            Intent(Settings.ACTION_SECURITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        ).any { runCatching { context.startActivity(it) }.isSuccess }
     }
 }
