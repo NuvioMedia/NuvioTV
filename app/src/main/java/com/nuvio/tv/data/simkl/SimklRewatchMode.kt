@@ -207,29 +207,25 @@ internal fun shouldRecordSimklRewatchOnStop(
 }
 
 /**
- * Whether a manual mark of an item is written as a repeat viewing.
+ * Whether a manual mark travels as a rewatch.
  *
- * A mark of something the account has already watched is a repeat, and Simkl records a plain add of it
- * as nothing at all: the write has to travel with the rewatch flag to land. A run the account already
- * holds makes the mark part of that run whatever the item's own state says, and a mark of something the
- * account has never watched stays a plain first watch, because there is nothing to repeat.
+ * A mark of an item the account already watched is a repeat, and Simkl records a plain add of it as
+ * nothing; it travels with the flag so the account can book the repeat. The explicit Mark as
+ * rewatched action asks for one directly, which also covers an episode the local history does not
+ * know about yet. A mark of an item that was never watched stays a plain add, even while a run is
+ * open: nothing is repeated, and the run belongs to the episodes that were.
  *
- * The mode and the plan are the gates the scrobble path uses. A semi-automatic account does not ask
- * here: the user marked the episode watched themselves, so the question the mode would ask before a
- * playback has been answered by the mark. A free account is never sent the flag, because Simkl drops a
- * write carrying it silently and the watch would be lost with it.
+ * The mode and the plan are the same gates the scrobble path uses; a free account would drop the
+ * write carrying the flag.
  */
 internal fun shouldRecordSimklRewatchOnMark(
     mode: SimklRewatchMode,
     accountType: String?,
     isRepeatViewing: Boolean,
-    hasRunningSession: Boolean = false,
-): Boolean = when {
-    mode == SimklRewatchMode.OFF -> false
-    !isSimklRewatchPlanEligible(accountType) -> false
-    hasRunningSession -> true
-    else -> isRepeatViewing
-}
+    explicitRewatch: Boolean = false,
+): Boolean = (explicitRewatch || isRepeatViewing) &&
+    mode != SimklRewatchMode.OFF &&
+    isSimklRewatchPlanEligible(accountType)
 
 /**
  * Whether to ask, before a playback starts, whether it opens a new rewatch run.

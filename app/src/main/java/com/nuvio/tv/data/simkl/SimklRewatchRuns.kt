@@ -266,25 +266,6 @@ internal fun List<SimklLibraryEntry>.activeRewatchSessionIdForRemoval(
     }
 }
 
-/**
- * Whether the account already holds a watch of this item's title, which a manual mark reads as a
- * possible repeat viewing.
- *
- * Simkl records a plain add of something already watched as nothing at all, so a mark that may be a
- * repeat has to travel as one. The check is deliberately coarse: it asks whether the account watched
- * the title at all, not whether it holds exactly this episode, because the account has the last word
- * either way and a write it reads as a first watch comes back as `first_watch` and is still recorded.
- * What it must not do is send a rewatch for a title the account has never watched, which is where an
- * empty session would come from.
- */
-internal fun List<SimklLibraryEntry>.hasWatchedTitle(reference: TrackingMediaReference): Boolean {
-    val target = reference.toSimklMedia()
-    val entry = firstOrNull { entry -> entry.media?.matchesTarget(target) == true } ?: return false
-    return entry.status == SimklListStatus.COMPLETED ||
-        entry.lastWatchedAt != null ||
-        entry.seasons.any { season -> season.episodes.any { episode -> episode.watchedAt != null } }
-}
-
 /** The state Simkl reports for the session a run continues in; only that one is ever pinned. */
 private const val ACTIVE_REWATCH_STATUS = "active"
 

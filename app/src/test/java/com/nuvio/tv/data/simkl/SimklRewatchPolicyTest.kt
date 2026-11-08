@@ -420,20 +420,29 @@ class SimklRewatchPolicyTest {
         assertFalse(shouldRecordSimklRewatchOnMark(SimklRewatchMode.AUTOMATIC, "free", isRepeatViewing = true))
         assertFalse(shouldRecordSimklRewatchOnMark(SimklRewatchMode.AUTOMATIC, null, isRepeatViewing = true))
 
-        // A title the account watched before, on a plan that takes rewatches.
+        // An item the account watched before, on a plan that takes rewatches.
         assertTrue(shouldRecordSimklRewatchOnMark(SimklRewatchMode.AUTOMATIC, "pro", isRepeatViewing = true))
         assertTrue(shouldRecordSimklRewatchOnMark(SimklRewatchMode.SEMI_AUTOMATIC, "vip", isRepeatViewing = true))
 
-        // A first watch stays a plain add: there is nothing to repeat.
+        // A first watch stays a plain add, even when a run is open elsewhere.
         assertFalse(shouldRecordSimklRewatchOnMark(SimklRewatchMode.AUTOMATIC, "pro", isRepeatViewing = false))
+        assertFalse(shouldRecordSimklRewatchOnMark(SimklRewatchMode.SEMI_AUTOMATIC, "pro", isRepeatViewing = false))
 
-        // A run the account already holds takes the mark whatever the title's own state says.
+        // The explicit action asks for one even where the local history does not know the item.
         assertTrue(
             shouldRecordSimklRewatchOnMark(
-                mode = SimklRewatchMode.SEMI_AUTOMATIC,
-                accountType = "pro",
+                SimklRewatchMode.AUTOMATIC,
+                "pro",
                 isRepeatViewing = false,
-                hasRunningSession = true
+                explicitRewatch = true
+            )
+        )
+        assertFalse(
+            shouldRecordSimklRewatchOnMark(
+                SimklRewatchMode.OFF,
+                "pro",
+                isRepeatViewing = false,
+                explicitRewatch = true
             )
         )
     }

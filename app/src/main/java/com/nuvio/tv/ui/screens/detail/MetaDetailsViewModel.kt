@@ -2711,9 +2711,9 @@ class MetaDetailsViewModel @Inject constructor(
                 )
                 val result = simklTrackingHistoryWriter.addToHistory(
                     profileId = profileManager.activeProfileId.value,
-                    // The writer owns the mode and plan gate: it marks the item a rewatch and pins
-                    // the open run only where the account can take one.
-                    items = listOf(TrackingHistoryItem(media = media))
+                    // The user picked the rewatch action, so the write says so. The writer still
+                    // owns the mode and plan gate and pins the open run only where it can take one.
+                    items = listOf(TrackingHistoryItem(media = media, isRewatch = true))
                 )
                 check(result.notFoundCount == 0) { "Simkl did not match the episode" }
                 showMessage(localizedContext.getString(R.string.detail_episode_marked_rewatched))

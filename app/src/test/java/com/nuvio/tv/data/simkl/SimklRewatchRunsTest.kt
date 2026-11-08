@@ -343,26 +343,4 @@ class SimklRewatchRunsTest {
         const val OLD = "2026-03-01T20:00:00Z"
         const val NEWER = "2026-08-01T20:00:00Z"
     }
-    @Test
-    fun `a title the account watched before is a repeat, a title it never watched is not`() {
-        val target = episode()
-
-        // Any watch of the title counts, the exact episode is the account's own call: a write it reads
-        // as a first watch is answered as one and still recorded.
-        assertTrue(listOf(rewatchRow(listOf(Marked(season = 1, episode = 1)), isRewatch = false)).hasWatchedTitle(target))
-        // A rewatch session is a repeat by definition.
-        assertTrue(listOf(session(id = 44, status = "active")).hasWatchedTitle(target))
-        // Something the account never watched is a first watch, and must not be sent as a repeat.
-        assertFalse(
-            listOf(
-                rewatchRow(listOf(Marked(season = 1, episode = 1)), isRewatch = false).copy(
-                    status = SimklListStatus.PLAN_TO_WATCH,
-                    lastWatchedAt = null,
-                    seasons = emptyList(),
-                )
-            ).hasWatchedTitle(target)
-        )
-        assertFalse(emptyList<SimklLibraryEntry>().hasWatchedTitle(target))
-    }
-
 }

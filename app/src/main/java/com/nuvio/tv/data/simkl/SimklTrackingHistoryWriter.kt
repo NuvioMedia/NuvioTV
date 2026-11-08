@@ -27,12 +27,13 @@ class SimklTrackingHistoryWriter @Inject constructor(
     /**
      * Writes the manual marks (the episode menu, a season action, a library action) to the account.
      *
-     * A mark of something the account has already watched is a repeat viewing, and Simkl records a
-     * plain add of it as nothing at all, so such a mark travels as a rewatch: the item carries the
-     * flag, the request carries `allow_rewatch=yes`, and a run the account already holds is pinned by
-     * its session id, so the mark joins that run instead of opening another. Whether a mark is a repeat
-     * is asked of the account's own history, and the flag only travels while the rewatch mode and the
-     * plan allow it: Simkl drops a write carrying the flag for a free account silently, and the watch
+     * A mark of an item the account already watched is a repeat, and Simkl records a plain add of it
+     * as nothing, so it travels as a rewatch: the item carries the flag, the request carries
+     * `allow_rewatch=yes`, and a run the account already holds is pinned by its session id. The
+     * explicit Mark as rewatched action asks for one directly. A mark of an item that was never
+     * watched stays a plain add, even while a run is open, so a first watch of a new episode cannot
+     * join a run it does not belong to. The flag only travels while the rewatch mode and the plan
+     * allow it; Simkl drops a write carrying the flag for a free account silently, and the watch
      * would be dropped with it.
      */
     override suspend fun addToHistory(
@@ -54,18 +55,22 @@ class SimklTrackingHistoryWriter @Inject constructor(
             val enriched = snapshot
                 .enrichMediaReference(item.media, entryIndex)
                 .resolveAnimeEpisodeForSimkl()
-            val runningSessionId = snapshot.rewatchSessions.activeRewatchSessionId(enriched)
+            val repeatViewing = snapshot.priorWatchForPlayback(enriched).wasWatched
             if (
                 shouldRecordSimklRewatchOnMark(
                     mode = mode,
                     accountType = accountType,
-                    isRepeatViewing = snapshot.entries.hasWatchedTitle(enriched),
-                    hasRunningSession = runningSessionId != null
+                    isRepeatViewing = repeatViewing,
+                    explicitRewatch = item.isRewatch
                 )
             ) {
-                item.copy(media = enriched, isRewatch = true, rewatchId = runningSessionId)
+                item.copy(
+                    media = enriched,
+                    isRewatch = true,
+                    rewatchId = snapshot.rewatchSessions.activeRewatchSessionId(enriched)
+                )
             } else {
-                item.copy(media = enriched)
+                item.copy(media = enriched, isRewatch = false, rewatchId = null)
             }
         }
         val result = service.addToHistory(resolved)
