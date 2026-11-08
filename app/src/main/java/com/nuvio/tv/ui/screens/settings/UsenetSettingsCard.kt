@@ -34,11 +34,16 @@ internal fun UsenetSettingsCard(
             subtitle = stringResource(R.string.usenet_self_hosted_description),
             checked = configuration.allowPrivateNetwork,
             onToggle = { update(configuration.copy(allowPrivateNetwork = !configuration.allowPrivateNetwork)) })
-        SettingsActionRow(title = stringResource(R.string.usenet_user_agent),
-            subtitle = stringResource(R.string.usenet_user_agent_description),
-            value = if (configuration.userAgent.isBlank()) stringResource(R.string.usenet_user_agent_default, configuration.agent)
-                else configuration.agent,
-            onClick = { picker = "userAgent" })
+        SettingsActionRow(title = stringResource(R.string.usenet_search_user_agent),
+            subtitle = stringResource(R.string.usenet_search_user_agent_description),
+            value = if (configuration.searchUserAgent.isBlank()) stringResource(R.string.usenet_user_agent_default, configuration.searchAgent)
+                else configuration.searchAgent,
+            onClick = { picker = "searchUserAgent" })
+        SettingsActionRow(title = stringResource(R.string.usenet_download_user_agent),
+            subtitle = stringResource(R.string.usenet_download_user_agent_description),
+            value = if (configuration.downloadUserAgent.isBlank()) stringResource(R.string.usenet_user_agent_default, configuration.downloadAgent)
+                else configuration.downloadAgent,
+            onClick = { picker = "downloadUserAgent" })
         SettingsToggleRow(title = stringResource(R.string.usenet_fallback),
             subtitle = stringResource(R.string.usenet_fallback_description),
             checked = configuration.fallbackEnabled,
@@ -111,19 +116,27 @@ internal fun UsenetSettingsCard(
         "connections" -> SettingsSingleChoiceDialog(title = stringResource(R.string.usenet_connections),
             options = listOf(0, 4, 8, 12, 16, 20, 24, 32, 40, 50, 60, 80, 100, 150, 200, 300, 500).map { SettingsPickerOption(it, if (it == 0) automatic else it.toString()) },
             selectedValue = configuration.maxConnections, onOptionSelected = { update(configuration.copy(maxConnections = it)); picker = null }, onDismiss = { picker = null })
-        "userAgent" -> UserAgentEditor(configuration, update, onDismiss = { picker = null })
+        "searchUserAgent" -> UserAgentEditor(
+            title = stringResource(R.string.usenet_search_user_agent),
+            description = stringResource(R.string.usenet_search_user_agent_description),
+            agent = configuration.searchAgent,
+            update = { update(configuration.copy(searchUserAgent = it)) }, onDismiss = { picker = null })
+        "downloadUserAgent" -> UserAgentEditor(
+            title = stringResource(R.string.usenet_download_user_agent),
+            description = stringResource(R.string.usenet_download_user_agent_description),
+            agent = configuration.downloadAgent,
+            update = { update(configuration.copy(downloadUserAgent = it)) }, onDismiss = { picker = null })
     }
 }
 
 @Composable
-private fun UserAgentEditor(configuration: UsenetConfiguration, update: (UsenetConfiguration) -> Unit, onDismiss: () -> Unit) {
+private fun UserAgentEditor(title: String, description: String, agent: String, update: (String) -> Unit, onDismiss: () -> Unit) {
     // Opens with the User-Agent being sent, so Nuvio's default can be read and edited.
-    var value by remember { mutableStateOf(configuration.agent) }
-    var error by remember { mutableStateOf(false) }
+    var value by remember(title) { mutableStateOf(agent) }
+    var error by remember(title) { mutableStateOf(false) }
     // Blank, or Nuvio's own unchanged, keeps the automatic one that follows app updates.
-    fun save(agent: String) { update(configuration.copy(userAgent = agent.trim())); onDismiss() }
-    NuvioDialog(title = stringResource(R.string.usenet_user_agent),
-        subtitle = stringResource(R.string.usenet_user_agent_description), onDismiss = onDismiss) {
+    fun save(agent: String) { update(agent.trim()); onDismiss() }
+    NuvioDialog(title = title, subtitle = description, onDismiss = onDismiss) {
         SourceField(stringResource(R.string.usenet_user_agent), value, { value = it; error = false })
         if (error) Text(stringResource(R.string.usenet_user_agent_invalid), color = NuvioTheme.colors.TextSecondary)
         SettingsDialogActionRow {

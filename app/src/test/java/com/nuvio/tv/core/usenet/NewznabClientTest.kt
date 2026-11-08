@@ -57,18 +57,26 @@ class NewznabClientTest {
         }
     }
 
-    @Test fun `requests send the user agent from the settings, which is Nuvio unless changed`() = runBlocking {
+    @Test fun `API requests use the search agent independently of the download agent`() = runBlocking {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setBody(capsXml))
             server.enqueue(MockResponse().setBody(capsXml))
+            server.enqueue(MockResponse().setBody(capsXml))
+            server.enqueue(MockResponse().setBody(emptyPage))
+            server.enqueue(MockResponse().setBody(emptyPage))
             var settings = UsenetConfiguration()
-            val client = NewznabClient(MemoryStorage()) { settings.agent }
+            val client = NewznabClient(MemoryStorage()) { settings.searchAgent }
             client.capabilities(server.indexer(), live = true)
-            settings = settings.copy(userAgent = "MyClient/1.0")
-            client.capabilities(server.indexer(), live = true)
+            settings = settings.copy(downloadUserAgent = "Downloader/2.0")
+            val caps = client.capabilities(server.indexer(), live = true)
+            settings = settings.copy(searchUserAgent = "MyClient/1.0")
+            client.verify(server.indexer())
+            client.search(server.indexer(), UsenetSearchRequest(imdbId = "tt123"), caps)
             assertEquals(NUVIO_USER_AGENT, server.takeRequest().getHeader("User-Agent"))
             assertTrue(NUVIO_USER_AGENT.startsWith("Nuvio/"))
-            assertEquals("MyClient/1.0", server.takeRequest().getHeader("User-Agent"))
+            assertEquals(NUVIO_USER_AGENT, server.takeRequest().getHeader("User-Agent"))
+            assertEquals(5, server.requestCount)
+            repeat(3) { assertEquals("MyClient/1.0", server.takeRequest().getHeader("User-Agent")) }
         }
     }
 
@@ -108,8 +116,10 @@ class NewznabClientTest {
     }
 
     @Test fun `only a user agent the user chose is kept, and only in plain text`() {
-        assertEquals(NUVIO_USER_AGENT, UsenetConfiguration(userAgent = "  ").agent)
-        assertEquals("MyClient/1.0", UsenetConfiguration(userAgent = " MyClient/1.0 ").agent)
+        assertEquals(NUVIO_USER_AGENT, UsenetConfiguration(searchUserAgent = "  ").searchAgent)
+        assertEquals(NUVIO_USER_AGENT, UsenetConfiguration(downloadUserAgent = "  ").downloadAgent)
+        assertEquals("MyClient/1.0", UsenetConfiguration(searchUserAgent = " MyClient/1.0 ").searchAgent)
+        assertEquals("Downloader/2.0", UsenetConfiguration(downloadUserAgent = " Downloader/2.0 ").downloadAgent)
         assertTrue(isValidUserAgent("MyClient/1.0 (Linux; x86_64)"))
         // A line break would inject headers; HTTP clients refuse other characters outright.
         for (agent in listOf("Nuvio\r\nX-Injected: 1", "Nüvio", "x".repeat(257))) assertFalse(agent, isValidUserAgent(agent))

@@ -35,10 +35,14 @@ data class UsenetConfiguration(
     val fallbackEnabled: Boolean = false,
     val fallbackMaxAttempts: Int = 5,
     /** Blank means [NUVIO_USER_AGENT]; only a User-Agent the user chose is stored. */
-    val userAgent: String = ""
+    val searchUserAgent: String = "",
+    /** Blank means [NUVIO_USER_AGENT]; independent of the search User-Agent. */
+    val downloadUserAgent: String = ""
 ) {
-    /** Sent by indexer searches and NZB downloads, unless an addon gives its NZB its own. */
-    val agent: String get() = userAgent.trim().ifEmpty { NUVIO_USER_AGENT }
+    /** Sent by built-in indexer searches, capability checks and connection tests. */
+    val searchAgent: String get() = searchUserAgent.trim().ifEmpty { NUVIO_USER_AGENT }
+    /** Sent by NZB downloads, unless an addon supplies its own User-Agent. */
+    val downloadAgent: String get() = downloadUserAgent.trim().ifEmpty { NUVIO_USER_AGENT }
 }
 
 /** Device-local tuning; never contains provider credentials or NZB URLs. */
@@ -50,8 +54,13 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
 
     fun update(configuration: UsenetConfiguration) {
         // Saving Nuvio's own User-Agent keeps the automatic one, which follows app updates.
-        val value = configuration.copy(userAgent = configuration.userAgent.trim().takeUnless { it == NUVIO_USER_AGENT }.orEmpty())
-        require(isValidUserAgent(value.userAgent))
+        fun customAgent(agent: String) = agent.trim().takeUnless { it == NUVIO_USER_AGENT }.orEmpty()
+        val value = configuration.copy(
+            searchUserAgent = customAgent(configuration.searchUserAgent),
+            downloadUserAgent = customAgent(configuration.downloadUserAgent)
+        )
+        require(isValidUserAgent(value.searchUserAgent))
+        require(isValidUserAgent(value.downloadUserAgent))
         require(value.profile in listOf("low-memory", "balanced", "throughput"))
         require(value.readAhead in 0..512 && value.maxConnections in 0..4096)
         require(value.fallbackMaxAttempts in 1..50)
@@ -70,7 +79,9 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
             .putInt("maxConsecutiveMissing", value.maxConsecutiveMissing)
             .putBoolean("fallbackEnabled", value.fallbackEnabled)
             .putInt("fallbackMaxAttempts", value.fallbackMaxAttempts)
-            .putString("userAgent", value.userAgent).apply()
+            .putString("searchUserAgent", value.searchUserAgent)
+            .putString("downloadUserAgent", value.downloadUserAgent)
+            .remove("userAgent").apply()
         state.value = value
         UsenetSidecar.get(context).settingsChanged()
     }
@@ -79,6 +90,9 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
         fun read(context: Context): UsenetConfiguration {
             val prefs = context.getSharedPreferences("usenet_performance", Context.MODE_PRIVATE)
             val maxMissingArticles = prefs.getInt("maxMissingArticles", 5).coerceIn(1, 50)
+            // Keep the old shared override for both until the separate fields have been saved.
+            // An explicitly saved blank must stay automatic, without reviving the old override.
+            val legacyAgent = prefs.getString("userAgent", null)?.takeIf(::isValidUserAgent).orEmpty()
             return UsenetConfiguration(
                 profile = prefs.getString("profile", "balanced")?.takeIf { it in listOf("low-memory", "balanced", "throughput") } ?: "balanced",
                 readAhead = prefs.getInt("readAhead", 0).coerceIn(0, 512),
@@ -94,7 +108,8 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
                 maxConsecutiveMissing = prefs.getInt("maxConsecutiveMissing", 2).coerceIn(1, minOf(10, maxMissingArticles)),
                 fallbackEnabled = prefs.getBoolean("fallbackEnabled", false),
                 fallbackMaxAttempts = prefs.getInt("fallbackMaxAttempts", 5).coerceIn(1, 50),
-                userAgent = prefs.getString("userAgent", null)?.takeIf(::isValidUserAgent).orEmpty()
+                searchUserAgent = prefs.getString("searchUserAgent", legacyAgent)?.takeIf(::isValidUserAgent).orEmpty(),
+                downloadUserAgent = prefs.getString("downloadUserAgent", legacyAgent)?.takeIf(::isValidUserAgent).orEmpty()
             )
         }
     }

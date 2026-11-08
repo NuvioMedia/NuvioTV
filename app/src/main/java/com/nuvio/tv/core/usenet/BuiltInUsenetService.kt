@@ -50,7 +50,7 @@ class NewznabClient internal constructor(
     /** The User-Agent of the next request; settings can change it at any time. */
     private val agent: () -> String = { NUVIO_USER_AGENT }
 ) {
-    @Inject constructor(storage: NewznabStateStorage, settings: UsenetSettings) : this(storage, { settings.settings.value.agent })
+    @Inject constructor(storage: NewznabStateStorage, settings: UsenetSettings) : this(storage, { settings.settings.value.searchAgent })
 
     // API keys are in query strings: use a dedicated client without URL logging,
     // Sentry breadcrumbs or a disk response cache.

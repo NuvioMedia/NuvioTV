@@ -86,13 +86,13 @@ class UsenetSidecar private constructor(private val context: Context) {
     }
 
     /**
-     * The engine downloads the NZB with these. Without a User-Agent from the addon it sends the one
-     * indexer searches send, so a grab names the same client, never Go's default.
+     * The engine downloads the NZB with these. An addon's User-Agent takes precedence over the
+     * download setting; searches have their own independent setting.
      */
     private fun nzbHeaders(stream: Stream, configuration: UsenetConfiguration): Map<String, String> {
         val headers = stream.behaviorHints?.proxyHeaders?.request.orEmpty().toMap()
         return if (headers.keys.any { it.equals(USER_AGENT, ignoreCase = true) }) headers
-        else headers + (USER_AGENT to configuration.agent)
+        else headers + (USER_AGENT to configuration.downloadAgent)
     }
 
     /** Start immediately. Only one candidate may own a prepared session. */
