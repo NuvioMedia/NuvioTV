@@ -14,8 +14,8 @@ import java.time.temporal.ChronoUnit
  *
  * The Continue Watching row follows a run only while the run is newer than the seed it replaces, so
  * an old run cannot pull the card back to an episode the user passed long ago. The detail screen
- * uses the same rule for the play action and the episode markers: a run the user left does not
- * decide either. A missing canonical mark reads as zero, which keeps a run with no date.
+ * needs the same rule: a run the user left is not a reason to offer its next episode over the
+ * canonical position. A missing canonical mark reads as zero, which keeps a run with no date.
  */
 internal fun RewatchRunPosition.isNewerThanCanonicalWatch(canonicalLastWatchedEpochMs: Long): Boolean =
     markedAtEpochMs >= canonicalLastWatchedEpochMs

@@ -26,7 +26,6 @@ import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.ListMembershipChanges
-import com.nuvio.tv.core.tracking.RewatchRunPosition
 import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
@@ -223,70 +222,22 @@ class MetaDetailsViewModel @Inject constructor(
     /**
      * The episodes the running rewatch of the item has covered, for the marker the episode list draws.
      *
-     * The set is kept even when the run is older than the canonical watch, because the episode menu
-     * still offers the rewatch actions for it. The marker fade is a separate flag: only a run the user
-     * is actually in may fade the episodes it has not reached. An older run leaves the plain watched
-     * markers the app had before rewatches.
-     *
-     * Returns the canonical watch mark the decision used, or null when no run is open, so the
-     * play action can reuse it.
+     * Only a run's own episodes are collected; without a run the set is empty and the list draws its
+     * marker exactly as it did before rewatches existed.
      */
-    private suspend fun refreshRewatchEpisodes(
-        contentId: String?,
-        progressMap: Map<Pair<Int, Int>, WatchProgress>
-    ): Long? {
+    private fun refreshRewatchEpisodes() {
         val snapshot = simklSyncRepository.state.value.snapshot
-        val run = snapshot.rewatchRuns.firstOrNull { candidate -> candidate.matches(contentId) }
-            ?: snapshot.rewatchRuns.firstOrNull { candidate ->
-                candidate.matches(_effectiveContentId.value)
-            }
+        val run = rewatchRunFor(_uiState.value.meta?.id) ?: rewatchRunFor(_effectiveContentId.value)
         val episodes = run
             ?.let { active -> snapshot.rewatchSessions.rewatchedEpisodesOf(active.contentId) }
             .orEmpty()
-        val canonicalLatestMark = run?.let { active ->
-            latestCanonicalWatchMark(progressMap, active.markedAtEpochMs)
-        }
-        val markersActive = run != null && canonicalLatestMark != null &&
-            run.isNewerThanCanonicalWatch(canonicalLatestMark)
         _uiState.update { state ->
-            if (state.rewatchEpisodes == episodes && state.rewatchMarkersActive == markersActive) {
-                state
-            } else {
-                state.copy(
-                    rewatchEpisodes = episodes,
-                    rewatchMarkersActive = markersActive
-                )
-            }
+            if (state.rewatchEpisodes == episodes) state else state.copy(rewatchEpisodes = episodes)
         }
-        return canonicalLatestMark
-    }
-
-    /**
-     * The latest canonical watch time, for the run comparison.
-     *
-     * The progress map carries the provider history and playback rows, so its newest mark is the
-     * first answer. Only when it cannot prove the run is older does the local watched store get
-     * read, which covers the rows the provider owns history for and the progress map does not
-     * mention. Zero means no canonical watch is known, and the run keeps deciding.
-     */
-    private suspend fun latestCanonicalWatchMark(
-        progressMap: Map<Pair<Int, Int>, WatchProgress>,
-        runMark: Long
-    ): Long {
-        val latestProgressMark = progressMap.values.maxOfOrNull { progress -> progress.lastWatched } ?: 0L
-        if (latestProgressMark > runMark) return latestProgressMark
-        return maxOf(
-            latestProgressMark,
-            watchedItemsPreferences
-                .getWatchedEpisodesWithTimestamps(_effectiveContentId.value)
-                .first()
-                .values
-                .maxOrNull() ?: 0L
-        )
     }
 
     /** The rewatch run that matches a content id, if the account is in the middle of one. */
-    private fun rewatchRunFor(contentId: String?): RewatchRunPosition? =
+    private fun rewatchRunFor(contentId: String?): com.nuvio.tv.core.tracking.RewatchRunPosition? =
         simklSyncRepository.state.value.snapshot.rewatchRuns
             .firstOrNull { run -> run.matches(contentId) }
 
@@ -1972,14 +1923,8 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun calculateNextToWatch() {
-        val meta = _uiState.value.meta
-        if (meta == null) {
-            nextToWatchJob?.cancel()
-            nextToWatchJob = viewModelScope.launch {
-                refreshRewatchEpisodes(null, _uiState.value.episodeProgressMap)
-            }
-            return
-        }
+        refreshRewatchEpisodes()
+        val meta = _uiState.value.meta ?: return
         val progressMap = _uiState.value.episodeProgressMap
         val watchedEpisodes = _uiState.value.watchedEpisodes
         val isSeries = meta.apiType.equals("series", ignoreCase = true) ||
@@ -1988,20 +1933,14 @@ class MetaDetailsViewModel @Inject constructor(
         // Don't override an existing nextToWatch with a computation from empty progress data.
         // The inline computation in applyMetaWithEnrichment reads directly from the repo
         // and may have better data than the UI state observer at this point.
-        val skipNextToWatch = isSeries && progressMap.isEmpty() && watchedEpisodes.isEmpty() &&
-            _uiState.value.nextToWatch != null
+        if (isSeries && progressMap.isEmpty() && watchedEpisodes.isEmpty() && _uiState.value.nextToWatch != null) {
+            return
+        }
 
         nextToWatchJob?.cancel()
 
         nextToWatchJob = viewModelScope.launch {
-            val canonicalLatestMark = refreshRewatchEpisodes(meta.id, progressMap)
-            if (skipNextToWatch) return@launch
-            val nextToWatch = computeNextToWatch(
-                meta = meta,
-                progressMap = progressMap,
-                watchedEpisodes = watchedEpisodes,
-                knownCanonicalLatestMark = canonicalLatestMark
-            )
+            val nextToWatch = computeNextToWatch(meta, progressMap, watchedEpisodes)
             updateNextToWatch(nextToWatch)
         }
     }
@@ -2009,8 +1948,7 @@ class MetaDetailsViewModel @Inject constructor(
     private suspend fun computeNextToWatch(
         meta: Meta,
         progressMap: Map<Pair<Int, Int>, WatchProgress> = emptyMap(),
-        watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
-        knownCanonicalLatestMark: Long? = null
+        watchedEpisodes: Set<Pair<Int, Int>> = emptySet()
     ): NextToWatch {
         val isSeries = meta.apiType in listOf("series", "tv")
 
@@ -2063,10 +2001,22 @@ class MetaDetailsViewModel @Inject constructor(
         // holds no run for this series, the canonical position decides too.
         val rewatchRun = rewatchRunFor(meta.id) ?: rewatchRunFor(_effectiveContentId.value)
         if (rewatchRun != null) {
-            // The run only decides while it is newer than the canonical watch, the same rule the
-            // Continue Watching row and the episode markers use.
-            val canonicalLatestMark = knownCanonicalLatestMark
-                ?: latestCanonicalWatchMark(progressMap, rewatchRun.markedAtEpochMs)
+            // The run only decides while it is newer than the canonical watch. The Continue Watching
+            // row applies the same comparison to the seed it replaces; without it here an old run
+            // kept offering its next episode after the series had been watched further.
+            val latestProgressMark = progressMap.values.maxOfOrNull { progress -> progress.lastWatched } ?: 0L
+            val canonicalLatestMark = if (latestProgressMark > rewatchRun.markedAtEpochMs) {
+                latestProgressMark
+            } else {
+                maxOf(
+                    latestProgressMark,
+                    watchedItemsPreferences
+                        .getWatchedEpisodesWithTimestamps(_effectiveContentId.value)
+                        .first()
+                        .values
+                        .maxOrNull() ?: 0L
+                )
+            }
             val runEpisode = if (rewatchRun.isNewerThanCanonicalWatch(canonicalLatestMark)) {
                 nextEpisodeAfterRun(
                     episodes = episodePool,
@@ -2775,8 +2725,8 @@ class MetaDetailsViewModel @Inject constructor(
                     "Simkl did not find the rewatch to remove"
                 }
                 // The committed receipt dropped the episode from the running session; re-read the
-                // set so the marker state is current at once.
-                refreshRewatchEpisodes(meta.id, _uiState.value.episodeProgressMap)
+                // set so the original watch gets its faded marker back at once.
+                refreshRewatchEpisodes()
                 showMessage(localizedContext.getString(R.string.detail_episode_marked_not_rewatched))
             }.onFailure { error ->
                 showMessage(
