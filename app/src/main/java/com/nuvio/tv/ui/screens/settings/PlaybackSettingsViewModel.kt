@@ -58,6 +58,7 @@ class PlaybackSettingsViewModel @Inject constructor(
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
     val transparentLetterbox: Flow<Boolean> = deviceLocalPlayerPreferences.transparentLetterbox
     val releaseDecoderOnBackground: Flow<Boolean> = deviceLocalPlayerPreferences.releaseDecoderOnBackground
+    val keepZoomInsideScreen: Flow<Boolean> = deviceLocalPlayerPreferences.keepZoomInsideScreen
     val trailerSettings: Flow<TrailerSettings> = trailerSettingsDataStore.settings
     val torrentSettingsFlow: Flow<TorrentSettingsData> = torrentSettings.settings
     val torrentCacheState: StateFlow<TorrentCacheState> = torrentService.cacheState
@@ -197,6 +198,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setReleaseDecoderOnBackground(enabled: Boolean) {
         deviceLocalPlayerPreferences.setReleaseDecoderOnBackground(enabled)
+    }
+
+    suspend fun setKeepZoomInsideScreen(enabled: Boolean) {
+        deviceLocalPlayerPreferences.setKeepZoomInsideScreen(enabled)
     }
 
     suspend fun setSkipIntroEnabled(enabled: Boolean) {

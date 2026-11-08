@@ -51,6 +51,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 internal fun PlaybackVideoSection(
     settings: PlayerSettings,
     transparentLetterbox: Boolean,
+    keepZoomInsideScreen: Boolean,
     onUpdate: PlaybackSettingsUpdate,
     onOpenDialog: (PlaybackDialog) -> Unit
 ) {
@@ -154,6 +155,13 @@ internal fun PlaybackVideoSection(
             subtitle = stringResource(R.string.playback_true_black_letterbox_sub),
             checked = transparentLetterbox,
             onToggle = { onUpdate { setTransparentLetterbox(!transparentLetterbox) } },
+            enabled = enabled
+        )
+        SettingsToggleRow(
+            title = stringResource(R.string.playback_keep_zoom_inside_screen),
+            subtitle = stringResource(R.string.playback_keep_zoom_inside_screen_sub),
+            checked = keepZoomInsideScreen,
+            onToggle = { onUpdate { setKeepZoomInsideScreen(!keepZoomInsideScreen) } },
             enabled = enabled
         )
 

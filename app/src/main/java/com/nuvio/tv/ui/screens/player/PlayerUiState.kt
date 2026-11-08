@@ -230,6 +230,7 @@ data class PlayerUiState(
     val resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
     val aspectMode: AspectMode = AspectMode.ORIGINAL,
     val tunneledSurfaceFill: Boolean = false,
+    val keepZoomInsideScreen: Boolean = false,
     val tunnelingEnabled: Boolean = false,
     val showAspectRatioIndicator: Boolean = false,
     val aspectRatioIndicatorText: String = "",

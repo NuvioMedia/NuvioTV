@@ -731,6 +731,12 @@ class PlayerRuntimeController(
     internal var hasDetectedAssSsaTrackForCurrentStream: Boolean = false
     internal var libassPipelineDecisionStreamUrl: String? = null
 
+    @Volatile internal var keystoneZoomEffect: KeystoneZoomEffect? = null
+    internal var keystoneZoomForCurrentStream: Boolean = false
+    internal var keystoneZoomBlockedForCurrentStream: Boolean = false
+    internal var keystoneZoomSwitchInFlight: Boolean = false
+    internal var keystoneZoomStreamUrl: String? = null
+
     // Dolby Vision Profile 5 -> HDR10 (see DolbyVisionP5Session).
     internal var dolbyVisionP5Session: com.nuvio.tv.core.player.DolbyVisionP5Session? = null
     internal var dv5HdrStreamUrl: String? = null
@@ -800,6 +806,7 @@ class PlayerRuntimeController(
         observeDeviceLocalAspectMode()
         observeDeviceLocalTransparentLetterbox()
         observeDeviceLocalTunneledSurfaceFill()
+        observeDeviceLocalKeepZoomInsideScreen()
         observeDeviceLocalReleaseDecoderOnBackground()
         observePlayerStatsHud()
         observeStreamDelayTrackSelection()

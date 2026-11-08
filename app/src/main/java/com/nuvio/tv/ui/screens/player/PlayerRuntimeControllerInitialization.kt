@@ -228,7 +228,15 @@ internal fun PlayerRuntimeController.initializePlayer(
             }
             // Profile 5 -> HDR10: turns tunneling off for the stream itself once Profile 5 shows up.
             val dv5HdrSession = startDolbyVisionP5Session(url, playerSettings)
-            val tunnelingActive = playerSettings.effectiveTunnelingEnabled && !tunnelingBlockedByUsbAudio
+            val keepZoomInsideScreen = deviceLocalPlayerPreferences.keepZoomInsideScreen.first()
+            val buildWithKeystoneZoom = shouldBuildWithKeystoneZoom(
+                aspectMode = deviceLocalPlayerPreferences.aspectMode.first(),
+                keepZoomInsideScreen = keepZoomInsideScreen,
+                internalPlayerEngine = overrideInternalPlayerEngine ?: playerSettings.internalPlayerEngine
+            )
+            val tunnelingActive = playerSettings.effectiveTunnelingEnabled &&
+                !tunnelingBlockedByUsbAudio &&
+                !buildWithKeystoneZoom
             if (rememberAudioDelayPerDeviceEnabled) {
                 applyStoredAudioDelayForCurrentRouteIfEnabled()
             }
@@ -275,6 +283,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     resizeMode = playerSettings.resizeMode,
                     aspectMode = deviceAspectMode,
                     tunneledSurfaceFill = tunneledSurfaceFill,
+                    keepZoomInsideScreen = keepZoomInsideScreen,
                     playbackIssueReportsEnabled = playerSettings.playbackIssueReportsEnabled,
                     tunnelingEnabled = tunnelingActive &&
                             effectiveInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER
@@ -1096,6 +1105,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                     handler.subtitleDelayUs = subtitleDelayUs.get() + streamSubtitleDelayUs.get()
                     handler.audioDelayUs = audioDelayUs.get()
                 }
+            }
+            if (buildWithKeystoneZoom) {
+                videoEffects.add(0, createKeystoneZoomEffect())
+            } else {
+                keystoneZoomEffect = null
             }
             if (videoEffects.isNotEmpty()) {
                 _exoPlayer?.setVideoEffects(videoEffects)

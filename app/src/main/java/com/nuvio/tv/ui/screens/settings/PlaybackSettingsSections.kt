@@ -30,6 +30,7 @@ internal fun PlaybackSettingsSections(
     playerSettings: PlayerSettings,
     p2p: P2pSettingsUi,
     transparentLetterbox: Boolean,
+    keepZoomInsideScreen: Boolean,
     releaseDecoderOnBackground: Boolean,
     onUpdate: PlaybackSettingsUpdate,
     onOpenDialog: (PlaybackDialog) -> Unit,
@@ -70,6 +71,7 @@ internal fun PlaybackSettingsSections(
                         playerSettings = playerSettings,
                         p2p = p2p,
                         transparentLetterbox = transparentLetterbox,
+                        keepZoomInsideScreen = keepZoomInsideScreen,
                         releaseDecoderOnBackground = releaseDecoderOnBackground,
                         onUpdate = onUpdate,
                         onOpenDialog = onOpenDialog,
@@ -89,6 +91,7 @@ private fun PlaybackSectionContent(
     playerSettings: PlayerSettings,
     p2p: P2pSettingsUi,
     transparentLetterbox: Boolean,
+    keepZoomInsideScreen: Boolean,
     releaseDecoderOnBackground: Boolean,
     onUpdate: PlaybackSettingsUpdate,
     onOpenDialog: (PlaybackDialog) -> Unit,
@@ -103,7 +106,7 @@ private fun PlaybackSectionContent(
         PlaybackSection.PLAYER_INTERFACE -> PlaybackPlayerInterfaceSection(playerSettings, onUpdate)
         PlaybackSection.AUDIO -> PlaybackAudioSection(playerSettings, onUpdate, onOpenDialog)
         PlaybackSection.SUBTITLES -> PlaybackSubtitlesSection(playerSettings, onUpdate, onOpenDialog)
-        PlaybackSection.VIDEO -> PlaybackVideoSection(playerSettings, transparentLetterbox, onUpdate, onOpenDialog)
+        PlaybackSection.VIDEO -> PlaybackVideoSection(playerSettings, transparentLetterbox, keepZoomInsideScreen, onUpdate, onOpenDialog)
         PlaybackSection.BUFFER_NETWORK -> PlaybackBufferNetworkSection(playerSettings, onUpdate, onMemorySettingChanged)
         PlaybackSection.P2P -> PlaybackP2pSection(p2p, onUpdate, onOpenDialog, onClearTorrentCache)
     }

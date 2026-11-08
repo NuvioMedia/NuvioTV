@@ -179,6 +179,10 @@ private fun PlayerRuntimeController.attachDolbyVisionP5Renderer(session: DolbyVi
         }
         return
     }
+    if (keystoneZoomEffect != null) {
+        dropKeystoneZoomForCurrentStream()
+        return
+    }
     if (activeAssVideoEffect != null) {
         // libass already draws through Media3's video effects on this player, which would take the
         // decoder's output instead.

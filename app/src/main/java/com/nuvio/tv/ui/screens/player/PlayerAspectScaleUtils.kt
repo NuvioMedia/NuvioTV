@@ -96,6 +96,58 @@ internal fun aspectModeLabel(mode: AspectMode, getString: (Int) -> String): Stri
 
 internal data class AspectScale(val scaleX: Float, val scaleY: Float)
 
+internal fun aspectModeVideoFraction(mode: AspectMode, videoAspect: Float?, viewAspect: Float): AspectScale {
+    val safeVideoAspect = videoAspect?.takeIf { it > 0f }
+    if (viewAspect <= 0f || safeVideoAspect == null) return AspectScale(scaleX = 1f, scaleY = 1f)
+    val ratio = safeVideoAspect / viewAspect
+    val fit = if (ratio > 1f) AspectScale(scaleX = 1f, scaleY = 1f / ratio) else AspectScale(scaleX = ratio, scaleY = 1f)
+    return when (mode) {
+        AspectMode.ORIGINAL -> fit
+        AspectMode.FULL_SCREEN -> if (ratio > 1f) {
+            AspectScale(scaleX = ratio, scaleY = 1f)
+        } else {
+            AspectScale(scaleX = 1f, scaleY = 1f / ratio)
+        }
+        AspectMode.STRETCH -> AspectScale(scaleX = 1f, scaleY = 1f)
+        AspectMode.FORCE_STRETCH -> AspectScale(
+            scaleX = 1f,
+            scaleY = forceStretchVerticalScale(safeVideoAspect, viewAspect)
+        )
+        AspectMode.SLIGHT_ZOOM -> AspectScale(fit.scaleX * SLIGHT_ZOOM_SCALE, fit.scaleY * SLIGHT_ZOOM_SCALE)
+        AspectMode.CINEMA_ZOOM -> AspectScale(fit.scaleX * CINEMA_ZOOM_SCALE, fit.scaleY * CINEMA_ZOOM_SCALE)
+        AspectMode.VERTICAL_STRETCH -> AspectScale(scaleX = ratio, scaleY = 1f)
+        AspectMode.HORIZONTAL_STRETCH -> AspectScale(scaleX = 1f, scaleY = 1f / ratio)
+    }
+}
+
+private const val VIDEO_FRACTION_OVERFLOW_TOLERANCE = 1.01f
+
+internal fun AspectScale.overflowsView(): Boolean =
+    scaleX > VIDEO_FRACTION_OVERFLOW_TOLERANCE || scaleY > VIDEO_FRACTION_OVERFLOW_TOLERANCE
+
+internal fun aspectModeAlwaysOverflowsView(mode: AspectMode): Boolean {
+    return when (mode) {
+        AspectMode.FORCE_STRETCH,
+        AspectMode.SLIGHT_ZOOM,
+        AspectMode.CINEMA_ZOOM -> true
+
+        AspectMode.ORIGINAL,
+        AspectMode.FULL_SCREEN,
+        AspectMode.STRETCH,
+        AspectMode.VERTICAL_STRETCH,
+        AspectMode.HORIZONTAL_STRETCH -> false
+    }
+}
+
+internal fun centeredVideoBounds(width: Int, height: Int, fraction: AspectScale): RectF? {
+    if (width <= 0 || height <= 0) return null
+    val videoWidth = width * fraction.scaleX
+    val videoHeight = height * fraction.scaleY
+    val left = (width - videoWidth) / 2f
+    val top = (height - videoHeight) / 2f
+    return RectF(left, top, left + videoWidth, top + videoHeight)
+}
+
 /**
  * The distances from the libass overlay frame to the visible video rectangle.
  * Values are signed: a positive value is a letterbox/pillarbox bar, while a negative value

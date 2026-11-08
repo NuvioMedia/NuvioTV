@@ -132,6 +132,7 @@ class PlaybackSettingsOrganizationTest {
                         playerSettings = settings,
                         p2p = P2pSettingsUi(),
                         transparentLetterbox = false,
+                        keepZoomInsideScreen = false,
                         releaseDecoderOnBackground = false,
                         onUpdate = {},
                         onOpenDialog = {},

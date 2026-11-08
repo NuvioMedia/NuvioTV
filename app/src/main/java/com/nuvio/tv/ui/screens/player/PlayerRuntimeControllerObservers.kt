@@ -370,6 +370,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     tunnelingEnabled = settings.effectiveTunnelingEnabled &&
                             !tunnelingBlockedByUsbAudio &&
                             dolbyVisionP5Renderer == null &&
+                            keystoneZoomEffect == null &&
                             resolvedInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER,
                     persistAudioAmplification = settings.persistAudioAmplification,
                     audioAmplificationDb = resolvedAudioAmplificationDb,
@@ -1110,6 +1111,21 @@ internal fun PlayerRuntimeController.observeDeviceLocalTunneledSurfaceFill() {
                         "Tunneled surface fill restored from device-local prefs: $fill"
                     )
                     _uiState.update { it.copy(tunneledSurfaceFill = fill) }
+                }
+            }
+    }
+}
+
+internal fun PlayerRuntimeController.observeDeviceLocalKeepZoomInsideScreen() {
+    scope.launch {
+        deviceLocalPlayerPreferences.keepZoomInsideScreen
+            .distinctUntilChanged()
+            .collect { enabled ->
+                if (_uiState.value.keepZoomInsideScreen != enabled) {
+                    _uiState.update { it.copy(keepZoomInsideScreen = enabled) }
+                }
+                if (!enabled) {
+                    disableKeystoneZoomForCurrentStream()
                 }
             }
     }

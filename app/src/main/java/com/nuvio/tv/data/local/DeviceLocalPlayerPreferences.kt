@@ -26,6 +26,7 @@ import javax.inject.Singleton
  *  - playerStatsHudButtonEnabled  (whether stats overlay button is available in stream info)
  *  - playerStatsHudActive  (whether playback stats HUD is turned on by the user)
  *  - releaseDecoderOnBackground  (free the hardware decoder when the app leaves the foreground)
+ *  - keepZoomInsideScreen  (zoom ExoPlayer video on the GPU so it stays inside the screen)
  */
 @Singleton
 class DeviceLocalPlayerPreferences @Inject constructor(
@@ -45,6 +46,7 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     private val playerStatsHudButtonEnabledKey = booleanPreferencesKey("player_stats_hud_enabled")
     private val playerStatsHudActiveKey = booleanPreferencesKey("player_stats_hud_active")
     private val releaseDecoderOnBackgroundKey = booleanPreferencesKey("release_decoder_on_background")
+    private val keepZoomInsideScreenKey = booleanPreferencesKey("keep_zoom_inside_screen")
 
     val aspectMode: Flow<AspectMode> = store.data.map { prefs ->
         prefs[aspectModeKey]?.let {
@@ -121,6 +123,16 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     suspend fun setReleaseDecoderOnBackground(enabled: Boolean) {
         store.edit { prefs ->
             prefs[releaseDecoderOnBackgroundKey] = enabled
+        }
+    }
+
+    val keepZoomInsideScreen: Flow<Boolean> = store.data.map { prefs ->
+        prefs[keepZoomInsideScreenKey] ?: false
+    }
+
+    suspend fun setKeepZoomInsideScreen(enabled: Boolean) {
+        store.edit { prefs ->
+            prefs[keepZoomInsideScreenKey] = enabled
         }
     }
 }

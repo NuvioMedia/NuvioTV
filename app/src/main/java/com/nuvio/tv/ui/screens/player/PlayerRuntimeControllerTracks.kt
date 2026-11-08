@@ -326,6 +326,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         cancelFirstFrameWatchdog()
     }
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
+    if (maybeDropKeystoneZoomForTracks(tracks)) return
     maybeAdjustLibassPipelineForTracks(tracks)
     maybeEnableDolbyVisionP5Hdr()
 }

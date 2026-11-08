@@ -1266,6 +1266,7 @@ fun PlayerScreen(
                             isBuffering = uiState.isBuffering,
                             aspectMode = uiState.aspectMode,
                             tunnelingEnabled = uiState.tunnelingEnabled,
+                            keepZoomInsideScreen = uiState.keepZoomInsideScreen,
                             useLibass = uiState.useLibass,
                             libassRenderMode = uiState.libassRenderMode,
                             subtitleStyle = uiState.effectiveSubtitleStyle,
@@ -2276,6 +2277,7 @@ private fun ExoPlayerSurface(
     isBuffering: Boolean,
     aspectMode: AspectMode,
     tunnelingEnabled: Boolean,
+    keepZoomInsideScreen: Boolean,
     useLibass: Boolean,
     libassRenderMode: LibassRenderMode,
     subtitleStyle: SubtitleStyleSettings,
@@ -2287,6 +2289,7 @@ private fun ExoPlayerSurface(
     val context = LocalContext.current
     val latestAspectMode by rememberUpdatedState(aspectMode)
     val latestTunnelingEnabled by rememberUpdatedState(tunnelingEnabled)
+    val latestKeepZoomInsideScreen by rememberUpdatedState(keepZoomInsideScreen)
     val latestBindSubtitleView by rememberUpdatedState(onBindSubtitleView)
     val latestSubtitleStyle by rememberUpdatedState(subtitleStyle)
     val latestSubtitleLiftPx by rememberUpdatedState(subtitleLiftPx)
@@ -2351,7 +2354,9 @@ private fun ExoPlayerSurface(
                 playerView.post {
                     playerView.syncExoSurfaceLayout(
                         tunnelingEnabled = latestTunnelingEnabled,
-                        aspectMode = latestAspectMode
+                        aspectMode = latestAspectMode,
+                        keystoneZoomEffect = controller.keystoneZoomEffect,
+                        onNeedsKeystoneZoom = controller.keystoneZoomRequest(latestKeepZoomInsideScreen)
                     )
                 }
             }
@@ -2360,7 +2365,9 @@ private fun ExoPlayerSurface(
                 playerView.post {
                     playerView.syncExoSurfaceLayout(
                         tunnelingEnabled = latestTunnelingEnabled,
-                        aspectMode = latestAspectMode
+                        aspectMode = latestAspectMode,
+                        keystoneZoomEffect = controller.keystoneZoomEffect,
+                        onNeedsKeystoneZoom = controller.keystoneZoomRequest(latestKeepZoomInsideScreen)
                     )
                 }
             }
@@ -2377,7 +2384,9 @@ private fun ExoPlayerSurface(
         playerView.post {
             playerView.syncExoSurfaceLayout(
                 tunnelingEnabled = latestTunnelingEnabled,
-                aspectMode = latestAspectMode
+                aspectMode = latestAspectMode,
+                keystoneZoomEffect = controller.keystoneZoomEffect,
+                onNeedsKeystoneZoom = controller.keystoneZoomRequest(latestKeepZoomInsideScreen)
             )
         }
         onDispose {
@@ -2390,7 +2399,9 @@ private fun ExoPlayerSurface(
             playerView.post {
                 playerView.syncExoSurfaceLayout(
                     tunnelingEnabled = latestTunnelingEnabled,
-                    aspectMode = latestAspectMode
+                    aspectMode = latestAspectMode,
+                    keystoneZoomEffect = controller.keystoneZoomEffect,
+                    onNeedsKeystoneZoom = controller.keystoneZoomRequest(latestKeepZoomInsideScreen)
                 )
             }
         }
@@ -2407,10 +2418,12 @@ private fun ExoPlayerSurface(
         }
     }
 
-    LaunchedEffect(playerView, aspectMode, tunnelingEnabled) {
+    LaunchedEffect(playerView, aspectMode, tunnelingEnabled, keepZoomInsideScreen) {
         playerView.syncExoSurfaceLayout(
             tunnelingEnabled = tunnelingEnabled,
-            aspectMode = aspectMode
+            aspectMode = aspectMode,
+            keystoneZoomEffect = controller.keystoneZoomEffect,
+            onNeedsKeystoneZoom = controller.keystoneZoomRequest(keepZoomInsideScreen)
         )
     }
 
@@ -2448,14 +2461,38 @@ private fun PlayerView.applyExoAspectMode(mode: AspectMode) {
     applyExoAspectMode(this, mode)
 }
 
+private fun PlayerRuntimeController.keystoneZoomRequest(keepZoomInsideScreen: Boolean): (() -> Unit)? =
+    if (keepZoomInsideScreen) {
+        { requestKeystoneZoom() }
+    } else {
+        null
+    }
+
 private fun PlayerView.syncExoSurfaceLayout(
     tunnelingEnabled: Boolean,
-    aspectMode: AspectMode
+    aspectMode: AspectMode,
+    keystoneZoomEffect: KeystoneZoomEffect?,
+    onNeedsKeystoneZoom: (() -> Unit)?
 ) {
-    val surfaceLayout = exoSurfaceLayout(
-        aspectMode = aspectMode,
-        videoAspect = readExoVideoAspectRatio(this),
-        viewAspect = readViewAspectRatio(width, height)
+    val videoAspect = readExoVideoAspectRatio(this)
+    val viewAspect = readViewAspectRatio(width, height)
+    val videoFraction = aspectModeVideoFraction(aspectMode, videoAspect, viewAspect)
+    val surfaceLayout = if (keystoneZoomEffect != null) {
+        keystoneZoomEffect.setVideoFraction(videoFraction)
+        ExoSurfaceLayout(AspectRatioFrameLayout.RESIZE_MODE_FILL)
+    } else {
+        if (onNeedsKeystoneZoom != null && videoAspect != null && videoFraction.overflowsView()) {
+            onNeedsKeystoneZoom()
+        }
+        exoSurfaceLayout(
+            aspectMode = aspectMode,
+            videoAspect = videoAspect,
+            viewAspect = viewAspect
+        )
+    }
+    setTag(
+        R.id.player_view_keystone_zoom_fraction_tag,
+        if (keystoneZoomEffect != null) videoFraction else null
     )
     if (resizeMode != surfaceLayout.resizeMode) {
         resizeMode = surfaceLayout.resizeMode
@@ -2493,7 +2530,12 @@ private fun PlayerView.syncLibassOverlayGeometry() {
     val videoSize = exoPlayer?.videoSize
     val overlayWidth = overlay?.width ?: 0
     val overlayHeight = overlay?.height ?: 0
-    val videoBounds = contentFrame?.let(::transformedChildBoundsInParent)
+    val keystoneZoomFraction = getTag(R.id.player_view_keystone_zoom_fraction_tag) as? AspectScale
+    val videoBounds = if (keystoneZoomFraction != null) {
+        centeredVideoBounds(width, height, keystoneZoomFraction)
+    } else {
+        contentFrame?.let(::transformedChildBoundsInParent)
+    }
     val margins = videoBounds?.let { libassOverlayMargins(overlayWidth, overlayHeight, it) }
 
     if (assOverlayView == null || assHandler == null || margins == null) {
