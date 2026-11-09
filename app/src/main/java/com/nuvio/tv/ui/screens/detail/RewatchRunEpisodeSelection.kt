@@ -10,15 +10,30 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 /**
- * Whether the run is still the position the user is in, compared with the last canonical watch.
+ * Whether the run still decides the detail Play action.
  *
- * The Continue Watching row follows a run only while the run is newer than the seed it replaces, so
- * an old run cannot pull the card back to an episode the user passed long ago. The detail screen
- * needs the same rule: a run the user left is not a reason to offer its next episode over the
- * canonical position. A missing canonical mark reads as zero, which keeps a run with no date.
+ * The canonical watch can move past an open run when the user watches further after the run
+ * started. A local mark of the run's own next step is part of the run, not a move past it, so only
+ * a canonical episode after that step can retire the run. The date breaks the tie: a run with no
+ * date is kept, because the account gave nothing to compare against.
  */
-internal fun RewatchRunPosition.isNewerThanCanonicalWatch(canonicalLastWatchedEpochMs: Long): Boolean =
-    markedAtEpochMs >= canonicalLastWatchedEpochMs
+internal fun RewatchRunPosition.decidesPlayAction(
+    expectedNextSeason: Int?,
+    expectedNextEpisode: Int?,
+    canonicalLatestSeason: Int?,
+    canonicalLatestEpisode: Int?,
+    canonicalLatestMarkedAtEpochMs: Long,
+): Boolean {
+    val nextSeason = expectedNextSeason ?: return false
+    val nextEpisode = expectedNextEpisode ?: return false
+    val latestSeason = canonicalLatestSeason ?: return true
+    val latestEpisode = canonicalLatestEpisode ?: return true
+    val pastTheStep = latestSeason > nextSeason ||
+        (latestSeason == nextSeason && latestEpisode > nextEpisode)
+    if (!pastTheStep) return true
+    if (markedAtEpochMs <= 0L) return true
+    return markedAtEpochMs >= canonicalLatestMarkedAtEpochMs
+}
 
 /**
  * The first episode of the series that comes after the given run position and may be offered.
