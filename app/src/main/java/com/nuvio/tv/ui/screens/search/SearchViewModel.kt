@@ -98,7 +98,6 @@ class SearchViewModel @Inject constructor(
     private var hasRenderedFirstCatalog = false
     private var pendingCatalogResponses = 0
     private var lastNonEmptyQuery: String = ""
-    private var lastTransitionToEmptyTime: Long = 0L
     private var revealBatchAfterNextDiscoverFetch = false
     private var hideUnreleasedContent = false
 
@@ -265,26 +264,11 @@ class SearchViewModel @Inject constructor(
             return
         }
         
-        val now = System.currentTimeMillis()
-        val currentState = _uiState.value.query
+        // Detect if this is a recomposition artifact: transitioning to empty from the current
+        // non-empty query. This happens when focus changes and Compose recomposes the text field.
+        val isRecompositionArtifact = query.isEmpty() && query != _uiState.value.query && _uiState.value.query == lastNonEmptyQuery
         
-        // Detect recomposition artifact: the actual pattern is empty→value restoration within ~50ms
-        // When focus changes, Compose recomposes and reports empty, then immediately reports
-        // the actual stored value again. We detect this by checking if:
-        // 1. We're transitioning TO non-empty from empty (query goes from "" to "something")
-        // 2. The new non-empty value matches what was there before (lastNonEmptyQuery)
-        // 3. This restoration happens within 50ms of the empty transition
-        val isRecompositionArtifact = query.isNotEmpty() && 
-            currentState.isEmpty() && 
-            query == lastNonEmptyQuery &&
-            (now - lastTransitionToEmptyTime) < 50
-        
-        // Track when we transition to empty for recomposition detection
-        if (query.isEmpty() && currentState.isNotEmpty()) {
-            lastTransitionToEmptyTime = now
-        }
-        
-        // Track non-empty queries for recomposition detection context
+        // Track non-empty queries for recomposition detection
         if (query.isNotEmpty()) {
             lastNonEmptyQuery = query
         }
