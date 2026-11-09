@@ -179,7 +179,7 @@ internal fun List<SimklLibraryEntry>.rewatchedEpisodesOf(contentId: String): Set
     filter { entry ->
         entry.isRewatch &&
             entry.isRunningRewatchSession() &&
-            entry.media?.canonicalContentId() == contentId
+            entry.media?.canonicalContentId()?.equals(contentId, ignoreCase = true) == true
     }
         .flatMap(SimklLibraryEntry::rewatchedEpisodes)
         .map { episode -> episode.seasonNumber to episode.episodeNumber }
@@ -215,15 +215,22 @@ internal fun List<SimklLibraryEntry>.rewatchSessionHolds(
  * away from the run cannot join it.
  *
  * The episode is the one the write resolves to: anime arrives here in Simkl's flat numbering, where
- * a session without a season places the step by its number alone.
+ * a session without a season places the step by its number alone. The rule is only read where the
+ * account returned no watched episode rows at all: with rows present, an exact miss is a first
+ * watch, and a mark of a new episode must not be pulled into the run.
  */
 internal fun SimklSyncSnapshot.markContinuesRunningRewatch(
     media: TrackingMediaReference
 ): Boolean {
     val episode = media.episode ?: return false
-    val canonicalId = media.toSimklMedia().canonicalContentId()
+    val target = media.toSimklMedia()
+    val entry = entries.firstOrNull { entry -> entry.media?.matchesTarget(target) == true }
+        ?: return false
+    if (entry.seasons.any { season -> season.episodes.any { item -> item.watchedAt != null } }) {
+        return false
+    }
     val run = rewatchRuns.firstOrNull { run ->
-        run.matches(media.catalog?.contentId) || run.matches(canonicalId)
+        run.matches(media.catalog?.contentId) || run.matches(target.canonicalContentId())
     } ?: return false
     val number = episode.number
     if ((episode.season ?: 0) to number in rewatchSessions.rewatchedEpisodesOf(run.contentId)) {
@@ -232,9 +239,9 @@ internal fun SimklSyncSnapshot.markContinuesRunningRewatch(
     return when {
         run.seasonNumber == 0 -> (episode.season ?: 0) == 0 && number == run.episodeNumber + 1
         episode.season == null -> false
-        episode.season == run.seasonNumber -> number == run.episodeNumber + 1
-        episode.season == run.seasonNumber + 1 -> number == 1
-        else -> false
+        // A season boundary is not a step the run can know without the episode list: episodes after
+        // the run may still exist in the same season, so only a gap inside the season is read here.
+        else -> episode.season == run.seasonNumber && number == run.episodeNumber + 1
     }
 }
 

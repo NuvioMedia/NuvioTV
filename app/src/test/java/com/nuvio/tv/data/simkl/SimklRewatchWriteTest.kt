@@ -391,4 +391,41 @@ class SimklRewatchWriteTest {
         assertNull(movieItem["rewatch_id"])
     }
 
+    @Test
+    fun `a mixed show batch is written as first watches and names no run`() {
+        val body = buildSimklHistoryMutationBody(
+            listOf(
+                TrackingHistoryItem(show(episode = TrackingEpisode(season = 2, number = 6)), WATCHED_AT)
+                    .copy(isRewatch = true, rewatchId = 21284L),
+                TrackingHistoryItem(show(episode = TrackingEpisode(season = 2, number = 7)), WATCHED_AT)
+            )
+        ).asObject()
+
+        val showItem = body.getValue("shows").jsonArray.single().jsonObject
+        // One show entry can carry one flag. The account already holds the repeat, while the plain
+        // add of a first watch is the one that would be lost, so the batch travels as first watches.
+        assertNull(showItem["is_rewatch"])
+        assertNull(showItem["rewatch_id"])
+        val numbers = showItem.getValue("seasons").jsonArray.single().jsonObject
+            .getValue("episodes").jsonArray
+            .map { episode -> episode.jsonObject.getValue("number").jsonPrimitive.content.toInt() }
+        assertEquals(listOf(6, 7), numbers)
+    }
+
+    @Test
+    fun `a batch where every episode is a repeat keeps the flag and its run`() {
+        val body = buildSimklHistoryMutationBody(
+            listOf(
+                TrackingHistoryItem(show(episode = TrackingEpisode(season = 2, number = 6)), WATCHED_AT)
+                    .copy(isRewatch = true, rewatchId = 21284L),
+                TrackingHistoryItem(show(episode = TrackingEpisode(season = 2, number = 7)), WATCHED_AT)
+                    .copy(isRewatch = true, rewatchId = 21284L)
+            )
+        ).asObject()
+
+        val showItem = body.getValue("shows").jsonArray.single().jsonObject
+        assertTrue(showItem.getValue("is_rewatch").jsonPrimitive.content.toBoolean())
+        assertEquals(21284, showItem.getValue("rewatch_id").jsonPrimitive.content.toInt())
+    }
+
 }

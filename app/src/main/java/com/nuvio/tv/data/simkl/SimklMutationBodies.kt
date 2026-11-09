@@ -159,12 +159,18 @@ private fun buildShowHistoryItem(
 ): SimklHistoryItemDto {
     val first = items.first()
     val parentMutation = items.lastOrNull { item -> item.media.episode == null }
-    // The session the write belongs to is carried by the item, not by the episode: Simkl documents it
-    // as a field of the movie or show entry, and so is the flag. An item that is a repeat viewing marks
-    // itself, and a caller that marks the whole request marks every item of it.
-    val mutation = parentMutation ?: first
-    val rewatchId = mutation.rewatchId
-    val isRewatch = mutation.isRewatch || requestRewatch
+    // The session the write belongs to is carried by the show entry, not by the episode: Simkl
+    // documents it as a field of the movie or show entry, and so is the flag. One show entry can
+    // carry only one answer, so a batch that mixes a repeat with a first watch travels as first
+    // watches: the account already holds the repeats, while a plain add of one is dropped, and a
+    // rewatch of a genuinely new episode would join the run.
+    val isRewatch = requestRewatch || items.all(TrackingHistoryItem::isRewatch)
+    // Only a group that agrees on its session may name one. A removal says `isRewatch = false` but
+    // still needs its id, which is why the id is not tied to the flag.
+    val rewatchId = items.mapNotNull(TrackingHistoryItem::rewatchId)
+        .distinct()
+        .singleOrNull()
+        ?.takeIf { isRewatch || !includeWatchedAt }
     if (parentMutation != null) {
         return parentMutation.media.toHistoryItemDto(
             watchedAtEpochMs = parentMutation.watchedAtEpochMs.takeIf { includeWatchedAt },

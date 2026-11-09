@@ -75,12 +75,22 @@ class SimklTrackingHistoryWriter @Inject constructor(
                 item.copy(media = enriched, isRewatch = false, rewatchId = null)
             }
         }
-        val result = service.addToHistory(resolved)
+        // One show entry can carry only one flag, and a batch that mixes a repeat with a first watch
+        // is sent as first watches by the body. Make the same choice here, so the read-back only
+        // starts for a write that really was a rewatch.
+        val writes = resolved.groupBy { item -> item.media.stableKey }.values.flatMap { group ->
+            if (group.all(TrackingHistoryItem::isRewatch) || group.none(TrackingHistoryItem::isRewatch)) {
+                group
+            } else {
+                group.map { item -> item.copy(isRewatch = false, rewatchId = null) }
+            }
+        }
+        val result = service.addToHistory(writes)
         // The run this mark opened or extended is not in the snapshot until a read sees it. The
         // history write updates the canonical entry but not the rewatch session sidecar, so the
         // Continue Watching row would keep the old run position until a sync. Read the sessions
         // back and adopt them, the same way a confirmed rewatch does.
-        val targetItem = resolved.firstOrNull { item -> item.isRewatch }
+        val targetItem = writes.firstOrNull { item -> item.isRewatch }
         val target = targetItem?.media
         // The running session is found by its id, so its own canonical id is used for the read
         // back. A flat anime session can resolve to a different id form than the catalogue item.

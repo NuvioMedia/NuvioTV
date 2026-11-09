@@ -440,12 +440,15 @@ private fun SimklSyncSnapshot.summaryPriorWatchForMark(
         return SimklPriorWatch.None
     }
     val target = media.episode ?: return SimklPriorWatch.None
+    // A special sits outside the numbered watch position, so the summary cannot place it.
+    val targetSeason = target.season
+    if (targetSeason != null && targetSeason <= 0) return SimklPriorWatch.None
     val targetNumber = target.number
     val next = parseSummaryEpisode(entry.nextToWatch)
     val last = parseSummaryEpisode(entry.lastWatched)
     val watched = when {
-        next != null -> compareEpisode(target.season, targetNumber, next)?.let { it < 0 } == true
-        last != null -> compareEpisode(target.season, targetNumber, last)?.let { it <= 0 } == true
+        next != null -> compareEpisode(targetSeason, targetNumber, next)?.let { it < 0 } == true
+        last != null -> compareEpisode(targetSeason, targetNumber, last)?.let { it <= 0 } == true
         else -> false
     }
     if (!watched) return SimklPriorWatch.None

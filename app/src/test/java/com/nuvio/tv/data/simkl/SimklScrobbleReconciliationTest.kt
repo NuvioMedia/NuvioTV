@@ -576,6 +576,8 @@ class SimklScrobbleReconciliationTest {
         // The next episode and anything after it are first watches.
         assertFalse(snapshot.priorWatchForMark(mark(2, 7), mark(2, 7)).wasWatched)
         assertFalse(snapshot.priorWatchForMark(mark(3, 1), mark(3, 1)).wasWatched)
+        // A special is outside the numbered watch position, so the summary cannot place it.
+        assertFalse(snapshot.priorWatchForMark(mark(0, 1), mark(0, 1)).wasWatched)
     }
 
     @Test

@@ -211,6 +211,8 @@ class SimklRewatchRunsTest {
         val contentId = rows.firstNotNullOf { row -> row.media?.canonicalContentId() }
 
         assertEquals(setOf(2 to 6, 2 to 7), rows.rewatchedEpisodesOf(contentId))
+        // An id form that differs only in case is the same item.
+        assertEquals(setOf(2 to 6, 2 to 7), rows.rewatchedEpisodesOf(contentId.uppercase()))
         // Another item has nothing of its own here.
         assertTrue(rows.rewatchedEpisodesOf("imdb:tt0000000").isEmpty())
     }
@@ -292,19 +294,33 @@ class SimklRewatchRunsTest {
         // The run position is the only history here: the episode rows the exact lookup reads are
         // missing, and the mark of the next step still has to travel as the rewatch it is.
         assertTrue(snapshot.markContinuesRunningRewatch(showEpisode(season = 2, episode = 8)))
-        assertTrue(snapshot.markContinuesRunningRewatch(showEpisode(season = 3, episode = 1)))
         // An episode the session already holds is a repeat too.
         assertTrue(snapshot.markContinuesRunningRewatch(showEpisode(season = 2, episode = 7)))
 
         // A jump away from the run is not its step and stays a first watch.
         assertFalse(snapshot.markContinuesRunningRewatch(showEpisode(season = 2, episode = 9)))
         assertFalse(snapshot.markContinuesRunningRewatch(showEpisode(season = 1, episode = 8)))
+        // A season boundary may hide more episodes of the old season, so it is not guessed.
+        assertFalse(snapshot.markContinuesRunningRewatch(showEpisode(season = 3, episode = 1)))
         // Another item has no run here.
         assertFalse(
             snapshot.markContinuesRunningRewatch(
                 showEpisode(imdb = "tt0000001", season = 2, episode = 8)
             )
         )
+    }
+
+    @Test
+    fun `a mark of the run step stays a first watch when the account has episode rows`() {
+        val session = rewatchRow(listOf(Marked(season = 2, episode = 7)), isRewatch = true)
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(session.copy(isRewatch = false, rewatchId = null, rewatchStatus = null)),
+            rewatchSessions = listOf(session),
+            rewatchRuns = deriveSimklRewatchRuns(entries = listOf(session), offerRuns = true),
+        )
+
+        // The rows say the next episode is not watched; the run position does not overrule them.
+        assertFalse(snapshot.markContinuesRunningRewatch(showEpisode(season = 2, episode = 8)))
     }
 
     @Test
@@ -493,9 +509,14 @@ class SimklRewatchRunsTest {
     private fun snapshotWithRun(vararg marked: Marked): SimklSyncSnapshot =
         snapshotOf(listOf(rewatchRow(marked.toList(), isRewatch = true)))
 
-    /** A snapshot holding these session rows, with the runs the account reader would derive. */
+    /**
+     * A snapshot holding these session rows, with the runs the account reader would derive. The
+     * canonical rows are left without episode history, which is the shape this rule is read for.
+     */
     private fun snapshotOf(sessions: List<SimklLibraryEntry>): SimklSyncSnapshot = SimklSyncSnapshot(
-        entries = sessions,
+        entries = sessions.map { session ->
+            session.copy(isRewatch = false, rewatchId = null, rewatchStatus = null, seasons = emptyList())
+        },
         rewatchSessions = sessions,
         rewatchRuns = deriveSimklRewatchRuns(entries = sessions, offerRuns = true),
     )
