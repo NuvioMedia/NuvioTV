@@ -191,8 +191,12 @@ private class DolbyVisionExtractor(
     private val stripHdr10PlusSei: Boolean = false
 ) : Extractor {
 
+    private var wrappedOutput: DolbyVisionExtractorOutput? = null
+
     override fun init(output: ExtractorOutput) {
-        delegate.init(DolbyVisionExtractorOutput(output, config, nalFormat, stripDvRpu, stripHdr10PlusSei))
+        val wrapped = DolbyVisionExtractorOutput(output, config, nalFormat, stripDvRpu, stripHdr10PlusSei)
+        wrappedOutput = wrapped
+        delegate.init(wrapped)
     }
 
     @Throws(IOException::class)
@@ -202,7 +206,11 @@ private class DolbyVisionExtractor(
     override fun read(input: ExtractorInput, seekPosition: PositionHolder): Int =
         delegate.read(input, seekPosition)
 
-    override fun seek(position: Long, timeUs: Long) = delegate.seek(position, timeUs)
+    override fun seek(position: Long, timeUs: Long) {
+        // Drop any half-buffered sample so stale bytes never leak into the first frame after a seek.
+        wrappedOutput?.resetTracks()
+        delegate.seek(position, timeUs)
+    }
 
     override fun release() = delegate.release()
 
@@ -219,6 +227,12 @@ private class DolbyVisionExtractorOutput(
     private val stripHdr10PlusSei: Boolean = false
 ) : ExtractorOutput {
 
+    private val videoTracks = mutableMapOf<Int, NativeOptimizedVideoTrackOutput>()
+
+    fun resetTracks() {
+        videoTracks.values.forEach { it.reset() }
+    }
+
     override fun track(id: Int, type: Int): TrackOutput {
         val track = delegate.track(id, type)
         return if (type == C.TRACK_TYPE_VIDEO) {
@@ -228,7 +242,7 @@ private class DolbyVisionExtractorOutput(
                 nalFormat = nalFormat,
                 stripDvRpu = stripDvRpu,
                 stripHdr10PlusSei = stripHdr10PlusSei
-            )
+            ).also { videoTracks[id] = it }
         } else {
             track
         }
@@ -254,10 +268,30 @@ private class NativeOptimizedVideoTrackOutput(
     private val scratch = ParsableByteArray()
 
     private var converting = false
+
+    // False until format() has been called. Some extractors (TsExtractor's H265Reader) push sample
+    // bytes BEFORE format(), so we must buffer those instead of passing them through, otherwise the
+    // first keyframe gets split between the pass-through and the processed path.
+    private var formatDecided = false
     private var shouldProcess = false
+    private var rewriteSamples = false
+    private var shouldStripDovi = false
+    private var shouldStripHdr10Plus = false
     private var profile: Int? = null
     private var codecs: String? = null
     private var nalLengthFieldLength = 4
+
+    private var preFormatPassthrough = false
+
+    // Bytes buffered before format() lives outside DefaultAllocator, so cap it: past this
+    // size we stop buffering and pass bytes through untouched (a split first frame is
+    // better than unbounded off-heap memory LoadControl cannot see).
+    private val buffering: Boolean get() = (!formatDecided && !preFormatPassthrough) || shouldProcess
+
+    /** Discards buffered, not-yet-committed sample bytes (called on seek). */
+    fun reset() {
+        pendingLen = 0
+    }
 
     private fun ensurePendingCapacity(extra: Int) {
         val need = pendingLen + extra
@@ -274,6 +308,16 @@ private class NativeOptimizedVideoTrackOutput(
             while (newSize < size) newSize = newSize shl 1
             inputScratch = ByteArray(newSize)
         }
+    }
+
+    /** Forwards [count] bytes from the start of the pending buffer untouched and removes them. */
+    private fun flushPending(count: Int) {
+        val n = count.coerceIn(0, pendingLen)
+        if (n == 0) return
+        scratch.reset(pendingBuf, n)
+        delegate.sampleData(scratch, n)
+        System.arraycopy(pendingBuf, n, pendingBuf, 0, pendingLen - n)
+        pendingLen -= n
     }
 
     override fun durationUs(durationUs: Long) = delegate.durationUs(durationUs)
@@ -294,12 +338,23 @@ private class NativeOptimizedVideoTrackOutput(
             outFormat = outFormat.buildUpon().setSampleMimeType(MimeTypes.VIDEO_H265).build()
         }
 
-        val rewriteSamples = converting && !(profile == 5 && !config.convertDv5Rpu)
-        val shouldStripDovi = stripDvRpu && strippedCodecs != null && strippedCodecs != format.codecs
-        
-        shouldProcess = rewriteSamples || shouldStripDovi || stripHdr10PlusSei
+        val hevcLike = isHevcLike(format, outFormat)
+        rewriteSamples = converting && !(profile == 5 && !config.convertDv5Rpu)
+        // DV strip applies to any HEVC track carrying in-band RPU/EL NALs (TS has no DV
+        // codec signaling, so it never produces a codecs rewrite but still needs the drop).
+        shouldStripDovi = stripDvRpu && hevcLike
+        // HDR10+ SEI only exists in HEVC. Running the HEVC NAL parser over H.264 (or any other
+        // codec, including AVC-based Dolby Vision profile 9) mis-reads NAL headers and
+        // drops/corrupts slices, which shows up as macroblocking.
+        shouldStripHdr10Plus = stripHdr10PlusSei && hevcLike
+
+        shouldProcess = rewriteSamples || shouldStripDovi || shouldStripHdr10Plus
+        formatDecided = true
         codecs = outFormat.codecs
         delegate.format(outFormat)
+
+        // Bytes that arrived before format() on a track we do not touch go straight through.
+        if (!shouldProcess) flushPending(pendingLen)
     }
 
     @Throws(IOException::class)
@@ -309,7 +364,7 @@ private class NativeOptimizedVideoTrackOutput(
         allowEndOfInput: Boolean,
         sampleDataPart: Int
     ): Int {
-        if (!shouldProcess) return delegate.sampleData(input, length, allowEndOfInput, sampleDataPart)
+        if (!buffering) return delegate.sampleData(input, length, allowEndOfInput, sampleDataPart)
         ensureInputScratch(length)
         val read = input.read(inputScratch, 0, length)
         if (read == C.RESULT_END_OF_INPUT) {
@@ -318,6 +373,13 @@ private class NativeOptimizedVideoTrackOutput(
         }
         if (read <= 0) return read
         if (sampleDataPart == TrackOutput.SAMPLE_DATA_PART_MAIN) {
+            if (!formatDecided && pendingLen + read > MAX_PRE_FORMAT_BUFFER_BYTES) {
+                flushPending(pendingLen)
+                preFormatPassthrough = true
+                scratch.reset(inputScratch, read)
+                delegate.sampleData(scratch, read, sampleDataPart)
+                return read
+            }
             ensurePendingCapacity(read)
             System.arraycopy(inputScratch, 0, pendingBuf, pendingLen, read)
             pendingLen += read
@@ -333,7 +395,13 @@ private class NativeOptimizedVideoTrackOutput(
         length: Int,
         sampleDataPart: Int
     ) {
-        if (!shouldProcess || sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN || length <= 0) {
+        if (!buffering || sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN || length <= 0) {
+            delegate.sampleData(data, length, sampleDataPart)
+            return
+        }
+        if (!formatDecided && pendingLen + length > MAX_PRE_FORMAT_BUFFER_BYTES) {
+            flushPending(pendingLen)
+            preFormatPassthrough = true
             delegate.sampleData(data, length, sampleDataPart)
             return
         }
@@ -349,15 +417,26 @@ private class NativeOptimizedVideoTrackOutput(
         offset: Int,
         cryptoData: TrackOutput.CryptoData?
     ) {
-        if (!shouldProcess || pendingLen == 0) {
+        if (!shouldProcess) {
+            // Includes the "metadata before format()" case: nothing to rewrite, release the buffer.
+            flushPending(pendingLen)
+            delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
+            return
+        }
+        if (pendingLen == 0) {
             delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
             return
         }
 
+        // The sample is the `size` bytes that end `offset` bytes before the end of the buffer.
         val carrySize = offset.coerceIn(0, pendingLen)
+        val sampleEndAbs = pendingLen - carrySize
+        val sampleStartAbs = (sampleEndAbs - size).coerceAtLeast(0)
+        // Anything before the sample start is not part of the sample; forward it unchanged.
+        flushPending(sampleStartAbs)
         val sampleEnd = pendingLen - carrySize
 
-        val mode = if (converting) config.conversionMode(profile) else 1
+        val mode = if (rewriteSamples) config.conversionMode(profile) else 1
         val formatVal = if (nalFormat == NalFormat.LENGTH_DELIMITED) 1 else 0
 
         // Process in native C++ layer
@@ -366,11 +445,11 @@ private class NativeOptimizedVideoTrackOutput(
             sampleLen = sampleEnd,
             nalFormat = formatVal,
             nalLengthFieldLength = nalLengthFieldLength,
-            convertDovi = converting,
+            convertDovi = rewriteSamples,
             doviMode = mode,
             doviProfile = profile ?: -1,
-            stripDoviRpu = stripDvRpu,
-            stripHdr10Plus = stripHdr10PlusSei
+            stripDoviRpu = shouldStripDovi,
+            stripHdr10Plus = shouldStripHdr10Plus
         )
 
         val useRewritten = written > 0
@@ -388,6 +467,19 @@ private class NativeOptimizedVideoTrackOutput(
     }
 
     private companion object {
+        const val MAX_PRE_FORMAT_BUFFER_BYTES = 8 * 1024 * 1024
+
+        fun isHevcLike(vararg formats: Format): Boolean = formats.any { f ->
+            // The codec string is authoritative: AVC-based Dolby Vision (dvav/dva1,
+            // profile 9) reports VIDEO_DOLBY_VISION mime but carries an H.264 bitstream.
+            val c = f.codecs?.trim()?.lowercase()
+            if (!c.isNullOrEmpty()) {
+                return@any c.startsWith("hev1") || c.startsWith("hvc1") ||
+                    c.startsWith("dvhe") || c.startsWith("dvh1")
+            }
+            f.sampleMimeType == MimeTypes.VIDEO_H265
+        }
+
         fun parseDvProfile(codecs: String?): Int? {
             if (codecs.isNullOrBlank()) return null
             val m = Regex("^(?:dvhe|dvav|dvh1|dva1)\\.(\\d+)\\.")
