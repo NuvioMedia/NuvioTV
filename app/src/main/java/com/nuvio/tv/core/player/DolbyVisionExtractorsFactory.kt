@@ -81,7 +81,7 @@ internal class DolbyVisionExtractorsFactory(
         return DolbyVisionExtractor(extractor, config, nalFormat, stripDvRpu, stripHdr10PlusSei)
     }
 
-    private fun nalFormatFor(extractor: Extractor): NalFormat? {
+    internal fun nalFormatFor(extractor: Extractor): NalFormat? {
         val name = extractor.javaClass.name
         return when {
             // Media3's Mp4Extractor / FragmentedMp4Extractor rewrite NAL length prefixes into
@@ -95,7 +95,7 @@ internal class DolbyVisionExtractorsFactory(
         }
     }
 
-    private companion object {
+    internal companion object {
         const val STOCK_MATROSKA_EXTRACTOR = "androidx.media3.extractor.mkv.MatroskaExtractor"
     }
 }
@@ -257,7 +257,7 @@ private class DolbyVisionExtractorOutput(
 }
 
 @UnstableApi
-private class NativeOptimizedVideoTrackOutput(
+internal class NativeOptimizedVideoTrackOutput(
     private val delegate: TrackOutput,
     private val config: DolbyVisionConversionConfig,
     private val nalFormat: NalFormat,
@@ -469,7 +469,7 @@ private class NativeOptimizedVideoTrackOutput(
         pendingLen = carrySize
     }
 
-    private companion object {
+    internal companion object {
         const val MAX_PRE_FORMAT_BUFFER_BYTES = 8 * 1024 * 1024
 
         fun isHevcLike(vararg formats: Format): Boolean = formats.any { f ->
