@@ -312,9 +312,12 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
             },
             watchProgressRepository.watchedItems.map { it.size },
             cwPipelineRefreshTrigger,
-            simklSyncRepository.state
-                .map { state -> state.snapshot.rewatchRuns }
-                .distinctUntilChanged()
+            combine(
+                simklSyncRepository.state.map { state -> state.snapshot.rewatchRuns },
+                cwOptimisticRewatchRuns
+            ) { accountRuns, optimisticRuns ->
+                mergeOptimisticRewatchRuns(accountRuns, optimisticRuns)
+            }.distinctUntilChanged()
         ) { progressSnapshot, settingsSnapshot, watchedItemsSize, _, rewatchRuns ->
             val (items, nextUpSeeds, hasLoadedRemoteProgress) = progressSnapshot
             @Suppress("UNCHECKED_CAST")

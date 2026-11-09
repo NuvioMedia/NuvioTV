@@ -213,6 +213,34 @@ class RewatchRunNextUpSeedsTest {
         assertSame(dismissed, withoutLiveRewatchDismissals(dismissed, emptyList()))
     }
 
+    @Test
+    fun `an optimistic run replaces the account run for the same item`() {
+        val account = run(contentId = SHOW, season = 3, episode = 4, markedAt = 1_000L)
+        val optimistic = run(contentId = SHOW, season = 3, episode = 5, markedAt = 2_000L)
+
+        val merged = mergeOptimisticRewatchRuns(listOf(account), mapOf(SHOW to optimistic))
+
+        assertEquals(listOf(optimistic), merged)
+    }
+
+    @Test
+    fun `an optimistic run for an item the account does not hold is added`() {
+        val other = run(contentId = OTHER_SHOW, season = 1, episode = 2, markedAt = 1_000L)
+        val optimistic = run(contentId = SHOW, season = 3, episode = 5, markedAt = 2_000L)
+
+        val merged = mergeOptimisticRewatchRuns(listOf(other), mapOf(SHOW to optimistic))
+
+        assertEquals(setOf(SHOW, OTHER_SHOW), merged.map { run -> run.contentId }.toSet())
+        assertEquals(optimistic, merged.first())
+    }
+
+    @Test
+    fun `no optimistic run leaves the account list alone`() {
+        val account = run(contentId = SHOW, season = 3, episode = 4, markedAt = 1_000L)
+
+        assertEquals(listOf(account), mergeOptimisticRewatchRuns(listOf(account), emptyMap()))
+    }
+
     private fun seed(
         contentId: String,
         season: Int,

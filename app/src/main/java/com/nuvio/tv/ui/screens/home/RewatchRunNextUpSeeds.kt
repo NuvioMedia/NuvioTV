@@ -53,6 +53,25 @@ internal fun applyRewatchRunPositions(
     return (withRunPositions + added).sortedByDescending { seed -> seed.lastWatched }
 }
 
+/**
+ * Replaces the account runs with the optimistic ones a Continue Watching mark just advanced.
+ *
+ * The optimistic entry is keyed by the run's own content id, which is what the row matches. It is
+ * kept until the account read reports the same or a later episode, so a stale read cannot pull the
+ * row back below the mark the user just made.
+ */
+internal fun mergeOptimisticRewatchRuns(
+    accountRuns: List<RewatchRunPosition>,
+    optimisticRuns: Map<String, RewatchRunPosition>
+): List<RewatchRunPosition> {
+    if (optimisticRuns.isEmpty()) return accountRuns
+    val accountIds = accountRuns.mapTo(mutableSetOf()) { run -> run.contentId }
+    return (
+        accountRuns.map { run -> optimisticRuns[run.contentId] ?: run } +
+            optimisticRuns.values.filter { run -> run.contentId !in accountIds }
+        ).sortedByDescending { run -> run.markedAtEpochMs }
+}
+
 /** A completed seed standing at the run position, with the mark that makes the run the newer one. */
 private fun RewatchRunPosition.toNextUpSeed(): WatchProgress = WatchProgress(
     contentId = contentId,

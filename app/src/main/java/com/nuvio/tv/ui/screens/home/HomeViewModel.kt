@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.recommendations.TvRecommendationManager
+import com.nuvio.tv.core.tracking.RewatchRunPosition
 import com.nuvio.tv.core.tmdb.MetaPreviewEnricher
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
@@ -56,6 +57,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -298,6 +300,13 @@ class HomeViewModel @Inject constructor(
     internal val cwProcessedOlderSeedContentIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     /** Running rewatch cards whose close write is still in flight. */
     internal val cwPendingRewatchCloseContentIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /**
+     * Runs advanced locally by a Continue Watching mark, kept over the account read until the read
+     * reports the same or a later episode. The classic mark is held by the provider's optimistic
+     * progress; a rewatch has no such provider row, so the run itself is advanced here.
+     */
+    internal val cwOptimisticRewatchRuns = MutableStateFlow<Map<String, RewatchRunPosition>>(emptyMap())
     internal val cwEnrichedNextUpOverlay = ConcurrentHashMap<String, NextUpInfo>()
     /** In-memory cache of enriched InProgress items per contentId+episode key. */
     internal val cwEnrichedInProgressOverlay = ConcurrentHashMap<String, ContinueWatchingItem.InProgress>()
@@ -414,6 +423,7 @@ class HomeViewModel @Inject constructor(
                     cwLastBadgeEpisodeKeys = emptySet()
                     cwLastShowIdSiblings = emptyMap()
                     cwPendingRewatchCloseContentIds.clear()
+                    cwOptimisticRewatchRuns.value = emptyMap()
                     _uiState.update {
                         it.copy(layoutPreferencesReady = false, continueWatchingItems = emptyList())
                     }
@@ -844,10 +854,78 @@ class HomeViewModel @Inject constructor(
 
     private fun markContinueWatchingWatched(item: ContinueWatchingItem) {
         if (!item.canMarkWatched()) return
+        val optimisticRun = optimisticRewatchRunFor(item)
+        if (optimisticRun != null) {
+            cwOptimisticRewatchRuns.update { runs -> runs + (optimisticRun.contentId to optimisticRun) }
+            viewModelScope.launch {
+                withTimeoutOrNull(30_000) {
+                    simklSyncRepository.state.first { state ->
+                        state.snapshot.rewatchRuns.any { run ->
+                            run.matches(optimisticRun.contentId) &&
+                                run.seasonNumber == optimisticRun.seasonNumber &&
+                                run.episodeNumber >= optimisticRun.episodeNumber
+                        }
+                    }
+                }
+                cwOptimisticRewatchRuns.update { runs ->
+                    if (runs[optimisticRun.contentId] == optimisticRun) {
+                        runs - optimisticRun.contentId
+                    } else {
+                        runs
+                    }
+                }
+            }
+        }
         viewModelScope.launch {
             runCatching { watchProgressRepository.markAsCompleted(item.toCompletedProgress()) }
                 .onFailure { error -> Log.w(TAG, "Failed to mark continue watching item as watched", error) }
         }
+    }
+
+    /**
+     * The run position a Continue Watching mark asks for, before the account read sees it.
+     *
+     * Only the card the run itself offered may advance the run. The classic mark is held by the
+     * provider's optimistic progress until the account catches up; a rewatch has no such provider
+     * row, so the run is advanced here by the same rule the mark follows. A flat anime session has
+     * no season, so its next step is the next number.
+     */
+    private fun optimisticRewatchRunFor(item: ContinueWatchingItem): RewatchRunPosition? {
+        val contentId = when (item) {
+            is ContinueWatchingItem.NextUp -> item.info.contentId
+            is ContinueWatchingItem.InProgress -> item.progress.contentId
+        }
+        val accountRun = simklSyncRepository.state.value.snapshot.rewatchRuns
+            .firstOrNull { candidate -> candidate.matches(contentId) } ?: return null
+        val run = cwOptimisticRewatchRuns.value[accountRun.contentId]
+            ?.takeIf { optimistic -> optimistic.episodeNumber >= accountRun.episodeNumber }
+            ?: accountRun
+        val markedSeason: Int?
+        val markedEpisode: Int?
+        when (item) {
+            is ContinueWatchingItem.NextUp -> {
+                if (item.info.seedSeason != run.seasonNumber || item.info.seedEpisode != run.episodeNumber) {
+                    return null
+                }
+                markedSeason = item.info.season
+                markedEpisode = item.info.episode
+            }
+            is ContinueWatchingItem.InProgress -> {
+                markedSeason = item.progress.season
+                markedEpisode = item.progress.episode
+                if (markedSeason == null || markedEpisode == null) return null
+                if (markedSeason != run.seasonNumber) return null
+                if (markedEpisode != run.episodeNumber && markedEpisode != run.episodeNumber + 1) return null
+            }
+        }
+        val nextEpisode = markedEpisode ?: return null
+        val advancedSeason = if (run.seasonNumber == 0) 0 else markedSeason ?: run.seasonNumber
+        val advancedEpisode = if (run.seasonNumber == 0) run.episodeNumber + 1 else nextEpisode
+        return run.copy(
+            seasonNumber = advancedSeason,
+            episodeNumber = advancedEpisode,
+            markedAtEpochMs = System.currentTimeMillis()
+        )
     }
 
     private fun observeCollections() = observeCollectionsPipeline()
