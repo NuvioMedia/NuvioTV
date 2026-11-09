@@ -1207,6 +1207,7 @@
     <string name="layout_preset_balanced">Balanced</string>
     <string name="layout_preset_comfort">Comfort</string>
     <string name="layout_preset_large">Large</string>
+    <string name="layout_preset_extra_large">Extra Large</string>
     <string name="layout_memory_only_scroll">Memory-Only Vertical Scroll</string>
     <string name="layout_memory_only_scroll_sub">Skip loading new images while scrolling vertically.</string>
     <string name="layout_preset_sharp">Sharp</string>
