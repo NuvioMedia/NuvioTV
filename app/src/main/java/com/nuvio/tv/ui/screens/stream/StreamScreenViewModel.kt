@@ -292,6 +292,15 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            // Links kept by earlier versions still hold their indexer's API key: take it out.
+            runCatching {
+                val sources = usenetSourceSettings.read()
+                if (sources.indexers.isNotEmpty()) streamLinkCacheDataStore.rewriteNzbUrls {
+                    com.nuvio.tv.core.usenet.BuiltInUsenetService.withoutApiKeys(it, sources)
+                }
+            }
+        }
         viewModelScope.launch {
             // A release tried while this list is shown is labelled: moved to the end when it failed for good.
             val unplayable = com.nuvio.tv.core.usenet.UnplayableReleases.get(context)

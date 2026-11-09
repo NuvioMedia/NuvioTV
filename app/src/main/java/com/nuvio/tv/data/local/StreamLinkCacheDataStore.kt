@@ -43,6 +43,7 @@ class StreamLinkCacheDataStore @Inject constructor(
 ) {
     companion object {
         private const val FEATURE = "stream_link_cache"
+        private const val PREF_PREFIX = "stream_link_"
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -170,10 +171,32 @@ class StreamLinkCacheDataStore @Inject constructor(
         return parsed
     }
 
+    /**
+     * Rewrites the release links kept by earlier versions with [withoutKeys], which takes the
+     * indexer API keys out of a link. Entries it leaves unchanged are not written again.
+     */
+    suspend fun rewriteNzbUrls(withoutKeys: (String) -> String) {
+        val changed = store().data.first().asMap().mapNotNull { (key, value) ->
+            val raw = (value as? String)?.takeIf { key.name.startsWith(PREF_PREFIX) && it.contains("\"nzbUrl\"") }
+                ?: return@mapNotNull null
+            runCatching {
+                val json = JSONObject(raw)
+                val kept = json.optString("nzbUrl", "").takeIf { it.isNotBlank() } ?: return@runCatching null
+                val rewritten = withoutKeys(kept)
+                if (rewritten == kept) null else kotlin.Pair(stringPreferencesKey(key.name), json.put("nzbUrl", rewritten).toString())
+            }.getOrNull()
+        }
+        if (changed.isEmpty()) return
+        store().edit { prefs ->
+            // Only entries still as they were read: one saved meanwhile is already without its key.
+            changed.forEach { (key, value) -> if (prefs[key] != null) prefs[key] = value }
+        }
+    }
+
     private fun cachePrefKey(contentKey: String): Preferences.Key<String> {
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(contentKey.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
-        return stringPreferencesKey("stream_link_$digest")
+        return stringPreferencesKey("$PREF_PREFIX$digest")
     }
 }
