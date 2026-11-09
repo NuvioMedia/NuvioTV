@@ -1,6 +1,5 @@
 package com.nuvio.tv.core.player
 
-import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import java.io.ByteArrayOutputStream
 
@@ -83,50 +82,6 @@ internal object HevcHdr10PlusStripper {
                 out.write(sample, nalStart, nalSize)
             }
             pos = nalStart + nalSize
-        }
-        return if (changed) out.toByteArray() else null
-    }
-
-    /**
-     * Rewrites an Annex-B (TS/raw HEVC) sample, removing HDR10+ SEI messages.
-     * Returns the rewritten bytes, or null if nothing was stripped.
-     */
-    fun stripHdr10PlusAnnexB(sample: ByteArray, sampleLen: Int): ByteArray? {
-        val out = ByteArrayOutputStream(sampleLen)
-        var scan = 0
-        var changed = false
-        while (scan < sampleLen) {
-            val startCode = findStartCode(sample, scan, sampleLen)
-            if (startCode < 0) {
-                out.write(sample, scan, sampleLen - scan)
-                break
-            }
-            val scLen = startCodeLength(sample, startCode, sampleLen)
-            val nalBegin = startCode + scLen
-            val nextStartCode = findStartCode(sample, nalBegin + 2, sampleLen)
-            val nalEnd = if (nextStartCode < 0) sampleLen else nextStartCode
-
-            if (startCode > scan) out.write(sample, scan, startCode - scan)
-
-            if (nalBegin < nalEnd) {
-                val nalSize = nalEnd - nalBegin
-                val nalType = (sample[nalBegin].toInt() ushr 1) and 0x3F
-                if (nalType == NAL_TYPE_PREFIX_SEI || nalType == NAL_TYPE_SUFFIX_SEI) {
-                    val filtered = filterSeiNal(sample, nalBegin, nalSize)
-                    when {
-                        filtered == null -> out.write(sample, startCode, nalEnd - startCode)
-                        filtered.isNotEmpty() -> {
-                            changed = true
-                            out.write(sample, startCode, scLen)
-                            out.write(filtered)
-                        }
-                        else -> changed = true // entire NAL was HDR10+; drop it
-                    }
-                } else {
-                    out.write(sample, startCode, nalEnd - startCode)
-                }
-            }
-            scan = nalEnd
         }
         return if (changed) out.toByteArray() else null
     }
@@ -254,18 +209,6 @@ internal object HevcHdr10PlusStripper {
         return true
     }
 
-    private fun findStartCode(data: ByteArray, from: Int, limit: Int): Int {
-        var i = from
-        while (i + 2 < limit) {
-            if (data[i].toInt() == 0 && data[i + 1].toInt() == 0) {
-                if (data[i + 2].toInt() == 1) return i
-                if (i + 3 < limit && data[i + 2].toInt() == 0 && data[i + 3].toInt() == 1) return i
-            }
-            i++
-        }
-        return -1
-    }
-
     private fun matchesSignature(data: ByteArray, offset: Int, sig: ByteArray): Boolean {
         if (offset + sig.size > data.size) return false
         for (i in sig.indices) {
@@ -274,10 +217,4 @@ internal object HevcHdr10PlusStripper {
         return true
     }
 
-    private fun startCodeLength(data: ByteArray, offset: Int, limit: Int): Int {
-        return if (offset + 3 < limit &&
-            data[offset].toInt() == 0 && data[offset + 1].toInt() == 0 &&
-            data[offset + 2].toInt() == 0 && data[offset + 3].toInt() == 1
-        ) 4 else 3
-    }
 }

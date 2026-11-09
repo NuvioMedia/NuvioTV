@@ -1,7 +1,6 @@
 package com.nuvio.tv.core.player
 
 import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -33,12 +32,12 @@ class HevcHdr10PlusStripperTest {
 
     @Test
     fun keepsOtherSeiMessagesAndIgnoresTrailingPadding() {
-        // user_data_unregistered-ish message (type 5, size 1) + HDR10+ + 0x80 + zero padding
+        // user_data_unregistered-ish message (type 5, size 1) + HDR10+ + 0x80 + multiple zero paddings
         val mixed = b(
             0x4E, 0x01,
             0x05, 0x01, 0x11,
             0x04, 0x06, 0xB5, 0x00, 0x3C, 0x00, 0x01, 0x04,
-            0x80, 0x00
+            0x80, 0x00, 0x00, 0x00
         )
         val sample = lengthDelimited(mixed, slice)
         val out = HevcHdr10PlusStripper.stripHdr10PlusLengthDelimited(sample, sample.size, 4)!!
@@ -57,6 +56,29 @@ class HevcHdr10PlusStripperTest {
         // 4-byte length 0x000001xx contains 00 00 01; the old fallback treated it as a start code.
         val sample = b(0x00, 0x00, 0x01, 0x4E, 0x01, 0x04, 0x06, 0xB5, 0x00, 0x3C, 0x00, 0x01, 0x04, 0x80)
         assertNull(HevcHdr10PlusStripper.stripHdr10PlusLengthDelimited(sample, sample.size, 4))
-        assertEquals(14, sample.size)
+    }
+
+    @Test
+    fun unterminatedPayloadTypeReturnsNull() {
+        // NAL header (2 bytes) + payloadType ending in 0xFF without terminating byte (< 0xFF)
+        val unterminatedType = b(0x4E, 0x01, 0xFF, 0xFF)
+        val sample = lengthDelimited(unterminatedType, slice)
+        assertNull(HevcHdr10PlusStripper.stripHdr10PlusLengthDelimited(sample, sample.size, 4))
+    }
+
+    @Test
+    fun unterminatedPayloadSizeReturnsNull() {
+        // NAL header + payloadType 4 + payloadSize ending in 0xFF without terminator
+        val unterminatedSize = b(0x4E, 0x01, 0x04, 0xFF, 0xFF)
+        val sample = lengthDelimited(unterminatedSize, slice)
+        assertNull(HevcHdr10PlusStripper.stripHdr10PlusLengthDelimited(sample, sample.size, 4))
+    }
+
+    @Test
+    fun payloadSizeExceedingRbspReturnsNull() {
+        // payloadSize = 50, but only 3 bytes remain in RBSP
+        val overflowSize = b(0x4E, 0x01, 0x04, 0x32, 0xB5, 0x00, 0x3C)
+        val sample = lengthDelimited(overflowSize, slice)
+        assertNull(HevcHdr10PlusStripper.stripHdr10PlusLengthDelimited(sample, sample.size, 4))
     }
 }
