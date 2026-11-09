@@ -9,30 +9,40 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
+/** What the detail Play action does with an open run. */
+internal enum class RewatchPlayAction {
+    KEEP,
+    ADVANCE,
+    REJECT,
+}
+
 /**
- * Whether the run still decides the detail Play action.
+ * What the detail Play action does with an open run, read from the latest completed mark.
  *
- * The canonical watch can move past an open run when the user watches further after the run
- * started. A local mark of the run's own next step is part of the run, not a move past it, so only
- * a canonical episode after that step can retire the run. The date breaks the tie: a run with no
- * date is kept, because the account gave nothing to compare against.
+ * The latest completed canonical mark is the last viewing the user made. When it is newer than the
+ * run and sits on the run's own next step, the run advances to that step: the local mark is the
+ * rewatch the user just made, and Play must offer the episode after it. A mark past that step is a
+ * watch that moved beyond the run, so the run stops deciding. A mark inside the run, an older mark,
+ * or a run with no date leaves the run in place.
  */
-internal fun RewatchRunPosition.decidesPlayAction(
+internal fun RewatchRunPosition.playActionFor(
     expectedNextSeason: Int?,
     expectedNextEpisode: Int?,
-    canonicalLatestSeason: Int?,
-    canonicalLatestEpisode: Int?,
-    canonicalLatestMarkedAtEpochMs: Long,
-): Boolean {
-    val nextSeason = expectedNextSeason ?: return false
-    val nextEpisode = expectedNextEpisode ?: return false
-    val latestSeason = canonicalLatestSeason ?: return true
-    val latestEpisode = canonicalLatestEpisode ?: return true
-    val pastTheStep = latestSeason > nextSeason ||
-        (latestSeason == nextSeason && latestEpisode > nextEpisode)
-    if (!pastTheStep) return true
-    if (markedAtEpochMs <= 0L) return true
-    return markedAtEpochMs >= canonicalLatestMarkedAtEpochMs
+    latestMarkSeason: Int?,
+    latestMarkEpisode: Int?,
+    latestMarkedAtEpochMs: Long,
+): RewatchPlayAction {
+    val nextSeason = expectedNextSeason ?: return RewatchPlayAction.REJECT
+    val nextEpisode = expectedNextEpisode ?: return RewatchPlayAction.REJECT
+    val markSeason = latestMarkSeason ?: return RewatchPlayAction.KEEP
+    val markEpisode = latestMarkEpisode ?: return RewatchPlayAction.KEEP
+    if (markedAtEpochMs <= 0L) return RewatchPlayAction.KEEP
+    if (latestMarkedAtEpochMs <= markedAtEpochMs) return RewatchPlayAction.KEEP
+    val pastTheStep = markSeason > nextSeason ||
+        (markSeason == nextSeason && markEpisode > nextEpisode)
+    if (pastTheStep) return RewatchPlayAction.REJECT
+    val onTheStep = markSeason == nextSeason && markEpisode == nextEpisode
+    return if (onTheStep) RewatchPlayAction.ADVANCE else RewatchPlayAction.KEEP
 }
 
 /**

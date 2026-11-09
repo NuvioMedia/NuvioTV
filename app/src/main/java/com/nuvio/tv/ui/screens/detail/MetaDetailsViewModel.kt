@@ -1946,23 +1946,30 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     /**
-     * The latest episode the canonical watch has reached, by position, or null when there is none.
+     * The last completed canonical mark, by time, or null when there is none.
      *
-     * Progress rows carry the timestamps and the watched set covers batch marks that have not reached
-     * the progress map yet, so both are read. The position, not the timestamp, is what tells a watch
-     * that moved past an open run from a repeat inside it.
+     * A mark inside the run and a mark past it both carry the time of the viewing, so the newest mark
+     * is what tells the run where the user is now. The local watched items cover batch marks that
+     * have not reached the progress map yet, and the progress map covers playback marks.
      */
-    private fun latestCanonicalEpisode(
+    private suspend fun latestCompletedCanonicalMark(
         progressMap: Map<Pair<Int, Int>, WatchProgress>,
-        watchedEpisodes: Set<Pair<Int, Int>>,
-    ): Pair<Int, Int>? = (
-        progressMap.values
-            .filter { progress -> progress.isCompleted() || shouldResumeProgress(progress) }
-            .mapNotNull { progress ->
-                progress.season?.let { season -> progress.episode?.let { episode -> season to episode } }
-            } +
-            watchedEpisodes
-        ).maxWithOrNull(compareBy({ it.first }, { it.second }))
+    ): Triple<Int, Int, Long>? {
+        val marks = buildMap<Pair<Int, Int>, Long> {
+            watchedItemsPreferences.getWatchedEpisodesWithTimestamps(_effectiveContentId.value)
+                .first()
+                .forEach { (position, watchedAt) -> put(position, watchedAt) }
+            progressMap.values.forEach { progress ->
+                val season = progress.season ?: return@forEach
+                val episode = progress.episode ?: return@forEach
+                if (!progress.isCompleted()) return@forEach
+                val position = season to episode
+                put(position, maxOf(get(position) ?: 0L, progress.lastWatched))
+            }
+        }
+        val latest = marks.maxByOrNull { (_, watchedAt) -> watchedAt } ?: return null
+        return Triple(latest.key.first, latest.key.second, latest.value)
+    }
 
     private suspend fun computeNextToWatch(
         meta: Meta,
@@ -2014,33 +2021,39 @@ class MetaDetailsViewModel @Inject constructor(
         val episodePool = if (nonSpecialEpisodes.isNotEmpty()) nonSpecialEpisodes else allEpisodes
 
         // A rewatch run the user is following decides where Play goes while the canonical watch has
-        // not moved past the run's next step. A local mark of that step is part of the run, so it
-        // does not retire the run; an episode the user watched further after the run does. When the
+        // not moved past the run's next step. A local mark of that step is part of the run and moves
+        // it forward, while an episode the user watched further after the run retires it. When the
         // run has no episode after it, or the account holds no run for this series, the canonical
         // position decides exactly as it does without a run.
         val rewatchRun = rewatchRunFor(meta.id) ?: rewatchRunFor(_effectiveContentId.value)
         if (rewatchRun != null) {
-            val runEpisode = nextEpisodeAfterRun(
+            val showUnairedNextUp = layoutPreferenceDataStore.showUnairedNextUp.first()
+            val expectedNext = nextEpisodeAfterRun(
                 episodes = episodePool,
                 run = rewatchRun,
-                showUnairedNextUp = layoutPreferenceDataStore.showUnairedNextUp.first(),
+                showUnairedNextUp = showUnairedNextUp,
             )
-            val canonicalLatest = latestCanonicalEpisode(progressMap, watchedEpisodes)
-            val canonicalLatestMark = canonicalLatest?.let { (season, episode) ->
-                progressMap[season to episode]?.lastWatched
-                    ?: watchedItemsPreferences
-                        .getWatchedEpisodesWithTimestamps(_effectiveContentId.value)
-                        .first()[season to episode]
-                    ?: 0L
-            } ?: 0L
-            val runDecides = runEpisode != null && rewatchRun.decidesPlayAction(
-                expectedNextSeason = runEpisode.season,
-                expectedNextEpisode = runEpisode.episode,
-                canonicalLatestSeason = canonicalLatest?.first,
-                canonicalLatestEpisode = canonicalLatest?.second,
-                canonicalLatestMarkedAtEpochMs = canonicalLatestMark,
+            val latestMark = latestCompletedCanonicalMark(progressMap)
+            val action = rewatchRun.playActionFor(
+                expectedNextSeason = expectedNext?.season,
+                expectedNextEpisode = expectedNext?.episode,
+                latestMarkSeason = latestMark?.first,
+                latestMarkEpisode = latestMark?.second,
+                latestMarkedAtEpochMs = latestMark?.third ?: 0L,
             )
-            if (runEpisode != null && runDecides) {
+            val runEpisode = when (action) {
+                RewatchPlayAction.KEEP -> expectedNext
+                RewatchPlayAction.ADVANCE -> expectedNext?.let { next ->
+                    val advancedRun = rewatchRun.copy(
+                        seasonNumber = next.season ?: rewatchRun.seasonNumber,
+                        episodeNumber = next.episode ?: rewatchRun.episodeNumber,
+                        markedAtEpochMs = latestMark?.third ?: rewatchRun.markedAtEpochMs,
+                    )
+                    nextEpisodeAfterRun(episodePool, advancedRun, showUnairedNextUp)
+                }
+                RewatchPlayAction.REJECT -> null
+            }
+            if (runEpisode != null) {
                 // Starting the run's next episode does not throw away the position the user already
                 // reached in it: the player resumes from there, and the button says so.
                 val runProgress = runEpisode.season?.let { season ->

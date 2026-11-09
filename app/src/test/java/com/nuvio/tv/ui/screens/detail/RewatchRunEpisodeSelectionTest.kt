@@ -262,79 +262,113 @@ class RewatchRunEpisodeSelectionTest {
     }
 
     @Test
-    fun `a canonical episode past the run step retires the run when it is newer`() {
-        assertFalse(
-            run(season = 1, episode = 7).decidesPlayAction(
+    fun `a mark of the run step advances the run`() {
+        assertEquals(
+            RewatchPlayAction.ADVANCE,
+            run(season = 1, episode = 7).playActionFor(
                 expectedNextSeason = 1,
                 expectedNextEpisode = 8,
-                canonicalLatestSeason = 1,
-                canonicalLatestEpisode = 9,
-                canonicalLatestMarkedAtEpochMs = 2_000L,
+                latestMarkSeason = 1,
+                latestMarkEpisode = 8,
+                latestMarkedAtEpochMs = 2_000L,
+            )
+        )
+    }
+
+    @Test
+    fun `a canonical episode past the run step retires the run when it is newer`() {
+        assertEquals(
+            RewatchPlayAction.REJECT,
+            run(season = 1, episode = 7).playActionFor(
+                expectedNextSeason = 1,
+                expectedNextEpisode = 8,
+                latestMarkSeason = 1,
+                latestMarkEpisode = 9,
+                latestMarkedAtEpochMs = 2_000L,
             )
         )
     }
 
     @Test
     fun `the original watch past the run step does not retire it`() {
-        assertTrue(
-            run(season = 1, episode = 7).decidesPlayAction(
+        assertEquals(
+            RewatchPlayAction.KEEP,
+            run(season = 1, episode = 7).playActionFor(
                 expectedNextSeason = 1,
                 expectedNextEpisode = 8,
-                canonicalLatestSeason = 1,
-                canonicalLatestEpisode = 10,
-                canonicalLatestMarkedAtEpochMs = 500L,
+                latestMarkSeason = 1,
+                latestMarkEpisode = 10,
+                latestMarkedAtEpochMs = 500L,
             )
         )
     }
 
     @Test
-    fun `a mark of the run step does not retire the run`() {
-        assertTrue(
-            run(season = 1, episode = 7).decidesPlayAction(
+    fun `a mark behind the run step keeps the run`() {
+        assertEquals(
+            RewatchPlayAction.KEEP,
+            run(season = 1, episode = 7).playActionFor(
                 expectedNextSeason = 1,
                 expectedNextEpisode = 8,
-                canonicalLatestSeason = 1,
-                canonicalLatestEpisode = 8,
-                canonicalLatestMarkedAtEpochMs = 2_000L,
+                latestMarkSeason = 1,
+                latestMarkEpisode = 5,
+                latestMarkedAtEpochMs = 2_000L,
             )
         )
     }
 
     @Test
-    fun `a run with no date is kept past the step`() {
-        assertTrue(
-            run(season = 1, episode = 7, markedAtEpochMs = 0L).decidesPlayAction(
+    fun `an older mark does not move the run`() {
+        assertEquals(
+            RewatchPlayAction.KEEP,
+            run(season = 1, episode = 7).playActionFor(
                 expectedNextSeason = 1,
                 expectedNextEpisode = 8,
-                canonicalLatestSeason = 1,
-                canonicalLatestEpisode = 10,
-                canonicalLatestMarkedAtEpochMs = 2_000L,
+                latestMarkSeason = 1,
+                latestMarkEpisode = 9,
+                latestMarkedAtEpochMs = 500L,
+            )
+        )
+    }
+
+    @Test
+    fun `a run with no date is kept`() {
+        assertEquals(
+            RewatchPlayAction.KEEP,
+            run(season = 1, episode = 7, markedAtEpochMs = 0L).playActionFor(
+                expectedNextSeason = 1,
+                expectedNextEpisode = 8,
+                latestMarkSeason = 1,
+                latestMarkEpisode = 10,
+                latestMarkedAtEpochMs = 2_000L,
             )
         )
     }
 
     @Test
     fun `a run without a next step does not decide`() {
-        assertFalse(
-            run(season = 1, episode = 7).decidesPlayAction(
+        assertEquals(
+            RewatchPlayAction.REJECT,
+            run(season = 1, episode = 7).playActionFor(
                 expectedNextSeason = null,
                 expectedNextEpisode = null,
-                canonicalLatestSeason = 1,
-                canonicalLatestEpisode = 10,
-                canonicalLatestMarkedAtEpochMs = 2_000L,
+                latestMarkSeason = 1,
+                latestMarkEpisode = 10,
+                latestMarkedAtEpochMs = 2_000L,
             )
         )
     }
 
     @Test
     fun `a run with no canonical mark decides`() {
-        assertTrue(
-            run(season = 1, episode = 7).decidesPlayAction(
+        assertEquals(
+            RewatchPlayAction.KEEP,
+            run(season = 1, episode = 7).playActionFor(
                 expectedNextSeason = 1,
                 expectedNextEpisode = 8,
-                canonicalLatestSeason = null,
-                canonicalLatestEpisode = null,
-                canonicalLatestMarkedAtEpochMs = 0L,
+                latestMarkSeason = null,
+                latestMarkEpisode = null,
+                latestMarkedAtEpochMs = 0L,
             )
         )
     }
