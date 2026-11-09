@@ -878,6 +878,23 @@ open class MainActivity : ComponentActivity() {
                         ambientIdleController.onInteraction()
                     }
 
+                    // The player and home are routes inside this activity, so leaving the
+                    // player or returning home never reaches onResume. Ask for the same
+                    // throttled watch state pull a foreground return gets.
+                    LaunchedEffect(navController) {
+                        var previousRoute: String? = null
+                        navController.currentBackStackEntryFlow.collect { entry ->
+                            val route = entry.destination.route
+                            if (route == previousRoute) return@collect
+                            val leftPlayer = previousRoute == Screen.Player.route
+                            val returnedHome = previousRoute != null && route == Screen.Home.route
+                            if (leftPlayer || returnedHome) {
+                                startupSyncService.requestNavigationSync()
+                            }
+                            previousRoute = route
+                        }
+                    }
+
                     // Auto-play next episode for EXTERNAL players: the tracker resolves the
                     // next episode and we navigate into the same Screen.Stream auto-play route
                     // the internal onPlaybackEnded path uses. Collected from the root composable

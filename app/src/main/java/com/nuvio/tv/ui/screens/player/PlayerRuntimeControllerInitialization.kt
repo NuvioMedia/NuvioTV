@@ -2307,7 +2307,8 @@ private class SubtitleOffsetRenderersFactory(
                     .setAudioCapabilities(AudioOutputRouteDetector.bluetoothPcmOnlyCapabilities())
             }
             forceOpticalPassthrough -> {
-                DefaultAudioSink.Builder(context)
+                @Suppress("DEPRECATION")
+                DefaultAudioSink.Builder()
                     .setAudioCapabilities(buildStableAudioCapabilities(context, true))
             }
             else -> DefaultAudioSink.Builder(context)
