@@ -1097,31 +1097,31 @@ private fun EpisodeCard(
             if (showCompletedBadge) {
                 Row(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
+                        .align(Alignment.TopEnd)
                         .padding(
-                            start = cardMetrics.statusBadgeInset,
+                            end = cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
                         ),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (showRewatchBadge) {
+                        RewatchMarker(size = cardMetrics.statusBadgeSize)
+                    }
                     WatchedMarker(
                         size = cardMetrics.statusBadgeSize,
                         iconSize = cardMetrics.statusIconSize
                     )
-                    if (showRewatchBadge) {
-                        RewatchMarker(size = cardMetrics.statusBadgeSize)
-                    }
                 }
             }
 
             if (isUnavailable) {
                 Box(
                     modifier = Modifier
-                        .align(if (showCompletedBadge) Alignment.TopEnd else Alignment.TopStart)
+                        .align(if (showCompletedBadge) Alignment.TopStart else Alignment.TopEnd)
                         .padding(
-                            start = if (showCompletedBadge) 0.dp else cardMetrics.statusBadgeInset,
-                            end = if (showCompletedBadge) cardMetrics.statusBadgeInset else 0.dp,
+                            start = if (showCompletedBadge) cardMetrics.statusBadgeInset else 0.dp,
+                            end = if (showCompletedBadge) 0.dp else cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
                         )
                         .background(
