@@ -42,7 +42,7 @@ import com.nuvio.tv.ui.screens.player.formatTime
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-private val PreviewWidth = 160.dp
+private val PreviewWidth = 320.dp
 private val PreviewShape = RoundedCornerShape(10.dp)
 private const val DefaultAspectRatio = 16f / 9f
 private const val SeekPreviewLingerMs = 3_000L
