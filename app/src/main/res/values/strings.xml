@@ -500,7 +500,7 @@
     <string name="tracking_simkl_anime_id_kitsu">Prefer Kitsu</string>
     <string name="tracking_simkl_anime_id_tvdb">Prefer TVDB</string>
     <string name="settings_tracking_completion_title">Watched threshold</string>
-    <string name="settings_tracking_completion_subtitle">Progress at which a title\'s playback is finished and marked as watched. Fallback when no outro timestamp exists.</string>
+    <string name="settings_tracking_completion_subtitle">Playback percentage required to mark a title as watched. End-credits markers take priority when available.</string>
     <string name="settings_tracking_completion_value">%1$s%%</string>
     <string name="settings_tracking_rewatch_title">Track rewatches</string>
     <string name="settings_tracking_rewatch_subtitle">Log repeat viewings of titles finished over 2 days ago and track active rewatch runs in Continue Watching.</string>

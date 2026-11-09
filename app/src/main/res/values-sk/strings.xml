@@ -2873,7 +2873,7 @@
 <string name="tracking_simkl_anime_id_mal">Uprednostniť MyAnimeList</string>
 <string name="tracking_simkl_anime_id_kitsu">Uprednostniť Kitsu</string>
 <string name="settings_tracking_completion_title">Hranica pozretia</string>
-<string name="settings_tracking_completion_subtitle">Podiel, pri ktorom sa prehratie titulu považuje za dokončené a označí sa ako pozreté. Záloha, keď neexistuje časová pečiatka outro.</string>
+<string name="settings_tracking_completion_subtitle">Percento prehratia potrebné na označenie titulu ako pozretého. Ak sú dostupné značky záverečných titulkov, majú prednosť.</string>
 <string name="settings_tracking_completion_value">%1$s %%</string>
 <string name="settings_tracking_rewatch_title">Sledovať opakované pozretia</string>
 <string name="settings_tracking_rewatch_subtitle">Zaznamenávať opakované pozretia titulov dokončených pred viac ako 2 dňami a sledovať aktívne behy opakovaného pozretia v Continue Watching.</string>
