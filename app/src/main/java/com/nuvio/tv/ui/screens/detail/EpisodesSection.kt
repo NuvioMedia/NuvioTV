@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -97,6 +96,7 @@ import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.LightweightCard
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.RewatchMarker
 import com.nuvio.tv.ui.components.WatchedMarker
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.domain.model.CardDepthSurface
@@ -553,7 +553,6 @@ fun EpisodesRow(
                 imdbRating = imdbRating,
                 isMarkedWatched = isMarkedWatched,
                 isMarkedRewatched = isMarkedRewatched,
-                rewatchInProgress = rewatchedEpisodes.isNotEmpty(),
                 blurUnwatched = blurUnwatchedEpisodes,
                 suppressMarquee = isOverlayOpen,
                 cardMetrics = cardMetrics,
@@ -655,16 +654,6 @@ fun EpisodesRow(
     }
 }
 
-/**
- * How solid the watched marker is on an episode a rewatch in progress has not reached yet.
- *
- * A value rather than a number in the drawing code, so the look can be tuned without touching the
- * layout: the marker is the same one the app has always drawn, only faded while a run owns the
- * meaning of a full one. The fade has to be deep enough to read as "not this run's yet" next to a
- * solid marker on a TV at viewing distance, which 0.45 did not.
- */
-private const val REWATCH_PENDING_MARKER_ALPHA = 0.35f
-
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun EpisodeCard(
@@ -673,7 +662,6 @@ private fun EpisodeCard(
     imdbRating: Double? = null,
     isMarkedWatched: Boolean = false,
     isMarkedRewatched: Boolean = false,
-    rewatchInProgress: Boolean = false,
     blurUnwatched: Boolean = false,
     suppressMarquee: Boolean = false,
     cardMetrics: EpisodeCardMetrics,
@@ -704,16 +692,9 @@ private fun EpisodeCard(
     val progressPercent = remember(watchProgress) { watchProgress?.progressPercentage ?: 0f }
     val showProgress = remember(watchProgress) { watchProgress?.isInProgress() == true }
     val showCompletedBadge = isWatched
-    /*
-     * A run in progress is what gives the marker two meanings: solid marks an episode the run has
-     * already rewatched, and half marks one the account watched before the run and the run has not
-     * reached yet. Without a run every watched episode keeps the solid marker it always had.
-     */
-    val rewatchMarkerAlpha = if (rewatchInProgress && isWatched && !isMarkedRewatched) {
-        REWATCH_PENDING_MARKER_ALPHA
-    } else {
-        1f
-    }
+    // The check marks any watched episode. The R beside it is the rewatch marker and only appears
+    // when the running session has covered this exact episode.
+    val showRewatchBadge = showCompletedBadge && isMarkedRewatched
     val showNotStartedBadge = !showCompletedBadge && !showProgress
     val isUnavailable = remember(episode.available) { episode.available == false }
     val cardBgColor = NuvioTheme.colors.BackgroundCard
@@ -1114,26 +1095,33 @@ private fun EpisodeCard(
             }
 
             if (showCompletedBadge) {
-                WatchedMarker(
+                Row(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .alpha(rewatchMarkerAlpha)
+                        .align(Alignment.TopStart)
                         .padding(
-                            end = cardMetrics.statusBadgeInset,
+                            start = cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
                         ),
-                    size = cardMetrics.statusBadgeSize,
-                    iconSize = cardMetrics.statusIconSize
-                )
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    WatchedMarker(
+                        size = cardMetrics.statusBadgeSize,
+                        iconSize = cardMetrics.statusIconSize
+                    )
+                    if (showRewatchBadge) {
+                        RewatchMarker(size = cardMetrics.statusBadgeSize)
+                    }
+                }
             }
 
             if (isUnavailable) {
                 Box(
                     modifier = Modifier
-                        .align(if (showCompletedBadge) Alignment.TopStart else Alignment.TopEnd)
+                        .align(if (showCompletedBadge) Alignment.TopEnd else Alignment.TopStart)
                         .padding(
-                            start = if (showCompletedBadge) cardMetrics.statusBadgeInset else 0.dp,
-                            end = if (showCompletedBadge) 0.dp else cardMetrics.statusBadgeInset,
+                            start = if (showCompletedBadge) 0.dp else cardMetrics.statusBadgeInset,
+                            end = if (showCompletedBadge) cardMetrics.statusBadgeInset else 0.dp,
                             top = cardMetrics.statusBadgeInset
                         )
                         .background(
