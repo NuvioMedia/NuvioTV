@@ -84,10 +84,13 @@ internal class DolbyVisionExtractorsFactory(
     private fun nalFormatFor(extractor: Extractor): NalFormat? {
         val name = extractor.javaClass.name
         return when {
+            // Media3's Mp4Extractor / FragmentedMp4Extractor rewrite NAL length prefixes into
+            // 4-byte Annex-B start codes before calling TrackOutput, and TsExtractor carries
+            // Annex-B PES payloads, so all wrapped containers deliver Annex-B samples.
             // RPU is in-band in the sample for these containers, so reachable here.
-            name.contains("FragmentedMp4Extractor") -> NalFormat.LENGTH_DELIMITED
-            name.contains("Mp4Extractor") -> NalFormat.LENGTH_DELIMITED
-            name.contains("TsExtractor") -> NalFormat.ANNEX_B
+            name.contains("FragmentedMp4Extractor") ||
+                name.contains("Mp4Extractor") ||
+                name.contains("TsExtractor") -> NalFormat.ANNEX_B
             else -> null
         }
     }

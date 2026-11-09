@@ -486,7 +486,12 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
     bool changed = false;
     outputBuffer.clear();
 
-    if (nalFormat == 1) { // Length-Delimited
+    // All wrapped extractors (Mp4/FragmentedMp4/Ts) deliver Annex-B samples to
+    // TrackOutput; nalFormat==1 (length-delimited) is kept for completeness but
+    // treated strictly: malformed length prefixes abort with 0, never reinterpreted.
+    bool annexB = (nalFormat != 1);
+
+    if (!annexB) { // Length-Delimited
         int pos = 0;
         while (pos + nalLengthFieldLength <= sampleLen) {
             int nalSize = 0;
@@ -494,8 +499,8 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                 nalSize = (nalSize << 8) | (sampleBuffer[pos + i] & 0xFF);
             }
             int nalStart = pos + nalLengthFieldLength;
-            if (nalSize <= 0 || nalStart + nalSize > sampleLen) {
-                return 0; // abort processing, format malformed
+            if (nalSize <= 0 || nalSize > sampleLen - nalStart) {
+                return 0; // malformed length-delimited data
             }
 
             uint8_t nalHeader = sampleBuffer[nalStart];
