@@ -38,7 +38,7 @@ internal object HevcDvRpuStripper {
                 nalSize = (nalSize shl 8) or (sample[pos + i].toInt() and 0xFF)
             }
             val nalStart = pos + nalLengthFieldLength
-            if (nalSize <= 0 || nalStart + nalSize > sampleLen) return false
+            if (nalSize <= 0 || nalSize > sampleLen - nalStart) return false
             val nalHeader = sample[nalStart].toInt()
             val nalType = (nalHeader ushr 1) and 0x3F
             val layerId =
@@ -51,7 +51,7 @@ internal object HevcDvRpuStripper {
             val isRpu = nalType == NAL_TYPE_DV_RPU
             val isEnhancementLayer =
                 layerId > 0
-            val shouldDrop = isRpu || isEnhancementLayer
+            val shouldDrop = isRpu || nalType == NAL_TYPE_DV_EL || isEnhancementLayer
             if (shouldDrop) {
                 changed = true
             } else {

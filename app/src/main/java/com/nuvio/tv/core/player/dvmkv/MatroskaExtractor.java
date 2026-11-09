@@ -140,11 +140,15 @@ public class MatroskaExtractor implements Extractor {
      * @param blockAdditionalData Block additional payload bytes.
      * @param blockAddIdType Dolby Vision BlockAddIdType ({@code dvcc}/{@code dvvc}).
      * @param dolbyVisionConfigBytes Track-level Dolby Vision config bytes, if available.
+     * @param codecs Source codec string of the track this data belongs to.
      * @return Payload to retain for the associated sample, or null to keep original data.
      */
     @Nullable
     default byte[] onDolbyVisionBlockAdditionalData(
-        byte[] blockAdditionalData, int blockAddIdType, @Nullable byte[] dolbyVisionConfigBytes) {
+        byte[] blockAdditionalData,
+        int blockAddIdType,
+        @Nullable byte[] dolbyVisionConfigBytes,
+        @Nullable String codecs) {
       return null;
     }
 
@@ -171,6 +175,7 @@ public class MatroskaExtractor implements Extractor {
      * @param nalUnitLengthFieldLength Length field size in bytes.
      * @param blockAdditionalData Block additional payload associated with this sample.
      * @param dolbyVisionConfigBytes Track-level Dolby Vision config bytes, if available.
+     * @param codecs Source codec string of the track this sample belongs to.
      * @return Reusable buffer with the rewritten sample, or null to keep original.
      */
     @Nullable
@@ -179,7 +184,8 @@ public class MatroskaExtractor implements Extractor {
         int sampleLength,
         int nalUnitLengthFieldLength,
         @Nullable byte[] blockAdditionalData,
-        @Nullable byte[] dolbyVisionConfigBytes) {
+        @Nullable byte[] dolbyVisionConfigBytes,
+        @Nullable String codecs) {
       return null;
     }
 
@@ -1976,7 +1982,10 @@ public class MatroskaExtractor implements Extractor {
         try {
           byte[] transformed =
               dolbyVisionSampleTransformer.onDolbyVisionBlockAdditionalData(
-                  blockAdditionalData, track.blockAddIdType, track.dolbyVisionConfigBytes);
+                  blockAdditionalData,
+                  track.blockAddIdType,
+                  track.dolbyVisionConfigBytes,
+                  track.dvSourceCodecs);
           if (transformed != null) {
             track.pendingDolbyVisionBlockAdditionalData = transformed;
           }
@@ -2142,7 +2151,7 @@ public class MatroskaExtractor implements Extractor {
 
     if (track.isHevc
         && track.hevcAlternativeTransferSamplesToCheck > 0
-        && !track.requiresDolbyVisionTransform
+        && (!track.requiresDolbyVisionTransform || track.dolbyVisionConfigBytes == null)
         && !sampleEncodingHandled
         && sampleBytesRead == 0
         && zlibSampleSource == null
@@ -2295,7 +2304,8 @@ public class MatroskaExtractor implements Extractor {
                 remainingSampleBytes,
                 track.nalUnitLengthFieldLength,
                 track.pendingDolbyVisionBlockAdditionalData,
-                track.dolbyVisionConfigBytes);
+                track.dolbyVisionConfigBytes,
+                track.dvSourceCodecs);
         if (transformedPayload != null) {
           payloadToWrite = transformedPayload;
           payloadLength = dolbyVisionSampleTransformer.lastTransformedSampleLength();
@@ -3164,6 +3174,9 @@ public class MatroskaExtractor implements Extractor {
     public float minMasteringLuminance = Format.NO_VALUE;
     public byte @MonotonicNonNull [] dolbyVisionConfigBytes;
     public byte @MonotonicNonNull [] pendingDolbyVisionBlockAdditionalData;
+    // Source (pre-rewrite) codec string carrying the track's DV signaling, passed to the
+    // transformer per call so a shared transformer never mixes up codecs across tracks.
+    public @Nullable String dvSourceCodecs;
 
     // Audio elements. Initially set to their default values.
     public int channelCount = 1;
@@ -3401,6 +3414,7 @@ public class MatroskaExtractor implements Extractor {
               "Unrecognized codec identifier.", /* cause= */ null);
       }
       @Nullable String hevcCodecsString = codecs;
+      @Nullable String sourceCodecs = null;
       if (dolbyVisionConfigBytes != null) {
         @Nullable
         DolbyVisionConfig dolbyVisionConfig =
@@ -3414,6 +3428,7 @@ public class MatroskaExtractor implements Extractor {
             dolbyVisionConfigBytes = null;
           } else {
           codecs = dolbyVisionConfig.codecs;
+          sourceCodecs = codecs;
           mimeType = MimeTypes.VIDEO_DOLBY_VISION;
           if (dolbyVisionSampleTransformer != null) {
             @Nullable
@@ -3444,6 +3459,7 @@ public class MatroskaExtractor implements Extractor {
             || lower.startsWith("dvh1.")
             || lower.startsWith("dvav.")
             || lower.startsWith("dva1.")) {
+          sourceCodecs = codecs;
           @Nullable
           String transformedCodecs =
               dolbyVisionSampleTransformer.onDolbyVisionCodecString(codecs, null);
@@ -3558,6 +3574,7 @@ public class MatroskaExtractor implements Extractor {
               .setCodecs(codecs)
               .setDrmInitData(drmInitData)
               .build();
+      this.dvSourceCodecs = sourceCodecs;
       requiresDolbyVisionTransform =
           dolbyVisionSampleTransformer != null
               && dolbyVisionSampleTransformer.shouldTransform(codecs, dolbyVisionConfigBytes);

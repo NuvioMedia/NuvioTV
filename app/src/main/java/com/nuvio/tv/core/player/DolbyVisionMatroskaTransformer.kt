@@ -72,11 +72,12 @@ internal class DolbyVisionMatroskaTransformer(
     override fun onDolbyVisionBlockAdditionalData(
         blockAdditionalData: ByteArray?,
         blockAddIdType: Int,
-        dolbyVisionConfigBytes: ByteArray?
+        dolbyVisionConfigBytes: ByteArray?,
+        codecs: String?
     ): ByteArray? {
         if (blockAdditionalData == null) return null
         if (stripRpuOnly) return ByteArray(0)
-        val profile = resolveProfile(null, dolbyVisionConfigBytes)
+        val profile = resolveProfile(codecs, dolbyVisionConfigBytes)
         if (!config.shouldConvert(profile)) return null
         // Single conversion site for BlockAdditional RPUs; transformHevcSample appends as-is.
         return convertRpuNal(blockAdditionalData, config.conversionMode(profile))
@@ -106,12 +107,21 @@ internal class DolbyVisionMatroskaTransformer(
         sampleLength: Int,
         nalUnitLengthFieldLength: Int,
         blockAdditionalData: ByteArray?,
-        dolbyVisionConfigBytes: ByteArray?
+        dolbyVisionConfigBytes: ByteArray?,
+        codecs: String?
     ): ByteArray? {
         val sample = sampleLengthDelimitedData ?: return null
-        val profile = resolveProfile(null, dolbyVisionConfigBytes)
+        val profile = resolveProfile(codecs, dolbyVisionConfigBytes)
 
         lastTransformedLength = sampleLength
+
+        // Plain HDR10/HDR10+ HEVC tracks only get HDR10+ SEI stripping; never touch DV NALs there.
+        val isDv = profile != null ||
+                codecs?.startsWith("dv", ignoreCase = true) == true ||
+                (dolbyVisionConfigBytes != null && dolbyVisionConfigBytes.isNotEmpty())
+        if (!isDv) {
+            return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
+        }
 
         if (stripRpuOnly) {
             if (profile == 5) {
