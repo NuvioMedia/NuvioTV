@@ -98,7 +98,7 @@ class SearchViewModel @Inject constructor(
     private var hasRenderedFirstCatalog = false
     private var pendingCatalogResponses = 0
     private var lastNonEmptyQuery: String = ""
-    private var lastEmptyTransitionTime: Long = 0L
+    private var lastTransitionToEmptyTime: Long = 0L
     private var revealBatchAfterNextDiscoverFetch = false
     private var hideUnreleasedContent = false
 
@@ -266,19 +266,22 @@ class SearchViewModel @Inject constructor(
         }
         
         val now = System.currentTimeMillis()
+        val currentState = _uiState.value.query
         
-        // Detect if this is a recomposition artifact: transitioning to empty from the current
-        // (non-empty) query, AND we transitioned to empty very recently (within 50ms).
-        // This indicates a rapid empty→value bounce that's characteristic of Compose recomposition.
-        // Normal backspace/delete is user-paced and much slower.
-        val isRecompositionArtifact = query.isEmpty() && 
-            query != _uiState.value.query && 
-            _uiState.value.query.isNotEmpty() &&
-            (now - lastEmptyTransitionTime) < 50
+        // Detect recomposition artifact: the actual pattern is empty→value restoration within ~50ms
+        // When focus changes, Compose recomposes and reports empty, then immediately reports
+        // the actual stored value again. We detect this by checking if:
+        // 1. We're transitioning TO non-empty from empty (query goes from "" to "something")
+        // 2. The new non-empty value matches what was there before (lastNonEmptyQuery)
+        // 3. This restoration happens within 50ms of the empty transition
+        val isRecompositionArtifact = query.isNotEmpty() && 
+            currentState.isEmpty() && 
+            query == lastNonEmptyQuery &&
+            (now - lastTransitionToEmptyTime) < 50
         
         // Track when we transition to empty for recomposition detection
-        if (query.isEmpty() && query != _uiState.value.query) {
-            lastEmptyTransitionTime = now
+        if (query.isEmpty() && currentState.isNotEmpty()) {
+            lastTransitionToEmptyTime = now
         }
         
         // Track non-empty queries for recomposition detection context
