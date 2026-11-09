@@ -255,6 +255,8 @@ internal fun LayoutPosterCardSection(
         PresetOption(stringResource(R.string.layout_preset_balanced), 126),
         PresetOption(stringResource(R.string.layout_preset_comfort), 134),
         PresetOption(stringResource(R.string.layout_preset_large), 140),
+        // Between Large (140) and Extra Large (280); applies to portrait and landscape cards.
+        PresetOption(stringResource(R.string.layout_preset_larger), 200),
         // Twice Large; portrait height and landscape cards are derived from this width, so both double.
         PresetOption(stringResource(R.string.layout_preset_extra_large), 280)
     )
