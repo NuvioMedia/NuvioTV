@@ -1761,4 +1761,8 @@
     <string name="servers_subtitle_switch_failed">Det gick inte att byta undertextspår.</string>
     <string name="party_phone_chat_note">Öppna Watch Party på din telefon med den här profilen för att chatta.</string>
 
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Programvaruavkodning av AV1-video. Av VideoLAN och dav1d:s upphovspersoner. BSD 2-Clause-licens.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Identifiering av processorfunktioner för AV1-avkodaren. Av Google. Apache 2.0-licens.</string>
 </resources>

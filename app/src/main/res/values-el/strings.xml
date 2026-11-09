@@ -3342,4 +3342,8 @@
   <string name="autosync_label_synced">Αυτόματα συγχρονισμένος</string>
   <string name="stream_resume_from_time">Συνέχεια από %1$s</string>
   <string name="stream_resume_from_percent">Συνέχεια από %1$d%%</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Αποκωδικοποίηση βίντεο AV1 μέσω λογισμικού. Από τη VideoLAN και τους δημιουργούς του dav1d. Άδεια BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Ανίχνευση δυνατοτήτων του επεξεργαστή για τον αποκωδικοποιητή AV1. Από την Google. Άδεια Apache 2.0.</string>
 </resources>

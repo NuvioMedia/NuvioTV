@@ -691,6 +691,7 @@ class PlayerRuntimeController(
     // attempt is forced to libdovi mode 1 before falling back to HDR10 base layer.
     internal val dv7Mode1ForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal val vc1TrackSelectionBypassStreamUrls: MutableSet<String> = mutableSetOf()
+    internal val mpvFormatFallbackStreamUrls: MutableSet<String> = mutableSetOf()
     // Streams whose VC-1 video failed on the platform decoder; replayed with FFmpeg software decoding.
     internal val vc1SoftwareDecodeStreamUrls: MutableSet<String> = mutableSetOf()
     internal val safeAudioForcedStreamUrls: MutableSet<String> = mutableSetOf()

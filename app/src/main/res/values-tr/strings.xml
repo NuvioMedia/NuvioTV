@@ -3449,4 +3449,8 @@
     <string name="autosync_label_synced">Otomatik eşitlendi</string>
     <string name="stream_resume_from_time">%1$s konumundan devam et</string>
     <string name="stream_resume_from_percent">%1$d%% konumundan devam et</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Yazılımsal AV1 video kod çözme. VideoLAN ve dav1d yazarları tarafından oluşturulmuştur. BSD 2-Clause lisansı.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">AV1 kod çözücü için işlemci özelliklerini algılama. Google tarafından oluşturulmuştur. Apache 2.0 lisansı.</string>
 </resources>

@@ -3430,4 +3430,8 @@
     <string name="autosync_label_synced">Sincronizado automaticamente</string>
     <string name="stream_resume_from_time">Continuar a partir de %1$s</string>
     <string name="stream_resume_from_percent">Continuar a partir de %1$d%%</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Decodificação de vídeo AV1 por software. Pela VideoLAN e pelos autores do dav1d. Licença BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Detecção dos recursos do processador para o decodificador AV1. Pelo Google. Licença Apache 2.0.</string>
 </resources>

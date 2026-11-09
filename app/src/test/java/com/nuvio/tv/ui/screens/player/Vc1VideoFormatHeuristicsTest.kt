@@ -149,4 +149,12 @@ class Vc1VideoFormatHeuristicsTest {
             )
         )
     }
+    @Test
+    fun knownVc1DoesNotHijackNetworkParserAudioOrDrmErrors() {
+        for (code in listOf(2000, 2004, 3001, 5001, 6006)) {
+            val error = PlaybackException("VC-1 source failed", null, code)
+            assertFalse(Vc1VideoFormatHeuristics.isVc1PlaybackFailure(error, true, "Movie.VC-1.mkv"))
+        }
+    }
+
 }

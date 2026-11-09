@@ -51,6 +51,10 @@ internal object Vc1VideoFormatHeuristics {
         currentVideoTrackIsLikelyVc1: Boolean,
         currentStreamName: String? = null
     ): Boolean {
+        // A VC-1 track/title does not make an HTTP, parser, audio-sink or DRM
+        // failure a video decoder failure. Leave those to their existing ladders.
+        if (error.errorCode !in 4000..4005) return false
+
         // 1. If we already know the stream's video track is VC-1
         if (currentVideoTrackIsLikelyVc1) {
             val rendererFormat = (error as? ExoPlaybackException)?.rendererFormat

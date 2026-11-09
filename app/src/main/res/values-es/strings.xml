@@ -3429,4 +3429,8 @@ Utilizas esta función bajo tu entera responsabilidad. P2P se puede desactivar e
     <string name="stream_resume_from_time">Reanudar desde %1$s</string>
     <string name="stream_resume_from_percent">Reanudar desde %1$d%%</string>
 
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Decodificación de vídeo AV1 por software. Creado por VideoLAN y los autores de dav1d. Licencia BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Detección de las características del procesador para el decodificador AV1. Creado por Google. Licencia Apache 2.0.</string>
 </resources>

@@ -2728,4 +2728,8 @@
     <string name="profile_default_name">Профіль %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">Колекція TMDB %1$d</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Програмне декодування відео AV1. Автори: VideoLAN і розробники dav1d. Ліцензія BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Визначення можливостей процесора для декодера AV1. Автор: Google. Ліцензія Apache 2.0.</string>
 </resources>

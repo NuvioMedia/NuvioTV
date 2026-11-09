@@ -3451,4 +3451,8 @@
     <string name="audio_downmix_lfe_level_off">Vypnuté</string>
     <string name="audio_downmix_lfe_level_half">50 %</string>
     <string name="audio_downmix_lfe_level_full">100 %</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Softvérové dekódovanie videa AV1. Autori: VideoLAN a tvorcovia dav1d. Licencia BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Zisťovanie funkcií procesora pre dekodér AV1. Autor: Google. Licencia Apache 2.0.</string>
 </resources>

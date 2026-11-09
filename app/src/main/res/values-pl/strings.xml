@@ -3521,4 +3521,8 @@
     <string name="cd_emoji_option">Emoji %1$s</string>
     <string name="cd_trailer_controls">Sterowanie zwiastunem</string>
     <string name="cd_seek_bar">Pasek przewijania</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Programowe dekodowanie wideo AV1. Autorzy: VideoLAN i twórcy dav1d. Licencja BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Wykrywanie funkcji procesora dla dekodera AV1. Autor: Google. Licencja Apache 2.0.</string>
 </resources>

@@ -2575,4 +2575,8 @@
     <string name="profile_default_name">Perfil %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">Coleção TMDB %1$d</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Descodificação de vídeo AV1 por software. Da VideoLAN e dos autores do dav1d. Licença BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Deteção das funcionalidades do processador para o descodificador AV1. Da Google. Licença Apache 2.0.</string>
 </resources>

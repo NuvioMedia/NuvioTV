@@ -2268,4 +2268,8 @@
     <string name="trakt_comments_error_request_failed">Trakt comments request failed</string>
     <string name="trakt_library_error_fetch_list_items">Failed to fetch list items</string>
 
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Software-Dekodierung von AV1-Video. Von VideoLAN und den dav1d-Autoren. BSD-2-Clause-Lizenz.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Erkennung der Prozessorfunktionen für den AV1-Decoder. Von Google. Apache-Lizenz 2.0.</string>
 </resources>

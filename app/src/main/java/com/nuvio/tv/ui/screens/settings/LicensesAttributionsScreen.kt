@@ -78,6 +78,7 @@ private const val ImdbDatasetsUrl = "https://developer.imdb.com/non-commercial-d
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
 private const val HazeLicenseUrl = "https://github.com/chrisbanes/haze/blob/1.7.2/LICENSE"
 private const val LibMpvAndroidUrl = "https://github.com/jarnedemeulemeester/libmpv-android"
+private const val Dav1dUrl = "https://code.videolan.org/videolan/dav1d"
 
 private sealed interface LicenseLogo {
     data class Drawable(@param:DrawableRes val resId: Int) : LicenseLogo
@@ -418,5 +419,17 @@ private fun playbackLicenseItems() = listOf(
         title = stringResource(R.string.licenses_attributions_libmpv_title),
         body = stringResource(R.string.licenses_attributions_libmpv_body),
         url = LibMpvAndroidUrl
+    ),
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_dav1d_title),
+        body = stringResource(R.string.licenses_attributions_dav1d_body) + "\n\n" +
+            stringResource(R.string.licenses_attributions_dav1d_notice),
+        url = Dav1dUrl
+    ),
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_cpu_features_title),
+        body = stringResource(R.string.licenses_attributions_cpu_features_body) + "\n\n" +
+            stringResource(R.string.licenses_attributions_cpu_features_notice),
+        url = ApacheLicenseUrl
     )
 )

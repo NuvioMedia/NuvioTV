@@ -236,6 +236,16 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             retryCurrentStreamWithVc1TrackSelectionBypass(currentPosition)
             return
         }
+        if (UnsupportedFormatMpvFallbackPolicy.shouldSwitchForUnplayableVideoTrack(
+                exoPlayerActive = isExoPlayerActiveForFormatFallback,
+                alreadySwitched = currentStreamUrl in mpvFormatFallbackStreamUrls,
+                videoTrackPresent = true,
+                videoTrackSelected = currentVideoTrackSelected,
+                videoFormatSupport = currentVideoTrackBestSupport
+            ) && switchToMpvForUnsupportedFormat("no-decoder")
+        ) {
+            return
+        }
     } else {
         currentVideoTrackMimeType = null
         currentVideoTrackCodecs = null
@@ -246,6 +256,18 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         currentVideoTrackBestSupport = C.FORMAT_UNSUPPORTED_TYPE
         currentVideoTrackIsLikelyVc1 = false
         lastLoggedVideoTrackSignature = null
+        // Live TV radio channels are transport streams with sound only; they stay on ExoPlayer.
+        if (!_uiState.value.isLive && !LivePlaybackUiPolicy.isLiveContentType(contentType) &&
+            UnsupportedFormatMpvFallbackPolicy.shouldSwitchForMissingVideoTrack(
+                exoPlayerActive = isExoPlayerActiveForFormatFallback,
+                alreadySwitched = currentStreamUrl in mpvFormatFallbackStreamUrls,
+                hasAudioTrack = audioTracks.isNotEmpty(),
+                fileName = currentFilename ?: currentStreamUrl,
+                streamMimeType = currentStreamMimeType
+            ) && switchToMpvForUnsupportedFormat("no-video-track")
+        ) {
+            return
+        }
     }
 
     hasScannedTextTracksOnce = true

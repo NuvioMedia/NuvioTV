@@ -3362,4 +3362,8 @@
     <string name="autosync_label_synced">Sincronizzato automaticamente</string>
     <string name="stream_resume_from_time">Riprendi da %1$s</string>
     <string name="stream_resume_from_percent">Riprendi dal %1$d%%</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Decodifica software dei video AV1. Di VideoLAN e degli autori di dav1d. Licenza BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Rilevamento delle funzionalità del processore per il decoder AV1. Di Google. Licenza Apache 2.0.</string>
 </resources>

@@ -3297,4 +3297,8 @@
     <string name="shuffle_save_failed">Nije moguće ažurirati nasumičnu reprodukciju. Pokušaj ponovno.</string>
     <string name="shuffle_change_selection">Odaberi epizode</string>
     <string name="shuffle_badge">Nasumična reprodukcija epizoda uključena</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Softversko dekodiranje AV1 videa. Autori: VideoLAN i tvorci dav1d-a. BSD 2-Clause licenca.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Prepoznavanje mogućnosti procesora za AV1 dekoder. Autor: Google. Apache licenca 2.0.</string>
 </resources>

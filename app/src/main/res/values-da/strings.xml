@@ -2696,4 +2696,8 @@
     <string name="profile_default_name">Profil %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">TMDB Collection %1$d</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Softwareafkodning af AV1-video. Af VideoLAN og dav1d-forfatterne. BSD 2-Clause-licens.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Registrering af processorfunktioner til AV1-afkoderen. Af Google. Apache 2.0-licens.</string>
 </resources>

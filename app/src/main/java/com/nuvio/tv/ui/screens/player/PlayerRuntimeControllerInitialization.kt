@@ -61,6 +61,7 @@ import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.nuvio.tv.R
+import com.nuvio.tv.core.player.AviTrackFormatExtractorsFactory
 import com.nuvio.tv.core.player.DolbyVisionCodecFallback
 import com.nuvio.tv.core.player.DolbyVisionBaseLayerPolicy
 import com.nuvio.tv.core.player.BitrateAwareLoadControl
@@ -853,9 +854,13 @@ internal fun PlayerRuntimeController.initializePlayer(
             }
 
             // ── Extractors & DV Hook ──
-            val extractorsFactory = DefaultExtractorsFactory()
-                .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS or com.nuvio.tv.reshaped.livetv.LiveTvTsFlags.extraFor(url))
-                .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE)
+            // AVI goes through the OpenDML-capable reader with frame rate, audio syncframe timing and
+            // packed B-frame repair, see AviTrackFormatExtractorsFactory.
+            val extractorsFactory: ExtractorsFactory = AviTrackFormatExtractorsFactory(
+                DefaultExtractorsFactory()
+                    .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS or com.nuvio.tv.reshaped.livetv.LiveTvTsFlags.extraFor(url))
+                    .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE)
+            )
 
             // Manual Convert-to-DV8.1 uses mode 2; if a prior attempt at this stream
             // failed to play, force mode 1 this time (before the HDR10 fallback).
@@ -1676,6 +1681,21 @@ internal fun PlayerRuntimeController.initializePlayer(
                             return
                         }
 
+                        // A format only MPV can show (WMV / ASF, DivX 3, RealVideo, a legacy decoder that will
+                        // not start) is not a dead link: same source, other engine first.
+                        fun switchedToMpvForUnsupportedFormat(): Boolean =
+                            !isInBackground &&
+                                UnsupportedFormatMpvFallbackPolicy.shouldSwitchForFatalError(
+                                    exoPlayerActive = isExoPlayerActiveForFormatFallback,
+                                    alreadySwitched = currentStreamUrl in mpvFormatFallbackStreamUrls,
+                                    hasRenderedFirstFrame = hasRenderedFirstFrame,
+                                    errorCode = error.errorCode,
+                                    videoMimeType = currentVideoTrackMimeType,
+                                    fileName = currentFilename ?: currentStreamUrl,
+                                    streamMimeType = currentStreamMimeType
+                                ) && switchToMpvForUnsupportedFormat(error.errorCodeName)
+                        if (switchedToMpvForUnsupportedFormat()) return
+
                         if (tryParsingErrorProbeFallback(
                             error = error,
                             detailedError = detailedError,
@@ -1724,6 +1744,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 playerSettingsDataStore.setLastPlaybackDiagnostics(errorDiagnostics)
                             }
                         }
+
+                        if (switchedToMpvForUnsupportedFormat()) return
 
                         // Fatal error: stop any next-episode auto-play that may have been
                         // armed by a short placeholder ENDED or residual post-play state.
@@ -2267,7 +2289,21 @@ private class SubtitleOffsetRenderersFactory(
             allowedVideoJoiningTimeMs,
             built
         )
+        // dav1d (software AV1) goes right after MediaCodec: it takes 8-bit AV1 up to 1080p that no
+        // hardware decoder takes, see SoftwareAv1Renderer.
+        val softwareAv1Index = softwareAv1Slot(built, videoExtensionMode, first = false) {
+            it::class.java == MediaCodecVideoRenderer::class.java
+        }
+        softwareAv1Index?.let { slot ->
+            built.add(
+                slot,
+                createSoftwareAv1Renderer(allowedVideoJoiningTimeMs, eventHandler, eventListener) { format ->
+                    hardwareAv1Support(mediaCodecSelector, format)
+                }
+            )
+        }
         // Same settings as the platform renderer it replaces; the factory's own DV7 setting only reaches that one.
+        // The replacement also repairs decode-order times (AVI, VC-1, XviD/DivX), see DecodeOrderPtsVideoRenderer.
         for (renderer in built) {
             if (renderer::class.java == MediaCodecVideoRenderer::class.java) {
                 val builder = MediaCodecVideoRenderer.Builder(context)
@@ -2279,7 +2315,13 @@ private class SubtitleOffsetRenderersFactory(
                     .setEventListener(eventListener)
                     .setMaxDroppedFramesToNotify(DefaultRenderersFactory.MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY)
                     .setMapDV7ToHevc(mapDv7ToHevc)
-                out.add(HardwareFirstVideoRenderer(builder))
+                out.add(
+                    DecodeOrderPtsVideoRenderer(
+                        builder,
+                        vendorUnstablePts = false,
+                        dav1dLoaded = { softwareAv1Index != null && dav1dLoaded() }
+                    )
+                )
             } else {
                 out.add(renderer)
             }

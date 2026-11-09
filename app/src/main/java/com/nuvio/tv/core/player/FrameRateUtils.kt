@@ -1455,6 +1455,9 @@ object FrameRateUtils {
         return null
     }
 
+    /** Hard deadline after which a stuck extractor probe is force-released. */
+    private const val EXTRACTOR_PROBE_HARD_DEADLINE_MS = 6_000L
+
     private fun detectFrameRateWithExtractor(
         context: Context,
         sourceUrl: String,
@@ -1463,6 +1466,28 @@ object FrameRateUtils {
     ): FrameRateDetection? {
         val safeHeaders = headers
         val extractor = MediaExtractor()
+        // MediaExtractor.setDataSource() is a blocking native call that cooperative withTimeoutOrNull
+        // cancellation cannot interrupt. On a non-faststart MP4 (moov atom at the tail) it reads toward
+        // end-of-file and can block for minutes. Releasing the extractor from a watchdog thread aborts
+        // the native open, making the probe budget real.
+        val probeFinished = java.util.concurrent.atomic.AtomicBoolean(false)
+        val watchdog = Thread({
+            try {
+                Thread.sleep(EXTRACTOR_PROBE_HARD_DEADLINE_MS)
+            } catch (_: InterruptedException) {
+                return@Thread
+            }
+            if (!probeFinished.get()) {
+                Log.w(TAG, "AFR extractor probe exceeded ${EXTRACTOR_PROBE_HARD_DEADLINE_MS} ms; force-releasing extractor")
+                try {
+                    extractor.release()
+                } catch (_: Throwable) {
+                }
+            }
+        }, "afr-probe-watchdog").apply {
+            isDaemon = true
+            start()
+        }
         return try {
             val uri = Uri.parse(sourceUrl)
             when (uri.scheme?.lowercase()) {
@@ -1539,6 +1564,8 @@ object FrameRateUtils {
             Log.w(TAG, "Frame rate probe failed: ${e.message}")
             null
         } finally {
+            probeFinished.set(true)
+            watchdog.interrupt()
             try {
                 extractor.release()
             } catch (_: Exception) {

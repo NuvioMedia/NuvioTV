@@ -994,4 +994,8 @@
     <string name="update_ignore">नज़रअंदाज़ करें</string>
     <string name="playback_player_auto">ऑटो (सामग्री के लिए सर्वश्रेष्ठ)</string>
     <string name="playback_player_auto_desc">ExoPlayer मूवीज़ और टीवी शोज़ के लिए · MPV एनीमे के लिए</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">सॉफ़्टवेयर AV1 वीडियो डिकोडिंग। VideoLAN और dav1d के लेखकों द्वारा। BSD 2-Clause लाइसेंस।</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">AV1 डिकोडर के लिए प्रोसेसर की क्षमताओं की पहचान। Google द्वारा। Apache 2.0 लाइसेंस।</string>
 </resources>

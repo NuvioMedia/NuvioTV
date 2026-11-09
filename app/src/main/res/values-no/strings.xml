@@ -1119,4 +1119,8 @@
     <string name="watchlist_removed">Fjernet fra ønskelisten</string>
     <string name="playback_player_auto">Automatisk (Best for innhold)</string>
     <string name="playback_player_auto_desc">ExoPlayer for filmer og serier · MPV for anime</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Programvaredekoding av AV1-video. Av VideoLAN og dav1d-forfatterne. BSD 2-Clause-lisens.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Gjenkjenning av prosessorfunksjoner for AV1-dekoderen. Av Google. Apache 2.0-lisens.</string>
 </resources>

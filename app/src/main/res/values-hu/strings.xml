@@ -3419,4 +3419,8 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="stream_resume_from_time">Folytatás innen: %1$s</string>
     <string name="stream_resume_from_percent">Folytatás innen: %1$d%%</string>
 
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">AV1 videó szoftveres dekódolása. Készítette: a VideoLAN és a dav1d szerzői. BSD 2-Clause licenc.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Processzorfunkciók felismerése az AV1 dekóderhez. Készítette: Google. Apache 2.0 licenc.</string>
 </resources>

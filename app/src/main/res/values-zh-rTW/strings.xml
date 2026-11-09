@@ -3227,4 +3227,8 @@
     <string name="stream_test_video_bitrate">平均影片位元率：%1$s</string>
     <string name="stream_test_error_connection">連線失敗。上次播放的串流連結可能已過期或無法存取。請重新播放影片並重試。</string>
 
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">用於軟體解碼 AV1 影片。由 VideoLAN 與 dav1d 作者建立。基於 BSD 2-Clause 授權。</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">用於為 AV1 解碼器偵測處理器特性。由 Google 建立。基於 Apache 2.0 授權。</string>
 </resources>

@@ -2443,4 +2443,8 @@
     <string name="trakt_comments_error_request_failed">Permintaan komentar Trakt gagal</string>
     <string name="trakt_library_error_fetch_list_items">Gagal mengambil item daftar</string>
 
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Dekode video AV1 secara perangkat lunak. Oleh VideoLAN dan para penulis dav1d. Lisensi BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Deteksi fitur prosesor untuk dekoder AV1. Oleh Google. Lisensi Apache 2.0.</string>
 </resources>

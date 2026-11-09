@@ -3433,4 +3433,8 @@
     <string name="autosync_label_synced">自動同期済み</string>
     <string name="stream_resume_from_time">%1$s から再開</string>
     <string name="stream_resume_from_percent">%1$d%% から再開</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">AV1動画のソフトウェアデコード。VideoLANとdav1dの作者による。BSD 2-Clauseライセンス。</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">AV1デコーダー向けのプロセッサー機能の検出。Google作。Apache 2.0ライセンス。</string>
 </resources>

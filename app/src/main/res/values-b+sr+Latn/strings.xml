@@ -3166,4 +3166,8 @@
     <string name="stream_test_video_bitrate">Prosečni video bitrejt: %1$s</string>
     <string name="stream_test_error_connection">Povezivanje nije uspelo. Veza poslednje puštenog strima je možda istekla ili je nedostupna. Pustite video ponovo i pokušajte opet.</string>
 
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Softversko dekodiranje AV1 videa. Autori: VideoLAN i tvorci dav1d-a. BSD 2-Clause licenca.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Prepoznavanje mogućnosti procesora za AV1 dekoder. Autor: Google. Apache licenca 2.0.</string>
 </resources>

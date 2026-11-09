@@ -3227,4 +3227,8 @@
     <string name="stream_test_video_bitrate">平均视频比特率：%1$s</string>
     <string name="stream_test_error_connection">连接失败。上次播放的流链接可能已过期或无法访问。请重新播放视频并重试。</string>
 
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">用于软件解码 AV1 视频。由 VideoLAN 和 dav1d 作者创建。基于 BSD 2-Clause 许可。</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">用于为 AV1 解码器检测处理器特性。由 Google 创建。基于 Apache 2.0 许可。</string>
 </resources>

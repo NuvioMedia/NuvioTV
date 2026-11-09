@@ -3349,4 +3349,8 @@
     <string name="autosync_label_synced">Sinchronizuota automatiškai</string>
     <string name="stream_resume_from_time">Tęsti nuo %1$s</string>
     <string name="stream_resume_from_percent">Tęsti nuo %1$d%%</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Programinis AV1 vaizdo dekodavimas. Autoriai: VideoLAN ir dav1d kūrėjai. BSD 2-Clause licencija.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Procesoriaus funkcijų aptikimas AV1 dekoderiui. Autorius: Google. Apache 2.0 licencija.</string>
 </resources>

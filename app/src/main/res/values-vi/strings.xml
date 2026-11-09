@@ -3435,4 +3435,8 @@
     <string name="autosync_label_synced">Đã tự động đồng bộ</string>
     <string name="stream_resume_from_time">Xem tiếp từ %1$s</string>
     <string name="stream_resume_from_percent">Xem tiếp từ %1$d%%</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Giải mã video AV1 bằng phần mềm. Được tạo bởi VideoLAN và các tác giả dav1d. Giấy phép BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Phát hiện tính năng của bộ xử lý cho bộ giải mã AV1. Được tạo bởi Google. Giấy phép Apache 2.0.</string>
 </resources>

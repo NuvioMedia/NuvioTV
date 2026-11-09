@@ -3138,4 +3138,8 @@
     <string name="stream_test_video_bitrate">Gemiddelde videobitrate: %1$s</string>
     <string name="stream_test_error_connection">Verbinding mislukt. De link van de laatst afgespeelde stream is mogelijk verlopen of onbereikbaar. Speel de video opnieuw af en probeer het nogmaals.</string>
 
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">Softwaredecodering van AV1-video. Door VideoLAN en de dav1d-auteurs. BSD 2-Clause-licentie.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">Detectie van processorfuncties voor de AV1-decoder. Door Google. Apache 2.0-licentie.</string>
 </resources>

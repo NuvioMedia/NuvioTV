@@ -142,9 +142,11 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
     private fun computePrefetchDepthChunks(
         connections: Int,
-        chunkBytes: Long
+        chunkBytes: Long,
+        mp4SessionMode: Boolean = false
     ): Int {
-        if (!nuvioPerformanceModeEnabled) return connections + 1
+        // MP4 session mode is deliberately single-connection; leave its 1+1 behaviour.
+        if (mp4SessionMode || !nuvioPerformanceModeEnabled) return connections + 1
         val chunkMb = (chunkBytes / (1024L * 1024L)).toInt().coerceAtLeast(1)
         val safeNativeMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
         val reserveMb = NuvioExoPlayerPerformanceHelper.targetBufferSizeMb.coerceAtLeast(0)
@@ -222,20 +224,38 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 "parallel=${if (useParallelConnections) parallelConnectionCount else 0} chunkKb=$parallelChunkSizeKb"
         )
         // Live TV never goes through ranged parallel requests (endless streams, one-connection accounts).
-        val useChunkSessionSource = useParallelConnections && !isHls && !isDash &&
-            !com.nuvio.tv.reshaped.livetv.LiveTvPlaybackRegistry.isLiveTv(url)
+        val isLiveTv = com.nuvio.tv.reshaped.livetv.LiveTvPlaybackRegistry.isLiveTv(url)
+        // Progressive MP4 engages the chunk-session source even with parallel connections off, pinned
+        // to one connection and 8 MB chunks. Non-faststart / poorly interleaved MP4s (moov at the tail)
+        // force scatter reads, and ExoPlayer recreates the data source on every seek; the session-owned
+        // chunks are what survive that boundary, so seeking does not stall on re-opened connections.
+        val mp4SessionMode = !isLiveTv &&
+            usesMp4Session(useParallelConnections, false, isHls || isDash, resolvedMimeType, url)
+        val useChunkSessionSource = (useParallelConnections || mp4SessionMode) && !isHls && !isDash && !isLiveTv
         parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
         val networkProgressiveFactory: DataSource.Factory = if (useChunkSessionSource) {
-            val sessionConnections = parallelConnectionCount
+            if (mp4SessionMode) {
+                Log.i(
+                    LOG_TAG,
+                    "MP4_SESSION engaged: single-connection chunk session " +
+                        "(${MP4_SESSION_CHUNK_BYTES / (1024L * 1024L)} MB chunks) " +
+                        "for progressive MP4 with parallel connections off"
+                )
+            }
+            val sessionConnections = if (mp4SessionMode) 1 else parallelConnectionCount
             val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
                 if (sanitizedHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
                     setUserAgent(DEFAULT_USER_AGENT)
                 }
             }
-            val sessionChunkBytes = parallelChunkSizeKb
-                .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
-                .toLong() * 1024L
+            val sessionChunkBytes = if (mp4SessionMode) {
+                MP4_SESSION_CHUNK_BYTES
+            } else {
+                parallelChunkSizeKb
+                    .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
+                    .toLong() * 1024L
+            }
             val effectiveNative =
                 nuvioPerformanceModeEnabled || NuvioEngineConfig.get().isNativeAllocationEnabled()
             ParallelRangeDataSource.Factory(
@@ -245,9 +265,13 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 useNativeMemory = effectiveNative,
                 prefetchDepthChunks = computePrefetchDepthChunks(
                     sessionConnections,
-                    sessionChunkBytes
+                    sessionChunkBytes,
+                    mp4SessionMode
                 ),
                 shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
+                // MP4 session mode keeps whole-chunk retention: its scatter-read cursors revisit
+                // regions, and a retained chunk makes every repeat visit free.
+                allowContinuationReopen = !mp4SessionMode,
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
             )
         } else if (isLoopbackUrl(url)) {
@@ -427,6 +451,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     companion object {
         private const val MIME_VIDEO_QUICK_TIME = "video/quicktime"
         private const val ENABLE_VOD_CACHE = true
+        internal const val MP4_SESSION_CHUNK_BYTES = 8L * 1024L * 1024L
         private const val VOD_CACHE_FREE_SPACE_RESERVE_BYTES = 1024L * 1024L * 1024L
         private const val VOD_CACHE_DIR_NAME = "nuvio_vod_cache"
         private const val VOD_CACHE_STALE_PREFIX = "nuvio_vod_cache_stale_"
@@ -577,6 +602,19 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 headers = sanitizeHeaders(mergedHeaders)
             )
         }
+
+        /**
+         * Progressive MP4 with parallel connections off takes the single-connection chunk session
+         * (see createMediaSource). Media servers, adaptive streams and the local loopback proxy keep
+         * the plain path.
+         */
+        internal fun usesMp4Session(
+            parallel: Boolean,
+            mediaServer: Boolean,
+            adaptive: Boolean,
+            mimeType: String?,
+            url: String
+        ): Boolean = !parallel && !mediaServer && !adaptive && mimeType == MimeTypes.VIDEO_MP4 && !isLoopbackUrl(url)
 
         internal fun isLoopbackUrl(url: String): Boolean {
             val host = url.toHttpUrlOrNull()?.host ?: return false

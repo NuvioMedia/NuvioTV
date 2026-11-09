@@ -3028,4 +3028,8 @@
     <string name="web_stream_badge_imported">استُورد رابط الشارة.</string>
     <string name="web_stream_badge_importing">جارٍ الاستيراد\u2026</string>
     <string name="web_stream_badge_load_error">تعذر تحميل إعدادات شارات البث</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">فك ترميز فيديو AV1 برمجيًا. من VideoLAN ومؤلفي dav1d. رخصة BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">اكتشاف ميزات المعالج لمفكك ترميز AV1. من Google. رخصة Apache 2.0.</string>
 </resources>

@@ -3429,4 +3429,8 @@
     <string name="autosync_label_synced">מסונכרן אוטומטית</string>
     <string name="stream_resume_from_time">המשך מ-%1$s</string>
     <string name="stream_resume_from_percent">המשך מ-%1$d%%</string>
+    <string name="licenses_attributions_dav1d_title">dav1d</string>
+    <string name="licenses_attributions_dav1d_body">פענוח וידאו AV1 בתוכנה. מאת VideoLAN ומחברי dav1d. רישיון BSD 2-Clause.</string>
+    <string name="licenses_attributions_cpu_features_title">cpu_features</string>
+    <string name="licenses_attributions_cpu_features_body">זיהוי יכולות המעבד עבור מפענח AV1. מאת Google. רישיון Apache 2.0.</string>
 </resources>
