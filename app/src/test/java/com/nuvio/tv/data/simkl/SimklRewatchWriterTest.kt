@@ -68,6 +68,63 @@ class SimklRewatchWriterTest {
         assertEquals(1, engine.paths.size)
     }
 
+    @Test
+    fun `a delta read that misses the write is retried whole`() = runBlocking {
+        val reads = mutableListOf<String?>()
+        val result = readRewatchSessionsUntilSettled(
+            dateFrom = "watermark",
+            delays = longArrayOf(0L),
+            read = { window ->
+                reads += window
+                if (window == null) listOf(session(7L)) else emptyList()
+            },
+            settled = { sessions -> sessions.any { session -> session.rewatchId == 7L } },
+        )
+
+        // The session write did not move the item activity, so the delta stays empty and the whole
+        // read is what carries the new session.
+        assertEquals(listOf("watermark", null), reads)
+        assertTrue(result.settled)
+        assertEquals(7L, result.sessions?.single()?.rewatchId ?: 0L)
+    }
+
+    @Test
+    fun `a delta read that already holds the write is not read twice`() = runBlocking {
+        val reads = mutableListOf<String?>()
+        val result = readRewatchSessionsUntilSettled(
+            dateFrom = "watermark",
+            delays = longArrayOf(0L),
+            read = { window ->
+                reads += window
+                listOf(session(7L))
+            },
+            settled = { sessions -> sessions.any { session -> session.rewatchId == 7L } },
+        )
+
+        assertEquals(listOf("watermark"), reads)
+        assertTrue(result.settled)
+    }
+
+    @Test
+    fun `a read that never settles is reported as not settled`() = runBlocking {
+        val result = readRewatchSessionsUntilSettled(
+            dateFrom = "watermark",
+            delays = longArrayOf(0L),
+            read = { emptyList() },
+            settled = { false },
+        )
+
+        assertFalse(result.settled)
+        assertTrue(result.sessions?.isEmpty() == true)
+    }
+
+    private fun session(id: Long) = SimklLibraryEntry(
+        mediaType = SimklMediaType.SHOWS,
+        isRewatch = true,
+        rewatchId = id,
+        rewatchStatus = "active",
+    )
+
     private fun client(engine: RecordingEngine): SimklApiClient = SimklApiClient(
         engine = engine,
         configuration = configuration,

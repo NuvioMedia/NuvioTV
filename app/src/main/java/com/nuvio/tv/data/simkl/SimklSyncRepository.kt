@@ -11,6 +11,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,6 +73,17 @@ class SimklSyncRepository @Inject constructor(
 
     fun refreshAsync(intent: TrackingRefreshIntent) {
         scope.launch { refresh(intent) }
+    }
+
+    /**
+     * Reads the account after a write has had time to publish, on this repository's own scope so a
+     * caller that leaves its screen does not cancel the read.
+     */
+    fun refreshAfterDelay(intent: TrackingRefreshIntent, delayMs: Long) {
+        scope.launch {
+            delay(delayMs)
+            refresh(intent)
+        }
     }
 
     suspend fun refresh(intent: TrackingRefreshIntent) = withContext(Dispatchers.IO) {

@@ -64,33 +64,25 @@ class SimklRewatchWriter @Inject constructor(
      */
     internal fun refreshRewatchSessions(settled: (List<SimklLibraryEntry>) -> Boolean) {
         scope.launch {
-            // The read is paired with the sync watermark, so it carries the items changed since the
-            // last sync, the write this waits for among them once Simkl publishes it. Every pass of
-            // the loop reads the same window on purpose: a narrower one would skip a change that was
-            // published between two reads.
-            val dateFrom = syncRepository.state.value.snapshot.watermark
-            var lastRead: List<SimklLibraryEntry>? = null
-            var settledSeen = false
-            for (waitMs in SIMKL_REWATCH_SESSION_READ_DELAYS_MS) {
-                delay(waitMs)
-                val sessions = runCatching { remote.fetchRewatchSessions(dateFrom) }
-                    .onFailure { error ->
-                        Log.w(TAG, "Could not read the rewatch sessions back: ${error.message}")
-                    }
-                    .getOrNull() ?: continue
-                lastRead = sessions
-                if (settled(sessions)) {
-                    settledSeen = true
-                    break
-                }
-            }
+            val result = readRewatchSessionsUntilSettled(
+                dateFrom = syncRepository.state.value.snapshot.watermark,
+                delays = SIMKL_REWATCH_SESSION_READ_DELAYS_MS,
+                read = { window ->
+                    runCatching { remote.fetchRewatchSessions(window) }
+                        .onFailure { error ->
+                            Log.w(TAG, "Could not read the rewatch sessions back: ${error.message}")
+                        }
+                        .getOrNull()
+                },
+                settled = settled,
+            )
             // A write the account took but did not act on looks exactly like one it never saw, and
             // only the reads tell the two apart. The line is what a report of a card that came back
             // is diagnosed from.
-            if (!settledSeen && lastRead != null) {
+            if (!result.settled && result.sessions != null) {
                 Log.w(TAG, "The account did not report the session change the write asked for")
             }
-            lastRead?.let { sessions -> syncRepository.adoptRewatchSessions(sessions) }
+            result.sessions?.let { sessions -> syncRepository.adoptRewatchSessions(sessions) }
         }
     }
 
@@ -100,4 +92,46 @@ class SimklRewatchWriter @Inject constructor(
     private companion object {
         const val TAG = "SimklRewatch"
     }
+}
+
+internal data class RewatchSessionReadResult(
+    val sessions: List<SimklLibraryEntry>?,
+    val settled: Boolean,
+)
+
+/**
+ * Reads the rewatch sessions back until [settled] accepts them.
+ *
+ * The delta read is paired with the sync watermark, so it carries the items whose activity moved.
+ * A rewatch session can change without moving that activity, so a delta that does not settle is
+ * retried as a whole read before the next wait. The last read is returned either way.
+ */
+internal suspend fun readRewatchSessionsUntilSettled(
+    dateFrom: String?,
+    delays: LongArray,
+    read: suspend (String?) -> List<SimklLibraryEntry>?,
+    settled: (List<SimklLibraryEntry>) -> Boolean,
+): RewatchSessionReadResult {
+    var lastRead: List<SimklLibraryEntry>? = null
+    var settledSeen = false
+    for (waitMs in delays) {
+        delay(waitMs)
+        if (dateFrom != null) {
+            val delta = read(dateFrom)
+            if (delta != null) {
+                lastRead = delta
+                if (settled(delta)) {
+                    settledSeen = true
+                    break
+                }
+            }
+        }
+        val whole = read(null) ?: continue
+        lastRead = whole
+        if (settled(whole)) {
+            settledSeen = true
+            break
+        }
+    }
+    return RewatchSessionReadResult(sessions = lastRead, settled = settledSeen)
 }

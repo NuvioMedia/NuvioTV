@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.recommendations.TvRecommendationManager
+import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tmdb.MetaPreviewEnricher
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
@@ -847,6 +848,10 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { watchProgressRepository.markAsCompleted(item.toCompletedProgress()) }
                 .onFailure { error -> Log.w(TAG, "Failed to mark continue watching item as watched", error) }
+            // The account and its rewatch sessions publish the mark a moment after the write. Read
+            // them back on the repository scope so the row follows without waiting for the next sync,
+            // even when the user leaves Home right after the mark.
+            simklSyncRepository.refreshAfterDelay(TrackingRefreshIntent.USER_INITIATED, 1_500L)
         }
     }
 
