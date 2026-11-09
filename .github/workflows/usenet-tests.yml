@@ -3,6 +3,10 @@ name: Usenet tests
 on:
   pull_request:
     branches: [main, dev, nntp, full-nntp]
+    paths:
+      - native/usenet/**
+      - tests/usenet_prebuilts_test.py
+      - .github/workflows/usenet-tests.yml
   push:
     branches: [nntp, full-nntp]
   workflow_dispatch:

@@ -3,7 +3,7 @@ name: PR Full Debug Build
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [main, dev]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:

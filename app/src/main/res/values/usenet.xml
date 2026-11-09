@@ -85,4 +85,23 @@
     <string name="usenet_throughput">High throughput</string>
     <string name="usenet_opening">Opening Usenet stream…</string>
     <string name="usenet_failed">Usenet stream could not be opened</string>
+    <string name="usenet_engine_missing">Usenet engine is missing for this device\'s CPU</string>
+    <string name="usenet_engine_start_failed">Usenet engine could not start</string>
+    <string name="usenet_engine_connection_failed">Usenet engine connection failed</string>
+    <string name="usenet_engine_http_error">Usenet engine returned HTTP %1$d</string>
+    <string name="usenet_engine_interrupted">Usenet engine response was interrupted</string>
+    <string name="usenet_preparation_budget_exhausted">Usenet preparation time budget exhausted</string>
+    <string name="usenet_preparation_timed_out">Usenet source preparation timed out</string>
+    <string name="usenet_preparation_failed">Usenet preparation failed</string>
+    <string name="usenet_indexer_search_paused">%1$s: indexer limit reached, paused until %2$s.</string>
+    <string name="usenet_indexer_search_failed">%1$s: indexer search failed. Check the API URL, key and limits.</string>
+    <string name="usenet_size_season_share">%1$s whole season (~%2$s per episode)</string>
+    <string name="usenet_size_pack_share">%1$s whole pack (~%2$s per episode)</string>
+    <string name="usenet_size_season">%1$s (whole season)</string>
+    <string name="usenet_size_pack">%1$s (whole pack)</string>
+    <string name="usenet_badge_unavailable">UNAVAILABLE</string>
+    <string name="usenet_badge_available">AVAILABLE</string>
+    <string name="usenet_badge_season_pack">SEASON PACK</string>
+    <string name="usenet_badge_episode_failed">E%1$02d FAILED</string>
+    <string name="usenet_badge_episode_played">E%1$02d PLAYED</string>
 </resources>

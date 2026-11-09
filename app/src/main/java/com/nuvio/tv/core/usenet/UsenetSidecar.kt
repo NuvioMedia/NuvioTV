@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.SystemClock
 import android.util.Base64
 import android.util.Log
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Subtitle
 import java.io.File
@@ -352,7 +353,8 @@ class UsenetSidecar private constructor(private val context: Context) {
             runCatching {
                 val request = Request.Builder().url("$endpoint/sessions/$id/diagnostics")
                     .header("Authorization", "Bearer $token").get().build()
-                http.newCall(request).execute().use { response ->
+                // Diagnostics are optional and this holds the session lock: never wait long for them.
+                http.newBuilder().callTimeout(5, TimeUnit.SECONDS).build().newCall(request).execute().use { response ->
                     if (response.isSuccessful) UsenetStartupDiagnostics.complete(url, JSONObject(response.body!!.string()))
                 }
             }
@@ -428,7 +430,7 @@ class UsenetSidecar private constructor(private val context: Context) {
         trace?.mark("sidecar_starting")
         stopLocked()
         val binary = File(context.applicationInfo.nativeLibraryDir, "libnuvio_usenet.so")
-        if (!binary.canExecute()) throw UsenetPreparationException("Usenet engine is missing for this device's CPU", UsenetPreparationException.Scope.ENGINE)
+        if (!binary.canExecute()) throw UsenetPreparationException(context.getString(R.string.usenet_engine_missing), UsenetPreparationException.Scope.ENGINE)
         val secret = ByteArray(32).also { SecureRandom().nextBytes(it) }
             .joinToString("") { "%02x".format(it) }
         // Go defaults to MADV_FREE on Android (MADV_DONTNEED only for GOOS=linux),
@@ -467,7 +469,7 @@ class UsenetSidecar private constructor(private val context: Context) {
             endpoint = "http://127.0.0.1:$port"; token = secret
             UsenetEngineUrls.remember(port)
             trace?.mark("sidecar_ready")
-        } catch (e: Exception) { ready.cancel(true); stopLocked(); throw UsenetPreparationException("Usenet engine could not start", UsenetPreparationException.Scope.ENGINE) }
+        } catch (e: Exception) { ready.cancel(true); stopLocked(); throw UsenetPreparationException(context.getString(R.string.usenet_engine_start_failed), UsenetPreparationException.Scope.ENGINE) }
     }
 
     private suspend fun control(path: String, payload: JSONObject?, delete: Boolean = false): String {
@@ -477,7 +479,7 @@ class UsenetSidecar private constructor(private val context: Context) {
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) { if (continuation.isActive) continuation.resumeWithException(UsenetPreparationException("Usenet engine connection failed", UsenetPreparationException.Scope.ENGINE)) }
+                override fun onFailure(call: Call, e: IOException) { if (continuation.isActive) continuation.resumeWithException(UsenetPreparationException(context.getString(R.string.usenet_engine_connection_failed), UsenetPreparationException.Scope.ENGINE)) }
                 override fun onResponse(call: Call, response: Response) {
                     try { response.use {
                         val text = it.body?.string().orEmpty()
@@ -492,10 +494,10 @@ class UsenetSidecar private constructor(private val context: Context) {
                                 // unwinding; it is not a permanent engine failure.
                                 else -> UsenetPreparationException.Scope.SOURCE
                             }
-                            continuation.resumeWithException(UsenetPreparationException(text.take(240).ifBlank { "Usenet engine returned HTTP ${it.code}" }, scope, failure))
+                            continuation.resumeWithException(UsenetPreparationException(text.take(240).ifBlank { context.getString(R.string.usenet_engine_http_error, it.code) }, scope, failure))
                         }
                     } } catch (e: IOException) {
-                        if (continuation.isActive) continuation.resumeWithException(IOException("Usenet engine response was interrupted"))
+                        if (continuation.isActive) continuation.resumeWithException(IOException(context.getString(R.string.usenet_engine_interrupted)))
                     }
                 }
             })
