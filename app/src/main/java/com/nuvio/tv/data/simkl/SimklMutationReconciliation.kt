@@ -118,8 +118,8 @@ private fun SimklSyncSnapshot.withResolvedHistoryStatus(
  * Drops one episode from the rewatch session that was named, and leaves the canonical watch alone.
  *
  * A canonical removal clears the watched episode from the library entries. A rewatch removal must
- * not: the original watch is what the detail screen shows as a faded marker while the run is open,
- * and clearing the entry would make the episode look unwatched.
+ * not: the original watch is what keeps the watched check while the run is open, and clearing the
+ * entry would make the episode look unwatched.
  */
 private fun SimklSyncSnapshot.withRewatchRemoval(
     mutations: List<TrackingMediaReference>,

@@ -392,16 +392,98 @@ internal fun SimklSyncSnapshot.priorWatchForPlayback(media: TrackingMediaReferen
  *
  * The anime resolution rewrites the episode to Simkl's flat numbering, and the local canonical
  * history can be shaped either way. Try the native reference first; when that misses and the two
- * references differ, try the catalogue one. A missing watch on both stays a first watch.
+ * references differ, try the catalogue one. When the account returned no episode rows at all, the
+ * summary markers decide instead. A missing watch everywhere stays a first watch.
  */
 internal fun SimklSyncSnapshot.priorWatchForMark(
     catalogue: TrackingMediaReference,
     resolved: TrackingMediaReference
 ): SimklPriorWatch {
     val native = priorWatchForPlayback(resolved)
-    if (native.wasWatched || resolved === catalogue) return native
-    return priorWatchForPlayback(catalogue)
+    if (native.wasWatched) return native
+    if (resolved !== catalogue) {
+        val catalogueWatch = priorWatchForPlayback(catalogue)
+        if (catalogueWatch.wasWatched) return catalogueWatch
+    }
+    // The account sometimes answers a watched title with its count and summary markers but no
+    // episode rows. The exact lookup cannot see the episode there, and a plain add of an already
+    // watched item is dropped by the account, so the summary decides instead.
+    val nativeSummary = summaryPriorWatchForMark(resolved)
+    if (nativeSummary.wasWatched || resolved === catalogue) return nativeSummary
+    return summaryPriorWatchForMark(catalogue)
 }
+
+/**
+ * The prior watch a title summary can still tell when the account returned no episode rows.
+ *
+ * The summary names the last watched episode and the next one to watch as `SxxEyy`. Everything
+ * before the next one was watched, and so was the last one itself. The fallback is deliberately
+ * read only when no watched episode rows exist at all: with rows present, an episode missing from
+ * them is a first watch and must not join a run.
+ */
+private fun SimklSyncSnapshot.summaryPriorWatchForMark(
+    media: TrackingMediaReference
+): SimklPriorWatch {
+    val entry = entries.matchingEntry(
+        SimklScrobbleResult(
+            outcome = SimklScrobbleOutcome.START,
+            playbackId = null,
+            progress = 0.0,
+            mediaType = media.kind.toSimklMediaType(),
+            media = media.toSimklMedia(),
+            episode = media.episode?.let { item ->
+                SimklPlaybackEpisode(season = item.season, number = item.number, title = item.title)
+            }
+        )
+    ) ?: return SimklPriorWatch.None
+    if (entry.seasons.any { season -> season.episodes.any { episode -> episode.watchedAt != null } }) {
+        return SimklPriorWatch.None
+    }
+    val target = media.episode ?: return SimklPriorWatch.None
+    val targetNumber = target.number
+    val next = parseSummaryEpisode(entry.nextToWatch)
+    val last = parseSummaryEpisode(entry.lastWatched)
+    val watched = when {
+        next != null -> compareEpisode(target.season, targetNumber, next)?.let { it < 0 } == true
+        last != null -> compareEpisode(target.season, targetNumber, last)?.let { it <= 0 } == true
+        else -> false
+    }
+    if (!watched) return SimklPriorWatch.None
+    return SimklPriorWatch(
+        wasWatched = true,
+        watchedAtEpochMs = entry.lastWatchedAt?.let(::parseSimklUtcEpochMs)
+    )
+}
+
+/** A summary marker the account reports next to a show, for example `S02E07` or `E7`. */
+private fun parseSummaryEpisode(value: String?): Pair<Int?, Int>? {
+    val match = value?.trim()?.let(SIMKL_SUMMARY_EPISODE::matchEntire) ?: return null
+    val episode = match.groupValues[2].toIntOrNull() ?: return null
+    return match.groupValues[1].takeIf(String::isNotEmpty)?.toIntOrNull() to episode
+}
+
+/**
+ * Compares an episode against a summary marker, by season first where both name one.
+ *
+ * A missing season on either side makes the comparison unusable: the flat episode number of an
+ * anime and a seasoned one cannot be told apart, so the caller stays with a first watch.
+ */
+private fun compareEpisode(
+    targetSeason: Int?,
+    targetNumber: Int,
+    marker: Pair<Int?, Int>
+): Int? {
+    val markerSeason = marker.first
+    if (targetSeason == null && markerSeason != null) return null
+    if (targetSeason != null && markerSeason == null) return null
+    if (targetSeason != null && markerSeason != null) {
+        val bySeason = targetSeason.compareTo(markerSeason)
+        if (bySeason != 0) return bySeason
+    }
+    return targetNumber.compareTo(marker.second)
+}
+
+private val SIMKL_SUMMARY_EPISODE = Regex("(?i)^(?:S(\\d+))?E(\\d+)$")
 
 internal fun SimklMedia.matchesTarget(target: SimklMedia): Boolean =
     matchesTargetWithIds(toTrackingExternalIds(), target, target.toTrackingExternalIds())
