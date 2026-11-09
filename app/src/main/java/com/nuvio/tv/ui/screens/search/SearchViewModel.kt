@@ -98,7 +98,7 @@ class SearchViewModel @Inject constructor(
     private var hasRenderedFirstCatalog = false
     private var pendingCatalogResponses = 0
     private var lastNonEmptyQuery: String = ""
-    private var lastNonEmptyQueryTime: Long = 0L
+    private var lastEmptyTransitionTime: Long = 0L
     private var revealBatchAfterNextDiscoverFetch = false
     private var hideUnreleasedContent = false
 
@@ -265,20 +265,25 @@ class SearchViewModel @Inject constructor(
             return
         }
         
-        // Detect if this is a recomposition artifact: transitioning to empty from the last
-        // non-empty query WITHIN 2 seconds (indicates Compose recomposition during focus change).
-        // Recomposition happens in rapid succession during focus changes. X button clicks are
-        // deliberate user actions that happen separately from the query being set.
         val now = System.currentTimeMillis()
+        
+        // Detect if this is a recomposition artifact: transitioning to empty from the current
+        // (non-empty) query, AND we transitioned to empty very recently (within 50ms).
+        // This indicates a rapid empty→value bounce that's characteristic of Compose recomposition.
+        // Normal backspace/delete is user-paced and much slower.
         val isRecompositionArtifact = query.isEmpty() && 
             query != _uiState.value.query && 
-            _uiState.value.query == lastNonEmptyQuery &&
-            (now - lastNonEmptyQueryTime) < 2000
+            _uiState.value.query.isNotEmpty() &&
+            (now - lastEmptyTransitionTime) < 50
         
-        // Track non-empty queries and their timestamp for recomposition detection
+        // Track when we transition to empty for recomposition detection
+        if (query.isEmpty() && query != _uiState.value.query) {
+            lastEmptyTransitionTime = now
+        }
+        
+        // Track non-empty queries for recomposition detection context
         if (query.isNotEmpty()) {
             lastNonEmptyQuery = query
-            lastNonEmptyQueryTime = now
         }
 
         _uiState.update {
