@@ -29,12 +29,14 @@ class SimklTrackingHistoryWriter @Inject constructor(
      *
      * A mark of an item the account already watched is a repeat, and Simkl records a plain add of it
      * as nothing, so it travels as a rewatch: the item carries the flag, the request carries
-     * `allow_rewatch=yes`, and a run the account already holds is pinned by its session id. The
-     * explicit Mark as rewatched action asks for one directly. A mark of an item that was never
-     * watched stays a plain add, even while a run is open, so a first watch of a new episode cannot
-     * join a run it does not belong to. The flag only travels while the rewatch mode and the plan
-     * allow it; Simkl drops a write carrying the flag for a free account silently, and the watch
-     * would be dropped with it.
+     * `allow_rewatch=yes`, and a run the account already holds is pinned by its session id. A mark of
+     * the step the open run is waiting for continues it too, which is what the Continue Watching card
+     * asks for; the account's episode rows are not needed for that, because the run position already
+     * says where the user is. The explicit Mark as rewatched action asks for one directly. A mark of
+     * an item that was never watched stays a plain add everywhere else, so a first watch of a new
+     * episode cannot join a run it does not belong to. The flag only travels while the rewatch mode
+     * and the plan allow it; Simkl drops a write carrying the flag for a free account silently, and
+     * the watch would be dropped with it.
      */
     override suspend fun addToHistory(
         profileId: Int,
@@ -54,7 +56,8 @@ class SimklTrackingHistoryWriter @Inject constructor(
         val resolved = pushableItems.map { item ->
             val catalogue = snapshot.enrichMediaReference(item.media, entryIndex)
             val enriched = catalogue.resolveAnimeEpisodeForSimkl()
-            val repeatViewing = snapshot.priorWatchForMark(catalogue, enriched).wasWatched
+            val repeatViewing = snapshot.priorWatchForMark(catalogue, enriched).wasWatched ||
+                snapshot.markContinuesRunningRewatch(enriched)
             if (
                 shouldRecordSimklRewatchOnMark(
                     mode = mode,

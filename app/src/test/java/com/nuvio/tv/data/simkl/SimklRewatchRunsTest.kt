@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.simkl
 
 import com.nuvio.tv.core.tracking.RewatchRunPosition
+import com.nuvio.tv.core.tracking.TrackingCatalogReference
 import com.nuvio.tv.core.tracking.TrackingEpisode
 import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.core.tracking.TrackingMediaKind
@@ -285,6 +286,45 @@ class SimklRewatchRunsTest {
     }
 
     @Test
+    fun `a mark of the step after the run continues it without exact episode history`() {
+        val snapshot = snapshotWithRun(Marked(season = 2, episode = 7))
+
+        // The run position is the only history here: the episode rows the exact lookup reads are
+        // missing, and the mark of the next step still has to travel as the rewatch it is.
+        assertTrue(snapshot.markContinuesRunningRewatch(showEpisode(season = 2, episode = 8)))
+        assertTrue(snapshot.markContinuesRunningRewatch(showEpisode(season = 3, episode = 1)))
+        // An episode the session already holds is a repeat too.
+        assertTrue(snapshot.markContinuesRunningRewatch(showEpisode(season = 2, episode = 7)))
+
+        // A jump away from the run is not its step and stays a first watch.
+        assertFalse(snapshot.markContinuesRunningRewatch(showEpisode(season = 2, episode = 9)))
+        assertFalse(snapshot.markContinuesRunningRewatch(showEpisode(season = 1, episode = 8)))
+        // Another item has no run here.
+        assertFalse(
+            snapshot.markContinuesRunningRewatch(
+                showEpisode(imdb = "tt0000001", season = 2, episode = 8)
+            )
+        )
+    }
+
+    @Test
+    fun `a mark does not continue a run the account no longer reports`() {
+        val entries = listOf(
+            rewatchRow(listOf(Marked(season = 2, episode = 7)), isRewatch = true, status = "closed")
+        )
+
+        assertFalse(snapshotOf(entries).markContinuesRunningRewatch(showEpisode(season = 2, episode = 8)))
+    }
+
+    @Test
+    fun `a flat anime mark continues the run by its number`() {
+        val snapshot = snapshotOf(listOf(animeSession(season = null, episode = 7)))
+
+        assertTrue(snapshot.markContinuesRunningRewatch(animeEpisode(number = 8)))
+        assertFalse(snapshot.markContinuesRunningRewatch(animeEpisode(number = 9)))
+    }
+
+    @Test
     fun `the running session of the item is the one a write joins`() {
         val sessions = listOf(
             session(id = 41, status = "completed"),
@@ -424,6 +464,40 @@ class SimklRewatchRunsTest {
         year = 2017,
         ids = TrackingExternalIds(imdb = "tt5753856"),
         episode = TrackingEpisode(season = 2, number = 7),
+    )
+
+    /** The same show at the episode a mark names, the way the writer reads it before the write. */
+    private fun showEpisode(
+        imdb: String = "tt5753856",
+        season: Int,
+        episode: Int,
+    ) = TrackingMediaReference(
+        kind = TrackingMediaKind.SHOW,
+        title = "Dark",
+        year = 2017,
+        ids = TrackingExternalIds(imdb = imdb),
+        episode = TrackingEpisode(season = season, number = episode),
+        catalog = TrackingCatalogReference(contentId = imdb, contentType = "series"),
+    )
+
+    /** A flat anime mark: Simkl lists the episode without a season, by its absolute number. */
+    private fun animeEpisode(number: Int) = TrackingMediaReference(
+        kind = TrackingMediaKind.ANIME,
+        title = "Attack on Titan",
+        year = 2013,
+        ids = TrackingExternalIds(mal = 16498),
+        episode = TrackingEpisode(season = null, number = number),
+        catalog = TrackingCatalogReference(contentId = "mal:16498", contentType = "anime"),
+    )
+
+    private fun snapshotWithRun(vararg marked: Marked): SimklSyncSnapshot =
+        snapshotOf(listOf(rewatchRow(marked.toList(), isRewatch = true)))
+
+    /** A snapshot holding these session rows, with the runs the account reader would derive. */
+    private fun snapshotOf(sessions: List<SimklLibraryEntry>): SimklSyncSnapshot = SimklSyncSnapshot(
+        entries = sessions,
+        rewatchSessions = sessions,
+        rewatchRuns = deriveSimklRewatchRuns(entries = sessions, offerRuns = true),
     )
 
     private data class Marked(

@@ -206,6 +206,39 @@ internal fun List<SimklLibraryEntry>.rewatchSessionHolds(
 }
 
 /**
+ * Whether a mark of this item is the next step of the account's running run.
+ *
+ * The account can report a watched title without the episode rows the exact prior-watch lookup
+ * needs (the API sometimes answers with counts only). The run position is then the only history
+ * left: a mark of the episode right after it, or of an episode the session already holds, is the
+ * run's own step and must travel as a rewatch. Anything else stays a first watch, so a new episode
+ * away from the run cannot join it.
+ *
+ * The episode is the one the write resolves to: anime arrives here in Simkl's flat numbering, where
+ * a session without a season places the step by its number alone.
+ */
+internal fun SimklSyncSnapshot.markContinuesRunningRewatch(
+    media: TrackingMediaReference
+): Boolean {
+    val episode = media.episode ?: return false
+    val canonicalId = media.toSimklMedia().canonicalContentId()
+    val run = rewatchRuns.firstOrNull { run ->
+        run.matches(media.catalog?.contentId) || run.matches(canonicalId)
+    } ?: return false
+    val number = episode.number
+    if ((episode.season ?: 0) to number in rewatchSessions.rewatchedEpisodesOf(run.contentId)) {
+        return true
+    }
+    return when {
+        run.seasonNumber == 0 -> (episode.season ?: 0) == 0 && number == run.episodeNumber + 1
+        episode.season == null -> false
+        episode.season == run.seasonNumber -> number == run.episodeNumber + 1
+        episode.season == run.seasonNumber + 1 -> number == 1
+        else -> false
+    }
+}
+
+/**
  * The session a repeat viewing of this item joins, when the account already has one running.
  *
  * Simkl asks a client to pin the session on every write after the one that opened it, so the write
