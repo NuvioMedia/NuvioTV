@@ -613,6 +613,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     .build()
             }
             _loadControl = loadControl
+            // Live TV channels start after a second of video instead of the file buffer settings' 3 to 5 s.
+            val playerLoadControl = com.nuvio.tv.reshaped.livetv.LiveTvStartLoadControl.forUrl(url, loadControl)
 
             // The cache wraps whichever upstream data source it is given, so it does not depend on
             // either buffer engine. The low-RAM plus confirmed DV7 case is handled dynamically at
@@ -1035,7 +1037,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     .setTrackSelector(trackSelector!!)
                     .setMediaSourceFactory(DefaultMediaSourceFactory(playerDataSourceFactory, effectiveExtractorsFactory))
                     .setRenderersFactory(renderersFactory)
-                    .setLoadControl(loadControl)
+                    .setLoadControl(playerLoadControl)
                     .setReleaseTimeoutMs(PLAYER_RELEASE_TIMEOUT_MS)
                     .setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
                     .build()
@@ -1060,7 +1062,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 val playerDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, headers)
                 ExoPlayer.Builder(context)
                     .setBandwidthMeter(bandwidthMeter)
-                    .setLoadControl(loadControl)
+                    .setLoadControl(playerLoadControl)
                     .setTrackSelector(trackSelector!!)
                     .setMediaSourceFactory(DefaultMediaSourceFactory(playerDataSourceFactory, effectiveExtractorsFactory))
                     .setReleaseTimeoutMs(PLAYER_RELEASE_TIMEOUT_MS)
