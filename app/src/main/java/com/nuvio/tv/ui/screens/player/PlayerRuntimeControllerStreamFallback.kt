@@ -21,7 +21,8 @@ internal fun PlayerRuntimeController.beginStreamFallbackSession(stream: Stream, 
             stream, streams,
             maxAttempts = UsenetSettings.read(context).fallbackMaxAttempts,
             isEnabled = { UsenetSettings.read(context).fallbackEnabled },
-            isUnplayable = { unplayable.contains(it) }
+            isUnplayable = { unplayable.contains(it) },
+            messages = com.nuvio.tv.core.player.streamFallbackMessages(context)
         )
     } else null
     streamFallbackResumePosition = null
@@ -49,7 +50,7 @@ internal suspend fun PlayerRuntimeController.resolveSelectedStreamWithFallback(
     val resolved = try {
         streamFallbackSession?.prepareCandidate(stream) { resolveFallbackCandidate(stream, season, episode) }
             ?: withTimeoutOrNull(120_000L) { resolveFallbackCandidate(stream, season, episode) }
-            ?: error("Stream preparation timed out")
+            ?: error(context.getString(R.string.usenet_preparation_timed_out))
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (error: Exception) {

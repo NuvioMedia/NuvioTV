@@ -1385,7 +1385,8 @@ class StreamScreenViewModel @Inject constructor(
             stream, _uiState.value.filteredStreams.ifEmpty { _uiState.value.allStreams },
             maxAttempts = com.nuvio.tv.core.usenet.UsenetSettings.read(context).fallbackMaxAttempts,
             isEnabled = { com.nuvio.tv.core.usenet.UsenetSettings.read(context).fallbackEnabled },
-            isUnplayable = { com.nuvio.tv.core.usenet.UnplayableReleases.get(context).contains(it) }
+            isUnplayable = { com.nuvio.tv.core.usenet.UnplayableReleases.get(context).contains(it) },
+            messages = com.nuvio.tv.core.player.streamFallbackMessages(context)
         )
         var candidate: Stream? = stream
         var pendingResolutionError: String? = null
@@ -1813,6 +1814,11 @@ class StreamScreenViewModel @Inject constructor(
         val nzbUrl = stream.nzbUrl ?: return
         if (stream.addonName != com.nuvio.tv.core.usenet.BuiltInUsenetService.GROUP_NAME) return
         pendingCacheSaveJob = viewModelScope.launch {
+            // The link cache is not encrypted: the link is kept without its indexer's API key.
+            // Without the sources to find the key in it, the link is not kept at all.
+            val sources = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { usenetSourceSettings.read() }.getOrNull()
+            } ?: return@launch
             streamLinkCacheDataStore.save(
                 contentKey = streamCacheKey,
                 url = "",
@@ -1821,7 +1827,7 @@ class StreamScreenViewModel @Inject constructor(
                 videoSize = stream.behaviorHints?.videoSize,
                 contentLanguage = contentLanguage,
                 year = year,
-                nzbUrl = nzbUrl,
+                nzbUrl = com.nuvio.tv.core.usenet.BuiltInUsenetService.withoutApiKeys(nzbUrl, sources),
                 releaseTitle = stream.title,
                 publishedAt = stream.publishedAt
             )

@@ -184,6 +184,9 @@ private fun StreamLabelBadgeChip(badge: StreamBadge) {
     val background = remember(badge.tagColor) { badge.tagColor.toBadgeColorOrNull() ?: Color(0xFF0A0C0C) }
     val text = remember(badge.textColor) { badge.textColor.toBadgeColorOrNull() ?: Color.White }
     val border = remember(badge.borderColor) { badge.borderColor.toBadgeColorOrNull() ?: background }
+    val label = com.nuvio.tv.core.usenet.BuiltInUsenetService.badgeText(badge.name)?.let { (id, episode) ->
+        if (episode != null) stringResource(id, episode) else stringResource(id)
+    } ?: badge.name
     Box(
         modifier = Modifier
             .height(20.dp)
@@ -194,7 +197,7 @@ private fun StreamLabelBadgeChip(badge: StreamBadge) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = badge.name,
+            text = label,
             style = MaterialTheme.typography.labelSmall,
             color = text
         )

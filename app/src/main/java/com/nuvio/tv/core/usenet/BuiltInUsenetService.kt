@@ -1,12 +1,15 @@
 package com.nuvio.tv.core.usenet
 
+import android.content.Context
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.R
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBadge
 import com.nuvio.tv.domain.model.StreamBehaviorHints
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.text.DateFormat
 import java.time.ZonedDateTime
@@ -290,8 +293,14 @@ class BuiltInUsenetService @Inject constructor(
     private val client: NewznabClient,
     private val tmdb: TmdbService,
     private val tmdbApi: TmdbApi,
-    private val unplayable: UnplayableReleases? = null
+    private val unplayable: UnplayableReleases? = null,
+    /** Null in unit tests, which read the English wording. */
+    @ApplicationContext private val context: Context? = null
 ) {
+    /** A translated message; [english], the same wording, where there is no context. */
+    private fun text(id: Int, english: String, vararg args: Any): String =
+        context?.getString(id, *args) ?: english.format(Locale.ROOT, *args)
+
     fun search(config: UsenetSourceConfiguration, type: String, videoId: String,
         season: Int?, episode: Int?): Flow<BuiltInUsenetResult> = flow {
         if (!config.ready || type.lowercase() !in BUILT_IN_USENET_TYPES) return@flow
@@ -421,9 +430,10 @@ class BuiltInUsenetService @Inject constructor(
                         // Never display raw exception messages: network/parser errors can contain keys.
                         val cooldown = result.exceptionOrNull() as? IndexerCooldownException
                         emit(BuiltInUsenetResult(failure = if (cooldown != null) {
-                            "${indexer.name}: indexer limit reached, paused until " +
-                                DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(cooldown.until)) + "."
-                        } else "${indexer.name}: indexer search failed. Check the API URL, key and limits."))
+                            text(R.string.usenet_indexer_search_paused, "%1\$s: indexer limit reached, paused until %2\$s.",
+                                indexer.name, DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(cooldown.until)))
+                        } else text(R.string.usenet_indexer_search_failed,
+                            "%1\$s: indexer search failed. Check the API URL, key and limits.", indexer.name)))
                     } else {
                         releases += result.getOrThrow()
                         if (releases.any { it.packSeasons.isNotEmpty() }) seasonLookup?.start()
@@ -500,11 +510,15 @@ class BuiltInUsenetService @Inject constructor(
         // A pack's size is its seasons', not the episode's that plays: with their episode counts, the
         // size badge shows an episode's share and the details keep the whole size.
         val episodeShare = episodeSize(seasonEpisodes).takeIf { pack && it != size }
-        val whole = if (packSeasons.size == 1) "whole season" else "whole pack"
+        val season = packSeasons.size == 1
         val sizeLabel = if (size <= 0) null else when {
             !pack -> gb(size)
-            episodeShare != null -> "${gb(size)} $whole (~${gb(episodeShare)} per episode)"
-            else -> "${gb(size)} ($whole)"
+            episodeShare != null && season -> text(R.string.usenet_size_season_share,
+                "%1\$s whole season (~%2\$s per episode)", gb(size), gb(episodeShare))
+            episodeShare != null -> text(R.string.usenet_size_pack_share,
+                "%1\$s whole pack (~%2\$s per episode)", gb(size), gb(episodeShare))
+            season -> text(R.string.usenet_size_season, "%1\$s (whole season)", gb(size))
+            else -> text(R.string.usenet_size_pack, "%1\$s (whole pack)", gb(size))
         }
         val age = if (publishedAt > 0) "${((System.currentTimeMillis() - publishedAt) / 86400000).coerceAtLeast(0)}d" else null
         val details = listOfNotNull(sizeLabel, age, indexerName).joinToString(" • ")
@@ -576,7 +590,23 @@ class BuiltInUsenetService @Inject constructor(
          */
         private const val SIBLING_FAILED_COLOR = "#FD7E14"
         private const val SIBLING_PLAYED_COLOR = "#0AA2C0"
-        private val SIBLING_LABEL = Regex("E\\d+ (FAILED|PLAYED)")
+        private val SIBLING_LABEL = Regex("E(\\d+) (FAILED|PLAYED)")
+
+        /**
+         * The text a built-in badge named [name] is shown with: its string resource, and the
+         * episode of an "E02 FAILED" badge. A badge keeps its English name, which tells it apart;
+         * null for any other badge, shown by its name.
+         */
+        fun badgeText(name: String): Pair<Int, Int?>? = when (name) {
+            UNAVAILABLE_LABEL -> R.string.usenet_badge_unavailable to null
+            AVAILABLE_LABEL -> R.string.usenet_badge_available to null
+            SEASON_PACK_LABEL -> R.string.usenet_badge_season_pack to null
+            else -> SIBLING_LABEL.matchEntire(name)?.let { match ->
+                val episode = match.groupValues[1].toIntOrNull() ?: return@let null
+                (if (match.groupValues[2] == "FAILED") R.string.usenet_badge_episode_failed
+                else R.string.usenet_badge_episode_played) to episode
+            }
+        }
 
         fun siblingBadge(outcome: SiblingOutcome): StreamBadge =
             StreamBadge(name = "E%02d %s".format(Locale.ROOT, outcome.episode, if (outcome.failed) "FAILED" else "PLAYED"),
@@ -597,11 +627,38 @@ class BuiltInUsenetService @Inject constructor(
         fun restoredStream(nzbUrl: String, name: String, title: String?, size: Long?, publishedAt: Long?,
             config: UsenetSourceConfiguration): Stream? {
             val servers = config.servers().ifEmpty { return null }
+            val download = withApiKeys(nzbUrl, config) ?: return null
             return Stream(name = name, title = title, description = null, url = null, ytId = null, infoHash = null,
                 fileIdx = null, externalUrl = null,
                 behaviorHints = usenetHints(bingeGroup(title), size),
-                addonName = GROUP_NAME, addonLogo = null, nzbUrl = nzbUrl, servers = servers, publishedAt = publishedAt)
+                addonName = GROUP_NAME, addonLogo = null, nzbUrl = download, servers = servers, publishedAt = publishedAt)
         }
+
+        /**
+         * [nzbUrl] as it may be kept outside the encrypted sources: every indexer API key in it is
+         * replaced by a reference to its indexer, wherever the indexer put it in the link.
+         * [withApiKeys] puts today's key back.
+         */
+        fun withoutApiKeys(nzbUrl: String, config: UsenetSourceConfiguration): String =
+            config.indexers.filter { it.apiKey.length >= MIN_REFERENCED_KEY }.sortedByDescending { it.apiKey.length }
+                .fold(nzbUrl) { url, indexer -> url.replace(indexer.apiKey, "$KEY_REFERENCE${indexer.id}}") }
+
+        /** Null when a referenced indexer was removed or has no key any more: the link cannot be opened. */
+        fun withApiKeys(stored: String, config: UsenetSourceConfiguration): String? {
+            var missing = false
+            val url = KEY_REFERENCES.replace(stored) { match ->
+                val key = config.indexers.find { it.id == match.groupValues[1] }?.apiKey.orEmpty()
+                if (key.isEmpty()) missing = true
+                Regex.escapeReplacement(key)
+            }
+            return url.takeUnless { missing }
+        }
+
+        // Braces are never left bare in a URL, so a reference cannot be mistaken for part of one.
+        private const val KEY_REFERENCE = "{indexer-key:"
+        private val KEY_REFERENCES = Regex("""\{indexer-key:([^}]+)\}""")
+        /** Shorter values could match unrelated parts of a link. */
+        private const val MIN_REFERENCED_KEY = 8
 
         /** Available releases first when chosen, unplayable ones last; the sort applies within each. */
         private fun outcomeRank(failed: Boolean, available: Boolean, availableFirst: Boolean) = when {

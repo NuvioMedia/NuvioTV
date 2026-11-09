@@ -57,6 +57,38 @@ class BuiltInUsenetServiceTest {
             config.copy(providers = config.providers.map { it.copy(enabled = false) })))
     }
 
+    @Test fun `a kept release link holds no API key and opens with today's`() {
+        val indexer = UsenetIndexer(name = "A", apiUrl = "https://a.test", apiKey = "0123456789abcdef")
+        val config = UsenetSourceConfiguration(enabled = true, indexers = listOf(indexer),
+            providers = listOf(UsenetProvider(name = "News", host = "news.test")))
+        val link = "https://a.test/api?t=get&id=1&apikey=0123456789abcdef"
+        val kept = BuiltInUsenetService.withoutApiKeys(link, config)
+        assertFalse(kept.contains("0123456789abcdef"))
+        assertEquals(link, BuiltInUsenetService.withApiKeys(kept, config))
+        // A key changed since is the one used; wherever the indexer put it in the link.
+        val renewed = config.copy(indexers = listOf(indexer.copy(apiKey = "fedcba9876543210")))
+        assertEquals("https://a.test/api?t=get&id=1&apikey=fedcba9876543210",
+            BuiltInUsenetService.restoredStream(kept, "A", null, null, null, renewed)?.nzbUrl)
+        assertEquals("https://a.test/fedcba9876543210/1.nzb", BuiltInUsenetService.withApiKeys(
+            BuiltInUsenetService.withoutApiKeys("https://a.test/0123456789abcdef/1.nzb", config), renewed))
+        // Its indexer removed, or left without a key: the list shows instead.
+        assertNull(BuiltInUsenetService.restoredStream(kept, "A", null, null, null, config.copy(indexers = emptyList())))
+        assertNull(BuiltInUsenetService.withApiKeys(kept, config.copy(indexers = listOf(indexer.copy(apiKey = "")))))
+        // A link kept before, or one that holds no known key, is unchanged.
+        assertEquals("https://b.test/nzb/1", BuiltInUsenetService.withApiKeys(
+            BuiltInUsenetService.withoutApiKeys("https://b.test/nzb/1", config), config))
+    }
+
+    @Test fun `built-in badges are shown translated and other badges by their name`() {
+        assertEquals(com.nuvio.tv.R.string.usenet_badge_unavailable to null,
+            BuiltInUsenetService.badgeText(BuiltInUsenetService.UNAVAILABLE_LABEL))
+        assertEquals(com.nuvio.tv.R.string.usenet_badge_episode_failed to 2,
+            BuiltInUsenetService.badgeText(BuiltInUsenetService.siblingBadge(SiblingOutcome(2, failed = true)).name))
+        assertEquals(com.nuvio.tv.R.string.usenet_badge_episode_played to 12,
+            BuiltInUsenetService.badgeText(BuiltInUsenetService.siblingBadge(SiblingOutcome(12, failed = false)).name))
+        assertNull(BuiltInUsenetService.badgeText("BD 50"))
+    }
+
     @Test fun `an upload's episodes share a binge group, so the next episode keeps to it`() {
         fun group(title: String) = BuiltInUsenetService.bingeGroup(title)
         val e01 = group("Silo.S01E01.Freedom.Day.2160p.ATVp.WEB-DL.DDP5.1.HDR.H.265-NTb")

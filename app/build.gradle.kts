@@ -481,7 +481,7 @@ dependencies {
     implementation(libs.retrofit.moshi)
     implementation(libs.okhttp)
     // Bounded-time matching for native stream profile rules.
-    implementation("com.google.re2j:re2j:1.8")
+    implementation(libs.re2j)
     implementation(libs.okhttp.logging)
     implementation(libs.moshi)
     ksp(libs.moshi.codegen)

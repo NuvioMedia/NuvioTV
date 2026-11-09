@@ -15,7 +15,8 @@ internal class StreamFallbackSession(
     private val nanoTime: () -> Long = System::nanoTime,
     private val isEnabled: () -> Boolean = { false },
     /** Releases that already failed for good with these providers; trying them again only costs time. */
-    private val isUnplayable: (Stream) -> Boolean = { false }
+    private val isUnplayable: (Stream) -> Boolean = { false },
+    private val messages: StreamFallbackMessages = StreamFallbackMessages()
 ) {
     private val selectedIsUsenet = selected.isUsenet()
     private var playbackUrl: String? = null
@@ -29,7 +30,7 @@ internal class StreamFallbackSession(
         private set
     val failureMessage: String?
         get() = if (preparationSpentMs >= 120_000L) {
-            "Usenet preparation time budget exhausted" + (lastFailure?.let { ": $it" } ?: "")
+            messages.budgetExhausted + (lastFailure?.let { ": $it" } ?: "")
         } else lastFailure
     var attempts: Int = 0
         private set
@@ -77,7 +78,7 @@ internal class StreamFallbackSession(
         ownsPlayback(url) && canAdvance
 
     private fun recordFailure(stream: Stream, error: Exception) {
-        lastFailure = error.message ?: "Usenet preparation failed"
+        lastFailure = error.message ?: messages.failed
         when ((error as? UsenetPreparationException)?.scope) {
             UsenetPreparationException.Scope.ENGINE -> engineFailed = true
             UsenetPreparationException.Scope.PROVIDER -> failedProviders += stream.servers.orEmpty().sorted()
@@ -93,14 +94,14 @@ internal class StreamFallbackSession(
     suspend fun <T> prepareCandidate(stream: Stream, resolve: suspend () -> T): T {
         val allowance = minOf(120_000L - preparationSpentMs,
             if (!enabled) 120_000L else if (attempts == 0) 60_000L else 30_000L)
-        if (allowance <= 0L) error("Usenet preparation time budget exhausted")
+        if (allowance <= 0L) error(messages.budgetExhausted)
         val start = nanoTime()
         fun elapsed() = (nanoTime() - start) / 1_000_000L
         val label = "attempt=$attempts source=\"${stream.name}\" release=\"${stream.title?.lineSequence()?.firstOrNull()}\""
         logPreparation("start $label allowanceMs=$allowance spentMs=$preparationSpentMs")
         try {
             val prepared = withTimeoutOrNull(allowance) { Prepared(resolve()) }
-                ?: throw UsenetPreparationException("Usenet source preparation timed out")
+                ?: throw UsenetPreparationException(messages.timedOut)
             logPreparation("ready $label ms=${elapsed()}")
             return prepared.value
         } catch (cancelled: CancellationException) {
@@ -137,6 +138,19 @@ internal class StreamFallbackSession(
         }
     }
 }
+
+/** What a session tells the user. The defaults are the English wording, for tests without resources. */
+internal data class StreamFallbackMessages(
+    val budgetExhausted: String = "Usenet preparation time budget exhausted",
+    val timedOut: String = "Usenet source preparation timed out",
+    val failed: String = "Usenet preparation failed"
+)
+
+internal fun streamFallbackMessages(context: android.content.Context) = StreamFallbackMessages(
+    budgetExhausted = context.getString(com.nuvio.tv.R.string.usenet_preparation_budget_exhausted),
+    timedOut = context.getString(com.nuvio.tv.R.string.usenet_preparation_timed_out),
+    failed = context.getString(com.nuvio.tv.R.string.usenet_preparation_failed)
+)
 
 /** One line per Usenet source preparation, so slow or failing indexers and releases show in logcat. */
 private fun logPreparation(message: String) {
