@@ -389,25 +389,35 @@ static bool filterSeiNal(const uint8_t* data, size_t nalOffset, size_t nalSize, 
     const size_t HDR10_PLUS_SIG_LEN = 5;
 
     while (pos < rbspEnd) {
-        if (rbspEnd - pos == 1 && rbspData[pos] == 0x80) break;
+        // rbsp_trailing_bits (0x80), optionally followed by zero padding.
+        if (rbspData[pos] == 0x80) {
+            bool onlyPadding = true;
+            for (size_t k = pos + 1; k < rbspEnd; ++k) {
+                if (rbspData[k] != 0) { onlyPadding = false; break; }
+            }
+            if (onlyPadding) break;
+        }
 
         size_t msgStart = pos;
 
         uint32_t payloadType = 0;
+        bool typeTerminated = false;
         while (pos < rbspEnd) {
             uint8_t b = rbspData[pos++];
             payloadType += b;
-            if (b != 0xFF) break;
+            if (b != 0xFF) { typeTerminated = true; break; }
         }
 
         uint32_t payloadSize = 0;
+        bool sizeTerminated = false;
         while (pos < rbspEnd) {
             uint8_t b = rbspData[pos++];
             payloadSize += b;
-            if (b != 0xFF) break;
+            if (b != 0xFF) { sizeTerminated = true; break; }
         }
 
-        if (pos + payloadSize > rbspEnd) return false;
+        if (!typeTerminated || !sizeTerminated) return false;
+        if (payloadSize > rbspEnd - pos) return false;
         size_t payloadStart = pos;
         pos += payloadSize;
         size_t msgEnd = pos;

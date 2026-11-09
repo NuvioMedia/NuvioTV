@@ -48,10 +48,12 @@ internal object HevcHdr10PlusStripper {
                 nalSize = (nalSize shl 8) or (sample[pos + i].toInt() and 0xFF)
             }
             val nalStart = pos + nalLengthFieldLength
-            if (nalSize <= 0 || nalStart + nalSize > sampleLen) {
-                // Fallback: If length field parsing fails due to missing/corrupted CSD,
-                // perform an emergency Annex-B byte scan pass over this sample frame.
-                return stripHdr10PlusAnnexB(sample, sampleLen)
+            if (nalSize <= 0 || nalSize > sampleLen - nalStart) {
+                // Malformed / not length-delimited. Never fall back to the Annex-B scanner here:
+                // a 4-byte length such as 00 00 01 xx looks like an Annex-B start code and the
+                // scanner would edit payload bytes without fixing the length prefix, and would
+                // return Annex-B bytes to a caller that expects length-delimited data.
+                return null
             }
             val nalType = (sample[nalStart].toInt() ushr 1) and 0x3F
             if (nalType == NAL_TYPE_PREFIX_SEI || nalType == NAL_TYPE_SUFFIX_SEI) {
@@ -169,28 +171,31 @@ internal object HevcHdr10PlusStripper {
         var hasHdr10Plus = false
 
         while (pos < rbspEnd) {
-            // Lone 0x80 at end = RBSP stop bit; nothing more to parse
-            if (rbspEnd - pos == 1 && (rbspData[pos].toInt() and 0xFF) == 0x80) break
+            // rbsp_trailing_bits (0x80), optionally followed by zero padding; nothing more to parse
+            if (isRbspTrailing(rbspData, pos, rbspEnd)) break
 
             val msgStart = pos
 
             // Read SEI payloadType (variable-length encoding)
             var payloadType = 0
+            var typeTerminated = false
             while (pos < rbspEnd) {
                 val b = rbspData[pos++].toInt() and 0xFF
                 payloadType += b
-                if (b != 0xFF) break
+                if (b != 0xFF) { typeTerminated = true; break }
             }
 
             // Read SEI payloadSize (variable-length encoding)
             var payloadSize = 0
+            var sizeTerminated = false
             while (pos < rbspEnd) {
                 val b = rbspData[pos++].toInt() and 0xFF
                 payloadSize += b
-                if (b != 0xFF) break
+                if (b != 0xFF) { sizeTerminated = true; break }
             }
 
-            if (pos + payloadSize > rbspEnd) return null // malformed; keep original
+            if (!typeTerminated || !sizeTerminated) return null // malformed; keep original
+            if (payloadSize < 0 || payloadSize > rbspEnd - pos) return null // malformed; keep original
             val payloadStart = pos
             pos += payloadSize
             val msgEnd = pos
@@ -239,6 +244,14 @@ internal object HevcHdr10PlusStripper {
         }
 
         return finalNal.toByteArray()
+    }
+
+    private fun isRbspTrailing(data: ByteArray, pos: Int, end: Int): Boolean {
+        if ((data[pos].toInt() and 0xFF) != 0x80) return false
+        for (i in pos + 1 until end) {
+            if (data[i].toInt() != 0) return false
+        }
+        return true
     }
 
     private fun findStartCode(data: ByteArray, from: Int, limit: Int): Int {
