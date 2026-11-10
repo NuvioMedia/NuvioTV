@@ -374,6 +374,9 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 )
             }
 
+            if (settings.subtitleStyle.usesStyledRenderer != currentState.subtitleStyle.usesStyledRenderer) {
+                refreshStyledSubtitles()
+            }
             if (resolvedAudioAmplificationDb != currentState.audioAmplificationDb) {
                 applyAudioAmplification(resolvedAudioAmplificationDb)
             }
