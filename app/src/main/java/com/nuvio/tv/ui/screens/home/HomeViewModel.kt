@@ -530,26 +530,49 @@ class HomeViewModel @Inject constructor(
      */
     private fun observeRewatchRuns() {
         viewModelScope.launch {
-            var initial = true
+            var previousRuns: List<RewatchRunPosition>? = null
             simklSyncRepository.state
                 .map { state -> state.snapshot.rewatchRuns }
                 .distinctUntilChanged()
-                .collect { _ ->
+                .collect { runs ->
                     // Dismissals are not healed here any more: clearing every run's keys on every
                     // emission (the first included) made a dismissal unable to keep a run card
                     // hidden. The close path clears the keys of the one run it actually closes; the
                     // cost is that a stale dismissal from a build that could not close a session is
                     // no longer swept away.
-                    if (initial) {
-                        initial = false
-                        return@collect
-                    }
-                    // The pipeline already watches the runs, so it rebuilds on the change. Clear
-                    // the per content answers without emptying the row: a close removes one card,
-                    // it must not make the whole Continue Watching row blink.
-                    clearAllCwInMemoryCaches(clearRow = false)
+                    val previous = previousRuns
+                    previousRuns = runs
+                    if (previous == null) return@collect
+                    invalidateCwCachesForRewatchRuns(changedRewatchRunKeys(previous, runs))
                 }
         }
+    }
+
+    /**
+     * Drops the Continue Watching answers of the series whose run changed, and leaves the others.
+     *
+     * The pipeline already watches the runs, so it rebuilds on the change. Clearing every series
+     * instead is what made the other cards fall back to their raw provider titles until enrichment
+     * ran again. A run whose mark time alone changed is not passed here: its position did not move.
+     */
+    private fun invalidateCwCachesForRewatchRuns(keys: Set<String>) {
+        if (keys.isEmpty()) return
+        keys.forEach { contentId ->
+            cwEnrichedNextUpOverlay.remove(contentId)
+            cwEnrichedInProgressOverlay.remove(contentId)
+        }
+        synchronized(cwNextUpResolutionCache) {
+            cwNextUpResolutionCache.keys.removeAll { key -> key.substringBefore('|') in keys }
+        }
+        cwNextUpNegativeCacheTimestamps.keys.removeAll { key -> key.substringBefore('|') in keys }
+        synchronized(discoveredOlderNextUpItems) {
+            discoveredOlderNextUpItems.removeAll { item -> item.info.contentId in keys }
+        }
+        cwLastProcessedNextUpContentIds.removeAll(keys)
+        cwProcessedOlderSeedContentIds.removeAll(keys)
+        // A run that disappeared can put the canonical seed back in the row, and the older-seed
+        // path skips a series whose validation deadline is still fresh. Expire only this series.
+        watchedSeriesStateHolder.clearValidationStateFor(keys)
     }
 
     private fun observeBlurUnwatchedEpisodes() {

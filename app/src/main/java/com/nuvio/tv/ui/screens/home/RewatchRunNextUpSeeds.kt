@@ -72,6 +72,41 @@ internal fun mergeOptimisticRewatchRuns(
         ).sortedByDescending { run -> run.markedAtEpochMs }
 }
 
+/**
+ * The id forms of the runs whose Continue Watching answers are stale.
+ *
+ * A run that appears, disappears or moves to another episode invalidates the row answers of its
+ * series. A run whose mark time alone changes does not: the next-up resolution is keyed by the
+ * position, so a mark that leaves the position in place leaves that key valid too. Returning every
+ * id form the run matches keeps a catalogue id and the provider ids from missing the same series.
+ */
+internal fun changedRewatchRunKeys(
+    previous: List<RewatchRunPosition>,
+    current: List<RewatchRunPosition>,
+): Set<String> {
+    val previousByContentId = previous.associateBy(RewatchRunPosition::contentId)
+    val currentByContentId = current.associateBy(RewatchRunPosition::contentId)
+    val changed = mutableListOf<RewatchRunPosition>()
+    previousByContentId.forEach { (contentId, before) ->
+        val after = currentByContentId[contentId]
+        when {
+            after == null -> changed += before
+            after.seasonNumber != before.seasonNumber ||
+                after.episodeNumber != before.episodeNumber -> {
+                changed += before
+                changed += after
+            }
+        }
+    }
+    currentByContentId.forEach { (contentId, after) ->
+        if (contentId !in previousByContentId) changed += after
+    }
+    return changed
+        .flatMapTo(mutableSetOf()) { run -> listOf(run.contentId) + run.matchKeys }
+        .mapTo(mutableSetOf()) { key -> key.trim() }
+        .apply { remove("") }
+}
+
 /** A completed seed standing at the run position, with the mark that makes the run the newer one. */
 private fun RewatchRunPosition.toNextUpSeed(): WatchProgress = WatchProgress(
     contentId = contentId,

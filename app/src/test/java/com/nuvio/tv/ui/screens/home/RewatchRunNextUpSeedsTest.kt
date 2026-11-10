@@ -241,6 +241,74 @@ class RewatchRunNextUpSeedsTest {
         assertEquals(listOf(account), mergeOptimisticRewatchRuns(listOf(account), emptyMap()))
     }
 
+    @Test
+    fun `a run that appears invalidates every id form of its series`() {
+        val appeared = run(
+            contentId = SHOW,
+            season = 3,
+            episode = 5,
+            markedAt = 2_000L,
+            matchKeys = listOf("imdb:$SHOW", "tmdb:123"),
+        )
+
+        assertEquals(
+            setOf(SHOW, "imdb:$SHOW", "tmdb:123"),
+            changedRewatchRunKeys(previous = emptyList(), current = listOf(appeared)),
+        )
+    }
+
+    @Test
+    fun `a run that disappears invalidates only its series`() {
+        val gone = run(
+            contentId = SHOW,
+            season = 3,
+            episode = 5,
+            markedAt = 2_000L,
+            matchKeys = listOf("imdb:$SHOW"),
+        )
+        val other = run(contentId = OTHER_SHOW, season = 1, episode = 2, markedAt = 1_000L)
+
+        assertEquals(
+            setOf(SHOW, "imdb:$SHOW"),
+            changedRewatchRunKeys(previous = listOf(gone, other), current = listOf(other)),
+        )
+    }
+
+    @Test
+    fun `a run that moves invalidates only the series that moved`() {
+        val before = run(
+            contentId = SHOW,
+            season = 3,
+            episode = 4,
+            markedAt = 1_000L,
+            matchKeys = listOf("imdb:$SHOW"),
+        )
+        val after = run(
+            contentId = SHOW,
+            season = 3,
+            episode = 5,
+            markedAt = 2_000L,
+            matchKeys = listOf("imdb:$SHOW"),
+        )
+        val other = run(contentId = OTHER_SHOW, season = 1, episode = 2, markedAt = 1_000L)
+
+        assertEquals(
+            setOf(SHOW, "imdb:$SHOW"),
+            changedRewatchRunKeys(
+                previous = listOf(before, other),
+                current = listOf(after, other),
+            ),
+        )
+    }
+
+    @Test
+    fun `a run whose mark time alone changes invalidates nothing`() {
+        val before = run(contentId = SHOW, season = 3, episode = 4, markedAt = 1_000L)
+        val after = run(contentId = SHOW, season = 3, episode = 4, markedAt = 2_000L)
+
+        assertTrue(changedRewatchRunKeys(listOf(before), listOf(after)).isEmpty())
+    }
+
     private fun seed(
         contentId: String,
         season: Int,
