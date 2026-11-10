@@ -33,6 +33,7 @@ data class SimklSettingsUiState(
     val username: String? = null,
     val userCode: String? = null,
     val verificationUri: String? = null,
+    val verificationUriComplete: String? = null,
     val expiresAtEpochMs: Long? = null,
     val pollIntervalSeconds: Int = 5,
     val statusMessage: String? = null,
@@ -64,6 +65,7 @@ class SimklSettingsViewModel @Inject constructor(
                         username = state.username,
                         userCode = state.pinSession?.userCode,
                         verificationUri = state.pinSession?.verificationUri,
+                        verificationUriComplete = state.pinSession?.qrUri,
                         expiresAtEpochMs = state.pinSession?.expiresAtEpochMs,
                         pollIntervalSeconds = state.pinSession?.intervalSeconds ?: 5,
                         errorMessage = state.error?.message()
@@ -207,7 +209,8 @@ class SimklSettingsViewModel @Inject constructor(
                 delay((session.intervalSeconds * 1_000L).coerceAtMost(remaining))
                 try {
                     when (authRepository.pollPin()) {
-                        SimklPinPollResult.Pending -> _uiState.update {
+                        SimklPinPollResult.Pending,
+                        SimklPinPollResult.SlowDown -> _uiState.update {
                             it.copy(statusMessage = context.getString(R.string.simkl_status_waiting))
                         }
                         SimklPinPollResult.Authorized -> {
@@ -245,6 +248,8 @@ class SimklSettingsViewModel @Inject constructor(
 
     private fun SimklAuthError.message(): String = when (this) {
         SimklAuthError.MISSING_CLIENT_ID -> context.getString(R.string.simkl_missing_credentials)
+        SimklAuthError.INVALID_CLIENT -> context.getString(R.string.simkl_error_invalid_client)
+        SimklAuthError.REAUTHORIZATION_REQUIRED -> context.getString(R.string.simkl_error_reauthorization_required)
         SimklAuthError.PIN_EXPIRED,
         SimklAuthError.PIN_INVALIDATED -> context.getString(R.string.simkl_error_code_expired)
         SimklAuthError.AUTHORIZATION_REVOKED -> context.getString(R.string.simkl_error_authorization_revoked)

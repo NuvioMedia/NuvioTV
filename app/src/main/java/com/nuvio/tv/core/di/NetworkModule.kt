@@ -236,7 +236,8 @@ object NetworkModule {
                 scope = authorization.scope,
                 expectedAccessToken = authorization.accessToken
             )
-        }
+        },
+        onTokensRefreshed = storage::saveRefreshedTokens
     )
 
     @Provides

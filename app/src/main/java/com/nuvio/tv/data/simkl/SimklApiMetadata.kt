@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.simkl
 
 import com.nuvio.tv.BuildConfig
+import java.net.URLEncoder
 import okhttp3.HttpUrl.Companion.toHttpUrl
 
 data class SimklApiConfiguration(
@@ -26,17 +27,27 @@ fun buildSimklApiUrl(
     return builder.build().toString()
 }
 
+enum class SimklContentType(val mediaType: String) {
+    JSON("application/json"),
+    FORM("application/x-www-form-urlencoded")
+}
+
 fun simklRequestHeaders(
     configuration: SimklApiConfiguration,
     accessToken: String? = null,
-    contentTypeJson: Boolean = false
+    contentType: SimklContentType? = null
 ): Map<String, String> = buildMap {
     put("User-Agent", "$SIMKL_USER_AGENT_APP_NAME/${configuration.appVersion}")
     put("Accept", "application/json")
     accessToken?.trim()?.takeIf(String::isNotBlank)?.let { token ->
         put("Authorization", "Bearer $token")
     }
-    if (contentTypeJson) put("Content-Type", "application/json")
+    contentType?.let { put("Content-Type", it.mediaType) }
+}
+
+/** Encodes [fields] as an `application/x-www-form-urlencoded` body, as AUTH V2 expects. */
+fun simklFormBody(fields: Map<String, String>): String = fields.entries.joinToString("&") { (key, value) ->
+    "${URLEncoder.encode(key, Charsets.UTF_8.name())}=${URLEncoder.encode(value, Charsets.UTF_8.name())}"
 }
 
 fun defaultSimklApiConfiguration(): SimklApiConfiguration = SimklApiConfiguration(

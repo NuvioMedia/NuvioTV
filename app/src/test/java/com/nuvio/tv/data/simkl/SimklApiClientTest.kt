@@ -222,6 +222,151 @@ class SimklApiClientTest {
         assertTrue(result.isSoftSuccess)
     }
 
+    @Test
+    fun `expired access token is refreshed once and the request replayed`() = runBlocking {
+        val engine = RecordingEngine(
+            response(401, """{"error":"user_token_failed"}"""),
+            response(200, REFRESH_RESPONSE),
+            response(200, "{}")
+        )
+        val harness = RefreshHarness(engine)
+
+        harness.client.execute(SimklApiRequest(SimklHttpMethod.GET, "/sync/activities"))
+
+        assertEquals(3, engine.requests.size)
+        assertEquals("Bearer old-access", engine.requests[0].headers["Authorization"])
+        val refresh = engine.requests[1]
+        assertTrue(refresh.url.startsWith("https://api.simkl.com/oauth2/token?"))
+        assertEquals("application/x-www-form-urlencoded", refresh.headers["Content-Type"])
+        assertFalse("Authorization" in refresh.headers)
+        assertEquals("grant_type=refresh_token&client_id=client-id&refresh_token=refresh", refresh.body)
+        assertEquals("Bearer new-access", engine.requests[2].headers["Authorization"])
+        assertEquals("new-access", harness.current?.accessToken)
+        assertFalse(harness.wasUnauthorized)
+    }
+
+    @Test
+    fun `scrobbles that never retry still replay after a refresh`() = runBlocking {
+        val engine = RecordingEngine(
+            response(401),
+            response(200, REFRESH_RESPONSE),
+            response(201, "{}")
+        )
+        val harness = RefreshHarness(engine)
+
+        val result = harness.client.execute(
+            SimklApiRequest(
+                method = SimklHttpMethod.POST,
+                path = "/scrobble/start",
+                body = "{}",
+                retryPolicy = SimklRetryPolicy.NEVER
+            )
+        )
+
+        assertEquals(201, result.status)
+        assertEquals("Bearer new-access", engine.requests.last().headers["Authorization"])
+    }
+
+    @Test
+    fun `token near expiry is refreshed before the request`() = runBlocking {
+        val engine = RecordingEngine(response(200, REFRESH_RESPONSE), response(200, "{}"))
+        val harness = RefreshHarness(engine, expiresAt = 60L * 60L * 1_000L)
+
+        harness.client.execute(SimklApiRequest(SimklHttpMethod.GET, "/sync/activities"))
+
+        assertTrue(engine.requests[0].url.startsWith("https://api.simkl.com/oauth2/token?"))
+        assertEquals("Bearer new-access", engine.requests[1].headers["Authorization"])
+    }
+
+    @Test
+    fun `still valid token survives a failed proactive refresh`() = runBlocking {
+        val engine = RecordingEngine(response(500), response(200, "{}"))
+        val harness = RefreshHarness(engine, expiresAt = 60L * 60L * 1_000L)
+
+        harness.client.execute(SimklApiRequest(SimklHttpMethod.GET, "/sync/activities"))
+
+        assertEquals("Bearer old-access", engine.requests[1].headers["Authorization"])
+        assertEquals("old-access", harness.current?.accessToken)
+        assertFalse(harness.wasUnauthorized)
+    }
+
+    @Test
+    fun `rejected refresh signs the user out`() {
+        val engine = RecordingEngine(
+            response(401),
+            response(400, """{"error":"invalid_grant"}""")
+        )
+        val harness = RefreshHarness(engine)
+
+        val error = assertThrows(SimklApiException::class.java) {
+            runBlocking { harness.client.execute(SimklApiRequest(SimklHttpMethod.GET, "/sync/activities")) }
+        }
+
+        assertEquals(401, error.status)
+        assertTrue(harness.wasUnauthorized)
+        assertEquals(2, engine.requests.size)
+    }
+
+    @Test
+    fun `refresh result is dropped when the profile changed meanwhile`() {
+        val engine = RecordingEngine(response(401), response(200, REFRESH_RESPONSE))
+        val harness = RefreshHarness(engine, acceptRefresh = false)
+
+        val error = assertThrows(SimklApiException::class.java) {
+            runBlocking { harness.client.execute(SimklApiRequest(SimklHttpMethod.GET, "/sync/activities")) }
+        }
+
+        assertEquals("auth_scope_changed", error.errorCode)
+        assertFalse(harness.wasUnauthorized)
+    }
+
+    @Test
+    fun `token response parsing keeps the refresh token when it is omitted`() {
+        val grant = SimklTokenResponse(
+            accessToken = "access",
+            tokenType = "bearer",
+            expiresIn = 604_800L,
+            scope = "media:read media:write"
+        ).toGrant(nowEpochMs = 1_000L, fallbackRefreshToken = "refresh")
+
+        assertEquals("refresh", grant?.refreshToken)
+        assertEquals(604_801_000L, grant?.accessTokenExpiresAtEpochMs)
+        assertTrue(grant?.canWrite == true)
+    }
+
+    private class RefreshHarness(
+        engine: RecordingEngine,
+        expiresAt: Long = 7L * 24L * 60L * 60L * 1_000L,
+        acceptRefresh: Boolean = true
+    ) {
+        var now = 0L
+        var wasUnauthorized = false
+        var current: SimklAuthorization? = testSimklAuthorization(token = "old-access").copy(
+            refreshToken = "refresh",
+            accessTokenExpiresAtEpochMs = expiresAt
+        )
+        val client = SimklApiClient(
+            engine = engine.also { it.now = { now } },
+            configuration = SimklApiConfiguration("client-id", "nuvio", "1.0"),
+            authorization = { current },
+            onUnauthorized = { wasUnauthorized = true },
+            onTokensRefreshed = { previous, grant ->
+                if (!acceptRefresh) {
+                    null
+                } else {
+                    previous.copy(
+                        accessToken = grant.accessToken,
+                        refreshToken = grant.refreshToken,
+                        accessTokenExpiresAtEpochMs = grant.accessTokenExpiresAtEpochMs
+                    ).also { current = it }
+                }
+            },
+            nowEpochMs = { now },
+            sleep = { delay -> now += delay },
+            retryJitterMs = { 0L }
+        )
+    }
+
     private class Harness(
         engine: RecordingEngine,
         responseDurationMs: Long = 0L
@@ -273,4 +418,9 @@ class SimklApiClientTest {
         body: String = "",
         headers: Map<String, String> = emptyMap()
     ) = SimklRawHttpResponse(status, body, headers)
+
+    private companion object {
+        const val REFRESH_RESPONSE =
+            """{"access_token":"new-access","token_type":"Bearer","expires_in":604800,"refresh_token":"refresh","scope":"media:read media:write"}"""
+    }
 }

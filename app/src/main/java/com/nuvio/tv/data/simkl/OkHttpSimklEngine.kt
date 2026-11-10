@@ -3,6 +3,7 @@ package com.nuvio.tv.data.simkl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.ResponseBody
@@ -20,7 +21,12 @@ class OkHttpSimklEngine(private val client: OkHttpClient) : SimklHttpEngine {
     ): SimklRawHttpResponse = withContext(Dispatchers.IO) {
         val builder = Request.Builder().url(url)
         headers.forEach(builder::header)
-        val requestBody = body.toRequestBody(JSON_MEDIA_TYPE)
+        val mediaType = headers.entries
+            .firstOrNull { (key, _) -> key.equals("Content-Type", ignoreCase = true) }
+            ?.value
+            ?.toMediaTypeOrNull()
+            ?: JSON_MEDIA_TYPE
+        val requestBody = body.toRequestBody(mediaType)
         when (method) {
             SimklHttpMethod.GET.name -> builder.get()
             SimklHttpMethod.POST.name -> builder.post(requestBody)

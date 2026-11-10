@@ -251,7 +251,7 @@ internal fun SimklAccountDialog(
                 instruction = stringResource(R.string.simkl_awaiting_instruction),
                 userCode = state.userCode,
                 displayUrl = state.verificationUri,
-                qrUrl = state.verificationUri,
+                qrUrl = state.verificationUriComplete ?: state.verificationUri,
                 expiresAtEpochMs = state.expiresAtEpochMs,
                 isLoading = state.isLoading,
                 isPolling = state.isPolling,

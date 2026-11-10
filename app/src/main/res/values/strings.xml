@@ -3090,7 +3090,7 @@
     <string name="simkl_disconnect_subtitle">This removes the Simkl account and cached Simkl data from this profile.</string>
     <string name="simkl_connected_as">Connected as %1$s</string>
     <string name="simkl_user_fallback">Simkl user</string>
-    <string name="simkl_awaiting_instruction">Open the Simkl verification page and enter this code.</string>
+    <string name="simkl_awaiting_instruction">Scan the QR code with your phone, or open the Simkl page below and enter this code.</string>
     <string name="simkl_code_expires">Code expires in %1$s</string>
     <string name="simkl_sync_now">Sync now</string>
     <string name="simkl_visit">Visit Simkl</string>
@@ -3103,7 +3103,7 @@
     <string name="simkl_sync_info_docs">Read the Simkl sync guide</string>
     <string name="error_open_browser_failed">Failed to open browser</string>
     <string name="simkl_missing_credentials">Missing SIMKL_CLIENT_ID</string>
-    <string name="simkl_status_enter_code">Enter the code on Simkl to finish connecting</string>
+    <string name="simkl_status_enter_code">Approve Nuvio on Simkl to finish connecting</string>
     <string name="simkl_status_waiting">Waiting for Simkl approval…</string>
     <string name="simkl_status_connected">Connected to Simkl</string>
     <string name="simkl_status_disconnected">Disconnected from Simkl</string>
@@ -3113,6 +3113,8 @@
     <string name="simkl_library_source_selected">Simkl selected for Library</string>
     <string name="simkl_error_code_expired">Simkl code expired. Start again.</string>
     <string name="simkl_error_authorization_revoked">Simkl authorization was revoked. Connect again.</string>
+    <string name="simkl_error_invalid_client">This Simkl client ID is not enabled for sign-in. Use an AUTH V2 client ID.</string>
+    <string name="simkl_error_reauthorization_required">Simkl updated its sign-in. Scan the code to connect again.</string>
     <string name="simkl_error_network">Unable to reach Simkl. Try again.</string>
     <string name="tracking_removal_title">Remove from %1$s?</string>
     <string name="tracking_removal_message">Removing “%1$s” from %2$s will also clear its %3$s there. This can’t be undone.</string>

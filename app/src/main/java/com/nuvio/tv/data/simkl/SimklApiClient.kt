@@ -31,7 +31,8 @@ data class SimklApiRequest(
     val body: String = "",
     val requiresAuthentication: Boolean = true,
     val retryPolicy: SimklRetryPolicy = SimklRetryPolicy.TRANSIENT_FAILURES,
-    val scrobbleStopConflictIsSuccess: Boolean = false
+    val scrobbleStopConflictIsSuccess: Boolean = false,
+    val contentType: SimklContentType = SimklContentType.JSON
 )
 
 data class SimklRawHttpResponse(
@@ -68,6 +69,11 @@ class SimklApiClient(
     private val configuration: SimklApiConfiguration,
     private val authorization: () -> SimklAuthorization?,
     private val onUnauthorized: (SimklAuthorization) -> Unit,
+    /**
+     * Persists tokens minted by an AUTH V2 refresh and returns the authorization to continue
+     * with, or null when the grant changed meanwhile (profile switch or disconnect).
+     */
+    private val onTokensRefreshed: (SimklAuthorization, SimklTokenGrant) -> SimklAuthorization? = { _, _ -> null },
     private val nowEpochMs: () -> Long = System::currentTimeMillis,
     private val sleep: suspend (Long) -> Unit = { delay(it) },
     private val retryJitterMs: () -> Long = { Random.nextLong(RETRY_JITTER_BOUND_MS + 1L) }
@@ -96,7 +102,7 @@ class SimklApiClient(
                         (nowEpochMs() - queuedAtEpochMs).coerceAtLeast(0L)
                 )
             }
-            val requestAuthorization = if (request.requiresAuthentication) {
+            var requestAuthorization = if (request.requiresAuthentication) {
                 authorization()?.takeIf { it.accessToken.isNotBlank() }
                     ?.also { current ->
                         if (expectedAuthScope != null && current.scope != expectedAuthScope) {
@@ -111,10 +117,15 @@ class SimklApiClient(
             } else {
                 null
             }
-            val token = requestAuthorization?.accessToken
+            requestAuthorization?.takeIf(::needsProactiveRefresh)?.let { current ->
+                requestAuthorization = refreshBeforeRequest(current)
+            }
             val maxAttempts = if (request.retryPolicy == SimklRetryPolicy.NEVER) 1 else MAX_ATTEMPTS
             var syncWriteLockRetried = false
-            repeat(maxAttempts) { attempt ->
+            var refreshedAfterUnauthorized = false
+            var attempt = 0
+            while (attempt < maxAttempts) {
+                val token = requestAuthorization?.accessToken
                 val response = try {
                     executeRateLimited(request.method) {
                         engine.execute(
@@ -123,7 +134,7 @@ class SimklApiClient(
                             headers = simklRequestHeaders(
                                 configuration = configuration,
                                 accessToken = token,
-                                contentTypeJson = request.method != SimklHttpMethod.GET
+                                contentType = request.contentType.takeIf { request.method != SimklHttpMethod.GET }
                             ),
                             body = request.body
                         )
@@ -135,7 +146,8 @@ class SimklApiClient(
                         throw SimklApiException(null, "transport_failure", "Simkl request failed", error)
                     }
                     sleep(retryDelayMs(attempt, null, retryJitterMs()))
-                    return@repeat
+                    attempt += 1
+                    continue
                 }
 
                 logSyncResponse(request, response, attempt + 1)
@@ -149,19 +161,28 @@ class SimklApiClient(
                     request.retryPolicy == SimklRetryPolicy.SYNC_WRITE &&
                     response.status == 400 &&
                     !syncWriteLockRetried &&
-                    response.errorCode(json) == "rate_limit" &&
+                    response.errorCode(json).equals("rate_limit", ignoreCase = true) &&
                     attempt < maxAttempts - 1
                 ) {
                     syncWriteLockRetried = true
                     sleep(SYNC_WRITE_LOCK_RETRY_DELAY_MS)
-                    return@repeat
+                    attempt += 1
+                    continue
                 }
 
                 when (classifySimklResponse(response.status, request.scrobbleStopConflictIsSuccess)) {
                     SimklResponseAction.SUCCESS -> return@withLock response.toApiResponse()
                     SimklResponseAction.SOFT_SUCCESS -> return@withLock response.toApiResponse(true)
                     SimklResponseAction.REAUTHENTICATE -> {
-                        requestAuthorization?.let(onUnauthorized)
+                        val current = requestAuthorization
+                        if (current != null && !refreshedAfterUnauthorized && current.refreshToken != null) {
+                            // An AUTH V2 access token lives 7 days: refresh once, then replay
+                            // the same request without spending one of its retry attempts.
+                            refreshedAfterUnauthorized = true
+                            requestAuthorization = refreshAfterUnauthorized(current, response)
+                            continue
+                        }
+                        current?.let(onUnauthorized)
                         throw response.toApiException(json)
                     }
                     SimklResponseAction.FAIL -> throw response.toApiException(json)
@@ -174,10 +195,97 @@ class SimklApiClient(
                                 retryJitterMs()
                             )
                         )
+                        attempt += 1
                     }
                 }
             }
             error("Simkl request loop completed without a response")
+        }
+    }
+
+    private fun needsProactiveRefresh(current: SimklAuthorization): Boolean {
+        val expiresAt = current.accessTokenExpiresAtEpochMs ?: return false
+        return current.refreshToken != null && expiresAt - nowEpochMs() <= PROACTIVE_REFRESH_WINDOW_MS
+    }
+
+    /** Refreshes a token that is close to expiry. A token that is still valid survives a failed refresh. */
+    private suspend fun refreshBeforeRequest(current: SimklAuthorization): SimklAuthorization =
+        when (val result = refreshLocked(current)) {
+            is SimklRefreshResult.Refreshed -> result.authorization
+            SimklRefreshResult.Rejected -> {
+                onUnauthorized(current)
+                throw SimklApiException(401, "invalid_grant", "Simkl authorization expired. Connect again.")
+            }
+            is SimklRefreshResult.Failed -> {
+                val expiresAt = current.accessTokenExpiresAtEpochMs ?: Long.MAX_VALUE
+                if (expiresAt <= nowEpochMs()) throw result.error
+                current
+            }
+        }
+
+    private suspend fun refreshAfterUnauthorized(
+        current: SimklAuthorization,
+        unauthorizedResponse: SimklRawHttpResponse
+    ): SimklAuthorization = when (val result = refreshLocked(current)) {
+        is SimklRefreshResult.Refreshed -> result.authorization
+        SimklRefreshResult.Rejected -> {
+            onUnauthorized(current)
+            throw unauthorizedResponse.toApiException(json)
+        }
+        is SimklRefreshResult.Failed -> throw result.error
+    }
+
+    /** Runs the AUTH V2 refresh grant. Must be called while holding [requestMutex]. */
+    private suspend fun refreshLocked(current: SimklAuthorization): SimklRefreshResult {
+        val refreshToken = current.refreshToken ?: return SimklRefreshResult.Rejected
+        val response = try {
+            executeRateLimited(SimklHttpMethod.POST) {
+                engine.execute(
+                    method = SimklHttpMethod.POST.name,
+                    url = buildSimklApiUrl(configuration, SIMKL_TOKEN_PATH),
+                    headers = simklRequestHeaders(
+                        configuration = configuration,
+                        contentType = SimklContentType.FORM
+                    ),
+                    body = simklFormBody(
+                        mapOf(
+                            "grant_type" to "refresh_token",
+                            "client_id" to configuration.clientId,
+                            "refresh_token" to refreshToken
+                        )
+                    )
+                )
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            return SimklRefreshResult.Failed(
+                SimklApiException(null, "transport_failure", "Simkl token refresh failed", error)
+            )
+        }
+        if (response.status in 200..299) {
+            val grant = runCatching { json.decodeFromString<SimklTokenResponse>(response.body) }
+                .getOrNull()
+                ?.toGrant(nowEpochMs(), fallbackRefreshToken = refreshToken)
+                ?: return SimklRefreshResult.Failed(
+                    SimklApiException(response.status, "invalid_token_response", "Simkl token refresh failed")
+                )
+            val refreshed = onTokensRefreshed(current, grant)
+                ?: return SimklRefreshResult.Failed(
+                    SimklApiException(409, "auth_scope_changed", "Simkl authentication profile changed")
+                )
+            return SimklRefreshResult.Refreshed(refreshed)
+        }
+        val errorCode = response.errorCode(json)
+        return if (
+            response.status == 401 ||
+            errorCode == "invalid_grant" ||
+            errorCode == "invalid_client" ||
+            errorCode == "unauthorized_client"
+        ) {
+            SimklRefreshResult.Rejected
+        } else {
+            SimklRefreshResult.Failed(response.toApiException(json))
         }
     }
 
@@ -226,8 +334,20 @@ class SimklApiClient(
         const val MAX_ATTEMPTS = 5
         const val SYNC_WRITE_LOCK_RETRY_DELAY_MS = 3_000L
         const val RETRY_JITTER_BOUND_MS = 1_000L
+        /** Refresh "a day or so from expiry", as the AUTH V2 token docs recommend. */
+        const val PROACTIVE_REFRESH_WINDOW_MS = 24L * 60L * 60L * 1_000L
     }
 }
+
+private sealed interface SimklRefreshResult {
+    data class Refreshed(val authorization: SimklAuthorization) : SimklRefreshResult
+    data object Rejected : SimklRefreshResult
+    data class Failed(val error: SimklApiException) : SimklRefreshResult
+}
+
+internal const val SIMKL_DEVICE_PATH = "/oauth2/device"
+internal const val SIMKL_TOKEN_PATH = "/oauth2/token"
+internal const val SIMKL_REVOKE_PATH = "/oauth2/revoke"
 
 enum class SimklResponseAction {
     SUCCESS,
