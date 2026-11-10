@@ -110,10 +110,10 @@ class SimklTrackingHistoryWriter @Inject constructor(
             ?: target?.catalog?.contentId?.takeIf(String::isNotBlank)
         val targetSeason = target?.episode?.season
         val targetEpisode = target?.episode?.number
-        // Only a status the account uses for a recorded session means a run exists to read back.
-        // A no-op inside the 2-day gap carries no status, so the old check would have read the
-        // sessions three times for a write that never opened one. A batch with one accepted item
-        // still reads, so the accepted item's run is not missed.
+        // Only an episode the account actually added, in a state it uses for a running or finished
+        // session, means a run exists to read back. A no-op inside the 2-day gap can still echo the
+        // active session, so the added count is what tells the two apart. A batch with one accepted
+        // item still reads, so the accepted item's run is not missed.
         val rewatchStatuses = result.resolutions.mapNotNull { resolution -> resolution.rewatchStatus }
         val rewatchRecorded = rewatchStatuses.any { status ->
             simklHistoryRewatchWasRecorded(status, result.addedCount)

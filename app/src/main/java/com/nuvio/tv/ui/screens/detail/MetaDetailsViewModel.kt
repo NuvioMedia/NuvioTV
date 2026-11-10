@@ -2707,8 +2707,8 @@ class MetaDetailsViewModel @Inject constructor(
                         message = localizedContext.getString(R.string.detail_rewatch_too_soon),
                         isError = true
                     )
-                    // A history write inside the 2-day gap is a silent no-op with no status, so
-                    // absence is the normal answer for a repeat the account did not book.
+                    // A history write inside the 2-day gap can still echo the active session, so
+                    // the missing added episode, not the status alone, says it did not book it.
                     else -> showMessage(
                         message = localizedContext.getString(R.string.detail_rewatch_not_recorded),
                         isError = true
