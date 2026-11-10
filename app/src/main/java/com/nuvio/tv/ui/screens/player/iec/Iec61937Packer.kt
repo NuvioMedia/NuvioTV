@@ -78,6 +78,45 @@ internal object Iec61937Packer {
         swapEndian16(out, DATA_OFFSET, copy)
     }
 
+    /** Burst size in bytes for a plain DTS frame of this many samples, 0 when IEC 61937 has no burst type for it. */
+    fun dtsCoreBurstBytes(sampleCount: Int): Int = if (dtsCoreBurstType(sampleCount) != null) sampleCount shl 2 else 0
+
+    fun dtsCoreBurstType(sampleCount: Int): Int? = when (sampleCount) {
+        512 -> TYPE_DTS1
+        1024 -> TYPE_DTS2
+        2048 -> TYPE_DTS3
+        else -> null
+    }
+
+    /**
+     * Packs one plain DTS frame into a stereo IEC 61937 burst. A frame that fills the burst exactly goes without a
+     * header, as in IEC 61937-5. False when the frame does not fit, or the sample count has no burst type.
+     */
+    fun packDtsCoreInto(frame: ByteBuffer, sampleCount: Int, littleEndian: Boolean, out: ByteArray): Boolean {
+        val type = dtsCoreBurstType(sampleCount) ?: return false
+        val burstSize = sampleCount shl 2
+        require(out.size == burstSize) {
+            "DTS burst must be $burstSize bytes, was ${out.size}"
+        }
+        val size = frame.remaining()
+        val dataStart = when {
+            size == burstSize -> 0
+            size <= burstSize - DATA_OFFSET -> DATA_OFFSET
+            else -> return false
+        }
+        out.fill(0)
+        if (dataStart == DATA_OFFSET) {
+            val header = ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN)
+            header.putShort(0, PREAMBLE1)
+            header.putShort(2, PREAMBLE2)
+            header.putShort(4, type.toShort())
+            header.putShort(6, (size shl 3).toShort())
+        }
+        frame.get(out, dataStart, size)
+        if (!littleEndian) swapEndian16(out, dataStart, size + (size and 1))
+        return true
+    }
+
     fun dtsHdIecPeriod(channelCount: Int, coreSampleCount: Int): Int {
         val samples = if (coreSampleCount > 0) coreSampleCount else 512
         return if (channelCount > 2) samples * 16 else samples * 4
