@@ -590,11 +590,23 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                         )
                     )
                 }
+                // Keep the card of a series whose episode was just finished until its fresh
+                // next-up replaces it. Dropping it here and adding it back below moved focus
+                // to the neighbouring card.
+                val awaitingNextUpItems = continueWatchingCardsAwaitingNextUp(
+                    shownItems = _uiState.value.continueWatchingItems,
+                    placedContentIds = inProgressOnly.mapTo(mutableSetOf()) { it.progress.contentId } +
+                        cachedNextUpItems.map { it.info.contentId },
+                    seededContentIds = activeSeedContentIds,
+                    dismissedNextUpKeys = dismissedNextUp
+                )
                 if (inProgressOnly.isNotEmpty() || cachedNextUpItems.isNotEmpty()) {
                     val initialItems = applyContinueWatchingEnrichmentOverlay(
                         mergeContinueWatchingItems(
-                            inProgressItems = inProgressOnly,
-                            nextUpItems = cachedNextUpItems,
+                            inProgressItems = inProgressOnly +
+                                awaitingNextUpItems.filterIsInstance<ContinueWatchingItem.InProgress>(),
+                            nextUpItems = cachedNextUpItems +
+                                awaitingNextUpItems.filterIsInstance<ContinueWatchingItem.NextUp>(),
                             mode = continueWatchingSortMode
                         )
                     )
@@ -690,10 +702,15 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                 val retainedCached = cachedNextUpItems.filter {
                                     it.info.contentId !in freshIds
                                 }
+                                val retainedAwaiting = awaitingNextUpItems.filter {
+                                    it.contentId() !in freshIds
+                                }
                                 val partialItems = applyContinueWatchingEnrichmentOverlay(
                                     mergeContinueWatchingItems(
-                                        inProgressItems = inProgressOnly,
-                                        nextUpItems = cachedPartialNextUp + retainedCached,
+                                        inProgressItems = inProgressOnly +
+                                            retainedAwaiting.filterIsInstance<ContinueWatchingItem.InProgress>(),
+                                        nextUpItems = cachedPartialNextUp + retainedCached +
+                                            retainedAwaiting.filterIsInstance<ContinueWatchingItem.NextUp>(),
                                         mode = continueWatchingSortMode
                                     )
                                 )

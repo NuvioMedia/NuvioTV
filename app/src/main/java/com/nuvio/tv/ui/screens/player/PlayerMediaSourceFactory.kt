@@ -1022,7 +1022,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
             query.split('&').forEach { parameter ->
                 val key = parameter.substringBefore('=', missingDelimiterValue = "").trim()
-                val value = parameter.substringAfter('=', missingDelimiterValue = "").trim()
+                val rawValue = parameter.substringAfter('=', missingDelimiterValue = "").trim()
+                val value = runCatching {
+                    URLDecoder.decode(rawValue.replace("+", "%2B"), Charsets.UTF_8.name())
+                }.getOrDefault(rawValue).lowercase(Locale.US)
                 if (key.isBlank() || value.isBlank()) return@forEach
 
                 when (key) {
