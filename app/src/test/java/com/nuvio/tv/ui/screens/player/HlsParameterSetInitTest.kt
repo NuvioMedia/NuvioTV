@@ -39,6 +39,19 @@ class HlsParameterSetInitTest {
     }
 
     @Test
+    fun `segment head is settled once the first slice or a non H264 stream shows`() {
+        val segment = segment(withParameterSets = true)
+        // The tables alone, then the first video packet with the SPS, PPS and the start of the IDR slice.
+        assertFalse(HlsParameterSetInit.isSegmentHeadConclusive(segment.copyOf(376)))
+        assertTrue(HlsParameterSetInit.isSegmentHeadConclusive(segment.copyOf(564)))
+
+        // AAC only: settled as soon as the PMT is read, once enough packets show it is a transport stream.
+        assertTrue(HlsParameterSetInit.isSegmentHeadConclusive(tables(streamType = 0x0F) + tsPacket(0x1FFF, ByteArray(0))))
+        assertFalse(HlsParameterSetInit.isSegmentHeadConclusive(ByteArray(100)))
+        assertTrue(HlsParameterSetInit.isSegmentHeadConclusive(ByteArray(4096)))
+    }
+
+    @Test
     fun `init segment carries the tables and parameter sets in at least five packets`() {
         val head = HlsParameterSetInit.scanSegmentHead(segment(withParameterSets = true))!!
         val init = HlsParameterSetInit.buildInitSegment(head)!!
@@ -122,20 +135,7 @@ class HlsParameterSetInitTest {
         /** A segment of three frames, opening on an IDR frame with or without the SPS and PPS before it. */
         fun segment(withParameterSets: Boolean): ByteArray {
             val out = ByteArrayOutputStream()
-            out.write(tsPacket(0, section(0x00, byteArrayOf(0, 1, 0xC1.toByte(), 0, 0, 0, 1, 0xF0.toByte(), 0x00))))
-            out.write(
-                tsPacket(
-                    PMT_PID,
-                    section(
-                        0x02,
-                        byteArrayOf(
-                            0, 1, 0xC1.toByte(), 0, 0,
-                            0xE1.toByte(), 0x00, 0xF0.toByte(), 0x00,
-                            0x1B, 0xE1.toByte(), 0x00, 0xF0.toByte(), 0x00
-                        )
-                    )
-                )
-            )
+            out.write(tables())
             val idr = AUD + (if (withParameterSets) START + SPS + START + PPS else ByteArray(0)) +
                 START + byteArrayOf(0x65, 0x88.toByte()) + ByteArray(400) { 0x11 }
             val frames = listOf(idr, AUD + START + byteArrayOf(0x41, 0x9A.toByte()) + ByteArray(200) { 0x22 })
@@ -144,6 +144,21 @@ class HlsParameterSetInitTest {
             }
             return out.toByteArray()
         }
+
+        /** A PAT and a PMT listing one stream of [streamType] on [VIDEO_PID]. */
+        fun tables(streamType: Int = 0x1B): ByteArray =
+            tsPacket(0, section(0x00, byteArrayOf(0, 1, 0xC1.toByte(), 0, 0, 0, 1, 0xF0.toByte(), 0x00))) +
+                tsPacket(
+                    PMT_PID,
+                    section(
+                        0x02,
+                        byteArrayOf(
+                            0, 1, 0xC1.toByte(), 0, 0,
+                            0xE1.toByte(), 0x00, 0xF0.toByte(), 0x00,
+                            streamType.toByte(), 0xE1.toByte(), 0x00, 0xF0.toByte(), 0x00
+                        )
+                    )
+                )
 
         fun section(tableId: Int, body: ByteArray): ByteArray {
             val length = body.size + 4

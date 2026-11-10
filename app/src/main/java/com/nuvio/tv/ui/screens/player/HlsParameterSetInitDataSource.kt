@@ -82,7 +82,16 @@ internal class HlsParameterSetInitDataSource(
                     .setLength(HlsParameterSetInit.SEGMENT_HEAD_BYTES.toLong())
                     .build()
             )
-            readAll(source, HlsParameterSetInit.SEGMENT_HEAD_BYTES)
+            // Some hosts throttle segments, so stop as soon as the start of the segment says enough.
+            val head = ByteArrayOutputStream()
+            val step = ByteArray(SEGMENT_HEAD_STEP_BYTES)
+            while (head.size() < HlsParameterSetInit.SEGMENT_HEAD_BYTES) {
+                val read = source.read(step, 0, minOf(step.size, HlsParameterSetInit.SEGMENT_HEAD_BYTES - head.size()))
+                if (read == C.RESULT_END_OF_INPUT) break
+                head.write(step, 0, read)
+                if (HlsParameterSetInit.isSegmentHeadConclusive(head.toByteArray())) break
+            }
+            head.toByteArray()
         } catch (e: java.io.IOException) {
             Log.w(TAG, "Could not read the start of $uri", e)
             null
@@ -97,7 +106,8 @@ internal class HlsParameterSetInitDataSource(
     }
 
     private companion object {
-        const val CHECK_TIMEOUT_MS = 2_000L
+        const val CHECK_TIMEOUT_MS = 3_000L
+        const val SEGMENT_HEAD_STEP_BYTES = 4 * 1024
 
         fun isPlaylist(uri: Uri, headers: Map<String, List<String>>): Boolean {
             val path = uri.path.orEmpty().lowercase()
@@ -107,11 +117,11 @@ internal class HlsParameterSetInitDataSource(
             }
         }
 
-        fun readAll(source: DataSource, limit: Int = Int.MAX_VALUE): ByteArray {
+        fun readAll(source: DataSource): ByteArray {
             val out = ByteArrayOutputStream()
             val chunk = ByteArray(16 * 1024)
-            while (out.size() < limit) {
-                val read = source.read(chunk, 0, minOf(chunk.size, limit - out.size()))
+            while (true) {
+                val read = source.read(chunk, 0, chunk.size)
                 if (read == C.RESULT_END_OF_INPUT) break
                 out.write(chunk, 0, read)
             }

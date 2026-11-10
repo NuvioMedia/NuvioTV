@@ -21,7 +21,7 @@ import okio.ByteString.Companion.toByteString
 @OptIn(UnstableApi::class)
 internal object HlsParameterSetInit {
 
-    /** Bytes read from the start of a segment: enough for the tables and the first video PES header. */
+    /** Most bytes read from the start of a segment. Reading normally stops far earlier, see [isSegmentHeadConclusive]. */
     const val SEGMENT_HEAD_BYTES = 64 * 1024
 
     private const val TS_PACKET_SIZE = 188
@@ -35,6 +35,9 @@ internal object HlsParameterSetInit {
 
     // TsExtractor only recognizes a transport stream after five packets in a row.
     private const val MIN_INIT_PACKETS = 5
+
+    // Packets in a row that must start with a sync byte before data counts as a transport stream.
+    private const val SYNC_CHECK_PACKETS = 3
 
     private val START_CODE = byteArrayOf(0, 0, 0, 1)
 
@@ -110,8 +113,20 @@ internal object HlsParameterSetInit {
     }
 
     /** Reads the tables and the parameter sets ahead of the first video slice, or null if not H.264 TS. */
-    fun scanSegmentHead(data: ByteArray): SegmentHead? {
-        val start = findSyncOffset(data) ?: return null
+    fun scanSegmentHead(data: ByteArray): SegmentHead? = scan(data).head
+
+    /**
+     * Whether [data], the start of a segment, already holds all [scanSegmentHead] can tell: it has
+     * reached the first video slice, or it is clearly not an H.264 transport stream. The parameter
+     * sets and the first slice usually sit in the first couple of KiB.
+     */
+    fun isSegmentHeadConclusive(data: ByteArray): Boolean = scan(data).conclusive
+
+    private class Scan(val head: SegmentHead?, val conclusive: Boolean)
+
+    private fun scan(data: ByteArray): Scan {
+        val start = findSyncOffset(data)
+            ?: return Scan(head = null, conclusive = data.size >= SYNC_CHECK_PACKETS * TS_PACKET_SIZE)
         var pmtPid = -1
         var videoPid = -1
         var patPacket: ByteArray? = null
@@ -138,7 +153,7 @@ internal object HlsParameterSetInit {
                     patPacket = data.copyOfRange(packetStart, packetEnd)
                 }
                 pid == pmtPid && unitStart && pmtPacket == null -> {
-                    videoPid = parseH264Pid(data, payload, packetEnd) ?: return null
+                    videoPid = parseH264Pid(data, payload, packetEnd) ?: return Scan(head = null, conclusive = true)
                     pmtPacket = data.copyOfRange(packetStart, packetEnd)
                 }
                 pid == videoPid && videoPid >= 0 -> {
@@ -153,10 +168,11 @@ internal object HlsParameterSetInit {
             }
         }
 
-        val pat = patPacket ?: return null
-        val pmt = pmtPacket ?: return null
+        val pat = patPacket ?: return Scan(head = null, conclusive = false)
+        val pmt = pmtPacket ?: return Scan(head = null, conclusive = false)
         val parameterSets = scanParameterSets(videoData.toByteArray())
-        return SegmentHead(pat, pmt, videoPid, parameterSets.sps, parameterSets.pps, parameterSets.reachedFirstSlice)
+        val head = SegmentHead(pat, pmt, videoPid, parameterSets.sps, parameterSets.pps, parameterSets.reachedFirstSlice)
+        return Scan(head, conclusive = parameterSets.reachedFirstSlice)
     }
 
     /** The init segment: the PAT and PMT, one video PES with the SPS and PPS, padded for sniffing. */
@@ -214,7 +230,7 @@ internal object HlsParameterSetInit {
 
     private fun findSyncOffset(data: ByteArray): Int? =
         (0 until minOf(TS_PACKET_SIZE, data.size)).firstOrNull { candidate ->
-            (0 until 3).all { packet ->
+            (0 until SYNC_CHECK_PACKETS).all { packet ->
                 val index = candidate + packet * TS_PACKET_SIZE
                 index < data.size && data.u8(index) == TS_SYNC_BYTE
             }
