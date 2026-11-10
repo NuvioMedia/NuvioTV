@@ -31,7 +31,7 @@ import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.data.simkl.rewatchedEpisodesOf
-import com.nuvio.tv.data.simkl.simklRewatchWasRecorded
+import com.nuvio.tv.data.simkl.simklHistoryRewatchWasRecorded
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaTrailer
@@ -2700,7 +2700,7 @@ class MetaDetailsViewModel @Inject constructor(
                     ?.trim()
                     ?.lowercase()
                 when {
-                    simklRewatchWasRecorded(rewatchStatus) -> showMessage(
+                    simklHistoryRewatchWasRecorded(rewatchStatus, result.addedCount) -> showMessage(
                         localizedContext.getString(R.string.detail_episode_marked_rewatched)
                     )
                     rewatchStatus == "too_soon" -> showMessage(

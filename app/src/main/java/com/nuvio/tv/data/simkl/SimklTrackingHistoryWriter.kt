@@ -115,7 +115,9 @@ class SimklTrackingHistoryWriter @Inject constructor(
         // sessions three times for a write that never opened one. A batch with one accepted item
         // still reads, so the accepted item's run is not missed.
         val rewatchStatuses = result.resolutions.mapNotNull { resolution -> resolution.rewatchStatus }
-        val rewatchRecorded = rewatchStatuses.any { status -> simklRewatchWasRecorded(status) }
+        val rewatchRecorded = rewatchStatuses.any { status ->
+            simklHistoryRewatchWasRecorded(status, result.addedCount)
+        }
         if (
             result.isComplete &&
             rewatchRecorded &&

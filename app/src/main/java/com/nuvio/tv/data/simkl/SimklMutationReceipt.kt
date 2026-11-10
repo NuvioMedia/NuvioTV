@@ -112,6 +112,7 @@ internal fun SimklApiResponse.toHistoryMutationReceipt(
 ): SimklMutationReceipt {
     val payload = payload(json)
     val result = payload.toTrackingMutationResult(candidates.size)
+        .copy(addedCount = payload.addedEpisodeCount())
     val notFound = payload.notFoundTargets()
     val statuses = payload.historyStatuses()
     val accepted = candidates
@@ -191,6 +192,17 @@ private fun SimklApiResponse.payload(json: Json): JsonObject =
     body.takeIf(String::isNotBlank)
         ?.let { value -> runCatching { json.parseToJsonElement(value).jsonObject }.getOrNull() }
         ?: JsonObject(emptyMap())
+
+/**
+ * The number of episodes the history response says it actually marked watched.
+ *
+ * A repeat folded into an existing watch leaves every `added` count at zero even when
+ * `added.statuses` still names the session, so this is the signal that separates a booked episode
+ * from an answer that only echoed the run. `added.shows` is not used: it counts a show added to the
+ * library, which says nothing about the episode the user marked.
+ */
+private fun JsonObject.addedEpisodeCount(): Int =
+    objectValue("added")?.intValue("episodes") ?: 0
 
 private fun JsonObject.toTrackingMutationResult(attemptedCount: Int): TrackingMutationResult {
     val notFoundCount = objectValue("not_found")

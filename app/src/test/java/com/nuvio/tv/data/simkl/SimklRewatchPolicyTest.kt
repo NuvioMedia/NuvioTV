@@ -448,20 +448,25 @@ class SimklRewatchPolicyTest {
     }
 
     @Test
-    fun `only a recorded rewatch session is read back`() {
+    fun `only a rewatch with an added episode is recorded`() {
         // The three states a history write reports for a session it actually opened or extended.
-        assertTrue(simklRewatchWasRecorded("active"))
-        assertTrue(simklRewatchWasRecorded("COMPLETED"))
-        assertTrue(simklRewatchWasRecorded(" closed "))
+        assertTrue(simklHistoryRewatchWasRecorded("active", addedCount = 1))
+        assertTrue(simklHistoryRewatchWasRecorded("COMPLETED", addedCount = 1))
+        assertTrue(simklHistoryRewatchWasRecorded(" closed ", addedCount = 1))
+
+        // An already running session can be named in the answer even when the episode was folded
+        // into the original watch. The zero added count is what says the write did nothing.
+        assertFalse(simklHistoryRewatchWasRecorded("active", addedCount = 0))
+        assertFalse(simklHistoryRewatchWasRecorded("completed", addedCount = 0))
 
         // A history write inside the 2-day gap is a silent no-op and carries no status at all.
-        assertFalse(simklRewatchWasRecorded(null))
-        assertFalse(simklRewatchWasRecorded(""))
-        assertFalse(simklRewatchWasRecorded("too_soon"))
-        assertFalse(simklRewatchWasRecorded("first_watch"))
-        assertFalse(simklRewatchWasRecorded("pro_required"))
-        assertFalse(simklRewatchWasRecorded("not_eligible"))
-        assertFalse(simklRewatchWasRecorded("something_new"))
+        assertFalse(simklHistoryRewatchWasRecorded(null, addedCount = 0))
+        assertFalse(simklHistoryRewatchWasRecorded("", addedCount = 1))
+        assertFalse(simklHistoryRewatchWasRecorded("too_soon", addedCount = 1))
+        assertFalse(simklHistoryRewatchWasRecorded("first_watch", addedCount = 1))
+        assertFalse(simklHistoryRewatchWasRecorded("pro_required", addedCount = 1))
+        assertFalse(simklHistoryRewatchWasRecorded("not_eligible", addedCount = 1))
+        assertFalse(simklHistoryRewatchWasRecorded("something_new", addedCount = 1))
     }
 
 }

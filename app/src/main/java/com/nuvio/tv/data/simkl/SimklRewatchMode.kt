@@ -228,17 +228,18 @@ internal fun shouldRecordSimklRewatchOnMark(
     isSimklRewatchPlanEligible(accountType)
 
 /**
- * Whether a history write actually opened or extended a rewatch session.
+ * Whether a history write actually booked an episode into a rewatch session.
  *
- * `/sync/history` carries `rewatch_status` in `added.statuses[].response` only for a write it
- * recorded. A write inside the 2-day gap is a no-op and carries no status, and a free plan or a
- * first watch opens no session either. Absence is therefore not success: it is the normal answer
- * for a repeat the account did not book.
+ * The status alone is not enough: an already running session can be named in the answer even when
+ * the episode was folded into the original watch inside the 2-day gap. The account reports that as
+ * zero added episodes, so the count is what says the write landed. A free plan and a first watch
+ * also add no session and report no rewatch status.
  */
-internal fun simklRewatchWasRecorded(status: String?): Boolean = when (status?.trim()?.lowercase()) {
-    "active", "completed", "closed" -> true
-    else -> false
-}
+internal fun simklHistoryRewatchWasRecorded(status: String?, addedCount: Int): Boolean =
+    addedCount > 0 && when (status?.trim()?.lowercase()) {
+        "active", "completed", "closed" -> true
+        else -> false
+    }
 
 /**
  * Whether to ask, before a playback starts, whether it opens a new rewatch run.

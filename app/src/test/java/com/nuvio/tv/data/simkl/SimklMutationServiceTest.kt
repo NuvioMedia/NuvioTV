@@ -355,7 +355,7 @@ class SimklMutationServiceTest {
         val engine = RecordingEngine(
             response(
                 201,
-                """{"added":{"statuses":[{"response":{"status":"completed","rewatch_id":21284,"rewatch_status":"active"}}]},"not_found":{"movies":[],"shows":[],"episodes":[]}}"""
+                """{"added":{"movies":0,"shows":0,"episodes":1,"statuses":[{"response":{"status":"completed","rewatch_id":21284,"rewatch_status":"active"}}]},"not_found":{"movies":[],"shows":[],"episodes":[]}}"""
             )
         )
         val result = SimklMutationService(client(engine)).addToHistory(
@@ -371,6 +371,7 @@ class SimklMutationServiceTest {
         // The body the flag rides on is asserted where the bodies are read back
         // (SimklRewatchWriteTest); what this call owes is the answer, which a caller reports to the user.
         assertEquals("active", result.resolutions.single().rewatchStatus)
+        assertEquals(1, result.addedCount)
     }
 
     @Test
@@ -389,7 +390,30 @@ class SimklMutationServiceTest {
 
         assertTrue("allow_rewatch=yes" in engine.urls.single())
         assertTrue(result.isComplete)
+        assertEquals(0, result.addedCount)
         assertTrue(result.resolutions.isEmpty())
+    }
+
+    @Test
+    fun `an active session answer with no added episode is not a recorded rewatch`() = runBlocking {
+        // A running session can be echoed back even when the episode inside the 2-day gap was not
+        // added. The status looks successful, which is why the added count has to decide.
+        val engine = RecordingEngine(
+            response(
+                201,
+                """{"added":{"movies":0,"shows":0,"episodes":0,"statuses":[{"response":{"status":"completed","rewatch_id":21284,"rewatch_status":"active"}}]}}"""
+            )
+        )
+        val result = SimklMutationService(client(engine)).addToHistory(
+            listOf(
+                TrackingHistoryItem(show(TrackingEpisode(season = 2, number = 7)), 1_700_000_000_000L)
+                    .copy(isRewatch = true, rewatchId = 21284L)
+            )
+        )
+
+        assertEquals("active", result.resolutions.single().rewatchStatus)
+        assertEquals(0, result.addedCount)
+        assertFalse(simklHistoryRewatchWasRecorded("active", result.addedCount))
     }
 
 }
