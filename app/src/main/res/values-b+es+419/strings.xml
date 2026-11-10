@@ -776,6 +776,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Cambiar automáticamente de motor en caso de error al iniciar</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Si falla el inicio del stream, alterna automáticamente entre ExoPlayer y libmpv.</string>
+    <string name="playback_release_decoder_on_background">Liberar el decodificador en segundo plano</string>
+    <string name="playback_release_decoder_on_background_sub">Libera el decodificador de video cuando Nuvio pasa a segundo plano. Activa esta opción si la reproducción falla con un error del decodificador al volver a la app. El reproductor se recarga al regresar, también después del protector de pantalla.</string>
     <string name="playback_external_forward_subtitles">Enviar subtítulos al reproductor externo</string>
     <string name="playback_external_forward_subtitles_sub">Obtén subtítulos en tu idioma preferido desde los addons y envíalos al reproductor externo.</string>
     <string name="playback_external_send_skip_segments">Enviar marcas de tiempo de introducción y créditos finales</string>
@@ -1209,6 +1211,8 @@
     <string name="layout_custom_poster_screen_tv_recommendations">Recomendaciones de TV</string>
     <string name="layout_always_show_landscape_clearlogo">Mostrar siempre fondo con logotipo para pósters horizontales</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Ignorar el póster horizontal del addon y usar el fondo con el logotipo superpuesto en su lugar.</string>
+    <string name="layout_hero_description_auto_scroll">Desplazar descripciones automáticamente</string>
+    <string name="layout_hero_description_auto_scroll_sub">Desplaza lentamente las descripciones largas en la pantalla de Inicio en lugar de cortarlas.</string>
     <string name="web_custom_poster_title">Fuente de póster personalizada</string>
     <string name="web_custom_poster_subtitle">Pega un patrón de URL de póster a continuación y presiona Guardar.</string>
     <string name="web_custom_poster_label">Patrón de URL</string>
