@@ -931,6 +931,28 @@
     <string name="sub_hdr_brightness">HDR Brightness</string>
     <string name="sub_hdr_dim_player_controls">Dim player controls on HDR</string>
     <string name="sub_hdr_dim_player_controls_sub">Apply the HDR brightness to the player controls and menus shown over HDR and Dolby Vision video</string>
+    <string name="sub_appearance">Subtitle Appearance</string>
+    <string name="sub_appearance_desc">Font, colors, background and shadow</string>
+    <string name="sub_appearance_hint">Applies to text subtitles. Styled ASS and image subtitles keep their original appearance.</string>
+    <string name="sub_preview">Preview</string>
+    <string name="sub_preview_text">Every story begins with a little curiosity.</string>
+    <string name="sub_font">Font</string>
+    <string name="sub_font_default">Default</string>
+    <string name="sub_font_serif">Serif</string>
+    <string name="sub_font_mono">Monospace</string>
+    <string name="sub_font_import">Import from Phone</string>
+    <string name="sub_font_import_desc">Add a .ttf or .otf font up to 10 MB. Imported fonts stay on this TV.</string>
+    <string name="sub_font_import_qr">Scan with your phone to add a .ttf or .otf font</string>
+    <string name="sub_font_missing">Font unavailable on this device. Using the default font.</string>
+    <string name="sub_font_remove">Remove %1$s</string>
+    <string name="sub_background">Background</string>
+    <string name="sub_bg_opacity">Background Opacity</string>
+    <string name="sub_bg_roundness">Corner Roundness</string>
+    <string name="sub_shadow">Drop Shadow</string>
+    <string name="sub_shadow_desc">Separate the text from bright scenes</string>
+    <string name="sub_shadow_opacity">Shadow Opacity</string>
+    <string name="sub_shadow_size">Shadow Size</string>
+    <string name="sub_reset_appearance">Reset Appearance</string>
     <string name="sub_advanced_section">Advanced Subtitle Rendering</string>
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
     <string name="sub_libass_sub">Advanced ASS/SSA rendering (styles, positioning, animations)</string>
@@ -1229,6 +1251,13 @@
     <string name="web_custom_poster_none">No pattern set</string>
     <string name="web_custom_poster_loading">Loading…</string>
     <string name="web_custom_poster_placeholders_info">Placeholders: {id} passes all content IDs. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} target a single ID type - if unavailable, the original poster is kept. {imdb_id|tmdb_id|kitsu_id} declares supported ID types - the matching one is used, or the original poster is kept. Add ? to make a placeholder optional, resolving to empty instead of skipping: {imdb_id?}. Other placeholders: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">Subtitle Fonts</string>
+    <string name="web_subtitle_font_subtitle">Choose a .ttf or .otf file to use it for subtitles on your TV.</string>
+    <string name="web_subtitle_font_choose">Choose Font File</string>
+    <string name="web_subtitle_font_uploading">Uploading…</string>
+    <string name="web_subtitle_font_added">Added to your TV</string>
+    <string name="web_subtitle_font_error">Could not import this font. Choose a valid .ttf or .otf file under 10 MB.</string>
+    <string name="web_subtitle_font_connection_error">Connection error</string>
 
 
     <string name="mdblist_name">MDBList</string>

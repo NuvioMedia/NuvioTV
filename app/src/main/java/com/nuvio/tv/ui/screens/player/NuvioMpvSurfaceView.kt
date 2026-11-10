@@ -14,6 +14,11 @@ import kotlin.math.pow
 import kotlin.math.roundToLong
 
 internal const val MPV_TRACK_LIST_PROPERTY = "track-list"
+internal const val MPV_SID_PROPERTY = "sid"
+internal const val MPV_SUB_TEXT_PROPERTY = "sub-text"
+private val MPV_STYLED_SUBTITLE_CODECS = setOf(
+    "subrip", "srt", "webvtt", "text", "mov_text", "microdvd", "mpl2", "subviewer", "subviewer1", "sami", "realtext"
+)
 
 class NuvioMpvSurfaceView @JvmOverloads constructor(
     context: Context,
@@ -34,6 +39,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     private var cachedTrackList: MpvTrackListCache? = null
     private var currentAspectMode: AspectMode = AspectMode.ORIGINAL
     private var pendingAspectRetryCount = 0
+    private var styledSubtitlesEnabled = false
     private val aspectReapplyRunnable = Runnable {
         applyAspectModeInternal(currentAspectMode, allowRetry = true)
     }
@@ -165,7 +171,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             // Let mpv choose the default streams for every new media load.
             mpv.setPropertyString("aid", "auto")
             mpv.setPropertyString("sid", "auto")
-            mpv.setPropertyBoolean("sub-visibility", true)
+            mpv.setPropertyBoolean("sub-visibility", !styledSubtitlesEnabled)
         }.onFailure {
             Log.w(TAG, "Failed to reset default A/V track selection: ${it.message}")
         }
@@ -236,7 +242,21 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
     fun currentSubtitleText(): String? {
         if (!initialized) return null
-        return mpv.getPropertyString("sub-text")
+        return mpv.getPropertyString(MPV_SUB_TEXT_PROPERTY)
+    }
+
+    fun syncStyledSubtitles(enabled: Boolean): String? {
+        styledSubtitlesEnabled = enabled
+        if (!initialized) return null
+        return runCatching {
+            val codec = mpv.getPropertyString("current-tracks/sub/codec")?.lowercase(Locale.US)
+            val styled = enabled && codec != null && codec in MPV_STYLED_SUBTITLE_CODECS
+            val sid = mpv.getPropertyString(MPV_SID_PROPERTY)
+            if (sid != null && sid != "no" && sid != "false") {
+                mpv.setPropertyBoolean("sub-visibility", !styled)
+            }
+            if (styled) mpv.getPropertyString("sub-text/ass") ?: mpv.getPropertyString(MPV_SUB_TEXT_PROPERTY) else null
+        }.getOrNull()
     }
 
     fun currentPositionMs(): Long {
@@ -553,7 +573,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     fun selectSubtitleTrackById(trackId: Int): Boolean {
         if (!initialized) return false
         return runCatching {
-            mpv.setPropertyBoolean("sub-visibility", true)
+            mpv.setPropertyBoolean("sub-visibility", !styledSubtitlesEnabled)
             mpv.setPropertyInt("sid", trackId)
             true
         }.getOrElse {
@@ -593,7 +613,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
                 else ->
                     mpv.command("sub-add", url, "cached")
             }
-            mpv.setPropertyBoolean("sub-visibility", true)
+            mpv.setPropertyBoolean("sub-visibility", !styledSubtitlesEnabled)
             true
         }.getOrElse {
             Log.w(TAG, "Failed to add external subtitle: ${it.message}")
@@ -781,6 +801,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         // Progress is polled by PlayerRuntimeController. Track-list changes are pushed so
         // the poll can skip re-reading an unchanged track list.
         mpv.observeProperty(MPV_TRACK_LIST_PROPERTY, MPV.mpvFormat.MPV_FORMAT_NONE)
+        mpv.observeProperty(MPV_SID_PROPERTY, MPV.mpvFormat.MPV_FORMAT_STRING)
+        mpv.observeProperty(MPV_SUB_TEXT_PROPERTY, MPV.mpvFormat.MPV_FORMAT_STRING)
     }
 
     private fun applyHeaders(headers: Map<String, String>) {
