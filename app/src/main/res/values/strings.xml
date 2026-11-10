@@ -931,6 +931,13 @@
     <string name="sub_hdr_brightness">HDR Brightness</string>
     <string name="sub_hdr_dim_player_controls">Dim player controls on HDR</string>
     <string name="sub_hdr_dim_player_controls_sub">Apply the HDR brightness to the player controls and menus shown over HDR and Dolby Vision video</string>
+    <string name="sub_font">Font</string>
+    <string name="sub_font_default">Default</string>
+    <string name="sub_font_serif">Serif</string>
+    <string name="sub_font_mono">Monospace</string>
+    <string name="sub_background">Background</string>
+    <string name="sub_bg_roundness">Corner Roundness</string>
+    <string name="sub_shadow">Drop Shadow</string>
     <string name="sub_advanced_section">Advanced Subtitle Rendering</string>
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
     <string name="sub_libass_sub">Advanced ASS/SSA rendering (styles, positioning, animations)</string>

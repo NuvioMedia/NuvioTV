@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -44,5 +46,18 @@ class StyledSubtitlePlacementTest {
 
         assertEquals(20f, styled.innerPaddingPx, 0.0001f)
         assertEquals(1880f, styled.wrapWidthPx, 0.0001f)
+    }
+
+    @Test
+    fun `picking a background color keeps its opacity or makes it visible`() {
+        val translucentBlack = Color.Black.copy(alpha = 0.5f).toArgb()
+
+        assertEquals(Color.White.copy(alpha = 0.5f).toArgb(), subtitleBackgroundColorFor(Color.White, translucentBlack))
+        assertEquals(
+            Color.White.copy(alpha = SUBTITLE_BACKGROUND_DEFAULT_OPACITY).toArgb(),
+            subtitleBackgroundColorFor(Color.White, Color.Transparent.toArgb())
+        )
+        assertEquals(Color.Black.toArgb(), selectedSubtitleBackgroundPreset(translucentBlack))
+        assertEquals(0, selectedSubtitleBackgroundPreset(Color.Transparent.toArgb()))
     }
 }
