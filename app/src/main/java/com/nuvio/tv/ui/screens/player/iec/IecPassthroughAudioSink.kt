@@ -47,6 +47,9 @@ internal class IecPassthroughAudioSink(
     private var audioSessionId: Int = 0
     private var volume: Float = 1f
     private var dtsChannelCount: Int = 8
+    private var dtsCarrierOverride: Int? = null
+    private var dtsCarrierKnown = false
+    private var dtsCarrierLossless = false
     private val dtsDuration = DtsHdFrameDurationEstimator()
     private val uhdAudioChunkId = AtomicInteger()
     private var configuredFormat: Format? = null
@@ -134,6 +137,9 @@ internal class IecPassthroughAudioSink(
         configuredBufferSize = specifiedBufferSize
         configuredOutputChannels = outputChannels
         releaseIec()
+        dtsCarrierOverride = null
+        dtsCarrierKnown = false
+        dtsCarrierLossless = false
         reopenedAtNanos = NEVER
         reopensForFormat = 0
         LiveDirectAudioPlayback.setPassthroughLive(false)
@@ -497,6 +503,7 @@ internal class IecPassthroughAudioSink(
 
     private fun hbrIecChannelCount(format: Format): Int {
         if (format.sampleMimeType == MimeTypes.AUDIO_TRUEHD) return 8
+        dtsCarrierOverride?.let { return it }
         val count = format.channelCount
         return if (count > 0) Iec61937Packer.dtsHdChannelMask(count) else 8
     }
@@ -590,7 +597,55 @@ internal class IecPassthroughAudioSink(
         android.util.Log.i("IecPassthrough", line)
     }
 
+    private fun moveDtsCarrierIfNeeded(buffer: ByteBuffer): Boolean {
+        val format = configuredFormat ?: return false
+        if (dtsCarrierLossless || format.sampleMimeType?.startsWith("audio/vnd.dts.uhd") == true) return false
+        val wanted = Iec61937Packer.dtsHdCarrierChannels(buffer) ?: return false
+        if (wanted == 8) {
+            dtsCarrierLossless = true
+        } else if (dtsCarrierKnown) {
+            return false
+        }
+        dtsCarrierKnown = true
+        val current = Iec61937Packer.dtsHdChannelMask(dtsChannelCount)
+        if (wanted == current) return false
+        moveDtsCarrier(format, from = current, to = wanted)
+        return true
+    }
+
+    private fun moveDtsCarrier(format: Format, from: Int, to: Int) {
+        val queued = ArrayList(uncommitted)
+        resetIecState(keepTrack = false)
+        dtsCarrierOverride = to
+        var opened = openIec(format)
+        if (!opened) {
+            dtsCarrierOverride = from
+            opened = openIec(format)
+        }
+        if (!opened) {
+            uncommitted.addAll(queued)
+            fallbackToWrappedSink("carrier_move from=$from to=$to")
+            return
+        }
+        dtsChannelCount = dtsCarrierOverride ?: to
+        dtsDuration.clockSampleRate = clockSampleRateFor(iecOutputSampleRate)
+        android.util.Log.i(
+            "IecPassthrough",
+            "DTS-HD carrier from=$from to=$to used=$dtsChannelCount rate=$iecOutputSampleRate"
+        )
+        onDiagnosticEvent?.invoke("iec_dts_carrier from=$from to=$to used=$dtsChannelCount")
+        for (au in queued) {
+            notePts(au.ptsUs)
+            queueForIec(ByteBuffer.wrap(au.bytes), au.ptsUs, au.count)
+        }
+        refreshPassthroughLive()
+    }
+
     private fun handleDtsHd(buffer: ByteBuffer, presentationTimeUs: Long): Boolean {
+        if (moveDtsCarrierIfNeeded(buffer)) {
+            buffer.position(buffer.limit())
+            return true
+        }
         val position = buffer.position()
         val head = ByteArray(buffer.remaining().coerceAtMost(8))
         buffer.get(head)
