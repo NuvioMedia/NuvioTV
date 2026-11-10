@@ -23,7 +23,7 @@ class WeTrakrScrobbleService @Inject constructor(
                 scope,
                 acceptedStatuses = setOf(404),
                 query = if (action == TrackingScrobbleAction.PAUSE) emptyMap() else {
-                    mapOf("min_progress" to sync.watchedPercent.toString())
+                    mapOf("min_progress" to sync.minProgressFor(event.creditsStartPercent).toString())
                 }
             )
             if (response.status == 404) return@write snapshot to Unit

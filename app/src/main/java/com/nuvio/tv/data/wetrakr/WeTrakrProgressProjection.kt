@@ -123,3 +123,10 @@ internal const val WETRAKR_MAX_WATCHED_PERCENT = 100
 
 internal fun weTrakrWatchedPercent(value: Int): Int =
     value.coerceIn(WETRAKR_MIN_WATCHED_PERCENT, WETRAKR_MAX_WATCHED_PERCENT)
+
+internal fun weTrakrMinProgress(watchedPercent: Int, creditsStartPercent: Double?): Int {
+    val credits = creditsStartPercent
+        ?.takeIf { it.isFinite() && it >= WETRAKR_MIN_WATCHED_PERCENT && it <= WETRAKR_MAX_WATCHED_PERCENT }
+        ?: return weTrakrWatchedPercent(watchedPercent)
+    return kotlin.math.floor(credits).toInt()
+}

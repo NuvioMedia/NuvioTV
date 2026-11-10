@@ -1264,9 +1264,9 @@
     <string name="wetrakr_connected_as">Connected as %1$s</string>
     <string name="wetrakr_rating_title">WeTrakr ratings</string>
     <string name="wetrakr_rating_subtitle">Show the WeTrakr community score next to IMDb and TMDB on title pages.</string>
-    <string name="wetrakr_watched_percent_title">Mark as watched at</string>
-    <string name="wetrakr_watched_percent_row_subtitle">How far you need to get for WeTrakr to mark a title watched.</string>
-    <string name="wetrakr_watched_percent_subtitle">When you stop at or past this point, WeTrakr marks the title watched. Below it, the title stays in Continue Watching.</string>
+    <string name="wetrakr_watched_percent_title">Watched threshold</string>
+    <string name="wetrakr_watched_percent_row_subtitle">Playback percentage needed to mark a title as watched. End credits take priority when available.</string>
+    <string name="wetrakr_watched_percent_subtitle">When you stop at or past this point, WeTrakr marks the title watched. Below it, the title stays in Continue Watching. If the title has end credits info from skip intro, the start of the credits is used instead.</string>
     <string name="wetrakr_watched_percent_value">%1$d%%</string>
     <string name="wetrakr_watched_percent_default">%1$d%% (default)</string>
     <string name="wetrakr_connected_as_plan">Connected as %1$s • %2$s</string>

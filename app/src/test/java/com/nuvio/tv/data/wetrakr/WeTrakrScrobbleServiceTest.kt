@@ -97,6 +97,37 @@ class WeTrakrScrobbleServiceTest {
     }
 
     @Test
+    fun `the credits start is sent as min_progress when the title has one`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val harness = WeTrakrTestHarness()
+        val (sync, service) = setup(harness, dispatcher, watchedPercent = 80)
+        harness.reply(body = """{"action":"pause","progress":90}""")
+
+        service.scrobble(
+            sync.currentScope(), TrackingScrobbleAction.STOP,
+            movie.copy(progressPercent = 90.0, creditsStartPercent = 93.7)
+        )
+
+        assertEquals(mapOf("min_progress" to "93"), harness.engine.requests.single().query)
+        assertEquals(90f, sync.currentSnapshot()!!.playback.single().progress)
+    }
+
+    @Test
+    fun `the watched setting is used when there are no credits or they are out of range`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val harness = WeTrakrTestHarness()
+        val (sync, service) = setup(harness, dispatcher, watchedPercent = 75)
+        harness.reply(body = """{"action":"pause","progress":60}""")
+
+        service.scrobble(sync.currentScope(), TrackingScrobbleAction.STOP, movie.copy(progressPercent = 60.0))
+
+        assertEquals(mapOf("min_progress" to "75"), harness.engine.requests.single().query)
+        assertEquals(75, weTrakrMinProgress(75, 30.0))
+        assertEquals(75, weTrakrMinProgress(75, null))
+        assertEquals(88, weTrakrMinProgress(75, 88.9))
+    }
+
+    @Test
     fun `unknown titles change nothing`() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val harness = WeTrakrTestHarness()
