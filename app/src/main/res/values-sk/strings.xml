@@ -224,6 +224,8 @@
     <string name="detail_episode_marked_unwatched">Epizóda označená ako nevidená</string>
     <string name="detail_episode_marked_rewatched">Epizóda označená ako opakované pozretie</string>
     <string name="detail_episode_marked_not_rewatched">Opakované pozretie zrušené</string>
+    <string name="detail_rewatch_too_soon">Simkl nezaznamenal opakované pozretie: epizóda bola pozretá pred menej ako 48 hodinami.</string>
+    <string name="detail_rewatch_not_recorded">Simkl nezaznamenal opakované pozretie.</string>
     <string name="detail_lists_updated">Zoznamy aktualizované</string>
     <string name="detail_movie_marked_watched">Označené ako videné</string>
     <string name="detail_movie_marked_unwatched">Označené ako nevidené</string>

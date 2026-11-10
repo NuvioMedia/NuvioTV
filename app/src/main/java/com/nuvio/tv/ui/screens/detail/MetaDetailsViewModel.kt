@@ -2693,22 +2693,32 @@ class MetaDetailsViewModel @Inject constructor(
                     items = listOf(TrackingHistoryItem(media = media, isRewatch = true))
                 )
                 check(result.notFoundCount == 0) { "Simkl did not match the episode" }
-                showMessage(localizedContext.getString(R.string.detail_episode_marked_rewatched))
+                val rewatchStatus = result.resolutions
+                    .firstOrNull { resolution -> resolution.rewatchStatus != null }
+                    ?.rewatchStatus
+                    ?.trim()
+                    ?.lowercase()
+                when (rewatchStatus) {
+                    "too_soon" -> showMessage(
+                        message = localizedContext.getString(R.string.detail_rewatch_too_soon),
+                        isError = true
+                    )
+                    "pro_required", "not_eligible" -> showMessage(
+                        message = localizedContext.getString(R.string.detail_rewatch_not_recorded),
+                        isError = true
+                    )
+                    else -> showMessage(
+                        localizedContext.getString(R.string.detail_episode_marked_rewatched)
+                    )
+                }
             }.onFailure { error ->
                 showMessage(
                     message = error.message ?: context.getString(com.nuvio.tv.R.string.detail_error_update_episode_watched_failed),
                     isError = true
                 )
             }
-            // The run this write opened or extended is not in the snapshot until a read sees it, and
-            // re-deriving the runs only re-reads what is already stored. A failed read must not turn
-            // a recorded mark into an error, so it stays out of the write's result.
-            runCatching {
-                delay(1_500)
-                simklSyncRepository.refresh(TrackingRefreshIntent.USER_INITIATED)
-            }.onFailure { error ->
-                Log.w(TAG, "Could not refresh Simkl after a manual rewatch mark", error)
-            }
+            // The writer reads the run this write opened or extended back from the sessions and
+            // adopts it, so a second full sync here would only duplicate that read.
             _uiState.update {
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKey)
             }

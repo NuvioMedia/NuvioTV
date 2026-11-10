@@ -447,4 +447,21 @@ class SimklRewatchPolicyTest {
         )
     }
 
+    @Test
+    fun `a rewatch answer that opened no session is not read back`() {
+        // Simkl folded the repeat into a watch less than 48 hours old.
+        assertTrue(simklRewatchWasRejected("too_soon"))
+        assertTrue(simklRewatchWasRejected(" TOO_SOON "))
+        // The plan does not allow rewatches, and a first watch has no session either.
+        assertTrue(simklRewatchWasRejected("pro_required"))
+        assertTrue(simklRewatchWasRejected("not_eligible"))
+        assertTrue(simklRewatchWasRejected("first_watch"))
+
+        // These opened a session or carry no status, so the read-back is what settles them.
+        assertFalse(simklRewatchWasRejected("active"))
+        assertFalse(simklRewatchWasRejected("completed"))
+        assertFalse(simklRewatchWasRejected("closed"))
+        assertFalse(simklRewatchWasRejected(null))
+    }
+
 }
