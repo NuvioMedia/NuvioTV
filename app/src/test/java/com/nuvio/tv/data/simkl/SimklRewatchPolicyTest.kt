@@ -448,20 +448,20 @@ class SimklRewatchPolicyTest {
     }
 
     @Test
-    fun `a rewatch answer that opened no session is not read back`() {
-        // Simkl folded the repeat into a watch less than 48 hours old.
-        assertTrue(simklRewatchWasRejected("too_soon"))
-        assertTrue(simklRewatchWasRejected(" TOO_SOON "))
-        // The plan does not allow rewatches, and a first watch has no session either.
-        assertTrue(simklRewatchWasRejected("pro_required"))
-        assertTrue(simklRewatchWasRejected("not_eligible"))
-        assertTrue(simklRewatchWasRejected("first_watch"))
+    fun `only a recorded rewatch session is read back`() {
+        // The three states a history write reports for a session it actually opened or extended.
+        assertTrue(simklRewatchWasRecorded("active"))
+        assertTrue(simklRewatchWasRecorded("COMPLETED"))
+        assertTrue(simklRewatchWasRecorded(" closed "))
 
-        // These opened a session or carry no status, so the read-back is what settles them.
-        assertFalse(simklRewatchWasRejected("active"))
-        assertFalse(simklRewatchWasRejected("completed"))
-        assertFalse(simklRewatchWasRejected("closed"))
-        assertFalse(simklRewatchWasRejected(null))
+        // A history write inside the 2-day gap is a silent no-op and carries no status at all.
+        assertFalse(simklRewatchWasRecorded(null))
+        assertFalse(simklRewatchWasRecorded(""))
+        assertFalse(simklRewatchWasRecorded("too_soon"))
+        assertFalse(simklRewatchWasRecorded("first_watch"))
+        assertFalse(simklRewatchWasRecorded("pro_required"))
+        assertFalse(simklRewatchWasRecorded("not_eligible"))
+        assertFalse(simklRewatchWasRecorded("something_new"))
     }
 
 }

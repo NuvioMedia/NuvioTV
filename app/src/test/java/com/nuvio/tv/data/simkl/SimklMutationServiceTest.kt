@@ -373,5 +373,23 @@ class SimklMutationServiceTest {
         assertEquals("active", result.resolutions.single().rewatchStatus)
     }
 
+    @Test
+    fun `a history rewatch inside the two day gap is a no-op`() = runBlocking {
+        // Simkl answers 201 with zero counts and no added.statuses for a repeat it folded into the
+        // original watch. The absence of a rewatch status is what the UI must read as "not booked".
+        val engine = RecordingEngine(
+            response(201, """{"added":{"movies":0,"shows":0,"episodes":0}}""")
+        )
+        val result = SimklMutationService(client(engine)).addToHistory(
+            listOf(
+                TrackingHistoryItem(show(TrackingEpisode(season = 2, number = 7)), 1_700_000_000_000L)
+                    .copy(isRewatch = true)
+            )
+        )
+
+        assertTrue("allow_rewatch=yes" in engine.urls.single())
+        assertTrue(result.isComplete)
+        assertTrue(result.resolutions.isEmpty())
+    }
 
 }

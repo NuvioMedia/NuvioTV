@@ -31,6 +31,7 @@ import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.data.simkl.rewatchedEpisodesOf
+import com.nuvio.tv.data.simkl.simklRewatchWasRecorded
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaTrailer
@@ -2698,17 +2699,19 @@ class MetaDetailsViewModel @Inject constructor(
                     ?.rewatchStatus
                     ?.trim()
                     ?.lowercase()
-                when (rewatchStatus) {
-                    "too_soon" -> showMessage(
+                when {
+                    simklRewatchWasRecorded(rewatchStatus) -> showMessage(
+                        localizedContext.getString(R.string.detail_episode_marked_rewatched)
+                    )
+                    rewatchStatus == "too_soon" -> showMessage(
                         message = localizedContext.getString(R.string.detail_rewatch_too_soon),
                         isError = true
                     )
-                    "pro_required", "not_eligible" -> showMessage(
+                    // A history write inside the 2-day gap is a silent no-op with no status, so
+                    // absence is the normal answer for a repeat the account did not book.
+                    else -> showMessage(
                         message = localizedContext.getString(R.string.detail_rewatch_not_recorded),
                         isError = true
-                    )
-                    else -> showMessage(
-                        localizedContext.getString(R.string.detail_episode_marked_rewatched)
                     )
                 }
             }.onFailure { error ->

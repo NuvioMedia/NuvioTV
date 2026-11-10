@@ -110,15 +110,15 @@ class SimklTrackingHistoryWriter @Inject constructor(
             ?: target?.catalog?.contentId?.takeIf(String::isNotBlank)
         val targetSeason = target?.episode?.season
         val targetEpisode = target?.episode?.number
-        // A rejected rewatch opens no session: reading the sessions back would only repeat the
-        // same answer three times and still leave the row where it was. A batch with one accepted
-        // item still reads, so the accepted item's run is not missed.
+        // Only a status the account uses for a recorded session means a run exists to read back.
+        // A no-op inside the 2-day gap carries no status, so the old check would have read the
+        // sessions three times for a write that never opened one. A batch with one accepted item
+        // still reads, so the accepted item's run is not missed.
         val rewatchStatuses = result.resolutions.mapNotNull { resolution -> resolution.rewatchStatus }
-        val rewatchRejected = rewatchStatuses.isNotEmpty() &&
-            rewatchStatuses.all { status -> simklRewatchWasRejected(status) }
+        val rewatchRecorded = rewatchStatuses.any { status -> simklRewatchWasRecorded(status) }
         if (
             result.isComplete &&
-            !rewatchRejected &&
+            rewatchRecorded &&
             target != null &&
             targetContentId != null &&
             targetEpisode != null

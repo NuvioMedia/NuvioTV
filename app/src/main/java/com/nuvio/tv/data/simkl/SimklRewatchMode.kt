@@ -228,14 +228,15 @@ internal fun shouldRecordSimklRewatchOnMark(
     isSimklRewatchPlanEligible(accountType)
 
 /**
- * Whether a rewatch answer says the account opened no session for the write.
+ * Whether a history write actually opened or extended a rewatch session.
  *
- * Simkl folds a repeat watch into one less than 48 hours old (`too_soon`), refuses a plan without
- * rewatches, and records a first watch without a session. Reading the sessions back after one of
- * those only repeats the same answer, so the read-back stays out and the caller can tell the user.
+ * `/sync/history` carries `rewatch_status` in `added.statuses[].response` only for a write it
+ * recorded. A write inside the 2-day gap is a no-op and carries no status, and a free plan or a
+ * first watch opens no session either. Absence is therefore not success: it is the normal answer
+ * for a repeat the account did not book.
  */
-internal fun simklRewatchWasRejected(status: String?): Boolean = when (status?.trim()?.lowercase()) {
-    "too_soon", "pro_required", "not_eligible", "first_watch" -> true
+internal fun simklRewatchWasRecorded(status: String?): Boolean = when (status?.trim()?.lowercase()) {
+    "active", "completed", "closed" -> true
     else -> false
 }
 
