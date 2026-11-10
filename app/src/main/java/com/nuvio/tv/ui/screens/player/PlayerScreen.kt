@@ -1140,11 +1140,11 @@ fun PlayerScreen(
                 val subtitleMeasurePaint = remember { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG) }
                 LaunchedEffect(subtitleWidthKey, prescannedSubtitleTexts) {
                     val metrics = subtitleTextMetrics ?: return@LaunchedEffect
-                    if (prescannedSubtitleTexts.isEmpty()) return@LaunchedEffect
+                    val texts = prescannedSubtitleTexts
                     val widest = withContext(Dispatchers.Default) {
                         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                        prescannedSubtitleTexts.maxOf { measureSubtitleBlockPx(paint, it, metrics) }
-                    }
+                        texts.maxOfOrNull { measureSubtitleBlockPx(paint, it, metrics) }
+                    } ?: return@LaunchedEffect
                     widestSubtitleBlockPx = maxOf(widestSubtitleBlockPx ?: 0f, widest)
                 }
                 LaunchedEffect(subtitleWidthKey, subtitleCueState) {

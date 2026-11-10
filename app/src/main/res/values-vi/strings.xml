@@ -1211,6 +1211,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Luôn dùng phông nền kèm logo cho poster ngang</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Bỏ qua poster ngang từ tiện ích và thay thế bằng phông nền có chèn lớp phủ logo trong suốt.</string>
+    <string name="layout_hero_description_auto_scroll">Tự động cuộn phần mô tả</string>
+    <string name="layout_hero_description_auto_scroll_sub">Cuộn chậm các phần mô tả dài trên Trang chủ thay vì cắt ngắn.</string>
     <string name="web_custom_poster_title">Nguồn poster tùy chỉnh</string>
     <string name="web_custom_poster_subtitle">Dán mẫu URL poster vào bên dưới và nhấn Lưu.</string>
     <string name="web_custom_poster_label">Mẫu URL</string>

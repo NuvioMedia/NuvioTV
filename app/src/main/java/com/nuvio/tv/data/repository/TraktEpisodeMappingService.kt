@@ -141,13 +141,17 @@ class TraktEpisodeMappingService @Inject constructor(
             return null
         }
 
+        // Writes (scrobbles, marking watched/unwatched) keep the addon's number when Trakt has
+        // that exact episode and no unique title match says otherwise, matching how reads keep
+        // Trakt's number when the addon has it. Episodes Trakt lacks still use the index.
         val mapped = remapEpisodeByTitleOrIndex(
             requestedSeason = requestedSeason,
             requestedEpisode = requestedEpisode,
             requestedVideoId = videoId,
             requestedTitle = episodeTitle,
             addonEpisodes = addonEpisodes,
-            traktEpisodes = traktEpisodes
+            traktEpisodes = traktEpisodes,
+            preferSameNumberOverIndex = true
         ) ?: return null
 
         cacheMutex.withLock {
