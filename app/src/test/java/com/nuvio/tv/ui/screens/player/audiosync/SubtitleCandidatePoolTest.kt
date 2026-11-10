@@ -166,6 +166,48 @@ class SubtitleCandidatePoolTest {
         assertTrue(elapsedMs < 5_000, "took ${elapsedMs}ms")
     }
 
+    @Test
+    fun regionalVariantsThatAreSeparateTranslationsGetTheirOwnKey() {
+        val expected = mapOf(
+            "por-BR" to listOf(
+                "pt-BR", "pt_br", "PT-BR", "pob", "pb", "por-BR",
+                "Portuguese (Brazil)", "Portuguese (Brazilian)", "Portuguese - Brazil", "Portuguese (BR)",
+            ),
+            "por" to listOf("pt", "pt-PT", "pt_PT", "por", "Portuguese", "Portuguese (Portugal)", "Portuguese (European)"),
+            "spa-419" to listOf(
+                "es-419", "es_419", "es-MX", "es-LA", "spl", "ea",
+                "Spanish (Latin America)", "Spanish (LA)", "Spanish (Latino)",
+            ),
+            "spa" to listOf("es", "es-ES", "spa", "spn", "sp", "Spanish", "Spanish (Spain)", "Spanish (EU)"),
+            "zho-Hant" to listOf(
+                "zh-Hant", "zh-TW", "zh-HK", "zh-Hant-TW", "zht", "chi-tw",
+                "Chinese (Traditional)", "Chinese (Taiwan)", "Chinese (Hong Kong)",
+            ),
+            "zho" to listOf(
+                "zh", "zh-Hans", "zh-CN", "zh-Hans-HK", "chi", "zho", "zhs", "chi-cn",
+                "Chinese", "Chinese (Simplified)",
+            ),
+        )
+        for ((key, labels) in expected) {
+            for (label in labels) assertEquals(key, SubtitleCandidatePool.languageKey(label), "\"$label\"")
+        }
+    }
+
+    @Test
+    fun otherRegionsStillShareTheLanguage() {
+        val expected = mapOf(
+            "eng" to listOf("en", "en-US", "en-GB", "eng", "English", "English (SDH)"),
+            "fra" to listOf("fr", "fr-CA", "fre", "fra", "French"),
+            "ron" to listOf("ro", "rum", "Romanian"),
+            "deu" to listOf("de", "de-AT", "ger", "German"),
+        )
+        for ((key, labels) in expected) {
+            for (label in labels) assertEquals(key, SubtitleCandidatePool.languageKey(label), "\"$label\"")
+        }
+        assertNull(SubtitleCandidatePool.languageKey(null))
+        assertNull(SubtitleCandidatePool.languageKey("  "))
+    }
+
     /**
      * Plays [full] back with a 60 s look-ahead, updating every 10 s. Like the controller, the pool is
      * only asked while the chosen subtitle's [tracker] (when given) has not locked.

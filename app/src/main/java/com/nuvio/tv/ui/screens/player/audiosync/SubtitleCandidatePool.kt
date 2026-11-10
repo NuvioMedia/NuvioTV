@@ -285,8 +285,19 @@ internal class SubtitleCandidatePool(
             "alb" to "sqi", "arm" to "hye", "baq" to "eus", "bur" to "mya", "chi" to "zho", "cze" to "ces",
             "dut" to "nld", "fre" to "fra", "geo" to "kat", "ger" to "deu", "gre" to "ell", "ice" to "isl",
             "mac" to "mkd", "mao" to "mri", "may" to "msa", "per" to "fas", "rum" to "ron", "mol" to "ron",
-            "slo" to "slk", "tib" to "bod", "wel" to "cym", "scc" to "srp", "scr" to "hrv", "pob" to "por",
+            "slo" to "slk", "tib" to "bod", "wel" to "cym", "scc" to "srp", "scr" to "hrv",
         )
+
+        /** Subtitle site codes that name a regional variant. */
+        private val variantCodes = mapOf(
+            "pob" to "por-BR", "pb" to "por-BR",
+            "spl" to "spa-419", "ea" to "spa-419", "spn" to "spa", "sp" to "spa",
+            "zht" to "zho-Hant", "zhs" to "zho",
+        )
+        private val brazilian = setOf("br", "bra", "brazil", "brasil", "brazilian", "brasileiro")
+        private val latinAmerican = setOf("419", "la", "lat", "latam", "latin", "latino", "latinoamericano", "mx")
+        private val traditionalChinese = setOf("hant", "tw", "hk", "mo", "taiwan", "hong", "traditional", "cht")
+        private val simplifiedChinese = setOf("hans", "cn", "simplified")
 
         private val languageNames: Map<String, String> by lazy {
             Locale.getISOLanguages().associateBy(
@@ -295,10 +306,29 @@ internal class SubtitleCandidatePool(
             )
         }
 
-        /** ISO 639-2/T code for a language code or English name ("ro", "rum", "Romanian" -> "ron"). */
+        /**
+         * ISO 639-2/T code for a language code or English name ("ro", "rum", "Romanian" -> "ron").
+         * Brazilian Portuguese, Latin American Spanish and Traditional Chinese are separate
+         * translations and keep a suffix ("pt-BR" -> "por-BR", "es-419" -> "spa-419",
+         * "zh-Hant" -> "zho-Hant"). Without a region, these languages count as the European and
+         * Simplified variants.
+         */
         fun languageKey(language: String?): String? {
             val value = language?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
-            val code = value.split('-', '_', ' ').first()
+            val words = value.split('-', '_', ' ', '(', ')', ',', '/').filter { it.isNotEmpty() }
+            val code = words.firstOrNull() ?: return value
+            variantCodes[code]?.let { return it }
+            val base = baseLanguageKey(value, code)
+            val variant = when (base) {
+                "por" -> "BR".takeIf { words.any { it in brazilian } }
+                "spa" -> "419".takeIf { words.any { it in latinAmerican } }
+                "zho" -> "Hant".takeIf { words.any { it in traditionalChinese } && words.none { it in simplifiedChinese } }
+                else -> null
+            }
+            return if (variant == null) base else "$base-$variant"
+        }
+
+        private fun baseLanguageKey(value: String, code: String): String {
             bibliographic[code]?.let { return it }
             if (code.length == 2 || code.length == 3) {
                 val iso3 = runCatching { Locale(code).isO3Language }.getOrNull()
