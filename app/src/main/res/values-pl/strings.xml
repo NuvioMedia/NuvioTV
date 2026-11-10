@@ -3468,7 +3468,7 @@
     <string name="layout_custom_poster_screen_tv_recommendations">Rekomendacje TV</string>
 
     <string name="playback_exo_chapters_title">Pokaż rozdziały</string>
-    <string name="playback_exo_chapters_sub">Odczytuj rozdziały z plików MKV, aby oznaczać je na pasku postępu i przeskakiwać między nimi. Wymaga kilku dodatkowych zapytań po rozpoczęciu odtwarzania.</string>
+    <string name="playback_exo_chapters_sub">Odczytuj rozdziały z plików MKV, aby oznaczać je na pasku postępu i przeskakiwać między nimi.</string>
     <string name="playback_chapter_title_title">Pokaż tytuł rozdziału</string>
     <string name="playback_chapter_title_sub">Pokazuj nazwę bieżącego rozdziału nad paskiem postępu.</string>
     <string name="player_chapters">Rozdziały</string>
