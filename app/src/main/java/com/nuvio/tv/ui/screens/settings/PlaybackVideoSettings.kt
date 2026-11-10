@@ -136,16 +136,24 @@ internal fun PlaybackVideoSection(
             onToggle = { onUpdate { setTransparentLetterbox(!transparentLetterbox) } },
             enabled = enabled
         )
-
-        SettingsSectionLabel(text = stringResource(R.string.playback_chapters_label))
-        SettingsToggleRow(
-            title = stringResource(R.string.playback_exo_chapters_title),
-            subtitle = stringResource(R.string.playback_exo_chapters_sub),
-            checked = settings.exoChaptersEnabled,
-            onToggle = { onUpdate { setExoChaptersEnabled(!settings.exoChaptersEnabled) } },
-            enabled = enabled
-        )
     }
+
+    // Chapters work on both engines.
+    SettingsSectionLabel(text = stringResource(R.string.playback_chapters_label))
+    SettingsToggleRow(
+        title = stringResource(R.string.playback_exo_chapters_title),
+        subtitle = stringResource(R.string.playback_exo_chapters_sub),
+        checked = settings.exoChaptersEnabled,
+        onToggle = { onUpdate { setExoChaptersEnabled(!settings.exoChaptersEnabled) } },
+        enabled = enabled
+    )
+    SettingsToggleRow(
+        title = stringResource(R.string.playback_chapter_title_title),
+        subtitle = stringResource(R.string.playback_chapter_title_sub),
+        checked = settings.chapterTitleEnabled,
+        onToggle = { onUpdate { setChapterTitleEnabled(!settings.chapterTitleEnabled) } },
+        enabled = enabled && settings.exoChaptersEnabled
+    )
 
     if (settings.usesMpvEngine) {
         SettingsSectionLabel(text = stringResource(R.string.playback_mpv_decoding_label))

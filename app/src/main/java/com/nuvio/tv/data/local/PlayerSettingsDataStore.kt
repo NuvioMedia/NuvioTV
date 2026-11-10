@@ -338,8 +338,13 @@ data class PlayerSettings(
     // Only honored when dv7HandlingMode is OFF or DV81_LIBDOVI.
     val dv7LibdoviModeOverride: Int = -1,
     val stripHdr10PlusSei: Boolean = false,
-    /** ExoPlayer reads Matroska chapters itself over HTTP; mpv always lists them. */
+    /**
+     * Chapters on the progress bar and in the chapters panel, for both engines. ExoPlayer reads
+     * Matroska chapters itself over HTTP; mpv lists them. Chapters still feed skip intro when off.
+     */
     val exoChaptersEnabled: Boolean = false,
+    /** The current chapter's title above the progress bar, when chapters are shown. */
+    val chapterTitleEnabled: Boolean = true,
     val mpvHi10pGnextSoftwareFallbackEnabled: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
     // Display settings
@@ -666,6 +671,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val dv7LibdoviModeOverrideKey = intPreferencesKey("dv7_libdovi_mode_override")
     private val stripHdr10PlusSeiKey = booleanPreferencesKey("strip_hdr10plus_sei")
     private val exoChaptersEnabledKey = booleanPreferencesKey("exo_chapters_enabled")
+    private val chapterTitleEnabledKey = booleanPreferencesKey("chapter_title_enabled")
     private val mpvHi10pGnextSoftwareFallbackEnabledKey =
         booleanPreferencesKey("mpv_hi10p_gnext_software_fallback_enabled")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
@@ -1062,6 +1068,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 dv7LibdoviModeOverride = (prefs[dv7LibdoviModeOverrideKey] ?: -1).coerceIn(-1, 4),
                 stripHdr10PlusSei = prefs[stripHdr10PlusSeiKey] ?: false,
                 exoChaptersEnabled = prefs[exoChaptersEnabledKey] ?: false,
+                chapterTitleEnabled = prefs[chapterTitleEnabledKey] ?: true,
                 mpvHi10pGnextSoftwareFallbackEnabled =
                     prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
@@ -1739,6 +1746,7 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setDv7LibdoviModeOverride(mode: Int) { store().edit { it[dv7LibdoviModeOverrideKey] = mode.coerceIn(-1, 4) } }
     suspend fun setStripHdr10PlusSei(enabled: Boolean) { store().edit { it[stripHdr10PlusSeiKey] = enabled } }
     suspend fun setExoChaptersEnabled(enabled: Boolean) { store().edit { it[exoChaptersEnabledKey] = enabled } }
+    suspend fun setChapterTitleEnabled(enabled: Boolean) { store().edit { it[chapterTitleEnabledKey] = enabled } }
 
     // Subtitle styles
     suspend fun setSubtitlePreferredLanguage(language: String) { store().edit { it[subtitlePreferredLanguageKey] = normalizeSelectableLanguageCode(language.ifBlank { SubtitleLanguageOption.DEVICE }) } }
