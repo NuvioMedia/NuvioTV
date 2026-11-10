@@ -11,6 +11,7 @@ import com.nuvio.tv.core.player.SubtitleFonts
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.DeviceIpAddress
 import com.nuvio.tv.core.server.SubtitleFontUploadServer
+import com.nuvio.tv.core.util.readAppLogoBytes
 import com.nuvio.tv.core.util.withAppLocale
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,6 +39,7 @@ class SubtitleFontsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val store = SubtitleFontStore.get(context)
+    private val logoBytes: ByteArray? by lazy { context.readAppLogoBytes() }
     val fonts: StateFlow<List<SubtitleFont>> = store.fonts
 
     private val mutableImportState = MutableStateFlow(SubtitleFontImportState())
@@ -58,7 +60,11 @@ class SubtitleFontsViewModel @Inject constructor(
             showImportError(R.string.error_network_required)
             return
         }
-        val startedServer = SubtitleFontUploadServer.startOnAvailablePort(context, ::importUploadedFont)
+        val startedServer = SubtitleFontUploadServer.startOnAvailablePort(
+            context = context,
+            onFontUploaded = ::importUploadedFont,
+            logoProvider = { logoBytes }
+        )
         if (startedServer == null) {
             showImportError(R.string.error_server_ports_unavailable)
             return

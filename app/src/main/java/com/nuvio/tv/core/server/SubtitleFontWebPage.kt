@@ -19,48 +19,58 @@ internal object SubtitleFontWebPage {
 
         return """
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>$appName - $title</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-background:#000;color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:16px}
-.card{max-width:560px;width:100%;padding:32px 0}
-h1{font-size:20px;font-weight:600;margin-bottom:4px}
-.subtitle{font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:24px;line-height:1.5}
-label{display:block;width:100%;padding:0.875rem 1.3rem;border:1px solid rgba(255,255,255,0.2);border-radius:100px;
-text-align:center;font-size:0.875rem;font-weight:500;cursor:pointer;transition:all .25s ease}
-label:hover{background:#fff;color:#000;border-color:#fff}
-input{display:none}
-.status{margin-top:16px;font-size:13px;text-align:center;min-height:20px;color:rgba(255,255,255,0.6)}
-.status.ok{color:#4caf50}
-.status.err{color:#ef5350}
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; min-height: 100vh; line-height: 1.5; }
+  .page { max-width: 600px; margin: 0 auto; padding: 0 1.5rem 6rem; }
+  .header { text-align: center; padding: 3rem 0 2.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 2.5rem; }
+  .header-logo { height: 40px; width: auto; margin-bottom: 0.5rem; filter: brightness(0) invert(1); opacity: 0.9; }
+  .header p { font-size: 0.875rem; font-weight: 300; color: rgba(255,255,255,0.42); letter-spacing: 0.02em; }
+  .intro { margin-bottom: 2rem; }
+  .intro-copy { color: rgba(255,255,255,0.44); font-size: 0.875rem; font-weight: 300; }
+  .actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 100px; padding: 0.875rem 1.3rem; color: #fff; font-family: inherit; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.25s ease; white-space: nowrap; }
+  .btn:hover { background: #fff; color: #000; border-color: #fff; }
+  input[type=file] { display: none; }
+  .status { color: rgba(135,239,172,0.95); font-size: 0.875rem; font-weight: 300; min-height: 24px; margin-top: 1rem; text-align: center; }
+  .status.error { color: rgba(207,102,121,0.9); }
+  @media (max-width: 480px) { .page { padding: 0 1rem 5rem; } .header { padding: 2rem 0; } .header-logo { height: 32px; } }
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>$title</h1>
-  <p class="subtitle">$subtitle</p>
-  <label for="font">$choose</label>
+<div class="page">
+  <div class="header">
+    <img src="/logo.png" alt="$appName" class="header-logo">
+    <p>$title</p>
+  </div>
+  <div class="intro">
+    <div class="intro-copy">$subtitle</div>
+  </div>
+  <div class="actions">
+    <label class="btn" for="font">$choose</label>
+  </div>
   <input id="font" type="file" accept=".ttf,.otf">
-  <div id="status" class="status"></div>
+  <div class="status" id="status"></div>
 </div>
 <script>
 const input=document.getElementById('font');
-const statusView=document.getElementById('status');
-function show(text,kind){statusView.textContent=text;statusView.className='status '+kind}
+const statusBox=document.getElementById('status');
+function show(text,failed){statusBox.textContent=text;statusBox.className=failed?'status error':'status'}
 input.addEventListener('change',async()=>{
   const file=input.files[0];
   if(!file)return;
-  show($uploading,'');
+  show($uploading,false);
   try{
     const response=await fetch('/api/font',{method:'POST',
       headers:{'Content-Type':'application/octet-stream','X-File-Name':encodeURIComponent(file.name)},body:file});
-    if(response.ok){show($added,'ok')}else{show($error,'err')}
-  }catch(e){show($connectionError,'err')}
+    if(response.ok){show($added,false)}else{show($error,true)}
+  }catch(e){show($connectionError,true)}
   input.value='';
 });
 </script>

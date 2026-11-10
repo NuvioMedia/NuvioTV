@@ -3,12 +3,14 @@ package com.nuvio.tv.core.server
 import android.content.Context
 import com.nuvio.tv.core.player.SubtitleFonts
 import fi.iki.elonen.NanoHTTPD
+import java.io.ByteArrayInputStream
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
 class SubtitleFontUploadServer(
     private val context: Context,
     private val onFontUploaded: (fileName: String, bytes: ByteArray) -> Boolean,
+    private val logoProvider: () -> ByteArray?,
     port: Int
 ) : NanoHTTPD(port) {
 
@@ -18,8 +20,14 @@ class SubtitleFontUploadServer(
             "text/html; charset=utf-8",
             SubtitleFontWebPage.html(context)
         )
+        session.method == Method.GET && session.uri == "/logo.png" -> serveLogo()
         session.method == Method.POST && session.uri == "/api/font" -> handleUpload(session)
         else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
+    }
+
+    private fun serveLogo(): Response {
+        val bytes = logoProvider() ?: return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
+        return newFixedLengthResponse(Response.Status.OK, "image/png", ByteArrayInputStream(bytes), bytes.size.toLong())
     }
 
     private fun handleUpload(session: IHTTPSession): Response {
@@ -51,11 +59,12 @@ class SubtitleFontUploadServer(
         fun startOnAvailablePort(
             context: Context,
             onFontUploaded: (fileName: String, bytes: ByteArray) -> Boolean,
+            logoProvider: () -> ByteArray?,
             startPort: Int = 8094,
             maxAttempts: Int = 10
         ): SubtitleFontUploadServer? {
             for (port in startPort until startPort + maxAttempts) {
-                val server = SubtitleFontUploadServer(context, onFontUploaded, port)
+                val server = SubtitleFontUploadServer(context, onFontUploaded, logoProvider, port)
                 if (runCatching { server.start(SOCKET_READ_TIMEOUT, false) }.isSuccess) return server
             }
             return null
