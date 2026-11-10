@@ -447,6 +447,7 @@ class ExternalPlaybackTracker @Inject constructor(
             }
             val position = positionDeferred.await()
             pendingStartPositionMs = position
+            persistStartPosition(position)
             val skipSegmentsJson = skipSegmentsDeferred.await()
             if (shouldCancelPendingAutoLaunch(autoLaunch)) {
                 Log.d(AUTO_NEXT_TAG, "auto launch cancelled during player preparation")
@@ -626,6 +627,9 @@ class ExternalPlaybackTracker @Inject constructor(
             nextEpisodeSnapshot = loadPersistedNextEpisodeSnapshot()
             autoNextEnabledForPendingLaunch = loadPersistedAutoNextEnabled()
             pendingCloudSessionToken = loadPersistedCloudSessionToken()
+            // A resume above the completion bar is the tail of a viewing the account already has,
+            // and the tracker needs its real start position to tell that from a fresh one.
+            pendingStartPositionMs = persistedPrefs.getLong("startPositionMs", 0L)
         }
 
         if (result == null) {
@@ -794,7 +798,17 @@ class ExternalPlaybackTracker @Inject constructor(
             .putString("year", m.year)
             .putInt("profileId", m.profileId)
             .putString("cloudSessionToken", cloudSessionToken)
+            .putLong("startPositionMs", 0L)
             .apply()
+    }
+
+    /**
+     * The result can arrive after the player killed our process, so the start position has to
+     * survive next to the metadata. Without it a resumed viewing above the bar looks like one that
+     * began from zero and can open a rewatch for a watch the account already has.
+     */
+    private fun persistStartPosition(positionMs: Long) {
+        persistedPrefs.edit().putLong("startPositionMs", positionMs).apply()
     }
 
     private fun loadPersistedCloudSessionToken(): String? =
@@ -1459,12 +1473,17 @@ class ExternalPlaybackTracker @Inject constructor(
         // Continue Watching or tracking entries for files that did not have them before.
         if (metadata.contentType.equals("cloud", ignoreCase = true)) return
         val effectiveDuration = durationMs ?: 0L
+        // A result whose duration was backfilled runs after the screen's ON_RESUME has already
+        // stopped tracking, so the in-memory position can be zero by now. The persisted copy still
+        // says where this playback began, including after a process recreation.
+        val startPositionMs = pendingStartPositionMs.takeIf { it > 0L }
+            ?: persistedPrefs.getLong("startPositionMs", 0L)
         val startedAboveCompletionBar = effectiveDuration > 0L &&
-            pendingStartPositionMs > 0L &&
-            pendingStartPositionMs.toDouble() / effectiveDuration.toDouble() * 100.0 >=
+            startPositionMs > 0L &&
+            startPositionMs.toDouble() / effectiveDuration.toDouble() * 100.0 >=
                 TRACKING_COMPLETION_BAR_PERCENT
-        val startProgressPercent = if (effectiveDuration > 0L && pendingStartPositionMs > 0L) {
-            pendingStartPositionMs.toDouble() / effectiveDuration.toDouble() * 100.0
+        val startProgressPercent = if (effectiveDuration > 0L && startPositionMs > 0L) {
+            startPositionMs.toDouble() / effectiveDuration.toDouble() * 100.0
         } else {
             null
         }

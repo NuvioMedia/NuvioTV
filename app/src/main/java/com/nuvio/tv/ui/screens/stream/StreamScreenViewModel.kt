@@ -19,9 +19,7 @@ import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
-import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
-import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.core.streams.StreamBadgePresentation
@@ -41,7 +39,6 @@ import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
-import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.StreamDebridCacheState
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -2058,69 +2055,6 @@ class StreamScreenViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to fetch subtitles for external player", e)
             null
-        }
-    }
-
-    /**
-     * Save watch progress returned by an external player.
-     * Called when the external player returns position/duration data via ActivityResult.
-     *
-     * Sends both scrobbleStart + scrobbleStop to Trakt so the playback session is properly
-     * recorded (Trakt requires an active session before stop will persist progress).
-     */
-    fun saveExternalPlayerProgress(
-        playbackInfo: StreamPlaybackInfo,
-        positionMs: Long,
-        durationMs: Long?
-    ) {
-        val contentId = playbackInfo.contentId ?: return
-        val videoId = playbackInfo.videoId ?: contentId
-        val effectiveDuration = durationMs ?: 0L
-
-        viewModelScope.launch {
-            val progress = WatchProgress(
-                contentId = contentId,
-                contentType = playbackInfo.contentType ?: "movie",
-                name = playbackInfo.contentName ?: playbackInfo.title,
-                poster = playbackInfo.poster,
-                backdrop = playbackInfo.backdrop,
-                logo = playbackInfo.logo,
-                videoId = videoId,
-                season = playbackInfo.season,
-                episode = playbackInfo.episode,
-                episodeTitle = playbackInfo.episodeTitle,
-                position = positionMs,
-                duration = effectiveDuration,
-                lastWatched = System.currentTimeMillis()
-            )
-            Log.d(TAG, "Saving external player progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +
-                "content=$contentId, video=$videoId")
-            watchProgressRepository.saveProgress(progress, playbackInfo.profileId)
-
-            val progressPercent = if (effectiveDuration > 0L) {
-                (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)
-            } else {
-                0f
-            }
-            if (progressPercent > 0f) {
-                val scrobbleItem = buildScrobbleItem(playbackInfo)
-                if (scrobbleItem != null) {
-                    // The external player is reported from its start here, so its stop is the end
-                    // of a session and may record a repeat viewing.
-                    trackingScrobbleCoordinator.scrobble(
-                        TrackingScrobbleAction.START,
-                        TrackingScrobbleEvent(scrobbleItem, 0.0, hasPlaybackSession = true)
-                    )
-                    trackingScrobbleCoordinator.scrobble(
-                        TrackingScrobbleAction.STOP,
-                        TrackingScrobbleEvent(
-                            scrobbleItem,
-                            progressPercent.toDouble(),
-                            hasPlaybackSession = true
-                        )
-                    )
-                }
-            }
         }
     }
 
