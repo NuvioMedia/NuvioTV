@@ -810,7 +810,6 @@
     <string name="video_section">Video</string>
     <string name="playback_true_black_letterbox">True black bars</string>
     <string name="playback_true_black_letterbox_sub">Leave the bars around the picture unpainted so HDR stays true black. Keep this off if a bright line appears on the bars.</string>
-    <string name="playback_chapters_label">Chapters</string>
     <string name="playback_exo_chapters_title">Show Chapters</string>
     <string name="playback_exo_chapters_sub">Read the chapters of MKV files to mark them on the progress bar and skip between them. Makes a few small extra requests once playback starts.</string>
     <string name="playback_chapter_title_title">Show Chapter Title</string>

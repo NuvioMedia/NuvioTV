@@ -3133,7 +3133,6 @@
     <string name="about_update_auto_install_notice_subtitle">অ্যাপটি নিজে নিজে আপডেট হওয়ার পর পরবর্তী চালুর সময় একটি ব্যানার দেখান</string>
     <string name="playback_release_decoder_on_background">ব্যাকগ্রাউন্ডে ডিকোডার ছেড়ে দিন</string>
     <string name="playback_release_decoder_on_background_sub">Nuvio ব্যাকগ্রাউন্ডে গেলে ভিডিও ডিকোডার মুক্ত করুন। অ্যাপে ফিরে আসার পর ডিকোডার এরর দিয়ে প্লেব্যাক ব্যর্থ হলে এটি চালু করুন। ফিরে আসার পর প্লেয়ারটি পুনরায় লোড হবে, স্ক্রিনসেভারের পরেও</string>
-    <string name="playback_chapters_label">চ্যাপ্টার</string>
     <string name="playback_exo_chapters_title">চ্যাপ্টার দেখান</string>
     <string name="playback_exo_chapters_sub">প্রগ্রেস বারে চিহ্নিত করতে এবং সেগুলোর মধ্যে স্কিপ করতে MKV ফাইলের চ্যাপ্টারগুলো পড়ুন। প্লেব্যাক শুরু হলে এটি কয়েকটি অতিরিক্ত রিকোয়েস্ট করে।</string>
     <string name="audio_night_mode">নাইট মোড</string>
