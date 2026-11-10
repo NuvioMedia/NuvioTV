@@ -11,11 +11,13 @@ import com.nuvio.tv.core.util.findCause
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val MAX_STARTUP_AUTO_RETRIES = 2
 private const val MAX_AUTO_RETRIES = 2
 private const val RETRY_DELAY_MS = 1_500L
 private const val STABLE_PROGRESS_RESET_DELAY_MS = 5_000L
+private const val ISO_FALLBACK_PROBE_TIMEOUT_MS = 20_000L
 
 internal fun PlayerRuntimeController.showRecoveryOverlay() {
     _uiState.update { state ->
@@ -506,6 +508,31 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
     errorRetryJob?.cancel()
     errorRetryJob = scope.launch {
         showRecoveryOverlay()
+        if (currentStreamBluray == null && isBlurayPlaybackAllowed() &&
+            !BlurayPlaylistResolver.isLikelyBdavM2tsUrl(currentStreamUrl)
+        ) {
+            val bluray = PlayerMediaSourceFactory.probeBlurayLayout(url = currentStreamUrl, headers = currentHeaders)
+                ?: withTimeoutOrNull(ISO_FALLBACK_PROBE_TIMEOUT_MS) {
+                    PlayerMediaSourceFactory.probeBlurayIso(url = currentStreamUrl, headers = currentHeaders)
+                }?.let { disc ->
+                    disc.feature?.also { showDiscTitles(disc) }
+                }
+            if (bluray != null) {
+                Log.i(PlayerRuntimeController.TAG, "Stream probe found Blu-ray ${bluray::class.simpleName}. Retrying playback...")
+                currentStreamBluray = bluray
+                releasePlayer(flushPlaybackState = false)
+                if (savedPosition > 0L) {
+                    _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+                }
+                initializePlayer(
+                    currentStreamUrl,
+                    currentHeaders,
+                    overrideInternalPlayerEngine = runtimeInternalPlayerEngineOverride,
+                    startPaused = paused
+                )
+                return@launch
+            }
+        }
         val probedMime = PlayerMediaSourceFactory.probeNetworkMimeType(
             url = currentStreamUrl,
             headers = currentHeaders

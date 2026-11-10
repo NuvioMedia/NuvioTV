@@ -3434,4 +3434,13 @@
     <string name="licenses_attributions_dav1d_body">Decodificação de vídeo AV1 por software. Pela VideoLAN e pelos autores do dav1d. Licença BSD 2-Clause.</string>
     <string name="licenses_attributions_cpu_features_title">cpu_features</string>
     <string name="licenses_attributions_cpu_features_body">Detecção dos recursos do processador para o decodificador AV1. Pelo Google. Licença Apache 2.0.</string>
+    <string name="player_disc_titles">Títulos do disco</string>
+    <string name="player_disc_title_feature">Filme · %1$d min</string>
+    <string name="player_disc_title_extra">Extra · %1$d min</string>
+    <string name="player_disc_title_subtitles">Legendas %1$s</string>
+    <string name="player_disc_title_failed">Não foi possível reproduzir este título</string>
+    <plurals name="player_disc_title_clips">
+        <item quantity="one">%d clipe</item>
+        <item quantity="other">%d clipes</item>
+    </plurals>
 </resources>

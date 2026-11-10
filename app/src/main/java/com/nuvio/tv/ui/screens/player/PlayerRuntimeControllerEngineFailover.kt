@@ -75,7 +75,8 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
     beginSwitchTraceSession(reason = reason, targetEngine = targetEngine)
     val targetEngineLabel = targetEngineLabel(targetEngine)
     val switchMessage = context.getString(R.string.player_engine_switching_manual_message, targetEngineLabel)
-    val currentPosition = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
+    val discFeaturePosition = discFeaturePositionMs.takeIf { isPlayingDiscExtra() }
+    val currentPosition = discFeaturePosition ?: currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
     logSwitchTrace(
         stage = "manual-switch-trigger",
         message = "targetEngine=$targetEngine positionMs=$currentPosition " +
@@ -121,6 +122,7 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
     delayMpvResumeSeekUntilVideoTrack = switchingToMpv
 
     releasePlayer(flushPlaybackState = true, keepTorrentStream = true)
+    returnToDiscFeature()
     initializePlayer(
         url = currentStreamUrl,
         headers = currentHeaders,

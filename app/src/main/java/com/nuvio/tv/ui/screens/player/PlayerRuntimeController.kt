@@ -676,6 +676,12 @@ class PlayerRuntimeController(
     internal var forceDv7ToHevc: Boolean = false
     internal var startupRetryCount: Int = 0
     internal var parsingErrorProbeAttempted: Boolean = false
+    internal var currentStreamBluray: BlurayPlaylistResolver.RemoteLayout? = null
+    internal var clipPlaylistProbedUrl: String? = null
+    internal var discTitlePlaylists: Map<String, BlurayPlaylistResolver.RemoteLayout.Playlist> = emptyMap()
+    internal var discFeatureTitle: String? = null
+    internal var discFeaturePositionMs: Long = 0L
+    internal var discTitleLanguagesJob: Job? = null
     internal var hasRetriedCurrentStreamAfterUnexpectedNpe: Boolean = false
     internal var hasRetriedCurrentStreamAfterMediaPeriodHolderCrash: Boolean = false
     internal var timeoutRecoveryAttempts: Int = 0
