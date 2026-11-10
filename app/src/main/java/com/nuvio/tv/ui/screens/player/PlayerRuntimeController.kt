@@ -108,7 +108,7 @@ class PlayerRuntimeController(
     internal val serverStreams: ServerStreams,
     internal val party: com.nuvio.tv.core.party.PartyRepository,
     internal val profileId: Int,
-    savedStateHandle: SavedStateHandle,
+    internal val savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
 ) {
 
