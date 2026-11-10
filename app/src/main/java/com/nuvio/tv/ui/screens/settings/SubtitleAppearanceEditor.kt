@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -293,26 +294,32 @@ private fun SubtitleColorSwatchRow(
     selectedColor: Int,
     onColorSelected: (Color) -> Unit
 ) {
+    val firstSwatchFocusRequester = remember { FocusRequester() }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = SettingsRowContentInset, vertical = NuvioTheme.spacing.sm),
+            .padding(vertical = NuvioTheme.spacing.sm),
         verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
-            color = NuvioTheme.colors.TextPrimary
+            color = NuvioTheme.colors.TextPrimary,
+            modifier = Modifier.padding(horizontal = SettingsRowContentInset)
         )
         LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRestorer(firstSwatchFocusRequester),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
-            contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xs, vertical = NuvioTheme.spacing.xs)
+            contentPadding = PaddingValues(horizontal = SettingsRowContentInset, vertical = NuvioTheme.spacing.sm)
         ) {
-            items(colors, key = { it.toArgb() }) { color ->
+            itemsIndexed(colors, key = { _, color -> color.toArgb() }) { index, color ->
                 ColorOption(
                     color = color,
                     isSelected = color.toArgb() == selectedColor,
-                    onClick = { onColorSelected(color) }
+                    onClick = { onColorSelected(color) },
+                    modifier = if (index == 0) Modifier.focusRequester(firstSwatchFocusRequester) else Modifier
                 )
             }
         }
