@@ -12,6 +12,7 @@ import com.nuvio.tv.data.mediaserver.emby.EmbyProvider
 import com.nuvio.tv.data.mediaserver.jellyfin.JellyfinProvider
 import com.nuvio.tv.data.mediaserver.mediabrowser.ServerClientIdentity
 import com.nuvio.tv.data.mediaserver.plex.PlexProvider
+import com.nuvio.tv.data.mediaserver.silo.SiloProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,7 +53,8 @@ object MediaServerModule {
             providers = listOf(
                 JellyfinProvider(http, clientIdentity),
                 EmbyProvider(http, clientIdentity),
-                PlexProvider(http, clientIdentity)
+                PlexProvider(http, clientIdentity),
+                SiloProvider(http, clientIdentity)
             ),
             scope = scope
         )

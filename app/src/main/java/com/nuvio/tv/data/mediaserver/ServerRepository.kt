@@ -2,6 +2,7 @@ package com.nuvio.tv.data.mediaserver
 
 import android.util.Log
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
@@ -13,6 +14,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
@@ -51,6 +54,7 @@ class ServerRepository(
     private var syncedKeys: Set<String>? = null
     private var localVersion = 0L
     private val mutableLocalChanges = MutableSharedFlow<Int>(extraBufferCapacity = 8)
+    private val renewals = ConcurrentHashMap<String, Mutex>()
     val localChanges: SharedFlow<Int> = mutableLocalChanges.asSharedFlow()
 
     fun ensureLoaded() {
@@ -94,7 +98,14 @@ class ServerRepository(
         val session = session(connectionId) ?: throw ServerException(ServerFailure.AUTH_REQUIRED)
         val provider = provider(session.connection) ?: throw ServerException(ServerFailure.UNSUPPORTED)
         return try {
-            block(provider, session).also {
+            val current = if (provider.renewalDue(session)) renewedAhead(provider, session) else session
+            try {
+                block(provider, current)
+            } catch (error: ServerException) {
+                if (error.failure != ServerFailure.AUTH_REQUIRED) throw error
+                val renewed = renewed(provider, current, error) ?: throw error
+                block(provider, renewed)
+            }.also {
                 if (startedGeneration != generation) throw CancellationException("Server scope changed")
                 setFailure(connectionId, null)
             }
@@ -106,6 +117,43 @@ class ServerRepository(
             }
             throw error
         }
+    }
+
+    /** Renews ahead of time; the current token is kept when the server can't be asked right now. */
+    private suspend fun renewedAhead(provider: ServerProvider, session: ServerSession): ServerSession = try {
+        renewed(provider, session, failure = null) ?: session
+    } catch (error: ServerException) {
+        if (error.failure == ServerFailure.AUTH_REQUIRED) throw error
+        session
+    }
+
+    /** One renewal at a time per connection: a call that waited gets the token the first one saved. */
+    private suspend fun renewed(provider: ServerProvider, session: ServerSession, failure: ServerException?): ServerSession? {
+        val connectionId = session.connection.id
+        return renewals.getOrPut(connectionId) { Mutex() }.withLock {
+            val latest = session(connectionId) ?: return@withLock null
+            if (latest.token != session.token) return@withLock latest
+            val profileId = loadedProfileId ?: return@withLock null
+            val token = provider.renewToken(latest, failure) ?: return@withLock null
+            if (!replaceToken(profileId, latest.connection, latest.token, token)) return@withLock null
+            ServerSession(latest.connection, token)
+        }
+    }
+
+    /** Saves [token] only while [profileId] is loaded and the connection still holds [previous]. */
+    private fun replaceToken(profileId: Int, connection: ServerConnection, previous: String, token: String): Boolean {
+        val updated = synchronized(lock) {
+            if (loadedProfileId != profileId || tokens[connection.credentialRef] != previous) return false
+            (tokens + (connection.credentialRef to token)).also { tokens = it }
+        }
+        val changesAccount = syncsSignIn(connection) && provider(connection)?.renewalChangesAccount(previous, token) != false
+        if (changesAccount) {
+            pendingPush = true
+            localVersion++
+        }
+        persist(mutableState.value.connections, updated)
+        if (changesAccount) mutableLocalChanges.tryEmit(profileId)
+        return true
     }
 
     suspend fun connect(provider: ServerProvider, address: String, username: String, password: String): ServerConnection =
@@ -211,7 +259,10 @@ class ServerRepository(
             profileId = profileId,
             version = localVersion,
             servers = mutableState.value.connections.filter(::syncsSignIn).mapNotNull { connection ->
-                currentTokens[connection.credentialRef]?.let(connection::toSynced)
+                currentTokens[connection.credentialRef]
+                    ?.let { token -> provider(connection)?.tokenForAccount(token) ?: token }
+                    ?.takeIf { it.length <= MAX_ACCOUNT_TOKEN_LENGTH }
+                    ?.let(connection::toSynced)
             },
             pendingPush = pendingPush,
             syncedKeys = syncedKeys
@@ -230,8 +281,10 @@ class ServerRepository(
             val credentialRef = local?.credentialRef ?: newId("k")
             val id = local?.id ?: server.id.takeUnless { id -> current.any { it.id == id } || id in usedIds } ?: newId("c")
             usedIds += id
-            updatedTokens[credentialRef] = server.token
-            if (local != null && currentTokens[credentialRef] != server.token) setFailure(local.id, null)
+            val localToken = local?.let { currentTokens[credentialRef] }
+            val token = localToken?.takeIf { provider(local)?.keepsLocalToken(it, server.token) == true } ?: server.token
+            updatedTokens[credentialRef] = token
+            if (local != null && currentTokens[credentialRef] != token) setFailure(local.id, null)
             server.toConnection(id, credentialRef)
         }
         val deviceOnly = current.filterNot { syncsSignIn(it) || it.id in usedIds }
@@ -340,5 +393,6 @@ class ServerRepository(
 
     private companion object {
         const val TAG = "ServerRepository"
+        const val MAX_ACCOUNT_TOKEN_LENGTH = 1024
     }
 }

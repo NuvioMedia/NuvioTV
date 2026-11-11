@@ -34,6 +34,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.data.mediaserver.ServerConnection
 import com.nuvio.tv.data.mediaserver.ServerFailure
 import com.nuvio.tv.data.mediaserver.plex.PlexProvider
+import com.nuvio.tv.data.mediaserver.silo.SiloProvider
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 @Composable
@@ -92,10 +93,10 @@ internal fun MediaServersSettingsContent(
                     items(viewModel.providers, key = { "provider_${it.id}" }) { provider ->
                         SettingsActionRow(
                             title = provider.displayName,
-                            subtitle = if (provider.id == PlexProvider.ID) {
-                                stringResource(R.string.plex_add_description)
-                            } else {
-                                stringResource(R.string.servers_add_description, provider.displayName)
+                            subtitle = when (provider.id) {
+                                PlexProvider.ID -> stringResource(R.string.plex_add_description)
+                                SiloProvider.ID -> stringResource(R.string.silo_add_description)
+                                else -> stringResource(R.string.servers_add_description, provider.displayName)
                             },
                             onClick = { signIn = ServerSignInRequest(provider) },
                             leadingRawIconRes = serverLogoRes(provider.id),
@@ -121,7 +122,7 @@ internal fun MediaServersSettingsContent(
     }
 }
 
-/** Plex signs in with a code at plex.tv/link; the other servers with an address, user and password. */
+/** Plex signs in with a code at plex.tv/link, Silo with a code or its own password sign-in; the other servers with an address, user and password. */
 @Composable
 internal fun ServerSignInRoute(
     request: ServerSignInRequest,
@@ -129,10 +130,10 @@ internal fun ServerSignInRoute(
     onConnected: (ServerConnection) -> Unit,
     onDismiss: () -> Unit
 ) {
-    if (request.provider.id == PlexProvider.ID) {
-        PlexSignInDialog(viewModel = viewModel, onConnected = onConnected, onDismiss = onDismiss)
-    } else {
-        ServerSignInDialog(request = request, viewModel = viewModel, onConnected = onConnected, onDismiss = onDismiss)
+    when (request.provider.id) {
+        PlexProvider.ID -> PlexSignInDialog(viewModel = viewModel, onConnected = onConnected, onDismiss = onDismiss)
+        SiloProvider.ID -> SiloSignInDialog(request = request, viewModel = viewModel, onConnected = onConnected, onDismiss = onDismiss)
+        else -> ServerSignInDialog(request = request, viewModel = viewModel, onConnected = onConnected, onDismiss = onDismiss)
     }
 }
 
@@ -165,5 +166,6 @@ internal fun serverLogoRes(providerId: String): Int? = when (providerId) {
     "jellyfin" -> R.raw.jellyfin_logo
     "emby" -> R.raw.emby_logo
     PlexProvider.ID -> R.raw.plex_logo
+    SiloProvider.ID -> R.raw.silo_logo
     else -> null
 }
