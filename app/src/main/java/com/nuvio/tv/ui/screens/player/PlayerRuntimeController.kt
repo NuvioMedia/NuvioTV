@@ -254,6 +254,14 @@ class PlayerRuntimeController(
             .ifEmpty { StreamSidecarSubtitles.forUrl(currentStreamUrl) }
     }
 
+    /** URL opened from the reuse-last-link cache; it is refetched after a playback error even without a token. */
+    internal var linkCacheSourceUrl: String? = currentStreamUrl.takeIf {
+        navigationArgs.fromLinkCache && it.isNotBlank() && !it.startsWith("torrent://")
+    }
+
+    /** Last URL refetched after a playback error, so a link is refreshed at most once. */
+    internal var linkRefreshAttemptedUrl: String? = null
+
     fun getCurrentStreamUrl(): String = currentStreamUrl
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
 

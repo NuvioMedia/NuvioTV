@@ -274,6 +274,9 @@ internal fun PlayerRuntimeController.handleMpvPlaybackError(
         lastPlaybackDiagnosticsForReport =
             lastPlaybackDiagnosticsForReport.copy(result = "Error: $detailedError")
 
+        // A link that has likely expired is fetched again before anything else is tried on it.
+        if (tryRefreshExpiredLinkAfterError(detailedError)) return
+
         val startupFailed = !hasRenderedFirstFrame
         if (startupFailed &&
             maybeAutoSwitchInternalPlayerOnStartupError(
