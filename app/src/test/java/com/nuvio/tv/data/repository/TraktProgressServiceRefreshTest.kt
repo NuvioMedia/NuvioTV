@@ -4,6 +4,7 @@ import android.content.Context
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.TraktAuthState
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchedSeriesStateHolder
 import com.nuvio.tv.data.remote.api.TraktApi
@@ -46,6 +47,9 @@ class TraktProgressServiceRefreshTest {
 
     @Volatile
     private var playbackHangs = false
+
+    @Volatile
+    private var signedIn = true
 
     @Test
     fun `watch action refetches only the changed watched list and the next poll skips it`() = runBlocking {
@@ -99,6 +103,16 @@ class TraktProgressServiceRefreshTest {
 
         assertEquals(1, watchedShowsCalls.get())
         assertEquals(1, watchedMoviesCalls.get())
+    }
+
+    @Test
+    fun `polling makes no Trakt calls while signed out`() = runBlocking {
+        signedIn = false
+        createService()
+        delay(SETTLE_MS)
+
+        assertEquals(0, lastActivitiesCalls.get())
+        assertEquals(0, playbackCalls.get())
     }
 
     @Test
@@ -184,6 +198,9 @@ class TraktProgressServiceRefreshTest {
 
         val authService = mockk<TraktAuthService>()
         every { authService.isCircuitClosed() } returns true
+        coEvery { authService.getCurrentAuthState() } answers {
+            if (signedIn) TraktAuthState(accessToken = "access", refreshToken = "refresh") else TraktAuthState()
+        }
         coEvery { authService.executeAuthorizedRequest<Any?>(any()) } coAnswers {
             firstArg<suspend (String) -> Response<Any?>>().invoke("Bearer test")
         }
