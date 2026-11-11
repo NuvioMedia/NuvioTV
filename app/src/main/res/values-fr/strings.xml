@@ -812,6 +812,8 @@
     <string name="playback_true_black_letterbox_sub">Laisse les bandes autour de l’image non peintes afin que le HDR conserve un noir pur. Gardez cette option désactivée si une ligne lumineuse apparaît sur les bandes.</string>
     <string name="playback_exo_chapters_title">Afficher les chapitres</string>
     <string name="playback_exo_chapters_sub">Lire les chapitres des fichiers MKV pour les repérer sur la barre de progression et passer de l’un à l’autre.</string>
+    <string name="playback_chapter_title_title">Afficher le titre du chapitre</string>
+    <string name="playback_chapter_title_sub">Afficher le nom du chapitre en cours au-dessus de la barre de progression.</string>
     <string name="audio_trailer_section">Bande-annonce</string>
     <string name="audio_autoplay_trailers">Lecture automatique des bandes-annonces</string>
     <string name="audio_autoplay_trailers_sub">Lire automatiquement les bandes-annonces sur les écrans de détail et de fin de lecture</string>
@@ -930,6 +932,28 @@
     <string name="sub_hdr_brightness">Luminosité HDR</string>
     <string name="sub_hdr_dim_player_controls">Atténuer les commandes du lecteur en HDR</string>
     <string name="sub_hdr_dim_player_controls_sub">Appliquer la luminosité HDR aux commandes et aux menus du lecteur affichés sur les vidéos HDR et Dolby Vision</string>
+    <string name="sub_appearance">Apparence des sous-titres</string>
+    <string name="sub_appearance_desc">Police, couleurs, arrière-plan et ombre</string>
+    <string name="sub_appearance_hint">S’applique aux sous-titres texte. Les sous-titres ASS stylisés et les sous-titres image conservent leur apparence d’origine.</string>
+    <string name="sub_preview">Aperçu</string>
+    <string name="sub_preview_text">Chaque histoire commence par un peu de curiosité.</string>
+    <string name="sub_font">Police</string>
+    <string name="sub_font_default">Par défaut</string>
+    <string name="sub_font_serif">Avec empattement</string>
+    <string name="sub_font_mono">Chasse fixe</string>
+    <string name="sub_font_import">Importer depuis le téléphone</string>
+    <string name="sub_font_import_desc">Ajoutez une police .ttf ou .otf jusqu’à 10&#160;Mo. Les polices importées restent sur cette TV.</string>
+    <string name="sub_font_import_qr">Scannez avec votre téléphone pour ajouter une police .ttf ou .otf</string>
+    <string name="sub_font_missing">Police indisponible sur cet appareil. Utilisation de la police par défaut.</string>
+    <string name="sub_font_remove">Retirer %1$s</string>
+    <string name="sub_background">Arrière-plan</string>
+    <string name="sub_bg_opacity">Opacité de l’arrière-plan</string>
+    <string name="sub_bg_roundness">Arrondi des coins</string>
+    <string name="sub_shadow">Ombre portée</string>
+    <string name="sub_shadow_desc">Détacher le texte des scènes lumineuses</string>
+    <string name="sub_shadow_opacity">Opacité de l’ombre</string>
+    <string name="sub_shadow_size">Taille de l’ombre</string>
+    <string name="sub_reset_appearance">Réinitialiser l’apparence</string>
     <string name="sub_advanced_section">Rendu avancé des sous-titres</string>
     <string name="sub_libass">Utiliser libass pour les sous-titres ASS/SSA</string>
     <string name="sub_libass_sub">Rendu ASS/SSA avancé (styles, positionnement, animations)</string>
@@ -1228,6 +1252,13 @@
     <string name="web_custom_poster_none">Aucun modèle défini</string>
     <string name="web_custom_poster_loading">Chargement…</string>
     <string name="web_custom_poster_placeholders_info">Espaces réservés&#160;: {id} transmet tous les ID de contenu. {imdb_id}, {tmdb_id}, {tvdb_id} et {kitsu_id} ciblent un seul type d’ID&#160;; s’il n’est pas disponible, l’affiche d’origine est conservée. {imdb_id|tmdb_id|kitsu_id} déclare les types d’ID pris en charge&#160;: celui qui correspond est utilisé, sinon l’affiche d’origine est conservée. Ajoutez ? pour rendre un espace réservé facultatif, qui devient alors vide au lieu d’être ignoré&#160;: {imdb_id?}. Autres espaces réservés&#160;: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">Polices des sous-titres</string>
+    <string name="web_subtitle_font_subtitle">Choisissez un fichier .ttf ou .otf à utiliser pour les sous-titres sur votre TV.</string>
+    <string name="web_subtitle_font_choose">Choisir le fichier de police</string>
+    <string name="web_subtitle_font_uploading">Envoi…</string>
+    <string name="web_subtitle_font_added">Ajoutée à votre TV</string>
+    <string name="web_subtitle_font_error">Impossible d’importer cette police. Choisissez un fichier .ttf ou .otf valide de moins de 10&#160;Mo.</string>
+    <string name="web_subtitle_font_connection_error">Erreur de connexion</string>
 
 
     <string name="mdblist_name">MDBList</string>
