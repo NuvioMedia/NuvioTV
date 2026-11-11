@@ -12,6 +12,9 @@ import com.nuvio.tv.data.mediaserver.serverFailure
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +39,11 @@ class MediaServersViewModel @Inject constructor(
 
     private val mutableRefreshing = MutableStateFlow<String?>(null)
     val refreshing: StateFlow<String?> = mutableRefreshing.asStateFlow()
+
+    /** Withdrawing an unused code and ending an unsaved sign-in still run after this screen is gone. */
+    private val cleanupScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
+
+    val siloSignIn: SiloSignInFlow by lazy { SiloSignInFlow(repository, viewModelScope, cleanupScope) }
 
     init {
         repository.ensureLoaded()
@@ -98,4 +106,8 @@ class MediaServersViewModel @Inject constructor(
         repository.setLibrarySelected(connectionId, libraryId, selected)
 
     fun remove(connectionId: String) = repository.remove(connectionId)
+
+    override fun onCleared() {
+        siloSignIn.close()
+    }
 }
