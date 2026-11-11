@@ -166,6 +166,17 @@ internal class DolbyVisionMatroskaTransformer(
         return scratch.backingArray()
     }
 
+    private val av1StripOut = ExposedByteArrayOutputStream(256 * 1024)
+
+    override fun transformAv1Sample(sample: ByteArray, sampleLength: Int): ByteArray? {
+        if (!stripHdr10PlusSei) return null
+        av1StripOut.reset()
+        val written = Av1Hdr10PlusStripper.stripHdr10PlusObus(sample, sampleLength, av1StripOut)
+        if (written < 0) return null
+        lastTransformedLength = written
+        return av1StripOut.backingArray()
+    }
+
     override fun onDolbyVisionCodecString(
         codecs: String?,
         dolbyVisionConfigBytes: ByteArray?
