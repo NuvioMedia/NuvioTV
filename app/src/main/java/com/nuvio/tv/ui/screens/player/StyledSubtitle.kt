@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -52,22 +52,21 @@ internal fun styledSubtitlePaddingXPx(textSizePx: Float): Float =
 internal fun rememberSubtitleTypeface(fontId: String): Typeface? {
     val context = LocalContext.current
     val store = remember(context) { SubtitleFontStore.get(context) }
-    val typeface by produceState(store.cachedTypeface(fontId), fontId, store) {
-        value = withContext(Dispatchers.IO) { store.typeface(fontId) }
+    return key(fontId) {
+        produceState(store.cachedTypeface(fontId), store) {
+            value = withContext(Dispatchers.IO) { store.typeface(fontId) }
+        }.value
     }
-    return typeface
 }
 
 @Composable
 internal fun rememberSubtitleFontFamily(fontId: String): FontFamily {
     val context = LocalContext.current
     val store = remember(context) { SubtitleFontStore.get(context) }
-    val fontFamily by produceState(builtInSubtitleFontFamily(fontId), fontId, store) {
-        value = withContext(Dispatchers.IO) {
-            store.typeface(fontId)?.let { store.fontFile(fontId) }?.let { FontFamily(Font(it)) }
-        } ?: builtInSubtitleFontFamily(fontId)
+    val typeface = rememberSubtitleTypeface(fontId)
+    return remember(fontId, typeface) {
+        typeface?.let { store.fontFile(fontId) }?.let { FontFamily(Font(it)) } ?: builtInSubtitleFontFamily(fontId)
     }
-    return fontFamily
 }
 
 private fun builtInSubtitleFontFamily(fontId: String): FontFamily = when (fontId) {
