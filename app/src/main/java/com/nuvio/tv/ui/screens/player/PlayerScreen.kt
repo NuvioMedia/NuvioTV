@@ -1826,7 +1826,11 @@ fun PlayerScreen(
                 .reportSubtitleClearance(subtitleClearanceGapPx) { seekClearancePx = it }
                 .then(playerControlsDim)
         ) {
-            SeekOverlayHost(viewModel = viewModel, chapters = uiState.chapters)
+            SeekOverlayHost(
+                viewModel = viewModel,
+                chapters = uiState.chapters,
+                showChapterTitle = uiState.showChapterTitle
+            )
         }
 
         // Chapters side panel (slides in from right, over a scrim)
@@ -2951,6 +2955,7 @@ private fun PlayerControlsOverlay(
                         PlayerControlsProgressBarHost(
                             viewModel = viewModel,
                             chapters = uiState.chapters,
+                            showChapterTitle = uiState.showChapterTitle,
                             focusRequester = progressBarFocusRequester,
                             upFocusRequester = progressBarUpFocusRequester,
                             downFocusRequester = playPauseFocusRequester,
@@ -3200,6 +3205,7 @@ private fun PlayerControlsOverlay(
 private fun PlayerControlsProgressBarHost(
     viewModel: PlayerViewModel,
     chapters: List<PlayerChapter>,
+    showChapterTitle: Boolean,
     focusRequester: FocusRequester,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
@@ -3209,7 +3215,9 @@ private fun PlayerControlsProgressBarHost(
 ) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
 
-    ChapterTitle(chapters = chapters, positionMs = playbackTimeline.currentPosition)
+    if (showChapterTitle) {
+        ChapterTitle(chapters = chapters, positionMs = playbackTimeline.currentPosition)
+    }
     ProgressBar(
         chapters = chapters,
         currentPosition = playbackTimeline.currentPosition,
@@ -3569,7 +3577,8 @@ private fun SeekOverlay(
     currentPosition: Long,
     duration: Long,
     bufferedPosition: Long = 0L,
-    chapters: List<PlayerChapter> = emptyList()
+    chapters: List<PlayerChapter> = emptyList(),
+    showChapterTitle: Boolean = true
 ) {
     Column(
         modifier = Modifier
@@ -3577,7 +3586,9 @@ private fun SeekOverlay(
             .padding(horizontal = NuvioTheme.spacing.xxl, vertical = NuvioTheme.spacing.xl)
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            ChapterTitle(chapters = chapters, positionMs = currentPosition)
+            if (showChapterTitle) {
+                ChapterTitle(chapters = chapters, positionMs = currentPosition)
+            }
             ProgressBar(
                 currentPosition = currentPosition,
                 duration = duration,
@@ -3605,14 +3616,19 @@ private fun SeekOverlay(
 }
 
 @Composable
-private fun SeekOverlayHost(viewModel: PlayerViewModel, chapters: List<PlayerChapter>) {
+private fun SeekOverlayHost(
+    viewModel: PlayerViewModel,
+    chapters: List<PlayerChapter>,
+    showChapterTitle: Boolean
+) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
 
     SeekOverlay(
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration,
         bufferedPosition = playbackTimeline.bufferedPosition,
-        chapters = chapters
+        chapters = chapters,
+        showChapterTitle = showChapterTitle
     )
 }
 

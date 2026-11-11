@@ -818,9 +818,8 @@
     <string name="video_section">Video</string>
     <string name="playback_true_black_letterbox">Gerçek siyah bantlar</string>
     <string name="playback_true_black_letterbox_sub">Açıkken görüntünün etrafındaki bantlar boyanmaz ve HDR ekranda gerçek siyah kalır. Bantlarda parlak bir çizgi görürsen kapalı bırak.</string>
-    <string name="playback_chapters_label">Sahneler</string>
-    <string name="playback_exo_chapters_title">Sahneleri göster (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">MKV dosyalarındaki sahneleri okuyup ilerleme çubuğunda işaretler ve aralarında atlamayı sağlar. Oynatma başlayınca birkaç küçük ek istek yapar. mpv sahneleri her zaman gösterir.</string>
+    <string name="playback_exo_chapters_title">Sahneleri göster</string>
+    <string name="playback_exo_chapters_sub">MKV dosyalarındaki sahneleri okuyup ilerleme çubuğunda işaretler ve aralarında atlamayı sağlar.</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Fragman</string>

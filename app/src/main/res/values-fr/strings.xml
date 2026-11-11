@@ -810,9 +810,8 @@
     <string name="video_section">Vidéo</string>
     <string name="playback_true_black_letterbox">Bandes noires pures</string>
     <string name="playback_true_black_letterbox_sub">Laisse les bandes autour de l’image non peintes afin que le HDR conserve un noir pur. Gardez cette option désactivée si une ligne lumineuse apparaît sur les bandes.</string>
-    <string name="playback_chapters_label">Chapitres</string>
-    <string name="playback_exo_chapters_title">Afficher les chapitres (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Lire les chapitres des fichiers MKV pour les repérer sur la barre de progression et passer de l’un à l’autre. Effectue quelques petites requêtes supplémentaires une fois la lecture démarrée. mpv affiche toujours les chapitres.</string>
+    <string name="playback_exo_chapters_title">Afficher les chapitres</string>
+    <string name="playback_exo_chapters_sub">Lire les chapitres des fichiers MKV pour les repérer sur la barre de progression et passer de l’un à l’autre.</string>
     <string name="audio_trailer_section">Bande-annonce</string>
     <string name="audio_autoplay_trailers">Lecture automatique des bandes-annonces</string>
     <string name="audio_autoplay_trailers_sub">Lire automatiquement les bandes-annonces sur les écrans de détail et de fin de lecture</string>

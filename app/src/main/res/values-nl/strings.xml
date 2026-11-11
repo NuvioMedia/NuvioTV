@@ -809,9 +809,8 @@
     <string name="video_section">Video</string>
     <string name="playback_true_black_letterbox">Puur zwarte balken</string>
     <string name="playback_true_black_letterbox_sub">Teken de balken rond het beeld niet, zodat ze bij HDR puur zwart blijven. Laat dit uit als er een lichte lijn op de balken verschijnt.</string>
-    <string name="playback_chapters_label">Hoofdstukken</string>
-    <string name="playback_exo_chapters_title">Hoofdstukken tonen (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Leest hoofdstukken uit MKV-bestanden om ze op de voortgangsbalk te markeren en ertussen te springen. Hiervoor zijn een paar kleine extra verzoeken nodig zodra het afspelen start. mpv toont altijd hoofdstukken.</string>
+    <string name="playback_exo_chapters_title">Hoofdstukken tonen</string>
+    <string name="playback_exo_chapters_sub">Leest hoofdstukken uit MKV-bestanden om ze op de voortgangsbalk te markeren en ertussen te springen.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Trailers automatisch afspelen</string>
     <string name="audio_autoplay_trailers_sub">Speel trailers automatisch af op het detailscherm en na afloop van een film of aflevering</string>

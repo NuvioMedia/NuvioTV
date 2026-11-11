@@ -105,8 +105,12 @@ data class PlayerUiState(
     val subtitleTracks: List<TrackInfo> = emptyList(),
     val selectedAudioTrackIndex: Int = -1,
     val selectedSubtitleTrackIndex: Int = -1,
-    /** The file's chapters, sorted; empty when it has fewer than two. */
+    /** The file's chapters, sorted; empty when it has fewer than two or chapters are turned off. */
     val chapters: List<PlayerChapter> = emptyList(),
+    /** The "Show chapters" setting, for both engines. */
+    val chaptersEnabled: Boolean = false,
+    /** Whether the current chapter's title is shown above the progress bar. */
+    val showChapterTitle: Boolean = true,
     val showChaptersPanel: Boolean = false,
     val audioDelayMs: Int = 0,
     val audioAmplificationDb: Int = 0,

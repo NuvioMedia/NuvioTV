@@ -812,9 +812,8 @@
     <string name="video_section">וידאו</string>
     <string name="playback_true_black_letterbox">פסים שחורים אמיתיים</string>
     <string name="playback_true_black_letterbox_sub">השארת הפסים סביב התמונה ללא צביעה, כדי ש-HDR יישאר שחור אמיתי. כדאי להשאיר זאת כבוי אם מופיע קו בהיר על הפסים.</string>
-    <string name="playback_chapters_label">מקטעים</string>
-    <string name="playback_exo_chapters_title">הצגת מקטעים (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">קריאת המקטעים של קובצי MKV כדי לסמן אותם בסרגל ההתקדמות ולדלג ביניהם. שולח כמה בקשות קטנות נוספות לאחר תחילת ההפעלה. mpv מציג מקטעים תמיד.</string>
+    <string name="playback_exo_chapters_title">הצגת מקטעים</string>
+    <string name="playback_exo_chapters_sub">קריאת המקטעים של קובצי MKV כדי לסמן אותם בסרגל ההתקדמות ולדלג ביניהם.</string>
     <string name="audio_trailer_section">טריילר</string>
     <string name="audio_autoplay_trailers">הפעלה אוטומטית של טריילרים</string>
     <string name="audio_autoplay_trailers_sub">הפעלת טריילרים אוטומטית במסך הפרטים לאחר תקופת חוסר פעילות</string>

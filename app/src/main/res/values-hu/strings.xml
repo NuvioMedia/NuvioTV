@@ -809,9 +809,8 @@
     <string name="video_section">Videó</string>
     <string name="playback_true_black_letterbox">Valódi fekete sávok</string>
     <string name="playback_true_black_letterbox_sub">A kép körüli sávok HDR-ben is feketék maradnak. Kapcsold ki, ha világos csík jelenik meg rajtuk.</string>
-    <string name="playback_chapters_label">Fejezetek</string>
-    <string name="playback_exo_chapters_title">Fejezetek megjelenítése (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Az MKV-fájlok fejezeteinek beolvasása, hogy megjelenjenek a folyamatjelzőn, és lehessen köztük lépkedni. A lejátszás indítása után néhány kisebb extra lekérést igényel. Az mpv mindig megjeleníti a fejezeteket.</string>
+    <string name="playback_exo_chapters_title">Fejezetek megjelenítése</string>
+    <string name="playback_exo_chapters_sub">Az MKV-fájlok fejezeteinek beolvasása, hogy megjelenjenek a folyamatjelzőn, és lehessen köztük lépkedni.</string>
     <string name="audio_trailer_section">Előzetes</string>
     <string name="audio_autoplay_trailers">Előzetesek automatikus lejátszása</string>
     <string name="audio_autoplay_trailers_sub">Előzetesek automatikus lejátszása a részletek oldalon és a lejátszás utáni képernyőn</string>
