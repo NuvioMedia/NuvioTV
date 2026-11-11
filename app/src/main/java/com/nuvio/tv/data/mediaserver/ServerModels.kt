@@ -212,6 +212,7 @@ enum class ServerFailure {
     UNSUPPORTED,
     NOT_FOUND,
     INCOMPLETE,
+    REMOTE_PLAYBACK_BLOCKED,
     FAILED
 }
 

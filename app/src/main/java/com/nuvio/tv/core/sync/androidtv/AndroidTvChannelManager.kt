@@ -13,6 +13,7 @@ import androidx.tvprovider.media.tv.PreviewProgram
 import androidx.tvprovider.media.tv.TvContractCompat
 import com.nuvio.tv.MainActivity
 import com.nuvio.tv.R
+import com.nuvio.tv.data.mediaserver.plex.PlexArtworkLink
 import com.nuvio.tv.domain.model.WatchProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -149,8 +150,8 @@ class AndroidTvChannelManager @Inject constructor(
                 val rowIds = existing[key]
 
                 val (imageUri, _) = when {
-                    !progress.backdrop.isNullOrBlank() -> progress.backdrop to TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
-                    !progress.poster.isNullOrBlank() -> progress.poster to TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3
+                    launcherArt(progress.backdrop) != null -> progress.backdrop to TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
+                    launcherArt(progress.poster) != null -> progress.poster to TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3
                     else -> null to null
                 }
                 val positionMs = if (progress.position > 0) {
@@ -299,9 +300,9 @@ class AndroidTvChannelManager @Inject constructor(
         // Backdrop/poster fills the tile via posterArt; logo goes to the dedicated logo column
         // so the launcher renders it as a small badge overlay on focus.
         val (imageUri, aspectRatio) = when {
-            !progress.backdrop.isNullOrBlank() ->
+            launcherArt(progress.backdrop) != null ->
                 progress.backdrop to TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
-            !progress.poster.isNullOrBlank() ->
+            launcherArt(progress.poster) != null ->
                 progress.poster to TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3
             else -> null to null
         }
@@ -371,3 +372,6 @@ class AndroidTvChannelManager @Inject constructor(
         else
             progress.contentId
 }
+
+/** Artwork the launcher can load by itself: Plex links need the token the app's image loader adds. */
+private fun launcherArt(url: String?): String? = url?.takeIf { it.isNotBlank() && !PlexArtworkLink.needsToken(it) }

@@ -145,6 +145,7 @@ private fun ServerFailure.signInMessage(provider: ServerProvider): String = when
     ServerFailure.UNREACHABLE -> stringResource(R.string.servers_error_unreachable)
     ServerFailure.UNSUPPORTED -> stringResource(R.string.servers_error_unsupported, provider.displayName, provider.minimumVersion)
     ServerFailure.FORBIDDEN -> stringResource(R.string.servers_error_forbidden)
+    ServerFailure.REMOTE_PLAYBACK_BLOCKED -> stringResource(R.string.servers_failure_remote_playback)
     ServerFailure.INCOMPLETE,
     ServerFailure.FAILED -> stringResource(R.string.servers_error_failed)
 }

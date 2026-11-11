@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.tvprovider.media.tv.TvContractCompat
 import androidx.tvprovider.media.tv.WatchNextProgram
 import com.nuvio.tv.MainActivity
+import com.nuvio.tv.data.mediaserver.plex.PlexArtworkLink
 import com.nuvio.tv.domain.model.WatchProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -40,7 +41,7 @@ class ProgramBuilder @Inject constructor(
 
         builder.setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9)
 
-        val horizontalArt = progress.backdrop ?: progress.poster
+        val horizontalArt = (progress.backdrop ?: progress.poster)?.takeUnless(PlexArtworkLink::needsToken)
         horizontalArt?.let {
             val uriWithCacheBuster = Uri.parse(it).buildUpon()
                 .appendQueryParameter("v", "horizontal_fix")
