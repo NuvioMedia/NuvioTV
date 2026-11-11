@@ -220,13 +220,14 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         val isHls = resolvedMimeType == MimeTypes.APPLICATION_M3U8
         val isDash = resolvedMimeType == MimeTypes.APPLICATION_MPD
         val httpDataSourceFactory = if (isHls || isDash) {
-            DefaultDataSource.Factory(
+            val adaptiveFactory = DefaultDataSource.Factory(
                 context,
                 PlayerPlaybackNetworking.createHttpDataSourceFactory(
                     sanitizedHeaders,
                     useLongReadTimeout = isLoopbackUrl(url),
                 ),
             )
+            if (isHls) HlsParameterSetInitDataSource.Factory(adaptiveFactory) else adaptiveFactory
         } else {
             PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
         }
