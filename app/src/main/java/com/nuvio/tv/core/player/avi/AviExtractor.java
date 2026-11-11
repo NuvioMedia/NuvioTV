@@ -34,9 +34,11 @@ import androidx.media3.extractor.ExtractorOutput;
 import androidx.media3.extractor.NoOpExtractorOutput;
 import androidx.media3.extractor.PositionHolder;
 import androidx.media3.extractor.SeekMap;
+import androidx.media3.extractor.SeekPoint;
 import androidx.media3.extractor.TrackOutput;
 import androidx.media3.extractor.text.SubtitleParser;
 import androidx.media3.extractor.text.SubtitleTranscodingExtractorOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
@@ -319,13 +321,13 @@ public final class AviExtractor implements Extractor {
           return RESULT_CONTINUE;
         }
         if (chunkHeaderHolder.chunkType != FOURCC_LIST || listType != FOURCC_movi) {
-          // The chunk header (8 bytes) plus the whole body.
-          pendingReposition = input.getPosition() + chunkHeaderHolder.size + 8;
+          // The chunk header (8 bytes) plus the whole body and its padding byte.
+          pendingReposition = input.getPosition() + 8 + paddedSize(chunkHeaderHolder.size);
           return RESULT_CONTINUE;
         }
         moviStart = input.getPosition();
         // Size includes the list type, but not the LIST or size fields, so we add 8.
-        moviEnd = moviStart + chunkHeaderHolder.size + 8;
+        moviEnd = moviStart + 8 + paddedSize(chunkHeaderHolder.size);
         if (!seekMapHasBeenOutput) {
           if (standardIndexPositions.length > 0) {
             nextStandardIndex = 0;
@@ -357,7 +359,7 @@ public final class AviExtractor implements Extractor {
           idx1BodySize = boxSize;
         } else {
           // This one is not idx1, skip to the next box.
-          pendingReposition = input.getPosition() + boxSize;
+          pendingReposition = input.getPosition() + paddedSize(boxSize);
         }
         return RESULT_CONTINUE;
       case STATE_READING_IDX1_BODY:
@@ -588,9 +590,11 @@ public final class AviExtractor implements Extractor {
         // We ignore unknown chunk IDs.
         continue;
       }
+      // Every audio chunk is a sync sample, whatever the muxer wrote in the flags.
       chunkReader.appendIndexChunk(
           indexEntries.positions[i],
-          /* isKeyFrame= */ (indexEntries.flags[i] & AVIIF_KEYFRAME) == AVIIF_KEYFRAME);
+          /* isKeyFrame= */ chunkReader.isAudio()
+              || (indexEntries.flags[i] & AVIIF_KEYFRAME) == AVIIF_KEYFRAME);
     }
     for (ChunkReader chunkReader : chunkReaders) {
       chunkReader.commitIndex();
@@ -657,8 +661,7 @@ public final class AviExtractor implements Extractor {
         currentChunkReader = null;
       }
     } else {
-      if (!alignInputToEvenPosition(input)
-          || !input.peekFully(scratch.getData(), /* offset= */ 0, 8, /* allowEndOfInput= */ true)) {
+      if (!alignInputToEvenPosition(input) || !peekChunkHeader(input)) {
         return endOfInput();
       }
       scratch.setPosition(0);
@@ -671,6 +674,10 @@ public final class AviExtractor implements Extractor {
         return RESULT_CONTINUE;
       }
       int size = scratch.readLittleEndianInt();
+      if (size < 0) {
+        // No chunk is this large: the rest of the file is not chunk data.
+        return endOfInput();
+      }
       if (chunkType == FOURCC_JUNK) {
         pendingReposition = input.getPosition() + size + 8;
         return RESULT_CONTINUE;
@@ -728,6 +735,22 @@ public final class AviExtractor implements Extractor {
     }
   }
 
+  /** The size of a chunk body with its padding byte, the size field read as unsigned. */
+  private static long paddedSize(int size) {
+    long unsignedSize = size & 0xFFFFFFFFL;
+    return unsignedSize + (unsignedSize & 1);
+  }
+
+  /** Peeks the next chunk header into {@link #scratch}; false when fewer than 8 bytes are left. */
+  private boolean peekChunkHeader(ExtractorInput input) throws IOException {
+    try {
+      return input.peekFully(scratch.getData(), /* offset= */ 0, 8, /* allowEndOfInput= */ true);
+    } catch (EOFException e) {
+      input.resetPeekPosition();
+      return false;
+    }
+  }
+
   /**
    * Skips one byte from the given {@code input} if the current position is odd.
    *
@@ -763,14 +786,20 @@ public final class AviExtractor implements Extractor {
 
     @Override
     public SeekPoints getSeekPoints(long timeUs) {
-      SeekPoints result = chunkReaders[0].getSeekPoints(timeUs);
-      for (int i = 1; i < chunkReaders.length; i++) {
-        SeekPoints seekPoints = chunkReaders[i].getSeekPoints(timeUs);
-        if (seekPoints.first.position < result.first.position) {
+      @Nullable SeekPoints result = null;
+      for (ChunkReader chunkReader : chunkReaders) {
+        if (!chunkReader.hasIndexEntries()) {
+          // A stream with no chunks has no say in where reading starts.
+          continue;
+        }
+        SeekPoints seekPoints = chunkReader.getSeekPoints(timeUs);
+        if (result == null || seekPoints.first.position < result.first.position) {
           result = seekPoints;
         }
       }
-      return result;
+      return result != null
+          ? result
+          : new SeekPoints(new SeekPoint(/* timeUs= */ 0, /* position= */ moviStart));
     }
   }
 

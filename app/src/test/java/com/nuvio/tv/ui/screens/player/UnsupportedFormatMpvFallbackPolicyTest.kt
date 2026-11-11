@@ -79,7 +79,7 @@ class UnsupportedFormatMpvFallbackPolicyTest {
         assertFalse(fatal(init, MimeTypes.VIDEO_H265))
         assertFalse(fatal(init, MimeTypes.VIDEO_H264))
         assertFalse(fatal(init, MimeTypes.VIDEO_DOLBY_VISION))
-        assertFalse(fatal(decoding, MimeTypes.VIDEO_AV1))
+        assertFalse(fatal(decoding, MimeTypes.VIDEO_AV1, firstFrame = true))
         assertFalse(fatal(init, null))
     }
 
@@ -103,5 +103,17 @@ class UnsupportedFormatMpvFallbackPolicyTest {
         assertFalse(missing("album.flac"))
         assertFalse(missing("movie.mkv"))
         assertFalse(UnsupportedFormatMpvFallbackPolicy.shouldSwitchForMissingVideoTrack(false, false, true, "a.ts", null))
+    }
+
+    @Test
+    fun av1DecoderThatNeverStarts_goesToMpv_butNotAfterThePictureShowed() {
+        fun fail(firstFrame: Boolean, code: Int = PlaybackException.ERROR_CODE_DECODER_INIT_FAILED) =
+            UnsupportedFormatMpvFallbackPolicy.shouldSwitchForFatalError(
+                true, false, firstFrame, code, MimeTypes.VIDEO_AV1, "a.mkv", null
+            )
+        assertTrue(fail(firstFrame = false))
+        assertTrue(fail(firstFrame = false, code = PlaybackException.ERROR_CODE_DECODING_FAILED))
+        assertFalse(fail(firstFrame = true))
+        assertFalse(fail(firstFrame = false, code = PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED))
     }
 }

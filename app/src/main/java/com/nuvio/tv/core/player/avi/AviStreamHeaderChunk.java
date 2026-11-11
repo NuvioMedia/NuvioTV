@@ -89,6 +89,9 @@ import androidx.media3.common.util.Util;
   }
 
   public long getDurationUs() {
+    if (rate <= 0) {
+      return 0;
+    }
     return Util.scaleLargeTimestamp(
         /* timestamp= */ length,
         /* multiplier= */ C.MICROS_PER_SECOND * scale,

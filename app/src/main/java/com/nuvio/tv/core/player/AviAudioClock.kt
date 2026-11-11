@@ -19,6 +19,7 @@ internal class AviAudioClock private constructor(
     val countsBytes: Boolean,
     private val usNumerator: Long,
     private val usDenominator: Long,
+    private val blockCheckBytesPerSecond: Long = 0L,
 ) {
     private var dataPositions = LongArray(0)
     private var bytesBefore: LongArray? = null
@@ -39,6 +40,7 @@ internal class AviAudioClock private constructor(
         for (i in 1 until positions.size) {
             if (positions[i] <= positions[i - 1]) return false
         }
+        if (blockCheckBytesPerSecond > 0L && !blocksMatchBytes(entries)) return true
         bytesBefore = if (countsBytes) {
             LongArray(entries.sizes.size).also { before ->
                 var sum = 0L
@@ -55,6 +57,12 @@ internal class AviAudioClock private constructor(
         return true
     }
 
+    private fun blocksMatchBytes(entries: AviIndex.Entries): Boolean {
+        val byBlocksUs = scale(entries.sizes.size.toLong(), usNumerator, usDenominator).toDouble()
+        val byBytesUs = entries.sizes.sumOf { it.toLong() } * MICROS_PER_SECOND.toDouble() / blockCheckBytesPerSecond
+        return byBytesUs > 0.0 && abs(byBlocksUs - byBytesUs) <= byBytesUs * MAX_HEADER_MISMATCH
+    }
+
     /** The reader moved: the next chunk is placed by the index or by the reader's time, not by the last chunk. */
     fun reset() {
         running = false
@@ -65,6 +73,10 @@ internal class AviAudioClock private constructor(
      * which the stock reader stamped [readerTimeUs].
      */
     fun chunkTimeUs(dataPosition: Long, size: Int, readerTimeUs: Long): Long {
+        if (blockCheckBytesPerSecond > 0L && indexedChunks == 0) {
+            lastChunkIndexed = false
+            return readerTimeUs
+        }
         val index = if (dataPosition >= 0 && dataPositions.isNotEmpty()) {
             Arrays.binarySearch(dataPositions, dataPosition)
         } else {
@@ -97,7 +109,9 @@ internal class AviAudioClock private constructor(
                 val strhBytesPerSecond =
                     if (strhUsable) stream.rate * stream.sampleSize / stream.scale.toDouble() else 0.0
                 val avg = stream.avgBytesPerSecond.toDouble()
-                if (strhUsable && avg > 0 && abs(strhBytesPerSecond - avg) > avg * MAX_HEADER_MISMATCH) return null
+                if (strhUsable && avg > 0 && abs(strhBytesPerSecond - avg) > avg * MAX_HEADER_MISMATCH) {
+                    return if (strhBytesPerSecond > avg) blockClockIfIndexAgrees(stream) else null
+                }
                 val bytesPerSecond = if (strhUsable) strhBytesPerSecond else avg
                 if (bytesPerSecond < MIN_BYTES_PER_SECOND || bytesPerSecond > MAX_BYTES_PER_SECOND) return null
                 return if (strhUsable) {
@@ -110,6 +124,23 @@ internal class AviAudioClock private constructor(
             val blockUs = stream.scale * MICROS_PER_SECOND / stream.rate
             if (blockUs < MIN_BLOCK_US || blockUs > MAX_BLOCK_US) return null
             return reduced(false, stream.scale * MICROS_PER_SECOND, stream.rate)
+        }
+
+        /**
+         * The sample size is bigger than one block really is (some FFmpeg muxes of AAC say 4608 bytes for frames of
+         * about 1500), so the header's length and byte rate are off by that factor while scale / rate still gives one
+         * chunk's time. Only used once the index shows the chunks add up to the length the real byte rate gives.
+         */
+        private fun blockClockIfIndexAgrees(stream: AviHeader.Stream): AviAudioClock? {
+            val blockUs = stream.scale * MICROS_PER_SECOND / stream.rate
+            if (blockUs < MIN_BLOCK_US || blockUs > MAX_BLOCK_US) return null
+            val divisor = gcd(stream.scale * MICROS_PER_SECOND, stream.rate)
+            return AviAudioClock(
+                countsBytes = false,
+                usNumerator = stream.scale * MICROS_PER_SECOND / divisor,
+                usDenominator = stream.rate / divisor,
+                blockCheckBytesPerSecond = stream.avgBytesPerSecond,
+            )
         }
 
         private fun reduced(countsBytes: Boolean, numerator: Long, denominator: Long): AviAudioClock {

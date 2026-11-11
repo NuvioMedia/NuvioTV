@@ -8,7 +8,7 @@ import com.nuvio.tv.core.player.DecodeOrderTimestamps
 import com.nuvio.tv.data.local.InternalPlayerEngine
 
 /**
- * Formats ExoPlayer cannot show at all (DivX 3, WMV / ASF, RealVideo, a VC-1 decoder that will not start) go to
+ * Formats ExoPlayer cannot show at all (DivX 3, WMV / ASF, RealVideo, a VC-1 or AV1 decoder that will not start) go to
  * MPV, whose software decoders cover them, instead of ending on an error screen or playing sound without picture.
  * One switch per stream. Formats ExoPlayer can play never take this route.
  */
@@ -45,7 +45,10 @@ internal object UnsupportedFormatMpvFallbackPolicy {
             PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
             PlaybackException.ERROR_CODE_DECODING_FAILED,
             PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
-            PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES -> isLegacyVideoMime(videoMimeType)
+            PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES ->
+                isLegacyVideoMime(videoMimeType) ||
+                    // An AV1 decoder that never starts (no hardware AV1, dav1d unavailable or refusing the stream).
+                    (!hasRenderedFirstFrame && videoMimeType?.lowercase() == MimeTypes.VIDEO_AV1)
             else -> false
         }
     }

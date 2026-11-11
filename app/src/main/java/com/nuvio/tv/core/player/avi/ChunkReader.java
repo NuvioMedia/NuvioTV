@@ -142,7 +142,7 @@ import java.util.Arrays;
   }
 
   public long getFrameDurationUs() {
-    return getChunkTimestampUs(/* chunkIndex= */ 1);
+    return Math.max(1, getChunkTimestampUs(/* chunkIndex= */ 1));
   }
 
   public void commitIndex() {
@@ -155,6 +155,10 @@ import java.util.Arrays;
       // audio sample is a sync sample, and every sync sample should be in the index.
       chunkCount = indexSize;
     }
+  }
+
+  public boolean hasIndexEntries() {
+    return firstIndexChunkOffset != C.INDEX_UNSET;
   }
 
   public boolean handlesChunkId(int chunkId) {
@@ -282,6 +286,13 @@ import java.util.Arrays;
   }
 
   private long getChunkTimestampUs(int chunkIndex) {
+    if (chunkCount <= 0) {
+      // A header that was never finalised says the stream has no chunks.
+      return streamHeaderChunk.rate <= 0
+          ? 0
+          : Util.scaleLargeTimestamp(
+              chunkIndex, C.MICROS_PER_SECOND * streamHeaderChunk.scale, streamHeaderChunk.rate);
+    }
     return durationUs * chunkIndex / chunkCount;
   }
 

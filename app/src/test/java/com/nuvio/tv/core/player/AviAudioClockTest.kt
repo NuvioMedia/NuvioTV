@@ -166,4 +166,35 @@ class AviAudioClockTest {
         assertEquals(listOf(8064, 768), stream.sizes.toList())
         assertTrue(AviIndex.audioEntries(index, emptyList()).isEmpty())
     }
+
+    // The AAC stream of an FFmpeg mux: one frame per chunk, but a sample size of 4608, so dwLength says 1h09m.
+    private val aacStream = AviHeader.Stream(
+        number = 1, type = "auds", scale = 8, rate = 375, length = 194_119, sampleSize = 4608,
+        avgBytesPerSecond = 72_000,
+    )
+
+    @Test
+    fun timesEachChunkAsOneBlockWhenTheSampleSizeIsTooBig() {
+        val sizes = IntArray(587_454) { 1523 }
+        val positions = positions(sizes)
+        val clock = assertNotNullAndGet(AviAudioClock.forStream(aacStream))
+        assertFalse(clock.countsBytes)
+        assertTrue(clock.useIndex(AviIndex.Entries(positions, sizes)))
+        assertEquals(587_454, clock.indexedChunks)
+        assertEquals(64_000L, clock.chunkTimeUs(positions[3], sizes[3], readerTimeUs = 21_000L))
+        assertEquals(12_532_330_666L, clock.chunkTimeUs(positions[587_453], sizes[587_453], readerTimeUs = 1L))
+    }
+
+    @Test
+    fun keepsTheReaderTimeWhenChunksDoNotAddUpOrThereIsNoIndex() {
+        val noIndex = assertNotNullAndGet(AviAudioClock.forStream(aacStream))
+        assertEquals(777L, noIndex.chunkTimeUs(100L, 1523, readerTimeUs = 777L))
+
+        val sizes = IntArray(194_119) { 4608 }
+        val positions = positions(sizes)
+        val clock = assertNotNullAndGet(AviAudioClock.forStream(aacStream))
+        assertTrue(clock.useIndex(AviIndex.Entries(positions, sizes)))
+        assertEquals(0, clock.indexedChunks)
+        assertEquals(777L, clock.chunkTimeUs(positions[5], 4608, readerTimeUs = 777L))
+    }
 }

@@ -787,7 +787,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             if (hi10pGnextSoftwareFallbackActive) MPV_HWDEC_DISABLED else hardwareDecodeMode.toMpvHwdecValue()
         )
         appliedHi10pGnextSoftwareFallback = hi10pGnextSoftwareFallbackActive
-        mpv.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
+        mpv.setOptionString("hwdec-codecs", "h264,hevc,mpeg2video,vp8,vp9,av1")
         mpv.setOptionString("ao", "audiotrack,opensles")
         mpv.setOptionString("audio-set-media-role", "yes")
         mpv.setOptionString("tls-verify", "yes")

@@ -100,6 +100,38 @@ class AviExtractorOpenDmlTest {
     }
 
     @Test
+    fun seeksByTheVideoWhenTheIndexMarksNoAudioChunkAsKey() {
+        for (openDml in listOf(true, false)) {
+            val file = TestAvi.build(openDml = openDml, audioKeyFlags = false)
+            val output = RecordingOutput()
+            val extractor = extractor().apply { init(output) }
+            runExtractor(extractor, ArraySource(file)) { output.seekMap != null }
+
+            val point = output.seekMap!!.getSeekPoints(32 * TestAvi.FRAME_US).first
+            assertTrue(point.position > file.size / 2)
+
+            output.tracks.values.forEach { it.samples.clear() }
+            extractor.seek(point.position, point.timeUs)
+            runExtractor(extractor, ArraySource(file), start = point.position)
+            val video = output.track(C.TRACK_TYPE_VIDEO).samples
+            assertEquals(30, video.first().firstByte)
+            assertEquals(30 * TestAvi.FRAME_US, video.first().timeUs)
+        }
+    }
+
+    @Test
+    fun endsCleanlyOnStrayBytesAfterTheLastChunk() {
+        for (openDml in listOf(true, false)) {
+            for (stray in listOf(1, 5, 13)) {
+                val file = TestAvi.build(openDml = openDml, trailing = ByteArray(stray))
+                val output = RecordingOutput()
+                runExtractor(extractor().apply { init(output) }, ArraySource(file))
+                assertEquals(TestAvi.FRAMES, output.track(C.TRACK_TYPE_VIDEO).samples.size)
+            }
+        }
+    }
+
+    @Test
     fun handsTheWholeIndexToTheListenerInFileOrder() {
         val file = TestAvi.build(openDml = true)
         var positions = LongArray(0)
@@ -151,6 +183,8 @@ internal object TestAvi {
         junk: Boolean = true,
         recLists: Boolean = false,
         videoChunk: (Int) -> ByteArray = { frame -> ByteArray(VIDEO_CHUNK).also { it[0] = frame.toByte() } },
+        audioKeyFlags: Boolean = true,
+        trailing: ByteArray = ByteArray(0),
     ): ByteArray {
         val segments = if (openDml) SEGMENTS else intArrayOf(FRAMES)
         // The header has a fixed size, so build it once to learn where the segments start.
@@ -185,7 +219,7 @@ internal object TestAvi {
                     out.write(video)
                     if (video.size % 2 == 1) out.write(0)
                     out.tag("01wb"); out.u32(AUDIO_CHUNK.toLong())
-                    segmentEntries += Entry(1, out.size().toLong(), AUDIO_CHUNK, true)
+                    segmentEntries += Entry(1, out.size().toLong(), AUDIO_CHUNK, audioKeyFlags)
                     out.write(ByteArray(AUDIO_CHUNK))
                     if (recLists) out.patchU32(recStart + 4, (out.size() - recStart - 8).toLong())
                     frame++
@@ -214,6 +248,7 @@ internal object TestAvi {
             if (openDml && it == 0) {
                 ixPositions = newIx
             } else {
+                out.write(trailing)
                 return out.toByteArray()
             }
         }

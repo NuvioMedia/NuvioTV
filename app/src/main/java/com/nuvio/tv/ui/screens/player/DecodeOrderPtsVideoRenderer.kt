@@ -170,7 +170,8 @@ internal class DecodeOrderPtsVideoRenderer(
     }
 
     private fun sameTrackKind(a: Format, b: Format?): Boolean =
-        b != null && a.sampleMimeType == b.sampleMimeType && a.containerMimeType == b.containerMimeType
+        b != null && a.sampleMimeType == b.sampleMimeType && a.containerMimeType == b.containerMimeType &&
+            a.customData === b.customData
 
     private companion object {
         const val TAG = "PTS_REPAIR"

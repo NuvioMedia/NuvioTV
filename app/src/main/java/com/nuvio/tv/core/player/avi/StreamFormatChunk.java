@@ -27,6 +27,8 @@ import com.google.common.collect.ImmutableList;
 /** Holds the {@link Format} information contained in an STRF chunk. */
 /* package */ final class StreamFormatChunk implements AviChunk {
   private static final String TAG = "StreamFormatChunk";
+  private static final int WAVE_FORMAT_EXTENSIBLE = 0xfffe;
+  private static final int EXTENSIBLE_BYTES = 22;
 
   @Nullable
   public static AviChunk parseFrom(int trackType, ParsableByteArray body) {
@@ -75,17 +77,28 @@ import com.google.common.collect.ImmutableList;
   @Nullable
   private static AviChunk parseWaveFormatEx(ParsableByteArray body) {
     int formatTag = body.readLittleEndianUnsignedShort();
-    @Nullable String mimeType = getMimeTypeFromTag(formatTag);
-    if (mimeType == null) {
-      Log.w(TAG, "Ignoring track with unsupported format tag " + formatTag);
-      return null;
-    }
     int channelCount = body.readLittleEndianUnsignedShort();
     int samplesPerSecond = body.readLittleEndianInt();
     body.skipBytes(6); // averageBytesPerSecond (4 bytes), nBlockAlign (2 bytes).
     int bitsPerSample = body.readLittleEndianUnsignedShort();
     int pcmEncoding = Util.getPcmEncoding(bitsPerSample);
-    int cbSize = body.bytesLeft() > 0 ? body.readLittleEndianUnsignedShort() : 0;
+    int cbSize = body.bytesLeft() > 1 ? body.readLittleEndianUnsignedShort() : 0;
+    if (formatTag == WAVE_FORMAT_EXTENSIBLE) {
+      if (cbSize < EXTENSIBLE_BYTES || body.bytesLeft() < EXTENSIBLE_BYTES) {
+        Log.w(TAG, "Ignoring track with a short extensible format");
+        return null;
+      }
+      body.skipBytes(6); // wValidBitsPerSample (2 bytes), dwChannelMask (4 bytes).
+      formatTag = body.readLittleEndianUnsignedShort(); // The first two bytes of SubFormat.
+      body.skipBytes(14); // The rest of SubFormat.
+      cbSize -= EXTENSIBLE_BYTES;
+    }
+    @Nullable String mimeType = getMimeTypeFromTag(formatTag);
+    if (mimeType == null) {
+      Log.w(TAG, "Ignoring track with unsupported format tag " + formatTag);
+      return null;
+    }
+    cbSize = Math.min(cbSize, body.bytesLeft());
     Format.Builder formatBuilder = new Format.Builder();
     formatBuilder
         .setSampleMimeType(mimeType)
