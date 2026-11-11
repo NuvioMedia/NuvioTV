@@ -283,7 +283,7 @@ internal fun PlayerRuntimeController.renderSidecarCuesAtCurrentPosition() {
 }
 
 private fun PlayerRuntimeController.showSidecarCues(view: SubtitleView, cues: List<Cue>) {
-    view.setCues(cues)
+    view.setCues(presentExoCues(cues))
     subtitleCueTracker.update(cues)
 }
 
