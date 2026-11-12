@@ -34,7 +34,8 @@ internal interface IecAudioTrack {
     fun timestamp(): IecAudioTimestampSample? = null
 }
 
-internal const val IEC_MAX_OUTPUT_LATENCY_US = 5L * C.MICROS_PER_SECOND
+// As Kodi: output latency below the track of a second or more is not believed.
+internal const val IEC_MAX_OUTPUT_LATENCY_US = C.MICROS_PER_SECOND
 
 internal fun iecOutputLatencyUs(reportedLatencyMs: Int, bufferSizeUs: Long): Long {
     if (reportedLatencyMs <= 0) return 0L

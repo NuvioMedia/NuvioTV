@@ -32,14 +32,14 @@ class IecOutputLatencyTest {
         assertEquals(
             IEC_MAX_OUTPUT_LATENCY_US,
             iecOutputLatencyUs(
-                reportedLatencyMs = 6_000,
+                reportedLatencyMs = 2_000,
                 bufferSizeUs = 1_000_000L
             )
         )
         assertEquals(
             0L,
             iecOutputLatencyUs(
-                reportedLatencyMs = 6_001,
+                reportedLatencyMs = 2_001,
                 bufferSizeUs = 1_000_000L
             )
         )
