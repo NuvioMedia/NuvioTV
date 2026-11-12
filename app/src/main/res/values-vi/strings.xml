@@ -813,7 +813,7 @@
     <string name="playback_exo_chapters_title">Hiển thị chương</string>
     <string name="playback_exo_chapters_sub">Đọc các chương của tệp MKV để đánh dấu trên thanh tiến trình và chuyển đổi qua lại giữa chúng.</string>
     <string name="playback_chapter_title_title">Hiển thị tên chương</string>
-    <string name="playback_chapter_title_sub">Hiển thị tên của chương hiện tại phía trên thanh tiến trình.</string>
+    <string name="playback_chapter_title_sub">Hiển thị tên chương hiện tại phía trên thanh tiến trình.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Tự động phát trailer</string>
     <string name="audio_autoplay_trailers_sub">Tự động phát trailer trên màn hình chi tiết sau một khoảng thời gian không hoạt động</string>
