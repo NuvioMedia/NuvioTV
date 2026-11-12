@@ -61,6 +61,14 @@ data class Meta(
     fun watchableEpisodes(): List<Video> = videos.watchableEpisodes()
 }
 
+/**
+ * Whether this title is marked watched as a whole, like a movie, instead of per episode: movies
+ * always are, and so is any other type that is not a show (an add-on's "youtube", say) when it
+ * has no episode list.
+ */
+fun Meta.isWatchedAsOneItem(): Boolean =
+    apiType.equals("movie", ignoreCase = true) || (!isSeriesLikeType(apiType) && videos.isEmpty())
+
 fun List<Video>.watchableEpisodes(): List<Video> {
     val candidates = filter {
         it.season != null && it.episode != null && (it.season ?: 0) > 0

@@ -178,6 +178,21 @@ internal fun PlaybackPlayerInterfaceSection(
         onToggle = { onUpdate { setParentalGuideEnabled(!settings.parentalGuideEnabled) } },
         enabled = internalPlayer
     )
+    // Chapters work on both engines.
+    SettingsToggleRow(
+        title = stringResource(R.string.playback_exo_chapters_title),
+        subtitle = stringResource(R.string.playback_exo_chapters_sub),
+        checked = settings.exoChaptersEnabled,
+        onToggle = { onUpdate { setExoChaptersEnabled(!settings.exoChaptersEnabled) } },
+        enabled = internalPlayer
+    )
+    SettingsToggleRow(
+        title = stringResource(R.string.playback_chapter_title_title),
+        subtitle = stringResource(R.string.playback_chapter_title_sub),
+        checked = settings.chapterTitleEnabled,
+        onToggle = { onUpdate { setChapterTitleEnabled(!settings.chapterTitleEnabled) } },
+        enabled = internalPlayer && settings.exoChaptersEnabled
+    )
 }
 
 @Composable

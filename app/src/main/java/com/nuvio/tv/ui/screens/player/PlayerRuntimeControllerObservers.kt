@@ -363,6 +363,11 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     },
                     pauseOverlayEnabled = settings.pauseOverlayEnabled,
                     osdClockEnabled = settings.osdClockEnabled,
+                    chaptersEnabled = settings.exoChaptersEnabled,
+                    showChapterTitle = settings.chapterTitleEnabled,
+                    // Turning chapters off hides them at once; skip intro keeps its own copy.
+                    chapters = if (settings.exoChaptersEnabled) state.chapters else emptyList(),
+                    showChaptersPanel = state.showChaptersPanel && settings.exoChaptersEnabled,
                     internalPlayerEngine = resolvedInternalPlayerEngine,
                     frameRateMatchingMode = settings.frameRateMatchingMode,
                     tunnelingEnabled = settings.effectiveTunnelingEnabled &&
@@ -374,6 +379,9 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 )
             }
 
+            if (settings.subtitleStyle.usesStyledRenderer != currentState.subtitleStyle.usesStyledRenderer) {
+                refreshStyledSubtitles()
+            }
             if (resolvedAudioAmplificationDb != currentState.audioAmplificationDb) {
                 applyAudioAmplification(resolvedAudioAmplificationDb)
             }

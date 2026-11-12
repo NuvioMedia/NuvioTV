@@ -83,6 +83,35 @@ class PlayerMediaSourceFactoryTest {
     }
 
     @Test
+    fun `inferMimeType recognizes percent encoded DASH MIME query values`() {
+        for (key in listOf("format", "mime", "mime_type", "content_type", "type")) {
+            val url = "https://example.com/playback?$key=application%2Fdash%2Bxml"
+            assertEquals(
+                url,
+                MimeTypes.APPLICATION_MPD,
+                PlayerMediaSourceFactory.inferMimeType(url = url, filename = null)
+            )
+        }
+    }
+
+    @Test
+    fun `inferMimeType preserves literal MIME plus signs and tolerates invalid escapes`() {
+        assertEquals(
+            MimeTypes.APPLICATION_MPD,
+            PlayerMediaSourceFactory.inferMimeType(
+                url = "https://example.com/playback?mime=application/dash+xml",
+                filename = null
+            )
+        )
+        assertNull(
+            PlayerMediaSourceFactory.inferMimeType(
+                url = "https://example.com/playback?mime=%ZZ",
+                filename = null
+            )
+        )
+    }
+
+    @Test
     fun `normalizeMimeType recognizes redirected matroska file responses`() {
         val mimeType = PlayerMediaSourceFactory.normalizeMimeType("video/x-matroska")
 

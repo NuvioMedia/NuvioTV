@@ -4,6 +4,7 @@ import android.content.Context
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.TraktAuthState
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchedSeriesStateHolder
 import com.nuvio.tv.data.remote.api.TraktApi
@@ -101,6 +102,7 @@ class TraktProgressServiceFailureTest {
 
         val authService = mockk<TraktAuthService>()
         every { authService.isCircuitClosed() } returns true
+        coEvery { authService.getCurrentAuthState() } returns TraktAuthState(accessToken = "access", refreshToken = "refresh")
         coEvery { authService.executeAuthorizedRequest<Any?>(any()) } coAnswers {
             firstArg<suspend (String) -> Response<Any?>>().invoke("Bearer test")
         }
