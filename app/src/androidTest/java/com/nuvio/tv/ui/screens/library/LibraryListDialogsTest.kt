@@ -4,6 +4,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
@@ -13,6 +17,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.nuvio.tv.R
+import com.nuvio.tv.core.tracking.LOCAL_LIBRARY_LIST_KEY
 import com.nuvio.tv.core.tracking.TrackingListManagementCapabilities
 import com.nuvio.tv.domain.model.LibraryListPrivacy
 import com.nuvio.tv.domain.model.LibraryListTab
@@ -49,6 +54,21 @@ class LibraryListDialogsTest {
         composeRule.onNodeWithText("${context.getString(R.string.mdblist_name)} · $watchlist")
             .assertIsFocused().performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.runOnIdle { assertEquals("mdblist:watchlist", selected) }
+    }
+
+    @Test
+    fun pickerMarksSavedListsAsChecked() {
+        val tabs = listOf(
+            LibraryListTab(LOCAL_LIBRARY_LIST_KEY, "Nuvio", LibraryListTab.Type.WATCHLIST),
+            LibraryListTab("favorites", "Favorites", LibraryListTab.Type.PERSONAL, trackingProviderId = "trakt")
+        )
+        composeRule.setContent {
+            NuvioTheme {
+                PosterListPickerDialog("Lists", tabs, mapOf(LOCAL_LIBRARY_LIST_KEY to true, "favorites" to false), false, null, {}, {}, {})
+            }
+        }
+        composeRule.onNode(hasText("Nuvio", substring = true) and isToggleable()).assertIsOn()
+        composeRule.onNode(hasText("Favorites", substring = true) and isToggleable()).assertIsOff()
     }
 
     @Test

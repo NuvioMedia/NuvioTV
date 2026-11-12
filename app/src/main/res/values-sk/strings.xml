@@ -3388,9 +3388,8 @@
     <string name="about_update_auto_install_subtitle">Sťahovať nové verzie na pozadí a inštalovať ich, kým je zariadenie neaktívne</string>
     <string name="about_update_auto_install_notice_title">Upozorniť po automatickej aktualizácii</string>
     <string name="about_update_auto_install_notice_subtitle">Zobraziť banner pri ďalšom spustení po automatickej aktualizácii aplikácie</string>
-    <string name="playback_chapters_label">Kapitoly</string>
-    <string name="playback_exo_chapters_title">Zobrazovať kapitoly (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Načítať kapitoly zo súborov MKV, označiť ich na časovej osi a presakovať medzi nimi. Po spustení prehrávania vykoná niekoľko malých požiadaviek navyše. mpv zobrazuje kapitoly vždy.</string>
+    <string name="playback_exo_chapters_title">Zobrazovať kapitoly</string>
+    <string name="playback_exo_chapters_sub">Načítať kapitoly zo súborov MKV, označiť ich na časovej osi a presakovať medzi nimi.</string>
     <string name="sub_hdr_style">Samostatný štýl pre HDR / Dolby Vision</string>
     <string name="sub_hdr_style_sub">Použiť odlišnú farbu textu a nižší jas pre titulky pri videách v HDR a Dolby Vision</string>
     <string name="sub_hdr_text_color">Farba textu pre HDR</string>

@@ -35,7 +35,9 @@ data class Stream(
     /** When a built-in Usenet release was posted, in epoch milliseconds, if its indexer said. */
     val publishedAt: Long? = null,
     val serverTarget: ServerPlaybackTarget? = null,
-    val pluginSourceName: String? = null
+    val pluginSourceName: String? = null,
+    /** True when [url] was produced by Nuvio's own debrid resolver, not returned by the add-on. */
+    val debridResolved: Boolean = false
 ) {
     fun isUsenet(): Boolean = !nzbUrl.isNullOrBlank() && url.isNullOrBlank()
     /**

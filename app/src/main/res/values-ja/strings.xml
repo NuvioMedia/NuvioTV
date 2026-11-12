@@ -810,9 +810,8 @@
     <string name="video_section">映像</string>
     <string name="playback_true_black_letterbox">完全な黒いバー</string>
     <string name="playback_true_black_letterbox_sub">映像の周囲のバーを描画しないでHDRが真の黒のままになるようにします。バーに明るい線が現れる場合はオフのままにしてください。</string>
-    <string name="playback_chapters_label">チャプター</string>
-    <string name="playback_exo_chapters_title">チャプターを表示(ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">MKVファイルのチャプターを読み取って進行バーにマークし、それらの間をスキップします。再生開始後にいくつかの小さな追加リクエストを行います。mpvは常にチャプターを表示します。</string>
+    <string name="playback_exo_chapters_title">チャプターを表示</string>
+    <string name="playback_exo_chapters_sub">MKVファイルのチャプターを読み取って進行バーにマークし、それらの間をスキップします。</string>
     <string name="audio_trailer_section">予告編</string>
     <string name="audio_autoplay_trailers">予告編の自動再生</string>
     <string name="audio_autoplay_trailers_sub">詳細画面で一定時間操作がない場合に自動で予告編を再生</string>

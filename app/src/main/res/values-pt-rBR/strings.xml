@@ -808,9 +808,8 @@
     <string name="video_section">Vídeo</string>
     <string name="playback_true_black_letterbox">Barras pretas reais</string>
     <string name="playback_true_black_letterbox_sub">Deixe as barras ao redor da imagem sem pintura para o HDR manter o preto real. Desative se aparecer uma linha clara nas barras.</string>
-    <string name="playback_chapters_label">Capítulos</string>
-    <string name="playback_exo_chapters_title">Mostrar capítulos (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Lê os capítulos dos arquivos MKV para marcá-los na barra de progresso e pular entre eles. Faz algumas pequenas requisições extras quando a reprodução começa. O mpv sempre mostra os capítulos.</string>
+    <string name="playback_exo_chapters_title">Mostrar capítulos</string>
+    <string name="playback_exo_chapters_sub">Lê os capítulos dos arquivos MKV para marcá-los na barra de progresso e pular entre eles.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Reproduzir trailers Automaticamente</string>
     <string name="audio_autoplay_trailers_sub">Reproduzir automaticamente trailers nas telas de detalhes e após reprodução</string>

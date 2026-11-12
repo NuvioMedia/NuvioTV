@@ -102,7 +102,7 @@ private fun movieRecommendationTriggerPositionMs(
             it.startTime * 1_000.0 < durationMs
     }
     val credits = validIntervals.filter {
-        it.type == "movie-credits" &&
+        it.isMovieEndCredits(durationMs) &&
             it.endTime * 1_000.0 <= durationMs + PlayerNextEpisodeRules.END_OF_VIDEO_EPSILON_MS
     }
     val firstCreditsStart = credits.minOfOrNull { it.startTime }
@@ -129,4 +129,15 @@ private fun movieRecommendationTriggerPositionMs(
     } else {
         (credits.minOf { it.startTime } * 1_000.0).toLong()
     }
+}
+
+/**
+ * IntroDB reports movie credits as "movie-credits". Container chapters such as "End Credits"
+ * arrive as outro types; those only count in the second half, so an opening "Credits"
+ * chapter is not taken for the end credits.
+ */
+private fun SkipInterval.isMovieEndCredits(durationMs: Long): Boolean = when (type) {
+    "movie-credits" -> true
+    in PlayerNextEpisodeRules.OUTRO_SEGMENT_TYPES -> startTime * 1_000.0 >= durationMs / 2.0
+    else -> false
 }
