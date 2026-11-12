@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.home
 import com.nuvio.tv.core.tracking.RewatchRunPosition
 import com.nuvio.tv.domain.model.WatchProgress
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -307,6 +308,32 @@ class RewatchRunNextUpSeedsTest {
         val after = run(contentId = SHOW, season = 3, episode = 4, markedAt = 2_000L)
 
         assertTrue(changedRewatchRunKeys(listOf(before), listOf(after)).isEmpty())
+    }
+
+    @Test
+    fun `the optimistic run is held until the account reaches the marked episode`() {
+        val optimistic = run(contentId = SHOW, season = 1, episode = 11, markedAt = 3_000L)
+
+        assertFalse(accountCaughtUpWithOptimisticRun(listOf(run(SHOW, 1, 10, 2_000L)), optimistic))
+        assertTrue(accountCaughtUpWithOptimisticRun(listOf(run(SHOW, 1, 11, 2_500L)), optimistic))
+        assertTrue(accountCaughtUpWithOptimisticRun(listOf(run(SHOW, 1, 12, 2_500L)), optimistic))
+    }
+
+    @Test
+    fun `a mark that completes a season's session lets the series move on to the next season`() {
+        val optimistic = run(contentId = SHOW, season = 1, episode = 11, markedAt = 3_000L)
+
+        // The first season's session completed, and the series now runs on the second season's.
+        assertTrue(accountCaughtUpWithOptimisticRun(listOf(run(SHOW, 2, 1, 1_000L)), optimistic))
+        // Or on no session at all.
+        assertTrue(accountCaughtUpWithOptimisticRun(listOf(run(OTHER_SHOW, 1, 1, 1_000L)), optimistic))
+    }
+
+    @Test
+    fun `an earlier season of the account does not release the hold`() {
+        val optimistic = run(contentId = SHOW, season = 2, episode = 3, markedAt = 3_000L)
+
+        assertFalse(accountCaughtUpWithOptimisticRun(listOf(run(SHOW, 1, 24, 2_000L)), optimistic))
     }
 
     private fun seed(

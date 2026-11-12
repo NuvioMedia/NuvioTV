@@ -899,11 +899,7 @@ class HomeViewModel @Inject constructor(
             viewModelScope.launch {
                 withTimeoutOrNull(30_000) {
                     simklSyncRepository.state.first { state ->
-                        state.snapshot.rewatchRuns.any { run ->
-                            run.matches(optimisticRun.contentId) &&
-                                run.seasonNumber == optimisticRun.seasonNumber &&
-                                run.episodeNumber >= optimisticRun.episodeNumber
-                        }
+                        accountCaughtUpWithOptimisticRun(state.snapshot.rewatchRuns, optimisticRun)
                     }
                 }
                 cwOptimisticRewatchRuns.update { runs ->

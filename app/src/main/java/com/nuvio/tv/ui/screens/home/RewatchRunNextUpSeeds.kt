@@ -107,6 +107,29 @@ internal fun changedRewatchRunKeys(
         .apply { remove("") }
 }
 
+/**
+ * Whether the account caught up with a run a Continue Watching mark advanced, so the optimistic
+ * entry can go.
+ *
+ * The account's run of the series has reached the marked episode or moved past it, in the
+ * catalogue's order across seasons, or the account runs the series no more. Both happen when the
+ * mark completes a session: Simkl reports a session that covers every episode of its item as
+ * completed, and the series then runs on another season's session or not at all. Waiting for the
+ * same season only kept the finished season's card up until the hold timed out.
+ */
+internal fun accountCaughtUpWithOptimisticRun(
+    accountRuns: List<RewatchRunPosition>,
+    optimistic: RewatchRunPosition
+): Boolean {
+    val run = accountRuns.firstOrNull { candidate -> candidate.matches(optimistic.contentId) } ?: return true
+    return compareValuesBy(
+        run,
+        optimistic,
+        RewatchRunPosition::seasonNumber,
+        RewatchRunPosition::episodeNumber
+    ) >= 0
+}
+
 /** A completed seed standing at the run position, with the mark that makes the run the newer one. */
 private fun RewatchRunPosition.toNextUpSeed(): WatchProgress = WatchProgress(
     contentId = contentId,
