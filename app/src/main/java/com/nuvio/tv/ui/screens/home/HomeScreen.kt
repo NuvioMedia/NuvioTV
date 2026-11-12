@@ -102,6 +102,7 @@ fun HomeScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.beginShuffleHomeVisit()
                 viewModel.refreshHomeCatalogsIfStale()
+                viewModel.refreshContinueWatchingIfReleased()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
