@@ -128,13 +128,17 @@ class SimklTrackingHistoryWriter @Inject constructor(
             val readContentId = targetContentId
             val readEpisode = targetEpisode
             val readKind = target.kind
+            val pinnedRewatchId = targetItem.rewatchId
             rewatchWriter.refreshRewatchSessions { sessions ->
                 sessions.rewatchSessionHolds(
                     contentId = readContentId,
                     kind = readKind,
                     season = targetSeason,
                     episode = readEpisode
-                )
+                ) ||
+                    // A mark of the last episode the session lacked completes it, and a completed
+                    // session never holds the episode as a running one.
+                    (pinnedRewatchId != null && sessions.rewatchSessionEnded(pinnedRewatchId))
             }
         }
         // The answer is what says whether the account booked the view: `pro_required` and `too_soon`

@@ -331,6 +331,22 @@ internal fun List<SimklLibraryEntry>.rewatchSessionHolds(
 }
 
 /**
+ * Whether a read shows the session a write was pinned to as ended.
+ *
+ * Simkl completes a session once the rewatch covers every episode of its item, and the write that
+ * does it is answered `completed`. The session then no longer runs, so it can never hold the episode
+ * as a running session would, and waiting for that only spent the remaining reads (whole reads among
+ * them). An ended session is as final an answer to the write as the episode itself.
+ */
+internal fun List<SimklLibraryEntry>.rewatchSessionEnded(rewatchId: Long): Boolean =
+    any { entry ->
+        entry.isRewatch &&
+            entry.rewatchId == rewatchId &&
+            !entry.rewatchStatus.isNullOrBlank() &&
+            !entry.isRunningRewatchSession()
+    }
+
+/**
  * Whether a mark of this item is the next step of the account's running run.
  *
  * The account can report a watched title without the episode rows the exact prior-watch lookup

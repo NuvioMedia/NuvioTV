@@ -117,6 +117,15 @@ class SimklRewatchAnimeSeasonsTest {
         assertTrue(sessions.rewatchSessionHolds(SERIES_ID, TrackingMediaKind.ANIME, 2, 1))
     }
 
+    @Test
+    fun `a read showing the pinned session completed answers the write`() {
+        val completed = firstSeasonSession(watchedAt = NEWER).copy(rewatchStatus = "completed")
+
+        assertTrue(listOf(completed).rewatchSessionEnded(FIRST_REWATCH_ID))
+        assertFalse(listOf(firstSeasonSession(watchedAt = NEWER)).rewatchSessionEnded(FIRST_REWATCH_ID))
+        assertFalse(listOf(completed).rewatchSessionEnded(SECOND_REWATCH_ID))
+    }
+
     /** A mark the way the catalogue names it: the series and its season, anime ids stripped. */
     private fun seriesMark(season: Int, episode: Int) = TrackingMediaReference(
         kind = TrackingMediaKind.ANIME,
