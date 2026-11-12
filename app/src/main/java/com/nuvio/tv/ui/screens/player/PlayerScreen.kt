@@ -356,7 +356,7 @@ fun PlayerScreen(
         }
     }
 
-    // True while ANY element that Back can dismiss is on screen (controls, panels, dialogs, overlays).
+    // True while ANY element that Back can dismiss is on screen (controls, panels, dialogs, overlays, prompts).
     val anyDismissibleUiVisible =
         uiState.showControls ||
             uiState.showAudioOverlay ||
@@ -372,6 +372,9 @@ fun PlayerScreen(
             uiState.showSourcesPanel ||
             uiState.showChaptersPanel ||
             uiState.showEpisodesPanel ||
+            (uiState.postPlayMode is PostPlayMode.AutoPlay &&
+                postPlayRecommendationState.recommendation == null) ||
+            uiState.postPlayMode is PostPlayMode.StillWatching ||
             skipButtonActuallyVisible
     var uiHiddenAtMs by remember { mutableLongStateOf(0L) }
     var uiWasVisible by remember { mutableStateOf(anyDismissibleUiVisible) }
@@ -1187,10 +1190,11 @@ fun PlayerScreen(
                 val subtitleMeasurePaint = remember { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG) }
                 LaunchedEffect(subtitleWidthKey, prescannedSubtitleTexts) {
                     val metrics = measuredSubtitleTextMetrics ?: return@LaunchedEffect
-                    if (prescannedSubtitleTexts.isEmpty()) return@LaunchedEffect
+                    val texts = prescannedSubtitleTexts
+                    if (texts.isEmpty()) return@LaunchedEffect
                     val widest = withContext(Dispatchers.Default) {
                         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                        prescannedSubtitleTexts.maxOf { measureSubtitleBlockPx(paint, it, metrics) }
+                        texts.maxOf { measureSubtitleBlockPx(paint, it, metrics) }
                     }
                     widestSubtitleBlockPx = maxOf(widestSubtitleBlockPx ?: 0f, widest)
                 }
