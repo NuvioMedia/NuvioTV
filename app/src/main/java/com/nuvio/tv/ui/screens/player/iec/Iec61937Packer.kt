@@ -126,6 +126,43 @@ internal object Iec61937Packer {
         return if (channelCount > 2) 8 else 2
     }
 
+    /**
+     * The HDMI carrier a DTS-HD unit needs, from the first component of its extension substream:
+     * lossless takes 8 channels, High Resolution takes 2. Null when the unit does not say.
+     */
+    fun dtsHdCarrierChannels(accessUnit: ByteBuffer): Int? {
+        val end = accessUnit.limit()
+        var carrier: Int? = null
+        var i = accessUnit.position()
+        while (i + DTS_EXSS_MIN_SIZE <= end) {
+            if (accessUnit.get(i) == DTS_EXSS_FIRST_BYTE && bigEndianWordAt(accessUnit, i) == DTS_EXSS_SYNC) {
+                val component = i + dtsExssHeaderSize(accessUnit, i)
+                if (component + 4 <= end) {
+                    when (bigEndianWordAt(accessUnit, component)) {
+                        DTS_XLL_SYNC -> return 8
+                        DTS_XBR_SYNC, DTS_XXCH_SYNC, DTS_X96_SYNC, DTS_XCH_SYNC -> carrier = 2
+                    }
+                }
+            }
+            i++
+        }
+        return carrier
+    }
+
+    private fun dtsExssHeaderSize(data: ByteBuffer, exss: Int): Int {
+        val bits = ((data.get(exss + 5).toInt() and 0xFF) shl 16) or
+            ((data.get(exss + 6).toInt() and 0xFF) shl 8) or
+            (data.get(exss + 7).toInt() and 0xFF)
+        val wideSizeFields = bits and (1 shl 21) != 0
+        return (if (wideSizeFields) (bits shr 9) and 0xFFF else (bits shr 13) and 0xFF) + 1
+    }
+
+    private fun bigEndianWordAt(data: ByteBuffer, index: Int): Int =
+        ((data.get(index).toInt() and 0xFF) shl 24) or
+            ((data.get(index + 1).toInt() and 0xFF) shl 16) or
+            ((data.get(index + 2).toInt() and 0xFF) shl 8) or
+            (data.get(index + 3).toInt() and 0xFF)
+
     fun dtsHdBurstSubtype(iecPeriod: Int): Int = when (iecPeriod) {
         512 -> 0
         1024 -> 1
@@ -162,4 +199,12 @@ internal object Iec61937Packer {
     }
 
     private const val LOW_BYTE_OF_EACH_SHORT = 0x00FF00FF00FF00FFL
+    private const val DTS_EXSS_MIN_SIZE = 8
+    private const val DTS_EXSS_FIRST_BYTE: Byte = 0x64
+    private const val DTS_EXSS_SYNC = 0x64582025
+    private const val DTS_XLL_SYNC = 0x41A29547
+    private const val DTS_XBR_SYNC = 0x655E315E
+    private const val DTS_XXCH_SYNC = 0x47004A03
+    private const val DTS_X96_SYNC = 0x1D95F262
+    private const val DTS_XCH_SYNC = 0x5A5A5A5A
 }
