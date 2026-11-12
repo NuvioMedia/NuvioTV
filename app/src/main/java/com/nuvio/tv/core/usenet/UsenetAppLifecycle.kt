@@ -16,7 +16,11 @@ class UsenetAppLifecycle : Application.ActivityLifecycleCallbacks {
     }
     override fun onActivityStopped(activity: Activity) {
         started = (started - 1).coerceAtLeast(0)
-        if (started == 0 && !activity.isChangingConfigurations) UsenetSidecar.stopIdleOnBackground()
+        if (started == 0 && !activity.isChangingConfigurations) {
+            UsenetSidecar.stopIdleOnBackground()
+            // Counts held back from frequent saves are written before the app may be stopped.
+            UsenetSourceStats.get(activity).flush()
+        }
     }
     override fun onActivityCreated(activity: Activity, state: Bundle?) = Unit
     override fun onActivityResumed(activity: Activity) = Unit

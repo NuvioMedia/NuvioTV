@@ -297,6 +297,49 @@ class NewznabClientTest {
         assertEquals(IndexerProblem.UNREACHABLE, client.status(gone).problem)
     }
 
+    @Test fun `every request sent counts in the indexer's statistics, by what it searched for`() = runBlocking {
+        val stats = memoryStats()
+        MockWebServer().use { server ->
+            var respond: (HttpUrl) -> MockResponse = { MockResponse().setBody(capsXml) }
+            val asked = server.answer { respond(it) }
+            val client = NewznabClient(MemoryStorage(), stats)
+            val indexer = server.indexer()
+            val key = indexer.stateKey()
+            val caps = NewznabCapabilities()
+            val movie = UsenetSearchRequest(imdbId = "tt1")
+            fun counts(content: StatsContent) = stats.indexer(key, StatsPeriod.LAST_7_DAYS, content)
+
+            client.capabilities(indexer, live = true)
+            respond = { MockResponse().setBody(server.page("Show.S01E02.1080p", 1)) }
+            client.search(indexer, UsenetSearchRequest(imdbId = "tt1", series = true, season = 1, episode = 2), caps)
+            // The season and the episode search.
+            assertEquals(3, asked.size)
+            assertEquals(IndexerCounts(requests = 2, answered = 2, responseMs = counts(StatsContent.SHOWS)!!.responseMs),
+                counts(StatsContent.SHOWS))
+            respond = { MockResponse().setResponseCode(401) }
+            runCatching { client.search(indexer, movie, caps) }
+            respond = { MockResponse().setResponseCode(429).setHeader("Retry-After", "120") }
+            runCatching { client.search(indexer, movie, caps) }
+            // Paused: no request is sent, and none counts.
+            assertTrue(runCatching { client.search(indexer, movie, caps) }.exceptionOrNull() is IndexerCooldownException)
+            assertEquals(5, asked.size)
+            val movies = counts(StatsContent.MOVIES)!!
+            assertEquals(IndexerCounts(requests = 2, failedRequests = 1, limitedRequests = 1), movies)
+            val all = counts(StatsContent.ALL)!!
+            assertEquals(5, all.requests)
+            assertEquals(3, all.answered)
+            assertTrue(all.responseMs >= 0)
+        }
+        val closed = MockWebServer().apply { start() }
+        val gone = closed.indexer()
+        closed.shutdown()
+        runCatching { NewznabClient(MemoryStorage(), stats).verify(gone) }
+        // The key check's capabilities request searched for nothing: it counts in all content only.
+        assertEquals(IndexerCounts(requests = 1, failedRequests = 1),
+            stats.indexer(gone.stateKey(), StatsPeriod.ALL_TIME, StatsContent.ALL))
+        assertNull(stats.indexer(gone.stateKey(), StatsPeriod.ALL_TIME, StatsContent.MOVIES))
+    }
+
     @Test fun `a pause shows in the status`() = runBlocking {
         MockWebServer().use { server ->
             val client = NewznabClient(MemoryStorage())

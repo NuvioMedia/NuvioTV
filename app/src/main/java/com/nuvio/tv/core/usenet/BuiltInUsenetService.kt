@@ -50,10 +50,13 @@ class IndexerCooldownException(val until: Long) : IllegalStateException("Indexer
 @Singleton
 class NewznabClient internal constructor(
     storage: NewznabStateStorage,
+    /** Counts every request; null in unit tests that do not look. */
+    private val stats: UsenetSourceStats? = null,
     /** The User-Agent of the next request; settings can change it at any time. */
     private val agent: () -> String = { NUVIO_USER_AGENT }
 ) {
-    @Inject constructor(storage: NewznabStateStorage, settings: UsenetSettings) : this(storage, { settings.settings.value.searchAgent })
+    @Inject constructor(storage: NewznabStateStorage, settings: UsenetSettings, stats: UsenetSourceStats) :
+        this(storage, stats, { settings.settings.value.searchAgent })
 
     // API keys are in query strings: use a dedicated client without URL logging,
     // Sentry breadcrumbs or a disk response cache.
@@ -70,7 +73,7 @@ class NewznabClient internal constructor(
         val cached = states.get(indexer)?.takeIf { it.caps != null }
         if (!live && cached != null && now() - cached.capsFetchedAt < CAPS_TTL_MS) return cached.caps!!
         val caps = try {
-            request(indexer, NewznabProtocol.apiUrl(indexer, "caps").build(), live, NewznabProtocol::capabilities)
+            request(indexer, NewznabProtocol.apiUrl(indexer, "caps").build(), live, parse = NewznabProtocol::capabilities)
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
             // An expired copy still describes the indexer better than failing the search.
@@ -116,7 +119,7 @@ class NewznabClient internal constructor(
         val latest = NewznabProtocol.apiUrl(indexer, "search").setQueryParameter("limit", "1").build()
         // A search refused for its parameters still means the key was accepted; a page that is
         // no Newznab answer (a login page served with the public caps) does not.
-        request(indexer, latest, ignoreCooldown = true, NewznabProtocol::requireSearchAnswer)
+        request(indexer, latest, ignoreCooldown = true, parse = NewznabProtocol::requireSearchAnswer)
     }
 
     /**
@@ -152,13 +155,14 @@ class NewznabClient internal constructor(
     private suspend fun pages(indexer: UsenetIndexer, url: HttpUrl, request: UsenetSearchRequest,
         caps: NewznabCapabilities, results: Int, wholeSeason: Boolean = false): List<UsenetRelease> {
         val limit = caps.limit.coerceIn(1, 100)
-        var page = request(indexer, url) { NewznabProtocol.releases(it, indexer) }
+        val kind = if (request.series) ContentKind.SHOW else ContentKind.MOVIE
+        var page = request(indexer, url, kind = kind) { NewznabProtocol.releases(it, indexer) }
         val releases = page.releases.toMutableList()
         var offset = limit
         while (offset < results && page.items > 0 && (page.total?.let { offset < it } ?: (page.items >= limit))) {
             page = try {
                 NewznabProtocol.searchUrl(indexer, request, caps, offset, wholeSeason)?.let { next ->
-                    request(indexer, next) { NewznabProtocol.releases(it, indexer) }
+                    request(indexer, next, kind = kind) { NewznabProtocol.releases(it, indexer) }
                 }
             } catch (e: CancellationException) { throw e }
             // The pages read so far still answer the search.
@@ -172,18 +176,26 @@ class NewznabClient internal constructor(
     /**
      * Skips indexers in a cooldown without a request, and opens one when an
      * indexer throttles us or reports a spent quota, so later searches do not
-     * spend requests that can only fail.
+     * spend requests that can only fail. Every request sent counts in the indexer's statistics,
+     * for [kind] when it searched for one.
      */
     private suspend fun <T> request(indexer: UsenetIndexer, url: HttpUrl, ignoreCooldown: Boolean = false,
-        parse: (String) -> T): T {
+        kind: ContentKind? = null, parse: (String) -> T): T {
         val blockedUntil = states.get(indexer)?.blockedUntil ?: 0
         if (!ignoreCooldown && blockedUntil > now()) throw IndexerCooldownException(blockedUntil)
+        fun count(outcome: RequestOutcome, elapsedMs: Long = 0) =
+            stats?.indexerRequest(indexer.stateKey(), kind, outcome, elapsedMs)
+        val started = System.nanoTime()
         val response = try { get(url) }
             catch (e: CancellationException) { throw e }
-            catch (e: IOException) { note(indexer, IndexerProblem.UNREACHABLE); throw e }
-            catch (e: Exception) { note(indexer, IndexerProblem.RESPONSE); throw e }
+            catch (e: IOException) { count(RequestOutcome.FAILED); note(indexer, IndexerProblem.UNREACHABLE); throw e }
+            catch (e: Exception) { count(RequestOutcome.FAILED); note(indexer, IndexerProblem.RESPONSE); throw e }
+        val elapsedMs = (System.nanoTime() - started) / 1_000_000
         val retryAfter = retryAfterMs(response.headers["Retry-After"])
-        if (response.code == 429) throw cooldown(indexer, retryAfter?.coerceAtMost(MAX_THROTTLE_MS) ?: THROTTLE_MS)
+        if (response.code == 429) {
+            count(RequestOutcome.LIMITED)
+            throw cooldown(indexer, retryAfter?.coerceAtMost(MAX_THROTTLE_MS) ?: THROTTLE_MS)
+        }
         return try {
             if (response.code !in 200..299) {
                 NewznabProtocol.throwIfKnownError(response.body)
@@ -198,12 +210,16 @@ class NewznabClient internal constructor(
                 if (apiHitsLeft != null || grabsLeft != null) states.update(indexer) {
                     it.copy(problem = null, apiHitsLeft = apiHitsLeft, grabsLeft = grabsLeft, leftAt = now())
                 } else note(indexer, null)
+                count(RequestOutcome.ANSWERED, elapsedMs)
             }
         } catch (_: NewznabQuotaException) {
+            count(RequestOutcome.LIMITED)
             throw cooldown(indexer, retryAfter ?: QUOTA_MS)
         } catch (e: NewznabAuthException) {
+            count(RequestOutcome.FAILED)
             note(indexer, IndexerProblem.AUTH); throw e
         } catch (e: Exception) {
+            count(RequestOutcome.FAILED)
             note(indexer, IndexerProblem.RESPONSE); throw e
         }
     }
@@ -295,7 +311,9 @@ class BuiltInUsenetService @Inject constructor(
     private val tmdbApi: TmdbApi,
     private val unplayable: UnplayableReleases? = null,
     /** Null in unit tests, which read the English wording. */
-    @ApplicationContext private val context: Context? = null
+    @ApplicationContext private val context: Context? = null,
+    /** Counts each indexer's searches and remembers which indexer listed each release. */
+    private val stats: UsenetSourceStats? = null
 ) {
     /** A translated message; [english], the same wording, where there is no context. */
     private fun text(id: Int, english: String, vararg args: Any): String =
@@ -305,6 +323,7 @@ class BuiltInUsenetService @Inject constructor(
         season: Int?, episode: Int?): Flow<BuiltInUsenetResult> = flow {
         if (!config.ready || type.lowercase() !in BUILT_IN_USENET_TYPES) return@flow
         val series = type.lowercase() != "movie"
+        val kind = if (series) ContentKind.SHOW else ContentKind.MOVIE
         val (idSeason, idEpisode) = episodeNumbers(videoId)
         val resolvedSeason = season ?: idSeason
         val resolvedEpisode = episode ?: idEpisode
@@ -379,6 +398,7 @@ class BuiltInUsenetService @Inject constructor(
                             Result.success(if (found.isEmpty()) askAgain(indexer, search, caps, config.indexerResults) { metadata.await() } ?: found else found)
                         } catch (e: CancellationException) { throw e }
                         catch (e: Exception) { Result.failure(e) }
+                        countSearch(indexer, kind, result)
                         results.send(indexer to result)
                     }
                 }
@@ -453,6 +473,18 @@ class BuiltInUsenetService @Inject constructor(
             }
             metadata.cancel()
             seasonLookup?.cancel()
+        }
+    }
+
+    /** One search of [indexer] in its statistics; its releases count for it once downloaded or played. */
+    private fun countSearch(indexer: UsenetIndexer, kind: ContentKind, result: Result<List<UsenetRelease>>) {
+        val stats = stats ?: return
+        val key = indexer.stateKey()
+        result.onSuccess { found ->
+            stats.indexerSearch(key, kind, SearchOutcome.ANSWERED, found.size)
+            stats.remember(found.map { it.nzbUrl }, key, kind)
+        }.onFailure {
+            stats.indexerSearch(key, kind, if (it is IndexerCooldownException) SearchOutcome.PAUSED else SearchOutcome.FAILED)
         }
     }
 
@@ -642,6 +674,10 @@ class BuiltInUsenetService @Inject constructor(
         fun withoutApiKeys(nzbUrl: String, config: UsenetSourceConfiguration): String =
             config.indexers.filter { it.apiKey.length >= MIN_REFERENCED_KEY }.sortedByDescending { it.apiKey.length }
                 .fold(nzbUrl) { url, indexer -> url.replace(indexer.apiKey, "$KEY_REFERENCE${indexer.id}}") }
+
+        /** The indexer that listed a kept link, named by its key reference. */
+        fun keptLinkIndexer(stored: String, config: UsenetSourceConfiguration): UsenetIndexer? =
+            KEY_REFERENCES.find(stored)?.groupValues?.get(1)?.let { id -> config.indexers.find { it.id == id } }
 
         /** Null when a referenced indexer was removed or has no key any more: the link cannot be opened. */
         fun withApiKeys(stored: String, config: UsenetSourceConfiguration): String? {

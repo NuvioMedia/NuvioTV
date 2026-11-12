@@ -1511,6 +1511,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 .firstOrNull { it.key.equals("X-Usenet-Failure", ignoreCase = true) }?.value?.firstOrNull()
                             streamFallbackSession?.current?.let {
                                 com.nuvio.tv.core.usenet.UnplayableReleases.get(context).record(it, kind)
+                                if (kind in com.nuvio.tv.core.usenet.UnplayableReleases.KINDS) {
+                                    com.nuvio.tv.core.usenet.UsenetSourceStats.get(context).unavailable(it.nzbUrl)
+                                }
                             }
                         }
                         if (permanentUsenetFailure && tryNextStream(detailedError)) return

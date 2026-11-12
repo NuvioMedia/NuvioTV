@@ -73,6 +73,14 @@ internal data class NewznabIndexerState(
 )
 
 /**
+ * What an indexer's state and statistics are kept under: a hash of its endpoint and key, so no
+ * secret is stored and an edited indexer starts fresh.
+ */
+internal fun UsenetIndexer.stateKey(): String = MessageDigest.getInstance("SHA-256")
+    .digest("$endpoint\n$apiKey".toByteArray())
+    .joinToString("") { "%02x".format(it) }
+
+/**
  * Capabilities and limit cooldowns per indexer, kept across restarts so neither
  * costs API hits again. Keyed by a hash of the endpoint and key: no secret is
  * stored, and an edited indexer starts fresh.
@@ -108,9 +116,7 @@ internal class NewznabIndexerStates(private val storage: NewznabStateStorage, pr
         changes.value += 1
     }
 
-    private fun key(indexer: UsenetIndexer) = MessageDigest.getInstance("SHA-256")
-        .digest("${indexer.endpoint}\n${indexer.apiKey}".toByteArray())
-        .joinToString("") { "%02x".format(it) }
+    private fun key(indexer: UsenetIndexer) = indexer.stateKey()
 
     private companion object {
         const val RETENTION_MS = 30L * 24 * 3600 * 1000

@@ -12,8 +12,13 @@ import com.nuvio.tv.core.server.DeviceIpAddress
 import com.nuvio.tv.core.server.UsenetPhoneSetup
 import com.nuvio.tv.core.server.UsenetSourcesConfigServer
 import com.nuvio.tv.core.server.UsenetSourcesWebPage
+import com.nuvio.tv.core.usenet.IndexerCounts
 import com.nuvio.tv.core.usenet.IndexerStatus
 import com.nuvio.tv.core.usenet.NewznabClient
+import com.nuvio.tv.core.usenet.StatsContent
+import com.nuvio.tv.core.usenet.StatsPeriod
+import com.nuvio.tv.core.usenet.UsenetSourceStats
+import com.nuvio.tv.core.usenet.stateKey
 import com.nuvio.tv.core.usenet.NntpProviderTester
 import com.nuvio.tv.core.usenet.ProviderTestResult
 import com.nuvio.tv.core.usenet.UsenetIndexer
@@ -32,6 +37,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -49,6 +56,16 @@ data class UsenetSourcesUiState(
 /** The QR code shown while a phone can edit sources; [lastSaved] names the source it saved last. */
 data class UsenetPhoneSetupUiState(val url: String, val qrCode: Bitmap, val lastSaved: String? = null)
 
+/** An indexer's counts for the chosen period and content; null where it has none. */
+data class IndexerStatsUi(val counts: IndexerCounts? = null, val today: IndexerCounts? = null, val since: Long? = null)
+
+data class UsenetStatsUi(
+    val period: StatsPeriod = StatsPeriod.LAST_30_DAYS,
+    val content: StatsContent = StatsContent.ALL,
+    /** By indexer id. */
+    val indexers: Map<String, IndexerStatsUi> = emptyMap()
+)
+
 @HiltViewModel
 class UsenetSourcesViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
@@ -56,7 +73,8 @@ class UsenetSourcesViewModel @Inject constructor(
     private val profiles: ProfileManager,
     private val client: NewznabClient,
     private val providerTester: NntpProviderTester,
-    private val usenetSettings: UsenetSettings
+    private val usenetSettings: UsenetSettings,
+    private val sourceStats: UsenetSourceStats
 ) : ViewModel() {
     private val state = MutableStateFlow(UsenetSourcesUiState())
     val uiState = state.asStateFlow()
@@ -69,6 +87,32 @@ class UsenetSourcesViewModel @Inject constructor(
         combine(uiState, client.statusChanges) { ui, _ ->
             ui.configuration.indexers.associate { it.id to client.status(it) }
         }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /** Statistics of the configured indexers; searches and playback update them while settings are open. */
+    val stats: StateFlow<UsenetStatsUi> = flow {
+        // Loaded here, off the main thread, with the chosen filters; counts held back are saved too.
+        sourceStats.load()
+        sourceStats.flush()
+        emitAll(combine(uiState, sourceStats.revision, sourceStats.period, sourceStats.content) { ui, _, period, content ->
+            UsenetStatsUi(period, content, ui.configuration.indexers.associate { indexer ->
+                val key = indexer.stateKey()
+                indexer.id to IndexerStatsUi(sourceStats.indexer(key, period, content),
+                    sourceStats.indexerToday(key, content), sourceStats.indexerSince(key))
+            })
+        })
+    }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UsenetStatsUi())
+
+    fun setStatsPeriod(period: StatsPeriod) {
+        viewModelScope.launch(Dispatchers.IO) { sourceStats.setPeriod(period) }
+    }
+
+    fun setStatsContent(content: StatsContent) {
+        viewModelScope.launch(Dispatchers.IO) { sourceStats.setContent(content) }
+    }
+
+    fun resetStats() {
+        viewModelScope.launch(Dispatchers.IO) { sourceStats.reset() }
+    }
 
     init {
         viewModelScope.launch {

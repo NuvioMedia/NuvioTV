@@ -56,6 +56,7 @@ internal fun UsenetSettingsContent(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sources by sourcesViewModel.uiState.collectAsStateWithLifecycle()
     val indexerStatuses by sourcesViewModel.indexerStatuses.collectAsStateWithLifecycle()
+    val stats by sourcesViewModel.stats.collectAsStateWithLifecycle()
     val phoneSetup by sourcesViewModel.phoneSetup.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     // Opens what still has to be set up; everything else starts closed.
@@ -124,7 +125,13 @@ internal fun UsenetSettingsContent(
                     trailingIcon = if (open) Icons.Default.ExpandMore else Icons.AutoMirrored.Filled.KeyboardArrowRight
                 )
             }
-            if (UsenetSettingsSection.DIAGNOSTICS in expanded) usenetDiagnosticsCardItems()
+            if (UsenetSettingsSection.DIAGNOSTICS in expanded) {
+                usenetDiagnosticsCardItems()
+                usenetStatsCardItems(sources.configuration.indexers, stats,
+                    onPeriod = sourcesViewModel::setStatsPeriod,
+                    onContent = sourcesViewModel::setStatsContent,
+                    onReset = sourcesViewModel::resetStats)
+            }
         }
         SettingsVerticalScrollIndicators(state = listState)
         phoneSetup?.let { setup ->

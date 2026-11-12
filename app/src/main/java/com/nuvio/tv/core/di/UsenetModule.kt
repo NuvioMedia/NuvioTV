@@ -6,6 +6,7 @@ import com.nuvio.tv.core.usenet.NewznabStateStorage
 import com.nuvio.tv.core.usenet.SharedPreferencesNewznabStateStorage
 import com.nuvio.tv.core.usenet.UnplayableReleases
 import com.nuvio.tv.core.usenet.UsenetSourceSettings
+import com.nuvio.tv.core.usenet.UsenetSourceStats
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -37,5 +38,13 @@ abstract class UsenetModule {
         @IntoSet
         fun unplayableReleasesReset(@ApplicationContext context: Context): ProfileScopedCredentialStore =
             UnplayableReleases.storage(context)
+
+        @Provides
+        fun usenetSourceStats(@ApplicationContext context: Context): UsenetSourceStats = UsenetSourceStats.get(context)
+
+        @Provides
+        @IntoSet
+        fun usenetSourceStatsReset(@ApplicationContext context: Context): ProfileScopedCredentialStore =
+            UsenetSourceStats.storage(context)
     }
 }

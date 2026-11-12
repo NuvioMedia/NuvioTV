@@ -26,6 +26,7 @@ import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.core.streams.StreamBadgePresentation
 import com.nuvio.tv.core.streams.YouTubeStreamResolver
+import com.nuvio.tv.core.usenet.stateKey
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -495,9 +496,15 @@ class StreamScreenViewModel @Inject constructor(
                     val sources = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         runCatching { usenetSourceSettings.read() }.getOrNull()
                     }
-                    sources?.let {
+                    sources?.let { config ->
                         com.nuvio.tv.core.usenet.BuiltInUsenetService.restoredStream(nzbUrl, cached.streamName,
-                            cached.releaseTitle, cached.videoSize, cached.publishedAt, it)
+                            cached.releaseTitle, cached.videoSize, cached.publishedAt, config)?.also { restored ->
+                            // No search lists it: its download and playback count for the indexer its link names.
+                            com.nuvio.tv.core.usenet.BuiltInUsenetService.keptLinkIndexer(nzbUrl, config)?.let { indexer ->
+                                com.nuvio.tv.core.usenet.UsenetSourceStats.get(context).remember(listOfNotNull(restored.nzbUrl),
+                                    indexer.stateKey(), com.nuvio.tv.core.usenet.contentKindOf(contentType))
+                            }
+                        }
                     }?.takeUnless { com.nuvio.tv.core.usenet.UnplayableReleases.get(context).contains(it) }
                 }
                 if (cachedUsenet != null) {
