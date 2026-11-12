@@ -285,6 +285,16 @@ internal fun isSimklRewatchPlanEligible(accountType: String?): Boolean {
 /** The plan Simkl reports for an account without rewatches; the cached plan is corrected to it. */
 internal const val SIMKL_FREE_PLAN = "free"
 
+/**
+ * Whether a sync has to read the account plan first: rewatches are on and this device never stored
+ * the plan. That is the case for an account connected before the plan was stored, and for a mode
+ * that reached the device through profile settings sync instead of the picker, which is the only
+ * other place the plan is read. With the plan unknown the sessions are never read and no stop asks
+ * for a rewatch. A known plan, free included, is left to the settings refresh.
+ */
+internal fun shouldLoadSimklPlanForRewatches(mode: SimklRewatchMode, state: SimklAuthState): Boolean =
+    mode != SimklRewatchMode.OFF && state.isAuthenticated && state.accountType == null
+
 /** Free-tier accounts cannot record rewatches, so the picker keeps them off and offers an upgrade. */
 internal fun isSimklRewatchModeSelectable(
     mode: SimklRewatchMode,

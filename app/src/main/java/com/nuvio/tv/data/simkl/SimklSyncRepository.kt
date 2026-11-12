@@ -326,6 +326,11 @@ class SimklSyncRepository @Inject constructor(
     private suspend fun refreshSnapshot(profileId: Int, generation: Long) = snapshotMutex.withLock {
         val previous = _state.value
         _state.value = previous.copy(isLoading = true, errorMessage = null)
+        // Before the engine, so the sessions are read in this same sync once the plan allows them.
+        // A failed read leaves the plan unknown and is tried again on the next sync.
+        if (shouldLoadSimklPlanForRewatches(settingsDataStore.simklRewatchMode.first(), authStorage.state.value)) {
+            authRepository.ensurePlanLoaded()
+        }
         val result = try {
             engine.synchronize(previous.snapshot)
         } catch (error: CancellationException) {
