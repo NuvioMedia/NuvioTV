@@ -1499,7 +1499,7 @@ class ExternalPlaybackTracker @Inject constructor(
         }
 
         scope.launch {
-            val progress = WatchProgress(
+            val reported = WatchProgress(
                 contentId = metadata.contentId,
                 contentType = metadata.contentType,
                 name = metadata.contentName,
@@ -1515,6 +1515,19 @@ class ExternalPlaybackTracker @Inject constructor(
                 progressPercent = explicitPercent,
                 lastWatched = System.currentTimeMillis()
             )
+            // Same rule as the internal player: past the app's own bar, a progress source that counts
+            // a watch only from a higher point decides whether this stop finished the item. A
+            // completion the external player reported itself stays one.
+            val progress = if (
+                explicitPercent == null &&
+                reported.progressPercentage >= WatchProgress.COMPLETED_THRESHOLD
+            ) {
+                reported.copy(
+                    completionThresholdOverride = watchProgressRepository.sourceCompletionThreshold(contentEndPercent)
+                )
+            } else {
+                reported
+            }
             Log.d(TAG, "Saving progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +
                 "content=${metadata.contentId}, video=${metadata.videoId}, " +
                 "progressPct=${progress.progressPercentage}, isInProgress=${progress.isInProgress()}")

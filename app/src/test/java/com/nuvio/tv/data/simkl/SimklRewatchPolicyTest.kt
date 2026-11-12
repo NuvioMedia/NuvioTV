@@ -290,6 +290,16 @@ class SimklRewatchPolicyTest {
     }
 
     @Test
+    fun `the completion bar is the whole number a stop is sent with`() {
+        // The marker decides and is floored, the way Simkl reads `min_progress`.
+        assertEquals(96.0, simklCompletionThresholdPercent(userThresholdPercent = 85, contentEndPercent = 96.5), 0.0)
+        // Without a marker the user's threshold decides.
+        assertEquals(95.0, simklCompletionThresholdPercent(userThresholdPercent = 95, contentEndPercent = null), 0.0)
+        // A marker under Simkl's own bar cannot be used, so the threshold decides there too.
+        assertEquals(88.0, simklCompletionThresholdPercent(userThresholdPercent = 88, contentEndPercent = 70.0), 0.0)
+    }
+
+    @Test
     fun `only semi-automatic mode asks, and only before a playback that opens a run`() {
         val nowEpochMs = 10_000_000_000L
         val olderThanTheGap = nowEpochMs - SIMKL_REWATCH_MIN_GAP_MS - 1L

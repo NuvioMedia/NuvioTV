@@ -860,13 +860,13 @@ internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
     }
 }
 
-internal fun PlayerRuntimeController.saveWatchProgress() {
+internal fun PlayerRuntimeController.saveWatchProgress(naturalEnd: Boolean = false) {
     if (!hasRenderedFirstFrame) return
     if (_playbackTimeline.value.isLive) return
     val currentPosition = currentPlaybackPositionMs() ?: return
     val duration = getEffectiveDuration(currentPosition)
     if (isShortPlaceholderDuration(duration)) return
-    saveWatchProgressInternal(currentPosition, duration)
+    saveWatchProgressInternal(currentPosition, duration, naturalEnd = naturalEnd)
 }
 
 internal fun PlayerRuntimeController.getEffectiveDuration(position: Long): Long {
@@ -921,7 +921,7 @@ internal fun PlayerRuntimeController.handleNaturalPlaybackEnded() {
     if (contentType.equals("cloud", ignoreCase = true)) {
         saveCloudLibraryProgress(position, duration, completed = true)
     } else {
-        saveWatchProgress()
+        saveWatchProgress(naturalEnd = true)
     }
     resetPostPlayStateAfterPlaybackEnded()
 }
@@ -960,7 +960,16 @@ internal fun PlayerRuntimeController.currentWatchProgress(
     lastWatched = lastWatched
 )
 
-internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, duration: Long, syncRemote: Boolean = true) {
+/**
+ * @param naturalEnd the playback reached its end, which finishes it whatever bar the progress source
+ * counts from: the trackers are told 100 there too.
+ */
+internal fun PlayerRuntimeController.saveWatchProgressInternal(
+    position: Long,
+    duration: Long,
+    syncRemote: Boolean = true,
+    naturalEnd: Boolean = false
+) {
     if (contentType.equals("cloud", ignoreCase = true)) {
         saveCloudLibraryProgress(position, duration, completed = false)
         return
@@ -974,6 +983,12 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
 
     val progress = currentWatchProgress(parentContentId, parentContentType, position, duration, System.currentTimeMillis())
         .copy(progressPercent = fallbackPercent)
+    // Past the app's own bar, a progress source that counts a watch only from a higher point decides
+    // whether this stop finished the item: below its bar the source keeps a pause, and marking the
+    // item watched here would show it watched next to the position the source offers to resume.
+    // The marker is read now, on the player's thread.
+    val asksSourceBar = !naturalEnd && progress.progressPercentage >= WatchProgress.COMPLETED_THRESHOLD
+    val contentEndPercent = if (asksSourceBar) currentContentEndPercent() else null
 
     scope.launch(kotlinx.coroutines.NonCancellable) {
         try {
@@ -982,7 +997,16 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
                 videoId = progress.videoId,
                 profileId = profileId
             )
-            val normalizedProgress = progress.copy(contentId = effectiveContentId)
+            // The bar travels on the row, so the repository's own completion check and a later read
+            // of the saved row agree with the decision made here.
+            val normalizedProgress = progress.copy(
+                contentId = effectiveContentId,
+                completionThresholdOverride = if (asksSourceBar) {
+                    watchProgressRepository.sourceCompletionThreshold(contentEndPercent)
+                } else {
+                    null
+                }
+            )
             if (normalizedProgress.isCompleted()) {
                 if (!hasMarkedCurrentEpisodeCompleted) {
                     hasMarkedCurrentEpisodeCompleted = true

@@ -119,6 +119,20 @@ internal fun simklMinProgressPercent(completionThresholdPercent: Double): Int =
         ?.coerceIn(SIMKL_MIN_PROGRESS_MIN_PERCENT, SIMKL_MIN_PROGRESS_MAX_PERCENT)
         ?: SIMKL_REWATCH_MIN_PROGRESS_PERCENT.toInt()
 
+/**
+ * Where Simkl counts a playback as watched, as the whole number a stop carries as `min_progress`.
+ *
+ * The scrobbler sends it, and the progress source holds the local completion to it, so the account
+ * and this device agree on whether a stop was a watch or a pause.
+ */
+internal fun simklCompletionThresholdPercent(userThresholdPercent: Int, contentEndPercent: Double?): Double =
+    simklMinProgressPercent(
+        resolvedSimklCompletionPercent(
+            userThresholdPercent = userThresholdPercent.toDouble(),
+            contentEndPercent = contentEndPercent
+        )
+    ).toDouble()
+
 /** The bounds Simkl accepts for `min_progress`. */
 internal const val SIMKL_MIN_PROGRESS_MIN_PERCENT = 50
 internal const val SIMKL_MIN_PROGRESS_MAX_PERCENT = 100

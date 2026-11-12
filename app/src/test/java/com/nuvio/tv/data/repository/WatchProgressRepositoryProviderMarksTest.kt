@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -115,6 +116,29 @@ class WatchProgressRepositoryProviderMarksTest {
         assertTrue(harness.repository.watchedIdsSoon { VIDEO in it })
     }
 
+    @Test
+    fun `a source that counts a watch later holds the local completion to its bar`() = runBlocking {
+        val harness = harness(sourceBar = { 96.0 })
+        harness.awaitProvider(harness.repository)
+
+        assertEquals(0.96f, harness.repository.sourceCompletionThreshold(contentEndPercent = 96.4)!!, 0.0001f)
+    }
+
+    @Test
+    fun `with the app's own progress as the source the local bar stays`() = runBlocking {
+        val harness = harness(source = WatchProgressSource.NUVIO_SYNC, sourceBar = { 96.0 })
+
+        assertNull(harness.repository.sourceCompletionThreshold(contentEndPercent = 96.4))
+    }
+
+    @Test
+    fun `a source that cannot name its bar leaves the local one`() = runBlocking {
+        val harness = harness(sourceBar = { throw IllegalStateException("store") })
+        harness.awaitProvider(harness.repository)
+
+        assertNull(harness.repository.sourceCompletionThreshold(contentEndPercent = null))
+    }
+
     private class Harness(
         val watchedPreferences: WatchedItemsPreferences,
         val providerWatched: MutableStateFlow<Set<String>>,
@@ -129,7 +153,10 @@ class WatchProgressRepositoryProviderMarksTest {
         }
     }
 
-    private fun harness(source: WatchProgressSource = WatchProgressSource.TRAKT): Harness {
+    private fun harness(
+        source: WatchProgressSource = WatchProgressSource.TRAKT,
+        sourceBar: suspend () -> Double? = { null }
+    ): Harness {
         val profileManager = mockk<ProfileManager>()
         every { profileManager.activeProfileId } returns MutableStateFlow(1)
         val store = TestPreferencesStore()
@@ -142,6 +169,7 @@ class WatchProgressRepositoryProviderMarksTest {
         val provider = mockk<TrackingProgressProvider>(relaxed = true)
         every { provider.providerId } returns TrackingProviderId.TRAKT
         every { provider.isAuthenticated } returns MutableStateFlow(true)
+        coEvery { provider.completionThresholdPercent(any()) } coAnswers { sourceBar() }
         every { provider.watchedMovieIds } returns providerWatched
         every { provider.reportedWatchedMovieIds } returns providerReported
         every { provider.isWatched(any(), any(), any(), any()) } answers {
