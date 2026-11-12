@@ -84,6 +84,12 @@ data class MetaDetailsUiState(
     val mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     val isMdbListRatingsActive: Boolean = false,
     val tmdbRating: Float? = null,
+    /**
+     * Original content language resolved from TMDB (`original_language`).
+     * Independent of the "use details" toggle because it drives the "Original" audio
+     * track selection in the player.
+     */
+    val tmdbContentLanguage: String? = null,
     val comments: List<TraktCommentReview> = emptyList(),
     val commentsCurrentPage: Int = 0,
     val commentsPageCount: Int = 0,
