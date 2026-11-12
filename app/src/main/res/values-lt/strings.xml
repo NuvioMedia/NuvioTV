@@ -1556,9 +1556,8 @@
     <string name="video_section">Vaizdas</string>
     <string name="playback_true_black_letterbox">Visiškai juodos juostos</string>
     <string name="playback_true_black_letterbox_sub">Palikti juostas aplink vaizdą neužpildytas, kad HDR juoda spalva išliktų tikrai juoda. Jei juostose matoma šviesi linija, šią funkciją išjunkite.</string>
-    <string name="playback_chapters_label">Skyriai</string>
-    <string name="playback_exo_chapters_title">Rodyti skyrius (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Nuskaityti MKV failų skyrius, pažymėti juos eigos juostoje ir pereiti tarp jų. Prasidėjus atkūrimui siunčiamos kelios nedidelės papildomos užklausos. mpv skyrius rodo visada.</string>
+    <string name="playback_exo_chapters_title">Rodyti skyrius</string>
+    <string name="playback_exo_chapters_sub">Nuskaityti MKV failų skyrius, pažymėti juos eigos juostoje ir pereiti tarp jų.</string>
     <string name="audio_lang_original">Originalo kalba</string>
     <string name="audio_lang_original_hint">Reikia įjungti TMDB duomenų papildymą</string>
     <string name="audio_night_mode">Naktinis režimas</string>
