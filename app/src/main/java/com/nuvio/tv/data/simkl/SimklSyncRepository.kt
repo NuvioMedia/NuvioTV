@@ -395,35 +395,11 @@ class SimklSyncRepository @Inject constructor(
     private suspend fun offersSimklRewatchRuns(): Boolean =
         settingsDataStore.simklRewatchMode.first() != SimklRewatchMode.OFF
 
-    /*
-     * The threshold is read from `TraktSettingsDataStore`, the same as the rewatch mode. The
-     * projection is `suspend`, so the read is a single `first()`; when the setting cannot be read,
-     * the threshold is not passed in and a playback row keeps the source default of 80 percent. The
-     * threshold decides on the write side (the scrobbler), that is when a playback is reported as
-     * finished. On the Continue Watching read it no longer decides that a playback is finished: a
-     * playback row is a position the provider keeps open, and such a row is never closed by a
-     * percentage, so an episode stopped at 86 percent with a threshold of 95 stays in the row. The
-     * threshold is still passed to the row, and the row carries it as the number it was reported with.
-     */
-    private suspend fun completionThresholdFraction(): Float? = try {
-        resolvedSimklCompletionFraction(settingsDataStore.simklWatchedThresholdPercent.first())
-    } catch (error: CancellationException) {
-        throw error
-    } catch (_: Throwable) {
-        null
-    }
-
     private suspend fun buildProjection(
         snapshot: SimklSyncSnapshot,
         entryIndex: SimklEntryIndex? = null
     ): SimklSnapshotProjection =
-        withContext(Dispatchers.Default) {
-            SimklSnapshotProjection.create(
-                snapshot = snapshot,
-                existingEntryIndex = entryIndex,
-                completionThresholdFraction = completionThresholdFraction()
-            )
-        }
+        withContext(Dispatchers.Default) { SimklSnapshotProjection.create(snapshot, entryIndex) }
 
     private suspend fun decodeSnapshot(payload: String): SimklSyncSnapshot =
         withContext(Dispatchers.Default) { json.decodeFromString(payload) }

@@ -87,38 +87,35 @@ class WatchProgressTest {
     }
 
     @Test
-    fun `a provider playback row at ninety percent is not completed by a threshold of eighty five`() {
+    fun `a provider playback row at ninety percent is not completed`() {
         val wp = watchProgress(
             position = 0,
             duration = 0,
             progressPercent = 90f,
             source = WatchProgress.SOURCE_SIMKL_PLAYBACK,
-            completionThresholdFraction = 0.85f,
             isProviderPlaybackPosition = true
         )
 
         // The write side reported this stop as a pause, because 90 percent sat under the credits
         // marker, so the account holds the row open. shouldTreatAsInProgressForContinueWatching drops
-        // a row the moment isCompleted() is true, so reading the row against the user threshold of 85
-        // alone would drop the episode out of Continue Watching. The row is exempt and stays a
-        // position to resume.
+        // a row the moment isCompleted() is true, so reading the row by its percentage would drop the
+        // episode out of Continue Watching. The row is exempt and stays a position to resume.
         assertFalse(wp.isCompleted())
         assertTrue(wp.isInProgress())
     }
 
     @Test
-    fun `a provider playback row at the credits marker threshold is still not completed`() {
+    fun `a provider playback row at ninety six percent is still not completed`() {
         val wp = watchProgress(
             position = 0,
             duration = 0,
             progressPercent = 96f,
             source = WatchProgress.SOURCE_SIMKL_PLAYBACK,
-            completionThresholdFraction = 0.96f,
             isProviderPlaybackPosition = true
         )
 
         // Where a playback ends is the credits marker of the release, which a row the provider
-        // publishes does not carry, so even the resolved threshold is only a reading number here.
+        // publishes does not carry, so no percentage closes the row.
         assertFalse(wp.isCompleted())
         assertTrue(wp.isInProgress())
         assertEquals(0.96f, wp.progressPercentage, 0.0005f)
@@ -162,7 +159,6 @@ class WatchProgressTest {
         duration: Long,
         progressPercent: Float? = null,
         source: String = WatchProgress.SOURCE_LOCAL,
-        completionThresholdFraction: Float? = null,
         isProviderPlaybackPosition: Boolean = false
     ): WatchProgress {
         return WatchProgress(
@@ -181,7 +177,6 @@ class WatchProgressTest {
             lastWatched = 1000L,
             progressPercent = progressPercent,
             source = source,
-            completionThresholdFraction = completionThresholdFraction,
             isProviderPlaybackPosition = isProviderPlaybackPosition
         )
     }

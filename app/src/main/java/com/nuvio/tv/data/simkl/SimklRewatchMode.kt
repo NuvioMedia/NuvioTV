@@ -85,25 +85,6 @@ internal fun resolvedSimklCompletionPercent(
     return marker
 }
 
-/**
- * The number a playback row is read back with, as a fraction, from the stored threshold.
- *
- * The write side decides with [resolvedSimklCompletionPercent] and the credits marker of the playback
- * it is scrobbling; the reading side sees only the row the account kept, so the marker is not there.
- * What the row does carry is the percentage it was reported with, and the account keeps it open while
- * that sat under the threshold of the write. The number is therefore stored on the row, never below
- * the bar Simkl needs. Storing it does not decide the row: a row the account kept is a provider
- * playback position and never completes on a percentage, whatever number it was read with. For a row
- * that is not such a position the number is still the threshold the row is read with.
- *
- * A null means the setting could not be read: the caller leaves the field unset and the row keeps the
- * default of its own source.
- */
-internal fun resolvedSimklCompletionFraction(userThresholdPercent: Int?): Float? =
-    userThresholdPercent?.let { percent ->
-        (resolvedSimklCompletionPercent(percent.toDouble(), contentEndPercent = null) / 100.0).toFloat()
-    }
-
 /** Simkl merges two watches of the same item this close together, so asking would be pointless. */
 internal const val SIMKL_REWATCH_MIN_GAP_MS = 48L * 60L * 60L * 1_000L
 

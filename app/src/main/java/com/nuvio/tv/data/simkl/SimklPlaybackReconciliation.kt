@@ -5,16 +5,11 @@ import com.nuvio.tv.core.tracking.parseTrackingExternalIds
 import com.nuvio.tv.domain.model.WatchProgress
 
 internal fun SimklSyncSnapshot.reconcileWatchedPlayback(
-    entryIndex: SimklEntryIndex? = null,
-    completionThresholdFraction: Float? = null
+    entryIndex: SimklEntryIndex? = null
 ): SimklSyncSnapshot {
     if (playback.isEmpty()) return this
     val retainedPlayback = playback.filterNot { session ->
-        val progress = session.toWatchProgress(
-            libraryEntries = entries,
-            entryIndex = entryIndex,
-            completionThresholdFraction = completionThresholdFraction
-        ) ?: return@filterNot false
+        val progress = session.toWatchProgress(entries, entryIndex) ?: return@filterNot false
         if (entryIndex != null && entryIndex.matchesEntries(entries)) {
             entryIndex.matchingEntriesForContent(
                 entries = entries,

@@ -74,24 +74,13 @@ fun SimklSyncSnapshot.toSimklWatchedProjection(): SimklWatchedProjection {
     )
 }
 
-fun SimklSyncSnapshot.toSimklProgressEntries(
-    completionThresholdFraction: Float? = null
-): List<WatchProgress> = toSimklProgressEntries(
-    entryIndex = null,
-    completionThresholdFraction = completionThresholdFraction
-)
+fun SimklSyncSnapshot.toSimklProgressEntries(): List<WatchProgress> =
+    toSimklProgressEntries(entryIndex = null)
 
 internal fun SimklSyncSnapshot.toSimklProgressEntries(
-    entryIndex: SimklEntryIndex?,
-    completionThresholdFraction: Float? = null
+    entryIndex: SimklEntryIndex?
 ): List<WatchProgress> = playback
-    .mapNotNull { session ->
-        session.toWatchProgress(
-            libraryEntries = entries,
-            entryIndex = entryIndex,
-            completionThresholdFraction = completionThresholdFraction
-        )
-    }
+    .mapNotNull { session -> session.toWatchProgress(entries, entryIndex) }
     .groupBy(::simklProgressKey)
     .mapNotNull { (_, candidates) -> candidates.maxByOrNull(WatchProgress::lastWatched) }
     .sortedByDescending(WatchProgress::lastWatched)
@@ -316,8 +305,7 @@ private fun SimklLibraryEntry.toWatchedItem(
 
 internal fun SimklPlaybackSession.toWatchProgress(
     libraryEntries: List<SimklLibraryEntry> = emptyList(),
-    entryIndex: SimklEntryIndex? = null,
-    completionThresholdFraction: Float? = null
+    entryIndex: SimklEntryIndex? = null
 ): WatchProgress? {
     val media = media ?: return null
     val parentId = media.canonicalContentId() ?: return null
@@ -379,10 +367,7 @@ internal fun SimklPlaybackSession.toWatchProgress(
         // The row is not a finished watch but a position the provider keeps open, and it says that in
         // `isProviderPlaybackPosition`. Such a position ends at the credits marker, which a row like this
         // does not carry, so its percentage alone never closes it, or the position would drop out of
-        // Continue Watching. The threshold is passed in only as the number the row was reported with,
-        // and does not decide that it is over. A really recorded watch arrives as history and replaces
-        // it, and without a threshold (the setting could not be read) the source default of 80 stays.
-        completionThresholdFraction = completionThresholdFraction,
+        // Continue Watching. A really recorded watch arrives as history and replaces it.
         isProviderPlaybackPosition = true
     )
 }
