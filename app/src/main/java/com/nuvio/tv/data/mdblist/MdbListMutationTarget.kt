@@ -51,18 +51,32 @@ internal data class MdbListMutationTarget(
     }
 }
 
-internal fun MdbListSyncSnapshot.mutationTarget(reference: TrackingMediaReference): MdbListMutationTarget? {
+internal fun MdbListSyncSnapshot.mutationTarget(
+    reference: TrackingMediaReference,
+    projection: MdbListProgressProjection? = null,
+    mediaIndex: MdbListMediaIndex? = projection?.mediaIndex
+): MdbListMutationTarget? {
     val ids = reference.ids.toMdbListIds() ?: return null
     val isMovie = reference.kind == TrackingMediaKind.MOVIE || reference.catalog?.contentType in setOf("movie", "film")
     val type = if (isMovie) MdbListItemType.MOVIE else if (reference.episode != null) MdbListItemType.EPISODE else MdbListItemType.SHOW
-    val index = MdbListMediaIndex(this)
-    val media = index.resolve(type, ids).merged(MdbListMedia(ids, reference.title, reference.year, reference.posterUrl))
+    val index = mediaIndex ?: MdbListMediaIndex(this)
+    val resolvedFromIndex = index.resolve(type, ids)
+    val resolvedMedia = playback.asSequence()
+        .filter { (it.type == MdbListItemType.MOVIE) == isMovie && it.media.ids.matches(ids) }
+        .fold(resolvedFromIndex) { acc, record -> record.media.merged(acc) }
+    val media = resolvedMedia.merged(MdbListMedia(ids, reference.title, reference.year, reference.posterUrl))
     val episode = reference.episode.takeUnless { isMovie }
-    val known = if (episode == null) null else watched.firstOrNull { record ->
-        record.type == MdbListItemType.EPISODE && record.media.ids.matches(ids) &&
-            ((episode.tmdbId != null && episode.tmdbId == record.episodeTmdbId) ||
-                (episode.tvdbId != null && episode.tvdbId == record.episodeTvdbId) ||
-                (!episode.usesTvdbSeasonMapping && episode.season == record.season && episode.number == record.episode))
+    val candidates = if (episode == null) {
+        emptySequence()
+    } else {
+        projection?.watchedEpisodesForShow(ids) ?: watched.asSequence().filter { record ->
+            record.type == MdbListItemType.EPISODE && record.media.ids.matches(ids)
+        }
+    }
+    val known = if (episode == null) null else candidates.firstOrNull { record ->
+        (episode.tmdbId != null && episode.tmdbId == record.episodeTmdbId) ||
+            (episode.tvdbId != null && episode.tvdbId == record.episodeTvdbId) ||
+            (!episode.usesTvdbSeasonMapping && episode.season == record.season && episode.number == record.episode)
     }
     val season = known?.season ?: episode?.season
     val number = known?.episode ?: episode?.number
@@ -76,7 +90,7 @@ internal fun MdbListSyncSnapshot.mutationTarget(reference: TrackingMediaReferenc
 }
 
 internal fun TrackingExternalIds.toMdbListIds(): MdbListIds? = MdbListIds(
-    imdb = imdb?.takeIf { it.matches(Regex("tt[0-9]+")) },
+    imdb = imdb?.takeIf(String::isMdbListImdbId),
     tmdb = tmdb?.takeIf { it > 0L },
     tvdb = tvdb?.toLongOrNull()?.takeIf { it > 0L },
     trakt = trakt?.takeIf { it > 0L },

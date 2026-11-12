@@ -9,6 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -54,7 +58,12 @@ internal fun DebugMemberTierCard(
                 val shape = RoundedCornerShape(NuvioTheme.radii.sm)
                 Card(
                     onClick = { onTierSelected(tier) },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics {
+                            role = Role.RadioButton
+                            this.selected = selected
+                        },
                     colors = CardDefaults.colors(
                         containerColor = if (selected) {
                             NuvioTheme.colors.Secondary.copy(alpha = 0.2f)

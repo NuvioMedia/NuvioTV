@@ -61,17 +61,18 @@
     <string name="party_caught_up">De nouveau synchronisé avec la watch party</string>
     <string name="party_action_paused">%1$s a mis en pause</string>
     <string name="party_action_resumed">%1$s a repris la lecture</string>
-    <string name="party_action_seeked">%1$s a sauté à %2$s</string>
-    <string name="party_action_speed">%1$s a changé la vitesse à %2$s</string>
+    <string name="party_action_seeked">%1$s est passé à %2$s</string>
+    <string name="party_action_speed">%1$s a réglé la vitesse sur %2$s</string>
     <string name="party_joined_title">Vous y êtes</string>
     <string name="party_hosted_by">Organisée par %1$s</string>
     <string name="party_open_seat">Inviter un ami</string>
     <string name="party_host_hint">Pour organiser, lancez une watch party depuis le lecteur.</string>
     <string name="party_share_title">Partager mon flux</string>
-    <string name="party_share_description">Vos amis peuvent lire votre lien au lieu de choisir le leur. Il peut inclure votre clé debrid.</string>
+    <string name="party_share_description">Vos amis peuvent utiliser votre lien au lieu d’en choisir un. Il peut inclure votre clé debrid.</string>
     <string name="party_share_unavailable">Ce flux ne peut pas être partagé.</string>
     <string name="party_shared_by">Partagé par %1$s</string>
     <string name="party_invite_scan">Scannez avec un téléphone pour rejoindre</string>
     <string name="party_invite_share">Ou partagez le code. Vos amis peuvent le saisir dans Watch party sur n’importe quelle application Nuvio.</string>
     <string name="party_invite_qr">Code QR d’invitation à la watch party</string>
+    <string name="party_phone_chat_note">Ouvrez la watch party sur votre téléphone avec ce profil pour discuter.</string>
 </resources>

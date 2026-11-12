@@ -29,6 +29,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -120,12 +124,15 @@ internal fun ManageListsDialog(
                             Button(
                                 onClick = { onSelect(tab.key) },
                                 enabled = !pending,
-                                modifier = if (tab.key == personalTabs.firstOrNull()?.key) {
+                                modifier = (if (tab.key == personalTabs.firstOrNull()?.key) {
                                     Modifier
                                         .fillMaxWidth()
                                         .focusRequester(firstFocusRequester)
                                 } else {
                                     Modifier.fillMaxWidth()
+                                }).semantics {
+                                    role = Role.Tab
+                                    this.selected = selected
                                 },
                                 colors = ButtonDefaults.colors(
                                     containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
@@ -339,6 +346,12 @@ internal fun ListEditorDialog(
                 Button(
                     onClick = { onPrivacyChanged(privacy) },
                     enabled = !pending,
+                    modifier = Modifier.semantics {
+                        role = Role.RadioButton
+                        // `selected` is also a local val here, so compare explicitly
+                        // instead of reading the write-only semantics property.
+                        this.selected = privacy == state.privacy
+                    },
                     colors = ButtonDefaults.colors(
                         containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
                         contentColor = NuvioTheme.colors.TextPrimary

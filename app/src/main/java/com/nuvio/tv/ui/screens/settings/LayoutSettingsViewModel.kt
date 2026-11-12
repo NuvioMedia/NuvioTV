@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.core.util.readAppLogoBytes
 import com.nuvio.tv.domain.model.catalogRowLegacyKey
 import android.content.Context
 import android.graphics.Bitmap
@@ -11,6 +12,7 @@ import com.nuvio.tv.core.server.DeviceIpAddress
 import com.nuvio.tv.core.server.StreamBadgeConfigServer
 import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.core.streams.StreamBadgeRules
+import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
 import com.nuvio.tv.core.streams.StreamBadgeSettings
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
@@ -91,6 +93,7 @@ data class LayoutSettingsUiState(
     val customPosterEnabledScreens: Set<com.nuvio.tv.core.poster.CustomPosterScreen> =
         com.nuvio.tv.core.poster.CustomPosterScreen.ALL,
     val alwaysShowLandscapeClearlogo: Boolean = false,
+    val heroDescriptionAutoScrollEnabled: Boolean = false,
 )
 
 data class CatalogInfo(
@@ -152,6 +155,7 @@ sealed class LayoutSettingsEvent {
     data class SetContinueWatchingSortMode(val mode: ContinueWatchingSortMode) : LayoutSettingsEvent()
     data class SetContinueWatchingCardStyle(val style: ContinueWatchingCardStyle) : LayoutSettingsEvent()
     data class SetAlwaysShowLandscapeClearlogo(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetHeroDescriptionAutoScrollEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data object ResetPosterCardStyle : LayoutSettingsEvent()
     data object ResetCardDepthStyle : LayoutSettingsEvent()
     data class SetCustomPosterUrlPattern(val pattern: String) : LayoutSettingsEvent()
@@ -170,13 +174,14 @@ class LayoutSettingsViewModel @Inject constructor(
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
-    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository
+    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LayoutSettingsUiState())
     val uiState: StateFlow<LayoutSettingsUiState> = _uiState.asStateFlow()
     private var streamBadgeServer: StreamBadgeConfigServer? = null
-    private var logoBytes: ByteArray? = null
+    private val logoBytes: ByteArray? by lazy { context.readAppLogoBytes() }
 
     private val _streamBadgeUiState = MutableStateFlow(StreamBadgeSettingsUiState())
     val streamBadgeUiState: StateFlow<StreamBadgeSettingsUiState> = _streamBadgeUiState.asStateFlow()
@@ -191,7 +196,6 @@ class LayoutSettingsViewModel @Inject constructor(
     }
 
     init {
-        loadLogoBytes()
         viewModelScope.launch {
             streamBadgeSettingsDataStore.settings.collectLatest { settings ->
                 _streamBadgeUiState.update { it.copy(settings = settings) }
@@ -437,6 +441,13 @@ class LayoutSettingsViewModel @Inject constructor(
                     updateUiStateIfChanged { it.copy(alwaysShowLandscapeClearlogo = enabled) }
                 }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.heroDescriptionAutoScrollEnabled
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    updateUiStateIfChanged { it.copy(heroDescriptionAutoScrollEnabled = enabled) }
+                }
+        }
         loadAvailableCatalogs()
     }
 
@@ -491,6 +502,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetContinueWatchingSortMode -> setContinueWatchingSortMode(event.mode)
             is LayoutSettingsEvent.SetContinueWatchingCardStyle -> setContinueWatchingCardStyle(event.style)
             is LayoutSettingsEvent.SetAlwaysShowLandscapeClearlogo -> setAlwaysShowLandscapeClearlogo(event.enabled)
+            is LayoutSettingsEvent.SetHeroDescriptionAutoScrollEnabled -> setHeroDescriptionAutoScrollEnabled(event.enabled)
             LayoutSettingsEvent.ResetPosterCardStyle -> resetPosterCardStyle()
             LayoutSettingsEvent.ResetCardDepthStyle -> resetCardDepthStyle()
             is LayoutSettingsEvent.SetCustomPosterUrlPattern -> setCustomPosterUrlPattern(event.pattern)
@@ -560,14 +572,6 @@ class LayoutSettingsViewModel @Inject constructor(
 
     fun setStreamBadgePlacement(placement: StreamBadgePlacement) {
         viewModelScope.launch { streamBadgeSettingsDataStore.setStreamBadgePlacement(placement) }
-    }
-
-    private fun loadLogoBytes() {
-        try {
-            val inputStream = context.resources.openRawResource(R.drawable.app_logo_wordmark)
-            logoBytes = inputStream.use { it.readBytes() }
-        } catch (_: Exception) {
-        }
     }
 
     private fun stopStreamBadgeServer() {
@@ -859,6 +863,7 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.hideUnreleasedContent == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setHideUnreleasedContent(enabled)
+            homeCatalogSettingsSyncService.triggerPush()
         }
     }
 
@@ -901,6 +906,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.alwaysShowLandscapeClearlogo == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setAlwaysShowLandscapeClearlogo(enabled)
+        }
+    }
+
+    private fun setHeroDescriptionAutoScrollEnabled(enabled: Boolean) {
+        if (_uiState.value.heroDescriptionAutoScrollEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setHeroDescriptionAutoScrollEnabled(enabled)
         }
     }
 
@@ -1019,7 +1031,7 @@ class LayoutSettingsViewModel @Inject constructor(
                                 addonName = addon.displayName
                             )
                         }
-                }
+                }.distinctBy { it.key }
                 updateUiStateIfChanged { it.copy(availableCatalogs = catalogs) }
             }
         }

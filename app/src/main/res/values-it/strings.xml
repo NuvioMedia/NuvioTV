@@ -3359,9 +3359,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Ricerca approfondita con sincronizzazione automatica</string>
     <string name="autosync_thorough_description">Continua a confrontare gli altri sottotitoli e le tracce incorporate per trovare una corrispondenza più precisa prima della sincronizzazione. Se disattivata, viene usata prima la prima corrispondenza affidabile. Vengono applicate solo corrispondenze sicure.</string>
-    <string name="autosync_toast_failed">Sincronizzazione non riuscita: Auto Sync non ha trovato una corrispondenza tra questo sottotitolo e il video.</string>
-    <string name="autosync_toast_failed_no_reference">Sincronizzazione non riuscita: questo video non contiene sottotitoli incorporati da confrontare.</string>
-    <string name="autosync_toast_failed_unsupported">Sincronizzazione non riuscita: Auto Sync non supporta questo formato di sottotitoli.</string>
     <string name="autosync_label_synced">Sincronizzato automaticamente</string>
     <string name="stream_resume_from_time">Riprendi da %1$s</string>
     <string name="stream_resume_from_percent">Riprendi dal %1$d%%</string>

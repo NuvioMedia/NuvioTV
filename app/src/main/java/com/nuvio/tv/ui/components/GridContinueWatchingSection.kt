@@ -1,6 +1,6 @@
 package com.nuvio.tv.ui.components
 
-import com.nuvio.tv.ui.screens.home.shuffleFocusKey
+import com.nuvio.tv.ui.screens.home.continueWatchingItemKey
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
@@ -50,6 +50,7 @@ fun GridContinueWatchingSection(
     onStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
     showManualPlayOption: Boolean = false,
     onPlayManually: (ContinueWatchingItem) -> Unit = {},
+    onMarkWatched: (ContinueWatchingItem) -> Unit = {},
     modifier: Modifier = Modifier,
     title: String? = null,
     fullWidth: Dp = Dp.Unspecified,
@@ -137,14 +138,7 @@ fun GridContinueWatchingSection(
         ) {
             itemsIndexed(
                 items = items,
-                key = { _, item ->
-                    item.shuffleFocusKey ?: when (item) {
-                        is ContinueWatchingItem.InProgress ->
-                            "cw_${item.progress.contentId}_${item.progress.videoId}_${item.progress.season ?: -1}_${item.progress.episode ?: -1}"
-                        is ContinueWatchingItem.NextUp ->
-                            "nextup_${item.info.contentId}_${item.info.videoId}_${item.info.season}_${item.info.episode}"
-                    }
-                }
+                key = { _, item -> continueWatchingItemKey(item) }
             ) { index, progress ->
                 val requester = focusRequesters.getOrPut(index) { FocusRequester() }
                 val focusModifier = Modifier.focusRequester(requester)
@@ -208,6 +202,11 @@ fun GridContinueWatchingSection(
             showPlayManually = showManualPlayOption,
             onPlayManually = {
                 onPlayManually(menuItem)
+                optionsItem = null
+            },
+            onMarkWatched = {
+                pendingFocusIndex = if (items.size <= 1) null else minOf(lastFocusedIndex.intValue, items.lastIndex)
+                onMarkWatched(menuItem)
                 optionsItem = null
             }
         )

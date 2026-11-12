@@ -47,6 +47,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -145,6 +146,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
 ) : WatchProgressRepository {
     companion object {
         private const val TAG = "WatchProgressRepo"
+        private const val METADATA_MAX_ATTEMPTS = 3
     }
 
     private data class EpisodeMetadata(
@@ -169,6 +171,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val hydratedProgressKeys = mutableSetOf<ProfileContentKey>()
+    private data class MetadataAttempt(val count: Int, val lastAttemptEpochMs: Long)
+    private val metadataAttempts = mutableMapOf<ProfileContentKey, MetadataAttempt>()
+    internal var metadataRetryWindowMs = 2_000L
+    internal var metadataClock: () -> Long = System::currentTimeMillis
+    private var lastHydratedProfileId: Int? = null
     private val syncJobs = mutableMapOf<Int, Job>()
     private val syncJobsLock = Any()
     private val remoteProgressWriteDeduplicator = RemoteProgressWriteDeduplicator()
@@ -222,6 +229,21 @@ class WatchProgressRepositoryImpl @Inject constructor(
         }
     }
 
+    private fun canAttemptMetadata(key: ProfileContentKey, now: Long = metadataClock()): Boolean =
+        synchronized(metadataAttempts) {
+            val attempt = metadataAttempts[key] ?: return true
+            if (attempt.count >= METADATA_MAX_ATTEMPTS) return false
+            now - attempt.lastAttemptEpochMs >= (metadataRetryWindowMs * attempt.count)
+        }
+
+    private fun recordMetadataAttempt(key: ProfileContentKey, now: Long = metadataClock()) {
+        synchronized(metadataAttempts) {
+            val current = metadataAttempts[key]
+            val nextCount = (current?.count ?: 0) + 1
+            metadataAttempts[key] = MetadataAttempt(count = nextCount, lastAttemptEpochMs = now)
+        }
+    }
+
     private fun hydrateMetadata(progressList: List<WatchProgress>, profileId: Int) {
         val sorted = progressList.sortedByDescending { it.lastWatched }
         val uniqueByContent = linkedMapOf<String, WatchProgress>()
@@ -236,13 +258,17 @@ class WatchProgressRepositoryImpl @Inject constructor(
             if (contentId.isBlank()) return@forEach
             val key = ProfileContentKey(profileId, contentId)
             if (metadataState.value.containsKey(contentId)) return@forEach
+            if (!canAttemptMetadata(key)) return@forEach
 
             syncScope.launch {
                 val shouldFetch = metadataMutex.withLock {
                     if (profileManager.activeProfileId.value != profileId) return@withLock false
                     if (metadataState.value.containsKey(contentId)) return@withLock false
                     if (inFlightMetadataKeys.contains(key)) return@withLock false
+                    if (synchronized(hydratedProgressKeys) { key in hydratedProgressKeys }) return@withLock false
+                    if (!canAttemptMetadata(key)) return@withLock false
                     inFlightMetadataKeys.add(key)
+                    recordMetadataAttempt(key)
                     true
                 }
                 if (!shouldFetch) return@launch
@@ -253,6 +279,12 @@ class WatchProgressRepositoryImpl @Inject constructor(
                         contentType = progress.contentType
                     ) ?: return@launch
                     if (profileManager.activeProfileId.value != profileId) return@launch
+                    synchronized(hydratedProgressKeys) {
+                        hydratedProgressKeys.add(key)
+                    }
+                    synchronized(metadataAttempts) {
+                        metadataAttempts.remove(key)
+                    }
                     metadataState.update { current ->
                         current + (contentId to metadata)
                     }
@@ -376,7 +408,32 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 activeProgressProviderId = provider?.providerId
             }
         }
+        syncScope.launch { acknowledgeReportedProviderMarks() }
     }
+
+    /**
+     * Ends a pending provider mark once the active provider reports the item as watched. From then
+     * on the provider's data decides, so an unmark made through it elsewhere shows up here.
+     */
+    private suspend fun acknowledgeReportedProviderMarks() {
+        activeProgressProviderState
+            .flatMapLatest { provider -> provider?.let(::pendingMarksReportedBy) ?: emptyFlow() }
+            .collect { (profileId, reported) ->
+                runCatching { watchedItemsPreferences.acknowledgePendingProviderMarks(reported, profileId) }
+                    .onFailure { error -> Log.w(TAG, "Failed to acknowledge provider-reported marks", error) }
+            }
+    }
+
+    /** The active profile's pending provider marks that [provider] now reports as watched. */
+    private fun pendingMarksReportedBy(provider: TrackingProgressProvider): Flow<Pair<Int, Set<String>>> =
+        profileManager.activeProfileId.flatMapLatest { profileId ->
+            combine(
+                provider.reportedWatchedMovieIds,
+                watchedItemsPreferences.observePendingProviderMarks(profileId)
+            ) { reported, pending ->
+                profileId to pending.filterTo(linkedSetOf()) { contentId -> contentId in reported }
+            }
+        }
 
     private fun activeProgressProviderFlow(): Flow<TrackingProgressProvider?> = activeProgressProviderState
 
@@ -399,9 +456,15 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     override val allProgress: Flow<List<WatchProgress>>
         get() = profileManager.activeProfileId.flatMapLatest { profileId ->
-            metadataState.value = emptyMap()
-            synchronized(hydratedProgressKeys) {
-                hydratedProgressKeys.removeAll { it.profileId == profileId }
+            if (lastHydratedProfileId != profileId) {
+                lastHydratedProfileId = profileId
+                metadataState.value = emptyMap()
+                synchronized(hydratedProgressKeys) {
+                    hydratedProgressKeys.removeAll { it.profileId == profileId }
+                }
+                synchronized(metadataAttempts) {
+                    metadataAttempts.keys.removeAll { it.profileId == profileId }
+                }
             }
             activeProgressProviderFlow().flatMapLatest { provider ->
                 if (provider != null) {
@@ -421,7 +484,8 @@ class WatchProgressRepositoryImpl @Inject constructor(
                             val key = ProfileContentKey(profileId, progress.contentId)
                             (progress.poster == null || progress.backdrop == null ||
                                 progress.episodeTitle == null) &&
-                                synchronized(hydratedProgressKeys) { key !in hydratedProgressKeys }
+                                synchronized(hydratedProgressKeys) { key !in hydratedProgressKeys } &&
+                                canAttemptMetadata(key)
                         }
                         if (needsMetadata.isNotEmpty()) hydrateMetadata(needsMetadata, profileId)
                     }
@@ -431,7 +495,8 @@ class WatchProgressRepositoryImpl @Inject constructor(
                             val needsArtwork = items.filter { progress ->
                                 val key = ProfileContentKey(profileId, progress.contentId)
                                 progress.poster == null && progress.backdrop == null &&
-                                    synchronized(hydratedProgressKeys) { key !in hydratedProgressKeys }
+                                    synchronized(hydratedProgressKeys) { key !in hydratedProgressKeys } &&
+                                    canAttemptMetadata(key)
                             }
                             if (needsArtwork.isNotEmpty()) {
                                 syncScope.launch { hydrateProgressArtwork(needsArtwork, profileId) }
@@ -629,7 +694,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
         val baseFlow = activeProgressProviderFlow()
             .flatMapLatest { provider ->
                 if (provider != null) {
-                    provider.watchedMovieIds
+                    // Single items marked here stay watched until the provider reports them.
+                    combine(
+                        provider.watchedMovieIds,
+                        watchedItemsPreferences.pendingProviderMarks
+                    ) { providerIds, pendingMarks -> providerIds + pendingMarks }
                 } else {
                     combine(
                         watchProgressPreferences.allProgress,
@@ -744,7 +813,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     }
                 }
 
-                provider.isWatched(contentId, videoId, season, episode)
+                val providerWatched = provider.isWatched(contentId, videoId, season, episode)
+                if (season != null || episode != null) return@flatMapLatest providerWatched
+                combine(providerWatched, watchedItemsPreferences.pendingProviderMarks) { watched, pendingMarks ->
+                    watched || contentId in pendingMarks || (videoId != null && videoId in pendingMarks)
+                }
             }
     }
 
@@ -993,7 +1066,15 @@ class WatchProgressRepositoryImpl @Inject constructor(
         }
         watchProgressPreferences.saveProgress(completed, profileId = profileId)
         val watchedItem = completed.toWatchedItem(watchedAt = now)
-        watchedItemsPreferences.markAsWatched(watchedItem, profileId = profileId)
+        // With a tracking provider as the source, only its data decides what shows as watched, and it
+        // may never report a single item such as an add-on's YouTube video, so keep the mark pending.
+        val pendingProviderMark = watchedItem.season == null && watchedItem.episode == null &&
+            profileManager.activeProfileId.value == profileId && activeProgressProvider() != null
+        watchedItemsPreferences.markAsWatched(
+            watchedItem,
+            profileId = profileId,
+            pendingProviderMark = pendingProviderMark
+        )
         mutationStore.queueWatchedUpserts(listOf(watchedItem), profileId)
         if (broadcastTrackingHistory) {
             broadcastHistoryAdd(profileId, listOf(completed.toTrackingHistoryItem(now)))
@@ -1192,15 +1273,23 @@ class WatchProgressRepositoryImpl @Inject constructor(
         items.take(10).forEach { progress ->
             if (profileManager.activeProfileId.value != profileId) return
             val key = ProfileContentKey(profileId, progress.contentId)
-            synchronized(hydratedProgressKeys) {
-                hydratedProgressKeys.add(key)
+            if (!canAttemptMetadata(key)) return@forEach
+            val shouldFetch = metadataMutex.withLock {
+                if (profileManager.activeProfileId.value != profileId) return@withLock false
+                if (inFlightMetadataKeys.contains(key)) return@withLock false
+                if (synchronized(hydratedProgressKeys) { key in hydratedProgressKeys }) return@withLock false
+                if (!canAttemptMetadata(key)) return@withLock false
+                inFlightMetadataKeys.add(key)
+                recordMetadataAttempt(key)
+                true
             }
-            runCatching {
+            if (!shouldFetch) return@forEach
+            try {
                 val metadata = fetchContentMetadata(
                     contentId = progress.contentId,
                     contentType = progress.contentType
-                ) ?: return@runCatching
-                if (profileManager.activeProfileId.value != profileId) return@runCatching
+                ) ?: return@forEach
+                if (profileManager.activeProfileId.value != profileId) return@forEach
                 val episodeRuntimeMs = if (progress.season != null && progress.episode != null)
                     metadata.episodes[progress.season to progress.episode]?.runtimeMs ?: 0L
                 else 0L
@@ -1213,7 +1302,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 var posterToSave = progress.poster ?: metadata.poster
                 if (backdropToSave == null && posterToSave == null) {
                     val tmdbImages = tmdbService.fetchImdbImages(progress.contentId, progress.contentType)
-                    if (profileManager.activeProfileId.value != profileId) return@runCatching
+                    if (profileManager.activeProfileId.value != profileId) return@forEach
                     backdropToSave = tmdbImages?.backdropUrl
                     posterToSave = tmdbImages?.posterUrl
                 }
@@ -1233,7 +1322,19 @@ class WatchProgressRepositoryImpl @Inject constructor(
                         profileId = profileId
                     )
                 }
-            }.onFailure { Log.w(TAG, "Progress artwork hydration failed for ${progress.contentId}", it) }
+                synchronized(hydratedProgressKeys) {
+                    hydratedProgressKeys.add(key)
+                }
+                synchronized(metadataAttempts) {
+                    metadataAttempts.remove(key)
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Progress artwork hydration failed for ${progress.contentId}", e)
+            } finally {
+                metadataMutex.withLock {
+                    inFlightMetadataKeys.remove(key)
+                }
+            }
         }
     }
 

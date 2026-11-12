@@ -1,9 +1,12 @@
 package com.nuvio.tv.ui.screens.player
 
 import androidx.media3.common.MimeTypes
+import com.nuvio.tv.ui.util.languageCodeToName
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class PlayerSubtitleUtilsMimeTest {
 
@@ -114,5 +117,34 @@ class PlayerSubtitleUtilsMimeTest {
         assertEquals("es-419", PlayerSubtitleUtils.normalizeLanguageCode("spl"))
         assertTrue(PlayerSubtitleUtils.matchesLanguageCode("spn", "es"))
         assertTrue(PlayerSubtitleUtils.matchesLanguageCode("SPN", "es"))
+    }
+
+    @Test
+    fun normalizeLanguageCode_mapsMontenegrinToSerbianMontenegro() {
+        assertEquals("sr-me", PlayerSubtitleUtils.normalizeLanguageCode("mne"))
+        assertEquals("sr-me", PlayerSubtitleUtils.normalizeLanguageCode("ME"))
+        assertEquals("sr-me", PlayerSubtitleUtils.normalizeLanguageCode("cnr"))
+        assertEquals("sr-me", PlayerSubtitleUtils.normalizeLanguageCode("Montenegrin"))
+        assertTrue(PlayerSubtitleUtils.matchesLanguageCode("mne", "sr"))
+        assertTrue(PlayerSubtitleUtils.matchesLanguageCode("mne", "sr-me"))
+    }
+
+    @Test
+    fun normalizeLanguageCode_mapsCantoneseUnderChinese() {
+        assertEquals("zh-ca", PlayerSubtitleUtils.normalizeLanguageCode("zhc"))
+        assertEquals("zh-ca", PlayerSubtitleUtils.normalizeLanguageCode("ZHC"))
+        assertEquals("zh-ca", PlayerSubtitleUtils.normalizeLanguageCode("zc"))
+        assertEquals("zh-ca", PlayerSubtitleUtils.normalizeLanguageCode("yue"))
+        assertEquals("zh-ca", PlayerSubtitleUtils.normalizeLanguageCode("zh-ca"))
+        assertEquals("zh-ca", PlayerSubtitleUtils.normalizeLanguageCode("Cantonese"))
+        assertEquals("zh-ca", PlayerSubtitleUtils.normalizeLanguageCode("Chinese (Cantonese)"))
+        assertTrue(PlayerSubtitleUtils.matchesLanguageCode("zhc", "zh"))
+        assertTrue(PlayerSubtitleUtils.matchesLanguageCode("zhc", "zh-ca"))
+        val chinese = Locale.forLanguageTag("zh").getDisplayLanguage(Locale.getDefault())
+        val cantonese = Locale.forLanguageTag("yue").getDisplayLanguage(Locale.getDefault())
+        val label = languageCodeToName("zh-ca")
+        assertEquals("$chinese ($cantonese)", label)
+        assertEquals(label, languageCodeToName("zhc"))
+        assertFalse(label.contains("Canada", ignoreCase = true))
     }
 }

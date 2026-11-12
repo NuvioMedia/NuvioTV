@@ -309,12 +309,41 @@
     <string name="sub_outline_sub">Dodaj obrys wokół tekstu napisów dla lepszej widoczności</string>
     <string name="sub_outline_color">Kolor obrysu</string>
     <string name="sub_opacity">Krycie</string>
+    <string name="sub_appearance">Wygląd napisów</string>
+    <string name="sub_appearance_desc">Czcionka, kolory, tło i cień</string>
+    <string name="sub_appearance_hint">Dotyczy napisów tekstowych. Stylizowane napisy ASS i napisy graficzne zachowują oryginalny wygląd.</string>
+    <string name="sub_preview">Podgląd</string>
+    <string name="sub_preview_text">Każda historia zaczyna się od odrobiny ciekawości.</string>
+    <string name="sub_font">Czcionka</string>
+    <string name="sub_font_default">Domyślna</string>
+    <string name="sub_font_serif">Szeryfowa</string>
+    <string name="sub_font_mono">O stałej szerokości</string>
+    <string name="sub_font_import">Importuj z telefonu</string>
+    <string name="sub_font_import_desc">Dodaj czcionkę .ttf lub .otf do 10 MB. Zaimportowane czcionki zostają na tym TV.</string>
+    <string name="sub_font_import_qr">Zeskanuj telefonem, aby dodać czcionkę .ttf lub .otf</string>
+    <string name="sub_font_missing">Czcionka jest niedostępna na tym urządzeniu. Używana jest czcionka domyślna.</string>
+    <string name="sub_font_remove">Usuń %1$s</string>
+    <string name="sub_background">Tło</string>
+    <string name="sub_bg_opacity">Krycie tła</string>
+    <string name="sub_bg_roundness">Zaokrąglenie rogów</string>
+    <string name="sub_shadow">Cień</string>
+    <string name="sub_shadow_desc">Oddziel tekst od jasnych scen</string>
+    <string name="sub_shadow_opacity">Krycie cienia</string>
+    <string name="sub_shadow_size">Rozmiar cienia</string>
+    <string name="sub_reset_appearance">Resetuj wygląd</string>
     <string name="sub_advanced_section">Zaawansowane renderowanie napisów</string>
     <string name="sub_libass">Używaj libass dla napisów ASS/SSA</string>
     <string name="sub_libass_sub">Zaawansowane renderowanie ASS/SSA (style, pozycjonowanie, animacje)</string>
     <string name="sub_libass_mode">Tryb renderowania libass</string>
     <string name="sub_libass_render_scale">Rozdzielczość renderowania napisów</string>
     <string name="sub_libass_render_scale_sub">Niższa rozdzielczość poprawia wydajność przy ciężkim typesettingu kosztem ostrości</string>
+    <string name="sub_libass_render_mode">Tryb renderowania ASS</string>
+    <string name="sub_libass_render_mode_sub">Sposób rysowania napisów ASS/SSA na wideo</string>
+    <string name="sub_libass_render_mode_tunneled_sub">Tunelowane odtwarzanie omija pipeline efektów wideo. Nakładka jest używana automatycznie.</string>
+    <string name="sub_libass_render_mode_video_effect">Efekt wideo</string>
+    <string name="sub_libass_render_mode_video_effect_sub">Rysuje napisy bezpośrednio na każdej klatce wideo. Idealnie dokładny timing na każdym sprzęcie. Treści HDR są konwertowane do SDR.</string>
+    <string name="sub_libass_render_mode_overlay">Nakładka</string>
+    <string name="sub_libass_render_mode_overlay_sub">Renderuje napisy na osobnej warstwie. Zachowuje wyjście HDR. Timing napisów może nie być idealnie dokładny na niektórych urządzeniach.</string>
     <string name="sub_org_none">Brak (domyślna kolejność)</string>
     <string name="sub_org_by_lang">Według języka</string>
     <string name="sub_org_by_addon">Według dodatku</string>
@@ -510,6 +539,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Zawsze tło z logo dla poziomych plakatów</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Ignoruj poziomy plakat z dodatku i użyj tła z nakładką logo.</string>
+    <string name="layout_hero_description_auto_scroll">Automatyczne przewijanie opisów</string>
+    <string name="layout_hero_description_auto_scroll_sub">Powoli przewijaj długie opisy na ekranie głównym zamiast je ucinać.</string>
     <string name="web_custom_poster_title">Niestandardowe źródło plakatów</string>
     <string name="web_custom_poster_subtitle">Wklej wzorzec URL poniżej i naciśnij Zapisz.</string>
     <string name="web_custom_poster_label">Wzorzec URL</string>
@@ -526,6 +557,13 @@
     <string name="web_custom_poster_none">Brak wzorca</string>
     <string name="web_custom_poster_loading">Ładowanie…</string>
     <string name="web_custom_poster_placeholders_info">Symbole: {id} przekazuje wszystkie ID treści. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} celują w jeden typ ID - jeśli niedostępny, oryginalny plakat zostaje. {imdb_id|tmdb_id|kitsu_id} deklaruje wspierane typy ID - pasujący zostanie użyty, lub oryginalny plakat zostaje. Dodaj ? aby symbol był opcjonalny, rozwiązując do pustego zamiast pomijania: {imdb_id?}. Inne symbole: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">Czcionki napisów</string>
+    <string name="web_subtitle_font_subtitle">Wybierz plik .ttf lub .otf, aby używać go w napisach na TV.</string>
+    <string name="web_subtitle_font_choose">Wybierz plik czcionki</string>
+    <string name="web_subtitle_font_uploading">Przesyłanie…</string>
+    <string name="web_subtitle_font_added">Dodano do TV</string>
+    <string name="web_subtitle_font_error">Nie udało się zaimportować tej czcionki. Wybierz prawidłowy plik .ttf lub .otf mniejszy niż 10 MB.</string>
+    <string name="web_subtitle_font_connection_error">Błąd połączenia</string>
 
 
     <!-- MDBListSettingsScreen -->
@@ -1576,6 +1614,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automatyczne przełączanie silnika przy błędzie</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Jeśli uruchomienie strumienia się nie powiedzie, automatycznie przełącz między ExoPlayer a libmpv.</string>
+    <string name="playback_release_decoder_on_background">Zwalniaj dekoder w tle</string>
+    <string name="playback_release_decoder_on_background_sub">Zwalnia dekoder wideo, gdy Nuvio przechodzi w tło. Włącz, jeśli po powrocie do aplikacji odtwarzanie kończy się błędem dekodera. Po powrocie, także po wygaszaczu ekranu, odtwarzacz ładuje się od nowa</string>
     <string name="playback_external_forward_subtitles">Przekazuj napisy do zewnętrznego odtwarzacza</string>
     <string name="playback_external_forward_subtitles_sub">Pobierz napisy w preferowanym języku z dodatków i przekaż je do zewnętrznego odtwarzacza.</string>
     <string name="playback_engine_exoplayer_desc">Najlepsza kompatybilność z funkcjami Nuvio.</string>
@@ -3426,10 +3466,8 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Dokładne wyszukiwanie synchronizacji</string>
     <string name="autosync_thorough_description">Porównuj kolejne ścieżki napisów w poszukiwaniu lepszego dopasowania przed synchronizacją. Po wyłączeniu pierwsze silne dopasowanie jest używane szybciej. Tylko pewne dopasowania są stosowane.</string>
-    <string name="autosync_toast_failed">Synchronizacja nie powiodła się: nie udało się dopasować napisów do wideo.</string>
-    <string name="autosync_toast_failed_no_reference">Synchronizacja nie powiodła się: wideo nie zawiera osadzonych napisów do porównania.</string>
-    <string name="autosync_toast_failed_unsupported">Synchronizacja nie powiodła się: ten format napisów nie jest obsługiwany.</string>
-    <string name="autosync_label_synced">Zsynchronizowane automatycznie</string>
+    <string name="autosync_toast_no_fit">Synchronizacja nie powiodła się: te napisy nie pasują do tej wersji wideo.</string>
+    <string name="autosync_label_synced">Dopasowane</string>
 
     <string name="layout_trailer_4k">Zwiastuny 4K</string>
     <string name="layout_trailer_4k_sub">Odtwarzaj zwiastuny w rozdzielczości powyżej 1080p, gdy są dostępne. Zużywa znacznie więcej pamięci; domyślnie wyłączone na urządzeniach z 2 GB RAM lub mniej.</string>
@@ -3458,9 +3496,10 @@
 
     <string name="layout_custom_poster_screen_tv_recommendations">Rekomendacje TV</string>
 
-    <string name="playback_chapters_label">Rozdziały</string>
-    <string name="playback_exo_chapters_title">Pokaż rozdziały (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Odczytuj rozdziały z plików MKV, aby oznaczać je na pasku postępu i przeskakiwać między nimi. Wymaga kilku dodatkowych zapytań po rozpoczęciu odtwarzania. mpv zawsze pokazuje rozdziały.</string>
+    <string name="playback_exo_chapters_title">Pokaż rozdziały</string>
+    <string name="playback_exo_chapters_sub">Odczytuj rozdziały z plików MKV, aby oznaczać je na pasku postępu i przeskakiwać między nimi.</string>
+    <string name="playback_chapter_title_title">Pokaż tytuł rozdziału</string>
+    <string name="playback_chapter_title_sub">Pokazuj nazwę bieżącego rozdziału nad paskiem postępu.</string>
     <string name="player_chapters">Rozdziały</string>
     <string name="player_chapters_title">Rozdziały (%1$d)</string>
     <string name="player_chapter_number">Rozdział %1$d</string>
@@ -3482,4 +3521,32 @@
     <string name="subtitle_style_brightness_hdr">Jasność (HDR)</string>
     <string name="subtitle_style_text_color_hdr">Kolor tekstu (HDR)</string>
     <string name="subtitle_style_text_opacity_hdr">Przezroczystość tekstu (HDR)</string>
+    <string name="audio_night_mode">Tryb nocny</string>
+    <string name="audio_night_mode_sub">Wzmacnia dialogi i ciche dźwięki, dzięki czemu możesz oglądać przy niskiej głośności</string>
+    <string name="audio_night_mode_desc">Wzmacnia dialogi i ciche dźwięki, a głośne sceny pozostają bez zmian. Działa z dźwiękiem dekodowanym przez aplikację. Dolby i DTS wysyłane do amplitunera lub soundbara w trybie passthrough pozostają bez zmian.</string>
+    <string name="audio_night_mode_value">Tryb nocny: %1$s</string>
+    <string name="audio_night_mode_off">Wył.</string>
+    <string name="audio_night_mode_light">Lekki</string>
+    <string name="audio_night_mode_light_desc">Delikatne wzmocnienie, do +6 dB</string>
+    <string name="audio_night_mode_medium">Średni</string>
+    <string name="audio_night_mode_medium_desc">Wyraźnie wzmocnione dialogi, do +10 dB</string>
+    <string name="audio_night_mode_strong">Mocny</string>
+    <string name="audio_night_mode_strong_desc">Do +15 dB, do późnego oglądania przy niskiej głośności</string>
+    <string name="sub_hdr_dim_player_controls">Przyciemnij elementy sterowania w HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">Zastosuj jasność HDR do elementów sterowania i menu odtwarzacza wyświetlanych na wideo HDR i Dolby Vision</string>
+    <string name="settings_stream_player_badges_title">Znaczniki w odtwarzaczu</string>
+    <string name="settings_stream_player_badges_description">Wybierz pakiet znaczników używany przez odtwarzacz.</string>
+    <string name="settings_stream_player_badges_same">Takie same jak znaczniki strumieni</string>
+    <string name="audio_downmix_lfe_level">Poziom LFE przy downmiksie</string>
+    <string name="audio_downmix_lfe_level_sub">Miksuje kanał subwoofera (LFE) do pozostałych głośników zamiast go pomijać. Tylko dla układów bez LFE, takich jak 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">Używane, gdy układ downmiksu nie ma kanału LFE. Obowiązuje od następnego odtwarzania.</string>
+    <string name="audio_downmix_lfe_level_off">Wył.</string>
+    <string name="audio_downmix_lfe_level_half">50%</string>
+    <string name="audio_downmix_lfe_level_full">100%</string>
+    <string name="cd_enable_scraper">Włącz %1$s</string>
+    <string name="cd_enable_addon">Włącz %1$s</string>
+    <string name="cd_color_swatch">Kolor %1$s</string>
+    <string name="cd_emoji_option">Emoji %1$s</string>
+    <string name="cd_trailer_controls">Sterowanie zwiastunem</string>
+    <string name="cd_seek_bar">Pasek przewijania</string>
 </resources>

@@ -106,6 +106,7 @@ internal fun PlayerRuntimeController.applySurroundResolutionInPlace(reason: Stri
         downmixEnabled = surround.downmixEnabled,
         audioOutputChannels = surround.audioOutputChannels,
         downmixNormalizationEnabled = !settings.maintainOriginalAudioOnDownmix,
+        lfeMixLevel = settings.downmixLfeLevel.level,
         forceOpticalPassthrough = inputs.forceOpticalActive,
         deniedTranscodeMimes = surround.deniedTranscodeMimes
     )

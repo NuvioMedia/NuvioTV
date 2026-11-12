@@ -1,14 +1,23 @@
 package com.nuvio.tv.data.mdblist
 
+/**
+ * Lookup index mapping movie/show aliases to their merged [MdbListMedia] metadata.
+ *
+ * Once constructed for a [MdbListSyncSnapshot] and published on a [MdbListProgressProjection],
+ * this index is treated as effectively immutable and must only be queried via [resolve] or
+ * [resolveMedia] (never mutated after publication).
+ */
 internal class MdbListMediaIndex(snapshot: MdbListSyncSnapshot) {
-    private val byAlias = mutableMapOf<Pair<Boolean, String>, MdbListMedia>()
+    private val byAlias = HashMap<Pair<Boolean, String>, MdbListMedia>(
+        (snapshot.watched.size + snapshot.playback.size).coerceAtLeast(16)
+    )
 
     init {
         snapshot.watched.forEach { add(it.type, it.media) }
         snapshot.playback.forEach { add(it.type, it.media) }
     }
 
-    fun add(type: MdbListItemType, media: MdbListMedia): MdbListMedia {
+    internal fun add(type: MdbListItemType, media: MdbListMedia): MdbListMedia {
         val movie = type == MdbListItemType.MOVIE
         val merged = media.ids.aliases().mapNotNull { byAlias[movie to it] }
             .fold(media, MdbListMedia::merged)
@@ -19,6 +28,12 @@ internal class MdbListMediaIndex(snapshot: MdbListSyncSnapshot) {
     fun resolve(type: MdbListItemType, ids: MdbListIds): MdbListMedia =
         ids.aliases().firstNotNullOfOrNull { byAlias[(type == MdbListItemType.MOVIE) to it] }
             ?.let { it.copy(ids = it.ids.merged(ids)) } ?: MdbListMedia(ids)
+
+    fun resolveMedia(type: MdbListItemType, media: MdbListMedia): MdbListMedia {
+        val movie = type == MdbListItemType.MOVIE
+        return media.ids.aliases().mapNotNull { byAlias[movie to it] }
+            .fold(media, MdbListMedia::merged)
+    }
 }
 
 internal fun MdbListSyncSnapshot.normalizeMedia(): MdbListSyncSnapshot {

@@ -305,7 +305,7 @@ private fun FolderCard(
             if (!activeImageUrl.isNullOrBlank()) {
                 AsyncImage(
                     model = activeImageUrl,
-                    contentDescription = folder.title,
+                    contentDescription = if (folder.hideTitle) folder.title else null,
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(shape),

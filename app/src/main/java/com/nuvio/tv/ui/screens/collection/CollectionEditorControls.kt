@@ -199,6 +199,16 @@ fun NuvioButton(
     )
 }
 
+fun collectionSourceKeys(sources: List<CollectionSource>): List<String> {
+    val seen = HashMap<String, Int>()
+    return sources.map { source ->
+        val key = collectionSourceKey(source)
+        val occurrence = seen.getOrDefault(key, 0)
+        seen[key] = occurrence + 1
+        if (occurrence == 0) key else "$key#$occurrence"
+    }
+}
+
 fun collectionSourceKey(source: CollectionSource): String {
     return when (source) {
         is AddonCatalogCollectionSource -> "addon_${source.addonId}_${source.type}_${source.catalogId}_${source.genre.orEmpty()}"
