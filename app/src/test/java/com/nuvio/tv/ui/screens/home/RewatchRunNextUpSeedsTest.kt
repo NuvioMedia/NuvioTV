@@ -215,6 +215,63 @@ class RewatchRunNextUpSeedsTest {
     }
 
     @Test
+    fun `a run older than the canonical watch does not lead its series`() {
+        val olderRun = run(contentId = SHOW, season = 1, episode = 4, markedAt = 1_000L)
+        val newerRun = run(contentId = OTHER_SHOW, season = 2, episode = 1, markedAt = 5_000L)
+        val seeds = listOf(
+            seed(contentId = SHOW, season = 5, episode = 3, lastWatched = 2_000L),
+            seed(contentId = OTHER_SHOW, season = 3, episode = 9, lastWatched = 2_000L),
+        )
+
+        assertEquals(listOf(newerRun), runsLeadingTheirSeries(seeds, listOf(olderRun, newerRun)))
+    }
+
+    @Test
+    fun `a run with no seed of its series leads it`() {
+        val run = run(contentId = SHOW, season = 1, episode = 4, markedAt = 1_000L)
+
+        assertEquals(listOf(run), runsLeadingTheirSeries(emptyList(), listOf(run)))
+    }
+
+    @Test
+    fun `the dismissal of a canonical card newer than the run holds`() {
+        val run = run(contentId = SHOW, season = 1, episode = 4, markedAt = 1_000L)
+        val canonical = seed(contentId = SHOW, season = 5, episode = 3, lastWatched = 2_000L)
+
+        val result = withoutLiveRewatchDismissals(
+            dismissed = setOf(SHOW),
+            runs = runsLeadingTheirSeries(listOf(canonical), listOf(run)),
+        )
+
+        assertEquals(setOf(SHOW), result)
+    }
+
+    @Test
+    fun `the card seeded at the run position is the run card`() {
+        val runs = listOf(run(contentId = SHOW, season = 1, episode = 4, markedAt = 1_000L, matchKeys = listOf("imdb:$SHOW")))
+
+        assertTrue(isRewatchRunCard(runs, SHOW, seedSeason = 1, seedEpisode = 4))
+        assertTrue(isRewatchRunCard(runs, "imdb:$SHOW", seedSeason = 1, seedEpisode = 4))
+    }
+
+    @Test
+    fun `a canonical card of a series with an older run is not the run card`() {
+        val run = run(contentId = SHOW, season = 1, episode = 4, markedAt = 1_000L)
+        val canonical = seed(contentId = SHOW, season = 5, episode = 3, lastWatched = 2_000L)
+        // The row keeps the canonical seed, so the card on screen is seeded at S05E03.
+        val card = applyRewatchRunPositions(listOf(canonical), listOf(run)).single()
+
+        assertFalse(isRewatchRunCard(listOf(run), card.contentId, card.season, card.episode))
+    }
+
+    @Test
+    fun `a card of a series with no run is not a run card`() {
+        val runs = listOf(run(contentId = OTHER_SHOW, season = 1, episode = 4, markedAt = 1_000L))
+
+        assertFalse(isRewatchRunCard(runs, SHOW, seedSeason = 1, seedEpisode = 4))
+    }
+
+    @Test
     fun `an optimistic run replaces the account run for the same item`() {
         val account = run(contentId = SHOW, season = 3, episode = 4, markedAt = 1_000L)
         val optimistic = run(contentId = SHOW, season = 3, episode = 5, markedAt = 2_000L)

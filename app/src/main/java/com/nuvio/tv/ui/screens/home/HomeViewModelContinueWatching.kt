@@ -360,9 +360,11 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 val daysCap = snapshot.daysCap
                 // Closing a run used to leave a dismissal under the card's content id. A new run of
                 // the same title opened on Simkl is a running run, so it outranks that dismissal.
+                // Only a run whose card is on screen does: the dismissal of a canonical card that is
+                // newer than the run holds.
                 val dismissedNextUp = withoutLiveRewatchDismissals(
                     dismissed = snapshot.dismissedNextUp,
-                    runs = snapshot.rewatchRuns
+                    runs = runsLeadingTheirSeries(snapshot.nextUpSeeds, snapshot.rewatchRuns)
                 )
                 val showUnairedNextUp = snapshot.showUnairedNextUp
                 val nextUpFromFurthestEpisode = snapshot.nextUpFromFurthestEpisode
@@ -3425,7 +3427,13 @@ internal fun HomeViewModel.removeContinueWatchingPipeline(
     if (isNextUp) {
         val dismissKey = nextUpDismissKey(contentId, season, episode)
         val snapshot = simklSyncRepository.state.value.snapshot
-        if (runningRewatchFor(snapshot, contentId) != null) {
+        // Only the run's own card ends the run on the account. The row places cards with the
+        // optimistic runs too, so the card is matched against the same list.
+        val rowRuns = mergeOptimisticRewatchRuns(snapshot.rewatchRuns, cwOptimisticRewatchRuns.value)
+        if (
+            isRewatchRunCard(rowRuns, contentId, season, episode) &&
+            runningRewatchFor(snapshot, contentId) != null
+        ) {
             // The close continuation writes into the row and the dismissals, which belong to the
             // profile that asked for the close. A switch while the write is in flight must not let
             // it touch the next profile.

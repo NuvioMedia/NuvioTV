@@ -172,3 +172,30 @@ internal fun withoutLiveRewatchDismissals(
         runs.any { run -> run.matches(key) }
     }
 }
+
+/**
+ * The runs whose card is the one on screen: no completed seed of the series is newer than the run.
+ *
+ * Same comparison as [applyRewatchRunPositions]. A run older than the canonical watch leaves the
+ * canonical card on screen, and a dismissal of that card has to hold.
+ */
+internal fun runsLeadingTheirSeries(
+    seeds: List<WatchProgress>,
+    runs: List<RewatchRunPosition>,
+): List<RewatchRunPosition> = runs.filter { run ->
+    seeds.none { seed -> run.matches(seed.contentId) && run.markedAtEpochMs < seed.lastWatched }
+}
+
+/**
+ * Whether a Next Up card stands for the rewatch run of its series. The run moves the card's seed
+ * onto its own position, so a card seeded anywhere else is the canonical card.
+ */
+internal fun isRewatchRunCard(
+    runs: List<RewatchRunPosition>,
+    contentId: String,
+    seedSeason: Int?,
+    seedEpisode: Int?,
+): Boolean {
+    val run = runs.firstOrNull { candidate -> candidate.matches(contentId) } ?: return false
+    return run.seasonNumber == seedSeason && run.episodeNumber == seedEpisode
+}
