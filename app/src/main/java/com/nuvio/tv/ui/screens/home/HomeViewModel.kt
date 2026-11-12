@@ -572,10 +572,9 @@ class HomeViewModel @Inject constructor(
      */
     private fun invalidateCwCachesForRewatchRuns(keys: Set<String>) {
         if (keys.isEmpty()) return
-        keys.forEach { contentId ->
-            cwEnrichedNextUpOverlay.remove(contentId)
-            cwEnrichedInProgressOverlay.remove(contentId)
-        }
+        // The enriched overlays stay: they are reused for the same episode only, and the series
+        // title and artwork they hold are what the card keeps while its next episode is enriched.
+        // Dropping them made the card that just moved show its raw provider title in between.
         synchronized(cwNextUpResolutionCache) {
             cwNextUpResolutionCache.keys.removeAll { key -> key.substringBefore('|') in keys }
         }
