@@ -105,8 +105,12 @@ data class PlayerUiState(
     val subtitleTracks: List<TrackInfo> = emptyList(),
     val selectedAudioTrackIndex: Int = -1,
     val selectedSubtitleTrackIndex: Int = -1,
-    /** The file's chapters, sorted; empty when it has fewer than two. */
+    /** The file's chapters, sorted; empty when it has fewer than two or chapters are turned off. */
     val chapters: List<PlayerChapter> = emptyList(),
+    /** The "Show chapters" setting, for both engines. */
+    val chaptersEnabled: Boolean = false,
+    /** Whether the current chapter's title is shown above the progress bar. */
+    val showChapterTitle: Boolean = true,
     val showChaptersPanel: Boolean = false,
     val audioDelayMs: Int = 0,
     val audioAmplificationDb: Int = 0,
@@ -391,6 +395,12 @@ sealed class PlayerEvent {
     data class OnSetSubtitleOutlineEnabled(val enabled: Boolean) : PlayerEvent()
     data class OnSetSubtitleOutlineColor(val color: Int) : PlayerEvent()
     data class OnSetSubtitleVerticalOffset(val offset: Int) : PlayerEvent()
+    data class OnSetSubtitleFont(val fontId: String) : PlayerEvent()
+    data class OnSetSubtitleBackgroundColor(val color: Int) : PlayerEvent()
+    data class OnSetSubtitleBackgroundRadius(val radius: Int) : PlayerEvent()
+    data class OnSetSubtitleShadowEnabled(val enabled: Boolean) : PlayerEvent()
+    data class OnSetSubtitleShadowOpacity(val opacity: Int) : PlayerEvent()
+    data class OnSetSubtitleShadowSize(val size: Int) : PlayerEvent()
     data object OnResetSubtitleDefaults : PlayerEvent()
     data object OnToggleAspectRatio : PlayerEvent()
     data object OnSwitchInternalPlayerEngine : PlayerEvent()

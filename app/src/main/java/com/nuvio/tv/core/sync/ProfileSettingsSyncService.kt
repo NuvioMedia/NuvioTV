@@ -103,6 +103,7 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "dv7_libdovi_mode_override",
     "strip_hdr10plus_sei",
     "exo_chapters_enabled",
+    "chapter_title_enabled",
     "mpv_hardware_decode_mode",
     "frame_rate_matching",
     "frame_rate_matching_mode",

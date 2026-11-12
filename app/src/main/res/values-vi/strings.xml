@@ -810,9 +810,8 @@
     <string name="video_section">Video</string>
     <string name="playback_true_black_letterbox">Viền đen tuyệt đối</string>
     <string name="playback_true_black_letterbox_sub">Không phủ màu các viền đen xung quanh hình ảnh để hiển thị HDR đen tuyệt đối. Vui lòng tắt tính năng này nếu xuất hiện vệt sáng trên các viền đen.</string>
-    <string name="playback_chapters_label">Chương</string>
-    <string name="playback_exo_chapters_title">Hiển thị chương (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Đọc các chương của tệp MKV để đánh dấu trên thanh tiến trình và chuyển đổi qua lại giữa chúng. Thực hiện thêm một vài yêu cầu nhỏ khi bắt đầu phát lại. mpv luôn hiển thị các chương.</string>
+    <string name="playback_exo_chapters_title">Hiển thị chương</string>
+    <string name="playback_exo_chapters_sub">Đọc các chương của tệp MKV để đánh dấu trên thanh tiến trình và chuyển đổi qua lại giữa chúng.</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Tự động phát trailer</string>
     <string name="audio_autoplay_trailers_sub">Tự động phát trailer trên màn hình chi tiết sau một khoảng thời gian không hoạt động</string>

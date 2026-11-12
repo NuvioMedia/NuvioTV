@@ -807,9 +807,8 @@
     <string name="video_section">Видео</string>
     <string name="playback_true_black_letterbox">Истински черни ленти</string>
     <string name="playback_true_black_letterbox_sub">Оставете лентите около картината неоцветени, за да остане HDR истински черен. Изключете тази опция, ако върху лентите се появява ярка линия.</string>
-    <string name="playback_chapters_label">Глави</string>
-    <string name="playback_exo_chapters_title">Показване на глави (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Чете главите на MKV файловете, за да ги маркира в лентата за напредък и да прескача между тях. Прави няколко малки допълнителни заявки, след като възпроизвеждането започне. mpv винаги показва глави.</string>
+    <string name="playback_exo_chapters_title">Показване на глави</string>
+    <string name="playback_exo_chapters_sub">Чете главите на MKV файловете, за да ги маркира в лентата за напредък и да прескача между тях.</string>
     <string name="audio_trailer_section">Трейлър</string>
     <string name="audio_autoplay_trailers">Автоматично пускане на трейлъри</string>
     <string name="audio_autoplay_trailers_sub">Автоматично възпроизвеждане на трейлъри на екраните с подробности и след възпроизвеждане</string>

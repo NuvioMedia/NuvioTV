@@ -32,7 +32,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.LocalTextStyle
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -44,7 +43,9 @@ import kotlin.math.min
 private const val AUTO_SCROLL_START_DELAY_MS = 3_000L
 private const val AUTO_SCROLL_END_PAUSE_MS = 3_000L
 private const val AUTO_SCROLL_RETURN_DURATION_MS = 600
-private const val AUTO_SCROLL_SPEED_DP_PER_SECOND = 12f
+// Time per line of text rather than a fixed dp speed, so the reading pace is the same at any text
+// size. About 240 words a minute at the 9 to 10 words a hero description line holds.
+private const val AUTO_SCROLL_MS_PER_LINE = 2_500
 // Stop after a few loops so an idle Home screen doesn't animate forever.
 private const val AUTO_SCROLL_MAX_CYCLES = 3
 private const val AUTO_SCROLL_FADE_FRACTION = 0.18f
@@ -114,7 +115,7 @@ fun AutoScrollingText(
         val viewportPx = layout.getLineBottom(maxLines - 1)
         val overflowPx = layout.size.height - viewportPx
         val viewportHeight = with(density) { viewportPx.toDp() }
-        val speedPxPerSecond = with(density) { AUTO_SCROLL_SPEED_DP_PER_SECOND.dp.toPx() }
+        val lineHeightPx = viewportPx / maxLines
         val currentPaused by rememberUpdatedState(paused)
         // A fresh offset per text, so a new description never shows at the previous one's position.
         val offset = remember(text) { Animatable(0f) }
@@ -124,7 +125,7 @@ fun AutoScrollingText(
                 animationsDisabled = true
                 return@LaunchedEffect
             }
-            val scrollDurationMs = (overflowPx / speedPxPerSecond * 1000f).toInt().coerceAtLeast(1)
+            val scrollDurationMs = (overflowPx / lineHeightPx * AUTO_SCROLL_MS_PER_LINE).toInt().coerceAtLeast(1)
             withContext(FixedMotionDurationScale) {
                 snapshotFlow { currentPaused() }
                     .distinctUntilChanged()

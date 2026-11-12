@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
+import com.nuvio.tv.core.player.SubtitleFonts
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -155,7 +156,12 @@ data class SubtitleStyleSettings(
     val hdrStyleEnabled: Boolean = false,
     val hdrTextColor: Int = Color.White.toArgb(),
     val hdrBrightness: Int = HDR_BRIGHTNESS_DEFAULT, // 0-100, see hdrBrightnessFactor
-    val hdrDimPlayerControls: Boolean = false
+    val hdrDimPlayerControls: Boolean = false,
+    val fontId: String = SubtitleFonts.DEFAULT,
+    val backgroundRadius: Int = 0,
+    val shadowEnabled: Boolean = false,
+    val shadowOpacity: Int = SHADOW_OPACITY_DEFAULT,
+    val shadowSize: Int = SHADOW_SIZE_DEFAULT
 ) {
     /**
      * The style to render with: on HDR/Dolby Vision video with the override enabled, the HDR text
@@ -190,6 +196,11 @@ data class SubtitleStyleSettings(
         const val HDR_BRIGHTNESS_MIN = 0
         const val HDR_BRIGHTNESS_MAX = 100
         const val HDR_BRIGHTNESS_DEFAULT = 40
+        const val BACKGROUND_RADIUS_MAX = 24
+        const val SHADOW_OPACITY_DEFAULT = 75
+        const val SHADOW_SIZE_MIN = 1
+        const val SHADOW_SIZE_MAX = 8
+        const val SHADOW_SIZE_DEFAULT = 2
 
         /** Maps the 0-100 setting onto 30%-100% of full brightness, so 0 still leaves readable text. */
         private fun hdrBrightnessFactor(brightness: Int): Float =
@@ -338,8 +349,13 @@ data class PlayerSettings(
     // Only honored when dv7HandlingMode is OFF or DV81_LIBDOVI.
     val dv7LibdoviModeOverride: Int = -1,
     val stripHdr10PlusSei: Boolean = false,
-    /** ExoPlayer reads Matroska chapters itself over HTTP; mpv always lists them. */
+    /**
+     * Chapters on the progress bar and in the chapters panel, for both engines. ExoPlayer reads
+     * Matroska chapters itself over HTTP; mpv lists them. Chapters still feed skip intro when off.
+     */
     val exoChaptersEnabled: Boolean = false,
+    /** The current chapter's title above the progress bar, when chapters are shown. */
+    val chapterTitleEnabled: Boolean = true,
     val mpvHi10pGnextSoftwareFallbackEnabled: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
     // Display settings
@@ -666,6 +682,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val dv7LibdoviModeOverrideKey = intPreferencesKey("dv7_libdovi_mode_override")
     private val stripHdr10PlusSeiKey = booleanPreferencesKey("strip_hdr10plus_sei")
     private val exoChaptersEnabledKey = booleanPreferencesKey("exo_chapters_enabled")
+    private val chapterTitleEnabledKey = booleanPreferencesKey("chapter_title_enabled")
     private val mpvHi10pGnextSoftwareFallbackEnabledKey =
         booleanPreferencesKey("mpv_hi10p_gnext_software_fallback_enabled")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
@@ -734,6 +751,11 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleHdrTextColorKey = intPreferencesKey("subtitle_hdr_text_color")
     private val subtitleHdrBrightnessKey = intPreferencesKey("subtitle_hdr_brightness")
     private val subtitleHdrDimPlayerControlsKey = booleanPreferencesKey("subtitle_hdr_dim_player_controls")
+    private val subtitleFontIdKey = stringPreferencesKey("subtitle_font_id")
+    private val subtitleBackgroundRadiusKey = intPreferencesKey("subtitle_background_radius")
+    private val subtitleShadowEnabledKey = booleanPreferencesKey("subtitle_shadow_enabled")
+    private val subtitleShadowOpacityKey = intPreferencesKey("subtitle_shadow_opacity")
+    private val subtitleShadowSizeKey = intPreferencesKey("subtitle_shadow_size")
 
     // Buffer settings keys
     private val minBufferMsKey = intPreferencesKey("min_buffer_ms")
@@ -1062,6 +1084,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 dv7LibdoviModeOverride = (prefs[dv7LibdoviModeOverrideKey] ?: -1).coerceIn(-1, 4),
                 stripHdr10PlusSei = prefs[stripHdr10PlusSeiKey] ?: false,
                 exoChaptersEnabled = prefs[exoChaptersEnabledKey] ?: false,
+                chapterTitleEnabled = prefs[chapterTitleEnabledKey] ?: true,
                 mpvHi10pGnextSoftwareFallbackEnabled =
                     prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
@@ -1180,7 +1203,15 @@ class PlayerSettingsDataStore @Inject constructor(
                         hdrStyleEnabled = prefs[subtitleHdrStyleEnabledKey] ?: false,
                         hdrTextColor = prefs[subtitleHdrTextColorKey] ?: Color.White.toArgb(),
                         hdrBrightness = prefs[subtitleHdrBrightnessKey] ?: SubtitleStyleSettings.HDR_BRIGHTNESS_DEFAULT,
-                        hdrDimPlayerControls = prefs[subtitleHdrDimPlayerControlsKey] ?: false
+                        hdrDimPlayerControls = prefs[subtitleHdrDimPlayerControlsKey] ?: false,
+                        fontId = prefs[subtitleFontIdKey] ?: SubtitleFonts.DEFAULT,
+                        backgroundRadius = (prefs[subtitleBackgroundRadiusKey] ?: 0)
+                            .coerceIn(0, SubtitleStyleSettings.BACKGROUND_RADIUS_MAX),
+                        shadowEnabled = prefs[subtitleShadowEnabledKey] ?: false,
+                        shadowOpacity = (prefs[subtitleShadowOpacityKey] ?: SubtitleStyleSettings.SHADOW_OPACITY_DEFAULT)
+                            .coerceIn(0, 100),
+                        shadowSize = (prefs[subtitleShadowSizeKey] ?: SubtitleStyleSettings.SHADOW_SIZE_DEFAULT)
+                            .coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX)
                     )
                 },
                 bufferSettings = BufferSettings(
@@ -1739,6 +1770,7 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setDv7LibdoviModeOverride(mode: Int) { store().edit { it[dv7LibdoviModeOverrideKey] = mode.coerceIn(-1, 4) } }
     suspend fun setStripHdr10PlusSei(enabled: Boolean) { store().edit { it[stripHdr10PlusSeiKey] = enabled } }
     suspend fun setExoChaptersEnabled(enabled: Boolean) { store().edit { it[exoChaptersEnabledKey] = enabled } }
+    suspend fun setChapterTitleEnabled(enabled: Boolean) { store().edit { it[chapterTitleEnabledKey] = enabled } }
 
     // Subtitle styles
     suspend fun setSubtitlePreferredLanguage(language: String) { store().edit { it[subtitlePreferredLanguageKey] = normalizeSelectableLanguageCode(language.ifBlank { SubtitleLanguageOption.DEVICE }) } }
@@ -1768,6 +1800,40 @@ class PlayerSettingsDataStore @Inject constructor(
                 SubtitleStyleSettings.HDR_BRIGHTNESS_MIN,
                 SubtitleStyleSettings.HDR_BRIGHTNESS_MAX
             )
+        }
+    }
+    suspend fun setSubtitleFontId(fontId: String) { store().edit { it[subtitleFontIdKey] = fontId } }
+    suspend fun setSubtitleBackgroundRadius(radius: Int) {
+        store().edit { it[subtitleBackgroundRadiusKey] = radius.coerceIn(0, SubtitleStyleSettings.BACKGROUND_RADIUS_MAX) }
+    }
+    suspend fun setSubtitleShadowEnabled(enabled: Boolean) { store().edit { it[subtitleShadowEnabledKey] = enabled } }
+    suspend fun setSubtitleShadowOpacity(opacity: Int) { store().edit { it[subtitleShadowOpacityKey] = opacity.coerceIn(0, 100) } }
+    suspend fun setSubtitleShadowSize(size: Int) {
+        store().edit {
+            it[subtitleShadowSizeKey] = size.coerceIn(SubtitleStyleSettings.SHADOW_SIZE_MIN, SubtitleStyleSettings.SHADOW_SIZE_MAX)
+        }
+    }
+    suspend fun resetSubtitleAppearance(resetHdrText: Boolean = false) {
+        val defaults = SubtitleStyleSettings()
+        store().edit { prefs ->
+            prefs[subtitleSizeKey] = defaults.size
+            prefs[subtitleVerticalOffsetKey] = defaults.verticalOffset
+            prefs[subtitleBoldKey] = defaults.bold
+            if (resetHdrText) {
+                prefs[subtitleHdrTextColorKey] = defaults.hdrTextColor
+                prefs[subtitleHdrBrightnessKey] = defaults.hdrBrightness
+            } else {
+                prefs[subtitleTextColorKey] = defaults.textColor
+            }
+            prefs[subtitleBackgroundColorKey] = defaults.backgroundColor
+            prefs[subtitleOutlineEnabledKey] = defaults.outlineEnabled
+            prefs[subtitleOutlineColorKey] = defaults.outlineColor
+            prefs[subtitleOutlineWidthKey] = defaults.outlineWidth
+            prefs[subtitleFontIdKey] = defaults.fontId
+            prefs[subtitleBackgroundRadiusKey] = defaults.backgroundRadius
+            prefs[subtitleShadowEnabledKey] = defaults.shadowEnabled
+            prefs[subtitleShadowOpacityKey] = defaults.shadowOpacity
+            prefs[subtitleShadowSizeKey] = defaults.shadowSize
         }
     }
 
