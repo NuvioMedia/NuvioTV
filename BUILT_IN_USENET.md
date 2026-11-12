@@ -236,7 +236,7 @@ messages keep only their host.
 This state is device-local, keyed by a hash of the endpoint and key, and holds
 no credentials.
 
-### Indexer statistics
+### Source statistics
 
 **Diagnostics** shows a card per indexer: searches (failed, or skipped while
 paused), how often an answered search found releases and how many on average,
@@ -245,21 +245,29 @@ checks) and how many were refused for a limit or failed, the average response
 time, NZB downloads that opened, and how many of its releases played or failed
 for good. An NZB served from the NZB cache is not a download, and neither is one
 for a release that fails to open; a release that fails for good counts as
-unavailable. The grabs
-left that the indexer itself reports are on its row in the sources list. Bars
-compare the indexers' releases played and NZB downloads. **Statistics period**
-chooses the last 7 days, the last 30 days (default) or all time; **Statistics
-content** chooses all, movies or shows. Capabilities requests and key checks
-belong to neither, so they count under all only. A release counts for the
-indexer whose search listed it in this session, or whose key its reused link
-names, and a release's played or unavailable result counts at most once every
-12 hours.
+unavailable. The grabs left that the indexer itself reports are on its row in
+the sources list. A release counts for the indexer whose search listed it in
+this session, or whose key its reused link names, and a release's played or
+unavailable result counts at most once every 12 hours.
+
+A card per provider shows the articles it served, its completion (the share of
+the articles asked of it that it had, with the missing ones), other errors, the
+data downloaded, its average time to first byte and the sessions that used it.
+The engine reports these when a session closes; a session the engine never
+closes, because the engine itself stopped, is not counted.
+
+Bars compare the indexers' releases played and NZB downloads, and the providers'
+articles served. **Statistics period** chooses the last 7 days, the last 30 days
+(default) or all time; **Statistics content** chooses all, movies or shows.
+Capabilities requests and key checks belong to neither, so they count under all
+only.
 
 Counts are kept per day for 30 days and in total, are stored on the device,
 shared by all profiles and cleared by **Reset statistics** or an account reset.
-Indexers are keyed like the state above: no URL, key or name is stored, and an
-edited indexer starts again. An indexer unused for 180 days is forgotten. Counts
-are written at most every 5 seconds and when the app leaves the foreground.
+Indexers are keyed like the state above, providers by a hash of their address
+and username: no URL, key, password or name is stored, and an edited source
+starts again. A source unused for 180 days is forgotten. Counts are written at
+most every 5 seconds and when the app leaves the foreground.
 
 Protocol references (implementation is native Kotlin):
 

@@ -31,14 +31,17 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.core.usenet.IndexerCounts
+import com.nuvio.tv.core.usenet.ProviderCounts
 import com.nuvio.tv.core.usenet.StatsContent
 import com.nuvio.tv.core.usenet.StatsPeriod
 import com.nuvio.tv.core.usenet.UsenetIndexer
+import com.nuvio.tv.core.usenet.UsenetProvider
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
 import java.text.DateFormat
 import java.util.Date
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 /** How a period and a content filter are named. */
 private val StatsPeriod.label: Int
@@ -56,18 +59,19 @@ private val StatsContent.label: Int
     }
 
 /**
- * Indexer statistics under the startup diagnostics: the two filters, bars that compare the
- * indexers, a card per indexer and a reset. Separate lazy items, like the diagnostics, so the
- * remote reaches each one.
+ * Source statistics under the startup diagnostics: the two filters, bars that compare the sources,
+ * a card per indexer and per provider, and a reset. Separate lazy items, like the diagnostics, so
+ * the remote reaches each one.
  */
 internal fun LazyListScope.usenetStatsCardItems(
     indexers: List<UsenetIndexer>,
+    providers: List<UsenetProvider>,
     stats: UsenetStatsUi,
     onPeriod: (StatsPeriod) -> Unit,
     onContent: (StatsContent) -> Unit,
     onReset: () -> Unit
 ) {
-    if (indexers.isEmpty()) return
+    if (indexers.isEmpty() && providers.isEmpty()) return
     item(key = "usenet_stats_period") {
         StatsChoiceRow(R.string.usenet_stats_period, R.string.usenet_stats_period_desc, Icons.Default.DateRange,
             StatsPeriod.entries, stats.period, { it.label }, onPeriod)
@@ -77,14 +81,23 @@ internal fun LazyListScope.usenetStatsCardItems(
             StatsContent.entries, stats.content, { it.label }, onContent)
     }
     fun bars(value: (IndexerCounts) -> Int) =
-        statsBars(indexers.map { StatsBarSource(it.id, it.name, stats.indexers[it.id]?.counts?.let(value) ?: 0) })
+        statsBars(indexers.map { StatsBarSource(it.id, it.name, stats.indexers[it.id]?.counts?.let(value)?.toLong() ?: 0) })
     val played = bars { it.played }
     if (played.isNotEmpty()) item(key = "usenet_stats_bars_played") { StatsBarsCard(R.string.usenet_stats_played_chart, played) }
     val grabs = bars { it.grabs }
     if (grabs.isNotEmpty()) item(key = "usenet_stats_bars_grabs") { StatsBarsCard(R.string.usenet_stats_grabs, grabs) }
+    val served = statsBars(providers.map {
+        StatsBarSource(it.id, it.name, stats.providers[it.id]?.counts?.articles ?: 0)
+    })
+    if (served.isNotEmpty()) item(key = "usenet_stats_bars_articles") { StatsBarsCard(R.string.usenet_stats_articles, served) }
     indexers.forEach { indexer ->
         item(key = "usenet_stats_indexer_${indexer.id}") {
             IndexerStatsCard(indexer.name, stats.indexers[indexer.id] ?: IndexerStatsUi(), stats.period)
+        }
+    }
+    providers.forEach { provider ->
+        item(key = "usenet_stats_provider_${provider.id}") {
+            ProviderStatsCard(provider.name, stats.providers[provider.id] ?: ProviderStatsUi(), stats.period)
         }
     }
     item(key = "usenet_stats_reset") { StatsResetRow(onReset) }
@@ -159,6 +172,32 @@ private fun IndexerStatsCard(name: String, stats: IndexerStatsUi, period: StatsP
 }
 
 @Composable
+private fun ProviderStatsCard(name: String, stats: ProviderStatsUi, period: StatsPeriod) = DiagnosticsSectionCard {
+    StatsHeader(name)
+    val counts = stats.counts
+    if (counts == null) {
+        Text(stringResource(R.string.usenet_stats_no_data), style = MaterialTheme.typography.bodySmall,
+            color = NuvioTheme.colors.TextSecondary)
+        return@DiagnosticsSectionCard
+    }
+    DiagnosticRow(stringResource(R.string.usenet_stats_articles), "${counts.articles}")
+    counts.completion()?.let { percent ->
+        DiagnosticRow(stringResource(R.string.usenet_stats_completion),
+            stringResource(R.string.usenet_stats_completion_value, percent, counts.missing))
+    }
+    DiagnosticRow(stringResource(R.string.usenet_stats_errors), "${counts.errors}")
+    DiagnosticRow(stringResource(R.string.usenet_stats_downloaded),
+        stringResource(R.string.usenet_stats_gib, counts.bytes / (1024.0 * 1024 * 1024)))
+    counts.averageFirstByteMs()?.let {
+        DiagnosticRow(stringResource(R.string.usenet_stats_first_byte), stringResource(R.string.usenet_stats_ms, it))
+    }
+    DiagnosticRow(stringResource(R.string.usenet_stats_sessions), "${counts.sessions}")
+    if (period == StatsPeriod.ALL_TIME) stats.since?.let {
+        DiagnosticRow(stringResource(R.string.usenet_stats_since), DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(it)))
+    }
+}
+
+@Composable
 private fun StatsBarsCard(title: Int, bars: List<StatsBar>) = DiagnosticsSectionCard {
     StatsHeader(stringResource(title))
     val track = NuvioTheme.colors.TextTertiary.copy(alpha = 0.25f)
@@ -194,17 +233,31 @@ internal fun IndexerCounts.searchYield(): SearchYield? {
 internal fun IndexerCounts.averageResponseMs(): Long? =
     if (answered <= 0) null else (responseMs.toDouble() / answered).roundToInt().toLong()
 
-internal data class StatsBarSource(val id: String, val name: String, val value: Int)
+/**
+ * The share of the articles asked of a provider that it had, to one decimal; null before it was
+ * asked for any. Errors are left out: they say nothing about what it holds.
+ */
+internal fun ProviderCounts.completion(): Double? {
+    val asked = articles + missing
+    if (asked <= 0) return null
+    return (articles * 1000.0 / asked).roundToLong() / 10.0
+}
 
-internal data class StatsBar(val id: String, val name: String, val value: Int, val fraction: Float)
+/** Null when no session measured one. */
+internal fun ProviderCounts.averageFirstByteMs(): Long? =
+    if (ttfbSessions <= 0) null else (ttfbMs.toDouble() / ttfbSessions).roundToLong()
+
+internal data class StatsBarSource(val id: String, val name: String, val value: Long)
+
+internal data class StatsBar(val id: String, val name: String, val value: Long, val fraction: Float)
 
 /**
  * One bar per source, largest first, as a share of the largest. Empty when there is nothing to
  * compare: fewer than two sources, or no source with a count.
  */
 internal fun statsBars(sources: List<StatsBarSource>): List<StatsBar> {
-    val max = sources.maxOfOrNull { it.value } ?: 0
+    val max = sources.maxOfOrNull { it.value } ?: 0L
     if (sources.size < 2 || max <= 0) return emptyList()
     return sources.sortedWith(compareByDescending<StatsBarSource> { it.value }.thenBy { it.name.lowercase() })
-        .map { StatsBar(it.id, it.name, it.value, it.value.coerceAtLeast(0).toFloat() / max) }
+        .map { StatsBar(it.id, it.name, it.value, (it.value.coerceAtLeast(0).toDouble() / max).toFloat()) }
 }

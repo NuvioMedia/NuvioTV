@@ -61,7 +61,21 @@ func (s *Session) diagnostics() map[string]any {
 		v["archiveExtents"] = len(layout.parts)
 		layout.mu.RUnlock()
 	}
+	if reports := s.providerReports(); len(reports) > 0 {
+		v["providers"] = reports
+	}
 	return v
+}
+
+type providerReporter interface{ providerReports() []providerReport }
+
+// providerReports says what each provider did for this session so far; nil for
+// a pool that does not count, such as a test's.
+func (s *Session) providerReports() []providerReport {
+	if pool, ok := s.pool.(providerReporter); ok {
+		return pool.providerReports()
+	}
+	return nil
 }
 
 type rangeTiming struct {

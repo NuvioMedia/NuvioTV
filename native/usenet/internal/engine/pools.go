@@ -49,6 +49,23 @@ type poolLease struct {
 	brokeMu    sync.Mutex
 	broke      map[string]uint64
 	brokeCount atomic.Int32
+	// What each client did for this lease, for the app's provider statistics. A
+	// client is shared by sessions, so its own counters would mix them.
+	source []int           // Index of each client in the request's server list.
+	counts []providerCount // Parallel to clients.
+}
+
+type providerCount struct{ articles, bytes, missing, errors atomic.Int64 }
+
+// providerReport is what one provider did for a session. It names the provider
+// only by its index in the request's servers: never a host or an account.
+type providerReport struct {
+	Server   int     `json:"server"`
+	Articles int64   `json:"articles"`
+	Bytes    int64   `json:"bytes"`
+	Missing  int64   `json:"missing"`
+	Errors   int64   `json:"errors"`
+	TTFBMs   float64 `json:"ttfbMs,omitempty"`
 }
 
 // maxBrokenArticles bounds what a lease remembers; past it, retries simply follow order.
@@ -76,6 +93,7 @@ func (p *providerPools) acquireForRequest(lifetime, wait context.Context, provid
 		}
 		l.keys = append(l.keys, key)
 		l.clients = append(l.clients, entry.client)
+		l.source = append(l.source, i)
 		tier := 0
 		if i < len(priorities) {
 			tier = priorities[i]
@@ -88,13 +106,53 @@ func (p *providerPools) acquireForRequest(lifetime, wait context.Context, provid
 		order[i] = i
 	}
 	sort.SliceStable(order, func(a, b int) bool { return l.tiers[order[a]] < l.tiers[order[b]] })
-	clients, tiers := make([]*nntppool.Client, len(order)), make([]int, len(order))
+	clients, tiers, source := make([]*nntppool.Client, len(order)), make([]int, len(order)), make([]int, len(order))
 	for i, j := range order {
-		clients[i], tiers[i] = l.clients[j], l.tiers[j]
+		clients[i], tiers[i], source[i] = l.clients[j], l.tiers[j], l.source[j]
 	}
-	l.clients, l.tiers = clients, tiers
+	l.clients, l.tiers, l.source = clients, tiers, source
 	l.next = make([]atomic.Uint64, len(l.clients))
+	l.counts = make([]providerCount, len(l.clients))
 	return l, nil
+}
+
+// count records one attempt of clients[index] at an article. A cancelled read,
+// such as one a seek abandons, is no provider's doing and counts nothing.
+func (l *poolLease) count(ctx context.Context, index int, body *nntppool.ArticleBody, err error) {
+	if index >= len(l.counts) {
+		return
+	}
+	c := &l.counts[index]
+	switch {
+	case err == nil:
+		c.articles.Add(1)
+		if body != nil {
+			c.bytes.Add(int64(body.BytesDecoded))
+		}
+	case ctx.Err() != nil:
+	case errors.Is(err, nntppool.ErrArticleNotFound):
+		c.missing.Add(1)
+	default:
+		c.errors.Add(1)
+	}
+}
+
+// providerReports says what each provider did for this lease, in priority order.
+func (l *poolLease) providerReports() []providerReport {
+	if len(l.source) != len(l.clients) || len(l.counts) != len(l.clients) {
+		return nil
+	}
+	reports := make([]providerReport, 0, len(l.clients))
+	for i, client := range l.clients {
+		c := &l.counts[i]
+		report := providerReport{Server: l.source[i], Articles: c.articles.Load(), Bytes: c.bytes.Load(),
+			Missing: c.missing.Load(), Errors: c.errors.Load()}
+		if stats := client.Stats().Providers; len(stats) > 0 && stats[0].TTFB > 0 {
+			report.TTFBMs = float64(stats[0].TTFB.Microseconds()) / 1000
+		}
+		reports = append(reports, report)
+	}
+	return reports
 }
 
 func (p *providerPools) acquireProvider(lifetime, wait context.Context, key providerKey, provider nntppool.Provider) (*sharedProvider, error) {
@@ -336,6 +394,7 @@ func (l *poolLease) body(ctx context.Context, id string, out io.Writer, priority
 		writer.sealed = true
 		committed := writer.committed
 		writer.mu.Unlock()
+		l.count(ctx, index, body, err)
 		if err == nil || committed {
 			// Bytes already reached out, so no other client can continue this attempt; the
 			// store's retry can, starting elsewhere. A cancelled read is no client's fault.

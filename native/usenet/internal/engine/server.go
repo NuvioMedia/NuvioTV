@@ -147,11 +147,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		v := s.sessions[id]
 		delete(s.sessions, id)
 		s.mu.Unlock()
+		var reports []providerReport
 		if v != nil {
+			// Read before closing: the pool's clients may close with it.
+			reports = v.providerReports()
 			v.Close()
 			s.releaseIdleMemory()
 		}
-		w.WriteHeader(http.StatusNoContent)
+		if len(reports) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"providers": reports})
 	default:
 		http.NotFound(w, r)
 	}

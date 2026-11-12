@@ -206,6 +206,72 @@ class UsenetSourceStatsTest {
         assertNull(storage.value)
     }
 
+    private val primary = UsenetProvider(name = "Primary", host = "News.Example.com", username = "me", password = "one")
+    private val backup = UsenetProvider(name = "Backup", host = "backup.test", port = 443, username = "", password = "")
+
+    @Test fun `a closed session's reports count for the servers they name`() {
+        val stats = stats()
+        val servers = listOf(backup.serverUrl(), primary.serverUrl())
+        // The engine lists providers by priority; each names its place in the session's servers.
+        stats.providerSession(servers, ContentKind.SHOW, """{"providers":[
+            {"server":1,"articles":5,"bytes":5120,"missing":1,"errors":0,"ttfbMs":42.6},
+            {"server":0,"articles":1,"bytes":1024,"missing":0,"errors":2}]}""")
+        stats.providerSession(servers, ContentKind.MOVIE, """{"providers":[{"server":1,"articles":3,"bytes":3,"ttfbMs":10}]}""")
+        val key = primary.statsKey()!!
+        assertEquals(ProviderCounts(sessions = 1, articles = 5, bytes = 5120, missing = 1, ttfbMs = 43, ttfbSessions = 1),
+            stats.provider(key, StatsPeriod.LAST_7_DAYS, StatsContent.SHOWS))
+        assertEquals(ProviderCounts(sessions = 2, articles = 8, bytes = 5123, missing = 1, ttfbMs = 53, ttfbSessions = 2),
+            stats.provider(key, StatsPeriod.ALL_TIME, ALL))
+        assertEquals(ProviderCounts(sessions = 1, articles = 1, bytes = 1024, errors = 2),
+            stats.provider(backup.statsKey()!!, StatsPeriod.LAST_30_DAYS, ALL))
+        assertEquals(clock, stats.providerSince(key))
+    }
+
+    @Test fun `unreadable or foreign reports add nothing`() {
+        val stats = stats()
+        val servers = listOf(primary.serverUrl())
+        listOf("", "not json", """{"providers":[{"server":3,"articles":9}]}""", """{"other":1}""").forEach {
+            stats.providerSession(servers, ContentKind.MOVIE, it)
+        }
+        assertNull(stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, ALL))
+        assertEquals(0, stats.revision.value)
+    }
+
+    @Test fun `one account listed twice in a session counts once`() {
+        val stats = stats()
+        // Another password does not make another account.
+        val servers = listOf(primary.serverUrl(), primary.copy(password = "two", priority = 2).serverUrl())
+        stats.providerSession(servers, ContentKind.MOVIE, """{"providers":[
+            {"server":0,"articles":2,"ttfbMs":20},{"server":1,"articles":1,"ttfbMs":90}]}""")
+        assertEquals(ProviderCounts(sessions = 1, articles = 3, ttfbMs = 20, ttfbSessions = 1),
+            stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, ALL))
+    }
+
+    @Test fun `a provider is the same account whatever its password, connections or priority`() {
+        val key = primary.statsKey()
+        assertNotNull(key)
+        assertEquals(key, primary.copy(password = "other", connections = 3, priority = 2, tls = true).statsKey())
+        assertEquals(key, providerStatsKey("nntps://me:secret@news.example.com:563/50?priority=1"))
+        assertNotEquals(key, primary.copy(username = "you").statsKey())
+        assertNotEquals(key, primary.copy(port = 119).statsKey())
+        // Encoded usernames and IPv6 addresses give the same key either way.
+        val encoded = primary.copy(username = "a b+c@d")
+        assertEquals(encoded.statsKey(), providerStatsKey(encoded.serverUrl()))
+        assertNotEquals(encoded.statsKey(), primary.copy(username = "a b c@d").statsKey())
+        val ipv6 = primary.copy(host = "2001:db8::1")
+        assertNotNull(ipv6.statsKey())
+        assertEquals(ipv6.statsKey(), ipv6.copy(host = "[2001:db8::1]").statsKey())
+        assertNull(providerStatsKey("not a url"))
+        assertNull(providerStatsKey(null))
+    }
+
+    @Test fun `a reset clears providers too`() {
+        val stats = stats()
+        stats.providerSession(listOf(primary.serverUrl()), ContentKind.MOVIE, """{"providers":[{"server":0,"articles":2}]}""")
+        stats.reset()
+        assertNull(stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, ALL))
+    }
+
     @Test fun `unreadable saved counts start empty`() {
         storage.value = "not json"
         assertNull(stats().indexer("a", StatsPeriod.ALL_TIME, ALL))

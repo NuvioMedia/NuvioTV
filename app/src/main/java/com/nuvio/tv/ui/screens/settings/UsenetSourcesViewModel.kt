@@ -15,10 +15,12 @@ import com.nuvio.tv.core.server.UsenetSourcesWebPage
 import com.nuvio.tv.core.usenet.IndexerCounts
 import com.nuvio.tv.core.usenet.IndexerStatus
 import com.nuvio.tv.core.usenet.NewznabClient
+import com.nuvio.tv.core.usenet.ProviderCounts
 import com.nuvio.tv.core.usenet.StatsContent
 import com.nuvio.tv.core.usenet.StatsPeriod
 import com.nuvio.tv.core.usenet.UsenetSourceStats
 import com.nuvio.tv.core.usenet.stateKey
+import com.nuvio.tv.core.usenet.statsKey
 import com.nuvio.tv.core.usenet.NntpProviderTester
 import com.nuvio.tv.core.usenet.ProviderTestResult
 import com.nuvio.tv.core.usenet.UsenetIndexer
@@ -59,11 +61,16 @@ data class UsenetPhoneSetupUiState(val url: String, val qrCode: Bitmap, val last
 /** An indexer's counts for the chosen period and content; null where it has none. */
 data class IndexerStatsUi(val counts: IndexerCounts? = null, val today: IndexerCounts? = null, val since: Long? = null)
 
+/** A provider's counts for the chosen period and content; null where it has none. */
+data class ProviderStatsUi(val counts: ProviderCounts? = null, val since: Long? = null)
+
 data class UsenetStatsUi(
     val period: StatsPeriod = StatsPeriod.LAST_30_DAYS,
     val content: StatsContent = StatsContent.ALL,
     /** By indexer id. */
-    val indexers: Map<String, IndexerStatsUi> = emptyMap()
+    val indexers: Map<String, IndexerStatsUi> = emptyMap(),
+    /** By provider id. */
+    val providers: Map<String, ProviderStatsUi> = emptyMap()
 )
 
 @HiltViewModel
@@ -88,17 +95,23 @@ class UsenetSourcesViewModel @Inject constructor(
             ui.configuration.indexers.associate { it.id to client.status(it) }
         }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    /** Statistics of the configured indexers; searches and playback update them while settings are open. */
+    /** Statistics of the configured sources; searches and playback update them while settings are open. */
     val stats: StateFlow<UsenetStatsUi> = flow {
         // Loaded here, off the main thread, with the chosen filters; counts held back are saved too.
         sourceStats.load()
         sourceStats.flush()
         emitAll(combine(uiState, sourceStats.revision, sourceStats.period, sourceStats.content) { ui, _, period, content ->
-            UsenetStatsUi(period, content, ui.configuration.indexers.associate { indexer ->
-                val key = indexer.stateKey()
-                indexer.id to IndexerStatsUi(sourceStats.indexer(key, period, content),
-                    sourceStats.indexerToday(key, content), sourceStats.indexerSince(key))
-            })
+            UsenetStatsUi(period, content,
+                indexers = ui.configuration.indexers.associate { indexer ->
+                    val key = indexer.stateKey()
+                    indexer.id to IndexerStatsUi(sourceStats.indexer(key, period, content),
+                        sourceStats.indexerToday(key, content), sourceStats.indexerSince(key))
+                },
+                providers = ui.configuration.providers.associate { provider ->
+                    val key = provider.statsKey()
+                    provider.id to ProviderStatsUi(key?.let { sourceStats.provider(it, period, content) },
+                        key?.let { sourceStats.providerSince(it) })
+                })
         })
     }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UsenetStatsUi())
 

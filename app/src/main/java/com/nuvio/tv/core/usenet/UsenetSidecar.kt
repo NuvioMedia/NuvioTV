@@ -61,6 +61,10 @@ class UsenetSidecar private constructor(private val context: Context) {
     @Volatile private var playbackUrl: String? = null
     private var idleStop: Job? = null
     private val retiredSessions = mutableSetOf<String>() // guarded by mutex
+    /** A live session's servers, in the order its open sent them, and what it plays. */
+    private class SessionStats(val servers: List<String>, val kind: ContentKind)
+    /** By session id; the engine reports each session's providers when it closes. Guarded by mutex. */
+    private val sessionStats = mutableMapOf<String, SessionStats>()
     private var retirementJob: Job? = null
     private val preparationGuard = Any()
     private var preparationJob: Job? = null
@@ -279,6 +283,9 @@ class UsenetSidecar private constructor(private val context: Context) {
             openedId = newId
             // The engine reconciled abandoned sessions before this open.
             retiredSessions.clear()
+            sessionStats.keys.retainAll(setOfNotNull(previousId))
+            sessionStats[newId] = SessionStats(stream.servers.orEmpty(),
+                if (episode != null) ContentKind.SHOW else ContentKind.MOVIE)
             val url = UsenetEngineUrls.stream(requireNotNull(endpoint), newId, newPath)
             val nativeSubtitles = result.optJSONArray("subtitles")?.let { items ->
                 (0 until items.length()).map { index ->
@@ -339,13 +346,13 @@ class UsenetSidecar private constructor(private val context: Context) {
                 if (attempt > 0) delay(1_000L * attempt)
                 mutex.withLock {
                     for (retired in retiredSessions.toList()) {
-                        val deleted = runCatching {
-                            withTimeoutOrNull(2_000L) {
-                                control("/sessions/$retired", null, delete = true)
-                                true
-                            } == true
-                        }.getOrDefault(false)
-                        if (deleted) retiredSessions.remove(retired)
+                        val answer = runCatching {
+                            withTimeoutOrNull(2_000L) { control("/sessions/$retired", null, delete = true) }
+                        }.getOrNull()
+                        if (answer != null) {
+                            retiredSessions.remove(retired)
+                            reportSessionLocked(retired, answer)
+                        }
                     }
                 }
             }
@@ -384,8 +391,10 @@ class UsenetSidecar private constructor(private val context: Context) {
         val id = sessionId
         sessionId = null; playbackUrl = null
         try {
-            if (id != null && withTimeoutOrNull(2_000L) { control("/sessions/$id", null, delete = true); true } != true) {
-                stopLocked(); return
+            if (id != null) {
+                val answer = withTimeoutOrNull(2_000L) { control("/sessions/$id", null, delete = true) }
+                if (answer == null) { stopLocked(); return }
+                reportSessionLocked(id, answer)
             }
         } catch (_: Exception) { stopLocked(); return }
         if (!appForeground) { stopLocked(); return }
@@ -510,9 +519,17 @@ class UsenetSidecar private constructor(private val context: Context) {
         }
     }
 
+    /** Adds what a closed session's providers did, as the engine answered its close, to their statistics. */
+    private fun reportSessionLocked(id: String, answer: String) {
+        val session = sessionStats.remove(id) ?: return
+        runCatching { UsenetSourceStats.get(context).providerSession(session.servers, session.kind, answer) }
+    }
+
     private fun stopLocked() {
         retirementJob?.cancel(); retirementJob = null
         retiredSessions.clear()
+        // A stopped engine reports nothing for its sessions.
+        sessionStats.clear()
         clearPreparedLocked()
         idleStop?.cancel(); idleStop = null
         val child = process
