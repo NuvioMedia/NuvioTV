@@ -812,9 +812,8 @@
     <string name="video_section">וידאו</string>
     <string name="playback_true_black_letterbox">פסים שחורים אמיתיים</string>
     <string name="playback_true_black_letterbox_sub">השארת הפסים סביב התמונה ללא צביעה, כדי ש-HDR יישאר שחור אמיתי. כדאי להשאיר זאת כבוי אם מופיע קו בהיר על הפסים.</string>
-    <string name="playback_chapters_label">מקטעים</string>
-    <string name="playback_exo_chapters_title">הצגת מקטעים (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">קריאת המקטעים של קובצי MKV כדי לסמן אותם בסרגל ההתקדמות ולדלג ביניהם. שולח כמה בקשות קטנות נוספות לאחר תחילת ההפעלה. mpv מציג מקטעים תמיד.</string>
+    <string name="playback_exo_chapters_title">הצגת מקטעים</string>
+    <string name="playback_exo_chapters_sub">קריאת המקטעים של קובצי MKV כדי לסמן אותם בסרגל ההתקדמות ולדלג ביניהם.</string>
     <string name="audio_trailer_section">טריילר</string>
     <string name="audio_autoplay_trailers">הפעלה אוטומטית של טריילרים</string>
     <string name="audio_autoplay_trailers_sub">הפעלת טריילרים אוטומטית במסך הפרטים לאחר תקופת חוסר פעילות</string>
@@ -3426,9 +3425,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">חיפוש יסודי בסנכרון אוטומטי</string>
     <string name="autosync_thorough_description">השוואה מתמשכת מול כתוביות ורצועות מוטמעות נוספות לקבלת התאמה קרובה יותר לפני הסנכרון. כשהאפשרות כבויה, נעשה שימוש בהתאמה החזקה הראשונה שנמצאה, מוקדם יותר. מוחלות רק התאמות ודאיות.</string>
-    <string name="autosync_toast_failed">הסנכרון נכשל: הסנכרון האוטומטי לא הצליח להתאים את הכתוביות לסרטון.</string>
-    <string name="autosync_toast_failed_no_reference">הסנכרון נכשל: אין בסרטון הזה כתוביות מוטמעות להשוואה.</string>
-    <string name="autosync_toast_failed_unsupported">הסנכרון נכשל: הסנכרון האוטומטי לא תומך בפורמט הכתוביות הזה.</string>
     <string name="autosync_label_synced">מסונכרן אוטומטית</string>
     <string name="stream_resume_from_time">המשך מ-%1$s</string>
     <string name="stream_resume_from_percent">המשך מ-%1$d%%</string>

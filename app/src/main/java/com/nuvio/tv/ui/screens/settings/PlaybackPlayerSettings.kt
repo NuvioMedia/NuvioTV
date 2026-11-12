@@ -12,6 +12,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 @Composable
 internal fun PlaybackPlayerSection(
     settings: PlayerSettings,
+    releaseDecoderOnBackground: Boolean,
     onUpdate: PlaybackSettingsUpdate,
     onOpenDialog: (PlaybackDialog) -> Unit
 ) {
@@ -37,6 +38,14 @@ internal fun PlaybackPlayerSection(
         onToggle = { onUpdate { setAutoSwitchInternalPlayerOnError(!settings.autoSwitchInternalPlayerOnError) } },
         enabled = !usesExternalPlayer
     )
+    if (!usesExternalPlayer) {
+        SettingsToggleRow(
+            title = stringResource(R.string.playback_release_decoder_on_background),
+            subtitle = stringResource(R.string.playback_release_decoder_on_background_sub),
+            checked = releaseDecoderOnBackground,
+            onToggle = { onUpdate { setReleaseDecoderOnBackground(!releaseDecoderOnBackground) } }
+        )
+    }
 
     if (settings.playerPreference != PlayerPreference.INTERNAL) {
         SettingsSectionLabel(text = stringResource(R.string.playback_external_player_label))
@@ -168,6 +177,21 @@ internal fun PlaybackPlayerInterfaceSection(
         checked = settings.parentalGuideEnabled,
         onToggle = { onUpdate { setParentalGuideEnabled(!settings.parentalGuideEnabled) } },
         enabled = internalPlayer
+    )
+    // Chapters work on both engines.
+    SettingsToggleRow(
+        title = stringResource(R.string.playback_exo_chapters_title),
+        subtitle = stringResource(R.string.playback_exo_chapters_sub),
+        checked = settings.exoChaptersEnabled,
+        onToggle = { onUpdate { setExoChaptersEnabled(!settings.exoChaptersEnabled) } },
+        enabled = internalPlayer
+    )
+    SettingsToggleRow(
+        title = stringResource(R.string.playback_chapter_title_title),
+        subtitle = stringResource(R.string.playback_chapter_title_sub),
+        checked = settings.chapterTitleEnabled,
+        onToggle = { onUpdate { setChapterTitleEnabled(!settings.chapterTitleEnabled) } },
+        enabled = internalPlayer && settings.exoChaptersEnabled
     )
 }
 

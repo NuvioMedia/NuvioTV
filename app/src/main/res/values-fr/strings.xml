@@ -776,6 +776,8 @@
     <string name="playback_engine_mvplayer">Libmpv (bêta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Changer automatiquement de moteur en cas d’erreur au démarrage</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Si le démarrage du flux échoue, bascule automatiquement entre ExoPlayer et libmpv.</string>
+    <string name="playback_release_decoder_on_background">Libérer le décodeur en arrière-plan</string>
+    <string name="playback_release_decoder_on_background_sub">Libérer le décodeur vidéo lorsque Nuvio passe en arrière-plan. À activer si la lecture échoue avec une erreur de décodeur après le retour dans l’application. Le lecteur se recharge au retour, y compris après l’économiseur d’écran</string>
     <string name="playback_external_forward_subtitles">Transmettre les sous-titres au lecteur externe</string>
     <string name="playback_external_forward_subtitles_sub">Récupère les sous-titres dans votre langue préférée depuis les addons et les transmet au lecteur externe.</string>
     <string name="playback_external_send_skip_segments">Envoyer les repères d’intro et d’outro</string>
@@ -808,9 +810,10 @@
     <string name="video_section">Vidéo</string>
     <string name="playback_true_black_letterbox">Bandes noires pures</string>
     <string name="playback_true_black_letterbox_sub">Laisse les bandes autour de l’image non peintes afin que le HDR conserve un noir pur. Gardez cette option désactivée si une ligne lumineuse apparaît sur les bandes.</string>
-    <string name="playback_chapters_label">Chapitres</string>
-    <string name="playback_exo_chapters_title">Afficher les chapitres (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Lire les chapitres des fichiers MKV pour les repérer sur la barre de progression et passer de l’un à l’autre. Effectue quelques petites requêtes supplémentaires une fois la lecture démarrée. mpv affiche toujours les chapitres.</string>
+    <string name="playback_exo_chapters_title">Afficher les chapitres</string>
+    <string name="playback_exo_chapters_sub">Lire les chapitres des fichiers MKV pour les repérer sur la barre de progression et passer de l’un à l’autre.</string>
+    <string name="playback_chapter_title_title">Afficher le titre du chapitre</string>
+    <string name="playback_chapter_title_sub">Afficher le nom du chapitre en cours au-dessus de la barre de progression.</string>
     <string name="audio_trailer_section">Bande-annonce</string>
     <string name="audio_autoplay_trailers">Lecture automatique des bandes-annonces</string>
     <string name="audio_autoplay_trailers_sub">Lire automatiquement les bandes-annonces sur les écrans de détail et de fin de lecture</string>
@@ -929,6 +932,28 @@
     <string name="sub_hdr_brightness">Luminosité HDR</string>
     <string name="sub_hdr_dim_player_controls">Atténuer les commandes du lecteur en HDR</string>
     <string name="sub_hdr_dim_player_controls_sub">Appliquer la luminosité HDR aux commandes et aux menus du lecteur affichés sur les vidéos HDR et Dolby Vision</string>
+    <string name="sub_appearance">Apparence des sous-titres</string>
+    <string name="sub_appearance_desc">Police, couleurs, arrière-plan et ombre</string>
+    <string name="sub_appearance_hint">S’applique aux sous-titres texte. Les sous-titres ASS stylisés et les sous-titres image conservent leur apparence d’origine.</string>
+    <string name="sub_preview">Aperçu</string>
+    <string name="sub_preview_text">Chaque histoire commence par un peu de curiosité.</string>
+    <string name="sub_font">Police</string>
+    <string name="sub_font_default">Par défaut</string>
+    <string name="sub_font_serif">Avec empattement</string>
+    <string name="sub_font_mono">Chasse fixe</string>
+    <string name="sub_font_import">Importer depuis le téléphone</string>
+    <string name="sub_font_import_desc">Ajoutez une police .ttf ou .otf jusqu’à 10&#160;Mo. Les polices importées restent sur cette TV.</string>
+    <string name="sub_font_import_qr">Scannez avec votre téléphone pour ajouter une police .ttf ou .otf</string>
+    <string name="sub_font_missing">Police indisponible sur cet appareil. Utilisation de la police par défaut.</string>
+    <string name="sub_font_remove">Retirer %1$s</string>
+    <string name="sub_background">Arrière-plan</string>
+    <string name="sub_bg_opacity">Opacité de l’arrière-plan</string>
+    <string name="sub_bg_roundness">Arrondi des coins</string>
+    <string name="sub_shadow">Ombre portée</string>
+    <string name="sub_shadow_desc">Détacher le texte des scènes lumineuses</string>
+    <string name="sub_shadow_opacity">Opacité de l’ombre</string>
+    <string name="sub_shadow_size">Taille de l’ombre</string>
+    <string name="sub_reset_appearance">Réinitialiser l’apparence</string>
     <string name="sub_advanced_section">Rendu avancé des sous-titres</string>
     <string name="sub_libass">Utiliser libass pour les sous-titres ASS/SSA</string>
     <string name="sub_libass_sub">Rendu ASS/SSA avancé (styles, positionnement, animations)</string>
@@ -1209,6 +1234,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">Toujours utiliser l’arrière-plan avec logo pour les affiches paysage</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Ignorer l’affiche paysage fournie par l’addon et utiliser à la place l’arrière-plan avec le logo en superposition.</string>
+    <string name="layout_hero_description_auto_scroll">Défilement automatique des descriptions</string>
+    <string name="layout_hero_description_auto_scroll_sub">Faire défiler lentement les longues descriptions sur l’écran d’accueil au lieu de les couper.</string>
     <string name="web_custom_poster_title">Source d’affiches personnalisée</string>
     <string name="web_custom_poster_subtitle">Collez un modèle d’URL d’affiche ci-dessous, puis appuyez sur «&#160;Enregistrer&#160;».</string>
     <string name="web_custom_poster_label">Modèle d’URL</string>
@@ -1225,6 +1252,13 @@
     <string name="web_custom_poster_none">Aucun modèle défini</string>
     <string name="web_custom_poster_loading">Chargement…</string>
     <string name="web_custom_poster_placeholders_info">Espaces réservés&#160;: {id} transmet tous les ID de contenu. {imdb_id}, {tmdb_id}, {tvdb_id} et {kitsu_id} ciblent un seul type d’ID&#160;; s’il n’est pas disponible, l’affiche d’origine est conservée. {imdb_id|tmdb_id|kitsu_id} déclare les types d’ID pris en charge&#160;: celui qui correspond est utilisé, sinon l’affiche d’origine est conservée. Ajoutez ? pour rendre un espace réservé facultatif, qui devient alors vide au lieu d’être ignoré&#160;: {imdb_id?}. Autres espaces réservés&#160;: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">Polices des sous-titres</string>
+    <string name="web_subtitle_font_subtitle">Choisissez un fichier .ttf ou .otf à utiliser pour les sous-titres sur votre TV.</string>
+    <string name="web_subtitle_font_choose">Choisir le fichier de police</string>
+    <string name="web_subtitle_font_uploading">Envoi…</string>
+    <string name="web_subtitle_font_added">Ajoutée à votre TV</string>
+    <string name="web_subtitle_font_error">Impossible d’importer cette police. Choisissez un fichier .ttf ou .otf valide de moins de 10&#160;Mo.</string>
+    <string name="web_subtitle_font_connection_error">Erreur de connexion</string>
 
 
     <string name="mdblist_name">MDBList</string>
@@ -3427,9 +3461,7 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Recherche approfondie de la synchronisation automatique</string>
     <string name="autosync_thorough_description">Continuer à comparer d’autres sous-titres et pistes intégrées pour trouver une correspondance plus précise avant de synchroniser. Lorsque cette option est désactivée, la première correspondance fiable est utilisée plus tôt. Seules les correspondances fiables sont appliquées.</string>
-    <string name="autosync_toast_failed">Échec de la synchronisation&#160;: la synchronisation automatique n’a pas pu faire correspondre ce sous-titre à la vidéo.</string>
-    <string name="autosync_toast_failed_no_reference">Échec de la synchronisation&#160;: cette vidéo ne contient aucun sous-titre intégré à comparer.</string>
-    <string name="autosync_toast_failed_unsupported">Échec de la synchronisation&#160;: la synchronisation automatique ne prend pas en charge ce format de sous-titres.</string>
+    <string name="autosync_toast_no_fit">Échec de la synchronisation&#160;: ces sous-titres ne correspondent pas à cette version de la vidéo.</string>
     <string name="autosync_label_synced">Synchronisé automatiquement</string>
     <string name="stream_resume_from_time">Reprendre à %1$s</string>
     <string name="stream_resume_from_percent">Reprendre à %1$d&#160;%%</string>

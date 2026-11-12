@@ -91,6 +91,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -2059,7 +2060,7 @@ private fun ProfilePinOverlay(
 ) {
     val density = LocalDensity.current
     val keyboardState = rememberKeyboardVisibilityState()
-    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember(state) { FocusRequester() }
     val isSingleEntryMode = state !is ProfilePinOverlayState.Set
     var pin by remember(state) { mutableStateOf("") }
@@ -2067,7 +2068,6 @@ private fun ProfilePinOverlay(
     var entryStage by remember(state) { mutableStateOf(ProfilePinEntryStage.Create) }
     var internalErrorMessage by remember(state) { mutableStateOf<String?>(null) }
     var isInputFocused by remember(state) { mutableStateOf(false) }
-    var keyboardWasVisible by remember(state) { mutableStateOf(false) }
     val shakeOffset = remember(state) { androidx.compose.animation.core.Animatable(0f) }
     val cursorAlpha by rememberInfiniteTransition(label = "pinCursor").animateFloat(
         initialValue = 0.25f,
@@ -2128,10 +2128,10 @@ private fun ProfilePinOverlay(
         28.dp
     }
 
-    BackHandler(enabled = isInputFocused && keyboardState.isVisible) {
-        focusManager.clearFocus(force = true)
-    }
-
+    // The hidden PIN field is the overlay's only focusable, so focus always returns to it. It does
+    // not open the keyboard on focus (that reopened it right after Back closed it, so Back could
+    // never leave the overlay); the keyboard opens with the overlay and on OK instead. Back while
+    // the keyboard is open only closes it, as the keyboard handles that key itself.
     BackHandler(onBack = onDismiss)
 
     suspend fun playErrorAnimation() {
@@ -2144,15 +2144,7 @@ private fun ProfilePinOverlay(
     LaunchedEffect(state) {
         repeat(2) { withFrameNanos { } }
         runCatching { focusRequester.requestFocus() }
-    }
-
-    LaunchedEffect(keyboardState.isVisible, isInputFocused) {
-        if (keyboardState.isVisible) {
-            keyboardWasVisible = true
-        } else if (keyboardWasVisible && isInputFocused) {
-            keyboardWasVisible = false
-            focusManager.clearFocus(force = true)
-        }
+        keyboardController?.show()
     }
 
     LaunchedEffect(errorMessage) {
@@ -2194,7 +2186,10 @@ private fun ProfilePinOverlay(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectTapGestures { runCatching { focusRequester.requestFocus() } }
+                detectTapGestures {
+                    runCatching { focusRequester.requestFocus() }
+                    keyboardController?.show()
+                }
             }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
@@ -2204,11 +2199,15 @@ private fun ProfilePinOverlay(
                 when (native.keyCode) {
                     AndroidKeyEvent.KEYCODE_BACK,
                     AndroidKeyEvent.KEYCODE_ESCAPE -> {
-                        if (isInputFocused) {
-                            focusManager.clearFocus(force = true)
-                        } else {
-                            onDismiss()
-                        }
+                        onDismiss()
+                        true
+                    }
+
+                    AndroidKeyEvent.KEYCODE_DPAD_CENTER,
+                    AndroidKeyEvent.KEYCODE_ENTER,
+                    AndroidKeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                        runCatching { focusRequester.requestFocus() }
+                        keyboardController?.show()
                         true
                     }
 
@@ -2362,7 +2361,8 @@ private fun ProfilePinOverlay(
             textStyle = TextStyle(color = Color.Transparent),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.NumberPassword,
-                imeAction = ImeAction.Done
+                imeAction = ImeAction.Done,
+                showKeyboardOnFocus = false
             ),
             cursorBrush = SolidColor(Color.Transparent)
         )

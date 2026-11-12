@@ -73,17 +73,17 @@ class TraktEpisodeMappingService @Inject constructor(
         val addonEpisodes = getAddonEpisodes(resolvedContentId, resolvedContentType)
         if (addonEpisodes.isEmpty()) return null
 
-        val showLookupId = resolveShowLookupId(contentId = resolvedContentId, videoId = null) ?: return null
-        val traktEpisodes = getTraktEpisodes(showLookupId)
-        if (traktEpisodes.isEmpty()) return null
-
+        // Like the mobile app, only remap when the addon lacks this exact episode. Remapping
+        // episodes the addon already has mis-maps long shows whose season counts differ
+        // somewhere (e.g. The Daily Show), since the fallback is a whole-show index.
         val addonHasEpisode = addonEpisodes.any {
             it.season == requestedSeason && it.episode == requestedEpisode
         }
-        val sameStructure = hasSameSeasonStructure(addonEpisodes, traktEpisodes)
-        if (addonHasEpisode && sameStructure) {
-            return null
-        }
+        if (addonHasEpisode) return null
+
+        val showLookupId = resolveShowLookupId(contentId = resolvedContentId, videoId = null) ?: return null
+        val traktEpisodes = getTraktEpisodes(showLookupId)
+        if (traktEpisodes.isEmpty()) return null
 
         val mapped = reverseRemapEpisodeByTitleOrIndex(
             requestedSeason = requestedSeason,
@@ -141,13 +141,17 @@ class TraktEpisodeMappingService @Inject constructor(
             return null
         }
 
+        // Writes (scrobbles, marking watched/unwatched) keep the addon's number when Trakt has
+        // that exact episode and no unique title match says otherwise, matching how reads keep
+        // Trakt's number when the addon has it. Episodes Trakt lacks still use the index.
         val mapped = remapEpisodeByTitleOrIndex(
             requestedSeason = requestedSeason,
             requestedEpisode = requestedEpisode,
             requestedVideoId = videoId,
             requestedTitle = episodeTitle,
             addonEpisodes = addonEpisodes,
-            traktEpisodes = traktEpisodes
+            traktEpisodes = traktEpisodes,
+            preferSameNumberOverIndex = true
         ) ?: return null
 
         cacheMutex.withLock {

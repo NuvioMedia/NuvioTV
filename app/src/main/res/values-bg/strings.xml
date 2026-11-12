@@ -807,9 +807,8 @@
     <string name="video_section">Видео</string>
     <string name="playback_true_black_letterbox">Истински черни ленти</string>
     <string name="playback_true_black_letterbox_sub">Оставете лентите около картината неоцветени, за да остане HDR истински черен. Изключете тази опция, ако върху лентите се появява ярка линия.</string>
-    <string name="playback_chapters_label">Глави</string>
-    <string name="playback_exo_chapters_title">Показване на глави (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Чете главите на MKV файловете, за да ги маркира в лентата за напредък и да прескача между тях. Прави няколко малки допълнителни заявки, след като възпроизвеждането започне. mpv винаги показва глави.</string>
+    <string name="playback_exo_chapters_title">Показване на глави</string>
+    <string name="playback_exo_chapters_sub">Чете главите на MKV файловете, за да ги маркира в лентата за напредък и да прескача между тях.</string>
     <string name="audio_trailer_section">Трейлър</string>
     <string name="audio_autoplay_trailers">Автоматично пускане на трейлъри</string>
     <string name="audio_autoplay_trailers_sub">Автоматично възпроизвеждане на трейлъри на екраните с подробности и след възпроизвеждане</string>
@@ -3400,9 +3399,6 @@
     <string name="autosync_tolerance_value">%1$d мс</string>
     <string name="autosync_thorough_title">Пълно търсене с автоматична синхронизация</string>
     <string name="autosync_thorough_description">Продължете да сравнявате други субтитри и вградени записи за по-точно съвпадение преди синхронизиране. Когато е изключено, първото силно съвпадение се използва по-рано. Прилагат се само уверени съвпадения.</string>
-    <string name="autosync_toast_failed">Синхронизирането не бе успешно: Автоматичното синхронизиране не можа да съпостави тези субтитри с видеото.</string>
-    <string name="autosync_toast_failed_no_reference">Синхронизирането не бе успешно: това видео няма вградени субтитри за сравнение.</string>
-    <string name="autosync_toast_failed_unsupported">Синхронизирането не бе успешно: Автоматичното синхронизиране не поддържа този формат на субтитрите.</string>
     <string name="autosync_label_synced">Автоматично синхронизирано</string>
     <string name="stream_resume_from_time">Възобновяване от %1$s</string>
     <string name="stream_resume_from_percent">Възобновяване от %1$d%%</string>

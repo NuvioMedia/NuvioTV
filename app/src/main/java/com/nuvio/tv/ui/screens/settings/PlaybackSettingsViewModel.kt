@@ -57,6 +57,7 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
     val transparentLetterbox: Flow<Boolean> = deviceLocalPlayerPreferences.transparentLetterbox
+    val releaseDecoderOnBackground: Flow<Boolean> = deviceLocalPlayerPreferences.releaseDecoderOnBackground
     val trailerSettings: Flow<TrailerSettings> = trailerSettingsDataStore.settings
     val torrentSettingsFlow: Flow<TorrentSettingsData> = torrentSettings.settings
     val torrentCacheState: StateFlow<TorrentCacheState> = torrentService.cacheState
@@ -190,6 +191,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         deviceLocalPlayerPreferences.setTransparentLetterbox(enabled)
     }
 
+    suspend fun setReleaseDecoderOnBackground(enabled: Boolean) {
+        deviceLocalPlayerPreferences.setReleaseDecoderOnBackground(enabled)
+    }
+
     suspend fun setSkipIntroEnabled(enabled: Boolean) {
         playerSettingsDataStore.setSkipIntroEnabled(enabled)
     }
@@ -252,6 +257,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setExoChaptersEnabled(enabled: Boolean) {
         playerSettingsDataStore.setExoChaptersEnabled(enabled)
+    }
+
+    suspend fun setChapterTitleEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setChapterTitleEnabled(enabled)
     }
 
     suspend fun setUseLibass(enabled: Boolean) {
@@ -320,6 +329,30 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSubtitleOutlineWidth(width: Int) {
         playerSettingsDataStore.setSubtitleOutlineWidth(width)
+    }
+
+    suspend fun setSubtitleFontId(fontId: String) {
+        playerSettingsDataStore.setSubtitleFontId(fontId)
+    }
+
+    suspend fun setSubtitleBackgroundRadius(radius: Int) {
+        playerSettingsDataStore.setSubtitleBackgroundRadius(radius)
+    }
+
+    suspend fun setSubtitleShadowEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleShadowEnabled(enabled)
+    }
+
+    suspend fun setSubtitleShadowOpacity(opacity: Int) {
+        playerSettingsDataStore.setSubtitleShadowOpacity(opacity)
+    }
+
+    suspend fun setSubtitleShadowSize(size: Int) {
+        playerSettingsDataStore.setSubtitleShadowSize(size)
+    }
+
+    suspend fun resetSubtitleAppearance() {
+        playerSettingsDataStore.resetSubtitleAppearance()
     }
 
     suspend fun setSubtitleHdrStyleEnabled(enabled: Boolean) {

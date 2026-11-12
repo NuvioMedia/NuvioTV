@@ -812,9 +812,8 @@
     <string name="video_section">Vídeo</string>
     <string name="playback_true_black_letterbox">Barras negras puras</string>
     <string name="playback_true_black_letterbox_sub">Deja sin pintar las barras alrededor de la imagen para que el HDR mantenga un negro puro. Mantén esto desactivado si aparece una línea brillante en las barras.</string>
-    <string name="playback_chapters_label">Capítulos</string>
-    <string name="playback_exo_chapters_title">Mostrar capítulos (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Lee los capítulos de los archivos MKV para marcarlos en la barra de progreso y saltar entre ellos. Realiza unas pocas peticiones adicionales una vez iniciada la reproducción. mpv siempre muestra los capítulos.</string>
+    <string name="playback_exo_chapters_title">Mostrar capítulos</string>
+    <string name="playback_exo_chapters_sub">Lee los capítulos de los archivos MKV para marcarlos en la barra de progreso y saltar entre ellos.</string>
     <string name="audio_trailer_section">Tráiler</string>
     <string name="audio_autoplay_trailers">Reproducción automática de tráilers</string>
     <string name="audio_autoplay_trailers_sub">Reproduce automáticamente tráilers en la pantalla de detalles después de un período de inactividad</string>
@@ -3425,9 +3424,6 @@ Utilizas esta función bajo tu entera responsabilidad. P2P se puede desactivar e
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Búsqueda exhaustiva de sincronización automática</string>
     <string name="autosync_thorough_description">Continúa comparando otros subtítulos y pistas integradas para lograr un ajuste más preciso antes de sincronizar. Si está desactivada, se utiliza antes la primera coincidencia clara. Solo se aplican coincidencias fiables.</string>
-    <string name="autosync_toast_failed">Error de sincronización: la sincronización automática no ha podido hacer coincidir este subtítulo con el vídeo.</string>
-    <string name="autosync_toast_failed_no_reference">Error de sincronización: este vídeo no tiene subtítulos integrados con los que comparar.</string>
-    <string name="autosync_toast_failed_unsupported">Error de sincronización: la sincronización automática no admite este formato de subtítulos.</string>
     <string name="autosync_label_synced">Sincronizado automáticamente</string>
     <string name="stream_resume_from_time">Reanudar desde %1$s</string>
     <string name="stream_resume_from_percent">Reanudar desde %1$d%%</string>
