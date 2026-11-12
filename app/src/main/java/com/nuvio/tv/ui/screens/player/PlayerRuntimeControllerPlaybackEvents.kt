@@ -1229,14 +1229,14 @@ internal fun PlayerRuntimeController.emitScrobbleStop(progressPercent: Float? = 
         return
     }
 
-    /*
-     * A stop below the bar for a playback no session owns: the trackers that take such reports hear
-     * where the user left it. Above the bar the stop stays as it is for everyone, because there it is
-     * the finish of a viewing and the trackers that record it have to hear about it.
-     */
-    val sessionless = !hasRequestedScrobbleStartForCurrentItem &&
-        hasSentStartAboveCompletionBarForCurrentItem &&
-        percent < TRACKING_COMPLETION_BAR_PERCENT
+    // A playback that never had a session of its own finishes a viewing the trackers counted already,
+    // so only the ones that take sessionless reports hear its stop (see `isSessionlessStop`).
+    val sessionless = isSessionlessStop(
+        hasOpenedSession = hasOpenedScrobbleSessionForCurrentItem,
+        hasActiveScrobble = hasRequestedScrobbleStartForCurrentItem,
+        hasStartAboveCompletionBar = hasSentStartAboveCompletionBarForCurrentItem,
+        progressPercent = percent
+    )
 
     logScrobbleDiagnostic("stop_queued", "progress=$percent sessionless=$sessionless")
     scope.launch(kotlinx.coroutines.NonCancellable) {

@@ -1534,13 +1534,15 @@ class ExternalPlaybackTracker @Inject constructor(
                 if (scrobbleItem != null) {
                     // The external player reports its start when it is already over, so the item's
                     // resume position decides whether this playback began below the completion bar.
-                    // One that began above it finishes a viewing the account already has and must
-                    // not open a rewatch.
+                    // One that began above it finishes a viewing the account already has: it must
+                    // not open a rewatch, and the trackers that record a watch on every stop above
+                    // the bar must not hear it, or they count that viewing twice.
                     trackingScrobbleCoordinator.scrobble(
                         TrackingScrobbleAction.START,
                         TrackingScrobbleEvent(
                             scrobbleItem,
                             0.0,
+                            sessionless = startedAboveCompletionBar,
                             hasPlaybackSession = !startedAboveCompletionBar,
                             startProgressPercent = startProgressPercent
                         )
@@ -1551,6 +1553,7 @@ class ExternalPlaybackTracker @Inject constructor(
                             scrobbleItem,
                             progressPercent.toDouble(),
                             contentEndPercent = contentEndPercent,
+                            sessionless = startedAboveCompletionBar,
                             hasPlaybackSession = !startedAboveCompletionBar,
                             startProgressPercent = startProgressPercent
                         )

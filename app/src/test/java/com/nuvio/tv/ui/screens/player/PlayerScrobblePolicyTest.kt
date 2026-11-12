@@ -150,6 +150,59 @@ class PlayerScrobblePolicyTest {
     }
 
     @Test
+    fun `the stop of a playback that never opened a session is sessionless anywhere`() {
+        // Resumed at 85 and finished: the viewing was counted where the earlier playback stopped.
+        assertTrue(
+            isSessionlessStop(
+                hasOpenedSession = false,
+                hasActiveScrobble = false,
+                hasStartAboveCompletionBar = true,
+                progressPercent = 100f
+            )
+        )
+        // A pause in between cleared the start above the bar; the playback still had no session.
+        assertTrue(
+            isSessionlessStop(
+                hasOpenedSession = false,
+                hasActiveScrobble = false,
+                hasStartAboveCompletionBar = false,
+                progressPercent = 95f
+            )
+        )
+    }
+
+    @Test
+    fun `the stop of a playback that opened a session finishes a viewing of its own`() {
+        // Started below the bar, or seeked back under it: every tracker hears the finish.
+        assertFalse(
+            isSessionlessStop(
+                hasOpenedSession = true,
+                hasActiveScrobble = true,
+                hasStartAboveCompletionBar = false,
+                progressPercent = 100f
+            )
+        )
+        // The session was paused, then the playback ran past the bar again and stopped.
+        assertFalse(
+            isSessionlessStop(
+                hasOpenedSession = true,
+                hasActiveScrobble = false,
+                hasStartAboveCompletionBar = true,
+                progressPercent = 95f
+            )
+        )
+        // Below the bar it is only where the user left a playback whose start went out above it.
+        assertTrue(
+            isSessionlessStop(
+                hasOpenedSession = true,
+                hasActiveScrobble = false,
+                hasStartAboveCompletionBar = true,
+                progressPercent = 40f
+            )
+        )
+    }
+
+    @Test
     fun `a start above the completion bar is sent once, and only above the bar`() {
         assertFalse(shouldSendStartAboveCompletionBar(hasSentAboveCompletionBar = false, progressPercent = 79.9f))
         assertTrue(shouldSendStartAboveCompletionBar(hasSentAboveCompletionBar = false, progressPercent = 80f))

@@ -37,6 +37,24 @@ internal fun shouldSendStopScrobble(
     progressPercent >= TRACKING_COMPLETION_BAR_PERCENT
 
 /**
+ * Whether a stop goes only to the trackers that take sessionless reports.
+ *
+ * A playback that never opened a session below the bar began past it, so the viewing it finishes was
+ * counted already, where the earlier playback stopped at or above the bar. Trakt and MDBList record a
+ * watch on every stop from the bar up, so hearing this stop they would count the same viewing twice.
+ * A seek back below the bar opens a session, and the stop of that playback is a viewing of its own.
+ *
+ * Below the bar, the stop of a playback whose start went out above it is only where the user left it.
+ */
+internal fun isSessionlessStop(
+    hasOpenedSession: Boolean,
+    hasActiveScrobble: Boolean,
+    hasStartAboveCompletionBar: Boolean,
+    progressPercent: Float
+): Boolean = !hasOpenedSession ||
+    (!hasActiveScrobble && hasStartAboveCompletionBar && progressPercent < TRACKING_COMPLETION_BAR_PERCENT)
+
+/**
  * Whether a playback that began above the completion bar still needs its start sent.
  *
  * Below the bar the start is the session the rest of the playback is reported through, and that path
