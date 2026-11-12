@@ -91,7 +91,10 @@ class SimklTrackingScrobbler @Inject constructor(
         // the question before the playback: together they decide whether the scrobble asks Simkl for
         // a rewatch. A session the account runs releases the answer, which was for the run it opened.
         val knownSnapshot = syncRepository.state.value.snapshot
-        val runningSessionId = knownSnapshot.rewatchSessions.activeRewatchSessionId(enrichedEvent.media)
+        val runningSessionId = knownSnapshot.rewatchSessions.activeRewatchSessionId(
+            enrichedEvent.media,
+            library = knownSnapshot.entries
+        )
         if (runningSessionId != null) {
             rewatchConsentRepository.releaseGrant(enrichedEvent.media)
         }
@@ -188,7 +191,7 @@ class SimklTrackingScrobbler @Inject constructor(
         val snapshot = syncRepository.state.value.snapshot
         val enriched = snapshot.enrichMediaReference(media)
         val resolved = enriched.resolveAnimeEpisodeForSimkl()
-        val runningSessionId = snapshot.rewatchSessions.activeRewatchSessionId(resolved)
+        val runningSessionId = snapshot.rewatchSessions.activeRewatchSessionId(resolved, library = snapshot.entries)
         if (runningSessionId != null) {
             rewatchConsentRepository.releaseGrant(resolved)
             return

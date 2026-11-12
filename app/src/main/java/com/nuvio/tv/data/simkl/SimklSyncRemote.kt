@@ -86,7 +86,12 @@ class SimklApiSyncRemote @Inject constructor(
             SimklHttpMethod.GET,
             "/sync/all-items/${type.apiValue}",
             buildMap {
-                put("extended", "full")
+                // The same detail as the library read: with plain `full` an anime season listed as
+                // its own item comes back with its anime ids only and without the TVDB episode
+                // mapping, so its session lands on a card of its own instead of the series. Not
+                // `include_all_episodes`: a session must list only the episodes it rewatched.
+                put("extended", "full_anime_seasons")
+                put("episode_tvdb_id", "yes")
                 put("allow_rewatch", "yes")
                 put("episode_watched_at", "yes")
                 put("language", "en")

@@ -9,10 +9,11 @@ import com.nuvio.tv.core.player.PlayerSessionTracker
 import com.nuvio.tv.core.util.isEpisodeReleaseAired
 import com.nuvio.tv.core.util.parseEpisodeReleaseInstant
 import com.nuvio.tv.core.util.selectEpisodeReleaseValue
+import com.nuvio.tv.data.simkl.SimklLibraryEntry
 import com.nuvio.tv.data.simkl.SimklSyncSnapshot
-import com.nuvio.tv.data.simkl.canonicalContentId
-import com.nuvio.tv.data.simkl.isRunningRewatchSession
 import com.nuvio.tv.data.simkl.mediaReference
+import com.nuvio.tv.data.simkl.rewatchSessionMediaReference
+import com.nuvio.tv.data.simkl.runningRewatchSessionsOf
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
@@ -3354,25 +3355,22 @@ internal fun nextUpDismissalKeysToClear(
 }
 
 /**
- * The run a card stands for and the session that holds it, when the card is a running rewatch.
+ * The run a card stands for and the sessions that hold it, when the card is a running rewatch.
  *
  * The same matcher the row used to place the card, so the two cannot disagree about which run
- * the card stands for.
+ * the card stands for. One series can hold a session on several Simkl items (an anime lists each
+ * season as its own), and the card stands for all of them.
  */
 private fun runningRewatchFor(
     snapshot: SimklSyncSnapshot,
     contentId: String
-): Pair<RewatchRunPosition, Long>? {
+): Pair<RewatchRunPosition, List<SimklLibraryEntry>>? {
     val run = snapshot.rewatchRuns.firstOrNull { run -> run.matches(contentId) } ?: return null
-    val sessionId = snapshot.rewatchSessions
-        .firstOrNull { entry ->
-            entry.isRewatch &&
-                entry.isRunningRewatchSession() &&
-                entry.media?.canonicalContentId() == run.contentId
-        }
-        ?.rewatchId
+    val sessions = snapshot.rewatchSessions.runningRewatchSessionsOf(run.contentId)
+        .filter { session -> session.rewatchId != null }
+        .takeIf { sessions -> sessions.isNotEmpty() }
         ?: return null
-    return run to sessionId
+    return run to sessions
 }
 
 /**
@@ -3385,11 +3383,16 @@ private fun runningRewatchFor(
  */
 internal suspend fun HomeViewModel.closeRunningRewatchFor(contentId: String): Boolean {
     val snapshot = simklSyncRepository.state.value.snapshot
-    val (run, sessionId) = runningRewatchFor(snapshot, contentId) ?: return false
-    val closed = simklRewatchWriter.closeRewatchSession(
-        media = snapshot.mediaReference(contentId = run.contentId, contentType = SERIES_CONTENT_TYPE),
-        rewatchId = sessionId
-    )
+    val (run, sessions) = runningRewatchFor(snapshot, contentId) ?: return false
+    // Each session is closed on its own Simkl item: the series id can name another season's item,
+    // where the session would not be found.
+    var closed = true
+    for (session in sessions) {
+        val rewatchId = session.rewatchId ?: continue
+        val media = session.rewatchSessionMediaReference()
+            ?: snapshot.mediaReference(contentId = run.contentId, contentType = SERIES_CONTENT_TYPE)
+        if (!simklRewatchWriter.closeRewatchSession(media = media, rewatchId = rewatchId)) closed = false
+    }
     if (!closed) return false
     // The key of the dismissal just made is kept: clearing it in the same breath would put the
     // card straight back. Only the run's other id forms are swept, and only after the close landed.

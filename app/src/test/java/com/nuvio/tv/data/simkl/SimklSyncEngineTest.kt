@@ -692,7 +692,10 @@ class SimklSyncEngineTest {
         listOf("shows", "anime").forEachIndexed { index, type ->
             assertTrue("/sync/all-items/$type" in urls[index])
             assertTrue("allow_rewatch=yes" in urls[index])
-            assertTrue("extended=full" in urls[index])
+            // The library read's detail, so a season item carries the series ids and TVDB mapping.
+            assertTrue("extended=full_anime_seasons" in urls[index])
+            assertTrue("episode_tvdb_id=yes" in urls[index])
+            assertFalse("include_all_episodes" in urls[index])
             assertTrue("episode_watched_at=yes" in urls[index])
             assertTrue("language=en" in urls[index])
             // Outside the initial sync the read is paired with the sync watermark, as the guide asks.

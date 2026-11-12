@@ -30,7 +30,7 @@ import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
-import com.nuvio.tv.data.simkl.rewatchedEpisodesOf
+import com.nuvio.tv.data.simkl.rewatchedCatalogueEpisodesOf
 import com.nuvio.tv.data.simkl.simklHistoryRewatchWasRecorded
 import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
 import com.nuvio.tv.domain.model.Meta
@@ -232,7 +232,7 @@ class MetaDetailsViewModel @Inject constructor(
         val snapshot = simklSyncRepository.state.value.snapshot
         val run = rewatchRunFor(_uiState.value.meta?.id) ?: rewatchRunFor(_effectiveContentId.value)
         val episodes = run
-            ?.let { active -> snapshot.rewatchSessions.rewatchedEpisodesOf(active.contentId) }
+            ?.let { active -> snapshot.rewatchSessions.rewatchedCatalogueEpisodesOf(active.contentId) }
             .orEmpty()
         _uiState.update { state ->
             if (state.rewatchEpisodes == episodes) state else state.copy(rewatchEpisodes = episodes)

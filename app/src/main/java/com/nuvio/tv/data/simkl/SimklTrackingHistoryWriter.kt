@@ -69,7 +69,7 @@ class SimklTrackingHistoryWriter @Inject constructor(
                 item.copy(
                     media = enriched,
                     isRewatch = true,
-                    rewatchId = snapshot.rewatchSessions.activeRewatchSessionId(enriched)
+                    rewatchId = snapshot.rewatchSessions.activeRewatchSessionId(enriched, library = snapshot.entries)
                 )
             } else {
                 item.copy(media = enriched, isRewatch = false, rewatchId = null)
@@ -194,7 +194,8 @@ class SimklTrackingHistoryWriter @Inject constructor(
             media = media,
             seasonNumber = episode.season,
             episodeNumber = episode.number,
-            animeEpisodeNumber = resolved.episode?.number
+            animeEpisodeNumber = resolved.episode?.number,
+            library = snapshot.entries
         ) ?: return null
         return service.removeRewatchFromHistory(listOf(resolved), rewatchId)
     }
