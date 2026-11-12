@@ -17,6 +17,34 @@ object LivePlaybackUiPolicy {
         return previouslyLatched || playerReportsLive
     }
 
+    /** First duration seen for [mediaKey] (0 = none yet) and whether it has grown since. */
+    data class DurationGrowth(
+        val mediaKey: String? = null,
+        val firstDurationMs: Long = 0L,
+        val grew: Boolean = false
+    )
+
+    /**
+     * MPV can seek a live HLS stream inside its cache, so it reports it seekable; its duration,
+     * though, is what it has loaded so far and keeps growing, while a VOD's stays put. Readings
+     * taken before MPV reports the requested media are skipped: they can still be the previous
+     * file's.
+     */
+    fun nextDurationGrowth(
+        previous: DurationGrowth,
+        mediaKey: String?,
+        durationMs: Long,
+        fromRequestedMedia: Boolean
+    ): DurationGrowth {
+        val current = if (previous.mediaKey == mediaKey) previous else DurationGrowth(mediaKey)
+        if (!fromRequestedMedia || durationMs <= 0L || current.grew) return current
+        if (current.firstDurationMs == 0L) return current.copy(firstDurationMs = durationMs)
+        return if (durationMs > current.firstDurationMs + LIVE_DURATION_GROWTH_MS) current.copy(grew = true) else current
+    }
+
+    /** Growth past the first reading that marks a live stream (a VOD's duration only settles by a little). */
+    const val LIVE_DURATION_GROWTH_MS = 10_000L
+
     fun isLivePlayback(
         playerReportsLive: Boolean,
         contentType: String?,

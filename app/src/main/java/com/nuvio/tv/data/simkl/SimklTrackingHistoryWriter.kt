@@ -29,9 +29,10 @@ class SimklTrackingHistoryWriter @Inject constructor(
         if (pushableItems.isEmpty()) return TrackingMutationResult(0)
         syncRepository.ensureLoaded()
         val snapshot = syncRepository.state.value.snapshot
+        val entryIndex = syncRepository.currentEntryIndex()
         return service.addToHistory(
             pushableItems.map { item ->
-                val enriched = snapshot.enrichMediaReference(item.media)
+                val enriched = snapshot.enrichMediaReference(item.media, entryIndex)
                 item.copy(media = enriched.resolveAnimeEpisodeForSimkl())
             }
         )
@@ -44,9 +45,10 @@ class SimklTrackingHistoryWriter @Inject constructor(
         if (profileId != profileManager.activeProfileId.value) return TrackingMutationResult(0)
         syncRepository.ensureLoaded()
         val snapshot = syncRepository.state.value.snapshot
+        val entryIndex = syncRepository.currentEntryIndex()
         return service.removeFromHistory(
             items.map { ref ->
-                snapshot.enrichMediaReference(ref).resolveAnimeEpisodeForSimkl()
+                snapshot.enrichMediaReference(ref, entryIndex).resolveAnimeEpisodeForSimkl()
             }
         )
     }

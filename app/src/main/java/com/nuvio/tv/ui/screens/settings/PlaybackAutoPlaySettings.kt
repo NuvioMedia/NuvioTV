@@ -40,6 +40,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -562,7 +568,11 @@ private fun StreamAutoPlayProviderSelectionDialog(
                 onClick = { selected = emptySet() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (focusedItem == null) Modifier.focusRequester(focusRequester) else Modifier),
+                    .then(if (focusedItem == null) Modifier.focusRequester(focusRequester) else Modifier)
+                    .semantics {
+                        role = Role.RadioButton
+                        this.selected = selected.isEmpty()
+                    },
                 colors = CardDefaults.colors(
                     containerColor = if (selected.isEmpty()) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
                     focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -585,7 +595,7 @@ private fun StreamAutoPlayProviderSelectionDialog(
                     if (selected.isEmpty()) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(R.string.cd_selected),
+                            contentDescription = null,
                             tint = NuvioTheme.colors.Primary,
                             modifier = Modifier.height(20.dp)
                         )
@@ -620,7 +630,11 @@ private fun StreamAutoPlayProviderSelectionDialog(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(if (item == focusedItem) Modifier.focusRequester(focusRequester) else Modifier),
+                                .then(if (item == focusedItem) Modifier.focusRequester(focusRequester) else Modifier)
+                                .semantics {
+                                    role = Role.Checkbox
+                                    toggleableState = if (isSelected) ToggleableState.On else ToggleableState.Off
+                                },
                             colors = CardDefaults.colors(
                                 containerColor = if (isSelected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
                                 focusedContainerColor = NuvioTheme.colors.FocusBackground
@@ -643,7 +657,7 @@ private fun StreamAutoPlayProviderSelectionDialog(
                                 if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = stringResource(R.string.cd_selected),
+                                        contentDescription = null,
                                         tint = NuvioTheme.colors.Primary,
                                         modifier = Modifier.height(18.dp)
                                     )

@@ -74,4 +74,5 @@
     <string name="party_invite_scan">Escanea con un teléfono para unirte</string>
     <string name="party_invite_share">O comparte el código. Tus amigos pueden ingresarlo en Ver en grupo desde cualquier app de Nuvio.</string>
     <string name="party_invite_qr">Código QR de invitación para ver en grupo</string>
+    <string name="party_phone_chat_note">Abre Watch party en tu teléfono con este perfil para chatear.</string>
 </resources>

@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.tv.R
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.LibassRenderScale
+import com.nuvio.tv.data.local.LibassRenderMode
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.SubtitleLanguageOption
@@ -15,7 +16,7 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.ui.theme.NuvioPrimitives
 
-private val subtitleColors = listOf(
+internal val SubtitleSettingsTextColors = listOf(
     Color.White,
     Color(0xFFD9D9D9),
     Color.Yellow,
@@ -27,15 +28,7 @@ private val subtitleColors = listOf(
     Color(0xFF90EE90)
 )
 
-private val subtitleBackgroundColors = listOf(
-    Color.Transparent,
-    Color.Black,
-    Color(0x80000000),
-    NuvioPrimitives.neutral900,
-    NuvioPrimitives.neutral800
-)
-
-private val subtitleOutlineColors = listOf(
+internal val SubtitleSettingsOutlineColors = listOf(
     Color.Black,
     NuvioPrimitives.neutral900,
     NuvioPrimitives.neutral750,
@@ -94,61 +87,12 @@ internal fun PlaybackSubtitlesSection(
     )
 
     SettingsSectionLabel(text = stringResource(R.string.sub_style_label))
-    SliderSettingsItem(
-        title = stringResource(R.string.sub_size),
-        value = style.size,
-        valueText = "${style.size}%",
-        minValue = 50,
-        maxValue = 200,
-        step = 10,
-        onValueChange = { size -> onUpdate { setSubtitleSize(size) } },
+    SettingsActionRow(
+        title = stringResource(R.string.sub_appearance),
+        subtitle = stringResource(R.string.sub_appearance_desc),
+        onClick = { onOpenDialog(PlaybackDialog.SUBTITLE_APPEARANCE) },
         enabled = enabled
     )
-    SliderSettingsItem(
-        title = stringResource(R.string.sub_vertical_offset),
-        value = style.verticalOffset,
-        valueText = "${style.verticalOffset}%",
-        minValue = -20,
-        maxValue = 50,
-        step = 1,
-        onValueChange = { offset -> onUpdate { setSubtitleVerticalOffset(offset) } },
-        enabled = enabled
-    )
-    SettingsToggleRow(
-        title = stringResource(R.string.sub_bold),
-        subtitle = stringResource(R.string.sub_bold_sub),
-        checked = style.bold,
-        onToggle = { onUpdate { setSubtitleBold(!style.bold) } },
-        enabled = enabled
-    )
-    ColorSettingsItem(
-        title = stringResource(R.string.sub_text_color),
-        currentColor = Color(style.textColor),
-        onClick = { onOpenDialog(PlaybackDialog.SUBTITLE_TEXT_COLOR) },
-        enabled = enabled
-    )
-    ColorSettingsItem(
-        title = stringResource(R.string.sub_bg_color),
-        currentColor = Color(style.backgroundColor),
-        showTransparent = style.backgroundColor == Color.Transparent.toArgb(),
-        onClick = { onOpenDialog(PlaybackDialog.SUBTITLE_BACKGROUND_COLOR) },
-        enabled = enabled
-    )
-    SettingsToggleRow(
-        title = stringResource(R.string.sub_outline),
-        subtitle = stringResource(R.string.sub_outline_sub),
-        checked = style.outlineEnabled,
-        onToggle = { onUpdate { setSubtitleOutlineEnabled(!style.outlineEnabled) } },
-        enabled = enabled
-    )
-    if (style.outlineEnabled) {
-        ColorSettingsItem(
-            title = stringResource(R.string.sub_outline_color),
-            currentColor = Color(style.outlineColor),
-            onClick = { onOpenDialog(PlaybackDialog.SUBTITLE_OUTLINE_COLOR) },
-            enabled = enabled
-        )
-    }
     SettingsToggleRow(
         title = stringResource(R.string.sub_hdr_style),
         subtitle = stringResource(R.string.sub_hdr_style_sub),
@@ -173,6 +117,13 @@ internal fun PlaybackSubtitlesSection(
             onValueChange = { brightness -> onUpdate { setSubtitleHdrBrightness(brightness) } },
             enabled = enabled
         )
+        SettingsToggleRow(
+            title = stringResource(R.string.sub_hdr_dim_player_controls),
+            subtitle = stringResource(R.string.sub_hdr_dim_player_controls_sub),
+            checked = style.hdrDimPlayerControls,
+            onToggle = { onUpdate { setSubtitleHdrDimPlayerControls(!style.hdrDimPlayerControls) } },
+            enabled = enabled
+        )
     }
 
     SettingsSectionLabel(text = stringResource(R.string.sub_advanced_section))
@@ -184,6 +135,19 @@ internal fun PlaybackSubtitlesSection(
         enabled = enabled
     )
     if (settings.useLibass) {
+        SettingsActionRow(
+            title = stringResource(R.string.sub_libass_render_mode),
+            subtitle = if (settings.effectiveTunnelingEnabled)
+                stringResource(R.string.sub_libass_render_mode_tunneled_sub)
+            else
+                stringResource(R.string.sub_libass_render_mode_sub),
+            value = if (settings.effectiveTunnelingEnabled)
+                libassRenderModeLabel(LibassRenderMode.OVERLAY)
+            else
+                libassRenderModeLabel(settings.libassRenderMode),
+            onClick = { onOpenDialog(PlaybackDialog.LIBASS_RENDER_MODE) },
+            enabled = !settings.effectiveTunnelingEnabled
+        )
         SettingsActionRow(
             title = stringResource(R.string.sub_libass_render_scale),
             subtitle = stringResource(R.string.sub_libass_render_scale_sub),
@@ -199,6 +163,12 @@ internal fun subtitleLanguageLabel(style: SubtitleStyleSettings): String = when 
     style.isPreferredLanguageSystemDefault -> stringResource(R.string.appearance_language_system)
     else -> AVAILABLE_SUBTITLE_LANGUAGES.find { it.code == style.preferredLanguage }?.displayName
         ?: stringResource(R.string.appearance_language_system)
+}
+
+@Composable
+private fun libassRenderModeLabel(mode: LibassRenderMode): String = when (mode) {
+    LibassRenderMode.VIDEO_EFFECT -> stringResource(R.string.sub_libass_render_mode_video_effect)
+    LibassRenderMode.OVERLAY -> stringResource(R.string.sub_libass_render_mode_overlay)
 }
 
 @Composable
@@ -235,40 +205,14 @@ internal fun SubtitleSettingsDialogs(
             },
             onDismiss = onDismiss
         )
-        PlaybackDialog.SUBTITLE_TEXT_COLOR -> ColorSelectionDialog(
-            title = stringResource(R.string.sub_text_color),
-            colors = subtitleColors,
-            selectedColor = Color(style.textColor),
-            onColorSelected = { color ->
-                onUpdate { setSubtitleTextColor(color.toArgb()) }
-                onDismiss()
-            },
-            onDismiss = onDismiss
-        )
-        PlaybackDialog.SUBTITLE_BACKGROUND_COLOR -> ColorSelectionDialog(
-            title = stringResource(R.string.sub_bg_color),
-            colors = subtitleBackgroundColors,
-            selectedColor = Color(style.backgroundColor),
-            showTransparentOption = true,
-            onColorSelected = { color ->
-                onUpdate { setSubtitleBackgroundColor(color.toArgb()) }
-                onDismiss()
-            },
-            onDismiss = onDismiss
-        )
-        PlaybackDialog.SUBTITLE_OUTLINE_COLOR -> ColorSelectionDialog(
-            title = stringResource(R.string.sub_outline_color),
-            colors = subtitleOutlineColors,
-            selectedColor = Color(style.outlineColor),
-            onColorSelected = { color ->
-                onUpdate { setSubtitleOutlineColor(color.toArgb()) }
-                onDismiss()
-            },
+        PlaybackDialog.SUBTITLE_APPEARANCE -> SubtitleAppearanceDialog(
+            style = style,
+            onUpdate = onUpdate,
             onDismiss = onDismiss
         )
         PlaybackDialog.SUBTITLE_HDR_TEXT_COLOR -> ColorSelectionDialog(
             title = stringResource(R.string.sub_hdr_text_color),
-            colors = subtitleColors,
+            colors = SubtitleSettingsTextColors,
             selectedColor = Color(style.hdrTextColor),
             onColorSelected = { color ->
                 onUpdate { setSubtitleHdrTextColor(color.toArgb()) }
@@ -288,6 +232,27 @@ internal fun SubtitleSettingsDialogs(
             selectedValue = settings.libassRenderScale,
             onOptionSelected = { scale ->
                 onUpdate { setLibassRenderScale(scale) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
+        PlaybackDialog.LIBASS_RENDER_MODE -> SettingsSingleChoiceDialog(
+            title = stringResource(R.string.sub_libass_render_mode),
+            options = listOf(
+                SettingsPickerOption(
+                    LibassRenderMode.OVERLAY,
+                    stringResource(R.string.sub_libass_render_mode_overlay),
+                    stringResource(R.string.sub_libass_render_mode_overlay_sub)
+                ),
+                SettingsPickerOption(
+                    LibassRenderMode.VIDEO_EFFECT,
+                    stringResource(R.string.sub_libass_render_mode_video_effect),
+                    stringResource(R.string.sub_libass_render_mode_video_effect_sub)
+                )
+            ),
+            selectedValue = settings.libassRenderMode,
+            onOptionSelected = { mode ->
+                onUpdate { setLibassRenderMode(mode) }
                 onDismiss()
             },
             onDismiss = onDismiss

@@ -193,8 +193,8 @@
     <string name="hero_remove_from_library">Odstrániť z knižnice</string>
     <string name="hero_mark_watched">Označiť ako videné</string>
     <string name="hero_mark_unwatched">Označiť ako nevidené</string>
-    <string name="hero_play_trailer">Prehrať trailer</string>
-    <string name="hero_press_back_trailer">Stlačte späť pre ukončenie traileru</string>
+    <string name="hero_play_trailer">Prehrať Trailer</string>
+    <string name="hero_press_back_trailer">Stlačte späť pre ukončenie Traileru</string>
     <string name="cd_rating">Hodnotenie</string>
 
     
@@ -653,8 +653,8 @@
     <string name="sub_section">Titulky</string>
     <string name="sub_not_set">Nenastavené</string>
     <string name="sub_forced_lang">Vynútené</string>
-    <string name="sub_preferred_lang">Preferovaný jazyk</string>
-    <string name="sub_secondary_lang">Sekundárny preferovaný jazyk</string>
+    <string name="sub_preferred_lang">Preferovaný jazyk titulkov</string>
+    <string name="sub_secondary_lang">Sekundárny jazyk titulkov</string>
     <string name="sub_use_forced_subtitles">Použiť vynútené titulky</string>
     <string name="sub_use_forced_subtitles_desc">Uprednostniť vynútené titulky, keď sa jazyk audia zhoduje s jazykom titulkov; ak nie sú dostupné, nevyberať nič.</string>
     <string name="sub_show_only_preferred_languages">Zobraziť iba preferované jazyky</string>
@@ -2539,9 +2539,9 @@
 <string name="dv7_libdovi_mode_4_sub">Konvertovať na statický profil 8.4.</string>
 <string name="layout_section_streams">Streamy</string>
 <string name="layout_section_streams_desc">Nastavenia zobrazenia pre výsledky streamov a panely zdrojov prehrávača.</string>
-<string name="layout_cw_sort_split_upcoming">Oddelený riadok Nespustené</string>
-<string name="layout_cw_sort_split_upcoming_desc">Presunie neodvysielané epizódy do samostatného riadka Nespustené</string>
-<string name="upcoming_section_title">Nespustené</string>
+<string name="layout_cw_sort_split_upcoming">Oddelený riadok Neodvysielané</string>
+<string name="layout_cw_sort_split_upcoming_desc">Presunie neodvysielané epizódy do samostatného riadka Neodvysielané</string>
+<string name="upcoming_section_title">Neodvysielané</string>
 <string name="settings_card_depth_title">Efekt hĺbky karty</string>
 <string name="settings_card_depth_description">Pridáva osvetlený horný okraj a lesk kartám s obrázkami pre jemný pocit hĺbky.</string>
 <string name="settings_card_depth_enabled">Povoliť efekt hĺbky</string>
@@ -2568,7 +2568,7 @@
 <string name="settings_card_depth_surface_continue_watching">Pokračovať v sledovaní</string>
 <string name="settings_card_depth_surface_episodes">Karty epizód</string>
 <string name="settings_card_depth_surface_cast">Obsadenie</string>
-<string name="settings_card_depth_surface_trailers">Upútavky</string>
+<string name="settings_card_depth_surface_trailers">Trailery</string>
 <string name="mdblist_mal_title">MyAnimeList</string>
 <string name="mdblist_mal_subtitle">Zobrazovať hodnotenie MyAnimeList</string>
 <string name="debrid_stream_sort_original">Pôvodné poradie</string>
@@ -2702,7 +2702,7 @@
 <string name="external_playback_channel_description">Udržiava aplikáciu aktívnu počas prehrávania v externom prehrávači</string>
 <string name="web_debrid_title">Nastavenia priameho Debridu</string>
 <string name="web_debrid_intro_title">Prispôsobiť streamy Debrid</string>
-<string name="web_debrid_intro_copy">Upraviť štítky streamov, filtre a triedenie používané pre výsledky Direct Debrid.</string>
+<string name="web_debrid_intro_copy">Upraviť odznaky streamov, filtre a triedenie používané pre výsledky Direct Debrid.</string>
 <string name="web_debrid_tab_formatter">Formátovač</string>
 <string name="web_debrid_tab_rules">Filtre a triedenie</string>
 <string name="web_debrid_template_fields">Polia šablóny</string>
@@ -3100,9 +3100,9 @@
     <string name="player_post_play_previous_recommendation">Predchádzajúce odporúčanie</string>
     <string name="player_post_play_next_recommendation">Nasledujúce odporúčanie</string>
     <string name="player_post_play_return_to_player">Späť do prehrávača</string>
-    <string name="player_post_play_trailer_countdown">Upútavka o %1$d</string>
-    <string name="player_post_play_trailer_playing">Prehráva sa upútavka</string>
-    <string name="player_post_play_trailer">Upútavka</string>
+    <string name="player_post_play_trailer_countdown">Trailer o %1$d</string>
+    <string name="player_post_play_trailer_playing">Prehráva sa Trailer</string>
+    <string name="player_post_play_trailer">Trailer</string>
     <string name="auth_qr_manual_instruction">Alebo prejdite na %1$s a zadajte</string>
 
     <string name="appearance_launcher_artwork">Obrázok spúšťača</string>
@@ -3289,11 +3289,11 @@
     <string name="layout_section_card_depth_desc">Svetlo okrajov a odlesk na kartách obrázkov.</string>
     <string name="layout_section_custom_poster_desc">Použiť plagáty z externej služby.</string>
     <string name="layout_trailer_play_in_background">Prehrať na pozadí</string>
-    <string name="layout_trailer_play_in_background_sub">Prehrať upútavku namiesto pozadia, zatiaľ čo stránka zostáva viditeľná.</string>
+    <string name="layout_trailer_play_in_background_sub">Prehrať Trailer namiesto pozadia, zatiaľ čo stránka zostáva viditeľná.</string>
     <string name="layout_trailer_pause_on_scroll">Pozastaviť pri posúvaní</string>
-    <string name="layout_trailer_pause_on_scroll_sub">Pozastaviť upútavku pri posúvaní nadol a obnoviť ju po návrate nahor.</string>
+    <string name="layout_trailer_pause_on_scroll_sub">Pozastaviť Trailer pri posúvaní nadol a obnoviť ho po návrate nahor.</string>
     <string name="layout_detail_group_episodes">Epizódy</string>
-    <string name="layout_detail_group_trailers">Upútavky</string>
+    <string name="layout_detail_group_trailers">Trailery</string>
     <string name="layout_detail_group_metadata">Metadáta</string>
     <string name="layout_always_show_landscape_clearlogo">Vždy pozadie s logom pre plagáty na šírku</string>
     <string name="layout_always_show_landscape_clearlogo_sub">Ignorovať plagát na šírku z doplnku a namiesto neho použiť pozadie s prekrytím priesvitného loga.</string>
@@ -3366,9 +3366,6 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">Dôkladné vyhľadávanie automatickej synchronizácie</string>
     <string name="autosync_thorough_description">Pred synchronizáciou pokračovať v porovnávaní ostatných titulkov a vložených stôp pre presnejšiu zhodu. Keď je možnost vypnutá, prvá silná zhoda sa použije skôr. Použijú sa iba dostatočne spoľahlivé zhody.</string>
-    <string name="autosync_toast_failed">Synchronizácia zlyhala: Automatickej synchronizácii sa nepodarilo priradiť tieto titulky k videu.</string>
-    <string name="autosync_toast_failed_no_reference">Synchronizácia zlyhala: toto video nemá žiadne vložené titulky na porovnanie.</string>
-    <string name="autosync_toast_failed_unsupported">Synchronizácia zlyhala: Automatická synchronizácia nepodporuje tento formát titulkov.</string>
     <string name="autosync_label_synced">Automaticky synchronizované</string>
 
     <string name="ambient_mode_title">Ambientný režim</string>
@@ -3376,6 +3373,12 @@
     <string name="ambient_mode_enabled_subtitle">Fill the screen with backdrops after a period with no remote input</string>
     <string name="ambient_mode_timeout">Spustiť po</string>
     <string name="ambient_mode_timeout_subtitle">Ako dlho čakať na spustenie ambientného režimu</string>
+    <plurals name="ambient_mode_timeout_minutes">
+        <item quantity="one">%1$d minúta</item>
+        <item quantity="few">%1$d minúty</item>
+        <item quantity="many">%1$d minút</item>
+        <item quantity="other">%1$d minút</item>
+    </plurals>
     <string name="ambient_mode_catalogs">Katalógy</string>
     <string name="ambient_mode_catalogs_subtitle">Vyberte až 3 katalógy, z ktorých sa budú čerpať obrázky</string>
     <string name="ambient_mode_catalogs_dialog_subtitle">Vyberte až 3 katalógy</string>
@@ -3385,18 +3388,17 @@
     <string name="about_update_auto_install_subtitle">Sťahovať nové verzie na pozadí a inštalovať ich, kým je zariadenie neaktívne</string>
     <string name="about_update_auto_install_notice_title">Upozorniť po automatickej aktualizácii</string>
     <string name="about_update_auto_install_notice_subtitle">Zobraziť banner pri ďalšom spustení po automatickej aktualizácii aplikácie</string>
-    <string name="playback_chapters_label">Kapitoly</string>
-    <string name="playback_exo_chapters_title">Zobrazovať kapitoly (ExoPlayer)</string>
-    <string name="playback_exo_chapters_sub">Načítať kapitoly zo súborov MKV, označiť ich na časovej osi a presakovať medzi nimi. Po spustení prehrávania vykoná niekoľko malých požiadaviek navyše. mpv zobrazuje kapitoly vždy.</string>
+    <string name="playback_exo_chapters_title">Zobrazovať kapitoly</string>
+    <string name="playback_exo_chapters_sub">Načítať kapitoly zo súborov MKV, označiť ich na časovej osi a presakovať medzi nimi.</string>
     <string name="sub_hdr_style">Samostatný štýl pre HDR / Dolby Vision</string>
     <string name="sub_hdr_style_sub">Použiť odlišnú farbu textu a nižší jas pre titulky pri videách v HDR a Dolby Vision</string>
     <string name="sub_hdr_text_color">Farba textu pre HDR</string>
     <string name="sub_hdr_brightness">Jas titulkov pre HDR</string>
-    <string name="layout_trailer_4k">Upútavky v 4K</string>
-    <string name="layout_trailer_4k_sub">Prehrávať upútavky vo vyššom rozlíšení ako 1080p, ak sú dostupné. Spotrebováva výrazne viac pamäte; štandardne vypnuté na zariadeniach s 2 GB RAM alebo menej.</string>
+    <string name="layout_trailer_4k">Trailery v 4K</string>
+    <string name="layout_trailer_4k_sub">Prehrávať Trailery vo vyššom rozlíšení ako 1080p, ak sú dostupné. Spotrebováva výrazne viac pamäte; štandardne vypnuté na zariadeniach s 2 GB RAM alebo menej.</string>
     <string name="layout_custom_poster_screen_tv_recommendations">Odporúčania na TV</string>
     <string name="settings_stream_badges_in_player_title">Zobraziť v prehrávači</string>
-    <string name="settings_stream_badges_in_player_description">Zobrazovať štítky s informáciami o videu a zvuku pod názvom v prehrávači.</string>
+    <string name="settings_stream_badges_in_player_description">Zobrazovať odznaky s informáciami o videu a zvuku pod názvom v prehrávači.</string>
     <string name="player_engine_switch_title">Prepnúť na %1$s?</string>
     <string name="player_engine_switch_message">Video sa znova načíta od miesta, kde ste skončili.</string>
     <string name="subtitle_style_text_color_hdr">Farba textu (HDR)</string>
@@ -3409,4 +3411,43 @@
     <string name="player_chapter_remaining">Zostáva %1$s</string>
     <string name="stream_resume_from_time">Pokračovať od %1$s</string>
     <string name="stream_resume_from_percent">Pokračovať od %1$d%%</string>
+
+    <string name="sub_libass_render_scale">Rozlíšenie vykresľovania titulkov</string>
+    <string name="sub_libass_render_scale_sub">Nižšie rozlíšenie zlepšuje výkon pri náročnom formátovaní na úkor ostrosti</string>
+    <string name="sub_libass_render_mode">Režim vykresľovania ASS</string>
+    <string name="sub_libass_render_mode_sub">Spôsob vykresľovania titulkov ASS/SSA do videa</string>
+    <string name="sub_libass_render_mode_tunneled_sub">Tunelové prehrávanie obchádza kanál video efektov. Automaticky sa použije vrstva nad videom.</string>
+    <string name="sub_libass_render_mode_video_effect">Video efekt</string>
+    <string name="sub_libass_render_mode_video_effect_sub">Vykresľuje titulky priamo do každej snímky videa. Časovanie je presné na úroveň snímok na všetkom hardvéri. Obsah HDR sa konvertuje na SDR.</string>
+    <string name="sub_libass_render_mode_overlay">Vrstva nad videom</string>
+    <string name="sub_libass_render_mode_overlay_sub">Vykresľuje titulky na samostatnú vrstvu povrchu. Zachováva výstup HDR. Časovanie titulkov nemusí byť na niektorých zariadeniach úplne presné.</string>
+    <string name="settings_stream_player_badges_title">Odznaky v prehrávači</string>
+    <string name="settings_stream_player_badges_description">Vyberte sadu odznakov, ktorú prehrávač používa.</string>
+    <string name="settings_stream_player_badges_same">Rovnaké ako odznaky streamu</string>
+    <string name="cd_enable_scraper">Povoliť %1$s</string>
+    <string name="cd_enable_addon">Povoliť %1$s</string>
+    <string name="cd_color_swatch">Farba %1$s</string>
+    <string name="cd_emoji_option">Emodži %1$s</string>
+    <string name="cd_trailer_controls">Ovládacie prvky Traileru</string>
+    <string name="cd_seek_bar">Časová os</string>
+
+    <string name="audio_night_mode">Nočný režim</string>
+    <string name="audio_night_mode_sub">Zvýrazní dialógy a tiché zvuky, takže môžete mať nižšiu hlasitosť</string>
+    <string name="audio_night_mode_desc">Zvýrazňuje dialógy a tiché zvuky; hlasné scény zostávajú tak, ako boli namixované. Funguje pri zvuku dekódovanom aplikáciou. Formáty Dolby a DTS odoslané do prijímača alebo soundbaru cez priechod zvuku zostávajú bez zmeny.</string>
+    <string name="audio_night_mode_value">Nočný režim: %1$s</string>
+    <string name="audio_night_mode_off">Vypnuté</string>
+    <string name="audio_night_mode_light">Jemný</string>
+    <string name="audio_night_mode_light_desc">Jemné zvýraznenie, až do +6 dB</string>
+    <string name="audio_night_mode_medium">Stredný</string>
+    <string name="audio_night_mode_medium_desc">Zreteľne zvýraznené dialógy, až do +10 dB</string>
+    <string name="audio_night_mode_strong">Silný</string>
+    <string name="audio_night_mode_strong_desc">Až do +15 dB, na sledovanie neskoro v noci pri nízkej hlasitosti</string>
+    <string name="sub_hdr_dim_player_controls">Stlmiť ovládacie prvky prehrávača v HDR</string>
+    <string name="sub_hdr_dim_player_controls_sub">Použiť jas pre HDR na ovládacie prvky prehrávača a ponuky zobrazené nad videom v HDR a Dolby Vision</string>
+    <string name="audio_downmix_lfe_level">Úroveň LFE pri downmixovaní</string>
+    <string name="audio_downmix_lfe_level_sub">Zmieša kanál subwoofera (LFE) do ostatných reproduktorov namiesto jeho vynechania. Len pre konfigurácie bez LFE, ako je napríklad 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">Používa sa, keď rozloženie pre downmix nemá kanál LFE. Prejaví sa od nasledujúceho prehrávania.</string>
+    <string name="audio_downmix_lfe_level_off">Vypnuté</string>
+    <string name="audio_downmix_lfe_level_half">50 %</string>
+    <string name="audio_downmix_lfe_level_full">100 %</string>
 </resources>

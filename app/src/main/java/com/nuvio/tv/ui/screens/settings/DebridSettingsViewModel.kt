@@ -15,6 +15,7 @@ import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.DebridFormatterConfigServer
 import com.nuvio.tv.core.server.DebridFormatterSettings
 import com.nuvio.tv.core.server.DeviceIpAddress
+import com.nuvio.tv.core.util.readAppLogoBytes
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.remote.dto.PremiumizeDeviceTokenDto
 import com.nuvio.tv.data.remote.dto.TorboxDeviceTokenDto
@@ -50,7 +51,7 @@ class DebridSettingsViewModel @Inject constructor(
     private val premiumizeApi: PremiumizeApi
 ) : ViewModel() {
     private var formatterServer: DebridFormatterConfigServer? = null
-    private var logoBytes: ByteArray? = null
+    private val logoBytes: ByteArray? by lazy { context.readAppLogoBytes() }
 
     private val _uiState = MutableStateFlow(DebridSettingsUiState())
     val uiState: StateFlow<DebridSettingsUiState> = _uiState.asStateFlow()
@@ -62,19 +63,11 @@ class DebridSettingsViewModel @Inject constructor(
     val validationError: SharedFlow<String> = _validationError.asSharedFlow()
 
     init {
-        loadLogoBytes()
         viewModelScope.launch {
             dataStore.settings.collectLatest { settings ->
                 _uiState.update { it.fromSettings(settings) }
             }
         }
-    }
-
-    private fun loadLogoBytes() {
-        try {
-            val inputStream = context.resources.openRawResource(R.drawable.app_logo_wordmark)
-            logoBytes = inputStream.use { it.readBytes() }
-        } catch (_: Exception) { }
     }
 
     fun onEvent(event: DebridSettingsEvent) {

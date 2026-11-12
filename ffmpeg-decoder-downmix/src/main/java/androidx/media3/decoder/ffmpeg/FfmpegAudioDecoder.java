@@ -57,6 +57,7 @@ import java.util.List;
   private final @C.PcmEncoding int outputEncoding;
   private volatile int userCenterMixLevelDb;
   private volatile boolean downmixNormalizationEnabled;
+  private volatile float lfeMixLevel;
   private int outputBufferSize;
 
   private long nativeContext; // May be reassigned on resetting the codec.
@@ -143,6 +144,7 @@ import java.util.List;
             outputBufferSize,
             userCenterMixLevelDb,
             downmixNormalizationEnabled,
+            lfeMixLevel,
             inputBuffer.isEndOfStream());
     if (result == AUDIO_DECODER_ERROR_OTHER) {
       return new FfmpegDecoderException("Error decoding (see logcat).");
@@ -216,6 +218,14 @@ import java.util.List;
   /** Enables or disables downmix normalization. */
   public void setDownmixNormalizationEnabled(boolean downmixNormalizationEnabled) {
     this.downmixNormalizationEnabled = downmixNormalizationEnabled;
+  }
+
+  /**
+   * Sets how much of the LFE channel is mixed into the other channels when the downmix layout has
+   * no LFE (0 drops it, 1 mixes it at full level, split -3 dB per front channel by swresample).
+   */
+  public void setLfeMixLevel(float lfeMixLevel) {
+    this.lfeMixLevel = lfeMixLevel;
   }
 
   /**
@@ -350,6 +360,7 @@ import java.util.List;
       int outputSize,
       int userCenterMixLevelDb,
       boolean downmixNormalizationEnabled,
+      float lfeMixLevel,
       boolean endOfStream);
 
   private native int ffmpegGetChannelCount(long context);

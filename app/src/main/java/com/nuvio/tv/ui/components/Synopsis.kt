@@ -8,6 +8,7 @@ package com.nuvio.tv.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.focusable
@@ -48,6 +49,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,6 +83,7 @@ fun SynopsisDescription(
     var isTruncated by rememberSaveable(description, maxLines) { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val highlightInset = 12.dp
+    val readMoreLabel = stringResource(R.string.hero_synopsis_read_more)
 
     LaunchedEffect(isTruncated) {
         onTruncationChanged(isTruncated)
@@ -125,7 +128,7 @@ fun SynopsisDescription(
                         indication = null,
                         onClick = onShowFullDescription
                     )
-                    .semantics { role = Role.Button }
+                    .semantics { role = Role.Button; contentDescription = readMoreLabel }
                     .padding(horizontal = highlightInset, vertical = 8.dp)
             } else {
                 Modifier
@@ -294,7 +297,9 @@ fun SynopsisOverlay(
                             }
                         }
                         .focusRequester(contentFocusRequester)
+                        .semantics { this.contentDescription = title }
                         .focusable()
+                        .semantics { contentDescription = title }
                         .verticalScroll(scrollState)
                 ) {
                     Text(

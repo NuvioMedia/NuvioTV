@@ -102,7 +102,8 @@ internal class IecAudioTimestampClock(
             return
         }
         lastTimestampSampleTimeUs = systemTimeUs
-        val stamp = sample
+        // As Kodi: a timestamp more than 2 s old says nothing about now.
+        val stamp = sample?.takeIf { systemTimeUs - it.nanoTime / 1000L <= MAX_TIMESTAMP_AGE_US }
         val updated = stamp != null
         var wrappedFrames = 0L
         if (stamp != null) {
@@ -271,6 +272,7 @@ internal class IecAudioTimestampClock(
         const val INITIALIZING_DURATION_US = 500_000L
         const val WAIT_FOR_ADVANCE_DURATION_US = 2_000_000L
         const val MAX_AUDIO_TIMESTAMP_OFFSET_US = 5L * C.MICROS_PER_SECOND
+        const val MAX_TIMESTAMP_AGE_US = 2L * C.MICROS_PER_SECOND
         const val MAX_POSITION_DRIFT_ADVANCING_TIMESTAMP_US = 1_000L
         const val MAX_POSITION_DRIFT_FOR_SMOOTHING_US = C.MICROS_PER_SECOND
         const val MAX_POSITION_SMOOTHING_SPEED_CHANGE_PERCENT = 10
