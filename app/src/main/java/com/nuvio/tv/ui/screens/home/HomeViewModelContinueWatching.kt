@@ -2828,10 +2828,16 @@ private suspend fun HomeViewModel.applyContinueWatchingEnrichmentOverlay(
         val mapped = items.map { item ->
             when (item) {
                 is ContinueWatchingItem.NextUp -> {
-                    val overlay = cwEnrichedNextUpOverlay[item.info.contentId] ?: return@map item
+                    val overlay = cwEnrichedNextUpOverlay[item.info.contentId]
+                    if (overlay == null) {
+                        // A card that was in progress before it moved on keeps its series fields too.
+                        val inProgress = cwEnrichedInProgressOverlay[item.info.contentId] ?: return@map item
+                        return@map item.copy(info = item.info.withSeriesFieldsFrom(inProgress))
+                    }
                     if (overlay.season != item.info.season || overlay.episode != item.info.episode) {
-                        cwEnrichedNextUpOverlay.remove(item.info.contentId)
-                        return@map item
+                        // The card moved on to another episode. The overlay stays until that episode
+                        // is enriched, so every emission until then keeps the series fields.
+                        return@map item.copy(info = item.info.withSeriesFieldsFrom(overlay))
                     }
                     // Recalculate hasAired from current time so stale overlays
                     // don't keep episodes stuck in "upcoming".
@@ -3364,3 +3370,33 @@ internal fun reusableNextUpOverlay(
 ): NextUpInfo? = overlay?.takeIf {
     !seededFromDisk && it.season == item.season && it.episode == item.episode
 }
+
+/**
+ * Keeps what a card showed for its series when the card moves on to another episode.
+ *
+ * The title, artwork, genres and title ratings belong to the series, so they stay from the card
+ * enriched earlier until the new episode is enriched. Without this the card showed the raw progress
+ * title (e.g. the Simkl one) between the two. Episode fields are left to the new episode.
+ */
+internal fun NextUpInfo.withSeriesFieldsFrom(source: NextUpInfo): NextUpInfo = copy(
+    name = source.name.takeIf { it.isNotBlank() } ?: name,
+    poster = source.poster ?: poster,
+    backdrop = source.backdrop ?: backdrop,
+    logo = source.logo ?: logo,
+    genres = source.genres.ifEmpty { genres },
+    releaseInfo = source.releaseInfo ?: releaseInfo,
+    contentLanguage = source.contentLanguage ?: contentLanguage,
+    mdbListRatings = source.mdbListRatings ?: mdbListRatings
+)
+
+/** [withSeriesFieldsFrom] for a card that was in progress, e.g. an episode marked watched mid-way. */
+internal fun NextUpInfo.withSeriesFieldsFrom(source: ContinueWatchingItem.InProgress): NextUpInfo = copy(
+    name = source.progress.name.takeIf { it.isNotBlank() } ?: name,
+    poster = source.progress.poster ?: poster,
+    backdrop = source.progress.backdrop ?: backdrop,
+    logo = source.progress.logo ?: logo,
+    genres = source.genres.ifEmpty { genres },
+    releaseInfo = source.releaseInfo ?: releaseInfo,
+    contentLanguage = source.contentLanguage ?: contentLanguage,
+    mdbListRatings = source.mdbListRatings ?: mdbListRatings
+)
