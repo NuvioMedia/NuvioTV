@@ -96,6 +96,44 @@ class SimklRewatchWriterTest {
     }
 
     @Test
+    fun `unsettled deltas are retried as deltas and read whole once at the end`() {
+        val reads = mutableListOf<String?>()
+        val result = runBlocking {
+            readRewatchSessionsUntilSettled(
+                dateFrom = "watermark",
+                delays = longArrayOf(0L, 0L, 0L),
+                read = { window ->
+                    reads += window
+                    if (window == null) listOf(session(7L)) else emptyList()
+                },
+                settled = { sessions -> sessions.any { session -> session.rewatchId == 7L } },
+            )
+        }
+
+        // Every wait reads the cheap delta; the whole library is read once, after the last one.
+        assertEquals(listOf("watermark", "watermark", "watermark", null), reads)
+        assertTrue(result.settled)
+    }
+
+    @Test
+    fun `a delta that settles on a later wait needs no whole read`() {
+        val reads = mutableListOf<String?>()
+        runBlocking {
+            readRewatchSessionsUntilSettled(
+                dateFrom = "watermark",
+                delays = longArrayOf(0L, 0L, 0L),
+                read = { window ->
+                    reads += window
+                    if (reads.size == 2) listOf(session(7L)) else emptyList()
+                },
+                settled = { sessions -> sessions.any { session -> session.rewatchId == 7L } },
+            )
+        }
+
+        assertEquals(listOf("watermark", "watermark"), reads)
+    }
+
+    @Test
     fun `a delta read that already holds the write is not read twice`() = runBlocking {
         val reads = mutableListOf<String?>()
         val result = readRewatchSessionsUntilSettled(

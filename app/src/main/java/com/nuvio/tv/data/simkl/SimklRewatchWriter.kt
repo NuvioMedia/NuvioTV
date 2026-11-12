@@ -102,9 +102,11 @@ internal data class RewatchSessionReadResult(
 /**
  * Reads the rewatch sessions back until [settled] accepts them.
  *
- * The delta read is paired with the sync watermark, so it carries the items whose activity moved.
- * A rewatch session can change without moving that activity, so a delta that does not settle is
- * retried as a whole read before the next wait. The last read is returned either way.
+ * The delta read is paired with the sync watermark, so it carries the items whose activity moved,
+ * and it is what every wait reads: it costs one small response. A rewatch session can change without
+ * moving that activity, so when no delta settled, one whole read is made at the end before giving
+ * up. A whole read downloads the show and anime library with its episode dates, and reading it after
+ * every unsettled delta cost up to three of them per mark. The last read is returned either way.
  */
 internal suspend fun readRewatchSessionsUntilSettled(
     dateFrom: String?,
@@ -113,25 +115,17 @@ internal suspend fun readRewatchSessionsUntilSettled(
     settled: (List<SimklLibraryEntry>) -> Boolean,
 ): RewatchSessionReadResult {
     var lastRead: List<SimklLibraryEntry>? = null
-    var settledSeen = false
     for (waitMs in delays) {
         delay(waitMs)
-        if (dateFrom != null) {
-            val delta = read(dateFrom)
-            if (delta != null) {
-                lastRead = delta
-                if (settled(delta)) {
-                    settledSeen = true
-                    break
-                }
-            }
-        }
-        val whole = read(null) ?: continue
-        lastRead = whole
-        if (settled(whole)) {
-            settledSeen = true
-            break
+        val sessions = read(dateFrom) ?: continue
+        lastRead = sessions
+        if (settled(sessions)) return RewatchSessionReadResult(sessions = sessions, settled = true)
+    }
+    if (dateFrom != null) {
+        read(null)?.let { whole ->
+            lastRead = whole
+            if (settled(whole)) return RewatchSessionReadResult(sessions = whole, settled = true)
         }
     }
-    return RewatchSessionReadResult(sessions = lastRead, settled = settledSeen)
+    return RewatchSessionReadResult(sessions = lastRead, settled = false)
 }
