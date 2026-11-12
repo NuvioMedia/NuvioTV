@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
@@ -680,6 +681,9 @@ class TraktProgressService @Inject constructor(
             }
             .distinctUntilChanged()
     }
+
+    /** Watched movie keys as Trakt returned or accepted them, without optimistic progress. */
+    fun observeReportedWatchedMovieIds(): Flow<Set<String>> = watchedMoviesState.asStateFlow()
 
     suspend fun markAsWatched(
         progress: WatchProgress,

@@ -31,6 +31,7 @@ import com.nuvio.tv.domain.model.mergeCatalogPage
 import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.supportsExtra
+import com.nuvio.tv.domain.model.isSeriesLikeType
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.screens.home.GridItem
@@ -209,9 +210,8 @@ class FolderDetailViewModel @Inject constructor(
                 allItems.forEach { item ->
                     val key = com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
                     val isWatched = when (item.apiType) {
-                        "movie" -> item.id in movieWatchedIds
                         "series", "tv" -> item.id in seriesWatchedIds
-                        else -> false
+                        else -> !isSeriesLikeType(item.apiType) && item.id in movieWatchedIds
                     }
                     newStatus[key] = isWatched
                 }

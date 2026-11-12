@@ -44,6 +44,7 @@ import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.isSeriesLikeType
 import com.nuvio.tv.ui.components.ErrorState
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.LocalStartupLoadingState
@@ -446,17 +447,12 @@ fun HomeScreen(
     if (selectedPoster != null) {
         val item = selectedPoster.item
         val statusKey = homeItemStatusKey(item.id, item.apiType)
-        val isMovie = item.apiType.equals("movie", ignoreCase = true)
-        val isSeries = item.apiType.equals("series", ignoreCase = true) ||
-            item.apiType.equals("tv", ignoreCase = true) ||
-            item.apiType.equals("anime", ignoreCase = true)
+        val isSeries = isSeriesLikeType(item.apiType)
         HomePosterOptionsDialog(
             title = item.name,
             isInLibrary = uiState.posterLibraryMembership[statusKey] == true,
             isLibraryPending = statusKey in uiState.posterLibraryPending,
             showManageLists = uiState.librarySourceMode != LibrarySourceMode.LOCAL,
-            isMovie = isMovie,
-            isSeries = isSeries,
             isWatched = movieWatchedStatus[statusKey] == true,
             isWatchedPending = statusKey in uiState.movieWatchedPending,
             onDismiss = { posterOptionsTarget = null },
@@ -473,10 +469,10 @@ fun HomeScreen(
                 posterOptionsTarget = null
             },
             onToggleWatched = {
-                if (isMovie) {
-                    viewModel.togglePosterMovieWatched(item)
-                } else {
+                if (isSeries) {
                     viewModel.togglePosterSeriesWatched(item)
+                } else {
+                    viewModel.togglePosterMovieWatched(item)
                 }
                 posterOptionsTarget = null
             }
@@ -723,8 +719,6 @@ private fun HomePosterOptionsDialog(
     isInLibrary: Boolean,
     isLibraryPending: Boolean,
     showManageLists: Boolean,
-    isMovie: Boolean,
-    isSeries: Boolean = false,
     isWatched: Boolean,
     isWatchedPending: Boolean,
     onDismiss: () -> Unit,
@@ -778,24 +772,22 @@ private fun HomePosterOptionsDialog(
             )
         }
 
-        if (isMovie || isSeries) {
-            Button(
-                onClick = onToggleWatched,
-                enabled = !isWatchedPending,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.BackgroundCard,
-                    contentColor = NuvioTheme.colors.TextPrimary
-                )
-            ) {
-                Text(
-                    if (isWatched) {
-                        stringResource(R.string.hero_mark_unwatched)
-                    } else {
-                        stringResource(R.string.hero_mark_watched)
-                    }
-                )
-            }
+        Button(
+            onClick = onToggleWatched,
+            enabled = !isWatchedPending,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                contentColor = NuvioTheme.colors.TextPrimary
+            )
+        ) {
+            Text(
+                if (isWatched) {
+                    stringResource(R.string.hero_mark_unwatched)
+                } else {
+                    stringResource(R.string.hero_mark_watched)
+                }
+            )
         }
     }
 }
