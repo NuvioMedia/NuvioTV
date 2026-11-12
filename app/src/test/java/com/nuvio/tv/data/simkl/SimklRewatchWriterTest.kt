@@ -23,7 +23,14 @@ import org.junit.Test
  */
 class SimklRewatchWriterTest {
 
-    private val syncRepository = mockk<SimklSyncRepository>(relaxed = true)
+    /**
+     * The writer reads the sessions back on its own scope after the test has returned, starting from
+     * the sync state. A relaxed mock answered that state with a bare object, and the cast failure
+     * surfaced as an uncaught exception in whichever coroutine test happened to start next.
+     */
+    private val syncRepository = mockk<SimklSyncRepository>(relaxed = true) {
+        every { state } returns MutableStateFlow(SimklSyncState())
+    }
 
     @Test
     fun `closing a run names its session and moves it to closed`() = runBlocking {
