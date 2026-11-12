@@ -301,6 +301,8 @@ class HomeViewModel @Inject constructor(
     internal val cwNoNextUpSeeds = ConcurrentHashMap<String, Long>()
     /** Profile whose [cwNoNextUpSeeds] are loaded; null loads them again from disk. */
     @Volatile internal var cwNoNextUpSeedsProfileId: Int? = null
+    /** Wall clock time the last Continue Watching cycle started, to spot releases passed since. */
+    @Volatile internal var cwLastCycleStartedAtMs: Long = System.currentTimeMillis()
     /** In-memory cache of enriched InProgress items per contentId+episode key. */
     internal val cwEnrichedInProgressOverlay = ConcurrentHashMap<String, ContinueWatchingItem.InProgress>()
     /** Bumped to force the CW pipeline to re-run (e.g. after cache clear). */
@@ -374,6 +376,7 @@ class HomeViewModel @Inject constructor(
             observeLayoutPreferences()
             observeModernHomePresentation()
             loadContinueWatching()
+            observeContinueWatchingReleases()
             watchedSeriesStateHolder.loadFromDisk()
             observeExternalMetaPrefetchPreference()
             observeContinueWatchingSortMode()
