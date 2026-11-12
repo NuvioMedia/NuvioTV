@@ -5,6 +5,7 @@ import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tracking.TRACKING_SCROBBLE_DIAGNOSTIC_TAG
 import com.nuvio.tv.core.tracking.TrackingHistoryItem
 import com.nuvio.tv.core.tracking.TrackingHistoryWriter
+import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingMutationResult
 import com.nuvio.tv.core.tracking.TrackingProviderId
@@ -129,13 +130,21 @@ class SimklTrackingHistoryWriter @Inject constructor(
             val readEpisode = targetEpisode
             val readKind = target.kind
             val pinnedRewatchId = targetItem.rewatchId
+            val writtenFlat = readKind == TrackingMediaKind.ANIME && targetSeason == null
             rewatchWriter.refreshRewatchSessions { sessions ->
-                sessions.rewatchSessionHolds(
-                    contentId = readContentId,
-                    kind = readKind,
-                    season = targetSeason,
-                    episode = readEpisode
-                ) ||
+                val holds = if (writtenFlat) {
+                    // A flat write opens or extends the session of the item its ids name, which the
+                    // series id does not find when the reference took only that item's anime id.
+                    sessions.flatAnimeWriteHolds(target, readEpisode)
+                } else {
+                    sessions.rewatchSessionHolds(
+                        contentId = readContentId,
+                        kind = readKind,
+                        season = targetSeason,
+                        episode = readEpisode
+                    )
+                }
+                holds ||
                     // A mark of the last episode the session lacked completes it, and a completed
                     // session never holds the episode as a running one.
                     (pinnedRewatchId != null && sessions.rewatchSessionEnded(pinnedRewatchId))

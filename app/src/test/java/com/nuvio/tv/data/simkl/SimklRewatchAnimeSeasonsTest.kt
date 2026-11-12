@@ -118,6 +118,19 @@ class SimklRewatchAnimeSeasonsTest {
     }
 
     @Test
+    fun `the read back after a flat mark waits for the session of the item it named`() {
+        // Written flat to the second season's item by its Kitsu id alone, while the account reports
+        // both items by the series' IMDB id.
+        val mark = flatMark(kitsu = 45857, episode = 1)
+
+        // The first season's session holds its own episode 1, which is not the write.
+        assertFalse(listOf(firstSeasonSession(watchedAt = NEWER)).flatAnimeWriteHolds(mark, episode = 1))
+        // The second season's item published the session the write opened.
+        assertTrue(sessions().flatAnimeWriteHolds(mark, episode = 1))
+        assertFalse(sessions().flatAnimeWriteHolds(mark, episode = 2))
+    }
+
+    @Test
     fun `a read showing the pinned session completed answers the write`() {
         val completed = firstSeasonSession(watchedAt = NEWER).copy(rewatchStatus = "completed")
 

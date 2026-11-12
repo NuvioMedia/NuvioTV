@@ -331,6 +331,25 @@ internal fun List<SimklLibraryEntry>.rewatchSessionHolds(
 }
 
 /**
+ * Whether the item a flat anime write named holds the episode in a running session.
+ *
+ * A flat write names one Simkl item by its own ids (the anime id of one season's item) and numbers
+ * the episode inside that item, so only that item's sessions answer it. The series id cannot: the
+ * reference can carry the anime id alone while the account reports the item by its IMDB id, and the
+ * series' other items number their episodes from 1 as well, so their episode of the same number
+ * would end the wait before the written item publishes its session.
+ */
+internal fun List<SimklLibraryEntry>.flatAnimeWriteHolds(media: TrackingMediaReference, episode: Int): Boolean {
+    val target = media.toSimklMedia()
+    return any { entry ->
+        entry.isRewatch &&
+            entry.isRunningRewatchSession() &&
+            entry.media?.matchesTarget(target) == true &&
+            entry.rewatchedEpisodes().any { rewatched -> rewatched.episodeNumber == episode }
+    }
+}
+
+/**
  * Whether a read shows the session a write was pinned to as ended.
  *
  * Simkl completes a session once the rewatch covers every episode of its item, and the write that
