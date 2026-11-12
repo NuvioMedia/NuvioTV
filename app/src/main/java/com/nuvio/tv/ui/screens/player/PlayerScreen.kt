@@ -185,7 +185,7 @@ import kotlinx.coroutines.withContext
 private const val PLAYER_CONTROLS_FADE_DURATION_MS = 200
 
 // Back presses are ignored for this long after the last dismissible UI element (controls, panel, dialog or overlay) goes hidden (manual or auto-hide).
-private const val PLAYER_BACK_EXIT_GUARD_MS = 500L
+private const val PLAYER_BACK_EXIT_GUARD_MS = 200L
 
 private fun PlayerUiState.returnFocusSeasonEpisode(completed: Boolean): Pair<Int?, Int?> {
     val next = nextEpisode?.takeIf {
