@@ -932,7 +932,7 @@ class HomeViewModel @Inject constructor(
         val accountRun = simklSyncRepository.state.value.snapshot.rewatchRuns
             .firstOrNull { candidate -> candidate.matches(contentId) } ?: return null
         val run = cwOptimisticRewatchRuns.value[accountRun.contentId]
-            ?.takeIf { optimistic -> optimistic.episodeNumber >= accountRun.episodeNumber }
+            ?.takeIf { optimistic -> optimistic.isAtOrPast(accountRun) }
             ?: accountRun
         val markedSeason: Int?
         val markedEpisode: Int?

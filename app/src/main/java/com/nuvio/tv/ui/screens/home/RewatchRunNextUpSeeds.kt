@@ -122,13 +122,20 @@ internal fun accountCaughtUpWithOptimisticRun(
     optimistic: RewatchRunPosition
 ): Boolean {
     val run = accountRuns.firstOrNull { candidate -> candidate.matches(optimistic.contentId) } ?: return true
-    return compareValuesBy(
-        run,
-        optimistic,
+    return run.isAtOrPast(optimistic)
+}
+
+/**
+ * Whether this run stands at [other]'s episode or after it, in the catalogue's order across seasons.
+ * An episode number alone says nothing once the runs sit in different seasons.
+ */
+internal fun RewatchRunPosition.isAtOrPast(other: RewatchRunPosition): Boolean =
+    compareValuesBy(
+        this,
+        other,
         RewatchRunPosition::seasonNumber,
         RewatchRunPosition::episodeNumber
     ) >= 0
-}
 
 /** A completed seed standing at the run position, with the mark that makes the run the newer one. */
 private fun RewatchRunPosition.toNextUpSeed(): WatchProgress = WatchProgress(

@@ -330,6 +330,17 @@ class RewatchRunNextUpSeedsTest {
     }
 
     @Test
+    fun `a run position is compared by season before episode`() {
+        val firstSeasonTenth = run(contentId = SHOW, season = 1, episode = 10, markedAt = 1_000L)
+        val secondSeasonFirst = run(contentId = SHOW, season = 2, episode = 1, markedAt = 1_000L)
+
+        // An optimistic run left at S01E10 must not win over an account run that moved to S02E01.
+        assertFalse(firstSeasonTenth.isAtOrPast(secondSeasonFirst))
+        assertTrue(secondSeasonFirst.isAtOrPast(firstSeasonTenth))
+        assertTrue(firstSeasonTenth.isAtOrPast(firstSeasonTenth))
+    }
+
+    @Test
     fun `an earlier season of the account does not release the hold`() {
         val optimistic = run(contentId = SHOW, season = 2, episode = 3, markedAt = 3_000L)
 
