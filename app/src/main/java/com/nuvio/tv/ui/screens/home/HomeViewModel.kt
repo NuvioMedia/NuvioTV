@@ -475,7 +475,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun clearAllCwInMemoryCaches(clearRow: Boolean = true) {
+    private fun clearAllCwInMemoryCaches() {
         cwMetaCache.clear()
         cwMetaNegativeCacheTimestamps.clear()
         cwBadgeEpisodeCache.clear()
@@ -494,9 +494,6 @@ class HomeViewModel @Inject constructor(
         cwLastBadgeEpisodeKeys = emptySet()
         cwLastShowIdSiblings = emptyMap()
         watchedSeriesStateHolder.clearValidationState()
-        // A rewatch run move clears the answers only: the pipeline rebuilds from the run change
-        // itself, and wiping the row here is what made the whole row blink after a close.
-        if (!clearRow) return
         _uiState.update { it.copy(continueWatchingItems = emptyList(), upcomingItems = emptyList()) }
         // Bump trigger so the pipeline's collectLatest restarts with fresh state.
         cwPipelineRefreshTrigger.value++

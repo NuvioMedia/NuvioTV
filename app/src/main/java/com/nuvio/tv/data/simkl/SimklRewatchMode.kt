@@ -24,10 +24,6 @@ enum class SimklRewatchMode {
 
         fun fromStorage(value: String?): SimklRewatchMode {
             val normalized = value?.trim().orEmpty()
-            // "MANUAL" is the mode the first version of the setting shipped as; it asked for the
-            // same consent, only after the playback instead of before it, so the stored answer
-            // keeps its meaning and no migration is needed.
-            if (normalized.equals("MANUAL", ignoreCase = true)) return SEMI_AUTOMATIC
             return entries.firstOrNull { mode -> mode.name.equals(normalized, ignoreCase = true) } ?: Default
         }
     }
@@ -227,8 +223,9 @@ internal fun simklHistoryRewatchWasRecorded(status: String?, addedCount: Int): B
  *
  * The question is only worth asking where Simkl would open a session for the playback: the plan has
  * to allow rewatches, the item has to be in the user's history already, and its last watch has to
- * be older than 48 hours, or Simkl folds the new one into it and a yes would change nothing. A run
- * that is already open never asks: the playback is simply written into it.
+ * be older than 48 hours, or Simkl folds the new one into it and a yes would change nothing. It is
+ * asked before the playback starts, and only where the account runs no session for the item: a run
+ * that is already open never asks, the playback is simply written into it (the caller checks that).
  *
  * Only [SimklRewatchMode.SEMI_AUTOMATIC] asks. The answer is carried to the end of the playback,
  * where it decides whether the scrobble asks Simkl for a rewatch (see [shouldRecordSimklRewatchOnStop]).
@@ -236,21 +233,12 @@ internal fun simklHistoryRewatchWasRecorded(status: String?, addedCount: Int): B
 internal fun shouldAskToStartSimklRewatch(
     mode: SimklRewatchMode,
     accountType: String?,
-    action: TrackingScrobbleAction,
     priorWatch: SimklPriorWatch,
     nowEpochMs: Long,
-    hasRunningSession: Boolean,
     progressPercent: Double = 0.0,
-    hasPlaybackIdentity: Boolean = true,
 ): Boolean {
     if (mode != SimklRewatchMode.SEMI_AUTOMATIC) return false
     if (!isSimklRewatchPlanEligible(accountType)) return false
-    // An external player sends its start and stop back to back after it already closed, so a
-    // question raised by that start cannot be answered before the playback it is about. Such a
-    // start carries no playback id.
-    if (!hasPlaybackIdentity) return false
-    if (action != TrackingScrobbleAction.START) return false
-    if (hasRunningSession) return false
     // A start the player sends above the completion bar says that a playback that was already under
     // way is running again, not that a viewing is beginning: the question belongs before a playback,
     // and this one was asked when it began. The trackers still hear about the playback, which is why

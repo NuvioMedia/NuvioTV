@@ -199,12 +199,9 @@ class SimklTrackingScrobbler @Inject constructor(
         val askToStartRun = shouldAskToStartSimklRewatch(
             mode = rewatchMode(),
             accountType = authRepository.state.value.accountType,
-            action = TrackingScrobbleAction.START,
             priorWatch = snapshot.priorWatchForMark(catalogue = enriched, resolved = resolved),
             nowEpochMs = System.currentTimeMillis(),
-            hasRunningSession = false,
-            progressPercent = progressPercent,
-            hasPlaybackIdentity = true
+            progressPercent = progressPercent
         )
         if (askToStartRun) {
             rewatchConsentRepository.askAndAwait(resolved)

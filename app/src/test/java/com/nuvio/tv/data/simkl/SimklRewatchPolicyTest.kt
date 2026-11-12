@@ -138,9 +138,6 @@ class SimklRewatchPolicyTest {
         assertEquals(SimklRewatchMode.OFF, SimklRewatchMode.fromStorage("nonsense"))
         assertEquals(SimklRewatchMode.AUTOMATIC, SimklRewatchMode.fromStorage("automatic"))
         assertEquals(SimklRewatchMode.SEMI_AUTOMATIC, SimklRewatchMode.fromStorage("semi_automatic"))
-        // The mode the setting shipped as before it asked before the playback: the answer the user
-        // stored is still an answer, so it is read as the mode that asks.
-        assertEquals(SimklRewatchMode.SEMI_AUTOMATIC, SimklRewatchMode.fromStorage(" MANUAL "))
     }
 
     @Test
@@ -315,27 +312,6 @@ class SimklRewatchPolicyTest {
         assertFalse(ask(mode = SimklRewatchMode.SEMI_AUTOMATIC, accountType = "free", priorWatch = watchedLongAgo))
         assertFalse(ask(mode = SimklRewatchMode.SEMI_AUTOMATIC, accountType = null, priorWatch = watchedLongAgo))
 
-        // A run the account already holds is never asked about: the playback is written into it.
-        assertFalse(
-            ask(
-                mode = SimklRewatchMode.SEMI_AUTOMATIC,
-                accountType = "pro",
-                priorWatch = watchedLongAgo,
-                hasRunningSession = true,
-            ),
-        )
-
-        // Only a playback that is beginning asks. A stop is where the answer is used, not where it
-        // is collected.
-        assertFalse(
-            ask(
-                mode = SimklRewatchMode.SEMI_AUTOMATIC,
-                accountType = "pro",
-                priorWatch = watchedLongAgo,
-                action = TrackingScrobbleAction.STOP,
-            ),
-        )
-
         // An item the account does not hold is not a repeat viewing at all.
         assertFalse(
             ask(mode = SimklRewatchMode.SEMI_AUTOMATIC, accountType = "pro", priorWatch = SimklPriorWatch.None),
@@ -401,16 +377,12 @@ class SimklRewatchPolicyTest {
         accountType: String?,
         priorWatch: SimklPriorWatch,
         nowEpochMs: Long = 10_000_000_000L,
-        action: TrackingScrobbleAction = TrackingScrobbleAction.START,
-        hasRunningSession: Boolean = false,
         progressPercent: Double = 0.0,
     ): Boolean = shouldAskToStartSimklRewatch(
         mode = mode,
         accountType = accountType,
-        action = action,
         priorWatch = priorWatch,
         nowEpochMs = nowEpochMs,
-        hasRunningSession = hasRunningSession,
         progressPercent = progressPercent,
     )
     @Test

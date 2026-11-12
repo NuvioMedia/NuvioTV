@@ -3340,21 +3340,6 @@ internal fun nextUpDismissKey(
 }
 
 /**
- * The id forms whose saved dismissal a closed run may clear.
- *
- * The dismissal the user just made is stored under the content id the card carries, so clearing it
- * in the same breath would put the card straight back. The other forms are the stale ones a build
- * that could not close a session left behind; those are the ones this sweep is for.
- */
-internal fun nextUpDismissalKeysToClear(
-    matchKeys: Collection<String>,
-    keptKey: String
-): List<String> {
-    val kept = keptKey.trim()
-    return matchKeys.map { key -> key.trim() }.filter { key -> key.isNotEmpty() && key != kept }
-}
-
-/**
  * The run a card stands for and the sessions that hold it, when the card is a running rewatch.
  *
  * The same matcher the row used to place the card, so the two cannot disagree about which run
@@ -3382,6 +3367,7 @@ private fun runningRewatchFor(
  * Simkl already has. A card whose series runs no session is left alone.
  */
 internal suspend fun HomeViewModel.closeRunningRewatchFor(contentId: String): Boolean {
+    val profileId = profileManager.activeProfileId.value
     val snapshot = simklSyncRepository.state.value.snapshot
     val (run, sessions) = runningRewatchFor(snapshot, contentId) ?: return false
     // Each session is closed on its own Simkl item: the series id can name another season's item,
@@ -3394,10 +3380,15 @@ internal suspend fun HomeViewModel.closeRunningRewatchFor(contentId: String): Bo
         if (!simklRewatchWriter.closeRewatchSession(media = media, rewatchId = rewatchId)) closed = false
     }
     if (!closed) return false
-    // The key of the dismissal just made is kept: clearing it in the same breath would put the
-    // card straight back. Only the run's other id forms are swept, and only after the close landed.
-    for (key in nextUpDismissalKeysToClear(run.matchKeys, contentId)) {
-        traktSettingsDataStore.removeDismissedNextUpKeysForContent(key)
+    // A close is not a dismissal: a later run of the same title must be able to show up again. So
+    // every dismissal saved under any id form of the run goes, the card's own one included (closing
+    // a running card saves none), and only for the profile that asked for the close.
+    if (profileManager.activeProfileId.value == profileId) {
+        (run.matchKeys + contentId)
+            .map(String::trim)
+            .filter(String::isNotEmpty)
+            .distinct()
+            .forEach { key -> runCatching { traktSettingsDataStore.removeDismissedNextUpKeysForContent(key) } }
     }
     return true
 }
@@ -3448,11 +3439,6 @@ internal fun HomeViewModel.removeContinueWatchingPipeline(
                     // hide a run that is still live on Simkl.
                     if (closeRunningRewatchFor(contentId)) {
                         if (profileManager.activeProfileId.value != closeProfileId) return@launch
-                        // A rewatch close is not a dismissal. The close takes the card out of the
-                        // account, and a later run of the same title must be able to show up again.
-                        runCatching {
-                            traktSettingsDataStore.removeDismissedNextUpKeysForContent(contentId)
-                        }
                         removeNextUpCardLocally(dismissKey)
                         // The writer reads the sessions back in the background. Hold the row until
                         // the run is really gone, so the card cannot come back in that window.
