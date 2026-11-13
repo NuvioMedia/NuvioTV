@@ -303,7 +303,7 @@ func TestIndexedNZBRejectsMalformedDirectoryRecords(t *testing.T) {
 		func(r *nzbRecord) { r.Index = -1 },
 		func(r *nzbRecord) { r.Offset++ },
 		func(r *nzbRecord) { r.Length = 1 << 62 },
-		func(r *nzbRecord) { r.Bytes = maxNZBBytes + 1 },
+		func(r *nzbRecord) { r.Bytes = maxIndexedNZBDecoded + 1 },
 		func(r *nzbRecord) { r.Size = -1 },
 	} {
 		var records []nzbRecord

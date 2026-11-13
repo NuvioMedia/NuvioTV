@@ -219,8 +219,9 @@ func (c *nzbCache) readIndex(f *os.File, key string, size int64) (*nzbSnapshot, 
 	count, lastIndex := 0, -1
 	end, decoded := int64(nzbIndexHeader), int64(0)
 	for _, r := range records {
-		if r.Index <= lastIndex || r.Index >= 10000 || r.Order < 0 || r.Size <= 0 || r.Count <= 0 || r.Count > 500000-count ||
-			r.Offset != end || r.Length < 18 || r.Length > int64(offset)-end || r.Bytes < int64(r.Count)*3 || r.Bytes > maxNZBBytes-decoded {
+		if r.Index <= lastIndex || r.Index >= 10000 || r.Order < 0 || r.Size <= 0 || r.Count <= 0 || r.Count > maxNZBSegments ||
+			r.Count > maxIndexedNZBSegments-count || r.Offset != end || r.Length < 18 || r.Length > int64(offset)-end ||
+			r.Bytes < int64(r.Count)*3 || r.Bytes > maxIndexedNZBDecoded-decoded {
 			return nil, errNZBIndex
 		}
 		lastIndex, end, count, decoded = r.Index, end+r.Length, count+r.Count, decoded+r.Bytes
@@ -274,35 +275,59 @@ func (c *byteCounter) Write(p []byte) (int, error) { c.n += int64(len(p)); retur
 // One compressor and buffer are reused across records, keeping season-pack
 // writes bounded. Only validated parser output enters this format.
 func (f *nzbCacheFill) indexed(files []*File) string {
-	f.Write(make([]byte, nzbIndexHeader))
-	var records []nzbRecord
-	gz, _ := gzip.NewWriterLevel(f, gzip.BestSpeed)
-	bw := bufio.NewWriterSize(io.Discard, 32<<10)
+	f.startIndex()
 	for _, file := range files {
-		if f.ctx != nil && f.ctx.Err() != nil {
-			return f.finish(false)
-		}
-		if file.damaged != nil {
-			return f.finish(false)
-		}
-		if err := file.loadSegments(); err != nil {
-			return f.finish(false)
-		}
-		r := nzbRecord{Name: file.Name, Index: file.Index, Order: file.order, Size: file.prefix[len(file.prefix)-1], Count: len(file.segments), Offset: f.written, Password: file.password}
-		h := sha256.New()
-		count := &byteCounter{}
-		gz.Reset(f)
-		bw.Reset(io.MultiWriter(gz, h, count))
-		if writeNZBSegments(bw, file.segments) != nil || bw.Flush() != nil || gz.Close() != nil {
-			return f.finish(false)
-		}
-		r.Length, r.Bytes = f.written-r.Offset, count.n
-		copy(r.Hash[:], h.Sum(nil))
-		records = append(records, r)
-		if f.failure != "" {
+		if !f.appendIndexed(file) {
 			return f.finish(false)
 		}
 	}
+	return f.finishIndex()
+}
+
+// startIndex reserves the header, written last once the directory is known.
+func (f *nzbCacheFill) startIndex() {
+	f.Write(make([]byte, nzbIndexHeader))
+	f.gz, _ = gzip.NewWriterLevel(f, gzip.BestSpeed)
+	f.bw = bufio.NewWriterSize(io.Discard, 32<<10)
+}
+
+// appendIndexed writes one file's record. False when the index cannot be completed:
+// the file is damaged, the write failed or the open was cancelled.
+func (f *nzbCacheFill) appendIndexed(file *File) bool {
+	if f.ctx != nil && f.ctx.Err() != nil {
+		return false
+	}
+	if file.damaged != nil {
+		return false
+	}
+	if err := file.loadSegments(); err != nil {
+		return false
+	}
+	if len(f.records) >= 10000 || len(file.segments) > maxNZBSegments || len(file.segments) > maxIndexedNZBSegments-f.count {
+		return false
+	}
+	r := nzbRecord{Name: file.Name, Index: file.Index, Order: file.order, Size: file.prefix[len(file.prefix)-1], Count: len(file.segments), Offset: f.written, Password: file.password}
+	h := sha256.New()
+	count := &byteCounter{}
+	f.gz.Reset(f)
+	f.bw.Reset(io.MultiWriter(f.gz, h, count))
+	if writeNZBSegments(f.bw, file.segments) != nil || f.bw.Flush() != nil || f.gz.Close() != nil {
+		return false
+	}
+	r.Length, r.Bytes = f.written-r.Offset, count.n
+	if r.Bytes > maxIndexedNZBDecoded-f.decoded {
+		return false
+	}
+	copy(r.Hash[:], h.Sum(nil))
+	f.records = append(f.records, r)
+	f.count += r.Count
+	f.decoded += r.Bytes
+	return f.failure == ""
+}
+
+// finishIndex writes the directory and the header, and saves the entry.
+func (f *nzbCacheFill) finishIndex() string {
+	records := f.records
 	b, err := json.Marshal(records)
 	if err != nil || len(b) > nzbDirectoryBytes {
 		return f.finish(false)
@@ -319,5 +344,5 @@ func (f *nzbCacheFill) indexed(files []*File) string {
 		f.failure = "disk_error"
 	}
 	f.ioTime += time.Since(start)
-	return f.finish(len(files) > 0)
+	return f.finish(len(records) > 0)
 }

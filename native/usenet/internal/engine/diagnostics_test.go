@@ -119,7 +119,7 @@ func (r *delayedNZBReader) Read(p []byte) (int, error) {
 func TestNZBBodyWaitIsSeparatedFromParseWork(t *testing.T) {
 	xml, _ := fixture([]inputFile{{"movie.mkv", payload(1024), nil}})
 	trace := newStartupTrace()
-	_, err := parseNZBTraced(&delayedNZBReader{Reader: strings.NewReader(xml)}, nil, trace)
+	_, _, err := parseNZBTraced(&delayedNZBReader{Reader: strings.NewReader(xml)}, nil, trace, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -49,22 +49,43 @@ type File struct {
 	password      string // NZB <head><meta type="password">, shared by every file of the document.
 }
 
+// Every file's segment list of a document is held in memory up to these bounds.
 const maxNZBBytes = 64 << 20
 const maxNZBSegments = 500000
 
+// A larger document, such as a whole season of Blu-ray discs, is opened through
+// the NZB cache: each file's segments go to its index as soon as they are read,
+// so only the file being read is held, and the played file's are read back.
+const (
+	maxIndexedNZBBytes    = 256 << 20
+	maxIndexedNZBSegments = 2000000
+	// Uncompressed size of an index's records; the entry itself stays within nzbCacheEntryBytes.
+	maxIndexedNZBDecoded = 160 << 20
+)
+
+// What parseNZB holds before moving a document to the cache index; tests lower them.
+var heldNZBBytes, heldNZBSegments int64 = maxNZBBytes, maxNZBSegments
+
 var errNZBTooLarge = errors.New("NZB exceeds 64 MiB size limit")
+var errIndexedNZBTooLarge = errors.New("NZB exceeds 256 MiB size limit")
+var errNZBTooLargeToHold = errors.New("NZB is too large to open without room in the NZB cache")
 var errDamagedNZBFile = errors.New("NZB contains missing/duplicate segments or invalid article metadata")
 
 // Unlike LimitReader, crossing the bound returns an explicit error instead of
 // EOF. Probe one byte at the boundary so an exactly full document still works.
+// [extend], when set, may grant more once: the parser moved the document to the cache index.
 type nzbLimitReader struct {
 	r         io.Reader
 	remaining int64
+	extend    func() int64
 }
 
 func (r *nzbLimitReader) Read(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
+	}
+	if r.remaining == 0 && r.extend != nil {
+		r.remaining, r.extend = r.extend(), nil
 	}
 	if r.remaining == 0 {
 		var probe [1]byte
@@ -81,15 +102,63 @@ func (r *nzbLimitReader) Read(p []byte) (int, error) {
 }
 
 func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
+	files, _, err := parseNZB(r, store, nil)
+	return files, err
+}
+
+// nzbSpill takes the files of a document too large to hold: the NZB cache index being written.
+type nzbSpill interface {
+	startIndex()
+	appendIndexed(*File) bool
+}
+
+// parseNZB reads the document one file at a time. Within the in-memory bounds it
+// keeps every file's segments, as it always has. Past them, with [spill], every file
+// read so far and each one after it is written to the cache index and its segments
+// released; the result is then true and the caller must finish and bind the index,
+// since the returned files hold no segments. Damaged files are kept out of the index.
+func parseNZB(r io.Reader, store *Store, spill nzbSpill) ([]*File, bool, error) {
+	var files []*File
+	held, total := int64(0), 0 // segments in memory, and in the document
+	spilled, spillFailed := false, false
+	spillAll := func() bool {
+		if spilled {
+			return true
+		}
+		if spill == nil || spillFailed {
+			return false
+		}
+		spill.startIndex()
+		for _, f := range files {
+			if f.damaged != nil {
+				continue
+			}
+			if !spill.appendIndexed(f) {
+				spillFailed = true
+				return false
+			}
+			f.release()
+		}
+		spilled, held = true, 0
+		return true
+	}
+	// Past the in-memory byte bound, the document may grow to the indexed bound.
+	extend := func() int64 {
+		if !spillAll() {
+			return 0
+		}
+		return maxIndexedNZBBytes - heldNZBBytes
+	}
 	// Only NZB XML is buffered/decompressed here. Article/video payloads never
 	// pass through bufio or a line scanner; nntppool uses chunked rapidyenc.
-	br := bufio.NewReader(&nzbLimitReader{r: r, remaining: maxNZBBytes})
+	outer := &nzbLimitReader{r: r, remaining: heldNZBBytes, extend: extend}
+	br := bufio.NewReader(outer)
 	magic, _ := br.Peek(2)
 	var input io.Reader = br
 	if len(magic) == 2 && magic[0] == 0x1f && magic[1] == 0x8b {
 		gz, err := gzip.NewReader(br)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		defer gz.Close()
 		input = gz
@@ -97,10 +166,15 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 	// Adapt nzbparser's XML/subject handling, decoding one file at a time. Its
 	// full-document parser sorts files and retains a second complete XML model,
 	// which changes addon fileIdx semantics and wastes season-pack RAM.
-	decoder := xml.NewDecoder(&nzbLimitReader{r: input, remaining: maxNZBBytes})
+	inner := &nzbLimitReader{r: input, remaining: heldNZBBytes, extend: extend}
+	decoder := xml.NewDecoder(inner)
 	decoder.CharsetReader = charset.NewReaderLabel
-	var files []*File
-	count := 0
+	tooLarge := func(err error) error {
+		if errors.Is(err, errNZBTooLarge) && spilled {
+			return errIndexedNZBTooLarge
+		}
+		return err
+	}
 	root := false
 	index := 0
 	password := ""
@@ -110,7 +184,7 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("invalid NZB: %w", err)
+			return nil, spilled, fmt.Errorf("invalid NZB: %w", tooLarge(err))
 		}
 		start, ok := token.(xml.StartElement)
 		if !ok {
@@ -118,7 +192,7 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 		}
 		if !root {
 			if start.Name.Local != "nzb" {
-				return nil, errors.New("invalid NZB root")
+				return nil, spilled, errors.New("invalid NZB root")
 			}
 			root = true
 			continue
@@ -132,7 +206,7 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 				} `xml:"meta"`
 			}
 			if err := decoder.DecodeElement(&head, &start); err != nil {
-				return nil, fmt.Errorf("invalid NZB head: %w", err)
+				return nil, spilled, fmt.Errorf("invalid NZB head: %w", tooLarge(err))
 			}
 			for _, m := range head.Meta {
 				if value := strings.TrimSpace(m.Value); strings.EqualFold(m.Type, "password") && value != "" && len(value) <= 1024 {
@@ -143,20 +217,33 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 		}
 		if start.Name.Local != "file" {
 			if err := decoder.Skip(); err != nil {
-				return nil, err
+				return nil, spilled, tooLarge(err)
 			}
 			continue
 		}
 		if index >= 10000 {
-			return nil, errors.New("NZB exceeds file limit")
+			return nil, spilled, errors.New("NZB exceeds file limit")
 		}
 		var nf struct {
 			Subject  string             `xml:"subject,attr"`
 			Segments boundedNZBSegments `xml:"segments"`
 		}
-		nf.Segments.remaining = maxNZBSegments - count
+		budget := func() int {
+			if spilled {
+				return min(maxNZBSegments, maxIndexedNZBSegments-total)
+			}
+			return int(heldNZBSegments - held)
+		}
+		nf.Segments.remaining = budget()
+		// Past the in-memory bound, this file continues with the indexed one.
+		nf.Segments.more = func(read int) int {
+			if spilled || !spillAll() {
+				return 0
+			}
+			return max(0, budget()-read)
+		}
 		if err := decoder.DecodeElement(&nf, &start); err != nil {
-			return nil, fmt.Errorf("invalid NZB file: %w", err)
+			return nil, spilled, fmt.Errorf("invalid NZB file: %w", tooLarge(err))
 		}
 		i := index
 		index++
@@ -164,13 +251,14 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 		if len(segments) == 0 {
 			continue
 		}
-		count += len(segments)
+		total += len(segments)
 		sort.Slice(segments, func(i, j int) bool { return segments[i].Number < segments[j].Number })
 		subject, err := nzbparser.ParseSubject(nf.Subject)
 		if err != nil {
-			return nil, errors.New("invalid NZB subject")
+			return nil, spilled, errors.New("invalid NZB subject")
 		}
-		f := &File{Name: strings.Trim(subject.Filename, "\" '"), Index: i, store: store, prefix: make([]int64, len(segments)+1), segments: make([]segment, 0, len(segments))}
+		f := &File{Name: strings.Trim(subject.Filename, "\" '"), Index: i, store: store, prefix: make([]int64, len(segments)+1),
+			segments: make([]segment, 0, len(segments)), password: password}
 		if subject.TotalFiles > 1 {
 			f.order = subject.File
 		}
@@ -182,29 +270,44 @@ func ParseNZB(r io.Reader, store *Store) ([]*File, error) {
 			}
 			f.segments = append(f.segments, segment{id: id, wire: int64(s.Bytes)})
 			if s.Bytes > (1<<63-1)-f.prefix[j] {
-				return nil, errors.New("NZB size overflow")
+				return nil, spilled, errors.New("NZB size overflow")
 			}
 			f.prefix[j+1] = f.prefix[j] + int64(s.Bytes)
 		}
 		if f.damaged == nil {
 			f.size = f.prefix[len(f.segments)]
 		}
+		if !spilled {
+			held += int64(len(segments))
+		} else if f.damaged == nil {
+			if !spill.appendIndexed(f) {
+				return nil, true, errNZBTooLargeToHold
+			}
+			f.release()
+		}
 		files = append(files, f)
 	}
 	if len(files) == 0 {
-		return nil, errors.New("NZB has no files")
+		return nil, spilled, errors.New("NZB has no files")
 	}
 	for _, f := range files {
 		f.password = password
 	}
-	return files, nil
+	return files, spilled, nil
+}
+
+// release drops the segment list of a file written to the cache index; its size stays.
+func (f *File) release() {
+	f.segments, f.prefix = nil, nil
 }
 
 // Enforce the document budget before decoding/allocating the next segment,
-// including when a single file contains the entire oversized document.
+// including when a single file contains the entire oversized document. [more]
+// may raise it once the parser moved the document to the cache index.
 type boundedNZBSegments struct {
 	items     []nzbSegment
 	remaining int
+	more      func(read int) int
 }
 
 func (s *boundedNZBSegments) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
@@ -220,6 +323,9 @@ func (s *boundedNZBSegments) UnmarshalXML(d *xml.Decoder, start xml.StartElement
 					return err
 				}
 				continue
+			}
+			if s.remaining == 0 && s.more != nil {
+				s.remaining, s.more = s.more(len(s.items)), nil
 			}
 			if s.remaining == 0 {
 				return errors.New("NZB exceeds segment metadata limit")
@@ -344,16 +450,32 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 	trace.mark("nzb_cache_create_finished")
 	if fill != nil {
 		fill.ctx = ctx
-		files, err := parseNZBTraced(resp.Body, store, trace)
+		// Only a session's store can bind a document that had to be moved to the index.
+		var spill nzbSpill
+		if store != nil {
+			spill = fill
+		}
+		files, spilled, err := parseNZBTraced(resp.Body, store, trace, spill)
 		if err == nil && ctx.Err() == nil {
 			trace.mark("nzb_index_started")
-			diagnostic.Write = fill.indexed(files)
+			if spilled {
+				diagnostic.Write = fill.finishIndex()
+			} else {
+				diagnostic.Write = fill.indexed(files)
+			}
 			trace.mark("nzb_index_finished")
 			trace.duration("nzb_cache_io", fill.ioTime)
 			if diagnostic.Write == "saved" {
 				diagnostic.Format = "indexed"
+				parsed := files
 				files = cache.bindSaved(key, files, store)
+				if spilled {
+					files, err = withDamaged(files, parsed)
+				}
 				trace.mark("nzb_cache_bound")
+			} else if spilled {
+				// Its segments went to an index that could not be saved.
+				files, err = nil, errNZBTooLargeToHold
 			}
 		} else {
 			diagnostic.Write = fill.finish(false)
@@ -361,7 +483,7 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 		diagnostic.Bytes = fill.written
 		if ctx.Err() != nil {
 			diagnostic.Write = "cancelled"
-		} else if errors.Is(err, errNZBTooLarge) {
+		} else if errors.Is(err, errNZBTooLarge) || errors.Is(err, errIndexedNZBTooLarge) {
 			diagnostic.Write = "oversized"
 		}
 		return files, err
@@ -369,7 +491,30 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 	if cache != nil {
 		diagnostic.Write = outcome
 	}
-	return parseNZBTraced(resp.Body, store, trace)
+	files, _, err := parseNZBTraced(resp.Body, store, trace, nil)
+	return files, err
+}
+
+// withDamaged completes a document read into the cache index: [bound] are its
+// indexed files, read lazily, and [parsed] still names the damaged files the
+// index leaves out, so selection reports them as before. Without a bound index
+// the parsed files hold no segments and cannot be read.
+func withDamaged(bound, parsed []*File) ([]*File, error) {
+	if len(bound) == 0 || bound[0].cached == nil {
+		return nil, errNZBTooLargeToHold
+	}
+	var damaged []*File
+	for _, f := range parsed {
+		if f.damaged != nil {
+			damaged = append(damaged, f)
+		}
+	}
+	if len(damaged) == 0 {
+		return bound, nil
+	}
+	files := append(append([]*File(nil), bound...), damaged...)
+	sort.SliceStable(files, func(i, j int) bool { return files[i].Index < files[j].Index })
+	return files, nil
 }
 
 type nzbSegment struct {

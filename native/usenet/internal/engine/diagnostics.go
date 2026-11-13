@@ -114,18 +114,18 @@ func (r *nzbTimingReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-func parseNZBTraced(r io.Reader, store *Store, trace *startupTrace) ([]*File, error) {
+func parseNZBTraced(r io.Reader, store *Store, trace *startupTrace, spill nzbSpill) ([]*File, bool, error) {
 	if trace == nil {
-		return ParseNZB(r, store)
+		return parseNZB(r, store, spill)
 	}
 	trace.mark("nzb_parse_started")
 	start := time.Now()
 	body := &nzbTimingReader{r: r}
-	files, err := ParseNZB(body, store)
+	files, spilled, err := parseNZB(body, store, spill)
 	trace.duration("nzb_body_read", body.elapsed)
 	trace.duration("nzb_parse_work", time.Since(start)-body.elapsed)
 	trace.mark("nzb_parse_finished")
-	return files, err
+	return files, spilled, err
 }
 
 func (t *startupTrace) mark(name string) {

@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"bufio"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -337,6 +339,12 @@ type nzbCacheFill struct {
 	written  int64
 	reserved int64
 	failure  string
+	// The index being written, one file record at a time (nzb_index.go).
+	gz      *gzip.Writer
+	bw      *bufio.Writer
+	records []nzbRecord
+	count   int
+	decoded int64
 }
 
 func (c *nzbCache) begin(key string) (*nzbCacheFill, string) {
