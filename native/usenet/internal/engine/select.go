@@ -326,6 +326,11 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 				return &Content{Name: f.Name, Size: f.Size(), direct: f}, nil
 			}
 		}
+		// A season of Blu-ray discs posted without folders names no episode; its
+		// playlists do. Probing each of its hundreds of clips would not.
+		if discs := looseDiscs(files); discs != nil {
+			return looseDiscEpisode(ctx, discs, s)
+		}
 	}
 	for _, f := range direct {
 		if f.damaged != nil {
