@@ -63,7 +63,14 @@ used documents and their hints are evicted together. Active session descriptors
 are pinned until their stores close, so lazy reads survive ordinary eviction.
 The parser separately limits
 both downloaded and decompressed NZB bytes to 64 MiB, with an explicit size-limit
-error, and retains its 10,000-file and 500,000-segment bounds.
+error, and retains its 10,000-file and 500,000-segment bounds while it holds the
+whole document in memory. A larger document, such as a season of Blu-ray discs,
+is opened through this cache: once past those bounds the parser writes every file
+read so far, and then each file as it is read, to the index and releases its
+segments, holding one file at a time, and the played file's segments are read
+back as on any hit. Such a document may reach 256 MiB of XML and 2,000,000
+segments (500,000 per file). Without the NZB cache, or without room in it, it
+fails to open as before. Documents within the in-memory bounds are unchanged.
 Entries are keyed by a digest of the
 request URL, headers and client scope; each hit creates fresh session metadata.
 An entry still under the former per-profile scope is renamed to its new key once.
@@ -232,6 +239,19 @@ small cache. The image is read through its own RAR cursor, so selection still
 walks the set past it. DVD images, images without
 `BDMV/STREAM`, and sparable or virtual partitions fail with a message that says
 so. Images are not expanded when a file or episode selector is given.
+
+A season of Blu-ray discs is sometimes posted file by file without its folders:
+every disc's files carry only base names (`00045.m2ts`, `00001.mpls`), the discs
+one after another, each in the order its paths sort. Such a set is recognised by
+its runs of five-digit `.m2ts` files, each right after its disc's run of `.mpls`
+playlists (the backup playlists come earlier and are not read). An episode
+request reads the playlists, disc by disc, eight at a time: a playlist that plays
+one clip of at least ten minutes for most of its length is an episode, one that
+chains such clips is the disc's "play all" and orders them, and episodes much
+shorter than the others are extras. The n-th episode in disc order is served as
+`Disc <d>/BDMV/STREAM/<clip>.m2ts`, with its disc's CLPI beside it. The discs are
+taken to hold one season. A disc none of whose playlists can be read fails the
+open with that error, so a removed release fails as missing articles.
 
 Numeric part names, `.rar/.r00/...`, `.001/...`, width-mismatched names, season
 selection, yEnc name recovery and anonymous RAR5 volume numbers are supported.
