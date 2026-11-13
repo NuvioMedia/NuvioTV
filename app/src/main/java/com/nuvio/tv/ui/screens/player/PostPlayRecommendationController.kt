@@ -31,6 +31,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,6 +62,7 @@ internal class PostPlayRecommendationController(
     private val trailerService: TrailerService,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val trailerPlayerPool: TrailerPlayerPool,
+    ratingPromptVisible: Flow<Boolean>,
     private val scope: CoroutineScope
 ) {
     private data class PlaybackIdentity(
@@ -85,7 +87,8 @@ internal class PostPlayRecommendationController(
         val playbackEnded: Boolean,
         val positionMs: Long,
         val durationMs: Long,
-        val hasActiveAutoPlay: Boolean
+        val hasActiveAutoPlay: Boolean,
+        val isHeldByRatingPrompt: Boolean
     )
 
     private data class ResolvedCandidate(
@@ -122,8 +125,9 @@ internal class PostPlayRecommendationController(
             combine(
                 playbackController.uiState,
                 playbackController.playbackTimeline,
-                playerSettingsDataStore.playerSettings
-            ) { playerState, timeline, playerSettings ->
+                playerSettingsDataStore.playerSettings,
+                ratingPromptVisible
+            ) { playerState, timeline, playerSettings, ratingPromptShown ->
                 PlaybackSnapshot(
                     identity = PlaybackIdentity(
                         contentType = playerState.contentType?.trim()?.lowercase(),
@@ -145,7 +149,8 @@ internal class PostPlayRecommendationController(
                     positionMs = timeline.currentPosition,
                     durationMs = timeline.duration,
                     hasActiveAutoPlay = playerState.postPlayMode is PostPlayMode.AutoPlay &&
-                        playerState.nextEpisode?.hasAired == true
+                        playerState.nextEpisode?.hasAired == true,
+                    isHeldByRatingPrompt = ratingPromptShown
                 )
             }
                 .distinctUntilChanged()
@@ -310,6 +315,8 @@ internal class PostPlayRecommendationController(
 
         if (!shouldShow) return
         if (!state.isVisible && snapshot.hasBlockingInteraction) return
+        // The Trakt rating prompt goes first; recommendations appear once it is answered or skipped.
+        if (!state.isVisible && snapshot.isHeldByRatingPrompt) return
 
         if (!state.isVisible) {
             val needsPostEndCountdown = snapshot.playbackEnded &&

@@ -210,6 +210,7 @@ fun TrackingSettingsContent(
             showDaysCapDialog = true
         },
         onCommentsChanged = traktViewModel::onShowMetaCommentsChanged,
+        onPostPlayRatingPromptChanged = traktViewModel::onPostPlayRatingPromptChanged,
         onMoreLikeThisClick = {
             restoreFocusTarget = TrackingFocusTarget.MORE_LIKE_THIS
             showMoreLikeThisSourceDialog = true
@@ -490,6 +491,7 @@ internal fun TrackingSettingsOverview(
     onCommentsChanged: (Boolean) -> Unit,
     onMoreLikeThisClick: () -> Unit,
     onAnimeIdClick: () -> Unit,
+    onPostPlayRatingPromptChanged: (Boolean) -> Unit = {},
     mdbListLibraryLists: MdbListLibraryListsUiState = MdbListLibraryListsUiState(),
     onMdbListLibraryListsClick: () -> Unit = {}
 ) {
@@ -628,6 +630,16 @@ internal fun TrackingSettingsOverview(
                                     onCommentsChanged(!traktState.showMetaComments)
                                 },
                                 modifier = Modifier.testTag(TrackingSettingsTestTags.COMMENTS)
+                            )
+                            SettingsToggleRow(
+                                title = stringResource(R.string.trakt_post_play_rating_title),
+                                subtitle = stringResource(R.string.trakt_post_play_rating_subtitle),
+                                checked = traktState.postPlayRatingPrompt,
+                                enabled = true,
+                                onToggle = {
+                                    onPostPlayRatingPromptChanged(!traktState.postPlayRatingPrompt)
+                                },
+                                modifier = Modifier.testTag(TrackingSettingsTestTags.POST_PLAY_RATING)
                             )
                         }
                     }
@@ -816,5 +828,6 @@ internal object TrackingSettingsTestTags {
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"
     const val CONTINUE_WATCHING = "tracking_trakt_continue_watching"
     const val COMMENTS = "tracking_trakt_comments"
+    const val POST_PLAY_RATING = "tracking_trakt_post_play_rating"
     const val MORE_LIKE_THIS = "tracking_trakt_more_like_this"
 }
