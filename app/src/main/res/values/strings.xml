@@ -2125,6 +2125,7 @@
     <string name="library_filter_genre">Genre</string>
     <string name="library_filter_year">Year</string>
     <string name="library_filter_watched">Watched</string>
+    <string name="library_filter_hide_watched">Hide watched</string>
     <string name="library_watched_filter_all">All</string>
     <string name="library_watched_filter_watched">Watched</string>
     <string name="library_watched_filter_unwatched">Unwatched</string>
