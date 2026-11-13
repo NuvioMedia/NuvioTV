@@ -1146,6 +1146,14 @@
     <string name="layout_cw_sort_streaming_desc">פריטים שיצאו תחילה, עתידיים בסוף</string>
     <string name="layout_cw_sort_split_upcoming">שורת \"עתידי\" נפרדת</string>
     <string name="layout_cw_sort_split_upcoming_desc">העברת פרקים שטרם שודרו לשורת \"עתידי\" נפרדת</string>
+    <string name="layout_cw_click_action">בעת בחירת פריט</string>
+    <string name="layout_cw_click_action_sub">מה ייפתח בעת בחירת פריט בשורת המשך הצפייה</string>
+    <string name="layout_cw_click_stream">פתיחת מקור צפייה</string>
+    <string name="layout_cw_click_stream_desc">בחירת מקור צפייה או המשך הפעלה</string>
+    <string name="layout_cw_click_details">פתיחת פרטים</string>
+    <string name="layout_cw_click_details_desc">פתיחת עמוד הפרטים של הכותרת</string>
+    <string name="layout_cw_click_details_upcoming">פרטים עבור פרקים עתידיים בלבד</string>
+    <string name="layout_cw_click_details_upcoming_desc">פתיחת פרטי הפרקים שטרם שודרו, ומקור הצפייה עבור שאר הפרקים</string>
     <string name="upcoming_section_title">עתידי</string>
     <string name="layout_trailer_button">הצגת כפתור טריילר</string>
     <string name="layout_trailer_button_sub">הצגת כפתור טריילר בעמוד הפרטים (רק כשטריילר זמין).</string>
