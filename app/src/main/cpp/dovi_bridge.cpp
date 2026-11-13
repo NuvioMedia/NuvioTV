@@ -389,25 +389,35 @@ static bool filterSeiNal(const uint8_t* data, size_t nalOffset, size_t nalSize, 
     const size_t HDR10_PLUS_SIG_LEN = 5;
 
     while (pos < rbspEnd) {
-        if (rbspEnd - pos == 1 && rbspData[pos] == 0x80) break;
+        // rbsp_trailing_bits (0x80), optionally followed by zero padding.
+        if (rbspData[pos] == 0x80) {
+            bool onlyPadding = true;
+            for (size_t k = pos + 1; k < rbspEnd; ++k) {
+                if (rbspData[k] != 0) { onlyPadding = false; break; }
+            }
+            if (onlyPadding) break;
+        }
 
         size_t msgStart = pos;
 
         uint32_t payloadType = 0;
+        bool typeTerminated = false;
         while (pos < rbspEnd) {
             uint8_t b = rbspData[pos++];
             payloadType += b;
-            if (b != 0xFF) break;
+            if (b != 0xFF) { typeTerminated = true; break; }
         }
 
         uint32_t payloadSize = 0;
+        bool sizeTerminated = false;
         while (pos < rbspEnd) {
             uint8_t b = rbspData[pos++];
             payloadSize += b;
-            if (b != 0xFF) break;
+            if (b != 0xFF) { sizeTerminated = true; break; }
         }
 
-        if (pos + payloadSize > rbspEnd) return false;
+        if (!typeTerminated || !sizeTerminated) return false;
+        if (payloadSize > rbspEnd - pos) return false;
         size_t payloadStart = pos;
         pos += payloadSize;
         size_t msgEnd = pos;
@@ -486,7 +496,12 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
     bool changed = false;
     outputBuffer.clear();
 
-    if (nalFormat == 1) { // Length-Delimited
+    // All wrapped extractors (Mp4/FragmentedMp4/Ts) deliver Annex-B samples to
+    // TrackOutput; nalFormat==1 (length-delimited) is kept for completeness but
+    // treated strictly: malformed length prefixes abort with 0, never reinterpreted.
+    bool annexB = (nalFormat != 1);
+
+    if (!annexB) { // Length-Delimited
         int pos = 0;
         while (pos + nalLengthFieldLength <= sampleLen) {
             int nalSize = 0;
@@ -494,8 +509,8 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                 nalSize = (nalSize << 8) | (sampleBuffer[pos + i] & 0xFF);
             }
             int nalStart = pos + nalLengthFieldLength;
-            if (nalSize <= 0 || nalStart + nalSize > sampleLen) {
-                return 0; // abort processing, format malformed
+            if (nalSize <= 0 || nalSize > sampleLen - nalStart) {
+                return 0; // malformed length-delimited data
             }
 
             uint8_t nalHeader = sampleBuffer[nalStart];
