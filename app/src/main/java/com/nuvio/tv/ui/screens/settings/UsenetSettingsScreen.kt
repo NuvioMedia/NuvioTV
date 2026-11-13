@@ -127,7 +127,7 @@ internal fun UsenetSettingsContent(
             }
             if (UsenetSettingsSection.DIAGNOSTICS in expanded) {
                 usenetDiagnosticsCardItems()
-                usenetStatsCardItems(sources.configuration.indexers, stats,
+                usenetStatsCardItems(sources.configuration.indexers, sources.configuration.providers, stats,
                     onPeriod = sourcesViewModel::setStatsPeriod,
                     onContent = sourcesViewModel::setStatsContent,
                     onReset = sourcesViewModel::resetStats)

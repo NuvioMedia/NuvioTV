@@ -147,11 +147,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		v := s.sessions[id]
 		delete(s.sessions, id)
 		s.mu.Unlock()
+		var reports []providerReport
 		if v != nil {
+			// Read before closing: the pool's clients may close with it.
+			reports = v.providerReports()
 			v.Close()
 			s.releaseIdleMemory()
 		}
-		w.WriteHeader(http.StatusNoContent)
+		if len(reports) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"providers": reports})
 	default:
 		http.NotFound(w, r)
 	}
@@ -267,6 +275,13 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		if w.Header().Get("X-Usenet-Failure") == "" {
 			if kind := permanentStreamFailure(err); kind != "" {
 				w.Header().Set("X-Usenet-Failure", kind)
+			}
+		}
+		// This open never becomes a session that the app closes, so its providers'
+		// counts, such as the articles they lacked, come with the failure.
+		if reports := pool.providerReports(); len(reports) > 0 {
+			if encoded, err := json.Marshal(map[string]any{"providers": reports}); err == nil {
+				w.Header().Set("X-Usenet-Providers", string(encoded))
 			}
 		}
 		http.Error(w, msg, http.StatusUnprocessableEntity)

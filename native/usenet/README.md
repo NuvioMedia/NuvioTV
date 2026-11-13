@@ -91,6 +91,14 @@ the playing session intact. Replacement cleanup retries asynchronously with a
 two-second deadline per DELETE. Each subsequent open explicitly identifies the
 session to retain; the engine removes abandoned sessions before checking its
 capacity. This also recovers lost open responses and lost DELETE requests.
+`DELETE /sessions/{id}` answers `200` with `{"providers":[…]}`: for each
+provider, its index in the open request's `servers`, and the articles it
+served, the bytes decoded, the articles it lacked, its other errors and its
+time to first byte. It never names a host or account. Without a session, or
+without counts, it answers `204` as before. An open that fails after its
+providers were set up sends the same object in an `X-Usenet-Providers` header
+with its error, since it never becomes a session to delete. The app adds these
+to its provider statistics.
 Idle session deletion also returns
 unused Go heap pages to the OS; steady playback does not force garbage collection.
 

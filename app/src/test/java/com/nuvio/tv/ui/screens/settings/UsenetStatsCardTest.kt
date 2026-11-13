@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.settings
 
 import com.nuvio.tv.core.usenet.IndexerCounts
+import com.nuvio.tv.core.usenet.ProviderCounts
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -27,5 +28,13 @@ class UsenetStatsCardTest {
         assertTrue(statsBars(listOf(StatsBarSource("a", "A", 5))).isEmpty())
         assertTrue(statsBars(listOf(StatsBarSource("a", "A", 0), StatsBarSource("b", "B", 0))).isEmpty())
         assertTrue(statsBars(emptyList()).isEmpty())
+    }
+
+    @Test fun `completion is the share of asked articles a provider had`() {
+        assertEquals(99.2, ProviderCounts(articles = 992, missing = 8, errors = 50).completion()!!, 0.0)
+        assertEquals(0.0, ProviderCounts(missing = 3).completion()!!, 0.0)
+        assertNull(ProviderCounts(errors = 4).completion())
+        assertEquals(35L, ProviderCounts(ttfbMs = 70, ttfbSessions = 2).averageFirstByteMs())
+        assertNull(ProviderCounts(sessions = 3).averageFirstByteMs())
     }
 }
