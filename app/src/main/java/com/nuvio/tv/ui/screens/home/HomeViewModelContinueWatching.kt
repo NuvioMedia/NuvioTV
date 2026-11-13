@@ -2385,7 +2385,9 @@ internal fun resolveNextUpVideoFromMeta(
         }
     }
 
-    if (watchedIndex < 0) {
+    // An S1E0 seed marks a show with nothing watched yet; its next episode is the first one.
+    val isUnstartedSeed = watchedIndex < 0 && seedSeason == 1 && seedEpisode == 0
+    if (watchedIndex < 0 && !isUnstartedSeed) {
         logNextUpDecision(
             "drop contentId=${progress.contentId} name=${progress.name} reason=seed-not-found-in-meta seed=${seedSeason}x${seedEpisode}"
         )
@@ -2393,7 +2395,7 @@ internal fun resolveNextUpVideoFromMeta(
     }
 
     val todayLocal = LocalDate.now(ZoneId.systemDefault())
-    val watchedEpisodeSeason = episodes[watchedIndex].season
+    val watchedEpisodeSeason = if (isUnstartedSeed) episodes.first().season else episodes[watchedIndex].season
     val nextVideo = episodes.drop(watchedIndex + 1).firstOrNull { video ->
         if (video.season in progress.excludedNextUpSeasons) return@firstOrNull false
         val releaseDate = parseEpisodeReleaseDate(video.released)
