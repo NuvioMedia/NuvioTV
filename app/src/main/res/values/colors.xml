@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="splash_background">#0D0D0D</color>
+    
+    <!-- Continue Watching Badge Colors -->
+    <color name="cw_series_premiere_badge">#3B6B8B</color>
+    <color name="cw_season_premiere_badge">#4B7C4B</color>
+    <color name="cw_mid_season_premiere_badge">#A68D3B</color>
+    <color name="cw_mid_season_finale_badge">#704B3B</color>
+    <color name="cw_season_finale_badge">#8B4B7C</color>
+    <color name="cw_series_finale_badge">#6B4B8B</color>
 </resources>
