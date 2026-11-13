@@ -688,6 +688,10 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
             }
             addAll(PlaybackConnectionEvents.recentEvents())
             addAll(LoggingDataSource.recentEvents())
+            PlayerAudioBitrateMeter.bitrateBps()?.let {
+                add("measured_audio_bitrate_bps=$it")
+            }
+            add("iec_underruns=${PlayerAudioUnderrunCounter.current()}")
         }
         return PlaybackIssuePlaybackAnalyticsInput(
             schemaVersion = 1,

@@ -144,7 +144,8 @@ import java.util.List;
             outputBufferSize,
             userCenterMixLevelDb,
             downmixNormalizationEnabled,
-            lfeMixLevel);
+            lfeMixLevel,
+            inputBuffer.isEndOfStream());
     if (result == AUDIO_DECODER_ERROR_OTHER) {
       return new FfmpegDecoderException("Error decoding (see logcat).");
     } else if (result == AUDIO_DECODER_ERROR_INVALID_DATA) {
@@ -359,7 +360,8 @@ import java.util.List;
       int outputSize,
       int userCenterMixLevelDb,
       boolean downmixNormalizationEnabled,
-      float lfeMixLevel);
+      float lfeMixLevel,
+      boolean endOfStream);
 
   private native int ffmpegGetChannelCount(long context);
 
