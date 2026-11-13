@@ -110,6 +110,8 @@ class MetaDetailsViewModel @Inject constructor(
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val simklRelatedService: com.nuvio.tv.data.simkl.SimklRelatedService,
     private val simklAuthRepository: com.nuvio.tv.data.simkl.SimklAuthRepository,
+    private val weTrakrCatalogService: com.nuvio.tv.data.wetrakr.WeTrakrCatalogService,
+    private val weTrakrAuthStore: com.nuvio.tv.data.wetrakr.WeTrakrAuthStore,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val episodeShuffleStore: com.nuvio.tv.data.local.EpisodeShuffleStore,
     private val episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffle,
@@ -162,8 +164,10 @@ class MetaDetailsViewModel @Inject constructor(
 
     private var isPlayButtonFocused = false
     private var hideUnreleasedContent = false
-    private var traktCommentsEnabled = false
+    private var commentsSource: CommentsSource? = null
     private var traktAuthenticated = false
+    private var weTrakrConnected = false
+    private var weTrakrRatingJob: kotlinx.coroutines.Job? = null
     private var moreLikeThisSourcePreference = com.nuvio.tv.data.local.MoreLikeThisSourcePreference.TRAKT
 
     /** Content ID used for watch-progress and watched-items lookups.
@@ -233,17 +237,31 @@ class MetaDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 traktSettingsDataStore.showMetaComments,
-                traktAuthDataStore.isAuthenticated
-            ) { enabled, authenticated ->
-                enabled to authenticated
+                traktAuthDataStore.isAuthenticated,
+                traktSettingsDataStore.showWeTrakrComments,
+                weTrakrAuthStore.state,
+                profileManager.activeProfileId
+            ) { traktEnabled, traktAuth, weTrakrEnabled, weTrakrAuth, profileId ->
+                val weTrakrAuthenticated = weTrakrAuth.isAuthenticated && weTrakrAuth.scope.profileId == profileId
+                Triple(
+                    traktAuth,
+                    weTrakrAuthenticated,
+                    when {
+                        weTrakrEnabled && weTrakrAuthenticated -> CommentsSource.WETRAKR
+                        traktEnabled && traktAuth -> CommentsSource.TRAKT
+                        else -> null
+                    }
+                )
             }
                 .distinctUntilChanged()
-                .collectLatest { (enabled, authenticated) ->
-                    traktCommentsEnabled = enabled
+                .collectLatest { (authenticated, weTrakrAuthenticated, source) ->
+                    commentsSource = source
                     traktAuthenticated = authenticated
+                    weTrakrConnected = weTrakrAuthenticated
+                    source?.let { selected -> _uiState.update { it.copy(commentsSource = selected) } }
 
                     val meta = _uiState.value.meta
-                    val shouldShow = enabled && authenticated && supportsComments(meta)
+                    val shouldShow = source != null && supportsComments(meta)
                     if (!shouldShow) {
                         cancelCommentsRequests()
                     }
@@ -271,6 +289,7 @@ class MetaDetailsViewModel @Inject constructor(
 
                     if (meta != null) {
                         loadMoreLikeThisAsync(meta)
+                        loadWeTrakrRatingAsync(meta)
                     }
 
                     if (shouldShow && meta != null) {
@@ -766,6 +785,7 @@ class MetaDetailsViewModel @Inject constructor(
                     mdbListRatings = null,
                     isMdbListRatingsActive = isMdbListActive,
                     tmdbRating = null,
+                    weTrakrRating = null,
                     moreLikeThis = emptyList(),
                     moreLikeThisSource = null,
                     collection = emptyList(),
@@ -1008,7 +1028,7 @@ class MetaDetailsViewModel @Inject constructor(
                 nextToWatch = effectiveNextToWatch,
                 error = null,
                 commentsEpisodeTarget = null,
-                shouldShowCommentsSection = traktCommentsEnabled && traktAuthenticated && supportsComments(meta)
+                shouldShowCommentsSection = commentsSource != null && supportsComments(meta)
             )
         }
 
@@ -1018,13 +1038,14 @@ class MetaDetailsViewModel @Inject constructor(
         // Start fetching trailer after meta is loaded
         fetchTrailerUrl()
 
-        if (traktCommentsEnabled && traktAuthenticated && supportsComments(meta)) {
+        if (commentsSource != null && supportsComments(meta)) {
             loadComments(meta)
         }
     }
 
     private suspend fun applyMetaWithEnrichment(meta: Meta) {
         if (!isServerItem) loadMoreLikeThisAsync(meta)
+        if (!isServerItem) loadWeTrakrRatingAsync(meta)
         val enriched = if (isServerItem) meta else enrichMeta(meta)
 
         syncEffectiveContentId(enriched)
@@ -1087,7 +1108,7 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun loadComments(meta: Meta, forceRefresh: Boolean = false) {
-        if (!traktCommentsEnabled || !traktAuthenticated || !supportsComments(meta)) {
+        if (commentsSource == null || !supportsComments(meta)) {
             cancelCommentsRequests()
             _uiState.update { state ->
                 state.copy(
@@ -1127,14 +1148,7 @@ class MetaDetailsViewModel @Inject constructor(
             }
 
             try {
-                val page = traktCommentsService.getCommentsPage(
-                    meta = meta,
-                    fallbackItemId = itemId,
-                    fallbackItemType = itemType,
-                    targetEpisode = currentCommentsEpisodeTarget(meta),
-                    page = 1,
-                    forceRefresh = forceRefresh
-                )
+                val page = fetchCommentsPage(meta, page = 1, forceRefresh = forceRefresh)
 
                 _uiState.update { state ->
                     if (state.meta == null || state.meta.id != meta.id) {
@@ -1168,7 +1182,9 @@ class MetaDetailsViewModel @Inject constructor(
                             commentsPageCount = 0,
                             isCommentsLoading = false,
                             isCommentsLoadingMore = false,
-                            commentsError = localizedContext.getString(R.string.detail_comments_error),
+                            commentsError = localizedContext.getString(
+                                if (commentsSource == CommentsSource.WETRAKR) R.string.detail_comments_error_wetrakr else R.string.detail_comments_error
+                            ),
                             shouldShowCommentsSection = true
                         )
                     }
@@ -1176,6 +1192,27 @@ class MetaDetailsViewModel @Inject constructor(
             }
         }
     }
+
+    private suspend fun fetchCommentsPage(meta: Meta, page: Int, forceRefresh: Boolean = false) =
+        if (commentsSource == CommentsSource.WETRAKR) {
+            weTrakrCatalogService.getCommentsPage(
+                meta = meta,
+                fallbackItemId = itemId,
+                fallbackItemType = itemType,
+                targetEpisode = currentCommentsEpisodeTarget(meta),
+                page = page,
+                forceRefresh = forceRefresh
+            )
+        } else {
+            traktCommentsService.getCommentsPage(
+                meta = meta,
+                fallbackItemId = itemId,
+                fallbackItemType = itemType,
+                targetEpisode = currentCommentsEpisodeTarget(meta),
+                page = page,
+                forceRefresh = forceRefresh
+            )
+        }
 
     private fun supportsComments(meta: Meta?): Boolean {
         if (meta == null || isServerItem) return false
@@ -1189,7 +1226,7 @@ class MetaDetailsViewModel @Inject constructor(
     private fun loadMoreComments(selectNextAfterLoad: Boolean = false) {
         val state = _uiState.value
         val meta = state.meta ?: return
-        if (!traktCommentsEnabled || !traktAuthenticated || !supportsComments(meta)) return
+        if (commentsSource == null || !supportsComments(meta)) return
         if (state.isCommentsLoading || state.isCommentsLoadingMore || state.commentsCurrentPage == 0) return
         if (state.commentsPageCount > 0 && state.commentsCurrentPage >= state.commentsPageCount) return
 
@@ -1204,13 +1241,7 @@ class MetaDetailsViewModel @Inject constructor(
             }
 
             try {
-                val page = traktCommentsService.getCommentsPage(
-                    meta = meta,
-                    fallbackItemId = itemId,
-                    fallbackItemType = itemType,
-                    targetEpisode = currentCommentsEpisodeTarget(meta),
-                    page = nextPage
-                )
+                val page = fetchCommentsPage(meta, page = nextPage)
 
                 _uiState.update { current ->
                     if (current.meta?.id != meta.id) {
@@ -1288,10 +1319,27 @@ class MetaDetailsViewModel @Inject constructor(
         commentsLoadMoreJob?.cancel()
     }
 
+    private fun loadWeTrakrRatingAsync(meta: Meta) {
+        weTrakrRatingJob?.cancel()
+        weTrakrRatingJob = viewModelScope.launch {
+            val rating = if (weTrakrConnected && supportsComments(meta) && traktSettingsDataStore.showWeTrakrRating.first()) {
+                runCatching { weTrakrCatalogService.getRating(meta, itemId, itemType) }
+                    .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+                    .getOrNull()
+            } else {
+                null
+            }
+            _uiState.update { current ->
+                if (current.meta?.id != meta.id) current else current.copy(weTrakrRating = rating?.toFloat())
+            }
+        }
+    }
+
     private fun loadMoreLikeThisAsync(meta: Meta) {
         moreLikeThisJob?.cancel()
         moreLikeThisJob = viewModelScope.launch {
             val source = when {
+                shouldLoadWeTrakrMoreLikeThis(meta) -> MoreLikeThisSource.WETRAKR
                 shouldLoadSimklMoreLikeThis() -> MoreLikeThisSource.SIMKL
                 shouldLoadTraktMoreLikeThis(meta) -> MoreLikeThisSource.TRAKT
                 else -> {
@@ -1327,6 +1375,19 @@ class MetaDetailsViewModel @Inject constructor(
                         )
                     }.getOrElse {
                         Log.w(TAG, "Failed to load Simkl related titles for ${meta.id}: ${it.message}")
+                        emptyList()
+                    }
+                }
+
+                MoreLikeThisSource.WETRAKR -> {
+                    runCatching {
+                        weTrakrCatalogService.getSimilar(
+                            meta = meta,
+                            fallbackItemId = itemId,
+                            fallbackItemType = itemType
+                        )
+                    }.getOrElse {
+                        Log.w(TAG, "Failed to load WeTrakr similar titles for ${meta.id}: ${it.message}")
                         emptyList()
                     }
                 }
@@ -1391,6 +1452,11 @@ class MetaDetailsViewModel @Inject constructor(
             ContentType.SERIES, ContentType.TV -> true
             else -> meta.apiType in listOf("movie", "series", "tv", "show")
         }
+    }
+
+    private fun shouldLoadWeTrakrMoreLikeThis(meta: Meta): Boolean {
+        if (moreLikeThisSourcePreference != com.nuvio.tv.data.local.MoreLikeThisSourcePreference.WETRAKR) return false
+        return weTrakrConnected && supportsComments(meta)
     }
 
     private fun shouldLoadSimklMoreLikeThis(): Boolean {
@@ -1778,7 +1844,7 @@ class MetaDetailsViewModel @Inject constructor(
                 selectedComment = null
             )
         }
-        if (traktCommentsEnabled && traktAuthenticated && supportsComments(meta)) {
+        if (commentsSource != null && supportsComments(meta)) {
             loadComments(meta, forceRefresh = true)
         }
     }
@@ -1795,7 +1861,7 @@ class MetaDetailsViewModel @Inject constructor(
                 selectedComment = null
             )
         }
-        if (traktCommentsEnabled && traktAuthenticated && supportsComments(meta)) {
+        if (commentsSource != null && supportsComments(meta)) {
             loadComments(meta, forceRefresh = true)
         }
     }

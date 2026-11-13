@@ -1110,7 +1110,7 @@ internal fun PlayerRuntimeController.emitScrobbleStart() {
         logScrobbleDiagnostic("start_dispatching", "requestGeneration=$requestGeneration progress=$progressPercent")
         val failures = trackingScrobbleCoordinator.scrobble(
             action = TrackingScrobbleAction.START,
-            event = TrackingScrobbleEvent(item, progressPercent.toDouble())
+            event = TrackingScrobbleEvent(item, progressPercent.toDouble(), currentCreditsStartPercent())
         )
         logScrobbleDiagnostic(
             "start_dispatched",
@@ -1144,12 +1144,13 @@ internal fun PlayerRuntimeController.emitScrobbleStop(progressPercent: Float? = 
     }
 
     val percent = provided ?: currentPlaybackProgressPercent()
+    val creditsPercent = currentCreditsStartPercent()
     logScrobbleDiagnostic("stop_queued", "progress=$percent")
     scope.launch(kotlinx.coroutines.NonCancellable) {
         logScrobbleDiagnostic("stop_dispatching", "progress=$percent")
         val failures = trackingScrobbleCoordinator.scrobble(
             action = TrackingScrobbleAction.STOP,
-            event = TrackingScrobbleEvent(item, percent.toDouble())
+            event = TrackingScrobbleEvent(item, percent.toDouble(), creditsPercent)
         )
         logScrobbleDiagnostic("stop_dispatched", "progress=$percent failures=${failures.map { it.providerId.storageId }}")
     }
@@ -1225,15 +1226,16 @@ internal fun PlayerRuntimeController.emitSeekScrobbleRestart(progressPercent: Fl
     if (isShortPlaceholderStream()) return
     val item = currentScrobbleItem ?: return
     if (!hasRequestedScrobbleStartForCurrentItem) return
+    val creditsPercent = currentCreditsStartPercent()
     scope.launch {
         trackingScrobbleCoordinator.scrobbleSeek(
             action = TrackingScrobbleAction.STOP,
-            event = TrackingScrobbleEvent(item, progressPercent.toDouble())
+            event = TrackingScrobbleEvent(item, progressPercent.toDouble(), creditsPercent)
         )
         if (isPlaybackCurrentlyPlaying()) {
             trackingScrobbleCoordinator.scrobbleSeek(
                 action = TrackingScrobbleAction.START,
-                event = TrackingScrobbleEvent(item, currentPlaybackProgressPercent().toDouble())
+                event = TrackingScrobbleEvent(item, currentPlaybackProgressPercent().toDouble(), creditsPercent)
             )
         }
     }

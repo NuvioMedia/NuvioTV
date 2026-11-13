@@ -63,6 +63,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
+import com.nuvio.tv.ui.util.rememberRawSvgPainter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -107,6 +108,7 @@ import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 fun CommentsSection(
     comments: List<TraktCommentReview>,
     commentsMode: CommentsMode,
+    source: CommentsSource = CommentsSource.TRAKT,
     canToggleEpisodeComments: Boolean,
     titleModeFocusRequester: FocusRequester? = null,
     episodeModeFocusRequester: FocusRequester? = null,
@@ -194,12 +196,12 @@ fun CommentsSection(
     }
     val subtitleText = if (commentsMode == CommentsMode.EPISODE && selectedEpisode != null) {
         stringResource(
-            R.string.detail_comments_subtitle_episode,
+            if (source == CommentsSource.WETRAKR) R.string.detail_comments_subtitle_episode_wetrakr else R.string.detail_comments_subtitle_episode,
             selectedEpisode.season ?: 0,
             selectedEpisode.episode ?: 0
         )
     } else {
-        stringResource(R.string.detail_comments_subtitle)
+        stringResource(if (source == CommentsSource.WETRAKR) R.string.detail_comments_subtitle_wetrakr else R.string.detail_comments_subtitle)
     }
 
     LaunchedEffect(listState, comments.size, canLoadMore, isLoadingMore, isLoading, error) {
@@ -248,15 +250,26 @@ fun CommentsSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.trakt_logo_wordmark),
-                contentDescription = stringResource(R.string.cd_trakt_logo),
-                modifier = Modifier
-                    .offset(y = (-1).dp)
-                    .width(47.dp)
-                    .height(20.dp),
-                colorFilter = ColorFilter.tint(NuvioTheme.colors.TextPrimary)
-            )
+            if (source == CommentsSource.WETRAKR) {
+                Image(
+                    painter = rememberRawSvgPainter(R.raw.wetrakr_logo, 92.dp),
+                    contentDescription = stringResource(R.string.wetrakr_name),
+                    modifier = Modifier
+                        .offset(y = (-1).dp)
+                        .width(92.dp)
+                        .height(20.dp)
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.trakt_logo_wordmark),
+                    contentDescription = stringResource(R.string.cd_trakt_logo),
+                    modifier = Modifier
+                        .offset(y = (-1).dp)
+                        .width(47.dp)
+                        .height(20.dp),
+                    colorFilter = ColorFilter.tint(NuvioTheme.colors.TextPrimary)
+                )
+            }
             Text(
                 text = stringResource(R.string.detail_comments_title),
                 style = MaterialTheme.typography.titleLarge,
@@ -389,7 +402,9 @@ fun CommentsSection(
 
             comments.isEmpty() -> {
                 Text(
-                    text = stringResource(R.string.detail_comments_empty),
+                    text = stringResource(
+                        if (source == CommentsSource.WETRAKR) R.string.detail_comments_empty_wetrakr else R.string.detail_comments_empty
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioTheme.colors.TextSecondary,
                     modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xxxl)
@@ -463,6 +478,7 @@ fun CommentsSection(
 
     if (showEpisodePicker && pickerEpisodes.isNotEmpty()) {
         EpisodeCommentPickerDialog(
+            source = source,
             seasons = availableSeasons,
             episodes = pickerEpisodes,
             season = pickerSeason ?: pickerDefaultSeason,
@@ -630,6 +646,7 @@ private fun CommentChip(text: String) {
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun EpisodeCommentPickerDialog(
+    source: CommentsSource,
     seasons: List<Int>,
     episodes: List<Video>,
     season: Int?,
@@ -671,7 +688,9 @@ private fun EpisodeCommentPickerDialog(
     NuvioDialog(
         onDismiss = onDismiss,
         title = stringResource(R.string.detail_comments_episode_picker_title),
-        subtitle = stringResource(R.string.detail_comments_episode_picker_subtitle),
+        subtitle = stringResource(
+            if (source == CommentsSource.WETRAKR) R.string.detail_comments_episode_picker_subtitle_wetrakr else R.string.detail_comments_episode_picker_subtitle
+        ),
         width = 560.dp,
         suppressFirstKeyUp = false
     ) {
@@ -775,7 +794,8 @@ fun CommentOverlay(
     transitionDirection: Int,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    source: CommentsSource = CommentsSource.TRAKT
 ) {
     val primaryFocusRequester = remember { FocusRequester() }
     val mainContentFocusRequester = remember { FocusRequester() }
@@ -870,12 +890,20 @@ fun CommentOverlay(
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.trakt_logo_wordmark),
-                    contentDescription = stringResource(R.string.cd_trakt_logo),
-                    modifier = Modifier.width(168.dp),
-                    colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.92f))
-                )
+                if (source == CommentsSource.WETRAKR) {
+                    Image(
+                        painter = rememberRawSvgPainter(R.raw.wetrakr_logo, 168.dp),
+                        contentDescription = stringResource(R.string.wetrakr_name),
+                        modifier = Modifier.width(168.dp)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.trakt_logo_wordmark),
+                        contentDescription = stringResource(R.string.cd_trakt_logo),
+                        modifier = Modifier.width(168.dp),
+                        colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.92f))
+                    )
+                }
                 Text(
                     text = stringResource(R.string.detail_comments_back_hint),
                     modifier = Modifier.padding(start = 18.dp),
