@@ -208,6 +208,10 @@ internal class AsrSyncEngine(
             references = emptyList()
             locked = false
             provisional = null
+            // Pending audio (up to ~30 MB) is only useful to a running session; free it now rather
+            // than holding it until the next stream. Words already recognized are small and kept.
+            queue.clear()
+            queuedSamples = 0
         }
     }
 
@@ -313,15 +317,19 @@ internal class AsrSyncEngine(
         if (words.isEmpty()) return
         var best: Pair<ReferenceSubtitle, AnchorFit>? = null
         var bestLocals: List<AnchorFit> = emptyList()
+        var bestVotes: WordAnchorMatcher.Votes? = null
         for (reference in refs) {
-            val fit = reference.matcher.fit(words) ?: continue
-            val locals = reference.matcher.localFits(words, fit.scale)
+            // Built once: the fit, the regions and the place count below all start from them.
+            val votes = reference.matcher.votes(words)
+            val fit = reference.matcher.fit(votes) ?: continue
+            val locals = reference.matcher.localFits(votes, fit.scale)
             // A scene the release adds splits the words into two strong clusters, so one fit over
             // all words looks ambiguous; regions that are each confident explain it.
             if (!fit.isConfident && !explainsSteps(locals)) continue
             if (best == null || fit.score > best.second.score) {
                 best = reference to fit
                 bestLocals = locals
+                bestVotes = votes
             }
         }
         val (reference, fit) = best ?: return
@@ -340,7 +348,7 @@ internal class AsrSyncEngine(
         }
         val trustedFine = fine?.takeIf { isTrustedMove(it, coarseShiftMs) }
         val shiftMs = trustedFine?.shiftMs ?: coarseShiftMs
-        val segments = piecewise(targetTrack, words, reference, fit, scale, shiftMs)
+        val segments = piecewise(targetTrack, bestVotes!!, bestLocals, reference, fit, scale, shiftMs)
             ?: listOf(SubtitleSyncSegment(0L, scale, shiftMs))
         val result = AsrLock(
             scale = scale,
@@ -388,13 +396,14 @@ internal class AsrSyncEngine(
      */
     private fun piecewise(
         track: SubtitleSpeechTrack,
-        words: List<HeardWord>,
+        votes: WordAnchorMatcher.Votes,
+        /** [WordAnchorMatcher.localFits] of [votes] at [fit]'s scale. */
+        confidentLocals: List<AnchorFit>,
         reference: ReferenceSubtitle,
         fit: AnchorFit,
         scale: Double,
         shiftMs: Double,
     ): List<SubtitleSyncSegment>? {
-        val confidentLocals = reference.matcher.localFits(words, fit.scale)
         if (confidentLocals.isEmpty()) return null
         val bridgeScale = reference.bridge?.scale ?: 1.0
 
@@ -410,7 +419,7 @@ internal class AsrSyncEngine(
         // stretch its words come from (standing for the confident regions there that agree with
         // it); otherwise one strong region (say the opening, heard in full) would decide the whole
         // film. Not when a confident region inside that stretch says otherwise.
-        val spread = reference.matcher.fitByPlace(words, fit.scale)?.takeIf { spread ->
+        val spread = reference.matcher.fitByPlace(votes, fit.scale)?.takeIf { spread ->
             val shift = impliedShiftMs(spread)
             spread.segments >= MIN_PART_SEGMENTS && spread.spanSec >= SPREAD_MIN_SPAN_SEC &&
                 confidentLocals.none {

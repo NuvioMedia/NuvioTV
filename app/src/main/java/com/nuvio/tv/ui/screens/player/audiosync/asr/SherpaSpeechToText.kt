@@ -11,7 +11,12 @@ import java.io.File
  * English speech recognition with sherpa-onnx (Apache-2.0) and an int8 Zipformer transducer
  * trained on GigaSpeech (podcasts and YouTube, close to film dialogue). Runs fully on-device.
  */
-internal class SherpaSpeechToText(modelDir: File, threads: Int) : SpeechToText, AutoCloseable {
+internal class SherpaSpeechToText(
+    modelDir: File,
+    threads: Int,
+    /** Trades some speed for a smaller footprint (see [AsrModelFiles.provider]). */
+    lowMemory: Boolean = false,
+) : SpeechToText, AutoCloseable {
     val modelFormat = AsrModelFiles.format(modelDir)
     private val recognizer = OfflineRecognizer(
         config = OfflineRecognizerConfig(
@@ -25,7 +30,7 @@ internal class SherpaSpeechToText(modelDir: File, threads: Int) : SpeechToText, 
                 tokens = File(modelDir, AsrModel.TOKENS).absolutePath,
                 numThreads = threads,
                 modelType = "transducer",
-                provider = AsrModelFiles.provider(modelDir, modelFormat),
+                provider = AsrModelFiles.provider(modelDir, modelFormat, lowMemory),
             ),
             decodingMethod = "greedy_search",
         ),
