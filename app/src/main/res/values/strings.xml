@@ -1142,6 +1142,14 @@
     <string name="layout_cw_sort_streaming_desc">Released items first, upcoming at the end</string>
     <string name="layout_cw_sort_split_upcoming">Separate Upcoming Row</string>
     <string name="layout_cw_sort_split_upcoming_desc">Move unaired episodes to a separate Upcoming row</string>
+    <string name="layout_cw_click_action">On Select</string>
+    <string name="layout_cw_click_action_sub">What opens when you select a Continue Watching item</string>
+    <string name="layout_cw_click_stream">Open Stream</string>
+    <string name="layout_cw_click_stream_desc">Pick a source or resume playback</string>
+    <string name="layout_cw_click_details">Open Details</string>
+    <string name="layout_cw_click_details_desc">Open the details page of the title</string>
+    <string name="layout_cw_click_details_upcoming">Details for Upcoming Only</string>
+    <string name="layout_cw_click_details_upcoming_desc">Open details for episodes that have not aired yet, the stream for the rest</string>
     <string name="upcoming_section_title">Upcoming</string>
     <string name="layout_trailer_button">Show Trailer Button</string>
     <string name="layout_trailer_button_sub">Show trailer button on detail page (only when trailer is available).</string>
