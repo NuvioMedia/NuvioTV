@@ -28,6 +28,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedMovieItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedShowItemDto
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.MetaRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
@@ -287,6 +289,10 @@ class TraktProgressService @Inject constructor(
         }
         scope.launch {
             refreshEvents().collectLatest {
+                if (!traktAuthService.getCurrentAuthState().isAuthenticated) {
+                    trace("refresh skipped: not signed in to Trakt")
+                    return@collectLatest
+                }
                 val success = try {
                     refreshRemoteSnapshot()
                     true
@@ -675,6 +681,9 @@ class TraktProgressService @Inject constructor(
             }
             .distinctUntilChanged()
     }
+
+    /** Watched movie keys as Trakt returned or accepted them, without optimistic progress. */
+    fun observeReportedWatchedMovieIds(): Flow<Set<String>> = watchedMoviesState.asStateFlow()
 
     suspend fun markAsWatched(
         progress: WatchProgress,
@@ -1099,15 +1108,17 @@ class TraktProgressService @Inject constructor(
 
             val snapshot = try {
                 progressDeferred.await()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "fetchAllProgressSnapshot failed, keeping existing snapshot", e)
                 null
             }
             watchedMoviesDeferred?.let {
-                try { it.await() } catch (_: Exception) { }
+                try { it.await() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
             }
             seedsDeferred?.let {
-                try { it.await() } catch (_: Exception) { }
+                try { it.await() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
             }
 
             if (snapshot == null) {

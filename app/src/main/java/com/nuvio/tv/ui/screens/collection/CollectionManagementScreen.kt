@@ -1,5 +1,11 @@
 package com.nuvio.tv.ui.screens.collection
 
+import android.os.Build
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
@@ -193,7 +199,7 @@ fun CollectionManagementScreen(
                 try { targetRequester.requestFocus() } catch (_: Exception) {}
             }
             Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                if (uiState.collections.isNotEmpty()) {
+                if (uiState.collections.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     NuvioButton(onClick = {
                         scope.launch {
                             try {
@@ -385,6 +391,10 @@ private fun ImportContent(
                         if (mode == importMode) {
                             Button(
                                 onClick = { onModeChange(mode) },
+                                modifier = Modifier.semantics {
+                                    role = Role.Tab
+                                    this.selected = true
+                                },
                                 colors = ButtonDefaults.colors(
                                     containerColor = NuvioTheme.colors.Primary,
                                     contentColor = NuvioTheme.colors.Background,
@@ -402,7 +412,13 @@ private fun ImportContent(
                                 Text(label)
                             }
                         } else {
-                            NuvioButton(onClick = { onModeChange(mode) }) {
+                            NuvioButton(
+                                onClick = { onModeChange(mode) },
+                                modifier = Modifier.semantics {
+                                    role = Role.Tab
+                                    this.selected = false
+                                }
+                            ) {
                                 Text(label)
                             }
                         }

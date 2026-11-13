@@ -14,13 +14,14 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.tracking.scrobbleDiagnosticIdentity
 import com.nuvio.tv.data.local.InternalPlayerEngine
-import com.nuvio.tv.data.local.SubtitleStyleSettings
+import com.nuvio.tv.data.local.NightMode
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackSettingsInput
 import com.nuvio.tv.data.repository.PlaybackIssueReportInput
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.domain.model.WatchProgress
+import java.io.IOException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -138,6 +139,7 @@ internal fun PlayerRuntimeController.applyAudioDelay(delayMs: Int) {
 internal fun PlayerRuntimeController.applyEffectiveAudioDelay() {
     val totalMs = audioDelayParts.totalMs
     audioDelayUs.set(totalMs.toLong() * 1000L)
+    _exoPlayer?.getAssHandlerCompat()?.let { it.audioDelayUs = totalMs.toLong() * 1000L }
     _uiState.update { it.copy(audioDelayMs = totalMs) }
     if (isUsingMpvEngine()) {
         mpvView?.setAudioDelayMs(totalMs)
@@ -184,6 +186,10 @@ internal fun PlayerRuntimeController.applyStreamSubtitleOffset() {
     )
     val offsetUs = if (applies) audioDelayParts.streamSourceOffsetMs.toLong() * 1000L else 0L
     if (streamSubtitleDelayUs.getAndSet(offsetUs) == offsetUs) return
+    // Update libass with combined user delay + stream offset.
+    _exoPlayer?.getAssHandlerCompat()?.let {
+        it.subtitleDelayUs = subtitleDelayUs.get() + offsetUs
+    }
     if (isUsingMpvEngine()) {
         mpvView?.setSubtitleDelayMs(mpvSubtitleDelayMs(state.subtitleDelayMs))
     }
@@ -244,6 +250,20 @@ internal fun PlayerRuntimeController.applyAudioAmplification(db: Int) {
     }
 }
 
+internal fun PlayerRuntimeController.applyNightMode(mode: NightMode) {
+    _uiState.update { it.copy(nightMode = mode) }
+    if (isUsingMpvEngine()) return
+    val wasActive = nightModeAudioProcessor.isNightModeEnabled()
+    nightModeAudioProcessor.setMode(mode)
+
+    if (wasActive != nightModeAudioProcessor.isNightModeEnabled()) {
+        playbackSpeedAwareAudioSink?.notifyAudioProcessingRequirementChanged()
+        _exoPlayer?.let { player ->
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().build()
+        }
+    }
+}
+
 internal fun PlayerRuntimeController.applyCenterMixLevel(db: Int) {
     val clampedDb = db.coerceIn(CENTER_MIX_LEVEL_MIN_DB, CENTER_MIX_LEVEL_MAX_DB)
     ffmpegAudioRenderer?.setCenterMixLevelDb(clampedDb)
@@ -268,7 +288,8 @@ internal fun PlayerRuntimeController.updateAudioControlAvailability(
     _uiState.update { state ->
         state.copy(
             isAudioAmplificationAvailable = isAudioAmplificationAvailable,
-            isCenterMixAvailable = isCenterMixAvailable
+            isCenterMixAvailable = isCenterMixAvailable,
+            isNightModeAvailable = _exoPlayer != null && !isUsingMpvEngine()
         )
     }
 }
@@ -376,12 +397,18 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     }
                     val displayPosition = pendingPreviewSeekPosition ?: pos
                     val playingForWatchClock = playingNow && !cacheBuffering
+                    mpvDurationGrowth = LivePlaybackUiPolicy.nextDurationGrowth(
+                        previous = mpvDurationGrowth,
+                        mediaKey = currentStreamUrl,
+                        durationMs = playerDuration,
+                        fromRequestedMedia = view.isPositionFromRequestedMedia()
+                    )
                     publishPlaybackTimeline(
                         currentPosition = displayPosition,
                         duration = playerDuration,
                         bufferedPosition = (pos + (view.demuxerCacheDurationSec() * 1000.0).toLong())
                             .coerceAtLeast(displayPosition),
-                        playerReportsLive = view.isLiveStreamNow(),
+                        playerReportsLive = view.isLiveStreamNow() || mpvDurationGrowth.grew,
                         isPlaying = playingForWatchClock
                     )
                     // Prefer the largest known duration; MPV can report a shorter one transiently.
@@ -410,7 +437,11 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                             playbackEnded = naturalEnded
                         )
                     }
+                    // libmpv has no Media3 listener callbacks. Keep Android's active media
+                    // session in sync with the state sampled by this existing progress tick.
+                    refreshMpvMediaSession()
                     updateMpvTracksOnTick()
+                    recomputeChapterSkipIntervalsIfNeeded()
                     updateActiveSkipInterval(pos)
                     if (!_playbackTimeline.value.isLive) {
                         evaluatePostPlayOverlayVisibility(
@@ -479,6 +510,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         )
                     }
                 }
+                recomputeChapterSkipIntervalsIfNeeded()
                 updateActiveSkipInterval(pos)
                 if (!_playbackTimeline.value.isLive) {
                     evaluatePostPlayOverlayVisibility(
@@ -486,6 +518,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         durationMs = playerDuration.coerceAtLeast(0L)
                     )
                 }
+                checkExoPlaybackOverrun(player, pos, playerDuration)
 
                 if (player.isPlaying) {
                     val now = System.currentTimeMillis()
@@ -515,6 +548,64 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
             delay(500)
         }
     }
+}
+
+internal const val EXO_END_OVERRUN_GRACE_MS = 1_000L
+
+/** Whether at least one audio renderer is enabled and every enabled one has ended. */
+private fun exoAudioRendererEnded(player: androidx.media3.exoplayer.ExoPlayer): Boolean =
+    runCatching {
+        val audio = (0 until player.rendererCount)
+            .filter { player.getRendererType(it) == androidx.media3.common.C.TRACK_TYPE_AUDIO }
+            .map { player.getRenderer(it) }
+            .filter { it.state != androidx.media3.exoplayer.Renderer.STATE_DISABLED }
+        audio.isNotEmpty() && audio.all { it.isEnded }
+    }.getOrDefault(false)
+
+/**
+ * ExoPlayer only reaches STATE_ENDED once every enabled renderer reports isEnded().
+ * Some hardware decoders never let the video renderer read the end-of-stream
+ * marker, so it never ends: audio finishes, the screen goes black and the
+ * standalone clock keeps ticking past the duration forever.
+ * Once audio has ended past the duration, finish naturally instead.
+ */
+internal fun PlayerRuntimeController.checkExoPlaybackOverrun(
+    player: androidx.media3.exoplayer.ExoPlayer,
+    positionMs: Long,
+    durationMs: Long
+) {
+    if (durationMs <= 0L || player.isCurrentMediaItemLive) return
+    if (player.playbackState == Player.STATE_ENDED) return
+    val overrunMs = positionMs - durationMs
+    if (overrunMs <= 0L) {
+        if (exoEndOverrunHandled) {
+            // User seeked back after a forced end; allow detection again.
+            exoEndOverrunHandled = false
+            _uiState.update { it.copy(playbackEnded = false) }
+        }
+        return
+    }
+    if (exoEndOverrunHandled || overrunMs < EXO_END_OVERRUN_GRACE_MS) return
+    if (!endDetectionArmed || !hasRenderedFirstFrame) return
+    // Audio still running past duration means the duration is wrong, not the player.
+    if (!exoAudioRendererEnded(player)) return
+
+    exoEndOverrunHandled = true
+    Log.i(
+        PlayerRuntimeController.TAG,
+        "EXO_END_OVERRUN: forcing natural end positionMs=$positionMs durationMs=$durationMs"
+    )
+    val naturalEnded = shouldTreatAsNaturalPlaybackCompletion(
+        hasRenderedFirstFrame = hasRenderedFirstFrame,
+        hasFatalError = !_uiState.value.error.isNullOrBlank(),
+        durationMs = maxOf(durationMs, lastKnownDuration)
+    )
+    if (!naturalEnded) return
+    // Stop the runaway clock. The completion scrobble below clears the active
+    // scrobble, so the pause that follows does not send a Trakt pause.
+    _uiState.update { it.copy(playbackEnded = true, isBuffering = false) }
+    handleNaturalPlaybackEnded()
+    player.pause()
 }
 
 internal fun PlayerRuntimeController.stopProgressUpdates() {
@@ -752,6 +843,9 @@ private fun String.reportSafeHost(): String {
 
 internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
     if (!hasRenderedFirstFrame) return
+    // A live stream's position is no point to come back to: resuming there seeks past what the
+    // stream holds and nothing plays
+    if (_playbackTimeline.value.isLive) return
     val currentPosition = currentPlaybackPositionMs() ?: return
     val duration = getEffectiveDuration(currentPosition)
     // Don't save progress for very short streams (< 2:01) — these are
@@ -767,6 +861,7 @@ internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
 
 internal fun PlayerRuntimeController.saveWatchProgress() {
     if (!hasRenderedFirstFrame) return
+    if (_playbackTimeline.value.isLive) return
     val currentPosition = currentPlaybackPositionMs() ?: return
     val duration = getEffectiveDuration(currentPosition)
     if (isShortPlaceholderDuration(duration)) return
@@ -781,7 +876,7 @@ internal fun PlayerRuntimeController.getEffectiveDuration(position: Long): Long 
     val isEnded = if (isUsingMpvEngine()) {
         position >= (effectiveDuration - 500L)
     } else {
-        _exoPlayer?.playbackState == Player.STATE_ENDED
+        _exoPlayer?.playbackState == Player.STATE_ENDED || exoEndOverrunHandled
     }
     if (!isEnded && effectiveDuration < position) return 0L
 
@@ -880,35 +975,39 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
         .copy(progressPercent = fallbackPercent)
 
     scope.launch(kotlinx.coroutines.NonCancellable) {
-        val effectiveContentId = watchProgressRepository.normalizeParentContentId(
-            parentContentId = progress.contentId,
-            videoId = progress.videoId,
-            profileId = profileId
-        )
-        val normalizedProgress = progress.copy(contentId = effectiveContentId)
-        if (normalizedProgress.isCompleted()) {
-            if (!hasMarkedCurrentEpisodeCompleted) {
-                hasMarkedCurrentEpisodeCompleted = true
-                watchProgressRepository.markAsCompleted(
+        try {
+            val effectiveContentId = watchProgressRepository.normalizeParentContentId(
+                parentContentId = progress.contentId,
+                videoId = progress.videoId,
+                profileId = profileId
+            )
+            val normalizedProgress = progress.copy(contentId = effectiveContentId)
+            if (normalizedProgress.isCompleted()) {
+                if (!hasMarkedCurrentEpisodeCompleted) {
+                    hasMarkedCurrentEpisodeCompleted = true
+                    watchProgressRepository.markAsCompleted(
+                        normalizedProgress,
+                        profileId = profileId,
+                        broadcastTrackingHistory = false
+                    )
+                }
+                runCatching { tvRecommendationManager.onProgressRemoved(normalizedProgress.contentId) }
+            } else if (!hasMarkedCurrentEpisodeCompleted) {
+                // Only save in-progress when the episode has not already been
+                // marked as completed during this playback session.  After
+                // natural playback completion the player can report stale
+                // position/duration values (e.g. duration=0 → fallbackPercent=5)
+                // which would overwrite the completed entry in the mutation
+                // store and push an incorrect low-progress value to remote.
+                watchProgressRepository.saveProgress(
                     normalizedProgress,
                     profileId = profileId,
-                    broadcastTrackingHistory = false
+                    syncRemote = syncRemote
                 )
+                runCatching { tvRecommendationManager.updateSingleWatchNextProgram(normalizedProgress) }
             }
-            runCatching { tvRecommendationManager.onProgressRemoved(normalizedProgress.contentId) }
-        } else if (!hasMarkedCurrentEpisodeCompleted) {
-            // Only save in-progress when the episode has not already been
-            // marked as completed during this playback session.  After
-            // natural playback completion the player can report stale
-            // position/duration values (e.g. duration=0 → fallbackPercent=5)
-            // which would overwrite the completed entry in the mutation
-            // store and push an incorrect low-progress value to remote.
-            watchProgressRepository.saveProgress(
-                normalizedProgress,
-                profileId = profileId,
-                syncRemote = syncRemote
-            )
-            runCatching { tvRecommendationManager.updateSingleWatchNextProgram(normalizedProgress) }
+        } catch (error: IOException) {
+            Log.w(PlayerRuntimeController.TAG, "Watch progress could not be saved", error)
         }
     }
 }
@@ -1231,6 +1330,10 @@ internal fun PlayerRuntimeController.setSubtitleDelayMs(targetMs: Int, showOverl
     val keepInlineInSubtitleOverlay = showOverlay && currentState.showSubtitleOverlay
 
     subtitleDelayUs.set(newDelayMs.toLong() * 1000L)
+    // Propagate to libass so overlay and video effect paths also shift.
+    _exoPlayer?.getAssHandlerCompat()?.let {
+        it.subtitleDelayUs = newDelayMs.toLong() * 1000L + streamSubtitleDelayUs.get()
+    }
     if (isUsingMpvEngine()) {
         mpvView?.setSubtitleDelayMs(mpvSubtitleDelayMs(newDelayMs))
     }
@@ -1314,8 +1417,11 @@ fun PlayerRuntimeController.hideControls() {
     _uiState.update { it.copy(showControls = false, showSeekOverlay = false, showMoreDialog = false) }
 }
 
-fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
-    if (event != PlayerEvent.OnParentalGuideHide) {
+fun PlayerRuntimeController.onEvent(
+    event: PlayerEvent,
+    showPlaybackControls: Boolean = true,
+) {
+    if (showPlaybackControls && event != PlayerEvent.OnParentalGuideHide) {
         onUserInteraction()
     }
     when (event) {
@@ -1332,6 +1438,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     stopProgressUpdates()
                     stopWatchProgressSaving()
                     emitPauseScrobbleForCurrentProgress()
+                    // Same as Exo's pause: a paused player left alone can be killed by the system.
+                    saveWatchProgress()
                     schedulePauseOverlay()
                 } else {
                     userPausedManually = false
@@ -1357,7 +1465,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     publishPartyPlayback(paused = !player.playWhenReady)
                 }
             }
-            showControlsTemporarily()
+            if (showPlaybackControls) showControlsTemporarily()
         }
         PlayerEvent.OnSeekForward -> {
             if (_playbackTimeline.value.isLive) return
@@ -1436,10 +1544,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             updatePlaybackTimeline(currentPosition = target)
             scheduleProgressSyncAfterSeek()
             publishPartyPlayback(positionMs = target)
-            if (_uiState.value.showControls) {
-                showControlsTemporarily()
-            } else {
-                showSeekOverlayTemporarily()
+            if (showPlaybackControls) {
+                if (_uiState.value.showControls) {
+                    showControlsTemporarily()
+                } else {
+                    showSeekOverlayTemporarily()
+                }
             }
         }
         is PlayerEvent.OnSkipChapter -> {
@@ -1501,6 +1611,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     dbToPersist = if (event.enabled) currentDb else null,
                     centerMixDbToPersist = if (event.enabled) currentCenterMixDb else null
                 )
+            }
+        }
+        is PlayerEvent.OnSetNightMode -> {
+            applyNightMode(event.mode)
+            scope.launch {
+                playerSettingsDataStore.setNightMode(event.mode)
             }
         }
         is PlayerEvent.OnSetCenterMixLevelDb -> {
@@ -1765,7 +1881,11 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             selectEpisodesSeason(event.season)
         }
         is PlayerEvent.OnEpisodeSelected -> {
-            loadStreamsForEpisode(event.video)
+            loadStreamsForEpisode(
+                video = event.video,
+                forceRefresh = false,
+                manualSelection = event.manualSelection
+            )
         }
         PlayerEvent.OnReloadEpisodeStreams -> {
             reloadEpisodeStreams()
@@ -1815,6 +1935,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             hasRenderedFirstFrame = false
             endDetectionArmed = false
             mpvEofSeenClear = false
+            exoEndOverrunHandled = false
             hasRetriedCurrentStreamAfter416 = false
             playbackIssueReportRequestVersion.incrementAndGet()
             resetErrorRetryState()
@@ -1856,7 +1977,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 )
             } else {
                 releasePlayer()
-                initializePlayer(currentStreamUrl, currentHeaders)
+                reinitializeCurrentStream()
             }
         }
         PlayerEvent.OnReportPlaybackIssue -> {
@@ -1931,24 +2052,27 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         is PlayerEvent.OnSetSubtitleVerticalOffset -> {
             scope.launch { playerSettingsDataStore.setSubtitleVerticalOffset(event.offset) }
         }
+        is PlayerEvent.OnSetSubtitleFont -> {
+            scope.launch { playerSettingsDataStore.setSubtitleFontId(event.fontId) }
+        }
+        is PlayerEvent.OnSetSubtitleBackgroundColor -> {
+            scope.launch { playerSettingsDataStore.setSubtitleBackgroundColor(event.color) }
+        }
+        is PlayerEvent.OnSetSubtitleBackgroundRadius -> {
+            scope.launch { playerSettingsDataStore.setSubtitleBackgroundRadius(event.radius) }
+        }
+        is PlayerEvent.OnSetSubtitleShadowEnabled -> {
+            scope.launch { playerSettingsDataStore.setSubtitleShadowEnabled(event.enabled) }
+        }
+        is PlayerEvent.OnSetSubtitleShadowOpacity -> {
+            scope.launch { playerSettingsDataStore.setSubtitleShadowOpacity(event.opacity) }
+        }
+        is PlayerEvent.OnSetSubtitleShadowSize -> {
+            scope.launch { playerSettingsDataStore.setSubtitleShadowSize(event.size) }
+        }
         PlayerEvent.OnResetSubtitleDefaults -> {
             val editingHdr = _uiState.value.isEditingHdrSubtitleStyle
-            scope.launch {
-                val defaults = SubtitleStyleSettings()
-                playerSettingsDataStore.setSubtitleSize(defaults.size)
-                if (editingHdr) {
-                    playerSettingsDataStore.setSubtitleHdrTextColor(defaults.hdrTextColor)
-                    playerSettingsDataStore.setSubtitleHdrBrightness(defaults.hdrBrightness)
-                } else {
-                    playerSettingsDataStore.setSubtitleTextColor(defaults.textColor)
-                }
-                playerSettingsDataStore.setSubtitleBold(defaults.bold)
-                playerSettingsDataStore.setSubtitleOutlineEnabled(defaults.outlineEnabled)
-                playerSettingsDataStore.setSubtitleOutlineColor(defaults.outlineColor)
-                playerSettingsDataStore.setSubtitleOutlineWidth(defaults.outlineWidth)
-                playerSettingsDataStore.setSubtitleVerticalOffset(defaults.verticalOffset)
-                playerSettingsDataStore.setSubtitleBackgroundColor(defaults.backgroundColor)
-            }
+            scope.launch { playerSettingsDataStore.resetSubtitleAppearance(resetHdrText = editingHdr) }
         }
         PlayerEvent.OnToggleAspectRatio -> {
             val state = _uiState.value
@@ -2060,8 +2184,7 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
     val videoHeight = matchedFormat?.height?.takeIf { it > 0 } ?: activeVideoFormat?.height?.takeIf { it > 0 } ?: currentVideoHeight
     val videoBitrate = activeVideoFormat?.bitrate?.takeIf { it > 0 } ?: currentVideoBitrate
     val videoCodec = activeVideoFormat?.let { format ->
-        CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
-            ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+        CustomDefaultTrackNameProvider.resolveCodecName(format.sampleMimeType, format.codecs)
     } ?: currentVideoCodec
 
     return StreamInfoData(

@@ -55,14 +55,12 @@ internal fun unexpectedStreamStopError(
 }
 
 internal fun unexpectedTorrentError(
-    requestId: Long,
     eventTorrentId: String?,
     currentTorrentId: String?,
     message: String?,
     fallbackMessage: String
 ): TorrentState.Error? {
-    if (requestId != 0L ||
-        eventTorrentId == null ||
+    if (eventTorrentId == null ||
         currentTorrentId == null ||
         eventTorrentId != currentTorrentId
     ) {

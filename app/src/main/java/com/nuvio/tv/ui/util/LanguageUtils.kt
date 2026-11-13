@@ -76,11 +76,18 @@ internal val LANGUAGE_OVERRIDES = mapOf(
     "bul" to "bg",
     "hrv" to "hr",
     "srp" to "sr",
+    "cnr" to "sr-ME",
+    "mne" to "sr-ME",
+    "me" to "sr-ME",
     "slk" to "sk",
     "slo" to "sk",
     "slv" to "sl",
     "zht" to "zh-TW",
     "zhs" to "zh-CN",
+    "zhc" to "zh-ca",
+    "zc" to "zh-ca",
+    "yue" to "zh-ca",
+    "zh-ca" to "zh-ca",
     "chi-tw" to "zh-TW",
     "chi-cn" to "zh-CN",
     "zh-tw" to "zh-TW",
@@ -152,8 +159,10 @@ internal val LANGUAGE_NAME_ALIASES = mapOf(
     "bosnian" to "bs",
     "bulgarian" to "bg",
     "burmese" to "my",
+    "cantonese" to "zh-ca",
     "catalan" to "ca",
     "chinese" to "zh",
+    "chinese (cantonese)" to "zh-ca",
     "mandarin" to "zh",
     "croatian" to "hr",
     "czech" to "cs",
@@ -190,6 +199,7 @@ internal val LANGUAGE_NAME_ALIASES = mapOf(
     "maltese" to "mt",
     "marathi" to "mr",
     "mongolian" to "mn",
+    "montenegrin" to "sr-me",
     "nepali" to "ne",
     "norwegian" to "no",
     "persian" to "fa",
@@ -247,6 +257,12 @@ fun languageCodeToName(code: String): String {
         ?: resolveLanguageNameAlias(tokenized)
         ?: lowerCode.replace('_', '-')
     LANGUAGE_DISPLAY_OVERRIDES[bcp47]?.let { return it }
+    // OpenSubtitles uses zh-ca for Cantonese. Locale treats "CA" as Canada.
+    if (bcp47.equals("zh-ca", ignoreCase = true)) {
+        val chinese = Locale.forLanguageTag("zh").getDisplayLanguage(Locale.getDefault())
+        val cantonese = Locale.forLanguageTag("yue").getDisplayLanguage(Locale.getDefault())
+        return "$chinese ($cantonese)"
+    }
     return try {
         val locale = Locale.forLanguageTag(bcp47)
         val name = if (locale.country.isNotEmpty()) {

@@ -19,6 +19,7 @@ import com.nuvio.tv.ui.util.languageCodeToName
 internal fun rememberPlayerBadges(viewModel: PlayerViewModel, uiState: PlayerUiState): List<StreamBadge> {
     val filters = uiState.playerBadgeFilters
     var mediaInfo by remember { mutableStateOf(PlayerMediaInfo()) }
+    var streamFilename by remember { mutableStateOf<String?>(null) }
     val selectedAudio = uiState.audioTracks.firstOrNull { it.isSelected }
     LaunchedEffect(
         filters,
@@ -30,13 +31,23 @@ internal fun rememberPlayerBadges(viewModel: PlayerViewModel, uiState: PlayerUiS
     ) {
         if (filters.isNotEmpty() && uiState.showControls && !uiState.isBuffering) {
             mediaInfo = viewModel.playerMediaInfo()
+            streamFilename = viewModel.playerStreamFilename()
         }
     }
     if (filters.isEmpty()) return emptyList()
     val language = selectedAudio?.language
     val text = playbackMatchText(mediaInfo, listOfNotNull(language, language?.let(::languageCodeToName)))
-    return remember(text, filters) {
-        StreamBadgeMatcher.matchedBadges(listOfNotNull(text.takeIf { it.isNotBlank() }), filters)
+    // Keep candidates separate so regex lookaheads in one don't bleed into another.
+    // Collapse whitespace so \n in stream names doesn't break single-line regex patterns.
+    val metaCandidates = listOfNotNull(
+        streamFilename?.trim()?.takeIf { it.isNotBlank() },
+        uiState.currentStreamName?.trim()?.takeIf { it.isNotBlank() }
+    )
+    // Refine decoder text with details the decoder can't report (Atmos in MKV, DTS-HD MA vs HRA,
+    // HDR10+) before group exclusion runs, so those badges aren't lost.
+    val playbackCandidate = refinePlaybackText(text, metaCandidates).takeIf { it.isNotBlank() }
+    return remember(playbackCandidate, metaCandidates, filters) {
+        StreamBadgeMatcher.matchedPlayerBadges(playbackCandidate, metaCandidates, filters)
             .filter { it.imageURL.isNotBlank() }
     }
 }

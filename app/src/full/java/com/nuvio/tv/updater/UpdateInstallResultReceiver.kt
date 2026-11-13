@@ -34,7 +34,12 @@ class UpdateInstallResultReceiver : BroadcastReceiver() {
                     runCatching { context.packageManager.packageInstaller.abandonSession(sessionId) }
                 } else {
                     confirmationIntent(intent)?.let { confirm ->
-                        context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        runCatching { context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                            .onFailure {
+                                Log.w(TAG, "Install confirmation screen unavailable", it)
+                                runCatching { context.packageManager.packageInstaller.abandonSession(sessionId) }
+                                retryAfterFailure(context, apkFile, background = false, withDexMetadata = false)
+                            }
                     }
                 }
             }

@@ -78,12 +78,16 @@ class SimklTrackingProgressProvider @Inject constructor(
 
     override suspend fun removeProgress(contentId: String, season: Int?, episode: Int?) {
         syncRepository.ensureLoaded()
-        val sessions = syncRepository.state.value.snapshot.playback.filter { session ->
+        val snapshot = syncRepository.state.value.snapshot
+        val entryIndex = syncRepository.currentEntryIndex()
+        val matchingEntries by lazy(LazyThreadSafetyMode.NONE) {
+            entryIndex?.matchingEntriesForContent(snapshot.entries, contentId, trackingProviderItemId = null)
+                ?: snapshot.entries.filter { entry -> entry.matchesSimklContentId(contentId) }
+        }
+        val sessions = snapshot.playback.filter { session ->
             val media = session.media ?: return@filter false
             val sameContent = media.canonicalContentId().equals(contentId, ignoreCase = true) ||
-                syncRepository.state.value.snapshot.entries.any { entry ->
-                    entry.media == media && entry.matchesSimklContentId(contentId)
-                }
+                matchingEntries.any { entry -> entry.media == media }
             val sessionSeason = session.episode?.tvdbSeason ?: session.episode?.season
             val sessionEpisode = session.episode?.tvdbNumber ?: session.episode?.number
             sameContent && (season == null || episode == null ||

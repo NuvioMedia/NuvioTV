@@ -1792,7 +1792,6 @@
     <string name="parental_severity_mild">Blago</string>
     <string name="player_ends_at">Završava u %1$s</string>
     <string name="player_live_watched">UŽIVO  %1$s</string>
-    <string name="player_via">putem %1$s</string>
     <!-- Kôd sezone/epizode u sučelju playera (npr. S01E02). %1$d = sezona, %2$d = epizoda. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Kašnjenje titlova</string>

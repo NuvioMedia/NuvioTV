@@ -54,4 +54,20 @@ class SubtitleStyleHdrOverrideTest {
         assertEquals(0xFFFFFF00.toInt(), style.copy(hdrBrightness = 0).editableForVideo(isHdrVideo = true).textColor)
         assertEquals(style.textColor, style.editableForVideo(isHdrVideo = false).textColor)
     }
+
+    @Test
+    fun `player controls stay at full brightness unless every condition holds`() {
+        val dimming = style.copy(hdrDimPlayerControls = true, hdrBrightness = 0)
+        assertEquals(1f, style.copy(hdrBrightness = 0).playerControlsBrightness(isHdrVideo = true), 0f)
+        assertEquals(1f, dimming.playerControlsBrightness(isHdrVideo = false), 0f)
+        assertEquals(1f, dimming.copy(hdrStyleEnabled = false).playerControlsBrightness(isHdrVideo = true), 0f)
+    }
+
+    @Test
+    fun `player controls share the hdr brightness mapping`() {
+        val dimming = style.copy(hdrDimPlayerControls = true)
+        assertEquals(0.3f, dimming.copy(hdrBrightness = 0).playerControlsBrightness(isHdrVideo = true), 0.0001f)
+        assertEquals(0.58f, dimming.copy(hdrBrightness = 40).playerControlsBrightness(isHdrVideo = true), 0.0001f)
+        assertEquals(1f, dimming.copy(hdrBrightness = 100).playerControlsBrightness(isHdrVideo = true), 0.0001f)
+    }
 }

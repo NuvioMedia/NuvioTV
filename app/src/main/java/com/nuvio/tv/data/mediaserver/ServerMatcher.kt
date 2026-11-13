@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.mediaserver
 
 import android.util.Log
+import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.tracking.TrackingExternalIds
@@ -20,6 +21,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -86,6 +88,10 @@ class ServerMatcher internal constructor(
             size > LOOKUP_CACHE_SIZE
     }
     private val convertedImdb = mutableMapOf<Long, String>()
+    private val titleNames = object : LinkedHashMap<String, TitleName>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, TitleName>): Boolean =
+            size > TITLE_NAME_CACHE_SIZE
+    }
 
     fun request(type: String, videoId: String, season: Int?, episode: Int?): MatchRequest? {
         val title = titleRequest(type, videoId) ?: return null
@@ -104,7 +110,10 @@ class ServerMatcher internal constructor(
         val metaImdb = meta?.imdbId?.takeIf { it.startsWith("tt") }
         val ids = parseTrackingExternalIds(parentId).mergeMissing(TrackingExternalIds(imdb = metaImdb))
         if (ids.catalogIds().isEmpty()) return null
-        return MatchRequest(kind, parentId, ids, name = meta?.name?.takeIf { it.isNotBlank() }, year = meta?.releaseYear())
+        val nameKey = "${kind.contentType}:$parentId"
+        val title = meta?.titleName()?.also { synchronized(lock) { titleNames[nameKey] = it } }
+            ?: synchronized(lock) { titleNames[nameKey] }
+        return MatchRequest(kind, parentId, ids, name = title?.name, year = title?.year)
     }
 
     private fun parentSize(id: String): Int = if (id.startsWith("tt")) 1 else 2
@@ -136,6 +145,12 @@ class ServerMatcher internal constructor(
         val original = ids.tmdb?.let { originalTitle(it, request.kind) }?.takeIf { it.isNotBlank() }
         val query = ServerTitleQuery(ids, request.name, request.year, original)
         lookupItemIds(connection, request.kind, query, libraries, forceRefresh)?.let { return it }
+        if (request.name == null) {
+            fetchTitleName(request)?.let { title ->
+                val named = query.copy(name = title.name, year = title.year)
+                lookupItemIds(connection, request.kind, named, libraries, forceRefresh)?.let { return it }
+            }
+        }
         return libraries
             .flatMap { library -> index(connection, library, forceRefresh).lookup(ids) }
             .distinct()
@@ -241,6 +256,16 @@ class ServerMatcher internal constructor(
         }
     }
 
+    private suspend fun fetchTitleName(request: MatchRequest): TitleName? {
+        val type = request.kind.contentType
+        val result = withTimeoutOrNull(META_WAIT_MS) {
+            runCatching { metaRepository.getMetaFromAllAddons(type, request.parentId).first { it !is NetworkResult.Loading } }.getOrNull()
+        }
+        val title = (result as? NetworkResult.Success)?.data?.titleName() ?: return null
+        synchronized(lock) { titleNames["$type:${request.parentId}"] = title }
+        return title
+    }
+
     private suspend fun withConvertedIds(request: MatchRequest): TrackingExternalIds {
         val ids = withConvertedImdb(request)
         if (ids.tmdb != null) return ids
@@ -270,6 +295,10 @@ class ServerMatcher internal constructor(
         var failed = false
     }
 
+    private data class TitleName(val name: String, val year: Int?)
+
+    private fun Meta.titleName(): TitleName? = name.takeIf { it.isNotBlank() }?.let { TitleName(it, releaseYear()) }
+
     private data class LookupKey(
         val connectionId: String,
         val kind: ServerMediaKind,
@@ -292,6 +321,8 @@ class ServerMatcher internal constructor(
         const val LOOKUP_WAIT_MS = 6_000L
         const val LOOKUP_CACHE_SIZE = 300
         const val CONVERSION_TIMEOUT_MS = 5_000L
+        const val META_WAIT_MS = 3_000L
+        const val TITLE_NAME_CACHE_SIZE = 200
     }
 }
 

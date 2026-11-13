@@ -1191,7 +1191,6 @@
     <string name="parental_severity_moderate">மிதமான</string>
     <string name="parental_severity_mild">லேசான</string>
     <string name="player_ends_at">%1$s இல் முடியும்</string>
-    <string name="player_via">%1$s மூலம்</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">சப்டைட்டில் தாமதம்</string>

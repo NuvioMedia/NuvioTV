@@ -7,6 +7,8 @@ import com.nuvio.tv.R
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.AudioOutputChannels
+import com.nuvio.tv.data.local.DownmixLfeLevel
+import com.nuvio.tv.data.local.NightMode
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.displayName
@@ -44,6 +46,13 @@ internal fun PlaybackAudioSection(
             checked = settings.skipSilence,
             onToggle = { onUpdate { setSkipSilence(!settings.skipSilence) } },
             enabled = enabled
+        )
+        SettingsActionRow(
+            title = stringResource(R.string.audio_night_mode),
+            subtitle = stringResource(R.string.audio_night_mode_sub),
+            value = nightModeLabel(settings.nightMode),
+            enabled = enabled,
+            onClick = { onOpenDialog(PlaybackDialog.NIGHT_MODE) }
         )
     }
 
@@ -89,6 +98,13 @@ internal fun PlaybackAudioSection(
             onToggle = { onUpdate { setMaintainOriginalAudioOnDownmix(!settings.maintainOriginalAudioOnDownmix) } },
             enabled = enabled
         )
+        SettingsActionRow(
+            title = stringResource(R.string.audio_downmix_lfe_level),
+            subtitle = stringResource(R.string.audio_downmix_lfe_level_sub),
+            value = downmixLfeLevelLabel(settings.downmixLfeLevel),
+            enabled = enabled && !settings.audioOutputChannels.hasLfe,
+            onClick = { onOpenDialog(PlaybackDialog.DOWNMIX_LFE_LEVEL) }
+        )
     }
     SettingsToggleRow(
         title = stringResource(R.string.audio_tunneled),
@@ -129,6 +145,21 @@ internal fun decoderPriorityLabel(priority: Int): String = when (priority) {
 }
 
 @Composable
+private fun downmixLfeLevelLabel(level: DownmixLfeLevel): String = when (level) {
+    DownmixLfeLevel.OFF -> stringResource(R.string.audio_downmix_lfe_level_off)
+    DownmixLfeLevel.HALF -> stringResource(R.string.audio_downmix_lfe_level_half)
+    DownmixLfeLevel.FULL -> stringResource(R.string.audio_downmix_lfe_level_full)
+}
+
+@Composable
+private fun nightModeLabel(mode: NightMode): String = when (mode) {
+    NightMode.OFF -> stringResource(R.string.audio_night_mode_off)
+    NightMode.LIGHT -> stringResource(R.string.audio_night_mode_light)
+    NightMode.MEDIUM -> stringResource(R.string.audio_night_mode_medium)
+    NightMode.STRONG -> stringResource(R.string.audio_night_mode_strong)
+}
+
+@Composable
 internal fun AudioSettingsDialogs(
     dialog: PlaybackDialog?,
     settings: PlayerSettings,
@@ -165,6 +196,27 @@ internal fun AudioSettingsDialogs(
             },
             onDismiss = onDismiss
         )
+        PlaybackDialog.DOWNMIX_LFE_LEVEL -> SettingsSingleChoiceDialog(
+            title = stringResource(R.string.audio_downmix_lfe_level),
+            subtitle = stringResource(R.string.audio_downmix_lfe_level_desc),
+            options = DownmixLfeLevel.entries.map { SettingsPickerOption(it, downmixLfeLevelLabel(it)) },
+            selectedValue = settings.downmixLfeLevel,
+            onOptionSelected = { level ->
+                onUpdate { setDownmixLfeLevel(level) }
+                onDismiss()
+            },
+            onDismiss = onDismiss,
+            width = 420.dp,
+            maxHeight = 320.dp
+        )
+        PlaybackDialog.NIGHT_MODE -> NightModeDialog(
+            selectedMode = settings.nightMode,
+            onModeSelected = { mode ->
+                onUpdate { setNightMode(mode) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
         PlaybackDialog.DECODER_PRIORITY -> DecoderPriorityDialog(
             selectedPriority = settings.decoderPriority,
             onPrioritySelected = { priority ->
@@ -192,6 +244,43 @@ private fun AudioOutputChannelsDialog(
         onDismiss = onDismiss,
         width = 420.dp,
         maxHeight = 420.dp
+    )
+}
+
+@Composable
+private fun NightModeDialog(
+    selectedMode: NightMode,
+    onModeSelected: (NightMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        SettingsPickerOption(NightMode.OFF, stringResource(R.string.audio_night_mode_off)),
+        SettingsPickerOption(
+            NightMode.LIGHT,
+            stringResource(R.string.audio_night_mode_light),
+            stringResource(R.string.audio_night_mode_light_desc)
+        ),
+        SettingsPickerOption(
+            NightMode.MEDIUM,
+            stringResource(R.string.audio_night_mode_medium),
+            stringResource(R.string.audio_night_mode_medium_desc)
+        ),
+        SettingsPickerOption(
+            NightMode.STRONG,
+            stringResource(R.string.audio_night_mode_strong),
+            stringResource(R.string.audio_night_mode_strong_desc)
+        )
+    )
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.audio_night_mode),
+        subtitle = stringResource(R.string.audio_night_mode_desc),
+        options = options,
+        selectedValue = selectedMode,
+        onOptionSelected = onModeSelected,
+        onDismiss = onDismiss,
+        width = 420.dp,
+        maxHeight = 320.dp
     )
 }
 

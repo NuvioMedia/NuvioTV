@@ -1064,7 +1064,6 @@
     <string name="parental_severity_mild">Незначительно</string>
     <string name="player_ends_at">Закончится в %1$s</string>
     <string name="player_live_watched">ЭФИР  %1$s</string>
-    <string name="player_via">через %1$s</string>
     <string name="player_subtitle_delay">Задержка субтитров</string>
     <string name="player_error_title">Ошибка воспроизведения</string>
     <string name="player_go_back">Назад</string>

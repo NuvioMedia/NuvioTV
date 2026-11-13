@@ -2,6 +2,7 @@ package com.nuvio.tv.updater
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
@@ -46,6 +47,9 @@ object ApkInstaller {
         val packageInstaller = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(context.packageName)
+            // Sessions default to internal-only, which the system rejects for an app the user moved to adopted
+            // storage. Auto keeps the update on the volume the app is already on.
+            setInstallLocation(PackageInfo.INSTALL_LOCATION_AUTO)
             if (background && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }

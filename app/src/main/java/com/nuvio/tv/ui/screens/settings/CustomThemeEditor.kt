@@ -283,6 +283,7 @@ private fun ThemeColorSlot(
     Card(
         onClick = onClick,
         modifier = modifier.semantics {
+            role = Role.RadioButton
             this.selected = selected
             contentDescription = "$label, ${formatHexColor(color)}"
         },

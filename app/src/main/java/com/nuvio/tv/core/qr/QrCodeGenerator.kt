@@ -8,6 +8,7 @@ import android.graphics.Path
 import android.graphics.RectF
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
+import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 
 object QrCodeGenerator {
@@ -25,59 +26,55 @@ object QrCodeGenerator {
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        // Fill white background with rounded corners
-        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            style = Paint.Style.FILL
-        }
+        // Clip to rounded corners up front so modules never draw past the rounded background
         val cornerRadius = size * 0.06f
         val bgRect = RectF(0f, 0f, size.toFloat(), size.toFloat())
-        canvas.drawRoundRect(bgRect, cornerRadius, cornerRadius, bgPaint)
+        canvas.clipPath(
+            Path().apply { addRoundRect(bgRect, cornerRadius, cornerRadius, Path.Direction.CW) }
+        )
+        canvas.drawColor(Color.WHITE)
 
-        // Draw QR modules as rounded squares
-        val fgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val fgPaint = Paint().apply {
             color = Color.BLACK
             style = Paint.Style.FILL
         }
 
-        // Determine module size by finding first dark module boundary
-        var moduleSize = 1
-        for (x in 0 until size) {
-            if (bitMatrix[x, 0] != bitMatrix[0, 0]) {
-                moduleSize = x
-                break
-            }
-        }
-        if (moduleSize < 1) moduleSize = 1
-
-        val moduleRadius = moduleSize * 0.3f
-
-        var x = 0
-        while (x < size) {
-            var y = 0
-            while (y < size) {
+        // Draw one rect per QR module instead of per pixel; the matrix is scaled by the writer
+        val grid = moduleGrid(bitMatrix)
+        val step = grid.moduleSize
+        for (row in 0 until grid.modules) {
+            val y = grid.top + row * step
+            for (col in 0 until grid.modules) {
+                val x = grid.left + col * step
                 if (bitMatrix[x, y]) {
-                    val rect = RectF(
-                        x.toFloat(), y.toFloat(),
-                        (x + moduleSize).toFloat().coerceAtMost(size.toFloat()),
-                        (y + moduleSize).toFloat().coerceAtMost(size.toFloat())
+                    canvas.drawRect(
+                        x.toFloat(),
+                        y.toFloat(),
+                        (x + step).toFloat(),
+                        (y + step).toFloat(),
+                        fgPaint
                     )
-                    canvas.drawRoundRect(rect, moduleRadius, moduleRadius, fgPaint)
                 }
-                y += moduleSize
             }
-            x += moduleSize
         }
 
-        // Clip the entire bitmap to rounded corners
-        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val outputCanvas = Canvas(output)
-        val clipPath = Path().apply {
-            addRoundRect(bgRect, cornerRadius, cornerRadius, Path.Direction.CW)
-        }
-        outputCanvas.clipPath(clipPath)
-        outputCanvas.drawBitmap(bitmap, 0f, 0f, null)
+        return bitmap
+    }
 
-        return output
+    internal data class ModuleGrid(val left: Int, val top: Int, val moduleSize: Int, val modules: Int)
+
+    /**
+     * Locates the scaled module grid inside [matrix]. The top-left finder pattern starts the
+     * symbol and is 7 modules wide, which gives the module size without assuming any padding.
+     */
+    internal fun moduleGrid(matrix: BitMatrix): ModuleGrid {
+        // [left, top, width, height]; the finder patterns pin all four edges of the symbol
+        val bounds = matrix.enclosingRectangle ?: return ModuleGrid(0, 0, 1, 0)
+        val left = bounds[0]
+        val top = bounds[1]
+        var x = left
+        while (x < matrix.width && matrix[x, top]) x++
+        val moduleSize = ((x - left) / 7).coerceAtLeast(1)
+        return ModuleGrid(left, top, moduleSize, bounds[2] / moduleSize)
     }
 }

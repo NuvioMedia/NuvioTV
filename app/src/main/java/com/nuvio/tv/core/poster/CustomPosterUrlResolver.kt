@@ -54,6 +54,12 @@ object CustomPosterUrlResolver {
     )
 
     /**
+     * Whether the pattern has a `{shape}` placeholder, read the same way [resolve] reads it
+     * (percent-encoded braces count, as pasted from iOS).
+     */
+    fun supportsShape(pattern: String): Boolean = "{shape}" in preparedFor(pattern).decoded
+
+    /**
      * Resolve a custom poster URL pattern.
      *
      * @param pattern URL pattern with `{placeholder}` tokens

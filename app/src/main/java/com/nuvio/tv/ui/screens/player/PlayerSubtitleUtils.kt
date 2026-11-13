@@ -2,8 +2,12 @@ package com.nuvio.tv.ui.screens.player
 
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.Tracks
 import androidx.media3.common.text.Cue
+import java.util.Locale
 import com.nuvio.tv.ui.util.LANGUAGE_OVERRIDES
 import com.nuvio.tv.ui.util.resolveLanguageNameAlias
 
@@ -285,6 +289,27 @@ internal object PlayerSubtitleUtils {
             .setLineAnchor(Cue.TYPE_UNSET)
             .build()
     }
+
+    fun isAssOrSsaSelected(tracks: Tracks?, sidecarKey: String?): Boolean {
+        val selectedAss = tracks?.groups.orEmpty()
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+            .any { group ->
+                (0 until group.length).any { index ->
+                    group.isTrackSelected(index) && group.getTrackFormat(index).isAssOrSsa()
+                }
+            }
+        return selectedAss || sidecarKey?.let {
+            it.contains(".ass", ignoreCase = true) || it.contains(".ssa", ignoreCase = true)
+        } == true
+    }
+
+    private fun Format.isAssOrSsa(): Boolean =
+        sampleMimeType == MimeTypes.TEXT_SSA || codecs
+            ?.split(',')
+            ?.map { it.trim().lowercase(Locale.US) }
+            ?.any { codec ->
+                codec == MimeTypes.TEXT_SSA || codec == "s_text/ass" || codec == "s_text/ssa" || codec.endsWith("/x-ssa")
+            } == true
 
     private const val BOTTOM_CUE_LINE_FRACTION = 0.6f
 }

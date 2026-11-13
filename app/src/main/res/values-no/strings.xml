@@ -792,7 +792,6 @@
     <string name="parental_severity_moderate">Moderat</string>
     <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Slutter klokken %1$s</string>
-    <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Undertekst forsinkelse</string>
     <string name="player_error_title">Avspillingsfeil</string>
     <string name="player_go_back">Gå tilbake</string>

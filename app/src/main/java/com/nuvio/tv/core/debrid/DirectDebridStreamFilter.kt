@@ -28,6 +28,7 @@ object DirectDebridStreamFilter {
     private val releaseGroupRegex = Regex("-([a-z0-9][a-z0-9._]{1,24})($|\\.)", RegexOption.IGNORE_CASE)
     private val nonAlphanumericRegex = Regex("[^a-z0-9]")
     private val nonAlphanumericOrPlusRegex = Regex("[^a-z0-9+]")
+    private val nonAlphanumericRunRegex = Regex("[^a-z0-9]+")
     private val resolutionTokens = listOf(
         resolutionRegex("2160p?", "4k", "uhd") to DebridStreamResolution.P2160,
         resolutionRegex("1440p?", "2k") to DebridStreamResolution.P1440,
@@ -254,7 +255,8 @@ object DirectDebridStreamFilter {
         val audioChannels = streamAudioChannels(parsed?.channels.orEmpty(), searchText)
         val encode = streamEncode(parsed?.codec, searchText)
         val languages = parsed?.languages.orEmpty().mapNotNull { languageFor(it) }.ifEmpty {
-            languageRegexes.filter { (_, regex) -> regex.containsMatchIn(searchText) }.map { it.first }
+            val languageText = languageSearchText(stream)
+            languageRegexes.filter { (_, regex) -> regex.containsMatchIn(languageText) }.map { it.first }
         }
         val releaseGroup = parsed?.group?.takeIf { it.isNotBlank() } ?: releaseGroupFromText(searchText)
         return StreamFacts(
@@ -426,9 +428,20 @@ object DirectDebridStreamFilter {
         StreamTextSizeParser.effectiveSizeBytes(stream)
 
     private fun streamSearchText(stream: Stream): String {
+        val parsed = stream.clientResolve?.stream?.raw?.parsed
+        val parsedTexts = listOfNotNull(
+            parsed?.resolution,
+            parsed?.quality,
+            parsed?.codec,
+            parsed?.hdr?.joinToString(" "),
+            parsed?.audio?.joinToString(" ")
+        )
+        return (streamTexts(stream) + parsedTexts).joinToString(" ").lowercase()
+    }
+
+    private fun streamTexts(stream: Stream): List<String> {
         val resolve = stream.clientResolve
         val raw = resolve?.stream?.raw
-        val parsed = raw?.parsed
         return listOfNotNull(
             stream.name,
             stream.title,
@@ -438,13 +451,28 @@ object DirectDebridStreamFilter {
             resolve?.filename,
             raw?.torrentName,
             raw?.filename,
-            stream.debridCacheStatus?.cachedName,
-            parsed?.resolution,
-            parsed?.quality,
-            parsed?.codec,
-            parsed?.hdr?.joinToString(" "),
-            parsed?.audio?.joinToString(" ")
-        ).joinToString(" ").lowercase()
+            stream.debridCacheStatus?.cachedName
+        )
+    }
+
+    // Removes the media title from each text before languages are matched, so title words
+    // ("The French Dispatch", "The Italian Job") are not read as the stream language. Only the
+    // first match per text is removed: a release name repeats the title only as a language word.
+    private fun languageSearchText(stream: Stream): String {
+        val resolve = stream.clientResolve
+        val titleRegexes = listOfNotNull(resolve?.stream?.raw?.parsed?.parsedTitle, resolve?.title)
+            .mapNotNull { titleRegex(it) }
+            .distinctBy { it.pattern }
+            .sortedByDescending { it.pattern.length }
+        return streamTexts(stream).joinToString(" ") { text ->
+            titleRegexes.fold(text.lowercase()) { remaining, regex -> regex.replaceFirst(remaining, " ") }
+        }
+    }
+
+    private fun titleRegex(title: String): Regex? {
+        val words = title.lowercase().split(nonAlphanumericRunRegex).filter { it.isNotEmpty() }
+        if (words.isEmpty()) return null
+        return Regex("(^|[^a-z0-9])${words.joinToString("[^a-z0-9]+")}(?=[^a-z0-9]|\$)")
     }
 
     private fun sourceName(stream: Stream): String {
