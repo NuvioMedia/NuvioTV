@@ -89,7 +89,7 @@ func par2Worth(ctx context.Context, err error, files []*File) bool {
 		errors.Is(err, errProviderAuthentication) || errors.Is(err, errProviderQuota) ||
 		errors.Is(err, ErrCompressedRAR) || errors.Is(err, ErrCompressed7z) ||
 		errors.Is(err, ErrRARPasswordMissing) || errors.Is(err, ErrRARWrongPassword) ||
-		errors.Is(err, Err7zPasswordMissing) || errors.Is(err, Err7zWrongPassword) {
+		errors.Is(err, Err7zPasswordMissing) || errors.Is(err, Err7zWrongPassword) || errors.Is(err, errDiscEpisodeMissing) {
 		return false
 	}
 	for _, f := range files {
