@@ -4,7 +4,6 @@ import android.content.Context
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
 import java.net.URI
 import java.net.URLDecoder
-import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.Executors
@@ -166,27 +165,24 @@ private data class ProviderReport(val server: Int = -1, val articles: Long = 0, 
     val missing: Long = 0, val errors: Long = 0, val ttfbMs: Double = 0.0)
 
 /**
- * What a provider's statistics are kept under: a hash of its address and username. Its password,
- * connections and priority do not change which account it is, and are left out.
+ * Which account a server is: its address and username. Its password, connections and priority are
+ * left out, so a server listed with another password is still the same account.
  */
-internal fun providerStatsKey(serverUrl: String?): String? {
+internal fun providerAccount(serverUrl: String?): String? {
     val uri = runCatching { URI(serverUrl ?: return null) }.getOrNull() ?: return null
     val host = uri.host?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
     val port = if (uri.port > 0) uri.port else if (uri.scheme.equals("nntps", ignoreCase = true)) 563 else 119
     val username = uri.rawUserInfo?.substringBefore(':')
         ?.let { runCatching { URLDecoder.decode(it.replace("+", "%2B"), "UTF-8") }.getOrDefault(it) }.orEmpty()
-    return MessageDigest.getInstance("SHA-256").digest("$host:$port\n$username".toByteArray())
-        .joinToString("") { "%02x".format(it) }
+    return "$host:$port\n$username"
 }
-
-internal fun UsenetProvider.statsKey(): String? = providerStatsKey(serverUrl())
 
 /**
  * How each indexer and provider did: searches, requests, NZB downloads and how releases played for
  * an indexer; articles served and missing for a provider. Kept per day for a month and in total,
  * each split by movies and shows, so settings can show the last week, the last month or everything.
- * Sources are keyed by hashes ([UsenetIndexer.stateKey], [providerStatsKey]): nothing names a
- * source or holds a key or credential, and an edited source starts fresh.
+ * Sources are kept under their ids, so an edited source, such as one with a new API key, keeps its
+ * counts; nothing names a source or holds a key or credential.
  *
  * A search sends several requests to every indexer within a second, so counts are saved at most
  * every [SAVE_INTERVAL_MS]; [flush] saves the rest when the app leaves the foreground.
@@ -224,6 +220,18 @@ class UsenetSourceStats internal constructor(
     private class Attribution(val indexer: String, val kind: ContentKind?, var outcomeAt: Long = Long.MIN_VALUE / 2)
     private val attributions = object : LinkedHashMap<String, Attribution>(64, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Attribution>) = size > MAX_ATTRIBUTIONS
+    }
+
+    /**
+     * Configured providers' ids by server URL and by account, from [knowProviders]. The engine
+     * names a session's providers by the URLs it was opened with, which may predate an edit; those
+     * stay here, so the session still counts for the edited provider. Memory only: URLs hold passwords.
+     */
+    private val providerIds = object : LinkedHashMap<String, String>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>) = size > MAX_PROVIDER_LINKS
+    }
+    private val accountIds = object : LinkedHashMap<String, String>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>) = size > MAX_PROVIDER_LINKS
     }
 
     /** Loaded on first use, and again after an account reset cleared the storage. */
@@ -266,6 +274,20 @@ class UsenetSourceStats internal constructor(
         }
     }
 
+    /** The providers as configured, so engine reports, which name servers by URL, count for them. */
+    @Synchronized
+    fun knowProviders(providers: Collection<UsenetProvider>) {
+        providers.forEach { provider ->
+            val url = provider.serverUrl()
+            providerIds[url] = provider.id
+            providerAccount(url)?.let { accountIds[it] = provider.id }
+        }
+    }
+
+    /** A configured provider's id: by its exact URL, else by account, such as for an addon's release. */
+    private fun providerId(server: String?): String? =
+        server?.let { providerIds[it] ?: providerAccount(it)?.let(accountIds::get) }
+
     /** Remembers that [indexerKey] listed these releases, so their downloads and playback count for it. */
     @Synchronized
     fun remember(nzbUrls: Collection<String>, indexerKey: String, kind: ContentKind?) {
@@ -303,7 +325,8 @@ class UsenetSourceStats internal constructor(
     /**
      * Adds what the engine reported when a session closed, or with an open it [refused] for
      * [failure], its X-Usenet-Failure kind: [body] is its report, whose providers are indexes in
-     * [servers], the session's list. An empty or unreadable report adds nothing.
+     * [servers], the session's list. An empty or unreadable report adds nothing, and so does a
+     * server that is no configured provider's.
      *
      * A refused open counts as one that failed to open only for the providers it failed for: a
      * [PROVIDER_FAILURES] kind, and a provider that lacked or broke an article. A password, a
@@ -316,10 +339,10 @@ class UsenetSourceStats internal constructor(
         if (body.isBlank()) return
         val providerFailure = refused && failure in PROVIDER_FAILURES
         val reports = runCatching { json.decodeFromString<ProviderReports>(body) }.getOrNull()?.providers ?: return
-        // Two listings of one account (another password, say) are one provider here.
+        // Two listings of one provider (an addon's, with another password, say) are one here.
         val sessions = linkedMapOf<String, ProviderCounts>()
         reports.forEach { report ->
-            val key = providerStatsKey(servers.getOrNull(report.server)) ?: return@forEach
+            val key = providerId(servers.getOrNull(report.server)) ?: return@forEach
             val ttfb = report.ttfbMs.takeIf { it > 0 && it.isFinite() }?.roundToLong()
             val counts = ProviderCounts(articles = report.articles.coerceAtLeast(0), bytes = report.bytes.coerceAtLeast(0),
                 missing = report.missing.coerceAtLeast(0), errors = report.errors.coerceAtLeast(0),
@@ -435,7 +458,7 @@ class UsenetSourceStats internal constructor(
         background(Runnable { storage.save(json.encodeToString(snapshot)) })
     }
 
-    /** Deleted or edited sources stop being counted: forget them, bound the size, and drop days past the month. */
+    /** Deleted sources stop being counted: forget them, bound the size, and drop days past the month. */
     private fun <T> MutableMap<String, SourceRecord<T>>.prune(at: Long, firstDay: Long) {
         entries.removeAll { at - it.value.touchedAt > RETENTION_MS }
         while (size > MAX_SOURCES) remove(minBy { it.value.touchedAt }.key)
@@ -455,6 +478,7 @@ class UsenetSourceStats internal constructor(
         /** Per kind of source. */
         internal const val MAX_SOURCES = 32
         private const val MAX_ATTRIBUTIONS = 4000
+        private const val MAX_PROVIDER_LINKS = 64
         /** Engine failure kinds a provider causes: articles it lacks or serves damaged. */
         internal val PROVIDER_FAILURES = setOf("missing-article", "hole-limit", "invalid-article")
         private const val PERIOD = "period"

@@ -206,46 +206,66 @@ class UsenetSourceStatsTest {
         assertNull(storage.value)
     }
 
-    private val primary = UsenetProvider(name = "Primary", host = "News.Example.com", username = "me", password = "one")
-    private val backup = UsenetProvider(name = "Backup", host = "backup.test", port = 443, username = "", password = "")
+    private val primary = UsenetProvider(id = "primary", name = "Primary", host = "News.Example.com", username = "me", password = "one")
+    private val backup = UsenetProvider(id = "backup", name = "Backup", host = "backup.test", port = 443, username = "", password = "")
+    /** Statistics told the configured providers, as the sources' settings tell them. */
+    private fun providerStats() = stats().also { it.knowProviders(listOf(primary, backup)) }
 
     @Test fun `a closed session's reports count for the servers they name`() {
-        val stats = stats()
+        val stats = providerStats()
         val servers = listOf(backup.serverUrl(), primary.serverUrl())
         // The engine lists providers by priority; each names its place in the session's servers.
         stats.providerSession(servers, ContentKind.SHOW, """{"providers":[
             {"server":1,"articles":5,"bytes":5120,"missing":1,"errors":0,"ttfbMs":42.6},
             {"server":0,"articles":1,"bytes":1024,"missing":0,"errors":2}]}""")
         stats.providerSession(servers, ContentKind.MOVIE, """{"providers":[{"server":1,"articles":3,"bytes":3,"ttfbMs":10}]}""")
-        val key = primary.statsKey()!!
         assertEquals(ProviderCounts(sessions = 1, articles = 5, bytes = 5120, missing = 1, ttfbMs = 43, ttfbSessions = 1),
-            stats.provider(key, StatsPeriod.LAST_7_DAYS, StatsContent.SHOWS))
+            stats.provider(primary.id, StatsPeriod.LAST_7_DAYS, StatsContent.SHOWS))
         assertEquals(ProviderCounts(sessions = 2, articles = 8, bytes = 5123, missing = 1, ttfbMs = 53, ttfbSessions = 2),
-            stats.provider(key, StatsPeriod.ALL_TIME, ALL))
+            stats.provider(primary.id, StatsPeriod.ALL_TIME, ALL))
         assertEquals(ProviderCounts(sessions = 1, articles = 1, bytes = 1024, errors = 2),
-            stats.provider(backup.statsKey()!!, StatsPeriod.LAST_30_DAYS, ALL))
-        assertEquals(clock, stats.providerSince(key))
+            stats.provider(backup.id, StatsPeriod.LAST_30_DAYS, ALL))
+        assertEquals(clock, stats.providerSince(primary.id))
+    }
+
+    @Test fun `a provider keeps its counts through edits, and a server no provider has counts for nothing`() {
+        val stats = providerStats()
+        val before = primary.serverUrl()
+        val edited = primary.copy(host = "eu.example.org", port = 443, username = "new", password = "two")
+        stats.knowProviders(listOf(edited, backup))
+        // A session opened with the URL from before the edit, then one with today's.
+        stats.providerSession(listOf(before), ContentKind.MOVIE, """{"providers":[{"server":0,"articles":2}]}""")
+        stats.providerSession(listOf(edited.serverUrl()), ContentKind.MOVIE, """{"providers":[{"server":0,"articles":3}]}""")
+        assertEquals(ProviderCounts(sessions = 2, articles = 5), stats.provider(primary.id, StatsPeriod.ALL_TIME, ALL))
+        val unknown = UsenetProvider(host = "other.test", username = "x").serverUrl()
+        stats.providerSession(listOf(unknown), ContentKind.MOVIE, """{"providers":[{"server":0,"articles":7}]}""")
+        assertEquals(ProviderCounts(sessions = 2, articles = 5), stats.provider(primary.id, StatsPeriod.ALL_TIME, ALL))
+        assertNull(stats.provider(backup.id, StatsPeriod.ALL_TIME, ALL))
+        // Nothing is counted for a provider the statistics were never told.
+        val fresh = stats()
+        fresh.providerSession(listOf(before), ContentKind.MOVIE, """{"providers":[{"server":0,"articles":2}]}""")
+        assertEquals(0, fresh.revision.value)
     }
 
     @Test fun `an open refused for missing articles failed to open for the providers that lacked them`() {
-        val stats = stats()
+        val stats = providerStats()
         val servers = listOf(primary.serverUrl(), backup.serverUrl())
         // The primary lacked articles; the backup served some but lacked none of them.
         stats.providerSession(servers, ContentKind.SHOW, """{"providers":[
             {"server":0,"articles":2,"missing":5},{"server":1,"articles":3}]}""", refused = true, failure = "missing-article")
         stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"articles":40}]}""")
         assertEquals(ProviderCounts(sessions = 2, failedOpens = 1, articles = 42, missing = 5),
-            stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.SHOWS))
+            stats.provider(primary.id, StatsPeriod.ALL_TIME, StatsContent.SHOWS))
         assertEquals(ProviderCounts(sessions = 1, articles = 3),
-            stats.provider(backup.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.SHOWS))
+            stats.provider(backup.id, StatsPeriod.ALL_TIME, StatsContent.SHOWS))
         // Damaged articles and a passed hole limit are the provider's too.
         stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"errors":1}]}""", refused = true, failure = "invalid-article")
         stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"missing":3}]}""", refused = true, failure = "hole-limit")
-        assertEquals(3, stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.SHOWS)?.failedOpens)
+        assertEquals(3, stats.provider(primary.id, StatsPeriod.ALL_TIME, StatsContent.SHOWS)?.failedOpens)
     }
 
     @Test fun `an open refused for the release is no provider's failure`() {
-        val stats = stats()
+        val stats = providerStats()
         val servers = listOf(primary.serverUrl())
         // A password, a compressed archive or a blank release: the articles served still count.
         listOf(null, "blank-content", "provider").forEach {
@@ -255,52 +275,50 @@ class UsenetSourceStatsTest {
         // Refused before the provider was asked for anything, such as for an NZB too large to read.
         stats.providerSession(servers, ContentKind.MOVIE, """{"providers":[{"server":0,"articles":0}]}""", refused = true)
         assertEquals(ProviderCounts(sessions = 3, articles = 12, errors = 3),
-            stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.MOVIES))
+            stats.provider(primary.id, StatsPeriod.ALL_TIME, StatsContent.MOVIES))
     }
 
     @Test fun `unreadable or foreign reports add nothing`() {
-        val stats = stats()
+        val stats = providerStats()
         val servers = listOf(primary.serverUrl())
         listOf("", "not json", """{"providers":[{"server":3,"articles":9}]}""", """{"other":1}""").forEach {
             stats.providerSession(servers, ContentKind.MOVIE, it)
         }
-        assertNull(stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, ALL))
+        assertNull(stats.provider(primary.id, StatsPeriod.ALL_TIME, ALL))
         assertEquals(0, stats.revision.value)
     }
 
     @Test fun `one account listed twice in a session counts once`() {
-        val stats = stats()
-        // Another password does not make another account.
-        val servers = listOf(primary.serverUrl(), primary.copy(password = "two", priority = 2).serverUrl())
+        val stats = providerStats()
+        // An addon's server for the same account, with another password, is the same provider.
+        val servers = listOf(primary.serverUrl(), "nntps://me:two@news.example.com:563/8?priority=2")
         stats.providerSession(servers, ContentKind.MOVIE, """{"providers":[
             {"server":0,"articles":2,"ttfbMs":20},{"server":1,"articles":1,"ttfbMs":90}]}""")
         assertEquals(ProviderCounts(sessions = 1, articles = 3, ttfbMs = 20, ttfbSessions = 1),
-            stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, ALL))
+            stats.provider(primary.id, StatsPeriod.ALL_TIME, ALL))
     }
 
-    @Test fun `a provider is the same account whatever its password, connections or priority`() {
-        val key = primary.statsKey()
-        assertNotNull(key)
-        assertEquals(key, primary.copy(password = "other", connections = 3, priority = 2, tls = true).statsKey())
-        assertEquals(key, providerStatsKey("nntps://me:secret@news.example.com:563/50?priority=1"))
-        assertNotEquals(key, primary.copy(username = "you").statsKey())
-        assertNotEquals(key, primary.copy(port = 119).statsKey())
-        // Encoded usernames and IPv6 addresses give the same key either way.
-        val encoded = primary.copy(username = "a b+c@d")
-        assertEquals(encoded.statsKey(), providerStatsKey(encoded.serverUrl()))
-        assertNotEquals(encoded.statsKey(), primary.copy(username = "a b c@d").statsKey())
+    @Test fun `a server is the same account whatever its password, connections or priority`() {
+        val account = providerAccount(primary.serverUrl())
+        assertNotNull(account)
+        assertEquals(account, providerAccount(primary.copy(password = "other", connections = 3, priority = 2, tls = true).serverUrl()))
+        assertEquals(account, providerAccount("nntps://me:secret@news.example.com:563/50?priority=1"))
+        assertNotEquals(account, providerAccount(primary.copy(username = "you").serverUrl()))
+        assertNotEquals(account, providerAccount(primary.copy(port = 119).serverUrl()))
+        // Encoded usernames and IPv6 addresses give the same account either way.
+        assertEquals("news.example.com:563\na b+c@d", providerAccount(primary.copy(username = "a b+c@d").serverUrl()))
         val ipv6 = primary.copy(host = "2001:db8::1")
-        assertNotNull(ipv6.statsKey())
-        assertEquals(ipv6.statsKey(), ipv6.copy(host = "[2001:db8::1]").statsKey())
-        assertNull(providerStatsKey("not a url"))
-        assertNull(providerStatsKey(null))
+        assertNotNull(providerAccount(ipv6.serverUrl()))
+        assertEquals(providerAccount(ipv6.serverUrl()), providerAccount(ipv6.copy(host = "[2001:db8::1]").serverUrl()))
+        assertNull(providerAccount("not a url"))
+        assertNull(providerAccount(null))
     }
 
     @Test fun `a reset clears providers too`() {
-        val stats = stats()
+        val stats = providerStats()
         stats.providerSession(listOf(primary.serverUrl()), ContentKind.MOVIE, """{"providers":[{"server":0,"articles":2}]}""")
         stats.reset()
-        assertNull(stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, ALL))
+        assertNull(stats.provider(primary.id, StatsPeriod.ALL_TIME, ALL))
     }
 
     @Test fun `unreadable saved counts start empty`() {
