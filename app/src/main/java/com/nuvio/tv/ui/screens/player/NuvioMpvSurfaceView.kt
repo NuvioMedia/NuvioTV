@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
+import android.util.TypedValue
 import android.view.SurfaceHolder
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
@@ -524,7 +525,15 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         if (!initialized || width <= 0 || height <= 0 || isAssOrSsaSubtitleSelectedNow()) return null
         val fontSize = mpv.getPropertyDouble("sub-font-size") ?: return null
         val unitPx = height / MPV_SUBTITLE_REFERENCE_HEIGHT
-        val textSizePx = (fontSize * subtitleScale(style)).toFloat() * unitPx
+        val textSizePx = if (style.usesStyledRenderer) {
+            TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP,
+                SUBTITLE_BASE_TEXT_SP * (style.size / 100f),
+                resources.displayMetrics
+            )
+        } else {
+            (fontSize * subtitleScale(style)).toFloat() * unitPx
+        }
         val marginXPx = (mpv.getPropertyInt("sub-margin-x") ?: MPV_SUBTITLE_DEFAULT_MARGIN_X) * unitPx
         val location = IntArray(2)
         getLocationInWindow(location)
