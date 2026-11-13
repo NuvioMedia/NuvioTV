@@ -138,6 +138,41 @@ class BuiltInUsenetServiceTest {
         assertEquals(listOf("Movie.2020.1080p-GRP", "Movie.2020.720p-GRP"), names(config.copy(hideDuplicates = true)))
     }
 
+    @Test fun `each indexer's search counts, and its releases count for it once played`() = runTest {
+        val found = UsenetIndexer(id = "found", name = "Found", apiUrl = "https://found.test/api")
+        val empty = UsenetIndexer(id = "empty", name = "Empty", apiUrl = "https://empty.test/api")
+        val failed = UsenetIndexer(id = "failed", name = "Failed", apiUrl = "https://failed.test/api")
+        val paused = UsenetIndexer(id = "paused", name = "Paused", apiUrl = "https://paused.test/api")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider),
+            indexers = listOf(found, empty, failed, paused))
+        val client = mockk<NewznabClient>()
+        coEvery { client.capabilities(any()) } returns NewznabCapabilities()
+        coEvery { client.search(found, any(), any()) } returns listOf(release(found, "Show.S01E02.1080p"), release(found, "Show.S01E02.720p"))
+        coEvery { client.search(empty, any(), any()) } returns emptyList()
+        coEvery { client.search(failed, any(), any()) } throws IllegalStateException("down")
+        coEvery { client.search(paused, any(), any()) } throws IndexerCooldownException(System.currentTimeMillis() + 60_000)
+        val stats = memoryStats()
+        BuiltInUsenetService(client, mockk<TmdbService>(), mockk<TmdbApi>(), stats = stats)
+            .search(config, "series", "tt1:1:2", null, null).toList()
+        fun shows(indexer: UsenetIndexer) = stats.indexer(indexer.stateKey(), StatsPeriod.LAST_30_DAYS, StatsContent.SHOWS)
+        assertEquals(IndexerCounts(searches = 1, releases = 2), shows(found))
+        assertEquals(IndexerCounts(searches = 1, emptySearches = 1), shows(empty))
+        assertEquals(IndexerCounts(searches = 1, failedSearches = 1), shows(failed))
+        assertEquals(IndexerCounts(searches = 1, pausedSearches = 1), shows(paused))
+        assertNull(stats.indexer(found.stateKey(), StatsPeriod.LAST_30_DAYS, StatsContent.MOVIES))
+        stats.played(release(found, "Show.S01E02.720p").nzbUrl)
+        assertEquals(1, shows(found)?.played)
+    }
+
+    @Test fun `a kept link names the indexer that listed it`() {
+        val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api", apiKey = "abcdefgh12345")
+        val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer))
+        val kept = BuiltInUsenetService.withoutApiKeys("https://a.test/api?t=get&id=1&apikey=abcdefgh12345", config)
+        assertEquals(indexer, BuiltInUsenetService.keptLinkIndexer(kept, config))
+        assertNull(BuiltInUsenetService.keptLinkIndexer(kept, config.copy(indexers = emptyList())))
+        assertNull(BuiltInUsenetService.keptLinkIndexer("https://a.test/api?t=get&id=1", config))
+    }
+
     @Test fun `a whole Blu-ray carries its label, and every result its size`() = runTest {
         val indexer = UsenetIndexer(id = "a", name = "A", apiUrl = "https://a.test/api")
         val config = UsenetSourceConfiguration(enabled = true, providers = listOf(provider), indexers = listOf(indexer),

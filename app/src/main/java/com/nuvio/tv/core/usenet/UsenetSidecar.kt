@@ -304,11 +304,17 @@ class UsenetSidecar private constructor(private val context: Context) {
             sessionId = newId
             playbackUrl = url
             UsenetStartupDiagnostics.bind(url, trace, result.optJSONObject("startup"))
+            // Only an NZB the engine says it fetched counts as a download from the indexer.
+            val nzbLookup = result.optJSONObject("startup")?.optJSONObject("nzbCache")?.optString("lookup")
+            if (nzbLookup == "miss" || nzbLookup == "disabled") UsenetSourceStats.get(context).grabbed(stream.nzbUrl)
             previousId?.let(::retireSessionLocked)
             resolved
         } catch (e: Exception) {
             // Prefetches open here too, so a release found unplayable before it was chosen counts.
-            (e as? UsenetPreparationException)?.failure?.let { UnplayableReleases.get(context).record(stream, it) }
+            (e as? UsenetPreparationException)?.failure?.let {
+                UnplayableReleases.get(context).record(stream, it)
+                if (it in UnplayableReleases.KINDS) UsenetSourceStats.get(context).unavailable(stream.nzbUrl)
+            }
             if (e !is CancellationException) runCatching {
                 Log.i("UsenetPrepare", "open failed source=\"${stream.name}\" release=\"${stream.title?.lineSequence()?.firstOrNull()}\" " +
                     "kind=${(e as? UsenetPreparationException)?.failure ?: "-"} error=${e.javaClass.simpleName}: " +

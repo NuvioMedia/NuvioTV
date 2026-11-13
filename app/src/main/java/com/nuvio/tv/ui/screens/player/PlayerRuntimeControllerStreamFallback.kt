@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.StreamFallbackSession
 import com.nuvio.tv.core.usenet.UnplayableReleases
+import com.nuvio.tv.core.usenet.UsenetSourceStats
 import com.nuvio.tv.core.usenet.UsenetSettings
 import com.nuvio.tv.core.usenet.UsenetSidecar
 import com.nuvio.tv.domain.model.Stream
@@ -70,6 +71,7 @@ internal fun PlayerRuntimeController.recordPlayedRelease() {
     val stream = streamFallbackSession?.current ?: return
     if (!stream.isUsenet() || !UsenetSidecar.isSessionUrl(currentStreamUrl)) return
     runCatching { UnplayableReleases.get(context).recordPlayed(stream) }
+    runCatching { UsenetSourceStats.get(context).played(stream.nzbUrl) }
 }
 
 /** Called only once the existing same-source/decoder recovery ladder has given up. */
