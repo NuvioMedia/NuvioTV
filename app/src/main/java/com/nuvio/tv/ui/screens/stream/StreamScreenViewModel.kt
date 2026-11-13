@@ -50,7 +50,11 @@ import com.nuvio.tv.domain.repository.StreamRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
+import com.nuvio.tv.ui.screens.player.AutoPlayResolveAttempt
+import com.nuvio.tv.ui.screens.player.SourceFallbackHandoff
 import com.nuvio.tv.ui.screens.player.StreamSidecarSubtitles
+import com.nuvio.tv.ui.screens.player.nextSourceFallbackCandidate
+import com.nuvio.tv.ui.screens.player.resolveWithSourceFallback
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -110,6 +114,9 @@ class StreamScreenViewModel @Inject constructor(
     private var autoPlayHandledForSession = false
     private var directAutoPlayModeInitializedForSession = false
     private var directAutoPlayFlowEnabledForSession = false
+
+    /** The add-ons the auto source selection picked from, so its fallback picks by the same rules. */
+    private var autoPlayInstalledAddonNames: Set<String> = emptySet()
     private var isTorrentStreamStarted = false
     private var streamLoadJob: Job? = null
     private var streamLoadScope: kotlinx.coroutines.CoroutineScope? = null
@@ -531,6 +538,7 @@ class StreamScreenViewModel @Inject constructor(
                 addonRepository.getInstalledAddons().first().enabledAddons()
             }
             val installedAddonOrder = installedAddons.map { it.displayName }
+            autoPlayInstalledAddonNames = installedAddonOrder.toSet()
             val directDebridSourceNames = emptyList<String>()
             val directDebridAvailable = false
             val persistedBingeGroup = if (playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode &&
@@ -1303,7 +1311,20 @@ class StreamScreenViewModel @Inject constructor(
         }
     }
 
-    suspend fun resolveStreamForPlayback(stream: Stream, saveLastLink: Boolean = true): StreamPlaybackInfo? {
+    suspend fun resolveStreamForPlayback(stream: Stream, saveLastLink: Boolean = true): StreamPlaybackInfo? =
+        resolveForPlayback(stream, saveLastLink) { failure ->
+            showDirectDebridPlaybackError(failure.message, failure.refreshStreams)
+        }
+
+    /**
+     * Resolves [stream] for playback. A debrid result that cannot be played goes to [onDebridFailure]
+     * instead of being shown, so the auto-play fallback can try another source before showing it.
+     */
+    private suspend fun resolveForPlayback(
+        stream: Stream,
+        saveLastLink: Boolean,
+        onDebridFailure: (DebridResolveFailure) -> Unit
+    ): StreamPlaybackInfo? {
         stream.serverTarget?.let { target -> return prepareServerStream(stream, target) }
         if (stream.youTubeIdToResolve() != null) {
             return resolveYouTubeStreamForPlayback(stream)
@@ -1336,18 +1357,7 @@ class StreamScreenViewModel @Inject constructor(
 
         return when (result) {
             is DirectDebridResolveResult.Success -> {
-                if (!_uiState.value.isDirectAutoPlayFlow) {
-                    updateUiStateIfChanged {
-                        it.copy(
-                            showDirectAutoPlayOverlay = false,
-                            directAutoPlayMessage = null
-                        )
-                    }
-                } else {
-                    updateUiStateIfChanged {
-                        it.copy(directAutoPlayMessage = null)
-                    }
-                }
+                releaseDebridResolveOverlay()
                 cancelStreamsLoad()
                 val resolved = basePlaybackInfo.copy(
                     url = result.url,
@@ -1383,22 +1393,78 @@ class StreamScreenViewModel @Inject constructor(
                 resolved
             }
             DirectDebridResolveResult.MissingApiKey -> {
-                showDirectDebridPlaybackError(context.getString(R.string.debrid_missing_api_key), refreshStreams = false)
+                onDebridFailure(DebridResolveFailure(context.getString(R.string.debrid_missing_api_key), refreshStreams = false))
                 null
             }
             DirectDebridResolveResult.NotCached -> {
-                showDirectDebridPlaybackError(context.getString(R.string.debrid_not_cached), refreshStreams = false)
+                onDebridFailure(DebridResolveFailure(context.getString(R.string.debrid_not_cached), refreshStreams = false))
                 null
             }
             DirectDebridResolveResult.Stale -> {
-                showDirectDebridPlaybackError(context.getString(R.string.debrid_stale_stream), refreshStreams = true)
+                onDebridFailure(DebridResolveFailure(context.getString(R.string.debrid_stale_stream), refreshStreams = true))
                 null
             }
             DirectDebridResolveResult.Error -> {
-                showDirectDebridPlaybackError(context.getString(R.string.debrid_resolution_failed), refreshStreams = false)
+                onDebridFailure(DebridResolveFailure(context.getString(R.string.debrid_resolution_failed), refreshStreams = false))
                 null
             }
         }
+    }
+
+    /**
+     * Resolves the stream auto source selection picked, falling back past a debrid result that
+     * cannot be played.
+     *
+     * An expired result, one no longer cached or a failed resolve used to end the auto-play here and
+     * show the list. With falling back to the next matching source on, the next stream the selection
+     * would pick is resolved instead, up to the configured number of further sources, the way the
+     * player falls back when a source fails to start. Only the last failure is shown. The sources
+     * tried here are handed to the player, so its own fallback skips them and the count covers both.
+     */
+    suspend fun resolveAutoPlayStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        val settings = playerSettingsDataStore.playerSettings.first()
+        if (!settings.streamAutoPlayFallbackActive) return resolveStreamForPlayback(stream)
+        val run = resolveWithSourceFallback<StreamPlaybackInfo, DebridResolveFailure>(
+            first = stream,
+            maxSources = settings.streamAutoPlayFallbackMaxSources,
+            resolve = { candidate ->
+                var failure: DebridResolveFailure? = null
+                val playbackInfo = resolveForPlayback(candidate, saveLastLink = true) { failure = it }
+                when {
+                    playbackInfo != null -> AutoPlayResolveAttempt.Resolved(playbackInfo)
+                    // A failure other than a debrid one was already shown where it happened.
+                    else -> failure?.let { AutoPlayResolveAttempt.Failed(it) } ?: AutoPlayResolveAttempt.Ended
+                }
+            },
+            nextCandidate = { failed, triedKeys ->
+                nextSourceFallbackCandidate(
+                    streams = _uiState.value.allStreams,
+                    settings = settings,
+                    installedAddonNames = autoPlayInstalledAddonNames,
+                    triedKeys = triedKeys,
+                    failedAddonName = failed.addonName,
+                    failedInfoHash = failed.getEffectiveInfoHash()
+                )?.also { next ->
+                    Log.i(
+                        TAG,
+                        "Auto-selected source from ${failed.addonName} could not be resolved, " +
+                            "falling back to ${next.name ?: next.addonName} from ${next.addonName}"
+                    )
+                }
+            }
+        )
+        val playbackInfo = run.resolved
+        if (playbackInfo == null) {
+            run.failure?.let { failure -> showDirectDebridPlaybackError(failure.message, failure.refreshStreams) }
+            return null
+        }
+        // A source that needs no debrid resolve does not take down what a failed one showed.
+        if (run.attempts > 0) releaseDebridResolveOverlay()
+        SourceFallbackHandoff.set(
+            url = playbackUrlFor(playbackInfo),
+            triedSources = SourceFallbackHandoff.TriedSources(keys = run.triedKeys, attempts = run.attempts)
+        )
+        return playbackInfo
     }
 
     private suspend fun prepareServerStream(stream: Stream, target: ServerPlaybackTarget): StreamPlaybackInfo? {
@@ -1542,6 +1608,22 @@ class StreamScreenViewModel @Inject constructor(
         externalOverlayHideJob = viewModelScope.launch {
             kotlinx.coroutines.delay(700L)
             updateUiStateIfChanged { it.copy(externalPlayerOverlayVisible = false) }
+        }
+    }
+
+    /** Takes down what the debrid resolve put on screen, keeping the direct auto-play cover itself. */
+    private fun releaseDebridResolveOverlay() {
+        if (!_uiState.value.isDirectAutoPlayFlow) {
+            updateUiStateIfChanged {
+                it.copy(
+                    showDirectAutoPlayOverlay = false,
+                    directAutoPlayMessage = null
+                )
+            }
+        } else {
+            updateUiStateIfChanged {
+                it.copy(directAutoPlayMessage = null)
+            }
         }
     }
 
@@ -2161,6 +2243,9 @@ data class StreamPlaybackInfo(
     /** The link was taken from the reuse-last-link cache, not picked fresh from add-ons. */
     val fromLinkCache: Boolean = false
 )
+
+/** A debrid result that could not be played: what to show, and whether the results are stale. */
+private data class DebridResolveFailure(val message: String, val refreshStreams: Boolean)
 
 private fun playbackUrlFor(playbackInfo: StreamPlaybackInfo): String? =
     playbackInfo.url?.takeIf { it.isNotBlank() }
