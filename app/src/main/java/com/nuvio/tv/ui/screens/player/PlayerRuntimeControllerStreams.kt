@@ -979,6 +979,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
 
+    val resumePositionMs = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
     flushPlaybackSnapshotForSwitchOrExit()
 
     val newHeaders = PlayerMediaSourceFactory.sanitizeHeaders(
@@ -1031,6 +1032,10 @@ internal fun PlayerRuntimeController.switchToSourceStream(
             sourceStreamsError = null,
             isTorrentStream = false
         )
+    }
+    if (resumePositionMs > 0L) {
+        pendingResumeProgress = null
+        _uiState.update { it.copy(pendingSeekPosition = resumePositionMs) }
     }
     clearChapterSkipState()
     recomputeMergedSkipIntervals()
