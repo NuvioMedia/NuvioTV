@@ -242,15 +242,18 @@ no credentials.
 paused), how often an answered search found releases and how many on average,
 API requests sent (all of them: searches, further pages, capabilities, key
 checks) and how many were refused for a limit or failed, the average response
-time, NZB downloads not served from the NZB cache, and how many of its releases
-played or failed for good. Bars compare the indexers' releases played and NZB
-downloads. **Statistics period** chooses the last 7 days, the last 30 days
-(default) or all time; **Statistics content** chooses all, movies or shows.
-Capabilities requests and key checks belong to neither, so they count under all
-only. A release counts for the indexer whose search listed it in this session,
-or whose key its reused link names; an open that fails does not say whether its
-NZB came from the cache, so it is not counted as a download, and a release's
-played or unavailable result counts at most once every 12 hours.
+time, NZB downloads that opened, and how many of its releases played or failed
+for good. An NZB served from the NZB cache is not a download, and neither is one
+for a release that fails to open; a release that fails for good counts as
+unavailable. The grabs
+left that the indexer itself reports are on its row in the sources list. Bars
+compare the indexers' releases played and NZB downloads. **Statistics period**
+chooses the last 7 days, the last 30 days (default) or all time; **Statistics
+content** chooses all, movies or shows. Capabilities requests and key checks
+belong to neither, so they count under all only. A release counts for the
+indexer whose search listed it in this session, or whose key its reused link
+names, and a release's played or unavailable result counts at most once every
+12 hours.
 
 Counts are kept per day for 30 days and in total, are stored on the device,
 shared by all profiles and cleared by **Reset statistics** or an account reset.

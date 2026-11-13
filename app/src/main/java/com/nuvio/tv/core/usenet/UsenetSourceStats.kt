@@ -85,8 +85,8 @@ data class IndexerCounts(
     val answered: Int = 0,
     val responseMs: Long = 0,
     /**
-     * NZBs downloaded from it, not served from the NZB cache. An open that fails does not say where
-     * its NZB came from, so it is never counted.
+     * NZBs downloaded from it for an open that succeeded. One served from the NZB cache is not a
+     * download, and neither is a failed open: a release that failed for good counts as [unavailable].
      */
     val grabs: Int = 0,
     /** Its releases that showed their first frame, and that failed for good. */
