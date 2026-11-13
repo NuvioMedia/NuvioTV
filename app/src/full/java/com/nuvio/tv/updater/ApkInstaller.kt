@@ -13,6 +13,10 @@ import java.io.File
 
 object ApkInstaller {
 
+    /** Install sessions accept dex metadata from Android 9. */
+    val supportsDexMetadata: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+
     fun canRequestPackageInstalls(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.packageManager.canRequestPackageInstalls()
@@ -64,6 +68,7 @@ object ApkInstaller {
             packageInstaller.openSession(sessionId).use { session ->
                 session.writeFile("base.apk", apkFile)
                 dexMetadata?.let { session.writeFile("base.dm", it) }
+                if (!background) UpdateRelaunchReceiver.requestReopen(context)
                 session.commit(
                     UpdateInstallResultReceiver.statusReceiver(
                         context = context,
@@ -82,8 +87,12 @@ object ApkInstaller {
         }
     }
 
-    /** Hands the APK to the system installer screen, used when the session install cannot be completed. */
+    /**
+     * Hands the APK to the system installer screen, which stays up while the app is closed for the install and
+     * offers to open it again.
+     */
     fun launchSystemInstaller(context: Context, apkFile: File) {
+        UpdateRelaunchReceiver.cancelReopen(context)
         val authority = "${BuildConfig.APPLICATION_ID}.fileprovider"
         val uri = FileProvider.getUriForFile(context, authority, apkFile)
 
