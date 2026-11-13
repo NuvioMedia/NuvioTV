@@ -191,7 +191,9 @@ private fun ProviderStatsCard(name: String, stats: ProviderStatsUi, period: Stat
     counts.averageFirstByteMs()?.let {
         DiagnosticRow(stringResource(R.string.usenet_stats_first_byte), stringResource(R.string.usenet_stats_ms, it))
     }
-    DiagnosticRow(stringResource(R.string.usenet_stats_sessions), "${counts.sessions}")
+    DiagnosticRow(stringResource(R.string.usenet_stats_sessions), if (counts.failedOpens > 0) {
+        stringResource(R.string.usenet_stats_sessions_failed, counts.sessions, counts.failedOpens)
+    } else "${counts.sessions}")
     if (period == StatsPeriod.ALL_TIME) stats.since?.let {
         DiagnosticRow(stringResource(R.string.usenet_stats_since), DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(it)))
     }

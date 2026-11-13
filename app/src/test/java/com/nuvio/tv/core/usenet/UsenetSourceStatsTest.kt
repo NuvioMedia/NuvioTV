@@ -227,6 +227,18 @@ class UsenetSourceStatsTest {
         assertEquals(clock, stats.providerSince(key))
     }
 
+    @Test fun `a refused open counts as a session that failed to open`() {
+        val stats = stats()
+        val servers = listOf(primary.serverUrl())
+        stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"articles":2,"missing":5}]}""", failedOpen = true)
+        stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"articles":40}]}""")
+        assertEquals(ProviderCounts(sessions = 2, failedOpens = 1, articles = 42, missing = 5),
+            stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.SHOWS))
+        // Refused before the provider was asked for anything: not its failure.
+        stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"articles":0}]}""", failedOpen = true)
+        assertEquals(2, stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.SHOWS)?.sessions)
+    }
+
     @Test fun `unreadable or foreign reports add nothing`() {
         val stats = stats()
         val servers = listOf(primary.serverUrl())

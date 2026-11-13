@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -89,6 +90,50 @@ func TestLeaseReportsADuplicateUnderItsFirstListing(t *testing.T) {
 	reports := lease.providerReports()
 	if len(reports) != 1 || reports[0].Server != 0 || reports[0].Articles != 1 {
 		t.Fatalf("reports = %+v", reports)
+	}
+}
+
+// An open that fails never becomes a session to close, so it reports its
+// providers with the failure: here the articles they lacked.
+func TestFailedOpenReportsItsProviders(t *testing.T) {
+	xml, articles := fixture([]inputFile{{name: "Release.2026.1080p.mkv", data: mkvPayload(300000)}})
+	for id := range articles {
+		delete(articles, id)
+	}
+	provider, err := nntpserver.New(nntpserver.Config{Articles: articles})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer provider.Close()
+	nzb := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, xml) }))
+	defer nzb.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	app := NewServer(ctx, "secret", nil, nzb.Client())
+	defer app.Close()
+	srv := httptest.NewServer(app)
+	defer srv.Close()
+	b, _ := json.Marshal(OpenRequest{NZBURL: nzb.URL, Servers: []string{"nntp://" + provider.Addr() + "/4"},
+		Config: Config{AllowPrivateNetwork: true}})
+	r, _ := http.NewRequest(http.MethodPost, srv.URL+"/sessions", bytes.NewReader(b))
+	r.Header.Set("Authorization", "Bearer secret")
+	resp, err := srv.Client().Do(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusUnprocessableEntity || resp.Header.Get("X-Usenet-Failure") != "missing-article" {
+		t.Fatalf("open = %d %q, want 422 missing-article", resp.StatusCode, resp.Header.Get("X-Usenet-Failure"))
+	}
+	var body struct {
+		Providers []providerReport `json:"providers"`
+	}
+	if err := json.Unmarshal([]byte(resp.Header.Get("X-Usenet-Providers")), &body); err != nil {
+		t.Fatalf("X-Usenet-Providers %q: %v", resp.Header.Get("X-Usenet-Providers"), err)
+	}
+	if len(body.Providers) != 1 || body.Providers[0].Server != 0 || body.Providers[0].Missing == 0 || body.Providers[0].Articles != 0 {
+		t.Fatalf("providers = %+v, want server 0 with missing articles", body.Providers)
 	}
 }
 

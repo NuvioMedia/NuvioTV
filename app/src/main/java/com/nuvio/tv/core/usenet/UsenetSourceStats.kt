@@ -106,8 +106,9 @@ data class IndexerCounts(
 
 @Serializable
 data class ProviderCounts(
-    /** Engine sessions that used it. */
+    /** Engine sessions that used it, [failedOpens] included: opens the engine refused, such as for missing articles. */
     val sessions: Int = 0,
+    val failedOpens: Int = 0,
     /** Articles it served, and their decoded size. */
     val articles: Long = 0,
     val bytes: Long = 0,
@@ -119,9 +120,9 @@ data class ProviderCounts(
     val ttfbMs: Long = 0,
     val ttfbSessions: Int = 0
 ) {
-    operator fun plus(other: ProviderCounts) = ProviderCounts(sessions + other.sessions, articles + other.articles,
-        bytes + other.bytes, missing + other.missing, errors + other.errors, ttfbMs + other.ttfbMs,
-        ttfbSessions + other.ttfbSessions)
+    operator fun plus(other: ProviderCounts) = ProviderCounts(sessions + other.sessions, failedOpens + other.failedOpens,
+        articles + other.articles, bytes + other.bytes, missing + other.missing, errors + other.errors,
+        ttfbMs + other.ttfbMs, ttfbSessions + other.ttfbSessions)
 }
 
 /** Counts split by what they were for; only the parts with events exist. */
@@ -300,11 +301,12 @@ class UsenetSourceStats internal constructor(
     }
 
     /**
-     * Adds what the engine reported when a session closed: [body] is its answer, whose providers
-     * are indexes in [servers], the session's list. An empty or unreadable answer adds nothing.
+     * Adds what the engine reported when a session closed, or with an open it refused when
+     * [failedOpen]: [body] is its report, whose providers are indexes in [servers], the session's
+     * list. An empty or unreadable report adds nothing.
      */
     @Synchronized
-    fun providerSession(servers: List<String>, kind: ContentKind?, body: String) {
+    fun providerSession(servers: List<String>, kind: ContentKind?, body: String, failedOpen: Boolean = false) {
         if (body.isBlank()) return
         val reports = runCatching { json.decodeFromString<ProviderReports>(body) }.getOrNull()?.providers ?: return
         // Two listings of one account (another password, say) are one provider here.
@@ -315,6 +317,9 @@ class UsenetSourceStats internal constructor(
             val counts = ProviderCounts(articles = report.articles.coerceAtLeast(0), bytes = report.bytes.coerceAtLeast(0),
                 missing = report.missing.coerceAtLeast(0), errors = report.errors.coerceAtLeast(0),
                 ttfbMs = ttfb ?: 0, ttfbSessions = if (ttfb != null) 1 else 0)
+            // An open refused before any article was asked of the provider, such as for an NZB too
+            // large to read, is not the provider's doing.
+            if (failedOpen && counts.articles + counts.missing + counts.errors == 0L) return@forEach
             val known = sessions[key]
             sessions[key] = when {
                 known == null -> counts
@@ -325,7 +330,9 @@ class UsenetSourceStats internal constructor(
         }
         if (sessions.isEmpty()) return
         sessions.forEach { (key, counts) ->
-            records.providers.add(key, kind, ProviderCounts()) { it + counts.copy(sessions = 1) }
+            records.providers.add(key, kind, ProviderCounts()) {
+                it + counts.copy(sessions = 1, failedOpens = if (failedOpen) 1 else 0)
+            }
         }
         changed()
     }

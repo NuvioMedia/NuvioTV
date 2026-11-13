@@ -167,4 +167,5 @@
     <string name="usenet_stats_gib">%.2f GiB</string>
     <string name="usenet_stats_first_byte">First byte</string>
     <string name="usenet_stats_sessions">Sessions</string>
+    <string name="usenet_stats_sessions_failed">%1$d (%2$d failed to open)</string>
 </resources>

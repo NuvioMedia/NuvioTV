@@ -322,6 +322,14 @@ class UsenetSidecar private constructor(private val context: Context) {
                 UnplayableReleases.get(context).record(stream, it)
                 if (it in UnplayableReleases.KINDS) UsenetSourceStats.get(context).unavailable(stream.nzbUrl)
             }
+            // An open the engine refused never becomes a session to close: what its providers did,
+            // such as the articles they lacked, came with the refusal.
+            (e as? UsenetPreparationException)?.providers?.let { report ->
+                runCatching {
+                    UsenetSourceStats.get(context).providerSession(stream.servers.orEmpty(),
+                        if (episode != null) ContentKind.SHOW else ContentKind.MOVIE, report, failedOpen = true)
+                }
+            }
             if (e !is CancellationException) runCatching {
                 Log.i("UsenetPrepare", "open failed source=\"${stream.name}\" release=\"${stream.title?.lineSequence()?.firstOrNull()}\" " +
                     "kind=${(e as? UsenetPreparationException)?.failure ?: "-"} error=${e.javaClass.simpleName}: " +
@@ -509,7 +517,8 @@ class UsenetSidecar private constructor(private val context: Context) {
                                 // unwinding; it is not a permanent engine failure.
                                 else -> UsenetPreparationException.Scope.SOURCE
                             }
-                            continuation.resumeWithException(UsenetPreparationException(text.take(240).ifBlank { context.getString(R.string.usenet_engine_http_error, it.code) }, scope, failure))
+                            continuation.resumeWithException(UsenetPreparationException(text.take(240).ifBlank { context.getString(R.string.usenet_engine_http_error, it.code) }, scope, failure,
+                                providers = it.header("X-Usenet-Providers")))
                         }
                     } } catch (e: IOException) {
                         if (continuation.isActive) continuation.resumeWithException(IOException(context.getString(R.string.usenet_engine_interrupted)))

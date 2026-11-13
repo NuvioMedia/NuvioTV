@@ -277,6 +277,13 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("X-Usenet-Failure", kind)
 			}
 		}
+		// This open never becomes a session that the app closes, so its providers'
+		// counts, such as the articles they lacked, come with the failure.
+		if reports := pool.providerReports(); len(reports) > 0 {
+			if encoded, err := json.Marshal(map[string]any{"providers": reports}); err == nil {
+				w.Header().Set("X-Usenet-Providers", string(encoded))
+			}
+		}
 		http.Error(w, msg, http.StatusUnprocessableEntity)
 		return
 	}
