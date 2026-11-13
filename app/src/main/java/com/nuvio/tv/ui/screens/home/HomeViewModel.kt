@@ -548,6 +548,13 @@ class HomeViewModel @Inject constructor(
                 }
         }
         viewModelScope.launch {
+            layoutPreferenceDataStore.continueWatchingClickAction
+                .distinctUntilChanged()
+                .collect { action ->
+                    _uiState.update { it.copy(continueWatchingClickAction = action) }
+                }
+        }
+        viewModelScope.launch {
             var initialPattern = true
             layoutPreferenceDataStore.customPosterUrlPattern
                 .distinctUntilChanged()
