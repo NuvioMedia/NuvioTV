@@ -21,12 +21,17 @@ internal enum class AudioSamplingMode {
  * platform, so Nuvio's own player settings are left untouched.
  */
 internal object AudioSyncSettings {
-    private val _fallbackEnabled = MutableStateFlow(true)
+    // Declared first: object properties initialize in order.
+    private val DEFAULT_SAMPLING_MODE = AudioSamplingMode.LOW
 
-    /** Sync to the audio when AutoSync keeps a subtitle's original timing. */
+    // Off until the user turns it on: it reads extra data from the stream and runs on-device analysis.
+    private val _fallbackEnabled = MutableStateFlow(false)
+
+    /** Sync to the audio when AutoSync keeps a subtitle's original timing. Off by default. */
     val fallbackEnabled: StateFlow<Boolean> = _fallbackEnabled.asStateFlow()
 
-    private val _samplingMode = MutableStateFlow(AudioSamplingMode.HIGH)
+    // Low by default: one extra connection, since some hosts limit concurrent connections per stream.
+    private val _samplingMode = MutableStateFlow(DEFAULT_SAMPLING_MODE)
 
     /** Reading short parts of the film ahead of playback; see [AudioSamplingMode]. */
     val samplingMode: StateFlow<AudioSamplingMode> = _samplingMode.asStateFlow()
@@ -42,10 +47,10 @@ internal object AudioSyncSettings {
     ) {
         this.save = save
         this.saveString = saveString
-        _fallbackEnabled.value = load(FALLBACK_ENABLED) ?: true
+        _fallbackEnabled.value = load(FALLBACK_ENABLED) ?: false
         _samplingMode.value = loadString(SAMPLING_MODE)
             ?.let { stored -> AudioSamplingMode.entries.firstOrNull { it.name == stored } }
-            ?: AudioSamplingMode.HIGH
+            ?: DEFAULT_SAMPLING_MODE
     }
 
     fun setFallbackEnabled(enabled: Boolean) {

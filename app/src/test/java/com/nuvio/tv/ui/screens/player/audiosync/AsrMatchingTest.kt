@@ -9,6 +9,7 @@ import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -48,6 +49,22 @@ class AsrMatchingTest {
         val fit = assertNotNull(matcher.fit(hear(cues, 7.3, random, upToLine = 6)))
         assertTrue(fit.isConfident, "fit $fit")
         assertTrue(abs(fit.shiftSec - 7.3) < 0.3, "shift ${fit.shiftSec}")
+    }
+
+    @Test
+    fun votesBuiltOnceGiveTheSameFitsAsTheWords() {
+        val random = Random(5)
+        val cues = script(random, 400)
+        val matcher = WordAnchorMatcher(cues)
+        val heard = hear(cues, -4.1, random, upToLine = 400)
+        val votes = matcher.votes(heard)
+        val fit = assertNotNull(matcher.fit(votes))
+        assertTrue(fit.isConfident && abs(fit.shiftSec + 4.1) < 0.3, "fit $fit")
+        assertEquals(matcher.fit(heard), fit)
+        assertEquals(matcher.localFits(heard, fit.scale), matcher.localFits(votes, fit.scale))
+        assertEquals(matcher.fitByPlace(heard, fit.scale), matcher.fitByPlace(votes, fit.scale))
+        // Votes are cast against one subtitle's words.
+        assertFailsWith<IllegalArgumentException> { WordAnchorMatcher(cues).fit(votes) }
     }
 
     @Test

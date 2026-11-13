@@ -34,11 +34,31 @@ internal object AsrModelFiles {
         else -> throw IOException("Speech model files are incomplete")
     }
 
-    /** The pre-optimized CPU graph needs no runtime graph optimization; weight prepacking stays on. */
-    fun provider(directory: File, format: Format): String {
-        if (format == Format.ONNX) return "cpu"
+    /**
+     * Runtime settings for [format], in the config file sherpa-onnx reads with the provider. None
+     * changes the arithmetic, so transcripts and word times stay exactly the same:
+     * - The pre-optimized ORT graph needs no runtime graph optimization.
+     * - The ORT model is memory-mapped and its weights used in place instead of copied into private
+     *   memory: about 90 MB less while loading and 20 MB less while running, at no cost in speed.
+     *   Safe because sherpa-onnx opens it by path and keeps the mapping as long as the session, and
+     *   downloads replace files by renaming, never in place.
+     * - With [lowMemory], the CPU memory pool is off. The pool grows to the longest segment
+     *   recognised and never shrinks, keeping ~290 MB for the whole film; without it about half
+     *   of that stays, for 5-10% slower recognition. Elsewhere it stays on for speed.
+     * Weight prepacking stays on: off, it saves more memory but costs over 10% in speed.
+     */
+    fun provider(directory: File, format: Format, lowMemory: Boolean = false): String {
+        val settings = buildList {
+            if (format == Format.ORT) {
+                add("GraphOptimizationLevel=0")
+                add("SessionConfig.session.use_memory_mapped_ort_model=1")
+                add("SessionConfig.session.use_ort_model_bytes_for_initializers=1")
+            }
+            if (lowMemory) add("EnableCpuMemArena=0")
+        }
+        if (settings.isEmpty()) return "cpu"
         val config = File(directory, "cpu.conf")
-        val text = "GraphOptimizationLevel=0\n"
+        val text = settings.joinToString(separator = "\n", postfix = "\n")
         if (!config.isFile || config.readText() != text) config.writeText(text)
         return "cpu:${config.absolutePath}"
     }

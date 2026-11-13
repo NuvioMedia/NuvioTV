@@ -33,6 +33,7 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
@@ -345,10 +346,18 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
         .distinctBy { it.url }
     val candidateByUrl = candidatesAtStart.associateBy { it.url }
 
+    AudioSyncFallback.stop(this)
+    // Audio sync fallback: on mpv it hears the film through sampled spots only.
+    val audioFallback = AudioSyncFallback.of(this)
+    audioFallback?.arm()
+
     automaticSubtitleSyncJob = scope.launch {
         fun streamUnchanged(): Boolean =
             currentStreamUrl == sourceUrlAtStart && isUsingMpvEngine()
 
+        // Every way out of this run disarms the fallback, unless it took over the subtitle. A
+        // cancelled run leaves it alone: the run that replaced it has armed it again.
+        var audioTookOver = false
         try {
             Log.d(
                 PlayerRuntimeController.TAG,
@@ -398,7 +407,11 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
             if (resolved == null) {
                 Log.d(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 mpv no match outcome=$analysisOutcome")
                 if (activeSubtitleUrl == selectedUrl) {
-                    context.buildAutoSyncFailureToast(analysisOutcome)?.let(::showAutoSyncToast)
+                    audioTookOver = analysisOutcome != AutoSyncAnalysisOutcome.SUBTITLE_UNAVAILABLE &&
+                        audioFallback?.takeOver(selectedUrl) == true
+                    if (!audioTookOver) {
+                        context.buildAutoSyncFailureToast(analysisOutcome)?.let(::showAutoSyncToast)
+                    }
                 }
                 return@launch
             }
@@ -457,6 +470,8 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
             throw cancel
         } catch (error: Throwable) {
             Log.w(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 mpv failed", error)
+        } finally {
+            if (!audioTookOver && isActive) audioFallback?.disarm()
         }
     }
 }

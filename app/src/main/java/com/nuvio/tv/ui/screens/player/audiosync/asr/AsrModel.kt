@@ -12,13 +12,14 @@ import java.net.URL
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * The English recognition model (about 74 MB), kept in app storage. It can be downloaded from
- * Settings, and is fetched automatically on an unmetered connection the first time it is needed.
+ * The English recognition model (about 74 MB), kept in app storage. It is only ever downloaded
+ * when the user selects Download in Settings; playback never fetches it.
  * Progress and errors are published to [SubtitleSyncStatus.speechModel].
  *
- * The pre-optimized ORT conversion loads faster and is preferred. When it cannot be fetched, the
- * original ONNX files come from the upstream repository instead. Every file of either source is
- * pinned by size and SHA-256 in [AsrModelFiles], so neither source has to be trusted.
+ * The files come from the upstream k2-fsa repository, pinned to a commit. A pre-optimized ORT
+ * conversion loads faster and is used when [ORT_DOWNLOAD] names a host for it; no such host is
+ * configured, so only upstream files are fetched. Every file of either format is pinned by size
+ * and SHA-256 in [AsrModelFiles], so the host does not have to be trusted.
  */
 internal object AsrModel {
     const val TOKENS = "tokens.txt"
@@ -27,8 +28,12 @@ internal object AsrModel {
     private const val ONNX_VERSION = "gigaspeech-2023-12-12"
     private const val ORT_VERSION = "$ONNX_VERSION-ort-v1"
 
-    /** The ORT conversion of the upstream files below; see the release's README and manifest. */
-    private const val ORT_DOWNLOAD = "https://github.com/DavidVamaiotu/NuvioTV-Reshaped/releases/download/asr-models-ort-v1/"
+    /**
+     * Where the ORT conversion of the upstream files below is hosted, or null to use the upstream
+     * ONNX files only. Should only ever point at a Nuvio-controlled release; the files are pinned
+     * in [AsrModelFiles.optimized] either way.
+     */
+    private val ORT_DOWNLOAD: String? = null
 
     /** The upstream model repository, pinned to a commit so its files cannot change under us. */
     private const val ONNX_DOWNLOAD =
@@ -114,13 +119,18 @@ internal object AsrModel {
         var error: String? = null
         try {
             publish(context)
-            val ortFailure = downloadAll(context, ortDirectory(context), AsrModelFiles.optimized) { ORT_DOWNLOAD + it }
-                ?: return true
-            SyncLog.w("optimized speech model unavailable ($ortFailure); downloading the upstream ONNX model")
+            val ortHost = ORT_DOWNLOAD
+            val ortFailure = if (ortHost != null) {
+                downloadAll(context, ortDirectory(context), AsrModelFiles.optimized) { ortHost + it }
+                    ?.also { SyncLog.w("optimized speech model unavailable ($it); downloading the upstream ONNX model") }
+                    ?: return true
+            } else {
+                null
+            }
             val onnxFailure = downloadAll(context, onnxDirectory(context), AsrModelFiles.legacy) {
                 ONNX_DOWNLOAD + ONNX_UPSTREAM_NAMES.getValue(it)
             } ?: return true
-            error = "$ortFailure; $onnxFailure"
+            error = listOfNotNull(ortFailure, onnxFailure).joinToString("; ")
             return false
         } finally {
             downloading.set(false)

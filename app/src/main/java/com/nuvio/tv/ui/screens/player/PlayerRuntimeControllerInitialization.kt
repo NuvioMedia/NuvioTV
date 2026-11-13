@@ -2278,14 +2278,16 @@ private class SubtitleOffsetRenderersFactory(
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor, nightModeAudioProcessor))
         val baseAudioSink = builder.build()
+        // Audio sync hook: tap the base sink so the returned sink stays a PlaybackSpeedAwareAudioSink
+        // and buildAudioRenderers keeps installing PlaybackSpeedAwareAudioRenderer.
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
-            sink = baseAudioSink,
+            sink = AudioSyncTaps.wrapAudioSink(baseAudioSink),
             initialForcePcm = initialForcePcm,
             forcePcmForBluetooth = bluetoothForcePcm
         )
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())
         onPlaybackSpeedAwareAudioSinkCreated(playbackSpeedAwareAudioSink)
-        return AudioSyncTaps.wrapAudioSink(playbackSpeedAwareAudioSink) // Audio sync hook
+        return playbackSpeedAwareAudioSink
     }
 
     override fun buildAudioRenderers(

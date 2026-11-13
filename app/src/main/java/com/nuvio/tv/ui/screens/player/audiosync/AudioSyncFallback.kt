@@ -20,6 +20,14 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.screens.player.PlayerPlaybackNetworking
 import com.nuvio.tv.ui.screens.player.PlayerRuntimeController
+import com.nuvio.tv.ui.screens.player.PlayerSubtitleUtils
+import com.nuvio.tv.ui.screens.player.buildAddonSubtitleTrackId
+import com.nuvio.tv.ui.screens.player.currentPlaybackDurationMs
+import com.nuvio.tv.ui.screens.player.currentPlaybackPositionMs
+import com.nuvio.tv.ui.screens.player.isPlaybackCurrentlyPlaying
+import com.nuvio.tv.ui.screens.player.isUsingMpvEngine
+import com.nuvio.tv.ui.screens.player.keepMpvPlayingIfNeeded
+import com.nuvio.tv.ui.screens.player.updateMpvAvailableTracks
 import com.nuvio.tv.ui.screens.player.autosync.AutomaticSubtitleSync
 import com.nuvio.tv.ui.screens.player.autosync.AutoSyncSyncedSubtitle
 import com.nuvio.tv.ui.screens.player.commitPreparedSidecarSubtitle
@@ -37,6 +45,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.Locale
 import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -50,12 +60,20 @@ import java.util.concurrent.atomic.AtomicReference
  * ([disarm]). The mapping found is applied by retiming the cues the player's sidecar shows, the
  * same way AutoSync applies its own result, so Nuvio's subtitle rendering is untouched. When the
  * sidecar moves on (another subtitle or track), the fallback stops on its own.
+ *
+ * With the mpv engine ([player] is null) no audio passes through ExoPlayer, so the film is heard
+ * only through spots sampled ahead of playback, and the mapping is shown the way AutoSync shows
+ * its own result there: a retimed copy of the subtitle loaded as an external mpv track.
  */
 internal class AudioSyncFallback private constructor(
     private val runtime: PlayerRuntimeController,
-    private val player: ExoPlayer,
+    /** The ExoPlayer that plays the stream; null when mpv plays it. */
+    private val player: ExoPlayer?,
+    /** The player object this fallback belongs to (the ExoPlayer or the mpv view). */
+    private val engine: Any,
     private val sourceUrl: String,
 ) {
+    private val isMpv = player == null
     private val appContext = runtime.context.applicationContext
     private val scope = runtime.scope
     private val controller = AudioSubtitleSyncController(
@@ -66,8 +84,16 @@ internal class AudioSyncFallback private constructor(
         requestSwitch = ::replaceSubtitle,
     )
 
-    /** The subtitle being synced, with its original cues and the sidecar attachment it lives in. */
-    private class Target(val url: String, val cues: List<CuesWithTiming>, val generation: Long)
+    /**
+     * The subtitle being synced, with its original cues and the sidecar attachment it lives in
+     * (ExoPlayer), or the retimed copy mpv shows for it ([mpvTrackId], null while the original shows).
+     */
+    private class Target(
+        val url: String,
+        val cues: List<CuesWithTiming>,
+        val generation: Long,
+        var mpvTrackId: Int? = null,
+    )
 
     private val target = AtomicReference<Target?>(null)
     private var armed = false
@@ -91,6 +117,8 @@ internal class AudioSyncFallback private constructor(
 
     init {
         controller.listensBeforeSession = false
+        controller.spotOnly = isMpv
+        if (isMpv) controller.spotOnlyAudioLanguage = mpvAudioLanguage()
         controller.enabled = AudioSyncSettings.fallbackEnabled.value
         controller.samplingMode = AudioSyncSettings.samplingMode.value
         controller.onSourceChanged(sourceUrl)
@@ -101,9 +129,11 @@ internal class AudioSyncFallback private constructor(
             extractorsFactory = DefaultExtractorsFactory(),
             localEngine = runtime._uiState.value.isTorrentStream || isLoopback(sourceUrl),
         )
-        player.addListener(trackListener)
-        controller.onAudioTrackSelected(player.currentTracks.selectedAudioFormat())
-        AudioSyncTaps.attach(controller)
+        if (player != null) {
+            player.addListener(trackListener)
+            controller.onAudioTrackSelected(player.currentTracks.selectedAudioFormat())
+            AudioSyncTaps.attach(controller)
+        }
         // Turned off in Settings mid-playback: the subtitle goes back to AutoSync's (original) timing.
         settingsJob = scope.launch {
             combine(AudioSyncSettings.fallbackEnabled, AutoSyncPreferences.enabled) { audio, auto -> audio && auto }
@@ -177,7 +207,17 @@ internal class AudioSyncFallback private constructor(
             disarm()
             return false
         }
+        // mpv's audio is only heard through sampling; with sampling off there is nothing to sync to.
+        if (isMpv && AudioSyncSettings.samplingMode.value == AudioSamplingMode.OFF) {
+            SyncLog.i("audio sampling is off; the mpv engine has no other audio to sync to")
+            disarm()
+            return false
+        }
         takeOverJob?.cancel()
+        if (isMpv) {
+            takeOverJob = scope.launch { takeOverMpv(url) }
+            return true
+        }
         takeOverJob = scope.launch {
             var waitedMs = 0L
             while (runtime.activeSidecarSubtitleKey == url && runtime.sidecarTimedCues.isEmpty() && waitedMs < CUES_WAIT_MS) {
@@ -203,6 +243,45 @@ internal class AudioSyncFallback private constructor(
         return true
     }
 
+    /** mpv: the subtitle's cues come from its file, as mpv shows them without the sidecar. */
+    private suspend fun takeOverMpv(url: String) {
+        val subtitle = runtime._uiState.value.selectedAddonSubtitle?.takeIf { it.url == url }
+        val cues = if (subtitle == null) emptyList() else downloadCues(url, subtitle.headers.orEmpty())
+        if (!isMpvShowing(url)) return disarm()
+        if (cues.isEmpty()) {
+            reportResult(success = false)
+            return disarm()
+        }
+        val current = Target(url, cues, generation = 0L)
+        target.set(current)
+        appliedModel = null
+        unmatchedPlayedMs = 0L
+        unmatchedReported = false
+        startTicker()
+        SyncLog.i("AutoSync kept the original timing of $url on mpv; syncing it to sampled audio")
+        controller.startSession(url, cues)
+    }
+
+    private suspend fun downloadCues(url: String, headers: Map<String, String>): List<CuesWithTiming> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val body = AutomaticSubtitleSync.downloadSubtitleBody(url = url, headers = headers)
+                parseSidecarTimedCuesRobust(body, url).cues
+            }.getOrDefault(emptyList())
+        }
+
+    /** mpv still plays this fallback's stream with [url] as the chosen add-on subtitle. */
+    private fun isMpvShowing(url: String): Boolean =
+        runtime.isUsingMpvEngine() && runtime.mpvView === engine && runtime.currentStreamUrl == sourceUrl &&
+            runtime._uiState.value.selectedAddonSubtitle?.url == url
+
+    /** The subtitle [current] was made for is still the one shown. */
+    private fun stillShown(current: Target): Boolean =
+        if (isMpv) isMpvShowing(current.url) else runtime.currentSidecarGenerationFor(current.url) == current.generation
+
+    private fun mpvAudioLanguage(): String? =
+        runtime._uiState.value.audioTracks.firstOrNull { it.isSelected }?.language
+
     /** The user moved to another subtitle or track, or AutoSync starts over. */
     fun stop() {
         takeOverJob?.cancel()
@@ -213,13 +292,17 @@ internal class AudioSyncFallback private constructor(
         ticker = null
         target.getAndSet(null)?.let { previous ->
             AutoSyncSyncedSubtitle.clear()
-            // Leave the subtitle on its original timing if it is still the one shown.
-            runtime.commitPreparedSidecarSubtitle(
-                expectedCurrentUrl = previous.url,
-                newUrl = previous.url,
-                cues = previous.cues,
-                expectedGeneration = previous.generation,
-            )
+            if (isMpv) {
+                showOriginalOnMpv(previous)
+            } else {
+                // Leave the subtitle on its original timing if it is still the one shown.
+                runtime.commitPreparedSidecarSubtitle(
+                    expectedCurrentUrl = previous.url,
+                    newUrl = previous.url,
+                    cues = previous.cues,
+                    expectedGeneration = previous.generation,
+                )
+            }
         }
         appliedModel = null
         pendingStatus = null
@@ -230,7 +313,7 @@ internal class AudioSyncFallback private constructor(
     private fun release() {
         stop()
         settingsJob?.cancel()
-        player.removeListener(trackListener)
+        player?.removeListener(trackListener)
         AudioSyncTaps.detach(controller)
         controller.release()
     }
@@ -242,12 +325,13 @@ internal class AudioSyncFallback private constructor(
             while (isActive) {
                 val current = target.get()
                 // Another subtitle, a track or a stopped sidecar: the fallback steps aside.
-                if (current != null && runtime.currentSidecarGenerationFor(current.url) != current.generation) {
+                if (current != null && !stillShown(current)) {
                     stop()
                     return@launch
                 }
-                val durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
-                controller.onPlaybackPosition(player.currentPosition, durationMs)
+                if (isMpv) controller.spotOnlyAudioLanguage = mpvAudioLanguage()
+                val durationMs = runtime.currentPlaybackDurationMs().takeIf { it > 0L && it != C.TIME_UNSET } ?: 0L
+                controller.onPlaybackPosition(runtime.currentPlaybackPositionMs() ?: 0L, durationMs)
                 val model = controller.currentModel()
                 if (current != null && model !== appliedModel) {
                     appliedModel = model
@@ -277,7 +361,7 @@ internal class AudioSyncFallback private constructor(
                 // Still nothing after a while: say so once, and keep searching quietly. A later
                 // match still shows its success.
                 if (current != null && target.get() === current && !unmatchedReported && controller.currentModel() == null) {
-                    if (player.isPlaying) unmatchedPlayedMs += TICK_MS
+                    if (runtime.isPlaybackCurrentlyPlaying()) unmatchedPlayedMs += TICK_MS
                     if (unmatchedPlayedMs >= UNMATCHED_REPORT_MS) {
                         unmatchedReported = true
                         SyncLog.i("no audio match after ${unmatchedPlayedMs / 1_000}s of playback; still searching")
@@ -290,6 +374,7 @@ internal class AudioSyncFallback private constructor(
     }
 
     private suspend fun apply(current: Target, model: SubtitleSyncModel?) {
+        if (isMpv) return applyOnMpv(current, model)
         val retimed = withContext(Dispatchers.Default) { retime(current.cues, model) }
         if (target.get() !== current) return
         val committed = runtime.commitPreparedSidecarSubtitle(
@@ -301,18 +386,90 @@ internal class AudioSyncFallback private constructor(
         if (!committed) stop()
     }
 
+    /**
+     * mpv: loads a retimed copy of the subtitle as an external track in place of the previous copy,
+     * as AutoSync applies its own result there. Without a mapping the original is shown again.
+     */
+    private suspend fun applyOnMpv(current: Target, model: SubtitleSyncModel?) {
+        if (model == null) {
+            showOriginalOnMpv(current)
+            return
+        }
+        val retimed = withContext(Dispatchers.Default) { retime(current.cues, model) }
+        val path = withContext(Dispatchers.IO) { writeMpvCopy(current.url, retimed) }
+        if (target.get() !== current || !isMpvShowing(current.url)) return
+        val view = runtime.mpvView ?: return stop()
+        val subtitle = runtime._uiState.value.addonSubtitles.firstOrNull { it.url == current.url }
+            ?: runtime._uiState.value.selectedAddonSubtitle?.takeIf { it.url == current.url }
+        val wasPlaying = runtime.isPlaybackCurrentlyPlaying()
+        val trackId = path?.let {
+            view.replaceExternalSubtitle(
+                path = it,
+                title = subtitle?.let(runtime::buildAddonSubtitleTrackId),
+                language = subtitle?.lang?.let(PlayerSubtitleUtils::normalizeLanguageCode),
+                replaceTrackId = current.mpvTrackId,
+            )
+        }
+        if (trackId == null) {
+            SyncLog.w("mpv did not accept the synced subtitle copy")
+            return stop()
+        }
+        current.mpvTrackId = trackId
+        runtime.keepMpvPlayingIfNeeded(wasPlaying)
+        runtime.updateMpvAvailableTracks()
+    }
+
+    /**
+     * mpv: drops the retimed copy of [previous]. When that copy is what mpv shows, the original
+     * file is selected again first (mpv's `cached` sub-add reuses the track it already has).
+     */
+    private fun showOriginalOnMpv(previous: Target) {
+        val trackId = previous.mpvTrackId ?: return
+        previous.mpvTrackId = null
+        val view = runtime.mpvView?.takeIf { it === engine } ?: return
+        if (view.selectedSubtitleTrackId() == trackId && isMpvShowing(previous.url)) {
+            val subtitle = runtime._uiState.value.selectedAddonSubtitle
+            view.addAndSelectExternalSubtitle(
+                url = previous.url,
+                title = subtitle?.let(runtime::buildAddonSubtitleTrackId),
+                language = subtitle?.lang?.let(PlayerSubtitleUtils::normalizeLanguageCode),
+            )
+        }
+        view.removeSubtitleTrack(trackId)
+        runtime.updateMpvAvailableTracks()
+    }
+
+    /** Writes [cues] as SRT next to AutoSync's mpv copies; returns its path, or null on failure. */
+    private fun writeMpvCopy(url: String, cues: List<CuesWithTiming>): String? = runCatching {
+        val text = toSrt(cues)
+        val cacheDir = File(appContext.cacheDir, "subtitles").also { it.mkdirs() }
+        val prefix = "mpv_audiosync_${Integer.toHexString(url.hashCode())}_"
+        val file = File(cacheDir, "$prefix${Integer.toHexString(text.hashCode())}.srt")
+        cacheDir.listFiles { candidate -> candidate.name.startsWith(prefix) && candidate != file }
+            ?.forEach { it.delete() }
+        file.writeText(text, Charsets.UTF_8)
+        file.absolutePath
+    }.onFailure { SyncLog.w("could not write synced subtitle copy: ${it.message}") }.getOrNull()
+
     /** Automatic switch to another subtitle that fits the audio, as AutoSync replaces a subtitle. */
     private fun replaceSubtitle(url: String) {
         scope.launch {
             val current = target.get() ?: return@launch
             val subtitle = runtime._uiState.value.addonSubtitles.firstOrNull { it.url == url } ?: return@launch
-            val cues = withContext(Dispatchers.IO) {
-                runCatching {
-                    val body = AutomaticSubtitleSync.downloadSubtitleBody(url = url, headers = subtitle.headers.orEmpty())
-                    parseSidecarTimedCuesRobust(body, url).cues
-                }.getOrDefault(emptyList())
-            }
+            val cues = downloadCues(url, subtitle.headers.orEmpty())
             if (cues.isEmpty() || target.get() !== current) return@launch
+            if (isMpv) {
+                if (!isMpvShowing(current.url)) return@launch
+                AutoSyncSyncedSubtitle.clear()
+                // The previous copy is replaced as soon as the handed-over mapping is applied.
+                target.set(Target(url, cues, generation = 0L, mpvTrackId = current.mpvTrackId))
+                appliedModel = null
+                runtime._uiState.update { it.copy(selectedAddonSubtitle = subtitle, selectedSubtitleTrackIndex = -1) }
+                if (runtime.isUserExplicitSubtitleSelection) runtime.rememberAddonSubtitleSelection(subtitle)
+                runtime.setSubtitleDelayMs(targetMs = 0, showOverlay = false)
+                controller.startSession(url, cues)
+                return@launch
+            }
             val committed = runtime.commitPreparedSidecarSubtitle(
                 expectedCurrentUrl = current.url,
                 newUrl = url,
@@ -384,19 +541,21 @@ internal class AudioSyncFallback private constructor(
         }
 
         /**
-         * The fallback of [runtime]'s current player and stream, created on first use and
-         * replaced when either changes. Null without an ExoPlayer (e.g. the MPV engine).
+         * The fallback of [runtime]'s current player (ExoPlayer or mpv) and stream, created on
+         * first use and replaced when either changes. Null when the fallback is off.
          */
         fun of(runtime: PlayerRuntimeController): AudioSyncFallback? = synchronized(fallbacks) {
             initialize(runtime.context)
             if (!AudioSyncSettings.fallbackEnabled.value) return null
-            val player = runtime._exoPlayer ?: return null
+            val mpvView = if (runtime.isUsingMpvEngine()) runtime.mpvView else null
+            val exoPlayer = if (mpvView == null) runtime._exoPlayer else null
+            val engine: Any = mpvView ?: exoPlayer ?: return null
             val existing = fallbacks[runtime]
-            if (existing != null && existing.player === player && existing.sourceUrl == runtime.currentStreamUrl) {
+            if (existing != null && existing.engine === engine && existing.sourceUrl == runtime.currentStreamUrl) {
                 return existing
             }
             existing?.release()
-            AudioSyncFallback(runtime, player, runtime.currentStreamUrl).also { fallbacks[runtime] = it }
+            AudioSyncFallback(runtime, exoPlayer, engine, runtime.currentStreamUrl).also { fallbacks[runtime] = it }
         }
 
         /** The player is closing: stop and free [runtime]'s fallback. */
@@ -414,6 +573,35 @@ internal class AudioSyncFallback private constructor(
             val host = Uri.parse(url).host.orEmpty().lowercase()
             host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]"
         }.getOrDefault(false)
+
+        /** [cues] as SubRip text; cues without a start are skipped, open-ended ones last 2 s. */
+        internal fun toSrt(cues: List<CuesWithTiming>): String = buildString {
+            var index = 1
+            for (entry in cues) {
+                if (entry.startTimeUs == C.TIME_UNSET) continue
+                val text = entry.cues.mapNotNull { it.text?.toString()?.trim()?.takeIf(String::isNotEmpty) }
+                    .joinToString("\n")
+                if (text.isEmpty()) continue
+                val endUs = when {
+                    entry.durationUs != C.TIME_UNSET -> entry.startTimeUs + entry.durationUs
+                    entry.endTimeUs != C.TIME_UNSET -> entry.endTimeUs
+                    else -> entry.startTimeUs + 2_000_000L
+                }
+                append(index++).append('\n')
+                append(srtTime(entry.startTimeUs)).append(" --> ").append(srtTime(endUs)).append('\n')
+                append(text).append("\n\n")
+            }
+        }
+
+        private fun srtTime(timeUs: Long): String {
+            val totalMs = (timeUs / 1_000L).coerceAtLeast(0L)
+            // Locale.ROOT: SubRip needs ASCII digits whatever the device language.
+            return String.format(
+                Locale.ROOT,
+                "%02d:%02d:%02d,%03d",
+                totalMs / 3_600_000L, totalMs / 60_000L % 60L, totalMs / 1_000L % 60L, totalMs % 1_000L,
+            )
+        }
 
         /**
          * [cues] placed on the media timeline by [model] (subtitle time -> media time); the

@@ -628,6 +628,55 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Adds [path] (a retimed copy of a subtitle) as a new external track and selects it, then
+     * removes [replaceTrackId], an earlier copy, so repeated retiming doesn't pile up tracks.
+     * Returns the new track's id, or null when it could not be added.
+     */
+    fun replaceExternalSubtitle(
+        path: String,
+        title: String?,
+        language: String?,
+        replaceTrackId: Int?,
+    ): Int? {
+        if (!initialized || path.isBlank()) return null
+        return runCatching {
+            val safeTitle = title?.takeIf { it.isNotBlank() }
+            val safeLanguage = language?.takeIf { it.isNotBlank() }
+            when {
+                safeTitle != null && safeLanguage != null ->
+                    mpv.command("sub-add", path, "select", safeTitle, safeLanguage)
+                safeTitle != null -> mpv.command("sub-add", path, "select", safeTitle)
+                else -> mpv.command("sub-add", path, "select")
+            }
+            mpv.setPropertyBoolean("sub-visibility", !styledSubtitlesEnabled)
+            val added = mpv.getPropertyString("sid")?.toIntOrNull()
+            if (replaceTrackId != null && replaceTrackId != added) removeSubtitleTrack(replaceTrackId)
+            added
+        }.getOrElse {
+            Log.w(TAG, "Failed to replace external subtitle: ${it.message}")
+            null
+        }
+    }
+
+    /** Removes an external subtitle track added with [replaceExternalSubtitle]. */
+    fun removeSubtitleTrack(trackId: Int): Boolean {
+        if (!initialized) return false
+        return runCatching {
+            mpv.command("sub-remove", trackId.toString())
+            true
+        }.getOrElse {
+            Log.w(TAG, "Failed to remove subtitle track id=$trackId: ${it.message}")
+            false
+        }
+    }
+
+    /** The selected subtitle track id, or null when none is selected. */
+    fun selectedSubtitleTrackId(): Int? {
+        if (!initialized) return null
+        return runCatching { mpv.getPropertyString("sid")?.toIntOrNull() }.getOrNull()
+    }
+
     fun applySubtitleLanguagePreferences(preferred: String, secondary: String?) {
         if (!initialized) return
         val languages = listOfNotNull(
