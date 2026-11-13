@@ -2276,8 +2276,12 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                 innerJob.cancel()
             }
 
-            val streamToPlay = selectedStream?.let {
-                resolveDirectDebridStreamIfNeeded(it, nextVideo.season, nextVideo.episode)
+            val streamToPlay = selectedStream?.let { selected ->
+                resolveNextEpisodeStream(
+                    selected = selected,
+                    nextVideo = nextVideo,
+                    streams = lastSuccessData.orEmpty().flatMap { addon -> addon.streams }
+                )
             }
             if (streamToPlay != null) {
                 val sourceName = (streamToPlay.name?.takeIf { it.isNotBlank() } ?: streamToPlay.addonName).trim()
@@ -2331,6 +2335,51 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
             showEpisodeStreamPicker(video = nextVideo, forceRefresh = false)
         }
     }
+}
+
+/**
+ * Resolves the stream auto-play picked for the next episode.
+ *
+ * When its debrid result cannot be played and falling back to the next matching source is on, the
+ * next stream the selection would pick from [streams] is resolved instead, up to the configured
+ * number of further sources, the way the stream screen falls back. Only when none resolves does the
+ * episode's source list open.
+ */
+private suspend fun PlayerRuntimeController.resolveNextEpisodeStream(
+    selected: Stream,
+    nextVideo: Video,
+    streams: List<Stream>
+): Stream? {
+    val settings = playerSettingsDataStore.playerSettings.first()
+    if (!settings.streamAutoPlayFallbackActive) {
+        return resolveDirectDebridStreamIfNeeded(selected, nextVideo.season, nextVideo.episode)
+    }
+    val installedAddonNames = streamAddonsFor(nextVideo.id).map { addon -> addon.displayName }.toSet()
+    return resolveWithSourceFallback<Stream, Unit>(
+        first = selected,
+        maxSources = settings.streamAutoPlayFallbackMaxSources,
+        resolve = { candidate ->
+            resolveDirectDebridStreamIfNeeded(candidate, nextVideo.season, nextVideo.episode)
+                ?.let { resolved -> AutoPlayResolveAttempt.Resolved(resolved) }
+                ?: AutoPlayResolveAttempt.Failed(Unit)
+        },
+        nextCandidate = { failed, triedKeys ->
+            nextSourceFallbackCandidate(
+                streams = streams,
+                settings = settings,
+                installedAddonNames = installedAddonNames,
+                triedKeys = triedKeys,
+                failedAddonName = failed.addonName,
+                failedInfoHash = failed.getEffectiveInfoHash()
+            )?.also { next ->
+                Log.i(
+                    PlayerRuntimeController.TAG,
+                    "Next episode source from ${failed.addonName} could not be resolved, " +
+                        "falling back to ${next.name ?: next.addonName} from ${next.addonName}"
+                )
+            }
+        }
+    ).resolved
 }
 
 private fun PlayerRuntimeController.playNextCloudLibraryFile(
