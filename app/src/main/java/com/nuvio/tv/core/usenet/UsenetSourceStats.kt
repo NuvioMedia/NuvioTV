@@ -301,13 +301,20 @@ class UsenetSourceStats internal constructor(
     }
 
     /**
-     * Adds what the engine reported when a session closed, or with an open it refused when
-     * [failedOpen]: [body] is its report, whose providers are indexes in [servers], the session's
-     * list. An empty or unreadable report adds nothing.
+     * Adds what the engine reported when a session closed, or with an open it [refused] for
+     * [failure], its X-Usenet-Failure kind: [body] is its report, whose providers are indexes in
+     * [servers], the session's list. An empty or unreadable report adds nothing.
+     *
+     * A refused open counts as one that failed to open only for the providers it failed for: a
+     * [PROVIDER_FAILURES] kind, and a provider that lacked or broke an article. A password, a
+     * compressed archive or a blank release is no provider's failure; a provider that served
+     * articles for it still counts them and the session.
      */
     @Synchronized
-    fun providerSession(servers: List<String>, kind: ContentKind?, body: String, failedOpen: Boolean = false) {
+    fun providerSession(servers: List<String>, kind: ContentKind?, body: String, refused: Boolean = false,
+        failure: String? = null) {
         if (body.isBlank()) return
+        val providerFailure = refused && failure in PROVIDER_FAILURES
         val reports = runCatching { json.decodeFromString<ProviderReports>(body) }.getOrNull()?.providers ?: return
         // Two listings of one account (another password, say) are one provider here.
         val sessions = linkedMapOf<String, ProviderCounts>()
@@ -318,8 +325,8 @@ class UsenetSourceStats internal constructor(
                 missing = report.missing.coerceAtLeast(0), errors = report.errors.coerceAtLeast(0),
                 ttfbMs = ttfb ?: 0, ttfbSessions = if (ttfb != null) 1 else 0)
             // An open refused before any article was asked of the provider, such as for an NZB too
-            // large to read, is not the provider's doing.
-            if (failedOpen && counts.articles + counts.missing + counts.errors == 0L) return@forEach
+            // large to read, did not use it.
+            if (refused && counts.articles + counts.missing + counts.errors == 0L) return@forEach
             val known = sessions[key]
             sessions[key] = when {
                 known == null -> counts
@@ -330,8 +337,9 @@ class UsenetSourceStats internal constructor(
         }
         if (sessions.isEmpty()) return
         sessions.forEach { (key, counts) ->
+            val failedHere = providerFailure && counts.missing + counts.errors > 0
             records.providers.add(key, kind, ProviderCounts()) {
-                it + counts.copy(sessions = 1, failedOpens = if (failedOpen) 1 else 0)
+                it + counts.copy(sessions = 1, failedOpens = if (failedHere) 1 else 0)
             }
         }
         changed()
@@ -447,6 +455,8 @@ class UsenetSourceStats internal constructor(
         /** Per kind of source. */
         internal const val MAX_SOURCES = 32
         private const val MAX_ATTRIBUTIONS = 4000
+        /** Engine failure kinds a provider causes: articles it lacks or serves damaged. */
+        internal val PROVIDER_FAILURES = setOf("missing-article", "hole-limit", "invalid-article")
         private const val PERIOD = "period"
         private const val CONTENT = "content"
         private val WRITER = Executors.newSingleThreadExecutor { runnable ->

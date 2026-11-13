@@ -253,11 +253,16 @@ unavailable result counts at most once every 12 hours.
 A card per provider shows the articles it served, its completion (the share of
 the articles asked of it that it had, with the missing ones), other errors, the
 data downloaded, its average time to first byte, and the sessions that used it
-and how many of them failed to open; with **Statistics content** on movies or
-shows, these are the movies or episodes it served. The engine reports these when a session closes, and
-with the failure of an open it refuses, so the articles missing from a release
-that could not open count against the provider's completion. A session the engine
-never closes, because the engine itself stopped, is not counted.
+and how many of them failed to open because of it; with **Statistics content**
+on movies or shows, these are the movies or episodes it served. The engine
+reports these when a session closes, and with the failure of an open it refuses,
+so the articles missing from a release that could not open count against the
+provider's completion. Such an open failed because of a provider only when that
+provider lacked or broke an article and the release failed for missing or
+damaged articles; a password, a compressed archive or a blank release is no
+provider's failure, and an open refused before any article was asked for, such
+as for an NZB too large to read, does not count for any provider. A session the
+engine never closes, because the engine itself stopped, is not counted.
 
 Bars compare the indexers' releases played and NZB downloads, and the providers'
 articles served. **Statistics period** chooses the last 7 days, the last 30 days

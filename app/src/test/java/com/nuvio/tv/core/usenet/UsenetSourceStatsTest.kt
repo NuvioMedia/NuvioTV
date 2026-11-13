@@ -227,16 +227,35 @@ class UsenetSourceStatsTest {
         assertEquals(clock, stats.providerSince(key))
     }
 
-    @Test fun `a refused open counts as a session that failed to open`() {
+    @Test fun `an open refused for missing articles failed to open for the providers that lacked them`() {
         val stats = stats()
-        val servers = listOf(primary.serverUrl())
-        stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"articles":2,"missing":5}]}""", failedOpen = true)
+        val servers = listOf(primary.serverUrl(), backup.serverUrl())
+        // The primary lacked articles; the backup served some but lacked none of them.
+        stats.providerSession(servers, ContentKind.SHOW, """{"providers":[
+            {"server":0,"articles":2,"missing":5},{"server":1,"articles":3}]}""", refused = true, failure = "missing-article")
         stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"articles":40}]}""")
         assertEquals(ProviderCounts(sessions = 2, failedOpens = 1, articles = 42, missing = 5),
             stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.SHOWS))
-        // Refused before the provider was asked for anything: not its failure.
-        stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"articles":0}]}""", failedOpen = true)
-        assertEquals(2, stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.SHOWS)?.sessions)
+        assertEquals(ProviderCounts(sessions = 1, articles = 3),
+            stats.provider(backup.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.SHOWS))
+        // Damaged articles and a passed hole limit are the provider's too.
+        stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"errors":1}]}""", refused = true, failure = "invalid-article")
+        stats.providerSession(servers, ContentKind.SHOW, """{"providers":[{"server":0,"missing":3}]}""", refused = true, failure = "hole-limit")
+        assertEquals(3, stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.SHOWS)?.failedOpens)
+    }
+
+    @Test fun `an open refused for the release is no provider's failure`() {
+        val stats = stats()
+        val servers = listOf(primary.serverUrl())
+        // A password, a compressed archive or a blank release: the articles served still count.
+        listOf(null, "blank-content", "provider").forEach {
+            stats.providerSession(servers, ContentKind.MOVIE, """{"providers":[{"server":0,"articles":4,"errors":1}]}""",
+                refused = true, failure = it)
+        }
+        // Refused before the provider was asked for anything, such as for an NZB too large to read.
+        stats.providerSession(servers, ContentKind.MOVIE, """{"providers":[{"server":0,"articles":0}]}""", refused = true)
+        assertEquals(ProviderCounts(sessions = 3, articles = 12, errors = 3),
+            stats.provider(primary.statsKey()!!, StatsPeriod.ALL_TIME, StatsContent.MOVIES))
     }
 
     @Test fun `unreadable or foreign reports add nothing`() {

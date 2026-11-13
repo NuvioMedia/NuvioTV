@@ -327,7 +327,8 @@ class UsenetSidecar private constructor(private val context: Context) {
             (e as? UsenetPreparationException)?.providers?.let { report ->
                 runCatching {
                     UsenetSourceStats.get(context).providerSession(stream.servers.orEmpty(),
-                        if (episode != null) ContentKind.SHOW else ContentKind.MOVIE, report, failedOpen = true)
+                        if (episode != null) ContentKind.SHOW else ContentKind.MOVIE, report,
+                        refused = true, failure = (e as UsenetPreparationException).failure)
                 }
             }
             if (e !is CancellationException) runCatching {
