@@ -26,7 +26,6 @@ import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.core.streams.StreamBadgePresentation
 import com.nuvio.tv.core.streams.YouTubeStreamResolver
-import com.nuvio.tv.core.usenet.stateKey
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -502,7 +501,7 @@ class StreamScreenViewModel @Inject constructor(
                             // No search lists it: its download and playback count for the indexer its link names.
                             com.nuvio.tv.core.usenet.BuiltInUsenetService.keptLinkIndexer(nzbUrl, config)?.let { indexer ->
                                 com.nuvio.tv.core.usenet.UsenetSourceStats.get(context).remember(listOfNotNull(restored.nzbUrl),
-                                    indexer.stateKey(), com.nuvio.tv.core.usenet.contentKindOf(contentType))
+                                    indexer.id, com.nuvio.tv.core.usenet.contentKindOf(contentType))
                             }
                         }
                     }?.takeUnless { com.nuvio.tv.core.usenet.UnplayableReleases.get(context).contains(it) }

@@ -304,7 +304,7 @@ class NewznabClientTest {
             val asked = server.answer { respond(it) }
             val client = NewznabClient(MemoryStorage(), stats)
             val indexer = server.indexer()
-            val key = indexer.stateKey()
+            val key = indexer.id
             val caps = NewznabCapabilities()
             val movie = UsenetSearchRequest(imdbId = "tt1")
             fun counts(content: StatsContent) = stats.indexer(key, StatsPeriod.LAST_7_DAYS, content)
@@ -329,6 +329,11 @@ class NewznabClientTest {
             assertEquals(5, all.requests)
             assertEquals(3, all.answered)
             assertTrue(all.responseMs >= 0)
+            // A new API key is the same indexer: its counts go on.
+            respond = { MockResponse().setBody(capsXml) }
+            client.capabilities(indexer.copy(apiKey = "rotated"), live = true)
+            assertEquals(6, counts(StatsContent.ALL)?.requests)
+            assertEquals(4, counts(StatsContent.ALL)?.answered)
         }
         val closed = MockWebServer().apply { start() }
         val gone = closed.indexer()
@@ -336,8 +341,8 @@ class NewznabClientTest {
         runCatching { NewznabClient(MemoryStorage(), stats).verify(gone) }
         // The key check's capabilities request searched for nothing: it counts in all content only.
         assertEquals(IndexerCounts(requests = 1, failedRequests = 1),
-            stats.indexer(gone.stateKey(), StatsPeriod.ALL_TIME, StatsContent.ALL))
-        assertNull(stats.indexer(gone.stateKey(), StatsPeriod.ALL_TIME, StatsContent.MOVIES))
+            stats.indexer(gone.id, StatsPeriod.ALL_TIME, StatsContent.ALL))
+        assertNull(stats.indexer(gone.id, StatsPeriod.ALL_TIME, StatsContent.MOVIES))
     }
 
     @Test fun `a pause shows in the status`() = runBlocking {

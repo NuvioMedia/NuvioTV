@@ -270,12 +270,13 @@ articles served. **Statistics period** chooses the last 7 days, the last 30 days
 Capabilities requests and key checks belong to neither, so they count under all
 only.
 
-Counts are kept per day for 30 days and in total, are stored on the device,
-shared by all profiles and cleared by **Reset statistics** or an account reset.
-Indexers are keyed like the state above, providers by a hash of their address
-and username: no URL, key, password or name is stored, and an edited source
-starts again. A source unused for 180 days is forgotten. Counts are written at
-most every 5 seconds and when the app leaves the foreground.
+Counts are kept per day for 30 days and in total, are stored on the device in
+one place for all profiles, and are cleared by **Reset statistics** or an
+account reset. Each source's counts are kept under its id, so an edited source,
+such as an indexer with a new API key or a provider with another server or
+username, keeps them; no URL, key, password or name is stored. A source unused
+for 180 days is forgotten. Counts are written at most every 5 seconds and when
+the app leaves the foreground.
 
 Protocol references (implementation is native Kotlin):
 

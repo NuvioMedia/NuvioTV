@@ -184,7 +184,7 @@ class NewznabClient internal constructor(
         val blockedUntil = states.get(indexer)?.blockedUntil ?: 0
         if (!ignoreCooldown && blockedUntil > now()) throw IndexerCooldownException(blockedUntil)
         fun count(outcome: RequestOutcome, elapsedMs: Long = 0) =
-            stats?.indexerRequest(indexer.stateKey(), kind, outcome, elapsedMs)
+            stats?.indexerRequest(indexer.id, kind, outcome, elapsedMs)
         val started = System.nanoTime()
         val response = try { get(url) }
             catch (e: CancellationException) { throw e }
@@ -479,7 +479,7 @@ class BuiltInUsenetService @Inject constructor(
     /** One search of [indexer] in its statistics; its releases count for it once downloaded or played. */
     private fun countSearch(indexer: UsenetIndexer, kind: ContentKind, result: Result<List<UsenetRelease>>) {
         val stats = stats ?: return
-        val key = indexer.stateKey()
+        val key = indexer.id
         result.onSuccess { found ->
             stats.indexerSearch(key, kind, SearchOutcome.ANSWERED, found.size)
             stats.remember(found.map { it.nzbUrl }, key, kind)

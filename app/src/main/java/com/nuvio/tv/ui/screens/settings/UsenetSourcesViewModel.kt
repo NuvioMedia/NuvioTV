@@ -19,8 +19,6 @@ import com.nuvio.tv.core.usenet.ProviderCounts
 import com.nuvio.tv.core.usenet.StatsContent
 import com.nuvio.tv.core.usenet.StatsPeriod
 import com.nuvio.tv.core.usenet.UsenetSourceStats
-import com.nuvio.tv.core.usenet.stateKey
-import com.nuvio.tv.core.usenet.statsKey
 import com.nuvio.tv.core.usenet.NntpProviderTester
 import com.nuvio.tv.core.usenet.ProviderTestResult
 import com.nuvio.tv.core.usenet.UsenetIndexer
@@ -103,14 +101,12 @@ class UsenetSourcesViewModel @Inject constructor(
         emitAll(combine(uiState, sourceStats.revision, sourceStats.period, sourceStats.content) { ui, _, period, content ->
             UsenetStatsUi(period, content,
                 indexers = ui.configuration.indexers.associate { indexer ->
-                    val key = indexer.stateKey()
-                    indexer.id to IndexerStatsUi(sourceStats.indexer(key, period, content),
-                        sourceStats.indexerToday(key, content), sourceStats.indexerSince(key))
+                    indexer.id to IndexerStatsUi(sourceStats.indexer(indexer.id, period, content),
+                        sourceStats.indexerToday(indexer.id, content), sourceStats.indexerSince(indexer.id))
                 },
                 providers = ui.configuration.providers.associate { provider ->
-                    val key = provider.statsKey()
-                    provider.id to ProviderStatsUi(key?.let { sourceStats.provider(it, period, content) },
-                        key?.let { sourceStats.providerSince(it) })
+                    provider.id to ProviderStatsUi(sourceStats.provider(provider.id, period, content),
+                        sourceStats.providerSince(provider.id))
                 })
         })
     }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UsenetStatsUi())

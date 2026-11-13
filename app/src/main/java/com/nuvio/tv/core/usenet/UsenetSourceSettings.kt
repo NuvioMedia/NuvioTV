@@ -27,6 +27,8 @@ class UsenetSourceSettings @Inject constructor(
     private val profiles: Lazy<ProfileManager>
 ) : ProfileScopedCredentialStore {
     private val preferences = context.getSharedPreferences("usenet_sources", Context.MODE_PRIVATE)
+    /** Told every provider list read or saved, so a provider's statistics follow it through edits. */
+    private val stats = UsenetSourceStats.get(context)
     private val revision = MutableStateFlow(0)
     private val json = Json { ignoreUnknownKeys = true }
     val snapshots get() = combine(profiles.get().activeProfileId, revision) { id, _ -> id to runCatching { read(id) } }
@@ -46,7 +48,10 @@ class UsenetSourceSettings @Inject constructor(
         cipher.updateAAD("profile_$profileId".toByteArray())
         return json.decodeFromString<UsenetSourceConfiguration>(
             cipher.doFinal(bytes.copyOfRange(12, bytes.size)).toString(Charsets.UTF_8)
-        ).also { decrypted[profileId] = it }
+        ).also {
+            decrypted[profileId] = it
+            stats.knowProviders(it.providers)
+        }
     }
 
     @Synchronized
@@ -60,6 +65,7 @@ class UsenetSourceSettings @Inject constructor(
             "Could not save Usenet sources"
         }
         decrypted[profileId] = value
+        stats.knowProviders(value.providers)
         revision.value += 1
     }
 
