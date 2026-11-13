@@ -105,6 +105,7 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "exo_chapters_enabled",
     "chapter_title_enabled",
     "mpv_hardware_decode_mode",
+    "mpv_user_config",
     "frame_rate_matching",
     "frame_rate_matching_mode",
     "resolution_matching_enabled",
