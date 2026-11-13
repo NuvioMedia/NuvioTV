@@ -10,7 +10,12 @@ package com.nuvio.tv.ui.screens.player
  * URL, like [StreamSidecarSubtitles], so a leftover entry cannot attach to another playback.
  */
 internal object SourceFallbackHandoff {
-    data class TriedSources(val keys: Set<String>, val attempts: Int)
+    data class TriedSources(val keys: Set<String>, val attempts: Int) {
+        companion object {
+            /** A stream auto selection picked first, with nothing tried before it. */
+            val None = TriedSources(keys = emptySet(), attempts = 0)
+        }
+    }
 
     @Volatile
     private var playbackUrl: String? = null
