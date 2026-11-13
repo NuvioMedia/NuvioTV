@@ -114,6 +114,9 @@ internal class AsrSyncEngine(
     /** Last reported (not yet final) lock, to report only real changes. */
     private var provisional: AsrLock? = null
 
+    /** A different final mapping seen once; it replaces the reported one if it comes back next. */
+    private var pendingMove: AsrLock? = null
+
     @Volatile
     private var stt: SpeechToText? = null
 
@@ -187,6 +190,7 @@ internal class AsrSyncEngine(
             references = referenceSubtitles
             locked = false
             provisional = null
+            pendingMove = null
             lock.notifyAll()
         }
         evaluate()
@@ -208,6 +212,7 @@ internal class AsrSyncEngine(
             references = emptyList()
             locked = false
             provisional = null
+            pendingMove = null
             // Pending audio (up to ~30 MB) is only useful to a running session; free it now rather
             // than holding it until the next stream. Words already recognized are small and kept.
             queue.clear()
@@ -234,6 +239,7 @@ internal class AsrSyncEngine(
             heard.clear()
             locked = false
             provisional = null
+            pendingMove = null
         }
     }
 
@@ -342,9 +348,11 @@ internal class AsrSyncEngine(
             // Compose target -> reference -> media.
             val scale = fit.scale * (bridge?.scale ?: 1.0)
             val coarseShiftMs = (fit.scale * (bridge?.shiftSec ?: 0.0) + fit.shiftSec) * 1_000.0
-            Triple(scale, coarseShiftMs, fineTune(targetTrack, scale, coarseShiftMs))
+            val chosen = Triple(scale, coarseShiftMs, fineTune(targetTrack, scale, coarseShiftMs))
+            if (fit.scale != 1.0) neighbouringRate(targetTrack, fit, bridge, chosen) else chosen
         } else {
-            mostLikelyRate(targetTrack, words, fit, bridge)
+            // Null: another frame rate fits the speech as well, so a guess would misplace most lines.
+            mostLikelyRate(targetTrack, words, fit, bridge) ?: return
         }
         val trustedFine = fine?.takeIf { isTrustedMove(it, coarseShiftMs) }
         val shiftMs = trustedFine?.shiftMs ?: coarseShiftMs
@@ -363,7 +371,18 @@ internal class AsrSyncEngine(
             if (target !== targetTrack) return
             val previous = provisional
             val tolerance = if (previous?.final == true) SETTLED_UPDATE_MIN_MS else UPDATE_MIN_MS
-            if (previous != null && previous.final == result.final && sameMapping(previous, result, tolerance)) return
+            if (previous != null && previous.final == result.final && sameMapping(previous, result, tolerance)) {
+                pendingMove = null
+                return
+            }
+            if (previous?.final == true && result.final) {
+                val again = pendingMove?.let { sameMapping(it, result, FINAL_MOVE_REPEAT_MS) } == true
+                if (!again) {
+                    pendingMove = result
+                    return
+                }
+            }
+            pendingMove = null
             if (result.final) locked = true
             provisional = result
         }
@@ -494,7 +513,7 @@ internal class AsrSyncEngine(
         words: List<HeardWord>,
         fit: AnchorFit,
         bridge: BridgeFit?,
-    ): Triple<Double, Double, SubtitleAudioAligner.Estimate?> {
+    ): Triple<Double, Double, SubtitleAudioAligner.Estimate?>? {
         val anchorMs = fit.anchorSec * 1_000.0
         val referenceAtAnchorMs = anchorMs - fit.shiftSec * 1_000.0
         val bridgeScale = bridge?.scale ?: 1.0
@@ -510,7 +529,31 @@ internal class AsrSyncEngine(
 
         val unstretched = hypothesis(1.0 / bridgeScale)
         val knownFrames = timeline.segments(maxFrames = FINE_TUNE_MAX_FRAMES).sumOf { it.knownFrames }
-        if (knownFrames < STRETCH_MIN_KNOWN_FRAMES) return unstretched
+        if (knownFrames < STRETCH_MIN_KNOWN_FRAMES) {
+            // Too little audio to choose a rate, so the plain one is assumed. If another rate (for
+            // instance the one a bridge to a 25 fps file implies) already fits the speech at least
+            // as well, the assumption would misplace most of the film's lines: publish nothing yet.
+            val unstretchedPeak = unstretched.third?.peak
+            val rival = SubtitleAudioAligner.CANDIDATE_SCALES.asSequence()
+                .map(::hypothesis)
+                .filter { abs(it.first - unstretched.first) > 1e-9 }
+                .mapNotNull { it.third }
+                .filter { !it.atSearchEdge }
+                .maxOfOrNull { it.peak }
+            // A bridge that changes the rate says the two files run at different rates, so one of
+            // them is stretched against the video: without speech evidence for the plain rate the
+            // assumption is a coin flip, and a wrong one is off by minutes far from the anchor.
+            val bridgeStretches = bridge != null && abs(bridgeScale - 1.0) > BRIDGE_STRETCH_MIN
+            return if (bridgeStretches) {
+                // Publish only when the speech clearly prefers the plain rate for this file.
+                unstretched.takeIf { unstretchedPeak != null && rival != null && unstretchedPeak >= rival + EARLY_RATE_VETO_MARGIN }
+            } else {
+                // Near the word anchor every rate fits about equally, so only a rate that fits
+                // clearly better blocks the estimate; without speech evidence for the plain rate
+                // there is nothing to compare, and the estimate stands as before.
+                unstretched.takeUnless { unstretchedPeak != null && rival != null && rival >= unstretchedPeak + EARLY_RATE_VETO_MARGIN }
+            }
+        }
         // Trying every ratio is the expensive part: keep the ratio chosen last time until clearly
         // more words or audio are in (or the target or bridge changed), then judge again.
         val situation = "${track.hashCode()}|${bridge?.shiftSec}|${knownFrames / STRETCH_RECHECK_FRAMES}"
@@ -531,6 +574,35 @@ internal class AsrSyncEngine(
             }
         }
         chosenRate = ChosenRate(situation, words.size, best.first / bridgeScale)
+        return best
+    }
+
+    /**
+     * Words tell a 25 fps file from a 23.976 one, but not 25/24 from 25/23.976: those differ by
+     * 0.1%, and the word fit keeps whichever rate it tried first. The speech timeline can tell them
+     * apart, so the rates 0.1% either side, passing through the same word anchor, are compared
+     * there and kept only when they fit clearly better.
+     */
+    private fun neighbouringRate(
+        track: SubtitleSpeechTrack,
+        fit: AnchorFit,
+        bridge: BridgeFit?,
+        chosen: Triple<Double, Double, SubtitleAudioAligner.Estimate?>,
+    ): Triple<Double, Double, SubtitleAudioAligner.Estimate?> {
+        val chosenPeak = chosen.third?.peak ?: return chosen
+        val anchorMs = fit.anchorSec * 1_000.0
+        val referenceAtAnchorMs = (fit.anchorSec - fit.shiftSec) / fit.scale * 1_000.0
+        var best = chosen
+        var bestPeak = chosenPeak + NEIGHBOUR_RATE_MARGIN
+        for (rate in doubleArrayOf(fit.scale * NEAR_RATE, fit.scale / NEAR_RATE)) {
+            val referenceShiftMs = anchorMs - rate * referenceAtAnchorMs
+            val scale = rate * (bridge?.scale ?: 1.0)
+            val coarseShiftMs = rate * (bridge?.shiftSec ?: 0.0) * 1_000.0 + referenceShiftMs
+            val fine = fineTune(track, scale, coarseShiftMs) ?: continue
+            if (fine.atSearchEdge || fine.peak < bestPeak) continue
+            best = Triple(scale, coarseShiftMs, fine)
+            bestPeak = fine.peak
+        }
         return best
     }
 
@@ -593,6 +665,31 @@ internal class AsrSyncEngine(
 
         /** Correlation a stretched mapping must win by over the unstretched one. */
         private const val OTHER_RATE_MARGIN = 0.04
+
+        /**
+         * Before the rate is known, no estimate is published while another rate fits the speech
+         * this much better than the assumed plain one. Not 0 as in the speech-activity tracker:
+         * there the search is global, here every rate passes through the same word anchor, where
+         * they all fit about equally (0 withheld good estimates for normal-rate films).
+         */
+        private const val EARLY_RATE_VETO_MARGIN = OTHER_RATE_MARGIN
+
+        /** A bridge rate further than this from 1 is a frame-rate change between the two files. */
+        private const val BRIDGE_STRETCH_MIN = 0.002
+
+        /**
+         * A confirmed (final) sync moves only when the same new mapping comes back on the next
+         * evaluation, within this: words from different parts of the film can favour two nearby
+         * offsets in turn (a reference with its own small step), and following each would make the
+         * subtitles jump back and forth.
+         */
+        private const val FINAL_MOVE_REPEAT_MS = 500.0
+
+        /** 24/23.976: the step between 25/24 and 25/23.976 (and between 1 and 24/23.976). */
+        private const val NEAR_RATE = 24_000.0 / 23_976.0
+
+        /** Correlation a neighbouring rate must win by to replace the one the words chose. */
+        private const val NEIGHBOUR_RATE_MARGIN = 0.005
 
         /** Like a speech-detection lock at a non-standard rate: 0.12 plus the 0.04 penalty. */
         private const val STRETCH_MIN_PROMINENCE = 0.16
