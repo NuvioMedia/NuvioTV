@@ -50,6 +50,13 @@ internal object SubtitleAudioAligner {
         val cueCount: Int,
         /** True when the peak sits at the edge of the searched range, so it may not be a real maximum. */
         val atSearchEdge: Boolean = false,
+        /**
+         * Peak minus the best competing alignment: the highest correlation outside the peak's own
+         * lobe. Dialogue lines last seconds, so the correlation falls off slowly around a true
+         * match; [prominence] compares the peak with that slope 2.5 s away and so stays low for real
+         * matches, while this compares it with another, separate peak.
+         */
+        val separation: Double = prominence,
     )
 
     /**
@@ -407,6 +414,31 @@ internal object SubtitleAudioAligner {
             val value = correlation[k]
             if (!value.isNaN() && abs(k - peakIndex) > exclusion && value > runnerUp) runnerUp = value
         }
+        // The peak's lobe: outwards from the peak while the curve keeps falling. A rise smaller than
+        // LOBE_TOLERANCE is noise on the slope; a larger one starts another peak.
+        var lobeFrom = peakIndex
+        var lowest = peak
+        while (lobeFrom > 0) {
+            val value = correlation[lobeFrom - 1]
+            if (value.isNaN() || value > lowest + LOBE_TOLERANCE) break
+            if (value < lowest) lowest = value
+            lobeFrom--
+        }
+        var lobeTo = peakIndex
+        lowest = peak
+        while (lobeTo < lagCount - 1) {
+            val value = correlation[lobeTo + 1]
+            if (value.isNaN() || value > lowest + LOBE_TOLERANCE) break
+            if (value < lowest) lowest = value
+            lobeTo++
+        }
+        lobeFrom = minOf(lobeFrom, peakIndex - exclusion)
+        lobeTo = maxOf(lobeTo, peakIndex + exclusion)
+        var competitor = Double.NEGATIVE_INFINITY
+        for (k in 0 until lagCount) {
+            val value = correlation[k]
+            if (!value.isNaN() && (k < lobeFrom || k > lobeTo) && value > competitor) competitor = value
+        }
         var refinedIndex = peakIndex.toDouble()
         if (peakIndex in 1 until lagCount - 1) {
             val left = correlation[peakIndex - 1]
@@ -427,6 +459,10 @@ internal object SubtitleAudioAligner {
             speechSeconds = 0.0,
             cueCount = 0,
             atSearchEdge = peakIndex < edgeFrames || peakIndex >= lagCount - edgeFrames,
+            separation = if (competitor.isFinite()) peak - competitor else peak,
         )
     }
+
+    /** Rises on a peak's slope smaller than this are noise, not the start of another peak. */
+    private const val LOBE_TOLERANCE = 0.02
 }

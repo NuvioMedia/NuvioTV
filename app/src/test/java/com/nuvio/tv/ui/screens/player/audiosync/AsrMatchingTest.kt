@@ -299,16 +299,25 @@ class AsrMatchingTest {
     @Test
     fun littleHeardAudioNeverStretches() {
         // As on a phone without sampling: about 70 s heard. Even if a stretch is right, it is not
-        // applied on so little evidence; the subtitle keeps its own rate until more is heard.
-        val lock = lockAcrossFrameRates(videoMatchesEnglish = true, heardMs = 70_000L)
-        assertEquals(1.0, lock.scale, 1e-9, "lock $lock")
-        assertTrue(!lock.final, "lock $lock")
+        // applied on so little evidence. Here the stretch the bridge implies is right and fits the
+        // speech as well as the plain rate, so a plain-rate estimate would put most of the film's
+        // lines in the wrong place: nothing is published until more is heard.
+        val locks = locksAcrossFrameRates(videoMatchesEnglish = true, heardMs = 70_000L)
+        assertTrue(locks.none { it.scale != 1.0 }, "stretched on little evidence: $locks")
+        assertTrue(locks.isEmpty(), "guessed a rate on little evidence: $locks")
     }
 
     private fun lockAcrossFrameRates(
         videoMatchesEnglish: Boolean,
         heardMs: Long = Long.MAX_VALUE,
-    ): com.nuvio.tv.ui.screens.player.audiosync.asr.AsrLock {
+    ): com.nuvio.tv.ui.screens.player.audiosync.asr.AsrLock =
+        locksAcrossFrameRates(videoMatchesEnglish, heardMs).lastOrNull() ?: throw AssertionError("no lock")
+
+    /** Every result the engine publishes once all heard lines are recognised and evaluated. */
+    private fun locksAcrossFrameRates(
+        videoMatchesEnglish: Boolean,
+        heardMs: Long = Long.MAX_VALUE,
+    ): List<com.nuvio.tv.ui.screens.player.audiosync.asr.AsrLock> {
         val rate = 25.0 / 23.976
         val media = script(Random(7), 160)
         fun at25(cues: List<Triple<Long, Long, String>>) =
@@ -339,10 +348,10 @@ class AsrMatchingTest {
                 (t - segmentStartSec) to word
             }
         }
-        assertTrue(latch.await(30, java.util.concurrent.TimeUnit.SECONDS), "no lock")
-        // Let every line be recognised and evaluated before reading the latest result.
+        // Let every line be recognised and evaluated before reading the results.
         val deadline = System.currentTimeMillis() + 60_000
         while (recognised.get() < 12 && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        latch.await(2, java.util.concurrent.TimeUnit.SECONDS)
         var settled = locks.size
         do {
             Thread.sleep(1_000)
@@ -351,7 +360,7 @@ class AsrMatchingTest {
             settled = now
         } while (!stable && System.currentTimeMillis() < deadline)
         engine.release()
-        return locks.last()
+        return locks.toList()
     }
 
     /** Clean speech exactly where [cues] are. */
