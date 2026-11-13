@@ -371,6 +371,9 @@ data class PlayerSettings(
     val postPlayMovieThresholdPercent: Int = DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
+    val streamAutoPlayFallbackOnFailure: Boolean = false,
+    val streamAutoPlayFallbackMaxSources: Int = DEFAULT_SOURCE_FALLBACK_MAX_SOURCES,
+    val streamAutoPlayFallbackStartupTimeoutSeconds: Int = DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS,
     val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = true,
     val streamAutoPlayReuseBingeGroup: Boolean = false,
     val streamAutoPlayTimeoutSeconds: Int = 10,
@@ -409,6 +412,15 @@ data class PlayerSettings(
     val isPreferAppDecoder: Boolean
         get() = decoderPriority == 2
 
+    /**
+     * Falling back to the next matching source applies only while auto source selection picks the
+     * stream and the internal player plays it.
+     */
+    val streamAutoPlayFallbackActive: Boolean
+        get() = streamAutoPlayFallbackOnFailure &&
+            streamAutoPlayMode != StreamAutoPlayMode.MANUAL &&
+            playerPreference != PlayerPreference.EXTERNAL
+
     /** FFmpeg downmix only runs when the app decoder is preferred. */
     val effectiveDownmixEnabled: Boolean
         get() = downmixEnabled && isPreferAppDecoder
@@ -428,6 +440,15 @@ data class PlayerSettings(
         get() = if (effectiveTunnelingEnabled) LibassRenderMode.OVERLAY else libassRenderMode
 
     companion object {
+        /** How many further sources falling back may try after the auto-selected one fails. */
+        const val DEFAULT_SOURCE_FALLBACK_MAX_SOURCES = 3
+        const val MIN_SOURCE_FALLBACK_MAX_SOURCES = 1
+        const val MAX_SOURCE_FALLBACK_MAX_SOURCES = 10
+        /** How long a source may take to start before falling back treats it as failed, in seconds. */
+        const val DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS = 15
+        const val MIN_SOURCE_STARTUP_TIMEOUT_SECONDS = 5
+        const val MAX_SOURCE_STARTUP_TIMEOUT_SECONDS = 45
+        const val SOURCE_STARTUP_TIMEOUT_SECONDS_STEP = 5
         const val DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD = 3
         const val MIN_STILL_WATCHING_EPISODE_THRESHOLD = 2
         const val MAX_STILL_WATCHING_EPISODE_THRESHOLD = 6
@@ -698,6 +719,10 @@ class PlayerSettingsDataStore @Inject constructor(
     private val postPlayMovieThresholdPercentKey = intPreferencesKey("post_play_movie_threshold_percent")
     private val streamAutoPlayNextEpisodeEnabledKey = booleanPreferencesKey("stream_auto_play_next_episode_enabled")
     private val streamAutoPlayNextEpisodeFallbackEnabledKey = booleanPreferencesKey("stream_auto_play_next_episode_fallback_enabled")
+    private val streamAutoPlayFallbackOnFailureKey = booleanPreferencesKey("stream_auto_play_fallback_on_failure")
+    private val streamAutoPlayFallbackMaxSourcesKey = intPreferencesKey("stream_auto_play_fallback_max_sources")
+    private val streamAutoPlayFallbackStartupTimeoutSecondsKey =
+        intPreferencesKey("stream_auto_play_fallback_startup_timeout_seconds")
     private val streamAutoPlayPreferBingeGroupForNextEpisodeKey = booleanPreferencesKey("stream_auto_play_prefer_bingegroup_next_episode")
     private val streamAutoPlayReuseBingeGroupKey = booleanPreferencesKey("stream_auto_play_reuse_binge_group")
     private val streamAutoPlayTimeoutSecondsKey = intPreferencesKey("stream_auto_play_timeout_seconds")
@@ -1109,6 +1134,19 @@ class PlayerSettingsDataStore @Inject constructor(
                 ),
                 streamAutoPlayNextEpisodeEnabled = prefs[streamAutoPlayNextEpisodeEnabledKey] ?: false,
                 streamAutoPlayNextEpisodeFallbackEnabled = prefs[streamAutoPlayNextEpisodeFallbackEnabledKey] ?: true,
+                streamAutoPlayFallbackOnFailure = prefs[streamAutoPlayFallbackOnFailureKey] ?: false,
+                streamAutoPlayFallbackMaxSources = prefs[streamAutoPlayFallbackMaxSourcesKey]
+                    ?.coerceIn(
+                        PlayerSettings.MIN_SOURCE_FALLBACK_MAX_SOURCES,
+                        PlayerSettings.MAX_SOURCE_FALLBACK_MAX_SOURCES
+                    )
+                    ?: PlayerSettings.DEFAULT_SOURCE_FALLBACK_MAX_SOURCES,
+                streamAutoPlayFallbackStartupTimeoutSeconds = prefs[streamAutoPlayFallbackStartupTimeoutSecondsKey]
+                    ?.coerceIn(
+                        PlayerSettings.MIN_SOURCE_STARTUP_TIMEOUT_SECONDS,
+                        PlayerSettings.MAX_SOURCE_STARTUP_TIMEOUT_SECONDS
+                    )
+                    ?: PlayerSettings.DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS,
                 streamAutoPlayPreferBingeGroupForNextEpisode =
                     prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] ?: true,
                 streamAutoPlayReuseBingeGroup =
@@ -1519,6 +1557,30 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setStreamAutoPlayNextEpisodeFallbackEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[streamAutoPlayNextEpisodeFallbackEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setStreamAutoPlayFallbackOnFailure(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[streamAutoPlayFallbackOnFailureKey] = enabled
+        }
+    }
+
+    suspend fun setStreamAutoPlayFallbackMaxSources(count: Int) {
+        store().edit { prefs ->
+            prefs[streamAutoPlayFallbackMaxSourcesKey] = count.coerceIn(
+                PlayerSettings.MIN_SOURCE_FALLBACK_MAX_SOURCES,
+                PlayerSettings.MAX_SOURCE_FALLBACK_MAX_SOURCES
+            )
+        }
+    }
+
+    suspend fun setStreamAutoPlayFallbackStartupTimeoutSeconds(seconds: Int) {
+        store().edit { prefs ->
+            prefs[streamAutoPlayFallbackStartupTimeoutSecondsKey] = seconds.coerceIn(
+                PlayerSettings.MIN_SOURCE_STARTUP_TIMEOUT_SECONDS,
+                PlayerSettings.MAX_SOURCE_STARTUP_TIMEOUT_SECONDS
+            )
         }
     }
 

@@ -1614,6 +1614,16 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automatyczne przełączanie silnika przy błędzie</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Jeśli uruchomienie strumienia się nie powiedzie, automatycznie przełącz między ExoPlayer a libmpv.</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">Wyłącz przechodzenie do kolejnego pasującego źródła, aby tego użyć.</string>
+    <string name="autoplay_fallback_next_source">Przejdź do kolejnego pasującego źródła przy błędzie</string>
+    <string name="autoplay_fallback_next_source_sub">Jeśli automatycznie wybrane źródło zgłosi błąd lub nie uruchomi się na czas, po cichu spróbuj kolejnych pasujących źródeł.</string>
+    <string name="autoplay_fallback_max_sources">Źródła do sprawdzenia przy błędzie</string>
+    <string name="autoplay_fallback_max_sources_sub">Ile kolejnych pasujących źródeł sprawdzić, zanim pojawi się błąd.</string>
+    <string name="autoplay_fallback_startup_timeout">Czas na uruchomienie źródła</string>
+    <string name="autoplay_fallback_startup_timeout_sub">Jak długo czekać na uruchomienie źródła, zanim zostanie sprawdzone kolejne.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$ds</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">Wyłącz automatyczne przełączanie silnika przy błędzie, aby tego użyć.</string>
+    <string name="player_error_source_startup_timeout">Źródło nie uruchomiło się w ciągu %1$d sekund.</string>
     <string name="playback_release_decoder_on_background">Zwalniaj dekoder w tle</string>
     <string name="playback_release_decoder_on_background_sub">Zwalnia dekoder wideo, gdy Nuvio przechodzi w tło. Włącz, jeśli po powrocie do aplikacji odtwarzanie kończy się błędem dekodera. Po powrocie, także po wygaszaczu ekranu, odtwarzacz ładuje się od nowa</string>
     <string name="playback_external_forward_subtitles">Przekazuj napisy do zewnętrznego odtwarzacza</string>

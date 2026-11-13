@@ -535,6 +535,9 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
             if (tryRefreshExpiredLinkAfterError(detailedError)) {
                 return@launch
             }
+            if (tryFallbackToNextSourceAfterError(detailedError)) {
+                return@launch
+            }
             if (maybeAutoSwitchInternalPlayerOnStartupError(detailedError = detailedError, allowEngineFailover = allowEngineFailover)) {
                 return@launch
             }
