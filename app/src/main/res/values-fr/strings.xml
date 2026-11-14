@@ -2198,15 +2198,8 @@
     <string name="library_status_dropped">Abandonnés</string>
     <string name="library_syncing_library">Synchronisation de la bibliothèque…</string>
     <string name="library_type_all">Tout</string>
-    <string name="library_type_items">éléments</string>
-    <string name="library_empty_local_title">%1$s&#160;: aucun élément pour le moment</string>
-    <string name="library_empty_trakt_title">%1$s&#160;: aucun élément dans cette liste</string>
-    <string name="library_empty_local_subtitle">Commencez à enregistrer vos favoris pour les voir ici</string>
-    <string name="library_empty_trakt_subtitle">Utilisez + dans les détails pour ajouter des éléments à la liste de suivi ou à des listes</string>
     <string name="library_empty_trakt_not_auth_title">Trakt non connecté</string>
     <string name="library_empty_trakt_not_auth_subtitle">Connectez votre compte Trakt dans les paramètres pour afficher votre bibliothèque Trakt</string>
-    <string name="library_empty_simkl_title">%1$s&#160;: aucun élément avec ce statut</string>
-    <string name="library_empty_simkl_subtitle">Utilisez + dans les détails pour ajouter des éléments à un statut Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl non connecté</string>
     <string name="library_empty_simkl_not_auth_subtitle">Connectez votre compte Simkl dans les paramètres pour afficher votre bibliothèque Simkl</string>
     <string name="library_list_create_dialog_title">Créer une liste</string>

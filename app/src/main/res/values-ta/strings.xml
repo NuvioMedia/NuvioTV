@@ -1412,11 +1412,6 @@
     <string name="library_watchlist">பார்க்க வேண்டிய பட்டியல்</string>
     <string name="library_syncing_library">நூலகம் ஒத்திசைக்கப்படுகிறது\u2026</string>
     <string name="library_type_all">அனைத்தும்</string>
-    <string name="library_type_items">உருப்படிகள்</string>
-    <string name="library_empty_local_title">இன்னும் %1$s இல்லை</string>
-    <string name="library_empty_trakt_title">இந்த பட்டியலில் %1$s இல்லை</string>
-    <string name="library_empty_local_subtitle">உங்கள் விருப்பங்களை சேமித்து இங்கே காணுங்கள்</string>
-    <string name="library_empty_trakt_subtitle">வாட்ச்லிஸ்ட் அல்லது பட்டியல்களில் சேர்க்க விவரங்களில் + ஐ பயன்படுத்தவும்</string>
     <string name="library_empty_trakt_not_auth_title">ட்ராக்ட் இணைக்கப்படவில்லை</string>
     <string name="library_empty_trakt_not_auth_subtitle">உங்கள் ட்ராக்ட் நூலகத்தை காண அமைப்புகளில் ட்ராக்ட் கணக்கை இணைக்கவும்</string>
 

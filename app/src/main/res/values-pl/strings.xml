@@ -1003,11 +1003,6 @@
     <string name="library_delete_confirm">Usuń</string>
     <string name="library_source_local">LOKALNA</string>
     <string name="library_type_all">Wszystkie</string>
-    <string name="library_type_items">elementy</string>
-    <string name="library_empty_local_title">Brak %1$s</string>
-    <string name="library_empty_trakt_title">Brak %1$s na tej liście</string>
-    <string name="library_empty_local_subtitle">Zacznij zapisywać ulubione, aby je tutaj zobaczyć</string>
-    <string name="library_empty_trakt_subtitle">Użyj + w szczegółach, aby dodać elementy do listy obserwowanych lub list</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Ładowanie\u2026</string>
@@ -3205,8 +3200,6 @@
     <string name="error_open_browser_failed">Nie udało się otworzyć przeglądarki</string>
     <string name="library_empty_simkl_not_auth_title">Simkl nie połączony</string>
     <string name="library_empty_simkl_not_auth_subtitle">Połącz konto Simkl w Ustawieniach, aby zobaczyć bibliotekę Simkl</string>
-    <string name="library_empty_simkl_title">Brak %1$s w tym statusie</string>
-    <string name="library_empty_simkl_subtitle">Użyj + w szczegółach, aby dodać elementy do statusu Simkl</string>
     <string name="library_sort_provider_order">Kolejność dostawcy</string>
     <string name="licenses_attributions_simkl_title">Simkl</string>
     <string name="licenses_attributions_simkl_body">Nuvio łączy się z Simkl w celu uwierzytelniania konta, list do obejrzenia, historii oglądania, postępu odtwarzania i scrobblowania. Dane śledzenia filmów, seriali i anime są dostarczane przez Simkl. Nuvio nie jest powiązane z Simkl ani przez niego wspierane.</string>

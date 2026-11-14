@@ -1644,11 +1644,6 @@
     <string name="library_watchlist">قائمة المشاهدة</string>
     <string name="library_syncing_library">جاري مزامنة المكتبة\u2026</string>
     <string name="library_type_all">الكل</string>
-    <string name="library_type_items">عناصر</string>
-    <string name="library_empty_local_title">لا يوجد %1$s بعد</string>
-    <string name="library_empty_trakt_title">لا يوجد %1$s في هذه القائمة</string>
-    <string name="library_empty_local_subtitle">ابدأ بحفظ مفضلاتك لتراها هنا</string>
-    <string name="library_empty_trakt_subtitle">استخدم + في التفاصيل لإضافة عناصر لقائمة المشاهدة أو القوائم</string>
     <string name="library_empty_trakt_not_auth_title">حساب Trakt غير متصل</string>
     <string name="library_empty_trakt_not_auth_subtitle">قم بربط حساب Trakt الخاص بك في الإعدادات لعرض مكتبتك الشخصية</string>
     <string name="library_list_create_dialog_title">إنشاء قائمة</string>
@@ -2728,8 +2723,6 @@
     <string name="layout_ratings_show">إظهار</string>
     <string name="library_empty_simkl_not_auth_subtitle">اربط حساب Simkl الخاص بك في الإعدادات لعرض مكتبة Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl غير متصل</string>
-    <string name="library_empty_simkl_subtitle">استخدم + في التفاصيل لإضافة عناصر إلى حالة Simkl</string>
-    <string name="library_empty_simkl_title">لا يوجد %1$s في هذه الحالة</string>
     <string name="library_filter_watched">تمت المشاهدة</string>
     <string name="library_sort_provider_order">ترتيب المزود</string>
     <string name="library_status_completed">مكتمل</string>

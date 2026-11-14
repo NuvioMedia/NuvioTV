@@ -1578,11 +1578,6 @@
     <string name="library_watchlist">Watchlist</string>
     <string name="library_syncing_library">Synchronizuje sa knižnica…</string>
     <string name="library_type_all">Všetko</string>
-    <string name="library_type_items">položiek</string>
-    <string name="library_empty_local_title">Zatiaľ žiadne %1$s</string>
-    <string name="library_empty_trakt_title">Žiadne %1$s v tomto zozname</string>
-    <string name="library_empty_local_subtitle">Začnite si ukladať obľúbené položky a zobrazia sa tu</string>
-    <string name="library_empty_trakt_subtitle">Použite + v detailoch pre pridanie položiek do watchlistu alebo zoznamov</string>
     <string name="library_empty_trakt_not_auth_title">Trakt nie je pripojený</string>
     <string name="library_empty_trakt_not_auth_subtitle">Pripojte svoj účet Trakt v Nastaveniach pre zobrazenie knižnice Trakt</string>
     <string name="cloud_library_connect_action">Pripojiť účet</string>
@@ -2880,8 +2875,6 @@
 <string name="simkl_name">Simkl</string>
 <string name="action_back">Späť</string>
 <string name="library_sort_provider_order">Poradie poskytovateľa</string>
-<string name="library_empty_simkl_title">Žiadne položky pre status: %1$s</string>
-<string name="library_empty_simkl_subtitle">Použite tlačitko + v detailoch na pridanie položiek do statusu Simkl</string>
 <string name="library_empty_simkl_not_auth_title">Simkl nie je pripojený</string>
 <string name="library_empty_simkl_not_auth_subtitle">Pripojte svoj účet Simkl v Nastaveniach, aby ste si moli zobraziť svoju knižnicu Simkl</string>
 <string name="simkl_account_title">Účet Simkl</string>
