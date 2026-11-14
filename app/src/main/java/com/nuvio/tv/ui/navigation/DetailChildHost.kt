@@ -255,17 +255,19 @@ internal fun DetailChildHost(
                             childNav.navigateNestedDetail(itemId, itemType, addonBaseUrl)
                         },
                         onPlayClick = parentNavController::navigateToDetailStream,
-                        onPlayManuallyClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
+                        onPlayManuallyClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage, logoLanguage ->
                             parentNavController.navigateToDetailStream(
                                 videoId, contentType, contentId, title, poster, backdrop, logo,
                                 season, episode, episodeName, genres, year, runtime, contentLanguage,
+                                logoLanguage = logoLanguage,
                                 manualSelection = true
                             )
                         },
-                        onPlayStartFromBeginningClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
+                        onPlayStartFromBeginningClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage, logoLanguage ->
                             parentNavController.navigateToDetailStream(
                                 videoId, contentType, contentId, title, poster, backdrop, logo,
                                 season, episode, episodeName, genres, year, runtime, contentLanguage,
+                                logoLanguage = logoLanguage,
                                 startFromBeginning = true
                             )
                         }
@@ -374,6 +376,7 @@ internal fun NavHostController.navigateToDetailStream(
     year: String?,
     runtime: Int?,
     contentLanguage: String?,
+    logoLanguage: String? = null,
     manualSelection: Boolean = false,
     startFromBeginning: Boolean = false
 ) {
@@ -396,7 +399,8 @@ internal fun NavHostController.navigateToDetailStream(
             manualSelection = manualSelection,
             startFromBeginning = startFromBeginning,
             returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
-            contentLanguage = contentLanguage
+            contentLanguage = contentLanguage,
+            logoLanguage = logoLanguage
         )
     )
 }

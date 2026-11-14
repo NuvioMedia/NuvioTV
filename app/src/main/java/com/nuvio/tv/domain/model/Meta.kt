@@ -13,6 +13,8 @@ data class Meta(
     val posterShape: PosterShape,
     val background: String?,
     val logo: String?,
+    /** ISO 639-1 language code of the specific [logo] image, when known (TMDB-sourced logos only). */
+    val logoLanguage: String? = null,
     val description: String?,
     val releaseInfo: String?,
     val status: String? = null,
