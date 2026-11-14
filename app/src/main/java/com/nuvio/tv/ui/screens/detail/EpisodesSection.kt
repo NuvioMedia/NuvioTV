@@ -1106,7 +1106,10 @@ private fun EpisodeCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (showRewatchBadge) {
-                        RewatchMarker(size = cardMetrics.statusBadgeSize)
+                        RewatchMarker(
+                            size = cardMetrics.statusBadgeSize,
+                            iconSize = cardMetrics.statusRewatchIconSize
+                        )
                     }
                     WatchedMarker(
                         size = cardMetrics.statusBadgeSize,
@@ -1235,6 +1238,7 @@ private data class EpisodeCardMetrics(
     val progressBarHeight: Dp,
     val statusBadgeSize: Dp,
     val statusIconSize: Dp,
+    val statusRewatchIconSize: Dp,
     val statusBadgeInset: Dp
 )
 
@@ -1265,7 +1269,8 @@ private fun rememberEpisodeCardMetrics(posterCardCornerRadiusDp: Int = 12): Epis
                 imdbLogoHeight = 14.dp,
                 progressBarHeight = NuvioTheme.spacing.xs,
                 statusBadgeSize = NuvioTheme.spacing.xxl,
-                statusIconSize = 20.dp,
+                statusIconSize = 23.dp,
+                statusRewatchIconSize = 26.dp,
                 statusBadgeInset = NuvioTheme.spacing.lg
             )
 
@@ -1290,7 +1295,8 @@ private fun rememberEpisodeCardMetrics(posterCardCornerRadiusDp: Int = 12): Epis
                 imdbLogoHeight = 13.dp,
                 progressBarHeight = NuvioTheme.spacing.xs,
                 statusBadgeSize = 28.dp,
-                statusIconSize = 18.dp,
+                statusIconSize = 20.dp,
+                statusRewatchIconSize = 23.dp,
                 statusBadgeInset = 14.dp
             )
 
@@ -1315,7 +1321,8 @@ private fun rememberEpisodeCardMetrics(posterCardCornerRadiusDp: Int = 12): Epis
                 imdbLogoHeight = NuvioTheme.spacing.md,
                 progressBarHeight = NuvioTheme.spacing.xs,
                 statusBadgeSize = NuvioTheme.spacing.xl,
-                statusIconSize = NuvioTheme.spacing.lg,
+                statusIconSize = 17.dp,
+                statusRewatchIconSize = 19.dp,
                 statusBadgeInset = NuvioTheme.spacing.md
             )
 
@@ -1340,7 +1347,8 @@ private fun rememberEpisodeCardMetrics(posterCardCornerRadiusDp: Int = 12): Epis
                 imdbLogoHeight = 11.dp,
                 progressBarHeight = NuvioTheme.spacing.xs,
                 statusBadgeSize = 22.dp,
-                statusIconSize = 14.dp,
+                statusIconSize = 16.dp,
+                statusRewatchIconSize = 18.dp,
                 statusBadgeInset = 10.dp
             )
         }

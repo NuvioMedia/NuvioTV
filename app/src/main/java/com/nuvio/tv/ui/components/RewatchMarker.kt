@@ -34,6 +34,7 @@ import com.nuvio.tv.ui.theme.accentBrush
 fun RewatchMarker(
     modifier: Modifier = Modifier,
     size: Dp = 21.dp,
+    iconSize: Dp = size * 0.81f,
 ) {
     val palette = NuvioTheme.palette
     val description = stringResource(R.string.episodes_cd_rewatched)
@@ -50,7 +51,7 @@ fun RewatchMarker(
             imageVector = Icons.Default.Refresh,
             contentDescription = null,
             tint = palette.onSecondary,
-            modifier = Modifier.size(size * 0.88f)
+            modifier = Modifier.size(iconSize)
         )
     }
 }
