@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.screens.ambient
 
+import android.content.Context
 import android.os.SystemClock
+import android.view.inputmethod.InputMethodManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -13,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -47,8 +50,13 @@ fun AmbientModeHost(
         }
     }
 
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val localView = LocalView.current
     LaunchedEffect(isShowing) {
         if (isShowing) {
+            keyboardController?.hide()
+            (localView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+                ?.hideSoftInputFromWindow(localView.windowToken, 0)
             onShown()
             viewModel.onShown()
         }
