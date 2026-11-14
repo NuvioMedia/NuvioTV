@@ -834,7 +834,9 @@ private fun PlayerRuntimeController.openExternalStreamInBrowser(
     if (externalUrl.isNullOrBlank()) {
         _uiState.update {
             if (fromEpisodePanel) {
-                it.copy(episodeStreamsError = context.getString(com.nuvio.tv.R.string.player_stream_error_invalid_external_url))
+                it.finishEpisodeAutoPlaySearch(showStreamPicker = true).copy(
+                    episodeStreamsError = context.getString(com.nuvio.tv.R.string.player_stream_error_invalid_external_url)
+                )
             } else {
                 it.copy(sourceStreamsError = context.getString(com.nuvio.tv.R.string.player_stream_error_invalid_external_url))
             }
@@ -855,6 +857,7 @@ private fun PlayerRuntimeController.openExternalStreamInBrowser(
                     showEpisodesPanel = false,
                     showEpisodeStreams = false,
                     isLoadingEpisodeStreams = false,
+                    isEpisodeAutoPlaySearching = false,
                     episodeStreamsError = null
                 )
             } else {
@@ -868,7 +871,9 @@ private fun PlayerRuntimeController.openExternalStreamInBrowser(
     }.onFailure { error ->
         _uiState.update {
             if (fromEpisodePanel) {
-                it.copy(episodeStreamsError = error.message ?: context.getString(com.nuvio.tv.R.string.player_stream_error_open_external_link_failed))
+                it.finishEpisodeAutoPlaySearch(showStreamPicker = true).copy(
+                    episodeStreamsError = error.message ?: context.getString(com.nuvio.tv.R.string.player_stream_error_open_external_link_failed)
+                )
             } else {
                 it.copy(sourceStreamsError = error.message ?: context.getString(com.nuvio.tv.R.string.player_stream_error_open_external_link_failed))
             }
@@ -1091,12 +1096,17 @@ internal fun PlayerRuntimeController.dismissEpisodesPanel() {
     episodeStreamsScope?.cancel()
     episodeStreamsScope = null
     episodeStreamsJob = null
+    if (_uiState.value.isEpisodeAutoPlaySearching) {
+        debridResolveJob?.cancel()
+        debridResolveJob = null
+    }
     streamRepository.setLocalPluginSearchPaused(true)
     _uiState.update {
         it.copy(
             showEpisodesPanel = false,
             showEpisodeStreams = false,
-            isLoadingEpisodeStreams = false
+            isLoadingEpisodeStreams = false,
+            isEpisodeAutoPlaySearching = false
         )
     }
     scheduleHideControls()
@@ -1179,7 +1189,16 @@ private fun PlayerRuntimeController.switchToTorrentEpisodeStream(
     forcedTargetVideo: Video?,
     isAutoPlay: Boolean
 ) {
-    val infoHash = stream.getEffectiveInfoHash() ?: return
+    val infoHash = stream.getEffectiveInfoHash()
+    if (infoHash == null) {
+        _uiState.update {
+            it.finishEpisodeAutoPlaySearch(showStreamPicker = true).copy(
+                isLoadingEpisodeStreams = false,
+                episodeStreamsError = context.getString(com.nuvio.tv.R.string.player_stream_error_invalid_url)
+            )
+        }
+        return
+    }
     consecutiveAutoPlayCount = nextConsecutiveAutoPlayCount(
         currentCount = consecutiveAutoPlayCount,
         isAutoPlay = isAutoPlay
@@ -1281,6 +1300,11 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(
     episodeStreamsScope?.cancel()
     episodeStreamsScope = null
     episodeStreamsJob = null
+    if (_uiState.value.isEpisodeAutoPlaySearching) {
+        debridResolveJob?.cancel()
+        debridResolveJob = null
+    }
+    _uiState.update { it.finishEpisodeAutoPlaySearch() }
     val newScope = kotlinx.coroutines.CoroutineScope(scope.coroutineContext + kotlinx.coroutines.SupervisorJob())
     episodeStreamsScope = newScope
     episodeStreamsJob = newScope.launch {
@@ -1290,6 +1314,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(
             else -> playerSettingsDataStore.playerSettings.first()
         }
         val autoPlaySettings = playerSettings?.takeIf { it.streamAutoPlayMode != StreamAutoPlayMode.MANUAL }
+        _uiState.update { it.copy(isEpisodeAutoPlaySearching = autoPlaySettings != null) }
         val state = _uiState.value
         val hasCachedPayload = state.episodeAllStreams.isNotEmpty() || state.episodeStreamsError != null
         if (!forceRefresh && requestKey == episodeStreamsCacheRequestKey && hasCachedPayload) {
@@ -1312,6 +1337,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(
                 it.copy(
                     showEpisodeStreams = true,
                     isLoadingEpisodeStreams = false,
+                    isEpisodeAutoPlaySearching = false,
                     episodeStreamsForVideoId = video.id,
                     episodeStreamsSeason = video.season,
                     episodeStreamsEpisode = video.episode,
@@ -1426,7 +1452,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(
                 )
             } else {
                 _uiState.update {
-                    it.copy(
+                    it.finishEpisodeAutoPlaySearch(showStreamPicker = true).copy(
                         showEpisodeStreams = true,
                         isLoadingEpisodeStreams = false
                     )
@@ -1565,7 +1591,9 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
             if (prepared != null) {
                 switchToEpisodeStream(prepared, forcedTargetVideo, isAutoPlay)
             } else {
-                _uiState.update { it.copy(isLoadingEpisodeStreams = false) }
+                _uiState.update {
+                    it.finishEpisodeAutoPlaySearch(showStreamPicker = true).copy(isLoadingEpisodeStreams = false)
+                }
             }
         }
         return
@@ -1581,7 +1609,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
                 switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay)
             } else {
                 _uiState.update {
-                    it.copy(
+                    it.finishEpisodeAutoPlaySearch(showStreamPicker = true).copy(
                         isLoadingEpisodeStreams = false,
                         episodeStreamsError = context.getString(com.nuvio.tv.R.string.youtube_resolution_failed)
                     )
@@ -1605,7 +1633,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
                 switchToTorrentEpisodeStream(resolved, forcedTargetVideo, isAutoPlay)
             } else {
                 _uiState.update {
-                    it.copy(
+                    it.finishEpisodeAutoPlaySearch(showStreamPicker = true).copy(
                         isLoadingEpisodeStreams = false,
                         episodeStreamsError = context.getString(com.nuvio.tv.R.string.player_stream_error_invalid_url)
                     )
@@ -1630,7 +1658,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
                 } else {
                     debridResolveJob = null
                     _uiState.update {
-                        it.copy(
+                        it.finishEpisodeAutoPlaySearch(showStreamPicker = true).copy(
                             isLoadingEpisodeStreams = false,
                             episodeStreamsError = context.getString(com.nuvio.tv.R.string.player_stream_error_invalid_url)
                         )
@@ -1639,7 +1667,11 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
             }
             return
         }
-        _uiState.update { it.copy(episodeStreamsError = context.getString(com.nuvio.tv.R.string.player_stream_error_invalid_url)) }
+        _uiState.update {
+            it.finishEpisodeAutoPlaySearch(showStreamPicker = true).copy(
+                episodeStreamsError = context.getString(com.nuvio.tv.R.string.player_stream_error_invalid_url)
+            )
+        }
         return
     }
 
