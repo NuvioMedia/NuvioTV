@@ -13,6 +13,27 @@ internal object MpvStartupWatchdogPolicy {
     val stallTicksLimit: Int = (STALL_TIMEOUT_MS / POLL_INTERVAL_MS).toInt()
     val absoluteTicksLimit: Int = (ABSOLUTE_TIMEOUT_MS / POLL_INTERVAL_MS).toInt()
 
+    // An MPEG-TS from the Usenet engine fills no demuxer cache while lavf probes it: it reads
+    // until every stream, Blu-ray PGS subtitles included, has parameters, then reads the last
+    // timestamps at the end of the file for the duration. A 76 GB disc clip took 16 s with
+    // part of it already fetched.
+    const val SLOW_PROBE_STALL_TIMEOUT_MS = 60_000L
+    const val SLOW_PROBE_ABSOLUTE_TIMEOUT_MS = 90_000L
+
+    data class Limits(val stallTicks: Int, val absoluteTicks: Int)
+
+    val defaultLimits = Limits(stallTicksLimit, absoluteTicksLimit)
+    val slowProbeLimits = Limits(
+        (SLOW_PROBE_STALL_TIMEOUT_MS / POLL_INTERVAL_MS).toInt(),
+        (SLOW_PROBE_ABSOLUTE_TIMEOUT_MS / POLL_INTERVAL_MS).toInt()
+    )
+
+    fun limitsFor(url: String, usenetSession: Boolean): Limits {
+        val path = url.substringBefore('#').substringBefore('?').lowercase()
+        val transportStream = path.endsWith(".m2ts") || path.endsWith(".mts") || path.endsWith(".ts")
+        return if (usenetSession && transportStream) slowProbeLimits else defaultLimits
+    }
+
     enum class Action {
         Continue,
         SurfaceTimeout,
@@ -34,6 +55,7 @@ internal object MpvStartupWatchdogPolicy {
         val idleActive: Boolean,
         val cacheProgressing: Boolean,
         val counters: Counters,
+        val limits: Limits = defaultLimits,
     )
 
     data class Step(
@@ -63,7 +85,7 @@ internal object MpvStartupWatchdogPolicy {
             if (idle >= idleTicksLimit) {
                 return Step(Action.IdleError, Counters())
             }
-            if (absolute >= absoluteTicksLimit) {
+            if (absolute >= input.limits.absoluteTicks) {
                 return Step(Action.AbsoluteTimeout, Counters())
             }
             return Step(
@@ -76,11 +98,11 @@ internal object MpvStartupWatchdogPolicy {
             )
         }
 
-        if (absolute >= absoluteTicksLimit) {
+        if (absolute >= input.limits.absoluteTicks) {
             return Step(Action.AbsoluteTimeout, Counters())
         }
         val stall = if (input.cacheProgressing) 0 else input.counters.stallTicks + 1
-        if (stall >= stallTicksLimit) {
+        if (stall >= input.limits.stallTicks) {
             return Step(Action.StallTimeout, Counters())
         }
         return Step(

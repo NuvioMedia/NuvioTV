@@ -25,6 +25,10 @@ data class CachedStreamLink(
     val bingeGroup: String? = null,
     val contentLanguage: String? = null,
     val year: String? = null,
+    /** A built-in Usenet release: opened again from its NZB, with its title and post time. */
+    val nzbUrl: String? = null,
+    val releaseTitle: String? = null,
+    val publishedAt: Long? = null,
     val audioDelayMs: Int? = null,
     val audioDelayLanguage: String? = null,
     val addonName: String? = null,
@@ -39,6 +43,7 @@ class StreamLinkCacheDataStore @Inject constructor(
 ) {
     companion object {
         private const val FEATURE = "stream_link_cache"
+        private const val PREF_PREFIX = "stream_link_"
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -58,13 +63,21 @@ class StreamLinkCacheDataStore @Inject constructor(
         bingeGroup: String? = null,
         contentLanguage: String? = null,
         year: String? = null,
+        nzbUrl: String? = null,
+        releaseTitle: String? = null,
+        publishedAt: Long? = null,
         audioDelayMs: Int? = null,
         audioDelayLanguage: String? = null,
         addonName: String? = null,
         addonLogo: String? = null,
         streamDescription: String? = null
     ) {
+        // Loopback Usenet capabilities expire with the playback process; the release is kept instead.
+        if (com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)) return
         val payload = JSONObject().apply {
+            nzbUrl?.let { put("nzbUrl", it) }
+            releaseTitle?.let { put("releaseTitle", it) }
+            publishedAt?.let { put("publishedAt", it) }
             put("url", url)
             put("streamName", streamName)
             put("cachedAtMs", System.currentTimeMillis())
@@ -118,9 +131,10 @@ class StreamLinkCacheDataStore @Inject constructor(
             val url = json.optString("url", "")
             val streamName = json.optString("streamName", "")
             val infoHash = json.optString("infoHash", "").ifBlank { null }
-            // Accept entry if it has either a real URL (HTTP stream) or an
-            // infoHash (torrent stream — URL is re-resolved on each playback).
-            if (streamName.isBlank() || (url.isBlank() && infoHash == null)) return@runCatching null
+            val nzbUrl = json.optString("nzbUrl", "").ifBlank { null }
+            // Accept entry if it has either a real URL (HTTP stream), an infoHash (torrent
+            // stream) or an NZB (Usenet release); the last two are opened again on each playback.
+            if (streamName.isBlank() || (url.isBlank() && infoHash == null && nzbUrl == null)) return@runCatching null
 
             val sourcesJson = json.optJSONArray("sources")
             val sources = sourcesJson?.let { arr ->
@@ -143,6 +157,9 @@ class StreamLinkCacheDataStore @Inject constructor(
                 bingeGroup = json.optString("bingeGroup", "").ifBlank { null },
                 contentLanguage = json.optString("contentLanguage", "").ifBlank { null },
                 year = json.optString("year", "").ifBlank { null },
+                nzbUrl = nzbUrl,
+                releaseTitle = json.optString("releaseTitle", "").ifBlank { null },
+                publishedAt = json.optLong("publishedAt", 0L).takeIf { it > 0L },
                 audioDelayMs = if (json.has("audioDelayMs")) json.optInt("audioDelayMs") else null,
                 audioDelayLanguage = json.optString("audioDelayLanguage", "").ifBlank { null },
                 addonName = json.optString("addonName", "").ifBlank { null },
@@ -160,10 +177,32 @@ class StreamLinkCacheDataStore @Inject constructor(
         return parsed
     }
 
+    /**
+     * Rewrites the release links kept by earlier versions with [withoutKeys], which takes the
+     * indexer API keys out of a link. Entries it leaves unchanged are not written again.
+     */
+    suspend fun rewriteNzbUrls(withoutKeys: (String) -> String) {
+        val changed = store().data.first().asMap().mapNotNull { (key, value) ->
+            val raw = (value as? String)?.takeIf { key.name.startsWith(PREF_PREFIX) && it.contains("\"nzbUrl\"") }
+                ?: return@mapNotNull null
+            runCatching {
+                val json = JSONObject(raw)
+                val kept = json.optString("nzbUrl", "").takeIf { it.isNotBlank() } ?: return@runCatching null
+                val rewritten = withoutKeys(kept)
+                if (rewritten == kept) null else kotlin.Pair(stringPreferencesKey(key.name), json.put("nzbUrl", rewritten).toString())
+            }.getOrNull()
+        }
+        if (changed.isEmpty()) return
+        store().edit { prefs ->
+            // Only entries still as they were read: one saved meanwhile is already without its key.
+            changed.forEach { (key, value) -> if (prefs[key] != null) prefs[key] = value }
+        }
+    }
+
     private fun cachePrefKey(contentKey: String): Preferences.Key<String> {
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(contentKey.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
-        return stringPreferencesKey("stream_link_$digest")
+        return stringPreferencesKey("$PREF_PREFIX$digest")
     }
 }

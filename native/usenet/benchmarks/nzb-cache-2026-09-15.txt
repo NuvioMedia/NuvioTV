@@ -1,0 +1,23 @@
+goos: windows
+goarch: amd64
+pkg: github.com/NuvioMedia/NuvioTV/native/usenet/internal/engine
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkNZBCachedStartup
+BenchmarkNZBCachedStartup/season
+BenchmarkNZBCachedStartup/season/xml
+BenchmarkNZBCachedStartup/season/xml-16     	       5	 964005280 ns/op	178302785 B/op	 2916174 allocs/op
+BenchmarkNZBCachedStartup/season/gzip_xml
+BenchmarkNZBCachedStartup/season/gzip_xml-16         	       5	 959867920 ns/op	178835760 B/op	 2917696 allocs/op
+BenchmarkNZBCachedStartup/season/indexed_selected_file
+BenchmarkNZBCachedStartup/season/indexed_selected_file-16         	       5	   1988740 ns/op	  595264 B/op	    2051 allocs/op
+    nzb_index_test.go:527: XML=38809501 bytes, gzip XML=894267 bytes, indexed=543969 bytes
+BenchmarkNZBCachedStartup/single
+BenchmarkNZBCachedStartup/single/xml
+BenchmarkNZBCachedStartup/single/xml-16                           	       5	 886645620 ns/op	181889364 B/op	 2880409 allocs/op
+BenchmarkNZBCachedStartup/single/gzip_xml
+BenchmarkNZBCachedStartup/single/gzip_xml-16                      	       5	 898172560 ns/op	181936947 B/op	 2880721 allocs/op
+BenchmarkNZBCachedStartup/single/indexed_selected_file
+BenchmarkNZBCachedStartup/single/indexed_selected_file-16         	       5	  76214240 ns/op	42373769 B/op	  162060 allocs/op
+    nzb_index_test.go:527: XML=39297867 bytes, gzip XML=883120 bytes, indexed=516544 bytes
+PASS
+ok  	github.com/NuvioMedia/NuvioTV/native/usenet/internal/engine	26.444s

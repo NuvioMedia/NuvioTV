@@ -1,0 +1,5 @@
+network,trial,connections,pipeline,ahead,cache_mib,first_ms,cold_seek_ms,mib_per_s,slabs_mib,allocs_per_mib,gcs,pipeline_peak,connections_opened
+100mbit_40ms,1,16,4,16,64,65.36,361.57,11.20,48.00,87.2,0,2,33
+100mbit_40ms,2,16,4,16,64,70.50,367.99,11.09,48.00,87.2,1,2,33
+400mbit_80ms,1,16,4,16,64,98.68,298.37,31.06,48.00,86.1,0,2,33
+400mbit_80ms,2,16,4,16,64,106.64,314.84,31.15,48.00,86.1,0,2,33

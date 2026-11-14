@@ -15,9 +15,11 @@ import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.enabledAddons
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 internal fun PlayerRuntimeController.reportServerPlayback() {
@@ -78,6 +80,12 @@ internal fun PlayerRuntimeController.serverImdbId(contentId: String): String? =
 
 internal suspend fun PlayerRuntimeController.streamAddonsFor(videoId: String): List<Addon> =
     if (serverStreams.isNativeRequest(videoId)) emptyList() else addonRepository.getInstalledAddons().first().enabledAddons()
+
+/** [addons]' names in stream-source order, with built-in Usenet where the user placed it. */
+internal suspend fun PlayerRuntimeController.streamSourceOrder(addons: List<Addon>): List<String> {
+    val above = withContext(Dispatchers.IO) { runCatching { usenetSourceSettings.read(profileId).addonsAbove }.getOrNull() }
+    return com.nuvio.tv.core.usenet.BuiltInUsenetOrder.sourceOrder(addons, above)
+}
 
 internal fun PlayerRuntimeController.serverSourceNames(type: String, videoId: String): List<String> =
     serverStreams.sources(type, videoId, season = null, episode = null).map { it.name }

@@ -295,6 +295,7 @@ internal fun PlayerRuntimeController.handleMpvPlaybackError(
         }
         val retryCanHelp = httpCode == null || !isPermanentHttpStatus(httpCode)
         if (retryCanHelp && attemptMpvAutoRetry(detailedError = detailedError, savedPosition = savedPosition)) return
+        if (tryNextStream(detailedError)) return
 
         finishLoadingDiagnostics("mpv_error")
         cancelNextEpisodeAutoPlayOnFatalError()
@@ -379,6 +380,10 @@ internal fun PlayerRuntimeController.maybeRunMpvStartupWatchdog(view: NuvioMpvSu
                 idleTicks = mpvIdleActiveTicks,
                 stallTicks = mpvStartupStallTicks,
                 absoluteTicks = mpvStartupAbsoluteTicks
+            ),
+            limits = MpvStartupWatchdogPolicy.limitsFor(
+                currentStreamUrl,
+                com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(currentStreamUrl)
             )
         )
     )

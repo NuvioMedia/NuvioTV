@@ -14,6 +14,7 @@ internal fun PlayerRuntimeController.releasePlayer(
     flushPlaybackState: Boolean,
     keepTorrentStream: Boolean = false
 ) {
+    if (flushPlaybackState) cancelStreamFallback()
     logScrobbleDiagnostic("release_player", "flushPlaybackState=$flushPlaybackState")
 
     // Preserve current subtitle selection across any rebuild. When the user explicitly

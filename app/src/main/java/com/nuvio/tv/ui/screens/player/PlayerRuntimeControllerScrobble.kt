@@ -105,7 +105,10 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
         // seek to be silently skipped — the player would start from 0:00
         // or hang in buffering after a late seek.
         val partyPositionMs = partyResumePositionMs()
-        if (partyPositionMs != null) {
+        if (streamFallbackResumePosition != null) {
+            pendingResumeProgress = null
+            _uiState.update { it.copy(pendingSeekPosition = streamFallbackResumePosition) }
+        } else if (partyPositionMs != null) {
             pendingResumeProgress = null
             _uiState.update { it.copy(pendingSeekPosition = partyPositionMs) }
         } else if (loadSavedProgress) {
@@ -119,7 +122,7 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
             phase = "initializing_player",
             message = context.getString(com.nuvio.tv.R.string.player_loading_building)
         )
-        initializePlayer(playbackUrl, playbackHeaders)
+        initializePlayer(playbackUrl, playbackHeaders, startPaused = streamFallbackResumePosition != null && streamFallbackStartPaused)
     }
 }
 
