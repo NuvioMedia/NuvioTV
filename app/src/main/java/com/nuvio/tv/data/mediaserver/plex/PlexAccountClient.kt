@@ -134,7 +134,7 @@ internal class PlexAccountClient(
             candidates.map { address ->
                 async {
                     val answer = try {
-                        withTimeoutOrNull(REACH_TIMEOUT_MS) { probes.withPermit { machineId(address.uri) } }
+                        probes.withPermit { withTimeoutOrNull(REACH_TIMEOUT_MS) { machineId(address.uri) } }
                     } catch (_: ServerException) {
                         null
                     }

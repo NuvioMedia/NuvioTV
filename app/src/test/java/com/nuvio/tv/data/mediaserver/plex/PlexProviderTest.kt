@@ -248,6 +248,7 @@ class PlexProviderTest {
             session,
             request.copy(capabilities = ServerPlayerCapabilities(allowDirectPlay = false), subtitleStreamIndex = 102)
         )
+        plex.report(session, playback, ServerPlaybackEvent(ServerPlaybackEventType.START, positionMs = 60_000L, isPaused = false))
         plex.report(session, playback, ServerPlaybackEvent(ServerPlaybackEventType.STOP, positionMs = 120_000L, isPaused = true))
 
         assertEquals(ServerPlayMethod.TRANSCODE, playback.playMethod)
@@ -255,10 +256,30 @@ class PlexProviderTest {
         assertEquals(listOf("Video is transcoding"), playback.transcodeReasons)
         assertEquals(listOf(101 to false, 102 to true), playback.burnInSubtitles.map { it.index to it.selected })
         assertEquals("102", http.requests("/library/parts/5").single().url.queryParameter("subtitleStreamID"))
-        val timeline = http.requests("/:/timeline").single().url
+        val timeline = http.requests("/:/timeline").last().url
+        assertEquals(listOf("playing", "stopped"), http.requests("/:/timeline").map { it.url.queryParameter("state") })
         assertEquals("stopped", timeline.queryParameter("state"))
         assertEquals("120000", timeline.queryParameter("time"))
         assertEquals(playback.playSessionId, http.requests("/video/:/transcode/universal/stop").single().url.queryParameter("session"))
+    }
+
+    @Test
+    fun aPlayThatNeverStartedLeavesTheResumePointAlone() = runTest {
+        val (plex, http) = provider { request ->
+            when (request.url.encodedPath) {
+                "/video/:/transcode/universal/decision" ->
+                    ok("""{"MediaContainer":{"generalDecisionCode":1001,"transcodeDecisionText":"Video is transcoding"}}""")
+                "/library/parts/5" -> ok("")
+                "/:/timeline", "/video/:/transcode/universal/stop" -> ok("")
+                else -> ok(movieItem)
+            }
+        }
+        val playback = plex.preparePlayback(session, request.copy(capabilities = ServerPlayerCapabilities(allowDirectPlay = false)))
+
+        plex.report(session, playback, ServerPlaybackEvent(ServerPlaybackEventType.STOP, positionMs = 0L, isPaused = true))
+
+        assertTrue(http.requests("/:/timeline").isEmpty())
+        assertEquals(1, http.requests("/video/:/transcode/universal/stop").size)
     }
 
     @Test

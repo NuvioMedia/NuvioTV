@@ -360,8 +360,11 @@ class PlexProvider internal constructor(
             else -> "playing"
         }
         val sessionHeader = mapOf(SESSION_HEADER to playSession)
+        // A play that never got going has no position worth keeping; a stop at 0 would clear the resume point.
+        val sendsTimeline = event.type != ServerPlaybackEventType.STOP || play.playing
+        if (event.type != ServerPlaybackEventType.STOP) play.playing = true
         try {
-            client.execute(
+            if (sendsTimeline) client.execute(
                 "GET",
                 session.connection.address,
                 TIMELINE_PATH,
@@ -473,7 +476,10 @@ class PlexProvider internal constructor(
         val durationMs: Long,
         val transcoded: Boolean,
         val preparedAtMs: Long
-    )
+    ) {
+        @Volatile
+        var playing = false
+    }
 
     internal companion object {
         const val ID = "plex"

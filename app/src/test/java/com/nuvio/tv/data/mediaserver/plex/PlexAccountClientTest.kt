@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.mediaserver.plex
 
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.runTest
 import okhttp3.Request
 import org.junit.Assert.assertEquals
@@ -137,5 +138,22 @@ class PlexAccountClientTest {
         plex.reach(server) { address -> tried += address; null }
 
         assertTrue("http://203.0.113.5:32400" !in tried)
+    }
+
+    @Test
+    fun deadAddressesDoNotUseUpTheTimeOfTheOthers() = runTest {
+        val (plex, _) = account { error("No request expected") }
+        val crowded = PlexServer(
+            machineId = "m1",
+            name = "Home",
+            owned = true,
+            accessToken = "token",
+            addresses = List(8) { PlexAddress("https://10-0-0-$it.abc.plex.direct:32400", local = true, relay = false) } +
+                PlexAddress("https://203-0-113-5.abc.plex.direct:32400", local = false, relay = false)
+        )
+
+        val reached = plex.reach(crowded) { address -> if ("10-0-0" in address) awaitCancellation() else "m1" }
+
+        assertEquals("https://203-0-113-5.abc.plex.direct:32400", reached.address)
     }
 }
