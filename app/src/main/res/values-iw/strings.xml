@@ -780,6 +780,18 @@
     <string name="playback_engine_mvplayer">Libmpv (בטא)</string>
     <string name="playback_auto_switch_internal_player_on_error">החלפת מנוע אוטומטית בשגיאת הפעלה</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">אם הפעלת המקור נכשלת, החלפה אוטומטית בין ExoPlayer ל-Libmpv</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">יש לכבות את המעבר למקור התואם הבא כדי להשתמש באפשרות זו.</string>
+    <string name="autoplay_fallback_next_source">מעבר למקור התואם הבא בעת כשל</string>
+    <string name="autoplay_fallback_next_source_sub">אם המקור שנבחר אוטומטית נכשל או אינו מתחיל בזמן, ינוסו בשקט המקורות התואמים הבאים.</string>
+    <string name="autoplay_fallback_max_sources">מספר מקורות לניסיון בעת כשל</string>
+    <string name="autoplay_fallback_max_sources_sub">כמה מקורות תואמים נוספים לנסות לפני הצגת השגיאה.</string>
+    <string name="autoplay_fallback_startup_timeout">זמן להתחלת מקור</string>
+    <string name="autoplay_fallback_startup_timeout_sub">כמה זמן להמתין להתחלת מקור לפני מעבר לבא.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$d שנ׳</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">יש לכבות את המעבר האוטומטי בין מנועים בעת שגיאת הפעלה כדי להשתמש באפשרות זו.</string>
+    <string name="player_error_source_startup_timeout">המקור לא התחיל תוך %1$d שניות.</string>
+    <string name="playback_release_decoder_on_background">שחרור המפענח ברקע</string>
+    <string name="playback_release_decoder_on_background_sub">שחרור מפענח הווידאו כש-Nuvio עוברת לרקע. כדאי להפעיל אם ההפעלה נכשלת בשגיאת מפענח לאחר חזרה לאפליקציה. הנגן נטען מחדש בחזרה, גם לאחר שומר המסך</string>
     <string name="playback_external_forward_subtitles">העברת כתוביות לנגן חיצוני</string>
     <string name="playback_external_forward_subtitles_sub">משיכת כתוביות בשפה המועדפת מתוספים, והעברתן לנגן החיצוני.</string>
     <string name="playback_external_send_skip_segments">שליחת חותמות זמן של פתיח וסיום</string>
@@ -814,6 +826,8 @@
     <string name="playback_true_black_letterbox_sub">השארת הפסים סביב התמונה ללא צביעה, כדי ש-HDR יישאר שחור אמיתי. כדאי להשאיר זאת כבוי אם מופיע קו בהיר על הפסים.</string>
     <string name="playback_exo_chapters_title">הצגת מקטעים</string>
     <string name="playback_exo_chapters_sub">קריאת המקטעים של קובצי MKV כדי לסמן אותם בסרגל ההתקדמות ולדלג ביניהם.</string>
+    <string name="playback_chapter_title_title">הצגת שם המקטע</string>
+    <string name="playback_chapter_title_sub">הצגת שם המקטע הנוכחי מעל סרגל ההתקדמות.</string>
     <string name="audio_trailer_section">טריילר</string>
     <string name="audio_autoplay_trailers">הפעלה אוטומטית של טריילרים</string>
     <string name="audio_autoplay_trailers_sub">הפעלת טריילרים אוטומטית במסך הפרטים לאחר תקופת חוסר פעילות</string>
@@ -932,6 +946,28 @@
     <string name="sub_hdr_brightness">בהירות כתוביות ב-HDR</string>
     <string name="sub_hdr_dim_player_controls">עמעום פקדי הנגן ב-HDR</string>
     <string name="sub_hdr_dim_player_controls_sub">החלת בהירות ה-HDR על פקדי הנגן והתפריטים המוצגים מעל וידאו HDR ו-Dolby Vision</string>
+    <string name="sub_appearance">מראה הכתוביות</string>
+    <string name="sub_appearance_desc">גופן, צבעים, רקע וצל</string>
+    <string name="sub_appearance_hint">חל על כתוביות טקסט. כתוביות ASS מעוצבות וכתוביות תמונה שומרות על מראן המקורי.</string>
+    <string name="sub_preview">תצוגה מקדימה</string>
+    <string name="sub_preview_text">כל סיפור מתחיל בקצת סקרנות.</string>
+    <string name="sub_font">גופן</string>
+    <string name="sub_font_default">ברירת מחדל</string>
+    <string name="sub_font_serif">סריף</string>
+    <string name="sub_font_mono">מונוספייס</string>
+    <string name="sub_font_import">ייבוא מהטלפון</string>
+    <string name="sub_font_import_desc">הוספת גופן ttf או otf בגודל של עד 10 MB. גופנים שיובאו נשארים בטלוויזיה הזו.</string>
+    <string name="sub_font_import_qr">יש לסרוק בטלפון כדי להוסיף גופן ttf או otf</string>
+    <string name="sub_font_missing">הגופן אינו זמין במכשיר זה. משתמשים בגופן ברירת המחדל.</string>
+    <string name="sub_font_remove">הסרת %1$s</string>
+    <string name="sub_background">רקע</string>
+    <string name="sub_bg_opacity">שקיפות הרקע</string>
+    <string name="sub_bg_roundness">עיגול פינות</string>
+    <string name="sub_shadow">צל</string>
+    <string name="sub_shadow_desc">הפרדת הטקסט מסצנות בהירות</string>
+    <string name="sub_shadow_opacity">שקיפות הצל</string>
+    <string name="sub_shadow_size">גודל הצל</string>
+    <string name="sub_reset_appearance">איפוס מראה</string>
     <string name="sub_advanced_section">הצגת כתוביות מתקדמת</string>
     <string name="sub_libass">שימוש ב-libass לכתוביות ASS/SSA</string>
     <string name="sub_libass_sub">ניסיוני: תמיכה בכתוביות עם עיצוב מיוחד, כמו אנימציות ומיקום משתנה על המסך</string>
@@ -1110,6 +1146,14 @@
     <string name="layout_cw_sort_streaming_desc">פריטים שיצאו תחילה, עתידיים בסוף</string>
     <string name="layout_cw_sort_split_upcoming">שורת \"עתידי\" נפרדת</string>
     <string name="layout_cw_sort_split_upcoming_desc">העברת פרקים שטרם שודרו לשורת \"עתידי\" נפרדת</string>
+    <string name="layout_cw_click_action">בעת בחירת פריט</string>
+    <string name="layout_cw_click_action_sub">מה ייפתח בעת בחירת פריט בשורת המשך הצפייה</string>
+    <string name="layout_cw_click_stream">פתיחת מקור צפייה</string>
+    <string name="layout_cw_click_stream_desc">בחירת מקור צפייה או המשך הפעלה</string>
+    <string name="layout_cw_click_details">פתיחת פרטים</string>
+    <string name="layout_cw_click_details_desc">פתיחת עמוד הפרטים של הכותרת</string>
+    <string name="layout_cw_click_details_upcoming">פרטים עבור פרקים עתידיים בלבד</string>
+    <string name="layout_cw_click_details_upcoming_desc">פתיחת פרטי הפרקים שטרם שודרו, ומקור הצפייה עבור שאר הפרקים</string>
     <string name="upcoming_section_title">עתידי</string>
     <string name="layout_trailer_button">הצגת כפתור טריילר</string>
     <string name="layout_trailer_button_sub">הצגת כפתור טריילר בעמוד הפרטים (רק כשטריילר זמין).</string>
@@ -1212,6 +1256,8 @@
     <!-- Custom Poster Web Page -->
     <string name="layout_always_show_landscape_clearlogo">תמיד רקע עם לוגו עבור פוסטרים לרוחב</string>
     <string name="layout_always_show_landscape_clearlogo_sub">התעלמות מפוסטר לרוחב מהתוסף, ושימוש ברקע עם שכבת לוגו שקוף במקום.</string>
+    <string name="layout_hero_description_auto_scroll">גלילה אוטומטית של תיאורים</string>
+    <string name="layout_hero_description_auto_scroll_sub">גלילה איטית של תיאורים ארוכים במסך הבית במקום חיתוכם.</string>
     <string name="web_custom_poster_title">מקור פוסטרים מותאם אישית</string>
     <string name="web_custom_poster_subtitle">יש להדביק למטה תבנית כתובת URL לפוסטר וללחוץ על שמירה.</string>
     <string name="web_custom_poster_label">תבנית URL</string>
@@ -1228,6 +1274,13 @@
     <string name="web_custom_poster_none">לא הוגדרה תבנית</string>
     <string name="web_custom_poster_loading">טוען…</string>
     <string name="web_custom_poster_placeholders_info">מציינים: {id} מעביר את כל מזהי התוכן. {imdb_id}, {tmdb_id}, {tvdb_id}, {kitsu_id} מיועדים לסוג מזהה בודד - אם הוא לא זמין, הפוסטר המקורי נשמר. {imdb_id|tmdb_id|kitsu_id} מציין סוגי מזהים נתמכים - נעשה שימוש בסוג המתאים, או שהפוסטר המקורי נשמר. הוספת ? הופכת מציין לאופציונלי, כך שיוחלף בערך ריק במקום לדלג: {imdb_id?}. מציינים נוספים: {id_type}, {typed_id}, {type}, {shape}.</string>
+    <string name="web_subtitle_font_title">גופני כתוביות</string>
+    <string name="web_subtitle_font_subtitle">.יש לבחור קובץ TTF או OTF לשימוש ככתוביות בטלוויזיה</string>
+    <string name="web_subtitle_font_choose">בחירת קובץ גופן</string>
+    <string name="web_subtitle_font_uploading">…מעלה</string>
+    <string name="web_subtitle_font_added">נוסף לטלוויזיה שלך</string>
+    <string name="web_subtitle_font_error">.לא ניתן היה לייבא את הגופן הזה. יש לבחור קובץ TTF או OTF תקין בגודל של עד 10 MB</string>
+    <string name="web_subtitle_font_connection_error">שגיאת חיבור</string>
     
 
     <string name="mdblist_name">MDBList</string>
@@ -1969,6 +2022,12 @@
     <string name="audio_center_mix_unavailable">מיקס מרכזי זמין רק כאשר downmix של FFmpeg פעיל.</string>
     <string name="audio_maintain_original_audio_on_downmix_title">שמירה על שמע מקורי ב-downmix</string>
     <string name="audio_maintain_original_audio_on_downmix_subtitle">כשמושבת, נורמליזציית downmix עלולה להפחית את עוצמת הקול הכוללת.</string>
+    <string name="audio_downmix_lfe_level">רמת LFE ב-Downmix</string>
+    <string name="audio_downmix_lfe_level_sub">מערבב את ערוץ הסאבוופר (LFE) אל שאר הרמקולים במקום להשמיט אותו. רק לפריסות ללא LFE, כמו 2.0.</string>
+    <string name="audio_downmix_lfe_level_desc">בשימוש כשלפריסת ה-Downmix אין ערוץ LFE. חל מההפעלה הבאה.</string>
+    <string name="audio_downmix_lfe_level_off">כבוי</string>
+    <string name="audio_downmix_lfe_level_half">50%</string>
+    <string name="audio_downmix_lfe_level_full">100%</string>
 
     <string name="subtitle_dialog_title">כתוביות</string>
     <string name="subtitle_no_builtin">אין כתוביות מובנות זמינות</string>
@@ -3425,6 +3484,7 @@
     <string name="autosync_tolerance_value">%1$d ms</string>
     <string name="autosync_thorough_title">חיפוש יסודי בסנכרון אוטומטי</string>
     <string name="autosync_thorough_description">השוואה מתמשכת מול כתוביות ורצועות מוטמעות נוספות לקבלת התאמה קרובה יותר לפני הסנכרון. כשהאפשרות כבויה, נעשה שימוש בהתאמה החזקה הראשונה שנמצאה, מוקדם יותר. מוחלות רק התאמות ודאיות.</string>
+    <string name="autosync_toast_no_fit">הסנכרון נכשל: הכתוביות האלה אינן תואמות לגרסה הזו של הסרטון.</string>
     <string name="autosync_label_synced">מסונכרן אוטומטית</string>
     <string name="stream_resume_from_time">המשך מ-%1$s</string>
     <string name="stream_resume_from_percent">המשך מ-%1$d%%</string>
