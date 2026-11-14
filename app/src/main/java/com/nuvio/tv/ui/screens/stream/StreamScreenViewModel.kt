@@ -1414,14 +1414,18 @@ class StreamScreenViewModel @Inject constructor(
                     updateUiStateIfChanged {
                         it.copy(
                             showDirectAutoPlayOverlay = true,
-                            directAutoPlayMessage = context.getString(R.string.player_trying_next_stream, session.attempts),
+                            directAutoPlayMessage = com.nuvio.tv.core.player.nextStreamMessage(
+                                context, session.attempts, session.lastFailureReason
+                            ),
                             playbackErrorMessage = null
                         )
                     }
                 }
                 val result = try {
                     session.prepareCandidate(selectedCandidate) {
-                        resolveSingleStreamForPlayback(selectedCandidate, session.attempts, saveLastLink) { pendingResolutionError = it }
+                        resolveSingleStreamForPlayback(
+                            selectedCandidate, session.attempts, saveLastLink, session.lastFailureReason
+                        ) { pendingResolutionError = it }
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
@@ -1451,7 +1455,9 @@ class StreamScreenViewModel @Inject constructor(
         return null
     }
 
-    private suspend fun resolveSingleStreamForPlayback(stream: Stream, fallbackAttempt: Int, saveLastLink: Boolean, onFailure: (String) -> Unit): StreamPlaybackInfo? {
+    private suspend fun resolveSingleStreamForPlayback(
+        stream: Stream, fallbackAttempt: Int, saveLastLink: Boolean, fallbackReason: String? = null, onFailure: (String) -> Unit
+    ): StreamPlaybackInfo? {
         usenetSelectionStarted = true
         if (!stream.isUsenet()) com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
         if (stream.isUsenet()) {
@@ -1460,7 +1466,7 @@ class StreamScreenViewModel @Inject constructor(
                 it.copy(
                     showDirectAutoPlayOverlay = true,
                     directAutoPlayMessage = when {
-                        fallbackAttempt > 0 -> context.getString(R.string.player_trying_next_stream, fallbackAttempt)
+                        fallbackAttempt > 0 -> com.nuvio.tv.core.player.nextStreamMessage(context, fallbackAttempt, fallbackReason)
                         showLoadingStatus -> context.getString(R.string.usenet_opening)
                         else -> null
                     },

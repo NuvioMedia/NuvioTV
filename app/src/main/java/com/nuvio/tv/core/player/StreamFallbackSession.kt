@@ -28,6 +28,9 @@ internal class StreamFallbackSession(
     private val failedProviders = mutableSetOf<List<String>>()
     var lastFailure: String? = null
         private set
+    /** Why the last source failed, in a few words, for the next attempt's message. */
+    var lastFailureReason: String? = null
+        private set
     val failureMessage: String?
         get() = if (preparationSpentMs >= 120_000L) {
             messages.budgetExhausted + (lastFailure?.let { ": $it" } ?: "")
@@ -77,8 +80,14 @@ internal class StreamFallbackSession(
     fun canFallbackFrom(url: String): Boolean =
         ownsPlayback(url) && canAdvance
 
+    /** The playing source failed after it opened: the next attempt says so, not an older reason. */
+    fun playbackFailed() {
+        lastFailureReason = messages.playbackFailed
+    }
+
     private fun recordFailure(stream: Stream, error: Exception) {
         lastFailure = error.message ?: messages.failed
+        lastFailureReason = messages.reason(error)
         when ((error as? UsenetPreparationException)?.scope) {
             UsenetPreparationException.Scope.ENGINE -> engineFailed = true
             UsenetPreparationException.Scope.PROVIDER -> failedProviders += stream.servers.orEmpty().sorted()
@@ -143,14 +152,50 @@ internal class StreamFallbackSession(
 internal data class StreamFallbackMessages(
     val budgetExhausted: String = "Usenet preparation time budget exhausted",
     val timedOut: String = "Usenet source preparation timed out",
-    val failed: String = "Usenet preparation failed"
-)
+    val failed: String = "Usenet preparation failed",
+    val playbackFailed: String = "Playback failed",
+    val tookTooLong: String = "Took too long to open",
+    /** A few words per engine failure kind (X-Usenet-Failure). */
+    val reasons: Map<String, String> = mapOf(
+        "missing-article" to "Articles missing on your providers",
+        "hole-limit" to "Too many missing articles",
+        "invalid-article" to "Damaged articles",
+        "provider-authentication" to "Provider login failed",
+        "provider-quota" to "Provider quota reached",
+        "provider" to "Provider unavailable",
+        "blank-content" to "Empty release"
+    )
+) {
+    /** The engine's kind when it sent a known one, else the first line of its message. */
+    fun reason(error: Exception): String? {
+        reasons[(error as? UsenetPreparationException)?.failure]?.let { return it }
+        val message = error.message?.lineSequence()?.firstOrNull()?.trim()
+        if (message == timedOut) return tookTooLong
+        return message?.takeIf { it.isNotEmpty() }?.let { redacted(it).take(80) }
+    }
+}
 
 internal fun streamFallbackMessages(context: android.content.Context) = StreamFallbackMessages(
     budgetExhausted = context.getString(com.nuvio.tv.R.string.usenet_preparation_budget_exhausted),
     timedOut = context.getString(com.nuvio.tv.R.string.usenet_preparation_timed_out),
-    failed = context.getString(com.nuvio.tv.R.string.usenet_preparation_failed)
+    failed = context.getString(com.nuvio.tv.R.string.usenet_preparation_failed),
+    playbackFailed = context.getString(com.nuvio.tv.R.string.usenet_reason_playback_failed),
+    tookTooLong = context.getString(com.nuvio.tv.R.string.usenet_reason_timed_out),
+    reasons = mapOf(
+        "missing-article" to context.getString(com.nuvio.tv.R.string.usenet_reason_missing_article),
+        "hole-limit" to context.getString(com.nuvio.tv.R.string.usenet_reason_hole_limit),
+        "invalid-article" to context.getString(com.nuvio.tv.R.string.usenet_reason_invalid_article),
+        "provider-authentication" to context.getString(com.nuvio.tv.R.string.usenet_reason_provider_authentication),
+        "provider-quota" to context.getString(com.nuvio.tv.R.string.usenet_reason_provider_quota),
+        "provider" to context.getString(com.nuvio.tv.R.string.usenet_reason_provider),
+        "blank-content" to context.getString(com.nuvio.tv.R.string.usenet_reason_blank_content)
+    )
 )
+
+/** "Trying next stream (attempt n)…", after the reason the last source failed when there is one. */
+internal fun nextStreamMessage(context: android.content.Context, attempt: Int, reason: String?): String =
+    if (reason.isNullOrBlank()) context.getString(com.nuvio.tv.R.string.player_trying_next_stream, attempt)
+    else context.getString(com.nuvio.tv.R.string.usenet_trying_next_stream_reason, reason.trimEnd('.', ' '), attempt)
 
 /** One line per Usenet source preparation, so slow or failing indexers and releases show in logcat. */
 private fun logPreparation(message: String) {

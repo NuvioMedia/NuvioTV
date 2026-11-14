@@ -58,7 +58,11 @@ internal suspend fun PlayerRuntimeController.resolveSelectedStreamWithFallback(
         val session = streamFallbackSession
         if (session == null || !session.canAdvance) throw error
         session.resolveNext { candidate, attempt ->
-            setLoadingStatus("stream_fallback", context.getString(R.string.player_trying_next_stream, attempt), showOverlay = true)
+            setLoadingStatus(
+                "stream_fallback",
+                com.nuvio.tv.core.player.nextStreamMessage(context, attempt, session.lastFailureReason),
+                showOverlay = true
+            )
             resolveFallbackCandidate(candidate, season, episode)
         }
     }
@@ -91,6 +95,7 @@ internal fun PlayerRuntimeController.tryNextStream(detailedError: String): Boole
         ?: streamFallbackResumePosition ?: 0L
     val paused = userPausedManually
     streamFallbackError = detailedError
+    session.playbackFailed()
     cancelNextEpisodeAutoPlayOnFatalError()
     streamFallbackJob = scope.launch {
         // Avoid re-entering a player listener while it is still reporting the failure.
@@ -100,7 +105,9 @@ internal fun PlayerRuntimeController.tryNextStream(detailedError: String): Boole
             setLoadingStatus("stream_fallback", context.getString(R.string.player_finding_next_stream), showOverlay = true)
             val resolved = session.resolveNext { candidate, attempt ->
                 setLoadingStatus(
-                    "stream_fallback", context.getString(R.string.player_trying_next_stream, attempt), showOverlay = true
+                    "stream_fallback",
+                    com.nuvio.tv.core.player.nextStreamMessage(context, attempt, session.lastFailureReason),
+                    showOverlay = true
                 )
                 resolveFallbackCandidate(candidate, currentSeason, currentEpisode)
             }
