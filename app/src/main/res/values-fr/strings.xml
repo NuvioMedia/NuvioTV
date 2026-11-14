@@ -417,6 +417,8 @@
     <string name="about_update_auto_install_subtitle">Télécharger les nouvelles versions en arrière-plan et les installer lorsque l’appareil est inactif</string>
     <string name="about_update_auto_install_notice_title">Notifier après les mises à jour automatiques</string>
     <string name="about_update_auto_install_notice_subtitle">Afficher une bannière au prochain lancement, une fois que l’application s’est mise à jour d’elle-même</string>
+    <string name="about_update_optimize_install_title">Optimiser les mises à jour lors de l’installation</string>
+    <string name="about_update_optimize_install_subtitle">Premier lancement plus rapide après une mise à jour, mais l’application se ferme environ une minute le temps de l’installation. Désactivez pour utiliser l’écran d’installation d’Android à la place</string>
     <string name="about_update_channel_title">Canal de mise à jour</string>
     <string name="about_update_channel_subtitle">Choisissez le type de mises à jour à recevoir</string>
     <string name="about_check_updates">Rechercher des mises à jour</string>
@@ -776,6 +778,16 @@
     <string name="playback_engine_mvplayer">Libmpv (bêta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Changer automatiquement de moteur en cas d’erreur au démarrage</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Si le démarrage du flux échoue, bascule automatiquement entre ExoPlayer et libmpv.</string>
+    <string name="playback_auto_switch_internal_player_blocked_by_fallback">Désactivez le repli vers la source correspondante suivante pour l’utiliser.</string>
+    <string name="autoplay_fallback_next_source">Repli vers la source correspondante suivante en cas d’échec</string>
+    <string name="autoplay_fallback_next_source_sub">Si la source sélectionnée automatiquement échoue ou ne démarre pas à temps, essayer discrètement les sources correspondantes suivantes.</string>
+    <string name="autoplay_fallback_max_sources">Sources à essayer en cas d’échec</string>
+    <string name="autoplay_fallback_max_sources_sub">Nombre de sources correspondantes supplémentaires à essayer avant d’afficher l’erreur.</string>
+    <string name="autoplay_fallback_startup_timeout">Délai de démarrage d’une source</string>
+    <string name="autoplay_fallback_startup_timeout_sub">Durée d’attente du démarrage d’une source avant d’essayer la suivante.</string>
+    <string name="autoplay_fallback_startup_timeout_value">%1$d s</string>
+    <string name="autoplay_fallback_next_source_blocked_by_engine_switch">Désactivez le changement automatique de moteur en cas d’erreur de démarrage pour l’utiliser.</string>
+    <string name="player_error_source_startup_timeout">La source n’a pas démarré dans un délai de %1$d secondes.</string>
     <string name="playback_release_decoder_on_background">Libérer le décodeur en arrière-plan</string>
     <string name="playback_release_decoder_on_background_sub">Libérer le décodeur vidéo lorsque Nuvio passe en arrière-plan. À activer si la lecture échoue avec une erreur de décodeur après le retour dans l’application. Le lecteur se recharge au retour, y compris après l’économiseur d’écran</string>
     <string name="playback_external_forward_subtitles">Transmettre les sous-titres au lecteur externe</string>
@@ -1132,6 +1144,14 @@
     <string name="layout_cw_sort_streaming_desc">Éléments sortis d’abord, éléments à venir à la fin</string>
     <string name="layout_cw_sort_split_upcoming">Rangée «&#160;À venir&#160;» séparée</string>
     <string name="layout_cw_sort_split_upcoming_desc">Déplacer les épisodes non diffusés dans une rangée «&#160;À venir&#160;» distincte</string>
+    <string name="layout_cw_click_action">À la sélection</string>
+    <string name="layout_cw_click_action_sub">Ce qui s’ouvre lorsque vous sélectionnez un élément de Continuer à regarder</string>
+    <string name="layout_cw_click_stream">Ouvrir les flux</string>
+    <string name="layout_cw_click_stream_desc">Choisir une source ou reprendre la lecture</string>
+    <string name="layout_cw_click_details">Ouvrir les détails</string>
+    <string name="layout_cw_click_details_desc">Ouvrir la page de détail du titre</string>
+    <string name="layout_cw_click_details_upcoming">Détails pour les épisodes à venir uniquement</string>
+    <string name="layout_cw_click_details_upcoming_desc">Ouvrir les détails des épisodes pas encore diffusés, et les flux pour les autres</string>
     <string name="upcoming_section_title">À venir</string>
     <string name="layout_trailer_button">Afficher le bouton bande-annonce</string>
     <string name="layout_trailer_button_sub">Afficher le bouton bande-annonce sur la page de détail (uniquement lorsqu’une bande-annonce est disponible).</string>
@@ -2422,7 +2442,7 @@
     <string name="cast_detail_retry">Réessayer</string>
     <string name="cast_detail_filmography">Filmographie</string>
     <string name="cast_detail_born">Naissance&#160;: %1$s</string>
-    <string name="cast_detail_born_died">Naissance&#160;: %1$s — †%2$s</string>
+    <string name="cast_detail_born_died">Naissance&#160;: %1$s — Décès&#160;: %2$s</string>
     <string name="cast_detail_age">%1$d ans</string>
 
     <string name="catalog_see_all_from">depuis %1$s</string>
@@ -2501,6 +2521,8 @@
     <string name="update_checking">Recherche de mises à jour…</string>
     <string name="update_waiting_for_stable">Vous recevrez la prochaine version stable dès qu’elle sera disponible</string>
     <string name="update_download_complete">Téléchargement terminé. Prêt à installer.</string>
+    <string name="update_ready_closes">Téléchargement terminé. L’application se ferme pendant l’installation de la mise à jour, ce qui peut prendre une minute. Rouvrez-la ensuite.</string>
+    <string name="update_ready_closes_and_reopens">Téléchargement terminé. L’application se ferme pendant l’installation de la mise à jour puis se rouvre d’elle-même, ce qui peut prendre une minute.</string>
     <string name="update_installed_automatically">Mise à jour automatique effectuée pendant que l’appareil était inactif</string>
     <string name="update_up_to_date">Le système est à jour. Dernières modifications&#160;:</string>
     <string name="update_close">Fermer</string>
