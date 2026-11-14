@@ -14,7 +14,8 @@ private const val TAG = "UpdateInstall"
 /**
  * Receives the outcome of an update install session. A confirmation request is shown only for installs the user
  * started; a background install that still needs confirmation is dropped and the downloaded APK waits for the banner.
- * A failed session is retried without dex metadata, then falls back to the system installer screen.
+ * A failed session is retried without dex metadata, then falls back to the system installer screen. A session the
+ * user declined, or that was abandoned on purpose, is left alone so the user is not asked again.
  */
 class UpdateInstallResultReceiver : BroadcastReceiver() {
 
@@ -43,7 +44,11 @@ class UpdateInstallResultReceiver : BroadcastReceiver() {
                     }
                 }
             }
-            else -> retryAfterFailure(context, apkFile, background, withDexMetadata)
+            PackageInstaller.STATUS_FAILURE_ABORTED -> UpdateRelaunchReceiver.cancelReopen(context)
+            else -> {
+                UpdateRelaunchReceiver.cancelReopen(context)
+                retryAfterFailure(context, apkFile, background, withDexMetadata)
+            }
         }
     }
 

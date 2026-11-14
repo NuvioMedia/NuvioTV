@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.updater.ui
 
+import android.os.Build
 import android.text.format.Formatter
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -102,6 +103,13 @@ internal fun UpdateBanner(
             (state.downloadProgress * 100).toInt().coerceIn(0, 100)
         )
         state.isDownloading -> stringResource(R.string.update_preparing_download)
+        // An optimized install closes the app with no installer screen left up, which reads as a crash unless said.
+        state.downloadedApkPath != null && state.optimizeDuringInstall && state.optimizeDuringInstallSupported ->
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                stringResource(R.string.update_ready_closes_and_reopens)
+            } else {
+                stringResource(R.string.update_ready_closes)
+            }
         state.downloadedApkPath != null -> stringResource(R.string.update_download_complete)
         else -> stringResource(R.string.update_available)
     }

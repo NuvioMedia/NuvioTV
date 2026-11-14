@@ -424,6 +424,8 @@
     <string name="about_update_auto_install_subtitle">Download new versions in the background and install them while the device is idle</string>
     <string name="about_update_auto_install_notice_title">Notify after automatic updates</string>
     <string name="about_update_auto_install_notice_subtitle">Show a banner on the next launch after the app updates itself</string>
+    <string name="about_update_optimize_install_title">Optimize updates during install</string>
+    <string name="about_update_optimize_install_subtitle">Faster first launch after an update, but the app closes for about a minute while it installs. Turn off to use Android\'s installer screen instead</string>
     <string name="about_update_channel_title">Update channel</string>
     <string name="about_update_channel_subtitle">Choose the type of app updates to receive</string>
     <string name="about_check_updates">Check for updates</string>
@@ -2546,6 +2548,8 @@
     <string name="update_checking">Checking for updates…</string>
     <string name="update_waiting_for_stable">You’ll receive the next stable release when it becomes available</string>
     <string name="update_download_complete">Download complete. Ready to install.</string>
+    <string name="update_ready_closes">Download complete. The app closes while the update installs, which can take a minute. Open it again afterwards.</string>
+    <string name="update_ready_closes_and_reopens">Download complete. The app closes while the update installs and opens again by itself, which can take a minute.</string>
     <string name="update_installed_automatically">Updated automatically while the device was idle</string>
     <string name="update_up_to_date">System is up to date. Latest changes:</string>
     <string name="update_close">Close</string>
