@@ -231,6 +231,8 @@ class HomeViewModel @Inject constructor(
     internal val catalogOrder = mutableListOf<String>()
     internal var addonsCache: List<Addon> = emptyList()
     internal var collectionsCache: List<Collection> = emptyList()
+    /** Guarded by [catalogStateLock]. Lives outside [catalogsMap] so it never reaches the hero. */
+    internal var homeWatchlistItems: List<MetaPreview> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
     internal var followAddonsOrderEnabled: Boolean = false
@@ -385,6 +387,7 @@ class HomeViewModel @Inject constructor(
             loadDisabledHomeCatalogPreference()
             loadCustomCatalogTitles()
             observeLibraryState()
+            observeHomeWatchlistRow()
             observeTmdbSettings()
             observeMdbListSettings()
             observeBlurUnwatchedEpisodes()
