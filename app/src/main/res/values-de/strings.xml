@@ -1428,11 +1428,6 @@
     <string name="library_watchlist">Watchlist</string>
     <string name="library_syncing_library">Synchronisiere Bibliothek\u2026</string>
     <string name="library_type_all">Alle</string>
-    <string name="library_type_items">Elemente</string>
-    <string name="library_empty_local_title">Noch keine %1$s</string>
-    <string name="library_empty_trakt_title">Keine %1$s in dieser Liste</string>
-    <string name="library_empty_local_subtitle">Speichern Sie Ihre Favoriten, um sie hier anzuzeigen</string>
-    <string name="library_empty_trakt_subtitle">Verwenden Sie + in den Details, um Elemente zur Beobachtungsliste oder zu Listen hinzuzufügen</string>
     <string name="library_empty_trakt_not_auth_title">Trakt ist nicht verbunden</string>
     <string name="library_empty_trakt_not_auth_subtitle">Trakt-Konto in den Einstellungen verbinden, um Trakt-Bibliothek zu sehen</string>
 

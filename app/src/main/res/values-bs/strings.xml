@@ -1097,11 +1097,6 @@
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Sinhronizacija biblioteke…</string>
     <string name="library_type_all">Sve</string>
-    <string name="library_type_items">stavki</string>
-    <string name="library_empty_local_title">Još nema %1$s</string>
-    <string name="library_empty_trakt_title">Nema %1$s u ovoj listi</string>
-    <string name="library_empty_local_subtitle">Počni dodavati favorite da ih vidiš ovdje</string>
-    <string name="library_empty_trakt_subtitle">Koristi + u detaljima da dodaš stavke na watchlistu ili liste</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Učitavanje…</string>

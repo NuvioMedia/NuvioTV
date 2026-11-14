@@ -1301,11 +1301,6 @@
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Синхронизация библиотеки\u2026</string>
     <string name="library_type_all">Все</string>
-    <string name="library_type_items">элементов</string>
-    <string name="library_empty_local_title">Пока нет %1$s</string>
-    <string name="library_empty_trakt_title">В этом списке нет %1$s</string>
-    <string name="library_empty_local_subtitle">Начните сохранять любимое, чтобы увидеть это здесь</string>
-    <string name="library_empty_trakt_subtitle">Используйте + на странице деталей, чтобы добавить в список просмотра или списки</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Загрузка\u2026</string>
@@ -2394,8 +2389,6 @@
     <string name="library_status_dropped">Брошено</string>
     <string name="library_empty_trakt_not_auth_title">Trakt не подключён</string>
     <string name="library_empty_trakt_not_auth_subtitle">Подключите аккаунт Trakt в Настройках для просмотра библиотеки Trakt</string>
-    <string name="library_empty_simkl_title">Нет %1$s в этом статусе</string>
-    <string name="library_empty_simkl_subtitle">Используйте + на странице описания, чтобы добавить элементы в статус Simkl</string>
     <string name="library_empty_simkl_not_auth_title">Simkl не подключён</string>
     <string name="library_empty_simkl_not_auth_subtitle">Подключите аккаунт Simkl в настройках, чтобы увидеть библиотеку Simkl</string>
     <string name="cloud_library_connect_action">Подключить аккаунт</string>

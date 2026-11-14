@@ -2145,15 +2145,8 @@
     <string name="library_status_dropped">Gestopt</string>
     <string name="library_syncing_library">Bibliotheek synchroniseren\u2026</string>
     <string name="library_type_all">Alles</string>
-    <string name="library_type_items">items</string>
-    <string name="library_empty_local_title">Nog geen %1$s</string>
-    <string name="library_empty_trakt_title">Geen %1$s in deze lijst</string>
-    <string name="library_empty_local_subtitle">Begin met het opslaan van je favorieten om ze hier te zien</string>
-    <string name="library_empty_trakt_subtitle">Gebruik + in details om items aan je kijklijst of lijsten toe te voegen</string>
     <string name="library_empty_trakt_not_auth_title">Trakt niet verbonden</string>
     <string name="library_empty_trakt_not_auth_subtitle">Verbind je Trakt-account in de instellingen om je Trakt-bibliotheek te bekijken</string>
-    <string name="library_empty_simkl_title">Geen %1$s met deze status</string>
-    <string name="library_empty_simkl_subtitle">Gebruik + in de details om items aan een Simkl-status toe te voegen</string>
     <string name="library_empty_simkl_not_auth_title">Simkl niet verbonden</string>
     <string name="library_empty_simkl_not_auth_subtitle">Verbind je Simkl-account in de instellingen om je Simkl-bibliotheek te bekijken</string>
     <string name="library_list_create_dialog_title">Lijst maken</string>

@@ -875,11 +875,6 @@
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Synkroniserar bibliotek\u2026</string>
     <string name="library_type_all">Alla</string>
-    <string name="library_type_items">objekt</string>
-    <string name="library_empty_local_title">Inga %1$s ännu</string>
-    <string name="library_empty_trakt_title">Inga %1$s i denna lista</string>
-    <string name="library_empty_local_subtitle">Börja spara dina favoriter för att se dem här</string>
-    <string name="library_empty_trakt_subtitle">Använd + i detaljer för att lägga till objekt i bevakningslistan eller listor</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Laddar\u2026</string>

@@ -1958,15 +1958,8 @@
     <string name="library_status_dropped">Napušteno</string>
     <string name="library_syncing_library">Sinhronizacija biblioteke\u2026</string>
     <string name="library_type_all">Sve</string>
-    <string name="library_type_items">stavke</string>
-    <string name="library_empty_local_title">Još nema %1$s</string>
-    <string name="library_empty_trakt_title">Nema %1$s na ovoj listi</string>
-    <string name="library_empty_local_subtitle">Započnite sačuvanjem omiljenih sadržaja da biste ih videli ovde</string>
-    <string name="library_empty_trakt_subtitle">Koristite + u detaljima da dodate stavke na listu za gledanje ili druge liste</string>
     <string name="library_empty_trakt_not_auth_title">Trakt nije povezan</string>
     <string name="library_empty_trakt_not_auth_subtitle">Povežite svoj Trakt nalog u Podešavanjima da biste videli svoju Trakt biblioteku</string>
-    <string name="library_empty_simkl_title">Nema %1$s u ovom statusu</string>
-    <string name="library_empty_simkl_subtitle">Koristite + u detaljima da dodate stavke u Simkl status</string>
     <string name="library_empty_simkl_not_auth_title">Simkl nije povezan</string>
     <string name="library_empty_simkl_not_auth_subtitle">Povežite svoj Simkl nalog u Podešavanjima da biste videli svoju Simkl biblioteku</string>
     <string name="library_list_create_dialog_title">Kreiraj listu</string>

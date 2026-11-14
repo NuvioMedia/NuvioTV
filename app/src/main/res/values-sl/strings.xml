@@ -1360,11 +1360,6 @@
 	<string name="library_watchlist">Seznam za ogled</string> 
 	<string name="library_syncing_library">Sinhroniziranje knjižnice\u2026</string>
 	<string name="library_type_all">Vse</string>
-	<string name="library_type_items">elementi</string>
-    <string name="library_empty_local_title">Še ni %1$s</string>
-    <string name="library_empty_trakt_title">V tem seznamu ni %1$s</string>
-    <string name="library_empty_local_subtitle">Začnite shranjevati priljubljene, da jih vidite tukaj</string>
-    <string name="library_empty_trakt_subtitle">Uporabite + v podrobnostih, da dodate elemente na seznam za ogled ali sezname</string>
 	<string name="library_empty_trakt_not_auth_title">Račun Trakt ni povezan</string>
     <string name="library_empty_trakt_not_auth_subtitle">V nastavitvah povežite svoj račun Trakt za ogled svoje knjižnice Trakt</string>																			  
     <!-- AccountSettingsContent -->
