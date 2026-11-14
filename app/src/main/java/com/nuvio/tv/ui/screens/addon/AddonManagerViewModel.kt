@@ -36,6 +36,8 @@ import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
 import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
 import com.nuvio.tv.core.util.readAppLogoBytes
 import com.nuvio.tv.data.local.CollectionsDataStore
+import com.nuvio.tv.data.repository.TrackingAddonConsentController
+import com.nuvio.tv.data.repository.isTrackingAddon
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
@@ -74,6 +76,7 @@ class AddonManagerViewModel @Inject constructor(
     private val profileManager: ProfileManager,
     private val tmdbCollectionSourceResolver: TmdbCollectionSourceResolver,
     private val traktPublicListSourceResolver: TraktPublicListSourceResolver,
+    private val trackingAddonConsentController: TrackingAddonConsentController,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -150,6 +153,11 @@ class AddonManagerViewModel @Inject constructor(
 
             when (val result = addonRepository.fetchAddon(normalizedUrl)) {
                 is NetworkResult.Success -> {
+                    if (result.data.isTrackingAddon) {
+                        trackingAddonConsentController.request(normalizedUrl, result.data)
+                        _uiState.update { it.copy(isInstalling = false, installUrl = "") }
+                        return@launch
+                    }
                     addonRepository.addAddon(normalizedUrl)
                     val addonName = result.data.displayName.ifBlank { result.data.baseUrl }
                     _uiState.update {
@@ -381,27 +389,6 @@ class AddonManagerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchAddonInfo(url: String): AddonInfo? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val result = withTimeoutOrNull(15_000L) {
-                    addonRepository.fetchAddon(url)
-                } ?: return@withContext null
-
-                when (result) {
-                    is NetworkResult.Success -> AddonInfo(
-                        url = result.data.baseUrl,
-                        name = result.data.name.ifBlank { url },
-                        description = result.data.description
-                    )
-                    else -> null
-                }
-            } catch (_: Exception) {
-                null
-            }
-        }
-    }
-
     private fun stopServerInternal() {
         server?.stop()
         server = null
@@ -570,10 +557,9 @@ class AddonManagerViewModel @Inject constructor(
 
         if (added.isNotEmpty()) {
             viewModelScope.launch {
-                val addedNames = withContext(Dispatchers.IO) {
-                    added.associateWith { url ->
-                        fetchAddonInfo(url)?.name ?: url
-                    }
+                val addedAddons = fetchAddedAddons(added)
+                val addedNames = addedAddons.mapValues { (url, addon) ->
+                    addon?.name?.ifBlank { url } ?: url
                 }
                 _uiState.update { state ->
                     val pending = state.pendingChange
@@ -581,20 +567,69 @@ class AddonManagerViewModel @Inject constructor(
                         state
                     } else {
                         state.copy(
-                            pendingChange = pending.copy(addedNames = addedNames)
+                            pendingChange = pending.copy(
+                                addedNames = addedNames,
+                                trackingAddonNames = addedAddons.trackingAddonNames()
+                            )
                         )
                     }
+                }
+            }
+        } else {
+            _uiState.update { state ->
+                val pending = state.pendingChange
+                if (pending == null || pending.changeId != change.id) {
+                    state
+                } else {
+                    state.copy(pendingChange = pending.copy(trackingAddonNames = emptyList()))
                 }
             }
         }
     }
 
-    fun confirmPendingChange() {
+    private suspend fun fetchAddedAddons(urls: List<String>): Map<String, Addon?> =
+        withContext(Dispatchers.IO) {
+            urls.associateWith { url ->
+                val result = runCatching {
+                    withTimeoutOrNull(15_000L) { addonRepository.fetchAddon(url) }
+                }.getOrNull()
+                (result as? NetworkResult.Success)?.data
+            }
+        }
+
+    private fun Map<String, Addon?>.trackingAddonNames(): List<String> =
+        mapNotNull { (url, addon) ->
+            addon?.takeIf { it.isTrackingAddon }?.let { it.name.ifBlank { url } }
+        }
+
+    fun dismissPendingTrackingConsent() {
+        _uiState.update { state ->
+            state.copy(pendingChange = state.pendingChange?.copy(awaitingTrackingConsent = false))
+        }
+    }
+
+    fun confirmPendingChange(trackingConsentGiven: Boolean = false) {
         val pending = _uiState.value.pendingChange ?: return
 
-        _uiState.update { it.copy(pendingChange = pending.copy(isApplying = true)) }
+        _uiState.update { it.copy(pendingChange = pending.copy(isApplying = true, awaitingTrackingConsent = false)) }
 
         viewModelScope.launch {
+            if (!trackingConsentGiven && pending.addedUrls.isNotEmpty()) {
+                val trackingNames = pending.trackingAddonNames
+                    ?: fetchAddedAddons(pending.addedUrls).trackingAddonNames()
+                if (trackingNames.isNotEmpty()) {
+                    _uiState.update { state ->
+                        state.copy(
+                            pendingChange = state.pendingChange?.copy(
+                                isApplying = false,
+                                trackingAddonNames = trackingNames,
+                                awaitingTrackingConsent = true
+                            )
+                        )
+                    }
+                    return@launch
+                }
+            }
             addonRepository.setAddonOrder(pending.proposedUrls)
             applyCatalogPreferencesFromPending(pending, pending.proposedUrls)
             if (pending.collectionsChanged && pending.proposedCollectionsJson != null) {

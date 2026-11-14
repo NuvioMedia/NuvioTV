@@ -172,7 +172,8 @@ class WatchProgressRepositoryProviderMarksTest {
                 trackingProgressProviders = TrackingProgressProviderRegistry(setOf(provider)),
                 trackingHistoryWriters = TrackingHistoryWriterRegistry(emptySet()),
                 mutationStore = mockk(relaxed = true),
-                serverWatched = mockk(relaxed = true)
+                serverWatched = mockk(relaxed = true),
+                addonEventDispatcher = mockk(relaxed = true)
             )
         }
     }

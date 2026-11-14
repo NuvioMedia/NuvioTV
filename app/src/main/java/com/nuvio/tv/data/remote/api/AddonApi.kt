@@ -5,8 +5,10 @@ import com.nuvio.tv.data.remote.dto.CatalogResponseDto
 import com.nuvio.tv.data.remote.dto.MetaResponseDto
 import com.nuvio.tv.data.remote.dto.StreamResponseDto
 import com.nuvio.tv.data.remote.dto.SubtitleResponseDto
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.Url
 
 interface AddonApi {
@@ -25,4 +27,8 @@ interface AddonApi {
 
     @GET
     suspend fun getSubtitles(@Url subtitleUrl: String): Response<SubtitleResponseDto>
+
+    @GET
+    @Headers("Cache-Control: no-cache")
+    suspend fun sendEvent(@Url eventUrl: String): Response<ResponseBody>
 }
