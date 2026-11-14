@@ -1161,6 +1161,10 @@
     <string name="layout_trailer_pause_on_scroll_sub">Pause the trailer when you scroll down and resume it when you return to the top.</string>
     <string name="layout_trailer_4k">4K Trailers</string>
     <string name="layout_trailer_4k_sub">Play trailers above 1080p when available. Uses much more memory; off by default on devices with 2 GB of RAM or less.</string>
+    <string name="layout_trailer_subtitles">Trailer Subtitles</string>
+    <string name="layout_trailer_subtitles_sub">Show YouTube captions on trailers everywhere they play, including the home screen, in your preferred subtitle language when the trailer has one.</string>
+    <string name="layout_trailer_subtitles_sdh">Filter SDH in Trailer Subtitles</string>
+    <string name="layout_trailer_subtitles_sdh_sub">Hide sound descriptions and speaker labels from trailer subtitles.</string>
     <string name="layout_detail_group_episodes">Episodes</string>
     <string name="layout_detail_group_trailers">Trailers</string>
     <string name="layout_detail_group_metadata">Metadata</string>
