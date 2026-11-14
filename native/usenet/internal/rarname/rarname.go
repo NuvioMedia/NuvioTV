@@ -101,6 +101,16 @@ func SetKey(filename string) (string, bool) {
 	return "", false
 }
 
+// NumericStem returns a numbered part's name without its folders, a posting
+// tool's prefix and the part number (Movie.mkv.001 -> Movie.mkv), keeping its
+// case. It reports false for a name with no numeric suffix.
+func NumericStem(filename string) (string, bool) {
+	if m := NumericPattern.FindStringSubmatch(baseName(filename)); len(m) > 1 {
+		return m[1], true
+	}
+	return "", false
+}
+
 // VolumeNumber extracts the volume scheme and ordinal for a filename so a set can
 // be checked for contiguity or resolved by number. The old-style roll scheme is
 // normalized so ".rar" is volume 0 and ".rNN" is volume NN+1, giving a single

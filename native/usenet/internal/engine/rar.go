@@ -796,8 +796,17 @@ type Content struct {
 	suffix       []extent // An ordered set's final parts, mapped back from its end (mapSuffix).
 	suffixDone   bool     // Guarded by layoutGate: the suffix is mapped as far as it can be.
 	disc         *discFiles
+	stored       string // The entry's name in the archive, when Name adds an extension (typeByContent).
 	layoutNS     atomic.Int64
 	layoutWaitNS atomic.Int64
+}
+
+// entryName is the name the archive's headers give the entry.
+func (c *Content) entryName() string {
+	if c.stored != "" {
+		return c.stored
+	}
+	return c.Name
 }
 
 // payloadSize is the packed byte count of the selected data in its volumes.
@@ -840,7 +849,7 @@ func (c *Content) extend(ctx context.Context, off int64) error {
 		if e != nil {
 			return fmt.Errorf("missing RAR continuation: %w", e)
 		}
-		if !b.before || b.name != c.Name || b.unpacked != c.Size {
+		if !b.before || b.name != c.entryName() || b.unpacked != c.Size {
 			return errors.New("RAR continuation does not match selected file")
 		}
 		start := last.start + last.length
@@ -977,7 +986,7 @@ func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) bool {
 		return false
 	}
 	if err != nil || last.version != b.version || !last.before || last.after ||
-		last.directory || last.name != c.Name || last.unpacked != c.Size ||
+		last.directory || last.name != c.entryName() || last.unpacked != c.Size ||
 		last.packed <= 0 || last.packed != c.payloadSize()-start {
 		return true
 	}
@@ -1013,7 +1022,7 @@ func (c *Content) verifyRARPart(ctx context.Context, off int64) error {
 		return fmt.Errorf("checking RAR continuation: %w", err)
 	}
 	if f == part.file && b.version == prediction.version && b.before && b.after != last &&
-		!b.directory && b.name == c.Name && b.unpacked == c.Size &&
+		!b.directory && b.name == c.entryName() && b.unpacked == c.Size &&
 		b.data == part.offset && b.packed == part.length && (last || f.Size() == prediction.volumeSize) {
 		c.mu.Lock()
 		prediction.verified[i] = true
@@ -1108,7 +1117,7 @@ func (c *Content) mapSuffix(ctx context.Context, off int64) (bool, error) {
 		// The final part ends the file; each part before it continues past its
 		// volume. Parts never reach back into the mapped prefix.
 		if err != nil || (cur.unordered && v.version != 5) || !b.before || b.after != (n > 0) || b.directory ||
-			b.crypt != nil || b.name != c.Name || b.unpacked != c.Size || b.packed <= 0 || end-b.packed < prefix {
+			b.crypt != nil || b.name != c.entryName() || b.unpacked != c.Size || b.packed <= 0 || end-b.packed < prefix {
 			c.suffixDone = true
 			return false, nil
 		}

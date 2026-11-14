@@ -212,6 +212,13 @@ the lazy path. Otherwise every entry header is read first: a Blu-ray folder list
 menu clips (`BDMV/STREAM/00277.m2ts`) before the feature. 7z sets list every entry
 in their header and choose the same way.
 
+An obfuscated release can also hide a RAR entry's type: its stored name has no
+video extension. Without a file index, a stored entry of at least 64 MiB whose
+type its name does not give (not a video, disc image, subtitle, archive or disc
+folder file) has its first bytes read, up to four entries per selection. A
+Matroska, MP4 or AVI signature serves it under its name plus that extension;
+its headers keep the stored name. Only the entry's first part is read.
+
 A clip's stream languages live in its `BDMV/CLIPINF/<clip>.clpi`, which rar lists
 before the clips. Selection keeps the location of each small stored CLPI it passes,
 and a selected disc clip is served as `/stream/<id>/BDMV/STREAM/<clip>.m2ts` with its
@@ -260,6 +267,15 @@ then their mappings are retained. RAR4 has no general internal volume ordinal;
 fully anonymous RAR4 sets require meaningful NZB subject/release ordering or XML
 ordering. Arbitrarily shuffled, completely anonymous RAR4 volumes cannot be
 reconstructed authoritatively from their headers alone.
+
+Numbered parts that hold neither a RAR nor a 7z archive but start with a
+Matroska, MP4 or AVI signature are a video cut without an archive
+(`Movie.mkv.001`, `.002`, ...). They are served as one file named after the
+parts without their number, with the signature's extension when that name has
+none. Part sizes come from the probes a 7z set uses: the first two and last two
+parts are probed, the others are predicted equal to the second and checked
+against their own yEnc size before they are read; a part of another size fails
+its read. Parts of unknown data are rejected as before.
 
 Real posts often number volumes inconsistently. A reposted copy of a volume is
 dropped in favour of the copy whose NZB metadata is intact. A volume named with

@@ -61,3 +61,18 @@ func TestSetKeyWidthIndependent(t *testing.T) {
 		}
 	}
 }
+
+func TestNumericStemKeepsCaseAndDropsPrefix(t *testing.T) {
+	for in, want := range map[string]string{
+		"Movie.2024.mkv.001":                  "Movie.2024.mkv",
+		`[N3wZ] \Z7lN1d\::Movie.2024.mkv.017`: "Movie.2024.mkv",
+		"Release/a8f3c2d1.002":                "a8f3c2d1",
+	} {
+		if got, ok := NumericStem(in); !ok || got != want {
+			t.Errorf("NumericStem(%q) = (%q, %t); want (%q, true)", in, got, ok, want)
+		}
+	}
+	if _, ok := NumericStem("Movie.2024.mkv"); ok {
+		t.Error("NumericStem accepted a name without a part number")
+	}
+}

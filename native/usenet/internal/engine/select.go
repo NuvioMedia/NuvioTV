@@ -441,6 +441,7 @@ func selectContent(ctx context.Context, files []*File, s Selection, allowFallbac
 		return nil
 	}
 	index := 0
+	sniffed := 0 // Entries of unknown type read to find a video (typeByContent).
 	if (len(groups) == 0 || allowFallback) && len(unknown) > 0 {
 		ordered := true
 		for _, f := range unknown {
@@ -573,6 +574,28 @@ groups:
 			if err != nil || is7zHead(head) {
 				continue groups
 			}
+			// A video cut into numbered parts without an archive.
+			if ext := videoExtension(head); ext != "" {
+				c, err := splitVideo(ctx, vols, ext)
+				if err == nil {
+					var matched bool
+					if matched, err = consider(c, index, ""); err == nil && matched {
+						for _, v := range vols {
+							if v.damaged != nil {
+								return nil, v.damaged
+							}
+						}
+						return selected(c)
+					}
+				}
+				index++
+				if err != nil {
+					if err := broken(err); err != nil {
+						return nil, err
+					}
+				}
+				continue groups
+			}
 		}
 		cursor := &rarCursor{files: vols, unordered: unordered}
 		for {
@@ -631,6 +654,11 @@ groups:
 					}
 				}
 				continue groups
+			}
+			if s.FileIdx == nil {
+				if err := c.typeByContent(ctx, b, &sniffed); err != nil {
+					return nil, err
+				}
 			}
 			if c.complete && b.crypt == nil && c.Size <= maxClipInfoBytes && isClipInfo(c.Name) {
 				// Listed before the clips, so selection passes it on the way.
