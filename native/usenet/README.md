@@ -262,7 +262,9 @@ ordering. Arbitrarily shuffled, completely anonymous RAR4 volumes cannot be
 reconstructed authoritatively from their headers alone.
 
 Real posts often number volumes inconsistently. A reposted copy of a volume is
-dropped in favour of the copy whose NZB metadata is intact. When a set mixes
+dropped in favour of the copy whose NZB metadata is intact. A volume named with
+folders or a posting tool's prefix (`[tag] \id\::name.part065.rar`) while its
+siblings are plain names still joins their set. When a set mixes
 numbering schemes and one scheme lacks only its first volume, a file of another
 scheme whose headers start the same file (an old-style `.rar` posted as
 `.partNN.rar`) completes it. Names that do not number the volumes (shuffled

@@ -32,6 +32,22 @@ func TestVolumeNumberWidthIndependent(t *testing.T) {
 	}
 }
 
+func TestSetKeyIgnoresFoldersAndPosterPrefix(t *testing.T) {
+	want, _ := SetKey("Show.S09E01.mkv.part064.rar")
+	for _, n := range []string{
+		`[N3wZ] \Z7lN1d345235\::Show.S09E01.mkv.part065.rar`,
+		`Release\Show.S09E01.mkv.part066.rar`,
+		"Release/Show.S09E01.mkv.part067.rar",
+	} {
+		if got, ok := SetKey(n); !ok || got != want {
+			t.Errorf("SetKey(%q) = (%q, %t); want (%q, true)", n, got, ok, want)
+		}
+		if s, v, ok := VolumeNumber(n); !ok || s != SchemePart || v < 65 {
+			t.Errorf("VolumeNumber(%q) = (%v, %d, %t)", n, s, v, ok)
+		}
+	}
+}
+
 func TestSetKeyWidthIndependent(t *testing.T) {
 	// All volumes of one set share a key regardless of padding width.
 	want, ok := SetKey("X.part01.rar")
