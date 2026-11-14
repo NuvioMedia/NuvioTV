@@ -59,6 +59,7 @@ func (s *Session) diagnostics() map[string]any {
 		v["archiveWaitMs"] = float64(layout.layoutWaitNS.Load()) / 1e6
 		layout.mu.RLock()
 		v["archiveExtents"] = len(layout.parts)
+		v["archiveSuffixExtents"] = len(layout.suffix)
 		layout.mu.RUnlock()
 	}
 	if reports := s.providerReports(); len(reports) > 0 {
