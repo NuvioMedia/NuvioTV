@@ -3090,7 +3090,7 @@
   <string name="advanced_player_stats_hud">Οθόνη στατιστικών αναπαραγωγής</string>
   <string name="advanced_player_stats_hud_subtitle">Εμφάνιση κουμπιού στις πληροφορίες ροής για εναλλαγή ζωντανών ενδείξεων CPU, μνήμης, buffer, ρυθμού μετάδοσης και θερμοκρασίας κατά την αναπαραγωγή</string>
   <string name="settings_stream_badge_position_top">Πάνω</string>
-  <string name="stream_test_btn_measuring_parallel8">Μέτρηση παράλληλης (8MB)...</string>
+  <string name="stream_test_btn_measuring_parallel8">Μέτρηση παράλληλης (8 συνδέσεις)...</string>
   <string name="diag_value_not_ready">Μη έτοιμο</string>
   <string name="web_stream_badge_error_import_limit">Μπορείτε να εισαγάγετε έως %1$d URL σημάτων.</string>
   <string name="dv7_libdovi_mode_4_sub">Μετατροπή σε στατικό προφίλ 8.4.</string>
@@ -3101,12 +3101,12 @@
   <string name="player_report_issue_sent_button">Η αναφορά στάλθηκε</string>
   <string name="dv7_libdovi_mode_4_title">Λειτουργία 4 — 8.4 (στατικό)</string>
   <string name="diag_label_conversions">Μετατροπές</string>
-  <string name="stream_test_label_parallel16">Παράλληλη σύνδεση (τμήματα 16 MB)</string>
+  <string name="stream_test_label_parallel16">Παράλληλη σύνδεση (16 συνδέσεις)</string>
   <string name="licenses_attributions_premiumize_title">Premiumize</string>
   <string name="supporters_contributors_loading_donation_progress">Φόρτωση προόδου χρηματοδότησης...</string>
-  <string name="stream_test_btn_measuring_parallel16">Μέτρηση παράλληλης (16MB)...</string>
+  <string name="stream_test_btn_measuring_parallel16">Μέτρηση παράλληλης (16 συνδέσεις)...</string>
   <string name="dv7_libdovi_mode_1_sub">Μετατρέπει το RPU ώστε να είναι συμβατό με MEL (Minimum Enhancement Layer).</string>
-  <string name="stream_test_btn_measuring_parallel4">Μέτρηση παράλληλης (4MB)...</string>
+  <string name="stream_test_btn_measuring_parallel4">Μέτρηση παράλληλης (4 συνδέσεις)...</string>
   <string name="diag_label_source_profile">Προφίλ πηγής</string>
   <string name="web_debrid_per_quality">Ανά ποιότητα</string>
   <string name="advanced_playback_issue_reports">Αναφορές προβλημάτων αναπαραγωγής</string>
@@ -3119,7 +3119,7 @@
   <string name="stream_test_error_connection">Η σύνδεση απέτυχε. Ο σύνδεσμος της τελευταίας αναπαραγωγής μπορεί να έχει λήξει ή να μην είναι προσβάσιμος. Αναπαράγετε ξανά το βίντεο και δοκιμάστε πάλι.</string>
   <string name="unit_size_kb">%1$s KB</string>
   <string name="settings_stream_badge_position_title">Θέση σημάτων</string>
-  <string name="stream_test_label_parallel4">Παράλληλη σύνδεση (τμήματα 4 MB)</string>
+  <string name="stream_test_label_parallel4">Παράλληλη σύνδεση (4 συνδέσεις)</string>
   <string name="web_stream_badge_import_error">Η εισαγωγή σημάτων απέτυχε.</string>
   <string name="diag_label_signal_rewrites">Επανεγγραφές σήματος</string>
   <string name="unit_size_mb">%1$s MB</string>
@@ -3168,7 +3168,7 @@
   <string name="diag_section_source_hardware">Πηγή &amp; Υλικό</string>
   <string name="stream_test_label_baseline">Τυπική μονή σύνδεση (βάση αναφοράς)</string>
   <string name="supporters_contributors_donation_progress_title">Διακομιστής &amp; συντήρηση αυτού του μήνα</string>
-  <string name="stream_test_label_parallel1">Παράλληλη σύνδεση (τμήματα 1 MB)</string>
+  <string name="stream_test_label_parallel1">Παράλληλη σύνδεση (1 σύνδεση)</string>
   <string name="unit_size_b">%1$d B</string>
   <string name="diag_label_bridge_reason">Αιτία γέφυρας</string>
   <string name="licenses_attributions_torbox_title">TorBox</string>
@@ -3185,7 +3185,7 @@
   <string name="player_report_issue">Αναφορά προβλήματος</string>
   <string name="unit_size_gb">%1$s GB</string>
   <string name="supporters_contributors_donation_progress_remaining">Μετά το 100%, η επιπλέον υποστήριξη διατίθεται στην ανάπτυξη.</string>
-  <string name="stream_test_btn_measuring_parallel1">Μέτρηση παράλληλης (1MB)...</string>
+  <string name="stream_test_btn_measuring_parallel1">Μέτρηση παράλληλης (1 σύνδεση)...</string>
   <string name="stream_test_btn_running">Εκτελείται...</string>
   <string name="diag_value_none">Καμία</string>
   <string name="diag_label_display">Οθόνη</string>
@@ -3222,7 +3222,7 @@
   <string name="playback_buffer_target_danger_warning">Κίνδυνος: Πάνω από το όριο προειδοποίησης (%1$d MB). Υψηλός κίνδυνος κολλήματος.</string>
   <string name="diag_section_decision_settings">Απόφαση &amp; Ρυθμίσεις</string>
   <string name="diag_value_off">Ανενεργό</string>
-  <string name="stream_test_label_parallel8">Παράλληλη σύνδεση (τμήματα 8 MB)</string>
+  <string name="stream_test_label_parallel8">Παράλληλη σύνδεση (8 συνδέσεις)</string>
   <string name="diag_value_ready">Έτοιμο</string>
   <string name="web_debrid_error_templates_required">Απαιτούνται και τα δύο πρότυπα</string>
   <string name="dv7_mode_strip_dv">Πάντα αφαίρεση DV</string>
