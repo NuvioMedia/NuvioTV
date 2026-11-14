@@ -128,6 +128,14 @@ private fun RewatchQuestion(
                     textAlign = TextAlign.Center
                 )
 
+                Text(
+                    text = stringResource(R.string.rewatch_prompt_subtitle),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = NuvioTheme.colors.TextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = NuvioTheme.spacing.sm)
+                )
+
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
                 Row(
