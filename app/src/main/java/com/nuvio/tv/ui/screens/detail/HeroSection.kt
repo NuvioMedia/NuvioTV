@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -123,6 +124,7 @@ fun HeroContentSection(
     mdbListRatingOrder: List<String> = com.nuvio.tv.domain.model.MDBListSettings.DEFAULT_RATING_ORDER,
     hideMetaInfoImdb: Boolean = false,
     tmdbRating: Float? = null,
+    weTrakrRating: Float? = null,
     showFullReleaseDate: Boolean = true,
     isTrailerPlaying: Boolean = false,
     playButtonFocusRequester: FocusRequester? = null,
@@ -368,7 +370,8 @@ fun HeroContentSection(
                         meta = meta,
                         hideImdbRating = hideMetaInfoImdb,
                         showFullReleaseDate = showFullReleaseDate,
-                        tmdbRating = tmdbRating
+                        tmdbRating = tmdbRating,
+                        weTrakrRating = weTrakrRating
                     )
                 }
             }
@@ -655,7 +658,8 @@ private fun MetaInfoRow(
     meta: Meta,
     hideImdbRating: Boolean,
     showFullReleaseDate: Boolean = true,
-    tmdbRating: Float? = null
+    tmdbRating: Float? = null,
+    weTrakrRating: Float? = null
 ) {
     val context = LocalContext.current
     val genresText = remember(meta.genres) {
@@ -677,7 +681,7 @@ private fun MetaInfoRow(
     val imdbRating = if (hideImdbRating) null else meta.imdbRating
     val reserveImdbRatingHeight = meta.imdbRating != null
     val shouldShowImdbRating = imdbRating != null
-    val shouldShowTmdbRating = tmdbRating != null
+    val shouldShowTmdbRating = tmdbRating != null || weTrakrRating != null
     val tmdbModel = remember(context) {
         ImageRequest.Builder(context)
             .data(com.nuvio.tv.R.raw.mdblist_tmdb)
@@ -782,6 +786,28 @@ private fun MetaInfoRow(
                         contentScale = ContentScale.Fit
                     )
                     val ratingText = remember(rating) { (rating * 10).toInt().toString() }
+                    Text(
+                        text = ratingText,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = NuvioTheme.extendedColors.textSecondary
+                    )
+                }
+            }
+
+            weTrakrRating?.let { rating ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
+                ) {
+                    Image(
+                        painter = rememberRawSvgPainter(R.raw.wetrakr_we_gradient, 34.dp),
+                        contentDescription = stringResource(R.string.wetrakr_name),
+                        modifier = Modifier
+                            .width(34.dp)
+                            .height(16.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    val ratingText = remember(rating) { String.format("%.1f", rating) }
                     Text(
                         text = ratingText,
                         style = MaterialTheme.typography.labelLarge,

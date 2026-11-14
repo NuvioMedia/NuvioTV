@@ -43,7 +43,8 @@ data class TrackingHistoryItem(
 
 data class TrackingScrobbleEvent(
     val media: TrackingMediaReference,
-    val progressPercent: Double
+    val progressPercent: Double,
+    val creditsStartPercent: Double? = null
 )
 
 data class TrackingMutationResult(

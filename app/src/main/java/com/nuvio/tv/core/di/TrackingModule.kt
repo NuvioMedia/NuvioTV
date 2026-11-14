@@ -22,6 +22,10 @@ import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
 import com.nuvio.tv.data.mdblist.MdbListTrackingHistoryWriter
 import com.nuvio.tv.data.mdblist.MdbListTrackingProgressProvider
 import com.nuvio.tv.data.mdblist.MdbListTrackingProvider
+import com.nuvio.tv.data.wetrakr.WeTrakrTrackingHistoryWriter
+import com.nuvio.tv.data.wetrakr.WeTrakrTrackingLibraryProvider
+import com.nuvio.tv.data.wetrakr.WeTrakrTrackingProgressProvider
+import com.nuvio.tv.data.wetrakr.WeTrakrTrackingProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -47,6 +51,22 @@ abstract class TrackingModule {
     @Binds
     @IntoSet
     abstract fun bindMdbListHistory(writer: MdbListTrackingHistoryWriter): TrackingHistoryWriter
+
+    @Binds
+    @IntoSet
+    abstract fun bindWeTrakrLibrary(provider: WeTrakrTrackingLibraryProvider): TrackingLibraryProvider
+
+    @Binds
+    @IntoSet
+    abstract fun bindWeTrakrProvider(provider: WeTrakrTrackingProvider): TrackingProvider
+
+    @Binds
+    @IntoSet
+    abstract fun bindWeTrakrProgress(provider: WeTrakrTrackingProgressProvider): TrackingProgressProvider
+
+    @Binds
+    @IntoSet
+    abstract fun bindWeTrakrHistory(writer: WeTrakrTrackingHistoryWriter): TrackingHistoryWriter
 
     @Binds
     @Singleton
