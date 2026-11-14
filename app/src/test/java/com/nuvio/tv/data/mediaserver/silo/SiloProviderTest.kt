@@ -383,6 +383,40 @@ class SiloProviderTest {
     }
 
     @Test
+    fun aStopThatMeetsAnExpiredTokenIsSentAgain() = runTest {
+        var stops = 0
+        val (silo, http) = provider { request ->
+            if (request.method == "DELETE" && stops++ == 0) problem(401, "authentication_required") else playbackRoute(request)
+        }
+        val playback = silo.preparePlayback(session(), request)
+        val stop = ServerPlaybackEvent(ServerPlaybackEventType.STOP, 20_000L, isPaused = true)
+
+        val error = runCatching { silo.report(session(), playback, stop) }.exceptionOrNull() as ServerException
+        silo.report(session(), playback, stop)
+
+        assertEquals(ServerFailure.AUTH_REQUIRED, error.failure)
+        assertEquals(2, http.requests("/api/v2/playback/s1").count { it.method == "DELETE" })
+    }
+
+    @Test
+    fun anyAuthAnswerIsWorthOneRenewal() = runTest {
+        val (silo, http) = provider { request ->
+            if (request.url.encodedPath.endsWith("/auth/refresh")) {
+                ok("""{"access_token":"access-2","refresh_token":"refresh-2","expires_in":3600}""")
+            } else {
+                problem(401, "authentication_required")
+            }
+        }
+        val failure = runCatching { silo.libraries(session()) }.exceptionOrNull() as ServerException
+
+        val renewed = silo.renewToken(session(), failure)
+
+        assertEquals(ServerFailure.AUTH_REQUIRED, failure.failure)
+        assertTrue(renewed != null)
+        assertEquals(1, http.requests.count { it.url.encodedPath.endsWith("/auth/refresh") })
+    }
+
+    @Test
     fun anEndedSignInCannotBeRenewed() = runTest {
         val (silo, _) = provider { problem(401, "session_expired") }
 

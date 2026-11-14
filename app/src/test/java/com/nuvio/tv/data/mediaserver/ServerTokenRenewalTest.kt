@@ -106,8 +106,36 @@ class ServerTokenRenewalTest {
         }
         val repository = ServerRepository(MemoryServerPersistence(), listOf(long), CoroutineScope(Dispatchers.Unconfined))
         repository.store(connection.copy(providerId = long.id), "device-token")
+        val snapshot = repository.syncSnapshot(1)!!
 
-        assertTrue(repository.syncSnapshot(1)!!.servers.isEmpty())
+        assertTrue(snapshot.servers.isEmpty())
+        assertTrue(repository.applySync(snapshot, emptyList(), emptySet()))
+        assertEquals(listOf("c1"), repository.uiState.value.connections.map { it.id })
+        assertEquals("device-token", repository.session("c1")?.token)
+    }
+
+    @Test
+    fun aPlayingReportOutlastsAServerListChange() = runTest {
+        val started = repository.session("c1")!!
+        repository.remove("c1")
+
+        val token = repository.callForPlayback(started) { _, session -> session.token }
+
+        assertEquals("token-1", token)
+    }
+
+    @Test
+    fun aPlayingReportRenewsOnceAfterAnExpiredToken() = runTest {
+        val started = repository.session("c1")!!
+        var calls = 0
+
+        val token = repository.callForPlayback(started) { _, session ->
+            if (calls++ == 0) throw ServerException(ServerFailure.AUTH_REQUIRED)
+            session.token
+        }
+
+        assertEquals(2, calls)
+        assertEquals("token-2", token)
     }
 
     @Test

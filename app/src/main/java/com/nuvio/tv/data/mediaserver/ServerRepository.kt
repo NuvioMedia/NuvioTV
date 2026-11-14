@@ -119,6 +119,26 @@ class ServerRepository(
         }
     }
 
+    /**
+     * For a play already running: renews like [call], but carries on when the server list changes, uses [started]
+     * when its connection is gone, and leaves the connection's failure state alone.
+     */
+    suspend fun <T> callForPlayback(
+        started: ServerSession,
+        block: suspend (ServerProvider, ServerSession) -> T
+    ): T {
+        val session = session(started.connection.id) ?: started
+        val provider = provider(session.connection) ?: throw ServerException(ServerFailure.UNSUPPORTED)
+        val current = if (provider.renewalDue(session)) renewedAhead(provider, session) else session
+        return try {
+            block(provider, current)
+        } catch (error: ServerException) {
+            if (error.failure != ServerFailure.AUTH_REQUIRED) throw error
+            val renewed = renewed(provider, current, error) ?: throw error
+            block(provider, renewed)
+        }
+    }
+
     /** Renews ahead of time; the current token is kept when the server can't be asked right now. */
     private suspend fun renewedAhead(provider: ServerProvider, session: ServerSession): ServerSession = try {
         renewed(provider, session, failure = null) ?: session
@@ -287,7 +307,11 @@ class ServerRepository(
             if (local != null && currentTokens[credentialRef] != token) setFailure(local.id, null)
             server.toConnection(id, credentialRef)
         }
-        val deviceOnly = current.filterNot { syncsSignIn(it) || it.id in usedIds }
+        val offered = snapshot.servers.mapTo(mutableSetOf()) { it.key }
+        val deviceOnly = current.filter {
+            it.id !in usedIds &&
+                (!syncsSignIn(it) || serverKey(it.providerId, it.remoteServerId, it.remoteUserId) !in offered)
+        }
         deviceOnly.forEach { connection ->
             currentTokens[connection.credentialRef]?.let { updatedTokens[connection.credentialRef] = it }
         }
