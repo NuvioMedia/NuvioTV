@@ -66,6 +66,22 @@ class StreamFallbackSessionTest {
         assertEquals("Engine missing", session.failureMessage)
     }
 
+    @Test fun `the next attempt says why the last source failed`() = runTest {
+        val first = stream("first")
+        val session = session(first, listOf(first) + (1..5).map { stream("$it") })
+        suspend fun fail(error: Exception) {
+            try { session.prepareCandidate(first) { throw error } } catch (_: Exception) { }
+        }
+        fail(UsenetPreparationException("article not found", failure = "missing-article"))
+        assertEquals("Articles missing on your providers", session.lastFailureReason)
+        fail(UsenetPreparationException("missing RAR continuation at https://indexer.test/api?apikey=secret\nmore"))
+        assertEquals("missing RAR continuation at https://indexer.test/…", session.lastFailureReason)
+        try { session.prepareCandidate(first) { delay(200_000); first } } catch (_: Exception) { }
+        assertEquals("Took too long to open", session.lastFailureReason)
+        session.playbackFailed()
+        assertEquals("Playback failed", session.lastFailureReason)
+    }
+
     private fun stream(id: String) = Stream(
         name = id, title = null, description = null, url = null, nzbUrl = "https://example.test/$id.nzb",
         ytId = null, infoHash = null, fileIdx = null, externalUrl = null,
