@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.Font
@@ -84,7 +86,8 @@ internal fun StyledSubtitleText(
     style: SubtitleStyleSettings,
     textSizePx: Float,
     fontFamily: FontFamily,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    horizontal: SubtitleHorizontalPosition = SubtitleHorizontalPosition.CENTER
 ) {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -93,17 +96,26 @@ internal fun StyledSubtitleText(
         val paddingX = STYLED_SUBTITLE_PADDING_X * unit
         val paddingY = STYLED_SUBTITLE_PADDING_Y * unit
         val maxTextWidth = (constraints.maxWidth - paddingX * 2).toInt().coerceAtLeast(1)
-        val layout = measurer.measure(
-            text = text,
-            style = TextStyle(
-                fontFamily = fontFamily,
-                fontSize = with(density) { textSizePx.toSp() },
-                fontWeight = if (style.bold) FontWeight.Bold else FontWeight.Normal,
-                textAlign = TextAlign.Center,
-                textDirection = TextDirection.ContentOrLtr
-            ),
-            constraints = Constraints(maxWidth = maxTextWidth)
+        val textStyle = TextStyle(
+            fontFamily = fontFamily,
+            fontSize = with(density) { textSizePx.toSp() },
+            fontWeight = if (style.bold) FontWeight.Bold else FontWeight.Normal,
+            textAlign = when (horizontal) {
+                SubtitleHorizontalPosition.START -> TextAlign.Left
+                SubtitleHorizontalPosition.CENTER -> TextAlign.Center
+                SubtitleHorizontalPosition.END -> TextAlign.Right
+            },
+            textDirection = TextDirection.ContentOrLtr
         )
+        val textConstraints = Constraints(maxWidth = maxTextWidth)
+        val layout = measurer.measure(text = text, style = textStyle, constraints = textConstraints)
+        val outlineLayout = if (text.spanStyles.any { it.item.color.isSpecified }) {
+            measurer.measure(text = text.withoutColors(), style = textStyle, constraints = textConstraints)
+        } else {
+            layout
+        }
+        val lineLeft = (0 until layout.lineCount).minOfOrNull { layout.getLineLeft(it) } ?: 0f
+        val lineRight = (0 until layout.lineCount).maxOfOrNull { layout.getLineRight(it) } ?: 0f
         val lineWidth = (0 until layout.lineCount).maxOfOrNull { layout.getLineRight(it) - layout.getLineLeft(it) } ?: 0f
         val blockHeight = layout.size.height + paddingY * 2
         val textColor = Color(style.textColor)
@@ -117,16 +129,26 @@ internal fun StyledSubtitleText(
                 .semantics { this.text = text }
         ) {
             val blockWidth = lineWidth + paddingX * 2
+            val blockLeft = when (horizontal) {
+                SubtitleHorizontalPosition.START -> 0f
+                SubtitleHorizontalPosition.CENTER -> (size.width - blockWidth) / 2f
+                SubtitleHorizontalPosition.END -> size.width - blockWidth
+            }
             drawRoundRect(
                 color = Color(style.backgroundColor),
-                topLeft = Offset((size.width - blockWidth) / 2f, 0f),
+                topLeft = Offset(blockLeft, 0f),
                 size = Size(blockWidth, size.height),
                 cornerRadius = CornerRadius(style.backgroundRadius * unit)
             )
-            val origin = Offset((size.width - layout.size.width) / 2f, paddingY)
+            val textLeft = when (horizontal) {
+                SubtitleHorizontalPosition.START -> paddingX - lineLeft
+                SubtitleHorizontalPosition.CENTER -> (size.width - layout.size.width) / 2f
+                SubtitleHorizontalPosition.END -> size.width - paddingX - lineRight
+            }
+            val origin = Offset(textLeft, paddingY)
             if (style.outlineEnabled && outline > 0f) {
                 drawText(
-                    layout,
+                    outlineLayout,
                     color = outlineColor.copy(alpha = outlineColor.alpha * textColor.alpha),
                     topLeft = origin,
                     drawStyle = Stroke(width = outline * 2, join = StrokeJoin.Round),
@@ -149,5 +171,12 @@ internal fun StyledSubtitleText(
                 }
             )
         }
+    }
+}
+
+private fun AnnotatedString.withoutColors(): AnnotatedString = buildAnnotatedString {
+    append(this@withoutColors.text)
+    this@withoutColors.spanStyles.forEach { range ->
+        addStyle(range.item.copy(color = Color.Unspecified), range.start, range.end)
     }
 }

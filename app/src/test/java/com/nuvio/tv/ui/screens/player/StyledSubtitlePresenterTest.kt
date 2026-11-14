@@ -45,6 +45,28 @@ class StyledSubtitlePresenterTest {
     }
 
     @Test
+    fun `srt alignment positions keep their row and column`() {
+        val presenter = StyledSubtitlePresenter()
+        val topLeft = Cue.Builder().setText("Top left")
+            .setLine(0.08f, Cue.LINE_TYPE_FRACTION).setLineAnchor(Cue.ANCHOR_TYPE_START)
+            .setPosition(0.08f).setPositionAnchor(Cue.ANCHOR_TYPE_START).build()
+        val middle = Cue.Builder().setText("Middle")
+            .setLine(0.5f, Cue.LINE_TYPE_FRACTION).setLineAnchor(Cue.ANCHOR_TYPE_MIDDLE)
+            .setPosition(0.5f).setPositionAnchor(Cue.ANCHOR_TYPE_MIDDLE).build()
+
+        presenter.present(listOf(topLeft, middle, caption), styled = true)
+
+        assertEquals(
+            listOf(
+                Triple("Top left", SubtitleVerticalPosition.TOP, SubtitleHorizontalPosition.START),
+                Triple("Middle", SubtitleVerticalPosition.MIDDLE, SubtitleHorizontalPosition.CENTER),
+                Triple("First caption", SubtitleVerticalPosition.BOTTOM, SubtitleHorizontalPosition.CENTER)
+            ),
+            presenter.cues.value.blocks.map { Triple(it.text.text, it.vertical, it.horizontal) }
+        )
+    }
+
+    @Test
     fun `switching styling re-routes the cues already on screen`() {
         val presenter = StyledSubtitlePresenter()
         presenter.present(listOf(caption), styled = false)
