@@ -644,8 +644,8 @@
     <string name="auto_skip_intro_sub">تخطي المقدمات وشارات البداية تلقائيًا.</string>
     <string name="auto_skip_recap">الملخص</string>
     <string name="auto_skip_recap_sub">تخطي مقاطع ملخص الأحداث تلقائيًا.</string>
-    <string name="auto_skip_outro">شارة النهاية</string>
-    <string name="auto_skip_outro_sub">تخطي شارات النهاية تلقائيًا.</string>
+    <string name="auto_skip_outro">الخاتمة</string>
+    <string name="auto_skip_outro_sub">تخطي الخاتمة وشارات ختام الأنمي تلقائيًا.</string>
     <string name="auto_skip_movie_credits">شارة النهاية</string>
     <string name="auto_skip_movie_credits_sub">تخطي شارة نهاية الأفلام تلقائيًا مع الاحتفاظ بمشاهد ما بعد الشارة.</string>
     <string name="skip_movie_credits">تخطي شارة النهاية</string>
