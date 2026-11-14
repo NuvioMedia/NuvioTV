@@ -10,6 +10,9 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.extractor.ExtractorsFactory
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncFallback
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncSettings
+import com.nuvio.tv.ui.screens.player.audiosync.AudioSyncTaps
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.screens.player.autosync.AutoSyncAnalysisOutcome
 import com.nuvio.tv.ui.screens.player.autosync.AutoSyncCandidateScope
@@ -30,6 +33,7 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
@@ -56,7 +60,13 @@ internal fun PlayerRuntimeController.autoSyncExtractorsFactory(
 ): ExtractorsFactory {
     AutoSyncPreferences.ensureLoaded(context)
     if (!AutoSyncPreferences.isEnabled(context)) return delegate
-    val factory = AutoSyncExtractorsFactory(delegate = delegate, sourceKey = url)
+    AudioSyncFallback.initialize(context)
+    val audioDelegate = if (AudioSyncSettings.fallbackEnabled.value) {
+        AudioSyncTaps.wrapExtractors(delegate, url)
+    } else {
+        delegate
+    }
+    val factory = AutoSyncExtractorsFactory(delegate = audioDelegate, sourceKey = url)
     prefetchAutoSyncIndex(url, headers)
     return factory
 }
@@ -81,6 +91,7 @@ internal fun PlayerRuntimeController.runSelectedAutomaticSubtitleSync(subtitle: 
 internal fun PlayerRuntimeController.cancelAutomaticSubtitleSync() {
     automaticSubtitleSyncJob?.cancel()
     automaticSubtitleSyncJob = null
+    AudioSyncFallback.stop(this)
 }
 
 internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
@@ -120,6 +131,7 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
     }
 
     automaticSubtitleSyncJob?.cancel()
+    AudioSyncFallback.stop(this)
 
     val sourceUrlAtStart = currentStreamUrl
     val sourceHeadersAtStart = currentHeaders.toMap()
@@ -146,6 +158,9 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
         .buildUpon()
         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
         .build()
+
+    val audioFallback = AudioSyncFallback.of(this)
+    audioFallback?.arm()
 
     automaticSubtitleSyncJob = scope.launch {
         launch {
@@ -215,10 +230,16 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
                 if (activeSidecarSubtitleKey == null) {
                     startSidecarAddonSubtitle(selectedSubtitle)
                 }
-                context.buildAutoSyncFailureToast(analysisOutcome)?.let(::showAutoSyncToast)
+                val audioTakesOver = analysisOutcome != AutoSyncAnalysisOutcome.SUBTITLE_UNAVAILABLE &&
+                    audioFallback?.takeOver(selectedUrl) == true
+                if (!audioTakesOver) {
+                    audioFallback?.disarm()
+                    context.buildAutoSyncFailureToast(analysisOutcome)?.let(::showAutoSyncToast)
+                }
                 return@launch
             }
 
+            audioFallback?.disarm()
             if (currentStreamUrl != sourceUrlAtStart) return@launch
             val activeSubtitleUrl = _uiState.value.selectedAddonSubtitle?.url
             if (activeSubtitleUrl != selectedUrl && activeSubtitleUrl != resolved.subtitleUrl) {
@@ -295,6 +316,7 @@ internal fun PlayerRuntimeController.maybeRunAutomaticSubtitleSync(
         } catch (cancel: CancellationException) {
             throw cancel
         } catch (error: Throwable) {
+            audioFallback?.disarm()
             Log.w(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 failed", error)
             if (!stillRelevant()) return@launch
             if (activeSidecarSubtitleKey == null) {
@@ -324,10 +346,18 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
         .distinctBy { it.url }
     val candidateByUrl = candidatesAtStart.associateBy { it.url }
 
+    AudioSyncFallback.stop(this)
+    // Audio sync fallback: on mpv it hears the film through sampled spots only.
+    val audioFallback = AudioSyncFallback.of(this)
+    audioFallback?.arm()
+
     automaticSubtitleSyncJob = scope.launch {
         fun streamUnchanged(): Boolean =
             currentStreamUrl == sourceUrlAtStart && isUsingMpvEngine()
 
+        // Every way out of this run disarms the fallback, unless it took over the subtitle. A
+        // cancelled run leaves it alone: the run that replaced it has armed it again.
+        var audioTookOver = false
         try {
             Log.d(
                 PlayerRuntimeController.TAG,
@@ -377,7 +407,11 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
             if (resolved == null) {
                 Log.d(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 mpv no match outcome=$analysisOutcome")
                 if (activeSubtitleUrl == selectedUrl) {
-                    context.buildAutoSyncFailureToast(analysisOutcome)?.let(::showAutoSyncToast)
+                    audioTookOver = analysisOutcome != AutoSyncAnalysisOutcome.SUBTITLE_UNAVAILABLE &&
+                        audioFallback?.takeOver(selectedUrl) == true
+                    if (!audioTookOver) {
+                        context.buildAutoSyncFailureToast(analysisOutcome)?.let(::showAutoSyncToast)
+                    }
                 }
                 return@launch
             }
@@ -436,6 +470,8 @@ private fun PlayerRuntimeController.runMpvAutomaticSubtitleSync(
             throw cancel
         } catch (error: Throwable) {
             Log.w(PlayerRuntimeController.TAG, "AUTO_SYNC_V2 mpv failed", error)
+        } finally {
+            if (!audioTookOver && isActive) audioFallback?.disarm()
         }
     }
 }
