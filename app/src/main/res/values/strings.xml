@@ -1789,6 +1789,13 @@
     <string name="addon_installing">Installing</string>
     <string name="addon_install_btn">Install</string>
     <string name="addon_install_success">Installed %1$s</string>
+    <string name="addon_tracking_consent_title">Tracking addon</string>
+    <string name="addon_tracking_consent_body">%1$s is a tracking addon. Nuvio will send it your activity: what you play, pause and stop with the playback position, what you add to or remove from your library, and what you mark as watched or unwatched. This data leaves Nuvio and is handled by the addon\'s developer and the service it connects to.</string>
+    <string name="addon_tracking_consent_checkbox">I agree to share my watch activity and library with this addon</string>
+    <string name="addon_tracking_consent_checked">Checked</string>
+    <string name="addon_tracking_consent_unchecked">Not checked</string>
+    <string name="addon_tracking_consent_cancel">Cancel</string>
+    <string name="addon_tracking_consent_install">Install</string>
     <string name="addon_error_invalid_url">Enter a valid addon URL</string>
     <string name="addon_error_invalid_scheme">Addon URL must start with http or https</string>
     <string name="addon_installed_section">Installed</string>

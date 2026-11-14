@@ -108,6 +108,7 @@ import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.ExperienceMode
+import com.nuvio.tv.ui.components.TrackingAddonConsentDialog
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.util.contentTextDirection
@@ -614,9 +615,16 @@ fun AddonManagerScreen(
             uiState.pendingChange?.let { pending ->
                 ConfirmAddonChangesDialog(
                     pendingChange = pending,
-                    onConfirm = viewModel::confirmPendingChange,
+                    onConfirm = { viewModel.confirmPendingChange() },
                     onReject = viewModel::rejectPendingChange
                 )
+                if (pending.awaitingTrackingConsent) {
+                    TrackingAddonConsentDialog(
+                        addonName = pending.trackingAddonNames.orEmpty().joinToString(", "),
+                        onInstall = { viewModel.confirmPendingChange(trackingConsentGiven = true) },
+                        onDismiss = viewModel::dismissPendingTrackingConsent
+                    )
+                }
             }
         }
 
@@ -1089,8 +1097,10 @@ internal fun ConfirmAddonChangesDialog(
     val focusRequester = remember { FocusRequester() }
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    LaunchedEffect(pendingChange.isApplying, pendingChange.awaitingTrackingConsent) {
+        if (!pendingChange.isApplying && !pendingChange.awaitingTrackingConsent) {
+            runCatching { focusRequester.requestFocus() }
+        }
     }
 
     BackHandler { onReject() }

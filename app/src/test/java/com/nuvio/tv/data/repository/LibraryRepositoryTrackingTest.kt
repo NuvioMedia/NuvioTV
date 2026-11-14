@@ -208,7 +208,8 @@ class LibraryRepositoryTrackingTest {
             authManager = mockk<AuthManager>(relaxed = true),
             metaRepository = mockk<MetaRepository>(relaxed = true),
             trackingProviders = TrackingLibraryProviderRegistry(providers),
-            profileManager = mockk<ProfileManager> { every { activeProfileId } returns MutableStateFlow(1) }
+            profileManager = mockk<ProfileManager> { every { activeProfileId } returns MutableStateFlow(1) },
+            addonEventDispatcher = mockk(relaxed = true)
         )
     }
 

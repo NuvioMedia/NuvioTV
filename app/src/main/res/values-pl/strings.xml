@@ -1350,6 +1350,13 @@
     <string name="addon_error_invalid_url">Wprowadź prawidłowy URL dodatku</string>
     <string name="addon_error_invalid_scheme">URL dodatku musi zaczynać się od http lub https</string>
     <string name="addon_install_success">Zainstalowano %1$s</string>
+    <string name="addon_tracking_consent_title">Dodatek śledzący</string>
+    <string name="addon_tracking_consent_body">%1$s to dodatek śledzący. Nuvio będzie wysyłać do niego Twoją aktywność: co odtwarzasz, wstrzymujesz i zatrzymujesz wraz z pozycją odtwarzania, co dodajesz do biblioteki lub z niej usuwasz oraz co oznaczasz jako obejrzane lub nieobejrzane. Te dane opuszczają Nuvio i trafiają do twórcy dodatku oraz serwisu, z którym się łączy.</string>
+    <string name="addon_tracking_consent_checkbox">Zgadzam się na udostępnianie temu dodatkowi mojej aktywności oglądania i biblioteki</string>
+    <string name="addon_tracking_consent_checked">Zaznaczone</string>
+    <string name="addon_tracking_consent_unchecked">Niezaznaczone</string>
+    <string name="addon_tracking_consent_cancel">Anuluj</string>
+    <string name="addon_tracking_consent_install">Zainstaluj</string>
 
     <string name="audio_dialog_tab_tracks">Audio</string>
     <string name="audio_dialog_tab_mix">Miks</string>

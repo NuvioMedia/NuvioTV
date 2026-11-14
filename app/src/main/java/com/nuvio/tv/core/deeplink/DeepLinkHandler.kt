@@ -3,17 +3,24 @@ package com.nuvio.tv.core.deeplink
 import android.content.Context
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.data.repository.TrackingAddonConsentController
+import com.nuvio.tv.data.repository.isTrackingAddon
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 class DeepLinkHandler @Inject constructor(
     private val addonRepository: AddonRepository,
+    private val trackingAddonConsentController: TrackingAddonConsentController,
     @ApplicationContext private val context: Context
 ) {
     suspend fun installAddon(manifestUrl: String): DeepLinkInstallResult {
         return when (val result = addonRepository.fetchAddon(manifestUrl)) {
             is NetworkResult.Success -> {
+                if (result.data.isTrackingAddon) {
+                    trackingAddonConsentController.request(manifestUrl, result.data)
+                    return DeepLinkInstallResult.ConsentRequired
+                }
                 addonRepository.addAddon(manifestUrl)
                 val addonName = result.data.displayName.ifBlank { result.data.baseUrl }
                 DeepLinkInstallResult.Success(
@@ -36,4 +43,8 @@ sealed interface DeepLinkInstallResult {
     data class Error(
         override val message: String
     ) : DeepLinkInstallResult
+
+    data object ConsentRequired : DeepLinkInstallResult {
+        override val message: String = ""
+    }
 }
