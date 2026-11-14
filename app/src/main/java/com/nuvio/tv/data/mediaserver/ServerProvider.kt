@@ -16,6 +16,10 @@ interface ServerProvider {
     val capabilities: Set<ServerCapability>
     val minimumVersion: String
 
+    /** False when the sign-in stays on this device instead of syncing to the Nuvio account with the other servers. */
+    val syncsSignIn: Boolean
+        get() = true
+
     suspend fun signIn(address: String, username: String, password: String): ServerSignIn = unsupported()
 
     suspend fun libraries(session: ServerSession): List<ServerLibrary>
