@@ -18,6 +18,7 @@ import kotlin.math.roundToLong
 internal const val MPV_TRACK_LIST_PROPERTY = "track-list"
 internal const val MPV_SID_PROPERTY = "sid"
 internal const val MPV_SUB_TEXT_PROPERTY = "sub-text"
+private const val MPV_TEXT_OUTLINE_SIZE_PER_WIDTH = 0.5
 private val MPV_STYLED_SUBTITLE_CODECS = setOf(
     "subrip", "srt", "webvtt", "text", "mov_text", "microdvd", "mpl2", "subviewer", "subviewer1", "sami", "realtext"
 )
@@ -474,7 +475,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             val outlineSize = when {
                 !style.outlineEnabled -> 0.0
                 isAssOrSsaSubtitleSelectedNow() -> style.outlineWidth.coerceIn(1, 6).toDouble()
-                else -> 1.0
+                else -> style.outlineWidth * MPV_TEXT_OUTLINE_SIZE_PER_WIDTH
             }
             val backgroundAlpha = (style.backgroundColor ushr 24) and 0xFF
             val borderStyle = if (backgroundAlpha > 0) "background-box" else "outline-and-shadow"
