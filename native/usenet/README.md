@@ -269,7 +269,13 @@ numbering schemes and one scheme lacks only its first volume, a file of another
 scheme whose headers start the same file (an old-style `.rar` posted as
 `.partNN.rar`) completes it. Names that do not number the volumes (shuffled
 `hash.N` obfuscation) are ordered by RAR5 main-header volume numbers, read a
-small batch at a time; RAR4 has none, so such a set stays rejected. A single
+small batch at a time; RAR4 has none, so such a set stays rejected. Names that
+number the volumes but disagree with their main headers (posting tools that
+shuffle names in small windows: `part01` holding volume 3) are first put in the
+order their NZB subjects number them (`[5/289]`), which follows the posting
+order. If the volume there carries the expected number, the set stays ordered
+and its continuations are predicted; otherwise the main headers order it as
+above. A single
 random name that ends in digits is not a set and stays with the other
 obfuscated files. Obfuscated 7z volumes drop interleaved PAR2 files by
 signature and follow yEnc `.7z.NNN` names when the poster kept them.

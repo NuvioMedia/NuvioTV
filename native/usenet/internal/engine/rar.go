@@ -450,8 +450,30 @@ type rarCursor struct {
 	volume    *rarVolume
 	pos       int64
 	unordered bool
+	released  bool // The files were put in their NZB subjects' release order.
 	resolved  map[int]*rarVolume
 	scanned   int
+}
+
+// releaseOrder returns files in the order their NZB subjects number them
+// (`[5/289]`), when every file has a distinct number and that order differs.
+// Posting tools that shuffle volume names usually still post in volume order.
+func releaseOrder(files []*File) ([]*File, bool) {
+	sorted := append([]*File(nil), files...)
+	seen := make(map[int]bool, len(files))
+	for _, f := range sorted {
+		if f.order <= 0 || seen[f.order] {
+			return nil, false
+		}
+		seen[f.order] = true
+	}
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].order < sorted[j].order })
+	for i, f := range sorted {
+		if f != files[i] {
+			return sorted, true
+		}
+	}
+	return nil, false
 }
 
 func (c *rarCursor) resolve(ctx context.Context) (*rarVolume, error) {
@@ -603,8 +625,17 @@ func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 		if b.main && b.volume >= 0 && b.volume != c.index {
 			if !c.unordered && c.volume.version == 5 {
 				// Obfuscated names can number every volume and still not follow
-				// them (<hash>.1 to <hash>.135 in shuffled order): the main
-				// headers order the set from here, a few volumes at a time.
+				// them (<hash>.1 to <hash>.135 in shuffled order). The order the
+				// volumes were posted in is tried once: if it holds, the set stays
+				// ordered and predictable. Otherwise the main headers order the
+				// set from here, a few volumes at a time.
+				if !c.released {
+					c.released = true
+					if files, ok := releaseOrder(c.files); ok {
+						c.files, c.volume = files, nil
+						continue
+					}
+				}
 				c.unordered, c.volume, c.resolved, c.scanned = true, nil, nil, 0
 				continue
 			}
