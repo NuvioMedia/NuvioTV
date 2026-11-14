@@ -417,6 +417,8 @@
     <string name="about_update_auto_install_subtitle">Tải xuống phiên bản mới trong nền và cài đặt khi thiết bị ở trạng thái chờ.</string>
     <string name="about_update_auto_install_notice_title">Thông báo sau khi tự động cập nhật</string>
     <string name="about_update_auto_install_notice_subtitle">Hiển thị bảng thông báo vào lần khởi chạy tiếp theo sau khi ứng dụng tự cập nhật</string>
+    <string name="about_update_optimize_install_title">Tối ưu hóa bản cập nhật khi cài đặt</string>
+    <string name="about_update_optimize_install_subtitle">Khởi chạy lần đầu nhanh hơn sau khi cập nhật, nhưng ứng dụng sẽ đóng trong khoảng một phút khi cài đặt. Tắt tùy chọn này để sử dụng màn hình cài đặt của Android.</string>
     <string name="about_update_channel_title">Kênh cập nhật</string>
     <string name="about_update_channel_subtitle">Chọn loại cập nhật ứng dụng bạn muốn nhận</string>
     <string name="about_check_updates">Kiểm tra cập nhật</string>
@@ -949,8 +951,8 @@
     <string name="sub_preview_text">Mọi câu chuyện đều bắt đầu từ một chút tò mò.</string>
     <string name="sub_font">Phông chữ</string>
     <string name="sub_font_default">Mặc định</string>
-    <string name="sub_font_serif">Kiểu chữ có chân</string>
-    <string name="sub_font_mono">Kiểu chữ đơn cách</string>
+    <string name="sub_font_serif">Có chân</string>
+    <string name="sub_font_mono">Đơn cách</string>
     <string name="sub_font_import">Nhập từ điện thoại</string>
     <string name="sub_font_import_desc">Thêm phông chữ .ttf hoặc .otf có dung lượng tối đa 10 MB. Phông chữ đã nhập sẽ được lưu trên TV này.</string>
     <string name="sub_font_import_qr">Quét bằng điện thoại để thêm phông chữ .ttf hoặc .otf</string>
@@ -2519,6 +2521,8 @@
     <string name="update_checking">Đang kiểm tra bản cập nhật…</string>
     <string name="update_waiting_for_stable">Bạn sẽ nhận bản phát hành ổn định tiếp theo khi có sẵn</string>
     <string name="update_download_complete">Tải xuống hoàn tất. Sẵn sàng cài đặt.</string>
+    <string name="update_ready_closes">Tải xuống hoàn tất. Ứng dụng sẽ đóng trong khi cài đặt bản cập nhật, quá trình này có thể mất một phút. Vui lòng mở lại ứng dụng sau đó.</string>
+    <string name="update_ready_closes_and_reopens">Tải xuống hoàn tất. Ứng dụng sẽ đóng trong khi cài đặt bản cập nhật và tự mở lại, quá trình này có thể mất một phút.</string>
     <string name="update_installed_automatically">Đã tự động cập nhật khi thiết bị ở trạng thái chờ.</string>
     <string name="update_up_to_date">Hệ thống đã được cập nhật. Những thay đổi mới nhất:</string>
     <string name="update_close">Đóng</string>
