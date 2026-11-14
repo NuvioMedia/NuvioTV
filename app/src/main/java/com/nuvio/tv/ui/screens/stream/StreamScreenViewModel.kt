@@ -1455,11 +1455,15 @@ class StreamScreenViewModel @Inject constructor(
         usenetSelectionStarted = true
         if (!stream.isUsenet()) com.nuvio.tv.core.usenet.UsenetSidecar.peek()?.cancelPrefetch(usenetPrefetchOwner)
         if (stream.isUsenet()) {
+            val showLoadingStatus = playerSettingsDataStore.playerSettings.first().showPlayerLoadingStatus
             updateUiStateIfChanged {
                 it.copy(
                     showDirectAutoPlayOverlay = true,
-                    directAutoPlayMessage = if (fallbackAttempt > 0) context.getString(R.string.player_trying_next_stream, fallbackAttempt)
-                        else context.getString(R.string.usenet_opening),
+                    directAutoPlayMessage = when {
+                        fallbackAttempt > 0 -> context.getString(R.string.player_trying_next_stream, fallbackAttempt)
+                        showLoadingStatus -> context.getString(R.string.usenet_opening)
+                        else -> null
+                    },
                     playbackErrorMessage = null
                 )
             }
