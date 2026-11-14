@@ -273,6 +273,7 @@ class LibraryRepositoryImpl @Inject constructor(
         item: LibraryEntryInput,
         mutation: () -> TrackingMembershipApplyResult
     ): TrackingMembershipApplyResult {
+        if (!addonEventDispatcher.hasEnabledAddonFor(ADDON_LIBRARY_RESOURCE)) return mutation()
         val wasInLibrary = isInLibrary(item.itemId, item.itemType).first()
         val result = mutation()
         if (result.requiresRemovalConfirmation) return result

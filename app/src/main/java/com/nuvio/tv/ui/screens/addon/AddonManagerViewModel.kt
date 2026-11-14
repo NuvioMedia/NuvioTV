@@ -61,6 +61,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
@@ -81,6 +84,7 @@ class AddonManagerViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddonManagerUiState())
+    private var addedAddonsFetch: Pair<String, Deferred<Map<String, Addon?>>>? = null
     val uiState: StateFlow<AddonManagerUiState> = _uiState.asStateFlow()
     val experienceMode = experienceModeDataStore.mode
 
@@ -154,8 +158,11 @@ class AddonManagerViewModel @Inject constructor(
             when (val result = addonRepository.fetchAddon(normalizedUrl)) {
                 is NetworkResult.Success -> {
                     if (result.data.isTrackingAddon) {
-                        trackingAddonConsentController.request(normalizedUrl, result.data)
-                        _uiState.update { it.copy(isInstalling = false, installUrl = "") }
+                        val decision = trackingAddonConsentController.request(normalizedUrl, result.data)
+                        _uiState.update { it.copy(isInstalling = false) }
+                        if (decision.await()) {
+                            _uiState.update { it.copy(installUrl = "") }
+                        }
                         return@launch
                     }
                     addonRepository.addAddon(normalizedUrl)
@@ -555,9 +562,12 @@ class AddonManagerViewModel @Inject constructor(
             )
         }
 
+        addedAddonsFetch = null
         if (added.isNotEmpty()) {
+            val fetch = viewModelScope.async { fetchAddedAddons(added) }
+            addedAddonsFetch = change.id to fetch
             viewModelScope.launch {
-                val addedAddons = fetchAddedAddons(added)
+                val addedAddons = fetch.await()
                 val addedNames = addedAddons.mapValues { (url, addon) ->
                     addon?.name?.ifBlank { url } ?: url
                 }
@@ -566,22 +576,8 @@ class AddonManagerViewModel @Inject constructor(
                     if (pending == null || pending.changeId != change.id) {
                         state
                     } else {
-                        state.copy(
-                            pendingChange = pending.copy(
-                                addedNames = addedNames,
-                                trackingAddonNames = addedAddons.trackingAddonNames()
-                            )
-                        )
+                        state.copy(pendingChange = pending.copy(addedNames = addedNames))
                     }
-                }
-            }
-        } else {
-            _uiState.update { state ->
-                val pending = state.pendingChange
-                if (pending == null || pending.changeId != change.id) {
-                    state
-                } else {
-                    state.copy(pendingChange = pending.copy(trackingAddonNames = emptyList()))
                 }
             }
         }
@@ -589,18 +585,36 @@ class AddonManagerViewModel @Inject constructor(
 
     private suspend fun fetchAddedAddons(urls: List<String>): Map<String, Addon?> =
         withContext(Dispatchers.IO) {
-            urls.associateWith { url ->
-                val result = runCatching {
-                    withTimeoutOrNull(15_000L) { addonRepository.fetchAddon(url) }
-                }.getOrNull()
-                (result as? NetworkResult.Success)?.data
-            }
+            urls.map { url ->
+                async {
+                    val result = runCatching {
+                        withTimeoutOrNull(15_000L) { addonRepository.fetchAddon(url) }
+                    }.getOrNull()
+                    url to (result as? NetworkResult.Success)?.data
+                }
+            }.awaitAll().toMap()
         }
 
-    private fun Map<String, Addon?>.trackingAddonNames(): List<String> =
-        mapNotNull { (url, addon) ->
-            addon?.takeIf { it.isTrackingAddon }?.let { it.name.ifBlank { url } }
+    private suspend fun resolveTrackingConsentNames(changeId: String, urls: List<String>): List<String> {
+        val initial = addedAddonsFetch
+            ?.takeIf { (fetchChangeId, _) -> fetchChangeId == changeId }
+            ?.second
+            ?.await()
+            ?: fetchAddedAddons(urls)
+        val failedUrls = urls.filter { initial[it] == null }
+        val retried = if (failedUrls.isEmpty()) emptyMap() else fetchAddedAddons(failedUrls)
+        return urls.mapNotNull { url ->
+            val addon = initial[url] ?: retried[url]
+            when {
+                addon == null -> url
+                addon.isTrackingAddon -> addon.name.ifBlank { url }
+                else -> null
+            }
         }
+    }
+
+    private fun isCurrentPendingChange(changeId: String): Boolean =
+        _uiState.value.pendingChange?.changeId == changeId
 
     fun dismissPendingTrackingConsent() {
         _uiState.update { state ->
@@ -615,8 +629,8 @@ class AddonManagerViewModel @Inject constructor(
 
         viewModelScope.launch {
             if (!trackingConsentGiven && pending.addedUrls.isNotEmpty()) {
-                val trackingNames = pending.trackingAddonNames
-                    ?: fetchAddedAddons(pending.addedUrls).trackingAddonNames()
+                val trackingNames = resolveTrackingConsentNames(pending.changeId, pending.addedUrls)
+                if (!isCurrentPendingChange(pending.changeId)) return@launch
                 if (trackingNames.isNotEmpty()) {
                     _uiState.update { state ->
                         state.copy(
@@ -630,6 +644,7 @@ class AddonManagerViewModel @Inject constructor(
                     return@launch
                 }
             }
+            if (!isCurrentPendingChange(pending.changeId)) return@launch
             addonRepository.setAddonOrder(pending.proposedUrls)
             applyCatalogPreferencesFromPending(pending, pending.proposedUrls)
             if (pending.collectionsChanged && pending.proposedCollectionsJson != null) {

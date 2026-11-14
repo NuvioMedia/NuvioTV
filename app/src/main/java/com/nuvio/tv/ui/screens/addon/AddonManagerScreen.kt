@@ -1097,8 +1097,10 @@ internal fun ConfirmAddonChangesDialog(
     val focusRequester = remember { FocusRequester() }
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    LaunchedEffect(pendingChange.isApplying, pendingChange.awaitingTrackingConsent) {
+        if (!pendingChange.isApplying && !pendingChange.awaitingTrackingConsent) {
+            runCatching { focusRequester.requestFocus() }
+        }
     }
 
     BackHandler { onReject() }

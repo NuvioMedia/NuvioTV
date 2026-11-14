@@ -1473,16 +1473,19 @@ class ExternalPlaybackTracker @Inject constructor(
             } else {
                 0f
             }
-            if (progressPercent > 0f) {
+            val reportedCompletion = explicitPercent != null && explicitPercent >= 100f
+            if (progressPercent > 0f || reportedCompletion) {
                 addonEventDispatcher.player(
                     target = AddonPlayerEventTarget(
                         type = metadata.contentType,
                         videoId = metadata.videoId.ifBlank { metadata.contentId }
                     ),
                     action = AddonPlayerAction.STOP,
-                    currentTimeMs = positionMs,
+                    currentTimeMs = if (positionMs <= 0L && reportedCompletion) effectiveDuration else positionMs,
                     durationMs = effectiveDuration
                 )
+            }
+            if (progressPercent > 0f) {
                 val scrobbleItem = buildScrobbleItem(metadata)
                 if (scrobbleItem != null) {
                     trackingScrobbleCoordinator.scrobble(

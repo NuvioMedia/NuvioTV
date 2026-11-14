@@ -8,10 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
@@ -28,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -71,69 +75,77 @@ fun TrackingAddonConsentDialog(
             Column(
                 modifier = Modifier
                     .width(560.dp)
+                    .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.9f).dp)
                     .padding(NuvioTheme.spacing.xl),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = stringResource(R.string.addon_tracking_consent_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioTheme.colors.TextPrimary,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
-
-                Text(
-                    text = stringResource(R.string.addon_tracking_consent_body, addonName),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioTheme.colors.TextSecondary,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
-
-                val checkboxState = stringResource(
-                    if (accepted) R.string.addon_tracking_consent_checked else R.string.addon_tracking_consent_unchecked
-                )
-                Card(
-                    onClick = { accepted = !accepted },
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(checkboxFocusRequester)
-                        .semantics {
-                            role = Role.Checkbox
-                            stateDescription = checkboxState
-                        },
-                    colors = CardDefaults.colors(
-                        containerColor = NuvioTheme.colors.BackgroundElevated,
-                        focusedContainerColor = NuvioTheme.colors.BackgroundElevated
-                    ),
-                    border = CardDefaults.border(
-                        focusedBorder = Border(
-                            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                            shape = RoundedCornerShape(NuvioTheme.radii.md)
-                        )
-                    ),
-                    shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md)),
-                    scale = CardDefaults.scale(focusedScale = 1.02f)
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
-                        verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = stringResource(R.string.addon_tracking_consent_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = NuvioTheme.colors.TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+
+                    Text(
+                        text = stringResource(R.string.addon_tracking_consent_body, addonName),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = NuvioTheme.colors.TextSecondary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+
+                    val checkboxState = stringResource(
+                        if (accepted) R.string.addon_tracking_consent_checked else R.string.addon_tracking_consent_unchecked
+                    )
+                    Card(
+                        onClick = { accepted = !accepted },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(checkboxFocusRequester)
+                            .semantics {
+                                role = Role.Checkbox
+                                stateDescription = checkboxState
+                            },
+                        colors = CardDefaults.colors(
+                            containerColor = NuvioTheme.colors.BackgroundElevated,
+                            focusedContainerColor = NuvioTheme.colors.BackgroundElevated
+                        ),
+                        border = CardDefaults.border(
+                            focusedBorder = Border(
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
+                            )
+                        ),
+                        shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md)),
+                        scale = CardDefaults.scale(focusedScale = 1.02f)
                     ) {
-                        Icon(
-                            imageVector = if (accepted) Icons.Filled.CheckBox else Icons.Filled.CheckBoxOutlineBlank,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = if (accepted) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary
-                        )
-                        Text(
-                            text = stringResource(R.string.addon_tracking_consent_checkbox),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = NuvioTheme.colors.TextPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (accepted) Icons.Filled.CheckBox else Icons.Filled.CheckBoxOutlineBlank,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = if (accepted) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary
+                            )
+                            Text(
+                                text = stringResource(R.string.addon_tracking_consent_checkbox),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = NuvioTheme.colors.TextPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
 

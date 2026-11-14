@@ -942,14 +942,20 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override suspend fun removeFromHistory(contentId: String, videoId: String?, season: Int?, episode: Int?) {
+        if (!addonEventDispatcher.hasEnabledAddonFor(ADDON_LIBRARY_RESOURCE)) {
+            removeFromHistoryInternal(contentId, videoId, season, episode)
+            return
+        }
+        val isEpisode = season != null || episode != null
         val wasWatched = runCatching { isWatched(contentId, videoId, season, episode).first() }.getOrDefault(true)
+        val type = resolveAddonContentType(contentId, isEpisode)
         removeFromHistoryInternal(contentId, videoId, season, episode)
         if (!wasWatched) return
-        if (season == null && episode == null) {
-            addonEventDispatcher.library("movie", contentId, AddonLibraryAction.UNWATCHED)
+        if (!isEpisode) {
+            addonEventDispatcher.library(type, contentId, AddonLibraryAction.UNWATCHED)
         } else {
             addonEventDispatcher.libraryVideos(
-                type = "series",
+                type = type,
                 id = contentId,
                 action = AddonLibraryAction.UNWATCHED,
                 videoIds = listOf(addonEpisodeVideoId(contentId, videoId, season, episode))
@@ -959,6 +965,16 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     private fun addonEpisodeVideoId(contentId: String, videoId: String?, season: Int?, episode: Int?): String =
         videoId?.takeIf { it.isNotBlank() && it != contentId } ?: "$contentId:${season ?: 0}:${episode ?: 0}"
+
+    private suspend fun resolveAddonContentType(contentId: String, isEpisode: Boolean): String {
+        val profileId = profileManager.activeProfileId.value
+        val knownType = runCatching {
+            watchedItemsPreferences.getAllItems(profileId).firstOrNull { it.contentId == contentId }?.contentType
+                ?: watchProgressPreferences.getAllRawEntries(profileId).values
+                    .firstOrNull { it.contentId == contentId }?.contentType
+        }.getOrNull()
+        return knownType?.takeIf { it.isNotBlank() } ?: if (isEpisode) "series" else "movie"
+    }
 
     private suspend fun removeFromHistoryInternal(contentId: String, videoId: String?, season: Int?, episode: Int?) {
         val profileId = profileManager.activeProfileId.value
@@ -1006,12 +1022,21 @@ class WatchProgressRepositoryImpl @Inject constructor(
         episodes: List<Triple<Int, Int, String?>>
     ) {
         if (episodes.isEmpty()) return
+        if (!addonEventDispatcher.hasEnabledAddonFor(ADDON_LIBRARY_RESOURCE)) {
+            removeFromHistoryBatchInternal(contentId, videoId, episodes)
+            return
+        }
+        val watchedEpisodes = runCatching { getWatchedShowEpisodes()[contentId] }.getOrNull()
+        val type = resolveAddonContentType(contentId, isEpisode = true)
         removeFromHistoryBatchInternal(contentId, videoId, episodes)
+        val changedEpisodes = episodes.filter { (season, episode, _) ->
+            watchedEpisodes?.contains(season to episode) ?: true
+        }
         addonEventDispatcher.libraryVideos(
-            type = "series",
+            type = type,
             id = contentId,
             action = AddonLibraryAction.UNWATCHED,
-            videoIds = episodes.map { (season, episode, episodeVideoId) ->
+            videoIds = changedEpisodes.map { (season, episode, episodeVideoId) ->
                 addonEpisodeVideoId(contentId, episodeVideoId, season, episode)
             }
         )
@@ -1078,11 +1103,13 @@ class WatchProgressRepositoryImpl @Inject constructor(
         profileId: Int,
         broadcastTrackingHistory: Boolean
     ) {
-        val wasWatched = broadcastTrackingHistory && runCatching {
+        val emitsAddonEvent = broadcastTrackingHistory &&
+            addonEventDispatcher.hasEnabledAddonFor(ADDON_LIBRARY_RESOURCE)
+        val wasWatched = emitsAddonEvent && runCatching {
             isWatched(progress.contentId, progress.videoId, progress.season, progress.episode).first()
         }.getOrDefault(false)
         markAsCompletedInternal(progress, profileId, broadcastTrackingHistory)
-        if (broadcastTrackingHistory && !wasWatched) {
+        if (emitsAddonEvent && !wasWatched) {
             emitAddonWatchedEvents(listOf(progress))
         }
     }
@@ -1153,8 +1180,22 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     override suspend fun markAsCompletedBatch(progressList: List<WatchProgress>) {
         if (progressList.isEmpty()) return
+        if (!addonEventDispatcher.hasEnabledAddonFor(ADDON_LIBRARY_RESOURCE)) {
+            markAsCompletedBatchInternal(progressList)
+            return
+        }
+        val watchedEpisodes = runCatching { getWatchedShowEpisodes() }.getOrDefault(emptyMap())
+        val changedProgress = progressList.filterNot { progress ->
+            val season = progress.season
+            val episode = progress.episode
+            if (season != null && episode != null) {
+                watchedEpisodes[progress.contentId]?.contains(season to episode) == true
+            } else {
+                runCatching { isWatched(progress.contentId, progress.videoId, null, null).first() }.getOrDefault(false)
+            }
+        }
         markAsCompletedBatchInternal(progressList)
-        emitAddonWatchedEvents(progressList)
+        emitAddonWatchedEvents(changedProgress)
     }
 
     private suspend fun markAsCompletedBatchInternal(progressList: List<WatchProgress>) {
