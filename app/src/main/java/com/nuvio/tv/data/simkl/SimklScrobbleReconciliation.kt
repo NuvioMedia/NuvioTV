@@ -319,11 +319,26 @@ internal fun SimklSyncSnapshot.priorWatchForScrobble(result: SimklScrobbleResult
     val targetNumber = target.number ?: return SimklPriorWatch.None
     val targetSeasonNumber = target.season
     val targetSeason = targetSeasonNumber ?: 1
-    val targetMapping = if (target.tvdbSeason != null && target.tvdbNumber != null) {
+    // A scrobble response can name the episode's TVDB coordinates. A pre-play reference cannot:
+    // it is built from the catalogue's season and episode. A flat Simkl anime row still carries the
+    // catalogue's TVDB mapping (the library read asks for full_anime_seasons), so the catalogue
+    // coordinates are used as the mapping when the response has none. This is the same rule the
+    // watched projection uses, and it lets a seasoned catalogue episode match a flat Simkl row.
+    val responseMapping = if (target.tvdbSeason != null && target.tvdbNumber != null) {
         SimklEpisodeMapping(target.tvdbSeason, target.tvdbNumber)
     } else {
         null
     }
+    val catalogueMapping = if (
+        responseMapping == null &&
+        result.mediaType == SimklMediaType.ANIME &&
+        targetSeasonNumber != null
+    ) {
+        SimklEpisodeMapping(targetSeasonNumber, targetNumber)
+    } else {
+        null
+    }
+    val targetMapping = responseMapping ?: catalogueMapping
     val watchedAt = entry.seasons
         .flatMap { season -> season.episodes.map { episode -> season.number to episode } }
         .firstOrNull { (seasonNumber, episode) ->
