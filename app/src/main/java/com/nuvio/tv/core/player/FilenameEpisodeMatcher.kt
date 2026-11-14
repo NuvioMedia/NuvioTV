@@ -131,25 +131,49 @@ object FilenameEpisodeMatcher {
 
     fun extractSeasonEpisode(filename: String): Pair<Int?, Int>? {
         if (filename.isBlank()) return null
+        val sanitized = filename.replace(CRC32_BRACKET_REGEX, "")
         // S01E03 pattern
-        Regex("""(?i)S\s*(\d{1,3})\s*E\s*(\d{1,4})""").find(filename)?.let { match ->
+        Regex("""(?i)(?<![a-z0-9])S\s*(\d{1,3})\s*E\s*(\d{1,4})(?![0-9]|(?![eE]\d)[a-z])""").find(sanitized)?.let { match ->
             val season = match.groupValues[1].toIntOrNull()
             val episode = match.groupValues[2].toIntOrNull() ?: return null
             return season to episode
         }
-        // 01x03 pattern
-        Regex("""(?<!\d)(\d{1,2})[xX](\d{1,4})""").find(filename)?.let { match ->
-            val season = match.groupValues[1].toIntOrNull()
-            val episode = match.groupValues[2].toIntOrNull() ?: return null
-            return season to episode
+        // 01x03 pattern (excluding 0x hex and 16x9/4x3 aspect ratios)
+        Regex("""(?<![a-zA-Z\d])(\d{1,2})[xX](\d{1,4})(?![a-zA-Z\d])""").findAll(sanitized).forEach { match ->
+            val season = match.groupValues[1].toIntOrNull() ?: return@forEach
+            val episode = match.groupValues[2].toIntOrNull() ?: return@forEach
+            val rawEpisode = match.groupValues[2]
+            val isAspectRatio = rawEpisode.length == 1 && ((season == 16 && episode == 9) || (season == 4 && episode == 3))
+            if (season > 0 && !isAspectRatio) {
+                return season to episode
+            }
         }
         // E03, EP03, EP.03 pattern (no season)
-        Regex("""(?i)\bE[Pp]?[.\s]?(\d{1,4})\b""").find(filename)?.let { match ->
+        Regex("""(?i)(?<![a-z0-9])(?:ep[.\s_-]?(\d{1,4})|(?<![0-9a-f]{4}-)e(\d{2,4}))(?![a-z0-9])""").find(sanitized)?.let { match ->
+            val epRaw = match.groupValues[1].ifEmpty { match.groupValues[2] }
+            val episode = epRaw.toIntOrNull() ?: return null
+            return null to episode
+        }
+        // Anime dash pattern: "Title - 01 [1080p].mkv", "Title - 08 - 1080p.mkv"
+        findAnimeDashEpisodeMatch(sanitized)?.let { match ->
             val episode = match.groupValues[1].toIntOrNull() ?: return null
             return null to episode
         }
         return null
     }
+
+    private fun findAnimeDashEpisodeMatch(input: String): MatchResult? {
+        return ANIME_DASH_EPISODE_REGEX.findAll(input).firstOrNull { match ->
+            val number = match.groupValues[1].toIntOrNull() ?: return@firstOrNull false
+            number !in NON_EPISODE_NUMBERS && number !in 1900..2099
+        }
+    }
+
+    private val CRC32_BRACKET_REGEX = Regex("""\[[0-9a-fA-F]{8}]""")
+    private val ANIME_DASH_EPISODE_REGEX = Regex(
+        """(?<=\s[-–]\s)(?<!\s[-–]\s\d{1,4}\s[-–]\s)(\d{1,4})(?:v\d+)?(?=\s*(?:[\[(]|\.[a-zA-Z0-9]{2,4}$|[-–]\s+(?!\d{1,4}\b(?![pP]))|$))"""
+    )
+    private val NON_EPISODE_NUMBERS = setOf(264, 265, 480, 576, 720, 1080, 2160)
 
     private val patterns = listOf(sXeY, seasonXepisode, episodeOnly)
 }

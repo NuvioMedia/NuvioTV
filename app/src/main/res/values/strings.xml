@@ -3487,4 +3487,6 @@
     <string name="autosync_label_synced">Auto synced</string>
     <string name="stream_resume_from_time">Resume from %1$s</string>
     <string name="stream_resume_from_percent">Resume from %1$d%%</string>
+    <string name="player_episode_mismatch_warning">Wrong episode detected: stream resolved to %1$s instead of %2$s</string>
+    <string name="player_episode_mismatch_mitigated">Wrong episode (%1$s) auto-corrected to %2$s via %3$s</string>
 </resources>
