@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import com.nuvio.tv.core.tracking.TRACKING_COMPLETION_BAR_PERCENT
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingProviderId
@@ -19,15 +20,47 @@ class TraktTrackingScrobbler @Inject constructor(
     override val providerId = TrackingProviderId.TRAKT
     override val seekScrobblePolicy = TrackingSeekScrobblePolicy.STOP_AND_RESTART
 
+    /*
+     * Trakt records a play on every stop at or above the bar, and a pause is sent as a stop. One
+     * playback can therefore report a completion more than once when it is interrupted and resumed;
+     * the player's run id lets the second one be dropped without touching a later, separate viewing.
+     */
+    @Volatile
+    private var lastCompletedPlaybackId: Long = 0L
+
     override suspend fun scrobble(
         action: TrackingScrobbleAction,
         event: TrackingScrobbleEvent
     ) {
+        /*
+         * A playback that resumes above the completion bar is not a new viewing here. The player
+         * marks that start sessionless, so the coordinator already leaves this scrobbler out; the
+         * guard keeps the rule for a caller that reaches the scrobbler directly, because Trakt would
+         * otherwise record the same watch twice, once through the start and once through the stop.
+         */
+        if (action == TrackingScrobbleAction.START &&
+            event.progressPercent >= TRACKING_COMPLETION_BAR_PERCENT
+        ) {
+            return
+        }
+        val completesPlayback = event.progressPercent >= TRACKING_COMPLETION_BAR_PERCENT &&
+            (action == TrackingScrobbleAction.PAUSE || action == TrackingScrobbleAction.STOP)
+        if (completesPlayback &&
+            event.playbackId != 0L &&
+            event.playbackId == lastCompletedPlaybackId
+        ) {
+            return
+        }
         val item = event.media.toTraktScrobbleItem() ?: return
-        when (action) {
+        val written = when (action) {
             TrackingScrobbleAction.START -> service.scrobbleStart(item, event.progressPercent.toFloat())
             TrackingScrobbleAction.PAUSE -> service.scrobbleStop(item, event.progressPercent.toFloat())
             TrackingScrobbleAction.STOP -> service.scrobbleStop(item, event.progressPercent.toFloat())
+        }
+        // The id is latched only after the tracker accepted the write, so a failed stop cannot
+        // suppress the later stop that really ends the playback.
+        if (completesPlayback && written && event.playbackId != 0L) {
+            lastCompletedPlaybackId = event.playbackId
         }
     }
 

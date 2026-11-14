@@ -19,9 +19,7 @@ import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
-import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
-import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.core.streams.StreamBadgePresentation
@@ -41,7 +39,6 @@ import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
-import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.StreamDebridCacheState
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -98,6 +95,7 @@ class StreamScreenViewModel @Inject constructor(
     private val debridStreamPresentation: DebridStreamPresentation,
     private val youTubeStreamResolver: YouTubeStreamResolver,
     private val externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker,
+    val rewatchConsentRepository: com.nuvio.tv.data.simkl.SimklRewatchConsentRepository,
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val torrentService: TorrentService,
@@ -1303,7 +1301,16 @@ class StreamScreenViewModel @Inject constructor(
         }
     }
 
-    suspend fun resolveStreamForPlayback(stream: Stream, saveLastLink: Boolean = true): StreamPlaybackInfo? {
+    suspend fun resolveStreamForPlayback(
+        stream: Stream,
+        saveLastLink: Boolean = true,
+        progressPercent: Double = 0.0
+    ): StreamPlaybackInfo? {
+        // The question is part of choosing a source, not of resolving it. Ask for every source
+        // that will play in Nuvio, before the resolver can put a loading overlay on screen.
+        if (!stream.isExternal()) {
+            preparePlaybackForStream(progressPercent)
+        }
         stream.serverTarget?.let { target -> return prepareServerStream(stream, target) }
         if (stream.youTubeIdToResolve() != null) {
             return resolveYouTubeStreamForPlayback(stream)
@@ -1462,6 +1469,25 @@ class StreamScreenViewModel @Inject constructor(
 
     fun onPlaybackErrorShown() {
         updateUiStateIfChanged { it.copy(playbackErrorMessage = null) }
+    }
+
+    /**
+     * Lets a tracker ask its pre-play question while the source is still on screen. This is a read
+     * only preparation; the player owns the actual start and the answer is kept for its stop.
+     */
+    suspend fun preparePlayback(playbackInfo: StreamPlaybackInfo, progressPercent: Double) {
+        val item = buildScrobbleItem(playbackInfo) ?: return
+        trackingScrobbleCoordinator.preparePlayback(item, progressPercent)
+    }
+
+    /**
+     * Asks the pre-play question before a debrid resolve can put a resolving overlay on screen.
+     * The source metadata is already in the screen's saved state; the resolved URL is irrelevant
+     * to whether a rewatch should be offered, and building the item must not cancel stream loads.
+     */
+    suspend fun preparePlaybackForStream(progressPercent: Double) {
+        val item = buildCurrentMediaScrobbleItem() ?: return
+        trackingScrobbleCoordinator.preparePlayback(item, progressPercent)
     }
 
     fun rememberPlayedPlugin(bingeGroup: String?) {
@@ -1699,6 +1725,10 @@ class StreamScreenViewModel @Inject constructor(
         autoLaunch: Boolean = false,
         context: android.content.Context
     ) {
+        /*
+         * The question is asked from the selected source before resolve; this path only launches
+         * the player after that answer. Do not ask again here.
+         */
         streamRepository.setLocalPluginSearchPaused(true)
         externalOverlayHideJob?.cancel()
         // Preserve the current message; blanking it made the card's Crossfade flash
@@ -2029,74 +2059,61 @@ class StreamScreenViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Save watch progress returned by an external player.
-     * Called when the external player returns position/duration data via ActivityResult.
-     *
-     * Sends both scrobbleStart + scrobbleStop to Trakt so the playback session is properly
-     * recorded (Trakt requires an active session before stop will persist progress).
-     */
-    fun saveExternalPlayerProgress(
-        playbackInfo: StreamPlaybackInfo,
-        positionMs: Long,
-        durationMs: Long?
-    ) {
-        val contentId = playbackInfo.contentId ?: return
-        val videoId = playbackInfo.videoId ?: contentId
-        val effectiveDuration = durationMs ?: 0L
-
-        viewModelScope.launch {
-            val progress = WatchProgress(
-                contentId = contentId,
-                contentType = playbackInfo.contentType ?: "movie",
-                name = playbackInfo.contentName ?: playbackInfo.title,
-                poster = playbackInfo.poster,
-                backdrop = playbackInfo.backdrop,
-                logo = playbackInfo.logo,
-                videoId = videoId,
-                season = playbackInfo.season,
-                episode = playbackInfo.episode,
-                episodeTitle = playbackInfo.episodeTitle,
-                position = positionMs,
-                duration = effectiveDuration,
-                lastWatched = System.currentTimeMillis()
-            )
-            Log.d(TAG, "Saving external player progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +
-                "content=$contentId, video=$videoId")
-            watchProgressRepository.saveProgress(progress, playbackInfo.profileId)
-
-            val progressPercent = if (effectiveDuration > 0L) {
-                (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)
-            } else {
-                0f
-            }
-            if (progressPercent > 0f) {
-                val scrobbleItem = buildScrobbleItem(playbackInfo)
-                if (scrobbleItem != null) {
-                    trackingScrobbleCoordinator.scrobble(
-                        TrackingScrobbleAction.START,
-                        TrackingScrobbleEvent(scrobbleItem, 0.0)
-                    )
-                    trackingScrobbleCoordinator.scrobble(
-                        TrackingScrobbleAction.STOP,
-                        TrackingScrobbleEvent(scrobbleItem, progressPercent.toDouble())
-                    )
-                }
-            }
-        }
-    }
-
-    private fun buildScrobbleItem(playbackInfo: StreamPlaybackInfo): TrackingMediaReference? {
-        val rawContentId = playbackInfo.contentId ?: return null
-        val reference = buildTrackingMediaReference(
-            contentType = playbackInfo.contentType ?: "movie",
-            parentMetaId = rawContentId,
+    private fun buildScrobbleItem(playbackInfo: StreamPlaybackInfo): TrackingMediaReference? =
+        buildScrobbleItem(
+            contentId = playbackInfo.contentId,
+            contentType = playbackInfo.contentType,
             videoId = playbackInfo.videoId,
             title = playbackInfo.contentName ?: playbackInfo.title,
             releaseInfo = playbackInfo.year,
             seasonNumber = playbackInfo.season,
             episodeNumber = playbackInfo.episode,
             episodeTitle = playbackInfo.episodeTitle
+        )
+
+    /**
+     * Builds the tracking item from the screen's own metadata, without touching the stream loader.
+     *
+     * The selected source does not change the item: the player already resolved the same fields
+     * from the saved state when it built its own scrobble. The question only needs that item, so it
+     * must not call `getStreamForPlayback`, which cancels the current stream and badge loads.
+     */
+    private fun buildCurrentMediaScrobbleItem(): TrackingMediaReference? =
+        buildScrobbleItem(
+            contentId = contentId ?: videoId.substringBefore(":"),
+            contentType = contentType,
+            videoId = videoId,
+            title = contentName ?: title,
+            releaseInfo = year,
+            seasonNumber = season,
+            episodeNumber = episode,
+            episodeTitle = episodeName
+        )
+
+    /**
+     * The single item builder shared by the pre-play question and the player paths, so the two
+     * cannot disagree about the series, episode, or external ids the grant is keyed by.
+     */
+    private fun buildScrobbleItem(
+        contentId: String?,
+        contentType: String?,
+        videoId: String?,
+        title: String?,
+        releaseInfo: String?,
+        seasonNumber: Int?,
+        episodeNumber: Int?,
+        episodeTitle: String?
+    ): TrackingMediaReference? {
+        val rawContentId = contentId ?: return null
+        val reference = buildTrackingMediaReference(
+            contentType = contentType ?: "movie",
+            parentMetaId = rawContentId,
+            videoId = videoId,
+            title = title,
+            releaseInfo = releaseInfo,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber,
+            episodeTitle = episodeTitle
         )
         return reference.takeIf { media ->
             media.hasResolvableIdentity &&

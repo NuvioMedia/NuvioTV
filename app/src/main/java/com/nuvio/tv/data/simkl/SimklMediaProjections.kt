@@ -363,7 +363,12 @@ internal fun SimklPlaybackSession.toWatchProgress(
         simklPlaybackId = id,
         trackingProviderId = TrackingProviderId.SIMKL.storageId,
         trackingProviderItemId = media.simklTrackingProviderItemId(),
-        trackingSourceUrl = buildSimklSourceUrl(mediaType, media)
+        trackingSourceUrl = buildSimklSourceUrl(mediaType, media),
+        // The row is not a finished watch but a position the provider keeps open, and it says that in
+        // `isProviderPlaybackPosition`. Such a position ends at the credits marker, which a row like this
+        // does not carry, so its percentage alone never closes it, or the position would drop out of
+        // Continue Watching. A really recorded watch arrives as history and replaces it.
+        isProviderPlaybackPosition = true
     )
 }
 

@@ -30,7 +30,9 @@ internal sealed interface SimklCommittedMutation {
 
     data class RemoveFromHistory(
         val items: List<TrackingMediaReference>,
-        val deleted: SimklDeletedCounts
+        val deleted: SimklDeletedCounts,
+        /** Set when the removal addressed one rewatch session, not the canonical watch. */
+        val rewatchId: Long? = null
     ) : SimklCommittedMutation
 }
 
@@ -46,7 +48,9 @@ internal data class SimklResolvedHistoryMutation(
     val request: TrackingHistoryItem,
     val status: SimklListStatus?,
     val mediaType: SimklMediaType?,
-    val animeType: String?
+    val animeType: String?,
+    val rewatchId: Long? = null,
+    val rewatchStatus: String? = null
 )
 
 internal data class SimklDeletedCounts(
@@ -108,6 +112,7 @@ internal fun SimklApiResponse.toHistoryMutationReceipt(
 ): SimklMutationReceipt {
     val payload = payload(json)
     val result = payload.toTrackingMutationResult(candidates.size)
+        .copy(addedCount = payload.addedEpisodeCount())
     val notFound = payload.notFoundTargets()
     val statuses = payload.historyStatuses()
     val accepted = candidates
@@ -118,7 +123,9 @@ internal fun SimklApiResponse.toHistoryMutationReceipt(
                 request = candidate,
                 status = status?.status,
                 mediaType = status?.mediaType,
-                animeType = status?.animeType
+                animeType = status?.animeType,
+                rewatchId = status?.rewatchId,
+                rewatchStatus = status?.rewatchStatus
             )
         }
     return SimklMutationReceipt(
@@ -133,7 +140,8 @@ internal fun SimklApiResponse.toHistoryMutationReceipt(
 
 internal fun SimklApiResponse.toHistoryRemovalReceipt(
     candidates: List<TrackingMediaReference>,
-    json: Json
+    json: Json,
+    rewatchId: Long? = null
 ): SimklMutationReceipt {
     val payload = payload(json)
     val result = payload.toTrackingMutationResult(candidates.size)
@@ -150,7 +158,8 @@ internal fun SimklApiResponse.toHistoryRemovalReceipt(
                 movies = deleted?.intValue("movies") ?: 0,
                 shows = deleted?.intValue("shows") ?: 0,
                 episodes = deleted?.intValue("episodes") ?: 0
-            )
+            ),
+            rewatchId = rewatchId
         ),
         requiresReconciliation = accepted.any { candidate ->
             candidate.kind != TrackingMediaKind.MOVIE && candidate.episode != null
@@ -169,13 +178,31 @@ private data class SimklHistoryStatus(
     val target: SimklResponseTarget,
     val status: SimklListStatus?,
     val mediaType: SimklMediaType?,
-    val animeType: String?
+    val animeType: String?,
+    val rewatchId: Long? = null,
+    /**
+     * What the account did with a write that asked for a repeat viewing: `active` for a run the write
+     * joined or opened, `completed`, `first_watch` for a write it read as a plain watch, `too_soon` for
+     * one folded into a watch less than two days old, and `pro_required` for a plan without rewatches.
+     */
+    val rewatchStatus: String? = null
 )
 
 private fun SimklApiResponse.payload(json: Json): JsonObject =
     body.takeIf(String::isNotBlank)
         ?.let { value -> runCatching { json.parseToJsonElement(value).jsonObject }.getOrNull() }
         ?: JsonObject(emptyMap())
+
+/**
+ * The number of episodes the history response says it actually marked watched.
+ *
+ * A repeat folded into an existing watch leaves every `added` count at zero even when
+ * `added.statuses` still names the session, so this is the signal that separates a booked episode
+ * from an answer that only echoed the run. `added.shows` is not used: it counts a show added to the
+ * library, which says nothing about the episode the user marked.
+ */
+private fun JsonObject.addedEpisodeCount(): Int =
+    objectValue("added")?.intValue("episodes") ?: 0
 
 private fun JsonObject.toTrackingMutationResult(attemptedCount: Int): TrackingMutationResult {
     val notFoundCount = objectValue("not_found")
@@ -213,7 +240,9 @@ private fun JsonObject.historyStatuses(): List<SimklHistoryStatus> =
                 target = SimklResponseTarget(request.toResponseMedia()),
                 status = response.stringValue("status")?.toSimklListStatus(),
                 mediaType = response.stringValue("simkl_type")?.toSimklMediaType(),
-                animeType = response.stringValue("anime_type")
+                animeType = response.stringValue("anime_type"),
+                rewatchId = response.stringValue("rewatch_id")?.toLongOrNull(),
+                rewatchStatus = response.stringValue("rewatch_status")
             )
         }
 
@@ -244,8 +273,11 @@ private fun JsonObject.toMutationResolution(
         ?: stringValue("type")?.toTrackingMediaKind()
         ?: fallbackKind
     val providerSubtype = stringValue("anime_type")
-    if (status == null && mediaKind == null && providerSubtype == null) return null
-    return TrackingMutationResolution(status, mediaKind, providerSubtype)
+    val rewatchStatus = stringValue("rewatch_status")
+    if (status == null && mediaKind == null && providerSubtype == null && rewatchStatus == null) {
+        return null
+    }
+    return TrackingMutationResolution(status, mediaKind, providerSubtype, rewatchStatus)
 }
 
 private fun JsonObject.toResponseMedia(): SimklMedia = SimklMedia(

@@ -29,6 +29,8 @@ import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.tracking.effectiveWatchProgressSource
+import com.nuvio.tv.core.tracking.localCompletionThresholdFor
+import kotlinx.coroutines.CancellationException
 import com.nuvio.tv.core.tracking.providerId
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
@@ -1237,6 +1239,24 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     override fun hasActiveTrackingProgressProvider(): Boolean =
         activeProgressProviderId != null
+
+    /*
+     * Only the active source has a say: with the app's own progress as the source the local bar stays
+     * the one this device decides by, whatever the connected trackers count. A source that cannot
+     * name its bar leaves the local one in place rather than failing the progress save.
+     */
+    override suspend fun sourceCompletionThreshold(contentEndPercent: Double?): Float? {
+        val provider = activeProgressProvider() ?: return null
+        val sourcePercent = try {
+            provider.completionThresholdPercent(contentEndPercent)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            Log.w(TAG, "${provider.providerId.storageId} completion threshold unavailable", error)
+            null
+        }
+        return localCompletionThresholdFor(sourcePercent)
+    }
 
     override fun activeProviderOwnsCompletedHistoryProjection(): Boolean =
         activeProgressProviderId

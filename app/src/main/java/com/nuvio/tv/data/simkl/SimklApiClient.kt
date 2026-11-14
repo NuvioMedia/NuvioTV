@@ -166,7 +166,11 @@ class SimklApiClient(
                     }
                     SimklResponseAction.FAIL -> throw response.toApiException(json)
                     SimklResponseAction.RETRY -> {
-                        if (attempt == maxAttempts - 1) throw response.toApiException(json)
+                        // A 429 that names the daily allowance is not a burst that clears in a second:
+                        // retrying spends the attempts and hides the reset the user should see.
+                        if (attempt == maxAttempts - 1 || response.isDailyQuotaExceeded(json)) {
+                            throw response.toApiException(json)
+                        }
                         sleep(
                             retryDelayMs(
                                 attempt,
@@ -289,6 +293,12 @@ private fun SimklRawHttpResponse.toApiException(json: Json): SimklApiException {
 }
 
 private fun SimklRawHttpResponse.errorCode(json: Json): String? = errorEnvelope(json)?.error
+
+/** The two 429 bodies that mean the daily quota is spent rather than a burst that clears at once. */
+private fun SimklRawHttpResponse.isDailyQuotaExceeded(json: Json): Boolean =
+    status == 429 && errorCode(json) in DailyQuotaExceededErrorCodes
+
+private val DailyQuotaExceededErrorCodes = setOf("user_limit_exceeded", "app_limit_exceeded")
 
 private fun SimklRawHttpResponse.errorEnvelope(json: Json): SimklErrorEnvelope? = body
     .takeIf(String::isNotBlank)

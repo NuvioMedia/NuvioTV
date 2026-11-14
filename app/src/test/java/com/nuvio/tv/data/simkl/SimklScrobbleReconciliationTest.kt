@@ -1,7 +1,12 @@
 package com.nuvio.tv.data.simkl
 
+import com.nuvio.tv.core.tracking.TrackingEpisode
+import com.nuvio.tv.core.tracking.TrackingExternalIds
+import com.nuvio.tv.core.tracking.TrackingMediaKind
+import com.nuvio.tv.core.tracking.TrackingMediaReference
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -172,6 +177,604 @@ class SimklScrobbleReconciliationTest {
         assertEquals("2023-11-14T21:00:00Z", updated.entries.single().lastWatchedAt)
         assertEquals("tt1375666", updated.toSimklWatchedProjection().items.single().contentId)
     }
+
+    @Test
+    fun `a watched movie reports the date the account holds`() {
+        val media = movieMedia()
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.MOVIES,
+                    status = SimklListStatus.COMPLETED,
+                    movie = media,
+                    lastWatchedAt = "2023-11-14T22:13:20Z"
+                )
+            )
+        )
+
+        val prior = snapshot.priorWatchForScrobble(
+            scrobbleResult(SimklMediaType.MOVIES, media, episode = null)
+        )
+
+        assertTrue(prior.wasWatched)
+        assertEquals(1_700_000_000_000L, prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `a movie the account only plans to watch is not a prior watch`() {
+        val media = movieMedia()
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.MOVIES,
+                    status = SimklListStatus.PLAN_TO_WATCH,
+                    movie = media,
+                    lastWatchedAt = "2023-11-14T22:13:20Z"
+                )
+            )
+        )
+
+        val prior = snapshot.priorWatchForScrobble(
+            scrobbleResult(SimklMediaType.MOVIES, media, episode = null)
+        )
+
+        assertFalse(prior.wasWatched)
+        assertNull(prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `an anime movie the account only plans to watch is not a prior watch`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val planned = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.PLAN_TO_WATCH,
+                    animeType = "movie",
+                    show = media,
+                    lastWatchedAt = "2023-11-14T22:13:20Z"
+                )
+            )
+        )
+        val completed = planned.copy(
+            entries = planned.entries.map { entry -> entry.copy(status = SimklListStatus.COMPLETED) }
+        )
+        val result = scrobbleResult(SimklMediaType.ANIME, media, episode = null)
+
+        assertFalse(planned.priorWatchForScrobble(result).wasWatched)
+        val prior = completed.priorWatchForScrobble(result)
+        assertTrue(prior.wasWatched)
+        assertEquals(1_700_000_000_000L, prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `pre-play prior watch reads the item before the player starts`() {
+        val media = showMedia(simklId = 2090L, imdb = "tt1520211")
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.SHOWS,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 1,
+                            episodes = listOf(SimklEpisode(number = 2, watchedAt = "2023-11-14T22:13:20Z"))
+                        )
+                    )
+                )
+            )
+        )
+        val reference = TrackingMediaReference(
+            kind = TrackingMediaKind.SHOW,
+            title = media.title,
+            year = media.year,
+            ids = TrackingExternalIds(imdb = "tt1520211"),
+            episode = TrackingEpisode(season = 1, number = 2)
+        )
+
+        val prior = snapshot.priorWatchForPlayback(reference)
+
+        assertTrue(prior.wasWatched)
+        assertEquals(1_700_000_000_000L, prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `the scrobbled episode decides, not another episode of the same show`() {
+        val media = showMedia(simklId = 2090L, imdb = "tt1520211")
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.SHOWS,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 1,
+                            episodes = listOf(
+                                SimklEpisode(number = 2, watchedAt = "2023-11-14T22:13:20Z"),
+                                SimklEpisode(number = 3)
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val watched = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.SHOWS,
+                media,
+                episode = SimklPlaybackEpisode(season = 1, number = 2)
+            )
+        )
+        val unwatched = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.SHOWS,
+                media,
+                episode = SimklPlaybackEpisode(season = 1, number = 3)
+            )
+        )
+
+        assertTrue(watched.wasWatched)
+        assertEquals(1_700_000_000_000L, watched.watchedAtEpochMs)
+        assertFalse(unwatched.wasWatched)
+        assertNull(unwatched.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `a watched episode is found through its tvdb coordinates`() {
+        val media = showMedia(simklId = 2090L, imdb = "tt1520211")
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.SHOWS,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 2,
+                            episodes = listOf(
+                                SimklEpisode(
+                                    number = 7,
+                                    watchedAt = "2023-11-14T22:13:20Z",
+                                    tvdb = SimklEpisodeMapping(season = 2, episode = 3)
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val mapped = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.SHOWS,
+                media,
+                episode = SimklPlaybackEpisode(
+                    season = 1,
+                    number = 2,
+                    tvdbSeason = 2,
+                    tvdbNumber = 3
+                )
+            )
+        )
+        val unmapped = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.SHOWS,
+                media,
+                episode = SimklPlaybackEpisode(season = 1, number = 2)
+            )
+        )
+
+        assertTrue(mapped.wasWatched)
+        assertEquals(1_700_000_000_000L, mapped.watchedAtEpochMs)
+        assertFalse(unmapped.wasWatched)
+    }
+
+    @Test
+    fun `a seasoned anime episode finds the flat row through its tvdb mapping`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 1,
+                            episodes = listOf(
+                                SimklEpisode(
+                                    number = 71,
+                                    watchedAt = "2023-11-14T22:13:20Z",
+                                    tvdb = SimklEpisodeMapping(season = 6, episode = 3)
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val catalogue = TrackingMediaReference(
+            kind = TrackingMediaKind.ANIME,
+            title = media.title,
+            year = media.year,
+            ids = TrackingExternalIds(mal = 16498L),
+            episode = TrackingEpisode(season = 6, number = 3)
+        )
+
+        val prior = snapshot.priorWatchForMark(catalogue = catalogue, resolved = catalogue)
+
+        assertTrue(prior.wasWatched)
+        assertEquals(1_700_000_000_000L, prior.watchedAtEpochMs)
+        assertTrue(
+            shouldAskToStartSimklRewatch(
+                mode = SimklRewatchMode.SEMI_AUTOMATIC,
+                accountType = "pro",
+                priorWatch = prior,
+                nowEpochMs = prior.watchedAtEpochMs!! + SIMKL_REWATCH_MIN_GAP_MS + 1L,
+                progressPercent = 0.0
+            )
+        )
+    }
+
+    @Test
+    fun `a seasoned anime episode without matching tvdb coordinates stays a first watch`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 1,
+                            episodes = listOf(
+                                SimklEpisode(
+                                    number = 71,
+                                    watchedAt = "2023-11-14T22:13:20Z",
+                                    tvdb = SimklEpisodeMapping(season = 6, episode = 3)
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val catalogue = TrackingMediaReference(
+            kind = TrackingMediaKind.ANIME,
+            title = media.title,
+            year = media.year,
+            ids = TrackingExternalIds(mal = 16498L),
+            episode = TrackingEpisode(season = 6, number = 4)
+        )
+
+        assertFalse(snapshot.priorWatchForMark(catalogue = catalogue, resolved = catalogue).wasWatched)
+    }
+
+    @Test
+    fun `a flat anime episode is a prior watch by its number`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = null,
+                            episodes = listOf(
+                                SimklEpisode(number = 7, watchedAt = "2023-11-14T22:13:20Z")
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val reference = TrackingMediaReference(
+            kind = TrackingMediaKind.ANIME,
+            title = media.title,
+            year = media.year,
+            ids = TrackingExternalIds(mal = 16498L),
+            episode = TrackingEpisode(season = null, number = 7)
+        )
+
+        val watched = snapshot.priorWatchForPlayback(reference)
+        val unwatched = snapshot.priorWatchForPlayback(reference.copy(episode = TrackingEpisode(season = null, number = 8)))
+
+        assertTrue(watched.wasWatched)
+        assertEquals(1_700_000_000_000L, watched.watchedAtEpochMs)
+        assertFalse(unwatched.wasWatched)
+        assertNull(unwatched.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `a flat anime number repeated across seasons is not a prior watch`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = null,
+                            episodes = listOf(SimklEpisode(number = 7, watchedAt = "2023-11-14T22:13:20Z"))
+                        ),
+                        SimklSeason(
+                            number = 2,
+                            episodes = listOf(SimklEpisode(number = 7, watchedAt = "2023-11-14T22:13:20Z"))
+                        )
+                    )
+                )
+            )
+        )
+
+        val prior = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.ANIME,
+                media,
+                episode = SimklPlaybackEpisode(season = null, number = 7)
+            )
+        )
+
+        assertFalse(prior.wasWatched)
+        assertNull(prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `an anime entry with season one still matches the flat number exactly`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 1,
+                            episodes = listOf(SimklEpisode(number = 7, watchedAt = "2023-11-14T22:13:20Z"))
+                        )
+                    )
+                )
+            )
+        )
+
+        val prior = snapshot.priorWatchForScrobble(
+            scrobbleResult(
+                SimklMediaType.ANIME,
+                media,
+                episode = SimklPlaybackEpisode(season = null, number = 7)
+            )
+        )
+
+        assertTrue(prior.wasWatched)
+        assertEquals(1_700_000_000_000L, prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `a mark reads the native anime reference first`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = null,
+                            episodes = listOf(SimklEpisode(number = 7, watchedAt = "2023-11-14T22:13:20Z"))
+                        )
+                    )
+                )
+            )
+        )
+        val catalogue = TrackingMediaReference(
+            kind = TrackingMediaKind.ANIME,
+            title = media.title,
+            year = media.year,
+            ids = TrackingExternalIds(mal = 16498L),
+            episode = TrackingEpisode(season = 2, number = 7)
+        )
+        val resolved = catalogue.copy(episode = TrackingEpisode(season = null, number = 7))
+
+        val prior = snapshot.priorWatchForMark(catalogue = catalogue, resolved = resolved)
+
+        assertTrue(prior.wasWatched)
+        assertEquals(1_700_000_000_000L, prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `a mark falls back to the catalogue reference when the flat number is ambiguous`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.WATCHING,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 2,
+                            episodes = listOf(SimklEpisode(number = 7, watchedAt = "2023-11-14T22:13:20Z"))
+                        ),
+                        SimklSeason(
+                            number = 3,
+                            episodes = listOf(SimklEpisode(number = 7, watchedAt = "2023-11-14T22:13:20Z"))
+                        )
+                    )
+                )
+            )
+        )
+        val catalogue = TrackingMediaReference(
+            kind = TrackingMediaKind.ANIME,
+            title = media.title,
+            year = media.year,
+            ids = TrackingExternalIds(mal = 16498L),
+            episode = TrackingEpisode(season = 2, number = 7)
+        )
+        val resolved = catalogue.copy(episode = TrackingEpisode(season = null, number = 7))
+
+        val prior = snapshot.priorWatchForMark(catalogue = catalogue, resolved = resolved)
+
+        assertTrue(prior.wasWatched)
+        assertEquals(1_700_000_000_000L, prior.watchedAtEpochMs)
+    }
+
+    @Test
+    fun `a mark reads the summary markers when the account returned no episode rows`() {
+        val media = showMedia(simklId = 2090L, imdb = "tt1520211")
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.SHOWS,
+                    status = SimklListStatus.WATCHING,
+                    lastWatchedAt = "2023-11-14T22:13:20Z",
+                    lastWatched = "S2E6",
+                    nextToWatch = "S2E7",
+                    watchedEpisodesCount = 6,
+                    show = media,
+                    seasons = emptyList()
+                )
+            )
+        )
+        fun mark(season: Int?, episode: Int) = TrackingMediaReference(
+            kind = TrackingMediaKind.SHOW,
+            title = media.title,
+            year = media.year,
+            ids = TrackingExternalIds(imdb = "tt1520211"),
+            episode = TrackingEpisode(season = season, number = episode)
+        )
+
+        // Everything before the next episode was watched, and so was the last one itself.
+        assertTrue(snapshot.priorWatchForMark(mark(2, 6), mark(2, 6)).wasWatched)
+        assertTrue(snapshot.priorWatchForMark(mark(2, 5), mark(2, 5)).wasWatched)
+        // The next episode and anything after it are first watches.
+        assertFalse(snapshot.priorWatchForMark(mark(2, 7), mark(2, 7)).wasWatched)
+        assertFalse(snapshot.priorWatchForMark(mark(3, 1), mark(3, 1)).wasWatched)
+        // A special is outside the numbered watch position, so the summary cannot place it.
+        assertFalse(snapshot.priorWatchForMark(mark(0, 1), mark(0, 1)).wasWatched)
+    }
+
+    @Test
+    fun `the summary fallback stays out when the account did return episode rows`() {
+        val media = showMedia(simklId = 2090L, imdb = "tt1520211")
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.SHOWS,
+                    status = SimklListStatus.WATCHING,
+                    lastWatched = "S2E6",
+                    nextToWatch = "S2E7",
+                    watchedEpisodesCount = 6,
+                    show = media,
+                    seasons = listOf(
+                        SimklSeason(
+                            number = 2,
+                            episodes = listOf(
+                                SimklEpisode(number = 4, watchedAt = "2023-11-14T22:13:20Z")
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val target = TrackingMediaReference(
+            kind = TrackingMediaKind.SHOW,
+            title = media.title,
+            year = media.year,
+            ids = TrackingExternalIds(imdb = "tt1520211"),
+            episode = TrackingEpisode(season = 2, number = 5)
+        )
+
+        // With rows present, an episode missing from them is a first watch, so a new episode
+        // cannot join an open run.
+        assertFalse(snapshot.priorWatchForMark(target, target).wasWatched)
+    }
+
+    @Test
+    fun `a flat anime summary marker reads the episode by its number`() {
+        val media = animeMedia(100L, "tt2560140", 16498L)
+        val snapshot = SimklSyncSnapshot(
+            entries = listOf(
+                SimklLibraryEntry(
+                    mediaType = SimklMediaType.ANIME,
+                    status = SimklListStatus.WATCHING,
+                    lastWatched = "E7",
+                    nextToWatch = "E8",
+                    watchedEpisodesCount = 7,
+                    show = media,
+                    seasons = emptyList()
+                )
+            )
+        )
+        val catalogue = TrackingMediaReference(
+            kind = TrackingMediaKind.ANIME,
+            title = media.title,
+            year = media.year,
+            ids = TrackingExternalIds(mal = 16498L),
+            episode = TrackingEpisode(season = 2, number = 7)
+        )
+        val resolved = catalogue.copy(episode = TrackingEpisode(season = null, number = 7))
+
+        assertTrue(snapshot.priorWatchForMark(catalogue = catalogue, resolved = resolved).wasWatched)
+        assertFalse(
+            snapshot.priorWatchForMark(
+                catalogue = catalogue.copy(episode = TrackingEpisode(season = null, number = 8)),
+                resolved = resolved.copy(episode = TrackingEpisode(season = null, number = 8))
+            ).wasWatched
+        )
+    }
+
+    @Test
+    fun `an item the account does not hold has no prior watch`() {
+        val media = showMedia(simklId = 2090L, imdb = "tt1520211")
+
+        assertFalse(
+            SimklSyncSnapshot()
+                .priorWatchForScrobble(scrobbleResult(SimklMediaType.SHOWS, media, episode = null))
+                .wasWatched
+        )
+        assertFalse(
+            SimklSyncSnapshot()
+                .priorWatchForScrobble(
+                    scrobbleResult(
+                        SimklMediaType.SHOWS,
+                        media,
+                        episode = SimklPlaybackEpisode(season = 1, number = 2)
+                    )
+                )
+                .wasWatched
+        )
+    }
+
+    private fun movieMedia() = SimklMedia(
+        title = "Inception",
+        year = 2010,
+        ids = mapOf(
+            "simkl" to JsonPrimitive(472214L),
+            "imdb" to JsonPrimitive("tt1375666")
+        )
+    )
+
+    private fun scrobbleResult(
+        mediaType: SimklMediaType,
+        media: SimklMedia,
+        episode: SimklPlaybackEpisode?
+    ) = SimklScrobbleResult(
+        outcome = SimklScrobbleOutcome.SCROBBLE,
+        playbackId = 9L,
+        progress = 95.0,
+        mediaType = mediaType,
+        media = media,
+        episode = episode
+    )
 
     private fun showMedia(simklId: Long, imdb: String) = SimklMedia(
         title = "The Walking Dead",

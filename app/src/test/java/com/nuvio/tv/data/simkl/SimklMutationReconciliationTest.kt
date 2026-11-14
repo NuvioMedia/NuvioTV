@@ -231,6 +231,114 @@ class SimklMutationReconciliationTest {
     }
 
     @Test
+    fun `rewatch removal clears only the session episode and keeps the original watch`() {
+        val request = show(TrackingEpisode(season = 1, number = 2))
+        val receipt = response(
+            """
+            {
+              "deleted": {"movies": 0, "shows": 0, "episodes": 1},
+              "not_found": {"movies": [], "shows": []}
+            }
+            """
+        ).toHistoryRemovalReceipt(listOf(request), json, rewatchId = 8975L)
+
+        val canonical = SimklLibraryEntry(
+            mediaType = SimklMediaType.SHOWS,
+            status = SimklListStatus.WATCHING,
+            lastWatchedAt = "2023-11-14T22:13:20Z",
+            watchedEpisodesCount = 1,
+            show = showMedia(),
+            seasons = listOf(
+                SimklSeason(
+                    number = 1,
+                    episodes = listOf(
+                        SimklEpisode(number = 2, watchedAt = "2023-11-14T22:13:20Z")
+                    )
+                )
+            )
+        )
+        val session = SimklLibraryEntry(
+            mediaType = SimklMediaType.SHOWS,
+            status = SimklListStatus.WATCHING,
+            lastWatchedAt = "2023-11-15T22:13:20Z",
+            watchedEpisodesCount = 1,
+            show = showMedia(),
+            seasons = listOf(
+                SimklSeason(
+                    number = 1,
+                    episodes = listOf(
+                        SimklEpisode(number = 2, watchedAt = "2023-11-15T22:13:20Z")
+                    )
+                )
+            ),
+            isRewatch = true,
+            rewatchId = 8975L,
+            rewatchStatus = "active"
+        )
+        val snapshot = SimklSyncSnapshot(
+            isInitialized = true,
+            watermark = "v1",
+            entries = listOf(canonical),
+            rewatchSessions = listOf(session)
+        )
+
+        val updated = snapshot.applyMutationReceipt(receipt, 1_700_000_100_000L)
+
+        // The session loses its viewing entirely; the canonical watch keeps its own.
+        assertTrue(updated.rewatchSessions.single().seasons.single().episodes.isEmpty())
+        assertEquals(
+            "2023-11-14T22:13:20Z",
+            updated.entries.single().seasons.single().episodes.single().watchedAt
+        )
+        assertTrue(updated.toSimklWatchedProjection().items.any { it.season == 1 && it.episode == 2 })
+        assertEquals(8975L, (receipt.mutation as SimklCommittedMutation.RemoveFromHistory).rewatchId ?: 0L)
+    }
+
+    @Test
+    fun `a rewatch removal keeps the later episodes in the session`() {
+        val request = show(TrackingEpisode(season = 1, number = 2))
+        val receipt = response(
+            """
+            {
+              "deleted": {"movies": 0, "shows": 0, "episodes": 1},
+              "not_found": {"movies": [], "shows": []}
+            }
+            """.trimIndent()
+        ).toHistoryRemovalReceipt(listOf(request), json, rewatchId = 8975L)
+        val session = SimklLibraryEntry(
+            mediaType = SimklMediaType.SHOWS,
+            status = SimklListStatus.WATCHING,
+            lastWatchedAt = "2023-11-15T22:13:20Z",
+            show = showMedia(),
+            seasons = listOf(
+                SimklSeason(
+                    number = 1,
+                    episodes = listOf(
+                        SimklEpisode(number = 2, watchedAt = "2023-11-15T22:13:20Z"),
+                        SimklEpisode(number = 3, watchedAt = "2023-11-16T22:13:20Z")
+                    )
+                )
+            ),
+            isRewatch = true,
+            rewatchId = 8975L,
+            rewatchStatus = "active"
+        )
+        val snapshot = SimklSyncSnapshot(
+            isInitialized = true,
+            watermark = "v1",
+            rewatchSessions = listOf(session)
+        )
+
+        val updated = snapshot.applyMutationReceipt(receipt, 1_700_000_100_000L)
+
+        assertEquals(
+            listOf(3),
+            updated.rewatchSessions.single().seasons.single().episodes.map { episode -> episode.number }
+        )
+        assertEquals("2023-11-16T22:13:20Z", updated.rewatchSessions.single().lastWatchedAt)
+    }
+
+    @Test
     fun `whole title removal deletes local entry without reconciliation`() {
         val request = movie()
         val receipt = response(

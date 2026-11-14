@@ -188,7 +188,9 @@ class TrackingSettingsOverviewTest {
                     onContinueWatchingWindowClick = {},
                     onCommentsChanged = {},
                     onMoreLikeThisClick = {},
-                    onAnimeIdClick = {}
+                    onAnimeIdClick = {},
+                    onWatchedThresholdChange = {},
+                    onRewatchModeClick = {}
                 )
             }
         }
@@ -271,7 +273,9 @@ class TrackingSettingsOverviewTest {
                     onContinueWatchingWindowClick = {},
                     onCommentsChanged = {},
                     onMoreLikeThisClick = {},
-                    onAnimeIdClick = {}
+                    onAnimeIdClick = {},
+                    onWatchedThresholdChange = {},
+                    onRewatchModeClick = {}
                 )
             }
         }

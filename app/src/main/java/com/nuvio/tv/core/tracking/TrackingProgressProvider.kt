@@ -54,6 +54,31 @@ interface TrackingProgressProvider {
         progress.isCompleted()
     fun normalizeParentContentId(parentContentId: String, videoId: String?): String = parentContentId
     suspend fun prepareNextUpSeed(progress: WatchProgress): WatchProgress
+
+    /**
+     * The progress, in percent, from which this source counts a stop as a watch, for a playback whose
+     * content ends at [contentEndPercent]. Null when the source has no bar of its own.
+     *
+     * While the provider is the progress source, what it reports is what the app shows as watched,
+     * so the local completion follows its bar instead of deciding against it.
+     */
+    suspend fun completionThresholdPercent(contentEndPercent: Double?): Double? = null
+}
+
+/**
+ * The completion threshold a local progress row carries, as the fraction [WatchProgress] reads, when
+ * the progress source counts a watch only from a higher point than the app's own bar.
+ *
+ * It only ever raises the bar: below it the row and the source already agree, and a source that
+ * counts a watch earlier shows it as watched from its own data anyway.
+ */
+internal fun localCompletionThresholdFor(sourceThresholdPercent: Double?): Float? {
+    val fraction = sourceThresholdPercent
+        ?.takeIf { percent -> percent.isFinite() }
+        ?.let { percent -> (percent / 100.0).toFloat() }
+        ?: return null
+    if (fraction <= WatchProgress.COMPLETED_THRESHOLD) return null
+    return fraction.coerceAtMost(1f)
 }
 
 @Singleton
