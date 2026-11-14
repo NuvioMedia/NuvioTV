@@ -315,6 +315,17 @@ discovery. The final header is always parsed, since its packed-size
 width and metadata may differ. Selection of unrequested entries stays serial so
 season-pack traversal preserves the cursor position.
 
+A read near the end of an ordered set that serial discovery maps, such as a
+player's first look at an MKV's Cues, does not wait for every volume header:
+the last volume's header gives the final part, and the exact payload size its
+offset. Up to two parts before it are mapped back the same way, each from its
+own header. A set ordered by its RAR5 main headers (names numbered off by one,
+or shuffled) maps only its final part, from its shortest volume once that
+volume's main header numbers it last. Only a read within two volumes of the
+end and at least four volumes past the mapped prefix, of a file that cannot
+fit before the last volume, takes this path; a header that disagrees leaves
+the read to serial discovery.
+
 ### Password-protected RAR
 
 Stored RAR4 (AES-128) and RAR5 (AES-256) entries are streamed with the NZB

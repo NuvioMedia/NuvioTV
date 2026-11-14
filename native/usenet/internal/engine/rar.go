@@ -762,6 +762,8 @@ type Content struct {
 	children     []nestedChild
 	clipInfo     *Content // A disc clip's CLPI from the same set, served beside it.
 	tail         *extent  // A shuffled set's final part, mapped before the volumes between.
+	suffix       []extent // An ordered set's final parts, mapped back from its end (mapSuffix).
+	suffixDone   bool     // Guarded by layoutGate: the suffix is mapped as far as it can be.
 	disc         *discFiles
 	layoutNS     atomic.Int64
 	layoutWaitNS atomic.Int64
@@ -794,6 +796,11 @@ func (c *Content) extend(ctx context.Context, off int64) error {
 					return ctx.Err()
 				}
 				continue
+			}
+		}
+		if off >= 0 {
+			if mapped, err := c.mapSuffix(ctx, off); err != nil || mapped {
+				return err
 			}
 		}
 		layoutStart := time.Now()
@@ -988,6 +995,138 @@ func (c *Content) verifyRARPart(ctx context.Context, off int64) error {
 	return c.extend(ctx, off)
 }
 
+// A read near the end of a file that the prediction could not map is served
+// from the set's last volumes instead of a walk through every volume before it:
+// a read within suffixReach volumes of the end and at least suffixWalk volumes
+// past the mapped prefix. At most suffixVolumes headers are read for it.
+const (
+	suffixReach   = 2
+	suffixWalk    = 4
+	suffixVolumes = 3
+)
+
+// mapSuffix maps the end of a stored file, such as an MKV's Cues, when the
+// set's continuation headers cannot be predicted (a recovery record or other
+// main-header fields): the last volume's header gives the final part, and the
+// exact payload size gives that part's offset, so the volumes between are not
+// read. A part before it is mapped back the same way from its own header; in a
+// shuffled RAR5 set only the final part is, from the volume whose main header
+// numbers it last. It reports whether off is mapped; when anything disagrees,
+// the serial walk maps off as before. Called with layoutGate held.
+func (c *Content) mapSuffix(ctx context.Context, off int64) (bool, error) {
+	cur := c.cursor
+	c.mu.RLock()
+	for _, s := range c.suffix {
+		if off >= s.start && off < s.start+s.length {
+			c.mu.RUnlock()
+			return true, nil
+		}
+	}
+	known := c.parts[len(c.parts)-1]
+	prefix := known.start + known.length
+	fill := int64(0)
+	if len(c.parts) > 1 {
+		fill = c.parts[1].length // A full continuation volume's share of the file.
+	}
+	plain := c.predicted == nil && !c.complete && c.direct == nil && c.nested == nil &&
+		c.aes == nil && !c.padded && c.pending == nil && c.tail == nil
+	c.mu.RUnlock()
+	if c.suffixDone || !plain || cur == nil || cur.volume != nil || fill <= 0 {
+		return false, nil
+	}
+	payload := c.payloadSize()
+	last := len(cur.files) - 1
+	// In a set of equal volumes a later one never holds more of the file than
+	// the second one (headers only grow), so more than fill bytes per volume left
+	// means the file reaches the last volume. One that ends before it is walked.
+	if off < payload-suffixReach*fill || off-prefix < suffixWalk*fill || last-cur.index < suffixWalk ||
+		payload-prefix <= int64(last-cur.index)*fill {
+		return false, nil
+	}
+	layoutStart := time.Now()
+	defer func() { c.layoutNS.Add(time.Since(layoutStart).Nanoseconds()) }()
+	for {
+		c.mu.RLock()
+		n, end := len(c.suffix), payload
+		if n > 0 {
+			end = c.suffix[0].start
+		}
+		c.mu.RUnlock()
+		if n > 0 && off >= end {
+			return true, nil
+		}
+		i := last - n
+		// A shuffled set is ordered by RAR5 main-header numbers, so only its last
+		// volume can be found without them: usually its one short file.
+		if n == suffixVolumes || i <= cur.index || (cur.unordered && n > 0) {
+			c.suffixDone = true
+			return false, nil
+		}
+		f := cur.files[i]
+		if cur.unordered {
+			for _, g := range cur.files {
+				if g.Size() < f.Size() {
+					f = g
+				}
+			}
+		}
+		v, b, err := rarVolumeFile(ctx, f, i)
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+		// The final part ends the file; each part before it continues past its
+		// volume. Parts never reach back into the mapped prefix.
+		if err != nil || (cur.unordered && v.version != 5) || !b.before || b.after != (n > 0) || b.directory ||
+			b.crypt != nil || b.name != c.Name || b.unpacked != c.Size || b.packed <= 0 || end-b.packed < prefix {
+			c.suffixDone = true
+			return false, nil
+		}
+		if cur.unordered {
+			// The walk then finds the last volume without searching for it.
+			if cur.resolved == nil {
+				cur.resolved = make(map[int]*rarVolume)
+			}
+			if cur.resolved[i] == nil {
+				cur.resolved[i] = v
+			}
+		}
+		c.mu.Lock()
+		c.suffix = append([]extent{{f, b.data, b.packed, end - b.packed}}, c.suffix...)
+		c.mu.Unlock()
+	}
+}
+
+// rarVolumeFile returns the first file block of f, which should be volume i of
+// its set. Unlike the cursor it never searches: a main header numbering another
+// volume, or encrypted headers, end it with an error.
+func rarVolumeFile(ctx context.Context, f *File, i int) (*rarVolume, rarBlock, error) {
+	v, err := openRAR(ctx, f)
+	if err != nil {
+		return nil, rarBlock{}, err
+	}
+	pos := v.start
+	for range 16 {
+		b, err := v.block(ctx, pos)
+		switch {
+		case err != nil:
+			return v, b, err
+		case b.headerCrypt != nil:
+			return v, b, ErrEncryptedRAR
+		case b.end:
+			return v, b, io.EOF
+		case b.main && b.volume >= 0 && b.volume != i:
+			return v, b, errors.New("RAR volume number does not match sequence")
+		case b.file:
+			b.version = v.version
+			return v, b, nil
+		case b.next <= pos:
+			return v, b, errors.New("RAR header does not advance")
+		}
+		pos = b.next
+	}
+	return v, rarBlock{}, errors.New("no RAR file header in volume")
+}
+
 func (c *Content) mappedPart(off int64) (extent, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -1000,6 +1139,11 @@ func (c *Content) mappedPart(off int64) (extent, bool) {
 			return extent{}, false
 		}
 		return c.parts[i], true
+	}
+	for _, s := range c.suffix {
+		if off >= s.start && off < s.start+s.length {
+			return s, true
+		}
 	}
 	return extent{}, false
 }
