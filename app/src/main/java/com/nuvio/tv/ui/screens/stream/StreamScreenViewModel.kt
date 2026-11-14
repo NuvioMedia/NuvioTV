@@ -1416,12 +1416,13 @@ class StreamScreenViewModel @Inject constructor(
             }
             return null
         }
-        StreamSidecarSubtitles.set(session.url, session.subtitles + stream.subtitles)
-        return getStreamForPlayback(stream).copy(
+        val playbackInfo = getStreamForPlayback(stream).copy(
             url = session.url,
             headers = session.headers.takeIf { it.isNotEmpty() },
             isServerStream = true
         )
+        StreamSidecarSubtitles.set(session.url, session.subtitles + stream.subtitles)
+        return playbackInfo
     }
 
     private suspend fun resolveYouTubeStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
