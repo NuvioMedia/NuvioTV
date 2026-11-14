@@ -307,7 +307,7 @@ func (l *rarLister) read(ctx context.Context, h rarEntryHead) (*Content, int, in
 		if err != nil {
 			return nil, 0, 0, err
 		}
-		if !b.before || b.name != c.Name || b.unpacked != c.Size || b.packed <= 0 || b.packed > c.Size-start || (!b.after && b.packed != c.Size-start) {
+		if !b.before || b.name != c.entryName() || b.unpacked != c.Size || b.packed <= 0 || b.packed > c.Size-start || (!b.after && b.packed != c.Size-start) {
 			return nil, 0, 0, errors.New("RAR continuation does not match selected file")
 		}
 		c.parts = append(c.parts, extent{f, b.data, b.packed, start})
