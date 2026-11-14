@@ -324,6 +324,7 @@ internal class AsrSyncEngine(
         var best: Pair<ReferenceSubtitle, AnchorFit>? = null
         var bestLocals: List<AnchorFit> = emptyList()
         var bestVotes: WordAnchorMatcher.Votes? = null
+        val confident = ArrayList<Pair<ReferenceSubtitle, AnchorFit>>()
         for (reference in refs) {
             // Built once: the fit, the regions and the place count below all start from them.
             val votes = reference.matcher.votes(words)
@@ -332,6 +333,7 @@ internal class AsrSyncEngine(
             // A scene the release adds splits the words into two strong clusters, so one fit over
             // all words looks ambiguous; regions that are each confident explain it.
             if (!fit.isConfident && !explainsSteps(locals)) continue
+            confident += reference to fit
             if (best == null || fit.score > best.second.score) {
                 best = reference to fit
                 bestLocals = locals
@@ -358,13 +360,23 @@ internal class AsrSyncEngine(
         val shiftMs = trustedFine?.shiftMs ?: coarseShiftMs
         val segments = piecewise(targetTrack, bestVotes!!, bestLocals, reference, fit, scale, shiftMs)
             ?: listOf(SubtitleSyncSegment(0L, scale, shiftMs))
+        // Through a bridge, the mapping is only as good as the timing match between the two
+        // subtitles, which can be ambiguous (similar line patterns at several offsets or rates).
+        // It is confirmed, or moves a confirmed sync, only when the speech timing near it agrees
+        // (fine-tuned) or another reference with its own bridge puts the lines in the same place.
+        val corroborated = bridge == null || trustedFine != null ||
+            confident.any { (other, otherFit) -> agreesThroughOwnBridge(other, otherFit, reference, scale, coarseShiftMs, words) }
+        if (!corroborated && locked) {
+            log("words=${words.size} reference=${reference.key} bridge=$bridge: move not corroborated, kept")
+            return
+        }
         val result = AsrLock(
             scale = scale,
             shiftMs = segments.first().shiftMs,
             referenceKey = reference.key,
             anchorScore = fit.score,
             fineTuned = trustedFine != null,
-            final = rateKnown || locked,
+            final = (rateKnown || locked) && corroborated,
             segments = segments,
         )
         synchronized(lock) {
@@ -391,6 +403,32 @@ internal class AsrSyncEngine(
                 "coarse=${coarseShiftMs.toLong()}ms fine=${fine?.shiftMs?.toLong()} rateKnown=$rateKnown",
         )
         onLock(result)
+    }
+
+    /**
+     * Whether [other] (another reference, bridged on its own) maps the target where the chosen
+     * reference does: within [BRIDGE_AGREE_MS] at the first and last heard word. A copy of the
+     * chosen reference has the same bridge and proves nothing, so it doesn't count.
+     */
+    private fun agreesThroughOwnBridge(
+        other: ReferenceSubtitle,
+        otherFit: AnchorFit,
+        chosen: ReferenceSubtitle,
+        scale: Double,
+        shiftMs: Double,
+        words: List<HeardWord>,
+    ): Boolean {
+        if (other === chosen) return false
+        val otherBridge = other.bridge ?: return false
+        val chosenBridge = chosen.bridge ?: return false
+        if (otherBridge.scale == chosenBridge.scale && abs(otherBridge.shiftSec - chosenBridge.shiftSec) < SAME_BRIDGE_SEC) return false
+        val otherScale = otherFit.scale * otherBridge.scale
+        val otherShiftMs = (otherFit.scale * otherBridge.shiftSec + otherFit.shiftSec) * 1_000.0
+        return listOf(words.first().timeSec, words.last().timeSec).all { mediaSec ->
+            // The target time shown at this media time by the chosen mapping, and where the other puts it.
+            val targetMs = (mediaSec * 1_000.0 - shiftMs) / scale
+            abs(targetMs * otherScale + otherShiftMs - mediaSec * 1_000.0) <= BRIDGE_AGREE_MS
+        }
     }
 
     /** Confident regions in at least two places, with enough evidence to trust a step. */
@@ -684,6 +722,12 @@ internal class AsrSyncEngine(
          * subtitles jump back and forth.
          */
         private const val FINAL_MOVE_REPEAT_MS = 500.0
+
+        /** Two references' bridged mappings agree when they place the heard lines this close. */
+        private const val BRIDGE_AGREE_MS = 600.0
+
+        /** Bridges this close (at the same rate) are the same bridge, e.g. two copies of one file. */
+        private const val SAME_BRIDGE_SEC = 0.1
 
         /** 24/23.976: the step between 25/24 and 25/23.976 (and between 1 and 24/23.976). */
         private const val NEAR_RATE = 24_000.0 / 23_976.0

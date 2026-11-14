@@ -262,6 +262,76 @@ class AsrMatchingTest {
         assertTrue(abs(delayMs + 30_000.0) < 150.0, "lock $lock")
     }
 
+    @Test
+    fun ambiguousBridgeIsNotConfirmedWithoutCorroboration() {
+        // One English reference, bridged to the translation with the wrong offset (similar line
+        // patterns at another offset), and no speech timing to check it against: the result may be
+        // shown as an estimate but never confirmed, so it can still be replaced.
+        val english = script(Random(21), 250)
+        val translation = english.map { (a, b, _) -> Triple(a, b, "linie") }
+        val target = SubtitleSpeechTrack.fromCues(translation)
+        val wrongBridge = com.nuvio.tv.ui.screens.player.audiosync.asr.BridgeFit(1.0, 2.0, 0.6, 0.2)
+        val locks = locksFromHeardWords(
+            english, target,
+            listOf(com.nuvio.tv.ui.screens.player.audiosync.asr.ReferenceSubtitle("en", english, wrongBridge)),
+            listOf(30..150, 500..700), SpeechTimeline(),
+        )
+        assertTrue(locks.isNotEmpty(), "no estimate at all")
+        assertTrue(locks.none { it.final }, "confirmed through an uncorroborated bridge: $locks")
+    }
+
+    @Test
+    fun bridgesOfTwoReferencesThatAgreeConfirm() {
+        // Two different English files (one 5 s later), each bridged on its own: both put the lines
+        // in the same place, which confirms the sync even without speech timing.
+        val english = script(Random(22), 250)
+        val later = english.map { (a, b, t) -> Triple(a + 5_000, b + 5_000, t) }
+        val translation = english.map { (a, b, _) -> Triple(a, b, "linie") }
+        val target = SubtitleSpeechTrack.fromCues(translation)
+        val references = listOf(english, later).mapIndexed { index, cues ->
+            val bridge = assertNotNull(SubtitleBridge.align(target, SubtitleSpeechTrack.fromCues(cues)))
+            com.nuvio.tv.ui.screens.player.audiosync.asr.ReferenceSubtitle("en$index", cues, bridge)
+        }
+        val locks = locksFromHeardWords(english, target, references, listOf(30..150, 500..700), SpeechTimeline())
+        val final = locks.lastOrNull { it.final }
+        assertNotNull(final, "not confirmed: $locks")
+        assertTrue(abs(final.segments.first().shiftMs) < 300.0, "lock $final")
+    }
+
+    /** Every lock the engine publishes once the lines of [media] within [heardSec] are recognised. */
+    private fun locksFromHeardWords(
+        media: List<Triple<Long, Long, String>>,
+        target: SubtitleSpeechTrack,
+        references: List<com.nuvio.tv.ui.screens.player.audiosync.asr.ReferenceSubtitle>,
+        heardSec: List<IntRange>,
+        timeline: SpeechTimeline,
+    ): List<com.nuvio.tv.ui.screens.player.audiosync.asr.AsrLock> {
+        val locks = java.util.Collections.synchronizedList(ArrayList<com.nuvio.tv.ui.screens.player.audiosync.asr.AsrLock>())
+        val engine = AsrSyncEngine(timeline, onLock = { locks += it })
+        engine.startSession(target, references)
+        val heardLines = media.indices.filter { line -> heardSec.any { media[line].first / 1_000 in it } }
+        val frameMs = SpeechTimeline.FRAME_DURATION_MS
+        heardLines.forEach { line ->
+            engine.offerSegment((media[line].first / frameMs).toInt(), FloatArray(SileroVad.CHUNK_SAMPLES * 10) { line.toFloat() }, spread = true)
+        }
+        val random = Random(23)
+        val recognised = java.util.concurrent.atomic.AtomicInteger()
+        engine.setRecognizer { samples ->
+            recognised.incrementAndGet()
+            val (start, end, text) = media[samples[0].toInt()]
+            val segmentStartSec = (start / frameMs).toInt() * frameMs / 1_000.0
+            val words = text.split(' ')
+            words.mapIndexed { k, word ->
+                ((start + (end - start) * k / words.size) / 1_000.0 + random.nextDouble(-0.1, 0.1) - segmentStartSec) to word
+            }
+        }
+        val deadline = System.currentTimeMillis() + 60_000
+        while (recognised.get() < heardLines.size && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        Thread.sleep(1_500)
+        engine.release()
+        return locks.toList()
+    }
+
     /** Runs recognition on the lines of [media] starting within [heardSec], returning the last lock. */
     private fun lockFromHeardWords(
         media: List<Triple<Long, Long, String>>,
