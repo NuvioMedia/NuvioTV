@@ -38,5 +38,6 @@ data class PendingChangeInfo(
     val proposedFollowAddonsOrder: Boolean? = null,
     val isApplying: Boolean = false,
     val trackingAddonNames: List<String>? = null,
+    val trackingConsentUrls: List<String> = emptyList(),
     val awaitingTrackingConsent: Boolean = false
 )

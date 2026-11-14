@@ -557,7 +557,8 @@ class AddonManagerViewModel @Inject constructor(
                     proposedCollectionsJson = proposedCollectionsJson,
                     proposedCollectionCount = proposedCollectionCount,
                     proposedDisabledCollectionKeys = proposedDisabledCollectionKeys,
-                    proposedFollowAddonsOrder = change.proposedFollowAddonsOrder
+                    proposedFollowAddonsOrder = change.proposedFollowAddonsOrder,
+                    trackingConsentUrls = change.trackingConsentUrls
                 )
             )
         }
@@ -629,7 +630,13 @@ class AddonManagerViewModel @Inject constructor(
 
         viewModelScope.launch {
             if (!trackingConsentGiven && pending.addedUrls.isNotEmpty()) {
-                val trackingNames = resolveTrackingConsentNames(pending.changeId, pending.addedUrls)
+                val consentedUrls = pending.trackingConsentUrls.map { normalizeUrlForComparison(it) }.toSet()
+                val urlsNeedingConsent = pending.addedUrls.filter { normalizeUrlForComparison(it) !in consentedUrls }
+                val trackingNames = if (urlsNeedingConsent.isEmpty()) {
+                    emptyList()
+                } else {
+                    resolveTrackingConsentNames(pending.changeId, urlsNeedingConsent)
+                }
                 if (!isCurrentPendingChange(pending.changeId)) return@launch
                 if (trackingNames.isNotEmpty()) {
                     _uiState.update { state ->
