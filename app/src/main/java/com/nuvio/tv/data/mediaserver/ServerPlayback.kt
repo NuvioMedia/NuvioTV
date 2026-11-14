@@ -79,7 +79,9 @@ class ServerPlayback internal constructor(
 
     suspend fun resumeState(url: String?): ServerUserState? {
         val current = url?.let { synchronized(lock) { active[it] } } ?: return null
-        return current.provider.details(current.session, current.playback.target.item.itemId).userStates.firstOrNull()
+        return repository.callForPlayback(current.session) { provider, session ->
+            provider.details(session, current.playback.target.item.itemId)
+        }.userStates.firstOrNull()
     }
 
     fun isServerSource(url: String?): Boolean = url != null && synchronized(lock) { url in active }
@@ -112,7 +114,7 @@ class ServerPlayback internal constructor(
             subtitleStreamIndex = subtitleStreamIndex
         )
         val playback = try {
-            current.provider.preparePlayback(current.session, request)
+            repository.callForPlayback(current.session) { provider, session -> provider.preparePlayback(session, request) }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -145,7 +147,9 @@ class ServerPlayback internal constructor(
             scope.launch {
                 for (event in events) {
                     try {
-                        val sent = withTimeoutOrNull(REPORT_TIMEOUT_MS) { provider.report(session, playback, event) }
+                        val sent = withTimeoutOrNull(REPORT_TIMEOUT_MS) {
+                            repository.callForPlayback(session) { provider, session -> provider.report(session, playback, event) }
+                        }
                         when {
                             sent == null -> Log.w(TAG, "Playback report ${event.type} for $label timed out")
                             event.type != ServerPlaybackEventType.PROGRESS -> {
