@@ -4,7 +4,6 @@
 package rarname
 
 import (
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -39,6 +38,19 @@ const (
 	SchemeNumeric        // name.NNN, e.g. .001 or .7z.001 (1-based)
 )
 
+// baseName is a filename without its folders, with either separator, and
+// without a posting tool's prefix: some posts name a single volume
+// `[tag] \id\::name.part065.rar` while its siblings are plain names.
+func baseName(filename string) string {
+	if i := strings.LastIndexAny(filename, `/\`); i >= 0 {
+		filename = filename[i+1:]
+	}
+	if i := strings.LastIndex(filename, "::"); i >= 0 {
+		filename = filename[i+2:]
+	}
+	return filename
+}
+
 // parseInt safely converts a string of digits to an int, returning -1 on any
 // non-digit. Kept local so this package imports nothing from the importer tree.
 func parseInt(s string) int {
@@ -62,9 +74,9 @@ func parseInt(s string) int {
 //
 // Input must be a canonical filename: the patterns anchor on the extension, so
 // callers normalize poster-controlled names (e.g. strip surrounding quotes) before
-// calling. SetKey performs no cleaning of its own.
+// calling. SetKey only drops what baseName drops.
 func SetKey(filename string) (string, bool) {
-	lower := strings.ToLower(filepath.Base(filename))
+	lower := strings.ToLower(baseName(filename))
 
 	// Pattern 1: filename.part###.rar
 	if m := PartPattern.FindStringSubmatch(lower); len(m) > 1 {
@@ -97,7 +109,7 @@ func SetKey(filename string) (string, bool) {
 // resolve to 1, 10 and 259. Returns ok=false for names with no recognizable volume
 // suffix.
 func VolumeNumber(filename string) (Scheme, int, bool) {
-	lower := strings.ToLower(filepath.Base(filename))
+	lower := strings.ToLower(baseName(filename))
 
 	// part###.rar must be checked before the plain .rar suffix.
 	if m := partPatternNumber.FindStringSubmatch(lower); len(m) > 1 {

@@ -99,6 +99,19 @@ func TestRepostedVolumesKeepIntactCopy(t *testing.T) {
 	selectAndRead(t, files, "movie.mkv", want)
 }
 
+// A posting tool named one volume `[tag] \id\::name.partNN.rar` while every
+// other volume kept its plain name. It still belongs to the set.
+func TestVolumeWithPosterPrefixStaysInSet(t *testing.T) {
+	for _, version := range []int{4, 5} {
+		t.Run(fmt.Sprintf("RAR%d", version), func(t *testing.T) {
+			in, want, _ := regularRARSet(version, 12, 2048, 31)
+			in[7].name = `[N3wZ] \Z7lN1d345235\::` + in[7].name
+			files, _, _ := setup(t, in, 0, 4, 4)
+			selectAndRead(t, files, "movie.mkv", want)
+		})
+	}
+}
+
 func TestRenamedFirstVolumeJoinsRollSet(t *testing.T) {
 	want := payload(300000)
 	files := damagedSetup(t, []inputFile{
